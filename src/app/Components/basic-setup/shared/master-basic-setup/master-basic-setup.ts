@@ -53,34 +53,18 @@ import { MasterConfig } from '../../Models/master-basic-setup.model';
 export class MasterBasicSetup {
     @Input() config!: MasterConfig;
     @Input() data: any[] = [];
+    @Input() form!: FormGroup;
 
     @Output() save = new EventEmitter<any>();
     @Output() edit = new EventEmitter<any>();
     @Output() delete = new EventEmitter<any>();
-
-    form!: FormGroup;
-
-    constructor(private fb: FormBuilder) {}
-
-    ngOnInit() {
-        this.buildForm();
-    }
-
-    buildForm() {
-        const group: any = {};
-        this.config.formFields.forEach((f) => {
-            group[f.name] = [''];
-        });
-        this.form = this.fb.group(group);
-    }
     onGlobalFilter(){
-        
+
     }
 
     onSave() {
         if (this.form.invalid) return;
         this.save.emit(this.form.value);
-        this.form.reset();
     }
 
     onEdit(row: any) {
@@ -88,7 +72,7 @@ export class MasterBasicSetup {
         this.edit.emit(row);
     }
 
-    onDelete(row: any) {
-        this.delete.emit(row);
-    }
+    onDelete(row: any, event: Event) {
+    this.delete.emit({ row, event });
+}
 }

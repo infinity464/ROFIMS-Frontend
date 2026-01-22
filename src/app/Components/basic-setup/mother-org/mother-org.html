@@ -1,1 +1,9 @@
-<app-master-basic-setup [config]="motherOrgConfig" [data]="motherOrgDate" (save)="submit($event)" (edit)="update($event)" (delete)="delete($event)"></app-master-basic-setup>
+<p-toast position="top-right"></p-toast>
+<p-confirm-dialog></p-confirm-dialog>
+<app-master-basic-setup [config]="motherOrgConfig"
+ [data]="motherOrgDate"
+  (save)="submit($event)"
+   (edit)="update($event)"
+    (delete)="delete($event.row, $event.event)"
+   [form]="motherOrgForm"
+    ></app-master-basic-setup>

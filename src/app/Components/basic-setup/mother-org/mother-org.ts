@@ -3,28 +3,61 @@ import { MasterConfig } from '../Models/master-basic-setup.model';
 import { MasterBasicSetup } from '../shared/master-basic-setup/master-basic-setup';
 import { MotherOrgService } from '../Services/mother-org-service';
 import { CommonCode } from '../Models/common-code';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { ConfirmationService, MessageService } from 'primeng/api';
+import { Toast } from "primeng/toast";
+import { ConfirmDialog } from "primeng/confirmdialog";
 @Component({
     selector: 'app-mother-org',
-    imports: [MasterBasicSetup],
+    imports: [MasterBasicSetup, Toast, ConfirmDialog],
     templateUrl: './mother-org.html',
-    styleUrl: './mother-org.scss'
+    styleUrl: './mother-org.scss',
+    providers: [ConfirmationService, MessageService]
 })
 export class MotherOrg implements OnInit {
     motherOrgDate: CommonCode[] = [];
     editingId: number | null = null;
-    constructor(private motherOrgService: MotherOrgService) {}
+    motherOrgForm!: FormGroup;
+
+    constructor(
+        private motherOrgService: MotherOrgService,
+        private messageService: MessageService,
+        private confirmationService: ConfirmationService,
+        private fb: FormBuilder
+    ) {}
 
     ngOnInit(): void {
+        this.initForm();
         this.getMotherOrg();
+    }
+
+    initForm() {
+        this.motherOrgForm = this.fb.group({
+            codeValueEN: ['', Validators.required],
+            codeValueBN: ['', Validators.required],
+            status: [true, Validators.required],
+            orgId: [0],
+            codeId: [0],
+            codeType: ['MotherOrg'],
+            commCode: [null],
+            displayCodeValueEN: [null],
+            displayCodeValueBN: [null],
+            parentCodeId: [null],
+            sortOrder: [null],
+            level: [null],
+            createdBy: [''],
+            createdDate: [''],
+            lastUpdatedBy: [''],
+            lastupdate: ['']
+        });
     }
 
     motherOrgConfig: MasterConfig = {
         title: 'Mother Org Setup',
-
         formFields: [
             {
                 name: 'codeValueEN',
-                label: 'Mother Org Name',
+                label: 'Mother Org Name (English)',
                 type: 'text',
                 required: true
             },
@@ -35,26 +68,24 @@ export class MotherOrg implements OnInit {
                 required: true
             },
             {
-                name: 'status', // ✅ FIXED
+                name: 'status',
                 label: 'Status',
                 type: 'select',
                 required: true,
-                default: true, // ✅ Active by default
+                default: true,
                 options: [
                     { label: 'Active', value: true },
                     { label: 'Inactive', value: false }
                 ]
             }
         ],
-
         tableColumns: [
-            { field: 'codeValueEN', header: 'Mother Org Name' },
-            { field: 'codeValueBN', header: 'Mother Org Name (Bangla)' },
-            { field: 'status', header: 'Status' }
+            { field: 'codeValueEN', header: 'Mother Org Name (EN)' },
+            { field: 'codeValueBN', header: 'Mother Org Name (BN)' },
+            { field: 'status', header: 'Status', type: 'boolean', trueLabel: 'Active', falseLabel: 'Inactive' },
+            { field: 'codeId', header: 'Code ID', hidden: true }
         ]
     };
-
-    genderData = [];
 
     getMotherOrg() {
         this.motherOrgService.getAll().subscribe({
@@ -69,12 +100,27 @@ export class MotherOrg implements OnInit {
     }
 
     submit(data: any) {
+        console.log('Form Data:', data);
+        if (this.motherOrgForm.invalid) {
+            this.motherOrgForm.markAllAsTouched();
+            return;
+        }
+
+        const currentUser = this.getCurrentUser();
+        const currentDateTime = new Date().toISOString();
+
         if (this.editingId) {
-            // Update existing record
-            this.motherOrgService.update(this.editingId, data).subscribe({
+            const updatePayload = {
+                ...this.motherOrgForm.value,
+                codeId: this.editingId,
+                lastUpdatedBy: currentUser,
+                lastupdate: currentDateTime
+            };
+
+            this.motherOrgService.update(updatePayload).subscribe({
                 next: (res) => {
                     console.log('Updated:', res);
-                    this.editingId = null;
+                    this.resetForm();
                     this.getMotherOrg();
                 },
                 error: (err) => {
@@ -83,9 +129,18 @@ export class MotherOrg implements OnInit {
             });
         } else {
             // Create new record
-            this.motherOrgService.create(data).subscribe({
+            const createPayload = {
+                ...this.motherOrgForm.value,
+                createdBy: currentUser,
+                createdDate: currentDateTime,
+                lastUpdatedBy: currentUser,
+                lastupdate: currentDateTime
+            };
+
+            this.motherOrgService.create(createPayload).subscribe({
                 next: (res) => {
                     console.log('Created:', res);
+                    this.resetForm();
                     this.getMotherOrg();
                 },
                 error: (err) => {
@@ -96,21 +151,64 @@ export class MotherOrg implements OnInit {
     }
 
     update(row: any) {
-        this.editingId = row.id;
+        this.editingId = row.codeId;
+        this.motherOrgForm.patchValue(row);
         console.log('Edit:', row);
     }
 
-    delete(row: any) {
-        if (confirm('Are you sure you want to delete this record?')) {
-            this.motherOrgService.delete(row.id).subscribe({
-                next: () => {
-                    console.log('Deleted successfully');
-                    this.getMotherOrg();
-                },
-                error: (err) => {
-                    console.error('Error deleting:', err);
+    delete(row: any, event: Event) {
+
+        this.confirmationService.confirm({
+            target: event.target as EventTarget,
+            message: 'Do you want to delete this record?',
+            header: 'Danger Zone',
+            icon: 'pi pi-info-circle',
+            rejectLabel: 'Cancel',
+            rejectButtonProps: {
+                label: 'Cancel',
+                severity: 'secondary',
+                outlined: true
+            },
+            acceptButtonProps: {
+                label: 'Delete',
+                severity: 'danger'
+            },
+
+            accept: () => {
+                try {
+                    this.motherOrgService.delete(row.codeId).subscribe({
+                        next: () => this.getMotherOrg(),
+                        error: (err) => console.error(err)
+                    });
+                    this.messageService.add({ severity: 'info', summary: 'Confirmed', detail: 'Record deleted' });
+                } catch (err) {
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete record' });
                 }
-            });
-        }
+            }
+        });
+    }
+
+    resetForm() {
+        this.editingId = null;
+        this.motherOrgForm.reset({
+            orgId: '',
+            codeId: 0,
+            codeType: 'MotherOrg',
+            status: true,
+            commCode: null,
+            displayCodeValueEN: null,
+            displayCodeValueBN: null,
+            parentCodeId: null,
+            sortOrder: 0,
+            level: null,
+            createdBy: '',
+            createdDate: '',
+            lastUpdatedBy: '',
+            lastupdate: ''
+        });
+    }
+
+    private getCurrentUser(): string {
+        return 'Admin';
     }
 }

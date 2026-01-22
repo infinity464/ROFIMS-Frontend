@@ -1,29 +1,54 @@
 <!-- FORM -->
 <p-fluid>
     <div class="card">
-        <div class="font-semibold text-xl">{{ config.title }}</div>
+        <div class="font-semibold text-xl mb-5">{{ config.title }}</div>
 
         <form [formGroup]="form" (ngSubmit)="onSave()">
-            <div class="flex gap-4">
+            <div class="flex gap-4 mb-4">
                 @for (field of config.formFields; track field.name) {
                 <div class="w-full">
-                    <label>{{ field.label }}</label>
+                    <label [for]="field.name" class="block mb-2">
+                        {{ field.label }}
+                        @if (field.required) {
+                        <span class="text-red-500">*</span>
+                        }
+                    </label>
 
                     @if (field.type === 'text') {
-                    <input pInputText [formControlName]="field.name" />
+                    <input pInputText [id]="field.name" [formControlName]="field.name"
+                        [placeholder]="'Enter ' + field.label" />
+                    <!-- Validation message for text -->
+                    @if (form.get(field.name)?.invalid && form.get(field.name)?.touched) {
+                    <small class="text-red-500 block mt-1">
+                        {{ field.label }} is required
+                    </small>
+                    }
                     } @else if (field.type === 'select') {
-                    <p-select [options]="field.options" optionLabel="label" optionValue="value" [formControlName]="field.name"> </p-select>
+                    <p-select [options]="field.options" optionLabel="label" optionValue="value"
+                        [formControlName]="field.name" [placeholder]="'Select ' + field.label">
+                    </p-select>
+                    <!-- Validation message for select -->
+                    @if (form.get(field.name)?.invalid && form.get(field.name)?.touched) {
+                    <small class="text-red-500 block mt-1">
+                        {{ field.label }} is required
+                    </small>
+                    }
                     }
                 </div>
                 }
             </div>
 
-            <button pButton label="Save"></button>
+            <div class="flex gap-2">
+                <button pButton type="submit" label="Save" icon="pi pi-check" [disabled]="form.invalid"></button>
+
+                <button pButton type="button" label="Reset" icon="pi pi-times" severity="secondary"
+                    ></button>
+            </div>
         </form>
     </div>
 </p-fluid>
 
-<!-- TABLE -->
+
 <div class="card mt-4">
     <div class="flex justify-between items-center flex-column sm:flex-row">
         <p-iconfield iconPosition="left" class="ml-auto">
@@ -37,7 +62,8 @@
         <ng-template pTemplate="header">
             <tr>
                 @for (col of config.tableColumns; track col.field) {
-                <th>{{ col.header }}</th>
+                    @if (!col.hidden) {
+                <th>{{ col.header }}</th>}
                 }
                 <th>Action</th>
             </tr>
@@ -46,11 +72,27 @@
         <ng-template pTemplate="body" let-row>
             <tr>
                 @for (col of config.tableColumns; track col.field) {
-                <td>{{ row[col.field] }}</td>
+                    @if (!col.hidden) {
+               <td>
+    @if (col.type === 'boolean') {
+        <span
+            [ngClass]="{
+                'text-green-600 font-semibold': row[col.field],
+                'text-red-600 font-semibold': !row[col.field]
+            }">
+            {{ row[col.field] ? col.trueLabel : col.falseLabel }}
+        </span>
+    }
+    @else {
+        {{ row[col.field] }}
+    }
+</td>
+
+                    }
                 }
                 <td>
-                    <button pButton icon="pi pi-pencil" (click)="onEdit(row)"></button>
-                    <button pButton icon="pi pi-trash" (click)="onDelete(row)" class="p-button-danger"></button>
+                    <button class="mx-2" pButton icon="pi pi-pencil" (click)="onEdit(row)"></button>
+                    <button pButton icon="pi pi-trash" (click)="onDelete(row, $event)" class="p-button-danger"></button>
                 </td>
             </tr>
         </ng-template>

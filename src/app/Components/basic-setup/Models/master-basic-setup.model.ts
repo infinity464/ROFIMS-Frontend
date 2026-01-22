@@ -10,10 +10,15 @@ export interface MasterFormField {
     type: 'text' | 'select';
     options?: any[];
     required: boolean;
-    default?: boolean
+    default?: boolean;
+
 }
 
 export interface MasterTableColumn {
     field: string;
     header: string;
+    hidden?: boolean;
+    type?: 'boolean';
+    trueLabel?: string;
+    falseLabel?: string;
 }

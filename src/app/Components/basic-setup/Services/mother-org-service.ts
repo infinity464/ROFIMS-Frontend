@@ -21,14 +21,15 @@ export class MotherOrgService {
     }
 
     create(data: CommonCode): Observable<CommonCode> {
-        return this.http.post<CommonCode>(`${this.apiUrl}/CommonCode`, data);
+        return this.http.post<CommonCode>(`${this.apiUrl}/CommonCode/SaveAsyn`, data);
     }
 
-    update(id: number, data: CommonCode): Observable<CommonCode> {
-        return this.http.put<CommonCode>(`${this.apiUrl}/CommonCode/${id}`, data);
+    update(data: CommonCode): Observable<CommonCode> {
+        return this.http.put<CommonCode>(`${this.apiUrl}/CommonCode/UpdateAsyn
+`, data);
     }
 
     delete(id: number): Observable<void> {
-        return this.http.delete<void>(`${this.apiUrl}/CommonCode/${id}`);
+        return this.http.delete<void>(`${this.apiUrl}/CommonCode/DeleteAsyn/${id}`);
     }
 }
