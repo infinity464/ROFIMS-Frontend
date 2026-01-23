@@ -6,7 +6,7 @@ import { HttpClient } from '@angular/common/http';
 @Injectable({
     providedIn: 'root'
 })
-export class Employeeinfo {
+export class EmployeeinfoService {
     private empApi = `${environment.apis.core}`;
     constructor(private http: HttpClient) {}
 

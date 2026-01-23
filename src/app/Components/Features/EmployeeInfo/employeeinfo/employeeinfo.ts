@@ -14,7 +14,8 @@ import { DatePickerModule } from 'primeng/datepicker';
 
 
 import { AddressSectionComponent } from '../../Shared/address-section/address-section';
-
+import { EmployeeinfoService } from '../Services/employeeinfo.service';
+import { EmployeeInfoModel } from '../model/employeeinfo.model';
 @Component({
   selector: 'app-employeeinfo',
   standalone: true,
@@ -48,7 +49,7 @@ export class Employeeinfo implements OnInit {
     { label: 'Air Force', value: 3 },
     { label: 'Police', value: 4 },
   ];
-
+  employee: EmployeeInfoModel[]=[];
   lastUnitOrganizations = [
     { label: 'Unit A', value: 1 },
     { label: 'Unit B', value: 2 },
@@ -125,14 +126,17 @@ export class Employeeinfo implements OnInit {
 
 
   serviceRecords: any[] = [];
+  loading: boolean = false;
+  errorMessage: string='error';
 
-  constructor(private fb: FormBuilder) {}
+  constructor(private fb: FormBuilder, private employeeService: EmployeeinfoService) {}
 
   ngOnInit(): void {
     this.buildForm();
     this.handleSameAsPermanent();
     this.handleWifeSameAsPermanent();
     this.handleRelieverToggle();
+    this.loadEmployeeInfo();
   }
 
   private buildForm(): void {
@@ -202,6 +206,22 @@ export class Employeeinfo implements OnInit {
       relieverRabId: [''],
     });
   }
+
+ loadEmployeeInfo(): void {
+    this.employeeService.getAll().subscribe({
+      next: (res) => {
+        this.employee = res;
+        console.log(this.employee,'hello')
+        this.loading = false;
+      },
+      error: (err) => {
+        this.loading = false;
+        this.errorMessage = err?.error?.message || 'Failed to load employee info';
+        console.error(err);
+      }
+    });
+  }
+
 
   private handleSameAsPermanent(): void {
     this.form.get('sameAsPermanent')?.valueChanges.subscribe((checked: boolean) => {
