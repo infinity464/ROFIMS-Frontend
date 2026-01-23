@@ -4,7 +4,7 @@
         <div class="font-semibold text-xl mb-5">{{ config.title }}</div>
 
         <form [formGroup]="form" (ngSubmit)="onSave()">
-            <div class="flex gap-4 mb-4">
+            <div class="flex flex-col md:flex-row gap-4 mb-4">
                 @for (field of config.formFields; track field.name) {
                 <div class="w-full">
                     <label [for]="field.name" class="block mb-2">
@@ -16,7 +16,7 @@
 
                     @if (field.type === 'text') {
                     <input pInputText [id]="field.name" [formControlName]="field.name"
-                        [placeholder]="'Enter ' + field.label" />
+                        [placeholder]="'Enter ' + field.label" class="w-full" />
                     <!-- Validation message for text -->
                     @if (form.get(field.name)?.invalid && form.get(field.name)?.touched) {
                     <small class="text-red-500 block mt-1">
@@ -25,7 +25,7 @@
                     }
                     } @else if (field.type === 'select') {
                     <p-select [options]="field.options" optionLabel="label" optionValue="value"
-                        [formControlName]="field.name" [placeholder]="'Select ' + field.label">
+                        [formControlName]="field.name" [placeholder]="'Select ' + field.label" styleClass="w-full">
                     </p-select>
                     <!-- Validation message for select -->
                     @if (form.get(field.name)?.invalid && form.get(field.name)?.touched) {
@@ -38,11 +38,12 @@
                 }
             </div>
 
-            <div class="flex gap-2">
-                <button pButton type="submit" label="Save" icon="pi pi-check" [disabled]="form.invalid"></button>
+            <div class="flex flex-col sm:flex-row gap-2 justify-end">
+                <p-button type="submit" [label]="editingId ? 'Update' : 'Save'" [disabled]="form.invalid" [fluid]="false"></p-button>
+                <p-button type="button"  label="Reset" severity="secondary"
+                    [fluid]="false" (click)="reset.emit()">
+                </p-button>
 
-                <button pButton type="button" label="Reset" icon="pi pi-times" severity="secondary"
-                    ></button>
             </div>
         </form>
     </div>
@@ -55,14 +56,16 @@
             <p-inputicon>
                 <i class="pi pi-search"></i>
             </p-inputicon>
-            <input pInputText type="text"  placeholder="Search keyword" />
+            <input pInputText type="text" placeholder="Search keyword" (input)="onSearch($event.target.value)" />
         </p-iconfield>
+
     </div>
-    <p-table [value]="data" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]">
+    <p-table [value]="data" [lazy]="true" [paginator]="true" [first]="first" [rows]="rows" [totalRecords]="totalRecords"
+        [rowsPerPageOptions]="[10, 25, 50]" [loading]="loading" (onLazyLoad)="onLazyLoad($event)">
         <ng-template pTemplate="header">
             <tr>
                 @for (col of config.tableColumns; track col.field) {
-                    @if (!col.hidden) {
+                @if (!col.hidden) {
                 <th>{{ col.header }}</th>}
                 }
                 <th>Action</th>
@@ -72,23 +75,22 @@
         <ng-template pTemplate="body" let-row>
             <tr>
                 @for (col of config.tableColumns; track col.field) {
-                    @if (!col.hidden) {
-               <td>
-    @if (col.type === 'boolean') {
-        <span
-            [ngClass]="{
+                @if (!col.hidden) {
+                <td>
+                    @if (col.type === 'boolean') {
+                    <span [ngClass]="{
                 'text-green-600 font-semibold': row[col.field],
                 'text-red-600 font-semibold': !row[col.field]
             }">
-            {{ row[col.field] ? col.trueLabel : col.falseLabel }}
-        </span>
-    }
-    @else {
-        {{ row[col.field] }}
-    }
-</td>
-
+                        {{ row[col.field] ? col.trueLabel : col.falseLabel }}
+                    </span>
                     }
+                    @else {
+                    {{ row[col.field] }}
+                    }
+                </td>
+
+                }
                 }
                 <td>
                     <button class="mx-2" pButton icon="pi pi-pencil" (click)="onEdit(row)"></button>

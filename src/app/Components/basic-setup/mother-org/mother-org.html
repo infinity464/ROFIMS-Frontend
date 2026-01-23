@@ -1,9 +1,8 @@
-<!-- <p-toast position="top-right"></p-toast>
-<p-confirm-dialog></p-confirm-dialog> -->
-<app-master-basic-setup [config]="motherOrgConfig"
- [data]="motherOrgDate"
-  (save)="submit($event)"
-   (edit)="update($event)"
-    (delete)="delete($event.row, $event.event)"
-   [form]="motherOrgForm"
-    ></app-master-basic-setup>
+<p-toast position="top-right"></p-toast>
+<p-confirm-dialog></p-confirm-dialog>
+
+<app-master-basic-setup [config]="motherOrgConfig" [data]="motherOrgDate" [form]="motherOrgForm" [first]="first"
+    [rows]="rows" [totalRecords]="totalRecords" [loading]="loading" (lazyLoad)="getMotherOrgWithPaging($event)"
+    (save)="submit($event)" (edit)="update($event)" (delete)="delete($event.row, $event.event)" (reset)="resetForm()"
+    (search)="onSearch($event)" [editingId]="editingId">
+</app-master-basic-setup>

@@ -19,6 +19,7 @@ import { IconFieldModule } from 'primeng/iconfield';
 import { TagModule } from 'primeng/tag';
 import { ReactiveFormsModule } from '@angular/forms';
 import { MasterConfig } from '../../Models/master-basic-setup.model';
+import { debounceTime, distinctUntilChanged, Subject } from 'rxjs';
 
 @Component({
     selector: 'app-master-basic-setup',
@@ -54,6 +55,7 @@ export class MasterBasicSetup {
     @Input() config!: MasterConfig;
     @Input() data: any[] = [];
     @Input() form!: FormGroup;
+    @Input() first = 0;
 
     @Input() totalRecords = 0;
     @Input() rows = 10;
@@ -63,6 +65,29 @@ export class MasterBasicSetup {
     @Output() edit = new EventEmitter<any>();
     @Output() delete = new EventEmitter<any>();
     @Output() lazyLoad = new EventEmitter<any>();
+    @Output() reset = new EventEmitter<void>();
+    @Output() search = new EventEmitter<string>();
+    @Input() editingId: number | null = null;
+
+
+    searchSubject = new Subject<string>();
+
+
+
+    ngOnInit() {
+        this.searchSubject
+            .pipe(
+                debounceTime(500), // wait 300ms after user stops typing
+                distinctUntilChanged()
+            )
+            .subscribe((keyword) => {
+                this.search.emit(keyword); // emit to parent
+            });
+    }
+
+    onSearch(value: string) {
+        this.searchSubject.next(value);
+    }
 
     onSave() {
         if (this.form.invalid) return;
@@ -81,4 +106,3 @@ export class MasterBasicSetup {
         this.lazyLoad.emit(event);
     }
 }
-

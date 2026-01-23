@@ -11,7 +11,8 @@ import { PagedResponse } from '@/Core/Models/Pagination';
 export class MotherOrgService {
     private http = inject(HttpClient);
     private apiUrl = `${environment.apis.core}/rab/api/CommonCode`;
-    private codeType = 'location';
+    private codeType = 'MotherOrg';
+
 
     getAll(): Observable<CommonCode[]> {
         return this.http.get<CommonCode[]>(`${this.apiUrl}/GetByTypeAsyn/${this.codeType}`);
@@ -19,6 +20,10 @@ export class MotherOrgService {
 
     getAllWithPaging(pageNumber: number, pageSize: number): Observable<PagedResponse<CommonCode>> {
         return this.http.get<PagedResponse<CommonCode>>(`${this.apiUrl}/GetPaginatedOnConditionAsyn/${this.codeType}?page_no=${pageNumber}&row_per_page=${pageSize}`);
+    }
+
+    getByKeyordWithPaging(keyword: string, pageNumber: number, pageSize: number): Observable<PagedResponse<CommonCode>> {
+        return this.http.get<PagedResponse<CommonCode>>(`${this.apiUrl}/GetPaginatedOnSearchAsyn/${this.codeType}?searchValue=${keyword}&page_no=${pageNumber}&row_per_page=${pageSize}`);
     }
 
     getById(id: number): Observable<CommonCode> {
