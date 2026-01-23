@@ -2,7 +2,7 @@
   <p-card styleClass="shadow-3 border-round-3xl overflow-hidden">
 
     <!-- HEADER with gradient background -->
-    <div class="flex align-items-center justify-content-between p-5 bg-primary-50 border-bottom-1 border-200">
+    <div class="flex gap-4">
       <div>
         <h2 class="m-0 text-3xl font-bold text-primary-900 letter-spacing-tight">DATA ENTRY</h2>
         <p class="m-0 mt-1 text-primary-600 font-medium">New Joining & Re-Joining in RAB</p>
@@ -386,237 +386,71 @@
 
       <p-divider></p-divider>
 
-      <!-- ================= OWN PERMANENT ADDRESS ================= -->
-      <div class="mb-5">
-        <div class="flex align-items-center gap-2 mb-4">
-          <i class="pi pi-home text-primary-600 text-2xl"></i>
-          <h3 class="m-0 text-xl font-bold text-900">Own Permanent Address</h3>
-        </div>
-
-        <div class="surface-50 border-round-2xl p-4">
-          <div class="flex flex-wrap gap-3 mb-4">
-            <div class="flex-1" style="min-width: 200px;">
-              <label class="font-semibold block mb-2 text-700">Division <span class="text-red-500">*</span></label>
-              <p-select [options]="divisions" optionLabel="label" optionValue="value"
-                placeholder="Select Division" styleClass="w-full" formControlName="perDivision"></p-select>
-            </div>
-
-            <div class="flex-1" style="min-width: 200px;">
-              <label class="font-semibold block mb-2 text-700">District <span class="text-red-500">*</span></label>
-              <p-select [options]="districts" optionLabel="label" optionValue="value"
-                placeholder="Select District" styleClass="w-full" formControlName="perDistrict"></p-select>
-            </div>
-
-            <div class="flex-1" style="min-width: 200px;">
-              <label class="font-semibold block mb-2 text-700">Upazila/Thana <span class="text-red-500">*</span></label>
-              <p-select [options]="upazilas" optionLabel="label" optionValue="value"
-                placeholder="Select Upazila" styleClass="w-full" formControlName="perUpazila"></p-select>
-            </div>
-
-            <div class="flex-1" style="min-width: 200px;">
-              <label class="font-semibold block mb-2 text-700">Post Office <span class="text-red-500">*</span></label>
-              <p-select [options]="postOffices" optionLabel="label" optionValue="value"
-                placeholder="Select Post Office" styleClass="w-full" formControlName="perPostOffice"></p-select>
-            </div>
-          </div>
-
-          <div class="flex flex-wrap gap-3 mb-4">
-            <div class="flex-1" style="min-width: 300px;">
-              <label class="font-semibold block mb-2 text-700">Village/Area (English)</label>
-              <input pInputText class="w-full" placeholder="Enter village/area" formControlName="perVillageEnglish" />
-            </div>
-
-            <div class="flex-1" style="min-width: 300px;">
-              <label class="font-semibold block mb-2 text-700">Village/Area (Bangla)</label>
-              <input pInputText class="w-full" placeholder="গ্রাম/এলাকা লিখুন" formControlName="perVillageBangla" />
-            </div>
-          </div>
-
-          <div>
-            <label class="font-semibold block mb-2 text-700">House & Road No</label>
-            <input pInputText class="w-full" placeholder="Enter house and road number" formControlName="perHouseRoad" />
-          </div>
-        </div>
-      </div>
+      <!-- ================= OWN PERMANENT ADDRESS (Using Shared Component) ================= -->
+      <app-address-section
+        [form]="form"
+        title="Own Permanent Address"
+        iconClass="pi pi-home text-primary-600 text-2xl"
+        prefix="per"
+        [divisions]="divisions"
+        [districts]="districts"
+        [upazilas]="upazilas"
+        [postOffices]="postOffices"
+        [showRequiredIndicators]="true"
+      ></app-address-section>
 
       <p-divider></p-divider>
 
-      <!-- ================= OWN PRESENT ADDRESS ================= -->
-      <div class="mb-5">
-        <div class="flex align-items-center justify-content-between mb-4">
-          <div class="flex align-items-center gap-2">
-            <i class="pi pi-map-marker text-primary-600 text-2xl"></i>
-            <h3 class="m-0 text-xl font-bold text-900">Own Present Address (Optional)</h3>
-          </div>
-
-          <div class="flex align-items-center gap-2 surface-100 border-round-lg px-3 py-2">
-            <p-checkbox formControlName="sameAsPermanent" [binary]="true" inputId="sameAsPermanent"></p-checkbox>
-            <label for="sameAsPermanent" class="cursor-pointer font-medium text-700">Same as Permanent Address</label>
-          </div>
-        </div>
-
-        <div class="surface-50 border-round-2xl p-4">
-          <div class="flex flex-wrap gap-3 mb-4">
-            <div class="flex-1" style="min-width: 200px;">
-              <label class="font-semibold block mb-2 text-700">Division</label>
-              <p-select [options]="divisions" optionLabel="label" optionValue="value"
-                placeholder="Select Division" styleClass="w-full" formControlName="preDivision"></p-select>
-            </div>
-
-            <div class="flex-1" style="min-width: 200px;">
-              <label class="font-semibold block mb-2 text-700">District</label>
-              <p-select [options]="districts" optionLabel="label" optionValue="value"
-                placeholder="Select District" styleClass="w-full" formControlName="preDistrict"></p-select>
-            </div>
-
-            <div class="flex-1" style="min-width: 200px;">
-              <label class="font-semibold block mb-2 text-700">Upazila/Thana</label>
-              <p-select [options]="upazilas" optionLabel="label" optionValue="value"
-                placeholder="Select Upazila" styleClass="w-full" formControlName="preUpazila"></p-select>
-            </div>
-
-            <div class="flex-1" style="min-width: 200px;">
-              <label class="font-semibold block mb-2 text-700">Post Office</label>
-              <p-select [options]="postOffices" optionLabel="label" optionValue="value"
-                placeholder="Select Post Office" styleClass="w-full" formControlName="prePostOffice"></p-select>
-            </div>
-          </div>
-
-          <div class="flex flex-wrap gap-3 mb-4">
-            <div class="flex-1" style="min-width: 300px;">
-              <label class="font-semibold block mb-2 text-700">Village/Area (English)</label>
-              <input pInputText class="w-full" placeholder="Enter village/area" formControlName="preVillageEnglish" />
-            </div>
-
-            <div class="flex-1" style="min-width: 300px;">
-              <label class="font-semibold block mb-2 text-700">Village/Area (Bangla)</label>
-              <input pInputText class="w-full" placeholder="গ্রাম/এলাকা লিখুন" formControlName="preVillageBangla" />
-            </div>
-          </div>
-
-          <div>
-            <label class="font-semibold block mb-2 text-700">House & Road No</label>
-            <input pInputText class="w-full" placeholder="Enter house and road number" formControlName="preHouseRoad" />
-          </div>
-        </div>
-      </div>
+      <!-- ================= OWN PRESENT ADDRESS (Using Shared Component) ================= -->
+      <app-address-section
+        [form]="form"
+        title="Own Present Address (Optional)"
+        iconClass="pi pi-map-marker text-primary-600 text-2xl"
+        prefix="pre"
+        [divisions]="divisions"
+        [districts]="districts"
+        [upazilas]="upazilas"
+        [postOffices]="postOffices"
+        [showRequiredIndicators]="false"
+        [showCheckbox]="true"
+        checkboxControlName="sameAsPermanent"
+        checkboxId="sameAsPermanent"
+        checkboxLabel="Same as Permanent Address"
+      ></app-address-section>
 
       <p-divider></p-divider>
 
-      <!-- ================= WIFE PERMANENT ADDRESS ================= -->
-      <div class="mb-5">
-        <div class="flex align-items-center gap-2 mb-4">
-          <i class="pi pi-heart text-pink-600 text-2xl"></i>
-          <h3 class="m-0 text-xl font-bold text-900">Wife Permanent Address</h3>
-        </div>
-
-        <div class="surface-50 border-round-2xl p-4">
-          <div class="flex flex-wrap gap-3 mb-4">
-            <div class="flex-1" style="min-width: 200px;">
-              <label class="font-semibold block mb-2 text-700">Division</label>
-              <p-select [options]="divisions" optionLabel="label" optionValue="value"
-                placeholder="Select Division" styleClass="w-full" formControlName="wifePerDivision"></p-select>
-            </div>
-
-            <div class="flex-1" style="min-width: 200px;">
-              <label class="font-semibold block mb-2 text-700">District</label>
-              <p-select [options]="districts" optionLabel="label" optionValue="value"
-                placeholder="Select District" styleClass="w-full" formControlName="wifePerDistrict"></p-select>
-            </div>
-
-            <div class="flex-1" style="min-width: 200px;">
-              <label class="font-semibold block mb-2 text-700">Upazila/Thana</label>
-              <p-select [options]="upazilas" optionLabel="label" optionValue="value"
-                placeholder="Select Upazila" styleClass="w-full" formControlName="wifePerUpazila"></p-select>
-            </div>
-
-            <div class="flex-1" style="min-width: 200px;">
-              <label class="font-semibold block mb-2 text-700">Post Office</label>
-              <p-select [options]="postOffices" optionLabel="label" optionValue="value"
-                placeholder="Select Post Office" styleClass="w-full" formControlName="wifePerPostOffice"></p-select>
-            </div>
-          </div>
-
-          <div class="flex flex-wrap gap-3 mb-4">
-            <div class="flex-1" style="min-width: 300px;">
-              <label class="font-semibold block mb-2 text-700">Village/Area (English)</label>
-              <input pInputText class="w-full" placeholder="Enter village/area" formControlName="wifePerVillageEnglish" />
-            </div>
-
-            <div class="flex-1" style="min-width: 300px;">
-              <label class="font-semibold block mb-2 text-700">Village/Area (Bangla)</label>
-              <input pInputText class="w-full" placeholder="গ্রাম/এলাকা লিখুন" formControlName="wifePerVillageBangla" />
-            </div>
-          </div>
-
-          <div>
-            <label class="font-semibold block mb-2 text-700">House & Road No</label>
-            <input pInputText class="w-full" placeholder="Enter house and road number" formControlName="wifePerHouseRoad" />
-          </div>
-        </div>
-      </div>
+      <!-- ================= WIFE PERMANENT ADDRESS (Using Shared Component) ================= -->
+      <app-address-section
+        [form]="form"
+        title="Wife Permanent Address"
+        iconClass="pi pi-heart text-pink-600 text-2xl"
+        prefix="wifePer"
+        [divisions]="divisions"
+        [districts]="districts"
+        [upazilas]="upazilas"
+        [postOffices]="postOffices"
+        [showRequiredIndicators]="false"
+      ></app-address-section>
 
       <p-divider></p-divider>
 
-      <!-- ================= WIFE PRESENT ADDRESS ================= -->
-      <div class="mb-5">
-        <div class="flex align-items-center justify-content-between mb-4">
-          <div class="flex align-items-center gap-2">
-            <i class="pi pi-map-marker text-pink-600 text-2xl"></i>
-            <h3 class="m-0 text-xl font-bold text-900">Wife Present Address (Optional)</h3>
-          </div>
-
-          <div class="flex align-items-center gap-2 surface-100 border-round-lg px-3 py-2">
-            <p-checkbox formControlName="wifeSameAsPermanent" [binary]="true" inputId="wifeSameAsPermanent"></p-checkbox>
-            <label for="wifeSameAsPermanent" class="cursor-pointer font-medium text-700">Same as Permanent Address</label>
-          </div>
-        </div>
-
-        <div class="surface-50 border-round-2xl p-4">
-          <div class="flex flex-wrap gap-3 mb-4">
-            <div class="flex-1" style="min-width: 200px;">
-              <label class="font-semibold block mb-2 text-700">Division</label>
-              <p-select [options]="divisions" optionLabel="label" optionValue="value"
-                placeholder="Select Division" styleClass="w-full" formControlName="wifePreDivision"></p-select>
-            </div>
-
-            <div class="flex-1" style="min-width: 200px;">
-              <label class="font-semibold block mb-2 text-700">District</label>
-              <p-select [options]="districts" optionLabel="label" optionValue="value"
-                placeholder="Select District" styleClass="w-full" formControlName="wifePreDistrict"></p-select>
-            </div>
-
-            <div class="flex-1" style="min-width: 200px;">
-              <label class="font-semibold block mb-2 text-700">Upazila/Thana</label>
-              <p-select [options]="upazilas" optionLabel="label" optionValue="value"
-                placeholder="Select Upazila" styleClass="w-full" formControlName="wifePreUpazila"></p-select>
-            </div>
-
-            <div class="flex-1" style="min-width: 200px;">
-              <label class="font-semibold block mb-2 text-700">Post Office</label>
-              <p-select [options]="postOffices" optionLabel="label" optionValue="value"
-                placeholder="Select Post Office" styleClass="w-full" formControlName="wifePrePostOffice"></p-select>
-            </div>
-          </div>
-
-          <div class="flex flex-wrap gap-3 mb-4">
-            <div class="flex-1" style="min-width: 300px;">
-              <label class="font-semibold block mb-2 text-700">Village/Area (English)</label>
-              <input pInputText class="w-full" placeholder="Enter village/area" formControlName="wifePreVillageEnglish" />
-            </div>
-
-            <div class="flex-1" style="min-width: 300px;">
-              <label class="font-semibold block mb-2 text-700">Village/Area (Bangla)</label>
-              <input pInputText class="w-full" placeholder="গ্রাম/এলাকা লিখুন" formControlName="wifePreVillageBangla" />
-            </div>
-          </div>
-
-          <div>
-            <label class="font-semibold block mb-2 text-700">House & Road No</label>
-            <input pInputText class="w-full" placeholder="Enter house and road number" formControlName="wifePreHouseRoad" />
-          </div>
-        </div>
-      </div>
+      <!-- ================= WIFE PRESENT ADDRESS (Using Shared Component) ================= -->
+      <app-address-section
+        [form]="form"
+        title="Wife Present Address (Optional)"
+        iconClass="pi pi-map-marker text-pink-600 text-2xl"
+        prefix="wifePre"
+        [divisions]="divisions"
+        [districts]="districts"
+        [upazilas]="upazilas"
+        [postOffices]="postOffices"
+        [showRequiredIndicators]="false"
+        [showCheckbox]="true"
+        checkboxControlName="wifeSameAsPermanent"
+        checkboxId="wifeSameAsPermanent"
+        checkboxLabel="Same as Permanent Address"
+      ></app-address-section>
 
       <p-divider></p-divider>
 
@@ -681,7 +515,7 @@
       </div>
 
       <!-- SUBMIT -->
-      <div class="flex justify-content-end gap-3 mt-5 pt-4 border-top-1 border-200">
+      <div class="flex gap-4">
         <button
           pButton
           type="button"

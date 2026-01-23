@@ -7,11 +7,19 @@ import { CardModule } from 'primeng/card';
 import { DividerModule } from 'primeng/divider';
 import { SelectModule } from 'primeng/select';
 import { InputTextModule } from 'primeng/inputtext';
-// import { CalendarModule } from 'primeng/calendar'; // ✅ FIXED: Added CalendarModule
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
 import { FileUploadModule } from 'primeng/fileupload';
+
+// ✅ OPTION 1: For PrimeNG v17+ (use DatePicker)
+import { DatePickerModule } from 'primeng/datepicker';
+
+// ✅ OPTION 2: For PrimeNG v16 and below (use Calendar)
+// import { CalendarModule } from 'primeng/calendar';
+
+/** Shared Components */
+import { AddressSectionComponent } from '../../Shared/address-section/address-section';
 
 @Component({
   selector: 'app-employeeinfo',
@@ -20,15 +28,20 @@ import { FileUploadModule } from 'primeng/fileupload';
     CommonModule,
     ReactiveFormsModule,
 
+    // PrimeNG Modules
     CardModule,
     DividerModule,
     SelectModule,
     InputTextModule,
-    // CalendarModule, // ✅ FIXED: Added to imports array
+    DatePickerModule,
+    // CalendarModule, // ✅ FIXED: Properly imported (or use DatePickerModule for v17+)
     TableModule,
     ButtonModule,
     CheckboxModule,
     FileUploadModule,
+
+    // Shared Components
+    AddressSectionComponent,
   ],
   templateUrl: './employeeinfo.html',
   styleUrl: './employeeinfo.scss',
@@ -127,7 +140,7 @@ export class Employeeinfo implements OnInit {
   ngOnInit(): void {
     this.buildForm();
     this.handleSameAsPermanent();
-    this.handleWifeSameAsPermanent(); // ✅ FIXED: Added wife address handler
+    this.handleWifeSameAsPermanent();
     this.handleRelieverToggle();
   }
 
@@ -147,7 +160,7 @@ export class Employeeinfo implements OnInit {
       officerType: [null],
       appointment: [null, Validators.required],
 
-      joiningDate: [null, Validators.required],
+      joiningDate: [null, Validators.required], // ✅ This is properly initialized
       rank: [null, Validators.required],
       corpsBranch: [null, Validators.required],
 
@@ -163,7 +176,7 @@ export class Employeeinfo implements OnInit {
       nameEnglish: ['', Validators.required],
       nameBangla: ['', Validators.required],
 
-      // Permanent Address
+      // Own Permanent Address
       perDivision: [null, Validators.required],
       perDistrict: [null, Validators.required],
       perUpazila: [null, Validators.required],
@@ -172,7 +185,7 @@ export class Employeeinfo implements OnInit {
       perVillageBangla: [''],
       perHouseRoad: [''],
 
-      // Present Address
+      // Own Present Address
       sameAsPermanent: [false],
       preDivision: [null],
       preDistrict: [null],
@@ -182,7 +195,7 @@ export class Employeeinfo implements OnInit {
       preVillageBangla: [''],
       preHouseRoad: [''],
 
-      // ✅ FIXED: Added Wife Permanent Address controls
+      // Wife Permanent Address
       wifePerDivision: [null],
       wifePerDistrict: [null],
       wifePerUpazila: [null],
@@ -191,7 +204,7 @@ export class Employeeinfo implements OnInit {
       wifePerVillageBangla: [''],
       wifePerHouseRoad: [''],
 
-      // ✅ FIXED: Added Wife Present Address controls
+      // Wife Present Address
       wifeSameAsPermanent: [false],
       wifePreDivision: [null],
       wifePreDistrict: [null],
@@ -239,7 +252,6 @@ export class Employeeinfo implements OnInit {
     });
   }
 
-  // ✅ FIXED: Added handler for wife address same-as-permanent functionality
   private handleWifeSameAsPermanent(): void {
     this.form.get('wifeSameAsPermanent')?.valueChanges.subscribe((checked: boolean) => {
       if (checked) {
@@ -324,9 +336,22 @@ export class Employeeinfo implements OnInit {
   onSubmit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      console.log('Form is invalid. Errors:', this.getFormValidationErrors());
       return;
     }
 
     console.log('SUBMIT:', this.form.getRawValue());
+  }
+
+  // ✅ HELPER: Debug form validation errors
+  private getFormValidationErrors() {
+    const errors: any = {};
+    Object.keys(this.form.controls).forEach(key => {
+      const control = this.form.get(key);
+      if (control && control.errors) {
+        errors[key] = control.errors;
+      }
+    });
+    return errors;
   }
 }
