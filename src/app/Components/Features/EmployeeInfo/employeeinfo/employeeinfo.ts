@@ -1,8 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-
-/** PrimeNG */
 import { CardModule } from 'primeng/card';
 import { DividerModule } from 'primeng/divider';
 import { SelectModule } from 'primeng/select';
@@ -12,13 +10,9 @@ import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
 import { FileUploadModule } from 'primeng/fileupload';
 
-// ✅ OPTION 1: For PrimeNG v17+ (use DatePicker)
 import { DatePickerModule } from 'primeng/datepicker';
 
-// ✅ OPTION 2: For PrimeNG v16 and below (use Calendar)
-// import { CalendarModule } from 'primeng/calendar';
 
-/** Shared Components */
 import { AddressSectionComponent } from '../../Shared/address-section/address-section';
 
 @Component({
@@ -28,19 +22,18 @@ import { AddressSectionComponent } from '../../Shared/address-section/address-se
     CommonModule,
     ReactiveFormsModule,
 
-    // PrimeNG Modules
+    
     CardModule,
     DividerModule,
     SelectModule,
     InputTextModule,
     DatePickerModule,
-    // CalendarModule, // ✅ FIXED: Properly imported (or use DatePickerModule for v17+)
+    
     TableModule,
     ButtonModule,
     CheckboxModule,
     FileUploadModule,
 
-    // Shared Components
     AddressSectionComponent,
   ],
   templateUrl: './employeeinfo.html',
@@ -49,7 +42,6 @@ import { AddressSectionComponent } from '../../Shared/address-section/address-se
 export class Employeeinfo implements OnInit {
   form!: FormGroup;
 
-  // Search dropdown data
   motherOrganizations = [
     { label: 'Army', value: 1 },
     { label: 'Navy', value: 2 },
@@ -57,7 +49,6 @@ export class Employeeinfo implements OnInit {
     { label: 'Police', value: 4 },
   ];
 
-  // Form dropdown data
   lastUnitOrganizations = [
     { label: 'Unit A', value: 1 },
     { label: 'Unit B', value: 2 },
@@ -111,7 +102,7 @@ export class Employeeinfo implements OnInit {
     { label: 'No', value: false },
   ];
 
-  // Address dropdowns
+ 
   divisions = [
     { label: 'Dhaka', value: 1 },
     { label: 'Chattogram', value: 2 },
@@ -132,7 +123,7 @@ export class Employeeinfo implements OnInit {
     { label: 'Uttara', value: 2 },
   ];
 
-  // Table data
+
   serviceRecords: any[] = [];
 
   constructor(private fb: FormBuilder) {}
@@ -146,12 +137,9 @@ export class Employeeinfo implements OnInit {
 
   private buildForm(): void {
     this.form = this.fb.group({
-      // Search Inputs
       motherOrganization: [null],
       serviceId: [''],
       nidNo: [''],
-
-      // Main Form
       motherOrganizationForm: [null, Validators.required],
       lastUnitMotherOrg: [null, Validators.required],
       lastMotherUnitLocation: ['', Validators.required],
@@ -160,7 +148,7 @@ export class Employeeinfo implements OnInit {
       officerType: [null],
       appointment: [null, Validators.required],
 
-      joiningDate: [null, Validators.required], // ✅ This is properly initialized
+      joiningDate: [null, Validators.required], 
       rank: [null, Validators.required],
       corpsBranch: [null, Validators.required],
 
@@ -176,7 +164,6 @@ export class Employeeinfo implements OnInit {
       nameEnglish: ['', Validators.required],
       nameBangla: ['', Validators.required],
 
-      // Own Permanent Address
       perDivision: [null, Validators.required],
       perDistrict: [null, Validators.required],
       perUpazila: [null, Validators.required],
@@ -185,7 +172,6 @@ export class Employeeinfo implements OnInit {
       perVillageBangla: [''],
       perHouseRoad: [''],
 
-      // Own Present Address
       sameAsPermanent: [false],
       preDivision: [null],
       preDistrict: [null],
@@ -195,7 +181,6 @@ export class Employeeinfo implements OnInit {
       preVillageBangla: [''],
       preHouseRoad: [''],
 
-      // Wife Permanent Address
       wifePerDivision: [null],
       wifePerDistrict: [null],
       wifePerUpazila: [null],
@@ -204,7 +189,6 @@ export class Employeeinfo implements OnInit {
       wifePerVillageBangla: [''],
       wifePerHouseRoad: [''],
 
-      // Wife Present Address
       wifeSameAsPermanent: [false],
       wifePreDivision: [null],
       wifePreDistrict: [null],
@@ -214,7 +198,6 @@ export class Employeeinfo implements OnInit {
       wifePreVillageBangla: [''],
       wifePreHouseRoad: [''],
 
-      // Reliever
       isReliever: [null],
       relieverRabId: [''],
     });
@@ -308,7 +291,6 @@ export class Employeeinfo implements OnInit {
 
     console.log('SEARCH payload:', payload);
 
-    // Demo data for table (replace with API result)
     this.serviceRecords = [
       {
         fromDate: '01-01-2010',
@@ -326,7 +308,6 @@ export class Employeeinfo implements OnInit {
   importProfile(row: any): void {
     console.log('Import from old profile:', row);
 
-    // Example patch
     this.form.patchValue({
       motherOrganizationForm: this.form.get('motherOrganization')?.value,
       appointment: row.appointment,
@@ -343,7 +324,6 @@ export class Employeeinfo implements OnInit {
     console.log('SUBMIT:', this.form.getRawValue());
   }
 
-  // ✅ HELPER: Debug form validation errors
   private getFormValidationErrors() {
     const errors: any = {};
     Object.keys(this.form.controls).forEach(key => {
