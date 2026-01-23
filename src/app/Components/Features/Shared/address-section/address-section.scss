@@ -1,0 +1,22 @@
+// address-section.component.scss
+
+:host {
+  display: block;
+}
+
+// Error message styling
+.p-error {
+  font-size: 0.875rem;
+  color: var(--red-500);
+}
+
+// Optional: Add animations for error messages
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+.p-error {
+  animation: shake 0.3s ease-in-out;
+}

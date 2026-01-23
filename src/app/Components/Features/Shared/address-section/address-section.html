@@ -1,0 +1,162 @@
+<div class="mb-5">
+  <!-- Section Header -->
+  <div class="flex align-items-center justify-content-between mb-4">
+    <div class="flex align-items-center gap-2">
+      <i [class]="iconClass"></i>
+      <h3 class="m-0 text-xl font-bold text-900">{{ title }}</h3>
+    </div>
+
+    <!-- Optional Checkbox (e.g., "Same as Permanent Address") -->
+    <div
+      *ngIf="showCheckbox"
+      class="flex align-items-center gap-2 surface-100 border-round-lg px-3 py-2"
+    >
+      <p-checkbox
+        [formControlName]="checkboxControlName"
+        [binary]="true"
+        [inputId]="checkboxId"
+      ></p-checkbox>
+
+      <label
+        [for]="checkboxId"
+        class="cursor-pointer font-medium text-700"
+      >
+        {{ checkboxLabel }}
+      </label>
+    </div>
+  </div>
+
+  <!-- Address Form Fields -->
+  <div class="surface-50 border-round-2xl p-4">
+    <!-- Row 1: Division, District, Upazila, Post Office -->
+    <div class="flex flex-wrap gap-3 mb-4">
+      <!-- Division -->
+      <div class="flex-1" style="min-width: 200px;">
+        <label class="font-semibold block mb-2 text-700">
+          Division
+          <span *ngIf="showRequiredIndicators" class="text-red-500">*</span>
+        </label>
+        <p-select
+          [options]="divisions"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Select Division"
+          styleClass="w-full"
+          [formControlName]="getControlName('Division')"
+        ></p-select>
+        <small
+          *ngIf="hasError('Division')"
+          class="p-error block mt-1"
+        >
+          {{ getErrorMessage('Division') }}
+        </small>
+      </div>
+
+      <!-- District -->
+      <div class="flex-1" style="min-width: 200px;">
+        <label class="font-semibold block mb-2 text-700">
+          District
+          <span *ngIf="showRequiredIndicators" class="text-red-500">*</span>
+        </label>
+        <p-select
+          [options]="districts"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Select District"
+          styleClass="w-full"
+          [formControlName]="getControlName('District')"
+        ></p-select>
+        <small
+          *ngIf="hasError('District')"
+          class="p-error block mt-1"
+        >
+          {{ getErrorMessage('District') }}
+        </small>
+      </div>
+
+      <!-- Upazila/Thana -->
+      <div class="flex-1" style="min-width: 200px;">
+        <label class="font-semibold block mb-2 text-700">
+          Upazila/Thana
+          <span *ngIf="showRequiredIndicators" class="text-red-500">*</span>
+        </label>
+        <p-select
+          [options]="upazilas"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Select Upazila"
+          styleClass="w-full"
+          [formControlName]="getControlName('Upazila')"
+        ></p-select>
+        <small
+          *ngIf="hasError('Upazila')"
+          class="p-error block mt-1"
+        >
+          {{ getErrorMessage('Upazila') }}
+        </small>
+      </div>
+
+      <!-- Post Office -->
+      <div class="flex-1" style="min-width: 200px;">
+        <label class="font-semibold block mb-2 text-700">
+          Post Office
+          <span *ngIf="showRequiredIndicators" class="text-red-500">*</span>
+        </label>
+        <p-select
+          [options]="postOffices"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Select Post Office"
+          styleClass="w-full"
+          [formControlName]="getControlName('PostOffice')"
+        ></p-select>
+        <small
+          *ngIf="hasError('PostOffice')"
+          class="p-error block mt-1"
+        >
+          {{ getErrorMessage('PostOffice') }}
+        </small>
+      </div>
+    </div>
+
+    <!-- Row 2: Village/Area (English & Bangla) -->
+    <div class="flex flex-wrap gap-3 mb-4">
+      <!-- Village/Area (English) -->
+      <div class="flex-1" style="min-width: 300px;">
+        <label class="font-semibold block mb-2 text-700">
+          Village/Area (English)
+        </label>
+        <input
+          pInputText
+          class="w-full"
+          placeholder="Enter village/area"
+          [formControlName]="getControlName('VillageEnglish')"
+        />
+      </div>
+
+      <!-- Village/Area (Bangla) -->
+      <div class="flex-1" style="min-width: 300px;">
+        <label class="font-semibold block mb-2 text-700">
+          Village/Area (Bangla)
+        </label>
+        <input
+          pInputText
+          class="w-full"
+          placeholder="গ্রাম/এলাকা লিখুন"
+          [formControlName]="getControlName('VillageBangla')"
+        />
+      </div>
+    </div>
+
+    <!-- Row 3: House & Road No -->
+    <div>
+      <label class="font-semibold block mb-2 text-700">House & Road No</label>
+      <input
+        pInputText
+        class="w-full"
+        placeholder="Enter house and road number"
+        [formControlName]="getControlName('HouseRoad')"
+      />
+    </div>
+  </div>
+</div>

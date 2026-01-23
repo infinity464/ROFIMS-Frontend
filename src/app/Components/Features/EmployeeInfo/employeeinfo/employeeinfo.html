@@ -1,0 +1,533 @@
+<form [formGroup]="form">
+  <p-card styleClass="shadow-3 border-round-3xl overflow-hidden">
+
+
+    <div class="flex gap-4">
+      <div>
+        <h2 class="m-0 text-3xl font-bold text-primary-900 letter-spacing-tight">DATA ENTRY</h2>
+        <p class="m-0 mt-1 text-primary-600 font-medium">New Joining & Re-Joining in RAB</p>
+      </div>
+      <div class="flex align-items-center gap-2 text-primary-700">
+        <i class="pi pi-shield text-4xl"></i>
+      </div>
+    </div>
+
+    <div class="p-5">
+     
+      <div class="surface-50 border-round-2xl p-4 mb-5">
+        <div class="flex flex-column gap-4">
+          <!-- Title Section -->
+          <div class="flex align-items-start gap-3">
+            <!-- <div class="flex align-items-center justify-content-center bg-primary-100 border-circle" style="width: 48px; height: 48px; min-width: 48px;"> -->
+              <!-- <i class="pi pi-search text-primary-700 text-xl"></i> -->
+            <!-- </div> -->
+            <div class="flex-1">
+              <h3 class="m-0 text-xl font-bold text-900">New Joining & Re-Joining in RAB</h3>
+              <p class="m-0 mt-1 text-600 line-height-3">
+                Search option will check Present Member & Ex-member database
+              </p>
+            </div>
+          </div>
+
+         
+          <div class="flex flex-wrap gap-3 align-items-end">
+            <div class="flex-1" style="min-width: 200px;">
+              <label class="font-semibold block mb-2 text-700">Mother Organization</label>
+              <p-select
+                [options]="motherOrganizations"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Select Organization"
+                styleClass="w-full"
+                formControlName="motherOrganization"
+              ></p-select>
+            </div>
+
+            <div class="flex-1" style="min-width: 180px;">
+              <label class="font-semibold block mb-2 text-700">Service ID</label>
+              <input
+                pInputText
+                type="text"
+                class="w-full"
+                placeholder="Enter Service ID"
+                formControlName="serviceId"
+              />
+            </div>
+
+            <div class="flex-1" style="min-width: 180px;">
+              <label class="font-semibold block mb-2 text-700">NID No</label>
+              <input
+                pInputText
+                type="text"
+                class="w-full"
+                placeholder="Enter NID No"
+                formControlName="nidNo"
+              />
+            </div>
+
+            <div style="min-width: 120px;">
+              <button
+                pButton
+                type="button"
+                icon="pi pi-search"
+                label="SEARCH"
+                class="p-button-success w-full"
+                (click)="onSearch()"
+              ></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p-divider></p-divider>
+
+      
+      <div *ngIf="serviceRecords?.length" class="my-5">
+        <div class="flex align-items-center gap-2 mb-4">
+          <i class="pi pi-history text-primary-600 text-2xl"></i>
+          <h3 class="m-0 text-xl font-bold text-900">Previous RAB Service Record</h3>
+        </div>
+
+        <p-table
+          [value]="serviceRecords"
+          responsiveLayout="scroll"
+          styleClass="p-datatable-sm"
+          [paginator]="true"
+          [rows]="5"
+        >
+          <ng-template pTemplate="header">
+            <tr>
+              <th style="width: 70px">Ser</th>
+              <th>Duration (From)</th>
+              <th>Duration (To)</th>
+              <th>Battalion/Wing</th>
+              <th>Appointments</th>
+              <th style="width: 220px">Action</th>
+            </tr>
+          </ng-template>
+
+          <ng-template pTemplate="body" let-row let-i="rowIndex">
+            <tr>
+              <td>{{ i + 1 }}</td>
+              <td>{{ row.fromDate }}</td>
+              <td>{{ row.toDate }}</td>
+              <td>{{ row.battalion }}</td>
+              <td>{{ row.appointment }}</td>
+              <td>
+                <button
+                  pButton
+                  type="button"
+                  label="View Profile"
+                  class="p-button-text p-button-sm p-button-info"
+                  icon="pi pi-eye"
+                  (click)="viewOldProfile(row)"
+                ></button>
+
+                <button
+                  pButton
+                  type="button"
+                  label="Import"
+                  class="p-button-sm ml-2"
+                  icon="pi pi-download"
+                  (click)="importProfile(row)"
+                ></button>
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+
+        <p-divider></p-divider>
+      </div>
+
+  
+      <div class="mb-5">
+        <div class="flex align-items-center gap-2 mb-4">
+          <!-- <i class="pi pi-user-plus text-primary-600 text-2xl"></i> -->
+          <h3 class="m-0 text-xl font-bold text-900">New Posting Entry Form</h3>
+        </div>
+
+        <div class="surface-50 border-round-2xl p-4">
+          
+          <div class="flex flex-wrap gap-3 mb-4">
+            <div class="flex-1" style="min-width: 200px;">
+              <label class="font-semibold block mb-2 text-700">Add Picture</label>
+              <p-fileUpload
+                mode="basic"
+                chooseLabel="Upload Picture"
+                chooseIcon="pi pi-upload"
+                name="picture"
+                accept="image/*"
+                [auto]="true"
+                styleClass="w-full"
+              ></p-fileUpload>
+            </div>
+
+            <div class="flex-1" style="min-width: 200px;">
+              <label class="font-semibold block mb-2 text-700">
+                Mother Organization <span class="text-red-500">*</span>
+              </label>
+              <p-select
+                [options]="motherOrganizations"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Select Organization"
+                styleClass="w-full"
+                formControlName="motherOrganizationForm"
+              ></p-select>
+            </div>
+
+            <div class="flex-1" style="min-width: 200px;">
+              <label class="font-semibold block mb-2 text-700">
+                Last Unit of Mother Organization <span class="text-red-500">*</span>
+              </label>
+              <p-select
+                [options]="lastUnitOrganizations"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Select Last Unit"
+                styleClass="w-full"
+                formControlName="lastUnitMotherOrg"
+              ></p-select>
+            </div>
+
+            <div class="flex-1" style="min-width: 200px;">
+              <label class="font-semibold block mb-2 text-700">
+                Last Mother Unit Location <span class="text-red-500">*</span>
+              </label>
+              <input
+                pInputText
+                class="w-full"
+                placeholder="Manual Entry / Auto Select"
+                formControlName="lastMotherUnitLocation"
+              />
+            </div>
+          </div>
+
+          <!-- Row 2: 4 Fields -->
+          <div class="flex flex-wrap gap-3 mb-4">
+            <div class="flex-1" style="min-width: 200px;">
+              <label class="font-semibold block mb-2 text-700">
+                Member Type <span class="text-red-500">*</span>
+              </label>
+              <p-select
+                [options]="memberTypes"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Select Member Type"
+                styleClass="w-full"
+                formControlName="memberType"
+              ></p-select>
+            </div>
+
+            <div class="flex-1" style="min-width: 200px;">
+              <label class="font-semibold block mb-2 text-700">
+                Officer Type <span class="text-red-500">*</span>
+              </label>
+              <p-select
+                [options]="officerTypes"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Select Officer Type"
+                styleClass="w-full"
+                formControlName="officerType"
+              ></p-select>
+            </div>
+
+            <div class="flex-1" style="min-width: 200px;">
+              <label class="font-semibold block mb-2 text-700">
+                Appointment <span class="text-red-500">*</span>
+              </label>
+              <p-select
+                [options]="appointments"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Select Appointment"
+                styleClass="w-full"
+                formControlName="appointment"
+              ></p-select>
+            </div>
+
+            <div class="flex-1" style="min-width: 200px;">
+              <label class="font-semibold block mb-2 text-700">
+                Date of Joining in RAB <span class="text-red-500">*</span>
+              </label>
+              <p-calendar
+                formControlName="joiningDate"
+                dateFormat="dd-mm-yy"
+                
+                placeholder="Select Date"
+                styleClass="w-full"
+              ></p-calendar>
+            </div>
+          </div>
+
+          
+          <div class="flex flex-wrap gap-3 mb-4">
+            <div class="flex-1" style="min-width: 200px;">
+              <label class="font-semibold block mb-2 text-700">
+                Rank <span class="text-red-500">*</span>
+              </label>
+              <p-select
+                [options]="ranks"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Select Rank"
+                styleClass="w-full"
+                formControlName="rank"
+              ></p-select>
+            </div>
+
+            <div class="flex-1" style="min-width: 200px;">
+              <label class="font-semibold block mb-2 text-700">
+                Corps/Branch <span class="text-red-500">*</span>
+              </label>
+              <p-select
+                [options]="corpsBranches"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Select Corps/Branch"
+                styleClass="w-full"
+                formControlName="corpsBranch"
+              ></p-select>
+            </div>
+
+            <div class="flex-1" style="min-width: 200px;">
+              <label class="font-semibold block mb-2 text-700">
+                Trade <span class="text-red-500">*</span>
+              </label>
+              <p-select
+                [options]="trades"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Select Trade"
+                styleClass="w-full"
+                formControlName="trade"
+              ></p-select>
+            </div>
+
+            <div class="flex-1" style="min-width: 200px;">
+              <label class="font-semibold block mb-2 text-700">Trade Remarks (Optional)</label>
+              <input pInputText class="w-full" placeholder="Enter remarks" formControlName="tradeRemarks" />
+            </div>
+          </div>
+
+         
+          <div class="flex flex-wrap gap-3 mb-4">
+            <div class="flex-1" style="min-width: 200px;">
+              <label class="font-semibold block mb-2 text-700">
+                Gender <span class="text-red-500">*</span>
+              </label>
+              <p-select
+                [options]="genders"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Select Gender"
+                styleClass="w-full"
+                formControlName="gender"
+              ></p-select>
+            </div>
+
+            <div class="flex-1" style="min-width: 200px;">
+              <label class="font-semibold block mb-2 text-700">
+                Select Prefix <span class="text-red-500">*</span>
+              </label>
+              <p-select
+                [options]="prefixes"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Select Prefix"
+                styleClass="w-full"
+                formControlName="prefix"
+              ></p-select>
+            </div>
+
+            <div class="flex-1" style="min-width: 200px;">
+              <label class="font-semibold block mb-2 text-700">
+                Service ID <span class="text-red-500">*</span>
+              </label>
+              <input
+                pInputText
+                class="w-full"
+                placeholder="Only Number"
+                formControlName="serviceIdOnly"
+              />
+            </div>
+
+            <div class="flex-1" style="min-width: 200px;">
+              <label class="font-semibold block mb-2 text-700">RAB ID</label>
+              <input
+                pInputText
+                class="w-full surface-100"
+                placeholder="Auto Generated"
+                formControlName="rabId"
+                readonly
+              />
+            </div>
+          </div>
+
+         
+          <div class="flex flex-wrap gap-3">
+            <div class="flex-1" style="min-width: 300px;">
+              <label class="font-semibold block mb-2 text-700">
+                Name English <span class="text-red-500">*</span>
+              </label>
+              <input pInputText class="w-full" placeholder="Enter name in English" formControlName="nameEnglish" />
+            </div>
+
+            <div class="flex-1" style="min-width: 300px;">
+              <label class="font-semibold block mb-2 text-700">
+                Name Bangla <span class="text-red-500">*</span>
+              </label>
+              <input pInputText class="w-full" placeholder="বাংলায় নাম লিখুন" formControlName="nameBangla" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p-divider></p-divider>
+
+      <app-address-section
+        [form]="form"
+        title="Own Permanent Address"
+        iconClass="pi pi-home text-primary-600 text-2xl"
+        prefix="per"
+        [divisions]="divisions"
+        [districts]="districts"
+        [upazilas]="upazilas"
+        [postOffices]="postOffices"
+        [showRequiredIndicators]="true"
+      ></app-address-section>
+
+      <p-divider></p-divider>
+
+      <app-address-section
+        [form]="form"
+        title="Own Present Address (Optional)"
+        iconClass="pi pi-map-marker text-primary-600 text-2xl"
+        prefix="pre"
+        [divisions]="divisions"
+        [districts]="districts"
+        [upazilas]="upazilas"
+        [postOffices]="postOffices"
+        [showRequiredIndicators]="false"
+        [showCheckbox]="true"
+        checkboxControlName="sameAsPermanent"
+        checkboxId="sameAsPermanent"
+        checkboxLabel="Same as Permanent Address"
+      ></app-address-section>
+
+      <p-divider></p-divider>
+
+      <app-address-section
+        [form]="form"
+        title="Wife Permanent Address"
+        iconClass="pi pi-heart text-pink-600 text-2xl"
+        prefix="wifePer"
+        [divisions]="divisions"
+        [districts]="districts"
+        [upazilas]="upazilas"
+        [postOffices]="postOffices"
+        [showRequiredIndicators]="false"
+      ></app-address-section>
+
+      <p-divider></p-divider>
+
+      <app-address-section
+        [form]="form"
+        title="Wife Present Address (Optional)"
+        iconClass="pi pi-map-marker text-pink-600 text-2xl"
+        prefix="wifePre"
+        [divisions]="divisions"
+        [districts]="districts"
+        [upazilas]="upazilas"
+        [postOffices]="postOffices"
+        [showRequiredIndicators]="false"
+        [showCheckbox]="true"
+        checkboxControlName="wifeSameAsPermanent"
+        checkboxId="wifeSameAsPermanent"
+        checkboxLabel="Same as Permanent Address"
+      ></app-address-section>
+
+      <p-divider></p-divider>
+
+      <div class="mb-5">
+        <div class="flex align-items-center gap-2 mb-4">
+          <i class="pi pi-file text-primary-600 text-2xl"></i>
+          <h3 class="m-0 text-xl font-bold text-900">Reliever & Files</h3>
+        </div>
+
+        <div class="surface-50 border-round-2xl p-4">
+          <div class="flex flex-wrap gap-3 align-items-end">
+            <div class="flex-1" style="min-width: 250px;">
+              <label class="font-semibold block mb-2 text-700">
+                Is he a reliever of any presently serving member?
+              </label>
+              <p-select
+                [options]="yesNoOptions"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Select"
+                styleClass="w-full"
+                formControlName="isReliever"
+              ></p-select>
+            </div>
+
+            <div class="flex-1" style="min-width: 250px;" *ngIf="form.get('isReliever')?.value === true">
+              <label class="font-semibold block mb-2 text-700">Enter RAB ID/Service No</label>
+              <input
+                pInputText
+                class="w-full"
+                placeholder="RAB ID / Service No"
+                formControlName="relieverRabId"
+              />
+            </div>
+
+            <div class="flex-1" style="min-width: 200px;">
+              <label class="font-semibold block mb-2 text-700">Upload Posting Order</label>
+              <p-fileUpload
+                mode="basic"
+                chooseLabel="Upload Document"
+                chooseIcon="pi pi-upload"
+                name="postingOrder"
+                [auto]="true"
+                styleClass="w-full"
+              ></p-fileUpload>
+            </div>
+
+            <div class="flex-1" style="min-width: 200px;">
+              <label class="font-semibold block mb-2 text-700">Add More File</label>
+              <p-fileUpload
+                mode="basic"
+                chooseLabel="Add File"
+                chooseIcon="pi pi-plus"
+                name="moreFile"
+                [auto]="true"
+                styleClass="w-full"
+              ></p-fileUpload>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex gap-4">
+        <button
+          pButton
+          type="button"
+          label="Reset Form"
+          icon="pi pi-refresh"
+          class="p-button-outlined p-button-secondary"
+        ></button>
+        
+        <button
+          pButton
+          type="button"
+          label="SUBMIT & CREATE PROFILE"
+          icon="pi pi-check-circle"
+          class="p-button-success p-button-lg"
+          (click)="onSubmit()"
+        ></button>
+      </div>
+    </div>
+
+  </p-card>
+</form>
