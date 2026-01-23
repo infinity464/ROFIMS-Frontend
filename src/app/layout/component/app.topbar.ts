@@ -5,7 +5,7 @@ import { CommonModule } from '@angular/common';
 import { StyleClassModule } from 'primeng/styleclass';
 import { AppConfigurator } from './app.configurator';
 import { LayoutService } from '../service/layout.service';
-import { Logout } from "@/Components/Features/Authentication/logout/logout";
+import { Logout } from '@/Components/Features/Authentication/logout/logout';
 
 @Component({
     selector: 'app-topbar',
@@ -34,7 +34,7 @@ import { Logout } from "@/Components/Features/Authentication/logout/logout";
                         />
                     </g>
                 </svg> -->
-                <img class="layout-topbar-logo" style="width: 40px;" src="https://upload.wikimedia.org/wikipedia/en/thumb/d/d0/Rapid_Action_Battalion_%28RAB%29_Emblem.svg/250px-Rapid_Action_Battalion_%28RAB%29_Emblem.svg.png" alt="logo">
+                <img class="layout-topbar-logo" style="width: 40px;" src="https://upload.wikimedia.org/wikipedia/en/thumb/d/d0/Rapid_Action_Battalion_%28RAB%29_Emblem.svg/250px-Rapid_Action_Battalion_%28RAB%29_Emblem.svg.png" alt="logo" />
                 <span>ROFIMS</span>
             </a>
         </div>
@@ -74,7 +74,7 @@ import { Logout } from "@/Components/Features/Authentication/logout/logout";
                         <i class="pi pi-inbox"></i>
                         <span>Messages</span>
                     </button>
-                   <app-logout></app-logout>
+                    <app-logout></app-logout>
                     <button type="button" class="layout-topbar-action">
                         <i class="pi pi-user"></i>
                         <span>Profile</span>
