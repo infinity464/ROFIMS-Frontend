@@ -2,6 +2,8 @@ export interface MasterConfig {
     title: string;
     formFields: MasterFormField[];
     tableColumns: MasterTableColumn[];
+    pageSize?: number;
+    pageNumber?: number;
 }
 
 export interface MasterFormField {

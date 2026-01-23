@@ -5,8 +5,9 @@ import { MotherOrgService } from '../Services/mother-org-service';
 import { CommonCode } from '../Models/common-code';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ConfirmationService, MessageService } from 'primeng/api';
-import { Toast } from "primeng/toast";
-import { ConfirmDialog } from "primeng/confirmdialog";
+import { Toast } from 'primeng/toast';
+import { ConfirmDialog } from 'primeng/confirmdialog';
+import { PagedResponse } from '@/Core/Models/Pagination';
 @Component({
     selector: 'app-mother-org',
     imports: [MasterBasicSetup, Toast, ConfirmDialog],
@@ -18,6 +19,15 @@ export class MotherOrg implements OnInit {
     motherOrgDate: CommonCode[] = [];
     editingId: number | null = null;
     motherOrgForm!: FormGroup;
+    dataWithPaging: PagedResponse<CommonCode> = {
+        datalist: [],
+        pages: { rows: 0, totalPages: 0 }
+    };
+
+    totalRecords = 0;
+    rows = 10; // page size
+    first = 0; // index of first record
+    loading = false;
 
     constructor(
         private motherOrgService: MotherOrgService,
@@ -28,7 +38,7 @@ export class MotherOrg implements OnInit {
 
     ngOnInit(): void {
         this.initForm();
-        this.getMotherOrg();
+        this.getMotherOrgWithPaging();
     }
 
     initForm() {
@@ -98,6 +108,27 @@ export class MotherOrg implements OnInit {
             }
         });
     }
+    getMotherOrgWithPaging(event?: any) {
+        this.loading = true;
+
+        const pageNo = event ? event.first / event.rows + 1 : 1;
+
+        const pageSize = event?.rows ?? this.rows;
+
+        this.motherOrgService.getAllWithPaging(pageNo, pageSize).subscribe({
+            next: (res) => {
+                this.motherOrgDate = res.datalist;
+                this.totalRecords = res.pages.rows; // 👈 VERY IMPORTANT
+                this.rows = pageSize;
+                console.log(res);
+                this.loading = false;
+            },
+            error: (err) => {
+                console.error('Error fetching data:', err);
+                this.loading = false;
+            }
+        });
+    }
 
     submit(data: any) {
         console.log('Form Data:', data);
@@ -128,7 +159,6 @@ export class MotherOrg implements OnInit {
                 }
             });
         } else {
-            // Create new record
             const createPayload = {
                 ...this.motherOrgForm.value,
                 createdBy: currentUser,
@@ -157,7 +187,6 @@ export class MotherOrg implements OnInit {
     }
 
     delete(row: any, event: Event) {
-
         this.confirmationService.confirm({
             target: event.target as EventTarget,
             message: 'Do you want to delete this record?',

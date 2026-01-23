@@ -55,12 +55,14 @@ export class MasterBasicSetup {
     @Input() data: any[] = [];
     @Input() form!: FormGroup;
 
+    @Input() totalRecords = 0;
+    @Input() rows = 10;
+    @Input() loading = false;
+
     @Output() save = new EventEmitter<any>();
     @Output() edit = new EventEmitter<any>();
     @Output() delete = new EventEmitter<any>();
-    onGlobalFilter(){
-
-    }
+    @Output() lazyLoad = new EventEmitter<any>();
 
     onSave() {
         if (this.form.invalid) return;
@@ -68,11 +70,15 @@ export class MasterBasicSetup {
     }
 
     onEdit(row: any) {
-        this.form.patchValue(row);
         this.edit.emit(row);
     }
 
     onDelete(row: any, event: Event) {
-    this.delete.emit({ row, event });
+        this.delete.emit({ row, event });
+    }
+
+    onLazyLoad(event: any) {
+        this.lazyLoad.emit(event);
+    }
 }
-}
+
