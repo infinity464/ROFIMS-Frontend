@@ -20,9 +20,10 @@ import { Fluid } from 'primeng/fluid';
 })
 export class BloodGroup {
     codeType: string = 'BloodGroup';
-    divisionDate: CommonCode[] = [];
+    title: string = 'Blood Group';
+    commonCodeData: CommonCode[] = [];
     editingId: number | null = null;
-    divisionForm!: FormGroup;
+    commonCodeForm!: FormGroup;
 
     totalRecords = 0;
     rows = 10;
@@ -84,14 +85,14 @@ export class BloodGroup {
 
     ngOnInit(): void {
         this.initForm();
-        this.getDivisionWithPaging({
+        this.getCommonCodeWithPaging({
             first: this.first,
             rows: this.rows
         });
     }
 
     initForm() {
-        this.divisionForm = this.fb.group({
+        this.commonCodeForm = this.fb.group({
             codeValueEN: ['', Validators.required],
             codeValueBN: ['', Validators.required],
             status: [true, Validators.required],
@@ -111,7 +112,7 @@ export class BloodGroup {
         });
     }
 
-    getDivisionWithPaging(event?: any) {
+    getCommonCodeWithPaging(event?: any) {
         this.loading = true;
         const pageNo = event ? event.first / event.rows + 1 : 1;
         const pageSize = event?.rows ?? this.rows;
@@ -120,7 +121,7 @@ export class BloodGroup {
 
         apiCall.subscribe({
             next: (res) => {
-                this.divisionDate = res.datalist;
+                this.commonCodeData = res.datalist;
                 this.totalRecords = res.pages.rows;
                 this.rows = pageSize;
                 this.loading = false;
@@ -138,8 +139,8 @@ export class BloodGroup {
     }
 
     submit(data: any) {
-        if (this.divisionForm.invalid) {
-            this.divisionForm.markAllAsTouched();
+        if (this.commonCodeForm.invalid) {
+            this.commonCodeForm.markAllAsTouched();
             return;
         }
 
@@ -147,15 +148,15 @@ export class BloodGroup {
         const currentDateTime = new Date().toISOString();
 
         if (this.editingId) {
-            this.updateDivision(currentUser, currentDateTime);
+            this.updateCommonCode(currentUser, currentDateTime);
         } else {
-            this.createDivision(currentUser, currentDateTime);
+            this.createCommonCode(currentUser, currentDateTime);
         }
     }
 
-    private createDivision(currentUser: string, currentDateTime: string) {
+    private createCommonCode(currentUser: string, currentDateTime: string) {
         const createPayload = {
-            ...this.divisionForm.value,
+            ...this.commonCodeForm.value,
             createdBy: currentUser,
             createdDate: currentDateTime,
             lastUpdatedBy: currentUser,
@@ -166,7 +167,7 @@ export class BloodGroup {
             next: (res) => {
                 console.log('Created:', res);
                 this.resetForm();
-                this.getDivisionWithPaging({
+                this.getCommonCodeWithPaging({
                     first: this.first,
                     rows: this.rows
                 });
@@ -187,9 +188,9 @@ export class BloodGroup {
         });
     }
 
-    private updateDivision(currentUser: string, currentDateTime: string) {
+    private updateCommonCode(currentUser: string, currentDateTime: string) {
         const updatePayload = {
-            ...this.divisionForm.value,
+            ...this.commonCodeForm.value,
             codeId: this.editingId,
             lastUpdatedBy: currentUser,
             lastupdate: currentDateTime
@@ -199,7 +200,7 @@ export class BloodGroup {
             next: (res) => {
                 console.log('Updated:', res);
                 this.resetForm();
-                this.getDivisionWithPaging({
+                this.getCommonCodeWithPaging({
                     first: this.first,
                     rows: this.rows
                 });
@@ -222,7 +223,7 @@ export class BloodGroup {
 
     update(row: any) {
         this.editingId = row.codeId;
-        this.divisionForm.patchValue(row);
+        this.commonCodeForm.patchValue(row);
         console.log('Edit:', row);
     }
 
@@ -245,7 +246,7 @@ export class BloodGroup {
             accept: () => {
                 this.masterBasicSetupService.delete(row.codeId).subscribe({
                     next: () => {
-                        this.getDivisionWithPaging({
+                        this.getCommonCodeWithPaging({
                             first: this.first,
                             rows: this.rows
                         });
@@ -270,7 +271,7 @@ export class BloodGroup {
 
     resetForm() {
         this.editingId = null;
-        this.divisionForm.reset({
+        this.commonCodeForm.reset({
             orgId: 0,
             codeId: 0,
             codeType: this.codeType,
@@ -291,7 +292,7 @@ export class BloodGroup {
     onSearch(keyword: string) {
         this.serchValue = keyword;
         this.first = 0;
-        this.getDivisionWithPaging({ first: 0, rows: this.rows });
+        this.getCommonCodeWithPaging({ first: 0, rows: this.rows });
     }
 
     private getCurrentUser(): string {
