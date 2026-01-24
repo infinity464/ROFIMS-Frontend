@@ -1,8 +1,7 @@
-
-        <form [formGroup]="form" (ngSubmit)="onSave()">
-            <div class="flex flex-col md:flex-row gap-4 mb-4">
+ <form [formGroup]="form" (ngSubmit)="onSave()">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-4">
                 @for (field of config.formFields; track field.name) {
-                <div class="w-full">
+                <div>
                     <label [for]="field.name" class="block mb-2">
                         {{ field.label }}
                         @if (field.required) {
@@ -12,7 +11,8 @@
 
                     @if (field.type === 'text') {
                     <input pInputText [id]="field.name" [formControlName]="field.name"
-                        [placeholder]="'Enter ' + field.label" class="w-full" />
+                        [placeholder]="'Enter ' + field.label" class="w-full"
+                        (change)="onFieldChange(field.name, $event.target.value)" />
                     <!-- Validation message for text -->
                     @if (form.get(field.name)?.invalid && form.get(field.name)?.touched) {
                     <small class="text-red-500 block mt-1">
@@ -20,8 +20,14 @@
                     </small>
                     }
                     } @else if (field.type === 'select') {
-                    <p-select [options]="field.options" optionLabel="label" optionValue="value"
-                        [formControlName]="field.name" [placeholder]="'Select ' + field.label" styleClass="w-full">
+                    <p-select
+                        [options]="field.options || []"
+                        optionLabel="label"
+                        optionValue="value"
+                        [formControlName]="field.name"
+                        [placeholder]="isFieldDisabled(field) ? 'Please select ' + (field.dependsOn || 'parent') + ' first' : 'Select ' + field.label"
+                        styleClass="w-full"
+                        (onChange)="onFieldChange(field.name, form.get(field.name)?.value)">
                     </p-select>
                     <!-- Validation message for select -->
                     @if (form.get(field.name)?.invalid && form.get(field.name)?.touched) {
@@ -41,4 +47,3 @@
                 </p-button>
             </div>
         </form>
-
