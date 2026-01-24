@@ -21,6 +21,7 @@ import { EducationInstitutionType } from '@/Components/basic-setup/education-ins
 import { EducationInstitution } from '@/Components/basic-setup/education-institution/education-institution';
 import { EducationResult } from '@/Components/basic-setup/education-result/education-result';
 import { CourseType } from '@/Components/basic-setup/course-type/course-type';
+import { CourseGrade } from '@/Components/basic-setup/course-grade/course-grade';
 
 export const appRoutes: Routes = [
   // Public routes
@@ -48,6 +49,7 @@ export const appRoutes: Routes = [
       { path: 'basic-setup/education-institution', component: EducationInstitution },
       { path: 'basic-setup/education-result', component: EducationResult },
       { path: 'basic-setup/course-type', component: CourseType },
+      { path: 'basic-setup/course-grade', component: CourseGrade },
       { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
       { path: 'documentation', component: Documentation },
       { path: 'pages', loadChildren: () => import('./app/pages/pages.routes') }
