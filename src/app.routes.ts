@@ -18,6 +18,7 @@ import { MaritalStatus } from '@/Components/basic-setup/marital-status/relations
 import { Occupation } from '@/Components/basic-setup/occupation/occupation';
 import { EducationQualification } from '@/Components/basic-setup/education-qualification/education-qualification';
 import { EducationInstitutionType } from '@/Components/basic-setup/education-institution-type/education-institution-type';
+import { EducationInstitution } from '@/Components/basic-setup/education-institution/education-institution';
 
 export const appRoutes: Routes = [
   // Public routes
@@ -42,6 +43,7 @@ export const appRoutes: Routes = [
       { path: 'basic-setup/occupation', component: Occupation },
       { path: 'basic-setup/education-qualification', component: EducationQualification },
       { path: 'basic-setup/education-institution-type', component: EducationInstitutionType },
+      { path: 'basic-setup/education-institution', component: EducationInstitution },
       { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
       { path: 'documentation', component: Documentation },
       { path: 'pages', loadChildren: () => import('./app/pages/pages.routes') }
