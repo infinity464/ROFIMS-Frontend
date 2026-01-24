@@ -10,7 +10,7 @@ import { PagedResponse } from '@/Core/Models/Pagination';
 })
 export class MasterBasicSetupService {
     private http = inject(HttpClient);
-    private apiUrl = `${environment.apis.core}/rab/api/CommonCode`;
+    private apiUrl = `${environment.apis.core}/CommonCode`;
 
     getAllByType(codeType: string): Observable<CommonCode[]> {
         return this.http.get<CommonCode[]>(`${this.apiUrl}/GetByTypeAsyn/${codeType}`);
