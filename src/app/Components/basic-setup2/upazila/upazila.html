@@ -1,0 +1,21 @@
+ <app-dynamic-form
+            [config]="formConfig"
+            [form]="upazilaForm"
+            [editingId]="editingId"
+            (save)="submit($event)"
+            (reset)="resetForm()"
+            (fieldChange)="onFieldChange($event)">
+        </app-dynamic-form>
+
+        <app-data-table
+            [config]="tableConfig"
+            [data]="upazilaData"
+            [first]="first"
+            [totalRecords]="totalRecords"
+            [rows]="rows"
+            [loading]="loading"
+            (edit)="update($event)"
+            (delete)="delete($event.row, $event.event)"
+            (lazyLoad)="getUpazilaWithPaging($event)"
+            (search)="onSearch($event)">
+        </app-data-table>

@@ -15,6 +15,9 @@ export class MasterBasicSetupService {
     getAllByType(codeType: string): Observable<CommonCode[]> {
         return this.http.get<CommonCode[]>(`${this.apiUrl}/GetByTypeAsyn/${codeType}`);
     }
+    getByParentId(parentCodeId: number): Observable<CommonCode[]> {
+        return this.http.get<CommonCode[]>(`${this.apiUrl}/GetByParentIdAsyn/${parentCodeId}`);
+    }
 
     getAllWithPaging(codeType: string, pageNumber: number, pageSize: number): Observable<PagedResponse<CommonCode>> {
         return this.http.get<PagedResponse<CommonCode>>(`${this.apiUrl}/GetPaginatedOnConditionAsyn/${codeType}?page_no=${pageNumber}&row_per_page=${pageSize}`);
