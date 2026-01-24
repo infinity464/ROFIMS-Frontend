@@ -29,6 +29,9 @@ import { LeaveType } from '@/Components/basic-setup/leave-type/leave-type';
 import { EquivalentName } from '@/Components/basic-setup/equivalent-name/equivalent-name';
 import { EmployeeStatusType } from '@/Components/basic-setup/employee-status-type/employee-status-type';
 import { EmployeeType } from '@/Components/basic-setup/employee-type/employee-type';
+import { AppointmentCategory } from '@/Components/basic-setup/appointment-category/appointment-category';
+import { RabId } from '@/Components/basic-setup/rab-id/rab-id';
+import { RabUnit } from '@/Components/basic-setup/rab-unit/rab-unit';
 
 export const appRoutes: Routes = [
   // Public routes
@@ -64,6 +67,9 @@ export const appRoutes: Routes = [
       { path: 'basic-setup/equivalent-name', component: EquivalentName },
       { path: 'basic-setup/employee-status-type', component: EmployeeStatusType },
       { path: 'basic-setup/employee-type', component: EmployeeType },
+      { path: 'basic-setup/appointment-category', component: AppointmentCategory },
+      { path: 'basic-setup/rab-id', component: RabId },
+      { path: 'basic-setup/rab-unit', component: RabUnit },
 
       { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
       { path: 'documentation', component: Documentation },
