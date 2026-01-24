@@ -12,15 +12,15 @@ import { Toast } from 'primeng/toast';
 import { Fluid } from 'primeng/fluid';
 
 @Component({
-    selector: 'app-visit-type',
+    selector: 'app-employee-status-type',
     imports: [DynamicFormComponent, DataTable, ConfirmDialog, Toast, Fluid],
-    templateUrl: './visit-type.html',
+    templateUrl: './employee-status-type.html',
     providers: [MessageService, ConfirmationService],
-    styleUrl: './visit-type.scss'
+    styleUrl: './employee-status-type.scss'
 })
-export class VisitType {
-    codeType: string = 'VisitType';
-    title: string = 'Visit Type';
+export class EmployeeStatusType {
+    codeType: string = 'Employee Status Type';
+    title: string = 'Employee Status Type';
     commonCodeData: CommonCode[] = [];
     editingId: number | null = null;
     commonCodeForm!: FormGroup;
@@ -37,13 +37,13 @@ export class VisitType {
         formFields: [
             {
                 name: 'codeValueEN',
-                label: 'Visit Type Name (English)',
+                label: 'Employee StatusType Name (English)',
                 type: 'text',
                 required: true
             },
             {
                 name: 'codeValueBN',
-                label: 'Visit Type Name (Bangla)',
+                label: 'Employee StatusType Name (Bangla)',
                 type: 'text',
                 required: true
             },
@@ -64,8 +64,8 @@ export class VisitType {
     // Table Configuration
     tableConfig: TableConfig = {
         tableColumns: [
-            { field: 'codeValueEN', header: 'Visit Type Name (EN)' },
-            { field: 'codeValueBN', header: 'Visit Type Name (BN)' },
+            { field: 'codeValueEN', header: 'Employee Status Type Name (EN)' },
+            { field: 'codeValueBN', header: 'Employee Status Type Name (BN)' },
             {
                 field: 'status',
                 header: 'Status',
@@ -176,7 +176,7 @@ export class VisitType {
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Success',
-                    detail: 'VisitType created successfully'
+                    detail: 'Employee StatusType created successfully'
                 });
                 this.isSubmitting = false;
             },
@@ -185,7 +185,7 @@ export class VisitType {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create visit-type'
+                    detail: 'Failed to create employee-status-type'
                 });
                 this.isSubmitting = false;
             }
@@ -212,7 +212,7 @@ export class VisitType {
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Success',
-                    detail: 'Visit Type updated successfully'
+                    detail: 'Employee StatusType updated successfully'
                 });
                 this.isSubmitting = false;
             },
@@ -221,7 +221,7 @@ export class VisitType {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update visit-type'
+                    detail: 'Failed to update employee-status-type'
                 });
                 this.isSubmitting = false;
             }
@@ -260,7 +260,7 @@ export class VisitType {
                         this.messageService.add({
                             severity: 'success',
                             summary: 'Success',
-                            detail: 'Visit Type deleted successfully'
+                            detail: 'Employee StatusType deleted successfully'
                         });
                     },
                     error: (err) => {
@@ -268,7 +268,7 @@ export class VisitType {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete visit-type'
+                            detail: 'Failed to delete employee-status-type'
                         });
                     }
                 });
