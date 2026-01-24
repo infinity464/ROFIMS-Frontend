@@ -44,35 +44,47 @@ export class Login {
     private messageService: MessageService
   ) {}
 
-  onLogin() {
-    this.isLoading = true;
+ onLogin() {
+  this.isLoading = true;
 
-    this.auth.login(this.email, this.password).subscribe({
-      next: (res) => {
-        this.isLoading = false;
+  this.auth.login(this.email, this.password).subscribe({
+    next: (res) => {
+      this.isLoading = false;
 
-        this.messageService.add({
-          severity: 'success',
-          summary: 'Login Successful',
-          detail: 'Welcome back! Redirecting to dashboard...',
-          life: 2000
-        });
-
-        setTimeout(() => {
-          this.router.navigate(['/dashboard']);
-        }, 800);
-      },
-      error: (err) => {
-        console.log(err);
-        this.isLoading = false;
-
+      // ✅ token missing/null check
+      if (!res?.token) {
         this.messageService.add({
           severity: 'error',
           summary: 'Login Failed',
-          detail: 'Invalid email or password. Try again.',
+          detail: 'Token not found. Please try again.',
           life: 3000
         });
+        return;
       }
-    });
-  }
+
+      this.messageService.add({
+        severity: 'success',
+        summary: 'Login Successful',
+        detail: 'Welcome back! Redirecting to dashboard...',
+        life: 2000
+      });
+
+      setTimeout(() => {
+        this.router.navigate(['/dashboard']);
+      }, 800);
+    },
+
+    error: (err) => {
+      this.isLoading = false;
+
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Login Failed',
+        detail: err?.error?.message || 'Invalid email or password. Try again.',
+        life: 3000
+      });
+    }
+  });
+}
+
 }
