@@ -103,30 +103,54 @@ export class MotherOrg implements OnInit {
     };
 
 
+    // getMotherOrgWithPaging(event?: any) {
+    //     this.loading = true;
+
+    //     const pageNo = event ? event.first / event.rows + 1 : 1;
+
+    //     const pageSize = event?.rows ?? this.rows;
+    //     this.first = event?.first ?? 0;
+
+    //     const apiCall = this.serchValue? this.motherOrgService.getByKeyordWithPaging(this.serchValue, pageNo, pageSize) : this.motherOrgService.getAllWithPaging(pageNo, pageSize);
+
+    //     apiCall.subscribe({
+    //         next: (res) => {
+    //             this.motherOrgDate = res.datalist;
+    //             this.totalRecords = res.pages.rows;
+    //             this.rows = pageSize;
+    //             console.log(res);
+    //             this.loading = false;
+    //         },
+    //         error: (err) => {
+    //             console.error('Error fetching data:', err);
+    //             this.loading = false;
+    //         }
+    //     });
+    // }
+
     getMotherOrgWithPaging(event?: any) {
-        this.loading = true;
+    this.loading = true;
+    const pageNo = event ? event.first / event.rows + 1 : 1;
+    const pageSize = event?.rows ?? this.rows;
 
-        const pageNo = event ? event.first / event.rows + 1 : 1;
+    const apiCall = this.serchValue
+        ? this.motherOrgService.getByKeyordWithPaging(this.serchValue, pageNo, pageSize)
+        : this.motherOrgService.getAllWithPaging(pageNo, pageSize);
 
-        const pageSize = event?.rows ?? this.rows;
-        this.first = event?.first ?? 0;
+    apiCall.subscribe({
+        next: (res) => {
+            this.motherOrgDate = res.datalist;
+            this.totalRecords = res.pages.rows;
+            this.rows = pageSize;
+            this.loading = false;
+        },
+        error: (err) => {
+            console.error('Error fetching data:', err);
+            this.loading = false;
+        }
+    });
+}
 
-        const apiCall = this.serchValue? this.motherOrgService.getByKeyordWithPaging(this.serchValue, pageNo, pageSize) : this.motherOrgService.getAllWithPaging(pageNo, pageSize);
-
-        apiCall.subscribe({
-            next: (res) => {
-                this.motherOrgDate = res.datalist;
-                this.totalRecords = res.pages.rows;
-                this.rows = pageSize;
-                console.log(res);
-                this.loading = false;
-            },
-            error: (err) => {
-                console.error('Error fetching data:', err);
-                this.loading = false;
-            }
-        });
-    }
 
     submit(data: any) {
         console.log('Form Data:', data);
