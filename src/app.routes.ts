@@ -15,6 +15,7 @@ import { Upazila } from '@/Components/basic-setup/upazila/upazila';
 import { BloodGroup } from '@/Components/basic-setup/blood-group/blood-group';
 import { Relationship } from '@/Components/basic-setup/relationship/relationship';
 import { MaritalStatus } from '@/Components/basic-setup/marital-status/relationship';
+import { Occupation } from '@/Components/basic-setup/occupation/occupation';
 
 export const appRoutes: Routes = [
   // Public routes
@@ -36,6 +37,7 @@ export const appRoutes: Routes = [
       { path: 'basic-setup/blood-group', component: BloodGroup },
       { path: 'basic-setup/relationship', component: Relationship },
       { path: 'basic-setup/marital-status', component: MaritalStatus },
+      { path: 'basic-setup/occupation', component: Occupation },
       { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
       { path: 'documentation', component: Documentation },
       { path: 'pages', loadChildren: () => import('./app/pages/pages.routes') }
