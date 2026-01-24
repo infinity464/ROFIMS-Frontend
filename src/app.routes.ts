@@ -22,6 +22,10 @@ import { EducationInstitution } from '@/Components/basic-setup/education-institu
 import { EducationResult } from '@/Components/basic-setup/education-result/education-result';
 import { CourseType } from '@/Components/basic-setup/course-type/course-type';
 import { CourseGrade } from '@/Components/basic-setup/course-grade/course-grade';
+import { PersonalQualification } from '@/Components/basic-setup/personal-qualification/personal-qualification';
+import { VisitType } from '@/Components/basic-setup/visit-type/visit-type';
+import { PunishmentType } from '@/Components/basic-setup/punishment-type/punishment-type';
+import { LeaveType } from '@/Components/basic-setup/leave-type/leave-type';
 
 export const appRoutes: Routes = [
   // Public routes
@@ -50,6 +54,11 @@ export const appRoutes: Routes = [
       { path: 'basic-setup/education-result', component: EducationResult },
       { path: 'basic-setup/course-type', component: CourseType },
       { path: 'basic-setup/course-grade', component: CourseGrade },
+      { path: 'basic-setup/personal-qualification', component: PersonalQualification },
+      { path: 'basic-setup/visit-type', component: VisitType },
+      { path: 'basic-setup/punishment-type', component: PunishmentType },
+      { path: 'basic-setup/leave-type', component: LeaveType },
+
       { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
       { path: 'documentation', component: Documentation },
       { path: 'pages', loadChildren: () => import('./app/pages/pages.routes') }
