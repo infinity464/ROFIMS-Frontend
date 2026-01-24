@@ -23,6 +23,7 @@ export class EducationInstitutionType {
     commonCodeData: CommonCode[] = [];
     editingId: number | null = null;
     commonCodeForm!: FormGroup;
+    isSubmitting = false;
 
     totalRecords = 0;
     rows = 10;
@@ -154,6 +155,7 @@ export class EducationInstitutionType {
     }
 
     private createCommonCode(currentUser: string, currentDateTime: string) {
+        this.isSubmitting = true;
         const createPayload = {
             ...this.commonCodeForm.value,
             createdBy: currentUser,
@@ -173,8 +175,9 @@ export class EducationInstitutionType {
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Success',
-                    detail: 'EducationInstitutionType created successfully'
+                    detail: 'Education Institution Type created successfully'
                 });
+                this.isSubmitting = false;
             },
             error: (err) => {
                 console.error('Error creating:', err);
@@ -183,11 +186,13 @@ export class EducationInstitutionType {
                     summary: 'Error',
                     detail: 'Failed to create education-institution-type'
                 });
+                this.isSubmitting = false;
             }
         });
     }
 
     private updateCommonCode(currentUser: string, currentDateTime: string) {
+        this.isSubmitting = true;
         const updatePayload = {
             ...this.commonCodeForm.value,
             codeId: this.editingId,
@@ -206,8 +211,9 @@ export class EducationInstitutionType {
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Success',
-                    detail: 'EducationInstitutionType updated successfully'
+                    detail: 'Education Institution Type updated successfully'
                 });
+                this.isSubmitting = false;
             },
             error: (err) => {
                 console.error('Error updating:', err);
@@ -216,6 +222,7 @@ export class EducationInstitutionType {
                     summary: 'Error',
                     detail: 'Failed to update education-institution-type'
                 });
+                this.isSubmitting = false;
             }
         });
     }
@@ -270,6 +277,7 @@ export class EducationInstitutionType {
 
     resetForm() {
         this.editingId = null;
+        this.isSubmitting = false;
         this.commonCodeForm.reset({
             orgId: 0,
             codeId: 0,

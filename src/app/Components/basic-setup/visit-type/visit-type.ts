@@ -24,6 +24,7 @@ export class VisitType {
     commonCodeData: CommonCode[] = [];
     editingId: number | null = null;
     commonCodeForm!: FormGroup;
+    isSubmitting = false;
 
     totalRecords = 0;
     rows = 10;
@@ -155,6 +156,7 @@ export class VisitType {
     }
 
     private createCommonCode(currentUser: string, currentDateTime: string) {
+        this.isSubmitting = true;
         const createPayload = {
             ...this.commonCodeForm.value,
             createdBy: currentUser,
@@ -176,6 +178,7 @@ export class VisitType {
                     summary: 'Success',
                     detail: 'VisitType created successfully'
                 });
+                this.isSubmitting = false;
             },
             error: (err) => {
                 console.error('Error creating:', err);
@@ -184,11 +187,13 @@ export class VisitType {
                     summary: 'Error',
                     detail: 'Failed to create visit-type'
                 });
+                this.isSubmitting = false;
             }
         });
     }
 
     private updateCommonCode(currentUser: string, currentDateTime: string) {
+        this.isSubmitting = true;
         const updatePayload = {
             ...this.commonCodeForm.value,
             codeId: this.editingId,
@@ -209,6 +214,7 @@ export class VisitType {
                     summary: 'Success',
                     detail: 'Visit Type updated successfully'
                 });
+                this.isSubmitting = false;
             },
             error: (err) => {
                 console.error('Error updating:', err);
@@ -217,6 +223,7 @@ export class VisitType {
                     summary: 'Error',
                     detail: 'Failed to update visit-type'
                 });
+                this.isSubmitting = false;
             }
         });
     }
@@ -271,6 +278,7 @@ export class VisitType {
 
     resetForm() {
         this.editingId = null;
+        this.isSubmitting = false;
         this.commonCodeForm.reset({
             orgId: 0,
             codeId: 0,

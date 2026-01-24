@@ -29,6 +29,7 @@ export class Occupation {
     first = 0;
     loading = false;
     serchValue: string = '';
+    isSubmitting = false;
 
     // Form Configuration
     formConfig: FormConfig = {
@@ -154,6 +155,7 @@ export class Occupation {
     }
 
     private createCommonCode(currentUser: string, currentDateTime: string) {
+        this.isSubmitting = true;
         const createPayload = {
             ...this.commonCodeForm.value,
             createdBy: currentUser,
@@ -175,6 +177,7 @@ export class Occupation {
                     summary: 'Success',
                     detail: 'Occupation created successfully'
                 });
+                this.isSubmitting = false;
             },
             error: (err) => {
                 console.error('Error creating:', err);
@@ -183,11 +186,13 @@ export class Occupation {
                     summary: 'Error',
                     detail: 'Failed to create occupation'
                 });
+                this.isSubmitting = false;
             }
         });
     }
 
     private updateCommonCode(currentUser: string, currentDateTime: string) {
+        this.isSubmitting = true;
         const updatePayload = {
             ...this.commonCodeForm.value,
             codeId: this.editingId,
@@ -208,6 +213,7 @@ export class Occupation {
                     summary: 'Success',
                     detail: 'Occupation updated successfully'
                 });
+                this.isSubmitting = false;
             },
             error: (err) => {
                 console.error('Error updating:', err);
@@ -216,6 +222,7 @@ export class Occupation {
                     summary: 'Error',
                     detail: 'Failed to update occupation'
                 });
+                this.isSubmitting = false;
             }
         });
     }
@@ -270,6 +277,7 @@ export class Occupation {
 
     resetForm() {
         this.editingId = null;
+        this.isSubmitting = false;
         this.commonCodeForm.reset({
             orgId: 0,
             codeId: 0,

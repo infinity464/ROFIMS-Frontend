@@ -29,6 +29,7 @@ export class Relationship {
     first = 0;
     loading = false;
     serchValue: string = '';
+    isSubmitting = false;
 
     // Form Configuration
     formConfig: FormConfig = {
@@ -154,6 +155,7 @@ export class Relationship {
     }
 
     private createDivision(currentUser: string, currentDateTime: string) {
+        this.isSubmitting = true;
         const createPayload = {
             ...this.divisionForm.value,
             createdBy: currentUser,
@@ -175,6 +177,7 @@ export class Relationship {
                     summary: 'Success',
                     detail: 'Relationship created successfully'
                 });
+                this.isSubmitting = false;
             },
             error: (err) => {
                 console.error('Error creating:', err);
@@ -183,11 +186,13 @@ export class Relationship {
                     summary: 'Error',
                     detail: 'Failed to create relationship'
                 });
+                this.isSubmitting = false;
             }
         });
     }
 
     private updateDivision(currentUser: string, currentDateTime: string) {
+        this.isSubmitting = true;
         const updatePayload = {
             ...this.divisionForm.value,
             codeId: this.editingId,
@@ -208,6 +213,7 @@ export class Relationship {
                     summary: 'Success',
                     detail: 'Relationship updated successfully'
                 });
+                this.isSubmitting = false;
             },
             error: (err) => {
                 console.error('Error updating:', err);
@@ -216,6 +222,7 @@ export class Relationship {
                     summary: 'Error',
                     detail: 'Failed to update relationship'
                 });
+                this.isSubmitting = false;
             }
         });
     }
@@ -269,6 +276,7 @@ export class Relationship {
     }
 
     resetForm() {
+        this.isSubmitting = false;
         this.editingId = null;
         this.divisionForm.reset({
             orgId: 0,

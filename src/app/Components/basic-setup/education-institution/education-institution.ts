@@ -75,6 +75,7 @@ export class EducationInstitution {
             { field: 'codeId', header: 'Code ID', hidden: true }
         ]
     };
+    isSubmitting = false;
 
     constructor(
         private masterBasicSetupService: MasterBasicSetupService,
@@ -155,6 +156,7 @@ export class EducationInstitution {
     }
 
     private createCommonCode(currentUser: string, currentDateTime: string) {
+        this.isSubmitting = true;
         const createPayload = {
             ...this.commonCodeForm.value,
             createdBy: currentUser,
@@ -174,8 +176,9 @@ export class EducationInstitution {
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Success',
-                    detail: 'EducationInstitution created successfully'
+                    detail: 'Education Institution created successfully'
                 });
+                this.isSubmitting = false;
             },
             error: (err) => {
                 console.error('Error creating:', err);
@@ -184,11 +187,13 @@ export class EducationInstitution {
                     summary: 'Error',
                     detail: 'Failed to create education-institution'
                 });
+                this.isSubmitting = false;
             }
         });
     }
 
     private updateCommonCode(currentUser: string, currentDateTime: string) {
+        this.isSubmitting = true;
         const updatePayload = {
             ...this.commonCodeForm.value,
             codeId: this.editingId,
@@ -209,6 +214,7 @@ export class EducationInstitution {
                     summary: 'Success',
                     detail: 'EducationInstitution updated successfully'
                 });
+                this.isSubmitting = false;
             },
             error: (err) => {
                 console.error('Error updating:', err);
@@ -217,6 +223,7 @@ export class EducationInstitution {
                     summary: 'Error',
                     detail: 'Failed to update education-institution'
                 });
+                this.isSubmitting = false;
             }
         });
     }
@@ -271,6 +278,7 @@ export class EducationInstitution {
 
     resetForm() {
         this.editingId = null;
+        this.isSubmitting = false;
         this.commonCodeForm.reset({
             orgId: 0,
             codeId: 0,

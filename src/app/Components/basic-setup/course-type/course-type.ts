@@ -30,6 +30,7 @@ export class CourseType {
     first = 0;
     loading = false;
     serchValue: string = '';
+    isSubmitting = false;
 
     // Form Configuration
     formConfig: FormConfig = {
@@ -155,6 +156,7 @@ export class CourseType {
     }
 
     private createCommonCode(currentUser: string, currentDateTime: string) {
+        this.isSubmitting = true;
         const createPayload = {
             ...this.commonCodeForm.value,
             createdBy: currentUser,
@@ -174,8 +176,9 @@ export class CourseType {
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Success',
-                    detail: 'CourseType created successfully'
+                    detail: 'Course Type created successfully'
                 });
+                this.isSubmitting = false;
             },
             error: (err) => {
                 console.error('Error creating:', err);
@@ -184,11 +187,13 @@ export class CourseType {
                     summary: 'Error',
                     detail: 'Failed to create course-type'
                 });
+                this.isSubmitting = false;
             }
         });
     }
 
     private updateCommonCode(currentUser: string, currentDateTime: string) {
+        this.isSubmitting = true;
         const updatePayload = {
             ...this.commonCodeForm.value,
             codeId: this.editingId,
@@ -207,8 +212,9 @@ export class CourseType {
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Success',
-                    detail: 'CourseType updated successfully'
+                    detail: 'Course Type updated successfully'
                 });
+                this.isSubmitting = false;
             },
             error: (err) => {
                 console.error('Error updating:', err);
@@ -217,6 +223,7 @@ export class CourseType {
                     summary: 'Error',
                     detail: 'Failed to update course-type'
                 });
+                this.isSubmitting = false;
             }
         });
     }
@@ -271,6 +278,7 @@ export class CourseType {
 
     resetForm() {
         this.editingId = null;
+        this.isSubmitting = false;
         this.commonCodeForm.reset({
             orgId: 0,
             codeId: 0,

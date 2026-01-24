@@ -4,7 +4,7 @@
     <div class="card">
         <div class="font-semibold text-xl mb-5">{{ title }} Setup</div>
         <app-dynamic-form [config]="formConfig" [form]="commonCodeForm" [editingId]="editingId" (save)="submit($event)"
-            (reset)="resetForm()">
+            (reset)="resetForm()" [isSubmitting]="isSubmitting">
         </app-dynamic-form>
     </div>
 </p-fluid>

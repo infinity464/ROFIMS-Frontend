@@ -31,6 +31,8 @@ export class PunishmentType {
     loading = false;
     serchValue: string = '';
 
+    isSubmitting = false;
+
     // Form Configuration
     formConfig: FormConfig = {
         formFields: [
@@ -155,6 +157,7 @@ export class PunishmentType {
     }
 
     private createCommonCode(currentUser: string, currentDateTime: string) {
+        this.isSubmitting = true;
         const createPayload = {
             ...this.commonCodeForm.value,
             createdBy: currentUser,
@@ -184,11 +187,13 @@ export class PunishmentType {
                     summary: 'Error',
                     detail: 'Failed to create punishment-type'
                 });
+                this.isSubmitting = false;
             }
         });
     }
 
     private updateCommonCode(currentUser: string, currentDateTime: string) {
+        this.isSubmitting = true;
         const updatePayload = {
             ...this.commonCodeForm.value,
             codeId: this.editingId,
@@ -209,6 +214,7 @@ export class PunishmentType {
                     summary: 'Success',
                     detail: 'Punishment Type updated successfully'
                 });
+                this.isSubmitting = false;
             },
             error: (err) => {
                 console.error('Error updating:', err);
@@ -217,6 +223,7 @@ export class PunishmentType {
                     summary: 'Error',
                     detail: 'Failed to update punishment-type'
                 });
+                this.isSubmitting = false;
             }
         });
     }
@@ -270,6 +277,7 @@ export class PunishmentType {
     }
 
     resetForm() {
+        this.isSubmitting = false;
         this.editingId = null;
         this.commonCodeForm.reset({
             orgId: 0,

@@ -7,7 +7,7 @@
 
 
         <app-dynamic-form [config]="formConfig" [form]="districtForm" [editingId]="editingId" (save)="submit($event)"
-            (reset)="resetForm()">
+            (reset)="resetForm()" [isSubmitting]="isSubmitting">
         </app-dynamic-form>
     </div>
 </p-fluid>

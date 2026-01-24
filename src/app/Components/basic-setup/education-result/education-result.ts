@@ -25,6 +25,8 @@ export class EducationResult {
     editingId: number | null = null;
     commonCodeForm!: FormGroup;
 
+    isSubmitting = false;
+
     totalRecords = 0;
     rows = 10;
     first = 0;
@@ -155,6 +157,7 @@ export class EducationResult {
     }
 
     private createCommonCode(currentUser: string, currentDateTime: string) {
+        this.isSubmitting = true;
         const createPayload = {
             ...this.commonCodeForm.value,
             createdBy: currentUser,
@@ -176,6 +179,7 @@ export class EducationResult {
                     summary: 'Success',
                     detail: 'Education Result created successfully'
                 });
+                this.isSubmitting = false;
             },
             error: (err) => {
                 console.error('Error creating:', err);
@@ -184,11 +188,13 @@ export class EducationResult {
                     summary: 'Error',
                     detail: 'Failed to create education result'
                 });
+                this.isSubmitting = false;
             }
         });
     }
 
     private updateCommonCode(currentUser: string, currentDateTime: string) {
+        this.isSubmitting = true;
         const updatePayload = {
             ...this.commonCodeForm.value,
             codeId: this.editingId,
@@ -209,6 +215,7 @@ export class EducationResult {
                     summary: 'Success',
                     detail: 'Education Result updated successfully'
                 });
+                this.isSubmitting = false;
             },
             error: (err) => {
                 console.error('Error updating:', err);
@@ -217,6 +224,7 @@ export class EducationResult {
                     summary: 'Error',
                     detail: 'Failed to update'
                 });
+                this.isSubmitting = false;
             }
         });
     }
@@ -271,6 +279,7 @@ export class EducationResult {
 
     resetForm() {
         this.editingId = null;
+        this.isSubmitting = false;
         this.commonCodeForm.reset({
             orgId: 0,
             codeId: 0,

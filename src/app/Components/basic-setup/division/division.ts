@@ -23,6 +23,7 @@ export class Division {
     divisionDate: CommonCode[] = [];
     editingId: number | null = null;
     divisionForm!: FormGroup;
+    isSubmitting = false;
 
     totalRecords = 0;
     rows = 10;
@@ -154,6 +155,7 @@ export class Division {
     }
 
     private createDivision(currentUser: string, currentDateTime: string) {
+        this.isSubmitting = true;
         const createPayload = {
             ...this.divisionForm.value,
             createdBy: currentUser,
@@ -175,6 +177,7 @@ export class Division {
                     summary: 'Success',
                     detail: 'Division created successfully'
                 });
+                this.isSubmitting = false;
             },
             error: (err) => {
                 console.error('Error creating:', err);
@@ -183,11 +186,13 @@ export class Division {
                     summary: 'Error',
                     detail: 'Failed to create division'
                 });
+                this.isSubmitting = false;
             }
         });
     }
 
     private updateDivision(currentUser: string, currentDateTime: string) {
+        this.isSubmitting = true;
         const updatePayload = {
             ...this.divisionForm.value,
             codeId: this.editingId,
@@ -208,6 +213,7 @@ export class Division {
                     summary: 'Success',
                     detail: 'Division updated successfully'
                 });
+                this.isSubmitting = false;
             },
             error: (err) => {
                 console.error('Error updating:', err);
@@ -216,6 +222,7 @@ export class Division {
                     summary: 'Error',
                     detail: 'Failed to update division'
                 });
+                this.isSubmitting = false;
             }
         });
     }
@@ -270,6 +277,7 @@ export class Division {
 
     resetForm() {
         this.editingId = null;
+        this.isSubmitting = false;
         this.divisionForm.reset({
             orgId: 0,
             codeId: 0,

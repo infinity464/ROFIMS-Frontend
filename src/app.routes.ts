@@ -14,7 +14,7 @@ import { District } from '@/Components/basic-setup/district/district';
 import { Upazila } from '@/Components/basic-setup/upazila/upazila';
 import { BloodGroup } from '@/Components/basic-setup/blood-group/blood-group';
 import { Relationship } from '@/Components/basic-setup/relationship/relationship';
-import { MaritalStatus } from '@/Components/basic-setup/marital-status/relationship';
+import { MaritalStatus } from '@/Components/basic-setup/marital-status/marital-status';
 import { Occupation } from '@/Components/basic-setup/occupation/occupation';
 import { EducationQualification } from '@/Components/basic-setup/education-qualification/education-qualification';
 import { EducationInstitutionType } from '@/Components/basic-setup/education-institution-type/education-institution-type';

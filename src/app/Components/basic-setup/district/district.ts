@@ -30,6 +30,7 @@ export class District {
     first = 0;
     loading = false;
     searchValue: string = '';
+    isSubmitting = false;
 
 
     formConfig: FormConfig = {
@@ -197,6 +198,7 @@ export class District {
     }
 
     private createDistrict(currentUser: string, currentDateTime: string) {
+        this.isSubmitting = true;
         const createPayload = {
             ...this.districtForm.value,
             createdBy: currentUser,
@@ -218,6 +220,7 @@ export class District {
                     summary: 'Success',
                     detail: 'District created successfully'
                 });
+                this.isSubmitting = false;
             },
             error: (err) => {
                 console.error('Error creating:', err);
@@ -226,11 +229,14 @@ export class District {
                     summary: 'Error',
                     detail: 'Failed to create district'
                 });
+
+                this.isSubmitting = false;
             }
         });
     }
 
     private updateDistrict(currentUser: string, currentDateTime: string) {
+        this.isSubmitting = true;
         const updatePayload = {
             ...this.districtForm.value,
             codeId: this.editingId,
@@ -253,6 +259,7 @@ export class District {
                     summary: 'Success',
                     detail: 'District updated successfully'
                 });
+                this.isSubmitting = false;
             },
             error: (err) => {
                 console.error('Error updating:', err);
@@ -261,6 +268,7 @@ export class District {
                     summary: 'Error',
                     detail: 'Failed to update district'
                 });
+                this.isSubmitting = false;
             }
         });
     }
@@ -320,6 +328,7 @@ export class District {
 
     resetForm() {
         this.editingId = null;
+        this.isSubmitting = false;
         this.districtForm.reset({
             divisionId: null,
             orgId: 0,

@@ -24,6 +24,7 @@ export class BloodGroup {
     commonCodeData: CommonCode[] = [];
     editingId: number | null = null;
     commonCodeForm!: FormGroup;
+    isSubmitting = false;
 
     totalRecords = 0;
     rows = 10;
@@ -36,13 +37,13 @@ export class BloodGroup {
         formFields: [
             {
                 name: 'codeValueEN',
-                label: 'BloodGroup Name (English)',
+                label: 'Blood Group (English)',
                 type: 'text',
                 required: true
             },
             {
                 name: 'codeValueBN',
-                label: 'BloodGroup Name (Bangla)',
+                label: 'Blood Group (Bangla)',
                 type: 'text',
                 required: true
             },
@@ -155,6 +156,7 @@ export class BloodGroup {
     }
 
     private createCommonCode(currentUser: string, currentDateTime: string) {
+        this.isSubmitting = true;
         const createPayload = {
             ...this.commonCodeForm.value,
             createdBy: currentUser,
@@ -176,6 +178,7 @@ export class BloodGroup {
                     summary: 'Success',
                     detail: 'Blood Group created successfully'
                 });
+                 this.isSubmitting = false;
             },
             error: (err) => {
                 console.error('Error creating:', err);
@@ -184,11 +187,13 @@ export class BloodGroup {
                     summary: 'Error',
                     detail: 'Failed to create blood-group'
                 });
+                this.isSubmitting = false;
             }
         });
     }
 
     private updateCommonCode(currentUser: string, currentDateTime: string) {
+            this.isSubmitting = true;
         const updatePayload = {
             ...this.commonCodeForm.value,
             codeId: this.editingId,
@@ -207,8 +212,9 @@ export class BloodGroup {
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Success',
-                    detail: 'BloodGroup updated successfully'
+                    detail: 'Blood Group updated successfully'
                 });
+                this.isSubmitting = false;
             },
             error: (err) => {
                 console.error('Error updating:', err);
@@ -217,6 +223,7 @@ export class BloodGroup {
                     summary: 'Error',
                     detail: 'Failed to update blood-group'
                 });
+                this.isSubmitting = false;
             }
         });
     }
@@ -224,7 +231,6 @@ export class BloodGroup {
     update(row: any) {
         this.editingId = row.codeId;
         this.commonCodeForm.patchValue(row);
-        console.log('Edit:', row);
     }
 
     delete(row: any, event: Event) {
@@ -271,6 +277,7 @@ export class BloodGroup {
 
     resetForm() {
         this.editingId = null;
+        this.isSubmitting = false;
         this.commonCodeForm.reset({
             orgId: 0,
             codeId: 0,

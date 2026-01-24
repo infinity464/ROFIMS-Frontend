@@ -31,6 +31,8 @@ export class PersonalQualification {
     loading = false;
     serchValue: string = '';
 
+    isSubmitting = false;
+
     // Form Configuration
     formConfig: FormConfig = {
         formFields: [
@@ -155,6 +157,7 @@ export class PersonalQualification {
     }
 
     private createCommonCode(currentUser: string, currentDateTime: string) {
+        this.isSubmitting = true;
         const createPayload = {
             ...this.commonCodeForm.value,
             createdBy: currentUser,
@@ -176,6 +179,7 @@ export class PersonalQualification {
                     summary: 'Success',
                     detail: 'PersonalQualification created successfully'
                 });
+                this.isSubmitting = false;
             },
             error: (err) => {
                 console.error('Error creating:', err);
@@ -184,11 +188,13 @@ export class PersonalQualification {
                     summary: 'Error',
                     detail: 'Failed to create personal-qualification'
                 });
+                this.isSubmitting = false;
             }
         });
     }
 
     private updateCommonCode(currentUser: string, currentDateTime: string) {
+        this.isSubmitting = true;
         const updatePayload = {
             ...this.commonCodeForm.value,
             codeId: this.editingId,
@@ -209,6 +215,7 @@ export class PersonalQualification {
                     summary: 'Success',
                     detail: 'PersonalQualification updated successfully'
                 });
+                this.isSubmitting = false;
             },
             error: (err) => {
                 console.error('Error updating:', err);
@@ -217,6 +224,7 @@ export class PersonalQualification {
                     summary: 'Error',
                     detail: 'Failed to update personal-qualification'
                 });
+                this.isSubmitting = false;
             }
         });
     }
@@ -271,6 +279,7 @@ export class PersonalQualification {
 
     resetForm() {
         this.editingId = null;
+        this.isSubmitting = false;
         this.commonCodeForm.reset({
             orgId: 0,
             codeId: 0,

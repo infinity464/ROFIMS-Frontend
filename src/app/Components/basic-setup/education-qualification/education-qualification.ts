@@ -29,6 +29,7 @@ export class EducationQualification {
     first = 0;
     loading = false;
     serchValue: string = '';
+    isSubmitting = false;
 
     // Form Configuration
     formConfig: FormConfig = {
@@ -138,6 +139,7 @@ export class EducationQualification {
     }
 
     submit(data: any) {
+
         if (this.commonCodeForm.invalid) {
             this.commonCodeForm.markAllAsTouched();
             return;
@@ -154,6 +156,7 @@ export class EducationQualification {
     }
 
     private createCommonCode(currentUser: string, currentDateTime: string) {
+        this.isSubmitting = true;
         const createPayload = {
             ...this.commonCodeForm.value,
             createdBy: currentUser,
@@ -175,6 +178,7 @@ export class EducationQualification {
                     summary: 'Success',
                     detail: 'EducationQualification created successfully'
                 });
+                this.isSubmitting = false;
             },
             error: (err) => {
                 console.error('Error creating:', err);
@@ -183,11 +187,13 @@ export class EducationQualification {
                     summary: 'Error',
                     detail: 'Failed to create education-qualification'
                 });
+                this.isSubmitting = false;
             }
         });
     }
 
     private updateCommonCode(currentUser: string, currentDateTime: string) {
+        this.isSubmitting = true;
         const updatePayload = {
             ...this.commonCodeForm.value,
             codeId: this.editingId,
@@ -208,6 +214,7 @@ export class EducationQualification {
                     summary: 'Success',
                     detail: 'EducationQualification updated successfully'
                 });
+                this.isSubmitting = false;
             },
             error: (err) => {
                 console.error('Error updating:', err);
@@ -216,6 +223,7 @@ export class EducationQualification {
                     summary: 'Error',
                     detail: 'Failed to update education-qualification'
                 });
+                this.isSubmitting = false;
             }
         });
     }
@@ -269,6 +277,7 @@ export class EducationQualification {
     }
 
     resetForm() {
+        this.isSubmitting = false;
         this.editingId = null;
         this.commonCodeForm.reset({
             orgId: 0,

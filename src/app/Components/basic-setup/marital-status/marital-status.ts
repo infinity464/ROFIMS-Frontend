@@ -23,6 +23,7 @@ export class MaritalStatus {
     commonCodeData: CommonCode[] = [];
     editingId: number | null = null;
     commonCodeForm!: FormGroup;
+    isSubmitting = false;
 
     totalRecords = 0;
     rows = 10;
@@ -154,6 +155,7 @@ export class MaritalStatus {
     }
 
     private createCommonCode(currentUser: string, currentDateTime: string) {
+         this.isSubmitting = true;
         const createPayload = {
             ...this.commonCodeForm.value,
             createdBy: currentUser,
@@ -175,6 +177,7 @@ export class MaritalStatus {
                     summary: 'Success',
                     detail: 'MaritalStatus created successfully'
                 });
+                this.isSubmitting = false;
             },
             error: (err) => {
                 console.error('Error creating:', err);
@@ -183,11 +186,13 @@ export class MaritalStatus {
                     summary: 'Error',
                     detail: 'Failed to create marital-status'
                 });
+                this.isSubmitting = false;
             }
         });
     }
 
     private updateCommonCode(currentUser: string, currentDateTime: string) {
+            this.isSubmitting = true;
         const updatePayload = {
             ...this.commonCodeForm.value,
             codeId: this.editingId,
@@ -208,6 +213,7 @@ export class MaritalStatus {
                     summary: 'Success',
                     detail: 'MaritalStatus updated successfully'
                 });
+                this.isSubmitting = false;
             },
             error: (err) => {
                 console.error('Error updating:', err);
@@ -216,6 +222,7 @@ export class MaritalStatus {
                     summary: 'Error',
                     detail: 'Failed to update marital-status'
                 });
+                this.isSubmitting = false;
             }
         });
     }
@@ -270,6 +277,7 @@ export class MaritalStatus {
 
     resetForm() {
         this.editingId = null;
+        this.isSubmitting = false;
         this.commonCodeForm.reset({
             orgId: 0,
             codeId: 0,
