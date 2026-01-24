@@ -7,11 +7,11 @@ import { Notfound } from './app/pages/notfound/notfound';
 // import { Login } from '@/pages/auth/login';
 import { Login } from '@/Components/Features/Authentication/Login/login';
 import { AuthGuard } from '@/Core/Guard/auth.guard';
-import { MotherOrg } from '@/Components/basic-setup/mother-org/mother-org';
+// import { MotherOrg } from '@/Components/basic-setup/mother-org/mother-org';
 import { Employeeinfo } from '@/Components/Features/EmployeeInfo/employeeinfo/employeeinfo';
-import { Division } from '@/Components/basic-setup2/division/division';
-import { District } from '@/Components/basic-setup2/district/district';
-import { Upazila } from '@/Components/basic-setup2/upazila/upazila';
+import { Division } from '@/Components/basic-setup/division/division';
+import { District } from '@/Components/basic-setup/district/district';
+import { Upazila } from '@/Components/basic-setup/upazila/upazila';
 
 export const appRoutes: Routes = [
   // Public routes
@@ -27,7 +27,6 @@ export const appRoutes: Routes = [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       { path: 'dashboard', component: Dashboard },
       {path: 'employee-info', component: Employeeinfo},
-      { path: 'basic-setup/mother-org', component: MotherOrg },
       { path: 'basic-setup/division', component: Division },
       { path: 'basic-setup/district', component: District },
       { path: 'basic-setup/upazila', component: Upazila },
