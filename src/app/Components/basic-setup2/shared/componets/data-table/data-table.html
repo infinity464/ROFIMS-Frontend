@@ -1,0 +1,62 @@
+<div class="card mt-4">
+    <div class="flex justify-between items-center flex-column sm:flex-row">
+        <p-iconfield iconPosition="left" class="ml-auto">
+            <p-inputicon>
+                <i class="pi pi-search"></i>
+            </p-inputicon>
+            <input pInputText type="text" placeholder="Search keyword" (input)="onSearch($event.target.value)" />
+        </p-iconfield>
+    </div>
+
+    <p-table [value]="data"
+             [lazy]="true"
+             [paginator]="true"
+             [first]="first"
+             [rows]="rows"
+             [totalRecords]="totalRecords"
+             [rowsPerPageOptions]="[10, 25, 50]"
+             [loading]="loading"
+             (onLazyLoad)="onLazyLoad($event)">
+
+        <ng-template pTemplate="header">
+            <tr>
+                <th>#</th>
+                @for (col of config.tableColumns; track col.field) {
+                    @if (!col.hidden) {
+                        <th>{{ col.header }}</th>
+                    }
+                }
+                <th>Action</th>
+            </tr>
+        </ng-template>
+
+        <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+            <tr>
+                <td>{{ first + rowIndex + 1 }}</td>
+
+                @for (col of config.tableColumns; track col.field) {
+                    @if (!col.hidden) {
+                        <td>
+                            @if (col.type === 'boolean') {
+                                <span [ngClass]="{
+                                    'text-green-600 font-semibold': row[col.field],
+                                    'text-red-600 font-semibold': !row[col.field]
+                                }">
+                                    {{ row[col.field] ? col.trueLabel : col.falseLabel }}
+                                </span>
+                            }
+                            @else {
+                                {{ row[col.field] }}
+                            }
+                        </td>
+                    }
+                }
+
+                <td>
+                    <button class="mx-2" pButton icon="pi pi-pencil" (click)="onEdit(row)"></button>
+                    <button pButton icon="pi pi-trash" (click)="onDelete(row, $event)" class="p-button-danger"></button>
+                </td>
+            </tr>
+        </ng-template>
+    </p-table>
+</div>

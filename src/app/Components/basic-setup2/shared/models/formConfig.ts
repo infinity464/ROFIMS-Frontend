@@ -1,0 +1,12 @@
+export interface FormConfig {
+    formFields: FormField[];
+}
+
+export interface FormField {
+    name: string;
+    label: string;
+    type: 'text' | 'select';
+    default?: any;
+    required?: boolean;
+    options?: { label: string; value: any }[];
+}
