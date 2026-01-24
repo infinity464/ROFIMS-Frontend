@@ -12,14 +12,14 @@ import { Toast } from 'primeng/toast';
 import { Fluid } from 'primeng/fluid';
 
 @Component({
-    selector: 'app-employee-status-type',
+    selector: 'app-employee-type',
     imports: [DynamicFormComponent, DataTable, ConfirmDialog, Toast, Fluid],
-    templateUrl: './employee-status-type.html',
+    templateUrl: './employee-type.html',
     providers: [MessageService, ConfirmationService],
-    styleUrl: './employee-status-type.scss'
+    styleUrl: './employee-type.scss'
 })
-export class EmployeeStatusType {
-    codeType: string = 'EmployeeStatusType';
+export class EmployeeType {
+    codeType: string = 'EmployeeType';
     title: string = 'Employee Status Type';
     commonCodeData: CommonCode[] = [];
     editingId: number | null = null;
@@ -176,7 +176,7 @@ export class EmployeeStatusType {
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Success',
-                    detail: 'Employee StatusType created successfully'
+                    detail: 'Employee Status Type created successfully'
                 });
                 this.isSubmitting = false;
             },
@@ -185,7 +185,7 @@ export class EmployeeStatusType {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create employee-status-type'
+                    detail: 'Failed to create employee-type'
                 });
                 this.isSubmitting = false;
             }
@@ -212,7 +212,7 @@ export class EmployeeStatusType {
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Success',
-                    detail: 'Employee StatusType updated successfully'
+                    detail: 'Employee Status Type updated successfully'
                 });
                 this.isSubmitting = false;
             },
@@ -221,7 +221,7 @@ export class EmployeeStatusType {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update employee-status-type'
+                    detail: 'Failed to update employee-type'
                 });
                 this.isSubmitting = false;
             }
@@ -268,7 +268,7 @@ export class EmployeeStatusType {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete employee-status-type'
+                            detail: 'Failed to delete employee-type'
                         });
                     }
                 });

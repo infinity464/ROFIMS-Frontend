@@ -28,6 +28,7 @@ import { PunishmentType } from '@/Components/basic-setup/punishment-type/punishm
 import { LeaveType } from '@/Components/basic-setup/leave-type/leave-type';
 import { EquivalentName } from '@/Components/basic-setup/equivalent-name/equivalent-name';
 import { EmployeeStatusType } from '@/Components/basic-setup/employee-status-type/employee-status-type';
+import { EmployeeType } from '@/Components/basic-setup/employee-type/employee-type';
 
 export const appRoutes: Routes = [
   // Public routes
@@ -62,6 +63,7 @@ export const appRoutes: Routes = [
       { path: 'basic-setup/leave-type', component: LeaveType },
       { path: 'basic-setup/equivalent-name', component: EquivalentName },
       { path: 'basic-setup/employee-status-type', component: EmployeeStatusType },
+      { path: 'basic-setup/employee-type', component: EmployeeType },
 
       { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
       { path: 'documentation', component: Documentation },
