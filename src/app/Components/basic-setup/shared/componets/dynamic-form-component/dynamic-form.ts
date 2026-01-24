@@ -53,6 +53,7 @@ import { FormConfig, FormField } from '../../models/formConfig';
 
 
 export class DynamicFormComponent implements OnInit {
+    @Input() isSubmitting: boolean = false;
     @Input() config!: FormConfig;
     @Input() form!: FormGroup;
     @Input() editingId: number | null = null;
@@ -116,6 +117,7 @@ export class DynamicFormComponent implements OnInit {
     }
 
     onReset() {
+        if (this.isSubmitting) return;
         this.reset.emit();
     }
 }
