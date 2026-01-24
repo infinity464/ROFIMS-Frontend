@@ -16,6 +16,7 @@ import { BloodGroup } from '@/Components/basic-setup/blood-group/blood-group';
 import { Relationship } from '@/Components/basic-setup/relationship/relationship';
 import { MaritalStatus } from '@/Components/basic-setup/marital-status/relationship';
 import { Occupation } from '@/Components/basic-setup/occupation/occupation';
+import { EducationQualification } from '@/Components/basic-setup/education-qualification/education-qualification';
 
 export const appRoutes: Routes = [
   // Public routes
@@ -38,6 +39,7 @@ export const appRoutes: Routes = [
       { path: 'basic-setup/relationship', component: Relationship },
       { path: 'basic-setup/marital-status', component: MaritalStatus },
       { path: 'basic-setup/occupation', component: Occupation },
+      { path: 'basic-setup/education-qualification', component: EducationQualification },
       { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
       { path: 'documentation', component: Documentation },
       { path: 'pages', loadChildren: () => import('./app/pages/pages.routes') }
