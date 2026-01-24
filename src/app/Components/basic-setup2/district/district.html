@@ -1,0 +1,27 @@
+<p-toast position="top-right"></p-toast>
+<p-confirm-dialog></p-confirm-dialog>
+<p-fluid>
+    <div class="card">
+        <div class="font-semibold text-xl mb-5">{{ codeType }} Setup</div>
+
+
+
+        <app-dynamic-form [config]="formConfig" [form]="districtForm" [editingId]="editingId" (save)="submit($event)"
+            (reset)="resetForm()">
+        </app-dynamic-form>
+    </div>
+</p-fluid>
+
+
+  <app-data-table
+            [config]="tableConfig"
+            [data]="districtData"
+            [first]="first"
+            [totalRecords]="totalRecords"
+            [rows]="rows"
+            [loading]="loading"
+            (edit)="update($event)"
+            (delete)="delete($event.row, $event.event)"
+            (lazyLoad)="getDistrictWithPaging($event)"
+            (search)="onSearch($event)">
+        </app-data-table>

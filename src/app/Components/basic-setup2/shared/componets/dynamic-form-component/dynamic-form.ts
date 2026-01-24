@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { FluidModule } from 'primeng/fluid';
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
@@ -18,7 +18,7 @@ import { InputIconModule } from 'primeng/inputicon';
 import { IconFieldModule } from 'primeng/iconfield';
 import { TagModule } from 'primeng/tag';
 import { ReactiveFormsModule } from '@angular/forms';
-import { FormConfig } from '../../models/formConfig';
+import { FormConfig, FormField } from '../../models/formConfig';
 
 @Component({
   selector: 'app-dynamic-form',
@@ -52,12 +52,63 @@ import { FormConfig } from '../../models/formConfig';
 })
 
 
-export class DynamicFormComponent {
+export class DynamicFormComponent implements OnInit {
     @Input() config!: FormConfig;
     @Input() form!: FormGroup;
     @Input() editingId: number | null = null;
     @Output() save = new EventEmitter<any>();
     @Output() reset = new EventEmitter<void>();
+    @Output() fieldChange = new EventEmitter<{ fieldName: string; value: any }>();
+
+    ngOnInit() {
+        this.setupCascadingDropdowns();
+    }
+
+    setupCascadingDropdowns() {
+        // Find all fields that have dependencies
+        const dependentFields = this.config.formFields.filter(f => f.dependsOn);
+
+        dependentFields.forEach(field => {
+            const parentField = field.dependsOn!;
+            const parentControl = this.form.get(parentField);
+
+            if (parentControl) {
+                // Subscribe to parent field changes
+                parentControl.valueChanges.subscribe(value => {
+                    // Clear the dependent field when parent changes
+                    const childControl = this.form.get(field.name);
+                    if (childControl) {
+                        childControl.setValue(null);
+
+                        // Clear options if it's a cascade load field
+                        if (field.cascadeLoad) {
+                            field.options = [];
+                        }
+                    }
+
+                    // Emit event to parent component to load new options
+                    if (value) {
+                        this.fieldChange.emit({
+                            fieldName: field.name,
+                            value: { parentField, parentValue: value }
+                        });
+                    }
+                });
+            }
+        });
+    }
+
+    onFieldChange(fieldName: string, value: any) {
+        this.fieldChange.emit({ fieldName, value });
+    }
+
+    isFieldDisabled(field: FormField): boolean {
+        if (field.dependsOn) {
+            const parentControl = this.form.get(field.dependsOn);
+            return !parentControl?.value;
+        }
+        return false;
+    }
 
     onSave() {
         if (this.form.invalid) return;

@@ -9,4 +9,7 @@ export interface FormField {
     default?: any;
     required?: boolean;
     options?: { label: string; value: any }[];
+    dependsOn?: string;
+    cascadeLoad?: boolean;
+
 }

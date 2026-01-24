@@ -12,7 +12,7 @@ export class MasterBasicSetupService {
     private http = inject(HttpClient);
     private apiUrl = `${environment.apis.core}/rab/api/CommonCode`;
 
-    getAll(codeType: string): Observable<CommonCode[]> {
+    getAllByType(codeType: string): Observable<CommonCode[]> {
         return this.http.get<CommonCode[]>(`${this.apiUrl}/GetByTypeAsyn/${codeType}`);
     }
 
