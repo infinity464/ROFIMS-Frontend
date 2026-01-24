@@ -32,6 +32,7 @@ import { EmployeeType } from '@/Components/basic-setup/employee-type/employee-ty
 import { AppointmentCategory } from '@/Components/basic-setup/appointment-category/appointment-category';
 import { RabId } from '@/Components/basic-setup/rab-id/rab-id';
 import { RabUnit } from '@/Components/basic-setup/rab-unit/rab-unit';
+import { OfficerType } from '@/Components/basic-setup/officer-type/officer-type';
 
 export const appRoutes: Routes = [
   // Public routes
@@ -70,6 +71,7 @@ export const appRoutes: Routes = [
       { path: 'basic-setup/appointment-category', component: AppointmentCategory },
       { path: 'basic-setup/rab-id', component: RabId },
       { path: 'basic-setup/rab-unit', component: RabUnit },
+      { path: 'basic-setup/officer-type', component: OfficerType },
 
       { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
       { path: 'documentation', component: Documentation },
