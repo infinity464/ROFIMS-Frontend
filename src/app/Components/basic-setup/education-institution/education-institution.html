@@ -6,18 +6,14 @@
 
 
 
-<app-dynamic-form
-            [config]="formConfig"
-            [form]="commonCodeForm"
-            [editingId]="editingId"
-            (save)="submit($event)"
-            (reset)="resetForm()"
-            [isSubmitting]="isSubmitting">
+        <app-dynamic-form [config]="formConfig" [form]="commonCodeForm" [editingId]="editingId" (save)="submit($event)"
+            (reset)="resetForm()" [isSubmitting]="isSubmitting">
         </app-dynamic-form>
-          </div>
+    </div>
 </p-fluid>
 
-        <app-data-table
+
+  <app-data-table
             [config]="tableConfig"
             [data]="commonCodeData"
             [first]="first"
@@ -25,7 +21,7 @@
             [rows]="rows"
             [loading]="loading"
             (edit)="update($event)"
-             (delete)="delete($event.row, $event.event)"
-            (lazyLoad)="getCommonCodeWithPaging($event)"
+            (delete)="delete($event.row, $event.event)"
+            (lazyLoad)="getOfficerTypeWithPaging($event)"
             (search)="onSearch($event)">
         </app-data-table>

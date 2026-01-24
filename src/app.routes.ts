@@ -18,8 +18,6 @@ import { MaritalStatus } from '@/Components/basic-setup/marital-status/marital-s
 import { Occupation } from '@/Components/basic-setup/occupation/occupation';
 import { EducationQualification } from '@/Components/basic-setup/education-qualification/education-qualification';
 import { EducationInstitutionType } from '@/Components/basic-setup/education-institution-type/education-institution-type';
-import { EducationInstitution } from '@/Components/basic-setup/education-institution/education-institution';
-import { EducationResult } from '@/Components/basic-setup/education-result/education-result';
 import { CourseType } from '@/Components/basic-setup/course-type/course-type';
 import { CourseGrade } from '@/Components/basic-setup/course-grade/course-grade';
 import { PersonalQualification } from '@/Components/basic-setup/personal-qualification/personal-qualification';
@@ -34,6 +32,8 @@ import { RabId } from '@/Components/basic-setup/rab-id/rab-id';
 import { RabUnit } from '@/Components/basic-setup/rab-unit/rab-unit';
 import { OfficerType } from '@/Components/basic-setup/officer-type/officer-type';
 import { RabWing } from '@/Components/basic-setup/rab-wing/rab-wing';
+import { EducationInstitution } from '@/Components/basic-setup/education-institution/education-institution';
+import { EducationResult } from '@/Components/basic-setup/education-result/education-result';
 
 export const appRoutes: Routes = [
   // Public routes

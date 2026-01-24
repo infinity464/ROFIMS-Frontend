@@ -1,27 +1,28 @@
 import { Component } from '@angular/core';
-import { CommonCode } from '../shared/models/common-code';
+import { FormConfig } from '../shared/models/formConfig';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MasterBasicSetupService } from '../shared/services/MasterBasicSetupService';
 import { ConfirmationService, MessageService } from 'primeng/api';
-import { FormConfig } from '../shared/models/formConfig';
-import { TableConfig } from '../shared/models/dataTableConfig';
-import { DynamicFormComponent } from '../shared/componets/dynamic-form-component/dynamic-form';
-import { DataTable } from '../shared/componets/data-table/data-table';
+import { DynamicFormComponent } from "../shared/componets/dynamic-form-component/dynamic-form";
 import { ConfirmDialog } from 'primeng/confirmdialog';
 import { Toast } from 'primeng/toast';
 import { Fluid } from 'primeng/fluid';
+import { DataTable } from "../shared/componets/data-table/data-table";
+import { TableConfig } from '../shared/models/dataTableConfig';
 
 @Component({
-    selector: 'app-education-institution',
-    imports: [DynamicFormComponent, DataTable, ConfirmDialog, Toast, Fluid],
-    templateUrl: './education-institution.html',
-    providers: [MessageService, ConfirmationService],
-    styleUrl: './education-institution.scss'
+  selector: 'app-education-institution',
+  imports: [DynamicFormComponent, Toast, ConfirmDialog, Fluid, DataTable],
+  providers: [MessageService, ConfirmationService],
+  templateUrl: './education-institution.html',
+  styleUrl: './education-institution.scss',
 })
 export class EducationInstitution {
-    codeType: string = 'EducationInstitution';
-    title: string = 'Education Institution';
-    commonCodeData: CommonCode[] = [];
+
+    codeType = "EducationInstitution";
+    title = 'Education Institution';
+
+    commonCodeData: any[] = [];
     editingId: number | null = null;
     commonCodeForm!: FormGroup;
 
@@ -29,20 +30,28 @@ export class EducationInstitution {
     rows = 10;
     first = 0;
     loading = false;
-    serchValue: string = '';
+    searchValue: string = '';
+    isSubmitting = false;
 
-    // Form Configuration
+
     formConfig: FormConfig = {
         formFields: [
             {
+                name: 'educationInstitutionTypeId',
+                label: 'Education Institution Type',
+                type: 'select',
+                required: true,
+                options: [] // Will be populated in ngOnInit
+            },
+            {
                 name: 'codeValueEN',
-                label: 'Education Institution Name (English)',
+                label: 'EducationInstitution Name (English)',
                 type: 'text',
                 required: true
             },
             {
                 name: 'codeValueBN',
-                label: 'Education Institution Name (Bangla)',
+                label: 'EducationInstitution Name (Bangla)',
                 type: 'text',
                 required: true
             },
@@ -60,11 +69,11 @@ export class EducationInstitution {
         ]
     };
 
-    // Table Configuration
-    tableConfig: TableConfig = {
+        tableConfig: TableConfig = {
         tableColumns: [
-            { field: 'codeValueEN', header: 'Education Institution Name (EN)' },
-            { field: 'codeValueBN', header: 'Education Institution Name (BN)' },
+            // { field: 'employeeTypeName', header: 'Division' },
+            { field: 'codeValueEN', header: 'Education Institution Type Name (EN)' },
+            { field: 'codeValueBN', header: 'Education Institution Type Name (BN)' },
             {
                 field: 'status',
                 header: 'Status',
@@ -75,35 +84,36 @@ export class EducationInstitution {
             { field: 'codeId', header: 'Code ID', hidden: true }
         ]
     };
-    isSubmitting = false;
 
-    constructor(
+        constructor(
         private masterBasicSetupService: MasterBasicSetupService,
         private messageService: MessageService,
         private confirmationService: ConfirmationService,
         private fb: FormBuilder
-    ) {}
+    ) { }
 
     ngOnInit(): void {
         this.initForm();
-        this.getCommonCodeWithPaging({
+        this.loadEducationInstitutionType(); // Load employeeTypes for dropdown
+        this.getOfficerTypeWithPaging({
             first: this.first,
             rows: this.rows
         });
     }
 
-    initForm() {
+      initForm() {
         this.commonCodeForm = this.fb.group({
+            educationInstitutionTypeId: [null, Validators.required],
             codeValueEN: ['', Validators.required],
             codeValueBN: ['', Validators.required],
             status: [true, Validators.required],
             orgId: [0],
             codeId: [0],
-            codeType: [this.codeType],
+            codeType: ['EducationInstitution'],
+            parentCodeId: [null], // Will store educationInstitutionTypeId
             commCode: [null],
             displayCodeValueEN: [null],
             displayCodeValueBN: [null],
-            parentCodeId: [null],
             sortOrder: [null],
             level: [null],
             createdBy: [''],
@@ -113,12 +123,40 @@ export class EducationInstitution {
         });
     }
 
-    getCommonCodeWithPaging(event?: any) {
+    // Load all employeeTypes for the dropdown
+    loadEducationInstitutionType() {
+        this.masterBasicSetupService.getAllByType('EducationInstitutionType').subscribe({
+            next: (employeeTypes) => {
+                const employeeTypeOptions = employeeTypes.map(d => ({
+                    label: d.codeValueEN,
+                    value: d.codeId
+                }));
+
+                // Update form config with rabUnit options
+                const employeeTypeField = this.formConfig.formFields.find(f => f.name === 'educationInstitutionTypeId');
+                if (employeeTypeField) {
+                    employeeTypeField.options = employeeTypeOptions;
+                }
+            },
+            error: (err) => {
+                console.error('Error loading data:', err);
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: 'Failed to load data'
+                });
+            }
+        });
+    }
+
+    getOfficerTypeWithPaging(event?: any) {
         this.loading = true;
         const pageNo = event ? event.first / event.rows + 1 : 1;
         const pageSize = event?.rows ?? this.rows;
 
-        const apiCall = this.serchValue ? this.masterBasicSetupService.getByKeyordWithPaging(this.codeType, this.serchValue, pageNo, pageSize) : this.masterBasicSetupService.getAllWithPaging(this.codeType, pageNo, pageSize);
+        const apiCall = this.searchValue
+            ? this.masterBasicSetupService.getByKeyordWithPaging('EducationInstitution', this.searchValue, pageNo, pageSize)
+            : this.masterBasicSetupService.getAllWithPaging('EducationInstitution', pageNo, pageSize);
 
         apiCall.subscribe({
             next: (res) => {
@@ -148,14 +186,19 @@ export class EducationInstitution {
         const currentUser = this.getCurrentUser();
         const currentDateTime = new Date().toISOString();
 
+        // Set parentCodeId to selected educationInstitutionTypeId
+        this.commonCodeForm.patchValue({
+            parentCodeId: this.commonCodeForm.value.educationInstitutionTypeId
+        });
+
         if (this.editingId) {
-            this.updateCommonCode(currentUser, currentDateTime);
+            this.updateOfficerType(currentUser, currentDateTime);
         } else {
-            this.createCommonCode(currentUser, currentDateTime);
+            this.createOfficerType(currentUser, currentDateTime);
         }
     }
 
-    private createCommonCode(currentUser: string, currentDateTime: string) {
+    private createOfficerType(currentUser: string, currentDateTime: string) {
         this.isSubmitting = true;
         const createPayload = {
             ...this.commonCodeForm.value,
@@ -169,14 +212,14 @@ export class EducationInstitution {
             next: (res) => {
                 console.log('Created:', res);
                 this.resetForm();
-                this.getCommonCodeWithPaging({
+                this.getOfficerTypeWithPaging({
                     first: this.first,
                     rows: this.rows
                 });
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Success',
-                    detail: 'Education Institution created successfully'
+                    detail: 'Education Institution Type created successfully'
                 });
                 this.isSubmitting = false;
             },
@@ -187,32 +230,35 @@ export class EducationInstitution {
                     summary: 'Error',
                     detail: 'Failed to create education-institution'
                 });
+
                 this.isSubmitting = false;
             }
         });
     }
 
-    private updateCommonCode(currentUser: string, currentDateTime: string) {
+    private updateOfficerType(currentUser: string, currentDateTime: string) {
         this.isSubmitting = true;
         const updatePayload = {
             ...this.commonCodeForm.value,
             codeId: this.editingId,
             lastUpdatedBy: currentUser,
-            lastupdate: currentDateTime
+            lastupdate: currentDateTime,
+            createdDate: currentDateTime,
+            createdBy: currentUser,
         };
 
         this.masterBasicSetupService.update(updatePayload).subscribe({
             next: (res) => {
                 console.log('Updated:', res);
                 this.resetForm();
-                this.getCommonCodeWithPaging({
+                this.getOfficerTypeWithPaging({
                     first: this.first,
                     rows: this.rows
                 });
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Success',
-                    detail: 'EducationInstitution updated successfully'
+                    detail: 'Education Institution Type updated successfully'
                 });
                 this.isSubmitting = false;
             },
@@ -230,7 +276,12 @@ export class EducationInstitution {
 
     update(row: any) {
         this.editingId = row.codeId;
-        this.commonCodeForm.patchValue(row);
+        this.commonCodeForm.patchValue({
+            educationInstitutionTypeId: row.parentCodeId, // parentCodeId contains educationInstitutionTypeId
+            codeValueEN: row.codeValueEN,
+            codeValueBN: row.codeValueBN,
+            status: row.status
+        });
         console.log('Edit:', row);
     }
 
@@ -253,7 +304,7 @@ export class EducationInstitution {
             accept: () => {
                 this.masterBasicSetupService.delete(row.codeId).subscribe({
                     next: () => {
-                        this.getCommonCodeWithPaging({
+                        this.getOfficerTypeWithPaging({
                             first: this.first,
                             rows: this.rows
                         });
@@ -280,14 +331,15 @@ export class EducationInstitution {
         this.editingId = null;
         this.isSubmitting = false;
         this.commonCodeForm.reset({
+            educationInstitutionTypeId: null,
             orgId: 0,
             codeId: 0,
-            codeType: this.codeType,
+            codeType: 'EducationInstitution',
             status: true,
+            parentCodeId: null,
             commCode: null,
             displayCodeValueEN: null,
             displayCodeValueBN: null,
-            parentCodeId: null,
             sortOrder: null,
             level: null,
             createdBy: '',
@@ -298,13 +350,15 @@ export class EducationInstitution {
     }
 
     onSearch(keyword: string) {
-        this.serchValue = keyword;
+        this.searchValue = keyword;
         this.first = 0;
-        this.getCommonCodeWithPaging({ first: 0, rows: this.rows });
+        this.getOfficerTypeWithPaging({ first: 0, rows: this.rows });
     }
 
     private getCurrentUser(): string {
         // TODO: Get from authentication service
         return 'Admin';
     }
+
+
 }
