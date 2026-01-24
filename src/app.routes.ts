@@ -13,6 +13,7 @@ import { Division } from '@/Components/basic-setup/division/division';
 import { District } from '@/Components/basic-setup/district/district';
 import { Upazila } from '@/Components/basic-setup/upazila/upazila';
 import { BloodGroup } from '@/Components/basic-setup/blood-group/blood-group';
+import { Relationship } from '@/Components/basic-setup/relationship/relationship';
 
 export const appRoutes: Routes = [
   // Public routes
@@ -32,6 +33,7 @@ export const appRoutes: Routes = [
       { path: 'basic-setup/district', component: District },
       { path: 'basic-setup/upazila', component: Upazila },
       { path: 'basic-setup/blood-group', component: BloodGroup },
+      { path: 'basic-setup/relationship', component: Relationship },
       { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
       { path: 'documentation', component: Documentation },
       { path: 'pages', loadChildren: () => import('./app/pages/pages.routes') }
