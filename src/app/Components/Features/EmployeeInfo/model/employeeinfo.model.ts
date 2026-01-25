@@ -26,14 +26,19 @@ export interface EmployeeInfoModel {
   StatusDate?: Date | string;
 }
 
-// ============ ADDRESS INFO MODEL ============
+export type LocationType =
+  | 'PERMANENT'
+  | 'PRESENT'
+  | 'WIFE_PERMANENT'
+  | 'WIFE_PRESENT';
+
 export interface AddressInfoModel {
   EmployeeID: number;
   AddressId: number;
-  FMID: number; // Family Member ID: 0 = Self, 1 = Wife, etc.
-  LocationType: 'PERMANENT' | 'PRESENT' | 'WIFE_PERMANENT' | 'WIFE_PRESENT';
-  LocationCode: string; // Format: "Division-District-Upazila"
-  PostCode: number;
+  FMID: number;
+  LocationType: LocationType;
+  LocationCode: string;
+  PostCode: string; // ✅ Changed from number to string
   AddressAreaEN?: string;
   AddressAreaBN?: string;
   CreatedBy?: string;
@@ -41,6 +46,7 @@ export interface AddressInfoModel {
   LastUpdatedBy?: string;
   Lastupdate?: Date | string;
 }
+
 
 // ============ SEARCH CRITERIA ============
 export interface EmployeeSearchCriteria {

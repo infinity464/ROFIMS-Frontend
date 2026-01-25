@@ -14,7 +14,7 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { ConfirmDialog } from 'primeng/confirmdialog';
 import { Toast } from 'primeng/toast';
 import { ConfirmationService, MessageService } from 'primeng/api';
-
+import { switchMap } from 'rxjs/operators';
 import { AddressSectionComponent } from '../../Shared/address-section/address-section';
 import { EmployeeinfoService } from '../Services/employeeinfo.service';
 import { EmployeeInfoModel } from '../model/employeeinfo.model';
@@ -49,6 +49,7 @@ import { EmployeeInfoModel } from '../model/employeeinfo.model';
 })
 export class Employeeinfo implements OnInit {
     form!: FormGroup;
+    tempEmployeeID = 102;
 
     // Mode: 'create' | 'edit' | 'view'
     mode: 'create' | 'edit' | 'view' = 'create';
@@ -235,41 +236,42 @@ export class Employeeinfo implements OnInit {
     }
 
     private buildEmployeePayload() {
-  return {
-    EmployeeID: 0,
-    LastMotherUnit: this.form.value.lastUnitMotherOrg,
+        const now = new Date().toISOString();
 
-    MemberType: this.form.value.memberType,
-    Appointment: this.form.value.appointment,
-    JoiningDate: this.toDateOnlyString(this.form.value.joiningDate),
+        return {
+            EmployeeID: this.tempEmployeeID,
 
-    Rank: this.form.value.rank,
-    Branch: this.form.value.corpsBranch,
-    Trade: this.form.value.trade,
+            LastMotherUnit: null,
+            MemberType: this.form.value.memberType,
+            Appointment: this.form.value.appointment,
+            JoiningDate: this.toDateOnlyString(this.form.value.joiningDate),
 
-    TradeMark: this.form.value.tradeRemarks,
-    Gender: this.form.value.gender,
-    Prefix: this.form.value.prefix,
+            Rank: this.form.value.rank,
+            Branch: this.form.value.corpsBranch,
+            Trade: this.form.value.trade,
 
-    ServiceId: this.form.value.serviceIdOnly,
-    RABID: this.form.get('rabId')?.value,
-    NID: this.form.value.nidNo,
+            TradeMark: this.form.value.tradeRemarks,
+            Gender: this.form.value.gender,
+            Prefix: this.form.value.prefix,
 
-    FullNameEN: this.form.value.nameEnglish,
-    FullNameBN: this.form.value.nameBangla,
+            ServiceId: this.form.value.serviceIdOnly,
+            RABID: this.form.get('rabId')?.value,
+            NID: this.form.value.nidNo,
 
-    IsReliever: this.form.value.isReliever ?? false,
+            FullNameEN: this.form.value.nameEnglish,
+            FullNameBN: this.form.value.nameBangla,
 
-    PostingStatus: "New",
-    Status: true,
+            IsReliever: this.form.value.isReliever ?? false,
+            PostingStatus: 'New',
+            Status: true,
 
-    CreatedBy: "system",          // ✅ REQUIRED
-    CreatedDate: new Date().toISOString(),
-
-    LastUpdatedBy: "system",      // ✅ REQUIRED
-    Lastupdate: new Date().toISOString()
-  };
-}
+            CreatedBy: 'system',
+            CreatedDate: now,
+            LastUpdatedBy: 'system',
+            Lastupdate: now,
+            StatusDate: now
+        };
+    }
 
     private toDateOnlyString(value: any): string | null {
         if (!value) return null;
@@ -283,93 +285,84 @@ export class Employeeinfo implements OnInit {
         return `${yyyy}-${mm}-${dd}`;
     }
 
-    private buildAddressPayload(employeeID: number): any[] {
-  const v = this.form.getRawValue();
-  const now = new Date().toISOString();
+  private buildAddressPayload(employeeID: number): any[] {
+    const v = this.form.getRawValue();
+    const now = new Date().toISOString();
 
-  const LOCATION_TYPE = {
-    PERMANENT: 1,
-    PRESENT: 2,
-    WIFE_PERMANENT: 3,
-    WIFE_PRESENT: 4
-  };
+    const addresses: any[] = [];
 
-  const addresses: any[] = [];
-
-  // 1) Own Permanent
-  addresses.push({
-    EmployeeID: employeeID,
-    AddressId: 0,
-    FMID: 0,
-    LocationType: LOCATION_TYPE.PERMANENT,
-    LocationCode: v.perUpazila,        // ⚠️ should be int (not "1-2-3")
-    PostCode: v.perPostOffice,         // int
-    AddressAreaEN: v.perVillageEnglish || '',
-    AddressAreaBN: v.perVillageBangla || '',
-    CreatedBy: 1,
-    CreatedDate: now,
-    LastUpdatedBy: 1,
-    Lastupdate: now
-  });
-
-  // 2) Own Present (optional)
-  if (!v.sameAsPermanent && v.preUpazila) {
+    // 1) Permanent Address
     addresses.push({
-      EmployeeID: employeeID,
-      AddressId: 0,
-      FMID: 0,
-      LocationType: LOCATION_TYPE.PRESENT,
-      LocationCode: v.preUpazila,
-      PostCode: v.prePostOffice,
-      AddressAreaEN: v.preVillageEnglish || '',
-      AddressAreaBN: v.preVillageBangla || '',
-      CreatedBy: 1,
-      CreatedDate: now,
-      LastUpdatedBy: 1,
-      Lastupdate: now
+        EmployeeID: employeeID,
+        AddressId: 0,
+        FMID: 0,
+        LocationType: "PERMANENT",
+        LocationCode: `${v.perDivision}-${v.perDistrict}-${v.perUpazila}`,
+        PostCode: v.perPostOffice?.toString() || '',
+        AddressAreaEN: v.perVillageEnglish || '',
+        AddressAreaBN: v.perVillageBangla || '',
+        CreatedBy: 'system', // ✅ Fixed - changed from 1 to 'system'
+        CreatedDate: now,
+        LastUpdatedBy: 'system', // ✅ Fixed - changed from 1 to 'system'
+        Lastupdate: now
     });
-  }
 
-  // 3) Wife Permanent
-  if (v.wifePerUpazila) {
-    addresses.push({
-      EmployeeID: employeeID,
-      AddressId: 0,
-      FMID: 1,
-      LocationType: LOCATION_TYPE.WIFE_PERMANENT,
-      LocationCode: v.wifePerUpazila,
-      PostCode: v.wifePerPostOffice,
-      AddressAreaEN: v.wifePerVillageEnglish || '',
-      AddressAreaBN: v.wifePerVillageBangla || '',
-      CreatedBy: 1,
-      CreatedDate: now,
-      LastUpdatedBy: 1,
-      Lastupdate: now
-    });
-  }
+    // 2) Present Address (if different)
+    if (!v.sameAsPermanent && v.preUpazila) {
+        addresses.push({
+            EmployeeID: employeeID,
+            AddressId: 0,
+            FMID: 0,
+            LocationType: 'PRESENT',
+            LocationCode: `${v.preDivision}-${v.preDistrict}-${v.preUpazila}`,
+            PostCode: v.prePostOffice?.toString() || '',
+            AddressAreaEN: v.preVillageEnglish || '',
+            AddressAreaBN: v.preVillageBangla || '',
+            CreatedBy: 'system', // ✅ Fixed
+            CreatedDate: now,
+            LastUpdatedBy: 'system', // ✅ Fixed
+            Lastupdate: now
+        });
+    }
 
-  // 4) Wife Present (optional)
-  if (!v.wifeSameAsPermanent && v.wifePreUpazila) {
-    addresses.push({
-      EmployeeID: employeeID,
-      AddressId: 0,
-      FMID: 1,
-      LocationType: LOCATION_TYPE.WIFE_PRESENT,
-      LocationCode: v.wifePreUpazila,
-      PostCode: v.wifePrePostOffice,
-      AddressAreaEN: v.wifePreVillageEnglish || '',
-      AddressAreaBN: v.wifePreVillageBangla || '',
-      CreatedBy: 1,
-      CreatedDate: now,
-      LastUpdatedBy: 1,
-      Lastupdate: now
-    });
-  }
+    // 3) Wife Permanent Address
+    if (v.wifePerUpazila) {
+        addresses.push({
+            EmployeeID: employeeID,
+            AddressId: 0,
+            FMID: 1,
+            LocationType: 'WIFE_PERMANENT',
+            LocationCode: `${v.wifePerDivision}-${v.wifePerDistrict}-${v.wifePerUpazila}`,
+            PostCode: v.wifePerPostOffice?.toString() || '',
+            AddressAreaEN: v.wifePerVillageEnglish || '',
+            AddressAreaBN: v.wifePerVillageBangla || '',
+            CreatedBy: 'system', // ✅ Fixed
+            CreatedDate: now,
+            LastUpdatedBy: 'system', // ✅ Fixed
+            Lastupdate: now
+        });
+    }
 
-  return addresses;
+    // 4) Wife Present Address (if different)
+    if (!v.wifeSameAsPermanent && v.wifePreUpazila) {
+        addresses.push({
+            EmployeeID: employeeID,
+            AddressId: 0,
+            FMID: 1,
+            LocationType: 'WIFE_PRESENT',
+            LocationCode: `${v.wifePreDivision}-${v.wifePreDistrict}-${v.wifePreUpazila}`,
+            PostCode: v.wifePrePostOffice?.toString() || '',
+            AddressAreaEN: v.wifePreVillageEnglish || '',
+            AddressAreaBN: v.wifePreVillageBangla || '',
+            CreatedBy: 'system', // ✅ Fixed
+            CreatedDate: now,
+            LastUpdatedBy: 'system',
+            Lastupdate: now
+        });
+    }
+
+    return addresses;
 }
-
-
     loadEmployeeInfo(): void {
         this.loading = true;
         this.employeeService.getAll().subscribe({
@@ -504,7 +497,7 @@ export class Employeeinfo implements OnInit {
         addresses.forEach((addr: any) => {
             const [division, district, upazila] = addr.LocationCode.split('-').map(Number);
 
-            if (addr.LocationType === 'PERMANENT') {
+            if (addr.LocationType === 1) {
                 this.form.patchValue({
                     perDivision: division,
                     perDistrict: district,
@@ -513,7 +506,7 @@ export class Employeeinfo implements OnInit {
                     perVillageEnglish: addr.AddressAreaEN,
                     perVillageBangla: addr.AddressAreaBN
                 });
-            } else if (addr.LocationType === 'PRESENT') {
+            } else if (addr.LocationType === 2) {
                 this.form.patchValue({
                     preDivision: division,
                     preDistrict: district,
@@ -529,46 +522,30 @@ export class Employeeinfo implements OnInit {
     onSubmit(): void {
         if (this.form.invalid) {
             this.form.markAllAsTouched();
-            const errors = this.getFormValidationErrors();
-            console.log('Form Errors:', errors);
             this.showError('Please fill all required fields');
             return;
         }
 
         const employeePayload = this.buildEmployeePayload();
+        const addressPayload = this.buildAddressPayload(this.tempEmployeeID);
+
+        console.log('EMP Payload:', employeePayload);
+        console.log('ADDR Payload:', addressPayload);
 
         this.loading = true;
 
-        if (this.mode === 'create') {
-            this.employeeService.saveCompleteProfile(employeePayload, this.buildAddressPayload(0)).subscribe({
-                next: (res) => {
-                    this.loading = false;
-                    console.log('Save Response:', res);
-                    this.showSuccess('Employee profile created successfully');
-                    this.resetForm();
-                    this.loadEmployeeInfo();
-                },
-                error: (err) => {
-                    this.loading = false;
-                    this.showError('Failed to create employee profile');
-                    console.error('Submit failed:', err);
-                }
-            });
-        } else if (this.mode === 'edit' && this.currentEmployeeId) {
-            this.employeeService.updateCompleteProfile(this.currentEmployeeId, employeePayload, this.buildAddressPayload(this.currentEmployeeId)).subscribe({
-                next: (res) => {
-                    this.loading = false;
-                    console.log('Update Response:', res);
-                    this.showSuccess('Employee profile updated successfully');
-                    this.loadEmployeeInfo();
-                },
-                error: (err) => {
-                    this.loading = false;
-                    this.showError('Failed to update employee profile');
-                    console.error('Update failed:', err);
-                }
-            });
-        }
+        this.employeeService.saveCompleteProfile(employeePayload, addressPayload).subscribe({
+            next: (res) => {
+                this.loading = false;
+                console.log('Saved both:', res);
+                this.showSuccess('Employee + Address saved successfully');
+            },
+            error: (err) => {
+                this.loading = false;
+                console.error('Save failed:', err);
+                this.showError('Save failed');
+            }
+        });
     }
 
     resetForm(): void {
