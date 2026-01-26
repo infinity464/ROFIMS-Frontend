@@ -9,6 +9,7 @@ import { Login } from '@/Components/Features/Authentication/Login/login';
 import { AuthGuard } from '@/Core/Guard/auth.guard';
 import { MotherOrg } from '@/Components/basic-setup/mother-org/mother-org';
 import { Employeeinfo } from '@/Components/Features/EmployeeInfo/employeeinfo/employeeinfo';
+import { PersonalInfo } from '@/Components/Features/PersonalInfo/personal-info/personal-info';
 
 export const appRoutes: Routes = [
   // Public routes
@@ -24,6 +25,7 @@ export const appRoutes: Routes = [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       { path: 'dashboard', component: Dashboard },
       {path: 'employee-info', component: Employeeinfo},
+      {path: 'personal-info', component: PersonalInfo},
       { path: 'basic-setup/mother-org', component: MotherOrg },
       { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
       { path: 'documentation', component: Documentation },
