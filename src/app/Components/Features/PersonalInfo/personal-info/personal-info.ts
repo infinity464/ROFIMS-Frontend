@@ -20,6 +20,7 @@ import { NomineeInfo } from "../nominee-info/nominee-info";
 import { PreviousServiceRab } from "../previous-service/previous-service";
 import { ServiceHistoryMotherOrg } from "../service-history-mother-org/service-history-mother-org";
 import { PromotionInfo } from "../promotion-info/promotion-info";
+import { RankConfirmation } from "../rank-confirmation/rank-confirmation";
 
 @Component({
   selector: 'app-personal-info',
@@ -42,7 +43,8 @@ import { PromotionInfo } from "../promotion-info/promotion-info";
     NomineeInfo,
     PreviousServiceRab,
     ServiceHistoryMotherOrg,
-    PromotionInfo
+    PromotionInfo,
+    RankConfirmation
 ],
   templateUrl: './personal-info.html',
   styleUrl: './personal-info.scss'
