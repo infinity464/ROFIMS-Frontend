@@ -18,6 +18,8 @@ import { DynamicFieldComponent } from "../../Shared/shared/components/dynamic-fi
 import { FamilyInfo } from "../family-info/family-info";
 import { NomineeInfo } from "../nominee-info/nominee-info";
 import { PreviousServiceRab } from "../previous-service/previous-service";
+import { ServiceHistoryMotherOrg } from "../service-history-mother-org/service-history-mother-org";
+import { PromotionInfo } from "../promotion-info/promotion-info";
 
 @Component({
   selector: 'app-personal-info',
@@ -38,7 +40,9 @@ import { PreviousServiceRab } from "../previous-service/previous-service";
     DynamicFieldComponent,
     FamilyInfo,
     NomineeInfo,
-    PreviousServiceRab
+    PreviousServiceRab,
+    ServiceHistoryMotherOrg,
+    PromotionInfo
 ],
   templateUrl: './personal-info.html',
   styleUrl: './personal-info.scss'
