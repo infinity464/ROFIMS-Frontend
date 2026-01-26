@@ -15,6 +15,7 @@
                 <p-tab value="3">Permanent Address</p-tab>
                 <p-tab value="4">Family Info</p-tab>
                 <p-tab value="5">Nominee</p-tab>
+                <p-tab value="6">Previous Service</p-tab>
             </p-tablist>
 
             <p-tabpanels>
@@ -209,7 +210,6 @@
                     </div>
                 </p-tabpanel>
 
-               
                 <p-tabpanel value="2">
                     <app-address-section [form]="form" title="Own Present Address" prefix="per" [divisions]="divisions" [districts]="districts" [upazilas]="upazilas" [postOffices]="postOffices" [showRequiredIndicators]="true"></app-address-section>
                 </p-tabpanel>
@@ -220,9 +220,10 @@
                     <!-- <app-family-info></app-family-info> -->
                 </p-tabpanel>
                 <p-tabpanel value="5">
-                    
                     <app-nominee-info></app-nominee-info>
-                
+                </p-tabpanel>
+                <p-tabpanel value="6">
+                    <app-previous-service-rab></app-previous-service-rab>
                 </p-tabpanel>
             </p-tabpanels>
         </p-tabs>

@@ -17,6 +17,7 @@ import { AddressSectionComponent } from '../../Shared/address-section/address-se
 import { DynamicFieldComponent } from "../../Shared/shared/components/dynamic-field/dynamic-field";
 import { FamilyInfo } from "../family-info/family-info";
 import { NomineeInfo } from "../nominee-info/nominee-info";
+import { PreviousServiceRab } from "../previous-service/previous-service";
 
 @Component({
   selector: 'app-personal-info',
@@ -36,7 +37,8 @@ import { NomineeInfo } from "../nominee-info/nominee-info";
     AddressSectionComponent,
     DynamicFieldComponent,
     FamilyInfo,
-    NomineeInfo
+    NomineeInfo,
+    PreviousServiceRab
 ],
   templateUrl: './personal-info.html',
   styleUrl: './personal-info.scss'
