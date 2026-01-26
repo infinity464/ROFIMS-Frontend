@@ -1,0 +1,74 @@
+<form [formGroup]="form">
+    <p-card styleClass="shadow-3 border-round-3xl overflow-hidden">
+        <div class="flex justify-content-between align-items-center mb-3">
+            <div>
+                <h2 class="m-0 text-3xl font-bold text-primary-900">Family Info</h2>
+                <p class="m-0 mt-1 text-primary-600 font-medium">Family Member Entry</p>
+            </div>
+
+            <!-- <button
+        pButton
+        type="button"
+        icon="pi pi-plus"
+        label="Add Member"
+        (click)="addFamilyMember()"
+      ></button> -->
+        </div>
+
+        <div formArrayName="familyMembers">
+            <div *ngFor="let member of familyMembers.controls; let i = index" class="surface-50 border-round-2xl p-4 mb-4" [formGroupName]="i">
+                <div class="flex justify-content-between align-items-center mb-3">
+                    <h3 class="m-0 text-xl font-bold text-900">Member {{ i + 1 }}</h3>
+
+                    <button pButton type="button" icon="pi pi-trash" class="p-button-danger p-button-sm" (click)="removeFamilyMember(i)" *ngIf="familyMembers.length > 1"></button>
+                </div>
+
+                <!-- ================= BASIC INFO ================= -->
+                <div class="flex flex-wrap gap-3 mb-3">
+                    <app-dynamic-field [form]="$any(member)" type="select" controlName="relationshipType" label="Relationship Type" placeholder="Select Relationship" [required]="true" [options]="relationshipTypes"></app-dynamic-field>
+
+                    <app-dynamic-field [form]="$any(member)" type="text" controlName="nameEnglish" label="Name English" placeholder="Enter Name English" [required]="true"></app-dynamic-field>
+
+                    <app-dynamic-field [form]="$any(member)" type="text" controlName="nameBangla" label="Name Bangla" placeholder="Enter Name Bangla" [required]="true"></app-dynamic-field>
+
+                    <app-dynamic-field [form]="$any(member)" type="date" controlName="dateOfBirth" label="Date of Birth" placeholder="Select Date"></app-dynamic-field>
+                </div>
+
+                <div class="flex flex-wrap gap-3 mb-3">
+                    <app-dynamic-field [form]="$any(member)" type="select" controlName="maritalStatus" label="Marital Status" placeholder="Select Marital Status" [options]="maritalStatuses"></app-dynamic-field>
+
+                    <app-dynamic-field [form]="$any(member)" type="select" controlName="spouseOccupation" label="Spouse Occupation" placeholder="Select Occupation" [options]="spouseOccupations"></app-dynamic-field>
+                </div>
+
+                <!-- ================= SERVICE HOLDER EXTRA ================= -->
+                <div class="flex flex-wrap gap-3 mb-3" *ngIf="isServiceHolder(i)">
+                    <app-dynamic-field [form]="$any(member)" type="text" controlName="organizationName" label="Organization Name" placeholder="Enter Organization Name"></app-dynamic-field>
+
+                    <app-dynamic-field [form]="$any(member)" type="select" controlName="organizationLocation" label="Organization Location" placeholder="Select District" [options]="districts"></app-dynamic-field>
+                </div>
+
+                <!-- ================= CONTACT ================= -->
+                <div class="flex flex-wrap gap-3 mb-3">
+                    <app-dynamic-field [form]="$any(member)" type="text" controlName="nidNo" label="NID No" placeholder="Only Number"></app-dynamic-field>
+
+                    <app-dynamic-field [form]="$any(member)" type="text" controlName="mobileNo" label="Mobile No" placeholder="01XXXXXXXXX"></app-dynamic-field>
+
+                    <app-dynamic-field [form]="$any(member)" type="text" controlName="passportNo" label="Passport No" placeholder="Only Number"></app-dynamic-field>
+
+                    <app-dynamic-field [form]="$any(member)" type="text" controlName="emailAddress" label="Email Address" placeholder="example@mail.com"></app-dynamic-field>
+                </div>
+
+                <p-divider></p-divider>
+
+                <h4 class="m-0 mb-2 text-lg font-bold">Permanent Address</h4>
+
+                <app-address-section [form]="form" title="Own Present Address" prefix="per" [divisions]="divisions" [districts]="districts" [upazilas]="upazilas" [postOffices]="postOffices" [showRequiredIndicators]="true"></app-address-section>
+                <!-- <app-address-section [form]="form" title="Own Permanent Address" prefix="per" [divisions]="divisions" [districts]="districts" [upazilas]="upazilas" [postOffices]="postOffices" [showRequiredIndicators]="true"></app-address-section> -->
+            </div>
+        </div>
+
+        <div class="flex justify-content-end mt-4">
+            <button pButton type="button" label="Submit" icon="pi pi-check" (click)="submit()"></button>
+        </div>
+    </p-card>
+</form>

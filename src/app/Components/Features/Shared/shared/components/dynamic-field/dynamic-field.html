@@ -1,0 +1,53 @@
+<div class="flex-1" style="min-width: 220px" [formGroup]="form">
+  <label class="font-semibold block mb-2 text-700">
+    {{ label }}
+    <span *ngIf="required" class="text-red-500">*</span>
+  </label>
+
+  <!-- TEXT -->
+  <input
+    *ngIf="type === 'text'"
+    pInputText
+    class="w-full"
+    [placeholder]="placeholder"
+    [formControlName]="controlName"
+  />
+
+  <!-- SELECT -->
+  <p-select
+    *ngIf="type === 'select'"
+    [options]="options"
+    [optionLabel]="optionLabel"
+    [optionValue]="optionValue"
+    [placeholder]="placeholder"
+    styleClass="w-full"
+    [formControlName]="controlName"
+  ></p-select>
+
+  <!-- DATE -->
+  <p-datepicker
+    *ngIf="type === 'date'"
+    styleClass="w-full"
+    [placeholder]="placeholder"
+    dateFormat="dd-mm-yy"
+    [formControlName]="controlName"
+  ></p-datepicker>
+
+  <!-- NUMBER -->
+  <p-inputNumber
+    *ngIf="type === 'number'"
+    class="w-full"
+    
+    [formControlName]="controlName"
+  ></p-inputNumber>
+
+  <!-- TEXTAREA -->
+  <!-- <textarea
+    *ngIf="type === 'textarea'"
+    pTextarea
+    class="w-full"
+    rows="3"
+    [placeholder]="placeholder"
+    [formControlName]="controlName"
+  ></textarea> -->
+</div>

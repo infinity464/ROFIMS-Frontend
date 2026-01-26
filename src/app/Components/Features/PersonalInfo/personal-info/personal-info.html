@@ -1,383 +1,224 @@
 <form [formGroup]="form">
-  <p-card styleClass="shadow-3 border-round-3xl overflow-hidden">
-    <div class="flex gap-4">
-      <div>
-        <h2 class="m-0 text-3xl font-bold text-primary-900 letter-spacing-tight">Personal Info</h2>
-        <p class="m-0 mt-1 text-primary-600 font-medium">Personal Info Entry</p>
-      </div>
-    </div>
-
-    <p-tabs value="0" scrollable class="mt-4">
-      <p-tablist>
-        <p-tab value="0">Personal Info</p-tab>
-        <p-tab value="1">Form</p-tab>
-        <p-tab value="2">Present Address</p-tab>
-        <p-tab value="3">Permanent Address</p-tab>
-      </p-tablist>
-
-      <p-tabpanels>
-        <p-tabpanel value="0">
-          <p class="text-600">Personal Info Overview</p>
-        </p-tabpanel>
-
-        <!-- =================== FORM TAB =================== -->
-        <p-tabpanel value="1">
-          <div class="mb-5">
-            <div class="flex align-items-center gap-2 mb-4">
-              <h3 class="m-0 text-xl font-bold text-900">Personal Info Form</h3>
+    <p-card styleClass="shadow-3 border-round-3xl overflow-hidden">
+        <div class="flex gap-4">
+            <div>
+                <h2 class="m-0 text-3xl font-bold text-primary-900 letter-spacing-tight">Personal Info</h2>
+                <p class="m-0 mt-1 text-primary-600 font-medium">Personal Info Entry</p>
             </div>
+        </div>
 
-            <div class="surface-50 border-round-2xl p-4">
-              <!-- Row 1 -->
-              <div class="flex flex-wrap gap-3 mb-4">
-                <div class="flex-1" style="min-width: 220px">
-                  <label class="font-semibold block mb-2 text-700">
-                    Blood Group <span class="text-red-500">*</span>
-                  </label>
-                  <p-select
-                    [options]="bloodGroups"
-                    optionLabel="label"
-                    optionValue="value"
-                    placeholder="Select Blood Group"
-                    styleClass="w-full"
-                    formControlName="bloodGroup"
-                  ></p-select>
-                </div>
+        <p-tabs value="0" scrollable class="mt-4">
+            <p-tablist>
+                <p-tab value="0">Personal Info</p-tab>
+                <p-tab value="1">Form</p-tab>
+                <p-tab value="2">Present Address</p-tab>
+                <p-tab value="3">Permanent Address</p-tab>
+                <p-tab value="4">Family Info</p-tab>
+            </p-tablist>
 
-                <div class="flex-1" style="min-width: 220px">
-                  <label class="font-semibold block mb-2 text-700">
-                    NID No (Old/New) <span class="text-red-500">*</span>
-                  </label>
-                  <input pInputText class="w-full" placeholder="Only number" formControlName="nidNo" />
-                </div>
+            <p-tabpanels>
+                <p-tabpanel value="0">
+                    <p class="text-600">Personal Info Overview</p>
+                </p-tabpanel>
 
-                <div class="flex-1" style="min-width: 220px">
-                  <label class="font-semibold block mb-2 text-700">
-                    Mobile No <span class="text-red-500">*</span>
-                  </label>
-                  <input pInputText class="w-full" placeholder="01XXXXXXXXX" formControlName="mobileNo" />
-                </div>
+                <!-- =================== FORM TAB =================== -->
+                <p-tabpanel value="1">
+                    <div class="mb-5">
+                        <div class="flex align-items-center gap-2 mb-4">
+                            <h3 class="m-0 text-xl font-bold text-900">Personal Info Form</h3>
+                        </div>
 
-                <div class="flex-1" style="min-width: 220px">
-                  <label class="font-semibold block mb-2 text-700">
-                    Email Address <span class="text-red-500">*</span>
-                  </label>
-                  <input pInputText class="w-full" placeholder="example@mail.com" formControlName="email" />
-                </div>
-              </div>
+                        <div class="surface-50 border-round-2xl p-4">
+                            <!-- Row 1 -->
+                            <div class="flex flex-wrap gap-3 mb-4">
+                                <div class="flex-1" style="min-width: 220px">
+                                    <app-dynamic-field
+                                        [form]="form"
+                                        type="select"
+                                        controlName="bloodGroup"
+                                        label="Blood Group"
+                                        placeholder="Select Blood Group"
+                                        [required]="true"
+                                        [options]="bloodGroups"
+                                        optionLabel="label"
+                                        optionValue="value"
+                                    ></app-dynamic-field>
+                                </div>
 
-              <!-- Row 2 -->
-              <div class="flex flex-wrap gap-3 mb-4">
-                <div class="flex-1" style="min-width: 220px">
-                  <label class="font-semibold block mb-2 text-700">
-                    Date of Birth <span class="text-red-500">*</span>
-                  </label>
-                  <p-datepicker
-                    formControlName="dateOfBirth"
-                    dateFormat="dd-mm-yy"
-                    placeholder="Select Date"
-                    styleClass="w-full"
-                  ></p-datepicker>
-                </div>
+                                <div class="flex-1" style="min-width: 220px">
+                                    <label class="font-semibold block mb-2 text-700"> NID No (Old/New) <span class="text-red-500">*</span> </label>
+                                    <input pInputText class="w-full" placeholder="Only number" formControlName="nidNo" />
+                                </div>
 
-                <div class="flex-1" style="min-width: 220px">
-                  <label class="font-semibold block mb-2 text-700">
-                    Religion <span class="text-red-500">*</span>
-                  </label>
-                  <p-select
-                    [options]="religions"
-                    optionLabel="label"
-                    optionValue="value"
-                    placeholder="Select Religion"
-                    styleClass="w-full"
-                    formControlName="religion"
-                  ></p-select>
-                </div>
+                                <div class="flex-1" style="min-width: 220px">
+                                    <label class="font-semibold block mb-2 text-700"> Mobile No <span class="text-red-500">*</span> </label>
+                                    <input pInputText class="w-full" placeholder="01XXXXXXXXX" formControlName="mobileNo" />
+                                </div>
 
-                <div class="flex-1" style="min-width: 220px">
-                  <label class="font-semibold block mb-2 text-700">Passport No</label>
-                  <input pInputText class="w-full" placeholder="Only number" formControlName="passportNo" />
-                </div>
+                                <div class="flex-1" style="min-width: 220px">
+                                    <label class="font-semibold block mb-2 text-700"> Email Address <span class="text-red-500">*</span> </label>
+                                    <input pInputText class="w-full" placeholder="example@mail.com" formControlName="email" />
+                                </div>
+                            </div>
 
-                <div class="flex-1" style="min-width: 220px">
-                  <label class="font-semibold block mb-2 text-700">Identification Mark</label>
-                  <input pInputText class="w-full" placeholder="e.g. Mole on face" formControlName="identificationMark" />
-                </div>
-              </div>
+                            <!-- Row 2 -->
+                            <div class="flex flex-wrap gap-3 mb-4">
+                                <div class="flex-1" style="min-width: 220px">
+                                    <label class="font-semibold block mb-2 text-700"> Date of Birth <span class="text-red-500">*</span> </label>
+                                    <p-datepicker formControlName="dateOfBirth" dateFormat="dd-mm-yy" placeholder="Select Date" styleClass="w-full"></p-datepicker>
+                                </div>
 
-              <!-- Row 3 -->
-              <div class="flex flex-wrap gap-3 mb-4">
-                <div class="flex-1" style="min-width: 220px">
-                  <label class="font-semibold block mb-2 text-700">
-                    Marital Status <span class="text-red-500">*</span>
-                  </label>
-                  <p-select
-                    [options]="maritalStatuses"
-                    optionLabel="label"
-                    optionValue="value"
-                    placeholder="Select Marital Status"
-                    styleClass="w-full"
-                    formControlName="maritalStatus"
-                  ></p-select>
-                </div>
+                                <div class="flex-1" style="min-width: 220px">
+                                    <label class="font-semibold block mb-2 text-700"> Religion <span class="text-red-500">*</span> </label>
+                                    <p-select [options]="religions" optionLabel="label" optionValue="value" placeholder="Select Religion" styleClass="w-full" formControlName="religion"></p-select>
+                                </div>
 
-                <div class="flex-1" style="min-width: 220px">
-                  <label class="font-semibold block mb-2 text-700">
-                    Emergency Contact No <span class="text-red-500">*</span>
-                  </label>
-                  <input pInputText class="w-full" placeholder="01XXXXXXXXX" formControlName="emergencyContactNo" />
-                </div>
+                                <div class="flex-1" style="min-width: 220px">
+                                    <label class="font-semibold block mb-2 text-700">Passport No</label>
+                                    <input pInputText class="w-full" placeholder="Only number" formControlName="passportNo" />
+                                </div>
 
-                <div class="flex-1" style="min-width: 220px">
-                  <label class="font-semibold block mb-2 text-700">
-                    Date of Joining in Service/Training <span class="text-red-500">*</span>
-                  </label>
-                  <p-datepicker
-                    formControlName="dateOfJoining"
-                    dateFormat="dd-mm-yy"
-                    placeholder="Select Date"
-                    styleClass="w-full"
-                  ></p-datepicker>
-                </div>
+                                <div class="flex-1" style="min-width: 220px">
+                                    <label class="font-semibold block mb-2 text-700">Identification Mark</label>
+                                    <input pInputText class="w-full" placeholder="e.g. Mole on face" formControlName="identificationMark" />
+                                </div>
+                            </div>
 
-                <div class="flex-1" style="min-width: 220px">
-                  <label class="font-semibold block mb-2 text-700">
-                    Date of Commission <span class="text-red-500">*</span>
-                  </label>
-                  <p-datepicker
-                    formControlName="dateOfCommission"
-                    dateFormat="dd-mm-yy"
-                    placeholder="Select Date"
-                    styleClass="w-full"
-                  ></p-datepicker>
-                </div>
-              </div>
+                            <!-- Row 3 -->
+                            <div class="flex flex-wrap gap-3 mb-4">
+                                <div class="flex-1" style="min-width: 220px">
+                                    <label class="font-semibold block mb-2 text-700"> Marital Status <span class="text-red-500">*</span> </label>
+                                    <p-select [options]="maritalStatuses" optionLabel="label" optionValue="value" placeholder="Select Marital Status" styleClass="w-full" formControlName="maritalStatus"></p-select>
+                                </div>
 
-              <!-- Row 4 -->
-              <div class="flex flex-wrap gap-3 mb-4">
-                <div class="flex-1" style="min-width: 220px">
-                  <label class="font-semibold block mb-2 text-700">
-                    Batch (Course/BCS/Dept/Other) <span class="text-red-500">*</span>
-                  </label>
-                  <p-select
-                    [options]="batches"
-                    optionLabel="label"
-                    optionValue="value"
-                    placeholder="Select Batch"
-                    styleClass="w-full"
-                    formControlName="batch"
-                  ></p-select>
-                </div>
+                                <div class="flex-1" style="min-width: 220px">
+                                    <label class="font-semibold block mb-2 text-700"> Emergency Contact No <span class="text-red-500">*</span> </label>
+                                    <input pInputText class="w-full" placeholder="01XXXXXXXXX" formControlName="emergencyContactNo" />
+                                </div>
 
-                <div class="flex-1" style="min-width: 220px">
-                  <label class="font-semibold block mb-2 text-700">Investigation Experience</label>
-                  <p-select
-                    [options]="yesNoOptions"
-                    optionLabel="label"
-                    optionValue="value"
-                    placeholder="Select"
-                    styleClass="w-full"
-                    formControlName="investigationExperience"
-                  ></p-select>
-                </div>
+                                <div class="flex-1" style="min-width: 220px">
+                                    <label class="font-semibold block mb-2 text-700"> Date of Joining in Service/Training <span class="text-red-500">*</span> </label>
+                                    <p-datepicker formControlName="dateOfJoining" dateFormat="dd-mm-yy" placeholder="Select Date" styleClass="w-full"></p-datepicker>
+                                </div>
 
-                <div class="flex-1" style="min-width: 220px">
-                  <label class="font-semibold block mb-2 text-700">
-                    Professional Qualification <span class="text-red-500">*</span>
-                  </label>
-                  <p-select
-                    [options]="professionalQualifications"
-                    optionLabel="label"
-                    optionValue="value"
-                    placeholder="Select"
-                    styleClass="w-full"
-                    formControlName="professionalQualification"
-                  ></p-select>
-                </div>
+                                <div class="flex-1" style="min-width: 220px">
+                                    <label class="font-semibold block mb-2 text-700"> Date of Commission <span class="text-red-500">*</span> </label>
+                                    <p-datepicker formControlName="dateOfCommission" dateFormat="dd-mm-yy" placeholder="Select Date" styleClass="w-full"></p-datepicker>
+                                </div>
+                            </div>
 
-                <div class="flex-1" style="min-width: 220px">
-                  <label class="font-semibold block mb-2 text-700">
-                    Personal Qualification <span class="text-red-500">*</span>
-                  </label>
-                  <p-select
-                    [options]="personalQualifications"
-                    optionLabel="label"
-                    optionValue="value"
-                    placeholder="Select"
-                    styleClass="w-full"
-                    formControlName="personalQualification"
-                  ></p-select>
-                </div>
-              </div>
+                            <!-- Row 4 -->
+                            <div class="flex flex-wrap gap-3 mb-4">
+                                <div class="flex-1" style="min-width: 220px">
+                                    <label class="font-semibold block mb-2 text-700"> Batch (Course/BCS/Dept/Other) <span class="text-red-500">*</span> </label>
+                                    <p-select [options]="batches" optionLabel="label" optionValue="value" placeholder="Select Batch" styleClass="w-full" formControlName="batch"></p-select>
+                                </div>
 
-              <!-- Investigation details (show if Yes) -->
-              <div class="mb-4" *ngIf="form.get('investigationExperience')?.value === true">
-                <label class="font-semibold block mb-2 text-700">
-                  Investigation Experience Details <span class="text-red-500">*</span>
-                </label>
-                <textarea
-                  pTextarea
-                  class="w-full"
-                  rows="3"
-                  placeholder="Write investigation experience in brief..."
-                  formControlName="investigationExperienceDetails"
-                ></textarea>
-              </div>
+                                <div class="flex-1" style="min-width: 220px">
+                                    <label class="font-semibold block mb-2 text-700">Investigation Experience</label>
+                                    <p-select [options]="yesNoOptions" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" formControlName="investigationExperience"></p-select>
+                                </div>
 
-              <!-- Row 5 -->
-              <div class="flex flex-wrap gap-3 mb-4">
-                <div class="flex-1" style="min-width: 220px">
-                  <label class="font-semibold block mb-2 text-700">
-                    Gallantry Awards/Decoration <span class="text-red-500">*</span>
-                  </label>
-                  <p-select
-                    [options]="gallantryAwards"
-                    optionLabel="label"
-                    optionValue="value"
-                    placeholder="Select"
-                    styleClass="w-full"
-                    formControlName="gallantryAwardsDecoration"
-                  ></p-select>
-                </div>
+                                <div class="flex-1" style="min-width: 220px">
+                                    <label class="font-semibold block mb-2 text-700"> Professional Qualification <span class="text-red-500">*</span> </label>
+                                    <p-select [options]="professionalQualifications" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" formControlName="professionalQualification"></p-select>
+                                </div>
 
-                <div class="flex-1" style="min-width: 220px">
-                  <label class="font-semibold block mb-2 text-700">
-                    Last Education Qualification <span class="text-red-500">*</span>
-                  </label>
-                  <p-select
-                    [options]="lastEducationQualifications"
-                    optionLabel="label"
-                    optionValue="value"
-                    placeholder="Select"
-                    styleClass="w-full"
-                    formControlName="lastEducationQualification"
-                  ></p-select>
-                </div>
+                                <div class="flex-1" style="min-width: 220px">
+                                    <label class="font-semibold block mb-2 text-700"> Personal Qualification <span class="text-red-500">*</span> </label>
+                                    <p-select [options]="personalQualifications" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" formControlName="personalQualification"></p-select>
+                                </div>
+                            </div>
 
-                <div class="flex-1" style="min-width: 220px">
-                  <label class="font-semibold block mb-2 text-700">
-                    Medical Category <span class="text-red-500">*</span>
-                  </label>
-                  <p-select
-                    [options]="medicalCategories"
-                    optionLabel="label"
-                    optionValue="value"
-                    placeholder="Select"
-                    styleClass="w-full"
-                    formControlName="medicalCategory"
-                  ></p-select>
-                </div>
+                            <!-- Investigation details (show if Yes) -->
+                            <div class="mb-4" *ngIf="form.get('investigationExperience')?.value === true">
+                                <label class="font-semibold block mb-2 text-700"> Investigation Experience Details <span class="text-red-500">*</span> </label>
+                                <textarea pTextarea class="w-full" rows="3" placeholder="Write investigation experience in brief..." formControlName="investigationExperienceDetails"></textarea>
+                            </div>
 
-                <div class="flex-1" style="min-width: 220px">
-                  <label class="font-semibold block mb-2 text-700">Tribal</label>
-                  <p-select
-                    [options]="yesNoOptions"
-                    optionLabel="label"
-                    optionValue="value"
-                    placeholder="Select"
-                    styleClass="w-full"
-                    formControlName="tribal"
-                  ></p-select>
-                </div>
-              </div>
+                            <!-- Row 5 -->
+                            <div class="flex flex-wrap gap-3 mb-4">
+                                <div class="flex-1" style="min-width: 220px">
+                                    <label class="font-semibold block mb-2 text-700"> Gallantry Awards/Decoration <span class="text-red-500">*</span> </label>
+                                    <p-select [options]="gallantryAwards" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" formControlName="gallantryAwardsDecoration"></p-select>
+                                </div>
 
-              <!-- Row 6 -->
-              <div class="flex flex-wrap gap-3 mb-4">
-                <div class="flex-1" style="min-width: 220px">
-                  <label class="font-semibold block mb-2 text-700">Freedom Fighter</label>
-                  <p-select
-                    [options]="yesNoOptions"
-                    optionLabel="label"
-                    optionValue="value"
-                    placeholder="Select"
-                    styleClass="w-full"
-                    formControlName="freedomFighter"
-                  ></p-select>
-                </div>
+                                <div class="flex-1" style="min-width: 220px">
+                                    <label class="font-semibold block mb-2 text-700"> Last Education Qualification <span class="text-red-500">*</span> </label>
+                                    <p-select [options]="lastEducationQualifications" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" formControlName="lastEducationQualification"></p-select>
+                                </div>
 
-                <div class="flex-1" style="min-width: 220px">
-                  <label class="font-semibold block mb-2 text-700">
-                    Height (Feet) <span class="text-red-500">*</span>
-                  </label>
-                  <p-inputNumber class="w-full" formControlName="heightFeet" [min]="0" [max]="8"></p-inputNumber>
-                </div>
+                                <div class="flex-1" style="min-width: 220px">
+                                    <label class="font-semibold block mb-2 text-700"> Medical Category <span class="text-red-500">*</span> </label>
+                                    <p-select [options]="medicalCategories" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" formControlName="medicalCategory"></p-select>
+                                </div>
 
-                <div class="flex-1" style="min-width: 220px">
-                  <label class="font-semibold block mb-2 text-700">
-                    Height (Inch) <span class="text-red-500">*</span>
-                  </label>
-                  <p-inputNumber class="w-full" formControlName="heightInch" [min]="0" [max]="11"></p-inputNumber>
-                </div>
+                                <div class="flex-1" style="min-width: 220px">
+                                    <label class="font-semibold block mb-2 text-700">Tribal</label>
+                                    <p-select [options]="yesNoOptions" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" formControlName="tribal"></p-select>
+                                </div>
+                            </div>
 
-                <div class="flex-1" style="min-width: 220px">
-                  <label class="font-semibold block mb-2 text-700">
-                    Weight (KG) <span class="text-red-500">*</span>
-                  </label>
-                  <p-inputNumber class="w-full" formControlName="weightKg" [min]="1" [max]="300"></p-inputNumber>
-                </div>
-              </div>
+                            <!-- Row 6 -->
+                            <div class="flex flex-wrap gap-3 mb-4">
+                                <div class="flex-1" style="min-width: 220px">
+                                    <label class="font-semibold block mb-2 text-700">Freedom Fighter</label>
+                                    <p-select [options]="yesNoOptions" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" formControlName="freedomFighter"></p-select>
+                                </div>
 
-              <!-- Row 7 -->
-              <div class="flex flex-wrap gap-3 mb-4">
-                <div class="flex-1" style="min-width: 220px">
-                  <label class="font-semibold block mb-2 text-700">Weight (LBS)</label>
-                  <p-inputNumber class="w-full" formControlName="weightLbs" [min]="1" [max]="700"></p-inputNumber>
-                </div>
+                                <div class="flex-1" style="min-width: 220px">
+                                    <label class="font-semibold block mb-2 text-700"> Height (Feet) <span class="text-red-500">*</span> </label>
+                                    <p-inputNumber class="w-full" formControlName="heightFeet" [min]="0" [max]="8"></p-inputNumber>
+                                </div>
 
-                <div class="flex-1" style="min-width: 220px">
-                  <label class="font-semibold block mb-2 text-700">Driving License No</label>
-                  <input pInputText class="w-full" placeholder="Driving License No" formControlName="drivingLicenseNo" />
-                </div>
+                                <div class="flex-1" style="min-width: 220px">
+                                    <label class="font-semibold block mb-2 text-700"> Height (Inch) <span class="text-red-500">*</span> </label>
+                                    <p-inputNumber class="w-full" formControlName="heightInch" [min]="0" [max]="11"></p-inputNumber>
+                                </div>
 
-                <div class="flex-1" style="min-width: 220px">
-                  <label class="font-semibold block mb-2 text-700">Service ID Card No</label>
-                  <input pInputText class="w-full" placeholder="Service ID Card No" formControlName="serviceIdCardNo" />
-                </div>
+                                <div class="flex-1" style="min-width: 220px">
+                                    <label class="font-semibold block mb-2 text-700"> Weight (KG) <span class="text-red-500">*</span> </label>
+                                    <p-inputNumber class="w-full" formControlName="weightKg" [min]="1" [max]="300"></p-inputNumber>
+                                </div>
+                            </div>
 
-                <div class="flex-1" style="min-width: 220px">
-                  <label class="font-semibold block mb-2 text-700">Supporting Document Upload</label>
-                  <p-fileUpload
-                    mode="basic"
-                    chooseLabel="Upload"
-                    name="docs[]"
-                    [multiple]="true"
-                    [auto]="false"
-                    (onSelect)="form.patchValue({ supportingDocuments: $event.files })"
-                  ></p-fileUpload>
-                </div>
-              </div>
-            </div>
-          </div>
-        </p-tabpanel>
+                            <!-- Row 7 -->
+                            <div class="flex flex-wrap gap-3 mb-4">
+                                <div class="flex-1" style="min-width: 220px">
+                                    <label class="font-semibold block mb-2 text-700">Weight (LBS)</label>
+                                    <p-inputNumber class="w-full" formControlName="weightLbs" [min]="1" [max]="700"></p-inputNumber>
+                                </div>
 
-        <!-- =================== ADDRESS TAB =================== -->
-        <p-tabpanel value="2">
-          <app-address-section
-            [form]="form"
-            title="Own Present Address"
-         
-            prefix="per"
-            [divisions]="divisions"
-            [districts]="districts"
-            [upazilas]="upazilas"
-            [postOffices]="postOffices"
-            [showRequiredIndicators]="true"
-          ></app-address-section>
-        </p-tabpanel>
-        <p-tabpanel value="3">
-          <app-address-section
-            [form]="form"
-            title="Own Permanent Address"
-           
-            prefix="per"
-            [divisions]="divisions"
-            [districts]="districts"
-            [upazilas]="upazilas"
-            [postOffices]="postOffices"
-            [showRequiredIndicators]="true"
-          ></app-address-section>
-        </p-tabpanel>
-      </p-tabpanels>
-    </p-tabs>
-  </p-card>
+                                <div class="flex-1" style="min-width: 220px">
+                                    <label class="font-semibold block mb-2 text-700">Driving License No</label>
+                                    <input pInputText class="w-full" placeholder="Driving License No" formControlName="drivingLicenseNo" />
+                                </div>
+
+                                <div class="flex-1" style="min-width: 220px">
+                                    <label class="font-semibold block mb-2 text-700">Service ID Card No</label>
+                                    <input pInputText class="w-full" placeholder="Service ID Card No" formControlName="serviceIdCardNo" />
+                                </div>
+
+                                <div class="flex-1" style="min-width: 220px">
+                                    <label class="font-semibold block mb-2 text-700">Supporting Document Upload</label>
+                                    <p-fileUpload mode="basic" chooseLabel="Upload" name="docs[]" [multiple]="true" [auto]="false" (onSelect)="form.patchValue({ supportingDocuments: $event.files })"></p-fileUpload>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </p-tabpanel>
+
+                <!-- =================== ADDRESS TAB =================== -->
+                <p-tabpanel value="2">
+                    <app-address-section [form]="form" title="Own Present Address" prefix="per" [divisions]="divisions" [districts]="districts" [upazilas]="upazilas" [postOffices]="postOffices" [showRequiredIndicators]="true"></app-address-section>
+                </p-tabpanel>
+                <p-tabpanel value="3">
+                    <app-address-section [form]="form" title="Own Permanent Address" prefix="per" [divisions]="divisions" [districts]="districts" [upazilas]="upazilas" [postOffices]="postOffices" [showRequiredIndicators]="true"></app-address-section>
+                </p-tabpanel>
+                <p-tabpanel value="4">
+                    <app-family-info></app-family-info>
+                </p-tabpanel>
+            </p-tabpanels>
+        </p-tabs>
+    </p-card>
 </form>

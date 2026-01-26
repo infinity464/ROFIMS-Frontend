@@ -14,6 +14,8 @@ import { TextareaModule } from 'primeng/textarea';
 import { FileUploadModule } from 'primeng/fileupload';
 
 import { AddressSectionComponent } from '../../Shared/address-section/address-section';
+import { DynamicFieldComponent } from "../../Shared/shared/components/dynamic-field/dynamic-field";
+import { FamilyInfo } from "../family-info/family-info";
 
 @Component({
   selector: 'app-personal-info',
@@ -21,10 +23,8 @@ import { AddressSectionComponent } from '../../Shared/address-section/address-se
   imports: [
     FormsModule,
     ReactiveFormsModule,
-
     Card,
     Tabs, TabList, Tab, TabPanels, TabPanel,
-
     InputTextModule,
     SelectModule,
     DatePicker,
@@ -32,9 +32,10 @@ import { AddressSectionComponent } from '../../Shared/address-section/address-se
     CheckboxModule,
     TextareaModule,
     FileUploadModule,
-
-    AddressSectionComponent
-  ],
+    AddressSectionComponent,
+    DynamicFieldComponent,
+    FamilyInfo
+],
   templateUrl: './personal-info.html',
   styleUrl: './personal-info.scss'
 })
