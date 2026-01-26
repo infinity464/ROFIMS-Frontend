@@ -18,31 +18,33 @@ import { switchMap } from 'rxjs/operators';
 import { AddressSectionComponent } from '../../Shared/address-section/address-section';
 import { EmployeeinfoService } from '../Services/employeeinfo.service';
 import { EmployeeInfoModel } from '../model/employeeinfo.model';
+import { NomineeInfo } from "../../PersonalInfo/nominee-info/nominee-info";
 
 @Component({
     selector: 'app-employeeinfo',
     standalone: true,
     imports: [
-        CommonModule,
-        ReactiveFormsModule,
-        CardModule,
-        DividerModule,
-        SelectModule,
-        InputTextModule,
-        DatePickerModule,
-        TableModule,
-        ButtonModule,
-        CheckboxModule,
-        FileUploadModule,
-        AddressSectionComponent,
-        Tab,
-        TabList,
-        Tabs,
-        TabPanels,
-        TabPanel,
-        ConfirmDialog,
-        Toast
-    ],
+    CommonModule,
+    ReactiveFormsModule,
+    CardModule,
+    DividerModule,
+    SelectModule,
+    InputTextModule,
+    DatePickerModule,
+    TableModule,
+    ButtonModule,
+    CheckboxModule,
+    FileUploadModule,
+    AddressSectionComponent,
+    Tab,
+    TabList,
+    Tabs,
+    TabPanels,
+    TabPanel,
+    ConfirmDialog,
+    Toast,
+    NomineeInfo
+],
     providers: [ConfirmationService, MessageService],
     templateUrl: './employeeinfo.html',
     styleUrl: './employeeinfo.scss'

@@ -1,1 +1,238 @@
-<p>nominee-info works!</p>
+<form [formGroup]="form" class="nominee-form">
+  <div class="mb-5">
+    <div class="flex align-items-center gap-2 mb-4">
+      <h3 class="m-0 text-xl font-bold text-900">2 (d) Nominee's Information Entry</h3>
+    </div>
+
+    <div class="surface-50 border-round-2xl p-4">
+      <!-- ID Input Section -->
+      <div class="flex flex-wrap gap-3 mb-4">
+        <div class="flex-1" style="min-width: 280px">
+          <label class="font-semibold block mb-2 text-700">RAB ID</label>
+          <input
+            pInputText
+            class="w-full"
+            formControlName="rabId"
+            placeholder="Enter RAB ID"
+            (blur)="onIdBlur()"
+          />
+        </div>
+
+        <div class="flex-1" style="min-width: 280px">
+          <label class="font-semibold block mb-2 text-700">Service ID</label>
+          <input
+            pInputText
+            class="w-full"
+            formControlName="serviceId"
+            placeholder="Enter Service ID"
+            (blur)="onIdBlur()"
+          />
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <small class="text-600 block">
+          <i class="pi pi-info-circle mr-1"></i>
+          যে কোন ID Input করলে নিচের তথ্য সমূহ Auto Load হবে।
+        </small>
+      </div>
+
+      <p-divider></p-divider>
+
+      <!-- Auto-loaded Information -->
+      <div class="flex flex-wrap gap-3 mb-4">
+        <div class="flex-1" style="min-width: 220px">
+          <label class="font-semibold block mb-2 text-700">Name</label>
+          <input
+            pInputText
+            class="w-full"
+            formControlName="name"
+            placeholder="Auto Loaded"
+          />
+        </div>
+
+        <div class="flex-1" style="min-width: 220px">
+          <label class="font-semibold block mb-2 text-700">Rank</label>
+          <input
+            pInputText
+            class="w-full"
+            formControlName="rank"
+            placeholder="Auto Loaded"
+          />
+        </div>
+
+        <div class="flex-1" style="min-width: 220px">
+          <label class="font-semibold block mb-2 text-700">Corps</label>
+          <input
+            pInputText
+            class="w-full"
+            formControlName="corps"
+            placeholder="Auto Loaded"
+          />
+        </div>
+
+        <div class="flex-1" style="min-width: 220px">
+          <label class="font-semibold block mb-2 text-700">Trade</label>
+          <input
+            pInputText
+            class="w-full"
+            formControlName="trade"
+            placeholder="Auto Loaded"
+          />
+        </div>
+      </div>
+
+      <div class="flex flex-wrap gap-3 mb-4">
+        <div class="flex-1" style="min-width: 280px">
+          <label class="font-semibold block mb-2 text-700">Mother Organization</label>
+          <input
+            pInputText
+            class="w-full"
+            formControlName="motherOrganization"
+            placeholder="Auto Loaded"
+          />
+        </div>
+
+        <div class="flex-1" style="min-width: 280px">
+          <label class="font-semibold block mb-2 text-700">Member Type</label>
+          <input
+            pInputText
+            class="w-full"
+            formControlName="memberType"
+            placeholder="Auto Loaded"
+          />
+        </div>
+      </div>
+
+      <p-divider></p-divider>
+
+      <!-- Action Buttons -->
+      <div class="flex flex-wrap gap-3 mb-4">
+        <button
+          pButton
+          type="button"
+          label="Add Family Member"
+          icon="pi pi-user-plus"
+          class="p-button-outlined"
+          (click)="addFamilyMember()"
+        ></button>
+
+        <button
+          pButton
+          type="button"
+          label="Select and Add from Family List"
+          icon="pi pi-list"
+          class="p-button-primary"
+          (click)="selectFromFamilyList()"
+        ></button>
+      </div>
+
+      <p-divider></p-divider>
+
+      <!-- Nominees Table Section -->
+      <div class="mb-4">
+        <h4 class="text-lg font-semibold text-900 mb-3">Nominee Details</h4>
+        
+        <div formArrayName="nominees" class="surface-card border-round-lg overflow-hidden">
+          <p-table
+            [value]="nominees.controls"
+            styleClass="p-datatable-sm"
+            responsiveLayout="scroll"
+          >
+            <ng-template pTemplate="header">
+              <tr>
+                <th style="width: 80px; background: var(--surface-100)">Ser</th>
+                <th style="background: var(--surface-100)">Relation Type</th>
+                <th style="background: var(--surface-100)">Name</th>
+                <th style="width: 250px; background: var(--surface-100)">Nominated Percentage (%)</th>
+              </tr>
+            </ng-template>
+
+            <ng-template pTemplate="body" let-row let-i="rowIndex">
+              <tr [formGroupName]="i">
+                <td class="text-center font-semibold">{{ row.get('ser')?.value }}</td>
+
+                <td>
+                  <input
+                    pInputText
+                    formControlName="relationType"
+                    class="w-full"
+                  />
+                </td>
+
+                <td>
+                  <input
+                    pInputText
+                    formControlName="nomineeName"
+                    class="w-full"
+                  />
+                </td>
+
+                <td>
+                  <p-inputNumber
+                    formControlName="nominatedPercentage"
+                    [min]="0"
+                    [max]="100"
+                    [suffix]="' %'"
+                    placeholder="Input manually"
+                    [showButtons]="true"
+                    styleClass="w-full"
+                  ></p-inputNumber>
+                </td>
+              </tr>
+            </ng-template>
+          </p-table>
+        </div>
+      </div>
+
+      <p-divider></p-divider>
+
+      <!-- Auth, Remarks & Upload -->
+      <div class="flex flex-wrap gap-3 mb-4">
+        <div class="flex-1" style="min-width: 280px">
+          <label class="font-semibold block mb-2 text-700">Auth</label>
+          <input
+            pInputText
+            class="w-full"
+            formControlName="auth"
+            placeholder="Enter authorization details"
+          />
+        </div>
+
+        <div class="flex-1" style="min-width: 280px">
+          <label class="font-semibold block mb-2 text-700">Remarks</label>
+          <input
+            pInputText
+            class="w-full"
+            formControlName="remarks"
+            placeholder="Enter remarks"
+          />
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <label class="font-semibold block mb-2 text-700">Document Upload</label>
+        <p-fileUpload
+          mode="basic"
+          name="file"
+          chooseLabel="Choose File"
+          [auto]="false"
+          [customUpload]="true"
+          (onSelect)="form.patchValue({ document: $event.files?.[0] })"
+        ></p-fileUpload>
+      </div>
+    </div>
+  </div>
+
+  <!-- Submit Button -->
+  <div class="flex justify-content-end gap-3">
+    <button
+      pButton
+      type="button"
+      label="Save"
+      icon="pi pi-check"
+      class="p-button-primary"
+      (click)="onSubmit()"
+    ></button>
+  </div>
+</form>

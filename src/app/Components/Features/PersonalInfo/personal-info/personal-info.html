@@ -14,6 +14,7 @@
                 <p-tab value="2">Present Address</p-tab>
                 <p-tab value="3">Permanent Address</p-tab>
                 <p-tab value="4">Family Info</p-tab>
+                <p-tab value="5">Nominee</p-tab>
             </p-tablist>
 
             <p-tabpanels>
@@ -208,7 +209,7 @@
                     </div>
                 </p-tabpanel>
 
-                <!-- =================== ADDRESS TAB =================== -->
+               
                 <p-tabpanel value="2">
                     <app-address-section [form]="form" title="Own Present Address" prefix="per" [divisions]="divisions" [districts]="districts" [upazilas]="upazilas" [postOffices]="postOffices" [showRequiredIndicators]="true"></app-address-section>
                 </p-tabpanel>
@@ -216,7 +217,12 @@
                     <app-address-section [form]="form" title="Own Permanent Address" prefix="per" [divisions]="divisions" [districts]="districts" [upazilas]="upazilas" [postOffices]="postOffices" [showRequiredIndicators]="true"></app-address-section>
                 </p-tabpanel>
                 <p-tabpanel value="4">
-                    <app-family-info></app-family-info>
+                    <!-- <app-family-info></app-family-info> -->
+                </p-tabpanel>
+                <p-tabpanel value="5">
+                    
+                    <app-nominee-info></app-nominee-info>
+                
                 </p-tabpanel>
             </p-tabpanels>
         </p-tabs>

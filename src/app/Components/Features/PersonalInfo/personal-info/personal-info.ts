@@ -16,6 +16,7 @@ import { FileUploadModule } from 'primeng/fileupload';
 import { AddressSectionComponent } from '../../Shared/address-section/address-section';
 import { DynamicFieldComponent } from "../../Shared/shared/components/dynamic-field/dynamic-field";
 import { FamilyInfo } from "../family-info/family-info";
+import { NomineeInfo } from "../nominee-info/nominee-info";
 
 @Component({
   selector: 'app-personal-info',
@@ -34,7 +35,8 @@ import { FamilyInfo } from "../family-info/family-info";
     FileUploadModule,
     AddressSectionComponent,
     DynamicFieldComponent,
-    FamilyInfo
+    FamilyInfo,
+    NomineeInfo
 ],
   templateUrl: './personal-info.html',
   styleUrl: './personal-info.scss'
