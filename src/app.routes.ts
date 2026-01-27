@@ -39,6 +39,7 @@ import { MotherOrg } from '@/Components/test/mother-org/mother-org';
 import { Organization } from '@/Components/organization-setup/organization/organization';
 import { OrganizationUnit } from '@/Components/organization-setup/organization-unit/organization-unit';
 import { MotherOrgRank } from '@/Components/basic-setup/mother-org-rank/mother-org-rank';
+import { Corps } from '@/Components/basic-setup/corps/corps';
 
 
 export const appRoutes: Routes = [
@@ -83,7 +84,8 @@ export const appRoutes: Routes = [
       {path: 'personal-info', component: PersonalInfo},
       {path: 'mother-org', component: Organization},
       {path: 'organization-unit', component: OrganizationUnit},
-      {path: 'mother-org-rank', component: MotherOrgRank},
+      {path: 'basic-setup/mother-org-rank', component: MotherOrgRank},
+      {path: 'basic-setup/corps', component: Corps},
 
 
       { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
