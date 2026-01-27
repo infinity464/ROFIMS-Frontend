@@ -15,7 +15,7 @@ export class OrganizationService {
         return this.http.get<OrganizationModel[]>(`${this.apiUrl}/GetAllMotherOrgAsyn`);
     }
 
-    getAllMotherOrgs(): Observable<OrganizationModel[]> {
+    getAllActiveMotherOrgs(): Observable<OrganizationModel[]> {
         return this.http.get<OrganizationModel[]>(`${this.apiUrl}/GetAllActiveMotherOrgs`);
     }
     GetAllOrgUnit(): Observable<OrganizationModel[]> {

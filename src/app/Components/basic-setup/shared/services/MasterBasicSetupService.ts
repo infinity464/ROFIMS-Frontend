@@ -4,6 +4,7 @@ import { inject, Injectable } from '@angular/core';
 import { CommonCode } from '../models/common-code';
 import { Observable } from 'rxjs';
 import { PagedResponse } from '@/Core/Models/Pagination';
+import { OrganizationModel } from '../../../organization-setup/models/organization';
 
 @Injectable({
     providedIn: 'root'
@@ -17,6 +18,10 @@ export class MasterBasicSetupService {
     }
     getByParentId(parentCodeId: number): Observable<CommonCode[]> {
         return this.http.get<CommonCode[]>(`${this.apiUrl}/GetByParentIdAsyn/${parentCodeId}`);
+    }
+
+   getAllActiveMotherOrgs(): Observable<OrganizationModel[]> {
+        return this.http.get<OrganizationModel[]>(`${environment.apis.core}/MotherOrg/GetAllActiveMotherOrgs`);
     }
 
     getAllWithPaging(codeType: string, pageNumber: number, pageSize: number): Observable<PagedResponse<CommonCode>> {

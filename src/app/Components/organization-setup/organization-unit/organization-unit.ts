@@ -116,7 +116,7 @@ export class OrganizationUnit implements OnInit {
     }
 
     loadMotherOrg(){
-        this.organizationService.getAllMotherOrgs().subscribe({
+        this.organizationService.getAllActiveMotherOrgs().subscribe({
             next: (res: OrganizationModel[]) => {
                 this.motherOrg = res;
 
