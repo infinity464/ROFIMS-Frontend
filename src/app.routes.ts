@@ -35,6 +35,8 @@ import { RabWing } from '@/Components/basic-setup/rab-wing/rab-wing';
 import { EducationInstitution } from '@/Components/basic-setup/education-institution/education-institution';
 import { EducationResult } from '@/Components/basic-setup/education-result/education-result';
 import { PersonalInfo } from '@/Components/Features/PersonalInfo/personal-info/personal-info';
+import { MotherOrg } from '@/Components/test/mother-org/mother-org';
+import { Organization } from '@/Components/organization-setup/organization/organization';
 
 
 export const appRoutes: Routes = [
@@ -77,6 +79,8 @@ export const appRoutes: Routes = [
       { path: 'basic-setup/officer-type', component: OfficerType },
       { path: 'basic-setup/rab-wing', component: RabWing },
       {path: 'personal-info', component: PersonalInfo},
+      {path: 'mother-org', component: Organization},
+
 
       { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
       { path: 'documentation', component: Documentation },
