@@ -42,6 +42,7 @@ import { MotherOrgRank } from '@/Components/basic-setup/mother-org-rank/mother-o
 import { Corps } from '@/Components/basic-setup/corps/corps';
 import { Batch } from '@/Components/basic-setup/batch/batch';
 import { Decoration } from '@/Components/basic-setup/decoration/decoration';
+import { ProfessionalQualification } from '@/Components/basic-setup/professional-qualification/professional-qualification';
 
 export const appRoutes: Routes = [
     // Public routes
@@ -89,6 +90,7 @@ export const appRoutes: Routes = [
             { path: 'basic-setup/corps', component: Corps },
             { path: 'basic-setup/batch', component: Batch },
             { path: 'basic-setup/decoration', component: Decoration },
+            { path: 'basic-setup/professional-qualification', component: ProfessionalQualification },
 
             { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
             { path: 'documentation', component: Documentation },
