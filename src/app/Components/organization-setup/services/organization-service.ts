@@ -11,8 +11,15 @@ export class OrganizationService {
     private http = inject(HttpClient);
     private apiUrl = `${environment.apis.core}/MotherOrg`;
 
-    getAll(): Observable<OrganizationModel[]> {
-        return this.http.get<OrganizationModel[]>(`${this.apiUrl}/GetAll`);
+    getAllMotherOrg(): Observable<OrganizationModel[]> {
+        return this.http.get<OrganizationModel[]>(`${this.apiUrl}/GetAllMotherOrgAsyn`);
+    }
+
+    getAllMotherOrgs(): Observable<OrganizationModel[]> {
+        return this.http.get<OrganizationModel[]>(`${this.apiUrl}/GetAllActiveMotherOrgs`);
+    }
+    GetAllOrgUnit(): Observable<OrganizationModel[]> {
+        return this.http.get<OrganizationModel[]>(`${this.apiUrl}/GetAllOrgUnit`);
     }
 
     getWithKeywordAndPaging(keyword: string, pageNumber: number, pageSize: number): Observable<OrganizationModel[]> {

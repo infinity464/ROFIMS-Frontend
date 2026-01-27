@@ -3,51 +3,76 @@
 
 <p-fluid>
     <div class="card">
-        <div class="font-semibold text-xl mb-5">Organization Setup</div>
+        <div class="font-semibold text-xl mb-5">Organization Unit</div>
         <form [formGroup]="organizationForm" (ngSubmit)="onSubmit()">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-                <!-- Organization Name (English) -->
+                <!-- Parent Organization -->
+                <div class="field">
+                    <label for="parentOrg" class="block mb-2">
+                        Unit Name
+                        <span class="text-red-500">*</span>
+                    </label>
+                    <p-select id="parentOrg" formControlName="parentOrg" [options]="motherOrg" optionLabel="orgNameEN"
+                        optionValue="orgId" placeholder="Select parentOrg" styleClass="w-full"></p-select>
+                </div>
+
+                <!-- Organization Unit Name (English) -->
                 <div class="field">
                     <label for="orgNameEN" class="block mb-2">
-                        Organization Name (English)
+                        Unit Name (English)
                         <span class="text-red-500">*</span>
                     </label>
                     <input pInputText id="orgNameEN" formControlName="orgNameEN" placeholder="Enter organization name"
                         class="w-full" />
                     @if (organizationForm.get('orgNameEN')?.invalid && organizationForm.get('orgNameEN')?.touched) {
                     <small class="text-red-500 block mt-1">
-                        Organization Name (English) is required
+                        Unit Name (English) is required
                     </small>
                     }
                 </div>
 
-                <!-- Organization Name (Bangla) -->
+                <!-- Organization Unit Name (Bangla) -->
                 <div class="field">
                     <label for="orgNameBN" class="block mb-2">
-                        Organization Name (Bangla)
+                        Unit Name (Bangla)
                         <span class="text-red-500">*</span>
                     </label>
                     <input pInputText id="orgNameBN" formControlName="orgNameBN" placeholder="Enter organization name"
                         class="w-full" />
                     @if (organizationForm.get('orgNameBN')?.invalid && organizationForm.get('orgNameBN')?.touched) {
                     <small class="text-red-500 block mt-1">
-                        Organization Name (Bangla) is required
+                        Unit Name (Bangla) is required
                     </small>
                     }
                 </div>
-                <!-- Sort Order -->
+                <!-- Organization Unit Location (English) -->
                 <div class="field">
-                    <label for="sortOrder" class="block mb-2">
-                        Seniority <span class="text-red-500">*</span>
+                    <label for="locationEN" class="block mb-2">
+                        Unit Location (English)
+
                     </label>
-                    <input type="number" pInputText id="sortOrder" formControlName="sortOrder"
-                        placeholder="Enter sort order" class="w-full" />
-                    @if (organizationForm.get('sortOrder')?.invalid && organizationForm.get('sortOrder')?.touched) {
+                    <input pInputText id="locationEN" formControlName="locationEN" placeholder="Enter organization name"
+                        class="w-full" />
+                    @if (organizationForm.get('locationEN')?.invalid && organizationForm.get('locationEN')?.touched) {
                     <small class="text-red-500 block mt-1">
-                        Seniority is required
+                        Unit Location (English) is required
                     </small>
                     }
                 </div>
+                <!-- Organization Unit Location (Bangla) -->
+                <div class="field">
+                    <label for="locationBN" class="block mb-2">
+                        Unit Location (Bangla)
+                    </label>
+                    <input pInputText id="locationBN" formControlName="locationBN" placeholder="Enter organization name"
+                        class="w-full" />
+                    @if (organizationForm.get('locationBN')?.invalid && organizationForm.get('locationBN')?.touched) {
+                    <small class="text-red-500 block mt-1">
+                        Organization Unit Location (Bangla) is required
+                    </small>
+                    }
+                </div>
+
 
                 <!-- Status -->
                 <div class="field">
@@ -88,9 +113,12 @@
         <ng-template pTemplate="header">
             <tr>
                 <th style="width: 5%">#</th>
-                <th>Organization Name (English)</th>
-                <th>Organization Name (Bangla)</th>
+                <th>Unit  Name (English)</th>
+                <th>Unit Name (Bangla)</th>
+                <th>Unit Location (Bangla)</th>
+                <th>Unit Location (English)</th>
                 <th>Status</th>
+
                 <th style="width: 15%">Action</th>
             </tr>
         </ng-template>
@@ -100,15 +128,15 @@
                 <td>{{ first + rowIndex + 1 }}</td>
                 <td>{{ row.orgNameEN }}</td>
                 <td>{{ row.orgNameBN }}</td>
+                <td>{{ row.locationBN }}</td>
+                <td>{{ row.locationEN}}</td>
                 <td>
                     <span [ngClass]="{
                                     'text-green-600 font-semibold': row.status,
                                     'text-red-600 font-semibold': !row.status
                                 }">
                         {{ row.status ? 'Active' : 'Inactive' }}
-                    </span>
-                </td>
-
+                    </span></td>
                 <td>
                     <div class="flex gap-2">
                         <button class="mx-2" pButton icon="pi pi-pencil" (click)="onEdit(row)"></button>

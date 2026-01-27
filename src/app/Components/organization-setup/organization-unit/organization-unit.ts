@@ -14,14 +14,11 @@ import { Toast } from "primeng/toast";
 import { ConfirmDialog } from "primeng/confirmdialog";
 import {  ConfirmationService } from 'primeng/api';
 import { TableModule } from "primeng/table";
-import { Tag } from "primeng/tag";
 import { IconField } from "primeng/iconfield";
 import { InputIcon } from "primeng/inputicon";
 
-
-
 @Component({
-    selector: 'app-organization',
+    selector: 'app-organization-unit',
     imports: [
         Fluid,
         ReactiveFormsModule,
@@ -36,15 +33,16 @@ import { InputIcon } from "primeng/inputicon";
         InputIcon,
         ConfirmDialog,
         ButtonModule,
-        CommonModule,
+        CommonModule
     ],
     providers: [MessageService, ConfirmationService],
-    templateUrl: './organization.html',
-    styleUrl: './organization.scss'
+    templateUrl: './organization-unit.html',
+    styleUrl: './organization-unit.scss'
 })
-export class Organization implements OnInit {
+export class OrganizationUnit implements OnInit {
     organizationForm!: FormGroup;
     isSubmitting = false;
+    motherOrg: OrganizationModel[] = [];
     organizations: OrganizationModel[] = [];
     filteredOrganizations: OrganizationModel[] = [];
     editingId: number | null = null;
@@ -71,7 +69,8 @@ export class Organization implements OnInit {
 
     ngOnInit(): void {
         this.initForm();
-        this.getAll();
+        this.GetAllOrgUnit();
+        this.loadMotherOrg();
     }
 
     initForm() {
@@ -80,15 +79,15 @@ export class Organization implements OnInit {
             orgNameEN: ['', Validators.required],
             orgNameBN: ['', Validators.required],
             contactName: [''],
-            contactNumber: ['', [Validators.pattern(/^[0-9]{10,15}$/)]],
+            contactNumber: [''],
             locationCode: [''],
             locationEN: [''],
             locationBN: [''],
-            email: ['', [Validators.email]],
-            sortOrder: [0, Validators.required],
-            status: [true, Validators.required],
+            email: [''],
+            sortOrder: [0],
+            status: [true],
             remarks: [''],
-            parentOrg: [null],
+            parentOrg: [Validators.required],
             createdBy: ['Admin'],
             createdDate: [new Date() ],
             lastUpdatedBy: ['Admin'],
@@ -97,13 +96,30 @@ export class Organization implements OnInit {
         });
     }
 
-    getAll() {
-        this.organizationService.getAllMotherOrg().subscribe({
+    GetAllOrgUnit() {
+        this.organizationService.GetAllOrgUnit().subscribe({
             next: (res: OrganizationModel[]) => {
                 console.log('Organizations fetched successfully', res);
                 this.organizations = res;
-                this.filteredOrganizations = [...res]; // Make a copy
+                this.filteredOrganizations = [...res];
                 this.totalRecords = res.length;
+            },
+            error: (err: any) => {
+                console.log('Error fetching organizations');
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: 'Failed to fetch organizations'
+                });
+            }
+        });
+    }
+
+    loadMotherOrg(){
+        this.organizationService.getAllMotherOrgs().subscribe({
+            next: (res: OrganizationModel[]) => {
+                this.motherOrg = res;
+
             },
             error: (err: any) => {
                 console.log('Error fetching organizations');
@@ -161,15 +177,15 @@ export class Organization implements OnInit {
                     detail: 'Organization created successfully'
                 });
                 this.onReset();
-                this.getAll();
+                this.GetAllOrgUnit();
                 this.isSubmitting = false;
             },
             error: (err: any) => {
-                console.log('Error creating organization');
+                console.log('Error creating organization-unit');
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create organization'
+                    detail: 'Failed to create organization-unit'
                 });
                 this.isSubmitting = false;
             }
@@ -193,15 +209,15 @@ export class Organization implements OnInit {
                     detail: 'Organization updated successfully'
                 });
                 this.onReset();
-                this.getAll();
+                this.GetAllOrgUnit();
                 this.isSubmitting = false;
             },
             error: (err: any) => {
-                console.log('Error updating organization');
+                console.log('Error updating organization-unit');
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update organization'
+                    detail: 'Failed to update organization-unit'
                 });
                 this.isSubmitting = false;
             }
@@ -217,7 +233,7 @@ export class Organization implements OnInit {
     onDelete(organization: OrganizationModel, event: Event) {
         this.confirmationService.confirm({
             target: event.target as EventTarget,
-            message: 'Are you sure you want to delete this organization?',
+            message: 'Are you sure you want to delete this organization-unit?',
             header: 'Delete Confirmation',
             icon: 'pi pi-exclamation-triangle',
             acceptIcon: 'pi pi-check',
@@ -241,14 +257,14 @@ export class Organization implements OnInit {
                             summary: 'Success',
                             detail: 'Organization deleted successfully'
                         });
-                        this.getAll();
+                        this.GetAllOrgUnit();
                     },
                     error: (err: any) => {
-                        console.log('Error deleting organization');
+                        console.log('Error deleting organization-unit');
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete organization'
+                            detail: 'Failed to delete organization-unit'
                         });
                     }
                 });

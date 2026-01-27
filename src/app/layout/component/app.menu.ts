@@ -28,6 +28,8 @@ export class AppMenu {
                 label: 'Basic Setup',
                 icon: 'pi pi-fw pi-cog',
                 items: [
+                    { label: 'Mother Organization', icon: 'pi pi-fw pi-map', routerLink: ['/mother-org'] },
+                    { label: 'Organization Unit', icon: 'pi pi-fw pi-map', routerLink: ['/organization-unit'] },
                     { label: 'Division', icon: 'pi pi-fw pi-map', routerLink: ['/basic-setup/division'] },
                     { label: 'District', icon: 'pi pi-fw pi-map-marker', routerLink: ['/basic-setup/district'] },
                     { label: 'Upazila', icon: 'pi pi-fw pi-compass', routerLink: ['/basic-setup/upazila'] },

@@ -37,6 +37,7 @@ import { EducationResult } from '@/Components/basic-setup/education-result/educa
 import { PersonalInfo } from '@/Components/Features/PersonalInfo/personal-info/personal-info';
 import { MotherOrg } from '@/Components/test/mother-org/mother-org';
 import { Organization } from '@/Components/organization-setup/organization/organization';
+import { OrganizationUnit } from '@/Components/organization-setup/organization-unit/organization-unit';
 
 
 export const appRoutes: Routes = [
@@ -80,6 +81,7 @@ export const appRoutes: Routes = [
       { path: 'basic-setup/rab-wing', component: RabWing },
       {path: 'personal-info', component: PersonalInfo},
       {path: 'mother-org', component: Organization},
+      {path: 'organization-unit', component: OrganizationUnit},
 
 
       { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
