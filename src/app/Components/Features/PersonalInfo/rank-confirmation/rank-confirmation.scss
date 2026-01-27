@@ -1,0 +1,178 @@
+.rank-form {
+  max-width: 1400px;
+  margin: 0 auto;
+
+  h3,
+  h4 {
+    color: var(--text-color);
+  }
+
+  .surface-50 {
+    background: var(--surface-50);
+  }
+
+  label {
+    font-size: 0.875rem;
+    color: var(--text-color-secondary);
+    font-weight: 600;
+  }
+
+  input,
+  ::ng-deep .p-inputtext,
+  ::ng-deep .p-inputnumber-input {
+    border-radius: 6px;
+    font-size: 0.875rem;
+
+    &::placeholder {
+      color: var(--text-color-secondary);
+      opacity: 0.6;
+    }
+
+    &:disabled {
+      background-color: var(--surface-100);
+      opacity: 0.8;
+    }
+  }
+
+  // Select dropdown styling
+  ::ng-deep .p-select {
+    border-radius: 6px;
+    font-size: 0.875rem;
+
+    .p-placeholder {
+      color: var(--text-color-secondary);
+      opacity: 0.6;
+    }
+  }
+
+  // Datepicker styling
+  ::ng-deep .p-datepicker {
+    .p-inputtext {
+      width: 100%;
+    }
+  }
+
+  // Info text styling
+  small {
+    font-size: 0.813rem;
+    color: var(--text-color-secondary);
+
+    .pi {
+      font-size: 0.75rem;
+    }
+  }
+
+  // Required field indicator
+  .text-red-500 {
+    color: #ef4444;
+  }
+
+  // Button styling
+  ::ng-deep .p-button {
+    border-radius: 6px;
+    font-weight: 500;
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
+
+    &.p-button-outlined {
+      background: transparent;
+
+      &:hover {
+        background: var(--primary-color);
+        color: var(--primary-color-text);
+      }
+    }
+  }
+
+  // Table styling
+  ::ng-deep .p-datatable {
+    .p-datatable-thead > tr > th {
+      background: var(--surface-100);
+      color: var(--text-color);
+      font-weight: 600;
+      font-size: 0.875rem;
+      padding: 0.875rem 1rem;
+      border-bottom: 1px solid var(--surface-border);
+    }
+
+    .p-datatable-tbody > tr > td {
+      padding: 0.75rem 1rem;
+      font-size: 0.875rem;
+      border-bottom: 1px solid var(--surface-border);
+    }
+
+    .p-datatable-tbody > tr {
+      &:hover {
+        background: var(--surface-hover);
+      }
+
+      &:last-child > td {
+        border-bottom: none;
+      }
+    }
+
+    // Empty message styling
+    .text-center {
+      font-style: italic;
+    }
+  }
+
+  // File upload styling
+  ::ng-deep .p-fileupload {
+    .p-button {
+      padding: 0.625rem 1.25rem;
+    }
+  }
+
+  // Divider styling
+  ::ng-deep .p-divider {
+    margin: 1.5rem 0;
+
+    &::before {
+      border-color: var(--surface-border);
+    }
+  }
+
+  // Section headers
+  h4 {
+    font-size: 1.125rem;
+    margin-bottom: 0.75rem;
+  }
+
+  // Surface card for table wrapper
+  .surface-card {
+    background: var(--surface-card);
+    border: 1px solid var(--surface-border);
+  }
+
+  // Responsive adjustments
+  @media (max-width: 768px) {
+    .flex-wrap {
+      > div {
+        min-width: 100% !important;
+      }
+    }
+
+    ::ng-deep .p-datatable {
+      font-size: 0.813rem;
+
+      .p-datatable-thead > tr > th,
+      .p-datatable-tbody > tr > td {
+        padding: 0.5rem;
+      }
+    }
+
+    h3 {
+      font-size: 1.125rem;
+    }
+
+    h4 {
+      font-size: 1rem;
+    }
+  }
+
+  // Action button section
+  .flex.justify-content-end {
+    padding-top: 1rem;
+  }
+}

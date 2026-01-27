@@ -34,6 +34,8 @@ import { OfficerType } from '@/Components/basic-setup/officer-type/officer-type'
 import { RabWing } from '@/Components/basic-setup/rab-wing/rab-wing';
 import { EducationInstitution } from '@/Components/basic-setup/education-institution/education-institution';
 import { EducationResult } from '@/Components/basic-setup/education-result/education-result';
+import { PersonalInfo } from '@/Components/Features/PersonalInfo/personal-info/personal-info';
+
 
 export const appRoutes: Routes = [
   // Public routes
@@ -74,6 +76,7 @@ export const appRoutes: Routes = [
       { path: 'basic-setup/rab-unit', component: RabUnit },
       { path: 'basic-setup/officer-type', component: OfficerType },
       { path: 'basic-setup/rab-wing', component: RabWing },
+      {path: 'personal-info', component: PersonalInfo},
 
       { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
       { path: 'documentation', component: Documentation },

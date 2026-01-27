@@ -1,36 +1,75 @@
+// ============ EMPLOYEE INFO MODEL ============
 export interface EmployeeInfoModel {
-  employeeID: number;
-  lastMotherUnit: number | null;
+  EmployeeID: number;
+  LastMotherUnit: number | null;
+  MemberType: string;
+  Appointment: string;
+  JoiningDate: Date | string;
+  Rank: number;
+  Branch: number;
+  Trade: number;
+  TradeMark?: string;
+  Gender: string;
+  Prefix: string;
+  ServiceId: string;
+  RABID: string;
+  NID?: string;
+  FullNameEN: string;
+  FullNameBN: string;
+  IsReliever: boolean;
+  PostingStatus: string;
+  Status: boolean;
+  CreatedBy?: string;
+  CreatedDate?: Date | string;
+  LastUpdatedBy?: string;
+  Lastupdate?: Date | string;
+  StatusDate?: Date | string;
+}
 
-  memberType: number;
-  appointment: number;
-  joiningDate: string; 
+export type LocationType =
+  | 'PERMANENT'
+  | 'PRESENT'
+  | 'WIFE_PERMANENT'
+  | 'WIFE_PRESENT';
 
-  rank: number;
-  branch: number;
-  trade: number;
+export interface AddressInfoModel {
+  EmployeeID: number;
+  AddressId: number;
+  FMID: number;
+  LocationType: LocationType;
+  LocationCode: string;
+  PostCode: string; // ✅ Changed from number to string
+  AddressAreaEN?: string;
+  AddressAreaBN?: string;
+  CreatedBy?: string;
+  CreatedDate?: Date | string;
+  LastUpdatedBy?: string;
+  Lastupdate?: Date | string;
+}
 
-  tradeMark: string;   
-  gender: number;
-  prefix: number;
 
-  serviceId: string;   
-  rabid: string;       
-  nid: string;
+// ============ SEARCH CRITERIA ============
+export interface EmployeeSearchCriteria {
+  motherOrganization?: number;
+  serviceId?: string;
+  nidNo?: string;
+  rabId?: string;
+  nameEnglish?: string;
+  rank?: number;
+  status?: boolean;
+}
 
-  fullNameEN: string;
-  fullNameBN: string;
+// ============ COMPLETE PROFILE ============
+export interface CompleteEmployeeProfile {
+  employee: EmployeeInfoModel;
+  addresses: AddressInfoModel[];
+}
 
-  isReliever: boolean;
-
-  postingStatus: string; 
-  status: boolean;
-
-  createdBy: string;
-  createdDate: string;   
-
-  lastUpdatedBy: string;
-  lastupdate: string;   
-
-  statusDate: string;    
+// ============ SAVE RESPONSE ============
+export interface SaveResponse {
+  success: boolean;
+  message: string;
+  employeeID?: number;
+  addressIds?: number[];
+  data?: any;
 }
