@@ -45,6 +45,7 @@ import { Decoration } from '@/Components/basic-setup/decoration/decoration';
 import { ProfessionalQualification } from '@/Components/basic-setup/professional-qualification/professional-qualification';
 import { PostOffice } from '@/Components/basic-setup/post-office/post-office';
 import { EducationalDepartment } from '@/Components/basic-setup/educational-department/educational-department';
+import { EducationSubject } from '@/Components/basic-setup/education-subject/education-subject';
 
 export const appRoutes: Routes = [
     // Public routes
@@ -95,6 +96,7 @@ export const appRoutes: Routes = [
             { path: 'basic-setup/professional-qualification', component: ProfessionalQualification },
             { path: 'basic-setup/post-office', component: PostOffice },
             { path: 'basic-setup/educational-department', component: EducationalDepartment },
+            { path: 'basic-setup/education-subject', component: EducationSubject },
 
             { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
             { path: 'documentation', component: Documentation },
