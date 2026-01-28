@@ -48,6 +48,7 @@ import { EducationalDepartment } from '@/Components/basic-setup/educational-depa
 import { EducationSubject } from '@/Components/basic-setup/education-subject/education-subject';
 import { Trade } from '@/Components/basic-setup/tarde/trade';
 import { Country } from '@/Components/basic-setup/country/country';
+import { RabBranch } from '@/Components/basic-setup/rab-branch/rab-branch';
 
 export const appRoutes: Routes = [
     // Public routes
@@ -101,7 +102,7 @@ export const appRoutes: Routes = [
             { path: 'basic-setup/education-subject', component: EducationSubject },
             { path: 'basic-setup/trade', component: Trade },
             { path: 'basic-setup/country', component: Country },
-
+            { path: 'basic-setup/rab-branch', component: RabBranch },
             { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
             { path: 'documentation', component: Documentation },
             { path: 'pages', loadChildren: () => import('./app/pages/pages.routes') }
