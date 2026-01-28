@@ -28,6 +28,10 @@ export class MasterBasicSetupService {
         return this.http.get<OrganizationModel[]>(`${environment.apis.core}/MotherOrg/GetAllActiveMotherOrgs`);
     }
 
+    getAllActiveCommonCodesByOrgIdAndType(orgId: number, codeType: string): Observable<CommonCode[]> {
+        return this.http.get<CommonCode[]>(`${this.apiUrl}/GetActiveByOrgIdAndTypeAsyn/${orgId}/${codeType}`);
+    }
+
     getAllWithPaging(codeType: string, pageNumber: number, pageSize: number): Observable<PagedResponse<CommonCode>> {
         return this.http.get<PagedResponse<CommonCode>>(`${this.apiUrl}/GetPaginatedOnConditionAsyn/${codeType}?page_no=${pageNumber}&row_per_page=${pageSize}`);
     }
