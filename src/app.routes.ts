@@ -43,6 +43,8 @@ import { Corps } from '@/Components/basic-setup/corps/corps';
 import { Batch } from '@/Components/basic-setup/batch/batch';
 import { Decoration } from '@/Components/basic-setup/decoration/decoration';
 import { ProfessionalQualification } from '@/Components/basic-setup/professional-qualification/professional-qualification';
+import { PostOffice } from '@/Components/basic-setup/post-office/post-office';
+import { EducationalDepartment } from '@/Components/basic-setup/educational-department/educational-department';
 
 export const appRoutes: Routes = [
     // Public routes
@@ -91,6 +93,8 @@ export const appRoutes: Routes = [
             { path: 'basic-setup/batch', component: Batch },
             { path: 'basic-setup/decoration', component: Decoration },
             { path: 'basic-setup/professional-qualification', component: ProfessionalQualification },
+            { path: 'basic-setup/post-office', component: PostOffice },
+            { path: 'basic-setup/educational-department', component: EducationalDepartment },
 
             { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
             { path: 'documentation', component: Documentation },
