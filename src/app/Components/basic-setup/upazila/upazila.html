@@ -1,21 +1,17 @@
- <app-dynamic-form
-            [config]="formConfig"
-            [form]="upazilaForm"
-            [editingId]="editingId"
-            (save)="submit($event)"
-            (reset)="resetForm()"
-            (fieldChange)="onFieldChange($event)">
-        </app-dynamic-form>
+<p-toast position="top-right"></p-toast>
+<p-confirm-dialog></p-confirm-dialog>
 
-        <app-data-table
-            [config]="tableConfig"
-            [data]="upazilaData"
-            [first]="first"
-            [totalRecords]="totalRecords"
-            [rows]="rows"
-            [loading]="loading"
-            (edit)="update($event)"
-            (delete)="delete($event.row, $event.event)"
-            (lazyLoad)="getUpazilaWithPaging($event)"
-            (search)="onSearch($event)">
-        </app-data-table>
+<p-fluid>
+    <div class="card">
+
+        <div class="font-semibold text-xl mb-5">{{ title }} Setup</div>
+        <app-dynamic-form [config]="formConfig" [form]="upazilaForm" [editingId]="editingId" (save)="submit($event)"
+            (reset)="resetForm()" (fieldChange)="onFieldChange($event)">
+        </app-dynamic-form>
+        </div>
+</p-fluid>
+
+<app-data-table [config]="tableConfig" [data]="upazilaData" [first]="first" [totalRecords]="totalRecords" [rows]="rows"
+    [loading]="loading" (edit)="update($event)" (delete)="delete($event.row, $event.event)"
+    (lazyLoad)="getUpazilaWithPaging($event)" (search)="onSearch($event)">
+</app-data-table>

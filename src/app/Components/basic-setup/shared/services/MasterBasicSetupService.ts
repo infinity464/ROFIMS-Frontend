@@ -20,6 +20,10 @@ export class MasterBasicSetupService {
         return this.http.get<CommonCode[]>(`${this.apiUrl}/GetByParentIdAsyn/${parentCodeId}`);
     }
 
+    getAncestorsOfCommonCode(codeId: number): Observable<CommonCode[]> {
+        return this.http.get<CommonCode[]>(`${this.apiUrl}/GetParentalInfoAsyn/${codeId}`);
+    }
+
    getAllActiveMotherOrgs(): Observable<OrganizationModel[]> {
         return this.http.get<OrganizationModel[]>(`${environment.apis.core}/MotherOrg/GetAllActiveMotherOrgs`);
     }

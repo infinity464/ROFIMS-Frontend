@@ -4,20 +4,26 @@ import { FormConfig } from '../shared/models/formConfig';
 import { TableConfig } from '../shared/models/dataTableConfig';
 import { MasterBasicSetupService } from '../shared/services/MasterBasicSetupService';
 import { ConfirmationService, MessageService } from 'primeng/api';
-import { DynamicFormComponent } from "../shared/componets/dynamic-form-component/dynamic-form";
-import { DataTable } from "../shared/componets/data-table/data-table";
+import { DynamicFormComponent } from '../shared/componets/dynamic-form-component/dynamic-form';
+import { DataTable } from '../shared/componets/data-table/data-table';
+import { Fluid } from 'primeng/fluid';
+import { ConfirmDialog } from 'primeng/confirmdialog';
+import { Toast } from 'primeng/toast';
+import { CommonCode } from '../shared/models/common-code';
 
 @Component({
-  selector: 'app-upazila',
-  imports: [DynamicFormComponent, DataTable],
-  templateUrl: './upazila.html',
-  styleUrl: './upazila.scss',
-  providers: [MessageService, ConfirmationService],
+    selector: 'app-upazila',
+    imports: [DynamicFormComponent, DataTable, Fluid, ConfirmDialog, Toast],
+    templateUrl: './upazila.html',
+    styleUrl: './upazila.scss',
+    providers: [MessageService, ConfirmationService]
 })
 export class Upazila {
-upazilaData: any[] = [];
+    upazilaData: any[] = [];
     editingId: number | null = null;
     upazilaForm!: FormGroup;
+    title = 'Thana Setup';
+    codeType = 'Thana';
 
     totalRecords = 0;
     rows = 10;
@@ -27,6 +33,7 @@ upazilaData: any[] = [];
 
     divisionOptions: { label: string; value: any }[] = [];
     districtOptions: { label: string; value: any }[] = [];
+    ancestors: CommonCode[] = [];
 
     formConfig: FormConfig = {
         formFields: [
@@ -72,7 +79,6 @@ upazilaData: any[] = [];
         ]
     };
 
-
     tableConfig: TableConfig = {
         tableColumns: [
             // { field: 'divisionName', header: 'Division' },
@@ -95,7 +101,7 @@ upazilaData: any[] = [];
         private messageService: MessageService,
         private confirmationService: ConfirmationService,
         private fb: FormBuilder
-    ) { }
+    ) {}
 
     ngOnInit(): void {
         this.initForm();
@@ -133,13 +139,13 @@ upazilaData: any[] = [];
     loadDivisions() {
         this.masterBasicSetupService.getAllByType('Division').subscribe({
             next: (divisions) => {
-                this.divisionOptions = divisions.map(d => ({
+                this.divisionOptions = divisions.map((d) => ({
                     label: d.codeValueEN,
                     value: d.codeId
                 }));
 
                 // Update form config with division options
-                const divisionField = this.formConfig.formFields.find(f => f.name === 'divisionId');
+                const divisionField = this.formConfig.formFields.find((f) => f.name === 'divisionId');
                 if (divisionField) {
                     divisionField.options = this.divisionOptions;
                 }
@@ -158,11 +164,11 @@ upazilaData: any[] = [];
     loadDistricts(divisionId: number) {
         this.masterBasicSetupService.getByParentId(divisionId).subscribe({
             next: (districts) => {
-                this.districtOptions = districts.map(d => ({
+                this.districtOptions = districts.map((d) => ({
                     label: d.codeValueEN,
                     value: d.codeId
                 }));
-                const districtField = this.formConfig.formFields.find(f => f.name === 'districtId');
+                const districtField = this.formConfig.formFields.find((f) => f.name === 'districtId');
                 if (districtField) {
                     districtField.options = this.districtOptions;
                 }
@@ -189,14 +195,24 @@ upazilaData: any[] = [];
         }
     }
 
+    loadAnscestors(codeId: number) {
+        this.masterBasicSetupService.getAncestorsOfCommonCode(codeId).subscribe({
+            next: (res) => {
+                this.ancestors = res;
+                console.log('Ancestors:', this.ancestors);
+            },
+            error: (err) => {
+                console.error('Error loading ancestors:');
+            }
+        });
+    }
+
     getUpazilaWithPaging(event?: any) {
         this.loading = true;
         const pageNo = event ? event.first / event.rows + 1 : 1;
         const pageSize = event?.rows ?? this.rows;
 
-        const apiCall = this.searchValue
-            ? this.masterBasicSetupService.getByKeyordWithPaging('Upazila', this.searchValue, pageNo, pageSize)
-            : this.masterBasicSetupService.getAllWithPaging('Upazila', pageNo, pageSize);
+        const apiCall = this.searchValue ? this.masterBasicSetupService.getByKeyordWithPaging('Upazila', this.searchValue, pageNo, pageSize) : this.masterBasicSetupService.getAllWithPaging('Upazila', pageNo, pageSize);
 
         apiCall.subscribe({
             next: (res) => {
@@ -277,7 +293,9 @@ upazilaData: any[] = [];
             ...this.upazilaForm.value,
             codeId: this.editingId,
             lastUpdatedBy: currentUser,
-            lastupdate: currentDateTime
+            lastupdate: currentDateTime,
+            createdDate: currentDateTime,
+            createdBy: currentUser
         };
 
         this.masterBasicSetupService.update(updatePayload).subscribe({
@@ -306,23 +324,42 @@ upazilaData: any[] = [];
     }
 
     update(row: any) {
-        this.editingId = row.codeId;
+    this.editingId = row.codeId;
 
-        // Load districts for the selected division first
-        if (row.divisionId) {
-            this.loadDistricts(row.divisionId);
+    this.loadAnscestors(row.codeId);
+
+    // Move the logic inside the loadAnscestors subscribe callback
+    this.masterBasicSetupService.getAncestorsOfCommonCode(row.codeId).subscribe({
+        next: (ancestors) => {
+            this.ancestors = ancestors;
+            console.log('Ancestors:', this.ancestors);
+
+            const divisionId = this.ancestors[0]?.codeId;
+
+            if (divisionId) {
+                console.log('Loading districts for divisionId:', divisionId);
+                this.loadDistricts(divisionId);
+
+                // Patch the form after districts are loaded
+                // Use setTimeout or subscribe to loadDistricts completion
+
+                    this.upazilaForm.patchValue({
+                        divisionId: divisionId,
+                        districtId: row.parentCodeId,
+                        codeValueEN: row.codeValueEN,
+                        codeValueBN: row.codeValueBN,
+                        status: row.status
+                    });
+
+            }
+        },
+        error: (err) => {
+            console.error('Error loading ancestors:', err);
         }
+    });
 
-        this.upazilaForm.patchValue({
-            divisionId: row.divisionId,
-            districtId: row.parentCodeId, // parentCodeId contains districtId
-            codeValueEN: row.codeValueEN,
-            codeValueBN: row.codeValueBN,
-            status: row.status
-        });
-
-        console.log('Edit:', row);
-    }
+    console.log('Edit:', row);
+}
 
     delete(row: any, event: Event) {
         this.confirmationService.confirm({
@@ -370,7 +407,7 @@ upazilaData: any[] = [];
         this.editingId = null;
 
         // Clear district options when resetting
-        const districtField = this.formConfig.formFields.find(f => f.name === 'districtId');
+        const districtField = this.formConfig.formFields.find((f) => f.name === 'districtId');
         if (districtField) {
             districtField.options = [];
         }
