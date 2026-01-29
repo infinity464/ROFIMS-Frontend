@@ -2,15 +2,17 @@ import { Component } from '@angular/core';
 import { MenuItem } from 'primeng/api';
 import { RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { StyleClassModule } from 'primeng/styleclass';
 import { AppConfigurator } from './app.configurator';
 import { LayoutService } from '../service/layout.service';
 import { Logout } from '@/Components/Features/Authentication/logout/logout';
+import { ToggleButtonModule } from 'primeng/togglebutton';
 
 @Component({
     selector: 'app-topbar',
     standalone: true,
-    imports: [RouterModule, CommonModule, StyleClassModule, AppConfigurator, Logout],
+    imports: [RouterModule, CommonModule, FormsModule, StyleClassModule, AppConfigurator, Logout, ToggleButtonModule],
     template: ` <div class="layout-topbar">
         <div class="layout-topbar-logo-container">
             <button class="layout-menu-button layout-topbar-action" (click)="layoutService.onMenuToggle()">
@@ -49,19 +51,18 @@ import { Logout } from '@/Components/Features/Authentication/logout/logout';
 
             <div class="layout-topbar-menu hidden lg:block">
                 <div class="layout-topbar-menu-content">
-                    <button type="button" class="layout-topbar-action">
-                        <i class="pi pi-calendar"></i>
-                        <span>Calendar</span>
-                    </button>
+                    <p-toggleButton [(ngModel)]="isEnglish" onLabel="EN" offLabel="BN" size="small" class="min-w-16" (onChange)="toggleLanguage()"> </p-toggleButton>
+
                     <button type="button" class="layout-topbar-action">
                         <i class="pi pi-inbox"></i>
                         <span>Messages</span>
                     </button>
-                    <app-logout></app-logout>
+
                     <button type="button" class="layout-topbar-action">
                         <i class="pi pi-user"></i>
                         <span>Profile</span>
                     </button>
+                    <app-logout></app-logout>
                 </div>
             </div>
         </div>
@@ -69,6 +70,7 @@ import { Logout } from '@/Components/Features/Authentication/logout/logout';
 })
 export class AppTopbar {
     items!: MenuItem[];
+    isEnglish: boolean = true;
     private readonly DARK_MODE_KEY = 'darkMode';
 
     constructor(public layoutService: LayoutService) {
@@ -82,6 +84,11 @@ export class AppTopbar {
             localStorage.setItem(this.DARK_MODE_KEY, JSON.stringify(newDarkTheme));
             return { ...state, darkTheme: newDarkTheme };
         });
+    }
+
+    toggleLanguage() {
+        const language = this.isEnglish ? 'EN' : 'BN';
+        localStorage.setItem('language', language);
     }
 
     private loadDarkModePreference() {
