@@ -28,11 +28,9 @@ import { SharedService } from '@/shared/services/shared-service';
         DatePickerModule,
         InputNumberModule,
         Button,
-        Toast,
         TableModule,
         IconField,
         InputIcon,
-        ConfirmDialog,
         ButtonModule,
         CommonModule
     ],
