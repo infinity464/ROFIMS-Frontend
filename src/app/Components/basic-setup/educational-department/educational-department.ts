@@ -7,17 +7,16 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 import { DynamicFormComponent } from '../shared/componets/dynamic-form-component/dynamic-form';
 import { DataTable } from '../shared/componets/data-table/data-table';
 import { Fluid } from 'primeng/fluid';
-import { ConfirmDialog } from 'primeng/confirmdialog';
-import { Toast } from 'primeng/toast';
+
 import { CommonCode } from '../shared/models/common-code';
 import { SharedService } from '@/shared/services/shared-service';
 
 @Component({
     selector: 'app-educational-department',
-    imports: [DynamicFormComponent, DataTable, Fluid, ConfirmDialog, Toast],
+    imports: [DynamicFormComponent, DataTable, Fluid, ],
     templateUrl: './educational-department.html',
     styleUrl: './educational-department.scss',
-    providers: [MessageService, ConfirmationService]
+    providers: []
 })
 export class EducationalDepartment {
     commonData: any[] = [];

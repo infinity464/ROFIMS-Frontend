@@ -36,7 +36,7 @@ import { SharedService } from '@/shared/services/shared-service';
         ButtonModule,
         CommonModule
     ],
-    providers: [MessageService, ConfirmationService],
+    providers: [],
     templateUrl: './organization-unit.html',
     styleUrl: './organization-unit.scss'
 })
@@ -71,10 +71,11 @@ export class OrganizationUnit implements OnInit {
     ) {}
 
     ngOnInit(): void {
-        this.initForm();
+
         this.GetAllOrgUnit();
         this.loadMotherOrg();
-        this.currentUser = this.sharedService.getCurrentUser()
+        this.currentUser = this.sharedService.getCurrentUser();
+        this.initForm();
     }
 
     initForm() {

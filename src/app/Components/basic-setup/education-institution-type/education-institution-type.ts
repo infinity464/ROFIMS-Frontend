@@ -7,16 +7,15 @@ import { FormConfig } from '../shared/models/formConfig';
 import { TableConfig } from '../shared/models/dataTableConfig';
 import { DynamicFormComponent } from '../shared/componets/dynamic-form-component/dynamic-form';
 import { DataTable } from '../shared/componets/data-table/data-table';
-import { ConfirmDialog } from 'primeng/confirmdialog';
-import { Toast } from 'primeng/toast';
+
 import { Fluid } from 'primeng/fluid';
 import { SharedService } from '@/shared/services/shared-service';
 
 @Component({
     selector: 'app-education-institution-type',
-    imports: [DynamicFormComponent, DataTable, ConfirmDialog, Toast, Fluid],
+    imports: [DynamicFormComponent, DataTable,   Fluid],
     templateUrl: './education-institution-type.html',
-    providers: [MessageService, ConfirmationService],
+    providers: [],
     styleUrl: './education-institution-type.scss'
 })
 export class EducationInstitutionType {

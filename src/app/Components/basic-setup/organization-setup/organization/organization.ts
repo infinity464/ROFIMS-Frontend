@@ -8,38 +8,21 @@ import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { OrganizationService } from '../services/organization-service';
 import { OrganizationModel } from '../models/organization';
-import { Button, ButtonModule } from "primeng/button";
+import { Button, ButtonModule } from 'primeng/button';
 import { MessageService } from 'primeng/api';
-import { Toast } from "primeng/toast";
-import { ConfirmDialog } from "primeng/confirmdialog";
-import {  ConfirmationService } from 'primeng/api';
-import { TableModule } from "primeng/table";
-import { Tag } from "primeng/tag";
-import { IconField } from "primeng/iconfield";
-import { InputIcon } from "primeng/inputicon";
+import { Toast } from 'primeng/toast';
+import { ConfirmDialog } from 'primeng/confirmdialog';
+import { ConfirmationService } from 'primeng/api';
+import { TableModule } from 'primeng/table';
+import { Tag } from 'primeng/tag';
+import { IconField } from 'primeng/iconfield';
+import { InputIcon } from 'primeng/inputicon';
 import { SharedService } from '@/shared/services/shared-service';
-
-
 
 @Component({
     selector: 'app-organization',
-    imports: [
-        Fluid,
-        ReactiveFormsModule,
-        InputTextModule,
-        SelectModule,
-        DatePickerModule,
-        InputNumberModule,
-        Button,
-        Toast,
-        TableModule,
-        IconField,
-        InputIcon,
-        ConfirmDialog,
-        ButtonModule,
-        CommonModule,
-    ],
-    providers: [MessageService, ConfirmationService],
+    imports: [Fluid, ReactiveFormsModule, InputTextModule, SelectModule, DatePickerModule, InputNumberModule, Button, TableModule, IconField, InputIcon, ButtonModule, CommonModule],
+    providers: [],
     templateUrl: './organization.html',
     styleUrl: './organization.scss'
 })
@@ -49,7 +32,7 @@ export class Organization implements OnInit {
     organizations: OrganizationModel[] = [];
     filteredOrganizations: OrganizationModel[] = [];
     editingId: number | null = null;
-    currentUser: string = ""
+    currentUser: string = '';
 
     // Pagination
     first = 0;
@@ -73,9 +56,9 @@ export class Organization implements OnInit {
     ) {}
 
     ngOnInit(): void {
-        this.initForm();
         this.getAll();
-        this.currentUser = this.sharedService.getCurrentUser()
+        this.currentUser = this.sharedService.getCurrentUser();
+        this.initForm();
     }
 
     initForm() {
@@ -94,10 +77,9 @@ export class Organization implements OnInit {
             remarks: [''],
             parentOrg: [null],
             createdBy: [this.currentUser],
-            createdDate: [new Date() ],
+            createdDate: [new Date()],
             lastUpdatedBy: [this.currentUser],
-            lastupdate: [new Date() ],
-
+            lastupdate: [new Date()]
         });
     }
 
@@ -125,10 +107,7 @@ export class Organization implements OnInit {
         this.searchValue = target.value.toLowerCase().trim();
 
         if (this.searchValue) {
-            this.filteredOrganizations = this.organizations.filter(org =>
-                org.orgNameEN?.toLowerCase().includes(this.searchValue) ||
-                org.orgNameBN?.toLowerCase().includes(this.searchValue)
-            );
+            this.filteredOrganizations = this.organizations.filter((org) => org.orgNameEN?.toLowerCase().includes(this.searchValue) || org.orgNameBN?.toLowerCase().includes(this.searchValue));
         } else {
             this.filteredOrganizations = [...this.organizations];
         }
@@ -136,7 +115,6 @@ export class Organization implements OnInit {
         this.totalRecords = this.filteredOrganizations.length;
         this.first = 0; // Reset to first page
     }
-
 
     onSubmit() {
         if (this.isSubmitting) return;
@@ -269,10 +247,7 @@ export class Organization implements OnInit {
             lastupdate: new Date(),
             lastUpdatedBy: this.currentUser,
             createdBy: this.currentUser
-
         });
         this.isSubmitting = false;
     }
 }
-
-

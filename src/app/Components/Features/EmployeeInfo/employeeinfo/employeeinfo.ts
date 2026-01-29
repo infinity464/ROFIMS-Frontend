@@ -11,8 +11,7 @@ import { CheckboxModule } from 'primeng/checkbox';
 import { FileUploadModule } from 'primeng/fileupload';
 import { TabsModule, Tab, TabList, Tabs, TabPanels, TabPanel } from 'primeng/tabs';
 import { DatePickerModule } from 'primeng/datepicker';
-import { ConfirmDialog } from 'primeng/confirmdialog';
-import { Toast } from 'primeng/toast';
+
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { switchMap } from 'rxjs/operators';
 import { AddressSectionComponent } from '../../Shared/address-section/address-section';
@@ -41,9 +40,6 @@ import { NomineeInfo } from "../../PersonalInfo/nominee-info/nominee-info";
     Tabs,
     TabPanels,
     TabPanel,
-    ConfirmDialog,
-    Toast,
-    NomineeInfo
 ],
     providers: [ConfirmationService, MessageService],
     templateUrl: './employeeinfo.html',

@@ -4,8 +4,7 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MasterBasicSetupService } from '../shared/services/MasterBasicSetupService';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { DynamicFormComponent } from "../shared/componets/dynamic-form-component/dynamic-form";
-import { ConfirmDialog } from 'primeng/confirmdialog';
-import { Toast } from 'primeng/toast';
+
 import { Fluid } from 'primeng/fluid';
 import { DataTable } from "../shared/componets/data-table/data-table";
 import { TableConfig } from '../shared/models/dataTableConfig';
@@ -13,8 +12,8 @@ import { SharedService } from '@/shared/services/shared-service';
 
 @Component({
   selector: 'app-decoration',
-  imports: [DynamicFormComponent, Toast, ConfirmDialog, Fluid, DataTable],
-  providers: [MessageService, ConfirmationService],
+  imports: [DynamicFormComponent,  Fluid, DataTable],
+  providers: [],
   templateUrl: './decoration.html',
   styleUrl: './decoration.scss',
 })

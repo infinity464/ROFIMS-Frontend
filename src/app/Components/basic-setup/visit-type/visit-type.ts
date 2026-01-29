@@ -7,16 +7,15 @@ import { FormConfig } from '../shared/models/formConfig';
 import { TableConfig } from '../shared/models/dataTableConfig';
 import { DynamicFormComponent } from '../shared/componets/dynamic-form-component/dynamic-form';
 import { DataTable } from '../shared/componets/data-table/data-table';
-import { ConfirmDialog } from 'primeng/confirmdialog';
-import { Toast } from 'primeng/toast';
+
 import { Fluid } from 'primeng/fluid';
 import { SharedService } from '@/shared/services/shared-service';
 
 @Component({
     selector: 'app-visit-type',
-    imports: [DynamicFormComponent, DataTable, ConfirmDialog, Toast, Fluid],
+    imports: [DynamicFormComponent, DataTable,   Fluid],
     templateUrl: './visit-type.html',
-    providers: [MessageService, ConfirmationService],
+    providers: [],
     styleUrl: './visit-type.scss'
 })
 export class VisitType {
