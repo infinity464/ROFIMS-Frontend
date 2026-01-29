@@ -28,12 +28,25 @@ export class AppMenu {
                 label: 'Basic Setup',
                 icon: 'pi pi-fw pi-cog',
                 items: [
-                    { label: 'Mother Organization', icon: 'pi pi-fw pi-map', routerLink: ['/mother-org'] },
-                    { label: 'Organization Unit', icon: 'pi pi-fw pi-map', routerLink: ['/organization-unit'] },
+                    { label: 'Mother Organization', icon: 'pi pi-fw pi-map', routerLink: ['/basic-setup/mother-org'] },
+                    { label: 'Organization Unit', icon: 'pi pi-fw pi-map', routerLink: ['/basic-setup/organization-unit'] },
+                    { label: 'Mother Org Rank', icon: 'pi pi-fw pi-map', routerLink: ['/basic-setup/mother-org-rank'] },
+                    { label: 'Equivalent Name', icon: 'pi pi-fw pi-clone', routerLink: ['/basic-setup/equivalent-name'] },
+                    { label: 'Corps', icon: 'pi pi-fw pi-sign-out', routerLink: ['/basic-setup/corps'] },
+                    { label: 'Trade', icon: 'pi pi-fw pi-sign-out', routerLink: ['/basic-setup/trade'] },
+                    { label: 'Batch', icon: 'pi pi-fw pi-sign-out', routerLink: ['basic-setup/batch'] },
+                    { label: 'Employee Status Type', icon: 'pi pi-fw pi-info-circle', routerLink: ['/basic-setup/employee-status-type'] },
+                    { label: 'Employee Type', icon: 'pi pi-fw pi-user-edit', routerLink: ['/basic-setup/employee-type'] },
+                    { label: 'Officer Type', icon: 'pi pi-fw pi-user-edit', routerLink: ['basic-setup/officer-type'] },
+                    { label: 'Appointment Category', icon: 'pi pi-fw pi-sitemap', routerLink: ['/basic-setup/appointment-category'] },
+                    { label: 'RAB ID', icon: 'pi pi-fw pi-id-card', routerLink: ['/basic-setup/rab-id'] },
+                    { label: 'RAB Unit', icon: 'pi pi-fw pi-building', routerLink: ['/basic-setup/rab-unit'] },
+                    { label: 'RAB Wing', icon: 'pi pi-fw pi-building', routerLink: ['basic-setup/rab-wing'] },
+                     { label: 'RAB Branch', icon: 'pi pi-fw pi-clone', routerLink: ['/basic-setup/rab-branch'] },
                     { label: 'Division', icon: 'pi pi-fw pi-map', routerLink: ['/basic-setup/division'] },
                     { label: 'District', icon: 'pi pi-fw pi-map-marker', routerLink: ['/basic-setup/district'] },
                     { label: 'Upazila', icon: 'pi pi-fw pi-compass', routerLink: ['/basic-setup/upazila'] },
-
+                    { label: 'Post Office', icon: 'pi pi-fw pi-compass', routerLink: ['basic-setup/post-office'] },
                     { label: 'Blood Group', icon: 'pi pi-fw pi-heart', routerLink: ['/basic-setup/blood-group'] },
                     { label: 'Relationship', icon: 'pi pi-fw pi-users', routerLink: ['/basic-setup/relationship'] },
                     { label: 'Marital Status', icon: 'pi pi-fw pi-user', routerLink: ['/basic-setup/marital-status'] },
@@ -42,36 +55,34 @@ export class AppMenu {
                     { label: 'Education Qualification', icon: 'pi pi-fw pi-book', routerLink: ['/basic-setup/education-qualification'] },
                     { label: 'Education Institution Type', icon: 'pi pi-fw pi-building', routerLink: ['/basic-setup/education-institution-type'] },
                     { label: 'Education Institution', icon: 'pi pi-fw pi-building', routerLink: ['/basic-setup/education-institution'] },
+                    { label: 'Educational  Department', icon: 'pi pi-fw pi-building', routerLink: ['/basic-setup/educational-department'] },
+                    { label: 'Educational  Subject', icon: 'pi pi-fw pi-building', routerLink: ['/basic-setup/education-subject'] },
                     { label: 'Education Result', icon: 'pi pi-fw pi-check-square', routerLink: ['/basic-setup/education-result'] },
 
                     { label: 'Course Type', icon: 'pi pi-fw pi-list', routerLink: ['/basic-setup/course-type'] },
+                    { label: 'Course Name', icon: 'pi pi-fw pi-list', routerLink: ['/basic-setup/course-name'] },
                     { label: 'Course Grade', icon: 'pi pi-fw pi-star', routerLink: ['/basic-setup/course-grade'] },
+                    { label: 'Gallantry Awards/ Decoration', icon: 'pi pi-fw pi-star', routerLink: ['basic-setup/decoration'] },
+                    { label: 'Professional Qualification', icon: 'pi pi-fw pi-star', routerLink: ['basic-setup/professional-qualification'] },
                     { label: 'Personal Qualification', icon: 'pi pi-fw pi-id-card', routerLink: ['/basic-setup/personal-qualification'] },
 
                     { label: 'Visit Type', icon: 'pi pi-fw pi-calendar', routerLink: ['/basic-setup/visit-type'] },
                     { label: 'Punishment Type', icon: 'pi pi-fw pi-ban', routerLink: ['/basic-setup/punishment-type'] },
-                    { label: 'Leave Type', icon: 'pi pi-fw pi-sign-out', routerLink: ['/basic-setup/leave-type'] },
+                    { label: 'Leave Type', icon: 'pi pi-fw pi-sign-out', routerLink: ['/basic-setup/leave-type'] }
 
                     // Newly added
-                    { label: 'Equivalent Name', icon: 'pi pi-fw pi-clone', routerLink: ['/basic-setup/equivalent-name'] },
-                    { label: 'Employee Status Type', icon: 'pi pi-fw pi-info-circle', routerLink: ['/basic-setup/employee-status-type'] },
-                    { label: 'Employee Type', icon: 'pi pi-fw pi-user-edit', routerLink: ['/basic-setup/employee-type'] },
-                    { label: 'Appointment Category', icon: 'pi pi-fw pi-sitemap', routerLink: ['/basic-setup/appointment-category'] },
-                    { label: 'RAB ID', icon: 'pi pi-fw pi-id-card', routerLink: ['/basic-setup/rab-id'] },
-                    { label: 'RAB Unit', icon: 'pi pi-fw pi-building', routerLink: ['/basic-setup/rab-unit'] }
                 ]
             },
 
             {
                 label: 'UI Components',
                 items: [
-
                     { label: 'EmployeeInfo', routerLink: ['/employee-info'] },
                     { label: 'Mother Org', icon: 'pi pi-fw pi-check-square', routerLink: ['/basic-setup/mother-org'] },
 
-                    {label: 'Personal Info', icon:'pi pi-pw pi-id-card', routerLink:['/personal-info']},
-                    {label: 'EmployeeInfo', icon:'pi pi-pw pi-briefcase', routerLink:['/employee-info']},
-                     { label: 'Mother Org', icon: 'pi pi-fw pi-check-square', routerLink: ['/basic-setup/mother-org'] },
+                    { label: 'Personal Info', icon: 'pi pi-pw pi-id-card', routerLink: ['/personal-info'] },
+                    { label: 'EmployeeInfo', icon: 'pi pi-pw pi-briefcase', routerLink: ['/employee-info'] },
+                    { label: 'Mother Org', icon: 'pi pi-fw pi-check-square', routerLink: ['/basic-setup/mother-org'] },
                     { label: 'Form Layout', icon: 'pi pi-fw pi-id-card', routerLink: ['/uikit/formlayout'] },
                     { label: 'Input', icon: 'pi pi-fw pi-check-square', routerLink: ['/uikit/input'] },
                     { label: 'Button', icon: 'pi pi-fw pi-mobile', class: 'rotated-icon', routerLink: ['/uikit/button'] },

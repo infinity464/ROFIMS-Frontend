@@ -4,7 +4,7 @@ import { inject, Injectable } from '@angular/core';
 import { CommonCode } from '../models/common-code';
 import { Observable } from 'rxjs';
 import { PagedResponse } from '@/Core/Models/Pagination';
-import { OrganizationModel } from '../../../organization-setup/models/organization';
+import { OrganizationModel } from '../../organization-setup/models/organization';
 
 @Injectable({
     providedIn: 'root'

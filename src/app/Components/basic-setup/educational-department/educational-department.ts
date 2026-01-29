@@ -363,7 +363,7 @@ export class EducationalDepartment {
         this.confirmationService.confirm({
             target: event.target as EventTarget,
             message: 'Do you want to delete this record?',
-            header: 'Danger Zone',
+            header: 'Delete Confirmation',
             icon: 'pi pi-info-circle',
             rejectLabel: 'Cancel',
             rejectButtonProps: {

@@ -217,7 +217,7 @@ export class Organization implements OnInit {
     onDelete(organization: OrganizationModel, event: Event) {
         this.confirmationService.confirm({
             target: event.target as EventTarget,
-            message: 'Are you sure you want to delete this organization?',
+            message: 'Do you want to delete this record?',
             header: 'Delete Confirmation',
             icon: 'pi pi-exclamation-triangle',
             acceptIcon: 'pi pi-check',

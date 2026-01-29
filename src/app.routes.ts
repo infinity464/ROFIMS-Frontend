@@ -35,9 +35,8 @@ import { RabWing } from '@/Components/basic-setup/rab-wing/rab-wing';
 import { EducationInstitution } from '@/Components/basic-setup/education-institution/education-institution';
 import { EducationResult } from '@/Components/basic-setup/education-result/education-result';
 import { PersonalInfo } from '@/Components/Features/PersonalInfo/personal-info/personal-info';
-import { MotherOrg } from '@/Components/test/mother-org/mother-org';
-import { Organization } from '@/Components/organization-setup/organization/organization';
-import { OrganizationUnit } from '@/Components/organization-setup/organization-unit/organization-unit';
+import { Organization } from '@/Components/basic-setup/organization-setup/organization/organization';
+import { OrganizationUnit } from '@/Components/basic-setup/organization-setup/organization-unit/organization-unit';
 import { MotherOrgRank } from '@/Components/basic-setup/mother-org-rank/mother-org-rank';
 import { Corps } from '@/Components/basic-setup/corps/corps';
 import { Batch } from '@/Components/basic-setup/batch/batch';
@@ -46,7 +45,7 @@ import { ProfessionalQualification } from '@/Components/basic-setup/professional
 import { PostOffice } from '@/Components/basic-setup/post-office/post-office';
 import { EducationalDepartment } from '@/Components/basic-setup/educational-department/educational-department';
 import { EducationSubject } from '@/Components/basic-setup/education-subject/education-subject';
-import { Trade } from '@/Components/basic-setup/tarde/trade';
+import { Trade } from '@/Components/basic-setup/trade/trade';
 import { Country } from '@/Components/basic-setup/country/country';
 import { RabBranch } from '@/Components/basic-setup/rab-branch/rab-branch';
 import { CourseName } from '@/Components/basic-setup/course-name/course-name';
@@ -90,9 +89,8 @@ export const appRoutes: Routes = [
             { path: 'basic-setup/rab-unit', component: RabUnit },
             { path: 'basic-setup/officer-type', component: OfficerType },
             { path: 'basic-setup/rab-wing', component: RabWing },
-            { path: 'personal-info', component: PersonalInfo },
-            { path: 'mother-org', component: Organization },
-            { path: 'organization-unit', component: OrganizationUnit },
+            { path: 'basic-setup/mother-org', component: Organization },
+            { path: 'basic-setup/organization-unit', component: OrganizationUnit },
             { path: 'basic-setup/mother-org-rank', component: MotherOrgRank },
             { path: 'basic-setup/corps', component: Corps },
             { path: 'basic-setup/batch', component: Batch },
@@ -105,6 +103,7 @@ export const appRoutes: Routes = [
             { path: 'basic-setup/country', component: Country },
             { path: 'basic-setup/rab-branch', component: RabBranch },
             { path: 'basic-setup/course-name', component: CourseName },
+            { path: 'personal-info', component: PersonalInfo },
             { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
             { path: 'documentation', component: Documentation },
             { path: 'pages', loadChildren: () => import('./app/pages/pages.routes') }
