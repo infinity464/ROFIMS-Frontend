@@ -10,6 +10,7 @@ import { DataTable } from '../shared/componets/data-table/data-table';
 import { ConfirmDialog } from 'primeng/confirmdialog';
 import { Toast } from 'primeng/toast';
 import { Fluid } from 'primeng/fluid';
+import { SharedService } from '@/shared/services/shared-service';
 
 @Component({
     selector: 'app-education-result',
@@ -82,7 +83,8 @@ export class EducationResult {
         private masterBasicSetupService: MasterBasicSetupService,
         private messageService: MessageService,
         private confirmationService: ConfirmationService,
-        private fb: FormBuilder
+        private fb: FormBuilder,
+        private shareService: SharedService
     ) {}
 
     ngOnInit(): void {
@@ -147,7 +149,7 @@ export class EducationResult {
         }
 
         const currentUser = this.getCurrentUser();
-        const currentDateTime = new Date().toISOString();
+        const currentDateTime = this.shareService.getCurrentDateTime()
 
         if (this.editingId) {
             this.updateCommonCode(currentUser, currentDateTime);
@@ -306,6 +308,6 @@ export class EducationResult {
 
     private getCurrentUser(): string {
         // TODO: Get from authentication service
-        return 'Admin';
+        return this.shareService.getCurrentUser()
     }
 }

@@ -10,6 +10,7 @@ import { Fluid } from 'primeng/fluid';
 import { ConfirmDialog } from 'primeng/confirmdialog';
 import { Toast } from 'primeng/toast';
 import { CommonCode } from '../shared/models/common-code';
+import { SharedService } from '@/shared/services/shared-service';
 
 @Component({
     selector: 'app-upazila',
@@ -100,7 +101,8 @@ export class Upazila {
         private masterBasicSetupService: MasterBasicSetupService,
         private messageService: MessageService,
         private confirmationService: ConfirmationService,
-        private fb: FormBuilder
+        private fb: FormBuilder,
+        private shareService: SharedService
     ) {}
 
     ngOnInit(): void {
@@ -240,7 +242,7 @@ export class Upazila {
         }
 
         const currentUser = this.getCurrentUser();
-        const currentDateTime = new Date().toISOString();
+        const currentDateTime = this.shareService.getCurrentDateTime()
 
         // Set parentCodeId to selected districtId
         this.upazilaForm.patchValue({
@@ -440,6 +442,6 @@ export class Upazila {
 
     private getCurrentUser(): string {
         // TODO: Get from authentication service
-        return 'Admin';
+        return this.shareService.getCurrentUser()
     }
 }

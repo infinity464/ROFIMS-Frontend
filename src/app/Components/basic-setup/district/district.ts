@@ -9,6 +9,7 @@ import { Toast } from 'primeng/toast';
 import { Fluid } from 'primeng/fluid';
 import { DataTable } from "../shared/componets/data-table/data-table";
 import { TableConfig } from '../shared/models/dataTableConfig';
+import { SharedService } from '@/shared/services/shared-service';
 
 @Component({
   selector: 'app-district',
@@ -88,7 +89,8 @@ export class District {
         private masterBasicSetupService: MasterBasicSetupService,
         private messageService: MessageService,
         private confirmationService: ConfirmationService,
-        private fb: FormBuilder
+        private fb: FormBuilder,
+        private shareService: SharedService
     ) { }
 
     ngOnInit(): void {
@@ -183,7 +185,7 @@ export class District {
         }
 
         const currentUser = this.getCurrentUser();
-        const currentDateTime = new Date().toISOString();
+        const currentDateTime = this.shareService.getCurrentDateTime()
 
         // Set parentCodeId to selected divisionId
         this.districtForm.patchValue({
@@ -356,7 +358,7 @@ export class District {
 
     private getCurrentUser(): string {
         // TODO: Get from authentication service
-        return 'Admin';
+        return this.shareService.getCurrentUser()
     }
 
 

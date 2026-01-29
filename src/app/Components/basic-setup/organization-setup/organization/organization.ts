@@ -17,6 +17,7 @@ import { TableModule } from "primeng/table";
 import { Tag } from "primeng/tag";
 import { IconField } from "primeng/iconfield";
 import { InputIcon } from "primeng/inputicon";
+import { SharedService } from '@/shared/services/shared-service';
 
 
 
@@ -48,6 +49,7 @@ export class Organization implements OnInit {
     organizations: OrganizationModel[] = [];
     filteredOrganizations: OrganizationModel[] = [];
     editingId: number | null = null;
+    currentUser: string = ""
 
     // Pagination
     first = 0;
@@ -66,12 +68,14 @@ export class Organization implements OnInit {
         private fb: FormBuilder,
         private organizationService: OrganizationService,
         private messageService: MessageService,
-        private confirmationService: ConfirmationService
+        private confirmationService: ConfirmationService,
+        private sharedService: SharedService
     ) {}
 
     ngOnInit(): void {
         this.initForm();
         this.getAll();
+        this.currentUser = this.sharedService.getCurrentUser()
     }
 
     initForm() {
@@ -89,9 +93,9 @@ export class Organization implements OnInit {
             status: [true, Validators.required],
             remarks: [''],
             parentOrg: [null],
-            createdBy: ['Admin'],
+            createdBy: [this.currentUser],
             createdDate: [new Date() ],
-            lastUpdatedBy: ['Admin'],
+            lastUpdatedBy: [this.currentUser],
             lastupdate: [new Date() ],
 
         });
@@ -263,8 +267,8 @@ export class Organization implements OnInit {
             status: true,
             createdDate: new Date(),
             lastupdate: new Date(),
-            lastUpdatedBy: 'Admin',
-            createdBy: 'Admin'
+            lastUpdatedBy: this.currentUser,
+            createdBy: this.currentUser
 
         });
         this.isSubmitting = false;

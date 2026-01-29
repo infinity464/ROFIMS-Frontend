@@ -10,6 +10,7 @@ import { Fluid } from 'primeng/fluid';
 import { ConfirmDialog } from 'primeng/confirmdialog';
 import { Toast } from 'primeng/toast';
 import { CommonCode } from '../shared/models/common-code';
+import { SharedService } from '@/shared/services/shared-service';
 
 @Component({
     selector: 'app-post-office',
@@ -107,7 +108,8 @@ export class PostOffice {
         private masterBasicSetupService: MasterBasicSetupService,
         private messageService: MessageService,
         private confirmationService: ConfirmationService,
-        private fb: FormBuilder
+        private fb: FormBuilder,
+        private shareService: SharedService
     ) {}
 
     ngOnInit(): void {
@@ -260,7 +262,7 @@ export class PostOffice {
         }
 
         const currentUser = this.getCurrentUser();
-        const currentDateTime = new Date().toISOString();
+        const currentDateTime = this.shareService.getCurrentDateTime()
 
         // Set parentCodeId to selected upazilaId (not districtId!)
         this.commonForm.patchValue({
@@ -493,6 +495,6 @@ export class PostOffice {
     }
 
     private getCurrentUser(): string {
-        return 'Admin';
+        return this.shareService.getCurrentUser()
     }
 }
