@@ -45,13 +45,13 @@ export class OfficerType {
             },
             {
                 name: 'codeValueEN',
-                label: 'OfficerType Name (English)',
+                label: 'Officer Type Name (English)',
                 type: 'text',
                 required: true
             },
             {
                 name: 'codeValueBN',
-                label: 'OfficerType Name (Bangla)',
+                label: 'Officer Type Name (Bangla)',
                 type: 'text',
                 required: true
             },
@@ -71,7 +71,6 @@ export class OfficerType {
 
         tableConfig: TableConfig = {
         tableColumns: [
-            // { field: 'employeeTypeName', header: 'Division' },
             { field: 'codeValueEN', header: 'OfficerType Name (EN)' },
             { field: 'codeValueBN', header: 'OfficerType Name (BN)' },
             {

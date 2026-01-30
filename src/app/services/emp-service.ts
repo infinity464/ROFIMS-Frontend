@@ -1,12 +1,11 @@
 import { Injectable } from '@angular/core';
 import { environment } from '@/Core/Environments/environment';
-import { EmpModel } from '../models/emp-model'
-import { AddressInfoModel } from '../models/emp-model';
 import { Observable, forkJoin } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { switchMap, map } from 'rxjs/operators';
 import { from } from 'rxjs';
 import { concatMap, toArray } from 'rxjs/operators';
+import { AddressInfoModel, EmpModel } from '@/models/EmpModel';
 @Injectable({
     providedIn: 'root'
 })

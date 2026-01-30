@@ -12,18 +12,17 @@ import { Fluid } from 'primeng/fluid';
 import { SharedService } from '@/shared/services/shared-service';
 
 @Component({
-    selector: 'app-employee-type',
+    selector: 'app-gender',
     imports: [DynamicFormComponent, DataTable,   Fluid],
-    templateUrl: './employee-type.html',
+    templateUrl: './gender.html',
     providers: [],
-    styleUrl: './employee-type.scss'
+    styleUrl: './gender.scss'
 })
-export class EmployeeType {
-    codeType: string = 'EmployeeType';
-    title: string = 'Employee  Type';
-    commonCodeData: CommonCode[] = [];
+export class Gender {
+    codeType: string = 'Gender';
+    genderDate: CommonCode[] = [];
     editingId: number | null = null;
-    commonCodeForm!: FormGroup;
+    genderForm!: FormGroup;
     isSubmitting = false;
 
     totalRecords = 0;
@@ -37,13 +36,13 @@ export class EmployeeType {
         formFields: [
             {
                 name: 'codeValueEN',
-                label: 'Employee StatusType Name (English)',
+                label: 'Gender Name (English)',
                 type: 'text',
                 required: true
             },
             {
                 name: 'codeValueBN',
-                label: 'Employee StatusType Name (Bangla)',
+                label: 'Gender Name (Bangla)',
                 type: 'text',
                 required: true
             },
@@ -64,8 +63,8 @@ export class EmployeeType {
     // Table Configuration
     tableConfig: TableConfig = {
         tableColumns: [
-            { field: 'codeValueEN', header: 'Employee  Type Name (EN)' },
-            { field: 'codeValueBN', header: 'Employee  Type Name (BN)' },
+            { field: 'codeValueEN', header: 'Gender Name (EN)' },
+            { field: 'codeValueBN', header: 'Gender Name (BN)' },
             {
                 field: 'status',
                 header: 'Status',
@@ -87,14 +86,14 @@ export class EmployeeType {
 
     ngOnInit(): void {
         this.initForm();
-        this.getCommonCodeWithPaging({
+        this.getGenderWithPaging({
             first: this.first,
             rows: this.rows
         });
     }
 
     initForm() {
-        this.commonCodeForm = this.fb.group({
+        this.genderForm = this.fb.group({
             codeValueEN: ['', Validators.required],
             codeValueBN: ['', Validators.required],
             status: [true, Validators.required],
@@ -114,7 +113,7 @@ export class EmployeeType {
         });
     }
 
-    getCommonCodeWithPaging(event?: any) {
+    getGenderWithPaging(event?: any) {
         this.loading = true;
         const pageNo = event ? event.first / event.rows + 1 : 1;
         const pageSize = event?.rows ?? this.rows;
@@ -123,7 +122,7 @@ export class EmployeeType {
 
         apiCall.subscribe({
             next: (res) => {
-                this.commonCodeData = res.datalist;
+                this.genderDate = res.datalist;
                 this.totalRecords = res.pages.rows;
                 this.rows = pageSize;
                 this.loading = false;
@@ -141,8 +140,8 @@ export class EmployeeType {
     }
 
     submit(data: any) {
-        if (this.commonCodeForm.invalid) {
-            this.commonCodeForm.markAllAsTouched();
+        if (this.genderForm.invalid) {
+            this.genderForm.markAllAsTouched();
             return;
         }
 
@@ -150,16 +149,16 @@ export class EmployeeType {
         const currentDateTime = this.shareService.getCurrentDateTime()
 
         if (this.editingId) {
-            this.updateCommonCode(currentUser, currentDateTime);
+            this.updateGender(currentUser, currentDateTime);
         } else {
-            this.createCommonCode(currentUser, currentDateTime);
+            this.createGender(currentUser, currentDateTime);
         }
     }
 
-    private createCommonCode(currentUser: string, currentDateTime: string) {
+    private createGender(currentUser: string, currentDateTime: string) {
         this.isSubmitting = true;
         const createPayload = {
-            ...this.commonCodeForm.value,
+            ...this.genderForm.value,
             createdBy: currentUser,
             createdDate: currentDateTime,
             lastUpdatedBy: currentUser,
@@ -170,14 +169,14 @@ export class EmployeeType {
             next: (res) => {
                 console.log('Created:', res);
                 this.resetForm();
-                this.getCommonCodeWithPaging({
+                this.getGenderWithPaging({
                     first: this.first,
                     rows: this.rows
                 });
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Success',
-                    detail: 'Employee  Type created successfully'
+                    detail: 'Gender created successfully'
                 });
                 this.isSubmitting = false;
             },
@@ -186,17 +185,17 @@ export class EmployeeType {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create employee-type'
+                    detail: 'Failed to create gender'
                 });
                 this.isSubmitting = false;
             }
         });
     }
 
-    private updateCommonCode(currentUser: string, currentDateTime: string) {
+    private updateGender(currentUser: string, currentDateTime: string) {
         this.isSubmitting = true;
         const updatePayload = {
-            ...this.commonCodeForm.value,
+            ...this.genderForm.value,
             codeId: this.editingId,
             lastUpdatedBy: currentUser,
             lastupdate: currentDateTime
@@ -206,14 +205,14 @@ export class EmployeeType {
             next: (res) => {
                 console.log('Updated:', res);
                 this.resetForm();
-                this.getCommonCodeWithPaging({
+                this.getGenderWithPaging({
                     first: this.first,
                     rows: this.rows
                 });
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Success',
-                    detail: 'Employee  Type updated successfully'
+                    detail: 'Gender updated successfully'
                 });
                 this.isSubmitting = false;
             },
@@ -222,7 +221,7 @@ export class EmployeeType {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update employee-type'
+                    detail: 'Failed to update gender'
                 });
                 this.isSubmitting = false;
             }
@@ -231,7 +230,7 @@ export class EmployeeType {
 
     update(row: any) {
         this.editingId = row.codeId;
-        this.commonCodeForm.patchValue(row);
+        this.genderForm.patchValue(row);
         console.log('Edit:', row);
     }
 
@@ -254,14 +253,14 @@ export class EmployeeType {
             accept: () => {
                 this.masterBasicSetupService.delete(row.codeId).subscribe({
                     next: () => {
-                        this.getCommonCodeWithPaging({
+                        this.getGenderWithPaging({
                             first: this.first,
                             rows: this.rows
                         });
                         this.messageService.add({
                             severity: 'success',
                             summary: 'Success',
-                            detail: 'Employee StatusType deleted successfully'
+                            detail: 'Gender deleted successfully'
                         });
                     },
                     error: (err) => {
@@ -269,7 +268,7 @@ export class EmployeeType {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete employee-type'
+                            detail: 'Failed to delete gender'
                         });
                     }
                 });
@@ -280,7 +279,7 @@ export class EmployeeType {
     resetForm() {
         this.editingId = null;
         this.isSubmitting = false;
-        this.commonCodeForm.reset({
+        this.genderForm.reset({
             orgId: 0,
             codeId: 0,
             codeType: this.codeType,
@@ -301,10 +300,11 @@ export class EmployeeType {
     onSearch(keyword: string) {
         this.serchValue = keyword;
         this.first = 0;
-        this.getCommonCodeWithPaging({ first: 0, rows: this.rows });
+        this.getGenderWithPaging({ first: 0, rows: this.rows });
     }
 
     private getCurrentUser(): string {
+        // TODO: Get from authentication service
         return this.shareService.getCurrentUser()
     }
 }

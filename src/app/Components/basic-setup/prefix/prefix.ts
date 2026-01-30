@@ -1,50 +1,64 @@
 import { Component } from '@angular/core';
-import { CommonCode } from '../shared/models/common-code';
+import { FormConfig } from '../shared/models/formConfig';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MasterBasicSetupService } from '../shared/services/MasterBasicSetupService';
 import { ConfirmationService, MessageService } from 'primeng/api';
-import { FormConfig } from '../shared/models/formConfig';
-import { TableConfig } from '../shared/models/dataTableConfig';
-import { DynamicFormComponent } from '../shared/componets/dynamic-form-component/dynamic-form';
-import { DataTable } from '../shared/componets/data-table/data-table';
+import { DynamicFormComponent } from "../shared/componets/dynamic-form-component/dynamic-form";
 
 import { Fluid } from 'primeng/fluid';
+import { DataTable } from "../shared/componets/data-table/data-table";
+import { TableConfig } from '../shared/models/dataTableConfig';
 import { SharedService } from '@/shared/services/shared-service';
 
 @Component({
-    selector: 'app-employee-type',
-    imports: [DynamicFormComponent, DataTable,   Fluid],
-    templateUrl: './employee-type.html',
-    providers: [],
-    styleUrl: './employee-type.scss'
+  selector: 'app-prefix',
+  imports: [DynamicFormComponent,  Fluid, DataTable],
+  providers: [],
+  templateUrl: './prefix.html',
+  styleUrl: './prefix.scss',
 })
-export class EmployeeType {
-    codeType: string = 'EmployeeType';
-    title: string = 'Employee  Type';
-    commonCodeData: CommonCode[] = [];
+export class Prefix {
+
+    codeType = "Prefix";
+    title = "Prefix";
+
+    commonData: any[] = [];
     editingId: number | null = null;
-    commonCodeForm!: FormGroup;
-    isSubmitting = false;
+    commonForm!: FormGroup;
 
     totalRecords = 0;
     rows = 10;
     first = 0;
     loading = false;
-    serchValue: string = '';
+    searchValue: string = '';
+    isSubmitting = false;
 
-    // Form Configuration
+
     formConfig: FormConfig = {
         formFields: [
             {
+                name: 'orgId',
+                label: 'Mother Organization',
+                type: 'select',
+                required: true,
+                options: [] // Will be populated in ngOnInit
+            },
+            {
                 name: 'codeValueEN',
-                label: 'Employee StatusType Name (English)',
+                label: 'Prefix Name (English)',
                 type: 'text',
                 required: true
             },
             {
                 name: 'codeValueBN',
-                label: 'Employee StatusType Name (Bangla)',
+                label: 'Prefix Name (Bangla)',
                 type: 'text',
+                required: true
+            },
+            {
+                name: 'sortOrder',
+                label: 'Seniority',
+                type: 'number',
                 required: true
             },
             {
@@ -61,11 +75,12 @@ export class EmployeeType {
         ]
     };
 
-    // Table Configuration
-    tableConfig: TableConfig = {
+        tableConfig: TableConfig = {
         tableColumns: [
-            { field: 'codeValueEN', header: 'Employee  Type Name (EN)' },
-            { field: 'codeValueBN', header: 'Employee  Type Name (BN)' },
+
+            { field: 'codeValueEN', header: 'Prefix Name (EN)' },
+            { field: 'codeValueBN', header: 'Prefix Name (BN)' },
+            { field: 'sortOrder', header: 'Seniority' },
             {
                 field: 'status',
                 header: 'Status',
@@ -77,34 +92,35 @@ export class EmployeeType {
         ]
     };
 
-    constructor(
+        constructor(
         private masterBasicSetupService: MasterBasicSetupService,
         private messageService: MessageService,
         private confirmationService: ConfirmationService,
         private fb: FormBuilder,
         private shareService: SharedService
-    ) {}
+    ) { }
 
     ngOnInit(): void {
         this.initForm();
+        this.loadActiveMotherOrgs(); // Load motherOrgRanks for dropdown
         this.getCommonCodeWithPaging({
             first: this.first,
             rows: this.rows
         });
     }
 
-    initForm() {
-        this.commonCodeForm = this.fb.group({
+      initForm() {
+        this.commonForm = this.fb.group({
             codeValueEN: ['', Validators.required],
             codeValueBN: ['', Validators.required],
             status: [true, Validators.required],
-            orgId: [0],
+            orgId: ['', Validators.required],
             codeId: [0],
-            codeType: [this.codeType],
+            codeType: ['Prefix'],
+            parentCodeId: [null], // Will store motherOrgId
             commCode: [null],
             displayCodeValueEN: [null],
             displayCodeValueBN: [null],
-            parentCodeId: [null],
             sortOrder: [null],
             level: [null],
             createdBy: [''],
@@ -114,16 +130,44 @@ export class EmployeeType {
         });
     }
 
+    // Load all motherOrgRanks for the dropdown
+    loadActiveMotherOrgs() {
+        this.masterBasicSetupService.getAllActiveMotherOrgs().subscribe({
+            next: (motherOrgRanks) => {
+                const motherOrgOptions = motherOrgRanks.map(d => ({
+                    label: d.orgNameEN,
+                    value: d.orgId
+                }));
+
+                // Update form config with motherOrg options
+                const motherOrgField = this.formConfig.formFields.find(f => f.name === 'orgId');
+                if (motherOrgField) {
+                    motherOrgField.options = motherOrgOptions;
+                }
+            },
+            error: (err) => {
+                console.error('Error loading prefix:', err);
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: 'Failed to load prefix'
+                });
+            }
+        });
+    }
+
     getCommonCodeWithPaging(event?: any) {
         this.loading = true;
         const pageNo = event ? event.first / event.rows + 1 : 1;
         const pageSize = event?.rows ?? this.rows;
 
-        const apiCall = this.serchValue ? this.masterBasicSetupService.getByKeyordWithPaging(this.codeType, this.serchValue, pageNo, pageSize) : this.masterBasicSetupService.getAllWithPaging(this.codeType, pageNo, pageSize);
+        const apiCall = this.searchValue
+            ? this.masterBasicSetupService.getByKeyordWithPaging('Prefix', this.searchValue, pageNo, pageSize)
+            : this.masterBasicSetupService.getAllWithPaging('Prefix', pageNo, pageSize);
 
         apiCall.subscribe({
             next: (res) => {
-                this.commonCodeData = res.datalist;
+                this.commonData = res.datalist;
                 this.totalRecords = res.pages.rows;
                 this.rows = pageSize;
                 this.loading = false;
@@ -141,25 +185,30 @@ export class EmployeeType {
     }
 
     submit(data: any) {
-        if (this.commonCodeForm.invalid) {
-            this.commonCodeForm.markAllAsTouched();
+        if (this.commonForm.invalid) {
+            this.commonForm.markAllAsTouched();
             return;
         }
 
         const currentUser = this.getCurrentUser();
         const currentDateTime = this.shareService.getCurrentDateTime()
 
+
+        // this.commonForm.patchValue({
+        //     parentCodeId: this.commonForm.value.divisionId
+        // });
+
         if (this.editingId) {
-            this.updateCommonCode(currentUser, currentDateTime);
+            this.updateDistrict(currentUser, currentDateTime);
         } else {
-            this.createCommonCode(currentUser, currentDateTime);
+            this.createDistrict(currentUser, currentDateTime);
         }
     }
 
-    private createCommonCode(currentUser: string, currentDateTime: string) {
+    private createDistrict(currentUser: string, currentDateTime: string) {
         this.isSubmitting = true;
         const createPayload = {
-            ...this.commonCodeForm.value,
+            ...this.commonForm.value,
             createdBy: currentUser,
             createdDate: currentDateTime,
             lastUpdatedBy: currentUser,
@@ -177,7 +226,7 @@ export class EmployeeType {
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Success',
-                    detail: 'Employee  Type created successfully'
+                    detail: 'Prefix created successfully'
                 });
                 this.isSubmitting = false;
             },
@@ -186,20 +235,23 @@ export class EmployeeType {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create employee-type'
+                    detail: 'Failed to create prefix'
                 });
+
                 this.isSubmitting = false;
             }
         });
     }
 
-    private updateCommonCode(currentUser: string, currentDateTime: string) {
+    private updateDistrict(currentUser: string, currentDateTime: string) {
         this.isSubmitting = true;
         const updatePayload = {
-            ...this.commonCodeForm.value,
+            ...this.commonForm.value,
             codeId: this.editingId,
             lastUpdatedBy: currentUser,
-            lastupdate: currentDateTime
+            lastupdate: currentDateTime,
+            createdDate: currentDateTime,
+            createdBy: currentUser,
         };
 
         this.masterBasicSetupService.update(updatePayload).subscribe({
@@ -213,7 +265,7 @@ export class EmployeeType {
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Success',
-                    detail: 'Employee  Type updated successfully'
+                    detail: 'Prefix updated successfully'
                 });
                 this.isSubmitting = false;
             },
@@ -222,7 +274,7 @@ export class EmployeeType {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update employee-type'
+                    detail: 'Failed to update prefix'
                 });
                 this.isSubmitting = false;
             }
@@ -231,7 +283,13 @@ export class EmployeeType {
 
     update(row: any) {
         this.editingId = row.codeId;
-        this.commonCodeForm.patchValue(row);
+        this.commonForm.patchValue({
+            orgId: row.orgId, // parentCodeId contains divisionId
+            codeValueEN: row.codeValueEN,
+            codeValueBN: row.codeValueBN,
+            status: row.status,
+            sortOrder: row.sortOrder
+        });
         console.log('Edit:', row);
     }
 
@@ -261,7 +319,7 @@ export class EmployeeType {
                         this.messageService.add({
                             severity: 'success',
                             summary: 'Success',
-                            detail: 'Employee StatusType deleted successfully'
+                            detail: 'Prefix deleted successfully'
                         });
                     },
                     error: (err) => {
@@ -269,7 +327,7 @@ export class EmployeeType {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete employee-type'
+                            detail: 'Failed to delete prefix'
                         });
                     }
                 });
@@ -280,15 +338,15 @@ export class EmployeeType {
     resetForm() {
         this.editingId = null;
         this.isSubmitting = false;
-        this.commonCodeForm.reset({
-            orgId: 0,
+        this.commonForm.reset({
+            orgId: '',
             codeId: 0,
-            codeType: this.codeType,
+            codeType: 'Prefix',
             status: true,
+            parentCodeId: null,
             commCode: null,
             displayCodeValueEN: null,
             displayCodeValueBN: null,
-            parentCodeId: null,
             sortOrder: null,
             level: null,
             createdBy: '',
@@ -299,7 +357,7 @@ export class EmployeeType {
     }
 
     onSearch(keyword: string) {
-        this.serchValue = keyword;
+        this.searchValue = keyword;
         this.first = 0;
         this.getCommonCodeWithPaging({ first: 0, rows: this.rows });
     }
@@ -307,4 +365,6 @@ export class EmployeeType {
     private getCurrentUser(): string {
         return this.shareService.getCurrentUser()
     }
+
+
 }

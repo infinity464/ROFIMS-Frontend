@@ -2,7 +2,7 @@ export interface MotherOrganizationModel {
   orgId: number;
 
   orgNameEN: string;
-  orgNameBN: string;
+  orgNameBN?: string;
 
   contactName?: string;
   contactNumber?: string;
@@ -19,9 +19,9 @@ export interface MotherOrganizationModel {
 
   parentOrg?: number;
 
-  createdBy: string;
-  createdDate: string;
+  createdBy?: string;
+  createdDate?: string;
 
-  lastUpdatedBy: string;
-  lastupdate: string;
+  lastUpdatedBy?: string;
+  lastupdate?: string;
 }

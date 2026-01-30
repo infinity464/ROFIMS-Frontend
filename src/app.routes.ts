@@ -49,6 +49,10 @@ import { Trade } from '@/Components/basic-setup/trade/trade';
 import { Country } from '@/Components/basic-setup/country/country';
 import { RabBranch } from '@/Components/basic-setup/rab-branch/rab-branch';
 import { CourseName } from '@/Components/basic-setup/course-name/course-name';
+import { EmpBasicInfo } from '@/Components/Features/Emp/emp-basic-info/emp-basic-info';
+import { Prefix } from '@/Components/basic-setup/prefix/prefix';
+import { Gender } from '@/Components/basic-setup/gender/gender';
+
 
 export const appRoutes: Routes = [
     // Public routes
@@ -93,6 +97,8 @@ export const appRoutes: Routes = [
             { path: 'basic-setup/organization-unit', component: OrganizationUnit },
             { path: 'basic-setup/mother-org-rank', component: MotherOrgRank },
             { path: 'basic-setup/corps', component: Corps },
+            { path: 'basic-setup/prefix', component: Prefix },
+            { path: 'basic-setup/gender', component: Gender },
             { path: 'basic-setup/batch', component: Batch },
             { path: 'basic-setup/decoration', component: Decoration },
             { path: 'basic-setup/professional-qualification', component: ProfessionalQualification },
@@ -104,6 +110,10 @@ export const appRoutes: Routes = [
             { path: 'basic-setup/rab-branch', component: RabBranch },
             { path: 'basic-setup/course-name', component: CourseName },
             { path: 'personal-info', component: PersonalInfo },
+
+            // EMP
+            {path: 'emp-basic-info', component: EmpBasicInfo},
+
             { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
             { path: 'documentation', component: Documentation },
             { path: 'pages', loadChildren: () => import('./app/pages/pages.routes') }
