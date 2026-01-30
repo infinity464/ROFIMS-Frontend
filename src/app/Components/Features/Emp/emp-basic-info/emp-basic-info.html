@@ -1,276 +1,274 @@
-<div class="mb-5">
-    <div class="flex align-items-center gap-2 mb-4">
-        <h3 class="m-0 text-xl font-bold text-900">New Posting Entry Form</h3>
-    </div>
+<p-fluid>
+    <div class="mb-5 card">
+        <div class="flex align-items-center gap-2 mb-4">
+            <h3 class="m-0 text-xl font-bold text-900">New Posting Entry Form</h3>
+        </div>
 
-    <form [formGroup]="postingForm" (ngSubmit)="onSubmit()">
-        <div class="surface-50 border-round-2xl p-4">
-            <!-- Row 1: 4 Fields -->
-            <div class="flex flex-wrap gap-3 mb-4">
-                <div class="flex-1" style="min-width: 200px">
-                    <label class="font-semibold block mb-2 text-700">Add Picture</label>
+        <form [formGroup]="postingForm" (ngSubmit)="onSubmit()">
+            <div class="surface-50 border-round-2xl p-4">
+                <!-- Row 1: 4 Fields -->
+                <div class="flex flex-wrap gap-3 mb-4">
+                    <div class="flex-1" style="min-width: 200px">
+                        <label class="font-semibold block mb-2 text-700">Add Picture</label>
 
-                    <!-- Image Preview -->
-                    @if (imagePreview) {
-                    <div class="mb-3 relative">
-                        <img [src]="imagePreview" alt="Profile Picture" class="w-full border-round"
-                            style="max-height: 200px; object-fit: cover;" />
-                        <button pButton type="button" icon="pi pi-times"
-                            class="p-button-rounded p-button-danger p-button-sm absolute" style="top: 8px; right: 8px;"
-                            (click)="removeImage()" pTooltip="Remove Image">
-                        </button>
+                        <!-- Image Preview -->
+                        @if (imagePreview) {
+                        <div class="mb-3 relative">
+                            <img [src]="imagePreview" alt="Profile Picture" class="w-full border-round"
+                                style="max-height: 200px; object-fit: cover;" />
+                            <button pButton type="button" icon="pi pi-times"
+                                class="p-button-rounded p-button-danger p-button-sm absolute"
+                                style="top: 8px; right: 8px;" (click)="removeImage()" pTooltip="Remove Image">
+                            </button>
+                        </div>
+                        }
+
+                        <p-fileUpload #fileUpload mode="basic" chooseLabel="Upload Picture" chooseIcon="pi pi-upload"
+                            name="picture" accept="image/*" [auto]="true" (onSelect)="onFileSelect($event)"
+                            maxFileSize="5000000" styleClass="w-full">
+                        </p-fileUpload>
+                        <small class="text-500">Max size: 5MB (JPG, PNG, GIF)</small>
                     </div>
-                    }
 
-                    <p-fileUpload #fileUpload mode="basic" chooseLabel="Upload Picture" chooseIcon="pi pi-upload"
-                        name="picture" accept="image/*" [auto]="true" (onSelect)="onFileSelect($event)"
-                        maxFileSize="5000000" styleClass="w-full">
-                    </p-fileUpload>
-                    <small class="text-500">Max size: 5MB (JPG, PNG, GIF)</small>
+                    <div class="flex-1" style="min-width: 200px">
+                        <label class="font-semibold block mb-2 text-700">
+                            Mother Organization <span class="text-red-500">*</span>
+                        </label>
+                        <p-select [options]="motherOrganizations" formControlName="motherOrganization"
+                            optionLabel="orgNameEN" optionValue="orgId" placeholder="Select Mother Organization"
+                            styleClass="w-full" (onChange)="onMotherOrgChange($event.value)">
+                        </p-select>
+                        @if (isFieldInvalid('motherOrganization')) {
+                        <small class="text-red-500">
+                            {{ getErrorMessage('motherOrganization') }}
+                        </small>
+                        }
+                    </div>
+
+                    <div class="flex-1" style="min-width: 200px">
+                        <label class="font-semibold block mb-2 text-700">
+                            Last Unit of Mother Organization <span class="text-red-500">*</span>
+                        </label>
+                        <p-select [options]="lastUnitOrganizations" optionLabel="orgNameEN" optionValue="orgId"
+                            placeholder="Select Last Unit" styleClass="w-full" formControlName="lastMotherUnit"
+                            (onChange)="onLastUnitChange($event.value)">
+                        </p-select>
+                        @if (isFieldInvalid('lastMotherUnit')) {
+                        <small class="text-red-500">
+                            {{ getErrorMessage('lastMotherUnit') }}
+                        </small>
+                        }
+                    </div>
+
+                    <div class="flex-1" style="min-width: 200px">
+                        <label class="font-semibold block mb-2 text-700">
+                            Last Mother Unit Location <span class="text-red-500">*</span>
+                        </label>
+                        <input pInputText class="w-full" placeholder="Manual Entry / Auto Select"
+                            formControlName="lastMotherUnitLocation" readonly />
+                        @if (isFieldInvalid('lastMotherUnitLocation')) {
+                        <small class="text-red-500">
+                            {{ getErrorMessage('lastMotherUnitLocation') }}
+                        </small>
+                        }
+                    </div>
                 </div>
 
-                <div class="flex-1" style="min-width: 200px">
-                    <label class="font-semibold block mb-2 text-700">
-                        Mother Organization <span class="text-red-500">*</span>
-                    </label>
-                    <p-select [options]="motherOrganizations"
-                        formControlName="motherOrganization"
-                        optionLabel="orgNameEN"
-                        optionValue="orgId"
-                        placeholder="Select Mother Organization"
-                        styleClass="w-full"
-                        (onChange)="onMotherOrgChange($event.value)">
-                    </p-select>
-                    @if (isFieldInvalid('motherOrganization')) {
-                    <small class="text-red-500">
-                        {{ getErrorMessage('motherOrganization') }}
-                    </small>
-                    }
+                <!-- Row 2: 4 Fields -->
+                <div class="flex flex-wrap gap-3 mb-4">
+                    <div class="flex-1" style="min-width: 200px">
+                        <label class="font-semibold block mb-2 text-700">
+                            Member Type <span class="text-red-500">*</span>
+                        </label>
+                        <p-select [options]="memberTypes" optionLabel="codeValueEN" optionValue="codeId"
+                            placeholder="Select Member Type" styleClass="w-full" formControlName="memberType"
+                            (onChange)="onMemberTypeChange($event.value)">
+                        </p-select>
+                        @if (isFieldInvalid('memberType')) {
+                        <small class="text-red-500">
+                            {{ getErrorMessage('memberType') }}
+                        </small>
+                        }
+                    </div>
+
+                    <div class="flex-1" style="min-width: 200px">
+                        <label class="font-semibold block mb-2 text-700">
+                            Officer Type <span class="text-red-500">*</span>
+                        </label>
+                        <p-select [options]="officerTypes" optionLabel="codeValueEN" optionValue="codeId"
+                            placeholder="Select Officer Type" styleClass="w-full" formControlName="officerType">
+                        </p-select>
+                        @if (isFieldInvalid('officerType')) {
+                        <small class="text-red-500">
+                            {{ getErrorMessage('officerType') }}
+                        </small>
+                        }
+                    </div>
+
+                    <div class="flex-1" style="min-width: 200px">
+                        <label class="font-semibold block mb-2 text-700">
+                            Appointment <span class="text-red-500">*</span>
+                        </label>
+                        <p-select [options]="appointments" optionLabel="codeValueEN" optionValue="codeId"
+                            placeholder="Select Appointment" styleClass="w-full" formControlName="appointment">
+                        </p-select>
+                        @if (isFieldInvalid('appointment')) {
+                        <small class="text-red-500">
+                            {{ getErrorMessage('appointment') }}
+                        </small>
+                        }
+                    </div>
+
+                    <div class="flex-1" style="min-width: 200px">
+                        <label class="font-semibold block mb-2 text-700">
+                            Date of Joining in RAB <span class="text-red-500">*</span>
+                        </label>
+                        <p-datepicker formControlName="joiningDate" dateFormat="dd-mm-yy" placeholder="Select Date"
+                            styleClass="w-full">
+                        </p-datepicker>
+                        @if (isFieldInvalid('joiningDate')) {
+                        <small class="text-red-500">
+                            {{ getErrorMessage('joiningDate') }}
+                        </small>
+                        }
+                    </div>
                 </div>
 
-                <div class="flex-1" style="min-width: 200px">
-                    <label class="font-semibold block mb-2 text-700">
-                        Last Unit of Mother Organization <span class="text-red-500">*</span>
-                    </label>
-                    <p-select [options]="lastUnitOrganizations" optionLabel="orgNameEN" optionValue="orgId"
-                        placeholder="Select Last Unit" styleClass="w-full" formControlName="lastMotherUnit"
-                        (onChange)="onLastUnitChange($event.value)">
-                    </p-select>
-                    @if (isFieldInvalid('lastMotherUnit')) {
-                    <small class="text-red-500">
-                        {{ getErrorMessage('lastMotherUnit') }}
-                    </small>
-                    }
+                <!-- Row 3: 4 Fields -->
+                <div class="flex flex-wrap gap-3 mb-4">
+                    <div class="flex-1" style="min-width: 200px">
+                        <label class="font-semibold block mb-2 text-700">
+                            Rank <span class="text-red-500">*</span>
+                        </label>
+                        <p-select [options]="ranks" optionLabel="codeValueEN" optionValue="codeId"
+                            placeholder="Select Rank" styleClass="w-full" formControlName="rank">
+                        </p-select>
+                        @if (isFieldInvalid('rank')) {
+                        <small class="text-red-500">
+                            {{ getErrorMessage('rank') }}
+                        </small>
+                        }
+                    </div>
+
+                    <div class="flex-1" style="min-width: 200px">
+                        <label class="font-semibold block mb-2 text-700">
+                            Corps <span class="text-red-500">*</span>
+                        </label>
+                        <p-select [options]="corps" optionLabel="codeValueEN" optionValue="codeId"
+                            placeholder="Select Corps" styleClass="w-full" formControlName="branch"
+                            (onChange)="onChangeCorps($event.value)">
+                        </p-select>
+                        @if (isFieldInvalid('branch')) {
+                        <small class="text-red-500">
+                            {{ getErrorMessage('branch') }}
+                        </small>
+                        }
+                    </div>
+
+                    <div class="flex-1" style="min-width: 200px">
+                        <label class="font-semibold block mb-2 text-700">
+                            Trade <span class="text-red-500">*</span>
+                        </label>
+                        <p-select [options]="trades" optionLabel="codeValueEN" optionValue="codeId"
+                            placeholder="Select Trade" styleClass="w-full" formControlName="trade">
+                        </p-select>
+                        @if (isFieldInvalid('trade')) {
+                        <small class="text-red-500">
+                            {{ getErrorMessage('trade') }}
+                        </small>
+                        }
+                    </div>
+
+                    <div class="flex-1" style="min-width: 200px">
+                        <label class="font-semibold block mb-2 text-700">Trade Remarks</label>
+                        <input pInputText class="w-full" placeholder="Enter remarks" formControlName="tradeMark" />
+                    </div>
                 </div>
 
-                <div class="flex-1" style="min-width: 200px">
-                    <label class="font-semibold block mb-2 text-700">
-                        Last Mother Unit Location <span class="text-red-500">*</span>
-                    </label>
-                    <input pInputText class="w-full" placeholder="Manual Entry / Auto Select"
-                        formControlName="lastMotherUnitLocation" readonly/>
-                    @if (isFieldInvalid('lastMotherUnitLocation')) {
-                    <small class="text-red-500">
-                        {{ getErrorMessage('lastMotherUnitLocation') }}
-                    </small>
-                    }
-                </div>
-            </div>
+                <!-- Row 4: 4 Fields -->
+                <div class="flex flex-wrap gap-3 mb-4">
+                    <div class="flex-1" style="min-width: 200px">
+                        <label class="font-semibold block mb-2 text-700">
+                            Gender <span class="text-red-500">*</span>
+                        </label>
+                        <p-select [options]="genders" optionLabel="codeValueEN" optionValue="codeId"
+                            placeholder="Select Gender" styleClass="w-full" formControlName="gender">
+                        </p-select>
+                        @if (isFieldInvalid('gender')) {
+                        <small class="text-red-500">
+                            {{ getErrorMessage('gender') }}
+                        </small>
+                        }
+                    </div>
 
-            <!-- Row 2: 4 Fields -->
-            <div class="flex flex-wrap gap-3 mb-4">
-                <div class="flex-1" style="min-width: 200px">
-                    <label class="font-semibold block mb-2 text-700">
-                        Member Type <span class="text-red-500">*</span>
-                    </label>
-                    <p-select [options]="memberTypes" optionLabel="codeValueEN" optionValue="codeId"
-                        placeholder="Select Member Type" styleClass="w-full" formControlName="memberType"
-                        (onChange)="onMemberTypeChange($event.value)">
-                    </p-select>
-                    @if (isFieldInvalid('memberType')) {
-                    <small class="text-red-500">
-                        {{ getErrorMessage('memberType') }}
-                    </small>
-                    }
-                </div>
+                    <div class="flex-1" style="min-width: 200px">
+                        <label class="font-semibold block mb-2 text-700">
+                            Select Prefix <span class="text-red-500">*</span>
+                        </label>
+                        <p-select [options]="prefixes" optionLabel="codeValueEN" optionValue="codeId"
+                            placeholder="Select Prefix" styleClass="w-full" formControlName="prefix">
+                        </p-select>
+                        @if (isFieldInvalid('prefix')) {
+                        <small class="text-red-500">
+                            {{ getErrorMessage('prefix') }}
+                        </small>
+                        }
+                    </div>
 
-                <div class="flex-1" style="min-width: 200px">
-                    <label class="font-semibold block mb-2 text-700">
-                        Officer Type <span class="text-red-500">*</span>
-                    </label>
-                    <p-select [options]="officerTypes" optionLabel="codeValueEN" optionValue="codeId"
-                        placeholder="Select Officer Type" styleClass="w-full" formControlName="officerType">
-                    </p-select>
-                    @if (isFieldInvalid('officerType')) {
-                    <small class="text-red-500">
-                        {{ getErrorMessage('officerType') }}
-                    </small>
-                    }
-                </div>
+                    <div class="flex-1" style="min-width: 200px">
+                        <label class="font-semibold block mb-2 text-700">
+                            Service ID <span class="text-red-500">*</span>
+                        </label>
+                        <input pInputText class="w-full" placeholder="Only Number" formControlName="serviceId" />
+                        @if (isFieldInvalid('serviceId')) {
+                        <small class="text-red-500">
+                            {{ getErrorMessage('serviceId') }}
+                        </small>
+                        }
+                    </div>
 
-                <div class="flex-1" style="min-width: 200px">
-                    <label class="font-semibold block mb-2 text-700">
-                        Appointment <span class="text-red-500">*</span>
-                    </label>
-                    <p-select [options]="appointments" optionLabel="codeValueEN" optionValue="codeId"
-                        placeholder="Select Appointment" styleClass="w-full" formControlName="appointment">
-                    </p-select>
-                    @if (isFieldInvalid('appointment')) {
-                    <small class="text-red-500">
-                        {{ getErrorMessage('appointment') }}
-                    </small>
-                    }
+                    <div class="flex-1" style="min-width: 200px">
+                        <label class="font-semibold block mb-2 text-700">RAB ID</label>
+                        <input pInputText class="w-full surface-100" placeholder="Auto Generated"
+                            formControlName="rabid" readonly />
+                    </div>
                 </div>
 
-                <div class="flex-1" style="min-width: 200px">
-                    <label class="font-semibold block mb-2 text-700">
-                        Date of Joining in RAB <span class="text-red-500">*</span>
-                    </label>
-                    <p-datepicker formControlName="joiningDate" dateFormat="dd-mm-yy" placeholder="Select Date"
-                        styleClass="w-full">
-                    </p-datepicker>
-                    @if (isFieldInvalid('joiningDate')) {
-                    <small class="text-red-500">
-                        {{ getErrorMessage('joiningDate') }}
-                    </small>
-                    }
-                </div>
-            </div>
+                <!-- Row 5: 2 Fields -->
+                <div class="flex flex-wrap gap-3">
+                    <div class="flex-1" style="min-width: 300px">
+                        <label class="font-semibold block mb-2 text-700">
+                            Name English <span class="text-red-500">*</span>
+                        </label>
+                        <input pInputText class="w-full" placeholder="Enter name in English"
+                            formControlName="fullNameEN" />
+                        @if (isFieldInvalid('fullNameEN')) {
+                        <small class="text-red-500">
+                            {{ getErrorMessage('fullNameEN') }}
+                        </small>
+                        }
+                    </div>
 
-            <!-- Row 3: 4 Fields -->
-            <div class="flex flex-wrap gap-3 mb-4">
-                <div class="flex-1" style="min-width: 200px">
-                    <label class="font-semibold block mb-2 text-700">
-                        Rank <span class="text-red-500">*</span>
-                    </label>
-                    <p-select [options]="ranks" optionLabel="codeValueEN" optionValue="codeId" placeholder="Select Rank"
-                        styleClass="w-full" formControlName="rank">
-                    </p-select>
-                    @if (isFieldInvalid('rank')) {
-                    <small class="text-red-500">
-                        {{ getErrorMessage('rank') }}
-                    </small>
-                    }
-                </div>
-
-                <div class="flex-1" style="min-width: 200px">
-                    <label class="font-semibold block mb-2 text-700">
-                        Corps <span class="text-red-500">*</span>
-                    </label>
-                    <p-select [options]="corps" optionLabel="codeValueEN" optionValue="codeId"
-                        placeholder="Select Corps" styleClass="w-full" formControlName="branch"
-                        (onChange)="onChangeCorps($event.value)">
-                    </p-select>
-                    @if (isFieldInvalid('branch')) {
-                    <small class="text-red-500">
-                        {{ getErrorMessage('branch') }}
-                    </small>
-                    }
-                </div>
-
-                <div class="flex-1" style="min-width: 200px">
-                    <label class="font-semibold block mb-2 text-700">
-                        Trade <span class="text-red-500">*</span>
-                    </label>
-                    <p-select [options]="trades" optionLabel="codeValueEN" optionValue="codeId" placeholder="Select Trade"
-                        styleClass="w-full" formControlName="trade">
-                    </p-select>
-                    @if (isFieldInvalid('trade')) {
-                    <small class="text-red-500">
-                        {{ getErrorMessage('trade') }}
-                    </small>
-                    }
-                </div>
-
-                <div class="flex-1" style="min-width: 200px">
-                    <label class="font-semibold block mb-2 text-700">Trade Remarks</label>
-                    <input pInputText class="w-full" placeholder="Enter remarks" formControlName="tradeMark" />
-                </div>
-            </div>
-
-            <!-- Row 4: 4 Fields -->
-            <div class="flex flex-wrap gap-3 mb-4">
-                <div class="flex-1" style="min-width: 200px">
-                    <label class="font-semibold block mb-2 text-700">
-                        Gender <span class="text-red-500">*</span>
-                    </label>
-                    <p-select [options]="genders" optionLabel="codeValueEN" optionValue="codeId" placeholder="Select Gender"
-                        styleClass="w-full" formControlName="gender">
-                    </p-select>
-                    @if (isFieldInvalid('gender')) {
-                    <small class="text-red-500">
-                        {{ getErrorMessage('gender') }}
-                    </small>
-                    }
-                </div>
-
-                <div class="flex-1" style="min-width: 200px">
-                    <label class="font-semibold block mb-2 text-700">
-                        Select Prefix <span class="text-red-500">*</span>
-                    </label>
-                    <p-select [options]="prefixes" optionLabel="codeValueEN" optionValue="codeId" placeholder="Select Prefix"
-                        styleClass="w-full" formControlName="prefix">
-                    </p-select>
-                    @if (isFieldInvalid('prefix')) {
-                    <small class="text-red-500">
-                        {{ getErrorMessage('prefix') }}
-                    </small>
-                    }
-                </div>
-
-                <div class="flex-1" style="min-width: 200px">
-                    <label class="font-semibold block mb-2 text-700">
-                        Service ID <span class="text-red-500">*</span>
-                    </label>
-                    <input pInputText class="w-full" placeholder="Only Number" formControlName="serviceId" />
-                    @if (isFieldInvalid('serviceId')) {
-                    <small class="text-red-500">
-                        {{ getErrorMessage('serviceId') }}
-                    </small>
-                    }
-                </div>
-
-                <div class="flex-1" style="min-width: 200px">
-                    <label class="font-semibold block mb-2 text-700">RAB ID</label>
-                    <input pInputText class="w-full surface-100" placeholder="Auto Generated" formControlName="rabid"
-                        readonly />
-                </div>
-            </div>
-
-            <!-- Row 5: 2 Fields -->
-            <div class="flex flex-wrap gap-3">
-                <div class="flex-1" style="min-width: 300px">
-                    <label class="font-semibold block mb-2 text-700">
-                        Name English <span class="text-red-500">*</span>
-                    </label>
-                    <input pInputText class="w-full" placeholder="Enter name in English"
-                        formControlName="fullNameEN" />
-                    @if (isFieldInvalid('fullNameEN')) {
-                    <small class="text-red-500">
-                        {{ getErrorMessage('fullNameEN') }}
-                    </small>
-                    }
-                </div>
-
-                <div class="flex-1" style="min-width: 300px">
-                    <label class="font-semibold block mb-2 text-700">
-                        Name Bangla <span class="text-red-500">*</span>
-                    </label>
-                    <input pInputText class="w-full" placeholder="বাংলায় নাম লিখুন" formControlName="fullNameBN" />
-                    @if (isFieldInvalid('fullNameBN')) {
-                    <small class="text-red-500">
-                        {{ getErrorMessage('fullNameBN') }}
-                    </small>
-                    }
+                    <div class="flex-1" style="min-width: 300px">
+                        <label class="font-semibold block mb-2 text-700">
+                            Name Bangla <span class="text-red-500">*</span>
+                        </label>
+                        <input pInputText class="w-full" placeholder="বাংলায় নাম লিখুন" formControlName="fullNameBN" />
+                        @if (isFieldInvalid('fullNameBN')) {
+                        <small class="text-red-500">
+                            {{ getErrorMessage('fullNameBN') }}
+                        </small>
+                        }
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Form Action Buttons -->
-        <div class="flex justify-content-end gap-3 mt-4">
-            <button pButton type="button" label="Save" icon="pi pi-save" class="p-button-success"
-                [disabled]="postingForm.invalid" (click)="onSubmit()">
-            </button>
-        </div>
-    </form>
-</div>
+
+            <div class="flex flex-col sm:flex-row gap-2 justify-end">
+                <p-button type="submit" label="Save" [disabled]="postingForm.invalid"
+                    [fluid]="false"></p-button>
+
+            </div>
+        </form>
+    </div>
+</p-fluid>

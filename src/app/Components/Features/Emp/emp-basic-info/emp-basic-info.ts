@@ -4,17 +4,18 @@ import { FileUpload } from 'primeng/fileupload';
 import { Select } from 'primeng/select';
 import { DatePicker } from 'primeng/datepicker';
 import { InputTextModule } from 'primeng/inputtext';
-import { ButtonModule } from 'primeng/button';
+import { Button, ButtonModule } from 'primeng/button';
 import { CommonCodeModel } from '@/models/common-code-model';
 import { EmpService } from '@/services/emp-service';
 import { MotherOrganizationModel } from '@/models/mother-org-model';
 import { CommonCodeService } from '@/services/common-code-service';
 import { DropdownOption } from '@/models/drop-down-options';
 import { MessageService } from 'primeng/api';
+import { Fluid } from 'primeng/fluid';
 
 @Component({
     selector: 'app-emp-basic-info',
-    imports: [FileUpload, ButtonModule, Select, DatePicker, ReactiveFormsModule, InputTextModule],
+    imports: [FileUpload, Fluid, Button, ButtonModule, Select, DatePicker, ReactiveFormsModule, InputTextModule],
     templateUrl: './emp-basic-info.html',
     styleUrl: './emp-basic-info.scss'
 })
