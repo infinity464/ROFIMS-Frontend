@@ -1,0 +1,15 @@
+:host {
+    display: block;
+}
+
+// Ensure image preview container stays within bounds
+.image-preview-container {
+    position: relative;
+    overflow: hidden;
+    max-width: 220px;
+}
+
+// Ensure the card content doesn't overflow
+.card {
+    overflow: visible;
+}

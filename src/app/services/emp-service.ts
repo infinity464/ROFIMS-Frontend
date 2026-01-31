@@ -41,7 +41,9 @@ export class EmpService {
     }
 
     getEmployeeById(employeeId: number): Observable<EmpModel> {
-        return this.http.get<EmpModel>(`${this.empApi}/EmployeeInfo/GetById/${employeeId}`);
+        return this.http.get<EmpModel[]>(`${this.empApi}/EmployeeInfo/GetFilteredByKeysAsyn/${employeeId}`).pipe(
+            map(data => data[0]) // API returns array, get first element
+        );
     }
 
     searchEmployees(criteria: { motherOrganization?: number; serviceId?: string; nidNo?: string }): Observable<EmpModel[]> {
@@ -52,24 +54,25 @@ export class EmpService {
         return this.http.post(`${this.empApi}/EmployeeInfo/SaveAsyn`, payload);
     }
 
-    updateEmployee(employeeId: number, payload: any): Observable<any> {
-        return this.http.put(`${this.empApi}/EmployeeInfo/Update/${employeeId}`, payload);
+    updateEmployee(payload: any): Observable<any> {
+        return this.http.post(`${this.empApi}/EmployeeInfo/UpdateAsyn`, payload);
     }
 
     deleteEmployee(employeeId: number): Observable<any> {
         return this.http.delete(`${this.empApi}/EmployeeInfo/Delete/${employeeId}`);
     }
 
-    getAddressesByEmployeeId(employeeId: number): Observable<AddressInfoModel[]> {
-        return this.http.get<AddressInfoModel[]>(`${this.empApi}/AddressInfo/GetByEmployeeId/${employeeId}`);
+    getAddressesByEmployeeId(employeeId: number): Observable<any[]> {
+        // Use dedicated API endpoint to get addresses by employee ID
+        return this.http.get<any[]>(`${this.empApi}/AddressInfo/GetByEmployeeId/${employeeId}`);
     }
 
     saveAddress(payload: any): Observable<any> {
         return this.http.post(`${this.empApi}/AddressInfo/SaveAsyn`, payload);
     }
 
-    updateAddress(addressId: number, payload: any): Observable<any> {
-        return this.http.put(`${this.empApi}/AddressInfo/Update/${addressId}`, payload);
+    updateAddress(payload: any): Observable<any> {
+        return this.http.post(`${this.empApi}/AddressInfo/UpdateAsyn`, payload);
     }
 
     deleteAddress(addressId: number): Observable<any> {
@@ -105,10 +108,10 @@ export class EmpService {
         );
     }
 
-    updateCompleteProfile(employeeId: number, employeePayload: any, addressPayload: any[]): Observable<any> {
+    updateCompleteProfile(employeePayload: any, addressPayload: any[]): Observable<any> {
         return forkJoin({
-            employee: this.updateEmployee(employeeId, employeePayload),
-            addresses: this.saveAddress(addressPayload) // This will handle updates based on AddressId
+            employee: this.updateEmployee(employeePayload),
+            addresses: forkJoin(addressPayload.map(addr => this.updateAddress(addr)))
         });
     }
 

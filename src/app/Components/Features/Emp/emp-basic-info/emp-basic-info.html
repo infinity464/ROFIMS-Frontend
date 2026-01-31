@@ -1,12 +1,24 @@
 <p-fluid>
     <div class="mb-5 card">
-        <div class="flex align-items-center gap-3 mb-4">
-            <h3 class="m-0 text-xl font-bold text-900">New Posting Entry Form</h3>
-            <!-- Show generated EmployeeID -->
-            @if (generatedEmployeeId) {
-                <div class="flex align-items-center gap-2">
-                    <span class="text-500 text-sm">Employee ID:</span>
-                    <span class="surface-200 border-round px-2 py-1 text-sm font-semibold text-primary">{{ generatedEmployeeId }}</span>
+        <div class="flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+            <h3 class="m-0 text-xl font-bold text-900">{{ pageTitle }}</h3>
+            <!-- View mode buttons -->
+            @if (isViewMode || isEditMode) {
+                <div class="flex flex-wrap gap-2">
+                    <p-button
+                        label="Back to List"
+                        icon="pi pi-arrow-left"
+                        severity="secondary"
+                        [outlined]="true"
+                        (onClick)="goBackToList()">
+                    </p-button>
+                    @if (isViewMode) {
+                        <p-button
+                            label="Edit"
+                            icon="pi pi-pencil"
+                            (onClick)="switchToEditMode()">
+                        </p-button>
+                    }
                 </div>
             }
         </div>
@@ -15,26 +27,64 @@
             <div class="surface-50 border-round-2xl p-4">
                 <!-- Row 1: 4 Fields -->
                 <div class="flex flex-wrap gap-3 mb-4">
-                    <div class="flex-1" style="min-width: 200px">
+                    <div class="flex-1" style="min-width: 200px; max-width: 250px;">
                         <label class="font-semibold block mb-2 text-700">Add Picture</label>
 
-                        <!-- Image Preview -->
-                        @if (imagePreview) {
-                        <div class="mb-3 relative">
-                            <img [src]="imagePreview" alt="Profile Picture" class="w-full border-round"
-                                style="max-height: 200px; object-fit: cover;" />
-                            <button pButton type="button" icon="pi pi-times"
-                                class="p-button-rounded p-button-danger p-button-sm absolute"
-                                style="top: 8px; right: 8px;" (click)="removeImage()" pTooltip="Remove Image">
-                            </button>
-                        </div>
+                        @if (!isViewMode) {
+                            <!-- Show upload button if no image -->
+                            @if (!imagePreview) {
+                                <p-fileUpload #fileUpload mode="basic" chooseLabel="Upload Picture" chooseIcon="pi pi-upload"
+                                    name="picture" accept="image/*" [auto]="true" (onSelect)="onFileSelect($event)"
+                                    maxFileSize="5000000" styleClass="w-full">
+                                </p-fileUpload>
+                                <small class="text-500">Max size: 5MB (JPG, PNG, GIF)</small>
+                            } @else {
+                                <!-- Show filename with preview and remove buttons -->
+                                <div class="flex align-items-center gap-2 surface-100 border-round p-2">
+                                    <i class="pi pi-image text-primary"></i>
+                                    <span class="text-700 font-medium flex-1" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                        {{ selectedFileName || 'image.png' }}
+                                    </span>
+                                    <p-button
+                                        icon="pi pi-eye"
+                                        [rounded]="true"
+                                        [text]="true"
+                                        severity="info"
+                                        size="small"
+                                        pTooltip="Preview"
+                                        (onClick)="showImagePreviewModal = true">
+                                    </p-button>
+                                    <p-button
+                                        icon="pi pi-times"
+                                        [rounded]="true"
+                                        [text]="true"
+                                        severity="danger"
+                                        size="small"
+                                        pTooltip="Remove"
+                                        (onClick)="removeImage()">
+                                    </p-button>
+                                </div>
+                            }
+                        } @else {
+                            <!-- View mode: show filename if image exists -->
+                            @if (imagePreview) {
+                                <div class="flex align-items-center gap-2 surface-100 border-round p-2">
+                                    <i class="pi pi-image text-primary"></i>
+                                    <span class="text-700 font-medium flex-1">{{ selectedFileName || 'image.png' }}</span>
+                                    <p-button
+                                        icon="pi pi-eye"
+                                        [rounded]="true"
+                                        [text]="true"
+                                        severity="info"
+                                        size="small"
+                                        pTooltip="Preview"
+                                        (onClick)="showImagePreviewModal = true">
+                                    </p-button>
+                                </div>
+                            } @else {
+                                <span class="text-500">No picture uploaded</span>
+                            }
                         }
-
-                        <p-fileUpload #fileUpload mode="basic" chooseLabel="Upload Picture" chooseIcon="pi pi-upload"
-                            name="picture" accept="image/*" [auto]="true" (onSelect)="onFileSelect($event)"
-                            maxFileSize="5000000" styleClass="w-full">
-                        </p-fileUpload>
-                        <small class="text-500">Max size: 5MB (JPG, PNG, GIF)</small>
                     </div>
 
                     <div class="flex-1" style="min-width: 200px">
@@ -293,132 +343,175 @@
                 </div>
             </div>
 
-
-            <div class="flex flex-col sm:flex-row gap-2 justify-end">
-                <p-button type="submit" label="Save" [disabled]="postingForm.invalid || isServiceIdDuplicate || isCheckingServiceId"
-                    [fluid]="false"></p-button>
-
-            </div>
         </form>
-    </div>
 
-    <!-- Permanent Address Section -->
-    <app-address-form
-      [config]="permanentAddressConfig"
-      [savedAddressId]="permanentAddressId"
-      (onSave)="savePermanentAddress($event)"
-      (onCancel)="cancelAddress()">
-    </app-address-form>
-
-    <!-- Present Address Section -->
-    <app-address-form
-      [config]="presentAddressConfig"
-      [presentAddressData]="permanentAddress"
-      [savedAddressId]="presentAddressId"
-      (onSave)="savePresentAddress($event)"
-      (onCancel)="cancelAddress()">
-    </app-address-form>
-
-    <!-- Wife Permanent Address Section -->
-    <app-address-form
-      [config]="wifePermanentAddressConfig"
-      [savedAddressId]="wifePermanentAddressId"
-      (onSave)="saveWifePermanentAddress($event)"
-      (onCancel)="cancelAddress()">
-    </app-address-form>
-
-    <!-- Wife Present Address Section -->
-    <app-address-form
-      [config]="wifePresentAddressConfig"
-      [presentAddressData]="wifePermanentAddress"
-      [savedAddressId]="wifePresentAddressId"
-      (onSave)="saveWifePresentAddress($event)"
-      (onCancel)="cancelAddress()">
-    </app-address-form>
-
-    <!-- Reliever Section -->
-    <div class="mb-5 card">
-        <div class="mb-4">
-            <h3 class="m-0 text-xl font-bold text-900 mb-3">Reliever Information</h3>
+        <!-- Permanent Address Section -->
+        <div class="mt-1">
+          <app-address-form
+            #permanentAddressForm
+            [config]="permanentAddressConfig"
+            [savedAddressId]="permanentAddressId"
+            [showButtons]="false"
+            [showCard]="false"
+            [isReadonly]="isViewMode"
+            [initialAddressData]="permanentAddress"
+            (onSave)="savePermanentAddress($event)"
+            (onCancel)="cancelAddress()">
+          </app-address-form>
         </div>
 
-        <div class="surface-50 border-round-2xl p-4">
-            <!-- Checkbox: Is he a reliever? -->
-            <div class="flex align-items-center gap-2 mb-4">
-                <p-checkbox
-                    [(ngModel)]="isReliever"
-                    [binary]="true"
-                    inputId="isReliever"
-                    (onChange)="onRelieverCheckChange($event.checked)">
-                </p-checkbox>
-                <label for="isReliever" class="cursor-pointer font-semibold text-700">
-                    Is he a reliever of any presently serving member?
-                </label>
+        <!-- Present Address Section -->
+        <div class="mt-1">
+          <app-address-form
+            #presentAddressForm
+            [config]="presentAddressConfig"
+            [savedAddressId]="presentAddressId"
+            [showButtons]="false"
+            [showCard]="false"
+            [isReadonly]="isViewMode"
+            [initialAddressData]="presentAddress"
+            (onSave)="savePresentAddress($event)"
+            (onCancel)="cancelAddress()"
+            (onSameAsPresentRequest)="copyPermanentToPresent()">
+          </app-address-form>
+        </div>
+
+        <!-- Wife Permanent Address Section -->
+        <div class="mt-1">
+          <app-address-form
+            #wifePermanentAddressForm
+            [config]="wifePermanentAddressConfig"
+            [savedAddressId]="wifePermanentAddressId"
+            [showButtons]="false"
+            [showCard]="false"
+            [isReadonly]="isViewMode"
+            [initialAddressData]="wifePermanentAddress"
+            (onSave)="saveWifePermanentAddress($event)"
+            (onCancel)="cancelAddress()">
+          </app-address-form>
+        </div>
+
+        <!-- Wife Present Address Section -->
+        <div class="mt-1">
+          <app-address-form
+            #wifePresentAddressForm
+            [config]="wifePresentAddressConfig"
+            [savedAddressId]="wifePresentAddressId"
+            [showButtons]="false"
+            [showCard]="false"
+            [isReadonly]="isViewMode"
+            [initialAddressData]="wifePresentAddress"
+            (onSave)="saveWifePresentAddress($event)"
+            (onCancel)="cancelAddress()"
+            (onSameAsPresentRequest)="copyWifePermanentToWifePresent()">
+          </app-address-form>
+        </div>
+
+        <!-- Reliever Section -->
+        <div class="mt-1">
+            <div class="mb-2">
+                <h3 class="m-0 text-xl font-bold text-900">Reliever Information</h3>
             </div>
 
-            <!-- Show dropdown if checked -->
-            @if (isReliever) {
-                <div class="flex flex-wrap gap-3 mb-4">
-                    <div class="flex-1" style="min-width: 300px; max-width: 400px;">
-                        <label class="font-semibold block mb-2 text-700">
-                            Select Presently Serving Member <span class="text-red-500">*</span>
-                        </label>
-                        <p-select
-                            [options]="existingEmployees"
-                            [(ngModel)]="selectedRelieverEmployeeId"
-                            optionLabel="fullNameEN"
-                            optionValue="employeeID"
-                            placeholder="Search by RAB ID / Service ID / Name"
-                            styleClass="w-full"
-                            [filter]="true"
-                            filterPlaceholder="Search employee..."
-                            (onChange)="onRelieverEmployeeSelect($event.value)">
-                            <ng-template let-emp pTemplate="item">
-                                <div class="flex flex-column">
-                                    <span class="font-semibold">{{ emp.fullNameEN }}</span>
-                                    <small class="text-500">Service ID: {{ emp.serviceId }} | RAB ID: {{ emp.rabid }}</small>
-                                </div>
-                            </ng-template>
-                        </p-select>
-                    </div>
+            <div class="surface-50 border-round-xl p-3">
+                <!-- Checkbox: Is he a reliever? -->
+                <div class="flex align-items-center gap-2 mb-4">
+                    <p-checkbox
+                        [(ngModel)]="isReliever"
+                        [binary]="true"
+                        inputId="isReliever"
+                        [disabled]="isViewMode"
+                        (onChange)="onRelieverCheckChange($event.checked)">
+                    </p-checkbox>
+                    <label for="isReliever" class="cursor-pointer font-semibold text-700">
+                        Is he a reliever of any presently serving member?
+                    </label>
                 </div>
 
-                <!-- Show selected employee details -->
-                @if (selectedRelieverEmployee) {
-                    <div class="surface-100 border-round p-3 mb-4">
-                        <h4 class="m-0 mb-2 text-700">Selected Member Details</h4>
-                        <div class="flex flex-wrap gap-4">
-                            <div>
-                                <span class="text-500 text-sm">Service ID:</span>
-                                <span class="ml-2 font-semibold">{{ selectedRelieverEmployee.serviceId }}</span>
-                            </div>
-                            <div>
-                                <span class="text-500 text-sm">RAB ID:</span>
-                                <span class="ml-2 font-semibold">{{ selectedRelieverEmployee.rabid || 'N/A' }}</span>
-                            </div>
-                            <div>
-                                <span class="text-500 text-sm">Name:</span>
-                                <span class="ml-2 font-semibold">{{ selectedRelieverEmployee.fullNameEN }}</span>
-                            </div>
-                            <div>
-                                <span class="text-500 text-sm">Rank:</span>
-                                <span class="ml-2 font-semibold">{{ selectedRelieverEmployee.rank || 'N/A' }}</span>
-                            </div>
+                <!-- Show dropdown if checked -->
+                @if (isReliever) {
+                    <div class="flex flex-wrap gap-3 mb-4">
+                        <div class="flex-1" style="min-width: 300px; max-width: 400px;">
+                            <label class="font-semibold block mb-2 text-700">
+                                Select Presently Serving Member <span class="text-red-500">*</span>
+                            </label>
+                            <p-select
+                                [options]="existingEmployees"
+                                [(ngModel)]="selectedRelieverEmployeeId"
+                                optionLabel="fullNameEN"
+                                optionValue="employeeID"
+                                placeholder="Search by RAB ID / Service ID / Name"
+                                styleClass="w-full"
+                                [filter]="true"
+                                filterPlaceholder="Search employee..."
+                                [disabled]="isViewMode"
+                                (onChange)="onRelieverEmployeeSelect($event.value)">
+                                <ng-template let-emp pTemplate="item">
+                                    <div class="flex flex-column">
+                                        <span class="font-semibold">{{ emp.fullNameEN }}</span>
+                                        <small class="text-500">Service ID: {{ emp.serviceId }} | RAB ID: {{ emp.rabid }}</small>
+                                    </div>
+                                </ng-template>
+                            </p-select>
                         </div>
                     </div>
 
-                    <!-- Update Button -->
-                    <div class="flex justify-end">
-                        <p-button
-                            type="button"
-                            label="Update Reliever Info"
-                            icon="pi pi-save"
-                            severity="success"
-                            (onClick)="updateRelieverId()">
-                        </p-button>
-                    </div>
+                    <!-- Show selected employee details -->
+                    @if (selectedRelieverEmployee) {
+                        <div class="surface-100 border-round p-3">
+                            <h4 class="m-0 mb-2 text-700">Selected Member Details</h4>
+                            <div class="flex flex-wrap gap-4">
+                                <div>
+                                    <span class="text-500 text-sm">Service ID:</span>
+                                    <span class="ml-2 font-semibold">{{ selectedRelieverEmployee.serviceId }}</span>
+                                </div>
+                                <div>
+                                    <span class="text-500 text-sm">RAB ID:</span>
+                                    <span class="ml-2 font-semibold">{{ selectedRelieverEmployee.rabid || 'N/A' }}</span>
+                                </div>
+                                <div>
+                                    <span class="text-500 text-sm">Name:</span>
+                                    <span class="ml-2 font-semibold">{{ selectedRelieverEmployee.fullNameEN }}</span>
+                                </div>
+                                <div>
+                                    <span class="text-500 text-sm">Rank:</span>
+                                    <span class="ml-2 font-semibold">{{ selectedRelieverEmployee.rank || 'N/A' }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    }
                 }
-            }
+            </div>
         </div>
+
+        <!-- Save All Information Button - hidden in view mode -->
+        @if (!isViewMode) {
+            <div class="flex justify-end mt-4">
+                <p-button
+                    type="button"
+                    label="Save All Information"
+                    icon="pi pi-check-circle"
+                    size="large"
+                    [disabled]="isServiceIdDuplicate || isCheckingServiceId"
+                    (onClick)="saveAll()">
+                </p-button>
+            </div>
+        }
     </div>
 </p-fluid>
+
+<!-- Image Preview Modal -->
+<p-dialog
+    header="Picture Preview"
+    [(visible)]="showImagePreviewModal"
+    [modal]="true"
+    [style]="{ width: '500px', maxWidth: '90vw' }"
+    [closable]="true"
+    [draggable]="false">
+    <div class="flex justify-content-center">
+        @if (imagePreview) {
+            <img [src]="imagePreview" alt="Profile Picture"
+                style="max-width: 100%; max-height: 400px; object-fit: contain; border-radius: 8px;" />
+        }
+    </div>
+</p-dialog>

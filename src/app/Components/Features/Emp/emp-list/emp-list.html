@@ -2,12 +2,11 @@
 <p-confirmDialog></p-confirmDialog>
 
 <div class="card">
-    <div class="flex justify-content-between align-items-center mb-4">
+    <div class="flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
         <h2 class="m-0 text-2xl font-bold text-900">Employee List</h2>
         <p-button
             label="Add New Employee"
             icon="pi pi-plus"
-            severity="success"
             (onClick)="addNewEmployee()">
         </p-button>
     </div>
@@ -100,7 +99,7 @@
                     </p-tag>
                 </td>
                 <td>
-                    <div class="flex gap-1">
+                    <div class="flex flex-nowrap gap-1">
                         <p-button
                             icon="pi pi-eye"
                             [rounded]="true"
@@ -114,19 +113,9 @@
                             icon="pi pi-pencil"
                             [rounded]="true"
                             [text]="true"
-                            severity="success"
                             pTooltip="Edit"
                             tooltipPosition="top"
                             (onClick)="editEmployee(employee)">
-                        </p-button>
-                        <p-button
-                            icon="pi pi-trash"
-                            [rounded]="true"
-                            [text]="true"
-                            severity="danger"
-                            pTooltip="Delete"
-                            tooltipPosition="top"
-                            (onClick)="confirmDelete(employee)">
                         </p-button>
                     </div>
                 </td>

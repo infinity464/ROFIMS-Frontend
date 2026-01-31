@@ -1,6 +1,6 @@
 import { CommonCodeService } from '@/services/common-code-service';
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, OnChanges, SimpleChanges, Output } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Fluid } from 'primeng/fluid';
 import { Checkbox } from 'primeng/checkbox';
@@ -35,13 +35,18 @@ export interface AddressFormConfig {
     styleUrls: ['./address-form.scss'],
     imports: [Fluid, InputTextModule, Checkbox, Select, ButtonModule, CommonModule, FormsModule, ReactiveFormsModule]
 })
-export class AddressFormComponent implements OnInit {
+export class AddressFormComponent implements OnInit, OnChanges {
     @Input() config!: AddressFormConfig;
     @Input() presentAddressData?: AddressData; // For "Same as Present" functionality
     @Input() savedAddressId?: number; // Generated AddressId after save
+    @Input() showButtons: boolean = true; // Control visibility of save/cancel buttons
+    @Input() showCard: boolean = true; // Control visibility of card wrapper
+    @Input() isReadonly: boolean = false; // Control readonly mode
+    @Input() initialAddressData?: AddressData; // Initial data for view/edit mode
 
     @Output() onSave = new EventEmitter<AddressData>();
     @Output() onCancel = new EventEmitter<void>();
+    @Output() onSameAsPresentRequest = new EventEmitter<void>(); // Request parent for source address data
 
     addressForm!: FormGroup;
     // sameAsPresent: boolean = false;
@@ -67,6 +72,35 @@ export class AddressFormComponent implements OnInit {
         this.initializeForm();
         this.loadDivisions();
         this.addressForm.get('sameAsPresent')!.valueChanges.subscribe((checked) => this.onSameAsPresentChange(checked));
+
+        // If initial data is provided, load it (for view/edit mode)
+        if (this.initialAddressData) {
+            this.loadInitialData(this.initialAddressData);
+        }
+
+        // If readonly mode, disable the form
+        if (this.isReadonly) {
+            this.disableAddressFields();
+        }
+    }
+
+    ngOnChanges(changes: SimpleChanges): void {
+        // Handle initialAddressData changes (async data loading from parent)
+        if (changes['initialAddressData'] && !changes['initialAddressData'].firstChange) {
+            const newData = changes['initialAddressData'].currentValue;
+            if (newData) {
+                this.loadInitialData(newData);
+            }
+        }
+
+        // Handle isReadonly changes
+        if (changes['isReadonly'] && !changes['isReadonly'].firstChange) {
+            if (changes['isReadonly'].currentValue) {
+                this.disableAddressFields();
+            } else {
+                this.enableAddressFields();
+            }
+        }
     }
 
     initializeForm(): void {
@@ -117,7 +151,65 @@ export class AddressFormComponent implements OnInit {
         })
     }
 
+    // Load initial data for view/edit mode (does NOT disable fields)
+    loadInitialData(sourceData: AddressData): void {
+        if (!sourceData || !sourceData.division) {
+            return;
+        }
 
+        // Load all cascading dropdowns first, then set values
+        const requests: any = {};
+
+        if (sourceData.division) {
+            requests.districts = this.commonCodeService.getAllActiveCommonCodesByParentId(sourceData.division);
+        }
+        if (sourceData.district) {
+            requests.upazilas = this.commonCodeService.getAllActiveCommonCodesByParentId(sourceData.district);
+        }
+        if (sourceData.upazila) {
+            requests.postOffices = this.commonCodeService.getAllActiveCommonCodesByParentId(sourceData.upazila);
+        }
+
+        // Load all dropdown data first
+        if (Object.keys(requests).length > 0) {
+            forkJoin(requests).subscribe({
+                next: (results: any) => {
+                    // Set dropdown options
+                    if (results.districts) this.districts = results.districts;
+                    if (results.upazilas) this.upazilas = results.upazilas;
+                    if (results.postOffices) this.postOffices = results.postOffices;
+
+                    // Now patch form with source address data
+                    this.addressForm.patchValue({
+                        division: sourceData.division,
+                        district: sourceData.district,
+                        upazila: sourceData.upazila,
+                        postOffice: sourceData.postOffice,
+                        villageEnglish: sourceData.villageEnglish || '',
+                        villageBangla: sourceData.villageBangla || '',
+                        houseRoad: sourceData.houseRoad || ''
+                    });
+
+                    // Do NOT disable fields here - this is for edit mode
+                    // Readonly mode is handled separately via isReadonly input
+                },
+                error: (err) => {
+                    console.error('Error loading initial address data', err);
+                }
+            });
+        } else {
+            // No cascading data needed, just patch values
+            this.addressForm.patchValue({
+                division: sourceData.division,
+                district: sourceData.district,
+                upazila: sourceData.upazila,
+                postOffice: sourceData.postOffice,
+                villageEnglish: sourceData.villageEnglish || '',
+                villageBangla: sourceData.villageBangla || '',
+                houseRoad: sourceData.houseRoad || ''
+            });
+        }
+    }
 
 
 
@@ -159,68 +251,8 @@ export class AddressFormComponent implements OnInit {
 
     onSameAsPresentChange(checked: boolean): void {
         if (checked) {
-            // Check if permanent address data exists
-            if (!this.presentAddressData || !this.presentAddressData.division) {
-                this.messageService.add({
-                    severity: 'warn',
-                    summary: 'Warning',
-                    detail: 'Please save Permanent Address first'
-                });
-                // Reset checkbox to unchecked
-                this.addressForm.patchValue({ sameAsPresent: false });
-                return;
-            }
-
-            // Load all cascading dropdowns first, then set values
-            const requests: any = {};
-
-            if (this.presentAddressData.division) {
-                requests.districts = this.commonCodeService.getAllActiveCommonCodesByParentId(this.presentAddressData.division);
-            }
-            if (this.presentAddressData.district) {
-                requests.upazilas = this.commonCodeService.getAllActiveCommonCodesByParentId(this.presentAddressData.district);
-            }
-            if (this.presentAddressData.upazila) {
-                requests.postOffices = this.commonCodeService.getAllActiveCommonCodesByParentId(this.presentAddressData.upazila);
-            }
-
-            // Load all dropdown data first
-            if (Object.keys(requests).length > 0) {
-                forkJoin(requests).subscribe({
-                    next: (results: any) => {
-                        // Set dropdown options
-                        if (results.districts) this.districts = results.districts;
-                        if (results.upazilas) this.upazilas = results.upazilas;
-                        if (results.postOffices) this.postOffices = results.postOffices;
-
-                        // Now patch form with permanent address data
-                        this.addressForm.patchValue({
-                            division: this.presentAddressData!.division,
-                            district: this.presentAddressData!.district,
-                            upazila: this.presentAddressData!.upazila,
-                            postOffice: this.presentAddressData!.postOffice,
-                            villageEnglish: this.presentAddressData!.villageEnglish || '',
-                            villageBangla: this.presentAddressData!.villageBangla || '',
-                            houseRoad: this.presentAddressData!.houseRoad || ''
-                        });
-
-                        this.disableAddressFields();
-                    },
-                    error: (err) => {
-                        console.error('Error loading address data', err);
-                        this.messageService.add({
-                            severity: 'error',
-                            summary: 'Error',
-                            detail: 'Failed to load address data'
-                        });
-                        this.addressForm.patchValue({ sameAsPresent: false });
-                    }
-                });
-            } else {
-                // No cascading data needed, just patch values
-                this.addressForm.patchValue(this.presentAddressData);
-                this.disableAddressFields();
-            }
+            // Emit event to request source address data from parent
+            this.onSameAsPresentRequest.emit();
         } else {
             this.enableAddressFields();
             // Reset form when unchecked
@@ -236,6 +268,78 @@ export class AddressFormComponent implements OnInit {
             this.districts = [];
             this.upazilas = [];
             this.postOffices = [];
+        }
+    }
+
+    // Public method for parent to populate this form with source address data
+    populateFromSourceAddress(sourceData: AddressData): void {
+        if (!sourceData || !sourceData.division) {
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'Warning',
+                detail: 'Please fill Permanent Address first'
+            });
+            this.addressForm.patchValue({ sameAsPresent: false });
+            return;
+        }
+
+        // Load all cascading dropdowns first, then set values
+        const requests: any = {};
+
+        if (sourceData.division) {
+            requests.districts = this.commonCodeService.getAllActiveCommonCodesByParentId(sourceData.division);
+        }
+        if (sourceData.district) {
+            requests.upazilas = this.commonCodeService.getAllActiveCommonCodesByParentId(sourceData.district);
+        }
+        if (sourceData.upazila) {
+            requests.postOffices = this.commonCodeService.getAllActiveCommonCodesByParentId(sourceData.upazila);
+        }
+
+        // Load all dropdown data first
+        if (Object.keys(requests).length > 0) {
+            forkJoin(requests).subscribe({
+                next: (results: any) => {
+                    // Set dropdown options
+                    if (results.districts) this.districts = results.districts;
+                    if (results.upazilas) this.upazilas = results.upazilas;
+                    if (results.postOffices) this.postOffices = results.postOffices;
+
+                    // Now patch form with source address data
+                    this.addressForm.patchValue({
+                        division: sourceData.division,
+                        district: sourceData.district,
+                        upazila: sourceData.upazila,
+                        postOffice: sourceData.postOffice,
+                        villageEnglish: sourceData.villageEnglish || '',
+                        villageBangla: sourceData.villageBangla || '',
+                        houseRoad: sourceData.houseRoad || ''
+                    });
+
+                    this.disableAddressFields();
+                },
+                error: (err) => {
+                    console.error('Error loading address data', err);
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'Error',
+                        detail: 'Failed to load address data'
+                    });
+                    this.addressForm.patchValue({ sameAsPresent: false });
+                }
+            });
+        } else {
+            // No cascading data needed, just patch values
+            this.addressForm.patchValue({
+                division: sourceData.division,
+                district: sourceData.district,
+                upazila: sourceData.upazila,
+                postOffice: sourceData.postOffice,
+                villageEnglish: sourceData.villageEnglish || '',
+                villageBangla: sourceData.villageBangla || '',
+                houseRoad: sourceData.houseRoad || ''
+            });
+            this.disableAddressFields();
         }
     }
 
@@ -260,6 +364,24 @@ export class AddressFormComponent implements OnInit {
 
     handleCancel(): void {
         this.onCancel.emit();
+    }
+
+    // Public method to get form data for parent component
+    getFormData(): { data: AddressData; valid: boolean } {
+        return {
+            data: {
+                employeeId: this.config.employeeId,
+                ...this.addressForm.getRawValue()
+            },
+            valid: this.addressForm.valid
+        };
+    }
+
+    // Mark form as touched to show validation errors
+    markAsTouched(): void {
+        Object.keys(this.addressForm.controls).forEach(key => {
+            this.addressForm.get(key)?.markAsTouched();
+        });
     }
 
     isFieldInvalid(fieldName: string): boolean {
