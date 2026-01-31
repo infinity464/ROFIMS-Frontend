@@ -1,0 +1,157 @@
+<p-fluid>
+    <div class="card">
+        <div class="font-semibold text-xl mb-5">Bank Setup</div>
+
+        <form [formGroup]="bankForm" (ngSubmit)="onSubmit()">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+
+                <!-- Bank Name EN -->
+                <div class="field">
+                    <label for="bankNameEN" class="block mb-2">
+                        Bank Name (English) <span class="text-red-500">*</span>
+                    </label>
+                    <input pInputText id="bankNameEN"
+                           formControlName="bankNameEN"
+                           placeholder="Enter bank name (English)"
+                           class="w-full" />
+                    @if (bankForm.get('bankNameEN')?.invalid && bankForm.get('bankNameEN')?.touched) {
+                        <small class="text-red-500 block mt-1">
+                            Bank Name (English) is required
+                        </small>
+                    }
+                </div>
+
+                <!-- Bank Name BN -->
+                <div class="field">
+                    <label for="bankNameBN" class="block mb-2">
+                        Bank Name (Bangla) <span class="text-red-500">*</span>
+                    </label>
+                    <input pInputText id="bankNameBN"
+                           formControlName="bankNameBN"
+                           placeholder="Enter bank name (Bangla)"
+                           class="w-full" />
+                    @if (bankForm.get('bankNameBN')?.invalid && bankForm.get('bankNameBN')?.touched) {
+                        <small class="text-red-500 block mt-1">
+                            Bank Name (Bangla) is required
+                        </small>
+                    }
+                </div>
+
+                <!-- Branch Name -->
+                <div class="field">
+                    <label for="branchName" class="block mb-2">
+                        Branch Name
+                    </label>
+                    <input pInputText id="branchName"
+                           formControlName="branchName"
+                           placeholder="Enter branch name"
+                           class="w-full" />
+                </div>
+
+                <!-- Routing Number -->
+                <div class="field">
+                    <label for="routingNumber" class="block mb-2">
+                        Routing Number
+                    </label>
+                    <input pInputText id="routingNumber"
+                           formControlName="routingNumber"
+                           placeholder="Enter routing number"
+                           class="w-full" />
+                </div>
+
+                <!-- Swift Code -->
+                <div class="field">
+                    <label for="swiftCode" class="block mb-2">
+                        SWIFT Code
+                    </label>
+                    <input pInputText id="swiftCode"
+                           formControlName="swiftCode"
+                           placeholder="Enter SWIFT code"
+                           class="w-full" />
+                </div>
+
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex justify-end gap-2">
+                <p-button
+                    [label]="editingId ? 'Update' : 'Save'"
+                    type="submit"
+                    [disabled]="bankForm.invalid || isSubmitting">
+                </p-button>
+
+                <p-button
+                    label="Reset"
+                    icon="pi pi-refresh"
+                    severity="secondary"
+                    type="button"
+                    (onClick)="onReset()"
+                    [disabled]="isSubmitting">
+                </p-button>
+            </div>
+        </form>
+    </div>
+</p-fluid>
+
+<div class="card mt-4">
+    <div class="flex justify-between items-center flex-column sm:flex-row mb-4">
+        <p-iconfield iconPosition="left" class="ml-auto">
+            <p-inputicon>
+                <i class="pi pi-search"></i>
+            </p-inputicon>
+            <input
+                pInputText
+                type="text"
+                placeholder="Search bank"
+                (input)="onSearch($event)" />
+        </p-iconfield>
+    </div>
+
+    <p-table
+        [value]="filteredBanks"
+        [paginator]="true"
+        [first]="first"
+        [rows]="rows"
+        [totalRecords]="totalRecords"
+        [rowsPerPageOptions]="[10, 25, 50]">
+
+        <ng-template pTemplate="header">
+            <tr>
+                <th style="width:5%">#</th>
+                <th>Bank Name (English)</th>
+                <th>Bank Name (Bangla)</th>
+                <th>Branch</th>
+                <th>Routing No</th>
+                <th style="width:15%">Action</th>
+            </tr>
+        </ng-template>
+
+        <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+            <tr>
+                <td>{{ first + rowIndex + 1 }}</td>
+                <td>{{ row.bankNameEN }}</td>
+                <td>{{ row.bankNameBN }}</td>
+                <td>{{ row.branchName || '-' }}</td>
+                <td>{{ row.routingNumber || '-' }}</td>
+
+                <td>
+                    <div class="flex gap-2">
+                        <button
+                            pButton
+                            icon="pi pi-pencil"
+                            (click)="onEdit(row)">
+                        </button>
+
+                        <button
+                            pButton
+                            icon="pi pi-trash"
+                            class="p-button-danger"
+                            (click)="onDelete(row, $event)">
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        </ng-template>
+
+    </p-table>
+</div>

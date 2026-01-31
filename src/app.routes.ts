@@ -52,6 +52,8 @@ import { CourseName } from '@/Components/basic-setup/course-name/course-name';
 import { EmpBasicInfo } from '@/Components/Features/Emp/emp-basic-info/emp-basic-info';
 import { Prefix } from '@/Components/basic-setup/prefix/prefix';
 import { Gender } from '@/Components/basic-setup/gender/gender';
+import { Bank } from '@/Components/basic-setup/bank/bank';
+import { TrainingInstitution } from '@/Components/basic-setup/training-institution/training-institution';
 
 export const appRoutes: Routes = [
     // Public routes
@@ -109,6 +111,8 @@ export const appRoutes: Routes = [
             { path: 'basic-setup/rab-branch', component: RabBranch },
             { path: 'basic-setup/course-name', component: CourseName },
             { path: 'personal-info', component: PersonalInfo },
+            { path: 'basic-setup/bank', component: Bank },
+            { path: 'basic-setup/training-institution', component: TrainingInstitution },
 
             // EMP
             {path: 'emp-basic-info', component: EmpBasicInfo},

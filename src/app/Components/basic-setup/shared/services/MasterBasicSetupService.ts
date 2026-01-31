@@ -5,6 +5,8 @@ import { CommonCode } from '../models/common-code';
 import { Observable } from 'rxjs';
 import { PagedResponse } from '@/Core/Models/Pagination';
 import { OrganizationModel } from '../../organization-setup/models/organization';
+import { BankModel } from '../models/bank';
+import { TrainingInstituteModel } from '../models/training-institution';
 
 @Injectable({
     providedIn: 'root'
@@ -12,6 +14,8 @@ import { OrganizationModel } from '../../organization-setup/models/organization'
 export class MasterBasicSetupService {
     private http = inject(HttpClient);
     private apiUrl = `${environment.apis.core}/CommonCode`;
+    private apiUrlBank = `${environment.apis.core}/Bank`;
+     private apiUrlTraining = `${environment.apis.core}/TrainingInstitute`;
 
     getAllByType(codeType: string): Observable<CommonCode[]> {
         return this.http.get<CommonCode[]>(`${this.apiUrl}/GetByTypeAsyn/${codeType}`);
@@ -24,7 +28,7 @@ export class MasterBasicSetupService {
         return this.http.get<CommonCode[]>(`${this.apiUrl}/GetParentalInfoAsyn/${codeId}`);
     }
 
-   getAllActiveMotherOrgs(): Observable<OrganizationModel[]> {
+    getAllActiveMotherOrgs(): Observable<OrganizationModel[]> {
         return this.http.get<OrganizationModel[]>(`${environment.apis.core}/MotherOrg/GetAllActiveMotherOrgs`);
     }
 
@@ -51,4 +55,52 @@ export class MasterBasicSetupService {
     delete(id: number): Observable<void> {
         return this.http.delete<void>(`${this.apiUrl}/DeleteAsyn/${id}`);
     }
+
+    // Bank
+
+    // GET: all banks
+    getAllBank(): Observable<BankModel[]> {
+        return this.http.get<BankModel[]>(`${this.apiUrlBank}/GetAll`);
+    }
+
+    // GET: bank by id
+    getBankById(id: number): Observable<BankModel> {
+        return this.http.get<BankModel>(`${this.apiUrlBank}/GetById/${id}`);
+    }
+
+    // POST: create bank
+    createBank(model: BankModel): Observable<any> {
+        return this.http.post(`${this.apiUrlBank}/SaveAsyn`, model);
+    }
+
+    // PUT: update bank
+    updateBank( model: BankModel): Observable<any> {
+        return this.http.put(`${this.apiUrlBank}/UpdateAsyn`, model);
+    }
+
+    // DELETE: delete bank
+    deleteBank(id: number): Observable<any> {
+        return this.http.delete(`${this.apiUrlBank}/DeleteAsyn/${id}`);
+    }
+
+
+  // GET: all training institutes
+  getAllInstitute(): Observable<TrainingInstituteModel[]> {
+    return this.http.get<TrainingInstituteModel[]>(`${this.apiUrlTraining}/GetAll`);
+  }
+
+  // POST: create
+  createInstitute(model: TrainingInstituteModel): Observable<any> {
+    return this.http.post(`${this.apiUrlTraining}/SaveAsyn`, model);
+  }
+
+  // PUT: update
+  updateInstitute(model: TrainingInstituteModel): Observable<any> {
+    return this.http.put(`${this.apiUrlTraining}/UpdateAsyn`, model);
+  }
+
+  // DELETE: delete
+  deleteInstitute(id: number): Observable<any> {
+    return this.http.delete(`${this.apiUrlTraining}/DeleteAsyn/${id}`);
+  }
 }
