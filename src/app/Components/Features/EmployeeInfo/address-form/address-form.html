@@ -1,0 +1,169 @@
+<p-fluid>
+  <div class="mb-5 card">
+    <!-- Header + Same as Present -->
+    <div class="flex align-items-center justify-content-between mb-4">
+      <h3 class="m-0 text-xl font-bold text-900">{{ formTitle }}</h3>
+
+      <div *ngIf="showSameAsPresentCheckbox" class="flex align-items-center">
+        <p-checkbox
+          formControlName="sameAsPresent"
+          [binary]="true"
+          inputId="sameAsPresent">
+        </p-checkbox>
+        <label for="sameAsPresent" class="ml-2 cursor-pointer font-semibold text-700">
+          Same as Present Address
+        </label>
+      </div>
+    </div>
+
+    <form [formGroup]="addressForm">
+      <div class="surface-50 border-round-2xl p-4">
+
+        <!-- Row 1: Division -> District -> Upazila -> Post Office -->
+        <div class="flex flex-wrap gap-3 mb-4">
+
+          <!-- Division -->
+          <div class="flex-1" style="min-width: 200px">
+            <label class="font-semibold block mb-2 text-700">
+              Division <span class="text-red-500">*</span>
+            </label>
+            <p-select
+              [options]="divisions"
+              formControlName="division"
+              optionLabel="codeValueEN"
+              optionValue="codeId"
+              placeholder="Select Division"
+              styleClass="w-full"
+              filterPlaceholder="Search Division"
+              (onChange)="onDivisionChange($event.value)"
+              >
+            </p-select>
+            <small *ngIf="isFieldInvalid('division')" class="text-red-500">
+              {{ getErrorMessage('division') }}
+            </small>
+          </div>
+
+          <!-- District -->
+          <div class="flex-1" style="min-width: 200px">
+            <label class="font-semibold block mb-2 text-700">
+              District <span class="text-red-500">*</span>
+            </label>
+            <p-select
+              [options]="districts"
+              formControlName="district"
+              optionLabel="codeValueEN"
+              optionValue="codeId"
+              placeholder="Select District"
+              styleClass="w-full"
+              [filter]="true"
+              filterPlaceholder="Search District"
+              (onChange)="onDistrictChange($event.value)"
+              [disabled]="!addressForm.get('division')?.value">
+            </p-select>
+            <small *ngIf="isFieldInvalid('district')" class="text-red-500">
+              {{ getErrorMessage('district') }}
+            </small>
+          </div>
+
+          <!-- Upazila -->
+          <div class="flex-1" style="min-width: 200px">
+            <label class="font-semibold block mb-2 text-700">
+              Upazila/Thana <span class="text-red-500">*</span>
+            </label>
+            <p-select
+              [options]="upazilas"
+              formControlName="upazila"
+              optionLabel="codeValueEN"
+              optionValue="codeId"
+              placeholder="Select Upazila"
+              styleClass="w-full"
+              [filter]="true"
+              filterPlaceholder="Search Upazila"
+              [disabled]="!addressForm.get('district')?.value"
+              (onChange)="onUpazilaChange($event.value)"
+              >
+            </p-select>
+            <small *ngIf="isFieldInvalid('upazila')" class="text-red-500">
+              {{ getErrorMessage('upazila') }}
+            </small>
+          </div>
+
+          <!-- Post Office -->
+          <div class="flex-1" style="min-width: 200px">
+            <label class="font-semibold block mb-2 text-700">
+              Post Office <span class="text-red-500">*</span>
+            </label>
+            <p-select
+              [options]="postOffices"
+              formControlName="postOffice"
+              optionLabel="codeValueEN"
+              optionValue="codeId"
+              placeholder="Select Post Office"
+              styleClass="w-full"
+              [filter]="true"
+              filterPlaceholder="Search Post Office"
+              [disabled]="!addressForm.get('upazila')?.value">
+              <ng-template let-office pTemplate="item">
+                <div>{{ office.nameEN }} ({{ office.code }})</div>
+              </ng-template>
+            </p-select>
+            <small *ngIf="isFieldInvalid('postOffice')" class="text-red-500">
+              {{ getErrorMessage('postOffice') }}
+            </small>
+          </div>
+
+        </div>
+
+        <!-- Row 2: Village/House -->
+        <div class="flex flex-wrap gap-3 mb-4">
+          <div class="flex-1" style="min-width: 200px">
+            <label class="font-semibold block mb-2 text-700">
+              Village/Area (English)
+            </label>
+            <input pInputText class="w-full" placeholder="Enter village/area name in English"
+              formControlName="villageEnglish" />
+          </div>
+
+          <div class="flex-1" style="min-width: 200px">
+            <label class="font-semibold block mb-2 text-700">
+              Village/Area (Bangla)
+            </label>
+            <input pInputText class="w-full" placeholder="গ্রাম/এলাকা বাংলায় লিখুন"
+              formControlName="villageBangla" />
+          </div>
+
+          <div class="flex-1" style="min-width: 200px">
+            <label class="font-semibold block mb-2 text-700">
+              House/Road/Block/Sector
+            </label>
+            <input pInputText class="w-full" placeholder="Enter house number, road, block, sector"
+              formControlName="houseRoad" />
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex flex-col sm:flex-row gap-2 justify-end mt-4">
+        <p-button
+          type="button"
+          label="Cancel"
+          icon="pi pi-times"
+          severity="secondary"
+          [outlined]="true"
+          (onClick)="handleCancel()">
+        </p-button>
+
+        <p-button
+          type="button"
+          label="Save {{ config.addressType }} Address"
+          icon="pi pi-save"
+          severity="success"
+          [disabled]="addressForm.invalid"
+          (onClick)="handleSave()">
+        </p-button>
+      </div>
+
+    </form>
+  </div>
+</p-fluid>

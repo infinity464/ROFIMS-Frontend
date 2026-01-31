@@ -53,7 +53,6 @@ import { EmpBasicInfo } from '@/Components/Features/Emp/emp-basic-info/emp-basic
 import { Prefix } from '@/Components/basic-setup/prefix/prefix';
 import { Gender } from '@/Components/basic-setup/gender/gender';
 
-
 export const appRoutes: Routes = [
     // Public routes
     { path: 'login', component: Login },

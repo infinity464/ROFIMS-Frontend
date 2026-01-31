@@ -12,15 +12,60 @@ import { CommonCodeService } from '@/services/common-code-service';
 import { DropdownOption } from '@/models/drop-down-options';
 import { MessageService } from 'primeng/api';
 import { Fluid } from 'primeng/fluid';
+import { AddressData, AddressFormConfig, AddressFormComponent } from '../../EmployeeInfo/address-form/address-form';
 
 @Component({
     selector: 'app-emp-basic-info',
-    imports: [FileUpload, Fluid, Button, ButtonModule, Select, DatePicker, ReactiveFormsModule, InputTextModule],
+    imports: [FileUpload, Fluid, Button, ButtonModule, Select, DatePicker, ReactiveFormsModule, InputTextModule, AddressFormComponent],
     templateUrl: './emp-basic-info.html',
     styleUrl: './emp-basic-info.scss'
 })
 export class EmpBasicInfo {
     @ViewChild('fileUpload') fileUpload!: FileUpload;
+
+
+
+
+
+
+
+    employeeId = 101; // example
+
+  // Store addresses
+  presentAddress?: AddressData;
+  permanentAddress?: AddressData;
+
+  // Present address config
+  presentAddressConfig: AddressFormConfig = {
+    title: 'Present Address',
+    addressType: 'present',
+    employeeId: this.employeeId
+  };
+
+  // Permanent address config
+  permanentAddressConfig: AddressFormConfig = {
+    title: 'Permanent Address',
+    addressType: 'permanent',
+    showSameAsPresent: true,
+    employeeId: this.employeeId
+  };
+
+  // Save handlers
+  savePresentAddress(data: AddressData) {
+    this.presentAddress = data;
+    console.log('Present Address Saved', data);
+  }
+
+  savePermanentAddress(data: AddressData) {
+    this.permanentAddress = data;
+    console.log('Permanent Address Saved', data);
+  }
+
+  cancelAddress() {
+    console.log('Address editing cancelled');
+  }
+
+
 
     postingForm!: FormGroup;
     imagePreview: string | null = null;
