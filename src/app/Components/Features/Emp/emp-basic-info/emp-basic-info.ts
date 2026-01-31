@@ -1,5 +1,5 @@
 import { Component, ViewChild } from '@angular/core';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
 import { FileUpload } from 'primeng/fileupload';
 import { Select } from 'primeng/select';
 import { DatePicker } from 'primeng/datepicker';
@@ -12,11 +12,12 @@ import { CommonCodeService } from '@/services/common-code-service';
 import { DropdownOption } from '@/models/drop-down-options';
 import { MessageService } from 'primeng/api';
 import { Fluid } from 'primeng/fluid';
+import { Checkbox } from 'primeng/checkbox';
 import { AddressData, AddressFormConfig, AddressFormComponent } from '../../EmployeeInfo/address-form/address-form';
 
 @Component({
     selector: 'app-emp-basic-info',
-    imports: [FileUpload, Fluid, Button, ButtonModule, Select, DatePicker, ReactiveFormsModule, InputTextModule, AddressFormComponent],
+    imports: [FileUpload, Fluid, Button, ButtonModule, Select, DatePicker, ReactiveFormsModule, FormsModule, InputTextModule, AddressFormComponent, Checkbox],
     templateUrl: './emp-basic-info.html',
     styleUrl: './emp-basic-info.scss'
 })
@@ -29,36 +30,363 @@ export class EmpBasicInfo {
 
 
 
-    employeeId = 101; // example
+    employeeId = 0; // Will be set after save
+    generatedEmployeeId: number | null = null;
 
   // Store addresses
   presentAddress?: AddressData;
   permanentAddress?: AddressData;
+  wifePermanentAddress?: AddressData;
+  wifePresentAddress?: AddressData;
 
-  // Present address config
-  presentAddressConfig: AddressFormConfig = {
-    title: 'Present Address',
-    addressType: 'present',
-    employeeId: this.employeeId
-  };
+  // Store generated AddressIds
+  permanentAddressId?: number;
+  presentAddressId?: number;
+  wifePermanentAddressId?: number;
+  wifePresentAddressId?: number;
 
-  // Permanent address config
+  // Permanent address config (first)
   permanentAddressConfig: AddressFormConfig = {
     title: 'Permanent Address',
     addressType: 'permanent',
+    employeeId: this.employeeId
+  };
+
+  // Present address config (second, with "Same as Permanent" option)
+  presentAddressConfig: AddressFormConfig = {
+    title: 'Present Address',
+    addressType: 'present',
     showSameAsPresent: true,
     employeeId: this.employeeId
   };
 
+  // Wife Permanent address config
+  wifePermanentAddressConfig: AddressFormConfig = {
+    title: 'Wife Permanent Address',
+    addressType: 'wife',
+    employeeId: this.employeeId
+  };
+
+  // Wife Present address config (with "Same as Wife Permanent" option)
+  wifePresentAddressConfig: AddressFormConfig = {
+    title: 'Wife Present Address',
+    addressType: 'wife',
+    showSameAsPresent: true,
+    employeeId: this.employeeId
+  };
+
+  // Service ID validation
+  isServiceIdDuplicate: boolean = false;
+  isCheckingServiceId: boolean = false;
+
+  checkServiceIdDuplicate(serviceId: string): void {
+    if (!serviceId || serviceId.trim() === '') {
+      this.isServiceIdDuplicate = false;
+      return;
+    }
+
+    this.isCheckingServiceId = true;
+    this.empService.searchEmployees({ serviceId: serviceId }).subscribe({
+      next: (res) => {
+        // If any employee found with same serviceId, it's a duplicate
+        this.isServiceIdDuplicate = res && res.length > 0;
+        this.isCheckingServiceId = false;
+
+        if (this.isServiceIdDuplicate) {
+          this.messageService.add({
+            severity: 'warn',
+            summary: 'Duplicate Service ID',
+            detail: 'This Service ID already exists in the system'
+          });
+        }
+      },
+      error: (err) => {
+        console.error('Error checking service ID', err);
+        this.isCheckingServiceId = false;
+      }
+    });
+  }
+
+  // Reliever section
+  isReliever: boolean = false;
+  existingEmployees: any[] = [];
+  selectedRelieverEmployeeId: number | null = null;
+  selectedRelieverEmployee: any = null;
+
+  onRelieverCheckChange(checked: boolean): void {
+    this.isReliever = checked;
+    if (checked && this.existingEmployees.length === 0) {
+      this.loadExistingEmployees();
+    }
+    if (!checked) {
+      this.selectedRelieverEmployeeId = null;
+      this.selectedRelieverEmployee = null;
+    }
+  }
+
+  loadExistingEmployees(): void {
+    this.empService.getAll().subscribe({
+      next: (res) => {
+        this.existingEmployees = res;
+      },
+      error: (err) => {
+        console.error('Failed to load employees', err);
+      }
+    });
+  }
+
+  onRelieverEmployeeSelect(employeeId: number): void {
+    this.selectedRelieverEmployeeId = employeeId;
+    this.selectedRelieverEmployee = this.existingEmployees.find(e => e.employeeID === employeeId);
+  }
+
+  updateRelieverId(): void {
+    if (!this.generatedEmployeeId) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Warning',
+        detail: 'Please save employee first'
+      });
+      return;
+    }
+
+    if (!this.selectedRelieverEmployeeId) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Warning',
+        detail: 'Please select a reliever employee'
+      });
+      return;
+    }
+
+    const payload = {
+      relieverId: this.selectedRelieverEmployeeId
+    };
+
+    this.empService.updateEmployee(this.generatedEmployeeId, payload).subscribe({
+      next: (res) => {
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Success',
+          detail: 'Reliever information updated successfully'
+        });
+      },
+      error: (err) => {
+        console.error('Failed to update reliever', err);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to update reliever information'
+        });
+      }
+    });
+  }
+
   // Save handlers
   savePresentAddress(data: AddressData) {
-    this.presentAddress = data;
-    console.log('Present Address Saved', data);
+    if (!this.generatedEmployeeId) {
+        this.messageService.add({
+            severity: 'warn',
+            summary: 'Warning',
+            detail: 'Please save employee first'
+        });
+        return;
+    }
+
+    const addressPayload = {
+        EmployeeID: this.generatedEmployeeId,
+        AddressId: 0,  // Auto-generated
+        FMID: 0,
+        LocationType: 'PRESENT',
+        LocationCode: `${data.division}-${data.district}-${data.upazila}`,
+        PostCode: data.postOffice?.toString() || '',
+        AddressAreaEN: data.villageEnglish || '',
+        AddressAreaBN: data.villageBangla || '',
+        DivisionType: data.division,
+        ThanType: data.upazila,
+        PostOfficeType: data.postOffice,
+        CreatedBy: 'system',
+        CreatedDate: new Date().toISOString(),
+        LastUpdatedBy: 'system',
+        Lastupdate: new Date().toISOString()
+    };
+
+    this.empService.saveAddress(addressPayload).subscribe({
+        next: (res) => {
+            this.presentAddress = data;
+            // Capture generated AddressId
+            const addressId = res?.data?.addressId || res?.Data?.AddressId || res?.addressId;
+            if (addressId) this.presentAddressId = addressId;
+            this.messageService.add({
+                severity: 'success',
+                summary: 'Success',
+                detail: 'Present address saved successfully'
+            });
+        },
+        error: (err) => {
+            console.error('Error saving address', err);
+            this.messageService.add({
+                severity: 'error',
+                summary: 'Error',
+                detail: 'Failed to save address'
+            });
+        }
+    });
   }
 
   savePermanentAddress(data: AddressData) {
-    this.permanentAddress = data;
-    console.log('Permanent Address Saved', data);
+    if (!this.generatedEmployeeId) {
+        this.messageService.add({
+            severity: 'warn',
+            summary: 'Warning',
+            detail: 'Please save employee first'
+        });
+        return;
+    }
+
+    const addressPayload = {
+        EmployeeID: this.generatedEmployeeId,
+        AddressId: 0,  // Auto-generated
+        FMID: 0,
+        LocationType: 'PERMANENT',
+        LocationCode: `${data.division}-${data.district}-${data.upazila}`,
+        PostCode: data.postOffice?.toString() || '',
+        AddressAreaEN: data.villageEnglish || '',
+        AddressAreaBN: data.villageBangla || '',
+        DivisionType: data.division,
+        ThanType: data.upazila,
+        PostOfficeType: data.postOffice,
+        CreatedBy: 'system',
+        CreatedDate: new Date().toISOString(),
+        LastUpdatedBy: 'system',
+        Lastupdate: new Date().toISOString()
+    };
+
+    this.empService.saveAddress(addressPayload).subscribe({
+        next: (res) => {
+            this.permanentAddress = data;
+            // Capture generated AddressId
+            const addressId = res?.data?.addressId || res?.Data?.AddressId || res?.addressId;
+            if (addressId) this.permanentAddressId = addressId;
+            this.messageService.add({
+                severity: 'success',
+                summary: 'Success',
+                detail: 'Permanent address saved successfully'
+            });
+        },
+        error: (err) => {
+            console.error('Error saving address', err);
+            this.messageService.add({
+                severity: 'error',
+                summary: 'Error',
+                detail: 'Failed to save address'
+            });
+        }
+    });
+  }
+
+  // Wife Permanent Address save handler
+  saveWifePermanentAddress(data: AddressData) {
+    if (!this.generatedEmployeeId) {
+        this.messageService.add({
+            severity: 'warn',
+            summary: 'Warning',
+            detail: 'Please save employee first'
+        });
+        return;
+    }
+
+    const addressPayload = {
+        EmployeeID: this.generatedEmployeeId,
+        AddressId: 0,
+        FMID: 0,
+        LocationType: 'WIFE_PERMANENT',
+        LocationCode: `${data.division}-${data.district}-${data.upazila}`,
+        PostCode: data.postOffice?.toString() || '',
+        AddressAreaEN: data.villageEnglish || '',
+        AddressAreaBN: data.villageBangla || '',
+        DivisionType: data.division,
+        ThanType: data.upazila,
+        PostOfficeType: data.postOffice,
+        CreatedBy: 'system',
+        CreatedDate: new Date().toISOString(),
+        LastUpdatedBy: 'system',
+        Lastupdate: new Date().toISOString()
+    };
+
+    this.empService.saveAddress(addressPayload).subscribe({
+        next: (res) => {
+            this.wifePermanentAddress = data;
+            // Capture generated AddressId
+            const addressId = res?.data?.addressId || res?.Data?.AddressId || res?.addressId;
+            if (addressId) this.wifePermanentAddressId = addressId;
+            this.messageService.add({
+                severity: 'success',
+                summary: 'Success',
+                detail: 'Wife permanent address saved successfully'
+            });
+        },
+        error: (err) => {
+            console.error('Error saving address', err);
+            this.messageService.add({
+                severity: 'error',
+                summary: 'Error',
+                detail: 'Failed to save address'
+            });
+        }
+    });
+  }
+
+  // Wife Present Address save handler
+  saveWifePresentAddress(data: AddressData) {
+    if (!this.generatedEmployeeId) {
+        this.messageService.add({
+            severity: 'warn',
+            summary: 'Warning',
+            detail: 'Please save employee first'
+        });
+        return;
+    }
+
+    const addressPayload = {
+        EmployeeID: this.generatedEmployeeId,
+        AddressId: 0,
+        FMID: 0,
+        LocationType: 'WIFE_PRESENT',
+        LocationCode: `${data.division}-${data.district}-${data.upazila}`,
+        PostCode: data.postOffice?.toString() || '',
+        AddressAreaEN: data.villageEnglish || '',
+        AddressAreaBN: data.villageBangla || '',
+        DivisionType: data.division,
+        ThanType: data.upazila,
+        PostOfficeType: data.postOffice,
+        CreatedBy: 'system',
+        CreatedDate: new Date().toISOString(),
+        LastUpdatedBy: 'system',
+        Lastupdate: new Date().toISOString()
+    };
+
+    this.empService.saveAddress(addressPayload).subscribe({
+        next: (res) => {
+            this.wifePresentAddress = data;
+            // Capture generated AddressId
+            const addressId = res?.data?.addressId || res?.Data?.AddressId || res?.addressId;
+            if (addressId) this.wifePresentAddressId = addressId;
+            this.messageService.add({
+                severity: 'success',
+                summary: 'Success',
+                detail: 'Wife present address saved successfully'
+            });
+        },
+        error: (err) => {
+            console.error('Error saving address', err);
+            this.messageService.add({
+                severity: 'error',
+                summary: 'Error',
+                detail: 'Failed to save address'
+            });
+        }
+    });
   }
 
   cancelAddress() {
@@ -322,6 +650,19 @@ export class EmpBasicInfo {
             this.empService.saveEmployee(formattedData).subscribe({
                 next: (res) => {
                     console.log('Saved successfully', res);
+
+                    // Get generated EmployeeID from response
+                    const employeeId = res?.data?.employeeID || res?.Data?.EmployeeID;
+
+                    if (employeeId) {
+                        this.generatedEmployeeId = employeeId;
+                        // Update address config with new EmployeeID
+                        this.presentAddressConfig.employeeId = employeeId;
+                        this.permanentAddressConfig.employeeId = employeeId;
+                        this.wifePermanentAddressConfig.employeeId = employeeId;
+                        this.wifePresentAddressConfig.employeeId = employeeId;
+                    }
+
                     this.messageService.add({
                         severity: 'success',
                         summary: 'Success',

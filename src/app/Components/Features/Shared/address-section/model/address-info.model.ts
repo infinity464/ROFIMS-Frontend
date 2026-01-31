@@ -3,12 +3,16 @@ export interface AddressInfoModel {
   addressId: number;
   fmid: number;
 
-  locationType: string; 
+  locationType: string;
   locationCode: string;
   postCode: string;
 
   addressAreaEN: string;
   addressAreaBN: string;
+
+  divisionType?: number;
+  thanType?: number;
+  postOfficeType?: number;
 
   createdBy: string;
   createdDate: string;

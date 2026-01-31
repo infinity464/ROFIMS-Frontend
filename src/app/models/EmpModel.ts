@@ -25,7 +25,7 @@ export interface EmpModel {
   StatusDate?: Date | string;
 }
 
-export interface AddressInfoModel {
+export interface AddressInfoModelLower {
   employeeID: number;
   addressId: number;
   fmid: number;
@@ -36,6 +36,10 @@ export interface AddressInfoModel {
 
   addressAreaEN: string;
   addressAreaBN: string;
+
+  divisionType?: number;
+  thanType?: number;
+  postOfficeType?: number;
 
   createdBy: string;
   createdDate: string;
@@ -57,9 +61,12 @@ export interface AddressInfoModel {
   FMID: number;
   LocationType: LocationType;
   LocationCode: string;
-  PostCode: string; // ✅ Changed from number to string
+  PostCode: string;
   AddressAreaEN?: string;
   AddressAreaBN?: string;
+  DivisionType?: number;
+  ThanType?: number;
+  PostOfficeType?: number;
   CreatedBy?: string;
   CreatedDate?: Date | string;
   LastUpdatedBy?: string;

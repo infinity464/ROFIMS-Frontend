@@ -7,6 +7,8 @@ import { Checkbox } from 'primeng/checkbox';
 import { Select } from 'primeng/select';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
+import { MessageService } from 'primeng/api';
+import { forkJoin } from 'rxjs';
 
 export interface AddressData {
     employeeId?: number;
@@ -36,6 +38,7 @@ export interface AddressFormConfig {
 export class AddressFormComponent implements OnInit {
     @Input() config!: AddressFormConfig;
     @Input() presentAddressData?: AddressData; // For "Same as Present" functionality
+    @Input() savedAddressId?: number; // Generated AddressId after save
 
     @Output() onSave = new EventEmitter<AddressData>();
     @Output() onCancel = new EventEmitter<void>();
@@ -56,7 +59,8 @@ export class AddressFormComponent implements OnInit {
 
     constructor(
         private fb: FormBuilder,
-        private commonCodeService: CommonCodeService
+        private commonCodeService: CommonCodeService,
+        private messageService: MessageService
     ) {}
 
     ngOnInit(): void {
@@ -154,16 +158,84 @@ export class AddressFormComponent implements OnInit {
     }
 
     onSameAsPresentChange(checked: boolean): void {
-        if (checked && this.presentAddressData) {
-            this.districts = this.allDistricts.filter((d) => d.divisionId === this.presentAddressData!.division);
-            this.upazilas = this.allUpazilas.filter((u) => u.districtId === this.presentAddressData!.district);
-            this.postOffices = this.allPostOffices.filter((p) => p.upazilaId === this.presentAddressData!.upazila);
+        if (checked) {
+            // Check if permanent address data exists
+            if (!this.presentAddressData || !this.presentAddressData.division) {
+                this.messageService.add({
+                    severity: 'warn',
+                    summary: 'Warning',
+                    detail: 'Please save Permanent Address first'
+                });
+                // Reset checkbox to unchecked
+                this.addressForm.patchValue({ sameAsPresent: false });
+                return;
+            }
 
-            this.addressForm.patchValue(this.presentAddressData);
+            // Load all cascading dropdowns first, then set values
+            const requests: any = {};
 
-            this.disableAddressFields();
+            if (this.presentAddressData.division) {
+                requests.districts = this.commonCodeService.getAllActiveCommonCodesByParentId(this.presentAddressData.division);
+            }
+            if (this.presentAddressData.district) {
+                requests.upazilas = this.commonCodeService.getAllActiveCommonCodesByParentId(this.presentAddressData.district);
+            }
+            if (this.presentAddressData.upazila) {
+                requests.postOffices = this.commonCodeService.getAllActiveCommonCodesByParentId(this.presentAddressData.upazila);
+            }
+
+            // Load all dropdown data first
+            if (Object.keys(requests).length > 0) {
+                forkJoin(requests).subscribe({
+                    next: (results: any) => {
+                        // Set dropdown options
+                        if (results.districts) this.districts = results.districts;
+                        if (results.upazilas) this.upazilas = results.upazilas;
+                        if (results.postOffices) this.postOffices = results.postOffices;
+
+                        // Now patch form with permanent address data
+                        this.addressForm.patchValue({
+                            division: this.presentAddressData!.division,
+                            district: this.presentAddressData!.district,
+                            upazila: this.presentAddressData!.upazila,
+                            postOffice: this.presentAddressData!.postOffice,
+                            villageEnglish: this.presentAddressData!.villageEnglish || '',
+                            villageBangla: this.presentAddressData!.villageBangla || '',
+                            houseRoad: this.presentAddressData!.houseRoad || ''
+                        });
+
+                        this.disableAddressFields();
+                    },
+                    error: (err) => {
+                        console.error('Error loading address data', err);
+                        this.messageService.add({
+                            severity: 'error',
+                            summary: 'Error',
+                            detail: 'Failed to load address data'
+                        });
+                        this.addressForm.patchValue({ sameAsPresent: false });
+                    }
+                });
+            } else {
+                // No cascading data needed, just patch values
+                this.addressForm.patchValue(this.presentAddressData);
+                this.disableAddressFields();
+            }
         } else {
             this.enableAddressFields();
+            // Reset form when unchecked
+            this.addressForm.patchValue({
+                division: null,
+                district: null,
+                upazila: null,
+                postOffice: null,
+                villageEnglish: '',
+                villageBangla: '',
+                houseRoad: ''
+            });
+            this.districts = [];
+            this.upazilas = [];
+            this.postOffices = [];
         }
     }
 
@@ -208,6 +280,6 @@ export class AddressFormComponent implements OnInit {
     }
 
     get showSameAsPresentCheckbox(): boolean {
-        return this.config.showSameAsPresent === true && this.config.addressType !== 'present' && !!this.presentAddressData;
+        return this.config.showSameAsPresent === true;
     }
 }

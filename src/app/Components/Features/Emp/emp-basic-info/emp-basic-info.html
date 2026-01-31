@@ -1,7 +1,14 @@
 <p-fluid>
     <div class="mb-5 card">
-        <div class="flex align-items-center gap-2 mb-4">
+        <div class="flex align-items-center gap-3 mb-4">
             <h3 class="m-0 text-xl font-bold text-900">New Posting Entry Form</h3>
+            <!-- Show generated EmployeeID -->
+            @if (generatedEmployeeId) {
+                <div class="flex align-items-center gap-2">
+                    <span class="text-500 text-sm">Employee ID:</span>
+                    <span class="surface-200 border-round px-2 py-1 text-sm font-semibold text-primary">{{ generatedEmployeeId }}</span>
+                </div>
+            }
         </div>
 
         <form [formGroup]="postingForm" (ngSubmit)="onSubmit()">
@@ -229,10 +236,23 @@
                         <label class="font-semibold block mb-2 text-700">
                             Service ID <span class="text-red-500">*</span>
                         </label>
-                        <input pInputText class="w-full" placeholder="Only Number" formControlName="serviceId" />
+                        <div class="p-inputgroup">
+                            <input pInputText class="w-full" placeholder="Only Number" formControlName="serviceId"
+                                (blur)="checkServiceIdDuplicate($event.target.value)" />
+                            @if (isCheckingServiceId) {
+                                <span class="p-inputgroup-addon">
+                                    <i class="pi pi-spin pi-spinner"></i>
+                                </span>
+                            }
+                        </div>
                         @if (isFieldInvalid('serviceId')) {
                         <small class="text-red-500">
                             {{ getErrorMessage('serviceId') }}
+                        </small>
+                        }
+                        @if (isServiceIdDuplicate) {
+                        <small class="text-red-500">
+                            This Service ID already exists in the system
                         </small>
                         }
                     </div>
@@ -275,16 +295,130 @@
 
 
             <div class="flex flex-col sm:flex-row gap-2 justify-end">
-                <p-button type="submit" label="Save" [disabled]="postingForm.invalid"
+                <p-button type="submit" label="Save" [disabled]="postingForm.invalid || isServiceIdDuplicate || isCheckingServiceId"
                     [fluid]="false"></p-button>
 
             </div>
         </form>
     </div>
-</p-fluid>
 
-<app-address-form
-  [config]="presentAddressConfig"
-  (onSave)="savePresentAddress($event)"
-  (onCancel)="cancelAddress()">
-</app-address-form>
+    <!-- Permanent Address Section -->
+    <app-address-form
+      [config]="permanentAddressConfig"
+      [savedAddressId]="permanentAddressId"
+      (onSave)="savePermanentAddress($event)"
+      (onCancel)="cancelAddress()">
+    </app-address-form>
+
+    <!-- Present Address Section -->
+    <app-address-form
+      [config]="presentAddressConfig"
+      [presentAddressData]="permanentAddress"
+      [savedAddressId]="presentAddressId"
+      (onSave)="savePresentAddress($event)"
+      (onCancel)="cancelAddress()">
+    </app-address-form>
+
+    <!-- Wife Permanent Address Section -->
+    <app-address-form
+      [config]="wifePermanentAddressConfig"
+      [savedAddressId]="wifePermanentAddressId"
+      (onSave)="saveWifePermanentAddress($event)"
+      (onCancel)="cancelAddress()">
+    </app-address-form>
+
+    <!-- Wife Present Address Section -->
+    <app-address-form
+      [config]="wifePresentAddressConfig"
+      [presentAddressData]="wifePermanentAddress"
+      [savedAddressId]="wifePresentAddressId"
+      (onSave)="saveWifePresentAddress($event)"
+      (onCancel)="cancelAddress()">
+    </app-address-form>
+
+    <!-- Reliever Section -->
+    <div class="mb-5 card">
+        <div class="mb-4">
+            <h3 class="m-0 text-xl font-bold text-900 mb-3">Reliever Information</h3>
+        </div>
+
+        <div class="surface-50 border-round-2xl p-4">
+            <!-- Checkbox: Is he a reliever? -->
+            <div class="flex align-items-center gap-2 mb-4">
+                <p-checkbox
+                    [(ngModel)]="isReliever"
+                    [binary]="true"
+                    inputId="isReliever"
+                    (onChange)="onRelieverCheckChange($event.checked)">
+                </p-checkbox>
+                <label for="isReliever" class="cursor-pointer font-semibold text-700">
+                    Is he a reliever of any presently serving member?
+                </label>
+            </div>
+
+            <!-- Show dropdown if checked -->
+            @if (isReliever) {
+                <div class="flex flex-wrap gap-3 mb-4">
+                    <div class="flex-1" style="min-width: 300px; max-width: 400px;">
+                        <label class="font-semibold block mb-2 text-700">
+                            Select Presently Serving Member <span class="text-red-500">*</span>
+                        </label>
+                        <p-select
+                            [options]="existingEmployees"
+                            [(ngModel)]="selectedRelieverEmployeeId"
+                            optionLabel="fullNameEN"
+                            optionValue="employeeID"
+                            placeholder="Search by RAB ID / Service ID / Name"
+                            styleClass="w-full"
+                            [filter]="true"
+                            filterPlaceholder="Search employee..."
+                            (onChange)="onRelieverEmployeeSelect($event.value)">
+                            <ng-template let-emp pTemplate="item">
+                                <div class="flex flex-column">
+                                    <span class="font-semibold">{{ emp.fullNameEN }}</span>
+                                    <small class="text-500">Service ID: {{ emp.serviceId }} | RAB ID: {{ emp.rabid }}</small>
+                                </div>
+                            </ng-template>
+                        </p-select>
+                    </div>
+                </div>
+
+                <!-- Show selected employee details -->
+                @if (selectedRelieverEmployee) {
+                    <div class="surface-100 border-round p-3 mb-4">
+                        <h4 class="m-0 mb-2 text-700">Selected Member Details</h4>
+                        <div class="flex flex-wrap gap-4">
+                            <div>
+                                <span class="text-500 text-sm">Service ID:</span>
+                                <span class="ml-2 font-semibold">{{ selectedRelieverEmployee.serviceId }}</span>
+                            </div>
+                            <div>
+                                <span class="text-500 text-sm">RAB ID:</span>
+                                <span class="ml-2 font-semibold">{{ selectedRelieverEmployee.rabid || 'N/A' }}</span>
+                            </div>
+                            <div>
+                                <span class="text-500 text-sm">Name:</span>
+                                <span class="ml-2 font-semibold">{{ selectedRelieverEmployee.fullNameEN }}</span>
+                            </div>
+                            <div>
+                                <span class="text-500 text-sm">Rank:</span>
+                                <span class="ml-2 font-semibold">{{ selectedRelieverEmployee.rank || 'N/A' }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Update Button -->
+                    <div class="flex justify-end">
+                        <p-button
+                            type="button"
+                            label="Update Reliever Info"
+                            icon="pi pi-save"
+                            severity="success"
+                            (onClick)="updateRelieverId()">
+                        </p-button>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</p-fluid>

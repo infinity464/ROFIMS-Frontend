@@ -1,0 +1,149 @@
+<p-toast></p-toast>
+<p-confirmDialog></p-confirmDialog>
+
+<div class="card">
+    <div class="flex justify-content-between align-items-center mb-4">
+        <h2 class="m-0 text-2xl font-bold text-900">Employee List</h2>
+        <p-button
+            label="Add New Employee"
+            icon="pi pi-plus"
+            severity="success"
+            (onClick)="addNewEmployee()">
+        </p-button>
+    </div>
+
+    <p-table
+        #dt
+        [value]="employees"
+        [paginator]="true"
+        [rows]="10"
+        [rowsPerPageOptions]="[10, 25, 50, 100]"
+        [showCurrentPageReport]="true"
+        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} employees"
+        [loading]="loading"
+        [globalFilterFields]="['fullNameEN', 'fullNameBN', 'serviceId', 'rabid']"
+        dataKey="employeeID"
+        [tableStyle]="{ 'min-width': '60rem' }">
+
+        <!-- Header -->
+        <ng-template pTemplate="caption">
+            <div class="flex flex-wrap gap-2 align-items-center justify-content-between">
+                <p-iconfield>
+                    <p-inputicon styleClass="pi pi-search"></p-inputicon>
+                    <input
+                        pInputText
+                        type="text"
+                        [(ngModel)]="searchValue"
+                        (input)="onGlobalFilter(dt, $event)"
+                        placeholder="Search employees..."
+                        class="w-full sm:w-auto" />
+                </p-iconfield>
+
+                <div class="flex gap-2">
+                    <p-button
+                        label="Clear"
+                        icon="pi pi-filter-slash"
+                        severity="secondary"
+                        [outlined]="true"
+                        (onClick)="clearFilter(dt)">
+                    </p-button>
+                    <p-button
+                        label="Refresh"
+                        icon="pi pi-refresh"
+                        severity="info"
+                        [outlined]="true"
+                        (onClick)="loadEmployees()">
+                    </p-button>
+                </div>
+            </div>
+        </ng-template>
+
+        <!-- Table Header -->
+        <ng-template pTemplate="header">
+            <tr>
+                <th pSortableColumn="employeeID" style="width: 80px">
+                    ID <p-sortIcon field="employeeID"></p-sortIcon>
+                </th>
+                <th pSortableColumn="serviceId" style="width: 120px">
+                    Service ID <p-sortIcon field="serviceId"></p-sortIcon>
+                </th>
+                <th pSortableColumn="fullNameEN" style="min-width: 180px">
+                    Name (English) <p-sortIcon field="fullNameEN"></p-sortIcon>
+                </th>
+                <th pSortableColumn="fullNameBN" style="min-width: 180px">
+                    Name (Bangla) <p-sortIcon field="fullNameBN"></p-sortIcon>
+                </th>
+                <th pSortableColumn="joiningDate" style="width: 120px">
+                    Joining Date <p-sortIcon field="joiningDate"></p-sortIcon>
+                </th>
+                <th pSortableColumn="status" style="width: 100px">
+                    Status <p-sortIcon field="status"></p-sortIcon>
+                </th>
+                <th style="width: 120px">Actions</th>
+            </tr>
+        </ng-template>
+
+        <!-- Table Body -->
+        <ng-template pTemplate="body" let-employee>
+            <tr>
+                <td>{{ employee.employeeID }}</td>
+                <td>
+                    <span class="font-semibold">{{ employee.serviceId }}</span>
+                </td>
+                <td>{{ employee.fullNameEN }}</td>
+                <td>{{ employee.fullNameBN }}</td>
+                <td>{{ employee.joiningDate | date: 'dd-MMM-yyyy' }}</td>
+                <td>
+                    <p-tag
+                        [value]="getStatusLabel(employee.status)"
+                        [severity]="getStatusSeverity(employee.status)">
+                    </p-tag>
+                </td>
+                <td>
+                    <div class="flex gap-1">
+                        <p-button
+                            icon="pi pi-eye"
+                            [rounded]="true"
+                            [text]="true"
+                            severity="info"
+                            pTooltip="View"
+                            tooltipPosition="top"
+                            (onClick)="viewEmployee(employee)">
+                        </p-button>
+                        <p-button
+                            icon="pi pi-pencil"
+                            [rounded]="true"
+                            [text]="true"
+                            severity="success"
+                            pTooltip="Edit"
+                            tooltipPosition="top"
+                            (onClick)="editEmployee(employee)">
+                        </p-button>
+                        <p-button
+                            icon="pi pi-trash"
+                            [rounded]="true"
+                            [text]="true"
+                            severity="danger"
+                            pTooltip="Delete"
+                            tooltipPosition="top"
+                            (onClick)="confirmDelete(employee)">
+                        </p-button>
+                    </div>
+                </td>
+            </tr>
+        </ng-template>
+
+        <!-- Empty Message -->
+        <ng-template pTemplate="emptymessage">
+            <tr>
+                <td colspan="7" class="text-center p-4">
+                    <div class="flex flex-column align-items-center gap-3 py-5">
+                        <i class="pi pi-users text-5xl text-400"></i>
+                        <span class="text-lg text-500">No employees found</span>
+                    </div>
+                </td>
+            </tr>
+        </ng-template>
+
+    </p-table>
+</div>

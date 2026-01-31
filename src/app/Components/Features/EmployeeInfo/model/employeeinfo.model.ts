@@ -44,6 +44,9 @@ export interface AddressInfoModel {
   PostCode: string; // ✅ Changed from number to string
   AddressAreaEN?: string;
   AddressAreaBN?: string;
+  DivisionType?: number | null;
+  ThanType?: number | null;
+  PostOfficeType?: number | null;
   CreatedBy?: string;
   CreatedDate?: Date | string;
   LastUpdatedBy?: string;

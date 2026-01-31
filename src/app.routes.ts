@@ -50,6 +50,7 @@ import { Country } from '@/Components/basic-setup/country/country';
 import { RabBranch } from '@/Components/basic-setup/rab-branch/rab-branch';
 import { CourseName } from '@/Components/basic-setup/course-name/course-name';
 import { EmpBasicInfo } from '@/Components/Features/Emp/emp-basic-info/emp-basic-info';
+import { EmpList } from '@/Components/Features/Emp/emp-list/emp-list';
 import { Prefix } from '@/Components/basic-setup/prefix/prefix';
 import { Gender } from '@/Components/basic-setup/gender/gender';
 import { Bank } from '@/Components/basic-setup/bank/bank';
@@ -117,7 +118,8 @@ export const appRoutes: Routes = [
             { path: 'basic-setup/rank-equivalent', component: RankEquivalent },
 
             // EMP
-            {path: 'emp-basic-info', component: EmpBasicInfo},
+            { path: 'emp-list', component: EmpList },
+            { path: 'emp-basic-info', component: EmpBasicInfo },
 
             { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
             { path: 'documentation', component: Documentation },

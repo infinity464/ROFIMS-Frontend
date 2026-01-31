@@ -6,6 +6,23 @@ import { switchMap, map } from 'rxjs/operators';
 import { from } from 'rxjs';
 import { concatMap, toArray } from 'rxjs/operators';
 import { AddressInfoModel, EmpModel } from '@/models/EmpModel';
+
+// Pagination interfaces
+export interface PaginationParams {
+    pageNumber: number;
+    pageSize: number;
+    sortField?: string;
+    sortOrder?: number; // 1 = asc, -1 = desc
+    searchText?: string;
+}
+
+export interface PaginatedResponse<T> {
+    data: T[];
+    totalRecords: number;
+    pageNumber: number;
+    pageSize: number;
+}
+
 @Injectable({
     providedIn: 'root'
 })
@@ -16,6 +33,11 @@ export class EmpService {
 
     getAll(): Observable<EmpModel[]> {
         return this.http.get<EmpModel[]>(`${this.empApi}/EmployeeInfo/GetAll`);
+    }
+
+    // Server-side pagination
+    getPaginated(params: PaginationParams): Observable<PaginatedResponse<any>> {
+        return this.http.post<PaginatedResponse<any>>(`${this.empApi}/EmployeeInfo/GetPaginated`, params);
     }
 
     getEmployeeById(employeeId: number): Observable<EmpModel> {

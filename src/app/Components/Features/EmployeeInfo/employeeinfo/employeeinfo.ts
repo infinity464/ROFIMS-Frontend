@@ -299,9 +299,12 @@ export class Employeeinfo implements OnInit {
         PostCode: v.perPostOffice?.toString() || '',
         AddressAreaEN: v.perVillageEnglish || '',
         AddressAreaBN: v.perVillageBangla || '',
-        CreatedBy: 'system', // ✅ Fixed - changed from 1 to 'system'
+        DivisionType: v.perDivision || null,
+        ThanType: v.perUpazila || null,
+        PostOfficeType: v.perPostOffice || null,
+        CreatedBy: 'system',
         CreatedDate: now,
-        LastUpdatedBy: 'system', // ✅ Fixed - changed from 1 to 'system'
+        LastUpdatedBy: 'system',
         Lastupdate: now
     });
 
@@ -316,9 +319,12 @@ export class Employeeinfo implements OnInit {
             PostCode: v.prePostOffice?.toString() || '',
             AddressAreaEN: v.preVillageEnglish || '',
             AddressAreaBN: v.preVillageBangla || '',
-            CreatedBy: 'system', // ✅ Fixed
+            DivisionType: v.preDivision || null,
+            ThanType: v.preUpazila || null,
+            PostOfficeType: v.prePostOffice || null,
+            CreatedBy: 'system',
             CreatedDate: now,
-            LastUpdatedBy: 'system', // ✅ Fixed
+            LastUpdatedBy: 'system',
             Lastupdate: now
         });
     }
@@ -334,9 +340,12 @@ export class Employeeinfo implements OnInit {
             PostCode: v.wifePerPostOffice?.toString() || '',
             AddressAreaEN: v.wifePerVillageEnglish || '',
             AddressAreaBN: v.wifePerVillageBangla || '',
-            CreatedBy: 'system', // ✅ Fixed
+            DivisionType: v.wifePerDivision || null,
+            ThanType: v.wifePerUpazila || null,
+            PostOfficeType: v.wifePerPostOffice || null,
+            CreatedBy: 'system',
             CreatedDate: now,
-            LastUpdatedBy: 'system', // ✅ Fixed
+            LastUpdatedBy: 'system',
             Lastupdate: now
         });
     }
@@ -352,7 +361,10 @@ export class Employeeinfo implements OnInit {
             PostCode: v.wifePrePostOffice?.toString() || '',
             AddressAreaEN: v.wifePreVillageEnglish || '',
             AddressAreaBN: v.wifePreVillageBangla || '',
-            CreatedBy: 'system', // ✅ Fixed
+            DivisionType: v.wifePreDivision || null,
+            ThanType: v.wifePreUpazila || null,
+            PostOfficeType: v.wifePrePostOffice || null,
+            CreatedBy: 'system',
             CreatedDate: now,
             LastUpdatedBy: 'system',
             Lastupdate: now

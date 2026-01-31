@@ -27,9 +27,10 @@ export class AppMenu {
             {
                 label: 'Emp',
                 items: [
+                    { label: 'Employee List', icon: 'pi pi-fw pi-list', routerLink: ['/emp-list'] },
                     { label: 'EmployeeInfo', routerLink: ['/employee-info'] },
-                    { label: 'New Joing', routerLink: ['/emp-basic-info'] },
-                    { label: 'Personal Info', icon: 'pi pi-pw pi-id-card', routerLink: ['/personal-info'] }
+                    { label: 'New Joining', icon: 'pi pi-fw pi-user-plus', routerLink: ['/emp-basic-info'] },
+                    { label: 'Personal Info', icon: 'pi pi-fw pi-id-card', routerLink: ['/personal-info'] }
                 ]
             },
             {
