@@ -37,30 +37,24 @@ export interface AddressFormConfig {
 })
 export class AddressFormComponent implements OnInit, OnChanges {
     @Input() config!: AddressFormConfig;
-    @Input() presentAddressData?: AddressData; // For "Same as Present" functionality
     @Input() savedAddressId?: number; // Generated AddressId after save
     @Input() showButtons: boolean = true; // Control visibility of save/cancel buttons
     @Input() showCard: boolean = true; // Control visibility of card wrapper
     @Input() isReadonly: boolean = false; // Control readonly mode
     @Input() initialAddressData?: AddressData; // Initial data for view/edit mode
+    @Input() isOptional: boolean = false; // When true, fields are not required
 
     @Output() onSave = new EventEmitter<AddressData>();
     @Output() onCancel = new EventEmitter<void>();
     @Output() onSameAsPresentRequest = new EventEmitter<void>(); // Request parent for source address data
 
     addressForm!: FormGroup;
-    // sameAsPresent: boolean = false;
 
     // Dropdown options
     divisions: any[] = [];
     districts: any[] = [];
     upazilas: any[] = [];
     postOffices: any[] = [];
-
-    // All data for cascading
-    allDistricts: any[] = [];
-    allUpazilas: any[] = [];
-    allPostOffices: any[] = [];
 
     constructor(
         private fb: FormBuilder,
@@ -104,19 +98,18 @@ export class AddressFormComponent implements OnInit, OnChanges {
     }
 
     initializeForm(): void {
+        const requiredValidator = this.isOptional ? [] : [Validators.required];
         this.addressForm = this.fb.group({
             sameAsPresent: [false],
-            division: [null, Validators.required],
-            district: [null, Validators.required],
-            upazila: [null, Validators.required],
-            postOffice: [null, Validators.required],
+            division: [null, requiredValidator],
+            district: [null, requiredValidator],
+            upazila: [null, requiredValidator],
+            postOffice: [null, requiredValidator],
             villageEnglish: [''],
             villageBangla: [''],
             houseRoad: ['']
         });
     }
-
-
 
     loadDivisions(): void {
         this.commonCodeService.getAllActiveCommonCodesType('Division').subscribe({
@@ -212,12 +205,7 @@ export class AddressFormComponent implements OnInit, OnChanges {
     }
 
 
-
-
-
-
     onDivisionChange(divisionId: number): void {
-        console.log("OK");
         // Reset dependent fields
         this.addressForm.patchValue({
             district: null,
@@ -403,5 +391,11 @@ export class AddressFormComponent implements OnInit, OnChanges {
 
     get showSameAsPresentCheckbox(): boolean {
         return this.config.showSameAsPresent === true;
+    }
+
+    // Check if form has meaningful data (division is selected)
+    hasData(): boolean {
+        const division = this.addressForm.get('division')?.value;
+        return division !== null && division !== undefined;
     }
 }

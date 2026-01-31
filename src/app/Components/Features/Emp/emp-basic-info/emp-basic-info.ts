@@ -10,7 +10,6 @@ import { CommonCodeModel } from '@/models/common-code-model';
 import { EmpService } from '@/services/emp-service';
 import { MotherOrganizationModel } from '@/models/mother-org-model';
 import { CommonCodeService } from '@/services/common-code-service';
-import { DropdownOption } from '@/models/drop-down-options';
 import { MessageService } from 'primeng/api';
 import { Fluid } from 'primeng/fluid';
 import { Checkbox } from 'primeng/checkbox';
@@ -39,9 +38,6 @@ export class EmpBasicInfo implements OnInit {
     // Image preview modal
     showImagePreviewModal: boolean = false;
     selectedFileName: string = '';
-
-
-
 
     employeeId = 0; // Will be set after save
     generatedEmployeeId: number | null = null;
@@ -153,49 +149,6 @@ export class EmpBasicInfo implements OnInit {
     this.selectedRelieverEmployee = this.existingEmployees.find(e => e.employeeID === employeeId);
   }
 
-  updateRelieverId(): void {
-    if (!this.generatedEmployeeId) {
-      this.messageService.add({
-        severity: 'warn',
-        summary: 'Warning',
-        detail: 'Please save employee first'
-      });
-      return;
-    }
-
-    if (!this.selectedRelieverEmployeeId) {
-      this.messageService.add({
-        severity: 'warn',
-        summary: 'Warning',
-        detail: 'Please select a reliever employee'
-      });
-      return;
-    }
-
-    const payload = {
-      employeeID: this.generatedEmployeeId,
-      relieverId: this.selectedRelieverEmployeeId
-    };
-
-    this.empService.updateEmployee(payload).subscribe({
-      next: (res) => {
-        this.messageService.add({
-          severity: 'success',
-          summary: 'Success',
-          detail: 'Reliever information updated successfully'
-        });
-      },
-      error: (err) => {
-        console.error('Failed to update reliever', err);
-        this.messageService.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: 'Failed to update reliever information'
-        });
-      }
-    });
-  }
-
   // Save handlers
   savePresentAddress(data: AddressData) {
     if (!this.generatedEmployeeId) {
@@ -209,7 +162,7 @@ export class EmpBasicInfo implements OnInit {
 
     const addressPayload = {
         EmployeeID: this.generatedEmployeeId,
-        AddressId: 0,  // Auto-generated
+        AddressId: 0,
         FMID: 0,
         LocationType: 'PRESENT',
         LocationCode: `${data.division}-${data.district}-${data.upazila}`,
@@ -217,6 +170,7 @@ export class EmpBasicInfo implements OnInit {
         AddressAreaEN: data.villageEnglish || '',
         AddressAreaBN: data.villageBangla || '',
         DivisionType: data.division,
+        DistrictType: data.district,
         ThanType: data.upazila,
         PostOfficeType: data.postOffice,
         HouseRoad: data.houseRoad || '',
@@ -261,7 +215,7 @@ export class EmpBasicInfo implements OnInit {
 
     const addressPayload = {
         EmployeeID: this.generatedEmployeeId,
-        AddressId: 0,  // Auto-generated
+        AddressId: 0,
         FMID: 0,
         LocationType: 'PERMANENT',
         LocationCode: `${data.division}-${data.district}-${data.upazila}`,
@@ -269,6 +223,7 @@ export class EmpBasicInfo implements OnInit {
         AddressAreaEN: data.villageEnglish || '',
         AddressAreaBN: data.villageBangla || '',
         DivisionType: data.division,
+        DistrictType: data.district,
         ThanType: data.upazila,
         PostOfficeType: data.postOffice,
         HouseRoad: data.houseRoad || '',
@@ -322,6 +277,7 @@ export class EmpBasicInfo implements OnInit {
         AddressAreaEN: data.villageEnglish || '',
         AddressAreaBN: data.villageBangla || '',
         DivisionType: data.division,
+        DistrictType: data.district,
         ThanType: data.upazila,
         PostOfficeType: data.postOffice,
         HouseRoad: data.houseRoad || '',
@@ -375,6 +331,7 @@ export class EmpBasicInfo implements OnInit {
         AddressAreaEN: data.villageEnglish || '',
         AddressAreaBN: data.villageBangla || '',
         DivisionType: data.division,
+        DistrictType: data.district,
         ThanType: data.upazila,
         PostOfficeType: data.postOffice,
         HouseRoad: data.houseRoad || '',
@@ -452,24 +409,24 @@ export class EmpBasicInfo implements OnInit {
       return;
     }
 
-    // Validate all address forms
+    // Get form data from all address forms
     const permanentData = this.permanentAddressForm?.getFormData();
     const presentData = this.presentAddressForm?.getFormData();
     const wifePermanentData = this.wifePermanentAddressForm?.getFormData();
     const wifePresentData = this.wifePresentAddressForm?.getFormData();
 
-    const allAddressesValid = permanentData?.valid && presentData?.valid && wifePermanentData?.valid && wifePresentData?.valid;
+    // Only validate required addresses (permanent and present)
+    // Wife addresses are optional
+    const requiredAddressesValid = permanentData?.valid && presentData?.valid;
 
-    if (!allAddressesValid) {
+    if (!requiredAddressesValid) {
       this.permanentAddressForm?.markAsTouched();
       this.presentAddressForm?.markAsTouched();
-      this.wifePermanentAddressForm?.markAsTouched();
-      this.wifePresentAddressForm?.markAsTouched();
 
       this.messageService.add({
         severity: 'warn',
         summary: 'Validation Error',
-        detail: 'Please fill all required address fields'
+        detail: 'Please fill all required address fields (Permanent and Present)'
       });
       return;
     }
@@ -504,8 +461,13 @@ export class EmpBasicInfo implements OnInit {
           this.wifePermanentAddressConfig.employeeId = employeeId;
           this.wifePresentAddressConfig.employeeId = employeeId;
 
-          // Step 2: Save or Update all addresses
-          this.saveAllAddressesInternal(permanentData!.data, presentData!.data, wifePermanentData!.data, wifePresentData!.data);
+          // Step 2: Save or Update addresses (only those with data)
+          this.saveAllAddressesInternal(
+            permanentData!.data,
+            presentData!.data,
+            this.wifePermanentAddressForm?.hasData() ? wifePermanentData!.data : null,
+            this.wifePresentAddressForm?.hasData() ? wifePresentData!.data : null
+          );
         } else {
           this.messageService.add({
             severity: 'error',
@@ -526,25 +488,35 @@ export class EmpBasicInfo implements OnInit {
   }
 
   // Internal method to save or update all addresses
-  private saveAllAddressesInternal(permanent: AddressData, present: AddressData, wifePermanent: AddressData, wifePresent: AddressData): void {
-    const buildPayload = (data: AddressData, locationType: string, existingAddressId?: number) => ({
-      EmployeeID: this.generatedEmployeeId,
-      AddressId: existingAddressId || 0,
-      FMID: 0,
-      LocationType: locationType,
-      LocationCode: `${data.division}-${data.district}-${data.upazila}`,
-      PostCode: data.postOffice?.toString() || '',
-      AddressAreaEN: data.villageEnglish || '',
-      AddressAreaBN: data.villageBangla || '',
-      DivisionType: data.division,
-      ThanType: data.upazila,
-      PostOfficeType: data.postOffice,
-      HouseRoad: data.houseRoad || '',
-      CreatedBy: 'system',
-      CreatedDate: new Date().toISOString(),
-      LastUpdatedBy: 'system',
-      Lastupdate: new Date().toISOString()
-    });
+  private saveAllAddressesInternal(
+    permanent: AddressData,
+    present: AddressData,
+    wifePermanent: AddressData | null,
+    wifePresent: AddressData | null
+  ): void {
+    const buildPayload = (data: AddressData, locationType: string, existingAddressId?: number) => {
+      const payload: any = {
+        EmployeeID: this.generatedEmployeeId,
+        AddressId: existingAddressId || 0,
+        FMID: 0,
+        LocationType: locationType,
+        LocationCode: `${data.division}-${data.district}-${data.upazila}`,
+        PostCode: data.postOffice?.toString() || '',
+        AddressAreaEN: data.villageEnglish || '',
+        AddressAreaBN: data.villageBangla || '',
+        DivisionType: data.division,
+        DistrictType: data.district,
+        ThanType: data.upazila,
+        PostOfficeType: data.postOffice,
+        HouseRoad: data.houseRoad || '',
+        CreatedBy: 'system',
+        CreatedDate: new Date().toISOString(),
+        LastUpdatedBy: 'system',
+        Lastupdate: new Date().toISOString()
+      };
+      console.log('Address payload:', payload);
+      return payload;
+    };
 
     // For edit mode, use update if addressId exists; otherwise save
     const getAddressRequest = (data: AddressData, locationType: string, existingAddressId?: number) => {
@@ -554,35 +526,40 @@ export class EmpBasicInfo implements OnInit {
         : this.empService.saveAddress(payload);
     };
 
-    const saveRequests = {
+    // Build save requests - only include addresses that have data
+    const saveRequests: { [key: string]: any } = {
       permanent: getAddressRequest(permanent, 'PERMANENT', this.permanentAddressId),
-      present: getAddressRequest(present, 'PRESENT', this.presentAddressId),
-      wifePermanent: getAddressRequest(wifePermanent, 'WIFE_PERMANENT', this.wifePermanentAddressId),
-      wifePresent: getAddressRequest(wifePresent, 'WIFE_PRESENT', this.wifePresentAddressId)
+      present: getAddressRequest(present, 'PRESENT', this.presentAddressId)
     };
+
+    // Add wife addresses only if they have data
+    if (wifePermanent) {
+      saveRequests['wifePermanent'] = getAddressRequest(wifePermanent, 'WIFE_PERMANENT', this.wifePermanentAddressId);
+    }
+    if (wifePresent) {
+      saveRequests['wifePresent'] = getAddressRequest(wifePresent, 'WIFE_PRESENT', this.wifePresentAddressId);
+    }
 
     forkJoin(saveRequests).subscribe({
       next: (results: any) => {
         this.permanentAddress = permanent;
         this.presentAddress = present;
-        this.wifePermanentAddress = wifePermanent;
-        this.wifePresentAddress = wifePresent;
+        if (wifePermanent) this.wifePermanentAddress = wifePermanent;
+        if (wifePresent) this.wifePresentAddress = wifePresent;
 
         // Only update addressIds for NEW addresses (not when updating existing ones)
-        // This prevents overwriting existing IDs with undefined from update responses
         const getAddressId = (res: any) => res?.data?.addressId || res?.Data?.AddressId || res?.addressId;
         if (!this.permanentAddressId && results.permanent) this.permanentAddressId = getAddressId(results.permanent);
         if (!this.presentAddressId && results.present) this.presentAddressId = getAddressId(results.present);
         if (!this.wifePermanentAddressId && results.wifePermanent) this.wifePermanentAddressId = getAddressId(results.wifePermanent);
         if (!this.wifePresentAddressId && results.wifePresent) this.wifePresentAddressId = getAddressId(results.wifePresent);
 
-        // relieverId is now included in the main employee payload, no separate call needed
         this.messageService.add({
           severity: 'success',
           summary: 'Success',
           detail: this.isEditMode
-            ? 'Employee and all addresses updated successfully!'
-            : 'Employee and all addresses saved successfully!'
+            ? 'Employee and addresses updated successfully!'
+            : 'Employee and addresses saved successfully!'
         });
       },
       error: (err: any) => {
@@ -598,112 +575,9 @@ export class EmpBasicInfo implements OnInit {
     });
   }
 
-  saveAllAddresses(): void {
-    // Check if employee is saved first
-    if (!this.generatedEmployeeId) {
-      this.messageService.add({
-        severity: 'warn',
-        summary: 'Warning',
-        detail: 'Please save employee first before saving addresses'
-      });
-      return;
-    }
-
-    // Get form data from all address forms
-    const permanentData = this.permanentAddressForm?.getFormData();
-    const presentData = this.presentAddressForm?.getFormData();
-    const wifePermanentData = this.wifePermanentAddressForm?.getFormData();
-    const wifePresentData = this.wifePresentAddressForm?.getFormData();
-
-    // Check if all forms are valid
-    const allValid = permanentData?.valid && presentData?.valid && wifePermanentData?.valid && wifePresentData?.valid;
-
-    if (!allValid) {
-      // Mark all forms as touched to show validation errors
-      this.permanentAddressForm?.markAsTouched();
-      this.presentAddressForm?.markAsTouched();
-      this.wifePermanentAddressForm?.markAsTouched();
-      this.wifePresentAddressForm?.markAsTouched();
-
-      this.messageService.add({
-        severity: 'warn',
-        summary: 'Validation Error',
-        detail: 'Please fill all required address fields'
-      });
-      return;
-    }
-
-    // Build address payloads
-    const buildPayload = (data: AddressData, locationType: string) => ({
-      EmployeeID: this.generatedEmployeeId,
-      AddressId: 0,
-      FMID: 0,
-      LocationType: locationType,
-      LocationCode: `${data.division}-${data.district}-${data.upazila}`,
-      PostCode: data.postOffice?.toString() || '',
-      AddressAreaEN: data.villageEnglish || '',
-      AddressAreaBN: data.villageBangla || '',
-      DivisionType: data.division,
-      ThanType: data.upazila,
-      PostOfficeType: data.postOffice,
-      HouseRoad: data.houseRoad || '',
-      CreatedBy: 'system',
-      CreatedDate: new Date().toISOString(),
-      LastUpdatedBy: 'system',
-      Lastupdate: new Date().toISOString()
-    });
-
-    // Create all save requests
-    const saveRequests = {
-      permanent: this.empService.saveAddress(buildPayload(permanentData!.data, 'PERMANENT')),
-      present: this.empService.saveAddress(buildPayload(presentData!.data, 'PRESENT')),
-      wifePermanent: this.empService.saveAddress(buildPayload(wifePermanentData!.data, 'WIFE_PERMANENT')),
-      wifePresent: this.empService.saveAddress(buildPayload(wifePresentData!.data, 'WIFE_PRESENT'))
-    };
-
-    // Execute all save requests in parallel
-    forkJoin(saveRequests).subscribe({
-      next: (results: any) => {
-        // Store address data
-        this.permanentAddress = permanentData!.data;
-        this.presentAddress = presentData!.data;
-        this.wifePermanentAddress = wifePermanentData!.data;
-        this.wifePresentAddress = wifePresentData!.data;
-
-        // Capture generated AddressIds
-        const getAddressId = (res: any) => res?.data?.addressId || res?.Data?.AddressId || res?.addressId;
-        if (results.permanent) this.permanentAddressId = getAddressId(results.permanent);
-        if (results.present) this.presentAddressId = getAddressId(results.present);
-        if (results.wifePermanent) this.wifePermanentAddressId = getAddressId(results.wifePermanent);
-        if (results.wifePresent) this.wifePresentAddressId = getAddressId(results.wifePresent);
-
-        this.messageService.add({
-          severity: 'success',
-          summary: 'Success',
-          detail: 'All addresses saved successfully'
-        });
-      },
-      error: (err: any) => {
-        console.error('Error saving addresses', err);
-        this.messageService.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: 'Failed to save one or more addresses'
-        });
-      }
-    });
-  }
-
-
-
     postingForm!: FormGroup;
     imagePreview: string | null = null;
     selectedFile: File | null = null;
-
-    // Success/Error flags
-    saveSuccess = false;
-    submitSuccess = false;
-    errorMessage: string | null = null;
 
     // Dropdown options
     motherOrganizations: MotherOrganizationModel[] = [];
@@ -960,14 +834,22 @@ export class EmpBasicInfo implements OnInit {
         if (file) {
             const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
             if (!validTypes.includes(file.type)) {
-                this.showError('Please upload a valid image file (JPG, PNG, GIF)');
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: 'Please upload a valid image file (JPG, PNG, GIF)'
+                });
                 this.fileUpload.clear();
                 return;
             }
 
             // Validate file size (5MB max)
             if (file.size > 5000000) {
-                this.showError('File size must be less than 5MB');
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: 'File size must be less than 5MB'
+                });
                 this.fileUpload.clear();
                 return;
             }
@@ -1193,94 +1075,11 @@ export class EmpBasicInfo implements OnInit {
         this.postingForm.reset();
         this.imagePreview = null;
         this.selectedFile = null;
-        this.saveSuccess = false;
-        this.submitSuccess = false;
-        this.errorMessage = null;
+        this.selectedFileName = '';
 
         if (this.fileUpload) {
             this.fileUpload.clear();
         }
-    }
-
-    /**
-     * Prepare form data for submission (including file)
-     */
-    private prepareFormData(): FormData {
-        const formData = new FormData();
-        const formValues = this.postingForm.getRawValue();
-
-        // Append all form fields
-        Object.keys(formValues).forEach((key) => {
-            if (key !== 'picture' && formValues[key] !== null && formValues[key] !== undefined) {
-                formData.append(key, formValues[key]);
-            }
-        });
-
-        // Append file if exists
-        if (this.selectedFile) {
-            formData.append('picture', this.selectedFile, this.selectedFile.name);
-        }
-
-        return formData;
-    }
-
-    private saveToLocalStorage(formData: FormData): void {
-        const dataObject: any = {};
-        formData.forEach((value, key) => {
-            dataObject[key] = value;
-        });
-
-        // Save image as base64 for localStorage
-        if (this.imagePreview) {
-            dataObject.imagePreview = this.imagePreview;
-        }
-
-        localStorage.setItem('postingFormDraft', JSON.stringify(dataObject));
-    }
-
-    /**
-     * Load draft from localStorage (optional feature)
-     */
-    loadDraft(): void {
-        const draft = localStorage.getItem('postingFormDraft');
-        if (draft) {
-            try {
-                const draftData = JSON.parse(draft);
-
-                // Restore form values
-                this.postingForm.patchValue(draftData);
-
-                // Restore image preview
-                if (draftData.imagePreview) {
-                    this.imagePreview = draftData.imagePreview;
-                }
-
-                console.log('Draft loaded successfully');
-            } catch (error) {
-                console.error('Error loading draft:', error);
-            }
-        }
-    }
-
-    /**
-     * Clear draft from localStorage
-     */
-    clearDraft(): void {
-        localStorage.removeItem('postingFormDraft');
-    }
-
-    /**
-     * Mark all fields as touched to show validation errors
-     */
-    private markFormGroupTouched(formGroup: FormGroup): void {
-        Object.keys(formGroup.controls).forEach((key) => {
-            const control = formGroup.get(key);
-            control?.markAsTouched();
-
-            if (control instanceof FormGroup) {
-                this.markFormGroupTouched(control);
-            }
-        });
     }
 
     /**
@@ -1310,47 +1109,5 @@ export class EmpBasicInfo implements OnInit {
         }
 
         return 'Invalid value';
-    }
-
-    /**
-     * Show success message
-     */
-    private showSuccess(type: 'save' | 'submit'): void {
-        if (type === 'save') {
-            this.saveSuccess = true;
-            setTimeout(() => (this.saveSuccess = false), 3000);
-        } else {
-            this.submitSuccess = true;
-            setTimeout(() => (this.submitSuccess = false), 3000);
-        }
-        this.errorMessage = null;
-    }
-
-    /**
-     * Show error message
-     */
-    private showError(message: string): void {
-        this.errorMessage = message;
-        setTimeout(() => (this.errorMessage = null), 5000);
-        this.saveSuccess = false;
-        this.submitSuccess = false;
-    }
-
-    /**
-     * Get image file name
-     */
-    get imageFileName(): string {
-        return this.selectedFile ? this.selectedFile.name : 'No file selected';
-    }
-
-    /**
-     * Get image file size in KB
-     */
-    get imageFileSize(): string {
-        if (this.selectedFile) {
-            const sizeInKB = (this.selectedFile.size / 1024).toFixed(2);
-            return `${sizeInKB} KB`;
-        }
-        return '';
     }
 }

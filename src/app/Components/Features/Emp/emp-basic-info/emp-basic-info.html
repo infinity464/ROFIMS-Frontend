@@ -376,7 +376,7 @@
           </app-address-form>
         </div>
 
-        <!-- Wife Permanent Address Section -->
+        <!-- Wife Permanent Address Section (Optional) -->
         <div class="mt-1">
           <app-address-form
             #wifePermanentAddressForm
@@ -385,13 +385,14 @@
             [showButtons]="false"
             [showCard]="false"
             [isReadonly]="isViewMode"
+            [isOptional]="true"
             [initialAddressData]="wifePermanentAddress"
             (onSave)="saveWifePermanentAddress($event)"
             (onCancel)="cancelAddress()">
           </app-address-form>
         </div>
 
-        <!-- Wife Present Address Section -->
+        <!-- Wife Present Address Section (Optional) -->
         <div class="mt-1">
           <app-address-form
             #wifePresentAddressForm
@@ -400,6 +401,7 @@
             [showButtons]="false"
             [showCard]="false"
             [isReadonly]="isViewMode"
+            [isOptional]="true"
             [initialAddressData]="wifePresentAddress"
             (onSave)="saveWifePresentAddress($event)"
             (onCancel)="cancelAddress()"
