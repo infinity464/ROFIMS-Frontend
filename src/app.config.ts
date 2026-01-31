@@ -6,6 +6,7 @@ import Aura from '@primeuix/themes/aura';
 import { providePrimeNG } from 'primeng/config';
 import { appRoutes } from './app.routes';
 import { AuthInterceptor } from '@/Core/Interceptor/auth.inspector';
+import { ConfirmationService, MessageService } from 'primeng/api';
 
 
 export const appConfig: ApplicationConfig = {
@@ -14,6 +15,8 @@ export const appConfig: ApplicationConfig = {
         provideRouter(appRoutes, withInMemoryScrolling({ anchorScrolling: 'enabled', scrollPositionRestoration: 'enabled' }), withEnabledBlockingInitialNavigation()),
         // provideHttpClient(withFetch()),
         provideAnimationsAsync(),
-        providePrimeNG({ theme: { preset: Aura, options: { darkModeSelector: '.app-dark' } } })
+        providePrimeNG({ theme: { preset: Aura, options: { darkModeSelector: '.app-dark' } } }),
+        MessageService,
+        ConfirmationService
     ]
 };

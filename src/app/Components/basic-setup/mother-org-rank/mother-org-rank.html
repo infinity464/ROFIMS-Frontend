@@ -1,0 +1,26 @@
+
+<p-fluid>
+    <div class="card">
+        <div class="font-semibold text-xl mb-5">{{ title }} Setup</div>
+
+
+
+        <app-dynamic-form [config]="formConfig" [form]="commonForm" [editingId]="editingId" (save)="submit($event)"
+            (reset)="resetForm()" [isSubmitting]="isSubmitting">
+        </app-dynamic-form>
+    </div>
+</p-fluid>
+
+
+  <app-data-table
+            [config]="tableConfig"
+            [data]="commonData"
+            [first]="first"
+            [totalRecords]="totalRecords"
+            [rows]="rows"
+            [loading]="loading"
+            (edit)="update($event)"
+            (delete)="delete($event.row, $event.event)"
+            (lazyLoad)="getCommonCodeWithPaging($event)"
+            (search)="onSearch($event)">
+        </app-data-table>

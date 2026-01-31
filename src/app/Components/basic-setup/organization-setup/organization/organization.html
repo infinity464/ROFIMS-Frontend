@@ -1,0 +1,126 @@
+
+<p-fluid>
+    <div class="card">
+        <div class="font-semibold text-xl mb-5">Organization Setup</div>
+        <form [formGroup]="organizationForm" (ngSubmit)="onSubmit()">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                <!-- Organization Name (English) -->
+                <div class="field">
+                    <label for="orgNameEN" class="block mb-2">
+                        Organization Name (English)
+                        <span class="text-red-500">*</span>
+                    </label>
+                    <input pInputText id="orgNameEN" formControlName="orgNameEN" placeholder="Enter organization name"
+                        class="w-full" />
+                    @if (organizationForm.get('orgNameEN')?.invalid && organizationForm.get('orgNameEN')?.touched) {
+                    <small class="text-red-500 block mt-1">
+                        Organization Name (English) is required
+                    </small>
+                    }
+                </div>
+
+                <!-- Organization Name (Bangla) -->
+                <div class="field">
+                    <label for="orgNameBN" class="block mb-2">
+                        Organization Name (Bangla)
+                        <span class="text-red-500">*</span>
+                    </label>
+                    <input pInputText id="orgNameBN" formControlName="orgNameBN" placeholder="Enter organization name"
+                        class="w-full" />
+                    @if (organizationForm.get('orgNameBN')?.invalid && organizationForm.get('orgNameBN')?.touched) {
+                    <small class="text-red-500 block mt-1">
+                        Organization Name (Bangla) is required
+                    </small>
+                    }
+                </div>
+                <!-- Sort Order -->
+                <div class="field">
+                    <label for="sortOrder" class="block mb-2">
+                        Seniority <span class="text-red-500">*</span>
+                    </label>
+                    <input type="number" pInputText id="sortOrder" formControlName="sortOrder"
+                        placeholder="Enter sort order" class="w-full" />
+                    @if (organizationForm.get('sortOrder')?.invalid && organizationForm.get('sortOrder')?.touched) {
+                    <small class="text-red-500 block mt-1">
+                        Seniority is required
+                    </small>
+                    }
+                </div>
+
+                <!-- Status -->
+                <div class="field">
+                    <label for="status" class="block mb-2">
+                        Status
+                        <span class="text-red-500">*</span>
+                    </label>
+                    <p-select id="status" formControlName="status" [options]="statusOptions" optionLabel="label"
+                        optionValue="value" placeholder="Select status" styleClass="w-full"></p-select>
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex justify-end gap-2">
+
+                <p-button [label]="editingId ? 'Update' : 'Save'" type="submit"
+                    [disabled]="organizationForm.invalid || isSubmitting"></p-button>
+                <p-button label="Reset" icon="pi pi-refresh" severity="secondary" (onClick)="onReset()" type="button"
+                    [disabled]="isSubmitting"></p-button>
+
+            </div>
+        </form>
+    </div>
+</p-fluid>
+
+<div class="card mt-4">
+    <div class="flex justify-between items-center flex-column sm:flex-row mb-4">
+        <p-iconfield iconPosition="left" class="ml-auto">
+            <p-inputicon>
+                <i class="pi pi-search"></i>
+            </p-inputicon>
+            <input pInputText type="text" placeholder="Search keyword" (input)="onSearch($event)" />
+        </p-iconfield>
+    </div>
+
+    <p-table [value]="filteredOrganizations" [paginator]="true" [first]="first" [rows]="rows"
+        [totalRecords]="totalRecords" [rowsPerPageOptions]="[10, 25, 50]">
+        <ng-template pTemplate="header">
+            <tr>
+                <th style="width: 5%">#</th>
+                <th>Organization Name (English)</th>
+                <th>Organization Name (Bangla)</th>
+                <th>Status</th>
+                <th style="width: 15%">Action</th>
+            </tr>
+        </ng-template>
+
+        <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+            <tr>
+                <td>{{ first + rowIndex + 1 }}</td>
+                <td>{{ row.orgNameEN }}</td>
+                <td>{{ row.orgNameBN }}</td>
+                <td>
+                    <span [ngClass]="{
+                                    'text-green-600 font-semibold': row.status,
+                                    'text-red-600 font-semibold': !row.status
+                                }">
+                        {{ row.status ? 'Active' : 'Inactive' }}
+                    </span>
+                </td>
+
+                <td>
+                    <div class="flex gap-2">
+                        <button class="mx-2" pButton icon="pi pi-pencil" (click)="onEdit(row)"></button>
+                        <button pButton icon="pi pi-trash" (click)="onDelete(row, $event)"
+                            class="p-button-danger"></button>
+                    </div>
+                </td>
+            </tr>
+        </ng-template>
+
+        <!-- <ng-template pTemplate="emptymessage">
+            <tr>
+                <td colspan="4" class="text-center">No organizations found.</td>
+            </tr>
+        </ng-template> -->
+    </p-table>
+</div>

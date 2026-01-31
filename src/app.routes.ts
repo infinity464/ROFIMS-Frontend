@@ -7,33 +7,122 @@ import { Notfound } from './app/pages/notfound/notfound';
 // import { Login } from '@/pages/auth/login';
 import { Login } from '@/Components/Features/Authentication/Login/login';
 import { AuthGuard } from '@/Core/Guard/auth.guard';
-import { MotherOrg } from '@/Components/basic-setup/mother-org/mother-org';
+// import { MotherOrg } from '@/Components/basic-setup/mother-org/mother-org';
 import { Employeeinfo } from '@/Components/Features/EmployeeInfo/employeeinfo/employeeinfo';
+import { Division } from '@/Components/basic-setup/division/division';
+import { District } from '@/Components/basic-setup/district/district';
+import { Upazila } from '@/Components/basic-setup/upazila/upazila';
+import { BloodGroup } from '@/Components/basic-setup/blood-group/blood-group';
+import { Relationship } from '@/Components/basic-setup/relationship/relationship';
+import { MaritalStatus } from '@/Components/basic-setup/marital-status/marital-status';
+import { Occupation } from '@/Components/basic-setup/occupation/occupation';
+import { EducationQualification } from '@/Components/basic-setup/education-qualification/education-qualification';
+import { EducationInstitutionType } from '@/Components/basic-setup/education-institution-type/education-institution-type';
+import { CourseType } from '@/Components/basic-setup/course-type/course-type';
+import { CourseGrade } from '@/Components/basic-setup/course-grade/course-grade';
+import { PersonalQualification } from '@/Components/basic-setup/personal-qualification/personal-qualification';
+import { VisitType } from '@/Components/basic-setup/visit-type/visit-type';
+import { PunishmentType } from '@/Components/basic-setup/punishment-type/punishment-type';
+import { LeaveType } from '@/Components/basic-setup/leave-type/leave-type';
+import { EquivalentName } from '@/Components/basic-setup/equivalent-name/equivalent-name';
+import { EmployeeStatusType } from '@/Components/basic-setup/employee-status-type/employee-status-type';
+import { EmployeeType } from '@/Components/basic-setup/employee-type/employee-type';
+import { AppointmentCategory } from '@/Components/basic-setup/appointment-category/appointment-category';
+import { RabId } from '@/Components/basic-setup/rab-id/rab-id';
+import { RabUnit } from '@/Components/basic-setup/rab-unit/rab-unit';
+import { OfficerType } from '@/Components/basic-setup/officer-type/officer-type';
+import { RabWing } from '@/Components/basic-setup/rab-wing/rab-wing';
+import { EducationInstitution } from '@/Components/basic-setup/education-institution/education-institution';
+import { EducationResult } from '@/Components/basic-setup/education-result/education-result';
 import { PersonalInfo } from '@/Components/Features/PersonalInfo/personal-info/personal-info';
+import { Organization } from '@/Components/basic-setup/organization-setup/organization/organization';
+import { OrganizationUnit } from '@/Components/basic-setup/organization-setup/organization-unit/organization-unit';
+import { MotherOrgRank } from '@/Components/basic-setup/mother-org-rank/mother-org-rank';
+import { Corps } from '@/Components/basic-setup/corps/corps';
+import { Batch } from '@/Components/basic-setup/batch/batch';
+import { Decoration } from '@/Components/basic-setup/decoration/decoration';
+import { ProfessionalQualification } from '@/Components/basic-setup/professional-qualification/professional-qualification';
+import { PostOffice } from '@/Components/basic-setup/post-office/post-office';
+import { EducationalDepartment } from '@/Components/basic-setup/educational-department/educational-department';
+import { EducationSubject } from '@/Components/basic-setup/education-subject/education-subject';
+import { Trade } from '@/Components/basic-setup/trade/trade';
+import { Country } from '@/Components/basic-setup/country/country';
+import { RabBranch } from '@/Components/basic-setup/rab-branch/rab-branch';
+import { CourseName } from '@/Components/basic-setup/course-name/course-name';
+import { EmpBasicInfo } from '@/Components/Features/Emp/emp-basic-info/emp-basic-info';
+import { Prefix } from '@/Components/basic-setup/prefix/prefix';
+import { Gender } from '@/Components/basic-setup/gender/gender';
+import { Bank } from '@/Components/basic-setup/bank/bank';
+import { TrainingInstitution } from '@/Components/basic-setup/training-institution/training-institution';
 
 export const appRoutes: Routes = [
-  // Public routes
-  { path: 'login', component: Login },
-  { path: 'landing', component: Landing },
+    // Public routes
+    { path: 'login', component: Login },
+    { path: 'landing', component: Landing },
 
-  // Protected routes (inside layout)
-  {
-    path: '',
-    component: AppLayout,
-    canActivate: [AuthGuard],
-    children: [
-      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
-      { path: 'dashboard', component: Dashboard },
-      {path: 'employee-info', component: Employeeinfo},
-      {path: 'personal-info', component: PersonalInfo},
-      { path: 'basic-setup/mother-org', component: MotherOrg },
-      { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
-      { path: 'documentation', component: Documentation },
-      { path: 'pages', loadChildren: () => import('./app/pages/pages.routes') }
-    ]
-  },
+    // Protected routes (inside layout)
+    {
+        path: '',
+        component: AppLayout,
+        canActivate: [AuthGuard],
+        children: [
+            { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+            { path: 'dashboard', component: Dashboard },
+            { path: 'employee-info', component: Employeeinfo },
+            { path: 'basic-setup/division', component: Division },
+            { path: 'basic-setup/district', component: District },
+            { path: 'basic-setup/upazila', component: Upazila },
+            { path: 'basic-setup/blood-group', component: BloodGroup },
+            { path: 'basic-setup/relationship', component: Relationship },
+            { path: 'basic-setup/marital-status', component: MaritalStatus },
+            { path: 'basic-setup/occupation', component: Occupation },
+            { path: 'basic-setup/education-qualification', component: EducationQualification },
+            { path: 'basic-setup/education-institution-type', component: EducationInstitutionType },
+            { path: 'basic-setup/education-institution', component: EducationInstitution },
+            { path: 'basic-setup/education-result', component: EducationResult },
+            { path: 'basic-setup/course-type', component: CourseType },
+            { path: 'basic-setup/course-grade', component: CourseGrade },
+            { path: 'basic-setup/personal-qualification', component: PersonalQualification },
+            { path: 'basic-setup/visit-type', component: VisitType },
+            { path: 'basic-setup/punishment-type', component: PunishmentType },
+            { path: 'basic-setup/leave-type', component: LeaveType },
+            { path: 'basic-setup/equivalent-name', component: EquivalentName },
+            { path: 'basic-setup/employee-status-type', component: EmployeeStatusType },
+            { path: 'basic-setup/employee-type', component: EmployeeType },
+            { path: 'basic-setup/appointment-category', component: AppointmentCategory },
+            { path: 'basic-setup/rab-id', component: RabId },
+            { path: 'basic-setup/rab-unit', component: RabUnit },
+            { path: 'basic-setup/officer-type', component: OfficerType },
+            { path: 'basic-setup/rab-wing', component: RabWing },
+            { path: 'basic-setup/mother-org', component: Organization },
+            { path: 'basic-setup/organization-unit', component: OrganizationUnit },
+            { path: 'basic-setup/mother-org-rank', component: MotherOrgRank },
+            { path: 'basic-setup/corps', component: Corps },
+            { path: 'basic-setup/prefix', component: Prefix },
+            { path: 'basic-setup/gender', component: Gender },
+            { path: 'basic-setup/batch', component: Batch },
+            { path: 'basic-setup/decoration', component: Decoration },
+            { path: 'basic-setup/professional-qualification', component: ProfessionalQualification },
+            { path: 'basic-setup/post-office', component: PostOffice },
+            { path: 'basic-setup/educational-department', component: EducationalDepartment },
+            { path: 'basic-setup/education-subject', component: EducationSubject },
+            { path: 'basic-setup/trade', component: Trade },
+            { path: 'basic-setup/country', component: Country },
+            { path: 'basic-setup/rab-branch', component: RabBranch },
+            { path: 'basic-setup/course-name', component: CourseName },
+            { path: 'personal-info', component: PersonalInfo },
+            { path: 'basic-setup/bank', component: Bank },
+            { path: 'basic-setup/training-institution', component: TrainingInstitution },
 
-  { path: 'notfound', component: Notfound },
-  { path: '**', redirectTo: '/notfound' }
+            // EMP
+            {path: 'emp-basic-info', component: EmpBasicInfo},
+
+            { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
+            { path: 'documentation', component: Documentation },
+            { path: 'pages', loadChildren: () => import('./app/pages/pages.routes') }
+        ]
+    },
+
+    { path: 'notfound', component: Notfound },
+    { path: '**', redirectTo: '/notfound' }
 ];
-
