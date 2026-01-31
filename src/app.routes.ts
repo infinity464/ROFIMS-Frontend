@@ -54,6 +54,7 @@ import { Prefix } from '@/Components/basic-setup/prefix/prefix';
 import { Gender } from '@/Components/basic-setup/gender/gender';
 import { Bank } from '@/Components/basic-setup/bank/bank';
 import { TrainingInstitution } from '@/Components/basic-setup/training-institution/training-institution';
+import { RankEquivalent } from '@/Components/basic-setup/rank-equivalent/rank-equivalent';
 
 export const appRoutes: Routes = [
     // Public routes
@@ -113,6 +114,7 @@ export const appRoutes: Routes = [
             { path: 'personal-info', component: PersonalInfo },
             { path: 'basic-setup/bank', component: Bank },
             { path: 'basic-setup/training-institution', component: TrainingInstitution },
+            { path: 'basic-setup/rank-equivalent', component: RankEquivalent },
 
             // EMP
             {path: 'emp-basic-info', component: EmpBasicInfo},

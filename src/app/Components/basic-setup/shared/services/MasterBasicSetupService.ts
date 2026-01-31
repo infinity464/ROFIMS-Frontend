@@ -103,4 +103,6 @@ export class MasterBasicSetupService {
   deleteInstitute(id: number): Observable<any> {
     return this.http.delete(`${this.apiUrlTraining}/DeleteAsyn/${id}`);
   }
+
+
 }
