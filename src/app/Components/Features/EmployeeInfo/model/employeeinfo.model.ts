@@ -19,6 +19,9 @@ export interface EmployeeInfoModel {
   IsReliever: boolean;
   PostingStatus: string;
   Status: boolean;
+  OfficerType?: number | null;
+  OrgId?: number | null;
+  RelieverId?: number | null;
   CreatedBy?: string;
   CreatedDate?: Date | string;
   LastUpdatedBy?: string;

@@ -36,7 +36,8 @@
                         </label>
                         <p-select [options]="motherOrganizations" formControlName="motherOrganization"
                             optionLabel="orgNameEN" optionValue="orgId" placeholder="Select Mother Organization"
-                            styleClass="w-full" (onChange)="onMotherOrgChange($event.value)">
+                            styleClass="w-full" (onChange)="onMotherOrgChange($event.value)"
+                            [filter]="true" filterPlaceholder="Search">
                         </p-select>
                         @if (isFieldInvalid('motherOrganization')) {
                         <small class="text-red-500">
@@ -51,7 +52,8 @@
                         </label>
                         <p-select [options]="lastUnitOrganizations" optionLabel="orgNameEN" optionValue="orgId"
                             placeholder="Select Last Unit" styleClass="w-full" formControlName="lastMotherUnit"
-                            (onChange)="onLastUnitChange($event.value)">
+                            (onChange)="onLastUnitChange($event.value)"
+                            [filter]="true" filterPlaceholder="Search">
                         </p-select>
                         @if (isFieldInvalid('lastMotherUnit')) {
                         <small class="text-red-500">
@@ -82,7 +84,8 @@
                         </label>
                         <p-select [options]="memberTypes" optionLabel="codeValueEN" optionValue="codeId"
                             placeholder="Select Member Type" styleClass="w-full" formControlName="memberType"
-                            (onChange)="onMemberTypeChange($event.value)">
+                            (onChange)="onMemberTypeChange($event.value)"
+                            [filter]="true" filterPlaceholder="Search">
                         </p-select>
                         @if (isFieldInvalid('memberType')) {
                         <small class="text-red-500">
@@ -96,7 +99,8 @@
                             Officer Type <span class="text-red-500">*</span>
                         </label>
                         <p-select [options]="officerTypes" optionLabel="codeValueEN" optionValue="codeId"
-                            placeholder="Select Officer Type" styleClass="w-full" formControlName="officerType">
+                            placeholder="Select Officer Type" styleClass="w-full" formControlName="officerType"
+                            [filter]="true" filterPlaceholder="Search">
                         </p-select>
                         @if (isFieldInvalid('officerType')) {
                         <small class="text-red-500">
@@ -110,7 +114,8 @@
                             Appointment <span class="text-red-500">*</span>
                         </label>
                         <p-select [options]="appointments" optionLabel="codeValueEN" optionValue="codeId"
-                            placeholder="Select Appointment" styleClass="w-full" formControlName="appointment">
+                            placeholder="Select Appointment" styleClass="w-full" formControlName="appointment"
+                            [filter]="true" filterPlaceholder="Search">
                         </p-select>
                         @if (isFieldInvalid('appointment')) {
                         <small class="text-red-500">
@@ -141,7 +146,8 @@
                             Rank <span class="text-red-500">*</span>
                         </label>
                         <p-select [options]="ranks" optionLabel="codeValueEN" optionValue="codeId"
-                            placeholder="Select Rank" styleClass="w-full" formControlName="rank">
+                            placeholder="Select Rank" styleClass="w-full" formControlName="rank"
+                            [filter]="true" filterPlaceholder="Search">
                         </p-select>
                         @if (isFieldInvalid('rank')) {
                         <small class="text-red-500">
@@ -156,7 +162,8 @@
                         </label>
                         <p-select [options]="corps" optionLabel="codeValueEN" optionValue="codeId"
                             placeholder="Select Corps" styleClass="w-full" formControlName="branch"
-                            (onChange)="onChangeCorps($event.value)">
+                            (onChange)="onChangeCorps($event.value)"
+                            [filter]="true" filterPlaceholder="Search">
                         </p-select>
                         @if (isFieldInvalid('branch')) {
                         <small class="text-red-500">
@@ -170,7 +177,8 @@
                             Trade <span class="text-red-500">*</span>
                         </label>
                         <p-select [options]="trades" optionLabel="codeValueEN" optionValue="codeId"
-                            placeholder="Select Trade" styleClass="w-full" formControlName="trade">
+                            placeholder="Select Trade" styleClass="w-full" formControlName="trade"
+                            [filter]="true" filterPlaceholder="Search">
                         </p-select>
                         @if (isFieldInvalid('trade')) {
                         <small class="text-red-500">
@@ -192,7 +200,8 @@
                             Gender <span class="text-red-500">*</span>
                         </label>
                         <p-select [options]="genders" optionLabel="codeValueEN" optionValue="codeId"
-                            placeholder="Select Gender" styleClass="w-full" formControlName="gender">
+                            placeholder="Select Gender" styleClass="w-full" formControlName="gender"
+                            [filter]="true" filterPlaceholder="Search">
                         </p-select>
                         @if (isFieldInvalid('gender')) {
                         <small class="text-red-500">
@@ -206,7 +215,8 @@
                             Select Prefix <span class="text-red-500">*</span>
                         </label>
                         <p-select [options]="prefixes" optionLabel="codeValueEN" optionValue="codeId"
-                            placeholder="Select Prefix" styleClass="w-full" formControlName="prefix">
+                            placeholder="Select Prefix" styleClass="w-full" formControlName="prefix"
+                            [filter]="true" filterPlaceholder="Search">
                         </p-select>
                         @if (isFieldInvalid('prefix')) {
                         <small class="text-red-500">
@@ -234,9 +244,9 @@
                     </div>
                 </div>
 
-                <!-- Row 5: 2 Fields -->
-                <div class="flex flex-wrap gap-3">
-                    <div class="flex-1" style="min-width: 300px">
+                <!-- Row 5: Name English, Name Bangla -->
+                <div class="flex flex-wrap gap-3 mb-4">
+                    <div class="flex-1" style="min-width: 200px">
                         <label class="font-semibold block mb-2 text-700">
                             Name English <span class="text-red-500">*</span>
                         </label>
@@ -249,7 +259,7 @@
                         }
                     </div>
 
-                    <div class="flex-1" style="min-width: 300px">
+                    <div class="flex-1" style="min-width: 200px">
                         <label class="font-semibold block mb-2 text-700">
                             Name Bangla <span class="text-red-500">*</span>
                         </label>

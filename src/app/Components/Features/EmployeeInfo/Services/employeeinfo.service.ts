@@ -63,20 +63,26 @@ export class EmployeeinfoService {
     }
 
     saveCompleteProfile(employeePayload: any, addressPayload: any[]): Observable<any> {
-        const employeeID = employeePayload.EmployeeID; // 102 fixed
-
         return this.saveEmployee(employeePayload).pipe(
-            switchMap(() => {
+            switchMap((response: any) => {
+                // Get the generated EmployeeID from the response
+                const generatedEmployeeID = response?.data?.employeeID || response?.Data?.EmployeeID;
+
+                if (!generatedEmployeeID) {
+                    throw new Error('Failed to get generated EmployeeID from response');
+                }
+
+                // Update all address payloads with the generated EmployeeID
                 const updatedAddressPayload = addressPayload.map((addr) => ({
                     ...addr,
-                    EmployeeID: employeeID
+                    EmployeeID: generatedEmployeeID
                 }));
 
                 return from(updatedAddressPayload).pipe(
                     concatMap((addr) => this.saveAddress(addr)),
                     toArray(),
                     map((addressResponses) => ({
-                        employeeID,
+                        employeeID: generatedEmployeeID,
                         addresses: addressResponses
                     }))
                 );

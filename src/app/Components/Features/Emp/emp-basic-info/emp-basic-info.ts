@@ -122,7 +122,6 @@ export class EmpBasicInfo {
             nid: [''],
             fullNameEN: ['', [Validators.required, Validators.minLength(2)]],
             fullNameBN: ['', [Validators.required, Validators.minLength(2)]],
-            isReliever: [false],
             postingStatus: [''],
             status: [true],
             createdBy: ['system'],
@@ -132,8 +131,10 @@ export class EmpBasicInfo {
             statusDate: [new Date()],
             lastMotherUnitLocation: [''],
             motherOrganization: [''],
-            officerType: ['']
+            officerType: [''],
+            orgId: [null]
         });
+
     }
 
     onFileSelect(event: any): void {
@@ -205,6 +206,9 @@ export class EmpBasicInfo {
     }
 
     onMotherOrgChange(orgId: number): void {
+        // Set orgId in form
+        this.postingForm.patchValue({ orgId: orgId });
+
         this.loadMotherOrgUnits(orgId);
         this.loadMotherOrgRank(orgId);
         this.loadMotherOrgCorps(orgId);
