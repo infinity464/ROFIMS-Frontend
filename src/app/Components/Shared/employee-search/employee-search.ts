@@ -78,19 +78,19 @@ export class EmployeeSearchComponent {
 
         this.isSearching = true;
         this.empService.searchByRabIdOrServiceId(this.searchRabId || undefined, this.searchServiceId || undefined).subscribe({
-            next: (employee) => {
+            next: (employee: any) => {
                 this.isSearching = false;
                 if (employee) {
                     this.employeeFound = true;
                     this.employeeInfo = {
-                        employeeID: employee.employeeID || employee.EmployeeID,
-                        fullNameEN: employee.fullNameEN || employee.FullNameEN || '',
-                        fullNameBN: employee.fullNameBN || employee.FullNameBN,
-                        rabid: employee.rabid || employee.Rabid || '',
-                        serviceId: employee.serviceId || employee.ServiceId || '',
-                        motherOrganization: employee.motherOrganization || employee.MotherOrganization,
-                        rank: employee.rank || employee.Rank,
-                        unit: employee.unit || employee.Unit
+                        employeeID: employee.EmployeeID || employee.employeeID,
+                        fullNameEN: employee.FullNameEN || employee.fullNameEN || '',
+                        fullNameBN: employee.FullNameBN || employee.fullNameBN,
+                        rabid: employee.RABID || employee.Rabid || employee.rabid || '',
+                        serviceId: employee.ServiceId || employee.serviceId || '',
+                        motherOrganization: employee.MotherOrganization || employee.motherOrganization,
+                        rank: employee.Rank || employee.rank,
+                        unit: employee.Unit || employee.unit
                     };
                     this.onEmployeeFound.emit(this.employeeInfo);
                 } else {
