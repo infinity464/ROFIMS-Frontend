@@ -60,11 +60,9 @@
         <!-- Family Members Table -->
         @if (employeeFound) {
             <div class="surface-card border-round p-4 mb-4">
-                <div class="flex justify-content-between align-items-center mb-3">
-                    <h4 class="m-0 text-lg font-semibold">Family Members</h4>
-                    @if (!isReadonly) {
-                        <p-button label="Add Family Member" icon="pi pi-plus" (onClick)="openAddDialog()"></p-button>
-                    }
+                <div class="flex justify-content-between align-items-center gap-3 mb-3 flex-wrap">
+                    <h4 class="m-0 text-lg font-semibold white-space-nowrap">Family Members</h4>
+                    <p-button label="Add Family Member" icon="pi pi-plus" (onClick)="openAddDialog()"></p-button>
                 </div>
 
                 <p-table [value]="familyMembers" [loading]="isLoading" [tableStyle]="{'min-width': '60rem'}" styleClass="p-datatable-sm">
@@ -79,7 +77,7 @@
                             <th>NID</th>
                             <th>Mobile</th>
                             @if (isReadonly) {
-                                <th style="width: 60px;">Address</th>
+                                <th style="width: 100px;">Actions</th>
                             }
                             @if (!isReadonly) {
                                 <th style="width: 120px;">Actions</th>
@@ -98,7 +96,10 @@
                             <td>{{ member.mobileNo || 'N/A' }}</td>
                             @if (isReadonly) {
                                 <td>
-                                    <p-button icon="pi pi-map-marker" [rounded]="true" [text]="true" severity="info" pTooltip="View Address" (onClick)="openAddressDialog(member)"></p-button>
+                                    <div class="flex gap-1">
+                                        <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="info" pTooltip="Edit" (onClick)="openEditDialog(member)"></p-button>
+                                        <p-button icon="pi pi-map-marker" [rounded]="true" [text]="true" severity="success" pTooltip="View Address" (onClick)="openAddressDialog(member)"></p-button>
+                                    </div>
                                 </td>
                             }
                             @if (!isReadonly) {
@@ -106,7 +107,6 @@
                                     <div class="flex gap-2">
                                         <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="info" pTooltip="Edit" (onClick)="openEditDialog(member)"></p-button>
                                         <p-button icon="pi pi-map-marker" [rounded]="true" [text]="true" severity="success" pTooltip="Address" (onClick)="openAddressDialog(member)"></p-button>
-                                        <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" pTooltip="Delete" (onClick)="confirmDelete(member)"></p-button>
                                     </div>
                                 </td>
                             }
@@ -125,18 +125,6 @@
                 </p-table>
             </div>
 
-            <!-- Action Buttons -->
-            <div class="flex justify-end mt-4 gap-2">
-                @if (mode === 'view') {
-                    <p-button label="Back to List" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" (onClick)="goBack()"></p-button>
-                    <p-button label="Edit" icon="pi pi-pencil" (onClick)="enableEditMode()"></p-button>
-                } @else if (mode === 'search' && isReadonly) {
-                    <p-button label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" (onClick)="resetForm()"></p-button>
-                    <p-button label="Edit" icon="pi pi-pencil" (onClick)="enableSearchEditMode()"></p-button>
-                } @else {
-                    <p-button label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" (onClick)="resetForm()"></p-button>
-                }
-            </div>
         }
     </div>
 </p-fluid>
@@ -210,31 +198,35 @@
             <!-- Permanent Address Tab -->
             <p-tabpanel value="1">
                 <div class="mt-3">
-                    <app-address-form
-                        #dialogPermanentAddressForm
-                        [config]="permanentAddressConfig"
-                        [showButtons]="false"
-                        [showCard]="false"
-                        [isReadonly]="false"
-                        [initialAddressData]="dialogPermanentAddressData!"
-                        [isOptional]="true">
-                    </app-address-form>
+                    @if (displayDialog) {
+                        <app-address-form
+                            #dialogPermanentAddressForm
+                            [config]="permanentAddressConfig"
+                            [showButtons]="false"
+                            [showCard]="false"
+                            [isReadonly]="false"
+                            [initialAddressData]="dialogPermanentAddressData ?? undefined"
+                            [isOptional]="true">
+                        </app-address-form>
+                    }
                 </div>
             </p-tabpanel>
 
             <!-- Present Address Tab -->
             <p-tabpanel value="2">
                 <div class="mt-3">
-                    <app-address-form
-                        #dialogPresentAddressForm
-                        [config]="presentAddressConfig"
-                        [showButtons]="false"
-                        [showCard]="false"
-                        [isReadonly]="false"
-                        [initialAddressData]="dialogPresentAddressData!"
-                        [isOptional]="true"
-                        (onSameAsPresentRequest)="copyDialogPermanentToPresent()">
-                    </app-address-form>
+                    @if (displayDialog) {
+                        <app-address-form
+                            #dialogPresentAddressForm
+                            [config]="presentAddressConfig"
+                            [showButtons]="false"
+                            [showCard]="false"
+                            [isReadonly]="false"
+                            [initialAddressData]="dialogPresentAddressData ?? undefined"
+                            [isOptional]="true"
+                            (onSameAsPresentRequest)="copyDialogPermanentToPresent()">
+                        </app-address-form>
+                    }
                 </div>
             </p-tabpanel>
         </p-tabpanels>
@@ -259,27 +251,31 @@
             </p-tablist>
             <p-tabpanels>
                 <p-tabpanel value="0">
-                    <app-address-form
-                        #permanentAddressForm
-                        [config]="permanentAddressConfig"
-                        [showButtons]="false"
-                        [showCard]="false"
-                        [isReadonly]="isReadonly"
-                        [initialAddressData]="permanentAddressData!"
-                        [isOptional]="true">
-                    </app-address-form>
+                    @if (displayAddressDialog) {
+                        <app-address-form
+                            #permanentAddressForm
+                            [config]="permanentAddressConfig"
+                            [showButtons]="false"
+                            [showCard]="false"
+                            [isReadonly]="isReadonly"
+                            [initialAddressData]="permanentAddressData ?? undefined"
+                            [isOptional]="true">
+                        </app-address-form>
+                    }
                 </p-tabpanel>
                 <p-tabpanel value="1">
-                    <app-address-form
-                        #presentAddressForm
-                        [config]="presentAddressConfig"
-                        [showButtons]="false"
-                        [showCard]="false"
-                        [isReadonly]="isReadonly"
-                        [initialAddressData]="presentAddressData!"
-                        [isOptional]="true"
-                        (onSameAsPresentRequest)="copyPermanentToPresent()">
-                    </app-address-form>
+                    @if (displayAddressDialog) {
+                        <app-address-form
+                            #presentAddressForm
+                            [config]="presentAddressConfig"
+                            [showButtons]="false"
+                            [showCard]="false"
+                            [isReadonly]="isReadonly"
+                            [initialAddressData]="presentAddressData ?? undefined"
+                            [isOptional]="true"
+                            (onSameAsPresentRequest)="copyPermanentToPresent()">
+                        </app-address-form>
+                    }
                 </p-tabpanel>
             </p-tabpanels>
         </p-tabs>

@@ -67,6 +67,12 @@ export class AddressFormComponent implements OnInit, OnChanges {
 
     ngOnInit(): void {
         this.initializeForm();
+
+        if (!this.config) {
+            console.warn('AddressFormComponent: config is required');
+            return;
+        }
+
         this.loadDivisions();
         this.addressForm.get('sameAsPresent')!.valueChanges.subscribe((checked) => this.onSameAsPresentChange(checked));
 

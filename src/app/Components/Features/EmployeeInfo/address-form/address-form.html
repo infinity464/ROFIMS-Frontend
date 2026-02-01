@@ -1,11 +1,13 @@
-@if (showCard) {
-<p-fluid>
-  <div class="card my-0 py-0">
+@if (config) {
+  @if (showCard) {
+  <p-fluid>
+    <div class="card my-0 py-0">
+      <ng-container *ngTemplateOutlet="addressContent"></ng-container>
+    </div>
+  </p-fluid>
+  } @else {
     <ng-container *ngTemplateOutlet="addressContent"></ng-container>
-  </div>
-</p-fluid>
-} @else {
-  <ng-container *ngTemplateOutlet="addressContent"></ng-container>
+  }
 }
 
 <ng-template #addressContent>

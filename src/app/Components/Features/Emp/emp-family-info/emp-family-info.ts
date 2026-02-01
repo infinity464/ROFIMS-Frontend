@@ -89,6 +89,8 @@ export class EmpFamilyInfo implements OnInit {
     selectedFamilyMember: FamilyMember | null = null;
     permanentAddressData: AddressData | null = null;
     presentAddressData: AddressData | null = null;
+    permanentAddressId: number = 0; // Track existing AddressId for update
+    presentAddressId: number = 0; // Track existing AddressId for update
     isLoadingAddresses: boolean = false;
     isSavingAddresses: boolean = false;
 
@@ -96,6 +98,8 @@ export class EmpFamilyInfo implements OnInit {
     activeDialogTab: string = '0';
     dialogPermanentAddressData: AddressData | null = null;
     dialogPresentAddressData: AddressData | null = null;
+    dialogPermanentAddressId: number = 0; // Track existing AddressId for update in dialog
+    dialogPresentAddressId: number = 0; // Track existing AddressId for update in dialog
     isSaving: boolean = false;
 
     // Address form references
@@ -290,16 +294,20 @@ export class EmpFamilyInfo implements OnInit {
 
     openAddDialog(): void {
         this.isEditMode = false;
+        this.isReadonly = false; // Switch to edit mode when adding new family member
         this.editingFmid = null;
         this.familyForm.reset();
         this.activeDialogTab = '0';
         this.dialogPermanentAddressData = null;
         this.dialogPresentAddressData = null;
+        this.dialogPermanentAddressId = 0; // Reset for new
+        this.dialogPresentAddressId = 0; // Reset for new
         this.displayDialog = true;
     }
 
     openEditDialog(member: FamilyMember): void {
         this.isEditMode = true;
+        this.isReadonly = false; // Switch to edit mode when opening edit dialog
         this.editingFmid = member.fmid;
         this.familyForm.patchValue({
             relation: member.relation,
@@ -316,6 +324,8 @@ export class EmpFamilyInfo implements OnInit {
         this.activeDialogTab = '0';
         this.dialogPermanentAddressData = null;
         this.dialogPresentAddressData = null;
+        this.dialogPermanentAddressId = 0; // Reset, will be set by loadDialogAddresses
+        this.dialogPresentAddressId = 0; // Reset, will be set by loadDialogAddresses
         // Load existing addresses for edit mode
         this.loadDialogAddresses(member);
         this.displayDialog = true;
@@ -343,9 +353,11 @@ export class EmpFamilyInfo implements OnInit {
 
                 if (permanentAddr) {
                     this.dialogPermanentAddressData = this.mapAddressToFormData(permanentAddr);
+                    this.dialogPermanentAddressId = permanentAddr.addressId || permanentAddr.AddressId || 0;
                 }
                 if (presentAddr) {
                     this.dialogPresentAddressData = this.mapAddressToFormData(presentAddr);
+                    this.dialogPresentAddressId = presentAddr.addressId || presentAddr.AddressId || 0;
                 }
             },
             error: (err) => {
@@ -498,6 +510,8 @@ export class EmpFamilyInfo implements OnInit {
         this.selectedFamilyMember = member;
         this.permanentAddressData = null;
         this.presentAddressData = null;
+        this.permanentAddressId = 0; // Reset for new/update
+        this.presentAddressId = 0; // Reset for new/update
         this.displayAddressDialog = true;
         this.loadFamilyMemberAddresses(member);
     }
@@ -529,10 +543,12 @@ export class EmpFamilyInfo implements OnInit {
 
                 if (permanentAddr) {
                     this.permanentAddressData = this.mapAddressToFormData(permanentAddr);
+                    this.permanentAddressId = permanentAddr.addressId || permanentAddr.AddressId || 0;
                 }
 
                 if (presentAddr) {
                     this.presentAddressData = this.mapAddressToFormData(presentAddr);
+                    this.presentAddressId = presentAddr.addressId || presentAddr.AddressId || 0;
                 }
 
                 this.isLoadingAddresses = false;
@@ -599,7 +615,8 @@ export class EmpFamilyInfo implements OnInit {
                     permanentFormData.data,
                     LocationType.Permanent,
                     this.selectedFamilyMember.employeeId,
-                    this.selectedFamilyMember.fmid
+                    this.selectedFamilyMember.fmid,
+                    this.permanentAddressId // Pass existing AddressId for update
                 ).toPromise()
             );
         }
@@ -611,7 +628,8 @@ export class EmpFamilyInfo implements OnInit {
                     presentFormData.data,
                     LocationType.Present,
                     this.selectedFamilyMember.employeeId,
-                    this.selectedFamilyMember.fmid
+                    this.selectedFamilyMember.fmid,
+                    this.presentAddressId // Pass existing AddressId for update
                 ).toPromise()
             );
         }
@@ -637,10 +655,10 @@ export class EmpFamilyInfo implements OnInit {
             });
     }
 
-    saveFamilyAddress(data: AddressData, locationType: LocationType, employeeId: number, fmid: number) {
+    saveFamilyAddress(data: AddressData, locationType: LocationType, employeeId: number, fmid: number, addressId: number = 0) {
         const addressPayload = {
             EmployeeID: employeeId,
-            AddressId: 0,
+            AddressId: addressId, // Use existing AddressId for update, 0 for new
             FMID: fmid, // Pass FMID for family member address
             LocationType: locationType,
             LocationCode: `${data.division}-${data.district}-${data.upazila}`,
@@ -659,7 +677,12 @@ export class EmpFamilyInfo implements OnInit {
             Lastupdate: new Date().toISOString()
         };
 
-        return this.empService.saveAddress(addressPayload);
+        // Use updateAddress if addressId exists, otherwise saveAddress for new
+        if (addressId > 0) {
+            return this.empService.updateAddress(addressPayload);
+        } else {
+            return this.empService.saveAddress(addressPayload);
+        }
     }
 
     closeAddressDialog(): void {
@@ -667,6 +690,8 @@ export class EmpFamilyInfo implements OnInit {
         this.selectedFamilyMember = null;
         this.permanentAddressData = null;
         this.presentAddressData = null;
+        this.permanentAddressId = 0;
+        this.presentAddressId = 0;
     }
 
     // Dialog methods for Add/Edit Family Member with Address
@@ -754,14 +779,14 @@ export class EmpFamilyInfo implements OnInit {
         // Save permanent address if filled
         if (permanentFormData?.data?.division) {
             savePromises.push(
-                this.saveFamilyAddress(permanentFormData.data, LocationType.Permanent, employeeId, fmid).toPromise()
+                this.saveFamilyAddress(permanentFormData.data, LocationType.Permanent, employeeId, fmid, this.dialogPermanentAddressId).toPromise()
             );
         }
 
         // Save present address if filled
         if (presentFormData?.data?.division) {
             savePromises.push(
-                this.saveFamilyAddress(presentFormData.data, LocationType.Present, employeeId, fmid).toPromise()
+                this.saveFamilyAddress(presentFormData.data, LocationType.Present, employeeId, fmid, this.dialogPresentAddressId).toPromise()
             );
         }
 
@@ -795,6 +820,8 @@ export class EmpFamilyInfo implements OnInit {
         this.activeDialogTab = '0';
         this.dialogPermanentAddressData = null;
         this.dialogPresentAddressData = null;
+        this.dialogPermanentAddressId = 0;
+        this.dialogPresentAddressId = 0;
         this.familyForm.reset();
         this.editingFmid = null;
         this.isEditMode = false;
