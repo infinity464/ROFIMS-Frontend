@@ -16,6 +16,7 @@
             </h3>
         </div>
 
+        <!-- Search Section -->
         @if (mode === 'search') {
             <div class="surface-50 border-round-2xl p-4 mb-4">
                 <div class="flex flex-wrap gap-3 mb-4">
@@ -45,6 +46,7 @@
             </div>
         }
 
+        <!-- Employee Info Header for View/Edit Mode -->
         @if (mode !== 'search' && employeeBasicInfo) {
             <div class="surface-50 border-round-2xl p-4 mb-4">
                 <div class="flex flex-wrap gap-4">
@@ -55,11 +57,66 @@
             </div>
         }
 
+        <!-- Family Members Table -->
         @if (employeeFound) {
-            <div class="surface-50 border-round-2xl p-4 mb-4">
-                <p class="text-600">Family information form will be displayed here...</p>
+            <div class="surface-card border-round p-4 mb-4">
+                <div class="flex justify-content-between align-items-center mb-3">
+                    <h4 class="m-0 text-lg font-semibold">Family Members</h4>
+                    @if (!isReadonly) {
+                        <p-button label="Add Family Member" icon="pi pi-plus" (onClick)="openAddDialog()"></p-button>
+                    }
+                </div>
+
+                <p-table [value]="familyMembers" [loading]="isLoading" [tableStyle]="{'min-width': '60rem'}" styleClass="p-datatable-sm">
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th>Relation</th>
+                            <th>Name (EN)</th>
+                            <th>Name (BN)</th>
+                            <th>Date of Birth</th>
+                            <th>Marital Status</th>
+                            <th>Occupation</th>
+                            <th>NID</th>
+                            <th>Mobile</th>
+                            @if (!isReadonly) {
+                                <th style="width: 100px;">Actions</th>
+                            }
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-member>
+                        <tr>
+                            <td>{{ getRelationName(member.relation) }}</td>
+                            <td>{{ member.nameEN || 'N/A' }}</td>
+                            <td>{{ member.nameBN || 'N/A' }}</td>
+                            <td>{{ member.dob ? (member.dob | date:'dd/MM/yyyy') : 'N/A' }}</td>
+                            <td>{{ getMaritalStatusName(member.maritalStatus) }}</td>
+                            <td>{{ getOccupationName(member.occupation) }}</td>
+                            <td>{{ member.nid || 'N/A' }}</td>
+                            <td>{{ member.mobileNo || 'N/A' }}</td>
+                            @if (!isReadonly) {
+                                <td>
+                                    <div class="flex gap-2">
+                                        <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="info" (onClick)="openEditDialog(member)"></p-button>
+                                        <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" (onClick)="confirmDelete(member)"></p-button>
+                                    </div>
+                                </td>
+                            }
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td [attr.colspan]="isReadonly ? 8 : 9" class="text-center py-4">
+                                <div class="flex flex-column align-items-center gap-3">
+                                    <span class="text-500">No family members found.</span>
+                                    <p-button label="Add New Family Member" icon="pi pi-plus" (onClick)="openAddDialog()"></p-button>
+                                </div>
+                            </td>
+                        </tr>
+                    </ng-template>
+                </p-table>
             </div>
 
+            <!-- Action Buttons -->
             <div class="flex justify-end mt-4 gap-2">
                 @if (mode === 'view') {
                     <p-button label="Back to List" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" (onClick)="goBack()"></p-button>
@@ -69,9 +126,72 @@
                     <p-button label="Edit" icon="pi pi-pencil" (onClick)="enableSearchEditMode()"></p-button>
                 } @else {
                     <p-button label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" (onClick)="resetForm()"></p-button>
-                    <p-button label="Save" icon="pi pi-check" (onClick)="saveData()"></p-button>
                 }
             </div>
         }
     </div>
 </p-fluid>
+
+<!-- Add/Edit Family Member Dialog -->
+<p-dialog [header]="isEditMode ? 'Edit Family Member' : 'Add Family Member'" [(visible)]="displayDialog" [modal]="true" [style]="{width: '700px'}" [closable]="true">
+    <form [formGroup]="familyForm">
+        <div class="grid grid-cols-2 gap-4">
+            <div class="col-span-1">
+                <label class="font-semibold block mb-2 text-700">Relation <span class="text-red-500">*</span></label>
+                <p-select [options]="relationOptions" formControlName="relation" placeholder="Select Relation" [style]="{'width':'100%'}"></p-select>
+                @if (familyForm.get('relation')?.invalid && familyForm.get('relation')?.touched) {
+                    <small class="text-red-500">Relation is required</small>
+                }
+            </div>
+            <div class="col-span-1">
+                <label class="font-semibold block mb-2 text-700">Date of Birth</label>
+                <p-datepicker formControlName="dob" [showIcon]="true" dateFormat="dd/mm/yy" [style]="{'width':'100%'}"></p-datepicker>
+            </div>
+            <div class="col-span-1">
+                <label class="font-semibold block mb-2 text-700">Name (English) <span class="text-red-500">*</span></label>
+                <input pInputText formControlName="nameEN" class="w-full" placeholder="Enter name in English" />
+                @if (familyForm.get('nameEN')?.invalid && familyForm.get('nameEN')?.touched) {
+                    <small class="text-red-500">Name is required</small>
+                }
+            </div>
+            <div class="col-span-1">
+                <label class="font-semibold block mb-2 text-700">Name (Bangla)</label>
+                <input pInputText formControlName="nameBN" class="w-full" placeholder="Enter name in Bangla" />
+            </div>
+            <div class="col-span-1">
+                <label class="font-semibold block mb-2 text-700">Marital Status</label>
+                <p-select [options]="maritalStatusOptions" formControlName="maritalStatus" placeholder="Select Status" [style]="{'width':'100%'}"></p-select>
+            </div>
+            <div class="col-span-1">
+                <label class="font-semibold block mb-2 text-700">Occupation</label>
+                <p-select [options]="occupationOptions" formControlName="occupation" placeholder="Select Occupation" [style]="{'width':'100%'}"></p-select>
+            </div>
+            <div class="col-span-1">
+                <label class="font-semibold block mb-2 text-700">NID</label>
+                <input pInputText formControlName="nid" class="w-full" placeholder="Enter NID number" />
+            </div>
+            <div class="col-span-1">
+                <label class="font-semibold block mb-2 text-700">Mobile No</label>
+                <input pInputText formControlName="mobileNo" class="w-full" placeholder="Enter mobile number" />
+            </div>
+            <div class="col-span-1">
+                <label class="font-semibold block mb-2 text-700">Passport No</label>
+                <input pInputText formControlName="passportNo" class="w-full" placeholder="Enter passport number" />
+            </div>
+            <div class="col-span-1">
+                <label class="font-semibold block mb-2 text-700">Email</label>
+                <input pInputText formControlName="email" class="w-full" placeholder="Enter email" />
+                @if (familyForm.get('email')?.invalid && familyForm.get('email')?.touched) {
+                    <small class="text-red-500">Invalid email format</small>
+                }
+            </div>
+        </div>
+    </form>
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="displayDialog = false"></p-button>
+        <p-button label="Save" icon="pi pi-check" (onClick)="saveFamily()"></p-button>
+    </ng-template>
+</p-dialog>
+
+<!-- Confirm Dialog -->
+<p-confirmDialog></p-confirmDialog>
