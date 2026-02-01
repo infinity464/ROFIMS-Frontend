@@ -30,7 +30,8 @@ export class AppMenu {
                     { label: 'Employee List', icon: 'pi pi-fw pi-list', routerLink: ['/emp-list'] },
                     { label: 'EmployeeInfo', routerLink: ['/employee-info'] },
                     { label: 'New Joining', icon: 'pi pi-fw pi-user-plus', routerLink: ['/emp-basic-info'] },
-                    { label: 'Personal Info', icon: 'pi pi-fw pi-id-card', routerLink: ['/personal-info'] }
+                    { label: 'Personal Info', icon: 'pi pi-fw pi-id-card', routerLink: ['/personal-info'] },
+                    { label: 'Employee Personal Info', icon: 'pi pi-fw pi-map-marker', routerLink: ['/emp-personal-info'] }
                 ]
             },
             {
@@ -59,6 +60,7 @@ export class AppMenu {
                     { label: 'Blood Group', icon: 'pi pi-fw pi-heart', routerLink: ['/basic-setup/blood-group'] },
                     { label: 'Relationship', icon: 'pi pi-fw pi-users', routerLink: ['/basic-setup/relationship'] },
                     { label: 'Marital Status', icon: 'pi pi-fw pi-user', routerLink: ['/basic-setup/marital-status'] },
+                    { label: 'Religion', icon: 'pi pi-fw pi-moon', routerLink: ['/basic-setup/religion'] },
                     { label: 'Occupation', icon: 'pi pi-fw pi-briefcase', routerLink: ['/basic-setup/occupation'] },
 
                     { label: 'Education Qualification', icon: 'pi pi-fw pi-book', routerLink: ['/basic-setup/education-qualification'] },

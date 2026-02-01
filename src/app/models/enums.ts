@@ -28,15 +28,27 @@ export enum MaritalStatus {
 
 // Blood Group
 export enum BloodGroup {
-  APositive = 1,
-  ANegative = 2,
-  BPositive = 3,
-  BNegative = 4,
-  ABPositive = 5,
-  ABNegative = 6,
-  OPositive = 7,
-  ONegative = 8
+  'A+' = 1,
+  'A-' = 2,
+  'B+' = 3,
+  'B-' = 4,
+  'AB+' = 5,
+  'AB-' = 6,
+  'O+' = 7,
+  'O-' = 8
 }
+
+// Blood Group Labels Helper (value is string to match backend varchar(5))
+export const BloodGroupOptions = [
+  { label: 'A+', value: 'A+' },
+  { label: 'A-', value: 'A-' },
+  { label: 'B+', value: 'B+' },
+  { label: 'B-', value: 'B-' },
+  { label: 'AB+', value: 'AB+' },
+  { label: 'AB-', value: 'AB-' },
+  { label: 'O+', value: 'O+' },
+  { label: 'O-', value: 'O-' }
+];
 
 // Religion
 export enum Religion {

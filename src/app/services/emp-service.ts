@@ -50,6 +50,17 @@ export class EmpService {
         return this.http.post<EmpModel[]>(`${this.empApi}/EmployeeInfo/Search`, criteria);
     }
 
+    // Search by RAB ID or Service ID
+    searchByRabIdOrServiceId(rabId?: string, serviceId?: string): Observable<EmpModel | null> {
+        const params: any = {};
+        if (rabId) params.rabId = rabId;
+        if (serviceId) params.serviceId = serviceId;
+
+        return this.http.get<EmpModel[]>(`${this.empApi}/EmployeeInfo/SearchByIdAsyn`, { params }).pipe(
+            map(data => data && data.length > 0 ? data[0] : null)
+        );
+    }
+
     saveEmployee(payload: any): Observable<any> {
         return this.http.post(`${this.empApi}/EmployeeInfo/SaveAsyn`, payload);
     }

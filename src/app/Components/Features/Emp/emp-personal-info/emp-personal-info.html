@@ -1,0 +1,247 @@
+<p-fluid>
+    <div class="mb-5 card">
+        <div class="flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+            <h3 class="m-0 text-xl font-bold text-900">Employee Personal Info</h3>
+        </div>
+
+        <!-- Employee Search Section -->
+        <div class="surface-50 border-round-2xl p-4 mb-4">
+            <div class="flex flex-wrap gap-3 mb-4">
+                <div class="flex-1" style="min-width: 200px; max-width: 250px;">
+                    <label class="font-semibold block mb-2 text-700">RAB ID</label>
+                    <input pInputText class="w-full" placeholder="Enter RAB ID" [(ngModel)]="searchRabId" />
+                </div>
+                <div class="flex-1" style="min-width: 200px; max-width: 250px;">
+                    <label class="font-semibold block mb-2 text-700">Service ID</label>
+                    <input pInputText class="w-full" placeholder="Enter Service ID" [(ngModel)]="searchServiceId" />
+                </div>
+                <div class="flex-1 flex align-items-end" style="min-width: 120px; max-width: 150px;">
+                    <p-button label="Search" icon="pi pi-search" [loading]="isSearching" (onClick)="searchEmployee()"></p-button>
+                </div>
+            </div>
+
+            <!-- Auto-loaded Employee Info -->
+            @if (employeeFound && employeeBasicInfo) {
+                <div class="surface-100 border-round p-3">
+                    <div class="flex flex-wrap gap-4">
+                        <div>
+                            <span class="text-500 text-sm">Name:</span>
+                            <span class="ml-2 font-semibold">{{ employeeBasicInfo.FullNameEN || 'N/A' }}</span>
+                        </div>
+                        <div>
+                            <span class="text-500 text-sm">Rank:</span>
+                            <span class="ml-2 font-semibold">{{ employeeBasicInfo.Rank || 'N/A' }}</span>
+                        </div>
+                        <div>
+                            <span class="text-500 text-sm">Corps:</span>
+                            <span class="ml-2 font-semibold">{{ employeeBasicInfo.Branch || 'N/A' }}</span>
+                        </div>
+                        <div>
+                            <span class="text-500 text-sm">Trade:</span>
+                            <span class="ml-2 font-semibold">{{ employeeBasicInfo.Trade || 'N/A' }}</span>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Personal Information Form -->
+        @if (employeeFound) {
+            <form [formGroup]="personalInfoForm">
+                <div class="surface-50 border-round-2xl p-4">
+                    <!-- Row 1: Blood Group, NID, Mobile, Email -->
+                    <div class="flex flex-wrap gap-3 mb-4">
+                        <div class="flex-1" style="min-width: 200px">
+                            <label class="font-semibold block mb-2 text-700">Blood Group</label>
+                            <p-select formControlName="bloodGroup" [options]="bloodGroups" optionLabel="label" optionValue="value" placeholder="Select Blood Group" styleClass="w-full"></p-select>
+                        </div>
+                        <div class="flex-1" style="min-width: 200px">
+                            <label class="font-semibold block mb-2 text-700">NID (Old/New)</label>
+                            <input pInputText class="w-full" placeholder="Only Number" formControlName="nid" />
+                        </div>
+                        <div class="flex-1" style="min-width: 200px">
+                            <label class="font-semibold block mb-2 text-700">Mobile No</label>
+                            <input pInputText class="w-full" placeholder="Mobile Number" formControlName="mobileNo" />
+                        </div>
+                        <div class="flex-1" style="min-width: 200px">
+                            <label class="font-semibold block mb-2 text-700">Email Address</label>
+                            <input pInputText class="w-full" placeholder="Valid Email" formControlName="emailAddress" />
+                        </div>
+                    </div>
+
+                    <!-- Row 2: DOB, Religion, Passport, Identification Mark -->
+                    <div class="flex flex-wrap gap-3 mb-4">
+                        <div class="flex-1" style="min-width: 200px">
+                            <label class="font-semibold block mb-2 text-700">Date of Birth</label>
+                            <p-datepicker formControlName="dateOfBirth" dateFormat="dd-mm-yy" placeholder="Select Date" styleClass="w-full"></p-datepicker>
+                        </div>
+                        <div class="flex-1" style="min-width: 200px">
+                            <label class="font-semibold block mb-2 text-700">Religion</label>
+                            <p-select formControlName="religion" [options]="religions" optionLabel="label" optionValue="value" placeholder="Select Religion" styleClass="w-full"></p-select>
+                        </div>
+                        <div class="flex-1" style="min-width: 200px">
+                            <label class="font-semibold block mb-2 text-700">Passport No</label>
+                            <input pInputText class="w-full" placeholder="Only Number" formControlName="passportNo" />
+                        </div>
+                        <div class="flex-1" style="min-width: 200px">
+                            <label class="font-semibold block mb-2 text-700">Identification Mark</label>
+                            <input pInputText class="w-full" placeholder="Enter Identification Mark" formControlName="identificationMark" />
+                        </div>
+                    </div>
+
+                    <!-- Row 3: Marital Status, Emergency Contact, Medical Category, Date of Joining -->
+                    <div class="flex flex-wrap gap-3 mb-4">
+                        <div class="flex-1" style="min-width: 200px">
+                            <label class="font-semibold block mb-2 text-700">Marital Status</label>
+                            <p-select formControlName="maritalStatus" [options]="maritalStatuses" optionLabel="label" optionValue="value" placeholder="Select Marital Status" styleClass="w-full"></p-select>
+                        </div>
+                        <div class="flex-1" style="min-width: 200px">
+                            <label class="font-semibold block mb-2 text-700">Emergency Contact No</label>
+                            <input pInputText class="w-full" placeholder="Mobile Number" formControlName="emergencyContactNo" />
+                        </div>
+                        <div class="flex-1" style="min-width: 200px">
+                            <label class="font-semibold block mb-2 text-700">Medical Category</label>
+                            <p-select formControlName="medicalCategory" [options]="medicalCategories" optionLabel="label" optionValue="value" placeholder="Select Medical Category" styleClass="w-full"></p-select>
+                        </div>
+                        <div class="flex-1" style="min-width: 200px">
+                            <label class="font-semibold block mb-2 text-700">Date of Joining in Service/Training</label>
+                            <p-datepicker formControlName="dateOfJoining" dateFormat="dd-mm-yy" placeholder="Select Date" styleClass="w-full"></p-datepicker>
+                        </div>
+                    </div>
+
+                    <!-- Row 4: Date of Commission, Batch, Investigation Experience, Professional Qualification -->
+                    <div class="flex flex-wrap gap-3 mb-4">
+                        <div class="flex-1" style="min-width: 200px">
+                            <label class="font-semibold block mb-2 text-700">Date of Commission</label>
+                            <p-datepicker formControlName="dateOfCommission" dateFormat="dd-mm-yy" placeholder="Select Date" styleClass="w-full"></p-datepicker>
+                        </div>
+                        <div class="flex-1" style="min-width: 200px">
+                            <label class="font-semibold block mb-2 text-700">Batch (Course/BCS/Dept/Other)</label>
+                            <p-select formControlName="batch" [options]="batches" optionLabel="label" optionValue="value" placeholder="Select Batch" styleClass="w-full"></p-select>
+                        </div>
+                        <div class="flex-1" style="min-width: 200px">
+                            <label class="font-semibold block mb-2 text-700">Investigation Experience</label>
+                            <div class="flex gap-4 h-full align-items-center pt-2">
+                                @for (option of yesNoOptions; track option.value) {
+                                    <div class="flex align-items-center">
+                                        <p-radioButton [inputId]="'invExp' + option.label" formControlName="investigationExperience" [value]="option.value"></p-radioButton>
+                                        <label [for]="'invExp' + option.label" class="ml-2 text-sm">{{ option.label }}</label>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                        <div class="flex-1" style="min-width: 200px">
+                            <label class="font-semibold block mb-2 text-700">Professional Qualification</label>
+                            <p-select formControlName="professionalQualification" [options]="professionalQualifications" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"></p-select>
+                        </div>
+                    </div>
+
+                    <!-- Investigation Details (conditional) -->
+                    @if (showInvestigationExperience) {
+                        <div class="flex flex-wrap gap-3 mb-4">
+                            <div class="flex-1">
+                                <label class="font-semibold block mb-2 text-700">Investigation Experience Details</label>
+                                <textarea pTextarea formControlName="investigationExperienceDetails" rows="2" class="w-full" placeholder="Write about investigation experience in brief..."></textarea>
+                            </div>
+                        </div>
+                    }
+
+                    <!-- Row 5: Personal Qualification, Gallantry Awards, Education, Tribal -->
+                    <div class="flex flex-wrap gap-3 mb-4">
+                        <div class="flex-1" style="min-width: 200px">
+                            <label class="font-semibold block mb-2 text-700">Personal Qualification</label>
+                            <p-select formControlName="personalQualification" [options]="personalQualifications" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"></p-select>
+                        </div>
+                        <div class="flex-1" style="min-width: 200px">
+                            <label class="font-semibold block mb-2 text-700">Gallantry Awards/Decoration</label>
+                            <p-select formControlName="gallantryAward" [options]="gallantryAwards" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"></p-select>
+                        </div>
+                        <div class="flex-1" style="min-width: 200px">
+                            <label class="font-semibold block mb-2 text-700">Last Education Qualification</label>
+                            <p-select formControlName="lastEducationQualification" [options]="educationQualifications" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"></p-select>
+                        </div>
+                        <div class="flex-1" style="min-width: 200px">
+                            <label class="font-semibold block mb-2 text-700">Tribal</label>
+                            <p-select formControlName="tribal" [options]="tribalOptions" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"></p-select>
+                        </div>
+                    </div>
+
+                    <!-- Row 6: Freedom Fighter, Height, Weight, Driving License -->
+                    <div class="flex flex-wrap gap-3 mb-4">
+                        <div class="flex-1" style="min-width: 200px">
+                            <label class="font-semibold block mb-2 text-700">Freedom Fighter</label>
+                            <p-select formControlName="freedomFighter" [options]="freedomFighterOptions" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"></p-select>
+                        </div>
+                        <div class="flex-1" style="min-width: 200px">
+                            <label class="font-semibold block mb-2 text-700">Height (cm)</label>
+                            <p-inputNumber formControlName="height" [min]="0" [max]="255" placeholder="Enter Height" styleClass="w-full"></p-inputNumber>
+                        </div>
+                        <div class="flex-1" style="min-width: 200px">
+                            <label class="font-semibold block mb-2 text-700">Weight (kg)</label>
+                            <p-inputNumber formControlName="weight" [min]="0" [max]="255" placeholder="Enter Weight" styleClass="w-full"></p-inputNumber>
+                        </div>
+                        <div class="flex-1" style="min-width: 200px">
+                            <label class="font-semibold block mb-2 text-700">Driving License No</label>
+                            <input pInputText class="w-full" placeholder="Enter Driving License No" formControlName="drivingLicenseNo" />
+                        </div>
+                    </div>
+
+                    <!-- Row 7: Service ID Card -->
+                    <div class="flex flex-wrap gap-3 mb-4">
+                        <div class="flex-1" style="min-width: 200px; max-width: 250px;">
+                            <label class="font-semibold block mb-2 text-700">Service ID Card No</label>
+                            <input pInputText class="w-full" placeholder="Enter Service ID Card No" formControlName="serviceIdCardNo" />
+                        </div>
+                    </div>
+
+                    <!-- Supporting Documents -->
+                    <div class="flex flex-wrap gap-3 mb-4">
+                        <div class="flex-1">
+                            <label class="font-semibold block mb-2 text-700">Supporting Document Upload</label>
+                            <p-fileupload
+                                name="documents[]"
+                                [multiple]="true"
+                                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                                maxFileSize="5000000"
+                                (onUpload)="onFileUpload($event)"
+                                (onRemove)="onFileRemove($event)"
+                                [showUploadButton]="false"
+                                [showCancelButton]="false"
+                                chooseLabel="Choose Files"
+                                chooseIcon="pi pi-plus">
+                                <ng-template pTemplate="empty">
+                                    <div class="flex align-items-center justify-content-center flex-column py-3">
+                                        <i class="pi pi-cloud-upload text-2xl text-400 mb-2"></i>
+                                        <span class="text-500 text-sm">Drag and drop files or click to browse</span>
+                                    </div>
+                                </ng-template>
+                            </p-fileupload>
+                        </div>
+                    </div>
+                </div>
+            </form>
+
+            <!-- Auth and Remarks -->
+            <form [formGroup]="authForm">
+                <div class="surface-50 border-round-2xl p-4 mt-4">
+                    <div class="flex flex-wrap gap-3">
+                        <div class="flex-1" style="min-width: 200px">
+                            <label class="font-semibold block mb-2 text-700">Auth</label>
+                            <input pInputText class="w-full" placeholder="Text Box" formControlName="auth" />
+                        </div>
+                        <div class="flex-1" style="min-width: 200px">
+                            <label class="font-semibold block mb-2 text-700">Remarks</label>
+                            <input pInputText class="w-full" placeholder="Text Box" formControlName="remarks" />
+                        </div>
+                    </div>
+                </div>
+            </form>
+
+            <!-- Action Buttons -->
+            <div class="flex justify-end mt-4 gap-2">
+                <p-button type="button" label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" (onClick)="resetForm()"></p-button>
+                <p-button type="button" label="Save All Information" icon="pi pi-check-circle" (onClick)="saveAll()"></p-button>
+            </div>
+        }
+    </div>
+</p-fluid>

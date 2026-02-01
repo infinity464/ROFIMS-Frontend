@@ -51,11 +51,13 @@ import { RabBranch } from '@/Components/basic-setup/rab-branch/rab-branch';
 import { CourseName } from '@/Components/basic-setup/course-name/course-name';
 import { EmpBasicInfo } from '@/Components/Features/Emp/emp-basic-info/emp-basic-info';
 import { EmpList } from '@/Components/Features/Emp/emp-list/emp-list';
+import { EmpPersonalInfo } from '@/Components/Features/Emp/emp-personal-info/emp-personal-info';
 import { Prefix } from '@/Components/basic-setup/prefix/prefix';
 import { Gender } from '@/Components/basic-setup/gender/gender';
 import { Bank } from '@/Components/basic-setup/bank/bank';
 import { TrainingInstitution } from '@/Components/basic-setup/training-institution/training-institution';
 import { RankEquivalent } from '@/Components/basic-setup/rank-equivalent/rank-equivalent';
+import { Religion } from '@/Components/basic-setup/religion/religion';
 
 export const appRoutes: Routes = [
     // Public routes
@@ -116,10 +118,12 @@ export const appRoutes: Routes = [
             { path: 'basic-setup/bank', component: Bank },
             { path: 'basic-setup/training-institution', component: TrainingInstitution },
             { path: 'basic-setup/rank-equivalent', component: RankEquivalent },
+            { path: 'basic-setup/religion', component: Religion },
 
             // EMP
             { path: 'emp-list', component: EmpList },
             { path: 'emp-basic-info', component: EmpBasicInfo },
+            { path: 'emp-personal-info', component: EmpPersonalInfo },
 
             { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
             { path: 'documentation', component: Documentation },
