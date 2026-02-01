@@ -22,10 +22,10 @@
           <p-checkbox
             formControlName="sameAsPresent"
             [binary]="true"
-            inputId="sameAsPresent">
+            [inputId]="'sameAsPresent_' + config.addressType">
           </p-checkbox>
-          <label for="sameAsPresent" class="ml-2 cursor-pointer font-semibold text-700">
-            Same as Permanent Address
+          <label [for]="'sameAsPresent_' + config.addressType" class="ml-2 cursor-pointer font-semibold text-700">
+            {{ sameAsCheckboxLabel }}
           </label>
         </div>
       }
@@ -121,6 +121,18 @@
           </p-select>
           @if (isFieldInvalid('postOffice')) {
             <small class="text-red-500">{{ getErrorMessage('postOffice') }}</small>
+          }
+        </div>
+
+        <!-- Post Code -->
+        <div class="flex-1" style="min-width: 150px">
+          <label class="font-semibold block mb-2 text-700">
+            Post Code
+          </label>
+          <input pInputText class="w-full" placeholder="Enter post code"
+            formControlName="postCode" maxlength="10" />
+          @if (isFieldInvalid('postCode')) {
+            <small class="text-red-500">Max length is 10 characters</small>
           }
         </div>
 

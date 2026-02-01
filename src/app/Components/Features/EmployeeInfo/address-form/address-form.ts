@@ -16,6 +16,7 @@ export interface AddressData {
     district: number | null;
     upazila: number | null;
     postOffice: number | null;
+    postCode: string;
     villageEnglish: string;
     villageBangla: string;
     houseRoad: string;
@@ -23,8 +24,9 @@ export interface AddressData {
 
 export interface AddressFormConfig {
     title: string;
-    addressType: 'permanent' | 'present' | 'wife' | 'father' | 'mother' | 'emergency';
+    addressType: 'permanent' | 'present' | 'wife' | 'father' | 'mother' | 'emergency' | 'wifePresent';
     showSameAsPresent?: boolean;
+    sameAsLabel?: string; // Custom label for "Same as" checkbox
     employeeId?: number;
     initialData?: Partial<AddressData>;
 }
@@ -105,6 +107,7 @@ export class AddressFormComponent implements OnInit, OnChanges {
             district: [null, requiredValidator],
             upazila: [null, requiredValidator],
             postOffice: [null, requiredValidator],
+            postCode: ['', [Validators.maxLength(10)]],
             villageEnglish: [''],
             villageBangla: [''],
             houseRoad: ['']
@@ -178,6 +181,7 @@ export class AddressFormComponent implements OnInit, OnChanges {
                         district: sourceData.district,
                         upazila: sourceData.upazila,
                         postOffice: sourceData.postOffice,
+                        postCode: sourceData.postCode || '',
                         villageEnglish: sourceData.villageEnglish || '',
                         villageBangla: sourceData.villageBangla || '',
                         houseRoad: sourceData.houseRoad || ''
@@ -197,6 +201,7 @@ export class AddressFormComponent implements OnInit, OnChanges {
                 district: sourceData.district,
                 upazila: sourceData.upazila,
                 postOffice: sourceData.postOffice,
+                postCode: sourceData.postCode || '',
                 villageEnglish: sourceData.villageEnglish || '',
                 villageBangla: sourceData.villageBangla || '',
                 houseRoad: sourceData.houseRoad || ''
@@ -249,6 +254,7 @@ export class AddressFormComponent implements OnInit, OnChanges {
                 district: null,
                 upazila: null,
                 postOffice: null,
+                postCode: '',
                 villageEnglish: '',
                 villageBangla: '',
                 houseRoad: ''
@@ -299,6 +305,7 @@ export class AddressFormComponent implements OnInit, OnChanges {
                         district: sourceData.district,
                         upazila: sourceData.upazila,
                         postOffice: sourceData.postOffice,
+                        postCode: sourceData.postCode || '',
                         villageEnglish: sourceData.villageEnglish || '',
                         villageBangla: sourceData.villageBangla || '',
                         houseRoad: sourceData.houseRoad || ''
@@ -323,6 +330,7 @@ export class AddressFormComponent implements OnInit, OnChanges {
                 district: sourceData.district,
                 upazila: sourceData.upazila,
                 postOffice: sourceData.postOffice,
+                postCode: sourceData.postCode || '',
                 villageEnglish: sourceData.villageEnglish || '',
                 villageBangla: sourceData.villageBangla || '',
                 houseRoad: sourceData.houseRoad || ''
@@ -332,11 +340,11 @@ export class AddressFormComponent implements OnInit, OnChanges {
     }
 
     private disableAddressFields(): void {
-        ['division', 'district', 'upazila', 'postOffice', 'villageEnglish', 'villageBangla', 'houseRoad'].forEach((name) => this.addressForm.get(name)?.disable());
+        ['division', 'district', 'upazila', 'postOffice', 'postCode', 'villageEnglish', 'villageBangla', 'houseRoad'].forEach((name) => this.addressForm.get(name)?.disable());
     }
 
     private enableAddressFields(): void {
-        ['division', 'district', 'upazila', 'postOffice', 'villageEnglish', 'villageBangla', 'houseRoad'].forEach((name) => this.addressForm.get(name)?.enable());
+        ['division', 'district', 'upazila', 'postOffice', 'postCode', 'villageEnglish', 'villageBangla', 'houseRoad'].forEach((name) => this.addressForm.get(name)?.enable());
     }
 
     handleSave(): void {
@@ -391,6 +399,10 @@ export class AddressFormComponent implements OnInit, OnChanges {
 
     get showSameAsPresentCheckbox(): boolean {
         return this.config.showSameAsPresent === true;
+    }
+
+    get sameAsCheckboxLabel(): string {
+        return this.config.sameAsLabel || 'Same as Permanent Address';
     }
 
     // Check if form has meaningful data (division is selected)

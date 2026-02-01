@@ -80,8 +80,9 @@ export class EmpBasicInfo implements OnInit {
   // Wife Present address config (with "Same as Wife Permanent" option)
   wifePresentAddressConfig: AddressFormConfig = {
     title: 'Wife Present Address',
-    addressType: 'wife',
+    addressType: 'wifePresent',
     showSameAsPresent: true,
+    sameAsLabel: 'Same as Wife Permanent Address',
     employeeId: this.employeeId
   };
 
@@ -167,7 +168,7 @@ export class EmpBasicInfo implements OnInit {
         FMID: 0,
         LocationType: LocationType.Present,
         LocationCode: `${data.division}-${data.district}-${data.upazila}`,
-        PostCode: data.postOffice?.toString() || '',
+        PostCode: data.postCode || '',
         AddressAreaEN: data.villageEnglish || '',
         AddressAreaBN: data.villageBangla || '',
         DivisionType: data.division,
@@ -220,7 +221,7 @@ export class EmpBasicInfo implements OnInit {
         FMID: 0,
         LocationType: LocationType.Permanent,
         LocationCode: `${data.division}-${data.district}-${data.upazila}`,
-        PostCode: data.postOffice?.toString() || '',
+        PostCode: data.postCode || '',
         AddressAreaEN: data.villageEnglish || '',
         AddressAreaBN: data.villageBangla || '',
         DivisionType: data.division,
@@ -274,7 +275,7 @@ export class EmpBasicInfo implements OnInit {
         FMID: 0,
         LocationType: LocationType.WifePermanent,
         LocationCode: `${data.division}-${data.district}-${data.upazila}`,
-        PostCode: data.postOffice?.toString() || '',
+        PostCode: data.postCode || '',
         AddressAreaEN: data.villageEnglish || '',
         AddressAreaBN: data.villageBangla || '',
         DivisionType: data.division,
@@ -328,7 +329,7 @@ export class EmpBasicInfo implements OnInit {
         FMID: 0,
         LocationType: LocationType.WifePresent,
         LocationCode: `${data.division}-${data.district}-${data.upazila}`,
-        PostCode: data.postOffice?.toString() || '',
+        PostCode: data.postCode || '',
         AddressAreaEN: data.villageEnglish || '',
         AddressAreaBN: data.villageBangla || '',
         DivisionType: data.division,
@@ -504,7 +505,7 @@ export class EmpBasicInfo implements OnInit {
         FMID: 0,
         LocationType: locationType,
         LocationCode: `${data.division}-${data.district}-${data.upazila}`,
-        PostCode: data.postOffice?.toString() || '',
+        PostCode: data.postCode || '',
         AddressAreaEN: data.villageEnglish || '',
         AddressAreaBN: data.villageBangla || '',
         DivisionType: data.division,
@@ -714,6 +715,7 @@ export class EmpBasicInfo implements OnInit {
                     const divisionType = addr.divisionType || addr.DivisionType;
                     const thanType = addr.thanType || addr.ThanType;
                     const postOfficeType = addr.postOfficeType || addr.PostOfficeType;
+                    const postCode = addr.postCode || addr.PostCode || '';
                     const addressAreaEN = addr.addressAreaEN || addr.AddressAreaEN || '';
                     const addressAreaBN = addr.addressAreaBN || addr.AddressAreaBN || '';
                     const houseRoad = addr.houseRoad || addr.HouseRoad || '';
@@ -733,6 +735,7 @@ export class EmpBasicInfo implements OnInit {
                         district: districtValue,
                         upazila: thanType,
                         postOffice: postOfficeType,
+                        postCode: postCode,
                         villageEnglish: addressAreaEN,
                         villageBangla: addressAreaBN,
                         houseRoad: houseRoad
