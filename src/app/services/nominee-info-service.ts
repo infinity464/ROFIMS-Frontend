@@ -40,11 +40,15 @@ export class NomineeInfoService {
     }
 
     private toApiPayload(payload: Partial<NomineeInfoModel>): any {
+        const now = new Date().toISOString();
         return {
             EmployeeID: payload.employeeID,
             FMID: payload.fmid,
             SharePercent: payload.sharePercent ?? null,
-            LastUpdatedBy: payload.lastUpdatedBy ?? 'user'
+            LastUpdatedBy: payload.lastUpdatedBy ?? 'user',
+            CreatedDate: payload.createdDate ?? now,
+            Lastupdate: payload.lastupdate ?? now,
+            StatusDate: payload.statusDate ?? now
         };
     }
 }

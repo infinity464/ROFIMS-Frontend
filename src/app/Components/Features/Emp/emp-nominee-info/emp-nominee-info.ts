@@ -110,19 +110,20 @@ export class EmpNomineeInfo implements OnInit {
         return this.nomineeForm.get('nominees') as FormArray;
     }
 
-    createNomineeRow(ser: number, relationType?: string, nomineeName?: string, nominatedPercentage?: number | null, fmid?: number) {
+    createNomineeRow(ser: number, relationType?: string, nomineeName?: string, nominatedPercentage?: number | null, fmid?: number, createdDate?: string | null) {
         return this.fb.group({
             ser: [ser],
             fmid: [fmid ?? null],
             relationType: [{ value: relationType ?? 'Auto Set', disabled: true }],
             nomineeName: [{ value: nomineeName ?? 'Auto Set', disabled: true }],
-            nominatedPercentage: [nominatedPercentage ?? null, [Validators.min(0), Validators.max(100)]]
+            nominatedPercentage: [nominatedPercentage ?? null, [Validators.min(0), Validators.max(100)]],
+            createdDate: [createdDate ?? null]
         });
     }
 
     addNomineeRow(relationType: string, nomineeName: string, fmid: number): void {
         const ser = this.nominees.length + 1;
-        this.nominees.push(this.createNomineeRow(ser, relationType, nomineeName, null, fmid));
+        this.nominees.push(this.createNomineeRow(ser, relationType, nomineeName, null, fmid, null));
     }
 
     removeNominee(index: number): void {
@@ -254,6 +255,8 @@ export class EmpNomineeInfo implements OnInit {
                     const item = n as any;
                     const fmid = item.fmid ?? item.FMID;
                     const pct = item.sharePercent ?? item.SharePercent ?? null;
+                    const createdDate = item.createdDate ?? item.CreatedDate ?? item.lastupdate ?? item.Lastupdate ?? null;
+                    const createdDateStr = createdDate != null ? (typeof createdDate === 'string' ? createdDate : new Date(createdDate).toISOString()) : null;
                     this.existingNomineeFmids.push(fmid);
                     const info = familyByFmid.get(fmid);
                     this.nominees.push(this.createNomineeRow(
@@ -261,7 +264,8 @@ export class EmpNomineeInfo implements OnInit {
                         info?.relationLabel ?? 'N/A',
                         info?.name ?? 'N/A',
                         pct != null ? Number(pct) : null,
-                        fmid
+                        fmid,
+                        createdDateStr
                     ));
                 }
             },
@@ -286,6 +290,15 @@ export class EmpNomineeInfo implements OnInit {
     enableEditMode(): void {
         this.mode = 'edit';
         this.isReadonly = false;
+    }
+
+    /** Discard changes and switch back to view mode; reload nominees from server. */
+    cancelEdit(): void {
+        if (!this.selectedEmployeeId) return;
+        this.mode = 'view';
+        this.isReadonly = true;
+        this.loadNomineesForEmployee(this.selectedEmployeeId);
+        this.messageService.add({ severity: 'info', summary: 'Cancelled', detail: 'Changes discarded.' });
     }
 
     goBack(): void {
@@ -319,14 +332,26 @@ export class EmpNomineeInfo implements OnInit {
         const deleteCalls = toDelete.map(fmid =>
             this.nomineeInfoService.delete(this.selectedEmployeeId!, fmid).pipe(catchError(() => of(null)))
         );
-        const saveCalls = toSave.map(({ fmid, pct }) =>
-            this.nomineeInfoService.saveUpdate({
-                employeeID: this.selectedEmployeeId!,
-                fmid: fmid!,
-                sharePercent: pct ?? 0,
-                lastUpdatedBy: 'user'
-            }).pipe(catchError(() => of(null)))
-        );
+        const now = new Date().toISOString();
+        const saveCalls = rows
+            .filter(c => {
+                const fid = c.get('fmid')?.value;
+                return fid != null && toSave.some(r => r.fmid === fid);
+            })
+            .map(c => {
+                const fmid = c.get('fmid')?.value as number;
+                const pct = c.get('nominatedPercentage')?.value as number | null;
+                const createdDate = c.get('createdDate')?.value as string | null;
+                return this.nomineeInfoService.saveUpdate({
+                    employeeID: this.selectedEmployeeId!,
+                    fmid,
+                    sharePercent: pct ?? 0,
+                    lastUpdatedBy: 'user',
+                    createdDate: createdDate ?? now,
+                    lastupdate: now,
+                    statusDate: now
+                }).pipe(catchError(() => of(null)));
+            });
         const allCalls = [...deleteCalls, ...saveCalls];
         if (allCalls.length === 0) {
             this.messageService.add({ severity: 'info', summary: 'Info', detail: 'No nominee changes to save.' });
@@ -338,6 +363,7 @@ export class EmpNomineeInfo implements OnInit {
                 this.isSaving = false;
                 this.existingNomineeFmids = toSave.map(r => r.fmid!);
                 this.messageService.add({ severity: 'success', summary: 'Saved', detail: 'Nominee information saved successfully.' });
+                this.loadNomineesForEmployee(this.selectedEmployeeId!);
             },
             error: () => {
                 this.isSaving = false;
