@@ -176,6 +176,7 @@ export class EmpBasicInfo implements OnInit {
         ThanType: data.upazila,
         PostOfficeType: data.postOffice,
         HouseRoad: data.houseRoad || '',
+        Active: true,  // New addresses are active by default
         CreatedBy: 'system',
         CreatedDate: new Date().toISOString(),
         LastUpdatedBy: 'system',
@@ -229,6 +230,7 @@ export class EmpBasicInfo implements OnInit {
         ThanType: data.upazila,
         PostOfficeType: data.postOffice,
         HouseRoad: data.houseRoad || '',
+        Active: true,  // New addresses are active by default
         CreatedBy: 'system',
         CreatedDate: new Date().toISOString(),
         LastUpdatedBy: 'system',
@@ -283,6 +285,7 @@ export class EmpBasicInfo implements OnInit {
         ThanType: data.upazila,
         PostOfficeType: data.postOffice,
         HouseRoad: data.houseRoad || '',
+        Active: true,  // New addresses are active by default
         CreatedBy: 'system',
         CreatedDate: new Date().toISOString(),
         LastUpdatedBy: 'system',
@@ -337,6 +340,7 @@ export class EmpBasicInfo implements OnInit {
         ThanType: data.upazila,
         PostOfficeType: data.postOffice,
         HouseRoad: data.houseRoad || '',
+        Active: true,  // New addresses are active by default
         CreatedBy: 'system',
         CreatedDate: new Date().toISOString(),
         LastUpdatedBy: 'system',
@@ -513,6 +517,7 @@ export class EmpBasicInfo implements OnInit {
         ThanType: data.upazila,
         PostOfficeType: data.postOffice,
         HouseRoad: data.houseRoad || '',
+        Active: true,  // New addresses are active by default
         CreatedBy: 'system',
         CreatedDate: new Date().toISOString(),
         LastUpdatedBy: 'system',
@@ -741,25 +746,25 @@ export class EmpBasicInfo implements OnInit {
                         houseRoad: houseRoad
                     };
 
-                    // Set address data based on location type
-                    switch (locationType.toUpperCase()) {
-                        case 'PERMANENT':
-                            this.permanentAddress = addressData;
-                            this.permanentAddressId = addressId;
-                            break;
-                        case 'PRESENT':
-                            this.presentAddress = addressData;
-                            this.presentAddressId = addressId;
-                            break;
-                        case 'WIFE_PERMANENT':
-                            this.wifePermanentAddress = addressData;
-                            this.wifePermanentAddressId = addressId;
-                            break;
-                        case 'WIFE_PRESENT':
-                            this.wifePresentAddress = addressData;
-                            this.wifePresentAddressId = addressId;
-                            break;
+                    // Set address data based on location type using enum values
+                    // Normalize for case-insensitive comparison
+                    const normalizedType = locationType.toLowerCase();
+
+                    if (normalizedType === LocationType.Permanent.toLowerCase()) {
+                        this.permanentAddress = addressData;
+                        this.permanentAddressId = addressId;
+                    } else if (normalizedType === LocationType.Present.toLowerCase()) {
+                        this.presentAddress = addressData;
+                        this.presentAddressId = addressId;
+                    } else if (normalizedType === LocationType.WifePermanent.toLowerCase()) {
+                        this.wifePermanentAddress = addressData;
+                        this.wifePermanentAddressId = addressId;
+                    } else if (normalizedType === LocationType.WifePresent.toLowerCase()) {
+                        this.wifePresentAddress = addressData;
+                        this.wifePresentAddressId = addressId;
                     }
+
+                    console.log(`Address loaded - Type: ${locationType}, AddressId: ${addressId}`);
                 });
             },
             error: (err) => {
