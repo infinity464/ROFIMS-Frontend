@@ -16,6 +16,7 @@ import { Checkbox } from 'primeng/checkbox';
 import { Dialog } from 'primeng/dialog';
 import { AddressData, AddressFormConfig, AddressFormComponent } from '../../EmployeeInfo/address-form/address-form';
 import { forkJoin } from 'rxjs';
+import { LocationType, PostingStatus } from '@/models/enums';
 
 @Component({
     selector: 'app-emp-basic-info',
@@ -164,7 +165,7 @@ export class EmpBasicInfo implements OnInit {
         EmployeeID: this.generatedEmployeeId,
         AddressId: 0,
         FMID: 0,
-        LocationType: 'PRESENT',
+        LocationType: LocationType.Present,
         LocationCode: `${data.division}-${data.district}-${data.upazila}`,
         PostCode: data.postOffice?.toString() || '',
         AddressAreaEN: data.villageEnglish || '',
@@ -217,7 +218,7 @@ export class EmpBasicInfo implements OnInit {
         EmployeeID: this.generatedEmployeeId,
         AddressId: 0,
         FMID: 0,
-        LocationType: 'PERMANENT',
+        LocationType: LocationType.Permanent,
         LocationCode: `${data.division}-${data.district}-${data.upazila}`,
         PostCode: data.postOffice?.toString() || '',
         AddressAreaEN: data.villageEnglish || '',
@@ -271,7 +272,7 @@ export class EmpBasicInfo implements OnInit {
         EmployeeID: this.generatedEmployeeId,
         AddressId: 0,
         FMID: 0,
-        LocationType: 'WIFE_PERMANENT',
+        LocationType: LocationType.WifePermanent,
         LocationCode: `${data.division}-${data.district}-${data.upazila}`,
         PostCode: data.postOffice?.toString() || '',
         AddressAreaEN: data.villageEnglish || '',
@@ -325,7 +326,7 @@ export class EmpBasicInfo implements OnInit {
         EmployeeID: this.generatedEmployeeId,
         AddressId: 0,
         FMID: 0,
-        LocationType: 'WIFE_PRESENT',
+        LocationType: LocationType.WifePresent,
         LocationCode: `${data.division}-${data.district}-${data.upazila}`,
         PostCode: data.postOffice?.toString() || '',
         AddressAreaEN: data.villageEnglish || '',
@@ -437,6 +438,8 @@ export class EmpBasicInfo implements OnInit {
       ...formValue,
       employeeID: this.generatedEmployeeId || 0,
       joiningDate: this.formatDate(formValue.joiningDate),
+      // Set PostingStatus to Supernumerary by default for new employees
+      postingStatus: formValue.postingStatus || PostingStatus.Supernumerary,
       // Include isReliever boolean and relieverId
       isReliever: this.isReliever,
       relieverId: (this.isReliever && this.selectedRelieverEmployeeId) ? this.selectedRelieverEmployeeId : null
@@ -528,16 +531,16 @@ export class EmpBasicInfo implements OnInit {
 
     // Build save requests - only include addresses that have data
     const saveRequests: { [key: string]: any } = {
-      permanent: getAddressRequest(permanent, 'PERMANENT', this.permanentAddressId),
-      present: getAddressRequest(present, 'PRESENT', this.presentAddressId)
+      permanent: getAddressRequest(permanent, LocationType.Permanent, this.permanentAddressId),
+      present: getAddressRequest(present, LocationType.Present, this.presentAddressId)
     };
 
     // Add wife addresses only if they have data
     if (wifePermanent) {
-      saveRequests['wifePermanent'] = getAddressRequest(wifePermanent, 'WIFE_PERMANENT', this.wifePermanentAddressId);
+      saveRequests['wifePermanent'] = getAddressRequest(wifePermanent, LocationType.WifePermanent, this.wifePermanentAddressId);
     }
     if (wifePresent) {
-      saveRequests['wifePresent'] = getAddressRequest(wifePresent, 'WIFE_PRESENT', this.wifePresentAddressId);
+      saveRequests['wifePresent'] = getAddressRequest(wifePresent, LocationType.WifePresent, this.wifePresentAddressId);
     }
 
     forkJoin(saveRequests).subscribe({
@@ -1017,7 +1020,9 @@ export class EmpBasicInfo implements OnInit {
             // Format the date to YYYY-MM-DD for backend
             const formattedData = {
                 ...formValue,
-                joiningDate: this.formatDate(formValue.joiningDate)
+                joiningDate: this.formatDate(formValue.joiningDate),
+                // Set PostingStatus to Supernumerary by default
+                postingStatus: formValue.postingStatus || PostingStatus.Supernumerary
             };
 
             this.empService.saveEmployee(formattedData).subscribe({
