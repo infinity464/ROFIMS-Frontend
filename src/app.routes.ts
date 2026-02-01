@@ -53,6 +53,20 @@ import { EmpBasicInfo } from '@/Components/Features/Emp/emp-basic-info/emp-basic
 import { EmpList } from '@/Components/Features/Emp/emp-list/emp-list';
 import { EmpPersonalInfo } from '@/Components/Features/Emp/emp-personal-info/emp-personal-info';
 import { EmpAddressInfo } from '@/Components/Features/Emp/emp-address-info/emp-address-info';
+import { EmpFamilyInfo } from '@/Components/Features/Emp/emp-family-info/emp-family-info';
+import { EmpNomineeInfo } from '@/Components/Features/Emp/emp-nominee-info/emp-nominee-info';
+import { EmpPreviousRabService } from '@/Components/Features/Emp/emp-previous-rab-service/emp-previous-rab-service';
+import { EmpServiceHistory } from '@/Components/Features/Emp/emp-service-history/emp-service-history';
+import { EmpPromotionInfo } from '@/Components/Features/Emp/emp-promotion-info/emp-promotion-info';
+import { EmpRankConfirmationComponent } from '@/Components/Features/Emp/emp-rank-confirmation/emp-rank-confirmation';
+import { EmpEducationInfoComponent } from '@/Components/Features/Emp/emp-education-info/emp-education-info';
+import { EmpCourseInfoComponent } from '@/Components/Features/Emp/emp-course-info/emp-course-info';
+import { EmpDisciplineInfoComponent } from '@/Components/Features/Emp/emp-discipline-info/emp-discipline-info';
+import { EmpBankAccount } from '@/Components/Features/Emp/emp-bank-account/emp-bank-account.component';
+import { EmpForeignVisit } from '@/Components/Features/Emp/emp-foreign-visit/emp-foreign-visit.component';
+import { EmpLeaveInfo } from '@/Components/Features/Emp/emp-leave-info/emp-leave-info.component';
+import { EmpMedicalCategory } from '@/Components/Features/Emp/emp-medical-category/emp-medical-category.component';
+import { EmpAdditionalRemarks } from '@/Components/Features/Emp/emp-additional-remarks/emp-additional-remarks.component';
 import { Prefix } from '@/Components/basic-setup/prefix/prefix';
 import { Gender } from '@/Components/basic-setup/gender/gender';
 import { Bank } from '@/Components/basic-setup/bank/bank';
@@ -126,6 +140,20 @@ export const appRoutes: Routes = [
             { path: 'emp-basic-info', component: EmpBasicInfo },
             { path: 'emp-personal-info', component: EmpPersonalInfo },
             { path: 'emp-address-info', component: EmpAddressInfo },
+            { path: 'emp-family-info', component: EmpFamilyInfo },
+            { path: 'emp-nominee-info', component: EmpNomineeInfo },
+            { path: 'emp-previous-rab-service', component: EmpPreviousRabService },
+            { path: 'emp-service-history', component: EmpServiceHistory },
+            { path: 'emp-promotion-info', component: EmpPromotionInfo },
+            { path: 'emp-rank-confirmation', component: EmpRankConfirmationComponent },
+            { path: 'emp-education-info', component: EmpEducationInfoComponent },
+            { path: 'emp-course-info', component: EmpCourseInfoComponent },
+            { path: 'emp-discipline-info', component: EmpDisciplineInfoComponent },
+            { path: 'emp-bank-account', component: EmpBankAccount },
+            { path: 'emp-foreign-visit', component: EmpForeignVisit },
+            { path: 'emp-leave-info', component: EmpLeaveInfo },
+            { path: 'emp-medical-category', component: EmpMedicalCategory },
+            { path: 'emp-additional-remarks', component: EmpAdditionalRemarks },
 
             { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
             { path: 'documentation', component: Documentation },

@@ -32,7 +32,21 @@ export class AppMenu {
                     { label: 'New Joining', icon: 'pi pi-fw pi-user-plus', routerLink: ['/emp-basic-info'] },
                     { label: 'Personal Info', icon: 'pi pi-fw pi-id-card', routerLink: ['/personal-info'] },
                     { label: 'Employee Personal Info', icon: 'pi pi-fw pi-user', routerLink: ['/emp-personal-info'] },
-                    { label: 'Employee Address Info', icon: 'pi pi-fw pi-map-marker', routerLink: ['/emp-address-info'] }
+                    { label: 'Employee Address Info', icon: 'pi pi-fw pi-map-marker', routerLink: ['/emp-address-info'] },
+                    { label: 'Family Info', icon: 'pi pi-fw pi-users', routerLink: ['/emp-family-info'] },
+                    { label: 'Nominee Info', icon: 'pi pi-fw pi-user-plus', routerLink: ['/emp-nominee-info'] },
+                    { label: 'Previous RAB Service', icon: 'pi pi-fw pi-history', routerLink: ['/emp-previous-rab-service'] },
+                    { label: 'Service History', icon: 'pi pi-fw pi-clock', routerLink: ['/emp-service-history'] },
+                    { label: 'Promotion Info', icon: 'pi pi-fw pi-arrow-up', routerLink: ['/emp-promotion-info'] },
+                    { label: 'Rank Confirmation', icon: 'pi pi-fw pi-check-circle', routerLink: ['/emp-rank-confirmation'] },
+                    { label: 'Education Info', icon: 'pi pi-fw pi-book', routerLink: ['/emp-education-info'] },
+                    { label: 'Course Info', icon: 'pi pi-fw pi-graduation-cap', routerLink: ['/emp-course-info'] },
+                    { label: 'Discipline Info', icon: 'pi pi-fw pi-exclamation-triangle', routerLink: ['/emp-discipline-info'] },
+                    { label: 'Bank Account', icon: 'pi pi-fw pi-wallet', routerLink: ['/emp-bank-account'] },
+                    { label: 'Foreign Visit', icon: 'pi pi-fw pi-globe', routerLink: ['/emp-foreign-visit'] },
+                    { label: 'Leave Info', icon: 'pi pi-fw pi-calendar-minus', routerLink: ['/emp-leave-info'] },
+                    { label: 'Medical Category', icon: 'pi pi-fw pi-heart', routerLink: ['/emp-medical-category'] },
+                    { label: 'Additional Remarks', icon: 'pi pi-fw pi-comment', routerLink: ['/emp-additional-remarks'] }
                 ]
             },
             {
