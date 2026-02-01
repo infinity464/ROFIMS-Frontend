@@ -31,7 +31,8 @@ export class AppMenu {
                     { label: 'EmployeeInfo', routerLink: ['/employee-info'] },
                     { label: 'New Joining', icon: 'pi pi-fw pi-user-plus', routerLink: ['/emp-basic-info'] },
                     { label: 'Personal Info', icon: 'pi pi-fw pi-id-card', routerLink: ['/personal-info'] },
-                    { label: 'Employee Personal Info', icon: 'pi pi-fw pi-map-marker', routerLink: ['/emp-personal-info'] }
+                    { label: 'Employee Personal Info', icon: 'pi pi-fw pi-user', routerLink: ['/emp-personal-info'] },
+                    { label: 'Employee Address Info', icon: 'pi pi-fw pi-map-marker', routerLink: ['/emp-address-info'] }
                 ]
             },
             {

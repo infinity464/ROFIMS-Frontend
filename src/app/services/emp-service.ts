@@ -144,4 +144,24 @@ export class EmpService {
             map(data => data && data.length > 0 ? data[0] : null)
         );
     }
+
+    // Get active addresses by employee ID (only Present and Permanent, not Wife addresses)
+    getActiveAddressesByEmployeeId(employeeId: number): Observable<any[]> {
+        return this.http.get<any[]>(`${this.empApi}/AddressInfo/GetByEmployeeId/${employeeId}`).pipe(
+            map(addresses => {
+                // Filter only active addresses and exclude wife addresses
+                return addresses.filter(addr => {
+                    const locationType = (addr.locationType || addr.LocationType || '').toLowerCase();
+                    const isActive = addr.active !== false && addr.Active !== false;
+                    const isNotWifeAddress = !locationType.includes('wife');
+                    return isActive && isNotWifeAddress;
+                });
+            })
+        );
+    }
+
+    // Deactivate an address (set Active = false)
+    deactivateAddress(addressId: number): Observable<any> {
+        return this.http.post(`${this.empApi}/AddressInfo/Deactivate/${addressId}`, {});
+    }
 }

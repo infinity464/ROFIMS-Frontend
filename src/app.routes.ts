@@ -52,6 +52,7 @@ import { CourseName } from '@/Components/basic-setup/course-name/course-name';
 import { EmpBasicInfo } from '@/Components/Features/Emp/emp-basic-info/emp-basic-info';
 import { EmpList } from '@/Components/Features/Emp/emp-list/emp-list';
 import { EmpPersonalInfo } from '@/Components/Features/Emp/emp-personal-info/emp-personal-info';
+import { EmpAddressInfo } from '@/Components/Features/Emp/emp-address-info/emp-address-info';
 import { Prefix } from '@/Components/basic-setup/prefix/prefix';
 import { Gender } from '@/Components/basic-setup/gender/gender';
 import { Bank } from '@/Components/basic-setup/bank/bank';
@@ -124,6 +125,7 @@ export const appRoutes: Routes = [
             { path: 'emp-list', component: EmpList },
             { path: 'emp-basic-info', component: EmpBasicInfo },
             { path: 'emp-personal-info', component: EmpPersonalInfo },
+            { path: 'emp-address-info', component: EmpAddressInfo },
 
             { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
             { path: 'documentation', component: Documentation },
