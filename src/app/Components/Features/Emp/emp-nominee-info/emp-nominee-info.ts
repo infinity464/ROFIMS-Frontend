@@ -10,6 +10,7 @@ import { MessageService } from 'primeng/api';
 import { TooltipModule } from 'primeng/tooltip';
 
 import { EmpService } from '@/services/emp-service';
+import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 
 @Component({
     selector: 'app-emp-nominee-info',
@@ -21,15 +22,13 @@ import { EmpService } from '@/services/emp-service';
         InputTextModule,
         ButtonModule,
         Fluid,
-        TooltipModule
+        TooltipModule,
+        EmployeeSearchComponent
     ],
     templateUrl: './emp-nominee-info.html',
     styleUrl: './emp-nominee-info.scss'
 })
 export class EmpNomineeInfo implements OnInit {
-    searchRabId: string = '';
-    searchServiceId: string = '';
-    isSearching: boolean = false;
     employeeFound: boolean = false;
     selectedEmployeeId: number | null = null;
     employeeBasicInfo: any = null;
@@ -74,32 +73,16 @@ export class EmpNomineeInfo implements OnInit {
         });
     }
 
-    searchEmployee(): void {
-        if (!this.searchRabId && !this.searchServiceId) {
-            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Please enter RAB ID or Service ID' });
-            return;
-        }
-        this.isSearching = true;
-        this.employeeFound = false;
+    // Handle employee search component events
+    onEmployeeSearchFound(employee: EmployeeBasicInfo): void {
+        this.employeeFound = true;
+        this.selectedEmployeeId = employee.employeeID;
+        this.employeeBasicInfo = employee;
+        this.isReadonly = true;
+    }
 
-        this.empService.searchByRabIdOrServiceId(this.searchRabId || undefined, this.searchServiceId || undefined).subscribe({
-            next: (employee: any) => {
-                this.isSearching = false;
-                if (employee) {
-                    this.employeeFound = true;
-                    this.selectedEmployeeId = employee.employeeID || employee.EmployeeID;
-                    this.employeeBasicInfo = employee;
-                    this.isReadonly = true;
-                    this.messageService.add({ severity: 'success', summary: 'Employee Found', detail: `Found: ${employee.fullNameEN || employee.FullNameEN}` });
-                } else {
-                    this.messageService.add({ severity: 'warn', summary: 'Not Found', detail: 'No employee found' });
-                }
-            },
-            error: () => {
-                this.isSearching = false;
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Search failed' });
-            }
-        });
+    onEmployeeSearchReset(): void {
+        this.resetForm();
     }
 
     enableEditMode(): void {
@@ -119,8 +102,6 @@ export class EmpNomineeInfo implements OnInit {
         this.employeeFound = false;
         this.selectedEmployeeId = null;
         this.employeeBasicInfo = null;
-        this.searchRabId = '';
-        this.searchServiceId = '';
     }
 
     saveData(): void {

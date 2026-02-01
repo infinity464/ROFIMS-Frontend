@@ -12,6 +12,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { EmpService } from '@/services/emp-service';
 import { AddressData, AddressFormConfig, AddressFormComponent } from '../../EmployeeInfo/address-form/address-form';
 import { LocationType } from '@/models/enums';
+import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 
 @Component({
     selector: 'app-emp-address-info',
@@ -24,7 +25,8 @@ import { LocationType } from '@/models/enums';
         ButtonModule,
         Fluid,
         TooltipModule,
-        AddressFormComponent
+        AddressFormComponent,
+        EmployeeSearchComponent
     ],
     templateUrl: './emp-address-info.html',
     styleUrl: './emp-address-info.scss'
@@ -33,10 +35,7 @@ export class EmpAddressInfo implements OnInit {
     @ViewChild('permanentAddressForm') permanentAddressForm!: AddressFormComponent;
     @ViewChild('presentAddressForm') presentAddressForm!: AddressFormComponent;
 
-    // Search
-    searchRabId: string = '';
-    searchServiceId: string = '';
-    isSearching: boolean = false;
+    // Employee lookup
     employeeFound: boolean = false;
     selectedEmployeeId: number | null = null;
 
@@ -126,57 +125,18 @@ export class EmpAddressInfo implements OnInit {
         }
     }
 
-    searchEmployee(): void {
-        if (!this.searchRabId && !this.searchServiceId) {
-            this.messageService.add({
-                severity: 'warn',
-                summary: 'Warning',
-                detail: 'Please enter RAB ID or Service ID'
-            });
-            return;
-        }
+    // Handle employee search component events
+    onEmployeeSearchFound(employee: EmployeeBasicInfo): void {
+        this.employeeFound = true;
+        this.selectedEmployeeId = employee.employeeID;
+        this.employeeBasicInfo = employee;
+        this.isReadonly = true;
+        this.updateAddressConfigs();
+        this.loadAddresses();
+    }
 
-        this.isSearching = true;
-        this.employeeFound = false;
-
-        this.empService.searchByRabIdOrServiceId(
-            this.searchRabId || undefined,
-            this.searchServiceId || undefined
-        ).subscribe({
-            next: (employee: any) => {
-                this.isSearching = false;
-                if (employee) {
-                    this.employeeFound = true;
-                    this.selectedEmployeeId = employee.employeeID || employee.EmployeeID;
-                    this.employeeBasicInfo = employee;
-                    this.isReadonly = true; // Show readonly mode first after search
-                    this.updateAddressConfigs();
-                    this.loadAddresses();
-
-                    const empName = employee.fullNameEN || employee.FullNameEN || 'Unknown';
-                    this.messageService.add({
-                        severity: 'success',
-                        summary: 'Employee Found',
-                        detail: `Found: ${empName}`
-                    });
-                } else {
-                    this.messageService.add({
-                        severity: 'warn',
-                        summary: 'Not Found',
-                        detail: 'No employee found with given ID'
-                    });
-                }
-            },
-            error: (err) => {
-                this.isSearching = false;
-                console.error('Search failed', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Failed to search employee'
-                });
-            }
-        });
+    onEmployeeSearchReset(): void {
+        this.resetForm();
     }
 
     loadAddresses(): void {
@@ -432,8 +392,6 @@ export class EmpAddressInfo implements OnInit {
         this.employeeFound = false;
         this.selectedEmployeeId = null;
         this.employeeBasicInfo = null;
-        this.searchRabId = '';
-        this.searchServiceId = '';
         this.permanentAddressData = undefined;
         this.presentAddressData = undefined;
         this.permanentAddressId = null;

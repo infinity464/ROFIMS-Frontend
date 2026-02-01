@@ -5,14 +5,10 @@
             <h3 class="m-0 text-xl font-bold text-900" style="display: inline-flex; align-items: center; gap: 0.5rem;">Course/Cadar Information Entry @if (mode === 'view') { <span class="text-500 text-base font-normal">(View Mode)</span> <p-button label="Edit" icon="pi pi-pencil" size="small" (onClick)="enableEditMode()"></p-button> } @if (mode === 'edit') { <span class="text-primary text-base font-normal">(Edit Mode)</span> }</h3>
         </div>
         @if (mode === 'search') {
-            <div class="surface-50 border-round-2xl p-4 mb-4">
-                <div class="flex flex-wrap gap-3 mb-4">
-                    <div style="min-width: 200px; max-width: 250px;"><label class="font-semibold block mb-2 text-700">RAB ID</label><input pInputText class="w-full" placeholder="Enter RAB ID" [(ngModel)]="searchRabId" /></div>
-                    <div style="min-width: 200px; max-width: 250px;"><label class="font-semibold block mb-2 text-700">Service ID</label><input pInputText class="w-full" placeholder="Enter Service ID" [(ngModel)]="searchServiceId" /></div>
-                    <div><label class="font-semibold block mb-2 text-700">&nbsp;</label><p-button label="Search" icon="pi pi-search" [loading]="isSearching" (onClick)="searchEmployee()"></p-button></div>
-                </div>
-                @if (employeeFound && employeeBasicInfo) { <div class="surface-100 border-round p-3"><div class="flex flex-wrap gap-4"><div><span class="text-500 text-sm">Name:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.fullNameEN || employeeBasicInfo.FullNameEN || 'N/A' }}</span></div><div><span class="text-500 text-sm">RAB ID:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.rabid || employeeBasicInfo.Rabid || 'N/A' }}</span></div><div><span class="text-500 text-sm">Service ID:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.serviceId || employeeBasicInfo.ServiceId || 'N/A' }}</span></div></div></div> }
-            </div>
+            <app-employee-search
+                (onEmployeeFound)="onEmployeeSearchFound($event)"
+                (onSearchReset)="onEmployeeSearchReset()">
+            </app-employee-search>
         }
         @if (mode !== 'search' && employeeBasicInfo) { <div class="surface-50 border-round-2xl p-4 mb-4"><div class="flex flex-wrap gap-4"><div><span class="text-500 text-sm">Name:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.fullNameEN || employeeBasicInfo.FullNameEN || 'N/A' }}</span></div><div><span class="text-500 text-sm">RAB ID:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.rabid || employeeBasicInfo.Rabid || 'N/A' }}</span></div><div><span class="text-500 text-sm">Service ID:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.serviceId || employeeBasicInfo.ServiceId || 'N/A' }}</span></div></div></div> }
         @if (employeeFound) {

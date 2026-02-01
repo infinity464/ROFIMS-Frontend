@@ -19,6 +19,7 @@ import { EmpService } from '@/services/emp-service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { FamilyInfoService } from '@/services/family-info-service';
 import { AddressFormComponent, AddressData, AddressFormConfig } from '@/Components/Features/EmployeeInfo/address-form/address-form';
+import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 import { LocationType } from '@/models/enums';
 
 interface FamilyMember {
@@ -53,16 +54,14 @@ interface FamilyMember {
         DialogModule,
         ConfirmDialogModule,
         TabsModule,
-        AddressFormComponent
+        AddressFormComponent,
+        EmployeeSearchComponent
     ],
     providers: [ConfirmationService],
     templateUrl: './emp-family-info.html',
     styleUrl: './emp-family-info.scss'
 })
 export class EmpFamilyInfo implements OnInit {
-    searchRabId: string = '';
-    searchServiceId: string = '';
-    isSearching: boolean = false;
     employeeFound: boolean = false;
     selectedEmployeeId: number | null = null;
     employeeBasicInfo: any = null;
@@ -212,35 +211,6 @@ export class EmpFamilyInfo implements OnInit {
             error: (err) => {
                 console.error('Failed to load employee', err);
                 this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load employee' });
-            }
-        });
-    }
-
-    searchEmployee(): void {
-        if (!this.searchRabId && !this.searchServiceId) {
-            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Please enter RAB ID or Service ID' });
-            return;
-        }
-        this.isSearching = true;
-        this.employeeFound = false;
-
-        this.empService.searchByRabIdOrServiceId(this.searchRabId || undefined, this.searchServiceId || undefined).subscribe({
-            next: (employee: any) => {
-                this.isSearching = false;
-                if (employee) {
-                    this.employeeFound = true;
-                    this.selectedEmployeeId = employee.employeeID || employee.EmployeeID;
-                    this.employeeBasicInfo = employee;
-                    this.isReadonly = true;
-                    this.loadFamilyMembers();
-                    this.messageService.add({ severity: 'success', summary: 'Employee Found', detail: `Found: ${employee.fullNameEN || employee.FullNameEN}` });
-                } else {
-                    this.messageService.add({ severity: 'warn', summary: 'Not Found', detail: 'No employee found' });
-                }
-            },
-            error: () => {
-                this.isSearching = false;
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Search failed' });
             }
         });
     }
@@ -500,9 +470,20 @@ export class EmpFamilyInfo implements OnInit {
         this.employeeFound = false;
         this.selectedEmployeeId = null;
         this.employeeBasicInfo = null;
-        this.searchRabId = '';
-        this.searchServiceId = '';
         this.familyMembers = [];
+    }
+
+    // Handle employee search component events
+    onEmployeeSearchFound(employee: EmployeeBasicInfo): void {
+        this.employeeFound = true;
+        this.selectedEmployeeId = employee.employeeID;
+        this.employeeBasicInfo = employee;
+        this.isReadonly = true;
+        this.loadFamilyMembers();
+    }
+
+    onEmployeeSearchReset(): void {
+        this.resetForm();
     }
 
     // Address Dialog Methods

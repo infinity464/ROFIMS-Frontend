@@ -8,18 +8,21 @@ import { Fluid } from 'primeng/fluid';
 import { MessageService } from 'primeng/api';
 import { TooltipModule } from 'primeng/tooltip';
 import { EmpService } from '@/services/emp-service';
+import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 
 @Component({
     selector: 'app-emp-education-info',
     standalone: true,
-    imports: [CommonModule, FormsModule, ReactiveFormsModule, InputTextModule, ButtonModule, Fluid, TooltipModule],
+    imports: [CommonModule, FormsModule, ReactiveFormsModule, InputTextModule, ButtonModule, Fluid, TooltipModule, EmployeeSearchComponent],
     templateUrl: './emp-education-info.html',
     styleUrl: './emp-education-info.scss'
 })
 export class EmpEducationInfoComponent implements OnInit {
-    searchRabId = ''; searchServiceId = ''; isSearching = false; employeeFound = false;
-    selectedEmployeeId: number | null = null; employeeBasicInfo: any = null;
-    mode: 'search' | 'view' | 'edit' = 'search'; isReadonly = false;
+    employeeFound = false;
+    selectedEmployeeId: number | null = null;
+    employeeBasicInfo: any = null;
+    mode: 'search' | 'view' | 'edit' = 'search';
+    isReadonly = false;
 
     constructor(private empService: EmpService, private messageService: MessageService, private route: ActivatedRoute, private router: Router) {}
 
@@ -35,18 +38,20 @@ export class EmpEducationInfoComponent implements OnInit {
         this.empService.getEmployeeById(employeeId).subscribe({ next: (e: any) => { if (e) { this.employeeFound = true; this.selectedEmployeeId = e.employeeID || e.EmployeeID; this.employeeBasicInfo = e; } } });
     }
 
-    searchEmployee(): void {
-        if (!this.searchRabId && !this.searchServiceId) { this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Please enter RAB ID or Service ID' }); return; }
-        this.isSearching = true; this.employeeFound = false;
-        this.empService.searchByRabIdOrServiceId(this.searchRabId || undefined, this.searchServiceId || undefined).subscribe({
-            next: (e: any) => { this.isSearching = false; if (e) { this.employeeFound = true; this.selectedEmployeeId = e.employeeID || e.EmployeeID; this.employeeBasicInfo = e; this.isReadonly = true; this.messageService.add({ severity: 'success', summary: 'Found', detail: `Found: ${e.fullNameEN || e.FullNameEN}` }); } else { this.messageService.add({ severity: 'warn', summary: 'Not Found', detail: 'No employee found' }); } },
-            error: () => { this.isSearching = false; this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Search failed' }); }
-        });
+    onEmployeeSearchFound(employee: EmployeeBasicInfo): void {
+        this.employeeFound = true;
+        this.selectedEmployeeId = employee.employeeID;
+        this.employeeBasicInfo = employee;
+        this.isReadonly = true;
+    }
+
+    onEmployeeSearchReset(): void {
+        this.resetForm();
     }
 
     enableEditMode(): void { this.mode = 'edit'; this.isReadonly = false; }
     enableSearchEditMode(): void { this.isReadonly = false; }
     goBack(): void { this.router.navigate(['/emp-list']); }
-    resetForm(): void { this.employeeFound = false; this.selectedEmployeeId = null; this.employeeBasicInfo = null; this.searchRabId = ''; this.searchServiceId = ''; }
+    resetForm(): void { this.employeeFound = false; this.selectedEmployeeId = null; this.employeeBasicInfo = null; }
     saveData(): void { this.messageService.add({ severity: 'info', summary: 'Info', detail: 'Save functionality to be implemented' }); }
 }

@@ -19,6 +19,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { EmpService } from '@/services/emp-service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { MedicalCategoryOptions } from '@/models/enums';
+import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 
 @Component({
     selector: 'app-emp-personal-info',
@@ -36,16 +37,14 @@ import { MedicalCategoryOptions } from '@/models/enums';
         TextareaModule,
         FileUploadModule,
         RadioButtonModule,
-        TooltipModule
+        TooltipModule,
+        EmployeeSearchComponent
     ],
     templateUrl: './emp-personal-info.html',
     styleUrl: './emp-personal-info.scss'
 })
 export class EmpPersonalInfo implements OnInit {
     // Employee lookup
-    searchRabId: string = '';
-    searchServiceId: string = '';
-    isSearching: boolean = false;
     employeeFound: boolean = false;
     selectedEmployeeId: number | null = null;
 
@@ -291,64 +290,24 @@ export class EmpPersonalInfo implements OnInit {
         });
     }
 
-    // Search employee by RAB ID or Service ID
-    searchEmployee(): void {
-        if (!this.searchRabId && !this.searchServiceId) {
-            this.messageService.add({
-                severity: 'warn',
-                summary: 'Warning',
-                detail: 'Please enter RAB ID or Service ID'
-            });
-            return;
+    // Handle employee search component events
+    onEmployeeSearchFound(employee: EmployeeBasicInfo): void {
+        this.employeeFound = true;
+        this.selectedEmployeeId = employee.employeeID;
+        this.employeeBasicInfo = employee;
+
+        // Load personal info if exists
+        this.loadPersonalInfo(employee);
+
+        // Load batches by mother org if available
+        const orgId = (employee as any).orgId || (employee as any).OrgId || (employee as any).lastMotherUnit || (employee as any).LastMotherUnit;
+        if (orgId) {
+            this.loadBatchesByMotherOrg(orgId);
         }
+    }
 
-        this.isSearching = true;
-        this.employeeFound = false;
-
-        this.empService.searchByRabIdOrServiceId(
-            this.searchRabId || undefined,
-            this.searchServiceId || undefined
-        ).subscribe({
-            next: (employee: any) => {
-                this.isSearching = false;
-                if (employee) {
-                    this.employeeFound = true;
-                    this.selectedEmployeeId = employee.employeeID || employee.EmployeeID;
-                    this.employeeBasicInfo = employee;
-
-                    // Load personal info if exists
-                    this.loadPersonalInfo(employee);
-
-                    // Load batches by mother org if available
-                    const orgId = employee.orgId || employee.OrgId || employee.lastMotherUnit || employee.LastMotherUnit;
-                    if (orgId) {
-                        this.loadBatchesByMotherOrg(orgId);
-                    }
-
-                    const empName = employee.fullNameEN || employee.FullNameEN || 'Unknown';
-                    this.messageService.add({
-                        severity: 'success',
-                        summary: 'Employee Found',
-                        detail: `Found: ${empName}`
-                    });
-                } else {
-                    this.messageService.add({
-                        severity: 'warn',
-                        summary: 'Not Found',
-                        detail: 'No employee found with given ID'
-                    });
-                }
-            },
-            error: (err) => {
-                this.isSearching = false;
-                console.error('Search error', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Failed to search employee'
-                });
-            }
-        });
+    onEmployeeSearchReset(): void {
+        this.resetForm();
     }
 
     loadPersonalInfo(employee: any): void {
@@ -540,8 +499,6 @@ export class EmpPersonalInfo implements OnInit {
         this.employeeFound = false;
         this.selectedEmployeeId = null;
         this.employeeBasicInfo = null;
-        this.searchRabId = '';
-        this.searchServiceId = '';
         this.uploadedFiles = [];
         this.showInvestigationExperience = false;
         this.personalInfoExists = false;
