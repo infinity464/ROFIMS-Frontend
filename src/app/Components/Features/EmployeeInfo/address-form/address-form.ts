@@ -33,6 +33,7 @@ export interface AddressFormConfig {
 
 @Component({
     selector: 'app-address-form',
+    standalone: true,
     templateUrl: './address-form.html',
     styleUrls: ['./address-form.scss'],
     imports: [Fluid, InputTextModule, Checkbox, Select, ButtonModule, CommonModule, FormsModule, ReactiveFormsModule]

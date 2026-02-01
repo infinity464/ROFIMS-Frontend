@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -13,10 +13,13 @@ import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
 import { DialogModule } from 'primeng/dialog';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { TabsModule } from 'primeng/tabs';
 
 import { EmpService } from '@/services/emp-service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { FamilyInfoService } from '@/services/family-info-service';
+import { AddressFormComponent, AddressData, AddressFormConfig } from '@/Components/Features/EmployeeInfo/address-form/address-form';
+import { LocationType } from '@/models/enums';
 
 interface FamilyMember {
     employeeId: number;
@@ -48,7 +51,9 @@ interface FamilyMember {
         SelectModule,
         DatePickerModule,
         DialogModule,
-        ConfirmDialogModule
+        ConfirmDialogModule,
+        TabsModule,
+        AddressFormComponent
     ],
     providers: [ConfirmationService],
     templateUrl: './emp-family-info.html',
@@ -78,6 +83,40 @@ export class EmpFamilyInfo implements OnInit {
     relationOptions: any[] = [];
     maritalStatusOptions: any[] = [];
     occupationOptions: any[] = [];
+
+    // Address Dialog (separate dialog for viewing/editing existing addresses)
+    displayAddressDialog: boolean = false;
+    selectedFamilyMember: FamilyMember | null = null;
+    permanentAddressData: AddressData | null = null;
+    presentAddressData: AddressData | null = null;
+    isLoadingAddresses: boolean = false;
+    isSavingAddresses: boolean = false;
+
+    // Dialog tabs and address data (for Add/Edit Family Member dialog)
+    activeDialogTab: string = '0';
+    dialogPermanentAddressData: AddressData | null = null;
+    dialogPresentAddressData: AddressData | null = null;
+    isSaving: boolean = false;
+
+    // Address form references
+    @ViewChild('permanentAddressForm') permanentAddressForm!: AddressFormComponent;
+    @ViewChild('presentAddressForm') presentAddressForm!: AddressFormComponent;
+    @ViewChild('dialogPermanentAddressForm') dialogPermanentAddressForm!: AddressFormComponent;
+    @ViewChild('dialogPresentAddressForm') dialogPresentAddressForm!: AddressFormComponent;
+
+    // Address configs
+    permanentAddressConfig: AddressFormConfig = {
+        title: 'Permanent Address',
+        addressType: 'permanent',
+        showSameAsPresent: false
+    };
+
+    presentAddressConfig: AddressFormConfig = {
+        title: 'Present Address',
+        addressType: 'present',
+        showSameAsPresent: true,
+        sameAsLabel: 'Same as Permanent Address'
+    };
 
     constructor(
         private empService: EmpService,
@@ -253,6 +292,9 @@ export class EmpFamilyInfo implements OnInit {
         this.isEditMode = false;
         this.editingFmid = null;
         this.familyForm.reset();
+        this.activeDialogTab = '0';
+        this.dialogPermanentAddressData = null;
+        this.dialogPresentAddressData = null;
         this.displayDialog = true;
     }
 
@@ -271,7 +313,45 @@ export class EmpFamilyInfo implements OnInit {
             passportNo: member.passportNo,
             email: member.email
         });
+        this.activeDialogTab = '0';
+        this.dialogPermanentAddressData = null;
+        this.dialogPresentAddressData = null;
+        // Load existing addresses for edit mode
+        this.loadDialogAddresses(member);
         this.displayDialog = true;
+    }
+
+    loadDialogAddresses(member: FamilyMember): void {
+        if (!member.employeeId || !member.fmid) return;
+
+        this.empService.getAddressesByEmployeeId(member.employeeId).subscribe({
+            next: (addresses: any[]) => {
+                const familyAddresses = addresses.filter(addr =>
+                    (addr.fmid || addr.FMID) === member.fmid &&
+                    (addr.active !== false && addr.Active !== false)
+                );
+
+                const permanentAddr = familyAddresses.find(addr => {
+                    const locationType = (addr.locationType || addr.LocationType || '').toLowerCase();
+                    return locationType === LocationType.Permanent.toLowerCase() || locationType.includes('permanent');
+                });
+
+                const presentAddr = familyAddresses.find(addr => {
+                    const locationType = (addr.locationType || addr.LocationType || '').toLowerCase();
+                    return locationType === LocationType.Present.toLowerCase() || locationType.includes('present');
+                });
+
+                if (permanentAddr) {
+                    this.dialogPermanentAddressData = this.mapAddressToFormData(permanentAddr);
+                }
+                if (presentAddr) {
+                    this.dialogPresentAddressData = this.mapAddressToFormData(presentAddr);
+                }
+            },
+            error: (err) => {
+                console.error('Failed to load family member addresses', err);
+            }
+        });
     }
 
     saveFamily(): void {
@@ -316,10 +396,42 @@ export class EmpFamilyInfo implements OnInit {
             });
         } else {
             this.familyInfoService.save(payload).subscribe({
-                next: () => {
+                next: (response: any) => {
+                    // Get the generated FMID from the response
+                    const generatedFmid = response?.data?.fmid || response?.data?.FMID || response?.FMID || response?.fmid;
+
                     this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Family member added successfully' });
                     this.displayDialog = false;
                     this.loadFamilyMembers();
+
+                    // If FMID was returned, ask user if they want to add address
+                    if (generatedFmid && this.selectedEmployeeId) {
+                        this.confirmationService.confirm({
+                            message: 'Family member saved. Do you want to add address for this family member?',
+                            header: 'Add Address',
+                            icon: 'pi pi-map-marker',
+                            acceptLabel: 'Yes, Add Address',
+                            rejectLabel: 'No, Later',
+                            accept: () => {
+                                // Create a temporary family member object with the generated FMID
+                                const newMember: FamilyMember = {
+                                    employeeId: this.selectedEmployeeId!,
+                                    fmid: generatedFmid,
+                                    relation: formValue.relation,
+                                    nameEN: formValue.nameEN,
+                                    nameBN: formValue.nameBN,
+                                    dob: formValue.dob,
+                                    maritalStatus: formValue.maritalStatus,
+                                    occupation: formValue.occupation,
+                                    nid: formValue.nid,
+                                    mobileNo: formValue.mobileNo,
+                                    passportNo: formValue.passportNo,
+                                    email: formValue.email
+                                };
+                                this.openAddressDialog(newMember);
+                            }
+                        });
+                    }
                 },
                 error: (err) => {
                     console.error('Failed to save family member', err);
@@ -379,5 +491,312 @@ export class EmpFamilyInfo implements OnInit {
         this.searchRabId = '';
         this.searchServiceId = '';
         this.familyMembers = [];
+    }
+
+    // Address Dialog Methods
+    openAddressDialog(member: FamilyMember): void {
+        this.selectedFamilyMember = member;
+        this.permanentAddressData = null;
+        this.presentAddressData = null;
+        this.displayAddressDialog = true;
+        this.loadFamilyMemberAddresses(member);
+    }
+
+    loadFamilyMemberAddresses(member: FamilyMember): void {
+        if (!member.employeeId || !member.fmid) return;
+
+        this.isLoadingAddresses = true;
+
+        // Get addresses filtered by EmployeeId and FMID
+        this.empService.getAddressesByEmployeeId(member.employeeId).subscribe({
+            next: (addresses: any[]) => {
+                // Filter addresses by FMID for this family member
+                const familyAddresses = addresses.filter(addr =>
+                    (addr.fmid || addr.FMID) === member.fmid &&
+                    (addr.active !== false && addr.Active !== false)
+                );
+
+                // Find permanent and present addresses
+                const permanentAddr = familyAddresses.find(addr => {
+                    const locationType = (addr.locationType || addr.LocationType || '').toLowerCase();
+                    return locationType === LocationType.Permanent.toLowerCase() || locationType.includes('permanent');
+                });
+
+                const presentAddr = familyAddresses.find(addr => {
+                    const locationType = (addr.locationType || addr.LocationType || '').toLowerCase();
+                    return locationType === LocationType.Present.toLowerCase() || locationType.includes('present');
+                });
+
+                if (permanentAddr) {
+                    this.permanentAddressData = this.mapAddressToFormData(permanentAddr);
+                }
+
+                if (presentAddr) {
+                    this.presentAddressData = this.mapAddressToFormData(presentAddr);
+                }
+
+                this.isLoadingAddresses = false;
+            },
+            error: (err) => {
+                console.error('Failed to load family member addresses', err);
+                this.isLoadingAddresses = false;
+            }
+        });
+    }
+
+    mapAddressToFormData(addr: any): AddressData {
+        return {
+            employeeId: addr.employeeID || addr.EmployeeID,
+            division: addr.divisionType || addr.DivisionType,
+            district: addr.districtType || addr.DistrictType,
+            upazila: addr.thanType || addr.ThanType,
+            postOffice: addr.postOfficeType || addr.PostOfficeType,
+            postCode: addr.postCode || addr.PostCode || '',
+            villageEnglish: addr.addressAreaEN || addr.AddressAreaEN || '',
+            villageBangla: addr.addressAreaBN || addr.AddressAreaBN || '',
+            houseRoad: addr.houseRoad || addr.HouseRoad || ''
+        };
+    }
+
+    copyPermanentToPresent(): void {
+        if (this.permanentAddressForm) {
+            const permanentData = this.permanentAddressForm.getFormData();
+            if (permanentData.data && permanentData.data.division) {
+                this.presentAddressForm?.populateFromSourceAddress(permanentData.data);
+            } else {
+                this.messageService.add({
+                    severity: 'warn',
+                    summary: 'Warning',
+                    detail: 'Please fill Permanent Address first'
+                });
+            }
+        }
+    }
+
+    saveFamilyAddresses(): void {
+        if (!this.selectedFamilyMember) return;
+
+        const permanentFormData = this.permanentAddressForm?.getFormData();
+        const presentFormData = this.presentAddressForm?.getFormData();
+
+        // Check if at least one address has data
+        if (!permanentFormData?.data?.division && !presentFormData?.data?.division) {
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'Warning',
+                detail: 'Please fill at least one address'
+            });
+            return;
+        }
+
+        this.isSavingAddresses = true;
+        const savePromises: Promise<any>[] = [];
+
+        // Save permanent address if filled
+        if (permanentFormData?.data?.division) {
+            savePromises.push(
+                this.saveFamilyAddress(
+                    permanentFormData.data,
+                    LocationType.Permanent,
+                    this.selectedFamilyMember.employeeId,
+                    this.selectedFamilyMember.fmid
+                ).toPromise()
+            );
+        }
+
+        // Save present address if filled
+        if (presentFormData?.data?.division) {
+            savePromises.push(
+                this.saveFamilyAddress(
+                    presentFormData.data,
+                    LocationType.Present,
+                    this.selectedFamilyMember.employeeId,
+                    this.selectedFamilyMember.fmid
+                ).toPromise()
+            );
+        }
+
+        Promise.all(savePromises)
+            .then(() => {
+                this.messageService.add({
+                    severity: 'success',
+                    summary: 'Success',
+                    detail: 'Addresses saved successfully'
+                });
+                this.displayAddressDialog = false;
+                this.isSavingAddresses = false;
+            })
+            .catch((err) => {
+                console.error('Failed to save addresses', err);
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: 'Failed to save addresses'
+                });
+                this.isSavingAddresses = false;
+            });
+    }
+
+    saveFamilyAddress(data: AddressData, locationType: LocationType, employeeId: number, fmid: number) {
+        const addressPayload = {
+            EmployeeID: employeeId,
+            AddressId: 0,
+            FMID: fmid, // Pass FMID for family member address
+            LocationType: locationType,
+            LocationCode: `${data.division}-${data.district}-${data.upazila}`,
+            PostCode: data.postCode || '',
+            AddressAreaEN: data.villageEnglish || '',
+            AddressAreaBN: data.villageBangla || '',
+            HouseRoad: data.houseRoad || '',
+            DivisionType: data.division,
+            DistrictType: data.district,
+            ThanType: data.upazila,
+            PostOfficeType: data.postOffice,
+            Active: true,
+            CreatedBy: 'system',
+            CreatedDate: new Date().toISOString(),
+            LastUpdatedBy: 'system',
+            Lastupdate: new Date().toISOString()
+        };
+
+        return this.empService.saveAddress(addressPayload);
+    }
+
+    closeAddressDialog(): void {
+        this.displayAddressDialog = false;
+        this.selectedFamilyMember = null;
+        this.permanentAddressData = null;
+        this.presentAddressData = null;
+    }
+
+    // Dialog methods for Add/Edit Family Member with Address
+    copyDialogPermanentToPresent(): void {
+        if (this.dialogPermanentAddressForm) {
+            const permanentData = this.dialogPermanentAddressForm.getFormData();
+            if (permanentData.data && permanentData.data.division) {
+                this.dialogPresentAddressForm?.populateFromSourceAddress(permanentData.data);
+            } else {
+                this.messageService.add({
+                    severity: 'warn',
+                    summary: 'Warning',
+                    detail: 'Please fill Permanent Address first'
+                });
+            }
+        }
+    }
+
+    saveFamilyWithAddress(): void {
+        if (this.familyForm.invalid) {
+            Object.keys(this.familyForm.controls).forEach(key => {
+                this.familyForm.get(key)?.markAsTouched();
+            });
+            this.activeDialogTab = '0'; // Switch to basic info tab to show errors
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Please fill required fields in Basic Info' });
+            return;
+        }
+
+        this.isSaving = true;
+        const formValue = this.familyForm.value;
+        const payload = {
+            EmployeeId: this.selectedEmployeeId,
+            FMID: this.isEditMode ? this.editingFmid : 0,
+            Relation: formValue.relation,
+            NameEN: formValue.nameEN,
+            NameBN: formValue.nameBN || null,
+            DOB: formValue.dob ? this.formatDate(formValue.dob) : null,
+            MaritalStatus: formValue.maritalStatus,
+            Occupation: formValue.occupation,
+            NID: formValue.nid || null,
+            MobileNo: formValue.mobileNo || null,
+            PassportNo: formValue.passportNo || null,
+            Email: formValue.email || null,
+            LastUpdatedBy: 'system',
+            Lastupdate: new Date().toISOString(),
+            StatusDate: new Date().toISOString()
+        };
+
+        const saveObservable = this.isEditMode
+            ? this.familyInfoService.update(payload)
+            : this.familyInfoService.save(payload);
+
+        saveObservable.subscribe({
+            next: (response: any) => {
+                // Get FMID - for edit mode use existing, for new get from response
+                const fmid = this.isEditMode
+                    ? this.editingFmid!
+                    : (response?.data?.fmid || response?.data?.FMID || response?.FMID || response?.fmid);
+
+                if (fmid && this.selectedEmployeeId) {
+                    // Save addresses if filled
+                    this.saveDialogAddresses(this.selectedEmployeeId, fmid);
+                } else {
+                    this.isSaving = false;
+                    this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Family member saved successfully' });
+                    this.displayDialog = false;
+                    this.loadFamilyMembers();
+                    this.resetDialogState();
+                }
+            },
+            error: (err) => {
+                console.error('Failed to save family member', err);
+                this.isSaving = false;
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to save family member' });
+            }
+        });
+    }
+
+    saveDialogAddresses(employeeId: number, fmid: number): void {
+        const permanentFormData = this.dialogPermanentAddressForm?.getFormData();
+        const presentFormData = this.dialogPresentAddressForm?.getFormData();
+
+        const savePromises: Promise<any>[] = [];
+
+        // Save permanent address if filled
+        if (permanentFormData?.data?.division) {
+            savePromises.push(
+                this.saveFamilyAddress(permanentFormData.data, LocationType.Permanent, employeeId, fmid).toPromise()
+            );
+        }
+
+        // Save present address if filled
+        if (presentFormData?.data?.division) {
+            savePromises.push(
+                this.saveFamilyAddress(presentFormData.data, LocationType.Present, employeeId, fmid).toPromise()
+            );
+        }
+
+        if (savePromises.length > 0) {
+            Promise.all(savePromises)
+                .then(() => {
+                    this.isSaving = false;
+                    this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Family member and addresses saved successfully' });
+                    this.displayDialog = false;
+                    this.loadFamilyMembers();
+                    this.resetDialogState();
+                })
+                .catch((err) => {
+                    console.error('Failed to save addresses', err);
+                    this.isSaving = false;
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Family member saved but failed to save addresses' });
+                    this.displayDialog = false;
+                    this.loadFamilyMembers();
+                    this.resetDialogState();
+                });
+        } else {
+            this.isSaving = false;
+            this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Family member saved successfully' });
+            this.displayDialog = false;
+            this.loadFamilyMembers();
+            this.resetDialogState();
+        }
+    }
+
+    resetDialogState(): void {
+        this.activeDialogTab = '0';
+        this.dialogPermanentAddressData = null;
+        this.dialogPresentAddressData = null;
+        this.familyForm.reset();
+        this.editingFmid = null;
+        this.isEditMode = false;
     }
 }
