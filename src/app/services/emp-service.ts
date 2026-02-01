@@ -129,4 +129,19 @@ export class EmpService {
     generateRabId(prefix: string, serviceId: string): string {
         return `${prefix}-${serviceId}`;
     }
+
+    // PersonalInfo API methods
+    savePersonalInfo(payload: any): Observable<any> {
+        return this.http.post(`${this.empApi}/PersonalInfo/SaveAsyn`, payload);
+    }
+
+    updatePersonalInfo(payload: any): Observable<any> {
+        return this.http.post(`${this.empApi}/PersonalInfo/UpdateAsyn`, payload);
+    }
+
+    getPersonalInfoByEmployeeId(employeeId: number): Observable<any> {
+        return this.http.get<any[]>(`${this.empApi}/PersonalInfo/GetFilteredByKeysAsyn/${employeeId}`).pipe(
+            map(data => data && data.length > 0 ? data[0] : null)
+        );
+    }
 }

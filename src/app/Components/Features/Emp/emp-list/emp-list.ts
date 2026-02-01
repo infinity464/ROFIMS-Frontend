@@ -86,6 +86,10 @@ export class EmpList implements OnInit {
         this.router.navigate(['/emp-basic-info'], { queryParams: { id: employee.employeeID, mode: 'edit' } });
     }
 
+    viewPersonalInfo(employee: any): void {
+        this.router.navigate(['/emp-personal-info'], { queryParams: { id: employee.employeeID, mode: 'view' } });
+    }
+
     confirmDelete(employee: any): void {
         this.confirmationService.confirm({
             message: `Are you sure you want to delete ${employee.fullNameEN}?`,

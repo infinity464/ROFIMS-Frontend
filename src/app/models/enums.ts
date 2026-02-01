@@ -80,3 +80,21 @@ export enum FormMode {
   Edit = 'edit',
   View = 'view'
 }
+
+// Medical Category
+export enum MedicalCategory {
+  A_AYEE = 'A (AYEE)',
+  B_BEE = 'B (BEE)',
+  C_CEE = 'C (CEE)',
+  D_DEE = 'D (DEE)',
+  E_EEE = 'E (EEE)'
+}
+
+// Medical Category Options for dropdown (value is integer ID for backend)
+export const MedicalCategoryOptions = [
+  { label: 'A (AYEE)', value: 1 },
+  { label: 'B (BEE)', value: 2 },
+  { label: 'C (CEE)', value: 3 },
+  { label: 'D (DEE)', value: 4 },
+  { label: 'E (EEE)', value: 5 }
+];

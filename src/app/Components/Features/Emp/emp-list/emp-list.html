@@ -78,6 +78,7 @@
                 <th pSortableColumn="status" style="width: 100px">
                     Status <p-sortIcon field="status"></p-sortIcon>
                 </th>
+                <th style="width: 120px">Personal Info</th>
                 <th style="width: 120px">Actions</th>
             </tr>
         </ng-template>
@@ -97,6 +98,19 @@
                         [value]="getStatusLabel(employee.status)"
                         [severity]="getStatusSeverity(employee.status)">
                     </p-tag>
+                </td>
+                <td>
+                    <p-button
+                        icon="pi pi-user"
+                        label="View"
+                        [rounded]="true"
+                        [outlined]="true"
+                        size="small"
+                        severity="help"
+                        pTooltip="View Personal Info"
+                        tooltipPosition="top"
+                        (onClick)="viewPersonalInfo(employee)">
+                    </p-button>
                 </td>
                 <td>
                     <div class="flex flex-nowrap gap-1">
@@ -125,7 +139,7 @@
         <!-- Empty Message -->
         <ng-template pTemplate="emptymessage">
             <tr>
-                <td colspan="7" class="text-center p-4">
+                <td colspan="8" class="text-center p-4">
                     <div class="flex flex-column align-items-center gap-3 py-5">
                         <i class="pi pi-users text-5xl text-400"></i>
                         <span class="text-lg text-500">No employees found</span>
