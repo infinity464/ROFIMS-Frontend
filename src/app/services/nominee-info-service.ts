@@ -22,7 +22,7 @@ export class NomineeInfoService {
     constructor(private http: HttpClient) {}
 
     getByEmployeeId(employeeId: number): Observable<NomineeInfoModel[]> {
-        return this.http.get<NomineeInfoModel[]>(`${this.apiUrl}/GetByEmployeeId/ByEmployee/${employeeId}`);
+        return this.http.get<NomineeInfoModel[]>(`${this.apiUrl}/GetByEmployeeId/${employeeId}`);
     }
 
     save(payload: Partial<NomineeInfoModel>): Observable<any> {
