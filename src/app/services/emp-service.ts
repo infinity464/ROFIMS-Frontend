@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
 import { environment } from '@/Core/Environments/environment';
-import { Observable, forkJoin } from 'rxjs';
+import { Observable, forkJoin, of } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
-import { switchMap, map } from 'rxjs/operators';
+import { switchMap, map, catchError, tap } from 'rxjs/operators';
 import { from } from 'rxjs';
 import { concatMap, toArray } from 'rxjs/operators';
 import { AddressInfoModel, EmpModel } from '@/models/EmpModel';
@@ -163,5 +163,75 @@ export class EmpService {
     // Deactivate an address (set Active = false)
     deactivateAddress(addressId: number): Observable<any> {
         return this.http.post(`${this.empApi}/AddressInfo/Deactivate/${addressId}`, {});
+    }
+
+    // Additional Remarks API methods
+    getAdditionalRemarksByEmployeeId(employeeId: number): Observable<any[]> {
+        return this.http.get<any>(`${this.empApi}/AdditionalRemarksInfo/GetByEmployeeId/${employeeId}`).pipe(
+            tap(data => console.log('Raw API response:', data, 'Type:', typeof data, 'IsArray:', Array.isArray(data))),
+            map(data => {
+                // Handle IQueryable response - it might come as an object with array properties
+                if (Array.isArray(data)) {
+                    console.log('Data is array, returning as-is');
+                    return data;
+                }
+                // If response is an object, check for common array properties
+                if (data && typeof data === 'object') {
+                    console.log('Data is object, checking properties:', Object.keys(data));
+                    // Try common property names
+                    if (Array.isArray(data.value)) {
+                        console.log('Found data.value array');
+                        return data.value;
+                    }
+                    if (Array.isArray(data.data)) {
+                        console.log('Found data.data array');
+                        return data.data;
+                    }
+                    if (Array.isArray(data.items)) {
+                        console.log('Found data.items array');
+                        return data.items;
+                    }
+                    // If it's a single object with ID, wrap in array
+                    if (data.additionalRemarksId || data.AdditionalRemarksId) {
+                        console.log('Single object found, wrapping in array');
+                        return [data];
+                    }
+                    // Check if object has enumerable properties that might be the array
+                    const entries = Object.entries(data);
+                    if (entries.length > 0) {
+                        console.log('Object entries:', entries);
+                        // Check if any value is an array
+                        for (const [key, value] of entries) {
+                            if (Array.isArray(value)) {
+                                console.log(`Found array in property: ${key}`);
+                                return value;
+                            }
+                        }
+                    }
+                }
+                console.log('No array found, returning empty array');
+                return [];
+            }),
+            catchError(error => {
+                console.error('Error fetching additional remarks:', error);
+                return of([]);
+            })
+        );
+    }
+
+    saveAdditionalRemarks(payload: any): Observable<any> {
+        return this.http.post(`${this.empApi}/AdditionalRemarksInfo/SaveAsyn`, payload);
+    }
+
+    updateAdditionalRemarks(payload: any): Observable<any> {
+        return this.http.post(`${this.empApi}/AdditionalRemarksInfo/UpdateAsyn`, payload);
+    }
+
+    saveUpdateAdditionalRemarks(payload: any): Observable<any> {
+        return this.http.post(`${this.empApi}/AdditionalRemarksInfo/SaveUpdateAsyn`, payload);
+    }
+
+    deleteAdditionalRemarks(additionalRemarksId: number): Observable<any> {
+        return this.http.delete(`${this.empApi}/AdditionalRemarksInfo/DeleteAsyn/${additionalRemarksId}`);
     }
 }
