@@ -7,6 +7,7 @@ import { PagedResponse } from '@/Core/Models/Pagination';
 import { OrganizationModel } from '../../organization-setup/models/organization';
 import { BankModel } from '../models/bank';
 import { TrainingInstituteModel } from '../models/training-institution';
+import { RabIdSerialModel } from '../models/rab-id-serial';
 
 @Injectable({
     providedIn: 'root'
@@ -15,7 +16,8 @@ export class MasterBasicSetupService {
     private http = inject(HttpClient);
     private apiUrl = `${environment.apis.core}/CommonCode`;
     private apiUrlBank = `${environment.apis.core}/Bank`;
-     private apiUrlTraining = `${environment.apis.core}/TrainingInstitute`;
+    private apiUrlTraining = `${environment.apis.core}/TrainingInstitute`;
+    private apiUrlRabIdSerial = `${environment.apis.core}/RabIdSerial`;
 
     getAllByType(codeType: string): Observable<CommonCode[]> {
         return this.http.get<CommonCode[]>(`${this.apiUrl}/GetByTypeAsyn/${codeType}`);
@@ -74,7 +76,7 @@ export class MasterBasicSetupService {
     }
 
     // PUT: update bank
-    updateBank( model: BankModel): Observable<any> {
+    updateBank(model: BankModel): Observable<any> {
         return this.http.put(`${this.apiUrlBank}/UpdateAsyn`, model);
     }
 
@@ -83,26 +85,50 @@ export class MasterBasicSetupService {
         return this.http.delete(`${this.apiUrlBank}/DeleteAsyn/${id}`);
     }
 
+    // GET: all training institutes
+    getAllInstitute(): Observable<TrainingInstituteModel[]> {
+        return this.http.get<TrainingInstituteModel[]>(`${this.apiUrlTraining}/GetAll`);
+    }
 
-  // GET: all training institutes
-  getAllInstitute(): Observable<TrainingInstituteModel[]> {
-    return this.http.get<TrainingInstituteModel[]>(`${this.apiUrlTraining}/GetAll`);
-  }
+    // POST: create
+    createInstitute(model: TrainingInstituteModel): Observable<any> {
+        return this.http.post(`${this.apiUrlTraining}/SaveAsyn`, model);
+    }
 
-  // POST: create
-  createInstitute(model: TrainingInstituteModel): Observable<any> {
-    return this.http.post(`${this.apiUrlTraining}/SaveAsyn`, model);
-  }
+    // PUT: update
+    updateInstitute(model: TrainingInstituteModel): Observable<any> {
+        return this.http.put(`${this.apiUrlTraining}/UpdateAsyn`, model);
+    }
 
-  // PUT: update
-  updateInstitute(model: TrainingInstituteModel): Observable<any> {
-    return this.http.put(`${this.apiUrlTraining}/UpdateAsyn`, model);
-  }
+    // DELETE: delete
+    deleteInstitute(id: number): Observable<any> {
+        return this.http.delete(`${this.apiUrlTraining}/DeleteAsyn/${id}`);
+    }
 
-  // DELETE: delete
-  deleteInstitute(id: number): Observable<any> {
-    return this.http.delete(`${this.apiUrlTraining}/DeleteAsyn/${id}`);
-  }
+    // RabIdSerial CRUD
 
+    // GET: all RabIdSerial
+    getAllRabIdSerial(): Observable<RabIdSerialModel[]> {
+        return this.http.get<RabIdSerialModel[]>(`${this.apiUrlRabIdSerial}/GetAll`);
+    }
 
+    // GET: RabIdSerial by id
+    getRabIdSerialById(id: number): Observable<RabIdSerialModel> {
+        return this.http.get<RabIdSerialModel>(`${this.apiUrlRabIdSerial}/GetFilteredByKeysAsyn/${id}`);
+    }
+
+    // POST: create RabIdSerial
+    createRabIdSerial(model: RabIdSerialModel): Observable<any> {
+        return this.http.post(`${this.apiUrlRabIdSerial}/SaveAsyn`, model);
+    }
+
+    // POST: update RabIdSerial
+    updateRabIdSerial(model: RabIdSerialModel): Observable<any> {
+        return this.http.post(`${this.apiUrlRabIdSerial}/UpdateAsyn`, model);
+    }
+
+    // DELETE: delete RabIdSerial
+    deleteRabIdSerial(id: number): Observable<any> {
+        return this.http.delete(`${this.apiUrlRabIdSerial}/DeleteAsyn/${id}`);
+    }
 }

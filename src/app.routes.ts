@@ -67,12 +67,14 @@ import { EmpForeignVisit } from '@/Components/Features/Emp/emp-foreign-visit/emp
 import { EmpLeaveInfo } from '@/Components/Features/Emp/emp-leave-info/emp-leave-info.component';
 import { EmpMedicalCategory } from '@/Components/Features/Emp/emp-medical-category/emp-medical-category.component';
 import { EmpAdditionalRemarks } from '@/Components/Features/Emp/emp-additional-remarks/emp-additional-remarks.component';
+import { RabIdAllocation } from '@/Components/Features/rab-id-allocation/rab-id-allocation';
 import { Prefix } from '@/Components/basic-setup/prefix/prefix';
 import { Gender } from '@/Components/basic-setup/gender/gender';
 import { Bank } from '@/Components/basic-setup/bank/bank';
 import { TrainingInstitution } from '@/Components/basic-setup/training-institution/training-institution';
 import { RankEquivalent } from '@/Components/basic-setup/rank-equivalent/rank-equivalent';
 import { Religion } from '@/Components/basic-setup/religion/religion';
+import { RabIdSerial } from '@/Components/basic-setup/rab-id-serial/rab-id-serial';
 
 export const appRoutes: Routes = [
     // Public routes
@@ -134,6 +136,7 @@ export const appRoutes: Routes = [
             { path: 'basic-setup/training-institution', component: TrainingInstitution },
             { path: 'basic-setup/rank-equivalent', component: RankEquivalent },
             { path: 'basic-setup/religion', component: Religion },
+            { path: 'basic-setup/rab-id-serial', component: RabIdSerial },
 
             // EMP
             { path: 'emp-list', component: EmpList },
@@ -154,6 +157,7 @@ export const appRoutes: Routes = [
             { path: 'emp-leave-info', component: EmpLeaveInfo },
             { path: 'emp-medical-category', component: EmpMedicalCategory },
             { path: 'emp-additional-remarks', component: EmpAdditionalRemarks },
+            { path: 'rab-id-allocation', component: RabIdAllocation },
 
             { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
             { path: 'documentation', component: Documentation },
