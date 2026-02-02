@@ -29,18 +29,18 @@
                 <!-- Min ID -->
                 <div class="field">
                     <label for="minId" class="block mb-2">
-                        Min ID <span class="text-red-500">*</span>
+                        Start From <span class="text-red-500">*</span>
                     </label>
                     <p-inputnumber
                         id="minId"
                         formControlName="minId"
-                        placeholder="Enter Min ID"
-                        [useGrouping]="false"
+                        placeholder="Enter Start From"
+                        [useGrouping]="false"   
                         class="w-full">
                     </p-inputnumber>
                     @if (rabIdSerialForm.get('minId')?.invalid && rabIdSerialForm.get('minId')?.touched) {
                         <small class="text-red-500 block mt-1">
-                            Min ID is required and must be greater than 0
+                            Start From is required and must be greater than 0
                         </small>
                     }
                 </div>
@@ -48,23 +48,23 @@
                 <!-- Max ID -->
                 <div class="field">
                     <label for="maxId" class="block mb-2">
-                        Max ID <span class="text-red-500">*</span>
+                        End To <span class="text-red-500">*</span>
                     </label>
                     <p-inputnumber
                         id="maxId"
                         formControlName="maxId"
-                        placeholder="Enter Max ID"
+                        placeholder="Enter End To"
                         [useGrouping]="false"
                         class="w-full">
                     </p-inputnumber>
                     @if (rabIdSerialForm.get('maxId')?.invalid && rabIdSerialForm.get('maxId')?.touched) {
                         <small class="text-red-500 block mt-1">
-                            Max ID is required and must be greater than 0
+                            End To is required and must be greater than 0
                         </small>
                     }
                     @if (rabIdSerialForm.get('maxId')?.value && rabIdSerialForm.get('minId')?.value && rabIdSerialForm.get('maxId')?.value < rabIdSerialForm.get('minId')?.value) {
                         <small class="text-red-500 block mt-1">
-                            Max ID cannot be less than Min ID
+                            End To cannot be less than Start From
                         </small>
                     }
                 </div>
@@ -118,8 +118,8 @@
             <tr>
                 <th style="width:5%">#</th>
                 <th>Officer Type</th>
-                <th>Min ID</th>
-                <th>Max ID</th>
+                <th>Start From</th>
+                <th>End To</th>
                 <th>Current ID</th>
             </tr>
         </ng-template>
