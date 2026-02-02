@@ -46,7 +46,8 @@ export class AppMenu {
                     { label: 'Foreign Visit', icon: 'pi pi-fw pi-globe', routerLink: ['/emp-foreign-visit'] },
                     { label: 'Leave Info', icon: 'pi pi-fw pi-calendar-minus', routerLink: ['/emp-leave-info'] },
                     { label: 'Medical Category', icon: 'pi pi-fw pi-heart', routerLink: ['/emp-medical-category'] },
-                    { label: 'Additional Remarks', icon: 'pi pi-fw pi-comment', routerLink: ['/emp-additional-remarks'] }
+                    { label: 'Additional Remarks', icon: 'pi pi-fw pi-comment', routerLink: ['/emp-additional-remarks'] },
+                    { label: 'RAB ID Allocation', icon: 'pi pi-fw pi-id-card', routerLink: ['/rab-id-allocation'] }
                 ]
             },
             {
@@ -98,9 +99,7 @@ export class AppMenu {
 
                     // Newly added
                 ]
-            },
-
-
+            }
 
             // {
             //     label: 'UI Components',
