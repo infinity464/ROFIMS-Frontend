@@ -5,7 +5,8 @@ import {
     FormBuilder,
     FormGroup,
     FormsModule,
-    ReactiveFormsModule
+    ReactiveFormsModule,
+    Validators
 } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
@@ -25,7 +26,13 @@ import { MOServHistoryService } from '@/services/mo-serv-history.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { OrganizationService } from '@/Components/basic-setup/organization-setup/services/organization-service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
-import type { OrganizationModel } from '@/Components/basic-setup/organization-setup/models/organization';
+
+/** Minimal shape for org unit dropdown (from Organization Unit setup). */
+interface OrgUnitOption {
+    orgId: number;
+    orgNameEN: string;
+    locationEN?: string;
+}
 
 @Component({
     selector: 'app-emp-service-history',
@@ -60,7 +67,7 @@ export class EmpServiceHistory implements OnInit {
     /** Year dropdown: first day of year as value e.g. { label: '2022', value: '2022-01-01' } */
     yearOptions: { label: string; value: string }[] = [];
     /** Organization units (children of selected mother org); loaded when user searches and selectedOrgId is set. */
-    orgUnitOptions: OrganizationModel[] = [];
+    orgUnitOptions: OrgUnitOption[] = [];
 
     /** Existing ServHisID from API (used to detect deletes). */
     private existingServHisIds: number[] = [];
@@ -138,6 +145,7 @@ export class EmpServiceHistory implements OnInit {
     createRow(
         ser: number,
         servHisID: number | null,
+        employeeID: number | null,
         orgId: number | null,
         orgUnitId: number | null,
         locationName: string | null,
@@ -154,8 +162,9 @@ export class EmpServiceHistory implements OnInit {
         return this.fb.group({
             ser: [ser],
             servHisID: [servHisID],
+            employeeID: [employeeID],
             orgId: [orgId],
-            orgUnitId: [orgUnitId],
+            orgUnitId: [orgUnitId, Validators.required],
             locationName: [locationName ?? ''],
             serviceFrom: [serviceFrom],
             serviceTo: [serviceTo],
@@ -197,11 +206,10 @@ export class EmpServiceHistory implements OnInit {
         const row = this.rows.at(rowIndex);
         const orgUnitId = row.get('orgUnitId')?.value as number | null;
         if (orgUnitId == null) return;
-        const unit = this.orgUnitOptions.find(u => (u.orgId ?? (u as any).OrgId) === orgUnitId);
-        if (unit?.locationEN != null || (unit as any)?.LocationEN != null) {
-            const loc = unit.locationEN ?? (unit as any).LocationEN ?? '';
-            row.patchValue({ locationName: loc }, { emitEvent: false });
-        }
+        const unit = this.orgUnitOptions.find(u => u.orgId === orgUnitId);
+        if (!unit) return;
+        const loc = unit.locationEN ?? '';
+        row.patchValue({ locationName: loc }, { emitEvent: false });
     }
 
     onPostingOrderSelect(event: { files: File[] }, rowIndex: number): void {
@@ -245,13 +253,13 @@ export class EmpServiceHistory implements OnInit {
     }
 
     addRow(): void {
-        if (this.selectedOrgId == null) {
-            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Employee organization is not set.' });
+        if (this.selectedEmployeeId == null) {
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'No employee selected.' });
             return;
         }
         const ser = this.rows.length + 1;
         this.rows.push(
-            this.createRow(ser, null, this.selectedOrgId, null, '', null, null, '', null, '', null, '', null, null)
+            this.createRow(ser, null, this.selectedEmployeeId, this.selectedOrgId, null, '', null, null, '', null, '', null, '', null, null)
         );
     }
 
@@ -281,28 +289,28 @@ export class EmpServiceHistory implements OnInit {
                     this.employeeBasicInfo = employee;
                     this.selectedOrgId = employee.orgId ?? employee.OrgId ?? employee.lastMotherUnit ?? employee.LastMotherUnit ?? null;
                     this.loadOrgUnitsForMotherOrg();
-                    this.loadHistoryForOrg(this.selectedOrgId);
+                    this.loadHistoryForEmployee(employeeId);
                 }
             },
             error: err => console.error('Failed to load employee', err)
         });
     }
 
-    loadHistoryForOrg(orgId: number | null): void {
+    loadHistoryForEmployee(employeeId: number): void {
         this.rows.clear();
         this.existingServHisIds = [];
-        if (orgId == null) return;
-        this.moServHistoryService.getByOrgId(orgId).subscribe({
+        this.moServHistoryService.getByEmployeeId(employeeId).subscribe({
             next: (list: any[]) => {
                 const arr = Array.isArray(list) ? list : [];
                 let ser = 1;
                 for (const item of arr) {
                     const id = item.servHisID ?? item.ServHisID;
-                    const itemOrgId = item.orgId ?? item.OrgId;
-                    if (itemOrgId !== orgId) continue;
+                    const itemEmpId = item.employeeID ?? (item as any).EmployeeID;
+                    if (itemEmpId !== employeeId) continue;
                     this.existingServHisIds.push(id);
-                    const from = item.serviceFrom ?? item.ServiceFrom;
-                    const to = item.serviceTo ?? item.ServiceTo;
+                    const itemOrgId = item.orgId ?? (item as any).OrgId ?? null;
+                    const from = item.serviceFrom ?? (item as any).ServiceFrom;
+                    const to = item.serviceTo ?? (item as any).ServiceTo;
                     const fromStr = from != null ? (typeof from === 'string' ? from : new Date(from).toISOString().substring(0, 10)) : null;
                     const toStr = to != null ? (typeof to === 'string' ? to : new Date(to).toISOString().substring(0, 10)) : null;
                     const docPath = (item as any).documentPath ?? (item as any).DocumentPath ?? null;
@@ -313,18 +321,19 @@ export class EmpServiceHistory implements OnInit {
                         this.createRow(
                             ser++,
                             id,
+                            itemEmpId,
                             itemOrgId,
                             orgUnitId,
                             locationName ?? '',
                             fromStr,
                             toStr,
-                            item.auth ?? item.Auth ?? null,
-                            item.appointment ?? item.Appointment ?? null,
-                            item.remarks ?? item.Remarks ?? null,
+                            item.auth ?? (item as any).Auth ?? null,
+                            item.appointment ?? (item as any).Appointment ?? null,
+                            item.remarks ?? (item as any).Remarks ?? null,
                             docPath,
                             docName,
-                            item.createdDate ?? item.CreatedDate ?? null,
-                            item.lastupdate ?? item.Lastupdate ?? null
+                            item.createdDate ?? (item as any).CreatedDate ?? null,
+                            item.lastupdate ?? (item as any).Lastupdate ?? null
                         )
                     );
                 }
@@ -344,17 +353,16 @@ export class EmpServiceHistory implements OnInit {
         this.isReadonly = false;
         this.loadOrgUnitsForMotherOrg();
         if (this.selectedOrgId != null) {
-            this.loadHistoryForOrg(this.selectedOrgId);
+            this.loadHistoryForEmployee(employee.employeeID);
         } else {
-            // Search result may not include org; fetch full employee to get orgId/lastMotherUnit
             this.empService.getEmployeeById(employee.employeeID).subscribe({
                 next: (full) => {
                     this.employeeBasicInfo = full;
                     this.selectedOrgId = (full as any).orgId ?? (full as any).OrgId ?? (full as any).lastMotherUnit ?? (full as any).LastMotherUnit ?? (full as any).motherOrganization ?? (full as any).MotherOrganization ?? null;
                     this.loadOrgUnitsForMotherOrg();
-                    this.loadHistoryForOrg(this.selectedOrgId ?? null);
+                    this.loadHistoryForEmployee(employee.employeeID);
                 },
-                error: () => this.loadHistoryForOrg(null)
+                error: () => this.loadHistoryForEmployee(employee.employeeID)
             });
         }
     }
@@ -373,10 +381,11 @@ export class EmpServiceHistory implements OnInit {
     }
 
     cancelEdit(): void {
-        if (this.selectedOrgId == null) return;
+        const empId = this.selectedEmployeeId;
+        if (empId == null) return;
         this.mode = 'view';
         this.isReadonly = true;
-        this.loadHistoryForOrg(this.selectedOrgId);
+        this.loadHistoryForEmployee(empId);
         this.messageService.add({ severity: 'info', summary: 'Cancelled', detail: 'Changes discarded.' });
     }
 
@@ -403,8 +412,8 @@ export class EmpServiceHistory implements OnInit {
     /** Get organization unit display name by orgId (from orgUnitOptions). */
     getOrgUnitLabel(orgUnitId: number | null): string {
         if (orgUnitId == null) return '—';
-        const u = this.orgUnitOptions.find(o => (o.orgId ?? (o as any).OrgId) === orgUnitId);
-        return u ? (u.orgNameEN ?? (u as any).OrgNameEN ?? '') : String(orgUnitId);
+        const u = this.orgUnitOptions.find(o => o.orgId === orgUnitId);
+        return u ? u.orgNameEN : String(orgUnitId);
     }
 
     /** Show only year in view mode (API stores first day of year e.g. 2026-01-01). */
@@ -416,11 +425,29 @@ export class EmpServiceHistory implements OnInit {
     }
 
     saveData(): void {
-        if (this.selectedOrgId == null) {
-            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'No employee/organization selected.' });
+        if (this.selectedEmployeeId == null) {
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'No employee selected.' });
             return;
         }
         const controls = this.rows.controls;
+        const rowsMissingOrgUnit: number[] = [];
+        controls.forEach((c, idx) => {
+            const val = c.get('orgUnitId')?.value;
+            if (val == null || val === '') {
+                rowsMissingOrgUnit.push(idx + 1);
+                c.get('orgUnitId')?.markAsTouched();
+            }
+        });
+        if (rowsMissingOrgUnit.length > 0) {
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'Validation',
+                detail: rowsMissingOrgUnit.length === 1
+                    ? 'Please select Organization Unit for row ' + rowsMissingOrgUnit[0] + '.'
+                    : 'Please select Organization Unit for row(s) ' + rowsMissingOrgUnit.join(', ') + '.'
+            });
+            return;
+        }
         const currentIds = new Set(
             controls.map(c => c.get('servHisID')?.value).filter((id): id is number => id != null && id > 0)
         );
@@ -441,14 +468,15 @@ export class EmpServiceHistory implements OnInit {
             const isNew = servHisID == null || servHisID <= 0;
             const payload = {
                 servHisID: isNew ? 0 : servHisID,
-                orgId: this.selectedOrgId!,
+                employeeID: this.selectedEmployeeId,
+                orgId: c.get('orgId')?.value ?? this.selectedOrgId ?? null,
                 orgUnitId: c.get('orgUnitId')?.value ?? null,
                 locationName: c.get('locationName')?.value || null,
                 serviceFrom: this.toDateOnly(c.get('serviceFrom')?.value),
                 serviceTo: this.toDateOnly(c.get('serviceTo')?.value),
                 auth: c.get('auth')?.value || null,
                 appointment: c.get('appointment')?.value ?? null,
-                remarks: c.get('remarks')?.value || null,
+                remarks: c.get('remarks')?.value ?? '',
                 createdBy: 'user',
                 createdDate: createdDate ?? now,
                 lastUpdatedBy: 'user',
@@ -498,7 +526,7 @@ export class EmpServiceHistory implements OnInit {
                     .map(c => c.get('servHisID')?.value as number | null)
                     .filter((id): id is number => id != null && id > 0);
                 this.messageService.add({ severity: 'success', summary: 'Saved', detail: 'Service history saved successfully.' });
-                this.loadHistoryForOrg(this.selectedOrgId!);
+                this.loadHistoryForEmployee(this.selectedEmployeeId!);
             },
             error: (err) => {
                 this.isSaving = false;

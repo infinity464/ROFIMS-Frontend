@@ -6,7 +6,8 @@ import { environment } from '@/Core/Environments/environment';
 
 export interface MOServHistoryModel {
     servHisID: number;
-    orgId: number;
+    employeeID: number;
+    orgId?: number | null;
     orgUnitId?: number | null;
     locationName?: string | null;
     serviceFrom?: string | null;
@@ -40,6 +41,12 @@ export class MOServHistoryService {
         );
     }
 
+    getByEmployeeId(employeeId: number): Observable<MOServHistoryModel[]> {
+        return this.getAll().pipe(
+            map((list) => list.filter((x) => (x.employeeID ?? (x as any).EmployeeID) === employeeId))
+        );
+    }
+
     save(payload: Partial<MOServHistoryModel>): Observable<any> {
         const body = this.toApiPayload(payload);
         return this.http.post(`${this.apiUrl}/SaveAsyn`, body);
@@ -58,13 +65,14 @@ export class MOServHistoryService {
         const now = new Date().toISOString();
         return {
             servHisID: payload.servHisID ?? 0,
-            orgId: payload.orgId ?? 0,
+            employeeID: payload.employeeID ?? 0,
+            orgId: payload.orgId ?? null,
             orgUnitId: payload.orgUnitId ?? null,
             locationName: payload.locationName ?? null,
             serviceFrom: payload.serviceFrom ?? null,
             serviceTo: payload.serviceTo ?? null,
-            auth: payload.auth ?? '',
-            appointment: payload.appointment ?? 0,
+            auth: payload.auth ?? null,
+            appointment: payload.appointment ?? null,
             remarks: payload.remarks ?? '',
             createdBy: payload.createdBy ?? 'user',
             createdDate: payload.createdDate ?? now,

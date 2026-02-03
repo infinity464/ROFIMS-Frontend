@@ -80,17 +80,17 @@ export class OrganizationUnit implements OnInit {
         this.organizationForm = this.fb.group({
             orgId: [0],
             orgNameEN: ['', Validators.required],
-            orgNameBN: ['', Validators.required],
+            orgNameBN: [''],
             contactName: [''],
             contactNumber: [''],
             locationCode: [''],
-            locationEN: [''],
+            locationEN: ['', Validators.required],
             locationBN: [''],
             email: [''],
             sortOrder: [0],
             status: [true],
             remarks: [''],
-            parentOrg: [Validators.required],
+            parentOrg: [null],
             createdBy: [this.currentUser],
             createdDate: [new Date() ],
             lastUpdatedBy: [this.currentUser],
@@ -279,12 +279,12 @@ export class OrganizationUnit implements OnInit {
         this.editingId = null;
         this.organizationForm.reset({
             orgId: 0,
+            parentOrg: null,
             status: true,
             createdDate: new Date(),
             lastupdate: new Date(),
             lastUpdatedBy: this.currentUser,
             createdBy: this.currentUser
-
         });
         this.isSubmitting = false;
     }

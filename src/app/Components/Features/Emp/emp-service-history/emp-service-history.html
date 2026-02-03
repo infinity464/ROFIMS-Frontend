@@ -42,17 +42,16 @@
                             <p-button label="Add row" icon="pi pi-plus" (onClick)="addRow()"></p-button>
                         }
                     </div>
-
                     <div formArrayName="rows" class="surface-card border-round-lg overflow-hidden mb-4">
-                        <p-table [value]="rows.controls" styleClass="p-datatable-sm" responsiveLayout="scroll" [tableStyle]="{'min-width': '52rem'}">
+                        <p-table [value]="rows.controls" styleClass="p-datatable-sm" responsiveLayout="scroll" [tableStyle]="{'min-width': '58rem'}">
                             <ng-template pTemplate="header">
                                 <tr>
                                     <th style="width: 40px; background: var(--surface-100)">Ser</th>
+                                    <th style="min-width: 160px; width: 160px; background: var(--surface-100)">Organization Unit&#32;*</th>
+                                    <th style="min-width: 140px; width: 140px; background: var(--surface-100)">Location Name</th>
                                     <th style="width: 100px; background: var(--surface-100)">From</th>
                                     <th style="width: 90px; background: var(--surface-100)">To</th>
                                     <th style="width: 95px; background: var(--surface-100)">Appointment</th>
-                                    <th style="min-width: 160px; width: 160px; background: var(--surface-100)">Organization Unit</th>
-                                    <th style="min-width: 160px; width: 160px; background: var(--surface-100)">Location Name</th>
                                     <th style="min-width: 160px; width: 160px; background: var(--surface-100)">Posting Authority</th>
                                     <th style="min-width: 180px; width: 180px; background: var(--surface-100)">Remarks</th>
                                     <th style="min-width: 160px; width: 160px; background: var(--surface-100)">File Name</th>
@@ -65,6 +64,33 @@
                             <ng-template pTemplate="body" let-row let-i="rowIndex">
                                 <tr [formGroupName]="i">
                                     <td class="text-center font-semibold">{{ row.get('ser')?.value }}</td>
+                                    <td>
+                                        @if (isReadonly) {
+                                            <span>{{ getOrgUnitLabel(row.get('orgUnitId')?.value) }}</span>
+                                        } @else {
+                                            <p-select
+                                                formControlName="orgUnitId"
+                                                [options]="orgUnitOptions"
+                                                optionLabel="orgNameEN"
+                                                optionValue="orgId"
+                                                placeholder="Select unit"
+                                                styleClass="w-full"
+                                                appendTo="body"
+                                                (onChange)="onOrgUnitChange(i)"
+                                                [class.p-invalid]="row.get('orgUnitId')?.invalid && row.get('orgUnitId')?.touched"
+                                            ></p-select>
+                                            @if (row.get('orgUnitId')?.invalid && row.get('orgUnitId')?.touched) {
+                                                <small class="text-red-500 block mt-1">Organization Unit is required</small>
+                                            }
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (isReadonly) {
+                                            <span>{{ row.get('locationName')?.value || '—' }}</span>
+                                        } @else {
+                                            <input pInputText formControlName="locationName" class="w-full" placeholder="Location name" />
+                                        }
+                                    </td>
                                     <td>
                                         @if (isReadonly) {
                                             <span>{{ formatYearOnly(row.get('serviceFrom')?.value) }}</span>
@@ -108,29 +134,6 @@
                                                 styleClass="w-full"
                                                 appendTo="body"
                                             ></p-select>
-                                        }
-                                    </td>
-                                    <td>
-                                        @if (isReadonly) {
-                                            <span>{{ getOrgUnitLabel(row.get('orgUnitId')?.value) }}</span>
-                                        } @else {
-                                            <p-select
-                                                formControlName="orgUnitId"
-                                                [options]="orgUnitOptions"
-                                                optionLabel="orgNameEN"
-                                                optionValue="orgId"
-                                                placeholder="Select unit"
-                                                styleClass="w-full"
-                                                appendTo="body"
-                                                (onChange)="onOrgUnitChange(i)"
-                                            ></p-select>
-                                        }
-                                    </td>
-                                    <td>
-                                        @if (isReadonly) {
-                                            <span>{{ row.get('locationName')?.value || '—' }}</span>
-                                        } @else {
-                                            <input pInputText formControlName="locationName" class="w-full" placeholder="Location name" />
                                         }
                                     </td>
                                     <td>
