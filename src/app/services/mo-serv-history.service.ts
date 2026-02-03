@@ -42,9 +42,9 @@ export class MOServHistoryService {
     }
 
     getByEmployeeId(employeeId: number): Observable<MOServHistoryModel[]> {
-        return this.getAll().pipe(
-            map((list) => list.filter((x) => (x.employeeID ?? (x as any).EmployeeID) === employeeId))
-        );
+        return this.http
+            .get<MOServHistoryModel[]>(`${this.apiUrl}/GetByEmployeeId/${employeeId}`)
+            .pipe(map((res: any) => (Array.isArray(res) ? res : [])));
     }
 
     save(payload: Partial<MOServHistoryModel>): Observable<any> {
