@@ -68,6 +68,7 @@ import { EmpLeaveInfo } from '@/Components/Features/Emp/emp-leave-info/emp-leave
 import { EmpMedicalCategory } from '@/Components/Features/Emp/emp-medical-category/emp-medical-category.component';
 import { EmpAdditionalRemarks } from '@/Components/Features/Emp/emp-additional-remarks/emp-additional-remarks.component';
 import { RabIdAllocation } from '@/Components/Features/rab-id-allocation/rab-id-allocation';
+import { PresentlyServingMembers } from '@/Components/Features/presently-serving-members/presently-serving-members';
 import { Prefix } from '@/Components/basic-setup/prefix/prefix';
 import { Gender } from '@/Components/basic-setup/gender/gender';
 import { Bank } from '@/Components/basic-setup/bank/bank';
@@ -158,6 +159,7 @@ export const appRoutes: Routes = [
             { path: 'emp-medical-category', component: EmpMedicalCategory },
             { path: 'emp-additional-remarks', component: EmpAdditionalRemarks },
             { path: 'rab-id-allocation', component: RabIdAllocation },
+            { path: 'presently-serving-members', component: PresentlyServingMembers },
 
             { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
             { path: 'documentation', component: Documentation },
