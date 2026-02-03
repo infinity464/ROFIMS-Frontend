@@ -34,9 +34,163 @@
         }
 
         @if (employeeFound) {
-            <div class="surface-50 border-round-2xl p-4 mb-4">
-                <p class="text-600">Service history form will be displayed here...</p>
-            </div>
+            <form [formGroup]="serviceForm" class="service-section">
+                <div class="surface-50 border-round-2xl p-4 mb-4">
+                    <div class="flex justify-content-between align-items-center gap-3 mb-3 flex-wrap">
+                        <h4 class="m-0 text-lg font-semibold text-900">MO Service History List</h4>
+                        @if (!isReadonly) {
+                            <p-button label="Add row" icon="pi pi-plus" (onClick)="addRow()"></p-button>
+                        }
+                    </div>
+
+                    <div formArrayName="rows" class="surface-card border-round-lg overflow-hidden mb-4">
+                        <p-table [value]="rows.controls" styleClass="p-datatable-sm" responsiveLayout="scroll" [tableStyle]="{'min-width': '52rem'}">
+                            <ng-template pTemplate="header">
+                                <tr>
+                                    <th style="width: 40px; background: var(--surface-100)">Ser</th>
+                                    <th style="width: 100px; background: var(--surface-100)">From</th>
+                                    <th style="width: 90px; background: var(--surface-100)">To</th>
+                                    <th style="width: 95px; background: var(--surface-100)">Appointment</th>
+                                    <th style="min-width: 160px; width: 160px; background: var(--surface-100)">Organization Unit</th>
+                                    <th style="min-width: 160px; width: 160px; background: var(--surface-100)">Location Name</th>
+                                    <th style="min-width: 160px; width: 160px; background: var(--surface-100)">Posting Authority</th>
+                                    <th style="min-width: 180px; width: 180px; background: var(--surface-100)">Remarks</th>
+                                    <th style="min-width: 160px; width: 160px; background: var(--surface-100)">File Name</th>
+                                    <th style="min-width: 150px; background: var(--surface-100)">Upload Posting Order</th>
+                                    @if (!isReadonly) {
+                                        <th style="width: 80px; background: var(--surface-100)">Action</th>
+                                    }
+                                </tr>
+                            </ng-template>
+                            <ng-template pTemplate="body" let-row let-i="rowIndex">
+                                <tr [formGroupName]="i">
+                                    <td class="text-center font-semibold">{{ row.get('ser')?.value }}</td>
+                                    <td>
+                                        @if (isReadonly) {
+                                            <span>{{ formatYearOnly(row.get('serviceFrom')?.value) }}</span>
+                                        } @else {
+                                            <p-select
+                                                formControlName="serviceFrom"
+                                                [options]="yearOptions"
+                                                optionLabel="label"
+                                                optionValue="value"
+                                                placeholder="From"
+                                                styleClass="w-full"
+                                                appendTo="body"
+                                            ></p-select>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (isReadonly) {
+                                            <span>{{ formatYearOnly(row.get('serviceTo')?.value) }}</span>
+                                        } @else {
+                                            <p-select
+                                                formControlName="serviceTo"
+                                                [options]="yearOptions"
+                                                optionLabel="label"
+                                                optionValue="value"
+                                                placeholder="To"
+                                                styleClass="w-full"
+                                                appendTo="body"
+                                            ></p-select>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (isReadonly) {
+                                            <span>{{ getOptionLabel(appointmentOptions, row.get('appointment')?.value) }}</span>
+                                        } @else {
+                                            <p-select
+                                                formControlName="appointment"
+                                                [options]="appointmentOptions"
+                                                optionLabel="label"
+                                                optionValue="value"
+                                                placeholder="Select"
+                                                styleClass="w-full"
+                                                appendTo="body"
+                                            ></p-select>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (isReadonly) {
+                                            <span>{{ getOrgUnitLabel(row.get('orgUnitId')?.value) }}</span>
+                                        } @else {
+                                            <p-select
+                                                formControlName="orgUnitId"
+                                                [options]="orgUnitOptions"
+                                                optionLabel="orgNameEN"
+                                                optionValue="orgId"
+                                                placeholder="Select unit"
+                                                styleClass="w-full"
+                                                appendTo="body"
+                                                (onChange)="onOrgUnitChange(i)"
+                                            ></p-select>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (isReadonly) {
+                                            <span>{{ row.get('locationName')?.value || '—' }}</span>
+                                        } @else {
+                                            <input pInputText formControlName="locationName" class="w-full" placeholder="Location name" />
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (isReadonly) {
+                                            <span>{{ row.get('auth')?.value || '—' }}</span>
+                                        } @else {
+                                            <input pInputText formControlName="auth" class="w-full" placeholder="Posting Authority" />
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (isReadonly) {
+                                            <span>{{ row.get('remarks')?.value || '—' }}</span>
+                                        } @else {
+                                            <input pInputText formControlName="remarks" class="w-full" placeholder="Remarks" />
+                                        }
+                                    </td>
+                                    <td class="align-middle">
+                                        @if (isReadonly) {
+                                            <span class="text-600">{{ row.get('documentFileName')?.value || '—' }}</span>
+                                        } @else {
+                                            <input pInputText formControlName="documentFileName" class="w-full text-sm" placeholder="File name" />
+                                        }
+                                    </td>
+                                    <td class="align-middle">
+                                        @if (isReadonly) {
+                                            <span class="text-600">{{ getPostingOrderLabel(row) }}</span>
+                                        } @else {
+                                            <div class="flex flex-column gap-2" [ngClass]="hasPostingOrderFile(row) ? 'upload-cell-with-file' : 'upload-cell-choose-only'">
+                                                @if (hasPostingOrderFile(row)) {
+                                                    <div class="flex align-items-center gap-2 flex-nowrap surface-100 border-round p-2">
+                                                        <span class="text-700 text-sm flex-grow-1 overflow-hidden text-overflow-ellipsis white-space-nowrap" style="min-width: 0;" [title]="getPostingOrderLabel(row)">{{ truncatePostingOrderName(row) }}</span>
+                                                        <p-button icon="pi pi-eye" [rounded]="true" [text]="true" severity="secondary" pTooltip="View file" (onClick)="viewPostingOrder(row)" styleClass="p-button-sm"></p-button>
+                                                        <p-button icon="pi pi-times" [rounded]="true" [text]="true" severity="danger" pTooltip="Remove file" (onClick)="clearPostingOrder(i)" styleClass="p-button-sm"></p-button>
+                                                    </div>
+                                                } @else {
+                                                    <div class="upload-cell-hide-filename">
+                                                        <p-fileUpload mode="basic" chooseLabel="Choose File" [auto]="false" [customUpload]="true" (onSelect)="onPostingOrderSelect($event, i)" styleClass="p-button-sm"></p-fileUpload>
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
+                                    </td>
+                                    @if (!isReadonly) {
+                                        <td class="align-middle">
+                                            <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" pTooltip="Remove row" (onClick)="removeRow(i)"></p-button>
+                                        </td>
+                                    }
+                                </tr>
+                            </ng-template>
+                            <ng-template pTemplate="emptymessage">
+                                <tr>
+                                    <td [attr.colspan]="isReadonly ? 10 : 11" class="text-center py-4 text-500">
+                                        No service history entries. Click "Add row" to add.
+                                    </td>
+                                </tr>
+                            </ng-template>
+                        </p-table>
+                    </div>
+                </div>
+            </form>
 
             <div class="flex justify-end mt-4 gap-2">
                 @if (mode === 'view') {
@@ -46,8 +200,9 @@
                     <p-button label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" (onClick)="resetForm()"></p-button>
                     <p-button label="Edit" icon="pi pi-pencil" (onClick)="enableSearchEditMode()"></p-button>
                 } @else {
-                    <p-button label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" (onClick)="resetForm()"></p-button>
-                    <p-button label="Save" icon="pi pi-check" (onClick)="saveData()"></p-button>
+                    <p-button label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" (onClick)="resetForm()" [disabled]="isSaving"></p-button>
+                    <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="cancelEdit()" [disabled]="isSaving"></p-button>
+                    <p-button label="Save" icon="pi pi-check" (onClick)="saveData()" [loading]="isSaving" [disabled]="isSaving"></p-button>
                 }
             </div>
         }
