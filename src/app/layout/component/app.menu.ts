@@ -96,7 +96,10 @@ export class AppMenu {
 
                     { label: 'Visit Type', icon: 'pi pi-fw pi-calendar', routerLink: ['/basic-setup/visit-type'] },
                     { label: 'Punishment Type', icon: 'pi pi-fw pi-ban', routerLink: ['/basic-setup/punishment-type'] },
-                    { label: 'Leave Type', icon: 'pi pi-fw pi-sign-out', routerLink: ['/basic-setup/leave-type'] }
+                    { label: 'Leave Type', icon: 'pi pi-fw pi-sign-out', routerLink: ['/basic-setup/leave-type'] },
+
+                    { label: 'Bank', icon: 'pi pi-fw pi-wallet', routerLink: ['/basic-setup/bank'] },
+                    { label: 'Bank Branch', icon: 'pi pi-fw pi-building', routerLink: ['/basic-setup/bank-branch'] }
 
                     // Newly added
                 ]
