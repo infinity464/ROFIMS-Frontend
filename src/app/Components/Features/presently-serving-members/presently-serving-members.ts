@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { TableModule } from 'primeng/table';
+import { TableModule, TableLazyLoadEvent } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { MessageService } from 'primeng/api';
 import { Toast } from 'primeng/toast';
@@ -18,6 +18,9 @@ import { EmployeeServiceOverview } from '@/models/employee-service-overview.mode
 export class PresentlyServingMembers implements OnInit {
     list: EmployeeServiceOverview[] = [];
     loading = false;
+    totalRecords = 0;
+    first = 0;
+    rows = 10;
 
     constructor(
         private servingMembersService: ServingMembersService,
@@ -25,20 +28,25 @@ export class PresentlyServingMembers implements OnInit {
     ) {}
 
     ngOnInit(): void {
-        this.loadList();
+        this.onLazyLoad({ first: 0, rows: this.rows });
     }
 
-    loadList(): void {
+    onLazyLoad(event: TableLazyLoadEvent): void {
+        const pageNo = event.first != null && event.rows != null ? Math.floor(event.first / event.rows) + 1 : 1;
+        const rowPerPage = event.rows ?? this.rows;
+        this.loadList(pageNo, rowPerPage);
+        this.first = event.first ?? 0;
+        this.rows = rowPerPage;
+    }
+
+    loadList(pageNo = 1, rowPerPage?: number): void {
+        const rows = rowPerPage ?? this.rows;
         this.loading = true;
-        this.servingMembersService.getPresentlyServingMembers().subscribe({
-            next: (data) => {
-                this.list = data ?? [];
+        this.servingMembersService.getPresentlyServingMembersPaginated(pageNo, rows).subscribe({
+            next: (res) => {
+                this.list = res.datalist ?? [];
+                this.totalRecords = res.pages?.rows ?? 0;
                 this.loading = false;
-                this.messageService.add({
-                    severity: 'success',
-                    summary: 'Loaded',
-                    detail: `${this.list.length} record(s) loaded.`
-                });
             },
             error: (err) => {
                 console.error('Failed to load presently serving members', err);
@@ -50,6 +58,11 @@ export class PresentlyServingMembers implements OnInit {
                 this.loading = false;
             }
         });
+    }
+
+    refresh(): void {
+        this.first = 0;
+        this.loadList(1, this.rows);
     }
 
     formatDate(value: string | null): string {
