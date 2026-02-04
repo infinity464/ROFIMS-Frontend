@@ -33,18 +33,11 @@
                     </small>
                     }
                 </div>
-                <!-- Sort Order -->
+                <!-- Seniority (Sort Order) -->
                 <div class="field">
-                    <label for="sortOrder" class="block mb-2">
-                        Seniority <span class="text-red-500">*</span>
-                    </label>
+                    <label for="sortOrder" class="block mb-2">Seniority</label>
                     <input type="number" pInputText id="sortOrder" formControlName="sortOrder"
-                        placeholder="Enter sort order" class="w-full" />
-                    @if (organizationForm.get('sortOrder')?.invalid && organizationForm.get('sortOrder')?.touched) {
-                    <small class="text-red-500 block mt-1">
-                        Seniority is required
-                    </small>
-                    }
+                        placeholder="Enter seniority (sort order)" class="w-full" />
                 </div>
 
                 <!-- Status -->
@@ -88,6 +81,7 @@
                 <th style="width: 5%">#</th>
                 <th>Organization Name (English)</th>
                 <th>Organization Name (Bangla)</th>
+                <th>Seniority</th>
                 <th>Status</th>
                 <th style="width: 15%">Action</th>
             </tr>
@@ -98,6 +92,7 @@
                 <td>{{ first + rowIndex + 1 }}</td>
                 <td>{{ row.orgNameEN }}</td>
                 <td>{{ row.orgNameBN }}</td>
+                <td>{{ row.sortOrder ?? '—' }}</td>
                 <td>
                     <span [ngClass]="{
                                     'text-green-600 font-semibold': row.status,
