@@ -142,6 +142,7 @@ export class AppMenu {
                     { label: 'Relationship', icon: 'pi pi-fw pi-users', routerLink: ['/basic-setup/relationship'] },
                     { label: 'Marital Status', icon: 'pi pi-fw pi-user', routerLink: ['/basic-setup/marital-status'] },
                     { label: 'Gender', icon: 'pi pi-fw pi-venus-mars', routerLink: ['/basic-setup/gender'] },
+                    { label: 'Prefix', icon: 'pi pi-fw pi-user', routerLink: ['/basic-setup/prefix'] },
                     { label: 'Religion', icon: 'pi pi-fw pi-moon', routerLink: ['/basic-setup/religion'] },
                     { label: 'Occupation', icon: 'pi pi-fw pi-briefcase', routerLink: ['/basic-setup/occupation'] },
 
