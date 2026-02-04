@@ -1,8 +1,33 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '@/Core/Environments/environment';
+
+/** View model with FK display names (from vw_PreviousRABServiceInfo). */
+export interface VwPreviousRABServiceInfoModel {
+    employeeID: number;
+    previousRABServiceID: number;
+    rabUnitCodeId?: number | null;
+    serviceFrom?: string | null;
+    serviceTo?: string | null;
+    appointment?: number | null;
+    postingAuth?: string | null;
+    remarks?: string | null;
+    documentPath?: string | null;
+    createdBy?: string | null;
+    createdDate?: string;
+    lastUpdatedBy?: string | null;
+    lastupdate?: string;
+    employeeServiceId?: string | null;
+    employeeRABID?: string | null;
+    employeeFullNameEN?: string | null;
+    employeeFullNameBN?: string | null;
+    rabUnitName?: string | null;
+    rabUnitNameBN?: string | null;
+    appointmentName?: string | null;
+    appointmentNameBN?: string | null;
+}
 
 export interface PreviousRABServiceInfoModel {
     employeeID: number;
@@ -29,9 +54,16 @@ export class PreviousRABServiceService {
     constructor(private http: HttpClient) {}
 
     getByEmployeeId(employeeId: number): Observable<PreviousRABServiceInfoModel[]> {
-        return this.http
-            .get<PreviousRABServiceInfoModel[]>(`${this.apiUrl}/GetByEmployeeId/${employeeId}`)
-            .pipe(map((res: any) => (Array.isArray(res) ? res : [])));
+        return this.http.get<PreviousRABServiceInfoModel[]>(`${this.apiUrl}/GetByEmployeeId/${employeeId}`).pipe(map((res: any) => (Array.isArray(res) ? res : [])));
+    }
+
+    /** Gets previous RAB service from view (with FK names) by employee ID. */
+    getViewByEmployeeId(employeeId: number): Observable<VwPreviousRABServiceInfoModel[]> {
+        const id = Number(employeeId);
+        if (Number.isNaN(id) || id <= 0) {
+            return of([]);
+        }
+        return this.http.get<VwPreviousRABServiceInfoModel[]>(`${this.apiUrl}/GetViewByEmployeeId/View/${id}`).pipe(map((res: any) => (Array.isArray(res) ? res : [])));
     }
 
     save(payload: Partial<PreviousRABServiceInfoModel>): Observable<any> {

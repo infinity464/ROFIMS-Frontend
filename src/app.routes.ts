@@ -67,6 +67,7 @@ import { EmpForeignVisit } from '@/Components/Features/Emp/emp-foreign-visit/emp
 import { EmpLeaveInfo } from '@/Components/Features/Emp/emp-leave-info/emp-leave-info.component';
 import { EmpMedicalCategory } from '@/Components/Features/Emp/emp-medical-category/emp-medical-category.component';
 import { EmpAdditionalRemarks } from '@/Components/Features/Emp/emp-additional-remarks/emp-additional-remarks.component';
+import { EmpPresentMemberCheckComponent } from '@/Components/Features/Emp/emp-present-member-check/emp-present-member-check.component';
 import { RabIdAllocation } from '@/Components/Features/rab-id-allocation/rab-id-allocation';
 import { PresentlyServingMembers } from '@/Components/Features/presently-serving-members/presently-serving-members';
 import { Prefix } from '@/Components/basic-setup/prefix/prefix';
@@ -160,6 +161,7 @@ export const appRoutes: Routes = [
             { path: 'emp-leave-info', component: EmpLeaveInfo },
             { path: 'emp-medical-category', component: EmpMedicalCategory },
             { path: 'emp-additional-remarks', component: EmpAdditionalRemarks },
+            { path: 'emp-present-member-check', component: EmpPresentMemberCheckComponent },
             { path: 'rab-id-allocation', component: RabIdAllocation },
             { path: 'presently-serving-members', component: PresentlyServingMembers },
 
