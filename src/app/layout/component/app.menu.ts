@@ -13,8 +13,8 @@ import { Menu } from 'primeng/menu';
         `
             :host {
                 display: block;
-                margin-left: -1rem;
-                margin-right: -1rem;
+                margin-left: 0rem;
+                margin-right: 0rem;
             }
 
             .layout-menuitem-icon {
@@ -76,7 +76,7 @@ export class AppMenu {
                 items: [{ label: 'Dashboard', icon: 'pi pi-fw pi-home', routerLink: ['/dashboard'], routerLinkActiveOptions: { paths: 'exact', queryParams: 'ignored', matrixParams: 'ignored', fragment: 'ignored' } }]
             },
             {
-                label: 'Data Entry (New Joining & Re-Joining in RAB) ',
+                label: 'Data Entry (New & Re-Joining)',
                 icon: 'pi pi-fw pi-user-plus',
                 items: [
                     { label: ' New Joining & Re-Joining', icon: 'pi pi-fw pi-user-plus', routerLink: ['/emp-basic-info'] },
