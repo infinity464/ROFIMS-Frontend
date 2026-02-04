@@ -1,30 +1,32 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import {
-    FormArray,
-    FormBuilder,
-    FormGroup,
-    FormsModule,
-    ReactiveFormsModule,
-} from '@angular/forms';
+import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { forkJoin, Observable, of } from 'rxjs';
+import { of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
 import { Fluid } from 'primeng/fluid';
-import { MessageService } from 'primeng/api';
+import { MessageService, ConfirmationService } from 'primeng/api';
 import { TooltipModule } from 'primeng/tooltip';
 import { TableModule } from 'primeng/table';
 import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
 import { FileUploadModule } from 'primeng/fileupload';
+import { DialogModule } from 'primeng/dialog';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
 
 import { EmpService } from '@/services/emp-service';
 import { RankConfirmationInfoService, RankConfirmationInfoModel } from '@/services/rank-confirmation-info.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
+
+export interface RankConfirmationListRow extends RankConfirmationInfoModel {
+    documentPath?: string | null;
+    documentFileName?: string | null;
+    documentFile?: File | null;
+}
 
 @Component({
     selector: 'app-emp-rank-confirmation',
@@ -41,8 +43,11 @@ import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/
         SelectModule,
         DatePickerModule,
         FileUploadModule,
+        DialogModule,
+        ConfirmDialogModule,
         EmployeeSearchComponent
     ],
+    providers: [ConfirmationService],
     templateUrl: './emp-rank-confirmation.html',
     styleUrl: './emp-rank-confirmation.scss'
 })
@@ -54,10 +59,16 @@ export class EmpRankConfirmationComponent implements OnInit {
     mode: 'search' | 'view' | 'edit' = 'search';
     isReadonly = false;
 
-    rankForm!: FormGroup;
-    rankOptions: { label: string; value: number }[] = [];
-    private existingKeys: { employeeId: number; rankConfirmId: number }[] = [];
+    rankList: RankConfirmationListRow[] = [];
+    isLoading = false;
+
+    displayDialog = false;
+    isEditMode = false;
     isSaving = false;
+    rankForm!: FormGroup;
+    editingRankConfirmId: number | null = null;
+
+    rankOptions: { label: string; value: number }[] = [];
 
     constructor(
         private fb: FormBuilder,
@@ -65,6 +76,7 @@ export class EmpRankConfirmationComponent implements OnInit {
         private rankConfirmationService: RankConfirmationInfoService,
         private commonCodeService: CommonCodeService,
         private messageService: MessageService,
+        private confirmationService: ConfirmationService,
         private route: ActivatedRoute,
         private router: Router
     ) {}
@@ -76,11 +88,16 @@ export class EmpRankConfirmationComponent implements OnInit {
     }
 
     buildForm(): void {
-        this.rankForm = this.fb.group({ rows: this.fb.array([]) });
-    }
-
-    get rows(): FormArray {
-        return this.rankForm.get('rows') as FormArray;
+        this.rankForm = this.fb.group({
+            rankConfirmId: [null],
+            presentRank: [null],
+            rankConfirmDate: [null],
+            auth: [''],
+            remarks: [''],
+            documentFileName: [''],
+            documentFile: [null as File | null],
+            documentPath: [null as string | null]
+        });
     }
 
     private mapCommonCodeToOption(item: any): { label: string; value: number } {
@@ -126,96 +143,6 @@ export class EmpRankConfirmationComponent implements OnInit {
         return isNaN(parsed.getTime()) ? null : parsed;
     }
 
-    createRow(
-        ser: number,
-        employeeId: number | null,
-        rankConfirmId: number | null,
-        presentRank: number | null,
-        rankConfirmDate: Date | string | null,
-        auth: string | null,
-        remarks: string | null,
-        documentFile?: File | null,
-        documentPath?: string | null,
-        documentFileName?: string | null
-    ): FormGroup {
-        return this.fb.group({
-            ser: [ser],
-            employeeId: [employeeId],
-            rankConfirmId: [rankConfirmId],
-            presentRank: [presentRank],
-            rankConfirmDate: [this.toDateForPicker(rankConfirmDate)],
-            auth: [auth ?? ''],
-            remarks: [remarks ?? ''],
-            documentFile: [documentFile ?? null],
-            documentPath: [documentPath ?? null],
-            documentFileName: [documentFileName ?? (documentPath ? documentPath.split(/[/\\]/).pop() ?? '' : '')]
-        });
-    }
-
-    onOrderSelect(event: { files: File[] }, rowIndex: number): void {
-        const file = event.files?.[0] ?? null;
-        this.rows.at(rowIndex).patchValue({ documentFile: file });
-    }
-
-    getOrderLabel(row: FormGroup): string {
-        const file = row.get('documentFile')?.value as File | null;
-        const path = row.get('documentPath')?.value as string | null;
-        if (file?.name) return file.name;
-        if (path) return path.split(/[/\\]/).pop() ?? path;
-        return '—';
-    }
-
-    truncateOrderName(row: FormGroup, maxLen = 20): string {
-        const full = this.getOrderLabel(row);
-        return full === '—' || full.length <= maxLen ? full : full.slice(0, maxLen) + '...';
-    }
-
-    clearOrder(rowIndex: number): void {
-        this.rows.at(rowIndex).patchValue({ documentFile: null, documentFileName: '' });
-    }
-
-    viewOrder(row: FormGroup): void {
-        const file = row.get('documentFile')?.value as File | null;
-        const path = row.get('documentPath')?.value as string | null;
-        if (file) window.open(URL.createObjectURL(file), '_blank');
-        else if (path) window.open(path, '_blank');
-    }
-
-    hasOrderFile(row: FormGroup): boolean {
-        const file = row.get('documentFile')?.value as File | null;
-        const path = row.get('documentPath')?.value as string | null;
-        return !!(file?.name || path);
-    }
-
-    addRow(): void {
-        if (this.selectedEmployeeId == null) {
-            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'No employee selected.' });
-            return;
-        }
-        const ser = this.rows.length + 1;
-        this.rows.push(this.createRow(ser, this.selectedEmployeeId, null, null, null, '', '', null, null, ''));
-    }
-
-    removeRow(index: number): void {
-        this.rows.removeAt(index);
-        this.rows.controls.forEach((ctrl, i) => ctrl.get('ser')?.setValue(i + 1));
-    }
-
-    getOptionLabel(options: { label: string; value: number }[], value: number | null): string {
-        if (value == null) return '—';
-        const opt = options.find(o => o.value === value);
-        return opt ? opt.label : String(value);
-    }
-
-    formatDate(value: Date | string | null): string {
-        if (value == null) return '—';
-        const d = typeof value === 'string' ? new Date(value) : value;
-        if (isNaN(d.getTime())) return '—';
-        const day = String(d.getDate()).padStart(2, '0');
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        return `${day}-${month}-${d.getFullYear()}`;
-    }
-
     checkRouteParams(): void {
         this.route.queryParams.subscribe(params => {
             const id = params['id'];
@@ -237,44 +164,198 @@ export class EmpRankConfirmationComponent implements OnInit {
                     this.employeeBasicInfo = e;
                     this.selectedOrgId = e.orgId ?? e.OrgId ?? e.lastMotherUnit ?? e.LastMotherUnit ?? null;
                     this.loadRankOptionsByOrg(this.selectedOrgId);
-                    this.loadDataForEmployee(employeeId);
+                    this.loadRankList();
                 }
             },
             error: err => console.error('Failed to load employee', err)
         });
     }
 
-    loadDataForEmployee(employeeId: number): void {
-        this.rows.clear();
-        this.existingKeys = [];
-        this.rankConfirmationService.getByEmployeeId(employeeId).subscribe({
+    loadRankList(): void {
+        if (!this.selectedEmployeeId) return;
+        this.isLoading = true;
+        this.rankConfirmationService.getByEmployeeId(this.selectedEmployeeId).subscribe({
             next: (list: any[]) => {
                 const arr = Array.isArray(list) ? list : [];
-                let ser = 1;
-                for (const item of arr) {
-                    const empId = item.employeeId ?? (item as any).EmployeeId;
-                    const rankId = item.rankConfirmId ?? (item as any).RankConfirmId;
-                    if (empId !== employeeId) continue;
-                    this.existingKeys.push({ employeeId: empId, rankConfirmId: rankId });
-                    const rankConfirmDate = item.rankConfirmDate ?? (item as any).RankConfirmDate;
-                    const dateVal = rankConfirmDate != null ? (typeof rankConfirmDate === 'string' ? rankConfirmDate : new Date(rankConfirmDate).toISOString().substring(0, 10)) : null;
-                    const docPath = (item as any).documentPath ?? (item as any).DocumentPath ?? null;
-                    const docName = docPath ? (docPath.split(/[/\\]/).pop() ?? '') : '';
-                    this.rows.push(this.createRow(
-                        ser++,
-                        empId,
-                        rankId,
-                        item.presentRank ?? (item as any).PresentRank ?? null,
-                        dateVal,
-                        item.auth ?? (item as any).Auth ?? null,
-                        item.remarks ?? (item as any).Remarks ?? null,
-                        null,
-                        docPath,
-                        docName
-                    ));
-                }
+                this.rankList = arr
+                    .filter((item: any) => (item.employeeId ?? item.EmployeeId) === this.selectedEmployeeId)
+                    .map((item: any) => {
+                        const docPath = (item as any).documentPath ?? (item as any).DocumentPath ?? null;
+                        const docName = docPath ? (docPath.split(/[/\\]/).pop() ?? '') : '';
+                        return {
+                            employeeId: item.employeeId ?? item.EmployeeId,
+                            rankConfirmId: item.rankConfirmId ?? item.RankConfirmId,
+                            presentRank: item.presentRank ?? item.PresentRank ?? null,
+                            rankConfirmDate: item.rankConfirmDate ?? item.RankConfirmDate ?? null,
+                            auth: item.auth ?? item.Auth ?? null,
+                            remarks: item.remarks ?? item.Remarks ?? null,
+                            documentPath: docPath,
+                            documentFileName: docName,
+                            documentFile: null as File | null
+                        };
+                    });
+                this.isLoading = false;
             },
-            error: () => { this.rows.clear(); this.existingKeys = []; }
+            error: () => { this.rankList = []; this.isLoading = false; }
+        });
+    }
+
+    getOptionLabel(options: { label: string; value: number }[], value: number | null): string {
+        if (value == null) return '—';
+        const opt = options.find(o => o.value === value);
+        return opt ? opt.label : String(value);
+    }
+
+    formatDate(value: Date | string | null): string {
+        if (value == null) return '—';
+        const d = typeof value === 'string' ? new Date(value) : value;
+        if (isNaN(d.getTime())) return '—';
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        return `${day}-${month}-${d.getFullYear()}`;
+    }
+
+    getOrderLabel(row: RankConfirmationListRow): string {
+        if (row.documentFile?.name) return row.documentFile.name;
+        if (row.documentPath) return row.documentPath.split(/[/\\]/).pop() ?? row.documentPath;
+        return row.documentFileName ?? '—';
+    }
+
+    truncateOrderName(row: RankConfirmationListRow, maxLen = 20): string {
+        const full = this.getOrderLabel(row);
+        return full === '—' || full.length <= maxLen ? full : full.slice(0, maxLen) + '...';
+    }
+
+    viewOrder(row: RankConfirmationListRow): void {
+        if (row.documentFile) window.open(URL.createObjectURL(row.documentFile), '_blank');
+        else if (row.documentPath) window.open(row.documentPath, '_blank');
+    }
+
+    hasOrderFileInForm(): boolean {
+        const file = this.rankForm.get('documentFile')?.value as File | null;
+        const path = this.rankForm.get('documentPath')?.value as string | null;
+        return !!(file?.name || path);
+    }
+
+    getOrderLabelInForm(): string {
+        const file = this.rankForm.get('documentFile')?.value as File | null;
+        const path = this.rankForm.get('documentPath')?.value as string | null;
+        if (file?.name) return file.name;
+        if (path) return path.split(/[/\\]/).pop() ?? path;
+        return '—';
+    }
+
+    viewOrderInForm(): void {
+        const file = this.rankForm.get('documentFile')?.value as File | null;
+        const path = this.rankForm.get('documentPath')?.value as string | null;
+        if (file) window.open(URL.createObjectURL(file), '_blank');
+        else if (path) window.open(path, '_blank');
+    }
+
+    clearOrderInForm(): void {
+        this.rankForm.patchValue({ documentFile: null, documentPath: null, documentFileName: '' });
+    }
+
+    onOrderSelectInForm(event: { files: File[] }): void {
+        this.rankForm.patchValue({ documentFile: event.files?.[0] ?? null });
+    }
+
+    onDialogHide(): void {
+        this.rankForm.patchValue({ documentFile: null });
+    }
+
+    openAddDialog(): void {
+        if (this.selectedEmployeeId == null) {
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'No employee selected.' });
+            return;
+        }
+        this.isEditMode = false;
+        this.editingRankConfirmId = null;
+        this.rankForm.reset({
+            rankConfirmId: null,
+            presentRank: null,
+            rankConfirmDate: null,
+            auth: '',
+            remarks: '',
+            documentFileName: '',
+            documentFile: null,
+            documentPath: null
+        });
+        this.displayDialog = true;
+    }
+
+    openEditDialog(row: RankConfirmationListRow): void {
+        this.isEditMode = true;
+        this.editingRankConfirmId = row.rankConfirmId;
+        const rankConfirmDate = row.rankConfirmDate ? (typeof row.rankConfirmDate === 'string' ? row.rankConfirmDate : new Date(row.rankConfirmDate).toISOString().substring(0, 10)) : null;
+        this.rankForm.patchValue({
+            rankConfirmId: row.rankConfirmId,
+            presentRank: row.presentRank,
+            rankConfirmDate: this.toDateForPicker(rankConfirmDate),
+            auth: row.auth ?? '',
+            remarks: row.remarks ?? '',
+            documentFileName: row.documentFileName ?? '',
+            documentFile: null,
+            documentPath: row.documentPath ?? null
+        });
+        this.displayDialog = true;
+    }
+
+    saveRank(): void {
+        if (!this.selectedEmployeeId) return;
+        const v = this.rankForm.value;
+        const now = new Date().toISOString();
+        const newId = this.rankList.length > 0 ? Math.max(...this.rankList.map(r => r.rankConfirmId)) + 1 : 1;
+        const payload: Partial<RankConfirmationInfoModel> = {
+            employeeId: this.selectedEmployeeId,
+            rankConfirmId: this.isEditMode ? (this.editingRankConfirmId ?? 0) : newId,
+            presentRank: v.presentRank ?? null,
+            rankConfirmDate: this.toDateOnly(v.rankConfirmDate),
+            auth: v.auth || null,
+            remarks: v.remarks ?? '',
+            createdBy: 'user',
+            createdDate: now,
+            lastUpdatedBy: 'user',
+            lastupdate: now
+        };
+        this.isSaving = true;
+        const req = this.isEditMode ? this.rankConfirmationService.saveUpdate(payload) : this.rankConfirmationService.save(payload);
+        req.pipe(
+            map((res: any) => {
+                const code = res?.statusCode ?? res?.StatusCode ?? 200;
+                if (code !== 200) throw new Error(res?.description ?? res?.Description ?? 'Save failed');
+                return res;
+            }),
+            catchError(err => {
+                this.messageService.add({ severity: 'error', summary: this.isEditMode ? 'Update failed' : 'Save failed', detail: String(err?.error?.description ?? err?.error?.Description ?? err?.message) });
+                return of(null);
+            })
+        ).subscribe(res => {
+            this.isSaving = false;
+            if (res != null) {
+                this.messageService.add({ severity: 'success', summary: 'Saved', detail: this.isEditMode ? 'Rank confirmation updated.' : 'Rank confirmation added.' });
+                this.displayDialog = false;
+                this.loadRankList();
+            }
+        });
+    }
+
+    confirmDelete(row: RankConfirmationListRow): void {
+        this.confirmationService.confirm({
+            message: 'Delete this rank confirmation record?',
+            header: 'Confirm Delete',
+            icon: 'pi pi-exclamation-triangle',
+            accept: () => this.deleteRank(row)
+        });
+    }
+
+    deleteRank(row: RankConfirmationListRow): void {
+        this.rankConfirmationService.delete(row.employeeId, row.rankConfirmId).subscribe({
+            next: () => {
+                this.messageService.add({ severity: 'success', summary: 'Deleted', detail: 'Rank confirmation deleted.' });
+                this.loadRankList();
+            },
+            error: err => this.messageService.add({ severity: 'error', summary: 'Error', detail: String(err?.error?.description ?? err?.error?.Description ?? err?.message ?? 'Delete failed') })
         });
     }
 
@@ -286,33 +367,29 @@ export class EmpRankConfirmationComponent implements OnInit {
         this.isReadonly = false;
         this.loadRankOptionsByOrg(this.selectedOrgId);
         if (this.selectedOrgId != null) {
-            this.loadDataForEmployee(employee.employeeID);
+            this.loadRankList();
         } else {
             this.empService.getEmployeeById(employee.employeeID).subscribe({
                 next: (full) => {
                     this.employeeBasicInfo = full;
                     this.selectedOrgId = (full as any).orgId ?? (full as any).OrgId ?? (full as any).lastMotherUnit ?? (full as any).LastMotherUnit ?? null;
                     this.loadRankOptionsByOrg(this.selectedOrgId);
-                    this.loadDataForEmployee(employee.employeeID);
+                    this.loadRankList();
                 },
-                error: () => this.loadDataForEmployee(employee.employeeID)
+                error: () => this.loadRankList()
             });
         }
     }
 
     onEmployeeSearchReset(): void { this.resetForm(); }
     enableEditMode(): void { this.mode = 'edit'; this.isReadonly = false; }
-    enableSearchEditMode(): void { this.isReadonly = false; }
-
     cancelEdit(): void {
-        const empId = this.selectedEmployeeId;
-        if (empId == null) return;
+        if (!this.selectedEmployeeId) return;
         this.mode = 'view';
         this.isReadonly = true;
-        this.loadDataForEmployee(empId);
+        this.loadRankList();
         this.messageService.add({ severity: 'info', summary: 'Cancelled', detail: 'Changes discarded.' });
     }
-
     goBack(): void { this.router.navigate(['/emp-list']); }
 
     resetForm(): void {
@@ -320,72 +397,6 @@ export class EmpRankConfirmationComponent implements OnInit {
         this.selectedEmployeeId = null;
         this.employeeBasicInfo = null;
         this.selectedOrgId = null;
-        this.rows.clear();
-        this.existingKeys = [];
-    }
-
-    saveData(): void {
-        if (this.selectedEmployeeId == null) {
-            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'No employee selected.' });
-            return;
-        }
-        const controls = this.rows.controls;
-        const currentKeys = new Set(
-            controls
-                .map(c => ({ e: c.get('employeeId')?.value, r: c.get('rankConfirmId')?.value }))
-                .filter((k): k is { e: number; r: number } => k.e != null && k.r != null && k.r > 0)
-                .map(k => `${k.e}-${k.r}`)
-        );
-        const toDelete = this.existingKeys.filter(k => !currentKeys.has(`${k.employeeId}-${k.rankConfirmId}`));
-        const now = new Date().toISOString();
-        const deleteCalls = toDelete.map(k =>
-            this.rankConfirmationService.delete(k.employeeId, k.rankConfirmId).pipe(catchError(() => of(null)))
-        );
-        const saveCalls: Observable<any>[] = [];
-        for (const c of controls) {
-            const rankConfirmId = c.get('rankConfirmId')?.value as number | null;
-            const isNew = rankConfirmId == null || rankConfirmId <= 0;
-            const payload: Partial<RankConfirmationInfoModel> = {
-                employeeId: this.selectedEmployeeId!,
-                rankConfirmId: isNew ? 0 : rankConfirmId!,
-                presentRank: c.get('presentRank')?.value ?? null,
-                rankConfirmDate: this.toDateOnly(c.get('rankConfirmDate')?.value),
-                auth: c.get('auth')?.value || null,
-                remarks: c.get('remarks')?.value ?? '',
-                createdBy: 'user',
-                createdDate: now,
-                lastUpdatedBy: 'user',
-                lastupdate: now
-            };
-            const call = isNew
-                ? this.rankConfirmationService.save(payload).pipe(
-                    map((res: any) => { const code = res?.statusCode ?? res?.StatusCode ?? 200; if (code !== 200) throw new Error(res?.description ?? res?.Description ?? 'Save failed'); return res; }),
-                    catchError((err) => { this.messageService.add({ severity: 'error', summary: 'Save failed', detail: String(err?.error?.description ?? err?.error?.Description ?? err?.message ?? 'Save failed') }); return of(null); })
-                )
-                : this.rankConfirmationService.saveUpdate(payload).pipe(
-                    map((res: any) => { const code = res?.statusCode ?? res?.StatusCode ?? 200; if (code !== 200) throw new Error(res?.description ?? res?.Description ?? 'Update failed'); return res; }),
-                    catchError((err) => { this.messageService.add({ severity: 'error', summary: 'Update failed', detail: String(err?.error?.description ?? err?.error?.Description ?? err?.message ?? 'Update failed') }); return of(null); })
-                );
-            saveCalls.push(call);
-        }
-        const allCalls = [...deleteCalls, ...saveCalls];
-        if (allCalls.length === 0) {
-            this.messageService.add({ severity: 'info', summary: 'Info', detail: 'No changes to save.' });
-            return;
-        }
-        this.isSaving = true;
-        forkJoin(allCalls).subscribe({
-            next: (results) => {
-                this.isSaving = false;
-                const failed = results?.some((r: any) => r == null) ?? false;
-                if (failed) return;
-                this.messageService.add({ severity: 'success', summary: 'Saved', detail: 'Rank confirmation saved successfully.' });
-                this.loadDataForEmployee(this.selectedEmployeeId!);
-            },
-            error: (err) => {
-                this.isSaving = false;
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: String(err?.error?.description ?? err?.error?.Description ?? err?.message ?? 'Failed to save.') });
-            }
-        });
+        this.rankList = [];
     }
 }

@@ -1,30 +1,32 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import {
-    FormArray,
-    FormBuilder,
-    FormGroup,
-    FormsModule,
-    ReactiveFormsModule,
-} from '@angular/forms';
+import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { forkJoin, Observable, of } from 'rxjs';
+import { of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
 import { Fluid } from 'primeng/fluid';
-import { MessageService } from 'primeng/api';
+import { MessageService, ConfirmationService } from 'primeng/api';
 import { TooltipModule } from 'primeng/tooltip';
 import { TableModule } from 'primeng/table';
 import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
 import { FileUploadModule } from 'primeng/fileupload';
+import { DialogModule } from 'primeng/dialog';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
 
 import { EmpService } from '@/services/emp-service';
 import { PromotionInfoService, PromotionInfoModel } from '@/services/promotion-info.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
+
+export interface PromotionListRow extends PromotionInfoModel {
+    documentPath?: string | null;
+    documentFileName?: string | null;
+    documentFile?: File | null;
+}
 
 @Component({
     selector: 'app-emp-promotion-info',
@@ -41,25 +43,32 @@ import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/
         SelectModule,
         DatePickerModule,
         FileUploadModule,
+        DialogModule,
+        ConfirmDialogModule,
         EmployeeSearchComponent
     ],
+    providers: [ConfirmationService],
     templateUrl: './emp-promotion-info.html',
     styleUrl: './emp-promotion-info.scss'
 })
 export class EmpPromotionInfo implements OnInit {
-    employeeFound: boolean = false;
+    employeeFound = false;
     selectedEmployeeId: number | null = null;
     employeeBasicInfo: any = null;
     selectedOrgId: number | null = null;
     mode: 'search' | 'view' | 'edit' = 'search';
-    isReadonly: boolean = false;
+    isReadonly = false;
 
+    promotionList: PromotionListRow[] = [];
+    isLoading = false;
+
+    displayDialog = false;
+    isEditMode = false;
+    isSaving = false;
     promotionForm!: FormGroup;
-    /** Rank options for Previous Rank & Promoted Rank (from CommonCode). */
+    editingPromotionId: number | null = null;
+
     rankOptions: { label: string; value: number }[] = [];
-    /** Track existing (employeeID, promotionID) for delete detection. */
-    private existingKeys: { employeeID: number; promotionID: number }[] = [];
-    isSaving: boolean = false;
 
     constructor(
         private fb: FormBuilder,
@@ -67,6 +76,7 @@ export class EmpPromotionInfo implements OnInit {
         private promotionInfoService: PromotionInfoService,
         private commonCodeService: CommonCodeService,
         private messageService: MessageService,
+        private confirmationService: ConfirmationService,
         private route: ActivatedRoute,
         private router: Router
     ) {}
@@ -79,12 +89,19 @@ export class EmpPromotionInfo implements OnInit {
 
     buildForm(): void {
         this.promotionForm = this.fb.group({
-            rows: this.fb.array([])
+            promotionID: [null],
+            previousRank: [null],
+            promotedRank: [null],
+            promotedDate: [null],
+            fromDate: [null],
+            toDate: [null],
+            probationaryPeriod: [''],
+            auth: [''],
+            remarks: [''],
+            documentFileName: [''],
+            documentFile: [null as File | null],
+            documentPath: [null as string | null]
         });
-    }
-
-    get rows(): FormArray {
-        return this.promotionForm.get('rows') as FormArray;
     }
 
     private mapCommonCodeToOption(item: any): { label: string; value: number } {
@@ -96,26 +113,21 @@ export class EmpPromotionInfo implements OnInit {
     loadRankOptions(): void {
         this.commonCodeService.getAllActiveCommonCodesType('Rank').pipe(catchError(() => of([] as any[]))).subscribe({
             next: (list: any[]) => {
-                const arr = Array.isArray(list) ? list : [];
-                this.rankOptions = arr.map((item: any) => this.mapCommonCodeToOption(item));
+                this.rankOptions = (Array.isArray(list) ? list : []).map((item: any) => this.mapCommonCodeToOption(item));
             }
         });
     }
 
-    /** When employee has orgId, optionally load org-specific ranks (MotherOrgRank). */
     loadRankOptionsByOrg(orgId: number | null): void {
         if (orgId == null) return;
         this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'MotherOrgRank').pipe(catchError(() => of([] as any[]))).subscribe({
             next: (list: any[]) => {
                 const arr = Array.isArray(list) ? list : [];
-                if (arr.length > 0) {
-                    this.rankOptions = arr.map((item: any) => this.mapCommonCodeToOption(item));
-                }
+                if (arr.length > 0) this.rankOptions = arr.map((item: any) => this.mapCommonCodeToOption(item));
             }
         });
     }
 
-    /** Convert form/date value to YYYY-MM-DD for API. */
     toDateOnly(d: Date | string | null): string | null {
         if (d == null) return null;
         if (typeof d === 'string') {
@@ -128,119 +140,11 @@ export class EmpPromotionInfo implements OnInit {
         return null;
     }
 
-    /** Normalize to Date for PrimeNG datepicker; strings from API are parsed to Date. */
     private toDateForPicker(d: Date | string | null): Date | null {
         if (d == null) return null;
         if (d instanceof Date) return isNaN(d.getTime()) ? null : d;
         const parsed = new Date(d);
         return isNaN(parsed.getTime()) ? null : parsed;
-    }
-
-    createRow(
-        ser: number,
-        employeeID: number | null,
-        promotionID: number | null,
-        previousRank: number | null,
-        promotedRank: number | null,
-        promotedDate: Date | string | null,
-        fromDate: Date | string | null,
-        toDate: Date | string | null,
-        probationaryPeriod: string | null,
-        auth: string | null,
-        remarks: string | null,
-        documentFile?: File | null,
-        documentPath?: string | null,
-        documentFileName?: string | null
-    ): FormGroup {
-        return this.fb.group({
-            ser: [ser],
-            employeeID: [employeeID],
-            promotionID: [promotionID],
-            previousRank: [previousRank],
-            promotedRank: [promotedRank],
-            promotedDate: [this.toDateForPicker(promotedDate)],
-            fromDate: [this.toDateForPicker(fromDate)],
-            toDate: [this.toDateForPicker(toDate)],
-            probationaryPeriod: [probationaryPeriod ?? ''],
-            auth: [auth ?? ''],
-            remarks: [remarks ?? ''],
-            documentFile: [documentFile ?? null],
-            documentPath: [documentPath ?? null],
-            documentFileName: [documentFileName ?? (documentPath ? documentPath.split(/[/\\]/).pop() ?? '' : '')]
-        });
-    }
-
-    onPromotionOrderSelect(event: { files: File[] }, rowIndex: number): void {
-        const file = event.files?.[0] ?? null;
-        this.rows.at(rowIndex).patchValue({ documentFile: file });
-    }
-
-    getPromotionOrderLabel(row: FormGroup): string {
-        const file = row.get('documentFile')?.value as File | null;
-        const path = row.get('documentPath')?.value as string | null;
-        if (file?.name) return file.name;
-        if (path) return path.split(/[/\\]/).pop() ?? path;
-        return '—';
-    }
-
-    truncatePromotionOrderName(row: FormGroup, maxLen: number = 20): string {
-        const full = this.getPromotionOrderLabel(row);
-        if (full === '—') return full;
-        return full.length <= maxLen ? full : full.slice(0, maxLen) + '...';
-    }
-
-    clearPromotionOrder(rowIndex: number): void {
-        this.rows.at(rowIndex).patchValue({ documentFile: null, documentFileName: '' });
-    }
-
-    viewPromotionOrder(row: FormGroup): void {
-        const file = row.get('documentFile')?.value as File | null;
-        const path = row.get('documentPath')?.value as string | null;
-        if (file) {
-            const url = URL.createObjectURL(file);
-            window.open(url, '_blank');
-        } else if (path) {
-            window.open(path, '_blank');
-        }
-    }
-
-    hasPromotionOrderFile(row: FormGroup): boolean {
-        const file = row.get('documentFile')?.value as File | null;
-        const path = row.get('documentPath')?.value as string | null;
-        return !!(file?.name || path);
-    }
-
-    addRow(): void {
-        if (this.selectedEmployeeId == null) {
-            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'No employee selected.' });
-            return;
-        }
-        const ser = this.rows.length + 1;
-        this.rows.push(
-            this.createRow(ser, this.selectedEmployeeId, null, null, null, null, null, null, '', '', '', null, null, '')
-        );
-    }
-
-    removeRow(index: number): void {
-        this.rows.removeAt(index);
-        this.rows.controls.forEach((ctrl, i) => ctrl.get('ser')?.setValue(i + 1));
-    }
-
-    getOptionLabel(options: { label: string; value: number }[], value: number | null): string {
-        if (value == null) return '—';
-        const opt = options.find(o => o.value === value);
-        return opt ? opt.label : String(value);
-    }
-
-    /** Format date as dd-mm-yyyy for display. */
-    formatDate(value: Date | string | null): string {
-        if (value == null) return '—';
-        const d = typeof value === 'string' ? new Date(value) : value;
-        if (isNaN(d.getTime())) return '—';
-        const day = String(d.getDate()).padStart(2, '0');
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const year = d.getFullYear();
-        return `${day}-${month}-${year}`;
     }
 
     checkRouteParams(): void {
@@ -264,58 +168,214 @@ export class EmpPromotionInfo implements OnInit {
                     this.employeeBasicInfo = employee;
                     this.selectedOrgId = employee.orgId ?? employee.OrgId ?? employee.lastMotherUnit ?? employee.LastMotherUnit ?? null;
                     this.loadRankOptionsByOrg(this.selectedOrgId);
-                    this.loadPromotionsForEmployee(employeeId);
+                    this.loadPromotionList();
                 }
             },
             error: err => console.error('Failed to load employee', err)
         });
     }
 
-    loadPromotionsForEmployee(employeeId: number): void {
-        this.rows.clear();
-        this.existingKeys = [];
-        this.promotionInfoService.getByEmployeeId(employeeId).subscribe({
+    loadPromotionList(): void {
+        if (!this.selectedEmployeeId) return;
+        this.isLoading = true;
+        this.promotionInfoService.getByEmployeeId(this.selectedEmployeeId).subscribe({
             next: (list: any[]) => {
                 const arr = Array.isArray(list) ? list : [];
-                let ser = 1;
-                for (const item of arr) {
-                    const empId = item.employeeID ?? (item as any).EmployeeID;
-                    const promId = item.promotionID ?? (item as any).PromotionID;
-                    if (empId !== employeeId) continue;
-                    this.existingKeys.push({ employeeID: empId, promotionID: promId });
-                    const promotedDate = item.promotedDate ?? (item as any).PromotedDate;
-                    const fromDate = item.fromDate ?? (item as any).FromDate;
-                    const toDate = item.toDate ?? (item as any).ToDate;
-                    const promotedDateVal = promotedDate != null ? (typeof promotedDate === 'string' ? promotedDate : new Date(promotedDate).toISOString().substring(0, 10)) : null;
-                    const fromDateVal = fromDate != null ? (typeof fromDate === 'string' ? fromDate : new Date(fromDate).toISOString().substring(0, 10)) : null;
-                    const toDateVal = toDate != null ? (typeof toDate === 'string' ? toDate : new Date(toDate).toISOString().substring(0, 10)) : null;
-                    const docPath = (item as any).documentPath ?? (item as any).DocumentPath ?? null;
-                    const docName = docPath ? (docPath.split(/[/\\]/).pop() ?? '') : '';
-                    const probationaryPeriod = (item as any).probationaryPeriod ?? (item as any).ProbationaryPeriod ?? null;
-                    this.rows.push(
-                        this.createRow(
-                            ser++,
-                            empId,
-                            promId,
-                            item.previousRank ?? (item as any).PreviousRank ?? null,
-                            item.promotedRank ?? (item as any).PromotedRank ?? null,
-                            promotedDateVal,
-                            fromDateVal,
-                            toDateVal,
-                            probationaryPeriod ?? '',
-                            item.auth ?? (item as any).Auth ?? null,
-                            item.remarks ?? (item as any).Remarks ?? null,
-                            null,
-                            docPath,
-                            docName
-                        )
-                    );
-                }
+                this.promotionList = arr
+                    .filter((item: any) => (item.employeeID ?? item.EmployeeID) === this.selectedEmployeeId)
+                    .map((item: any) => {
+                        const docPath = (item as any).documentPath ?? (item as any).DocumentPath ?? null;
+                        const docName = docPath ? (docPath.split(/[/\\]/).pop() ?? '') : '';
+                        return {
+                            employeeID: item.employeeID ?? item.EmployeeID,
+                            promotionID: item.promotionID ?? item.PromotionID,
+                            previousRank: item.previousRank ?? item.PreviousRank ?? null,
+                            promotedRank: item.promotedRank ?? item.PromotedRank ?? null,
+                            promotedDate: item.promotedDate ?? item.PromotedDate ?? null,
+                            fromDate: item.fromDate ?? item.FromDate ?? null,
+                            toDate: item.toDate ?? item.ToDate ?? null,
+                            probationaryPeriod: (item as any).probationaryPeriod ?? (item as any).ProbationaryPeriod ?? null,
+                            auth: item.auth ?? item.Auth ?? null,
+                            remarks: item.remarks ?? item.Remarks ?? null,
+                            documentPath: docPath,
+                            documentFileName: docName,
+                            documentFile: null as File | null
+                        };
+                    });
+                this.isLoading = false;
             },
-            error: () => {
-                this.rows.clear();
-                this.existingKeys = [];
+            error: () => { this.promotionList = []; this.isLoading = false; }
+        });
+    }
+
+    getOptionLabel(options: { label: string; value: number }[], value: number | null): string {
+        if (value == null) return '—';
+        const opt = options.find(o => o.value === value);
+        return opt ? opt.label : String(value);
+    }
+
+    formatDate(value: Date | string | null): string {
+        if (value == null) return '—';
+        const d = typeof value === 'string' ? new Date(value) : value;
+        if (isNaN(d.getTime())) return '—';
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        return `${day}-${month}-${d.getFullYear()}`;
+    }
+
+    getPromotionOrderLabel(row: PromotionListRow): string {
+        if (row.documentFile?.name) return row.documentFile.name;
+        if (row.documentPath) return row.documentPath.split(/[/\\]/).pop() ?? row.documentPath;
+        return row.documentFileName ?? '—';
+    }
+
+    truncatePromotionOrderName(row: PromotionListRow, maxLen: number = 20): string {
+        const full = this.getPromotionOrderLabel(row);
+        if (full === '—') return full;
+        return full.length <= maxLen ? full : full.slice(0, maxLen) + '...';
+    }
+
+    viewPromotionOrder(row: PromotionListRow): void {
+        if (row.documentFile) window.open(URL.createObjectURL(row.documentFile), '_blank');
+        else if (row.documentPath) window.open(row.documentPath, '_blank');
+    }
+
+    hasPromotionOrderFileInForm(): boolean {
+        const file = this.promotionForm.get('documentFile')?.value as File | null;
+        const path = this.promotionForm.get('documentPath')?.value as string | null;
+        return !!(file?.name || path);
+    }
+
+    getPromotionOrderLabelInForm(): string {
+        const file = this.promotionForm.get('documentFile')?.value as File | null;
+        const path = this.promotionForm.get('documentPath')?.value as string | null;
+        if (file?.name) return file.name;
+        if (path) return path.split(/[/\\]/).pop() ?? path;
+        return '—';
+    }
+
+    viewPromotionOrderInForm(): void {
+        const file = this.promotionForm.get('documentFile')?.value as File | null;
+        const path = this.promotionForm.get('documentPath')?.value as string | null;
+        if (file) window.open(URL.createObjectURL(file), '_blank');
+        else if (path) window.open(path, '_blank');
+    }
+
+    clearPromotionOrderInForm(): void {
+        this.promotionForm.patchValue({ documentFile: null, documentPath: null, documentFileName: '' });
+    }
+
+    onPromotionOrderSelectInForm(event: { files: File[] }): void {
+        this.promotionForm.patchValue({ documentFile: event.files?.[0] ?? null });
+    }
+
+    onDialogHide(): void {
+        this.promotionForm.patchValue({ documentFile: null });
+    }
+
+    openAddDialog(): void {
+        if (this.selectedEmployeeId == null) {
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'No employee selected.' });
+            return;
+        }
+        this.isEditMode = false;
+        this.editingPromotionId = null;
+        this.promotionForm.reset({
+            promotionID: null,
+            previousRank: null,
+            promotedRank: null,
+            promotedDate: null,
+            fromDate: null,
+            toDate: null,
+            probationaryPeriod: '',
+            auth: '',
+            remarks: '',
+            documentFileName: '',
+            documentFile: null,
+            documentPath: null
+        });
+        this.displayDialog = true;
+    }
+
+    openEditDialog(row: PromotionListRow): void {
+        this.isEditMode = true;
+        this.editingPromotionId = row.promotionID;
+        this.promotionForm.patchValue({
+            promotionID: row.promotionID,
+            previousRank: row.previousRank,
+            promotedRank: row.promotedRank,
+            promotedDate: this.toDateForPicker(row.promotedDate ?? null),
+            fromDate: this.toDateForPicker(row.fromDate ?? null),
+            toDate: this.toDateForPicker(row.toDate ?? null),
+            probationaryPeriod: row.probationaryPeriod ?? '',
+            auth: row.auth ?? '',
+            remarks: row.remarks ?? '',
+            documentFileName: row.documentFileName ?? '',
+            documentFile: null,
+            documentPath: row.documentPath ?? null
+        });
+        this.displayDialog = true;
+    }
+
+    savePromotion(): void {
+        if (!this.selectedEmployeeId) return;
+        const v = this.promotionForm.value;
+        const now = new Date().toISOString();
+        const newId = this.promotionList.length > 0 ? Math.max(...this.promotionList.map(r => r.promotionID)) + 1 : 1;
+        const payload: Partial<PromotionInfoModel> = {
+            employeeID: this.selectedEmployeeId,
+            promotionID: this.isEditMode ? (this.editingPromotionId ?? 0) : newId,
+            previousRank: v.previousRank ?? null,
+            promotedRank: v.promotedRank ?? null,
+            promotedDate: this.toDateOnly(v.promotedDate),
+            fromDate: this.toDateOnly(v.fromDate),
+            toDate: this.toDateOnly(v.toDate),
+            probationaryPeriod: v.probationaryPeriod || null,
+            auth: v.auth || null,
+            remarks: v.remarks ?? '',
+            createdBy: 'user',
+            createdDate: now,
+            lastUpdatedBy: 'user',
+            lastupdate: now
+        };
+        this.isSaving = true;
+        const req = this.isEditMode ? this.promotionInfoService.saveUpdate(payload) : this.promotionInfoService.save(payload);
+        req.pipe(
+            map((res: any) => {
+                const code = res?.statusCode ?? res?.StatusCode ?? 200;
+                if (code !== 200) throw new Error(res?.description ?? res?.Description ?? 'Save failed');
+                return res;
+            }),
+            catchError(err => {
+                this.messageService.add({ severity: 'error', summary: this.isEditMode ? 'Update failed' : 'Save failed', detail: String(err?.error?.description ?? err?.error?.Description ?? err?.message) });
+                return of(null);
+            })
+        ).subscribe(res => {
+            this.isSaving = false;
+            if (res != null) {
+                this.messageService.add({ severity: 'success', summary: 'Saved', detail: this.isEditMode ? 'Promotion updated.' : 'Promotion added.' });
+                this.displayDialog = false;
+                this.loadPromotionList();
             }
+        });
+    }
+
+    confirmDelete(row: PromotionListRow): void {
+        this.confirmationService.confirm({
+            message: 'Delete this promotion record?',
+            header: 'Confirm Delete',
+            icon: 'pi pi-exclamation-triangle',
+            accept: () => this.deletePromotion(row)
+        });
+    }
+
+    deletePromotion(row: PromotionListRow): void {
+        this.promotionInfoService.delete(row.employeeID, row.promotionID).subscribe({
+            next: () => {
+                this.messageService.add({ severity: 'success', summary: 'Deleted', detail: 'Promotion deleted.' });
+                this.loadPromotionList();
+            },
+            error: err => this.messageService.add({ severity: 'error', summary: 'Error', detail: String(err?.error?.description ?? err?.error?.Description ?? err?.message ?? 'Delete failed') })
         });
     }
 
@@ -327,144 +387,36 @@ export class EmpPromotionInfo implements OnInit {
         this.isReadonly = false;
         this.loadRankOptionsByOrg(this.selectedOrgId);
         if (this.selectedOrgId != null) {
-            this.loadPromotionsForEmployee(employee.employeeID);
+            this.loadPromotionList();
         } else {
             this.empService.getEmployeeById(employee.employeeID).subscribe({
                 next: (full) => {
                     this.employeeBasicInfo = full;
-                    this.selectedOrgId = (full as any).orgId ?? (full as any).OrgId ?? (full as any).lastMotherUnit ?? (full as any).LastMotherUnit ?? (full as any).motherOrganization ?? (full as any).MotherOrganization ?? null;
+                    this.selectedOrgId = (full as any).orgId ?? (full as any).OrgId ?? (full as any).lastMotherUnit ?? (full as any).LastMotherUnit ?? null;
                     this.loadRankOptionsByOrg(this.selectedOrgId);
-                    this.loadPromotionsForEmployee(employee.employeeID);
+                    this.loadPromotionList();
                 },
-                error: () => this.loadPromotionsForEmployee(employee.employeeID)
+                error: () => this.loadPromotionList()
             });
         }
     }
 
-    onEmployeeSearchReset(): void {
-        this.resetForm();
-    }
-
-    enableEditMode(): void {
-        this.mode = 'edit';
-        this.isReadonly = false;
-    }
-
-    enableSearchEditMode(): void {
-        this.isReadonly = false;
-    }
-
+    onEmployeeSearchReset(): void { this.resetForm(); }
+    enableEditMode(): void { this.mode = 'edit'; this.isReadonly = false; }
     cancelEdit(): void {
-        const empId = this.selectedEmployeeId;
-        if (empId == null) return;
+        if (!this.selectedEmployeeId) return;
         this.mode = 'view';
         this.isReadonly = true;
-        this.loadPromotionsForEmployee(empId);
+        this.loadPromotionList();
         this.messageService.add({ severity: 'info', summary: 'Cancelled', detail: 'Changes discarded.' });
     }
-
-    goBack(): void {
-        this.router.navigate(['/emp-list']);
-    }
+    goBack(): void { this.router.navigate(['/emp-list']); }
 
     resetForm(): void {
         this.employeeFound = false;
         this.selectedEmployeeId = null;
         this.employeeBasicInfo = null;
         this.selectedOrgId = null;
-        this.rows.clear();
-        this.existingKeys = [];
-    }
-
-    saveData(): void {
-        if (this.selectedEmployeeId == null) {
-            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'No employee selected.' });
-            return;
-        }
-        const controls = this.rows.controls;
-        const currentKeys = new Set(
-            controls
-                .map(c => ({ e: c.get('employeeID')?.value, p: c.get('promotionID')?.value }))
-                .filter((k): k is { e: number; p: number } => k.e != null && k.p != null && k.p > 0)
-                .map(k => `${k.e}-${k.p}`)
-        );
-        const toDelete = this.existingKeys.filter(
-            k => !currentKeys.has(`${k.employeeID}-${k.promotionID}`)
-        );
-
-        const now = new Date().toISOString();
-        const deleteCalls = toDelete.map(k =>
-            this.promotionInfoService.delete(k.employeeID, k.promotionID).pipe(catchError(() => of(null)))
-        );
-
-        const saveCalls: Observable<any>[] = [];
-        for (const c of controls) {
-            const promotionID = c.get('promotionID')?.value as number | null;
-            const isNew = promotionID == null || promotionID <= 0;
-            const payload: Partial<PromotionInfoModel> = {
-                employeeID: this.selectedEmployeeId!,
-                promotionID: isNew ? 0 : promotionID!,
-                previousRank: c.get('previousRank')?.value ?? null,
-                promotedRank: c.get('promotedRank')?.value ?? null,
-                promotedDate: this.toDateOnly(c.get('promotedDate')?.value),
-                fromDate: this.toDateOnly(c.get('fromDate')?.value),
-                toDate: this.toDateOnly(c.get('toDate')?.value),
-                probationaryPeriod: c.get('probationaryPeriod')?.value || null,
-                auth: c.get('auth')?.value || null,
-                remarks: c.get('remarks')?.value ?? '',
-                createdBy: 'user',
-                createdDate: now,
-                lastUpdatedBy: 'user',
-                lastupdate: now
-            };
-            const call = isNew
-                ? this.promotionInfoService.save(payload).pipe(
-                    map((res: any) => {
-                        const code = res?.statusCode ?? res?.StatusCode ?? 200;
-                        if (code !== 200) throw new Error(res?.description ?? res?.Description ?? 'Save failed');
-                        return res;
-                    }),
-                    catchError((err) => {
-                        const msg = err?.error?.description ?? err?.error?.Description ?? err?.message ?? 'Save failed';
-                        this.messageService.add({ severity: 'error', summary: 'Save failed', detail: String(msg) });
-                        return of(null);
-                    })
-                )
-                : this.promotionInfoService.saveUpdate(payload).pipe(
-                    map((res: any) => {
-                        const code = res?.statusCode ?? res?.StatusCode ?? 200;
-                        if (code !== 200) throw new Error(res?.description ?? res?.Description ?? 'Update failed');
-                        return res;
-                    }),
-                    catchError((err) => {
-                        const msg = err?.error?.description ?? err?.error?.Description ?? err?.message ?? 'Update failed';
-                        this.messageService.add({ severity: 'error', summary: 'Update failed', detail: String(msg) });
-                        return of(null);
-                    })
-                );
-            saveCalls.push(call);
-        }
-
-        const allCalls = [...deleteCalls, ...saveCalls];
-        if (allCalls.length === 0) {
-            this.messageService.add({ severity: 'info', summary: 'Info', detail: 'No changes to save.' });
-            return;
-        }
-
-        this.isSaving = true;
-        forkJoin(allCalls).subscribe({
-            next: (results) => {
-                this.isSaving = false;
-                const failed = results?.some((r: any) => r == null) ?? false;
-                if (failed) return;
-                this.messageService.add({ severity: 'success', summary: 'Saved', detail: 'Promotion information saved successfully.' });
-                this.loadPromotionsForEmployee(this.selectedEmployeeId!);
-            },
-            error: (err) => {
-                this.isSaving = false;
-                const msg = err?.error?.description ?? err?.error?.Description ?? err?.message ?? 'Failed to save.';
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: String(msg) });
-            }
-        });
+        this.promotionList = [];
     }
 }

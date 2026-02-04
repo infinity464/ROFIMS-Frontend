@@ -33,128 +33,129 @@
             </div>
         }
 
-        @if (employeeFound && rankForm) {
-            <form [formGroup]="rankForm" class="rank-section">
-                <div class="surface-50 border-round-2xl p-4 mb-4">
-                    <div class="flex justify-content-between align-items-center gap-3 mb-3 flex-wrap">
-                        <h4 class="m-0 text-lg font-semibold text-900">Rank Confirmation List</h4>
-                        @if (!isReadonly) {
-                            <p-button label="Add row" icon="pi pi-plus" (onClick)="addRow()"></p-button>
-                        }
-                    </div>
-                    <div formArrayName="rows" class="surface-card border-round-lg overflow-hidden mb-4">
-                        <p-table [value]="rows.controls" styleClass="p-datatable-sm" responsiveLayout="scroll" [tableStyle]="{'min-width': '60rem'}">
-                            <ng-template pTemplate="header">
-                                <tr>
-                                    <th style="width: 40px; background: var(--surface-100)">Ser</th>
-                                    <th style="min-width: 160px; background: var(--surface-100)">Rank Name</th>
-                                    <th style="min-width: 135px; background: var(--surface-100)">Rank Confirmation Date</th>
-                                    <th style="min-width: 140px; background: var(--surface-100)">Auth</th>
-                                    <th style="min-width: 160px; background: var(--surface-100)">Remarks</th>
-                                    <th style="min-width: 140px; background: var(--surface-100)">File Name</th>
-                                    <th style="min-width: 180px; background: var(--surface-100)">Rank Confirmation Order</th>
-                                    @if (!isReadonly) {
-                                        <th style="width: 80px; background: var(--surface-100)">Action</th>
-                                    }
-                                </tr>
-                            </ng-template>
-                            <ng-template pTemplate="body" let-row let-i="rowIndex">
-                                <tr [formGroupName]="i">
-                                    <td class="text-center font-semibold">{{ row.get('ser')?.value }}</td>
-                                    <td>
-                                        @if (isReadonly) {
-                                            <span>{{ getOptionLabel(rankOptions, row.get('presentRank')?.value) }}</span>
-                                        } @else {
-                                            <p-select
-                                                formControlName="presentRank"
-                                                [options]="rankOptions"
-                                                optionLabel="label"
-                                                optionValue="value"
-                                                placeholder="Select rank"
-                                                styleClass="w-full"
-                                                appendTo="body"
-                                            ></p-select>
-                                        }
-                                    </td>
-                                    <td>
-                                        @if (isReadonly) {
-                                            <span>{{ formatDate(row.get('rankConfirmDate')?.value) }}</span>
-                                        } @else {
-                                            <p-datepicker formControlName="rankConfirmDate" dateFormat="dd-mm-yy" placeholder="Select date" appendTo="body" styleClass="w-full" inputId="rankConfirmDate-{{i}}"></p-datepicker>
-                                        }
-                                    </td>
-                                    <td>
-                                        @if (isReadonly) {
-                                            <span>{{ row.get('auth')?.value || '—' }}</span>
-                                        } @else {
-                                            <input pInputText formControlName="auth" class="w-full" placeholder="Auth" />
-                                        }
-                                    </td>
-                                    <td>
-                                        @if (isReadonly) {
-                                            <span>{{ row.get('remarks')?.value || '—' }}</span>
-                                        } @else {
-                                            <input pInputText formControlName="remarks" class="w-full" placeholder="Remarks" />
-                                        }
-                                    </td>
-                                    <td class="align-middle">
-                                        @if (isReadonly) {
-                                            <span class="text-600">{{ row.get('documentFileName')?.value || '—' }}</span>
-                                        } @else {
-                                            <input pInputText formControlName="documentFileName" class="w-full text-sm" placeholder="File name" />
-                                        }
-                                    </td>
-                                    <td class="align-middle">
-                                        @if (isReadonly) {
-                                            <span class="text-600">{{ getOrderLabel(row) }}</span>
-                                        } @else {
-                                            <div class="flex flex-column gap-2" [ngClass]="hasOrderFile(row) ? 'upload-cell-with-file' : 'upload-cell-choose-only'">
-                                                @if (hasOrderFile(row)) {
-                                                    <div class="flex align-items-center gap-2 flex-nowrap surface-100 border-round p-2">
-                                                        <span class="text-700 text-sm flex-grow-1 overflow-hidden text-overflow-ellipsis white-space-nowrap" style="min-width: 0;" [title]="getOrderLabel(row)">{{ truncateOrderName(row) }}</span>
-                                                        <p-button icon="pi pi-eye" [rounded]="true" [text]="true" severity="secondary" pTooltip="View file" (onClick)="viewOrder(row)" styleClass="p-button-sm"></p-button>
-                                                        <p-button icon="pi pi-times" [rounded]="true" [text]="true" severity="danger" pTooltip="Remove file" (onClick)="clearOrder(i)" styleClass="p-button-sm"></p-button>
-                                                    </div>
-                                                } @else {
-                                                    <div class="upload-cell-hide-filename">
-                                                        <p-fileUpload mode="basic" chooseLabel="Choose File" [auto]="false" [customUpload]="true" (onSelect)="onOrderSelect($event, i)" styleClass="p-button-sm"></p-fileUpload>
-                                                    </div>
-                                                }
-                                            </div>
-                                        }
-                                    </td>
-                                    @if (!isReadonly) {
-                                        <td class="align-middle">
-                                            <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" pTooltip="Remove row" (onClick)="removeRow(i)"></p-button>
-                                        </td>
-                                    }
-                                </tr>
-                            </ng-template>
-                            <ng-template pTemplate="emptymessage">
-                                <tr>
-                                    <td [attr.colspan]="isReadonly ? 7 : 8" class="text-center py-4 text-500">
-                                        No rank confirmation entries. Click "Add row" to add.
-                                    </td>
-                                </tr>
-                            </ng-template>
-                        </p-table>
-                    </div>
+        @if (employeeFound) {
+            <div class="surface-50 border-round-2xl p-4 mb-4">
+                <div class="flex justify-content-between align-items-center gap-3 mb-3 flex-wrap">
+                    <h4 class="m-0 text-lg font-semibold text-900">Rank Confirmation List</h4>
+                    @if (!isReadonly) {
+                        <p-button label="Add row" icon="pi pi-plus" (onClick)="openAddDialog()"></p-button>
+                    }
                 </div>
-            </form>
+
+                <div class="surface-card border-round-lg overflow-hidden mb-4">
+                    <p-table [value]="rankList" [loading]="isLoading" styleClass="p-datatable-sm" responsiveLayout="scroll" [tableStyle]="{'min-width': '60rem'}">
+                        <ng-template pTemplate="header">
+                            <tr>
+                                <th style="width: 60px; background: var(--surface-100)">Ser</th>
+                                <th style="min-width: 160px; background: var(--surface-100)">Rank Name</th>
+                                <th style="min-width: 135px; background: var(--surface-100)">Rank Confirmation Date</th>
+                                <th style="min-width: 140px; background: var(--surface-100)">Auth</th>
+                                <th style="min-width: 160px; background: var(--surface-100)">Remarks</th>
+                                <th style="min-width: 140px; background: var(--surface-100)">File Name</th>
+                                <th style="min-width: 120px; background: var(--surface-100)">Rank Confirmation Order</th>
+                                <th style="width: 120px; background: var(--surface-100)">Actions</th>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="body" let-row let-i="rowIndex">
+                            <tr>
+                                <td class="text-center font-semibold">{{ i + 1 }}</td>
+                                <td>{{ getOptionLabel(rankOptions, row.presentRank) }}</td>
+                                <td>{{ formatDate(row.rankConfirmDate) }}</td>
+                                <td>{{ row.auth || '—' }}</td>
+                                <td>{{ row.remarks || '—' }}</td>
+                                <td class="text-600">{{ row.documentFileName || '—' }}</td>
+                                <td>
+                                    @if (row.documentPath || row.documentFile) {
+                                        <div class="flex align-items-center gap-2 flex-nowrap surface-100 border-round p-2">
+                                            <span class="text-700 text-sm flex-grow-1 overflow-hidden text-overflow-ellipsis white-space-nowrap" style="min-width: 0;" [title]="getOrderLabel(row)">{{ truncateOrderName(row) }}</span>
+                                            <p-button icon="pi pi-eye" [rounded]="true" [text]="true" severity="secondary" pTooltip="View file" (onClick)="viewOrder(row)" styleClass="p-button-sm"></p-button>
+                                        </div>
+                                    } @else {
+                                        <span class="text-500">—</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="flex gap-1">
+                                        <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="info" pTooltip="Edit" (onClick)="openEditDialog(row)"></p-button>
+                                        @if (!isReadonly) {
+                                            <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" pTooltip="Delete" (onClick)="confirmDelete(row)"></p-button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="emptymessage">
+                            <tr>
+                                <td [attr.colspan]="8" class="text-center py-4 text-500">No rank confirmation entries. Click "Add row" to add.</td>
+                            </tr>
+                        </ng-template>
+                    </p-table>
+                </div>
+            </div>
 
             <div class="flex justify-end mt-4 gap-2">
                 @if (mode === 'view') {
                     <p-button label="Back to List" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" (onClick)="goBack()"></p-button>
                     <p-button label="Edit" icon="pi pi-pencil" (onClick)="enableEditMode()"></p-button>
-                } @else if (mode === 'search' && isReadonly) {
-                    <p-button label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" (onClick)="resetForm()"></p-button>
-                    <p-button label="Edit" icon="pi pi-pencil" (onClick)="enableSearchEditMode()"></p-button>
                 } @else {
                     <p-button label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" (onClick)="resetForm()" [disabled]="isSaving"></p-button>
                     <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="cancelEdit()" [disabled]="isSaving"></p-button>
-                    <p-button label="Save" icon="pi pi-check" (onClick)="saveData()" [loading]="isSaving" [disabled]="isSaving"></p-button>
                 }
             </div>
         }
     </div>
 </p-fluid>
+
+<!-- Add/Edit Rank Confirmation Modal -->
+<p-dialog
+    [header]="isEditMode ? 'Edit Rank Confirmation' : 'Add Rank Confirmation'"
+    [(visible)]="displayDialog"
+    [modal]="true"
+    [style]="{ width: '560px' }"
+    [closable]="true"
+    [draggable]="false"
+    [resizable]="false"
+    (onHide)="onDialogHide()">
+    <form [formGroup]="rankForm" class="rank-form mt-3">
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="font-semibold block mb-2 text-700">Rank Name</label>
+                <p-select formControlName="presentRank" [options]="rankOptions" optionLabel="label" optionValue="value" placeholder="Select rank" styleClass="w-full" appendTo="body"></p-select>
+            </div>
+            <div>
+                <label class="font-semibold block mb-2 text-700">Rank Confirmation Date</label>
+                <p-datepicker formControlName="rankConfirmDate" dateFormat="dd-mm-yy" placeholder="Select date" appendTo="body" styleClass="w-full"></p-datepicker>
+            </div>
+            <div class="col-span-2">
+                <label class="font-semibold block mb-2 text-700">Auth</label>
+                <input pInputText formControlName="auth" class="w-full" placeholder="Auth" />
+            </div>
+            <div class="col-span-2">
+                <label class="font-semibold block mb-2 text-700">Remarks</label>
+                <input pInputText formControlName="remarks" class="w-full" placeholder="Remarks" />
+            </div>
+            <div class="col-span-2">
+                <label class="font-semibold block mb-2 text-700">File Name</label>
+                <input pInputText formControlName="documentFileName" class="w-full" placeholder="File name" />
+            </div>
+            <div class="col-span-2">
+                <label class="font-semibold block mb-2 text-700">Rank Confirmation Order</label>
+                @if (hasOrderFileInForm()) {
+                    <div class="flex align-items-center gap-2 surface-100 border-round p-2 mb-2">
+                        <span class="text-700 text-sm flex-grow-1 overflow-hidden text-overflow-ellipsis" [title]="getOrderLabelInForm()">{{ getOrderLabelInForm() }}</span>
+                        <p-button icon="pi pi-eye" [rounded]="true" [text]="true" severity="secondary" pTooltip="View" (onClick)="viewOrderInForm()" styleClass="p-button-sm"></p-button>
+                        <p-button icon="pi pi-times" [rounded]="true" [text]="true" severity="danger" pTooltip="Remove" (onClick)="clearOrderInForm()" styleClass="p-button-sm"></p-button>
+                    </div>
+                } @else {
+                    <p-fileUpload mode="basic" chooseLabel="Choose File" [auto]="false" [customUpload]="true" (onSelect)="onOrderSelectInForm($event)" styleClass="p-button-sm"></p-fileUpload>
+                }
+            </div>
+        </div>
+    </form>
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="displayDialog = false" [disabled]="isSaving"></p-button>
+        <p-button label="Save" icon="pi pi-check" [loading]="isSaving" [disabled]="isSaving" (onClick)="saveRank()"></p-button>
+    </ng-template>
+</p-dialog>
+
+<p-confirmDialog></p-confirmDialog>

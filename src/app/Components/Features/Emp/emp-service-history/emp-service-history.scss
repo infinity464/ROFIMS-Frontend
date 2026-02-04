@@ -1,53 +1,41 @@
-// emp-service-history styles (match emp-previous-rab-service design)
+// emp-service-history styles (match emp-education-info style)
 
-// Upload cell: hide + icon and "No file chosen" text; remove extra space so only button shows
-:host ::ng-deep .upload-cell-hide-filename {
-  .p-fileupload-choose-button svg[data-p-icon='plus'],
-  .p-fileupload-choose-button .p-button-icon,
-  .p-fileupload-choose-button .p-button-icon-left {
+// Modal: two fields per row (flex layout works in overlay)
+.service-form .service-form-rows .form-row {
+    display: flex;
+    gap: 1rem;
+}
+.service-form .service-form-rows .form-field {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+// Align "Upload Posting Order" label and Choose File button on same baseline
+.service-form .service-form-rows .form-row-upload {
+    align-items: center;
+}
+.service-form .service-form-rows .form-row-upload label {
+    margin-bottom: 0;
+    flex-shrink: 0;
+}
+
+:host ::ng-deep .service-form .p-fileupload-choose-button svg[data-p-icon='plus'],
+:host ::ng-deep .service-form .p-fileupload-choose-button .p-button-icon,
+:host ::ng-deep .service-form .p-fileupload-choose-button .p-button-icon-left {
     display: none !important;
-  }
-  .p-fileupload-basic-content .p-fileupload-choose-button ~ *,
-  .p-fileupload-basic-content > span {
+}
+:host ::ng-deep .service-form .p-fileupload-basic-content .p-fileupload-choose-button ~ *,
+:host ::ng-deep .service-form .p-fileupload-basic-content > span {
     display: none !important;
-  }
-  .p-fileupload,
-  .p-fileupload-basic-content {
+}
+:host ::ng-deep .service-form .p-fileupload,
+:host ::ng-deep .service-form .p-fileupload-basic-content {
     width: fit-content;
     min-width: 0;
     display: inline-flex;
-  }
-  .p-fileupload-basic-content {
-    gap: 0;
-  }
 }
 
-// When only "Choose File" is shown: no extra width; when file is shown: fixed width for filename + buttons
-.upload-cell-choose-only {
-  width: fit-content;
-  min-width: 0;
-}
-.upload-cell-with-file {
-  width: 280px;
-  min-width: 280px;
-  max-width: 280px;
-}
-
-// Standard min widths for text columns (cols 5=Posting Authority, 6=Remarks, 7=File Name)
-:host ::ng-deep .service-section .p-datatable {
-  .p-datatable-thead > tr > th:nth-child(5),
-  .p-datatable-tbody > tr > td:nth-child(5) {
-    min-width: 160px;
-    width: 160px;
-  }
-  .p-datatable-thead > tr > th:nth-child(6),
-  .p-datatable-tbody > tr > td:nth-child(6) {
-    min-width: 180px;
-    width: 180px;
-  }
-  .p-datatable-thead > tr > th:nth-child(7),
-  .p-datatable-tbody > tr > td:nth-child(7) {
-    min-width: 160px;
-    width: 160px;
-  }
+:host ::ng-deep .surface-card .p-datatable .p-datatable-thead > tr > th,
+:host ::ng-deep .surface-card .p-datatable .p-datatable-tbody > tr > td {
+    vertical-align: middle;
 }
