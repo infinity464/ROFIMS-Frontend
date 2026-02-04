@@ -146,15 +146,18 @@
                 <label class="font-semibold block mb-2 text-700">To</label>
                 <p-select formControlName="serviceTo" [options]="yearOptions" optionLabel="label" optionValue="value" placeholder="To" styleClass="w-full" appendTo="body" [disabled]="serviceForm.get('isCurrentlyActive')?.value"></p-select>
             </div>
-            <div class="flex align-items-center gap-2">
-                <p-checkbox formControlName="isCurrentlyActive" [binary]="true" inputId="isCurrentlyActive"></p-checkbox>
-                <label for="isCurrentlyActive" class="font-semibold text-700 cursor-pointer">Currently active</label>
+            <div>
+                <label class="font-semibold block mb-2 text-700">Currently active</label>
+                <div class="flex align-items-center gap-2" style="min-height: 2.5rem;">
+                    <p-checkbox formControlName="isCurrentlyActive" [binary]="true" inputId="isCurrentlyActive"></p-checkbox>
+                    <label for="isCurrentlyActive" class="text-700 cursor-pointer mb-0">Currently active posting</label>
+                </div>
             </div>
             <div>
                 <label class="font-semibold block mb-2 text-700">Appointment</label>
                 <p-select formControlName="appointment" [options]="appointmentOptions" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" appendTo="body"></p-select>
             </div>
-            <div class="col-span-2">
+            <div>
                 <label class="font-semibold block mb-2 text-700">Posting Authority</label>
                 <input pInputText formControlName="postingAuth" class="w-full" placeholder="Posting Authority" />
             </div>
