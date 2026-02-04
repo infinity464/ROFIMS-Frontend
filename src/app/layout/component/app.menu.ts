@@ -1,19 +1,56 @@
 import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
 import { MenuItem } from 'primeng/api';
-import { AppMenuitem } from './app.menuitem';
+import { PanelMenu, PanelMenuModule } from 'primeng/panelmenu';
+import { RouterModule } from '@angular/router';
+import { Menu } from 'primeng/menu';
 
 @Component({
     selector: 'app-menu',
     standalone: true,
-    imports: [CommonModule, AppMenuitem, RouterModule],
-    template: `<ul class="layout-menu">
-        <ng-container *ngFor="let item of model; let i = index">
-            <li app-menuitem *ngIf="!item.separator" [item]="item" [index]="i" [root]="true"></li>
-            <li *ngIf="item.separator" class="menu-separator"></li>
-        </ng-container>
-    </ul> `
+    imports: [RouterModule, PanelMenuModule],
+    template: ` <p-panelmenu [model]="model" class="w-full md:w-20rem" />`,
+    styles: [
+        `
+            :host {
+                display: block;
+                margin-left: -1rem;
+                margin-right: -1rem;
+            }
+
+            .layout-menuitem-icon {
+                margin-right: 0.5rem;
+            }
+
+            .layout-submenu-toggler {
+                margin-left: auto;
+                transition: transform 0.3s;
+            }
+
+            .active-route .layout-submenu-toggler {
+                transform: rotate(-180deg);
+            }
+
+            ul[app-menuitem] {
+                overflow: hidden;
+            }
+
+            /* Arrow on the right side for parent menu headers (PrimeNG PanelMenu) */
+            :host ::ng-deep .p-panelmenu-header-content {
+                display: flex;
+                align-items: center;
+                width: 100%;
+            }
+            :host ::ng-deep .p-panelmenu-header-link {
+                display: flex;
+                align-items: center;
+                flex: 1;
+            }
+            :host ::ng-deep .p-panelmenu-submenu-icon {
+                margin-left: auto;
+                order: 1;
+            }
+        `
+    ]
 })
 export class AppMenu {
     model: MenuItem[] = [];
