@@ -40,11 +40,20 @@ export interface EmployeeBasicInfo {
             </div>
 
             @if (employeeFound && employeeInfo) {
-                <div class="surface-100 border-round p-3">
-                    <div class="flex flex-wrap gap-4">
-                        <div><span class="text-500 text-sm">Name:</span><span class="ml-2 font-semibold">{{ employeeInfo.fullNameEN || 'N/A' }}</span></div>
-                        <div><span class="text-500 text-sm">RAB ID:</span><span class="ml-2 font-semibold">{{ employeeInfo.rabid || 'N/A' }}</span></div>
-                        <div><span class="text-500 text-sm">Service ID:</span><span class="ml-2 font-semibold">{{ employeeInfo.serviceId || 'N/A' }}</span></div>
+                <div class="border border-gray-300 rounded-lg p-4 mb-4 mt-8">
+                    <div class="grid grid-cols-3 gap-5">
+                        <div class="border-r pr-4">
+                            <div class="text-sm mb-2">NAME</div>
+                            <div class="text-xl font-bold">{{ employeeInfo.fullNameEN || 'N/A' }}</div>
+                        </div>
+                        <div class="border-r pr-4">
+                            <div class="text-sm mb-2">RAB ID</div>
+                            <div class="text-xl font-bold">{{ employeeInfo.rabid || 'N/A' }}</div>
+                        </div>
+                        <div>
+                            <div class="text-sm mb-2">SERVICE ID</div>
+                            <div class="text-xl font-bold">{{ employeeInfo.serviceId || 'N/A' }}</div>
+                        </div>
                     </div>
                 </div>
             }
