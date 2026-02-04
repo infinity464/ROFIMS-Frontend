@@ -10,6 +10,7 @@ export interface PreviousRABServiceInfoModel {
     rabUnitCodeId?: number | null;
     serviceFrom?: string | null;
     serviceTo?: string | null;
+    isCurrentlyActive?: boolean;
     appointment?: number | null;
     postingAuth?: string | null;
     remarks?: string | null;
@@ -56,6 +57,7 @@ export class PreviousRABServiceService {
             rabUnitCodeId: payload.rabUnitCodeId ?? null,
             serviceFrom: payload.serviceFrom ?? null,
             serviceTo: payload.serviceTo ?? null,
+            isCurrentlyActive: payload.isCurrentlyActive === true,
             appointment: payload.appointment ?? null,
             postingAuth: payload.postingAuth ?? null,
             remarks: payload.remarks ?? null,

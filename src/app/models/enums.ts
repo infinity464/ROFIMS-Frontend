@@ -71,7 +71,9 @@ export enum EmployeeStatus {
 // Posting Status
 export enum PostingStatus {
     Supernumerary = 'Supernumerary',
-    NewPosting = 'NewPosting'
+    NewPosting = 'NewPosting',
+    Servings='Servings',
+    ExMember='ExMember'
 }
 
 // Form Mode

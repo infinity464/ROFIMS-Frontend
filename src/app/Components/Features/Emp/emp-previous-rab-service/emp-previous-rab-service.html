@@ -50,6 +50,7 @@
                                 <th style="min-width: 150px; background: var(--surface-100)">RAB Wing/Battalion Name</th>
                                 <th style="width: 90px; background: var(--surface-100)">From</th>
                                 <th style="width: 90px; background: var(--surface-100)">To</th>
+                                <th style="width: 100px; background: var(--surface-100)">Currently Active</th>
                                 <th style="width: 95px; background: var(--surface-100)">Appointment</th>
                                 <th style="min-width: 160px; background: var(--surface-100)">Posting Authority</th>
                                 <th style="min-width: 150px; background: var(--surface-100)">Remarks</th>
@@ -64,6 +65,7 @@
                                 <td>{{ getOptionLabel(rabUnitOptions, row.rabUnitCodeId) }}</td>
                                 <td>{{ formatYearOnly(row.serviceFrom) }}</td>
                                 <td>{{ formatYearOnly(row.serviceTo) }}</td>
+                                <td class="text-center">{{ row.isCurrentlyActive ? 'Yes' : 'No' }}</td>
                                 <td>{{ getOptionLabel(appointmentOptions, row.appointment) }}</td>
                                 <td>{{ row.postingAuth || '—' }}</td>
                                 <td>{{ row.remarks || '—' }}</td>
@@ -90,7 +92,7 @@
                         </ng-template>
                         <ng-template pTemplate="emptymessage">
                             <tr>
-                                <td [attr.colspan]="10" class="text-center py-4 text-500">
+                                <td [attr.colspan]="11" class="text-center py-4 text-500">
                                     No previous RAB service entries. Click "Add row" to add.
                                 </td>
                             </tr>
@@ -142,7 +144,11 @@
             </div>
             <div>
                 <label class="font-semibold block mb-2 text-700">To</label>
-                <p-select formControlName="serviceTo" [options]="yearOptions" optionLabel="label" optionValue="value" placeholder="To" styleClass="w-full" appendTo="body"></p-select>
+                <p-select formControlName="serviceTo" [options]="yearOptions" optionLabel="label" optionValue="value" placeholder="To" styleClass="w-full" appendTo="body" [disabled]="serviceForm.get('isCurrentlyActive')?.value"></p-select>
+            </div>
+            <div class="flex align-items-center gap-2">
+                <p-checkbox formControlName="isCurrentlyActive" [binary]="true" inputId="isCurrentlyActive"></p-checkbox>
+                <label for="isCurrentlyActive" class="font-semibold text-700 cursor-pointer">Currently active</label>
             </div>
             <div>
                 <label class="font-semibold block mb-2 text-700">Appointment</label>

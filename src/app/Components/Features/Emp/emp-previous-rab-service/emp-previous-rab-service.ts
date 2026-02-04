@@ -15,6 +15,7 @@ import { SelectModule } from 'primeng/select';
 import { FileUploadModule } from 'primeng/fileupload';
 import { DialogModule } from 'primeng/dialog';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { CheckboxModule } from 'primeng/checkbox';
 
 import { EmpService } from '@/services/emp-service';
 import { PreviousRABServiceService } from '@/services/previous-rab-service.service';
@@ -27,6 +28,7 @@ export interface PreviousRABServiceListRow {
     rabUnitCodeId: number | null;
     serviceFrom: string | null;
     serviceTo: string | null;
+    isCurrentlyActive: boolean;
     appointment: number | null;
     postingAuth: string | null;
     remarks: string | null;
@@ -51,6 +53,7 @@ export interface PreviousRABServiceListRow {
         FileUploadModule,
         DialogModule,
         ConfirmDialogModule,
+        CheckboxModule,
         EmployeeSearchComponent
     ],
     providers: [ConfirmationService],
@@ -110,12 +113,19 @@ export class EmpPreviousRabService implements OnInit {
             rabUnitCodeId: [null, Validators.required],
             serviceFrom: [null],
             serviceTo: [null],
+            isCurrentlyActive: [false],
             appointment: [null],
             postingAuth: [''],
             remarks: [''],
             documentFileName: [''],
             documentFile: [null as File | null],
             documentPath: [null as string | null]
+        });
+        this.serviceForm.get('isCurrentlyActive')?.valueChanges.subscribe(active => {
+            const toControl = this.serviceForm.get('serviceTo');
+            if (toControl) {
+                if (active) toControl.disable(); else toControl.enable();
+            }
         });
     }
 
@@ -191,11 +201,13 @@ export class EmpPreviousRabService implements OnInit {
                     .map((item: any) => {
                         const docPath = item.documentPath ?? item.DocumentPath ?? null;
                         const docName = docPath ? (docPath.split(/[/\\]/).pop() ?? '') : '';
+                        const isActive = item.isCurrentlyActive ?? item.IsCurrentlyActive;
                         return {
                             previousRABServiceID: item.previousRABServiceID ?? item.PreviousRABServiceID,
                             rabUnitCodeId: item.rabUnitCodeId ?? item.RABUnitCodeId ?? null,
                             serviceFrom: item.serviceFrom ?? item.ServiceFrom ?? null,
                             serviceTo: item.serviceTo ?? item.ServiceTo ?? null,
+                            isCurrentlyActive: isActive === true || isActive === 1,
                             appointment: item.appointment ?? item.Appointment ?? null,
                             postingAuth: item.postingAuth ?? item.PostingAuth ?? null,
                             remarks: item.remarks ?? item.Remarks ?? null,
@@ -255,6 +267,7 @@ export class EmpPreviousRabService implements OnInit {
             rabUnitCodeId: null,
             serviceFrom: null,
             serviceTo: null,
+            isCurrentlyActive: false,
             appointment: null,
             postingAuth: '',
             remarks: '',
@@ -262,6 +275,7 @@ export class EmpPreviousRabService implements OnInit {
             documentFile: null,
             documentPath: null
         });
+        this.serviceForm.get('serviceTo')?.enable();
         this.displayDialog = true;
     }
 
@@ -275,6 +289,7 @@ export class EmpPreviousRabService implements OnInit {
             rabUnitCodeId: row.rabUnitCodeId,
             serviceFrom,
             serviceTo,
+            isCurrentlyActive: row.isCurrentlyActive ?? false,
             appointment: row.appointment,
             postingAuth: row.postingAuth ?? '',
             remarks: row.remarks ?? '',
@@ -282,6 +297,9 @@ export class EmpPreviousRabService implements OnInit {
             documentFile: null,
             documentPath: row.documentPath ?? null
         });
+        const toControl = this.serviceForm.get('serviceTo');
+        if (row.isCurrentlyActive && toControl) toControl.disable();
+        else toControl?.enable();
         this.displayDialog = true;
     }
 
@@ -333,7 +351,7 @@ export class EmpPreviousRabService implements OnInit {
             this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select RAB Wing/Battalion Name.' });
             return;
         }
-        const v = this.serviceForm.value;
+        const v = this.serviceForm.getRawValue();
         const now = new Date().toISOString();
         const newId = this.serviceList.length > 0
             ? Math.max(...this.serviceList.map(r => r.previousRABServiceID)) + 1
@@ -344,6 +362,7 @@ export class EmpPreviousRabService implements OnInit {
             rabUnitCodeId: v.rabUnitCodeId ?? null,
             serviceFrom: this.toDateOnly(v.serviceFrom),
             serviceTo: this.toDateOnly(v.serviceTo),
+            isCurrentlyActive: v.isCurrentlyActive === true,
             appointment: v.appointment ?? null,
             postingAuth: v.postingAuth || null,
             remarks: v.remarks || null,
