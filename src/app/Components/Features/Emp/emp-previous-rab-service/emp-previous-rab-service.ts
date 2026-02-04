@@ -5,7 +5,8 @@ import {
     FormBuilder,
     FormGroup,
     FormsModule,
-    ReactiveFormsModule
+    ReactiveFormsModule,
+    Validators
 } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
@@ -143,27 +144,78 @@ export class EmpPreviousRabService implements OnInit {
         appointment: number | null,
         postingAuth: string | null,
         remarks: string | null,
+        documentPath?: string | null,
+        documentFileName?: string | null,
         createdDate?: string | null,
         lastupdate?: string | null
     ): FormGroup {
         return this.fb.group({
             ser: [ser],
             previousRABServiceID: [previousRABServiceID],
-            rabUnitCodeId: [rabUnitCodeId],
+            rabUnitCodeId: [rabUnitCodeId, Validators.required],
             serviceFrom: [serviceFrom],
             serviceTo: [serviceTo],
             appointment: [appointment],
             postingAuth: [postingAuth ?? ''],
             remarks: [remarks ?? ''],
+            /** Display/editable file name (shown in File Name column). */
+            documentFileName: [documentFileName ?? (documentPath ? documentPath.split(/[/\\]/).pop() ?? '' : '')],
+            documentFile: [null as File | null],
+            documentPath: [documentPath ?? null],
             createdDate: [createdDate ?? null],
             lastupdate: [lastupdate ?? null]
         });
     }
 
+    /** Handle file select for Upload Posting Order; store in row for future API integration. */
+    onPostingOrderSelect(event: { files: File[] }, rowIndex: number): void {
+        const file = event.files?.[0] ?? null;
+        this.rows.at(rowIndex).patchValue({ documentFile: file });
+    }
+
+    /** Display name for Upload Posting Order (file name or saved path). */
+    getPostingOrderLabel(row: FormGroup): string {
+        const file = row.get('documentFile')?.value as File | null;
+        const path = row.get('documentPath')?.value as string | null;
+        if (file?.name) return file.name;
+        if (path) return path.split(/[/\\]/).pop() ?? path;
+        return '—';
+    }
+
+    /** Truncate file name for display (e.g. "5b96402f50a0819..."). */
+    truncatePostingOrderName(row: FormGroup, maxLen: number = 20): string {
+        const full = this.getPostingOrderLabel(row);
+        if (full === '—') return full;
+        return full.length <= maxLen ? full : full.slice(0, maxLen) + '...';
+    }
+
+    /** Clear selected posting order file in row. */
+    clearPostingOrder(rowIndex: number): void {
+        this.rows.at(rowIndex).patchValue({ documentFile: null, documentFileName: '' });
+    }
+
+    /** Open posting order file in new tab (for File object only). */
+    viewPostingOrder(row: FormGroup): void {
+        const file = row.get('documentFile')?.value as File | null;
+        const path = row.get('documentPath')?.value as string | null;
+        if (file) {
+            const url = URL.createObjectURL(file);
+            window.open(url, '_blank');
+        } else if (path) {
+            window.open(path, '_blank');
+        }
+    }
+
+    hasPostingOrderFile(row: FormGroup): boolean {
+        const file = row.get('documentFile')?.value as File | null;
+        const path = row.get('documentPath')?.value as string | null;
+        return !!(file?.name || path);
+    }
+
     addRow(): void {
         const ser = this.rows.length + 1;
         this.rows.push(
-            this.createRow(ser, null, null, null, null, null, '', '', null, null)
+            this.createRow(ser, null, null, null, null, null, '', '', null, '', null, null)
         );
     }
 
@@ -214,6 +266,8 @@ export class EmpPreviousRabService implements OnInit {
                     const to = item.serviceTo ?? item.ServiceTo;
                     const fromStr = from != null ? (typeof from === 'string' ? from : new Date(from).toISOString().substring(0, 10)) : null;
                     const toStr = to != null ? (typeof to === 'string' ? to : new Date(to).toISOString().substring(0, 10)) : null;
+                    const docPath = item.documentPath ?? item.DocumentPath ?? null;
+                    const docName = docPath ? (docPath.split(/[/\\]/).pop() ?? '') : '';
                     this.rows.push(
                         this.createRow(
                             ser++,
@@ -224,6 +278,8 @@ export class EmpPreviousRabService implements OnInit {
                             item.appointment ?? item.Appointment ?? null,
                             item.postingAuth ?? item.PostingAuth ?? null,
                             item.remarks ?? item.Remarks ?? null,
+                            docPath,
+                            docName,
                             item.createdDate ?? item.CreatedDate ?? null,
                             item.lastupdate ?? item.Lastupdate ?? null
                         )
@@ -298,6 +354,24 @@ export class EmpPreviousRabService implements OnInit {
             return;
         }
         const controls = this.rows.controls;
+        const rowsMissingRabUnit: number[] = [];
+        controls.forEach((c, idx) => {
+            const val = c.get('rabUnitCodeId')?.value;
+            if (val == null || val === '') {
+                rowsMissingRabUnit.push(idx + 1);
+                c.get('rabUnitCodeId')?.markAsTouched();
+            }
+        });
+        if (rowsMissingRabUnit.length > 0) {
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'Validation',
+                detail: rowsMissingRabUnit.length === 1
+                    ? `Please select RAB Wing/Battalion Name for row ${rowsMissingRabUnit[0]}.`
+                    : `Please select RAB Wing/Battalion Name for row(s) ${rowsMissingRabUnit.join(', ')}.`
+            });
+            return;
+        }
         const currentIds = new Set(
             controls.map(c => c.get('previousRABServiceID')?.value).filter((id): id is number => id != null)
         );

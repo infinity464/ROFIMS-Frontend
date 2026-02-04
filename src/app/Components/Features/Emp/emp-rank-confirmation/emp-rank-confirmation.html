@@ -1,22 +1,159 @@
 <p-fluid>
     <div class="mb-5 card">
         <div class="flex align-items-center gap-3 mb-4">
-            @if (mode !== 'search') { <p-button icon="pi pi-arrow-left" [rounded]="true" [text]="true" severity="secondary" pTooltip="Back to List" (onClick)="goBack()"></p-button> }
-            <h3 class="m-0 text-xl font-bold text-900" style="display: inline-flex; align-items: center; gap: 0.5rem;">Rank Confirmation Information Entry @if (mode === 'view') { <span class="text-500 text-base font-normal">(View Mode)</span> <p-button label="Edit" icon="pi pi-pencil" size="small" (onClick)="enableEditMode()"></p-button> } @if (mode === 'edit') { <span class="text-primary text-base font-normal">(Edit Mode)</span> }</h3>
+            @if (mode !== 'search') {
+                <p-button icon="pi pi-arrow-left" [rounded]="true" [text]="true" severity="secondary" pTooltip="Back to List" (onClick)="goBack()"></p-button>
+            }
+            <h3 class="m-0 text-xl font-bold text-900" style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                Rank Confirmation Information Entry
+                @if (mode === 'view') {
+                    <span class="text-500 text-base font-normal">(View Mode)</span>
+                    <p-button label="Edit" icon="pi pi-pencil" size="small" (onClick)="enableEditMode()"></p-button>
+                }
+                @if (mode === 'edit') {
+                    <span class="text-primary text-base font-normal">(Edit Mode)</span>
+                }
+            </h3>
         </div>
+
         @if (mode === 'search') {
             <app-employee-search
                 (onEmployeeFound)="onEmployeeSearchFound($event)"
                 (onSearchReset)="onEmployeeSearchReset()">
             </app-employee-search>
         }
-        @if (mode !== 'search' && employeeBasicInfo) { <div class="surface-50 border-round-2xl p-4 mb-4"><div class="flex flex-wrap gap-4"><div><span class="text-500 text-sm">Name:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.fullNameEN || employeeBasicInfo.FullNameEN || 'N/A' }}</span></div><div><span class="text-500 text-sm">RAB ID:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.rabid || employeeBasicInfo.Rabid || 'N/A' }}</span></div><div><span class="text-500 text-sm">Service ID:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.serviceId || employeeBasicInfo.ServiceId || 'N/A' }}</span></div></div></div> }
-        @if (employeeFound) {
-            <div class="surface-50 border-round-2xl p-4 mb-4"><p class="text-600">Form content will be displayed here...</p></div>
+
+        @if (mode !== 'search' && employeeBasicInfo) {
+            <div class="surface-50 border-round-2xl p-4 mb-4">
+                <div class="flex flex-wrap gap-4">
+                    <div><span class="text-500 text-sm">Name:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.fullNameEN || employeeBasicInfo.FullNameEN || 'N/A' }}</span></div>
+                    <div><span class="text-500 text-sm">RAB ID:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.rabid || employeeBasicInfo.Rabid || 'N/A' }}</span></div>
+                    <div><span class="text-500 text-sm">Service ID:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.serviceId || employeeBasicInfo.ServiceId || 'N/A' }}</span></div>
+                </div>
+            </div>
+        }
+
+        @if (employeeFound && rankForm) {
+            <form [formGroup]="rankForm" class="rank-section">
+                <div class="surface-50 border-round-2xl p-4 mb-4">
+                    <div class="flex justify-content-between align-items-center gap-3 mb-3 flex-wrap">
+                        <h4 class="m-0 text-lg font-semibold text-900">Rank Confirmation List</h4>
+                        @if (!isReadonly) {
+                            <p-button label="Add row" icon="pi pi-plus" (onClick)="addRow()"></p-button>
+                        }
+                    </div>
+                    <div formArrayName="rows" class="surface-card border-round-lg overflow-hidden mb-4">
+                        <p-table [value]="rows.controls" styleClass="p-datatable-sm" responsiveLayout="scroll" [tableStyle]="{'min-width': '60rem'}">
+                            <ng-template pTemplate="header">
+                                <tr>
+                                    <th style="width: 40px; background: var(--surface-100)">Ser</th>
+                                    <th style="min-width: 160px; background: var(--surface-100)">Rank Name</th>
+                                    <th style="min-width: 135px; background: var(--surface-100)">Rank Confirmation Date</th>
+                                    <th style="min-width: 140px; background: var(--surface-100)">Auth</th>
+                                    <th style="min-width: 160px; background: var(--surface-100)">Remarks</th>
+                                    <th style="min-width: 140px; background: var(--surface-100)">File Name</th>
+                                    <th style="min-width: 180px; background: var(--surface-100)">Rank Confirmation Order</th>
+                                    @if (!isReadonly) {
+                                        <th style="width: 80px; background: var(--surface-100)">Action</th>
+                                    }
+                                </tr>
+                            </ng-template>
+                            <ng-template pTemplate="body" let-row let-i="rowIndex">
+                                <tr [formGroupName]="i">
+                                    <td class="text-center font-semibold">{{ row.get('ser')?.value }}</td>
+                                    <td>
+                                        @if (isReadonly) {
+                                            <span>{{ getOptionLabel(rankOptions, row.get('presentRank')?.value) }}</span>
+                                        } @else {
+                                            <p-select
+                                                formControlName="presentRank"
+                                                [options]="rankOptions"
+                                                optionLabel="label"
+                                                optionValue="value"
+                                                placeholder="Select rank"
+                                                styleClass="w-full"
+                                                appendTo="body"
+                                            ></p-select>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (isReadonly) {
+                                            <span>{{ formatDate(row.get('rankConfirmDate')?.value) }}</span>
+                                        } @else {
+                                            <p-datepicker formControlName="rankConfirmDate" dateFormat="dd-mm-yy" placeholder="Select date" appendTo="body" styleClass="w-full" inputId="rankConfirmDate-{{i}}"></p-datepicker>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (isReadonly) {
+                                            <span>{{ row.get('auth')?.value || '—' }}</span>
+                                        } @else {
+                                            <input pInputText formControlName="auth" class="w-full" placeholder="Auth" />
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (isReadonly) {
+                                            <span>{{ row.get('remarks')?.value || '—' }}</span>
+                                        } @else {
+                                            <input pInputText formControlName="remarks" class="w-full" placeholder="Remarks" />
+                                        }
+                                    </td>
+                                    <td class="align-middle">
+                                        @if (isReadonly) {
+                                            <span class="text-600">{{ row.get('documentFileName')?.value || '—' }}</span>
+                                        } @else {
+                                            <input pInputText formControlName="documentFileName" class="w-full text-sm" placeholder="File name" />
+                                        }
+                                    </td>
+                                    <td class="align-middle">
+                                        @if (isReadonly) {
+                                            <span class="text-600">{{ getOrderLabel(row) }}</span>
+                                        } @else {
+                                            <div class="flex flex-column gap-2" [ngClass]="hasOrderFile(row) ? 'upload-cell-with-file' : 'upload-cell-choose-only'">
+                                                @if (hasOrderFile(row)) {
+                                                    <div class="flex align-items-center gap-2 flex-nowrap surface-100 border-round p-2">
+                                                        <span class="text-700 text-sm flex-grow-1 overflow-hidden text-overflow-ellipsis white-space-nowrap" style="min-width: 0;" [title]="getOrderLabel(row)">{{ truncateOrderName(row) }}</span>
+                                                        <p-button icon="pi pi-eye" [rounded]="true" [text]="true" severity="secondary" pTooltip="View file" (onClick)="viewOrder(row)" styleClass="p-button-sm"></p-button>
+                                                        <p-button icon="pi pi-times" [rounded]="true" [text]="true" severity="danger" pTooltip="Remove file" (onClick)="clearOrder(i)" styleClass="p-button-sm"></p-button>
+                                                    </div>
+                                                } @else {
+                                                    <div class="upload-cell-hide-filename">
+                                                        <p-fileUpload mode="basic" chooseLabel="Choose File" [auto]="false" [customUpload]="true" (onSelect)="onOrderSelect($event, i)" styleClass="p-button-sm"></p-fileUpload>
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
+                                    </td>
+                                    @if (!isReadonly) {
+                                        <td class="align-middle">
+                                            <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" pTooltip="Remove row" (onClick)="removeRow(i)"></p-button>
+                                        </td>
+                                    }
+                                </tr>
+                            </ng-template>
+                            <ng-template pTemplate="emptymessage">
+                                <tr>
+                                    <td [attr.colspan]="isReadonly ? 7 : 8" class="text-center py-4 text-500">
+                                        No rank confirmation entries. Click "Add row" to add.
+                                    </td>
+                                </tr>
+                            </ng-template>
+                        </p-table>
+                    </div>
+                </div>
+            </form>
+
             <div class="flex justify-end mt-4 gap-2">
-                @if (mode === 'view') { <p-button label="Back to List" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" (onClick)="goBack()"></p-button> <p-button label="Edit" icon="pi pi-pencil" (onClick)="enableEditMode()"></p-button> }
-                @else if (mode === 'search' && isReadonly) { <p-button label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" (onClick)="resetForm()"></p-button> <p-button label="Edit" icon="pi pi-pencil" (onClick)="enableSearchEditMode()"></p-button> }
-                @else { <p-button label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" (onClick)="resetForm()"></p-button> <p-button label="Save" icon="pi pi-check" (onClick)="saveData()"></p-button> }
+                @if (mode === 'view') {
+                    <p-button label="Back to List" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" (onClick)="goBack()"></p-button>
+                    <p-button label="Edit" icon="pi pi-pencil" (onClick)="enableEditMode()"></p-button>
+                } @else if (mode === 'search' && isReadonly) {
+                    <p-button label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" (onClick)="resetForm()"></p-button>
+                    <p-button label="Edit" icon="pi pi-pencil" (onClick)="enableSearchEditMode()"></p-button>
+                } @else {
+                    <p-button label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" (onClick)="resetForm()" [disabled]="isSaving"></p-button>
+                    <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="cancelEdit()" [disabled]="isSaving"></p-button>
+                    <p-button label="Save" icon="pi pi-check" (onClick)="saveData()" [loading]="isSaving" [disabled]="isSaving"></p-button>
+                }
             </div>
         }
     </div>

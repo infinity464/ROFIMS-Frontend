@@ -47,7 +47,8 @@ export class AppMenu {
                     { label: 'Leave Info', icon: 'pi pi-fw pi-calendar-minus', routerLink: ['/emp-leave-info'] },
                     { label: 'Medical Category', icon: 'pi pi-fw pi-heart', routerLink: ['/emp-medical-category'] },
                     { label: 'Additional Remarks', icon: 'pi pi-fw pi-comment', routerLink: ['/emp-additional-remarks'] },
-                    { label: 'RAB ID Allocation', icon: 'pi pi-fw pi-id-card', routerLink: ['/rab-id-allocation'] }
+                    { label: 'RAB ID Allocation', icon: 'pi pi-fw pi-id-card', routerLink: ['/rab-id-allocation'] },
+                    { label: 'Presently Serving Members', icon: 'pi pi-fw pi-users', routerLink: ['/presently-serving-members'] }
                 ]
             },
             {
@@ -95,7 +96,10 @@ export class AppMenu {
 
                     { label: 'Visit Type', icon: 'pi pi-fw pi-calendar', routerLink: ['/basic-setup/visit-type'] },
                     { label: 'Punishment Type', icon: 'pi pi-fw pi-ban', routerLink: ['/basic-setup/punishment-type'] },
-                    { label: 'Leave Type', icon: 'pi pi-fw pi-sign-out', routerLink: ['/basic-setup/leave-type'] }
+                    { label: 'Leave Type', icon: 'pi pi-fw pi-sign-out', routerLink: ['/basic-setup/leave-type'] },
+
+                    { label: 'Bank', icon: 'pi pi-fw pi-wallet', routerLink: ['/basic-setup/bank'] },
+                    { label: 'Bank Branch', icon: 'pi pi-fw pi-building', routerLink: ['/basic-setup/bank-branch'] }
 
                     // Newly added
                 ]

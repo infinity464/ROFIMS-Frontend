@@ -1,1 +1,43 @@
 // emp-promotion-info styles
+
+// Upload cell: hide + icon and "No file chosen" text
+:host ::ng-deep .upload-cell-hide-filename {
+  .p-fileupload-choose-button svg[data-p-icon='plus'],
+  .p-fileupload-choose-button .p-button-icon,
+  .p-fileupload-choose-button .p-button-icon-left {
+    display: none !important;
+  }
+  .p-fileupload-basic-content .p-fileupload-choose-button ~ *,
+  .p-fileupload-basic-content > span {
+    display: none !important;
+  }
+  .p-fileupload,
+  .p-fileupload-basic-content {
+    width: fit-content;
+    min-width: 0;
+    display: inline-flex;
+  }
+  .p-fileupload-basic-content {
+    gap: 0;
+  }
+}
+
+.upload-cell-choose-only {
+  width: fit-content;
+  min-width: 0;
+}
+.upload-cell-with-file {
+  width: 280px;
+  min-width: 280px;
+  max-width: 280px;
+}
+
+:host ::ng-deep .promotion-section .p-datatable {
+  .p-datepicker {
+    width: 100%;
+    min-width: 120px;
+  }
+  .p-datepicker .p-datepicker-input {
+    min-width: 120px;
+  }
+}

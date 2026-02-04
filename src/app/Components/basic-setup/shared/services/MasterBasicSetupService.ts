@@ -6,6 +6,7 @@ import { Observable } from 'rxjs';
 import { PagedResponse } from '@/Core/Models/Pagination';
 import { OrganizationModel } from '../../organization-setup/models/organization';
 import { BankModel } from '../models/bank';
+import { BankBranchModel } from '../models/bank-branch';
 import { TrainingInstituteModel } from '../models/training-institution';
 import { RabIdSerialModel } from '../models/rab-id-serial';
 
@@ -16,6 +17,7 @@ export class MasterBasicSetupService {
     private http = inject(HttpClient);
     private apiUrl = `${environment.apis.core}/CommonCode`;
     private apiUrlBank = `${environment.apis.core}/Bank`;
+    private apiUrlBankBranch = `${environment.apis.core}/BankBranch`;
     private apiUrlTraining = `${environment.apis.core}/TrainingInstitute`;
     private apiUrlRabIdSerial = `${environment.apis.core}/RabIdSerial`;
 
@@ -83,6 +85,24 @@ export class MasterBasicSetupService {
     // DELETE: delete bank
     deleteBank(id: number): Observable<any> {
         return this.http.delete(`${this.apiUrlBank}/DeleteAsyn/${id}`);
+    }
+
+    // BankBranch
+
+    getAllBankBranch(): Observable<BankBranchModel[]> {
+        return this.http.get<BankBranchModel[]>(`${this.apiUrlBankBranch}/GetAll`);
+    }
+
+    createBankBranch(model: BankBranchModel): Observable<any> {
+        return this.http.post(`${this.apiUrlBankBranch}/SaveAsyn`, model);
+    }
+
+    updateBankBranch(model: BankBranchModel): Observable<any> {
+        return this.http.put(`${this.apiUrlBankBranch}/UpdateAsyn`, model);
+    }
+
+    deleteBankBranch(id: number): Observable<any> {
+        return this.http.delete(`${this.apiUrlBankBranch}/DeleteAsyn/${id}`);
     }
 
     // GET: all training institutes
