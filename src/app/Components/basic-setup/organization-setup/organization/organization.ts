@@ -72,7 +72,7 @@ export class Organization implements OnInit {
             locationEN: [''],
             locationBN: [''],
             email: ['', [Validators.email]],
-            sortOrder: [0, Validators.required],
+            sortOrder: [null],
             status: [true, Validators.required],
             remarks: [''],
             parentOrg: [null],
@@ -242,6 +242,7 @@ export class Organization implements OnInit {
         this.editingId = null;
         this.organizationForm.reset({
             orgId: 0,
+            sortOrder: null,
             status: true,
             createdDate: new Date(),
             lastupdate: new Date(),
