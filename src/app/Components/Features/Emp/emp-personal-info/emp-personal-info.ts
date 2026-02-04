@@ -18,7 +18,6 @@ import { TooltipModule } from 'primeng/tooltip';
 
 import { EmpService } from '@/services/emp-service';
 import { CommonCodeService } from '@/services/common-code-service';
-import { MedicalCategoryOptions } from '@/models/enums';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 
 @Component({
@@ -63,7 +62,7 @@ export class EmpPersonalInfo implements OnInit {
     personalQualifications: any[] = [];
     gallantryAwards: any[] = [];
     educationQualifications: any[] = [];
-    medicalCategories = MedicalCategoryOptions;
+    medicalCategories: { label: string; value: number }[] = [];
     tribalOptions: any[] = [
         { label: 'No', value: 0 },
         { label: 'Yes', value: 1 }
@@ -191,7 +190,7 @@ export class EmpPersonalInfo implements OnInit {
             personalQualification: [null],
             gallantryAward: [null],
             lastEducationQualification: [null],
-            medicalCategory: [1],  // Default to A (AYEE) - value is integer ID
+            medicalCategory: [null],  // Loaded from API (Medical Category Type)
             tribal: [null],
             freedomFighter: [null],
             heightFeet: [null, [Validators.min(0), Validators.max(8)]],
@@ -280,7 +279,11 @@ export class EmpPersonalInfo implements OnInit {
             error: (err) => console.error('Failed to load education qualifications', err)
         });
 
-        // Medical Categories loaded from enum (MedicalCategoryOptions) with default A (AYEE)
+        // Load Medical Category Type from API (Basic Setup → Medical Category Type)
+        this.commonCodeService.getAllActiveCommonCodesType('MedicalCategoryType').subscribe({
+            next: (data) => this.medicalCategories = (data || []).map(d => ({ label: d.codeValueEN || String(d.codeId), value: d.codeId })),
+            error: (err) => console.error('Failed to load medical categories', err)
+        });
     }
 
     loadBatchesByMotherOrg(orgId: number): void {
@@ -368,7 +371,7 @@ export class EmpPersonalInfo implements OnInit {
             personalQualification: parseDropdownValue(data.PersonalQualification || data.personalQualification),
             gallantryAward: parseDropdownValue(data.Awards || data.awards),
             lastEducationQualification: parseDropdownValue(data.LastEducationalQualification || data.lastEducationalQualification),
-            medicalCategory: data.MedicalCategory || data.medicalCategory || 1,
+            medicalCategory: data.MedicalCategory ?? data.medicalCategory ?? null,
             tribal: data.Tribal !== undefined ? data.Tribal : (data.tribal !== undefined ? data.tribal : null),
             freedomFighter: data.FreedomFighter !== undefined ? data.FreedomFighter : (data.freedomFighter !== undefined ? data.freedomFighter : null),
             heightFeet: heightFeet || null,
@@ -494,7 +497,7 @@ export class EmpPersonalInfo implements OnInit {
             heightInch: null,
             weightKg: null,
             weightLbs: null,
-            medicalCategory: 1  // Default to A (AYEE) - value is integer ID
+            medicalCategory: null
         });
         this.employeeFound = false;
         this.selectedEmployeeId = null;

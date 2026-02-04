@@ -25,6 +25,9 @@ import { VisitType } from '@/Components/basic-setup/visit-type/visit-type';
 import { PunishmentType } from '@/Components/basic-setup/punishment-type/punishment-type';
 import { OffenceType } from '@/Components/basic-setup/offence-type/offence-type';
 import { BriefStatementOfOffence } from '@/Components/basic-setup/brief-statement-of-offence/brief-statement-of-offence';
+import { MedicalCategoryType } from '@/Components/basic-setup/medical-category-type/medical-category-type';
+import { PurposeOfVisitType } from '@/Components/basic-setup/purpose-of-visit-type/purpose-of-visit-type';
+import { SubjectType } from '@/Components/basic-setup/subject-type/subject-type';
 import { LeaveType } from '@/Components/basic-setup/leave-type/leave-type';
 import { EquivalentName } from '@/Components/basic-setup/equivalent-name/equivalent-name';
 import { EmployeeStatusType } from '@/Components/basic-setup/employee-status-type/employee-status-type';
@@ -112,6 +115,9 @@ export const appRoutes: Routes = [
             { path: 'basic-setup/punishment-type', component: PunishmentType },
             { path: 'basic-setup/offence-type', component: OffenceType },
             { path: 'basic-setup/brief-statement-of-offence', component: BriefStatementOfOffence },
+            { path: 'basic-setup/medical-category-type', component: MedicalCategoryType },
+            { path: 'basic-setup/purpose-of-visit-type', component: PurposeOfVisitType },
+            { path: 'basic-setup/subject-type', component: SubjectType },
             { path: 'basic-setup/leave-type', component: LeaveType },
             { path: 'basic-setup/equivalent-name', component: EquivalentName },
             { path: 'basic-setup/employee-status-type', component: EmployeeStatusType },

@@ -1,1 +1,202 @@
-<p-fluid><div class="mb-5 card"><div class="flex align-items-center gap-3 mb-4">@if (mode !== 'search') { <p-button icon="pi pi-arrow-left" [rounded]="true" [text]="true" severity="secondary" pTooltip="Back to List" (onClick)="goBack()"></p-button> }<h3 class="m-0 text-xl font-bold text-900" style="display: inline-flex; align-items: center; gap: 0.5rem;">Medical Category Information @if (mode === 'view') { <span class="text-500 text-base font-normal">(View Mode)</span> <p-button label="Edit" icon="pi pi-pencil" size="small" (onClick)="enableEditMode()"></p-button> } @if (mode === 'edit') { <span class="text-primary text-base font-normal">(Edit Mode)</span> }</h3></div>@if (mode === 'search') { <app-employee-search (onEmployeeFound)="onEmployeeSearchFound($event)" (onSearchReset)="onEmployeeSearchReset()"></app-employee-search> }@if (mode !== 'search' && employeeBasicInfo) { <div class="surface-50 border-round-2xl p-4 mb-4"><div class="flex flex-wrap gap-4"><div><span class="text-500 text-sm">Name:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.fullNameEN || employeeBasicInfo.FullNameEN || 'N/A' }}</span></div><div><span class="text-500 text-sm">RAB ID:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.rabid || employeeBasicInfo.Rabid || 'N/A' }}</span></div><div><span class="text-500 text-sm">Service ID:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.serviceId || employeeBasicInfo.ServiceId || 'N/A' }}</span></div></div></div> }@if (employeeFound) { <div class="surface-50 border-round-2xl p-4 mb-4"><p class="text-600">Form content will be displayed here...</p></div><div class="flex justify-end mt-4 gap-2">@if (mode === 'view') { <p-button label="Back to List" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" (onClick)="goBack()"></p-button> <p-button label="Edit" icon="pi pi-pencil" (onClick)="enableEditMode()"></p-button> } @else if (mode === 'search' && isReadonly) { <p-button label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" (onClick)="resetForm()"></p-button> <p-button label="Edit" icon="pi pi-pencil" (onClick)="enableSearchEditMode()"></p-button> } @else { <p-button label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" (onClick)="resetForm()"></p-button> <p-button label="Save" icon="pi pi-check" (onClick)="saveData()"></p-button> }</div> }</div></p-fluid>
+<p-fluid>
+    <div class="mb-5 card">
+        <div class="flex align-items-center gap-3 mb-4">
+            @if (mode !== 'search') {
+                <p-button icon="pi pi-arrow-left" [rounded]="true" [text]="true" severity="secondary" pTooltip="Back to List" (onClick)="goBack()"></p-button>
+            }
+            <h3 class="m-0 text-xl font-bold text-900" style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                Medical Category Information
+                @if (mode === 'view') {
+                    <span class="text-500 text-base font-normal">(View Mode)</span>
+                    <p-button label="Edit" icon="pi pi-pencil" size="small" (onClick)="enableEditMode()"></p-button>
+                }
+                @if (mode === 'edit') {
+                    <span class="text-primary text-base font-normal">(Edit Mode)</span>
+                }
+            </h3>
+        </div>
+
+        @if (mode === 'search') {
+            <app-employee-search
+                (onEmployeeFound)="onEmployeeSearchFound($event)"
+                (onSearchReset)="onEmployeeSearchReset()">
+            </app-employee-search>
+        }
+
+        @if (mode !== 'search' && employeeBasicInfo) {
+            <div class="surface-50 border-round-2xl p-4 mb-4">
+                <div class="flex flex-wrap gap-4">
+                    <div><span class="text-500 text-sm">Name:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.fullNameEN || employeeBasicInfo.FullNameEN || 'N/A' }}</span></div>
+                    <div><span class="text-500 text-sm">RAB ID:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.rabid || employeeBasicInfo.Rabid || 'N/A' }}</span></div>
+                    <div><span class="text-500 text-sm">Service ID:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.serviceId || employeeBasicInfo.ServiceId || 'N/A' }}</span></div>
+                </div>
+            </div>
+        }
+
+        @if (employeeFound) {
+            <div class="surface-50 border-round-2xl p-4 mb-4">
+                <div class="flex justify-content-between align-items-center gap-3 mb-3 flex-wrap">
+                    <h4 class="m-0 text-lg font-semibold text-900">Medical Records List</h4>
+                    <p-button label="Add row" icon="pi pi-plus" (onClick)="openAddDialog()"></p-button>
+                </div>
+
+                <div class="surface-card border-round-lg overflow-hidden mb-4">
+                    <p-table [value]="medicalList" [loading]="isLoading" styleClass="p-datatable-sm" responsiveLayout="scroll" [tableStyle]="{'min-width': '58rem'}">
+                        <ng-template pTemplate="header">
+                            <tr>
+                                <th style="width: 60px; background: var(--surface-100)">Ser</th>
+                                <th style="min-width: 120px; background: var(--surface-100)">Medical Category</th>
+                                <th style="width: 90px; background: var(--surface-100)">From</th>
+                                <th style="width: 90px; background: var(--surface-100)">To</th>
+                                <th style="min-width: 140px; background: var(--surface-100)">Reason</th>
+                                <th style="min-width: 120px; background: var(--surface-100)">Auth</th>
+                                <th style="min-width: 140px; background: var(--surface-100)">File Name</th>
+                                <th style="min-width: 140px; background: var(--surface-100)">Upload Document</th>
+                                <th style="width: 120px; background: var(--surface-100)">Actions</th>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="body" let-row let-i="rowIndex">
+                            <tr>
+                                <td class="text-center font-semibold">{{ i + 1 }}</td>
+                                <td>{{ getMedicalCategoryLabel(row.medicalCategoryId) }}</td>
+                                <td>{{ formatDate(row.fromDate) }}</td>
+                                <td>{{ formatDate(row.toDate) }}</td>
+                                <td>{{ row.reason || '—' }}</td>
+                                <td>{{ row.auth || '—' }}</td>
+                                <td class="text-600">{{ row.fileName || '—' }}</td>
+                                <td>
+                                    @if (row.fileName) {
+                                        <div class="flex align-items-center gap-2 flex-nowrap surface-100 border-round p-2">
+                                            <span class="text-700 text-sm flex-grow-1 overflow-hidden text-overflow-ellipsis white-space-nowrap" style="min-width: 0;" [title]="row.fileName">{{ row.fileName }}</span>
+                                        </div>
+                                    } @else {
+                                        <span class="text-500">—</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="flex gap-1">
+                                        <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="info" pTooltip="Edit" (onClick)="openEditDialog(row)"></p-button>
+                                        @if (!isReadonly) {
+                                            <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" pTooltip="Delete" (onClick)="confirmDelete(row)"></p-button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="emptymessage">
+                            <tr>
+                                <td [attr.colspan]="9" class="text-center py-4 text-500">No medical records. Click "Add row" to add.</td>
+                            </tr>
+                        </ng-template>
+                    </p-table>
+                </div>
+            </div>
+
+            <div class="flex justify-end mt-4 gap-2">
+                @if (mode === 'view') {
+                    <p-button label="Back to List" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" (onClick)="goBack()"></p-button>
+                    <p-button label="Edit" icon="pi pi-pencil" (onClick)="enableEditMode()"></p-button>
+                } @else {
+                    <p-button label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" (onClick)="onEmployeeSearchReset()" [disabled]="isSaving"></p-button>
+                }
+            </div>
+        }
+    </div>
+</p-fluid>
+
+<!-- Add/Edit Medical Record Dialog -->
+<p-dialog
+    [header]="isEditMode ? 'Edit Medical Record' : 'Add Medical Record'"
+    [(visible)]="displayDialog"
+    [modal]="true"
+    [style]="{ width: '640px' }"
+    [contentStyle]="{ padding: '1.25rem 1.5rem' }"
+    [closable]="true"
+    [draggable]="false"
+    [resizable]="false"
+    styleClass="medical-record-dialog"
+    (onHide)="onDialogHide()">
+    <form [formGroup]="medicalForm" class="medical-record-form">
+        <div class="form-rows">
+            <!-- Row 1: Medical Category Type | From -->
+            <div class="form-row flex gap-3 mb-3">
+                <div class="form-field flex-1">
+                    <label class="form-label">Medical Category Type <span class="required">*</span></label>
+                    <p-select
+                        formControlName="medicalCategoryId"
+                        [options]="medicalCategoryOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Select category"
+                        styleClass="w-full">
+                    </p-select>
+                    @if (medicalForm.get('medicalCategoryId')?.invalid && medicalForm.get('medicalCategoryId')?.touched) {
+                        <small class="form-error">Required</small>
+                    }
+                </div>
+                <div class="form-field flex-1">
+                    <label class="form-label">From <span class="required">*</span></label>
+                    <p-datepicker formControlName="fromDate" dateFormat="dd-mm-yy" placeholder="From" appendTo="body" styleClass="w-full"></p-datepicker>
+                    @if (medicalForm.get('fromDate')?.invalid && medicalForm.get('fromDate')?.touched) {
+                        <small class="form-error">Required</small>
+                    }
+                </div>
+            </div>
+
+            <!-- Row 2: To | Reason -->
+            <div class="form-row flex gap-3 mb-3">
+                <div class="form-field flex-1">
+                    <label class="form-label">To <span class="required">*</span></label>
+                    <p-datepicker formControlName="toDate" dateFormat="dd-mm-yy" placeholder="To" appendTo="body" styleClass="w-full"></p-datepicker>
+                    @if (medicalForm.get('toDate')?.invalid && medicalForm.get('toDate')?.touched) {
+                        <small class="form-error">Required</small>
+                    }
+                </div>
+                <div class="form-field flex-1">
+                    <label class="form-label">Reason</label>
+                    <input pInputText formControlName="reason" class="w-full" placeholder="Reason" />
+                </div>
+            </div>
+
+            <!-- Row 3: Remarks | Auth -->
+            <div class="form-row flex gap-3 mb-3">
+                <div class="form-field flex-1">
+                    <label class="form-label">Remarks</label>
+                    <input pInputText formControlName="remarks" class="w-full" placeholder="Remarks" />
+                </div>
+                <div class="form-field flex-1">
+                    <label class="form-label">Auth</label>
+                    <input pInputText formControlName="auth" class="w-full" placeholder="Auth" />
+                </div>
+            </div>
+
+            <!-- Row 4: File Name (DB column) | Upload File -->
+            <div class="form-row flex gap-3 mb-0">
+                <div class="form-field flex-1">
+                    <label class="form-label">File Name</label>
+                    <input pInputText formControlName="fileName" class="w-full" placeholder="File name" />
+                </div>
+                <div class="form-field flex-1 form-row-upload">
+                    <label class="form-label">Upload File</label>
+                    @if (hasFileInForm()) {
+                        <div class="flex align-items-center gap-2 surface-100 border-round p-2">
+                            <span class="text-700 text-sm flex-grow-1 overflow-hidden text-overflow-ellipsis" [title]="getFileLabelInForm()">{{ getFileLabelInForm() }}</span>
+                            <p-button icon="pi pi-eye" [rounded]="true" [text]="true" severity="secondary" pTooltip="View" (onClick)="viewFileInForm()" styleClass="p-button-sm"></p-button>
+                            <p-button icon="pi pi-times" [rounded]="true" [text]="true" severity="danger" pTooltip="Remove" (onClick)="clearFileInForm()" styleClass="p-button-sm"></p-button>
+                        </div>
+                    } @else {
+                        <p-fileUpload mode="basic" chooseLabel="Choose File" [auto]="false" [customUpload]="true" (onSelect)="onFileSelectInForm($event)" styleClass="p-button-sm"></p-fileUpload>
+                    }
+                </div>
+            </div>
+        </div>
+    </form>
+    <ng-template pTemplate="footer">
+        <div class="dialog-footer">
+            <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="displayDialog = false" [disabled]="isSaving"></p-button>
+            <p-button label="Save" icon="pi pi-check" [loading]="isSaving" [disabled]="isSaving" (onClick)="saveMedical()"></p-button>
+        </div>
+    </ng-template>
+</p-dialog>
+
+<p-confirmDialog></p-confirmDialog>

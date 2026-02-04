@@ -1,1 +1,147 @@
-// component styles
+// component styles (follow emp-service-history)
+:host ::ng-deep .file-input-hidden {
+    display: none;
+}
+
+.medical-record-form .form-row {
+    display: flex;
+    gap: 1rem;
+}
+.medical-record-form .form-row .form-field {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+// From/To date pickers: same as emp-promotion-info (Prob. From / Prob. To)
+:host ::ng-deep .medical-record-form p-datepicker {
+    width: 100%;
+}
+:host ::ng-deep .medical-record-form .p-datepicker .p-inputtext {
+    width: 100% !important;
+}
+
+.medical-record-form .form-row-upload {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+.medical-record-form .form-row-upload label {
+    margin-bottom: 0;
+    flex-shrink: 0;
+}
+
+:host ::ng-deep .medical-record-form .p-fileupload-choose-button svg[data-p-icon='plus'],
+:host ::ng-deep .medical-record-form .p-fileupload-choose-button .p-button-icon,
+:host ::ng-deep .medical-record-form .p-fileupload-choose-button .p-button-icon-left {
+    display: none !important;
+}
+:host ::ng-deep .medical-record-form .p-fileupload-basic-content .p-fileupload-choose-button ~ *,
+:host ::ng-deep .medical-record-form .p-fileupload-basic-content > span {
+    display: none !important;
+}
+:host ::ng-deep .medical-record-form .p-fileupload,
+:host ::ng-deep .medical-record-form .p-fileupload-basic-content {
+    width: fit-content;
+    min-width: 0;
+    display: inline-flex;
+}
+
+:host ::ng-deep .surface-card .p-datatable .p-datatable-thead > tr > th,
+:host ::ng-deep .surface-card .p-datatable .p-datatable-tbody > tr > td {
+    vertical-align: middle;
+}
+
+// Dialog and form – professional layout
+:host ::ng-deep .medical-record-dialog {
+    .p-dialog-header {
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid var(--surface-border);
+    }
+    .p-dialog-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+    }
+}
+
+.medical-record-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.form-section {
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--surface-border);
+
+    &:first-child {
+        padding-top: 0;
+    }
+    &:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+}
+
+.form-section-label {
+    display: block;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-color-secondary);
+    margin-bottom: 0.75rem;
+}
+
+.form-field {
+    margin-bottom: 1rem;
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+}
+
+.form-label {
+    display: block;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--text-color);
+    margin-bottom: 0.375rem;
+}
+
+.form-label .required {
+    color: var(--red-500, #e24c4c);
+}
+
+.form-error {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--red-500);
+    margin-top: 0.25rem;
+}
+
+.form-section-attach {
+    background: var(--surface-50);
+    margin: 0 -1.5rem;
+    padding: 1rem 1.5rem !important;
+    border-radius: var(--border-radius);
+    border: 1px dashed var(--surface-border);
+}
+
+.file-upload-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.file-name-input {
+    flex: 1;
+    min-width: 0;
+}
+
+:host ::ng-deep .dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    width: 100%;
+}
