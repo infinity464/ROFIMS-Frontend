@@ -115,13 +115,13 @@
                 <label class="font-semibold block mb-2 text-700">Education Subject</label>
                 <p-select formControlName="subjectName" [options]="subjectOptions" optionLabel="label" optionValue="value" placeholder="Select Subject" styleClass="w-full"></p-select>
             </div>
-            <div>
+            <div class="w-full">
                 <label class="font-semibold block mb-2 text-700">Date From</label>
-                <p-datepicker formControlName="dateFrom" dateFormat="dd/mm/yy" [showIcon]="true" styleClass="w-full" placeholder="From"></p-datepicker>
+                <p-datepicker formControlName="dateFrom" dateFormat="dd/mm/yy" [showIcon]="true" styleClass="w-full" [style]="{'width': '100%'}" placeholder="From"></p-datepicker>
             </div>
-            <div>
+            <div class="w-full">
                 <label class="font-semibold block mb-2 text-700">Date To</label>
-                <p-datepicker formControlName="dateTo" dateFormat="dd/mm/yy" [showIcon]="true" styleClass="w-full" placeholder="To"></p-datepicker>
+                <p-datepicker formControlName="dateTo" dateFormat="dd/mm/yy" [showIcon]="true" styleClass="w-full" [style]="{'width': '100%'}" placeholder="To"></p-datepicker>
             </div>
             <div>
                 <label class="font-semibold block mb-2 text-700">Grade</label>
