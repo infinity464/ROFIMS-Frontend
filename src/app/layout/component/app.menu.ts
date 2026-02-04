@@ -8,7 +8,7 @@ import { Menu } from 'primeng/menu';
     selector: 'app-menu',
     standalone: true,
     imports: [RouterModule, PanelMenuModule],
-    template: ` <p-panelmenu [model]="model" class="w-full md:w-20rem" />`,
+    template: ` <p-panelmenu [model]="model" class="w-full md:w-20rem menu-reduced-margin" />`,
     styles: [
         `
             :host {
@@ -49,6 +49,19 @@ import { Menu } from 'primeng/menu';
                 margin-left: auto;
                 order: 1;
             }
+
+            /* Highlight selected/active menu item */
+            :host ::ng-deep .p-panelmenu-item-link-active,
+            :host ::ng-deep a.p-panelmenu-item-link-active {
+                font-weight: 700 !important;
+                color: var(--primary-color) !important;
+                background-color: var(--surface-hover) !important;
+            }
+            :host ::ng-deep .p-panelmenu-header.p-panelmenu-header-active .p-panelmenu-header-link {
+                font-weight: 600;
+                color: var(--primary-color);
+                background-color: var(--surface-hover);
+            }
         `
     ]
 })
@@ -59,10 +72,12 @@ export class AppMenu {
         this.model = [
             {
                 label: 'Home',
-                items: [{ label: 'Dashboard', icon: 'pi pi-fw pi-home', routerLink: ['/'] }]
+                icon: 'pi pi-fw pi-th-large',
+                items: [{ label: 'Dashboard', icon: 'pi pi-fw pi-home', routerLink: ['/dashboard'], routerLinkActiveOptions: { paths: 'exact', queryParams: 'ignored', matrixParams: 'ignored', fragment: 'ignored' } }]
             },
             {
                 label: 'Emp',
+                icon: 'pi pi-fw pi-users',
                 items: [
                     { label: 'Employee List', icon: 'pi pi-fw pi-list', routerLink: ['/emp-list'] },
                     { label: 'EmployeeInfo', routerLink: ['/employee-info'] },
