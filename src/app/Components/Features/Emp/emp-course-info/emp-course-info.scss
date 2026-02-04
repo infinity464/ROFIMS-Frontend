@@ -1,1 +1,10 @@
 // component styles
+
+// Make datepicker fields same width as other form fields in the dialog
+:host ::ng-deep p-datepicker.w-full,
+:host ::ng-deep .p-datepicker {
+    width: 100% !important;
+}
+:host ::ng-deep p-datepicker .p-inputtext {
+    width: 100% !important;
+}
