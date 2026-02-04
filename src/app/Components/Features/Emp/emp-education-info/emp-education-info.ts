@@ -91,7 +91,7 @@ export class EmpEducationInfoComponent implements OnInit {
     }
 
     loadDropdowns(): void {
-        const types = ['EducationQualification', 'EducationInstitutionType', 'EducationInstitution', 'EducationalDepartment', 'EducationSubject', 'CourseGrade'];
+        const types = ['EducationQualification', 'EducationInstitutionType', 'EducationInstitution', 'EducationalDepartment', 'EducationSubject', 'EducationResult'];
         types.forEach((codeType) => {
             this.commonCodeService.getAllActiveCommonCodesType(codeType).subscribe({
                 next: (data) => {
@@ -115,7 +115,7 @@ export class EmpEducationInfoComponent implements OnInit {
                         case 'EducationSubject':
                             this.subjectOptions = opts;
                             break;
-                        case 'CourseGrade':
+                        case 'EducationResult':
                             this.gradeOptions = opts;
                             break;
                     }
@@ -168,6 +168,7 @@ export class EmpEducationInfoComponent implements OnInit {
                     dateTo: item.dateTo ?? item.DateTo,
                     passingYear: item.passingYear ?? item.PassingYear,
                     grade: item.grade ?? item.Grade,
+                    gradePoint: item.gradePoint ?? item.GradePoint ?? null,
                     remarks: item.remarks ?? item.Remarks
                 }));
                 this.isLoading = false;
@@ -231,7 +232,7 @@ export class EmpEducationInfoComponent implements OnInit {
             dateTo,
             passingYear: row.passingYear,
             grade: row.grade,
-            gradePoint: ''
+            gradePoint: row.gradePoint ?? ''
         });
         this.displayDialog = true;
     }
@@ -259,6 +260,7 @@ export class EmpEducationInfoComponent implements OnInit {
             dateTo: toDateStr(formValue.dateTo),
             passingYear: formValue.passingYear ?? null,
             grade: formValue.grade ?? null,
+            gradePoint: formValue.gradePoint && String(formValue.gradePoint).trim() ? String(formValue.gradePoint).trim() : null,
             remarks: null,
             createdBy: 'system',
             lastUpdatedBy: 'system'

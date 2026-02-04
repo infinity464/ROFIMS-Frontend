@@ -15,6 +15,7 @@ export interface EducationInfoModel {
     dateTo: string | null;
     passingYear: number | null;
     grade: number | null;
+    gradePoint: string | null;
     remarks: string | null;
     createdBy?: string;
     createdDate?: string;

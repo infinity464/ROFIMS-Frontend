@@ -90,7 +90,7 @@
 <!-- Add/Edit Bank Account Dialog -->
 <p-dialog [header]="isEditMode ? 'Edit Bank Account' : 'Add Bank Account'" [(visible)]="displayDialog" [modal]="true" [style]="{width: '520px'}" [closable]="true">
     <form [formGroup]="bankAccForm" class="mt-3">
-        <div class="grid grid-cols-1 gap-4">
+        <div class="grid grid-cols-2 gap-4">
             <div>
                 <label class="font-semibold block mb-2 text-700">Bank <span class="text-red-500">*</span></label>
                 <p-select
