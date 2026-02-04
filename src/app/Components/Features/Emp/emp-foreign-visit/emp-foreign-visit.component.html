@@ -1,1 +1,218 @@
-<p-fluid><div class="mb-5 card"><div class="flex align-items-center gap-3 mb-4">@if (mode !== 'search') { <p-button icon="pi pi-arrow-left" [rounded]="true" [text]="true" severity="secondary" pTooltip="Back to List" (onClick)="goBack()"></p-button> }<h3 class="m-0 text-xl font-bold text-900" style="display: inline-flex; align-items: center; gap: 0.5rem;">Foreign Visit Information Entry @if (mode === 'view') { <span class="text-500 text-base font-normal">(View Mode)</span> <p-button label="Edit" icon="pi pi-pencil" size="small" (onClick)="enableEditMode()"></p-button> } @if (mode === 'edit') { <span class="text-primary text-base font-normal">(Edit Mode)</span> }</h3></div>@if (mode === 'search') { <app-employee-search (onEmployeeFound)="onEmployeeSearchFound($event)" (onSearchReset)="onEmployeeSearchReset()"></app-employee-search> }@if (mode !== 'search' && employeeBasicInfo) { <div class="surface-50 border-round-2xl p-4 mb-4"><div class="flex flex-wrap gap-4"><div><span class="text-500 text-sm">Name:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.fullNameEN || employeeBasicInfo.FullNameEN || 'N/A' }}</span></div><div><span class="text-500 text-sm">RAB ID:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.rabid || employeeBasicInfo.Rabid || 'N/A' }}</span></div><div><span class="text-500 text-sm">Service ID:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.serviceId || employeeBasicInfo.ServiceId || 'N/A' }}</span></div></div></div> }@if (employeeFound) { <div class="surface-50 border-round-2xl p-4 mb-4"><p class="text-600">Form content will be displayed here...</p></div><div class="flex justify-end mt-4 gap-2">@if (mode === 'view') { <p-button label="Back to List" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" (onClick)="goBack()"></p-button> <p-button label="Edit" icon="pi pi-pencil" (onClick)="enableEditMode()"></p-button> } @else if (mode === 'search' && isReadonly) { <p-button label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" (onClick)="resetForm()"></p-button> <p-button label="Edit" icon="pi pi-pencil" (onClick)="enableSearchEditMode()"></p-button> } @else { <p-button label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" (onClick)="resetForm()"></p-button> <p-button label="Save" icon="pi pi-check" (onClick)="saveData()"></p-button> }</div> }</div></p-fluid>
+<p-toast></p-toast>
+<p-fluid>
+    <div class="mb-5 card">
+        <div class="flex align-items-center gap-3 mb-4">
+            @if (mode !== 'search') {
+                <p-button icon="pi pi-arrow-left" [rounded]="true" [text]="true" severity="secondary" pTooltip="Back to List" (onClick)="goBack()"></p-button>
+            }
+            <h3 class="m-0 text-xl font-bold text-900" style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                Foreign Visit Information Entry
+                @if (mode === 'view') {
+                    <span class="text-500 text-base font-normal">(View Mode)</span>
+                    <p-button label="Edit" icon="pi pi-pencil" size="small" (onClick)="enableEditMode()"></p-button>
+                }
+                @if (mode === 'edit') {
+                    <span class="text-primary text-base font-normal">(Edit Mode)</span>
+                }
+            </h3>
+        </div>
+
+        @if (mode === 'search') {
+            <app-employee-search
+                (onEmployeeFound)="onEmployeeSearchFound($event)"
+                (onSearchReset)="onEmployeeSearchReset()">
+            </app-employee-search>
+        }
+
+        @if (mode !== 'search' && employeeBasicInfo) {
+            <div class="surface-50 border-round-2xl p-4 mb-4">
+                <div class="flex flex-wrap gap-4">
+                    <div><span class="text-500 text-sm">Name:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.fullNameEN || employeeBasicInfo.FullNameEN || 'N/A' }}</span></div>
+                    <div><span class="text-500 text-sm">RAB ID:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.rabid || employeeBasicInfo.Rabid || 'N/A' }}</span></div>
+                    <div><span class="text-500 text-sm">Service ID:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.serviceId || employeeBasicInfo.ServiceId || 'N/A' }}</span></div>
+                </div>
+            </div>
+        }
+
+        @if (employeeFound) {
+            <div class="surface-card border-round p-4 mb-4">
+                <div class="flex justify-content-between align-items-center gap-3 mb-3 flex-wrap">
+                    <h4 class="m-0 text-lg font-semibold white-space-nowrap">Foreign Visit Records</h4>
+                    <p-button label="Add New" icon="pi pi-plus" (onClick)="openAddDialog()"></p-button>
+                </div>
+
+                <p-table [value]="visitList" [loading]="isLoading" [tableStyle]="{'min-width': '60rem'}" styleClass="p-datatable-sm">
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th>Subject</th>
+                            <th>Purpose of Visit</th>
+                            <th>Destination Country</th>
+                            <th>From</th>
+                            <th>To</th>
+                            <th>Total Days</th>
+                            <th>With Family</th>
+                            <th>Auth/Note-Sheet No</th>
+                            @if (!isReadonly) {
+                                <th style="width: 120px;">Actions</th>
+                            }
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row>
+                        <tr>
+                            <td>{{ getOptionLabel(subjectOptions, row.subjectId) }}</td>
+                            <td>{{ getOptionLabel(purposeOfVisitOptions, row.visitId) }}</td>
+                            <td>{{ getOptionLabel(destinationCountryOptions, row.destinationCountryId) }}</td>
+                            <td>{{ formatDate(row.fromDate) }}</td>
+                            <td>{{ formatDate(row.toDate) }}</td>
+                            <td>{{ getTotalDaysForRow(row) }}</td>
+                            <td>{{ row.withFamily ? 'Yes' : 'No' }}</td>
+                            <td>{{ row.auth || 'N/A' }}</td>
+                            @if (!isReadonly) {
+                                <td>
+                                    <div class="flex gap-1">
+                                        <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="info" pTooltip="Edit" (onClick)="openEditDialog(row)"></p-button>
+                                        <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" pTooltip="Delete" (onClick)="confirmDelete(row)"></p-button>
+                                    </div>
+                                </td>
+                            }
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td [attr.colspan]="isReadonly ? 8 : 9" class="text-center py-4">
+                                <span class="text-500">No foreign visit records found.</span>
+                            </td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+
+            <div class="flex justify-end mt-4 gap-2">
+                @if (mode === 'view') {
+                    <p-button label="Back to List" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" (onClick)="goBack()"></p-button>
+                    <p-button label="Edit" icon="pi pi-pencil" (onClick)="enableEditMode()"></p-button>
+                } @else if (mode === 'search' && isReadonly) {
+                    <p-button label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" (onClick)="resetForm()"></p-button>
+                } @else {
+                    <p-button label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" (onClick)="resetForm()"></p-button>
+                }
+            </div>
+        }
+    </div>
+</p-fluid>
+
+<!-- Add/Edit Foreign Visit Dialog -->
+<p-dialog
+    [header]="isEditMode ? 'Edit Foreign Visit' : 'Add Foreign Visit'"
+    [(visible)]="displayDialog"
+    [modal]="true"
+    [style]="{width: '620px'}"
+    [closable]="true">
+    <form [formGroup]="visitForm" class="mt-3">
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="font-semibold block mb-2 text-700">Subject</label>
+                <p-select
+                    formControlName="subjectId"
+                    [options]="subjectOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Auto Select / Manual Type"
+                    styleClass="w-full"></p-select>
+            </div>
+            <div>
+                <label class="font-semibold block mb-2 text-700">Purpose of Visit</label>
+                <p-select
+                    formControlName="visitId"
+                    [options]="purposeOfVisitOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Select Purpose of Visit"
+                    styleClass="w-full"></p-select>
+            </div>
+            <div>
+                <label class="font-semibold block mb-2 text-700">Destination Country</label>
+                <p-select
+                    formControlName="destinationCountryId"
+                    [options]="destinationCountryOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Select Destination Country"
+                    styleClass="w-full"></p-select>
+            </div>
+            <div>
+                <label class="font-semibold block mb-2 text-700">Date of Visit – From</label>
+                <p-datepicker
+                    formControlName="fromDate"
+                    dateFormat="dd/mm/yy"
+                    [showIcon]="true"
+                    styleClass="w-full"
+                    [style]="{'width': '100%'}"
+                    placeholder="From"></p-datepicker>
+            </div>
+            <div>
+                <label class="font-semibold block mb-2 text-700">Date of Visit – To</label>
+                <p-datepicker
+                    formControlName="toDate"
+                    dateFormat="dd/mm/yy"
+                    [showIcon]="true"
+                    styleClass="w-full"
+                    [style]="{'width': '100%'}"
+                    placeholder="To"></p-datepicker>
+            </div>
+            <div>
+                <label class="font-semibold block mb-2 text-700">Total Days</label>
+                <input pInputText [value]="totalDays" class="w-full" readonly />
+            </div>
+            <div class="col-span-2">
+                <label class="font-semibold block mb-2 text-700">With Family Member</label>
+                <p-select
+                    formControlName="withFamily"
+                    [options]="withFamilyYesNo"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Yes / No"
+                    styleClass="w-full"></p-select>
+            </div>
+
+            @if (visitForm.get('withFamily')?.value) {
+                <div class="col-span-2 surface-100 border-round p-3">
+                    <div class="flex align-items-center justify-content-between mb-3">
+                        <h5 class="m-0 font-semibold">Family List for this Visit</h5>
+                        @if (!isReadonly && familyMasterList.length > 0) {
+                            <p-select
+                                [(ngModel)]="selectedFamilyIdsForAdd"
+                                [options]="familyOptions"
+                                optionLabel="label"
+                                optionValue="value"
+                                placeholder="Select Family"
+                                [ngModelOptions]="{standalone: true}"
+                                styleClass="w-200px"></p-select>
+                            <p-button label="Add" icon="pi pi-plus" (onClick)="addFamilyMember()" size="small"></p-button>
+                        }
+                    </div>
+                    @if (familyListForVisit.length > 0) {
+                        <ul class="list-none p-0 m-0">
+                            @for (f of familyListForVisit; track f.foreignVisitFamilyId) {
+                                <li class="flex align-items-center justify-content-between py-2 px-3 mb-2 surface-50 border-round">
+                                    <span class="font-medium">{{ getFamilyName(f.familyId) }}</span>
+                                    @if (!isReadonly) {
+                                        <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" size="small" (onClick)="removeDisplayedFamilyMember({familyId: f.familyId, foreignVisitFamilyId: f.foreignVisitFamilyId, isPending: false})"></p-button>
+                                    }
+                                </li>
+                            }
+                        </ul>
+                    } @else {
+                        <p class="text-500 text-center py-4 m-0">No family members added yet.</p>
+                    }
+                </div>
+            }
+        </div>
+    </form>
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="displayDialog = false" [disabled]="isSaving"></p-button>
+        <p-button label="Save" icon="pi pi-check" [loading]="isSaving" [disabled]="isSaving" (onClick)="saveVisit()"></p-button>
+    </ng-template>
+</p-dialog>
+
+<p-confirmDialog></p-confirmDialog>
