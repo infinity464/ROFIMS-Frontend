@@ -5,7 +5,7 @@ import { HttpClient } from '@angular/common/http';
 import { switchMap, map, catchError, tap } from 'rxjs/operators';
 import { from } from 'rxjs';
 import { concatMap, toArray } from 'rxjs/operators';
-import { AddressInfoModel, EmpModel } from '@/models/EmpModel';
+import { AddressInfoModel, EmpModel, EmployeeSearchInfoModel } from '@/models/EmpModel';
 
 // Pagination interfaces
 export interface PaginationParams {
@@ -60,6 +60,13 @@ export class EmpService {
         if (motherOrganization != null && motherOrganization > 0) params.motherOrganization = String(motherOrganization);
 
         return this.http.get<EmpModel[]>(`${this.empApi}/EmployeeInfo/SearchByIdAsyn`, { params }).pipe(map((data) => (data && data.length > 0 ? data[0] : null)));
+    }
+
+    /** Gets display info from vw_EmployeeSearchInfo (Rank, Corps, Trade, MotherOrganization, MemberType). Call after search when employee is found. */
+    getEmployeeSearchInfo(employeeId: number): Observable<EmployeeSearchInfoModel | null> {
+        return this.http.get<EmployeeSearchInfoModel>(`${this.empApi}/EmployeeInfo/GetEmployeeSearchInfo/${employeeId}`).pipe(
+            catchError(() => of(null))
+        );
     }
 
     saveEmployee(payload: any): Observable<any> {

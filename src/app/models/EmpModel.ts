@@ -74,6 +74,40 @@ export interface AddressInfoModel {
 }
 
 
+/** Response from vw_EmployeeSearchInfo / GetEmployeeSearchInfo API (display names for search result). API may return PascalCase or camelCase. */
+export interface EmployeeSearchInfoModel {
+  employeeID?: number;
+  EmployeeID?: number;
+  fullNameEN?: string;
+  FullNameEN?: string;
+  fullNameBN?: string;
+  FullNameBN?: string;
+  rabID?: string;
+  RABID?: string;
+  serviceId?: string;
+  ServiceId?: string;
+  rankId?: number;
+  RankId?: number;
+  rank?: string;
+  Rank?: string;
+  branchId?: number;
+  BranchId?: number;
+  corps?: string;
+  Corps?: string;
+  tradeId?: number;
+  TradeId?: number;
+  trade?: string;
+  Trade?: string;
+  lastMotherUnitId?: number;
+  LastMotherUnitId?: number;
+  motherOrganization?: string;
+  MotherOrganization?: string;
+  memberTypeId?: number;
+  MemberTypeId?: number;
+  memberType?: string;
+  MemberType?: string;
+}
+
 // ============ SEARCH CRITERIA ============
 export interface EmployeeSearchCriteria {
   motherOrganization?: number;

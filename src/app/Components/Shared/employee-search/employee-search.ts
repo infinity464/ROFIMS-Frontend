@@ -16,6 +16,15 @@ export interface EmployeeBasicInfo {
     motherOrganization?: number;
     rank?: number;
     unit?: number;
+    branch?: number;
+    trade?: number;
+    memberType?: number;
+    /** Display names from vw_EmployeeSearchInfo (Rank, Corps, Trade, MotherOrganization, MemberType) */
+    rankDisplay?: string;
+    corpsDisplay?: string;
+    tradeDisplay?: string;
+    motherOrganizationDisplay?: string;
+    memberTypeDisplay?: string;
 }
 
 @Component({
@@ -41,18 +50,40 @@ export interface EmployeeBasicInfo {
 
             @if (employeeFound && employeeInfo) {
                 <div class="border border-gray-300 rounded-lg p-4 mb-4 mt-8">
-                    <div class="grid grid-cols-3 gap-5">
-                        <div class="border-r pr-4">
+                    <div class="grid grid-cols-4 gap-5">
+                        <div class="border-r border-gray-300 pr-4">
                             <div class="text-sm mb-2">NAME</div>
                             <div class="text-xl font-bold">{{ employeeInfo.fullNameEN || 'N/A' }}</div>
                         </div>
-                        <div class="border-r pr-4">
+                        <div class="border-r border-gray-300 pr-4">
                             <div class="text-sm mb-2">RAB ID</div>
                             <div class="text-xl font-bold">{{ employeeInfo.rabid || 'N/A' }}</div>
                         </div>
-                        <div>
+                        <div class="border-r border-gray-300 pr-4">
                             <div class="text-sm mb-2">SERVICE ID</div>
                             <div class="text-xl font-bold">{{ employeeInfo.serviceId || 'N/A' }}</div>
+                        </div>
+                        <div class="pl-4">
+                            <div class="text-sm mb-2">RANK</div>
+                            <div class="text-xl font-bold">{{ employeeInfo.rankDisplay ?? employeeInfo.rank ?? 'N/A' }}</div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-4 gap-5 mt-5">
+                        <div class="border-r border-gray-300 pr-4">
+                            <div class="text-sm mb-2">CORPS</div>
+                            <div class="text-xl font-bold">{{ employeeInfo.corpsDisplay ?? employeeInfo.branch ?? 'N/A' }}</div>
+                        </div>
+                        <div class="border-r border-gray-300 pr-4">
+                            <div class="text-sm mb-2">TRADE</div>
+                            <div class="text-xl font-bold">{{ employeeInfo.tradeDisplay ?? employeeInfo.trade ?? 'N/A' }}</div>
+                        </div>
+                        <div class="border-r border-gray-300 pr-4">
+                            <div class="text-sm mb-2">MOTHER ORG</div>
+                            <div class="text-xl font-bold">{{ employeeInfo.motherOrganizationDisplay ?? employeeInfo.motherOrganization ?? 'N/A' }}</div>
+                        </div>
+                        <div class="pl-4">
+                            <div class="text-sm mb-2">MEMBER TYPE</div>
+                            <div class="text-xl font-bold">{{ employeeInfo.memberTypeDisplay ?? employeeInfo.memberType ?? 'N/A' }}</div>
                         </div>
                     </div>
                 </div>
@@ -88,20 +119,39 @@ export class EmployeeSearchComponent {
         this.isSearching = true;
         this.empService.searchByRabIdOrServiceId(this.searchRabId || undefined, this.searchServiceId || undefined).subscribe({
             next: (employee: any) => {
-                this.isSearching = false;
                 if (employee) {
-                    this.employeeFound = true;
+                    const employeeID = employee.EmployeeID ?? employee.employeeID;
                     this.employeeInfo = {
-                        employeeID: employee.EmployeeID || employee.employeeID,
+                        employeeID,
                         fullNameEN: employee.FullNameEN || employee.fullNameEN || '',
                         fullNameBN: employee.FullNameBN || employee.fullNameBN,
                         rabid: employee.RABID || employee.Rabid || employee.rabid || '',
                         serviceId: employee.ServiceId || employee.serviceId || '',
-                        motherOrganization: employee.MotherOrganization || employee.motherOrganization,
-                        rank: employee.Rank || employee.rank,
-                        unit: employee.Unit || employee.unit
+                        motherOrganization: employee.LastMotherUnit ?? employee.MotherOrganization ?? employee.motherOrganization,
+                        rank: employee.Rank ?? employee.rank,
+                        unit: employee.Unit ?? employee.unit,
+                        branch: employee.Branch ?? employee.branch,
+                        trade: employee.Trade ?? employee.trade,
+                        memberType: employee.MemberType ?? employee.memberType
                     };
+                    this.employeeFound = true;
+                    this.isSearching = false;
                     this.onEmployeeFound.emit(this.employeeInfo);
+                    // Fetch display names from vw_EmployeeSearchInfo and merge into employeeInfo
+                    this.empService.getEmployeeSearchInfo(employeeID).subscribe({
+                        next: (searchInfo) => {
+                            if (searchInfo && this.employeeInfo && this.employeeInfo.employeeID === employeeID) {
+                                this.employeeInfo = {
+                                    ...this.employeeInfo,
+                                    rankDisplay: searchInfo.rank ?? searchInfo.Rank,
+                                    corpsDisplay: searchInfo.corps ?? searchInfo.Corps,
+                                    tradeDisplay: searchInfo.trade ?? searchInfo.Trade,
+                                    motherOrganizationDisplay: searchInfo.motherOrganization ?? searchInfo.MotherOrganization,
+                                    memberTypeDisplay: searchInfo.memberType ?? searchInfo.MemberType
+                                };
+                            }
+                        }
+                    });
                 } else {
                     this.employeeFound = false;
                     this.employeeInfo = null;
@@ -111,6 +161,7 @@ export class EmployeeSearchComponent {
                         detail: 'No employee found with the given ID'
                     });
                 }
+                this.isSearching = false;
             },
             error: (err) => {
                 console.error('Search failed', err);
