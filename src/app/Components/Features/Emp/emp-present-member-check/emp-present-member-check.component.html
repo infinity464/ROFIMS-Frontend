@@ -1,7 +1,7 @@
-<p-fluid>
+
     <div class="card">
        
-        <div class="surface-50 border-round-2xl p-4 mb-4">
+        <div class="surface-50 border-round-2xl mb-4">
             <div class="flex flex-wrap gap-3 align-items-end">
                 <div style="min-width: 220px;">
                     <label class="font-semibold block mb-2 text-700">Mother Organization</label>
@@ -78,7 +78,7 @@
                         <td>{{ row.appointmentName || row.AppointmentName || 'N/A' }}</td>
                         <td>{{ row.postingAuth || row.PostingAuth || 'N/A' }}</td>
                         <td>
-                            <p-button label="View Old Profile" icon="pi pi-eye" size="small"></p-button>
+                            <p-button label="View Old Profile" icon="pi pi-eye" size="small" (onClick)="viewOldProfile()"></p-button>
             
                         </td>
                     </tr>
@@ -113,4 +113,3 @@
             </p-button>
         </ng-template>
     </p-dialog>
-</p-fluid>

@@ -1,8 +1,8 @@
 <p-fluid>
-    <!-- Present Member Check: show above the form -->
     <app-emp-present-member-check
         (employeeNotFound)="showEntryForm = true"
-        (employeeFound)="showEntryForm = false" />
+        (employeeFound)="showEntryForm = false"
+        (loadOldProfile)="onLoadOldProfile($event)" />
 
     @if (showEntryForm) {
     <div class="mb-5 card">

@@ -625,6 +625,21 @@ export class EmpBasicInfo implements OnInit {
         });
     }
 
+    /** Called when user clicks View Old Profile in present-member-check: show form and load ex-member data. */
+    onLoadOldProfile(employeeId: number): void {
+        this.showEntryForm = true;
+        this.generatedEmployeeId = employeeId;
+        this.isEditMode = true;
+        this.isViewMode = false;
+        this.pageTitle = 'New Posting Entry Form';
+        this.presentAddressConfig.employeeId = employeeId;
+        this.permanentAddressConfig.employeeId = employeeId;
+        this.wifePermanentAddressConfig.employeeId = employeeId;
+        this.wifePresentAddressConfig.employeeId = employeeId;
+        this.loadEmployeeData(employeeId);
+        this.enableForm();
+    }
+
     // Load employee data for view/edit mode
     loadEmployeeData(employeeId: number): void {
         // Load employee basic info

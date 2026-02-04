@@ -41,6 +41,8 @@ export class EmpPresentMemberCheckComponent implements OnInit {
     @Output() employeeNotFound = new EventEmitter<void>();
     /** Emitted when search finds an employee (present or ex-member), so parent can hide the entry form. */
     @Output() employeeFound = new EventEmitter<void>();
+    /** Emitted when user clicks View Old Profile: parent should show form and load this employee id. */
+    @Output() loadOldProfile = new EventEmitter<number>();
 
     constructor(
         private empService: EmpService,
@@ -183,5 +185,16 @@ export class EmpPresentMemberCheckComponent implements OnInit {
     clearExMemberSection(): void {
         this.exMemberEmployee = null;
         this.exMemberViewList = [];
+    }
+
+    /** Hide ex-member table and ask parent to show form and load this employee's data. */
+    viewOldProfile(): void {
+        if (!this.exMemberEmployee) return;
+        const id = (this.exMemberEmployee as any).employeeID ?? (this.exMemberEmployee as any).EmployeeID;
+        if (id != null) {
+            this.loadOldProfile.emit(Number(id));
+            this.exMemberEmployee = null;
+            this.exMemberViewList = [];
+        }
     }
 }
