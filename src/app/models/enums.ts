@@ -106,6 +106,7 @@ export const MedicalCategoryOptions = [
 export enum CodeType {
     AppointmentCategory = 'AppointmentCategory',
     Batch = 'Batch',
+    BriefStatementOfOffence = 'BriefStatementOfOffence',
     BloodGroup = 'BloodGroup',
     Country = 'Country',
     Corps = 'Corps',
@@ -129,6 +130,7 @@ export enum CodeType {
     MaritalStatus = 'MaritalStatus',
     MotherOrgRank = 'MotherOrgRank',
     Occupation = 'Occupation',
+    OffenceType = 'OffenceType',
     OfficerType = 'OfficerType',
     PersonalQualification = 'PersonalQualification',
     PostOffice = 'PostOffice',

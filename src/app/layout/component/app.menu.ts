@@ -96,6 +96,8 @@ export class AppMenu {
 
                     { label: 'Visit Type', icon: 'pi pi-fw pi-calendar', routerLink: ['/basic-setup/visit-type'] },
                     { label: 'Punishment Type', icon: 'pi pi-fw pi-ban', routerLink: ['/basic-setup/punishment-type'] },
+                    { label: 'Offence Type', icon: 'pi pi-fw pi-exclamation-triangle', routerLink: ['/basic-setup/offence-type'] },
+                    { label: 'Brief Statement of Offence', icon: 'pi pi-fw pi-file-edit', routerLink: ['/basic-setup/brief-statement-of-offence'] },
                     { label: 'Leave Type', icon: 'pi pi-fw pi-sign-out', routerLink: ['/basic-setup/leave-type'] },
 
                     { label: 'Bank', icon: 'pi pi-fw pi-wallet', routerLink: ['/basic-setup/bank'] },
