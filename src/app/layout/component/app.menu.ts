@@ -164,7 +164,10 @@ export class AppMenu {
                     { label: 'Offence Type', icon: 'pi pi-fw pi-exclamation-triangle', routerLink: ['/basic-setup/offence-type'] },
                     { label: 'Brief Statement of Offence', icon: 'pi pi-fw pi-file-edit', routerLink: ['/basic-setup/brief-statement-of-offence'] },
                     { label: 'Leave Type', icon: 'pi pi-fw pi-sign-out', routerLink: ['/basic-setup/leave-type'] },
-
+                    
+                    { label: 'Medical Category Type', icon: 'pi pi-fw pi-heart', routerLink: ['/basic-setup/medical-category-type'] },
+                    { label: 'Visit Subject Type', icon: 'pi pi-fw pi-list', routerLink: ['/basic-setup/subject-type'] },
+                    
                     { label: 'Bank', icon: 'pi pi-fw pi-wallet', routerLink: ['/basic-setup/bank'] },
                     { label: 'Bank Branch', icon: 'pi pi-fw pi-building', routerLink: ['/basic-setup/bank-branch'] }
 
