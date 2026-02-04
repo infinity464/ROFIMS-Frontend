@@ -7,17 +7,16 @@
     </div>
 
     <!-- Filters -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+    <div class="flex flex-column gap-4 mb-4">
         <div class="flex flex-column gap-2">
             <label for="orgs" class="font-semibold">Organization(s)</label>
             <p-multiSelect id="orgs" [options]="orgOptions" [(ngModel)]="selectedOrgIds" optionLabel="orgNameEN" optionValue="orgId" placeholder="Select organization(s)" [filter]="true" styleClass="w-full" display="chip"> </p-multiSelect>
         </div>
-        <div class="flex flex-column gap-2 ms-4">
+        <div class="flex flex-column gap-2">
             <label for="memberType" class="font-semibold">Member Type</label>
             <p-select id="memberType" [options]="memberTypeOptions" [(ngModel)]="selectedMemberTypeId" placeholder="Select member type" optionLabel="label" optionValue="value" styleClass="w-full"> </p-select>
         </div>
-        <div class="flex flex-column gap-2 justify-content-end">
-            <label class="opacity-0">Actions</label>
+        <div>
             <p-button label="Load List" icon="pi pi-refresh" (onClick)="loadList()" [loading]="loading"> </p-button>
         </div>
     </div>
