@@ -1,13 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import {
-    FormArray,
-    FormBuilder,
-    FormGroup,
-    FormsModule,
-    ReactiveFormsModule,
-    Validators
-} from '@angular/forms';
+import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
@@ -15,16 +8,32 @@ import { catchError, map } from 'rxjs/operators';
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
 import { Fluid } from 'primeng/fluid';
-import { MessageService } from 'primeng/api';
+import { MessageService, ConfirmationService } from 'primeng/api';
 import { TooltipModule } from 'primeng/tooltip';
 import { TableModule } from 'primeng/table';
 import { SelectModule } from 'primeng/select';
 import { FileUploadModule } from 'primeng/fileupload';
+import { DialogModule } from 'primeng/dialog';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
 
 import { EmpService } from '@/services/emp-service';
 import { PreviousRABServiceService } from '@/services/previous-rab-service.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
+
+/** List row for display in table (includes document display fields) */
+export interface PreviousRABServiceListRow {
+    previousRABServiceID: number;
+    rabUnitCodeId: number | null;
+    serviceFrom: string | null;
+    serviceTo: string | null;
+    appointment: number | null;
+    postingAuth: string | null;
+    remarks: string | null;
+    documentPath?: string | null;
+    documentFileName?: string | null;
+    documentFile?: File | null;
+}
 
 @Component({
     selector: 'app-emp-previous-rab-service',
@@ -40,27 +49,33 @@ import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/
         TableModule,
         SelectModule,
         FileUploadModule,
+        DialogModule,
+        ConfirmDialogModule,
         EmployeeSearchComponent
     ],
+    providers: [ConfirmationService],
     templateUrl: './emp-previous-rab-service.html',
     styleUrl: './emp-previous-rab-service.scss'
 })
 export class EmpPreviousRabService implements OnInit {
-    employeeFound: boolean = false;
+    employeeFound = false;
     selectedEmployeeId: number | null = null;
     employeeBasicInfo: any = null;
     mode: 'search' | 'view' | 'edit' = 'search';
-    isReadonly: boolean = false;
+    isReadonly = false;
 
+    serviceList: PreviousRABServiceListRow[] = [];
+    isLoading = false;
+
+    displayDialog = false;
+    isEditMode = false;
+    isSaving = false;
     serviceForm!: FormGroup;
+    editingServiceId: number | null = null;
+
     rabUnitOptions: { label: string; value: number }[] = [];
     appointmentOptions: { label: string; value: number }[] = [];
-    /** Year dropdown: first day of year as value e.g. { label: '2022', value: '2022-01-01' } */
     yearOptions: { label: string; value: string }[] = [];
-
-    /** Existing PreviousRABServiceID from API (used to detect deletes). */
-    private existingServiceIds: number[] = [];
-    isSaving: boolean = false;
 
     constructor(
         private fb: FormBuilder,
@@ -68,6 +83,7 @@ export class EmpPreviousRabService implements OnInit {
         private previousRABService: PreviousRABServiceService,
         private commonCodeService: CommonCodeService,
         private messageService: MessageService,
+        private confirmationService: ConfirmationService,
         private route: ActivatedRoute,
         private router: Router
     ) {}
@@ -79,7 +95,6 @@ export class EmpPreviousRabService implements OnInit {
         this.checkRouteParams();
     }
 
-    /** Build year dropdown options (first day of year stored as value for API). Max year = current year, then down. */
     private buildYearOptions(): void {
         const currentYear = new Date().getFullYear();
         const startYear = 1980;
@@ -91,7 +106,16 @@ export class EmpPreviousRabService implements OnInit {
 
     buildForm(): void {
         this.serviceForm = this.fb.group({
-            rows: this.fb.array([])
+            previousRABServiceID: [null],
+            rabUnitCodeId: [null, Validators.required],
+            serviceFrom: [null],
+            serviceTo: [null],
+            appointment: [null],
+            postingAuth: [''],
+            remarks: [''],
+            documentFileName: [''],
+            documentFile: [null as File | null],
+            documentPath: [null as string | null]
         });
     }
 
@@ -115,11 +139,6 @@ export class EmpPreviousRabService implements OnInit {
         });
     }
 
-    get rows(): FormArray {
-        return this.serviceForm.get('rows') as FormArray;
-    }
-
-    /** Convert to YYYY-MM-DD for API; year-only becomes first day of year (YYYY-01-01). */
     private toDateOnly(d: Date | string | number | null): string | null {
         if (d == null) return null;
         if (typeof d === 'number' && !isNaN(d) && d >= 1900 && d <= 2100) return `${d}-01-01`;
@@ -133,95 +152,6 @@ export class EmpPreviousRabService implements OnInit {
         }
         if (d instanceof Date) return isNaN(d.getTime()) ? null : d.toISOString().substring(0, 10);
         return null;
-    }
-
-    createRow(
-        ser: number,
-        previousRABServiceID: number | null,
-        rabUnitCodeId: number | null,
-        serviceFrom: string | Date | null,
-        serviceTo: string | Date | null,
-        appointment: number | null,
-        postingAuth: string | null,
-        remarks: string | null,
-        documentPath?: string | null,
-        documentFileName?: string | null,
-        createdDate?: string | null,
-        lastupdate?: string | null
-    ): FormGroup {
-        return this.fb.group({
-            ser: [ser],
-            previousRABServiceID: [previousRABServiceID],
-            rabUnitCodeId: [rabUnitCodeId, Validators.required],
-            serviceFrom: [serviceFrom],
-            serviceTo: [serviceTo],
-            appointment: [appointment],
-            postingAuth: [postingAuth ?? ''],
-            remarks: [remarks ?? ''],
-            /** Display/editable file name (shown in File Name column). */
-            documentFileName: [documentFileName ?? (documentPath ? documentPath.split(/[/\\]/).pop() ?? '' : '')],
-            documentFile: [null as File | null],
-            documentPath: [documentPath ?? null],
-            createdDate: [createdDate ?? null],
-            lastupdate: [lastupdate ?? null]
-        });
-    }
-
-    /** Handle file select for Upload Posting Order; store in row for future API integration. */
-    onPostingOrderSelect(event: { files: File[] }, rowIndex: number): void {
-        const file = event.files?.[0] ?? null;
-        this.rows.at(rowIndex).patchValue({ documentFile: file });
-    }
-
-    /** Display name for Upload Posting Order (file name or saved path). */
-    getPostingOrderLabel(row: FormGroup): string {
-        const file = row.get('documentFile')?.value as File | null;
-        const path = row.get('documentPath')?.value as string | null;
-        if (file?.name) return file.name;
-        if (path) return path.split(/[/\\]/).pop() ?? path;
-        return '—';
-    }
-
-    /** Truncate file name for display (e.g. "5b96402f50a0819..."). */
-    truncatePostingOrderName(row: FormGroup, maxLen: number = 20): string {
-        const full = this.getPostingOrderLabel(row);
-        if (full === '—') return full;
-        return full.length <= maxLen ? full : full.slice(0, maxLen) + '...';
-    }
-
-    /** Clear selected posting order file in row. */
-    clearPostingOrder(rowIndex: number): void {
-        this.rows.at(rowIndex).patchValue({ documentFile: null, documentFileName: '' });
-    }
-
-    /** Open posting order file in new tab (for File object only). */
-    viewPostingOrder(row: FormGroup): void {
-        const file = row.get('documentFile')?.value as File | null;
-        const path = row.get('documentPath')?.value as string | null;
-        if (file) {
-            const url = URL.createObjectURL(file);
-            window.open(url, '_blank');
-        } else if (path) {
-            window.open(path, '_blank');
-        }
-    }
-
-    hasPostingOrderFile(row: FormGroup): boolean {
-        const file = row.get('documentFile')?.value as File | null;
-        const path = row.get('documentPath')?.value as string | null;
-        return !!(file?.name || path);
-    }
-
-    addRow(): void {
-        const ser = this.rows.length + 1;
-        this.rows.push(
-            this.createRow(ser, null, null, null, null, null, '', '', null, '', null, null)
-        );
-    }
-
-    removeRow(index: number): void {
-        this.rows.removeAt(index);
-        this.rows.controls.forEach((ctrl, i) => ctrl.get('ser')?.setValue(i + 1));
     }
 
     checkRouteParams(): void {
@@ -243,52 +173,229 @@ export class EmpPreviousRabService implements OnInit {
                     this.employeeFound = true;
                     this.selectedEmployeeId = employee.employeeID || employee.EmployeeID;
                     this.employeeBasicInfo = employee;
-                    this.loadServicesForEmployee(this.selectedEmployeeId!);
+                    this.loadServiceList();
                 }
             },
             error: err => console.error('Failed to load employee', err)
         });
     }
 
-    loadServicesForEmployee(employeeId: number): void {
-        this.rows.clear();
-        this.existingServiceIds = [];
-        this.previousRABService.getByEmployeeId(employeeId).subscribe({
+    loadServiceList(): void {
+        if (!this.selectedEmployeeId) return;
+        this.isLoading = true;
+        this.previousRABService.getByEmployeeId(this.selectedEmployeeId).subscribe({
             next: (list: any[]) => {
                 const arr = Array.isArray(list) ? list : [];
-                let ser = 1;
-                for (const item of arr) {
-                    const id = item.previousRABServiceID ?? item.PreviousRABServiceID;
-                    const empId = item.employeeID ?? item.EmployeeID;
-                    if (empId !== employeeId) continue;
-                    this.existingServiceIds.push(id);
-                    const from = item.serviceFrom ?? item.ServiceFrom;
-                    const to = item.serviceTo ?? item.ServiceTo;
-                    const fromStr = from != null ? (typeof from === 'string' ? from : new Date(from).toISOString().substring(0, 10)) : null;
-                    const toStr = to != null ? (typeof to === 'string' ? to : new Date(to).toISOString().substring(0, 10)) : null;
-                    const docPath = item.documentPath ?? item.DocumentPath ?? null;
-                    const docName = docPath ? (docPath.split(/[/\\]/).pop() ?? '') : '';
-                    this.rows.push(
-                        this.createRow(
-                            ser++,
-                            id,
-                            item.rabUnitCodeId ?? item.RABUnitCodeId ?? null,
-                            fromStr,
-                            toStr,
-                            item.appointment ?? item.Appointment ?? null,
-                            item.postingAuth ?? item.PostingAuth ?? null,
-                            item.remarks ?? item.Remarks ?? null,
-                            docPath,
-                            docName,
-                            item.createdDate ?? item.CreatedDate ?? null,
-                            item.lastupdate ?? item.Lastupdate ?? null
-                        )
-                    );
-                }
+                this.serviceList = arr
+                    .filter((item: any) => (item.employeeID ?? item.EmployeeID) === this.selectedEmployeeId)
+                    .map((item: any) => {
+                        const docPath = item.documentPath ?? item.DocumentPath ?? null;
+                        const docName = docPath ? (docPath.split(/[/\\]/).pop() ?? '') : '';
+                        return {
+                            previousRABServiceID: item.previousRABServiceID ?? item.PreviousRABServiceID,
+                            rabUnitCodeId: item.rabUnitCodeId ?? item.RABUnitCodeId ?? null,
+                            serviceFrom: item.serviceFrom ?? item.ServiceFrom ?? null,
+                            serviceTo: item.serviceTo ?? item.ServiceTo ?? null,
+                            appointment: item.appointment ?? item.Appointment ?? null,
+                            postingAuth: item.postingAuth ?? item.PostingAuth ?? null,
+                            remarks: item.remarks ?? item.Remarks ?? null,
+                            documentPath: docPath,
+                            documentFileName: docName,
+                            documentFile: null as File | null
+                        };
+                    });
+                this.isLoading = false;
             },
             error: () => {
-                this.rows.clear();
-                this.existingServiceIds = [];
+                this.serviceList = [];
+                this.isLoading = false;
+            }
+        });
+    }
+
+    getOptionLabel(options: { label: string; value: number }[], value: number | null): string {
+        if (value == null) return '—';
+        const opt = options.find(o => o.value === value);
+        return opt ? opt.label : String(value);
+    }
+
+    formatYearOnly(value: Date | string | null): string {
+        if (value == null) return '—';
+        if (typeof value === 'number' && !isNaN(value)) return String(value);
+        const d = typeof value === 'string' ? new Date(value) : value;
+        return isNaN(d.getTime()) ? '—' : String(d.getFullYear());
+    }
+
+    getPostingOrderLabel(row: PreviousRABServiceListRow): string {
+        if (row.documentFile?.name) return row.documentFile.name;
+        if (row.documentPath) return row.documentPath.split(/[/\\]/).pop() ?? row.documentPath;
+        return row.documentFileName ?? '—';
+    }
+
+    truncatePostingOrderName(row: PreviousRABServiceListRow, maxLen: number = 20): string {
+        const full = this.getPostingOrderLabel(row);
+        if (full === '—') return full;
+        return full.length <= maxLen ? full : full.slice(0, maxLen) + '...';
+    }
+
+    viewPostingOrder(row: PreviousRABServiceListRow): void {
+        if (row.documentFile) {
+            const url = URL.createObjectURL(row.documentFile);
+            window.open(url, '_blank');
+        } else if (row.documentPath) {
+            window.open(row.documentPath, '_blank');
+        }
+    }
+
+    openAddDialog(): void {
+        this.isEditMode = false;
+        this.editingServiceId = null;
+        this.serviceForm.reset({
+            previousRABServiceID: null,
+            rabUnitCodeId: null,
+            serviceFrom: null,
+            serviceTo: null,
+            appointment: null,
+            postingAuth: '',
+            remarks: '',
+            documentFileName: '',
+            documentFile: null,
+            documentPath: null
+        });
+        this.displayDialog = true;
+    }
+
+    openEditDialog(row: PreviousRABServiceListRow): void {
+        this.isEditMode = true;
+        this.editingServiceId = row.previousRABServiceID;
+        const serviceFrom = row.serviceFrom ? (typeof row.serviceFrom === 'string' ? row.serviceFrom : new Date(row.serviceFrom).toISOString().substring(0, 10)) : null;
+        const serviceTo = row.serviceTo ? (typeof row.serviceTo === 'string' ? row.serviceTo : new Date(row.serviceTo).toISOString().substring(0, 10)) : null;
+        this.serviceForm.patchValue({
+            previousRABServiceID: row.previousRABServiceID,
+            rabUnitCodeId: row.rabUnitCodeId,
+            serviceFrom,
+            serviceTo,
+            appointment: row.appointment,
+            postingAuth: row.postingAuth ?? '',
+            remarks: row.remarks ?? '',
+            documentFileName: row.documentFileName ?? '',
+            documentFile: null,
+            documentPath: row.documentPath ?? null
+        });
+        this.displayDialog = true;
+    }
+
+    hasPostingOrderFileInForm(): boolean {
+        const file = this.serviceForm.get('documentFile')?.value as File | null;
+        const path = this.serviceForm.get('documentPath')?.value as string | null;
+        return !!(file?.name || path);
+    }
+
+    getPostingOrderLabelInForm(): string {
+        const file = this.serviceForm.get('documentFile')?.value as File | null;
+        const path = this.serviceForm.get('documentPath')?.value as string | null;
+        if (file?.name) return file.name;
+        if (path) return path.split(/[/\\]/).pop() ?? path;
+        return '—';
+    }
+
+    viewPostingOrderInForm(): void {
+        const file = this.serviceForm.get('documentFile')?.value as File | null;
+        const path = this.serviceForm.get('documentPath')?.value as string | null;
+        if (file) {
+            const url = URL.createObjectURL(file);
+            window.open(url, '_blank');
+        } else if (path) {
+            window.open(path, '_blank');
+        }
+    }
+
+    clearPostingOrderInForm(): void {
+        this.serviceForm.patchValue({ documentFile: null, documentPath: null, documentFileName: '' });
+    }
+
+    onPostingOrderSelectInForm(event: { files: File[] }): void {
+        const file = event.files?.[0] ?? null;
+        this.serviceForm.patchValue({ documentFile: file });
+    }
+
+    onDialogHide(): void {
+        this.serviceForm.patchValue({ documentFile: null });
+    }
+
+    saveService(): void {
+        if (!this.selectedEmployeeId) {
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'No employee selected.' });
+            return;
+        }
+        if (this.serviceForm.get('rabUnitCodeId')?.invalid) {
+            this.serviceForm.get('rabUnitCodeId')?.markAsTouched();
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select RAB Wing/Battalion Name.' });
+            return;
+        }
+        const v = this.serviceForm.value;
+        const now = new Date().toISOString();
+        const newId = this.serviceList.length > 0
+            ? Math.max(...this.serviceList.map(r => r.previousRABServiceID)) + 1
+            : 1;
+        const payload = {
+            employeeID: this.selectedEmployeeId,
+            previousRABServiceID: this.isEditMode ? (this.editingServiceId ?? 0) : newId,
+            rabUnitCodeId: v.rabUnitCodeId ?? null,
+            serviceFrom: this.toDateOnly(v.serviceFrom),
+            serviceTo: this.toDateOnly(v.serviceTo),
+            appointment: v.appointment ?? null,
+            postingAuth: v.postingAuth || null,
+            remarks: v.remarks || null,
+            createdBy: 'user',
+            createdDate: now,
+            lastUpdatedBy: 'user',
+            lastupdate: now
+        };
+
+        this.isSaving = true;
+        const req = this.previousRABService.saveUpdate(payload).pipe(
+            map((res: any) => {
+                const code = res?.statusCode ?? res?.StatusCode ?? 200;
+                if (code !== 200) throw new Error(res?.description ?? res?.Description ?? 'Save failed');
+                return res;
+            }),
+            catchError(err => {
+                const msg = err?.error?.description ?? err?.error?.Description ?? err?.message ?? 'Save failed';
+                this.messageService.add({ severity: 'error', summary: 'Save failed', detail: String(msg) });
+                return of(null);
+            })
+        );
+
+        req.subscribe(res => {
+            this.isSaving = false;
+            if (res != null) {
+                this.messageService.add({ severity: 'success', summary: 'Saved', detail: this.isEditMode ? 'Previous RAB service updated.' : 'Previous RAB service added.' });
+                this.displayDialog = false;
+                this.loadServiceList();
+            }
+        });
+    }
+
+    confirmDelete(row: PreviousRABServiceListRow): void {
+        this.confirmationService.confirm({
+            message: 'Delete this previous RAB service record?',
+            header: 'Confirm Delete',
+            icon: 'pi pi-exclamation-triangle',
+            accept: () => this.deleteService(row)
+        });
+    }
+
+    deleteService(row: PreviousRABServiceListRow): void {
+        if (!this.selectedEmployeeId) return;
+        this.previousRABService.delete(this.selectedEmployeeId, row.previousRABServiceID).subscribe({
+            next: () => {
+                this.messageService.add({ severity: 'success', summary: 'Deleted', detail: 'Previous RAB service deleted.' });
+                this.loadServiceList();
+            },
+            error: err => {
+                const msg = err?.error?.description ?? err?.error?.Description ?? err?.message ?? 'Delete failed';
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: String(msg) });
             }
         });
     }
@@ -298,7 +405,7 @@ export class EmpPreviousRabService implements OnInit {
         this.selectedEmployeeId = employee.employeeID;
         this.employeeBasicInfo = employee;
         this.isReadonly = false;
-        this.loadServicesForEmployee(employee.employeeID);
+        this.loadServiceList();
     }
 
     onEmployeeSearchReset(): void {
@@ -310,15 +417,11 @@ export class EmpPreviousRabService implements OnInit {
         this.isReadonly = false;
     }
 
-    enableSearchEditMode(): void {
-        this.isReadonly = false;
-    }
-
     cancelEdit(): void {
         if (!this.selectedEmployeeId) return;
         this.mode = 'view';
         this.isReadonly = true;
-        this.loadServicesForEmployee(this.selectedEmployeeId);
+        this.loadServiceList();
         this.messageService.add({ severity: 'info', summary: 'Cancelled', detail: 'Changes discarded.' });
     }
 
@@ -330,117 +433,6 @@ export class EmpPreviousRabService implements OnInit {
         this.employeeFound = false;
         this.selectedEmployeeId = null;
         this.employeeBasicInfo = null;
-        this.rows.clear();
-        this.existingServiceIds = [];
-    }
-
-    getOptionLabel(options: { label: string; value: number }[], value: number | null): string {
-        if (value == null) return '—';
-        const opt = options.find(o => o.value === value);
-        return opt ? opt.label : String(value);
-    }
-
-    /** Show only year in view mode (API stores first day of year e.g. 2026-01-01). */
-    formatYearOnly(value: Date | string | null): string {
-        if (value == null) return '—';
-        if (typeof value === 'number' && !isNaN(value)) return String(value);
-        const d = typeof value === 'string' ? new Date(value) : value;
-        return isNaN(d.getTime()) ? '—' : String(d.getFullYear());
-    }
-
-    saveData(): void {
-        if (!this.selectedEmployeeId) {
-            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'No employee selected.' });
-            return;
-        }
-        const controls = this.rows.controls;
-        const rowsMissingRabUnit: number[] = [];
-        controls.forEach((c, idx) => {
-            const val = c.get('rabUnitCodeId')?.value;
-            if (val == null || val === '') {
-                rowsMissingRabUnit.push(idx + 1);
-                c.get('rabUnitCodeId')?.markAsTouched();
-            }
-        });
-        if (rowsMissingRabUnit.length > 0) {
-            this.messageService.add({
-                severity: 'warn',
-                summary: 'Validation',
-                detail: rowsMissingRabUnit.length === 1
-                    ? `Please select RAB Wing/Battalion Name for row ${rowsMissingRabUnit[0]}.`
-                    : `Please select RAB Wing/Battalion Name for row(s) ${rowsMissingRabUnit.join(', ')}.`
-            });
-            return;
-        }
-        const currentIds = new Set(
-            controls.map(c => c.get('previousRABServiceID')?.value).filter((id): id is number => id != null)
-        );
-        const toDelete = this.existingServiceIds.filter(id => !currentIds.has(id));
-
-        const now = new Date().toISOString();
-        const deleteCalls = toDelete.map(id =>
-            this.previousRABService.delete(this.selectedEmployeeId!, id).pipe(catchError(() => of(null)))
-        );
-
-        let nextNewId = this.existingServiceIds.length > 0 ? Math.max(...this.existingServiceIds) + 1 : 1;
-        const saveCalls: ReturnType<PreviousRABServiceService['saveUpdate']>[] = [];
-        for (const c of controls) {
-            const prevId = c.get('previousRABServiceID')?.value as number | null;
-            const id = prevId != null ? prevId : nextNewId++;
-            const createdDate = c.get('createdDate')?.value as string | null;
-            const lastupdateVal = c.get('lastupdate')?.value as string | null;
-            saveCalls.push(
-                this.previousRABService.saveUpdate({
-                    employeeID: this.selectedEmployeeId!,
-                    previousRABServiceID: id,
-                    rabUnitCodeId: c.get('rabUnitCodeId')?.value ?? null,
-                    serviceFrom: this.toDateOnly(c.get('serviceFrom')?.value),
-                    serviceTo: this.toDateOnly(c.get('serviceTo')?.value),
-                    appointment: c.get('appointment')?.value ?? null,
-                    postingAuth: c.get('postingAuth')?.value || null,
-                    remarks: c.get('remarks')?.value || null,
-                    createdBy: 'user',
-                    createdDate: createdDate ?? now,
-                    lastUpdatedBy: 'user',
-                    lastupdate: lastupdateVal ?? now
-                }).pipe(
-                    map((res: any) => {
-                        const code = res?.statusCode ?? res?.StatusCode ?? 200;
-                        if (code !== 200) throw new Error(res?.description ?? res?.Description ?? 'Save failed');
-                        return res;
-                    }),
-                    catchError((err) => {
-                        const msg = err?.error?.description ?? err?.error?.Description ?? err?.message ?? 'Save failed';
-                        this.messageService.add({ severity: 'error', summary: 'Save failed', detail: String(msg) });
-                        return of(null);
-                    })
-                )
-            );
-        }
-
-        const allCalls = [...deleteCalls, ...saveCalls];
-        if (allCalls.length === 0) {
-            this.messageService.add({ severity: 'info', summary: 'Info', detail: 'No changes to save.' });
-            return;
-        }
-
-        this.isSaving = true;
-        forkJoin(allCalls).subscribe({
-            next: (results) => {
-                this.isSaving = false;
-                const failed = results?.some((r: any) => r == null) ?? false;
-                if (failed) return;
-                this.existingServiceIds = this.rows.controls
-                    .map(c => c.get('previousRABServiceID')?.value as number | null)
-                    .filter((id): id is number => id != null);
-                this.messageService.add({ severity: 'success', summary: 'Saved', detail: 'Previous RAB service saved successfully.' });
-                this.loadServicesForEmployee(this.selectedEmployeeId!);
-            },
-            error: (err) => {
-                this.isSaving = false;
-                const msg = err?.error?.description ?? err?.error?.Description ?? err?.message ?? 'Failed to save.';
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: String(msg) });
-            }
-        });
+        this.serviceList = [];
     }
 }
