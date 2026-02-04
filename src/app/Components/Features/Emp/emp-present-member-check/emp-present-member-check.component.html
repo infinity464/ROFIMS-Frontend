@@ -1,0 +1,115 @@
+
+    <div class="card">
+       
+        <div class="surface-50 border-round-2xl mb-4">
+            <div class="flex flex-wrap gap-3 align-items-end">
+                <div style="min-width: 220px;">
+                    <label class="font-semibold block mb-2 text-700">Mother Organization</label>
+                    <p-select
+                        [options]="motherOrganizations"
+                        [(ngModel)]="motherOrgId"
+                        optionLabel="orgNameEN"
+                        optionValue="orgId"
+                        placeholder="Select Mother Organization"
+                        styleClass="w-full"
+                        [filter]="true"
+                        filterPlaceholder="Search"
+                        [showClear]="true">
+                    </p-select>
+                </div>
+                <div style="min-width: 180px;">
+                    <label class="font-semibold block mb-2 text-700">Service ID</label>
+                    <p-inputNumber
+                        [(ngModel)]="serviceId"
+                        placeholder="Service ID"
+                        [useGrouping]="false"
+                        styleClass="w-full"
+                        inputStyleClass="w-full"
+                        (keyup.enter)="search()">
+                    </p-inputNumber>
+                </div>
+                <div style="min-width: 180px;">
+                    <label class="font-semibold block mb-2 text-700">NID</label>
+                    <input
+                        pInputText
+                        [(ngModel)]="nid"
+                        placeholder="NID"
+                        class="w-full"
+                        (keyup.enter)="search()" />
+                </div>
+                <div>
+                    <label class="font-semibold block mb-2 text-700">&nbsp;</label>
+                    <p-button
+                        label="Search"
+                        icon="pi pi-search"
+                        [loading]="isSearching"
+                        (onClick)="search()">
+                    </p-button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (exMemberEmployee) {
+        <div class="card mt-4">
+            <p-table
+                [value]="exMemberViewList"
+                [loading]="isLoadingExMemberData"
+                [tableStyle]="{ 'min-width': '50rem' }"
+                styleClass="p-datatable-sm">
+                <ng-template pTemplate="header">
+                    <tr>
+                        
+                       <th>Ser</th>
+                        <th>Service From</th>
+                        <th>Service To</th>
+                        <th>Battalion/ Wing </th>
+                        <th>Appointment</th>
+                        <th>Posting Auth</th>
+                        <th>Action</th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                    <tr>
+                        <td>{{ rowIndex + 1 }}</td>
+                        <td>{{ row.serviceFrom || row.ServiceFrom || 'N/A' }}</td>
+                        <td>{{ row.serviceTo || row.ServiceTo || 'N/A' }}</td>
+                        <td>{{ row.rabUnitName || row.RABUnitName || 'N/A' }}</td>
+                        <td>{{ row.appointmentName || row.AppointmentName || 'N/A' }}</td>
+                        <td>{{ row.postingAuth || row.PostingAuth || 'N/A' }}</td>
+                        <td>
+                            <p-button label="View Old Profile" icon="pi pi-eye" size="small" (onClick)="viewOldProfile()"></p-button>
+            
+                        </td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="7" class="text-center text-500">No previous RAB service records. Please do Previous RAB 
+                            Posting History Manually Entry .</td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </div>
+    }
+
+    <p-dialog
+        [(visible)]="showAlreadyExistDialog"
+        header="Present Member"
+        [modal]="true"
+        [style]="{ width: '420px' }"
+        [draggable]="false"
+        [resizable]="false"
+        (onHide)="closeAlreadyExistDialog()">
+        <p class="m-0">
+            Already Exist in Present Member.
+            
+        </p>
+        <ng-template pTemplate="footer">
+            <p-button
+                label="Close"
+                severity="danger"
+                (onClick)="closeAlreadyExistDialog()">
+            </p-button>
+        </ng-template>
+    </p-dialog>

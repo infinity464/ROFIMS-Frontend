@@ -1,19 +1,69 @@
 import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
 import { MenuItem } from 'primeng/api';
-import { AppMenuitem } from './app.menuitem';
+import { PanelMenu, PanelMenuModule } from 'primeng/panelmenu';
+import { RouterModule } from '@angular/router';
+import { Menu } from 'primeng/menu';
 
 @Component({
     selector: 'app-menu',
     standalone: true,
-    imports: [CommonModule, AppMenuitem, RouterModule],
-    template: `<ul class="layout-menu">
-        <ng-container *ngFor="let item of model; let i = index">
-            <li app-menuitem *ngIf="!item.separator" [item]="item" [index]="i" [root]="true"></li>
-            <li *ngIf="item.separator" class="menu-separator"></li>
-        </ng-container>
-    </ul> `
+    imports: [RouterModule, PanelMenuModule],
+    template: ` <p-panelmenu [model]="model" class="w-full md:w-20rem menu-reduced-margin" />`,
+    styles: [
+        `
+            :host {
+                display: block;
+                margin-left: -1rem;
+                margin-right: -1rem;
+            }
+
+            .layout-menuitem-icon {
+                margin-right: 0.5rem;
+            }
+
+            .layout-submenu-toggler {
+                margin-left: auto;
+                transition: transform 0.3s;
+            }
+
+            .active-route .layout-submenu-toggler {
+                transform: rotate(-180deg);
+            }
+
+            ul[app-menuitem] {
+                overflow: hidden;
+            }
+
+            /* Arrow on the right side for parent menu headers (PrimeNG PanelMenu) */
+            :host ::ng-deep .p-panelmenu-header-content {
+                display: flex;
+                align-items: center;
+                width: 100%;
+            }
+            :host ::ng-deep .p-panelmenu-header-link {
+                display: flex;
+                align-items: center;
+                flex: 1;
+            }
+            :host ::ng-deep .p-panelmenu-submenu-icon {
+                margin-left: auto;
+                order: 1;
+            }
+
+            /* Highlight selected/active menu item */
+            :host ::ng-deep .p-panelmenu-item-link-active,
+            :host ::ng-deep a.p-panelmenu-item-link-active {
+                font-weight: 700 !important;
+                color: var(--primary-color) !important;
+                background-color: var(--surface-hover) !important;
+            }
+            :host ::ng-deep .p-panelmenu-header.p-panelmenu-header-active .p-panelmenu-header-link {
+                font-weight: 600;
+                color: var(--primary-color);
+                background-color: var(--surface-hover);
+            }
+        `
+    ]
 })
 export class AppMenu {
     model: MenuItem[] = [];
@@ -22,21 +72,31 @@ export class AppMenu {
         this.model = [
             {
                 label: 'Home',
-                items: [{ label: 'Dashboard', icon: 'pi pi-fw pi-home', routerLink: ['/'] }]
+                icon: 'pi pi-fw pi-th-large',
+                items: [{ label: 'Dashboard', icon: 'pi pi-fw pi-home', routerLink: ['/dashboard'], routerLinkActiveOptions: { paths: 'exact', queryParams: 'ignored', matrixParams: 'ignored', fragment: 'ignored' } }]
+            },
+            {
+                label: 'Data Entry (New Joining & Re-Joining in RAB) ',
+                icon: 'pi pi-fw pi-user-plus',
+                items: [
+                    { label: ' New Joining & Re-Joining', icon: 'pi pi-fw pi-user-plus', routerLink: ['/emp-basic-info'] },
+                    { label: 'Allocation of RAB ID ', icon: 'pi pi-fw pi-id-card', routerLink: ['/rab-id-allocation'] }
+                ]
             },
             {
                 label: 'Emp',
+                icon: 'pi pi-fw pi-users',
                 items: [
-                    { label: 'Employee List', icon: 'pi pi-fw pi-list', routerLink: ['/emp-list'] },
-                    { label: 'EmployeeInfo', routerLink: ['/employee-info'] },
-                    { label: 'New Joining', icon: 'pi pi-fw pi-user-plus', routerLink: ['/emp-basic-info'] },
-                    { label: 'Personal Info', icon: 'pi pi-fw pi-id-card', routerLink: ['/personal-info'] },
-                    { label: 'Employee Personal Info', icon: 'pi pi-fw pi-user', routerLink: ['/emp-personal-info'] },
-                    { label: 'Employee Address Info', icon: 'pi pi-fw pi-map-marker', routerLink: ['/emp-address-info'] },
+                    // { label: 'Employee List', icon: 'pi pi-fw pi-list', routerLink: ['/emp-list'] },
+                    // { label: 'EmployeeInfo', routerLink: ['/employee-info'] },
+
+                    // { label: 'Personal Info', icon: 'pi pi-fw pi-id-card', routerLink: ['/personal-info'] },
+                    { label: 'Personal Info', icon: 'pi pi-fw pi-user', routerLink: ['/emp-personal-info'] },
+                    { label: 'Address Info', icon: 'pi pi-fw pi-map-marker', routerLink: ['/emp-address-info'] },
                     { label: 'Family Info', icon: 'pi pi-fw pi-users', routerLink: ['/emp-family-info'] },
                     { label: 'Nominee Info', icon: 'pi pi-fw pi-user-plus', routerLink: ['/emp-nominee-info'] },
                     { label: 'Previous RAB Service', icon: 'pi pi-fw pi-history', routerLink: ['/emp-previous-rab-service'] },
-                    { label: 'Service History', icon: 'pi pi-fw pi-clock', routerLink: ['/emp-service-history'] },
+                    { label: 'Service History (Mother Org)', icon: 'pi pi-fw pi-clock', routerLink: ['/emp-service-history'] },
                     { label: 'Promotion Info', icon: 'pi pi-fw pi-arrow-up', routerLink: ['/emp-promotion-info'] },
                     { label: 'Rank Confirmation', icon: 'pi pi-fw pi-check-circle', routerLink: ['/emp-rank-confirmation'] },
                     { label: 'Education Info', icon: 'pi pi-fw pi-book', routerLink: ['/emp-education-info'] },
@@ -46,10 +106,13 @@ export class AppMenu {
                     { label: 'Foreign Visit', icon: 'pi pi-fw pi-globe', routerLink: ['/emp-foreign-visit'] },
                     { label: 'Leave Info', icon: 'pi pi-fw pi-calendar-minus', routerLink: ['/emp-leave-info'] },
                     { label: 'Medical Category', icon: 'pi pi-fw pi-heart', routerLink: ['/emp-medical-category'] },
-                    { label: 'Additional Remarks', icon: 'pi pi-fw pi-comment', routerLink: ['/emp-additional-remarks'] },
-                    { label: 'RAB ID Allocation', icon: 'pi pi-fw pi-id-card', routerLink: ['/rab-id-allocation'] },
-                    { label: 'Presently Serving Members', icon: 'pi pi-fw pi-users', routerLink: ['/presently-serving-members'] }
+                    { label: 'Additional Remarks', icon: 'pi pi-fw pi-comment', routerLink: ['/emp-additional-remarks'] }
                 ]
+            },
+            {
+                label: 'Organization Setup',
+                icon: 'pi pi-fw pi-user-plus',
+                items: [{ label: 'Presently Serving Members', icon: 'pi pi-fw pi-users', routerLink: ['/presently-serving-members'] }]
             },
             {
                 label: 'Basic Setup',
@@ -70,6 +133,7 @@ export class AppMenu {
                     { label: 'RAB Unit', icon: 'pi pi-fw pi-building', routerLink: ['/basic-setup/rab-unit'] },
                     { label: 'RAB Wing', icon: 'pi pi-fw pi-building', routerLink: ['basic-setup/rab-wing'] },
                     { label: 'RAB Branch', icon: 'pi pi-fw pi-clone', routerLink: ['/basic-setup/rab-branch'] },
+                    { label: 'Country', icon: 'pi pi-fw pi-globe', routerLink: ['/basic-setup/country'] },
                     { label: 'Division', icon: 'pi pi-fw pi-map', routerLink: ['/basic-setup/division'] },
                     { label: 'District', icon: 'pi pi-fw pi-map-marker', routerLink: ['/basic-setup/district'] },
                     { label: 'Upazila', icon: 'pi pi-fw pi-compass', routerLink: ['/basic-setup/upazila'] },
@@ -77,6 +141,7 @@ export class AppMenu {
                     { label: 'Blood Group', icon: 'pi pi-fw pi-heart', routerLink: ['/basic-setup/blood-group'] },
                     { label: 'Relationship', icon: 'pi pi-fw pi-users', routerLink: ['/basic-setup/relationship'] },
                     { label: 'Marital Status', icon: 'pi pi-fw pi-user', routerLink: ['/basic-setup/marital-status'] },
+                    { label: 'Gender', icon: 'pi pi-fw pi-venus-mars', routerLink: ['/basic-setup/gender'] },
                     { label: 'Religion', icon: 'pi pi-fw pi-moon', routerLink: ['/basic-setup/religion'] },
                     { label: 'Occupation', icon: 'pi pi-fw pi-briefcase', routerLink: ['/basic-setup/occupation'] },
 

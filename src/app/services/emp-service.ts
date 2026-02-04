@@ -42,7 +42,7 @@ export class EmpService {
 
     getEmployeeById(employeeId: number): Observable<EmpModel> {
         return this.http.get<EmpModel[]>(`${this.empApi}/EmployeeInfo/GetFilteredByKeysAsyn/${employeeId}`).pipe(
-            map(data => data[0]) // API returns array, get first element
+            map((data) => data[0]) // API returns array, get first element
         );
     }
 
@@ -50,15 +50,16 @@ export class EmpService {
         return this.http.post<EmpModel[]>(`${this.empApi}/EmployeeInfo/Search`, criteria);
     }
 
-    // Search by RAB ID or Service ID
-    searchByRabIdOrServiceId(rabId?: string, serviceId?: string): Observable<EmpModel | null> {
+    // Search by RAB ID, NID or Service ID. When presentMemberOnly is true, backend returns only if PostingStatus is Servings. Optional motherOrganization filters by OrgId.
+    searchByRabIdOrServiceId(rabId?: string, serviceId?: string, presentMemberOnly?: boolean, motherOrganization?: number | null, nid?: string): Observable<EmpModel | null> {
         const params: any = {};
         if (rabId) params.rabId = rabId;
         if (serviceId) params.serviceId = serviceId;
+        if (nid) params.nid = nid;
+        if (presentMemberOnly === true) params.presentMemberOnly = 'true';
+        if (motherOrganization != null && motherOrganization > 0) params.motherOrganization = String(motherOrganization);
 
-        return this.http.get<EmpModel[]>(`${this.empApi}/EmployeeInfo/SearchByIdAsyn`, { params }).pipe(
-            map(data => data && data.length > 0 ? data[0] : null)
-        );
+        return this.http.get<EmpModel[]>(`${this.empApi}/EmployeeInfo/SearchByIdAsyn`, { params }).pipe(map((data) => (data && data.length > 0 ? data[0] : null)));
     }
 
     saveEmployee(payload: any): Observable<any> {
@@ -122,7 +123,7 @@ export class EmpService {
     updateCompleteProfile(employeePayload: any, addressPayload: any[]): Observable<any> {
         return forkJoin({
             employee: this.updateEmployee(employeePayload),
-            addresses: forkJoin(addressPayload.map(addr => this.updateAddress(addr)))
+            addresses: forkJoin(addressPayload.map((addr) => this.updateAddress(addr)))
         });
     }
 
@@ -140,17 +141,15 @@ export class EmpService {
     }
 
     getPersonalInfoByEmployeeId(employeeId: number): Observable<any> {
-        return this.http.get<any[]>(`${this.empApi}/PersonalInfo/GetFilteredByKeysAsyn/${employeeId}`).pipe(
-            map(data => data && data.length > 0 ? data[0] : null)
-        );
+        return this.http.get<any[]>(`${this.empApi}/PersonalInfo/GetFilteredByKeysAsyn/${employeeId}`).pipe(map((data) => (data && data.length > 0 ? data[0] : null)));
     }
 
     // Get active addresses by employee ID (only Present and Permanent, not Wife addresses)
     getActiveAddressesByEmployeeId(employeeId: number): Observable<any[]> {
         return this.http.get<any[]>(`${this.empApi}/AddressInfo/GetByEmployeeId/${employeeId}`).pipe(
-            map(addresses => {
+            map((addresses) => {
                 // Filter only active addresses and exclude wife addresses
-                return addresses.filter(addr => {
+                return addresses.filter((addr) => {
                     const locationType = (addr.locationType || addr.LocationType || '').toLowerCase();
                     const isActive = addr.active !== false && addr.Active !== false;
                     const isNotWifeAddress = !locationType.includes('wife');
@@ -168,8 +167,8 @@ export class EmpService {
     // Additional Remarks API methods
     getAdditionalRemarksByEmployeeId(employeeId: number): Observable<any[]> {
         return this.http.get<any>(`${this.empApi}/AdditionalRemarksInfo/GetByEmployeeId/${employeeId}`).pipe(
-            tap(data => console.log('Raw API response:', data, 'Type:', typeof data, 'IsArray:', Array.isArray(data))),
-            map(data => {
+            tap((data) => console.log('Raw API response:', data, 'Type:', typeof data, 'IsArray:', Array.isArray(data))),
+            map((data) => {
                 // Handle IQueryable response - it might come as an object with array properties
                 if (Array.isArray(data)) {
                     console.log('Data is array, returning as-is');
@@ -212,7 +211,7 @@ export class EmpService {
                 console.log('No array found, returning empty array');
                 return [];
             }),
-            catchError(error => {
+            catchError((error) => {
                 console.error('Error fetching additional remarks:', error);
                 return of([]);
             })

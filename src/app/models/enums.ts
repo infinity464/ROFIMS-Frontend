@@ -71,7 +71,7 @@ export enum EmployeeStatus {
 // Posting Status
 export enum PostingStatus {
     Supernumerary = 'Supernumerary',
-    NewPosting = 'NewPosting',
+    Pending = 'Pending',
     Servings='Servings',
     ExMember='ExMember'
 }
