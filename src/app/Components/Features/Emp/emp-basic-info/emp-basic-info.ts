@@ -17,10 +17,11 @@ import { Dialog } from 'primeng/dialog';
 import { AddressData, AddressFormConfig, AddressFormComponent } from '../../EmployeeInfo/address-form/address-form';
 import { forkJoin } from 'rxjs';
 import { LocationType, PostingStatus } from '@/models/enums';
+import { EmpPresentMemberCheckComponent } from '../emp-present-member-check/emp-present-member-check.component';
 
 @Component({
     selector: 'app-emp-basic-info',
-    imports: [FileUpload, Fluid, Button, ButtonModule, Select, DatePicker, ReactiveFormsModule, FormsModule, InputTextModule, AddressFormComponent, Checkbox, Dialog],
+    imports: [FileUpload, Fluid, Button, ButtonModule, Select, DatePicker, ReactiveFormsModule, FormsModule, InputTextModule, AddressFormComponent, Checkbox, Dialog, EmpPresentMemberCheckComponent],
     templateUrl: './emp-basic-info.html',
     styleUrl: './emp-basic-info.scss'
 })
@@ -36,6 +37,9 @@ export class EmpBasicInfo implements OnInit {
     isEditMode: boolean = false;
     pageTitle: string = 'New Posting Entry Form';
 
+    /** When false, the entry form is hidden until search returns "employee not found". When true (or when opening with id in route), form is shown. */
+    showEntryForm: boolean = false;
+
     // Image preview modal
     showImagePreviewModal: boolean = false;
     selectedFileName: string = '';
@@ -43,546 +47,526 @@ export class EmpBasicInfo implements OnInit {
     employeeId = 0; // Will be set after save
     generatedEmployeeId: number | null = null;
 
-  // Store addresses
-  presentAddress?: AddressData;
-  permanentAddress?: AddressData;
-  wifePermanentAddress?: AddressData;
-  wifePresentAddress?: AddressData;
+    // Store addresses
+    presentAddress?: AddressData;
+    permanentAddress?: AddressData;
+    wifePermanentAddress?: AddressData;
+    wifePresentAddress?: AddressData;
 
-  // Store generated AddressIds
-  permanentAddressId?: number;
-  presentAddressId?: number;
-  wifePermanentAddressId?: number;
-  wifePresentAddressId?: number;
+    // Store generated AddressIds
+    permanentAddressId?: number;
+    presentAddressId?: number;
+    wifePermanentAddressId?: number;
+    wifePresentAddressId?: number;
 
-  // Permanent address config (first)
-  permanentAddressConfig: AddressFormConfig = {
-    title: 'Permanent Address',
-    addressType: 'permanent',
-    employeeId: this.employeeId
-  };
+    // Permanent address config (first)
+    permanentAddressConfig: AddressFormConfig = {
+        title: 'Permanent Address',
+        addressType: 'permanent',
+        employeeId: this.employeeId
+    };
 
-  // Present address config (second, with "Same as Permanent" option)
-  presentAddressConfig: AddressFormConfig = {
-    title: 'Present Address',
-    addressType: 'present',
-    showSameAsPresent: true,
-    employeeId: this.employeeId
-  };
+    // Present address config (second, with "Same as Permanent" option)
+    presentAddressConfig: AddressFormConfig = {
+        title: 'Present Address',
+        addressType: 'present',
+        showSameAsPresent: true,
+        employeeId: this.employeeId
+    };
 
-  // Wife Permanent address config
-  wifePermanentAddressConfig: AddressFormConfig = {
-    title: 'Wife Permanent Address',
-    addressType: 'wife',
-    employeeId: this.employeeId
-  };
+    // Wife Permanent address config
+    wifePermanentAddressConfig: AddressFormConfig = {
+        title: 'Wife Permanent Address',
+        addressType: 'wife',
+        employeeId: this.employeeId
+    };
 
-  // Wife Present address config (with "Same as Wife Permanent" option)
-  wifePresentAddressConfig: AddressFormConfig = {
-    title: 'Wife Present Address',
-    addressType: 'wifePresent',
-    showSameAsPresent: true,
-    sameAsLabel: 'Same as Wife Permanent Address',
-    employeeId: this.employeeId
-  };
+    // Wife Present address config (with "Same as Wife Permanent" option)
+    wifePresentAddressConfig: AddressFormConfig = {
+        title: 'Wife Present Address',
+        addressType: 'wifePresent',
+        showSameAsPresent: true,
+        sameAsLabel: 'Same as Wife Permanent Address',
+        employeeId: this.employeeId
+    };
 
-  // Service ID validation
-  isServiceIdDuplicate: boolean = false;
-  isCheckingServiceId: boolean = false;
+    // Service ID validation
+    isServiceIdDuplicate: boolean = false;
+    isCheckingServiceId: boolean = false;
 
-  checkServiceIdDuplicate(serviceId: string): void {
-    if (!serviceId || serviceId.trim() === '') {
-      this.isServiceIdDuplicate = false;
-      return;
+    checkServiceIdDuplicate(serviceId: string): void {
+        if (!serviceId || serviceId.trim() === '') {
+            this.isServiceIdDuplicate = false;
+            return;
+        }
+
+        this.isCheckingServiceId = true;
+        this.empService.searchEmployees({ serviceId: serviceId }).subscribe({
+            next: (res) => {
+                // If any employee found with same serviceId, it's a duplicate
+                this.isServiceIdDuplicate = res && res.length > 0;
+                this.isCheckingServiceId = false;
+
+                if (this.isServiceIdDuplicate) {
+                    this.messageService.add({
+                        severity: 'warn',
+                        summary: 'Duplicate Service ID',
+                        detail: 'This Service ID already exists in the system'
+                    });
+                }
+            },
+            error: (err) => {
+                console.error('Error checking service ID', err);
+                this.isCheckingServiceId = false;
+            }
+        });
     }
 
-    this.isCheckingServiceId = true;
-    this.empService.searchEmployees({ serviceId: serviceId }).subscribe({
-      next: (res) => {
-        // If any employee found with same serviceId, it's a duplicate
-        this.isServiceIdDuplicate = res && res.length > 0;
-        this.isCheckingServiceId = false;
+    // Reliever section
+    isReliever: boolean = false;
+    existingEmployees: any[] = [];
+    selectedRelieverEmployeeId: number | null = null;
+    selectedRelieverEmployee: any = null;
 
+    onRelieverCheckChange(checked: boolean): void {
+        this.isReliever = checked;
+        if (checked && this.existingEmployees.length === 0) {
+            this.loadExistingEmployees();
+        }
+        if (!checked) {
+            this.selectedRelieverEmployeeId = null;
+            this.selectedRelieverEmployee = null;
+        }
+    }
+
+    loadExistingEmployees(): void {
+        this.empService.getAll().subscribe({
+            next: (res) => {
+                this.existingEmployees = res;
+            },
+            error: (err) => {
+                console.error('Failed to load employees', err);
+            }
+        });
+    }
+
+    onRelieverEmployeeSelect(employeeId: number): void {
+        this.selectedRelieverEmployeeId = employeeId;
+        this.selectedRelieverEmployee = this.existingEmployees.find((e) => e.employeeID === employeeId);
+    }
+
+    // Save handlers
+    savePresentAddress(data: AddressData) {
+        if (!this.generatedEmployeeId) {
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'Warning',
+                detail: 'Please save employee first'
+            });
+            return;
+        }
+
+        const addressPayload = {
+            EmployeeID: this.generatedEmployeeId,
+            AddressId: 0,
+            FMID: 0,
+            LocationType: LocationType.Present,
+            LocationCode: `${data.division}-${data.district}-${data.upazila}`,
+            PostCode: data.postCode || '',
+            AddressAreaEN: data.villageEnglish || '',
+            AddressAreaBN: data.villageBangla || '',
+            DivisionType: data.division,
+            DistrictType: data.district,
+            ThanType: data.upazila,
+            PostOfficeType: data.postOffice,
+            HouseRoad: data.houseRoad || '',
+            Active: true, // New addresses are active by default
+            CreatedBy: 'system',
+            CreatedDate: new Date().toISOString(),
+            LastUpdatedBy: 'system',
+            Lastupdate: new Date().toISOString()
+        };
+
+        this.empService.saveAddress(addressPayload).subscribe({
+            next: (res) => {
+                this.presentAddress = data;
+                // Capture generated AddressId
+                const addressId = res?.data?.addressId || res?.Data?.AddressId || res?.addressId;
+                if (addressId) this.presentAddressId = addressId;
+                this.messageService.add({
+                    severity: 'success',
+                    summary: 'Success',
+                    detail: 'Present address saved successfully'
+                });
+            },
+            error: (err) => {
+                console.error('Error saving address', err);
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: 'Failed to save address'
+                });
+            }
+        });
+    }
+
+    savePermanentAddress(data: AddressData) {
+        if (!this.generatedEmployeeId) {
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'Warning',
+                detail: 'Please save employee first'
+            });
+            return;
+        }
+
+        const addressPayload = {
+            EmployeeID: this.generatedEmployeeId,
+            AddressId: 0,
+            FMID: 0,
+            LocationType: LocationType.Permanent,
+            LocationCode: `${data.division}-${data.district}-${data.upazila}`,
+            PostCode: data.postCode || '',
+            AddressAreaEN: data.villageEnglish || '',
+            AddressAreaBN: data.villageBangla || '',
+            DivisionType: data.division,
+            DistrictType: data.district,
+            ThanType: data.upazila,
+            PostOfficeType: data.postOffice,
+            HouseRoad: data.houseRoad || '',
+            Active: true, // New addresses are active by default
+            CreatedBy: 'system',
+            CreatedDate: new Date().toISOString(),
+            LastUpdatedBy: 'system',
+            Lastupdate: new Date().toISOString()
+        };
+
+        this.empService.saveAddress(addressPayload).subscribe({
+            next: (res) => {
+                this.permanentAddress = data;
+                // Capture generated AddressId
+                const addressId = res?.data?.addressId || res?.Data?.AddressId || res?.addressId;
+                if (addressId) this.permanentAddressId = addressId;
+                this.messageService.add({
+                    severity: 'success',
+                    summary: 'Success',
+                    detail: 'Permanent address saved successfully'
+                });
+            },
+            error: (err) => {
+                console.error('Error saving address', err);
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: 'Failed to save address'
+                });
+            }
+        });
+    }
+
+    // Wife Permanent Address save handler
+    saveWifePermanentAddress(data: AddressData) {
+        if (!this.generatedEmployeeId) {
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'Warning',
+                detail: 'Please save employee first'
+            });
+            return;
+        }
+
+        const addressPayload = {
+            EmployeeID: this.generatedEmployeeId,
+            AddressId: 0,
+            FMID: 0,
+            LocationType: LocationType.WifePermanent,
+            LocationCode: `${data.division}-${data.district}-${data.upazila}`,
+            PostCode: data.postCode || '',
+            AddressAreaEN: data.villageEnglish || '',
+            AddressAreaBN: data.villageBangla || '',
+            DivisionType: data.division,
+            DistrictType: data.district,
+            ThanType: data.upazila,
+            PostOfficeType: data.postOffice,
+            HouseRoad: data.houseRoad || '',
+            Active: true, // New addresses are active by default
+            CreatedBy: 'system',
+            CreatedDate: new Date().toISOString(),
+            LastUpdatedBy: 'system',
+            Lastupdate: new Date().toISOString()
+        };
+
+        this.empService.saveAddress(addressPayload).subscribe({
+            next: (res) => {
+                this.wifePermanentAddress = data;
+                // Capture generated AddressId
+                const addressId = res?.data?.addressId || res?.Data?.AddressId || res?.addressId;
+                if (addressId) this.wifePermanentAddressId = addressId;
+                this.messageService.add({
+                    severity: 'success',
+                    summary: 'Success',
+                    detail: 'Wife permanent address saved successfully'
+                });
+            },
+            error: (err) => {
+                console.error('Error saving address', err);
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: 'Failed to save address'
+                });
+            }
+        });
+    }
+
+    // Wife Present Address save handler
+    saveWifePresentAddress(data: AddressData) {
+        if (!this.generatedEmployeeId) {
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'Warning',
+                detail: 'Please save employee first'
+            });
+            return;
+        }
+
+        const addressPayload = {
+            EmployeeID: this.generatedEmployeeId,
+            AddressId: 0,
+            FMID: 0,
+            LocationType: LocationType.WifePresent,
+            LocationCode: `${data.division}-${data.district}-${data.upazila}`,
+            PostCode: data.postCode || '',
+            AddressAreaEN: data.villageEnglish || '',
+            AddressAreaBN: data.villageBangla || '',
+            DivisionType: data.division,
+            DistrictType: data.district,
+            ThanType: data.upazila,
+            PostOfficeType: data.postOffice,
+            HouseRoad: data.houseRoad || '',
+            Active: true, // New addresses are active by default
+            CreatedBy: 'system',
+            CreatedDate: new Date().toISOString(),
+            LastUpdatedBy: 'system',
+            Lastupdate: new Date().toISOString()
+        };
+
+        this.empService.saveAddress(addressPayload).subscribe({
+            next: (res) => {
+                this.wifePresentAddress = data;
+                // Capture generated AddressId
+                const addressId = res?.data?.addressId || res?.Data?.AddressId || res?.addressId;
+                if (addressId) this.wifePresentAddressId = addressId;
+                this.messageService.add({
+                    severity: 'success',
+                    summary: 'Success',
+                    detail: 'Wife present address saved successfully'
+                });
+            },
+            error: (err) => {
+                console.error('Error saving address', err);
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: 'Failed to save address'
+                });
+            }
+        });
+    }
+
+    cancelAddress() {
+        console.log('Address editing cancelled');
+    }
+
+    // Copy permanent address data to present address form
+    copyPermanentToPresent(): void {
+        const permanentData = this.permanentAddressForm?.getFormData();
+        if (permanentData?.data) {
+            this.presentAddressForm?.populateFromSourceAddress(permanentData.data);
+        }
+    }
+
+    // Copy wife permanent address data to wife present address form
+    copyWifePermanentToWifePresent(): void {
+        const wifePermanentData = this.wifePermanentAddressForm?.getFormData();
+        if (wifePermanentData?.data) {
+            this.wifePresentAddressForm?.populateFromSourceAddress(wifePermanentData.data);
+        }
+    }
+
+    // Save All - Employee + All Addresses
+    saveAll(): void {
+        // Validate employee form first
+        if (this.postingForm.invalid) {
+            Object.keys(this.postingForm.controls).forEach((key) => {
+                this.postingForm.get(key)?.markAsTouched();
+            });
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'Validation Error',
+                detail: 'Please fill all required employee fields'
+            });
+            return;
+        }
+
+        // Check for duplicate service ID
         if (this.isServiceIdDuplicate) {
-          this.messageService.add({
-            severity: 'warn',
-            summary: 'Duplicate Service ID',
-            detail: 'This Service ID already exists in the system'
-          });
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'Duplicate Service ID',
+                detail: 'Please use a unique Service ID'
+            });
+            return;
         }
-      },
-      error: (err) => {
-        console.error('Error checking service ID', err);
-        this.isCheckingServiceId = false;
-      }
-    });
-  }
 
-  // Reliever section
-  isReliever: boolean = false;
-  existingEmployees: any[] = [];
-  selectedRelieverEmployeeId: number | null = null;
-  selectedRelieverEmployee: any = null;
+        // Get form data from all address forms
+        const permanentData = this.permanentAddressForm?.getFormData();
+        const presentData = this.presentAddressForm?.getFormData();
+        const wifePermanentData = this.wifePermanentAddressForm?.getFormData();
+        const wifePresentData = this.wifePresentAddressForm?.getFormData();
 
-  onRelieverCheckChange(checked: boolean): void {
-    this.isReliever = checked;
-    if (checked && this.existingEmployees.length === 0) {
-      this.loadExistingEmployees();
-    }
-    if (!checked) {
-      this.selectedRelieverEmployeeId = null;
-      this.selectedRelieverEmployee = null;
-    }
-  }
+        // Only validate required addresses (permanent and present)
+        // Wife addresses are optional
+        const requiredAddressesValid = permanentData?.valid && presentData?.valid;
 
-  loadExistingEmployees(): void {
-    this.empService.getAll().subscribe({
-      next: (res) => {
-        this.existingEmployees = res;
-      },
-      error: (err) => {
-        console.error('Failed to load employees', err);
-      }
-    });
-  }
+        if (!requiredAddressesValid) {
+            this.permanentAddressForm?.markAsTouched();
+            this.presentAddressForm?.markAsTouched();
 
-  onRelieverEmployeeSelect(employeeId: number): void {
-    this.selectedRelieverEmployeeId = employeeId;
-    this.selectedRelieverEmployee = this.existingEmployees.find(e => e.employeeID === employeeId);
-  }
-
-  // Save handlers
-  savePresentAddress(data: AddressData) {
-    if (!this.generatedEmployeeId) {
-        this.messageService.add({
-            severity: 'warn',
-            summary: 'Warning',
-            detail: 'Please save employee first'
-        });
-        return;
-    }
-
-    const addressPayload = {
-        EmployeeID: this.generatedEmployeeId,
-        AddressId: 0,
-        FMID: 0,
-        LocationType: LocationType.Present,
-        LocationCode: `${data.division}-${data.district}-${data.upazila}`,
-        PostCode: data.postCode || '',
-        AddressAreaEN: data.villageEnglish || '',
-        AddressAreaBN: data.villageBangla || '',
-        DivisionType: data.division,
-        DistrictType: data.district,
-        ThanType: data.upazila,
-        PostOfficeType: data.postOffice,
-        HouseRoad: data.houseRoad || '',
-        Active: true,  // New addresses are active by default
-        CreatedBy: 'system',
-        CreatedDate: new Date().toISOString(),
-        LastUpdatedBy: 'system',
-        Lastupdate: new Date().toISOString()
-    };
-
-    this.empService.saveAddress(addressPayload).subscribe({
-        next: (res) => {
-            this.presentAddress = data;
-            // Capture generated AddressId
-            const addressId = res?.data?.addressId || res?.Data?.AddressId || res?.addressId;
-            if (addressId) this.presentAddressId = addressId;
             this.messageService.add({
-                severity: 'success',
-                summary: 'Success',
-                detail: 'Present address saved successfully'
+                severity: 'warn',
+                summary: 'Validation Error',
+                detail: 'Please fill all required address fields (Permanent and Present)'
             });
-        },
-        error: (err) => {
-            console.error('Error saving address', err);
-            this.messageService.add({
-                severity: 'error',
-                summary: 'Error',
-                detail: 'Failed to save address'
-            });
+            return;
         }
-    });
-  }
 
-  savePermanentAddress(data: AddressData) {
-    if (!this.generatedEmployeeId) {
-        this.messageService.add({
-            severity: 'warn',
-            summary: 'Warning',
-            detail: 'Please save employee first'
+        // Step 1: Save or Update Employee
+        const formValue = this.postingForm.getRawValue();
+        const formattedData = {
+            ...formValue,
+            employeeID: this.generatedEmployeeId || 0,
+            joiningDate: this.formatDate(formValue.joiningDate),
+            // Set PostingStatus to Supernumerary by default for new employees
+            postingStatus: formValue.postingStatus || PostingStatus.Supernumerary,
+            // Include isReliever boolean and relieverId
+            isReliever: this.isReliever,
+            relieverId: this.isReliever && this.selectedRelieverEmployeeId ? this.selectedRelieverEmployeeId : null
+        };
+
+        // Determine whether to save or update
+        const employeeRequest = this.isEditMode ? this.empService.updateEmployee(formattedData) : this.empService.saveEmployee(formattedData);
+
+        employeeRequest.subscribe({
+            next: (res) => {
+                // For new employee, get ID from response; for update, use existing ID
+                const employeeId = this.isEditMode ? this.generatedEmployeeId : res?.data?.employeeID || res?.Data?.EmployeeID;
+
+                if (employeeId) {
+                    this.generatedEmployeeId = employeeId;
+                    this.presentAddressConfig.employeeId = employeeId;
+                    this.permanentAddressConfig.employeeId = employeeId;
+                    this.wifePermanentAddressConfig.employeeId = employeeId;
+                    this.wifePresentAddressConfig.employeeId = employeeId;
+
+                    // Step 2: Save or Update addresses (only those with data)
+                    this.saveAllAddressesInternal(permanentData!.data, presentData!.data, this.wifePermanentAddressForm?.hasData() ? wifePermanentData!.data : null, this.wifePresentAddressForm?.hasData() ? wifePresentData!.data : null);
+                } else {
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'Error',
+                        detail: 'Failed to get Employee ID from response'
+                    });
+                }
+            },
+            error: (err) => {
+                console.error('Error saving/updating employee', err);
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: this.isEditMode ? 'Failed to update employee' : 'Failed to save employee'
+                });
+            }
         });
-        return;
     }
 
-    const addressPayload = {
-        EmployeeID: this.generatedEmployeeId,
-        AddressId: 0,
-        FMID: 0,
-        LocationType: LocationType.Permanent,
-        LocationCode: `${data.division}-${data.district}-${data.upazila}`,
-        PostCode: data.postCode || '',
-        AddressAreaEN: data.villageEnglish || '',
-        AddressAreaBN: data.villageBangla || '',
-        DivisionType: data.division,
-        DistrictType: data.district,
-        ThanType: data.upazila,
-        PostOfficeType: data.postOffice,
-        HouseRoad: data.houseRoad || '',
-        Active: true,  // New addresses are active by default
-        CreatedBy: 'system',
-        CreatedDate: new Date().toISOString(),
-        LastUpdatedBy: 'system',
-        Lastupdate: new Date().toISOString()
-    };
+    // Internal method to save or update all addresses
+    private saveAllAddressesInternal(permanent: AddressData, present: AddressData, wifePermanent: AddressData | null, wifePresent: AddressData | null): void {
+        const buildPayload = (data: AddressData, locationType: string, existingAddressId?: number) => {
+            const payload: any = {
+                EmployeeID: this.generatedEmployeeId,
+                AddressId: existingAddressId || 0,
+                FMID: 0,
+                LocationType: locationType,
+                LocationCode: `${data.division}-${data.district}-${data.upazila}`,
+                PostCode: data.postCode || '',
+                AddressAreaEN: data.villageEnglish || '',
+                AddressAreaBN: data.villageBangla || '',
+                DivisionType: data.division,
+                DistrictType: data.district,
+                ThanType: data.upazila,
+                PostOfficeType: data.postOffice,
+                HouseRoad: data.houseRoad || '',
+                Active: true, // New addresses are active by default
+                CreatedBy: 'system',
+                CreatedDate: new Date().toISOString(),
+                LastUpdatedBy: 'system',
+                Lastupdate: new Date().toISOString()
+            };
+            console.log('Address payload:', payload);
+            return payload;
+        };
 
-    this.empService.saveAddress(addressPayload).subscribe({
-        next: (res) => {
-            this.permanentAddress = data;
-            // Capture generated AddressId
-            const addressId = res?.data?.addressId || res?.Data?.AddressId || res?.addressId;
-            if (addressId) this.permanentAddressId = addressId;
-            this.messageService.add({
-                severity: 'success',
-                summary: 'Success',
-                detail: 'Permanent address saved successfully'
-            });
-        },
-        error: (err) => {
-            console.error('Error saving address', err);
-            this.messageService.add({
-                severity: 'error',
-                summary: 'Error',
-                detail: 'Failed to save address'
-            });
+        // For edit mode, use update if addressId exists; otherwise save
+        const getAddressRequest = (data: AddressData, locationType: string, existingAddressId?: number) => {
+            const payload = buildPayload(data, locationType, existingAddressId);
+            return this.isEditMode && existingAddressId ? this.empService.updateAddress(payload) : this.empService.saveAddress(payload);
+        };
+
+        // Build save requests - only include addresses that have data
+        const saveRequests: { [key: string]: any } = {
+            permanent: getAddressRequest(permanent, LocationType.Permanent, this.permanentAddressId),
+            present: getAddressRequest(present, LocationType.Present, this.presentAddressId)
+        };
+
+        // Add wife addresses only if they have data
+        if (wifePermanent) {
+            saveRequests['wifePermanent'] = getAddressRequest(wifePermanent, LocationType.WifePermanent, this.wifePermanentAddressId);
         }
-    });
-  }
-
-  // Wife Permanent Address save handler
-  saveWifePermanentAddress(data: AddressData) {
-    if (!this.generatedEmployeeId) {
-        this.messageService.add({
-            severity: 'warn',
-            summary: 'Warning',
-            detail: 'Please save employee first'
-        });
-        return;
-    }
-
-    const addressPayload = {
-        EmployeeID: this.generatedEmployeeId,
-        AddressId: 0,
-        FMID: 0,
-        LocationType: LocationType.WifePermanent,
-        LocationCode: `${data.division}-${data.district}-${data.upazila}`,
-        PostCode: data.postCode || '',
-        AddressAreaEN: data.villageEnglish || '',
-        AddressAreaBN: data.villageBangla || '',
-        DivisionType: data.division,
-        DistrictType: data.district,
-        ThanType: data.upazila,
-        PostOfficeType: data.postOffice,
-        HouseRoad: data.houseRoad || '',
-        Active: true,  // New addresses are active by default
-        CreatedBy: 'system',
-        CreatedDate: new Date().toISOString(),
-        LastUpdatedBy: 'system',
-        Lastupdate: new Date().toISOString()
-    };
-
-    this.empService.saveAddress(addressPayload).subscribe({
-        next: (res) => {
-            this.wifePermanentAddress = data;
-            // Capture generated AddressId
-            const addressId = res?.data?.addressId || res?.Data?.AddressId || res?.addressId;
-            if (addressId) this.wifePermanentAddressId = addressId;
-            this.messageService.add({
-                severity: 'success',
-                summary: 'Success',
-                detail: 'Wife permanent address saved successfully'
-            });
-        },
-        error: (err) => {
-            console.error('Error saving address', err);
-            this.messageService.add({
-                severity: 'error',
-                summary: 'Error',
-                detail: 'Failed to save address'
-            });
+        if (wifePresent) {
+            saveRequests['wifePresent'] = getAddressRequest(wifePresent, LocationType.WifePresent, this.wifePresentAddressId);
         }
-    });
-  }
 
-  // Wife Present Address save handler
-  saveWifePresentAddress(data: AddressData) {
-    if (!this.generatedEmployeeId) {
-        this.messageService.add({
-            severity: 'warn',
-            summary: 'Warning',
-            detail: 'Please save employee first'
+        forkJoin(saveRequests).subscribe({
+            next: (results: any) => {
+                this.permanentAddress = permanent;
+                this.presentAddress = present;
+                if (wifePermanent) this.wifePermanentAddress = wifePermanent;
+                if (wifePresent) this.wifePresentAddress = wifePresent;
+
+                // Only update addressIds for NEW addresses (not when updating existing ones)
+                const getAddressId = (res: any) => res?.data?.addressId || res?.Data?.AddressId || res?.addressId;
+                if (!this.permanentAddressId && results.permanent) this.permanentAddressId = getAddressId(results.permanent);
+                if (!this.presentAddressId && results.present) this.presentAddressId = getAddressId(results.present);
+                if (!this.wifePermanentAddressId && results.wifePermanent) this.wifePermanentAddressId = getAddressId(results.wifePermanent);
+                if (!this.wifePresentAddressId && results.wifePresent) this.wifePresentAddressId = getAddressId(results.wifePresent);
+
+                this.messageService.add({
+                    severity: 'success',
+                    summary: 'Success',
+                    detail: this.isEditMode ? 'Employee and addresses updated successfully!' : 'Employee and addresses saved successfully!'
+                });
+            },
+            error: (err: any) => {
+                console.error('Error saving/updating addresses', err);
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: this.isEditMode ? 'Employee updated but failed to update one or more addresses' : 'Employee saved but failed to save one or more addresses'
+                });
+            }
         });
-        return;
     }
-
-    const addressPayload = {
-        EmployeeID: this.generatedEmployeeId,
-        AddressId: 0,
-        FMID: 0,
-        LocationType: LocationType.WifePresent,
-        LocationCode: `${data.division}-${data.district}-${data.upazila}`,
-        PostCode: data.postCode || '',
-        AddressAreaEN: data.villageEnglish || '',
-        AddressAreaBN: data.villageBangla || '',
-        DivisionType: data.division,
-        DistrictType: data.district,
-        ThanType: data.upazila,
-        PostOfficeType: data.postOffice,
-        HouseRoad: data.houseRoad || '',
-        Active: true,  // New addresses are active by default
-        CreatedBy: 'system',
-        CreatedDate: new Date().toISOString(),
-        LastUpdatedBy: 'system',
-        Lastupdate: new Date().toISOString()
-    };
-
-    this.empService.saveAddress(addressPayload).subscribe({
-        next: (res) => {
-            this.wifePresentAddress = data;
-            // Capture generated AddressId
-            const addressId = res?.data?.addressId || res?.Data?.AddressId || res?.addressId;
-            if (addressId) this.wifePresentAddressId = addressId;
-            this.messageService.add({
-                severity: 'success',
-                summary: 'Success',
-                detail: 'Wife present address saved successfully'
-            });
-        },
-        error: (err) => {
-            console.error('Error saving address', err);
-            this.messageService.add({
-                severity: 'error',
-                summary: 'Error',
-                detail: 'Failed to save address'
-            });
-        }
-    });
-  }
-
-  cancelAddress() {
-    console.log('Address editing cancelled');
-  }
-
-  // Copy permanent address data to present address form
-  copyPermanentToPresent(): void {
-    const permanentData = this.permanentAddressForm?.getFormData();
-    if (permanentData?.data) {
-      this.presentAddressForm?.populateFromSourceAddress(permanentData.data);
-    }
-  }
-
-  // Copy wife permanent address data to wife present address form
-  copyWifePermanentToWifePresent(): void {
-    const wifePermanentData = this.wifePermanentAddressForm?.getFormData();
-    if (wifePermanentData?.data) {
-      this.wifePresentAddressForm?.populateFromSourceAddress(wifePermanentData.data);
-    }
-  }
-
-  // Save All - Employee + All Addresses
-  saveAll(): void {
-    // Validate employee form first
-    if (this.postingForm.invalid) {
-      Object.keys(this.postingForm.controls).forEach((key) => {
-        this.postingForm.get(key)?.markAsTouched();
-      });
-      this.messageService.add({
-        severity: 'warn',
-        summary: 'Validation Error',
-        detail: 'Please fill all required employee fields'
-      });
-      return;
-    }
-
-    // Check for duplicate service ID
-    if (this.isServiceIdDuplicate) {
-      this.messageService.add({
-        severity: 'warn',
-        summary: 'Duplicate Service ID',
-        detail: 'Please use a unique Service ID'
-      });
-      return;
-    }
-
-    // Get form data from all address forms
-    const permanentData = this.permanentAddressForm?.getFormData();
-    const presentData = this.presentAddressForm?.getFormData();
-    const wifePermanentData = this.wifePermanentAddressForm?.getFormData();
-    const wifePresentData = this.wifePresentAddressForm?.getFormData();
-
-    // Only validate required addresses (permanent and present)
-    // Wife addresses are optional
-    const requiredAddressesValid = permanentData?.valid && presentData?.valid;
-
-    if (!requiredAddressesValid) {
-      this.permanentAddressForm?.markAsTouched();
-      this.presentAddressForm?.markAsTouched();
-
-      this.messageService.add({
-        severity: 'warn',
-        summary: 'Validation Error',
-        detail: 'Please fill all required address fields (Permanent and Present)'
-      });
-      return;
-    }
-
-    // Step 1: Save or Update Employee
-    const formValue = this.postingForm.getRawValue();
-    const formattedData = {
-      ...formValue,
-      employeeID: this.generatedEmployeeId || 0,
-      joiningDate: this.formatDate(formValue.joiningDate),
-      // Set PostingStatus to Supernumerary by default for new employees
-      postingStatus: formValue.postingStatus || PostingStatus.Supernumerary,
-      // Include isReliever boolean and relieverId
-      isReliever: this.isReliever,
-      relieverId: (this.isReliever && this.selectedRelieverEmployeeId) ? this.selectedRelieverEmployeeId : null
-    };
-
-    // Determine whether to save or update
-    const employeeRequest = this.isEditMode
-      ? this.empService.updateEmployee(formattedData)
-      : this.empService.saveEmployee(formattedData);
-
-    employeeRequest.subscribe({
-      next: (res) => {
-        // For new employee, get ID from response; for update, use existing ID
-        const employeeId = this.isEditMode
-          ? this.generatedEmployeeId
-          : (res?.data?.employeeID || res?.Data?.EmployeeID);
-
-        if (employeeId) {
-          this.generatedEmployeeId = employeeId;
-          this.presentAddressConfig.employeeId = employeeId;
-          this.permanentAddressConfig.employeeId = employeeId;
-          this.wifePermanentAddressConfig.employeeId = employeeId;
-          this.wifePresentAddressConfig.employeeId = employeeId;
-
-          // Step 2: Save or Update addresses (only those with data)
-          this.saveAllAddressesInternal(
-            permanentData!.data,
-            presentData!.data,
-            this.wifePermanentAddressForm?.hasData() ? wifePermanentData!.data : null,
-            this.wifePresentAddressForm?.hasData() ? wifePresentData!.data : null
-          );
-        } else {
-          this.messageService.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: 'Failed to get Employee ID from response'
-          });
-        }
-      },
-      error: (err) => {
-        console.error('Error saving/updating employee', err);
-        this.messageService.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: this.isEditMode ? 'Failed to update employee' : 'Failed to save employee'
-        });
-      }
-    });
-  }
-
-  // Internal method to save or update all addresses
-  private saveAllAddressesInternal(
-    permanent: AddressData,
-    present: AddressData,
-    wifePermanent: AddressData | null,
-    wifePresent: AddressData | null
-  ): void {
-    const buildPayload = (data: AddressData, locationType: string, existingAddressId?: number) => {
-      const payload: any = {
-        EmployeeID: this.generatedEmployeeId,
-        AddressId: existingAddressId || 0,
-        FMID: 0,
-        LocationType: locationType,
-        LocationCode: `${data.division}-${data.district}-${data.upazila}`,
-        PostCode: data.postCode || '',
-        AddressAreaEN: data.villageEnglish || '',
-        AddressAreaBN: data.villageBangla || '',
-        DivisionType: data.division,
-        DistrictType: data.district,
-        ThanType: data.upazila,
-        PostOfficeType: data.postOffice,
-        HouseRoad: data.houseRoad || '',
-        Active: true,  // New addresses are active by default
-        CreatedBy: 'system',
-        CreatedDate: new Date().toISOString(),
-        LastUpdatedBy: 'system',
-        Lastupdate: new Date().toISOString()
-      };
-      console.log('Address payload:', payload);
-      return payload;
-    };
-
-    // For edit mode, use update if addressId exists; otherwise save
-    const getAddressRequest = (data: AddressData, locationType: string, existingAddressId?: number) => {
-      const payload = buildPayload(data, locationType, existingAddressId);
-      return (this.isEditMode && existingAddressId)
-        ? this.empService.updateAddress(payload)
-        : this.empService.saveAddress(payload);
-    };
-
-    // Build save requests - only include addresses that have data
-    const saveRequests: { [key: string]: any } = {
-      permanent: getAddressRequest(permanent, LocationType.Permanent, this.permanentAddressId),
-      present: getAddressRequest(present, LocationType.Present, this.presentAddressId)
-    };
-
-    // Add wife addresses only if they have data
-    if (wifePermanent) {
-      saveRequests['wifePermanent'] = getAddressRequest(wifePermanent, LocationType.WifePermanent, this.wifePermanentAddressId);
-    }
-    if (wifePresent) {
-      saveRequests['wifePresent'] = getAddressRequest(wifePresent, LocationType.WifePresent, this.wifePresentAddressId);
-    }
-
-    forkJoin(saveRequests).subscribe({
-      next: (results: any) => {
-        this.permanentAddress = permanent;
-        this.presentAddress = present;
-        if (wifePermanent) this.wifePermanentAddress = wifePermanent;
-        if (wifePresent) this.wifePresentAddress = wifePresent;
-
-        // Only update addressIds for NEW addresses (not when updating existing ones)
-        const getAddressId = (res: any) => res?.data?.addressId || res?.Data?.AddressId || res?.addressId;
-        if (!this.permanentAddressId && results.permanent) this.permanentAddressId = getAddressId(results.permanent);
-        if (!this.presentAddressId && results.present) this.presentAddressId = getAddressId(results.present);
-        if (!this.wifePermanentAddressId && results.wifePermanent) this.wifePermanentAddressId = getAddressId(results.wifePermanent);
-        if (!this.wifePresentAddressId && results.wifePresent) this.wifePresentAddressId = getAddressId(results.wifePresent);
-
-        this.messageService.add({
-          severity: 'success',
-          summary: 'Success',
-          detail: this.isEditMode
-            ? 'Employee and addresses updated successfully!'
-            : 'Employee and addresses saved successfully!'
-        });
-      },
-      error: (err: any) => {
-        console.error('Error saving/updating addresses', err);
-        this.messageService.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: this.isEditMode
-            ? 'Employee updated but failed to update one or more addresses'
-            : 'Employee saved but failed to save one or more addresses'
-        });
-      }
-    });
-  }
 
     postingForm!: FormGroup;
     imagePreview: string | null = null;
@@ -617,12 +601,13 @@ export class EmpBasicInfo implements OnInit {
         this.loadGender();
 
         // Check for query params (view/edit mode)
-        this.route.queryParams.subscribe(params => {
+        this.route.queryParams.subscribe((params) => {
             const employeeId = params['id'];
             const mode = params['mode'];
 
             if (employeeId) {
                 this.generatedEmployeeId = +employeeId;
+                this.showEntryForm = true; // Edit/View: always show form
 
                 if (mode === 'edit') {
                     this.isEditMode = true;
@@ -711,7 +696,7 @@ export class EmpBasicInfo implements OnInit {
             next: (addresses: any[]) => {
                 console.log('Loaded addresses:', addresses);
 
-                addresses.forEach(addr => {
+                addresses.forEach((addr) => {
                     // Handle both camelCase and PascalCase property names
                     const locationCode = addr.locationCode || addr.LocationCode || '';
                     const locationType = addr.locationType || addr.LocationType || '';
@@ -836,7 +821,6 @@ export class EmpBasicInfo implements OnInit {
             officerType: [''],
             orgId: [null]
         });
-
     }
 
     onFileSelect(event: any): void {
@@ -1071,7 +1055,6 @@ export class EmpBasicInfo implements OnInit {
             });
         }
     }
-
 
     formatDate(date: Date | string | null): string | null {
         if (!date) return null;

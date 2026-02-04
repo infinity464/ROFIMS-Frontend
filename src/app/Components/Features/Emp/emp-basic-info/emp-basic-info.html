@@ -1,4 +1,10 @@
 <p-fluid>
+    <!-- Present Member Check: show above the form -->
+    <app-emp-present-member-check
+        (employeeNotFound)="showEntryForm = true"
+        (employeeFound)="showEntryForm = false" />
+
+    @if (showEntryForm) {
     <div class="mb-5 card">
         <div class="flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
             <h3 class="m-0 text-xl font-bold text-900">{{ pageTitle }}</h3>
@@ -500,6 +506,7 @@
             </div>
         }
     </div>
+    }
 </p-fluid>
 
 <!-- Image Preview Modal -->

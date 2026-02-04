@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { InputNumberModule } from 'primeng/inputnumber';
@@ -36,6 +36,11 @@ export class EmpPresentMemberCheckComponent implements OnInit {
     exMemberEmployee: EmpModel | null = null;
     exMemberViewList: VwPreviousRABServiceInfoModel[] = [];
     isLoadingExMemberData = false;
+
+    /** Emitted when search completes and no employee is found (so parent can show the entry form). */
+    @Output() employeeNotFound = new EventEmitter<void>();
+    /** Emitted when search finds an employee (present or ex-member), so parent can hide the entry form. */
+    @Output() employeeFound = new EventEmitter<void>();
 
     constructor(
         private empService: EmpService,
@@ -89,6 +94,7 @@ export class EmpPresentMemberCheckComponent implements OnInit {
                     this.isSearching = false;
                     this.foundEmployee = employee;
                     this.showAlreadyExistDialog = true;
+                    this.employeeFound.emit();
                     return;
                 }
                 this.checkExMemberAndLoadView(serviceIdStr, nidStr, motherOrgId);
@@ -115,8 +121,10 @@ export class EmpPresentMemberCheckComponent implements OnInit {
                         summary: 'Not Found',
                         detail: 'No employee found with the given NID/Service ID.'
                     });
+                    this.employeeNotFound.emit();
                     return;
                 }
+                this.employeeFound.emit();
                 const postingStatus = (employee as any).PostingStatus ?? (employee as any).postingStatus ?? '';
                 if (postingStatus === 'ExMember') {
                     this.exMemberEmployee = employee;
