@@ -31,27 +31,27 @@
         <ng-template pTemplate="header">
             <tr>
                 <th style="width: 60px">Sl No</th>
-                <th style="width: 120px">Service ID</th>
-                <th style="min-width: 180px">Name (EN)</th>
-                <th style="width: 120px">Joining Date</th>
-                <th style="width: 100px">Prefix</th>
+                <th style="width: 120px">Service ID</th>                
                 <th style="min-width: 120px">Rank</th>
                 <th style="min-width: 120px">Corps</th>
                 <th style="min-width: 120px">Trade</th>
+                <th style="min-width: 180px">Name (EN)</th>
                 <th style="min-width: 160px">Mother Unit</th>
+                <th style="width: 120px">Joining Date</th>
+                
             </tr>
         </ng-template>
         <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
             <tr>
                 <td>{{ rowIndex + 1 }}</td>
-                <td><span class="font-semibold">{{ row.serviceId || '-' }}</span></td>
-                <td>{{ row.fullNameEN || '-' }}</td>
-                <td>{{ formatDate(row.joiningDate) }}</td>
-                <td>{{ row.prefixName || '-' }}</td>
+                <td><span class="font-semibold">{{ row.prefixName?  row.prefixName + " - " : "" }} {{ row.serviceId || '-' }}</span></td>
+                
                 <td>{{ row.rankName || '-' }}</td>
                 <td>{{ row.corpsName || '-' }}</td>
                 <td>{{ row.tradeName || '-' }}</td>
+                <td>{{ row.fullNameEN || '-' }}{{row.corpsName ? ", " + row.corpsName : ""}}</td>
                 <td>{{ row.motherUnitName || '-' }}</td>
+                <td>{{ formatDate(row.joiningDate) }}</td>
             </tr>
         </ng-template>
         <ng-template pTemplate="emptymessage">
