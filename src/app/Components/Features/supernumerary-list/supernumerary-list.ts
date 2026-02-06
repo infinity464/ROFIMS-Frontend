@@ -1,13 +1,16 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { TableModule, TableLazyLoadEvent } from 'primeng/table';
+import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
-import { MultiSelectModule } from 'primeng/multiselect';
 import { SelectModule } from 'primeng/select';
+import { InputTextModule } from 'primeng/inputtext';
+import { IconField } from 'primeng/iconfield';
+import { InputIcon } from 'primeng/inputicon';
+import { DatePickerModule } from 'primeng/datepicker';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
-import { EmployeeListService } from '@/services/employee-list.service';
+import { EmployeeListService, GetSupernumeraryListRequest } from '@/services/employee-list.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { EmployeeList } from '@/models/employee-list.model';
 import { MotherOrganizationModel } from '@/models/mother-org-model';
@@ -16,7 +19,7 @@ import { CommonCodeModel } from '@/models/common-code-model';
 @Component({
     selector: 'app-supernumerary-list',
     standalone: true,
-    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, Toast],
+    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, InputTextModule, IconField, InputIcon, DatePickerModule, Toast],
     providers: [MessageService],
     templateUrl: './supernumerary-list.html',
     styleUrl: './supernumerary-list.scss'
@@ -24,16 +27,15 @@ import { CommonCodeModel } from '@/models/common-code-model';
 export class SupernumeraryList implements OnInit {
     list: EmployeeList[] = [];
     loading = false;
-    totalRecords = 0;
     first = 0;
     rows = 20;
+    /** Client-side search: filters by Service ID or RAB ID (partial, case-insensitive). */
+    searchText = '';
 
     orgOptions: MotherOrganizationModel[] = [];
     selectedOrgId: number | null = null;
     memberTypeOptions: { label: string; value: number }[] = [];
     selectedMemberTypeId: number | null = null;
-    /** True after user has clicked Load List with valid filters; required for lazy load. */
-    filtersApplied = false;
 
     constructor(
         private employeeListService: EmployeeListService,
@@ -44,8 +46,8 @@ export class SupernumeraryList implements OnInit {
     ngOnInit(): void {
         this.loadOrgOptions();
         this.loadMemberTypeOptions();
-        this.filtersApplied = true;
-        this.loadPage(1, this.rows);
+        this.loadTradeOptions();
+        this.loadData();
     }
 
     loadOrgOptions(): void {
@@ -108,57 +110,113 @@ export class SupernumeraryList implements OnInit {
             });
         }
         this.first = 0;
-        this.loadPage(1, this.rows);
+        this.loadData();
     }
 
     /** Member Type change: reload list only. */
     onMemberTypeChange(): void {
         this.first = 0;
-        this.loadPage(1, this.rows);
+        this.loadData();
     }
 
     rankOptions: { label: string; value: number }[] = [];
     selectedRankId: number | null = null;
 
+    tradeOptions: { label: string; value: number }[] = [];
+    selectedTradeId: number | null = null;
+    joiningDateFrom: Date | null = null;
+    joiningDateTo: Date | null = null;
+    joiningDateInRABFrom: Date | null = null;
+    joiningDateInRABTo: Date | null = null;
+
+    /** Trade from CommonCode – load once on init. */
+    loadTradeOptions(): void {
+        this.commonCodeService.getAllActiveCommonCodesType('Trade').subscribe({
+            next: (codes: CommonCodeModel[]) => {
+                this.tradeOptions = codes.map((c) => ({
+                    label: c.codeValueEN || String(c.codeId),
+                    value: c.codeId
+                }));
+            },
+            error: (err) => {
+                console.error('Failed to load trades', err);
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: 'Failed to load trades'
+                });
+            }
+        });
+    }
+
     onFilterChange(): void {
         this.first = 0;
-        this.loadPage(1, this.rows);
+        this.loadData();
     }
 
-    onLazyLoad(event: TableLazyLoadEvent): void {
-        if (!this.filtersApplied) return;
-        const pageNo = event.first != null && event.rows != null ? Math.floor(event.first / event.rows) + 1 : 1;
-        const rowPerPage = event.rows ?? this.rows;
-        this.loadPage(pageNo, rowPerPage);
-        this.first = event.first ?? 0;
-        this.rows = rowPerPage;
+    onPage(event: { first: number }): void {
+        this.first = event.first;
     }
 
-    loadPage(pageNo: number, rowPerPage: number): void {
+    /** List filtered by searchText (Service ID / RAB ID). Used for table value. */
+    get filteredList(): EmployeeList[] {
+        const q = this.searchText?.trim()?.toLowerCase() ?? '';
+        if (q === '') return this.list;
+        return this.list.filter(
+            (row) =>
+                (row.serviceId && row.serviceId.toLowerCase().includes(q)) ||
+                (row.rabID && row.rabID.toLowerCase().includes(q))
+        );
+    }
+
+    onSearchChange(): void {
+        this.first = 0;
+    }
+
+    loadData(): void {
         this.loading = true;
-        this.employeeListService
-            .getSupernumeraryListPaginated({
-                orgIds: this.selectedOrgId != null ? [this.selectedOrgId] : undefined,
-                memberTypeId: this.selectedMemberTypeId ?? undefined,
-                rankId: this.selectedRankId ?? undefined,
-                pagination: { page_no: pageNo, row_per_page: rowPerPage }
-            })
-            .subscribe({
-                next: (res) => {
-                    this.list = res.datalist ?? [];
-                    this.totalRecords = res.pages?.rows ?? 0;
-                    this.loading = false;
-                },
-                error: (err) => {
-                    console.error('Failed to load supernumerary list', err);
-                    this.messageService.add({
-                        severity: 'error',
-                        summary: 'Error',
-                        detail: err?.error?.message || 'Failed to load supernumerary list'
-                    });
-                    this.loading = false;
-                }
-            });
+        const request: GetSupernumeraryListRequest = {
+            orgIds: this.selectedOrgId != null ? [this.selectedOrgId] : undefined,
+            memberTypeId: this.selectedMemberTypeId ?? undefined,
+            rankId: this.selectedRankId ?? undefined,
+            tradeId: this.selectedTradeId ?? undefined,
+            joiningDateFrom: this.toDateString(this.joiningDateFrom),
+            joiningDateTo: this.toDateString(this.joiningDateTo),
+            joiningDateInRABFrom: this.toDateString(this.joiningDateInRABFrom),
+            joiningDateInRABTo: this.toDateString(this.joiningDateInRABTo)
+        };
+        this.employeeListService.getSupernumeraryList(request).subscribe({
+            next: (res) => {
+                this.list = res ?? [];
+                this.loading = false;
+            },
+            error: (err) => {
+                console.error('Failed to load supernumerary list', err);
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: err?.error?.message || 'Failed to load supernumerary list'
+                });
+                this.loading = false;
+            }
+        });
+    }
+
+    onSendNewPostingList(row: EmployeeList): void {
+        // TODO: wire to Send New Posting list API / navigation
+        this.messageService.add({
+            severity: 'info',
+            summary: 'Send New Posting list',
+            detail: `Employee: ${row.serviceId ?? row.employeeID}`
+        });
+    }
+
+    toDateString(d: Date | null): string | undefined {
+        if (d == null) return undefined;
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
     }
 
     formatDate(value: string | null): string {

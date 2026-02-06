@@ -5,11 +5,20 @@ import { environment } from '@/Core/Environments/environment';
 import { GetEmployeeListRequest, EmployeeList, AllocateRabIdRequest, AllocateRabIdResultItem } from '@/models/employee-list.model';
 import { PagedResponse } from '@/Core/Models/Pagination';
 
-/** Request body for GetSupernumeraryListPaginated API. All filters optional. */
-export interface GetSupernumeraryListPaginatedRequest {
+/** Request body for GetSupernumeraryList API (no pagination). All filters optional. Dates as yyyy-MM-dd. */
+export interface GetSupernumeraryListRequest {
     orgIds?: number[] | null;
     memberTypeId?: number | null;
     rankId?: number | null;
+    tradeId?: number | null;
+    joiningDateFrom?: string | null;
+    joiningDateTo?: string | null;
+    joiningDateInRABFrom?: string | null;
+    joiningDateInRABTo?: string | null;
+}
+
+/** Request body for GetSupernumeraryListPaginated API. Extends filter request with pagination. */
+export interface GetSupernumeraryListPaginatedRequest extends GetSupernumeraryListRequest {
     pagination: { page_no: number; row_per_page: number };
 }
 
@@ -25,7 +34,8 @@ export class EmployeeListService {
         return this.http.post<EmployeeList[]>(`${this.apiUrl}/GetEmployeeList`, request);
     }
 
-    getSupernumeraryList(request: GetEmployeeListRequest): Observable<EmployeeList[]> {
+    /** All filters optional. Returns full list for client-side pagination. */
+    getSupernumeraryList(request: GetSupernumeraryListRequest): Observable<EmployeeList[]> {
         return this.http.post<EmployeeList[]>(`${this.apiUrl}/GetSupernumeraryList`, request);
     }
 

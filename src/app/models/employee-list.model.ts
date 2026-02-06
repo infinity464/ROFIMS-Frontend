@@ -23,6 +23,9 @@ export interface EmployeeList {
     motherUnitName: string | null;
     sortOrder: number | null;
     rabID?: string | null;
+    relieverId?: number | null;
+    relieverServiceId?: string | null;
+    relieverPrefixName?: string | null;
 }
 
 /** Request for AllocateRabId API. */
