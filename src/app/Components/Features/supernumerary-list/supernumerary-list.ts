@@ -204,7 +204,7 @@ export class SupernumeraryList implements OnInit {
         this.messageService.add({
             severity: 'info',
             summary: 'Send New Posting list',
-            detail: `Employee: ${row.serviceId ?? row.employeeID}`
+            detail: `Under Development`
         });
     }
 
