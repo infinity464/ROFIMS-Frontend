@@ -77,8 +77,9 @@
                 <td>{{ row.motherUnitName || '-' }}</td>
                 <td>{{ formatDate(row.joiningDate) }}</td>
                 <td style="white-space: nowrap">{{ row.relieverId ? (row.relieverPrefixName ? row.relieverPrefixName + " - " : "") + (row.relieverServiceId || '-') : '-' }}</td>
-                <td style="text-align: center; vertical-align: middle">
-                    <span style="min-width: 200px; display: inline-block">
+                <td style="text-align: center; vertical-align: middle; white-space: nowrap">
+                    <span class="action-buttons">
+                        <p-button label="Profile" size="small" [routerLink]="['/supernumerary-profile', row.employeeID]"></p-button>
                         <p-button label="Send New Posting list" size="small" (onClick)="onSendNewPostingList(row)"></p-button>
                     </span>
                 </td>

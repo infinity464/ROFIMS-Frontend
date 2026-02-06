@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '@/Core/Environments/environment';
-import { GetEmployeeListRequest, EmployeeList, AllocateRabIdRequest, AllocateRabIdResultItem } from '@/models/employee-list.model';
+import { GetEmployeeListRequest, EmployeeList, AllocateRabIdRequest, AllocateRabIdResultItem, SupernumeraryEmpProfile } from '@/models/employee-list.model';
 import { PagedResponse } from '@/Core/Models/Pagination';
 
 /** Request body for GetSupernumeraryList API (no pagination). All filters optional. Dates as yyyy-MM-dd. */
@@ -45,5 +45,9 @@ export class EmployeeListService {
 
     allocateRabId(request: AllocateRabIdRequest): Observable<AllocateRabIdResultItem[]> {
         return this.http.post<AllocateRabIdResultItem[]>(`${this.apiUrl}/AllocateRabId`, request);
+    }
+
+    getSupernumeraryEmpProfile(employeeId: number): Observable<SupernumeraryEmpProfile | null> {
+        return this.http.get<SupernumeraryEmpProfile | null>(`${this.apiUrl}/GetSupernumeraryEmpProfile/${employeeId}`);
     }
 }

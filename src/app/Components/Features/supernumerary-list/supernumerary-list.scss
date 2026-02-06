@@ -1,3 +1,12 @@
+// Action column: buttons side by side
+.action-buttons {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: nowrap;
+}
+
 // Responsive filter section: wrap on small screens, single row on large
 .filter-field {
   flex: 1 1 220px;

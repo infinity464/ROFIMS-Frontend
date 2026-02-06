@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
@@ -13,13 +14,14 @@ import { MessageService } from 'primeng/api';
 import { EmployeeListService, GetSupernumeraryListRequest } from '@/services/employee-list.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { EmployeeList } from '@/models/employee-list.model';
+import { TooltipModule } from 'primeng/tooltip';
 import { MotherOrganizationModel } from '@/models/mother-org-model';
 import { CommonCodeModel } from '@/models/common-code-model';
 
 @Component({
     selector: 'app-supernumerary-list',
     standalone: true,
-    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, InputTextModule, IconField, InputIcon, DatePickerModule, Toast],
+    imports: [CommonModule, FormsModule, RouterModule, TableModule, ButtonModule, SelectModule, InputTextModule, IconField, InputIcon, DatePickerModule, Toast, TooltipModule],
     providers: [MessageService],
     templateUrl: './supernumerary-list.html',
     styleUrl: './supernumerary-list.scss'
