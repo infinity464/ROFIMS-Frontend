@@ -1,0 +1,123 @@
+<p-fluid>
+<div class="calendar-wrapper card p-4 mb-4">
+    <div class="calendar-header flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
+        <div>
+            <h2 class="m-0 text-2xl font-semibold">Pending Task & Upcoming Event</h2>
+            <p class="m-0 mt-1 text-color-secondary text-sm">All tasks and events are shown together on the calendar.</p>
+        </div>
+        <div class="flex align-items-center gap-2">
+            <p-button
+                icon="pi pi-chevron-left"
+                [rounded]="true"
+                [text]="true"
+                (onClick)="prevMonth()" />
+            <p-button
+                label="Today"
+                [rounded]="true"
+                [outlined]="true"
+                (onClick)="goToToday()" />
+            <p-button
+                icon="pi pi-chevron-right"
+                [rounded]="true"
+                [text]="true"
+                (onClick)="nextMonth()" />
+            <span class="month-year text-xl font-semibold ml-2">{{ monthYearLabel }}</span>
+        </div>
+    </div>
+
+    <div class="calendar-grid card">
+        <div class="calendar-weekdays flex">
+            @for (day of weekDays; track day) {
+                <div class="calendar-weekday">{{ day }}</div>
+            }
+        </div>
+        @for (week of weeks; track week) {
+            <div class="calendar-week flex">
+                @for (day of week; track day.date.getTime()) {
+                    <div
+                        class="calendar-day"
+                        [class.other-month]="!day.isCurrentMonth"
+                        [class.today]="isToday(day.date)">
+                        <div class="day-num">{{ day.date.getDate() }}</div>
+                        <div class="day-events">
+                            @for (ev of day.events; track ev.id) {
+                                <button
+                                    type="button"
+                                    class="event-chip"
+                                    [style.background]="ev.color || '#3b82f6'"
+                                    (click)="onEventClick(ev)">
+                                    <span class="event-time" *ngIf="!ev.allDay">{{ formatTime(ev.start) }}</span>
+                                    <span class="event-title">{{ ev.title }}</span>
+                                </button>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+</p-fluid>
+
+<!-- Event/Task detail dialog (Google Calendar style) -->
+<p-dialog
+    [(visible)]="showDetailDialog"
+    [modal]="true"
+    [draggable]="false"
+    [resizable]="false"
+    [style]="{ width: '400px' }"
+    (onHide)="closeDetail()"
+    styleClass="event-detail-dialog">
+    <ng-template pTemplate="header">
+        <span class="text-xl font-semibold">{{ selectedEvent?.type === 'task' ? 'Task' : 'Event' }} details</span>
+    </ng-template>
+    <div *ngIf="selectedEvent" class="event-detail-content">
+        <div class="detail-row">
+            <i class="pi pi-tag detail-icon"></i>
+            <div>
+                <div class="detail-label">Title</div>
+                <div class="detail-value">{{ selectedEvent.title }}</div>
+            </div>
+        </div>
+        <div class="detail-row">
+            <i class="pi pi-calendar detail-icon"></i>
+            <div>
+                <div class="detail-label">Date & time</div>
+                <div class="detail-value">
+                    {{ formatDate(selectedEvent.start) }}
+                    <span *ngIf="!selectedEvent.allDay">
+                        · {{ formatTime(selectedEvent.start) }}
+                        <span *ngIf="selectedEvent.end"> – {{ formatTime(selectedEvent.end!) }}</span>
+                    </span>
+                    <span *ngIf="selectedEvent.allDay"> (All day)</span>
+                </div>
+            </div>
+        </div>
+        <div class="detail-row" *ngIf="selectedEvent.description">
+            <i class="pi pi-align-left detail-icon"></i>
+            <div>
+                <div class="detail-label">Description</div>
+                <div class="detail-value">{{ selectedEvent.description }}</div>
+            </div>
+        </div>
+        <div class="detail-row" *ngIf="selectedEvent.reminder">
+            <i class="pi pi-bell detail-icon"></i>
+            <div>
+                <div class="detail-label">Reminder</div>
+                <div class="detail-value">{{ selectedEvent.reminder }}</div>
+            </div>
+        </div>
+        <div class="detail-row">
+            <i class="pi pi-bookmark detail-icon"></i>
+            <div>
+                <div class="detail-label">Type</div>
+                <div class="detail-value">
+                    <p-tag [value]="selectedEvent.type === 'task' ? 'Task' : 'Event'" [severity]="selectedEvent.type === 'task' ? 'success' : 'info'"></p-tag>
+                </div>
+            </div>
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button label="Close" (onClick)="closeDetail()"></p-button>
+    </ng-template>
+</p-dialog>

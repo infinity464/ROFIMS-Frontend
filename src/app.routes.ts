@@ -83,6 +83,8 @@ import { TrainingInstitution } from '@/Components/basic-setup/training-instituti
 import { RankEquivalent } from '@/Components/basic-setup/rank-equivalent/rank-equivalent';
 import { Religion } from '@/Components/basic-setup/religion/religion';
 import { RabIdSerial } from '@/Components/basic-setup/rab-id-serial/rab-id-serial';
+import { CalendarComponent } from '@/Components/Features/calendar/calendar.component';
+import { TaskEventListComponent } from '@/Components/Features/calendar/task-event-list.component';
 
 export const appRoutes: Routes = [
     // Public routes
@@ -97,6 +99,8 @@ export const appRoutes: Routes = [
         children: [
             { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
             { path: 'dashboard', component: Dashboard },
+            { path: 'calendar', component: CalendarComponent },
+            { path: 'task-event-list', component: TaskEventListComponent },
             { path: 'employee-info', component: Employeeinfo },
             { path: 'basic-setup/division', component: Division },
             { path: 'basic-setup/district', component: District },

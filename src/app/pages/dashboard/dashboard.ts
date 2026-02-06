@@ -7,10 +7,16 @@ import { RevenueStreamWidget } from './components/revenuestreamwidget';
 
 @Component({
     selector: 'app-dashboard',
-    imports: [StatsWidget, RecentSalesWidget, BestSellingWidget, RevenueStreamWidget, NotificationsWidget],
+    imports: [
+        StatsWidget,
+        RecentSalesWidget,
+        BestSellingWidget,
+        RevenueStreamWidget,
+        NotificationsWidget
+    ],
     template: `
         <div class="grid grid-cols-12 gap-8">
-            <!-- Dashboard widgets hidden for now -->
+            <!-- Dashboard widgets -->
         </div>
     `
 })

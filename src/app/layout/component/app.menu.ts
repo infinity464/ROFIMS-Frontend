@@ -73,7 +73,11 @@ export class AppMenu {
             {
                 label: 'Home',
                 icon: 'pi pi-fw pi-th-large',
-                items: [{ label: 'Dashboard', icon: 'pi pi-fw pi-home', routerLink: ['/dashboard'], routerLinkActiveOptions: { paths: 'exact', queryParams: 'ignored', matrixParams: 'ignored', fragment: 'ignored' } }]
+                items: [
+                    { label: 'Dashboard', icon: 'pi pi-fw pi-home', routerLink: ['/dashboard'], routerLinkActiveOptions: { paths: 'exact', queryParams: 'ignored', matrixParams: 'ignored', fragment: 'ignored' } },
+                    { label: 'Task & Event List', icon: 'pi pi-fw pi-list', routerLink: ['/task-event-list'] },
+                    { label: 'Pending Task & Upcoming Event', icon: 'pi pi-fw pi-calendar', routerLink: ['/calendar'] }
+                ]
             },
             {
                 label: 'Data Entry (New & Re-Joining)',
