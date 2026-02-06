@@ -1,41 +1,41 @@
 <p-toast></p-toast>
 
-<!-- Card 1: Filters – 4 dropdowns on one line; date ranges on two lines with From/To side by side -->
+<!-- Card 1: Filters – responsive: wrap on small screens, single line on large -->
 <div class="card mb-4">
     <h2 class="m-0 text-2xl font-bold text-900 mb-4">Supernumerary List</h2>
-    <!-- Row 1: 4 dropdowns in same line -->
-    <div class="flex flex-nowrap gap-4 mb-4">
-        <div class="flex-1" style="min-width: 0;">
+    <!-- Row 1: 4 dropdowns – side by side on large, wrap on small -->
+    <div class="filter-row-dropdowns flex flex-wrap gap-4 mb-4">
+        <div class="filter-field">
             <label for="org" class="font-semibold block mb-2 text-700">Mother Organization</label>
             <p-select id="org" [options]="orgOptions" [(ngModel)]="selectedOrgId" (ngModelChange)="onOrgChange()" optionLabel="orgNameEN" optionValue="orgId" placeholder="Select organization" styleClass="w-full" [filter]="true"> </p-select>
         </div>
-        <div class="flex-1" style="min-width: 0;">
+        <div class="filter-field">
             <label for="memberType" class="font-semibold block mb-2 text-700">Member Type</label>
             <p-select id="memberType" [options]="memberTypeOptions" [(ngModel)]="selectedMemberTypeId" (ngModelChange)="onMemberTypeChange()" placeholder="Select member type" optionLabel="label" optionValue="value" styleClass="w-full"> </p-select>
         </div>
-        <div class="flex-1" style="min-width: 0;">
+        <div class="filter-field">
             <label for="rank" class="font-semibold block mb-2 text-700">Rank</label>
             <p-select id="rank" [options]="rankOptions" [(ngModel)]="selectedRankId" (ngModelChange)="onFilterChange()" placeholder="Select rank" optionLabel="label" optionValue="value" styleClass="w-full" [disabled]="selectedOrgId == null"> </p-select>
         </div>
-        <div class="flex-1" style="min-width: 0;">
+        <div class="filter-field">
             <label for="trade" class="font-semibold block mb-2 text-700">Trade</label>
-            <p-select id="trade" [options]="tradeOptions" [(ngModel)]="selectedTradeId" (ngModelChange)="onFilterChange()" placeholder="Select trade" optionLabel="label" optionValue="value" styleClass="w-full"> </p-select>
+            <p-select id="trade" [options]="tradeOptions" [(ngModel)]="selectedTradeId" (ngModelChange)="onFilterChange()" placeholder="Select trade" optionLabel="label" optionValue="value" styleClass="w-full" [disabled]="selectedOrgId == null"> </p-select>
         </div>
     </div>
-    <!-- Row 2: Date of Joining and Date of Join in RAB side by side -->
-    <div class="flex flex-wrap gap-4 align-items-end">
-        <div>
+    <!-- Row 2: Date ranges – same width as dropdown row on large -->
+    <div class="filter-row-dates flex flex-wrap gap-4 align-items-end">
+        <div class="filter-field filter-field-date">
             <label class="font-semibold block mb-2 text-700">Date of Joining</label>
-            <div class="flex gap-2 align-items-center">
-                <p-datepicker [(ngModel)]="joiningDateFrom" (ngModelChange)="onFilterChange()" dateFormat="dd-mm-yy" placeholder="From" appendTo="body" styleClass="w-full" style="width: 180px;"> </p-datepicker>
-                <p-datepicker [(ngModel)]="joiningDateTo" (ngModelChange)="onFilterChange()" dateFormat="dd-mm-yy" placeholder="To" appendTo="body" styleClass="w-full" style="width: 180px;"> </p-datepicker>
+            <div class="flex gap-2 flex-wrap">
+                <div class="filter-date-half"><p-datepicker [(ngModel)]="joiningDateFrom" (ngModelChange)="onFilterChange()" dateFormat="dd-mm-yy" placeholder="From" appendTo="body" styleClass="w-full"> </p-datepicker></div>
+                <div class="filter-date-half"><p-datepicker [(ngModel)]="joiningDateTo" (ngModelChange)="onFilterChange()" dateFormat="dd-mm-yy" placeholder="To" appendTo="body" styleClass="w-full"> </p-datepicker></div>
             </div>
         </div>
-        <div>
+        <div class="filter-field filter-field-date">
             <label class="font-semibold block mb-2 text-700">Date of Join in RAB</label>
-            <div class="flex gap-2 align-items-center">
-                <p-datepicker [(ngModel)]="joiningDateInRABFrom" (ngModelChange)="onFilterChange()" dateFormat="dd-mm-yy" placeholder="From" appendTo="body" styleClass="w-full" style="width: 180px;"> </p-datepicker>
-                <p-datepicker [(ngModel)]="joiningDateInRABTo" (ngModelChange)="onFilterChange()" dateFormat="dd-mm-yy" placeholder="To" appendTo="body" styleClass="w-full" style="width: 180px;"> </p-datepicker>
+            <div class="flex gap-2 flex-wrap">
+                <div class="filter-date-half"><p-datepicker [(ngModel)]="joiningDateInRABFrom" (ngModelChange)="onFilterChange()" dateFormat="dd-mm-yy" placeholder="From" appendTo="body" styleClass="w-full"> </p-datepicker></div>
+                <div class="filter-date-half"><p-datepicker [(ngModel)]="joiningDateInRABTo" (ngModelChange)="onFilterChange()" dateFormat="dd-mm-yy" placeholder="To" appendTo="body" styleClass="w-full"> </p-datepicker></div>
             </div>
         </div>
     </div>

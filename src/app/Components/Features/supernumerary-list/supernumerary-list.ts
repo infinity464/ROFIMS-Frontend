@@ -46,7 +46,6 @@ export class SupernumeraryList implements OnInit {
     ngOnInit(): void {
         this.loadOrgOptions();
         this.loadMemberTypeOptions();
-        this.loadTradeOptions();
         this.loadData();
     }
 
@@ -86,10 +85,12 @@ export class SupernumeraryList implements OnInit {
         });
     }
 
-    /** Only Rank depends on Mother Org: when org selected, load Rank options for that org. */
+    /** Rank and Trade depend on Mother Org: when org selected, load options for that org. */
     onOrgChange(): void {
         this.rankOptions = [];
         this.selectedRankId = null;
+        this.tradeOptions = [];
+        this.selectedTradeId = null;
         const orgId = this.selectedOrgId;
         if (orgId != null) {
             this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'MotherOrgRank').subscribe({
@@ -105,6 +106,22 @@ export class SupernumeraryList implements OnInit {
                         severity: 'error',
                         summary: 'Error',
                         detail: 'Failed to load ranks'
+                    });
+                }
+            });
+            this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'Trade').subscribe({
+                next: (codes: CommonCodeModel[]) => {
+                    this.tradeOptions = codes.map((c) => ({
+                        label: c.codeValueEN || String(c.codeId),
+                        value: c.codeId
+                    }));
+                },
+                error: (err) => {
+                    console.error('Failed to load trades', err);
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'Error',
+                        detail: 'Failed to load trades'
                     });
                 }
             });
@@ -128,26 +145,6 @@ export class SupernumeraryList implements OnInit {
     joiningDateTo: Date | null = null;
     joiningDateInRABFrom: Date | null = null;
     joiningDateInRABTo: Date | null = null;
-
-    /** Trade from CommonCode – load once on init. */
-    loadTradeOptions(): void {
-        this.commonCodeService.getAllActiveCommonCodesType('Trade').subscribe({
-            next: (codes: CommonCodeModel[]) => {
-                this.tradeOptions = codes.map((c) => ({
-                    label: c.codeValueEN || String(c.codeId),
-                    value: c.codeId
-                }));
-            },
-            error: (err) => {
-                console.error('Failed to load trades', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Failed to load trades'
-                });
-            }
-        });
-    }
 
     onFilterChange(): void {
         this.first = 0;
