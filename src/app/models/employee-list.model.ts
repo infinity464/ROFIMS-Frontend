@@ -1,15 +1,15 @@
 /**
- * Request payload for GetSupernumeraryList API.
+ * Request payload for GetEmployeeList API.
  */
-export interface GetSupernumeraryListRequest {
+export interface GetEmployeeListRequest {
     orgIds: number[];
     memberTypeId: number;
 }
 
 /**
- * Single row from vw_SupernumeraryList (supernumerary list).
+ * Single row from vw_EmployeeList (employee list).
  */
-export interface SupernumeraryList {
+export interface EmployeeList {
     employeeID: number;
     serviceId: string;
     fullNameEN: string;

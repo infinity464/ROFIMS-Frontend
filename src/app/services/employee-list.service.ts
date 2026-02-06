@@ -2,18 +2,18 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '@/Core/Environments/environment';
-import { GetSupernumeraryListRequest, SupernumeraryList, AllocateRabIdRequest, AllocateRabIdResultItem } from '@/models/supernumerary-list.model';
+import { GetEmployeeListRequest, EmployeeList, AllocateRabIdRequest, AllocateRabIdResultItem } from '@/models/employee-list.model';
 
 @Injectable({
     providedIn: 'root'
 })
-export class SupernumeraryListService {
+export class EmployeeListService {
     private readonly apiUrl = `${environment.apis.core}/EmployeeInfo`;
 
     constructor(private http: HttpClient) {}
 
-    getSupernumeraryList(request: GetSupernumeraryListRequest): Observable<SupernumeraryList[]> {
-        return this.http.post<SupernumeraryList[]>(`${this.apiUrl}/GetSupernumeraryList`, request);
+    getEmployeeList(request: GetEmployeeListRequest): Observable<EmployeeList[]> {
+        return this.http.post<EmployeeList[]>(`${this.apiUrl}/GetEmployeeList`, request);
     }
 
     allocateRabId(request: AllocateRabIdRequest): Observable<AllocateRabIdResultItem[]> {

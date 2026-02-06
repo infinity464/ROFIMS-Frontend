@@ -8,9 +8,9 @@ import { SelectModule } from 'primeng/select';
 import { Toast } from 'primeng/toast';
 import { ConfirmDialog } from 'primeng/confirmdialog';
 import { ConfirmationService, MessageService } from 'primeng/api';
-import { SupernumeraryListService } from '@/services/supernumerary-list.service';
+import { EmployeeListService } from '@/services/employee-list.service';
 import { CommonCodeService } from '@/services/common-code-service';
-import { SupernumeraryList, GetSupernumeraryListRequest } from '@/models/supernumerary-list.model';
+import { EmployeeList, GetEmployeeListRequest } from '@/models/employee-list.model';
 import { MotherOrganizationModel } from '@/models/mother-org-model';
 import { CommonCodeModel } from '@/models/common-code-model';
 
@@ -23,7 +23,7 @@ import { CommonCodeModel } from '@/models/common-code-model';
     styleUrl: './rab-id-allocation.scss'
 })
 export class RabIdAllocation implements OnInit {
-    list: SupernumeraryList[] = [];
+    list: EmployeeList[] = [];
     loading = false;
     generatingId = false;
 
@@ -33,7 +33,7 @@ export class RabIdAllocation implements OnInit {
     selectedMemberTypeId: number | null = null;
 
     constructor(
-        private supernumeraryListService: SupernumeraryListService,
+        private employeeListService: EmployeeListService,
         private commonCodeService: CommonCodeService,
         private messageService: MessageService,
         private confirmationService: ConfirmationService
@@ -97,13 +97,13 @@ export class RabIdAllocation implements OnInit {
             return;
         }
 
-        const request: GetSupernumeraryListRequest = {
+        const request: GetEmployeeListRequest = {
             orgIds: this.selectedOrgIds,
             memberTypeId: this.selectedMemberTypeId
         };
 
         this.loading = true;
-        this.supernumeraryListService.getSupernumeraryList(request).subscribe({
+        this.employeeListService.getEmployeeList(request).subscribe({
             next: (data) => {
                 this.list = data ?? [];
                 this.loading = false;
@@ -116,11 +116,11 @@ export class RabIdAllocation implements OnInit {
                 }
             },
             error: (err) => {
-                console.error('Failed to load supernumerary list', err);
+                console.error('Failed to load employee list', err);
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: err?.error?.message || 'Failed to load supernumerary list'
+                    detail: err?.error?.message || 'Failed to load employee list'
                 });
                 this.loading = false;
             }
@@ -177,7 +177,7 @@ export class RabIdAllocation implements OnInit {
 
     private doGenerateId(employeeIds: number[]): void {
         this.generatingId = true;
-        this.supernumeraryListService.allocateRabId({ employeeIds }).subscribe({
+        this.employeeListService.allocateRabId({ employeeIds }).subscribe({
             next: (results) => {
                 this.generatingId = false;
                 this.loadList(true);
