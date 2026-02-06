@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { TableModule } from 'primeng/table';
+import { TableModule, TableLazyLoadEvent } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { SelectModule } from 'primeng/select';
@@ -9,7 +9,7 @@ import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { EmployeeListService } from '@/services/employee-list.service';
 import { CommonCodeService } from '@/services/common-code-service';
-import { EmployeeList, GetEmployeeListRequest } from '@/models/employee-list.model';
+import { EmployeeList } from '@/models/employee-list.model';
 import { MotherOrganizationModel } from '@/models/mother-org-model';
 import { CommonCodeModel } from '@/models/common-code-model';
 
@@ -24,11 +24,16 @@ import { CommonCodeModel } from '@/models/common-code-model';
 export class SupernumeraryList implements OnInit {
     list: EmployeeList[] = [];
     loading = false;
+    totalRecords = 0;
+    first = 0;
+    rows = 20;
 
     orgOptions: MotherOrganizationModel[] = [];
     selectedOrgIds: number[] = [];
     memberTypeOptions: { label: string; value: number }[] = [];
     selectedMemberTypeId: number | null = null;
+    /** True after user has clicked Load List with valid filters; required for lazy load. */
+    filtersApplied = false;
 
     constructor(
         private employeeListService: EmployeeListService,
@@ -76,6 +81,15 @@ export class SupernumeraryList implements OnInit {
         });
     }
 
+    onLazyLoad(event: TableLazyLoadEvent): void {
+        if (!this.filtersApplied) return;
+        const pageNo = event.first != null && event.rows != null ? Math.floor(event.first / event.rows) + 1 : 1;
+        const rowPerPage = event.rows ?? this.rows;
+        this.loadPage(pageNo, rowPerPage);
+        this.first = event.first ?? 0;
+        this.rows = rowPerPage;
+    }
+
     loadList(): void {
         if (!this.selectedOrgIds?.length) {
             this.messageService.add({
@@ -93,33 +107,41 @@ export class SupernumeraryList implements OnInit {
             });
             return;
         }
-
-        const request: GetEmployeeListRequest = {
-            orgIds: this.selectedOrgIds,
-            memberTypeId: this.selectedMemberTypeId
-        };
-
-        this.loading = true;
-        this.employeeListService.getSupernumeraryList(request).subscribe({
-            next: (data) => {
-                this.list = data ?? [];
-                this.loading = false;
-                this.messageService.add({
-                    severity: 'success',
-                    summary: 'Loaded',
-                    detail: `${this.list.length} record(s) loaded.`
-                });
-            },
-            error: (err) => {
-                console.error('Failed to load supernumerary list', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: err?.error?.message || 'Failed to load supernumerary list'
-                });
-                this.loading = false;
-            }
+        this.filtersApplied = true;
+        this.first = 0;
+        this.loadPage(1, this.rows);
+        this.messageService.add({
+            severity: 'success',
+            summary: 'Loaded',
+            detail: 'List loaded. Use pagination to browse.'
         });
+    }
+
+    loadPage(pageNo: number, rowPerPage: number): void {
+        if (!this.selectedOrgIds?.length || this.selectedMemberTypeId == null) return;
+        this.loading = true;
+        this.employeeListService
+            .getSupernumeraryListPaginated({
+                orgIds: this.selectedOrgIds,
+                memberTypeId: this.selectedMemberTypeId,
+                pagination: { page_no: pageNo, row_per_page: rowPerPage }
+            })
+            .subscribe({
+                next: (res) => {
+                    this.list = res.datalist ?? [];
+                    this.totalRecords = res.pages?.rows ?? 0;
+                    this.loading = false;
+                },
+                error: (err) => {
+                    console.error('Failed to load supernumerary list', err);
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'Error',
+                        detail: err?.error?.message || 'Failed to load supernumerary list'
+                    });
+                    this.loading = false;
+                }
+            });
     }
 
     formatDate(value: string | null): string {

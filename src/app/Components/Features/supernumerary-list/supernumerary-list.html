@@ -20,8 +20,8 @@
         </div>
     </div>
 
-    <!-- Table -->
-    <p-table [value]="list" [loading]="loading" dataKey="employeeID" [tableStyle]="{ 'min-width': '60rem' }" styleClass="p-datatable-striped p-datatable-gridlines">
+    <!-- Table (server-side pagination) -->
+    <p-table [value]="list" [loading]="loading" dataKey="employeeID" [lazy]="true" [first]="first" [rows]="rows" [totalRecords]="totalRecords" (onLazyLoad)="onLazyLoad($event)" [paginator]="true" [rowsPerPageOptions]="[10, 20, 50]" [tableStyle]="{ 'min-width': '60rem' }" styleClass="p-datatable-striped p-datatable-gridlines" currentPageReportTemplate="Showing {first} to {last} of {totalRecords} entries">
         <ng-template pTemplate="header">
             <tr>
                 <th style="width: 60px">Sl No</th>
@@ -37,7 +37,7 @@
         </ng-template>
         <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
             <tr>
-                <td>{{ rowIndex + 1 }}</td>
+                <td>{{ first + rowIndex + 1 }}</td>
                 <td><span class="font-semibold">{{ row.rabID || '-' }}</span></td>
                 <td><span class="font-semibold">{{ row.prefixName ? row.prefixName + " - " : "" }}{{ row.serviceId || '-' }}</span></td>
                 <td>{{ row.rankName || '-' }}</td>
