@@ -5,10 +5,11 @@ import { environment } from '@/Core/Environments/environment';
 import { GetEmployeeListRequest, EmployeeList, AllocateRabIdRequest, AllocateRabIdResultItem } from '@/models/employee-list.model';
 import { PagedResponse } from '@/Core/Models/Pagination';
 
-/** Request body for GetSupernumeraryListPaginated API. */
+/** Request body for GetSupernumeraryListPaginated API. All filters optional. */
 export interface GetSupernumeraryListPaginatedRequest {
-    orgIds: number[];
-    memberTypeId: number;
+    orgIds?: number[] | null;
+    memberTypeId?: number | null;
+    rankId?: number | null;
     pagination: { page_no: number; row_per_page: number };
 }
 

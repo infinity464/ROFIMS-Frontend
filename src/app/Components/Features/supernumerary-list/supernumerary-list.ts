@@ -16,7 +16,7 @@ import { CommonCodeModel } from '@/models/common-code-model';
 @Component({
     selector: 'app-supernumerary-list',
     standalone: true,
-    imports: [CommonModule, FormsModule, TableModule, ButtonModule, MultiSelectModule, SelectModule, Toast],
+    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, Toast],
     providers: [MessageService],
     templateUrl: './supernumerary-list.html',
     styleUrl: './supernumerary-list.scss'
@@ -29,7 +29,7 @@ export class SupernumeraryList implements OnInit {
     rows = 20;
 
     orgOptions: MotherOrganizationModel[] = [];
-    selectedOrgIds: number[] = [];
+    selectedOrgId: number | null = null;
     memberTypeOptions: { label: string; value: number }[] = [];
     selectedMemberTypeId: number | null = null;
     /** True after user has clicked Load List with valid filters; required for lazy load. */
@@ -44,6 +44,8 @@ export class SupernumeraryList implements OnInit {
     ngOnInit(): void {
         this.loadOrgOptions();
         this.loadMemberTypeOptions();
+        this.filtersApplied = true;
+        this.loadPage(1, this.rows);
     }
 
     loadOrgOptions(): void {
@@ -62,8 +64,9 @@ export class SupernumeraryList implements OnInit {
         });
     }
 
+    /** Member Type from Employee Type Setup – load once on init (not dependent on org). */
     loadMemberTypeOptions(): void {
-        this.commonCodeService.getAllActiveCommonCodesType('OfficerType').subscribe({
+        this.commonCodeService.getAllActiveCommonCodesType('EmployeeType').subscribe({
             next: (codes: CommonCodeModel[]) => {
                 this.memberTypeOptions = codes.map((c) => ({
                     label: c.codeValueEN || String(c.codeId),
@@ -81,6 +84,47 @@ export class SupernumeraryList implements OnInit {
         });
     }
 
+    /** Only Rank depends on Mother Org: when org selected, load Rank options for that org. */
+    onOrgChange(): void {
+        this.rankOptions = [];
+        this.selectedRankId = null;
+        const orgId = this.selectedOrgId;
+        if (orgId != null) {
+            this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'MotherOrgRank').subscribe({
+                next: (codes: CommonCodeModel[]) => {
+                    this.rankOptions = codes.map((c) => ({
+                        label: c.codeValueEN || String(c.codeId),
+                        value: c.codeId
+                    }));
+                },
+                error: (err) => {
+                    console.error('Failed to load ranks', err);
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'Error',
+                        detail: 'Failed to load ranks'
+                    });
+                }
+            });
+        }
+        this.first = 0;
+        this.loadPage(1, this.rows);
+    }
+
+    /** Member Type change: reload list only. */
+    onMemberTypeChange(): void {
+        this.first = 0;
+        this.loadPage(1, this.rows);
+    }
+
+    rankOptions: { label: string; value: number }[] = [];
+    selectedRankId: number | null = null;
+
+    onFilterChange(): void {
+        this.first = 0;
+        this.loadPage(1, this.rows);
+    }
+
     onLazyLoad(event: TableLazyLoadEvent): void {
         if (!this.filtersApplied) return;
         const pageNo = event.first != null && event.rows != null ? Math.floor(event.first / event.rows) + 1 : 1;
@@ -90,40 +134,13 @@ export class SupernumeraryList implements OnInit {
         this.rows = rowPerPage;
     }
 
-    loadList(): void {
-        if (!this.selectedOrgIds?.length) {
-            this.messageService.add({
-                severity: 'warn',
-                summary: 'Validation',
-                detail: 'Please select at least one organization.'
-            });
-            return;
-        }
-        if (this.selectedMemberTypeId == null) {
-            this.messageService.add({
-                severity: 'warn',
-                summary: 'Validation',
-                detail: 'Please select member type.'
-            });
-            return;
-        }
-        this.filtersApplied = true;
-        this.first = 0;
-        this.loadPage(1, this.rows);
-        this.messageService.add({
-            severity: 'success',
-            summary: 'Loaded',
-            detail: 'List loaded. Use pagination to browse.'
-        });
-    }
-
     loadPage(pageNo: number, rowPerPage: number): void {
-        if (!this.selectedOrgIds?.length || this.selectedMemberTypeId == null) return;
         this.loading = true;
         this.employeeListService
             .getSupernumeraryListPaginated({
-                orgIds: this.selectedOrgIds,
-                memberTypeId: this.selectedMemberTypeId,
+                orgIds: this.selectedOrgId != null ? [this.selectedOrgId] : undefined,
+                memberTypeId: this.selectedMemberTypeId ?? undefined,
+                rankId: this.selectedRankId ?? undefined,
                 pagination: { page_no: pageNo, row_per_page: rowPerPage }
             })
             .subscribe({
