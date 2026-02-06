@@ -60,8 +60,9 @@ export class RabIdAllocation implements OnInit {
         });
     }
 
+    /** Member Type from Employee Type Setup (same as Supernumerary List). */
     loadMemberTypeOptions(): void {
-        this.commonCodeService.getAllActiveCommonCodesType('OfficerType').subscribe({
+        this.commonCodeService.getAllActiveCommonCodesType('EmployeeType').subscribe({
             next: (codes: CommonCodeModel[]) => {
                 this.memberTypeOptions = codes.map((c) => ({
                     label: c.codeValueEN || String(c.codeId),

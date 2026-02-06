@@ -1,0 +1,15 @@
+// Same card + dropdown style as Supernumerary list
+.filter-field {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+@media (min-width: 992px) {
+  .filter-row-dropdowns {
+    flex-wrap: nowrap;
+  }
+  .filter-row-dropdowns .filter-field {
+    flex: 1 0 0;
+    min-width: 0;
+  }
+}
