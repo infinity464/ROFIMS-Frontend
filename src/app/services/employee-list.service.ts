@@ -16,6 +16,10 @@ export class EmployeeListService {
         return this.http.post<EmployeeList[]>(`${this.apiUrl}/GetEmployeeList`, request);
     }
 
+    getSupernumeraryList(request: GetEmployeeListRequest): Observable<EmployeeList[]> {
+        return this.http.post<EmployeeList[]>(`${this.apiUrl}/GetSupernumeraryList`, request);
+    }
+
     allocateRabId(request: AllocateRabIdRequest): Observable<AllocateRabIdResultItem[]> {
         return this.http.post<AllocateRabIdResultItem[]>(`${this.apiUrl}/AllocateRabId`, request);
     }

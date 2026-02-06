@@ -22,6 +22,7 @@ export interface EmployeeList {
     tradeName: string | null;
     motherUnitName: string | null;
     sortOrder: number | null;
+    rabID?: string | null;
 }
 
 /** Request for AllocateRabId API. */
