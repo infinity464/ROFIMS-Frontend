@@ -48,78 +48,80 @@
                     <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
                 </div>
             } @else {
-                <div class="surface-50 border-round-2xl p-4 mb-4">
-                    <div class="flex justify-content-between align-items-center mb-3">
-                        <h4 class="m-0 text-lg font-semibold text-900">Remarks List</h4>
+                <div class="surface-card border-round p-4 mb-4">
+                    <div class="flex justify-content-between align-items-center gap-3 mb-3 flex-wrap">
+                        <h4 class="m-0 text-lg font-semibold text-900 white-space-nowrap">Remarks List</h4>
                         <p-button
-                            label="+ Add New Remark"
+                            label="Add New Remark"
                             icon="pi pi-plus"
                             (onClick)="openAddDialog()"
                             [disabled]="isReadonly">
                         </p-button>
                     </div>
 
-                    <div class="surface-card border-round-lg overflow-hidden">
-                        <p-table
-                            [value]="remarksList"
-                            styleClass="p-datatable-sm"
-                            responsiveLayout="scroll"
-                            [tableStyle]="{'min-width': '50rem'}">
-                            <ng-template pTemplate="header">
-                                <tr>
-                                    <th style="width: 60px; background: var(--surface-100)">Ser</th>
-                                    <th style="background: var(--surface-100)">Remarks</th>
-                                    <th style="width: 150px; background: var(--surface-100)">Created Date</th>
-                                    <th style="width: 120px; background: var(--surface-100)">Actions</th>
-                                </tr>
-                            </ng-template>
+                    <p-table
+                        [value]="remarksList"
+                        [loading]="isLoading"
+                        [tableStyle]="{'min-width': '60rem'}"
+                        styleClass="p-datatable-sm">
+                        <ng-template pTemplate="header">
+                            <tr>
+                                <th style="width: 60px;">Ser</th>
+                                <th>Remarks</th>
+                                <th style="width: 160px;">Created Date</th>
+                                <th style="width: 130px;">Actions</th>
+                            </tr>
+                        </ng-template>
 
-                            <ng-template pTemplate="body" let-row let-i="rowIndex">
-                                <tr>
-                                    <td>{{ i + 1 }}</td>
-                                    <td>
-                                        <div style="max-width: 500px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                                            {{ row.additionalRemarks || row.AdditionalRemarks || 'N/A' }}
-                                        </div>
-                                    </td>
-                                    <td>
-                                        {{ row.createdDate || row.CreatedDate ? (row.createdDate || row.CreatedDate | date:'short') : 'N/A' }}
-                                    </td>
-                                    <td>
-                                        <div class="flex gap-2">
-                                            <p-button
-                                                icon="pi pi-pencil"
-                                                [rounded]="true"
-                                                [text]="true"
-                                                severity="info"
-                                                pTooltip="Edit"
-                                                (onClick)="openEditDialog(row)"
-                                                [disabled]="isReadonly">
-                                            </p-button>
-                                            <p-button
-                                                icon="pi pi-trash"
-                                                [rounded]="true"
-                                                [text]="true"
-                                                severity="danger"
-                                                pTooltip="Delete"
-                                                (onClick)="deleteRemark(row)"
-                                                [disabled]="isReadonly">
-                                            </p-button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </ng-template>
+                        <ng-template pTemplate="body" let-row let-i="rowIndex">
+                            <tr>
+                                <td>{{ i + 1 }}</td>
+                                <td [title]="row.additionalRemarks || row.AdditionalRemarks || 'N/A'">
+                                    <span class="text-700">{{ row.additionalRemarks || row.AdditionalRemarks || 'N/A' }}</span>
+                                </td>
+                                <td>
+                                    <span class="text-600 text-sm">
+                                        {{ row.createdDate || row.CreatedDate ? (row.createdDate || row.CreatedDate | date:'MMM d, y h:mm a') : 'N/A' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="flex gap-2">
+                                        <p-button
+                                            icon="pi pi-pencil"
+                                            [rounded]="true"
+                                            [text]="true"
+                                            severity="info"
+                                            pTooltip="Edit"
+                                            pTooltipPosition="top"
+                                            (onClick)="openEditDialog(row)"
+                                            [disabled]="isReadonly">
+                                        </p-button>
+                                        <p-button
+                                            icon="pi pi-trash"
+                                            [rounded]="true"
+                                            [text]="true"
+                                            severity="danger"
+                                            pTooltip="Delete"
+                                            pTooltipPosition="top"
+                                            (onClick)="confirmDeleteRemark(row)"
+                                            [disabled]="isReadonly">
+                                        </p-button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </ng-template>
 
-                            <ng-template pTemplate="emptymessage">
-                                <tr>
-                                    <td colspan="4" class="text-center p-4 text-600">
-                                        <i class="pi pi-info-circle mr-2"></i>
+                        <ng-template pTemplate="emptymessage">
+                            <tr>
+                                <td colspan="4" class="text-center py-4">
+                                    <p class="text-500 m-0">
+                                        <i class="pi pi-inbox mr-2"></i>
                                         No remarks found. Click "Add New Remark" to add one.
-                                    </td>
-                                </tr>
-                            </ng-template>
-                        </p-table>
-                    </div>
+                                    </p>
+                                </td>
+                            </tr>
+                        </ng-template>
+                    </p-table>
                 </div>
 
                 <div class="flex justify-end mt-4 gap-2">
@@ -142,48 +144,44 @@
         }
     </div>
 
-    <!-- Add/Edit Dialog -->
+    <!-- Add/Edit Remark Dialog -->
     <p-dialog
         [(visible)]="displayDialog"
         [header]="isEditMode ? 'Edit Remark' : 'Add New Remark'"
         [modal]="true"
-        [style]="{width: '600px'}"
-        [draggable]="false"
-        [resizable]="false">
-        <form [formGroup]="remarksForm" class="flex flex-column gap-3">
-            <div class="field">
-                <label class="font-semibold block mb-2 text-700">Additional Remarks <span class="text-red-500">*</span></label>
-                <textarea
-                    pTextarea
-                    formControlName="additionalRemarks"
-                    [rows]="6"
-                    placeholder="Enter additional remarks about the employee..."
-                    class="w-full"
-                    style="resize: vertical; min-height: 120px;">
-                </textarea>
-                @if (remarksForm.get('additionalRemarks')?.invalid && remarksForm.get('additionalRemarks')?.touched) {
-                    <small class="p-error">Remarks is required</small>
-                }
-            </div>
+        [style]="{width: '500px'}"
+        [closable]="true">
+        <form [formGroup]="remarksForm">
+            <label class="font-semibold block mb-2 text-700">Additional Remarks <span class="text-red-500">*</span></label>
+            <textarea
+                pTextarea
+                formControlName="additionalRemarks"
+                [rows]="5"
+                placeholder="Enter additional remarks..."
+                class="w-full"
+                [class.ng-invalid]="remarksForm.get('additionalRemarks')?.invalid && remarksForm.get('additionalRemarks')?.touched"
+                style="resize: none;">
+            </textarea>
+            @if (remarksForm.get('additionalRemarks')?.invalid && remarksForm.get('additionalRemarks')?.touched) {
+                <small class="text-red-500 block mt-2">Remarks is required</small>
+            }
         </form>
         <ng-template pTemplate="footer">
-            <div class="flex justify-end gap-2">
-                <p-button
-                    label="Cancel"
-                    icon="pi pi-times"
-                    severity="secondary"
-                    [outlined]="true"
-                    (onClick)="closeDialog()"
-                    [disabled]="isSaving">
-                </p-button>
-                <p-button
-                    [label]="isEditMode ? 'Update' : 'Save'"
-                    icon="pi pi-check"
-                    (onClick)="saveRemark()"
-                    [disabled]="isSaving || remarksForm.invalid"
-                    [loading]="isSaving">
-                </p-button>
-            </div>
+            <p-button
+                label="Cancel"
+                icon="pi pi-times"
+                severity="secondary"
+                [outlined]="true"
+                (onClick)="closeDialog()"
+                [disabled]="isSaving">
+            </p-button>
+            <p-button
+                [label]="isEditMode ? 'Update' : 'Save'"
+                icon="pi pi-check"
+                (onClick)="saveRemark()"
+                [disabled]="isSaving || remarksForm.invalid"
+                [loading]="isSaving">
+            </p-button>
         </ng-template>
     </p-dialog>
 

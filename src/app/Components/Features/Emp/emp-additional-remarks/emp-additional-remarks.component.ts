@@ -262,6 +262,15 @@ export class EmpAdditionalRemarks implements OnInit {
         });
     }
 
+    confirmDeleteRemark(remark: AdditionalRemarksItem): void {
+        this.confirmationService.confirm({
+            message: 'Delete this remark?',
+            header: 'Confirm Delete',
+            icon: 'pi pi-exclamation-triangle',
+            accept: () => this.deleteRemark(remark)
+        });
+    }
+
     deleteRemark(remark: AdditionalRemarksItem): void {
         const remarkId = remark.additionalRemarksId || remark.AdditionalRemarksId;
         if (!remarkId) {
@@ -273,35 +282,28 @@ export class EmpAdditionalRemarks implements OnInit {
             return;
         }
 
-        this.confirmationService.confirm({
-            message: 'Are you sure you want to delete this remark?',
-            header: 'Confirm Delete',
-            icon: 'pi pi-exclamation-triangle',
-            accept: () => {
-                this.empService.deleteAdditionalRemarks(remarkId).subscribe({
-                    next: (response) => {
-                        if (response.statusCode === 200) {
-                            this.messageService.add({
-                                severity: 'success',
-                                summary: 'Success',
-                                detail: 'Remarks deleted successfully'
-                            });
-                            this.loadRemarksList();
-                        } else {
-                            this.messageService.add({
-                                severity: 'error',
-                                summary: 'Error',
-                                detail: response.message || 'Failed to delete remarks'
-                            });
-                        }
-                    },
-                    error: (error) => {
-                        this.messageService.add({
-                            severity: 'error',
-                            summary: 'Error',
-                            detail: error?.error?.message || 'Failed to delete remarks'
-                        });
-                    }
+        this.empService.deleteAdditionalRemarks(remarkId).subscribe({
+            next: (response) => {
+                if (response.statusCode === 200) {
+                    this.messageService.add({
+                        severity: 'success',
+                        summary: 'Success',
+                        detail: 'Remarks deleted successfully'
+                    });
+                    this.loadRemarksList();
+                } else {
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'Error',
+                        detail: response.message || 'Failed to delete remarks'
+                    });
+                }
+            },
+            error: (error) => {
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: error?.error?.message || 'Failed to delete remarks'
                 });
             }
         });
