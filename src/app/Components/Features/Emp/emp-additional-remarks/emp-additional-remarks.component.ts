@@ -17,6 +17,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 
 import { EmpService } from '@/services/emp-service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
+import { EmployeeSearchInfoModel } from '@/models/EmpModel';
 
 interface AdditionalRemarksItem {
     additionalRemarksId?: number;
@@ -60,6 +61,7 @@ export class EmpAdditionalRemarks implements OnInit {
     employeeFound = false;
     selectedEmployeeId: number | null = null;
     employeeBasicInfo: any = null;
+    employeeSearchInfo: EmployeeSearchInfoModel | null = null;
     mode: 'search' | 'view' | 'edit' = 'search';
     isReadonly = false;
     isSaving = false;
@@ -108,6 +110,9 @@ export class EmpAdditionalRemarks implements OnInit {
             employee: this.empService.getEmployeeById(employeeId).pipe(
                 catchError(() => of(null))
             ),
+            searchInfo: this.empService.getEmployeeSearchInfo(employeeId).pipe(
+                catchError(() => of(null))
+            ),
             remarks: this.empService.getAdditionalRemarksByEmployeeId(employeeId).pipe(
                 catchError(() => of([]))
             )
@@ -118,6 +123,7 @@ export class EmpAdditionalRemarks implements OnInit {
                     this.employeeFound = true;
                     this.selectedEmployeeId = data.employee.EmployeeID;
                     this.employeeBasicInfo = data.employee;
+                    this.employeeSearchInfo = data.searchInfo;
                     this.remarksList = Array.isArray(data.remarks) ? data.remarks : [];
                 }
             },
@@ -138,7 +144,21 @@ export class EmpAdditionalRemarks implements OnInit {
         this.employeeBasicInfo = employee;
         this.mode = 'edit';
         this.isReadonly = false;
+        this.loadEmployeeSearchInfo();
         this.loadRemarksList();
+    }
+
+    loadEmployeeSearchInfo(): void {
+        if (!this.selectedEmployeeId) return;
+
+        this.empService.getEmployeeSearchInfo(this.selectedEmployeeId).subscribe({
+            next: (data) => {
+                this.employeeSearchInfo = data;
+            },
+            error: (error) => {
+                console.error('Error loading employee search info:', error);
+            }
+        });
     }
 
     onEmployeeSearchReset(): void {
@@ -318,6 +338,7 @@ export class EmpAdditionalRemarks implements OnInit {
         this.employeeFound = false;
         this.selectedEmployeeId = null;
         this.employeeBasicInfo = null;
+        this.employeeSearchInfo = null;
         this.mode = 'search';
         this.isReadonly = false;
         this.remarksList = [];

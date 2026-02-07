@@ -1,22 +1,12 @@
 <p-fluid>
     <div class="mb-5 card">
         <div class="flex align-items-center gap-3 mb-4">
-            @if (mode !== 'search') {
-                <p-button
-                    icon="pi pi-arrow-left"
-                    [rounded]="true"
-                    [text]="true"
-                    severity="secondary"
-                    pTooltip="Back to List"
-                    (onClick)="goBack()">
-                </p-button>
-            }
             <h3 class="m-0 text-xl font-bold text-900" style="display: inline-flex; align-items: center; gap: 0.5rem;">
                 Additional Remarks
             </h3>
         </div>
 
-        @if (mode === 'search') {
+         @if (mode === 'search') {
             <app-employee-search
                 (onEmployeeFound)="onEmployeeSearchFound($event)"
                 (onSearchReset)="onEmployeeSearchReset()">
@@ -25,18 +15,38 @@
 
         @if (mode !== 'search' && employeeBasicInfo) {
             <div class="surface-50 border-round-2xl p-4 mb-4">
-                <div class="flex flex-wrap gap-4">
+                <div class="grid grid-cols-4 gap-6">
                     <div>
-                        <span class="text-500 text-sm">Name:</span>
-                        <span class="ml-2 font-semibold">{{ employeeBasicInfo.fullNameEN || employeeBasicInfo.FullNameEN || 'N/A' }}</span>
+                        <p class="text-500 text-sm m-0 mb-2">NAME</p>
+                        <p class="text-900 font-semibold m-0">{{ employeeSearchInfo?.fullNameEN || employeeSearchInfo?.FullNameEN || employeeBasicInfo.fullNameEN || employeeBasicInfo.FullNameEN || 'N/A' }}</p>
                     </div>
                     <div>
-                        <span class="text-500 text-sm">RAB ID:</span>
-                        <span class="ml-2 font-semibold">{{ employeeBasicInfo.rabid || employeeBasicInfo.Rabid || 'N/A' }}</span>
+                        <p class="text-500 text-sm m-0 mb-2">RAB ID</p>
+                        <p class="text-900 font-semibold m-0">{{ employeeSearchInfo?.rabID || employeeSearchInfo?.RABID || employeeBasicInfo.rabid || employeeBasicInfo.Rabid || 'N/A' }}</p>
                     </div>
                     <div>
-                        <span class="text-500 text-sm">Service ID:</span>
-                        <span class="ml-2 font-semibold">{{ employeeBasicInfo.serviceId || employeeBasicInfo.ServiceId || 'N/A' }}</span>
+                        <p class="text-500 text-sm m-0 mb-2">SERVICE ID</p>
+                        <p class="text-900 font-semibold m-0">{{ employeeSearchInfo?.serviceId || employeeSearchInfo?.ServiceId || employeeBasicInfo.serviceId || employeeBasicInfo.ServiceId || 'N/A' }}</p>
+                    </div>
+                    <div>
+                        <p class="text-500 text-sm m-0 mb-2">RANK</p>
+                        <p class="text-900 font-semibold m-0">{{ employeeSearchInfo?.rank || employeeSearchInfo?.Rank || 'N/A' }}</p>
+                    </div>
+                    <div>
+                        <p class="text-500 text-sm m-0 mb-2">CORPS</p>
+                        <p class="text-900 font-semibold m-0">{{ employeeSearchInfo?.corps || employeeSearchInfo?.Corps || 'N/A' }}</p>
+                    </div>
+                    <div>
+                        <p class="text-500 text-sm m-0 mb-2">TRADE</p>
+                        <p class="text-900 font-semibold m-0">{{ employeeSearchInfo?.trade || employeeSearchInfo?.Trade || 'N/A' }}</p>
+                    </div>
+                    <div>
+                        <p class="text-500 text-sm m-0 mb-2">MOTHER ORG</p>
+                        <p class="text-900 font-semibold m-0">{{ employeeSearchInfo?.motherOrganization || employeeSearchInfo?.MotherOrganization || 'N/A' }}</p>
+                    </div>
+                    <div>
+                        <p class="text-500 text-sm m-0 mb-2">MEMBER TYPE</p>
+                        <p class="text-900 font-semibold m-0">{{ employeeSearchInfo?.memberType || employeeSearchInfo?.MemberType || 'N/A' }}</p>
                     </div>
                 </div>
             </div>
@@ -131,13 +141,6 @@
                         severity="secondary"
                         [outlined]="true"
                         (onClick)="resetForm()">
-                    </p-button>
-                    <p-button
-                        label="Back to List"
-                        icon="pi pi-arrow-left"
-                        severity="secondary"
-                        [outlined]="true"
-                        (onClick)="goBack()">
                     </p-button>
                 </div>
             }
