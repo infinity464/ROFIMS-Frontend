@@ -5,6 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
+import { CheckboxModule } from 'primeng/checkbox';
 import { Fluid } from 'primeng/fluid';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { TooltipModule } from 'primeng/tooltip';
@@ -40,6 +41,7 @@ interface DropdownOption {
         ReactiveFormsModule,
         InputTextModule,
         ButtonModule,
+        CheckboxModule,
         Fluid,
         TooltipModule,
         TableModule,
@@ -82,6 +84,11 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
     uploadFileName = '';
     /** Pending family FMIDs to add when saving a new visit (Add mode). */
     pendingFamilyIds: number[] = [];
+    /** Pending family remarks mapping: familyId -> remarks */
+    pendingFamilyRemarks: Map<number, string> = new Map();
+    /** Family remarks mapping for edit mode: familyId -> remarks */
+    familyRemarksMap: Map<number, string> = new Map();
+    displayFamilyModal = false;
     private destroy$ = new Subject<void>();
 
     withFamilyYesNo = [{ label: 'Yes', value: true }, { label: 'No', value: false }];
@@ -135,7 +142,7 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
     loadDropdowns(): void {
         const types = [
             { key: CodeType.SubjectType, target: 'subjectOptions' },
-            { key: CodeType.PurposeOfVisitType, target: 'purposeOfVisitOptions' },
+            { key: CodeType.VisitType, target: 'purposeOfVisitOptions' },
             { key: CodeType.Country, target: 'destinationCountryOptions' }
         ];
         types.forEach(({ key, target }) => {
@@ -302,6 +309,15 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
             .subscribe({
                 next: (data) => {
                     this.familyListForVisit = data || [];
+                    // Populate remarks map with existing remarks for edit mode
+                    if (this.isEditMode) {
+                        this.familyRemarksMap.clear();
+                        this.familyListForVisit.forEach((f) => {
+                            if (f.remarks) {
+                                this.familyRemarksMap.set(f.familyId, f.remarks);
+                            }
+                        });
+                    }
                 }
             });
     }
@@ -343,9 +359,12 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
         console.log('📂 openAddDialog called, isReadonly:', this.isReadonly);
         this.loadFamilyMasterList();
         this.isEditMode = false;
+        this.isReadonly = false; // Allow editing in add mode
         this.editingVisitId = null;
         this.familyListForVisit = [];
         this.pendingFamilyIds = [];
+        this.pendingFamilyRemarks.clear();
+        this.familyRemarksMap.clear();
         this.selectedFamilyIdsForAdd = [];
         this.visitForm.reset({
             subjectId: null,
@@ -366,8 +385,11 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
     openEditDialog(row: ForeignVisitInfoModel): void {
         this.loadFamilyMasterList();
         this.isEditMode = true;
+        this.isReadonly = false; // Allow editing in edit mode
         this.editingVisitId = row.foreignVisitId;
         this.selectedFamilyIdsForAdd = [];
+        this.pendingFamilyRemarks.clear();
+        this.familyRemarksMap.clear();
         this.loadFamilyForVisit(row.foreignVisitId);
         const from = row.fromDate ? new Date(row.fromDate) : null;
         const to = row.toDate ? new Date(row.toDate) : null;
@@ -452,7 +474,9 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
 
     private addPendingFamilyMembers(foreignVisitId: number): void {
         const ids = [...this.pendingFamilyIds];
+        const remarksMap = new Map(this.pendingFamilyRemarks);
         this.pendingFamilyIds = [];
+        this.pendingFamilyRemarks.clear();
         let completed = 0;
         const total = ids.length;
         const done = () => {
@@ -473,11 +497,13 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
             return;
         }
         ids.forEach((familyId) => {
+            const remarks = remarksMap.get(familyId) || '';
             this.foreignVisitService
                 .saveFamilyMember({
                     employeeId: this.selectedEmployeeId!,
                     foreignVisitId,
                     familyId,
+                    remarks: remarks || null,
                     createdBy: 'system',
                     lastUpdatedBy: 'system'
                 })
@@ -501,20 +527,63 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
     }
 
     deleteVisit(row: ForeignVisitInfoModel): void {
+        // First, delete all related family members
+        this.foreignVisitService.getFamilyByEmployeeAndVisit(row.employeeId, row.foreignVisitId).subscribe({
+            next: (familyMembers) => {
+                let completed = 0;
+                const total = familyMembers.length;
+
+                if (total === 0) {
+                    // No family members, proceed directly to delete visit
+                    this.deleteVisitRecord(row);
+                    return;
+                }
+
+                // Delete each family member
+                familyMembers.forEach((family) => {
+                    this.foreignVisitService.deleteFamilyMember(family.employeeId, family.foreignVisitFamilyId).subscribe({
+                        next: () => {
+                            completed++;
+                            if (completed >= total) {
+                                // All family members deleted, now delete the visit
+                                this.deleteVisitRecord(row);
+                            }
+                        },
+                        error: () => {
+                            this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete family member' });
+                        }
+                    });
+                });
+            },
+            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to retrieve family members' })
+        });
+    }
+
+    private deleteVisitRecord(row: ForeignVisitInfoModel): void {
         this.foreignVisitService.deleteVisit(row.employeeId, row.foreignVisitId).subscribe({
             next: () => {
                 this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Foreign visit deleted.' });
                 this.loadVisitList();
             },
-            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete' })
+            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete visit' })
         });
     }
 
-    addFamilyMember(): void {
-        if (!this.selectedEmployeeId || !this.selectedFamilyIdsForAdd?.length) {
-            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Select family member(s) to add' });
+    openFamilyModal(): void {
+        this.displayFamilyModal = true;
+    }
+
+    closeFamilyModal(): void {
+        this.displayFamilyModal = false;
+        this.selectedFamilyIdsForAdd = [];
+    }
+
+    confirmFamilySelection(): void {
+        if (!this.selectedFamilyIdsForAdd?.length) {
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Select at least one family member' });
             return;
         }
+
         const idsToAdd = this.selectedFamilyIdsForAdd.filter((id) => id != null);
 
         if (this.isEditMode && this.editingVisitId != null) {
@@ -522,16 +591,18 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
             const newIds = idsToAdd.filter((id) => !alreadySet.has(id));
             if (newIds.length === 0) {
                 this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Selected family member(s) already added' });
-                this.selectedFamilyIdsForAdd = [];
+                this.closeFamilyModal();
                 return;
             }
             let completed = 0;
             newIds.forEach((fid) => {
+                const remarks = this.familyRemarksMap.get(fid) || '';
                 this.foreignVisitService
                     .saveFamilyMember({
                         employeeId: this.selectedEmployeeId!,
                         foreignVisitId: this.editingVisitId!,
                         familyId: fid,
+                        remarks: remarks || null,
                         createdBy: 'system',
                         lastUpdatedBy: 'system'
                     })
@@ -541,21 +612,48 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
                             if (completed >= newIds.length) {
                                 this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Family member(s) added.' });
                                 this.loadFamilyForVisit(this.editingVisitId!);
-                                this.selectedFamilyIdsForAdd = [];
+                                this.familyRemarksMap.clear();
+                                this.closeFamilyModal();
                             }
                         },
                         error: () => {
                             completed++;
                             this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to add family member(s)' });
-                            if (completed >= newIds.length) this.selectedFamilyIdsForAdd = [];
+                            if (completed >= newIds.length) this.closeFamilyModal();
                         }
                     });
             });
         } else {
             const alreadySet = new Set(this.pendingFamilyIds);
             const newIds = idsToAdd.filter((id) => !alreadySet.has(id));
+            newIds.forEach((id) => {
+                const remarks = this.pendingFamilyRemarks.get(id) || '';
+                if (remarks) this.pendingFamilyRemarks.set(id, remarks);
+            });
             this.pendingFamilyIds = [...this.pendingFamilyIds, ...newIds];
-            this.selectedFamilyIdsForAdd = [];
+            this.closeFamilyModal();
+        }
+    }
+
+    addFamilyMember(): void {
+        if (!this.selectedEmployeeId) {
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'No employee selected' });
+            return;
+        }
+        this.openFamilyModal();
+    }
+
+    getFamilyRemarks(familyId: number): string {
+        return this.isEditMode ? (this.familyRemarksMap.get(familyId) || '') : (this.pendingFamilyRemarks.get(familyId) || '');
+    }
+
+    setFamilyRemarks(familyId: number, remarks: string): void {
+        if (this.isEditMode) {
+            if (remarks) this.familyRemarksMap.set(familyId, remarks);
+            else this.familyRemarksMap.delete(familyId);
+        } else {
+            if (remarks) this.pendingFamilyRemarks.set(familyId, remarks);
+            else this.pendingFamilyRemarks.delete(familyId);
         }
     }
 

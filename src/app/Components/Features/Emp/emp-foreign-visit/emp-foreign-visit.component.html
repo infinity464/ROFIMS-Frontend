@@ -52,9 +52,7 @@
                             <th>Total Days</th>
                             <th>With Family</th>
                             <th>Auth/Note-Sheet No</th>
-                            @if (!isReadonly) {
-                                <th style="width: 120px;">Actions</th>
-                            }
+                            <th style="width: 120px;">Actions</th>
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="body" let-row>
@@ -67,19 +65,17 @@
                             <td>{{ getTotalDaysForRow(row) }}</td>
                             <td>{{ row.withFamily ? 'Yes' : 'No' }}</td>
                             <td>{{ row.auth || 'N/A' }}</td>
-                            @if (!isReadonly) {
-                                <td>
-                                    <div class="flex gap-1">
-                                        <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="info" pTooltip="Edit" (onClick)="openEditDialog(row)"></p-button>
-                                        <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" pTooltip="Delete" (onClick)="confirmDelete(row)"></p-button>
-                                    </div>
-                                </td>
-                            }
+                            <td>
+                                <div class="flex gap-1">
+                                    <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="info" pTooltip="Edit" (onClick)="openEditDialog(row)"></p-button>
+                                    <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" pTooltip="Delete" (onClick)="confirmDelete(row)"></p-button>
+                                </div>
+                            </td>
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="emptymessage">
                         <tr>
-                            <td [attr.colspan]="isReadonly ? 8 : 9" class="text-center py-4">
+                            <td [attr.colspan]="9" class="text-center py-4">
                                 <span class="text-500">No foreign visit records found.</span>
                             </td>
                         </tr>
@@ -106,7 +102,7 @@
     [header]="isEditMode ? 'Edit Foreign Visit' : 'Add Foreign Visit'"
     [(visible)]="displayDialog"
     [modal]="true"
-    [style]="{width: '620px'}"
+    [style]="{width: '720px'}"
     [closable]="true">
     <form [formGroup]="visitForm" class="mt-3">
         <div class="grid grid-cols-2 gap-4">
@@ -142,27 +138,23 @@
             </div>
             <div>
                 <label class="font-semibold block mb-2 text-700">Date of Visit – From</label>
-                <p-datepicker
-                    formControlName="fromDate"
-                    dateFormat="dd/mm/yy"
-                    [showIcon]="true"
-                    styleClass="w-full"
-                    [style]="{'width': '100%'}"
-                    placeholder="From"></p-datepicker>
+                <p-datepicker formControlName="fromDate" dateFormat="dd-mm-yy" placeholder="From" appendTo="body" styleClass="w-full"></p-datepicker>
             </div>
             <div>
                 <label class="font-semibold block mb-2 text-700">Date of Visit – To</label>
-                <p-datepicker
-                    formControlName="toDate"
-                    dateFormat="dd/mm/yy"
-                    [showIcon]="true"
-                    styleClass="w-full"
-                    [style]="{'width': '100%'}"
-                    placeholder="To"></p-datepicker>
+                <p-datepicker formControlName="toDate" dateFormat="dd-mm-yy" placeholder="To" appendTo="body" styleClass="w-full"></p-datepicker>
             </div>
             <div>
                 <label class="font-semibold block mb-2 text-700">Total Days</label>
                 <input pInputText [value]="totalDays" class="w-full" readonly />
+            </div>
+            <div>
+                <label class="font-semibold block mb-2 text-700">Auth / Note-Sheet No</label>
+                <input pInputText formControlName="auth" placeholder="Auth / Note-Sheet No" class="w-full" />
+            </div>
+            <div>
+                <label class="font-semibold block mb-2 text-700">Remarks</label>
+                <input pInputText formControlName="remarks" placeholder="Enter Remarks" class="w-full" />
             </div>
             <div class="col-span-2">
                 <label class="font-semibold block mb-2 text-700">With Family Member</label>
@@ -176,37 +168,72 @@
             </div>
 
             @if (visitForm.get('withFamily')?.value) {
-                <div class="col-span-2 surface-100 border-round p-3">
+                <div class="col-span-2">
                     <div class="flex align-items-center justify-content-between mb-3">
-                        <h5 class="m-0 font-semibold">Family List for this Visit</h5>
+                        <h5 class="m-0 font-semibold">Family Members for this Visit</h5>
                         @if (!isReadonly && familyMasterList.length > 0) {
-                            <p-select
-                                [(ngModel)]="selectedFamilyIdsForAdd"
-                                [options]="familyOptions"
-                                optionLabel="label"
-                                optionValue="value"
-                                placeholder="Select Family"
-                                [ngModelOptions]="{standalone: true}"
-                                styleClass="w-200px"></p-select>
-                            <p-button label="Add" icon="pi pi-plus" (onClick)="addFamilyMember()" size="small"></p-button>
+                            <p-button class="ml-2" label="Add Family Member" icon="pi pi-plus" (onClick)="addFamilyMember()" size="small"></p-button>
                         }
                     </div>
-                    @if (familyListForVisit.length > 0) {
-                        <ul class="list-none p-0 m-0">
-                            @for (f of familyListForVisit; track f.foreignVisitFamilyId) {
-                                <li class="flex align-items-center justify-content-between py-2 px-3 mb-2 surface-50 border-round">
-                                    <span class="font-medium">{{ getFamilyName(f.familyId) }}</span>
+                    @if (displayedFamilyList.length > 0) {
+                        <table class="w-full" style="border-collapse: collapse;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid #dee2e6;">
+                                    <th class="text-left p-3" style="width: 60%; font-weight: 600;">Family Member</th>
+                                    <th class="text-left p-3" style="font-weight: 600;">Remarks</th>
                                     @if (!isReadonly) {
-                                        <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" size="small" (onClick)="removeDisplayedFamilyMember({familyId: f.familyId, foreignVisitFamilyId: f.foreignVisitFamilyId, isPending: false})"></p-button>
+                                        <th class="text-center p-3" style="width: 60px; font-weight: 600;">Action</th>
                                     }
-                                </li>
-                            }
-                        </ul>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (f of displayedFamilyList; track f.familyId) {
+                                    <tr style="border-bottom: 1px solid #dee2e6;">
+                                        <td class="p-3">{{ getFamilyName(f.familyId) }}</td>
+                                        <td class="p-3">
+                                            @if (!isReadonly) {
+                                                <input pInputText
+                                                    [value]="getFamilyRemarks(f.familyId)"
+                                                    (input)="setFamilyRemarks(f.familyId, $any($event.target).value)"
+                                                    placeholder="(optional)"
+                                                    class="w-full"
+                                                    style="font-size: 0.875rem;" />
+                                            } @else {
+                                                {{ getFamilyRemarks(f.familyId) || '-' }}
+                                            }
+                                        </td>
+                                        @if (!isReadonly) {
+                                            <td class="text-center p-3">
+                                                <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" size="small" (onClick)="removeDisplayedFamilyMember(f)"></p-button>
+                                            </td>
+                                        }
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
                     } @else {
                         <p class="text-500 text-center py-4 m-0">No family members added yet.</p>
                     }
                 </div>
             }
+
+            <div>
+                <label class="font-semibold block mb-2 text-700">File Upload</label>
+                <p-fileUpload
+                    name="demo[]"
+                    [showUploadButton]="false"
+                    [showCancelButton]="false"
+                    (onSelect)="onFileSelect($event)"
+                    [auto]="false"
+                    accept="*"
+                    styleClass="w-full">
+                </p-fileUpload>
+                @if (uploadFileName) {
+                    <small class="text-600 block mt-2">Selected: {{ uploadFileName }}</small>
+                }
+            </div>
+
+                
         </div>
     </form>
     <ng-template pTemplate="footer">
@@ -215,4 +242,53 @@
     </ng-template>
 </p-dialog>
 
+<!-- Family Member Selection Modal -->
+<!-- Family Member Selection Modal (Simple) -->
+<p-dialog
+  header="Select Family Members"
+  [(visible)]="displayFamilyModal"
+  [modal]="true"
+  [style]="{ width: '450px' }"
+  [closable]="true">
+
+  @if (familyOptions.length > 0) {
+    <div class="flex flex-column gap-2">
+      @for (option of familyOptions; track option.value) {
+        <div class="flex align-items-center gap-2">
+          <p-checkbox
+            [value]="option.value"
+            [(ngModel)]="selectedFamilyIdsForAdd"
+            [ngModelOptions]="{ standalone: true }"
+            [binary]="false"
+            [inputId]="'family_' + option.value">
+          </p-checkbox>
+
+          <label
+            [for]="'family_' + option.value"
+            class="cursor-pointer m-0">
+            {{ option.label }}
+          </label>
+        </div>
+      }
+    </div>
+  } @else {
+    <p class="text-500 text-center py-4 m-0">No family members available.</p>
+  }
+
+  <ng-template pTemplate="footer">
+    <p-button
+      label="Cancel"
+      icon="pi pi-times"
+      severity="secondary"
+      [outlined]="true"
+      (onClick)="closeFamilyModal()">
+    </p-button>
+
+    <p-button
+      label="Confirm"
+      icon="pi pi-check"
+      (onClick)="confirmFamilySelection()">
+    </p-button>
+  </ng-template>
+</p-dialog>
 <p-confirmDialog></p-confirmDialog>
