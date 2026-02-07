@@ -1,37 +1,34 @@
 <p-toast></p-toast>
 <p-confirmDialog></p-confirmDialog>
 
-<div class="card">
-    <div class="flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
-        <h2 class="m-0 text-2xl font-bold text-900">RAB ID Allocation</h2>
-    </div>
-
-    <!-- Filters -->
-    <div class="flex flex-column gap-4 mb-4">
-        <div class="flex flex-column gap-2">
-            <label for="orgs" class="font-semibold">Organization(s)</label>
+<!-- Card 1: Filters (same style as Supernumerary) -->
+<div class="card mb-4">
+    <h2 class="m-0 text-2xl font-bold text-900 mb-4">RAB ID Allocation</h2>
+    <div class="filter-row-dropdowns flex flex-wrap gap-4 mb-4">
+        <div class="filter-field">
+            <label for="orgs" class="font-semibold block mb-2 text-700">Organization(s)</label>
             <p-multiSelect id="orgs" [options]="orgOptions" [(ngModel)]="selectedOrgIds" optionLabel="orgNameEN" optionValue="orgId" placeholder="Select organization(s)" [filter]="true" styleClass="w-full" display="chip"> </p-multiSelect>
         </div>
-        <div class="flex flex-column gap-2">
-            <label for="memberType" class="font-semibold">Member Type</label>
+        <div class="filter-field">
+            <label for="memberType" class="font-semibold block mb-2 text-700">Member Type</label>
             <p-select id="memberType" [options]="memberTypeOptions" [(ngModel)]="selectedMemberTypeId" placeholder="Select member type" optionLabel="label" optionValue="value" styleClass="w-full"> </p-select>
         </div>
-        <div>
-            <p-button label="Load List" icon="pi pi-refresh" (onClick)="loadList()" [loading]="loading"> </p-button>
-        </div>
     </div>
+    <div class="flex align-items-end">
+        <p-button label="Show List" icon="pi pi-refresh" (onClick)="loadList()" [loading]="loading"> </p-button>
+    </div>
+</div>
 
-    <!-- Generate Id -->
+<!-- Card 2: Table -->
+<div class="card">
     <div class="flex flex-wrap align-items-center justify-end gap-2 mb-3">
         <p-button label="Generate Id" icon="pi pi-id-card" (onClick)="generateId()" [loading]="generatingId" [disabled]="!list?.length || loading"> </p-button>
     </div>
-
-    <!-- Table -->
     <p-table [value]="list" [loading]="loading" dataKey="employeeID" [tableStyle]="{ 'min-width': '60rem' }" styleClass="p-datatable-striped p-datatable-gridlines">
         <ng-template pTemplate="header">
             <tr>
                 <th style="width: 60px">Sl No</th>
-                <th style="width: 120px">Service ID</th>                
+                <th style="width: 120px; white-space: nowrap">Service ID</th>                
                 <th style="min-width: 120px">Rank</th>
                 <th style="min-width: 120px">Corps</th>
                 <th style="min-width: 120px">Trade</th>
@@ -44,7 +41,7 @@
         <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
             <tr>
                 <td>{{ rowIndex + 1 }}</td>
-                <td><span class="font-semibold">{{ row.prefixName?  row.prefixName + " - " : "" }} {{ row.serviceId || '-' }}</span></td>
+                <td style="white-space: nowrap"><span class="font-semibold">{{ row.prefixName ? row.prefixName + " - " : "" }}{{ row.serviceId || '-' }}</span></td>
                 
                 <td>{{ row.rankName || '-' }}</td>
                 <td>{{ row.corpsName || '-' }}</td>
@@ -58,8 +55,8 @@
             <tr>
                 <td colspan="9" class="text-center p-4">
                     <div class="flex flex-column align-items-center gap-3 py-5">
-                        <i class="pi pi-list text-5xl text-400"></i>
-                        <span class="text-lg text-500">No records. Select organization(s) and member type, then click Load List.</span>
+                        
+                        <span class="text-lg text-500">No records found.</span>
                     </div>
                 </td>
             </tr>
