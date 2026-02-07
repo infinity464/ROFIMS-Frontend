@@ -1,0 +1,133 @@
+.supernumerary-profile-page {
+    max-width: 56rem;
+    margin: 0 auto;
+}
+
+/* Header: title left, empty placeholder box top right */
+.profile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+    gap: 1rem;
+}
+
+.profile-header-left {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.profile-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.profile-placeholder-box {
+    flex-shrink: 0;
+    width: 120px;
+    height: 100px;
+    border: 1px solid var(--surface-border);
+    background: var(--surface-card);
+}
+
+/* Core details: label normal, value bold; pairs on same line */
+.core-details {
+    margin-bottom: 1.5rem;
+}
+
+.core-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2rem 6rem;
+    margin-bottom: 2rem;
+    align-items: baseline;
+
+    .detail-item {
+        white-space: nowrap;
+    }
+
+    .detail-label {
+        font-weight: normal;
+    }
+
+    .detail-value {
+        font-weight: 700;
+    }
+}
+
+.core-row-full .detail-item {
+    white-space: normal;
+}
+
+.core-row-four .detail-item {
+    min-width: 0;
+}
+
+.core-row-three .detail-item {
+    min-width: 0;
+}
+
+/* Address sections: heading bold + underlined; two columns */
+.address-section {
+    margin-bottom: 1.25rem;
+}
+
+.address-heading {
+    font-weight: 700;
+    text-decoration: underline;
+    margin-bottom: 0.5rem;
+}
+
+.address-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 3rem;
+}
+
+.address-col {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.addr-row {
+    .addr-label {
+        font-weight: normal;
+    }
+
+    .addr-value {
+        font-weight: 700;
+    }
+}
+
+.reliever-heading {
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+}
+
+.reliever-table {
+    margin-top: 0.5rem;
+}
+
+@media (max-width: 768px) {
+    .profile-header {
+        flex-direction: column;
+    }
+
+    .profile-placeholder-box {
+        width: 100%;
+        max-width: 120px;
+    }
+
+    .core-row-four,
+    .core-row-three {
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .address-grid {
+        grid-template-columns: 1fr;
+    }
+}

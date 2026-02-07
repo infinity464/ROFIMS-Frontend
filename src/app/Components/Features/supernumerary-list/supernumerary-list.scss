@@ -1,0 +1,61 @@
+// Action column: buttons side by side
+.action-buttons {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: nowrap;
+}
+
+// Responsive filter section: wrap on small screens, single row on large
+.filter-field {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+// Large screen: 4 dropdowns forced in one row, equal width
+@media (min-width: 992px) {
+  .filter-row-dropdowns {
+    flex-wrap: nowrap;
+  }
+  .filter-row-dropdowns .filter-field {
+    flex: 1 0 0;
+    min-width: 0;
+  }
+  // Date row: 2 equal blocks (same total width as dropdown row), so date fields match dropdown size
+  .filter-row-dates {
+    flex-wrap: nowrap;
+  }
+  .filter-row-dates .filter-field-date {
+    flex: 1 0 0;
+    min-width: 0;
+  }
+  .filter-row-dates .filter-date-half {
+    flex: 1 0 0;
+    min-width: 0;
+  }
+}
+
+.filter-field-date {
+  flex: 1 1 280px;
+  min-width: 0;
+}
+
+.filter-date-half {
+  flex: 1 1 120px;
+  min-width: 0;
+}
+
+// Match date picker height to dropdown (PrimeNG select height)
+:host ::ng-deep .filter-field-date p-datepicker,
+:host ::ng-deep .filter-field-date .p-datepicker .p-inputtext {
+  min-height: 2.5rem;
+  width: 100%;
+}
+
+// On very small screens, stack date From/To vertically
+@media (max-width: 480px) {
+  .filter-date-half {
+    flex: 1 1 100%;
+  }
+}

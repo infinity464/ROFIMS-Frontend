@@ -74,6 +74,8 @@ import { EmpMedicalCategory } from '@/Components/Features/Emp/emp-medical-catego
 import { EmpAdditionalRemarks } from '@/Components/Features/Emp/emp-additional-remarks/emp-additional-remarks.component';
 import { EmpPresentMemberCheckComponent } from '@/Components/Features/Emp/emp-present-member-check/emp-present-member-check.component';
 import { RabIdAllocation } from '@/Components/Features/rab-id-allocation/rab-id-allocation';
+import { SupernumeraryList } from '@/Components/Features/supernumerary-list/supernumerary-list';
+import { SupernumeraryProfile } from '@/Components/Features/supernumerary-profile/supernumerary-profile';
 import { PresentlyServingMembers } from '@/Components/Features/presently-serving-members/presently-serving-members';
 import { Prefix } from '@/Components/basic-setup/prefix/prefix';
 import { Gender } from '@/Components/basic-setup/gender/gender';
@@ -177,6 +179,8 @@ export const appRoutes: Routes = [
             { path: 'emp-additional-remarks', component: EmpAdditionalRemarks },
             { path: 'emp-present-member-check', component: EmpPresentMemberCheckComponent },
             { path: 'rab-id-allocation', component: RabIdAllocation },
+            { path: 'supernumerary-list', component: SupernumeraryList },
+            { path: 'supernumerary-profile/:id', component: SupernumeraryProfile },
             { path: 'presently-serving-members', component: PresentlyServingMembers },
 
             { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
