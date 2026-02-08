@@ -456,17 +456,45 @@ export class EmpBasicInfo implements OnInit {
         const existingRefs = this.fileReferencesForm?.getExistingFileReferences() || [];
         const filesToUpload = this.fileReferencesForm?.getFilesToUpload() || [];
 
-        if (filesToUpload.length > 0) {
-            const uploads = filesToUpload.map((r: any) =>
+        const doSave = (filesRefsJson: string | null, profileImgsJson: string | null) => {
+            this.saveEmployeeWithFilesRefs(
+                this.formattedDataForEmployee(),
+                filesRefsJson,
+                profileImgsJson,
+                permanentData!,
+                presentData!,
+                wifePermanentData,
+                wifePresentData
+            );
+        };
+
+        if (filesToUpload.length > 0 || this.selectedFile) {
+            const fileRefUploads = filesToUpload.map((r: any) =>
                 this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
             );
-            forkJoin(uploads).subscribe({
+            const profileUpload$ = this.selectedFile
+                ? this.empService.uploadEmployeeFile(this.selectedFile, this.selectedFileName || this.selectedFile.name)
+                : null;
+
+            const allUploads = profileUpload$
+                ? [...fileRefUploads, profileUpload$]
+                : fileRefUploads;
+
+            forkJoin(allUploads).subscribe({
                 next: (results: unknown) => {
                     const resultsArray = Array.isArray(results) ? results : [];
-                    const newRefs = resultsArray.map((r: any) => ({ FileId: r.fileId, fileName: r.fileName }));
+                    const filesRefResults = profileUpload$ ? resultsArray.slice(0, -1) : resultsArray;
+                    const profileResult = profileUpload$ ? resultsArray[resultsArray.length - 1] : null;
+
+                    const newRefs = (filesRefResults as any[]).map((r: any) => ({ FileId: r.fileId, fileName: r.fileName }));
                     const allRefs = [...existingRefs, ...newRefs];
                     const filesReferencesJson = allRefs.length > 0 ? JSON.stringify(allRefs) : null;
-                    this.saveEmployeeWithFilesRefs(this.formattedDataForEmployee(), filesReferencesJson, permanentData!, presentData!, wifePermanentData, wifePresentData);
+
+                    const profileImagesJson = profileResult
+                        ? JSON.stringify([{ FileId: (profileResult as any).fileId, fileName: (profileResult as any).fileName }])
+                        : this.getProfileImagesJson();
+
+                    doSave(filesReferencesJson, profileImagesJson);
                 },
                 error: (err) => {
                     console.error('Error uploading files', err);
@@ -481,7 +509,8 @@ export class EmpBasicInfo implements OnInit {
         }
 
         const filesReferencesJson = existingRefs.length > 0 ? JSON.stringify(existingRefs) : null;
-        this.saveEmployeeWithFilesRefs(this.formattedDataForEmployee(), filesReferencesJson, permanentData!, presentData!, wifePermanentData, wifePresentData);
+        const profileImagesJson = this.getProfileImagesJson();
+        doSave(filesReferencesJson, profileImagesJson);
     }
 
     private formattedDataForEmployee(): any {
@@ -496,9 +525,18 @@ export class EmpBasicInfo implements OnInit {
         };
     }
 
+    /** Build ProfileImages JSON from existing ref (no new upload). Returns null if no profile image. */
+    private getProfileImagesJson(): string | null {
+        if (this.profileImageRef) {
+            return JSON.stringify([{ FileId: this.profileImageRef.fileId, fileName: this.profileImageRef.fileName }]);
+        }
+        return null;
+    }
+
     private saveEmployeeWithFilesRefs(
         formattedData: any,
         filesReferencesJson: string | null,
+        profileImagesJson: string | null,
         permanentData: { data: AddressData },
         presentData: { data: AddressData },
         wifePermanentData: { data: AddressData } | null,
@@ -506,6 +544,9 @@ export class EmpBasicInfo implements OnInit {
     ): void {
         if (filesReferencesJson != null) {
             formattedData.filesReferences = filesReferencesJson;
+        }
+        if (profileImagesJson != null) {
+            formattedData.profileImages = profileImagesJson;
         }
 
         // Determine whether to save or update
@@ -629,6 +670,9 @@ export class EmpBasicInfo implements OnInit {
     // File references (for FilesReferences JSON). fileId set when loading existing refs.
     fileRows: { displayName: string; file: File | null; fileId?: number }[] = [];
 
+    // Profile image: single item, same JSON shape as FilesReferences [{"FileId":2,"fileName":"..."}]
+    profileImageRef: { fileId: number; fileName: string } | null = null;
+
     // Dropdown options
     motherOrganizations: MotherOrganizationModel[] = [];
     lastUnitOrganizations: MotherOrganizationModel[] = [];
@@ -740,6 +784,32 @@ export class EmpBasicInfo implements OnInit {
                     }
                 } else {
                     this.fileRows = [];
+                }
+
+                // Load profile image ref (single item: [{"FileId":2,"fileName":"..."}])
+                const profileJson = employee.profileImages || employee.ProfileImages;
+                if (profileJson && typeof profileJson === 'string') {
+                    try {
+                        const arr = JSON.parse(profileJson) as { FileId?: number; fileName?: string }[];
+                        if (Array.isArray(arr) && arr.length > 0) {
+                            const first = arr[0];
+                            this.profileImageRef = { fileId: first.FileId ?? 0, fileName: first.fileName || '' };
+                            this.selectedFileName = this.profileImageRef.fileName;
+                            this.imagePreview = null; // No blob from server; show filename only
+                        } else {
+                            this.profileImageRef = null;
+                            this.selectedFileName = '';
+                            this.imagePreview = null;
+                        }
+                    } catch {
+                        this.profileImageRef = null;
+                        this.selectedFileName = '';
+                        this.imagePreview = null;
+                    }
+                } else {
+                    this.profileImageRef = null;
+                    this.selectedFileName = '';
+                    this.imagePreview = null;
                 }
 
                 // Load dependent dropdowns based on employee data
@@ -958,6 +1028,7 @@ export class EmpBasicInfo implements OnInit {
         this.imagePreview = null;
         this.selectedFile = null;
         this.selectedFileName = '';
+        this.profileImageRef = null;
         this.postingForm.patchValue({ picture: null });
 
         // Clear the file upload component
