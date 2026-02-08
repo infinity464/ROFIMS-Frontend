@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormArray, FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -13,13 +13,13 @@ import { TooltipModule } from 'primeng/tooltip';
 import { TableModule } from 'primeng/table';
 import { DialogModule } from 'primeng/dialog';
 import { InputNumberModule } from 'primeng/inputnumber';
-import { FileUploadModule } from 'primeng/fileupload';
 
 import { EmpService } from '@/services/emp-service';
 import { FamilyInfoService } from '@/services/family-info-service';
 import { NomineeInfoService } from '@/services/nominee-info-service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
+import { FileReferencesFormComponent, FileRowData } from '@components/Common/file-references-form/file-references-form';
 
 export interface FamilyMemberOption {
     employeeId: number;
@@ -44,13 +44,15 @@ export interface FamilyMemberOption {
         TableModule,
         DialogModule,
         InputNumberModule,
-        FileUploadModule,
-        EmployeeSearchComponent
+        EmployeeSearchComponent,
+        FileReferencesFormComponent
     ],
     templateUrl: './emp-nominee-info.html',
     styleUrl: './emp-nominee-info.scss'
 })
 export class EmpNomineeInfo implements OnInit {
+    @ViewChild('fileReferencesForm') fileReferencesForm!: any; // FileReferencesFormComponent
+
     employeeFound: boolean = false;
     selectedEmployeeId: number | null = null;
     employeeBasicInfo: any = null;
@@ -59,6 +61,11 @@ export class EmpNomineeInfo implements OnInit {
 
     nomineeForm!: FormGroup;
     relationOptions: { label: string; value: number }[] = [];
+
+    /** File references (Supporting Documents) – shown for first nominee in list. */
+    fileRows: FileRowData[] = [];
+    /** Per-nominee FilesReferences JSON from load (fmid -> json string); used on save for non-first nominees. */
+    private nomineeFilesByFmid: Map<number, string> = new Map();
 
     displayAddMemberDialog: boolean = false;
     familyMembersList: FamilyMemberOption[] = [];
@@ -90,8 +97,7 @@ export class EmpNomineeInfo implements OnInit {
         this.nomineeForm = this.fb.group({
             nominees: this.fb.array([]),
             auth: [''],
-            remarks: [''],
-            document: [null]
+            remarks: ['']
         });
     }
 
@@ -233,6 +239,8 @@ export class EmpNomineeInfo implements OnInit {
     loadNomineesForEmployee(employeeId: number): void {
         this.nominees.clear();
         this.existingNomineeFmids = [];
+        this.nomineeFilesByFmid.clear();
+        this.fileRows = [];
         forkJoin({
             nominees: this.nomineeInfoService.getByEmployeeId(employeeId).pipe(catchError(() => of([]))),
             family: this.familyInfoService.getByEmployeeId(employeeId).pipe(catchError(() => of([])))
@@ -251,12 +259,18 @@ export class EmpNomineeInfo implements OnInit {
                     }
                 }
                 let ser = 1;
+                let firstNomineeRefsJson: string | null = null;
                 for (const n of nomineeList) {
                     const item = n as any;
                     const fmid = item.fmid ?? item.FMID;
                     const pct = item.sharePercent ?? item.SharePercent ?? null;
                     const createdDate = item.createdDate ?? item.CreatedDate ?? item.lastupdate ?? item.Lastupdate ?? null;
                     const createdDateStr = createdDate != null ? (typeof createdDate === 'string' ? createdDate : new Date(createdDate).toISOString()) : null;
+                    const refsJson = item.filesReferences ?? item.FilesReferences ?? null;
+                    if (refsJson && typeof refsJson === 'string') {
+                        this.nomineeFilesByFmid.set(fmid, refsJson);
+                    }
+                    if (firstNomineeRefsJson === null) firstNomineeRefsJson = refsJson && typeof refsJson === 'string' ? refsJson : null;
                     this.existingNomineeFmids.push(fmid);
                     const info = familyByFmid.get(fmid);
                     this.nominees.push(this.createNomineeRow(
@@ -267,6 +281,17 @@ export class EmpNomineeInfo implements OnInit {
                         fmid,
                         createdDateStr
                     ));
+                }
+                // Load file rows for first nominee (Supporting Documents section)
+                if (firstNomineeRefsJson) {
+                    try {
+                        const refs = JSON.parse(firstNomineeRefsJson) as { FileId?: number; fileName?: string }[];
+                        if (Array.isArray(refs)) {
+                            this.fileRows = refs.map((r) => ({ displayName: r.fileName ?? '', file: null, fileId: r.FileId }));
+                        }
+                    } catch {
+                        this.fileRows = [];
+                    }
                 }
             },
             error: () => {
@@ -311,6 +336,29 @@ export class EmpNomineeInfo implements OnInit {
         this.employeeBasicInfo = null;
         this.nominees.clear();
         this.existingNomineeFmids = [];
+        this.fileRows = [];
+        this.nomineeFilesByFmid.clear();
+    }
+
+    onFileRowsChange(event: FileRowData[]): void {
+        if (event && Array.isArray(event)) {
+            this.fileRows = event;
+        }
+    }
+
+    onDownloadFile(payload: { fileId: number; fileName: string }): void {
+        const fileId = Number(payload.fileId);
+        if (!Number.isInteger(fileId) || fileId < 1) {
+            this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Invalid file reference' });
+            return;
+        }
+        this.empService.downloadFile(fileId).subscribe({
+            next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
+            error: (err) => {
+                console.error('Download failed', err);
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file' });
+            }
+        });
     }
 
     saveData(): void {
@@ -329,46 +377,77 @@ export class EmpNomineeInfo implements OnInit {
             .map(c => ({ fmid: c.get('fmid')?.value as number | null, pct: c.get('nominatedPercentage')?.value as number | null }))
             .filter(r => r.fmid != null);
 
+        const existingRefs = this.fileReferencesForm?.getExistingFileReferences() ?? [];
+        const filesToUpload = this.fileReferencesForm?.getFilesToUpload() ?? [];
+
+        const now = new Date().toISOString();
         const deleteCalls = toDelete.map(fmid =>
             this.nomineeInfoService.delete(this.selectedEmployeeId!, fmid).pipe(catchError(() => of(null)))
         );
-        const now = new Date().toISOString();
-        const saveCalls = rows
-            .filter(c => {
-                const fid = c.get('fmid')?.value;
-                return fid != null && toSave.some(r => r.fmid === fid);
-            })
-            .map(c => {
-                const fmid = c.get('fmid')?.value as number;
-                const pct = c.get('nominatedPercentage')?.value as number | null;
-                const createdDate = c.get('createdDate')?.value as string | null;
-                return this.nomineeInfoService.saveUpdate({
-                    employeeID: this.selectedEmployeeId!,
-                    fmid,
-                    sharePercent: pct ?? 0,
-                    lastUpdatedBy: 'user',
-                    createdDate: createdDate ?? now,
-                    lastupdate: now,
-                    statusDate: now
-                }).pipe(catchError(() => of(null)));
+
+        const runSaves = (firstNomineeFilesRefsJson: string | null) => {
+            const saveCalls = rows
+                .filter(c => {
+                    const fid = c.get('fmid')?.value;
+                    return fid != null && toSave.some(r => r.fmid === fid);
+                })
+                .map((c, index) => {
+                    const fmid = c.get('fmid')?.value as number;
+                    const pct = c.get('nominatedPercentage')?.value as number | null;
+                    const createdDate = c.get('createdDate')?.value as string | null;
+                    const filesReferences = index === 0 ? firstNomineeFilesRefsJson : (this.nomineeFilesByFmid.get(fmid) ?? undefined);
+                    return this.nomineeInfoService.saveUpdate({
+                        employeeID: this.selectedEmployeeId!,
+                        fmid,
+                        sharePercent: pct ?? 0,
+                        lastUpdatedBy: 'user',
+                        createdDate: createdDate ?? now,
+                        lastupdate: now,
+                        statusDate: now,
+                        filesReferences: filesReferences ?? undefined
+                    }).pipe(catchError(() => of(null)));
+                });
+            const allCalls = [...deleteCalls, ...saveCalls];
+            if (allCalls.length === 0) {
+                this.messageService.add({ severity: 'info', summary: 'Info', detail: 'No nominee changes to save.' });
+                return;
+            }
+            this.isSaving = true;
+            forkJoin(allCalls).subscribe({
+                next: () => {
+                    this.isSaving = false;
+                    this.existingNomineeFmids = toSave.map(r => r.fmid!);
+                    this.messageService.add({ severity: 'success', summary: 'Saved', detail: 'Nominee information saved successfully.' });
+                    this.loadNomineesForEmployee(this.selectedEmployeeId!);
+                },
+                error: () => {
+                    this.isSaving = false;
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to save nominee information.' });
+                }
             });
-        const allCalls = [...deleteCalls, ...saveCalls];
-        if (allCalls.length === 0) {
-            this.messageService.add({ severity: 'info', summary: 'Info', detail: 'No nominee changes to save.' });
+        };
+
+        if (filesToUpload.length > 0) {
+            const uploads = filesToUpload.map((r: FileRowData) =>
+                this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
+            );
+            forkJoin(uploads).subscribe({
+                next: (results: unknown) => {
+                    const resultsArray = Array.isArray(results) ? results : [];
+                    const newRefs = (resultsArray as { fileId: number; fileName: string }[]).map((r) => ({ FileId: r.fileId, fileName: r.fileName }));
+                    const allRefs: { FileId: number; fileName: string }[] = [...existingRefs.map((r: { FileId: number; fileName: string }) => ({ FileId: r.FileId, fileName: r.fileName })), ...newRefs];
+                    const firstNomineeFilesRefsJson = allRefs.length > 0 ? JSON.stringify(allRefs) : null;
+                    runSaves(firstNomineeFilesRefsJson);
+                },
+                error: (err) => {
+                    console.error('Error uploading files', err);
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to upload one or more files' });
+                }
+            });
             return;
         }
-        this.isSaving = true;
-        forkJoin(allCalls).subscribe({
-            next: () => {
-                this.isSaving = false;
-                this.existingNomineeFmids = toSave.map(r => r.fmid!);
-                this.messageService.add({ severity: 'success', summary: 'Saved', detail: 'Nominee information saved successfully.' });
-                this.loadNomineesForEmployee(this.selectedEmployeeId!);
-            },
-            error: () => {
-                this.isSaving = false;
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to save nominee information.' });
-            }
-        });
+
+        const firstNomineeFilesRefsJson = existingRefs.length > 0 ? JSON.stringify(existingRefs) : null;
+        runSaves(firstNomineeFilesRefsJson);
     }
 }

@@ -1,9 +1,6 @@
 <p-fluid>
     <div class="mb-5 card">
         <div class="flex align-items-center gap-3 mb-4">
-            @if (mode !== 'search') {
-                <p-button icon="pi pi-arrow-left" [rounded]="true" [text]="true" severity="secondary" pTooltip="Back to List" (onClick)="goBack()"></p-button>
-            }
             <h3 class="m-0 text-xl font-bold text-900" style="display: inline-flex; align-items: center; gap: 0.5rem;">
                 Employee Nominee Information
                 @if (mode === 'view') {
@@ -39,7 +36,7 @@
                     <div class="flex justify-content-between align-items-center gap-3 mb-3 flex-wrap">
                         <h4 class="m-0 text-lg font-semibold text-900">Nominee Information</h4>
                         @if (!isReadonly) {
-                            <p-button label="+ Add member" icon="pi pi-user-plus" (onClick)="openAddMemberModal()"></p-button>
+                            <p-button label="Add member" icon="pi pi-user" (onClick)="openAddMemberModal()"></p-button>
                         }
                     </div>
 
@@ -90,7 +87,7 @@
                             <ng-template pTemplate="emptymessage">
                                 <tr>
                                     <td [attr.colspan]="isReadonly ? 4 : 5" class="text-center py-4 text-500">
-                                        No nominees added. Click "+ Add member" to select from family members.
+                                        No nominees added. Click "Add member" to select from family members.
                                     </td>
                                 </tr>
                             </ng-template>
@@ -107,22 +104,24 @@
                             <input pInputText class="w-full" formControlName="remarks" placeholder="Enter remarks" [readonly]="isReadonly" />
                         </div>
                     </div>
-                    @if (!isReadonly) {
-                        <div class="mb-4">
-                            <label class="font-semibold block mb-2 text-700">Document Upload</label>
-                            <p-fileUpload mode="basic" chooseLabel="Choose File" [auto]="false" [customUpload]="true" (onSelect)="nomineeForm.patchValue({ document: $event.files?.[0] })"></p-fileUpload>
-                        </div>
-                    }
+
+                    <!-- File References (Supporting Documents – for first nominee in list) -->
+                    <app-file-references-form
+                        #fileReferencesForm
+                        [fileRows]="fileRows"
+                        [isViewMode]="isReadonly"
+                        title="Supporting Documents"
+                        (fileRowsChange)="onFileRowsChange($event)"
+                        (onDownloadFile)="onDownloadFile($event)">
+                    </app-file-references-form>
                 </div>
             </form>
 
             <div class="flex justify-end mt-4 gap-2">
                 @if (mode === 'view') {
-                    <p-button label="Back to List" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" (onClick)="goBack()"></p-button>
                     <p-button label="Edit" icon="pi pi-pencil" (onClick)="enableEditMode()"></p-button>
                 } @else {
                     <p-button label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" (onClick)="resetForm()" [disabled]="isSaving"></p-button>
-                    <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="cancelEdit()" [disabled]="isSaving"></p-button>
                     <p-button label="Save" icon="pi pi-check" (onClick)="saveData()" [loading]="isSaving" [disabled]="isSaving"></p-button>
                 }
             </div>

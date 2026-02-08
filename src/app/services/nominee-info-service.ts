@@ -11,6 +11,8 @@ export interface NomineeInfoModel {
     lastUpdatedBy?: string;
     lastupdate?: string;
     statusDate?: string;
+    /** JSON array of { FileId, fileName } from FileInformation (supporting documents). */
+    filesReferences?: string | null;
 }
 
 @Injectable({
@@ -48,7 +50,8 @@ export class NomineeInfoService {
             LastUpdatedBy: payload.lastUpdatedBy ?? 'user',
             CreatedDate: payload.createdDate ?? now,
             Lastupdate: payload.lastupdate ?? now,
-            StatusDate: payload.statusDate ?? now
+            StatusDate: payload.statusDate ?? now,
+            FilesReferences: payload.filesReferences ?? undefined
         };
     }
 }

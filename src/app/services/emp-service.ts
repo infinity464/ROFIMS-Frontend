@@ -261,6 +261,7 @@ export class EmpService {
         a.href = url;
         a.download = fileName || 'download';
         a.click();
-        URL.revokeObjectURL(url);
+        // Revoke after a short delay so the browser can start the download before the URL is invalidated
+        setTimeout(() => URL.revokeObjectURL(url), 500);
     }
 }
