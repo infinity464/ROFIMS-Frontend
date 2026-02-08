@@ -6,11 +6,12 @@ import { AppTopbar } from './app.topbar';
 import { AppSidebar } from './app.sidebar';
 import { AppFooter } from './app.footer';
 import { LayoutService } from '../service/layout.service';
+import { FloatingChatWidgetComponent } from '@/Components/Features/chat/floating-chat-widget.component';
 
 @Component({
     selector: 'app-layout',
     standalone: true,
-    imports: [CommonModule, AppTopbar, AppSidebar, RouterModule, AppFooter],
+    imports: [CommonModule, AppTopbar, AppSidebar, RouterModule, AppFooter, FloatingChatWidgetComponent],
     template: `<div class="layout-wrapper" [ngClass]="containerClass">
         <app-topbar></app-topbar>
         <app-sidebar></app-sidebar>
@@ -20,6 +21,7 @@ import { LayoutService } from '../service/layout.service';
             </div>
             <app-footer></app-footer>
         </div>
+        <app-floating-chat-widget></app-floating-chat-widget>
         <div class="layout-mask animate-fadein"></div>
     </div> `
 })
