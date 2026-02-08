@@ -1,9 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
+import { forkJoin } from 'rxjs';
 
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
@@ -21,12 +22,9 @@ import { EmpService } from '@/services/emp-service';
 import { PromotionInfoService, PromotionInfoModel } from '@/services/promotion-info.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
+import { FileReferencesFormComponent, FileRowData } from '@components/Common/file-references-form/file-references-form';
 
-export interface PromotionListRow extends PromotionInfoModel {
-    documentPath?: string | null;
-    documentFileName?: string | null;
-    documentFile?: File | null;
-}
+export interface PromotionListRow extends PromotionInfoModel {}
 
 @Component({
     selector: 'app-emp-promotion-info',
@@ -42,16 +40,18 @@ export interface PromotionListRow extends PromotionInfoModel {
         TableModule,
         SelectModule,
         DatePickerModule,
-        FileUploadModule,
         DialogModule,
         ConfirmDialogModule,
-        EmployeeSearchComponent
+        EmployeeSearchComponent,
+        FileReferencesFormComponent
     ],
     providers: [ConfirmationService],
     templateUrl: './emp-promotion-info.html',
     styleUrl: './emp-promotion-info.scss'
 })
 export class EmpPromotionInfo implements OnInit {
+    @ViewChild('fileReferencesForm') fileReferencesForm!: any; // FileReferencesFormComponent
+
     employeeFound = false;
     selectedEmployeeId: number | null = null;
     employeeBasicInfo: any = null;
@@ -67,6 +67,9 @@ export class EmpPromotionInfo implements OnInit {
     isSaving = false;
     promotionForm!: FormGroup;
     editingPromotionId: number | null = null;
+
+    /** File references for the current dialog (Add/Edit promotion). */
+    fileRows: FileRowData[] = [];
 
     rankOptions: { label: string; value: number }[] = [];
 
@@ -97,10 +100,7 @@ export class EmpPromotionInfo implements OnInit {
             toDate: [null],
             probationaryPeriod: [''],
             auth: [''],
-            remarks: [''],
-            documentFileName: [''],
-            documentFile: [null as File | null],
-            documentPath: [null as string | null]
+            remarks: ['']
         });
     }
 
@@ -184,8 +184,7 @@ export class EmpPromotionInfo implements OnInit {
                 this.promotionList = arr
                     .filter((item: any) => (item.employeeID ?? item.EmployeeID) === this.selectedEmployeeId)
                     .map((item: any) => {
-                        const docPath = (item as any).documentPath ?? (item as any).DocumentPath ?? null;
-                        const docName = docPath ? (docPath.split(/[/\\]/).pop() ?? '') : '';
+                        const filesRefs = item.filesReferences ?? item.FilesReferences ?? null;
                         return {
                             employeeID: item.employeeID ?? item.EmployeeID,
                             promotionID: item.promotionID ?? item.PromotionID,
@@ -197,9 +196,7 @@ export class EmpPromotionInfo implements OnInit {
                             probationaryPeriod: (item as any).probationaryPeriod ?? (item as any).ProbationaryPeriod ?? null,
                             auth: item.auth ?? item.Auth ?? null,
                             remarks: item.remarks ?? item.Remarks ?? null,
-                            documentPath: docPath,
-                            documentFileName: docName,
-                            documentFile: null as File | null
+                            filesReferences: typeof filesRefs === 'string' ? filesRefs : null
                         };
                     });
                 this.isLoading = false;
@@ -223,55 +220,7 @@ export class EmpPromotionInfo implements OnInit {
         return `${day}-${month}-${d.getFullYear()}`;
     }
 
-    getPromotionOrderLabel(row: PromotionListRow): string {
-        if (row.documentFile?.name) return row.documentFile.name;
-        if (row.documentPath) return row.documentPath.split(/[/\\]/).pop() ?? row.documentPath;
-        return row.documentFileName ?? '—';
-    }
-
-    truncatePromotionOrderName(row: PromotionListRow, maxLen: number = 20): string {
-        const full = this.getPromotionOrderLabel(row);
-        if (full === '—') return full;
-        return full.length <= maxLen ? full : full.slice(0, maxLen) + '...';
-    }
-
-    viewPromotionOrder(row: PromotionListRow): void {
-        if (row.documentFile) window.open(URL.createObjectURL(row.documentFile), '_blank');
-        else if (row.documentPath) window.open(row.documentPath, '_blank');
-    }
-
-    hasPromotionOrderFileInForm(): boolean {
-        const file = this.promotionForm.get('documentFile')?.value as File | null;
-        const path = this.promotionForm.get('documentPath')?.value as string | null;
-        return !!(file?.name || path);
-    }
-
-    getPromotionOrderLabelInForm(): string {
-        const file = this.promotionForm.get('documentFile')?.value as File | null;
-        const path = this.promotionForm.get('documentPath')?.value as string | null;
-        if (file?.name) return file.name;
-        if (path) return path.split(/[/\\]/).pop() ?? path;
-        return '—';
-    }
-
-    viewPromotionOrderInForm(): void {
-        const file = this.promotionForm.get('documentFile')?.value as File | null;
-        const path = this.promotionForm.get('documentPath')?.value as string | null;
-        if (file) window.open(URL.createObjectURL(file), '_blank');
-        else if (path) window.open(path, '_blank');
-    }
-
-    clearPromotionOrderInForm(): void {
-        this.promotionForm.patchValue({ documentFile: null, documentPath: null, documentFileName: '' });
-    }
-
-    onPromotionOrderSelectInForm(event: { files: File[] }): void {
-        this.promotionForm.patchValue({ documentFile: event.files?.[0] ?? null });
-    }
-
-    onDialogHide(): void {
-        this.promotionForm.patchValue({ documentFile: null });
-    }
+    onDialogHide(): void {}
 
     openAddDialog(): void {
         if (this.selectedEmployeeId == null) {
@@ -280,6 +229,7 @@ export class EmpPromotionInfo implements OnInit {
         }
         this.isEditMode = false;
         this.editingPromotionId = null;
+        this.fileRows = [];
         this.promotionForm.reset({
             promotionID: null,
             previousRank: null,
@@ -289,10 +239,7 @@ export class EmpPromotionInfo implements OnInit {
             toDate: null,
             probationaryPeriod: '',
             auth: '',
-            remarks: '',
-            documentFileName: '',
-            documentFile: null,
-            documentPath: null
+            remarks: ''
         });
         this.displayDialog = true;
     }
@@ -309,12 +256,36 @@ export class EmpPromotionInfo implements OnInit {
             toDate: this.toDateForPicker(row.toDate ?? null),
             probationaryPeriod: row.probationaryPeriod ?? '',
             auth: row.auth ?? '',
-            remarks: row.remarks ?? '',
-            documentFileName: row.documentFileName ?? '',
-            documentFile: null,
-            documentPath: row.documentPath ?? null
+            remarks: row.remarks ?? ''
         });
+        // Load file references from entity
+        const refsJson = row.filesReferences ?? (row as any).FilesReferences ?? null;
+        if (refsJson && typeof refsJson === 'string') {
+            try {
+                const refs = JSON.parse(refsJson) as { FileId?: number; fileName?: string }[];
+                this.fileRows = Array.isArray(refs)
+                    ? refs.map((r) => ({ displayName: r.fileName ?? '', file: null, fileId: r.FileId }))
+                    : [];
+            } catch {
+                this.fileRows = [];
+            }
+        } else {
+            this.fileRows = [];
+        }
         this.displayDialog = true;
+    }
+
+    onFileRowsChange(event: FileRowData[]): void {
+        if (event && Array.isArray(event)) {
+            this.fileRows = event;
+        }
+    }
+
+    onDownloadFile(payload: { fileId: number; fileName: string }): void {
+        this.empService.downloadFile(payload.fileId).subscribe({
+            next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
+            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file' })
+        });
     }
 
     savePromotion(): void {
@@ -322,42 +293,73 @@ export class EmpPromotionInfo implements OnInit {
         const v = this.promotionForm.value;
         const now = new Date().toISOString();
         const newId = this.promotionList.length > 0 ? Math.max(...this.promotionList.map(r => r.promotionID)) + 1 : 1;
-        const payload: Partial<PromotionInfoModel> = {
-            employeeID: this.selectedEmployeeId,
-            promotionID: this.isEditMode ? (this.editingPromotionId ?? 0) : newId,
-            previousRank: v.previousRank ?? null,
-            promotedRank: v.promotedRank ?? null,
-            promotedDate: this.toDateOnly(v.promotedDate),
-            fromDate: this.toDateOnly(v.fromDate),
-            toDate: this.toDateOnly(v.toDate),
-            probationaryPeriod: v.probationaryPeriod || null,
-            auth: v.auth || null,
-            remarks: v.remarks ?? '',
-            createdBy: 'user',
-            createdDate: now,
-            lastUpdatedBy: 'user',
-            lastupdate: now
+        const existingRefs = this.fileReferencesForm?.getExistingFileReferences() ?? [];
+        const filesToUpload = this.fileReferencesForm?.getFilesToUpload() ?? [];
+
+        const doSave = (filesReferencesJson: string | null) => {
+            const payload: Partial<PromotionInfoModel> = {
+                employeeID: this.selectedEmployeeId!,
+                promotionID: this.isEditMode ? (this.editingPromotionId ?? 0) : newId,
+                previousRank: v.previousRank ?? null,
+                promotedRank: v.promotedRank ?? null,
+                promotedDate: this.toDateOnly(v.promotedDate),
+                fromDate: this.toDateOnly(v.fromDate),
+                toDate: this.toDateOnly(v.toDate),
+                probationaryPeriod: v.probationaryPeriod || null,
+                auth: v.auth || null,
+                remarks: v.remarks ?? '',
+                createdBy: 'user',
+                createdDate: now,
+                lastUpdatedBy: 'user',
+                lastupdate: now,
+                filesReferences: filesReferencesJson
+            };
+            this.isSaving = true;
+            const req = this.isEditMode ? this.promotionInfoService.saveUpdate(payload) : this.promotionInfoService.save(payload);
+            req.pipe(
+                map((res: any) => {
+                    const code = res?.statusCode ?? res?.StatusCode ?? 200;
+                    if (code !== 200) throw new Error(res?.description ?? res?.Description ?? 'Save failed');
+                    return res;
+                }),
+                catchError(err => {
+                    this.messageService.add({ severity: 'error', summary: this.isEditMode ? 'Update failed' : 'Save failed', detail: String(err?.error?.description ?? err?.error?.Description ?? err?.message) });
+                    return of(null);
+                })
+            ).subscribe(res => {
+                this.isSaving = false;
+                if (res != null) {
+                    this.messageService.add({ severity: 'success', summary: 'Saved', detail: this.isEditMode ? 'Promotion updated.' : 'Promotion added.' });
+                    this.displayDialog = false;
+                    this.loadPromotionList();
+                }
+            });
         };
-        this.isSaving = true;
-        const req = this.isEditMode ? this.promotionInfoService.saveUpdate(payload) : this.promotionInfoService.save(payload);
-        req.pipe(
-            map((res: any) => {
-                const code = res?.statusCode ?? res?.StatusCode ?? 200;
-                if (code !== 200) throw new Error(res?.description ?? res?.Description ?? 'Save failed');
-                return res;
-            }),
-            catchError(err => {
-                this.messageService.add({ severity: 'error', summary: this.isEditMode ? 'Update failed' : 'Save failed', detail: String(err?.error?.description ?? err?.error?.Description ?? err?.message) });
-                return of(null);
-            })
-        ).subscribe(res => {
-            this.isSaving = false;
-            if (res != null) {
-                this.messageService.add({ severity: 'success', summary: 'Saved', detail: this.isEditMode ? 'Promotion updated.' : 'Promotion added.' });
-                this.displayDialog = false;
-                this.loadPromotionList();
-            }
-        });
+
+        if (filesToUpload.length > 0) {
+            const uploads = filesToUpload.map((r: FileRowData) =>
+                this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
+            );
+            forkJoin(uploads).subscribe({
+                next: (results: unknown) => {
+                    const resultsArray = Array.isArray(results) ? results : [];
+                    const newRefs = (resultsArray as { fileId: number; fileName: string }[]).map((r) => ({ FileId: r.fileId, fileName: r.fileName }));
+                    const allRefs: { FileId: number; fileName: string }[] = [
+                        ...existingRefs.map((r: { FileId: number; fileName: string }) => ({ FileId: r.FileId, fileName: r.fileName })),
+                        ...newRefs
+                    ];
+                    const filesReferencesJson = allRefs.length > 0 ? JSON.stringify(allRefs) : null;
+                    doSave(filesReferencesJson);
+                },
+                error: () => {
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to upload one or more files' });
+                }
+            });
+            return;
+        }
+
+        const filesReferencesJson = existingRefs.length > 0 ? JSON.stringify(existingRefs) : null;
+        doSave(filesReferencesJson);
     }
 
     confirmDelete(row: PromotionListRow): void {

@@ -55,8 +55,6 @@
                                 <th style="min-width: 140px; background: var(--surface-100)">Probationary Period</th>
                                 <th style="min-width: 140px; background: var(--surface-100)">Auth</th>
                                 <th style="min-width: 160px; background: var(--surface-100)">Remarks</th>
-                                <th style="min-width: 140px; background: var(--surface-100)">File Name</th>
-                                <th style="min-width: 120px; background: var(--surface-100)">Upload Promotion Order</th>
                                 <th style="width: 120px; background: var(--surface-100)">Actions</th>
                             </tr>
                         </ng-template>
@@ -71,17 +69,6 @@
                                 <td>{{ row.probationaryPeriod || '—' }}</td>
                                 <td>{{ row.auth || '—' }}</td>
                                 <td>{{ row.remarks || '—' }}</td>
-                                <td class="text-600">{{ row.documentFileName || '—' }}</td>
-                                <td>
-                                    @if (row.documentPath || row.documentFile) {
-                                        <div class="flex align-items-center gap-2 flex-nowrap surface-100 border-round p-2">
-                                            <span class="text-700 text-sm flex-grow-1 overflow-hidden text-overflow-ellipsis white-space-nowrap" style="min-width: 0;" [title]="getPromotionOrderLabel(row)">{{ truncatePromotionOrderName(row) }}</span>
-                                            <p-button icon="pi pi-eye" [rounded]="true" [text]="true" severity="secondary" pTooltip="View file" (onClick)="viewPromotionOrder(row)" styleClass="p-button-sm"></p-button>
-                                        </div>
-                                    } @else {
-                                        <span class="text-500">—</span>
-                                    }
-                                </td>
                                 <td>
                                     <div class="flex gap-1">
                                         <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="info" pTooltip="Edit" (onClick)="openEditDialog(row)"></p-button>
@@ -94,7 +81,7 @@
                         </ng-template>
                         <ng-template pTemplate="emptymessage">
                             <tr>
-                                <td [attr.colspan]="12" class="text-center py-4 text-500">No promotion entries. Click "Add row" to add.</td>
+                                <td [attr.colspan]="10" class="text-center py-4 text-500">No promotion entries. Click "Add row" to add.</td>
                             </tr>
                         </ng-template>
                     </p-table>
@@ -107,7 +94,6 @@
                     <p-button label="Edit" icon="pi pi-pencil" (onClick)="enableEditMode()"></p-button>
                 } @else {
                     <p-button label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" (onClick)="resetForm()" [disabled]="isSaving"></p-button>
-                    <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="cancelEdit()" [disabled]="isSaving"></p-button>
                 }
             </div>
         }
@@ -159,20 +145,14 @@
                 <input pInputText formControlName="remarks" class="w-full" placeholder="Remarks" />
             </div>
             <div class="col-span-2">
-                <label class="font-semibold block mb-2 text-700">File Name</label>
-                <input pInputText formControlName="documentFileName" class="w-full" placeholder="File name" />
-            </div>
-            <div class="col-span-2">
-                <label class="font-semibold block mb-2 text-700">Upload Promotion Order</label>
-                @if (hasPromotionOrderFileInForm()) {
-                    <div class="flex align-items-center gap-2 surface-100 border-round p-2 mb-2">
-                        <span class="text-700 text-sm flex-grow-1 overflow-hidden text-overflow-ellipsis" [title]="getPromotionOrderLabelInForm()">{{ getPromotionOrderLabelInForm() }}</span>
-                        <p-button icon="pi pi-eye" [rounded]="true" [text]="true" severity="secondary" pTooltip="View" (onClick)="viewPromotionOrderInForm()" styleClass="p-button-sm"></p-button>
-                        <p-button icon="pi pi-times" [rounded]="true" [text]="true" severity="danger" pTooltip="Remove" (onClick)="clearPromotionOrderInForm()" styleClass="p-button-sm"></p-button>
-                    </div>
-                } @else {
-                    <p-fileUpload mode="basic" chooseLabel="Choose File" [auto]="false" [customUpload]="true" (onSelect)="onPromotionOrderSelectInForm($event)" styleClass="p-button-sm"></p-fileUpload>
-                }
+                <app-file-references-form
+                    #fileReferencesForm
+                    [fileRows]="fileRows"
+                    [isViewMode]="isReadonly"
+                    title="Supporting Documents"
+                    (fileRowsChange)="onFileRowsChange($event)"
+                    (onDownloadFile)="onDownloadFile($event)">
+                </app-file-references-form>
             </div>
         </div>
     </form>
