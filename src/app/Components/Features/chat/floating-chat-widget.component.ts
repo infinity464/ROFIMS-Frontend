@@ -6,7 +6,16 @@ import { Subject } from 'rxjs';
 import { takeUntil, combineLatestWith, filter } from 'rxjs/operators';
 
 export interface ChatBubble {
+  type: 'direct';
   senderUserId: string;
+  senderName: string;
+  unreadCount: number;
+}
+
+export interface GroupChatBubble {
+  type: 'group';
+  groupId: number;
+  groupName: string;
   senderName: string;
   unreadCount: number;
 }
@@ -17,7 +26,21 @@ export interface ChatBubble {
   imports: [CommonModule],
   template: `
     <div class="fixed bottom-6 right-6 z-[9999] flex flex-col items-end gap-3" *ngIf="isLoggedIn && !isOnChatPage">
-      <!-- Incoming message bubbles (FB-style chat heads) -->
+      <!-- Group message bubbles -->
+      <div *ngFor="let bubble of groupBubbles; trackBy: trackByGroup"
+           (click)="openGroup(bubble.groupId)"
+           class="flex items-center gap-2 cursor-pointer group">
+        <div class="flex items-center gap-2 bg-surface-0 dark:bg-surface-800 rounded-full shadow-lg border border-surface-200 dark:border-surface-600 hover:shadow-xl transition-all hover:scale-105 min-w-[200px] pr-2 py-1.5 pl-1.5">
+          <div class="w-10 h-10 rounded-full bg-emerald-600 dark:bg-emerald-500 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
+            <i class="pi pi-users text-lg"></i>
+          </div>
+          <div class="flex-1 min-w-0 text-left">
+            <p class="text-sm font-medium text-surface-900 dark:text-surface-0 truncate">{{ bubble.groupName || 'Group' }}</p>
+            <p class="text-xs text-surface-600 dark:text-surface-400">{{ bubble.senderName }} · {{ bubble.unreadCount }} unread</p>
+          </div>
+        </div>
+      </div>
+      <!-- Direct message bubbles (FB-style chat heads) -->
       <div *ngFor="let bubble of bubbles; trackBy: trackBySender"
            (click)="openChat(bubble.senderUserId)"
            class="flex items-center gap-2 cursor-pointer group">
@@ -47,11 +70,13 @@ export interface ChatBubble {
 })
 export class FloatingChatWidgetComponent implements OnInit, OnDestroy {
   bubbles: ChatBubble[] = [];
+  groupBubbles: GroupChatBubble[] = [];
   isLoggedIn = false;
   isOnChatPage = false;
   private currentUserId = '';
   private destroy$ = new Subject<void>();
   private readonly MAX_BUBBLES = 5;
+  private readonly MAX_GROUP_BUBBLES = 5;
 
   constructor(
     private chatService: ChatService,
@@ -98,8 +123,23 @@ export class FloatingChatWidgetComponent implements OnInit, OnDestroy {
         if (!payload || payload.receiverUserId !== this.currentUserId) return;
         if (payload.senderUserId === selectedOtherUserId) return;
         this.addOrUpdateBubble({
+          type: 'direct',
           senderUserId: payload.senderUserId,
           senderName: payload.senderName || payload.senderUserId || 'Someone',
+          unreadCount: 1
+        });
+        this.cdr.markForCheck();
+      });
+
+    this.chatService.groupMessageReceived$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((payload: any) => {
+        if (!payload || payload.senderUserId === this.currentUserId) return;
+        this.addOrUpdateGroupBubble({
+          type: 'group',
+          groupId: payload.groupId,
+          groupName: payload.groupName || 'Group',
+          senderName: payload.senderName || 'Someone',
           unreadCount: 1
         });
         this.cdr.markForCheck();
@@ -128,8 +168,22 @@ export class FloatingChatWidgetComponent implements OnInit, OnDestroy {
     ].slice(0, this.MAX_BUBBLES);
   }
 
+  private addOrUpdateGroupBubble(bubble: GroupChatBubble): void {
+    const existing = this.groupBubbles.find((b) => b.groupId === bubble.groupId);
+    const unreadCount = existing ? existing.unreadCount + 1 : 1;
+    const updated: GroupChatBubble = { ...bubble, unreadCount };
+    this.groupBubbles = [
+      updated,
+      ...this.groupBubbles.filter((b) => b.groupId !== bubble.groupId)
+    ].slice(0, this.MAX_GROUP_BUBBLES);
+  }
+
   private removeBubble(senderUserId: string): void {
     this.bubbles = this.bubbles.filter((b) => b.senderUserId !== senderUserId);
+  }
+
+  private removeGroupBubble(groupId: number): void {
+    this.groupBubbles = this.groupBubbles.filter((b) => b.groupId !== groupId);
   }
 
   private updateIsOnChatPage(): void {
@@ -145,10 +199,21 @@ export class FloatingChatWidgetComponent implements OnInit, OnDestroy {
     return b.senderUserId;
   }
 
+  trackByGroup(_: number, b: GroupChatBubble): number {
+    return b.groupId;
+  }
+
   openChat(senderUserId: string): void {
     this.removeBubble(senderUserId);
     this.cdr.markForCheck();
     this.chatService.requestOpenConversation(senderUserId);
+    this.router.navigate(['/chat']);
+  }
+
+  openGroup(groupId: number): void {
+    this.removeGroupBubble(groupId);
+    this.cdr.markForCheck();
+    this.chatService.requestOpenGroup(groupId);
     this.router.navigate(['/chat']);
   }
 

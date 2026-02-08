@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject, Subject } from 'rxjs';
 import { environment } from '@/Core/Environments/environment';
 import { HubConnection, HubConnectionBuilder, HubConnectionState } from '@microsoft/signalr';
-import { ChatUserDto, DirectConversation, DirectMessageDto } from '@/models/chat.model';
+import { ChatUserDto, DirectConversation, DirectMessageDto, GroupDto, GroupMemberDto, GroupMessageDto } from '@/models/chat.model';
 
 @Injectable({
   providedIn: 'root'
@@ -21,6 +21,15 @@ export class ChatService {
   private directMessageDeletedSubject = new Subject<{ messageId: number }>();
   public directMessageDeleted$ = this.directMessageDeletedSubject.asObservable();
 
+  private groupMessageReceivedSubject = new Subject<any>();
+  public groupMessageReceived$ = this.groupMessageReceivedSubject.asObservable();
+
+  private groupMessageDeletedSubject = new Subject<{ messageId: number; groupId: number }>();
+  public groupMessageDeleted$ = this.groupMessageDeletedSubject.asObservable();
+
+  private groupMessagesSeenSubject = new Subject<{ messageIds: number[]; groupId: number; seenByUserId: string }>();
+  public groupMessagesSeen$ = this.groupMessagesSeenSubject.asObservable();
+
   private connectionStatusSubject = new BehaviorSubject<boolean>(false);
   public connectionStatus$ = this.connectionStatusSubject.asObservable();
 
@@ -31,8 +40,15 @@ export class ChatService {
   private selectedOtherUserIdSubject = new BehaviorSubject<string | null>(null);
   public selectedOtherUserId$ = this.selectedOtherUserIdSubject.asObservable();
 
+  /** Currently selected group (set by chat page). Used to avoid showing group bubble when user is viewing that group. */
+  private selectedGroupIdSubject = new BehaviorSubject<number | null>(null);
+  public selectedGroupId$ = this.selectedGroupIdSubject.asObservable();
+
   /** Request to open chat with this user (e.g. from floating bubble click). Chat page reads and clears. */
   private openConversationUserId: string | null = null;
+
+  /** Request to open chat with this group (e.g. from floating group bubble click). Chat page reads and clears. */
+  private openGroupId: number | null = null;
 
   constructor(private http: HttpClient) {
     this.initializeHubConnection();
@@ -78,6 +94,16 @@ export class ChatService {
     });
     this.hubConnection.on('DirectMessageDeleted', (payload: { messageId: number }) => {
       this.directMessageDeletedSubject.next(payload);
+    });
+
+    this.hubConnection.on('GroupMessageReceived', (payload: any) => {
+      this.groupMessageReceivedSubject.next(payload);
+    });
+    this.hubConnection.on('GroupMessageDeleted', (payload: { messageId: number; groupId: number }) => {
+      this.groupMessageDeletedSubject.next(payload);
+    });
+    this.hubConnection.on('GroupMessagesSeen', (payload: { messageIds: number[]; groupId: number; seenByUserId: string }) => {
+      this.groupMessagesSeenSubject.next(payload);
     });
 
     this.hubConnection.on('Error', (message: string) => {
@@ -213,5 +239,99 @@ export class ChatService {
     const id = this.openConversationUserId;
     this.openConversationUserId = null;
     return id;
+  }
+
+  setSelectedGroupId(groupId: number | null): void {
+    this.selectedGroupIdSubject.next(groupId);
+  }
+
+  getSelectedGroupId(): number | null {
+    return this.selectedGroupIdSubject.getValue();
+  }
+
+  requestOpenGroup(groupId: number): void {
+    this.openGroupId = groupId;
+  }
+
+  getAndClearOpenGroupId(): number | null {
+    const id = this.openGroupId;
+    this.openGroupId = null;
+    return id;
+  }
+
+  markGroupMessagesAsSeen(groupId: number, messageIds: number[]): Promise<void> {
+    if (!this.hubConnection) return Promise.reject('Hub not connected');
+    return this.hubConnection.invoke('MarkGroupMessagesAsSeen', groupId, messageIds).catch(() => {});
+  }
+
+  markGroupMessagesAsSeenViaApi(groupId: number, messageIds: number[]): Observable<any> {
+    return this.http.post(`${this.chatApi}/MarkGroupMessagesAsSeen`, { groupId, messageIds });
+  }
+
+  // ----- Group chat -----
+
+  createGroup(groupName: string, memberUserIds: string[]): Observable<any> {
+    return this.http.post(`${this.chatApi}/CreateGroup`, { groupName, memberUserIds });
+  }
+
+  getUserGroups(): Observable<GroupDto[]> {
+    return this.http.get<GroupDto[]>(`${this.chatApi}/GetUserGroups`);
+  }
+
+  getGroupMembers(groupId: number): Observable<GroupMemberDto[]> {
+    return this.http.get<GroupMemberDto[]>(`${this.chatApi}/GetGroupMembers`, {
+      params: { groupId: groupId.toString() }
+    });
+  }
+
+  getGroupMessages(groupId: number, pageNumber: number = 1, pageSize: number = 50): Observable<GroupMessageDto[]> {
+    return this.http.get<GroupMessageDto[]>(`${this.chatApi}/GetGroupMessages`, {
+      params: { groupId: groupId.toString(), pageNumber: pageNumber.toString(), pageSize: pageSize.toString() }
+    });
+  }
+
+  joinGroupHub(groupId: number): Promise<void> {
+    if (!this.hubConnection) return Promise.reject('Hub not connected');
+    return this.hubConnection.invoke('JoinGroup', groupId).catch(err => {
+      this.errorSubject.next(`Join group failed: ${err?.message ?? err}`);
+      return Promise.reject(err);
+    });
+  }
+
+  leaveGroupHub(groupId: number): Promise<void> {
+    if (!this.hubConnection) return Promise.resolve();
+    return this.hubConnection.invoke('LeaveGroup', groupId).catch(() => {});
+  }
+
+  sendGroupMessage(groupId: number, content: string, senderUserId?: string | null): Promise<void> {
+    if (!this.hubConnection) return Promise.reject('Hub not connected');
+    return this.hubConnection.invoke('SendGroupMessage', senderUserId ?? '', groupId, content).catch(err => {
+      this.errorSubject.next(`Error sending: ${err?.message ?? err}`);
+      return Promise.reject(err);
+    });
+  }
+
+  sendGroupMessageViaApi(groupId: number, content: string, senderUserId?: string | null): Observable<any> {
+    return this.http.post(`${this.chatApi}/SendGroupMessage`, {
+      senderUserId: senderUserId ?? undefined,
+      groupId,
+      messageContent: content
+    });
+  }
+
+  deleteGroupMessage(messageId: number): Promise<void> {
+    if (!this.hubConnection) return Promise.reject('Hub not connected');
+    return this.hubConnection.invoke('DeleteGroupMessage', messageId).catch(err => {
+      this.errorSubject.next(err?.message ?? 'Delete failed');
+      return Promise.reject(err);
+    });
+  }
+
+  addGroupMembers(groupId: number, userIdsToAdd: string[]): Observable<any> {
+    return this.http.post(`${this.chatApi}/AddGroupMembers`, { groupId, userIdsToAdd });
+  }
+
+  leaveGroup(groupId: number): Observable<any> {
+    return this.http.post(`${this.chatApi}/LeaveGroup`, { groupId });
   }
 }
