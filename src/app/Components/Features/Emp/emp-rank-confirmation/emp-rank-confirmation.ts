@@ -1,9 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
+import { forkJoin } from 'rxjs';
 
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
@@ -13,7 +14,6 @@ import { TooltipModule } from 'primeng/tooltip';
 import { TableModule } from 'primeng/table';
 import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
-import { FileUploadModule } from 'primeng/fileupload';
 import { DialogModule } from 'primeng/dialog';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 
@@ -21,11 +21,10 @@ import { EmpService } from '@/services/emp-service';
 import { RankConfirmationInfoService, RankConfirmationInfoModel } from '@/services/rank-confirmation-info.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
+import { FileReferencesFormComponent, FileRowData } from '@components/Common/file-references-form/file-references-form';
 
 export interface RankConfirmationListRow extends RankConfirmationInfoModel {
-    documentPath?: string | null;
-    documentFileName?: string | null;
-    documentFile?: File | null;
+    filesReferences?: string | null;
 }
 
 @Component({
@@ -42,16 +41,18 @@ export interface RankConfirmationListRow extends RankConfirmationInfoModel {
         TableModule,
         SelectModule,
         DatePickerModule,
-        FileUploadModule,
         DialogModule,
         ConfirmDialogModule,
-        EmployeeSearchComponent
+        EmployeeSearchComponent,
+        FileReferencesFormComponent
     ],
     providers: [ConfirmationService],
     templateUrl: './emp-rank-confirmation.html',
     styleUrl: './emp-rank-confirmation.scss'
 })
 export class EmpRankConfirmationComponent implements OnInit {
+    @ViewChild('fileReferencesForm') fileReferencesForm!: any;
+
     employeeFound = false;
     selectedEmployeeId: number | null = null;
     employeeBasicInfo: any = null;
@@ -68,6 +69,7 @@ export class EmpRankConfirmationComponent implements OnInit {
     rankForm!: FormGroup;
     editingRankConfirmId: number | null = null;
 
+    fileRows: FileRowData[] = [];
     rankOptions: { label: string; value: number }[] = [];
 
     constructor(
@@ -93,10 +95,7 @@ export class EmpRankConfirmationComponent implements OnInit {
             presentRank: [null],
             rankConfirmDate: [null],
             auth: [''],
-            remarks: [''],
-            documentFileName: [''],
-            documentFile: [null as File | null],
-            documentPath: [null as string | null]
+            remarks: ['']
         });
     }
 
@@ -179,21 +178,15 @@ export class EmpRankConfirmationComponent implements OnInit {
                 const arr = Array.isArray(list) ? list : [];
                 this.rankList = arr
                     .filter((item: any) => (item.employeeId ?? item.EmployeeId) === this.selectedEmployeeId)
-                    .map((item: any) => {
-                        const docPath = (item as any).documentPath ?? (item as any).DocumentPath ?? null;
-                        const docName = docPath ? (docPath.split(/[/\\]/).pop() ?? '') : '';
-                        return {
-                            employeeId: item.employeeId ?? item.EmployeeId,
-                            rankConfirmId: item.rankConfirmId ?? item.RankConfirmId,
-                            presentRank: item.presentRank ?? item.PresentRank ?? null,
-                            rankConfirmDate: item.rankConfirmDate ?? item.RankConfirmDate ?? null,
-                            auth: item.auth ?? item.Auth ?? null,
-                            remarks: item.remarks ?? item.Remarks ?? null,
-                            documentPath: docPath,
-                            documentFileName: docName,
-                            documentFile: null as File | null
-                        };
-                    });
+                    .map((item: any) => ({
+                        employeeId: item.employeeId ?? item.EmployeeId,
+                        rankConfirmId: item.rankConfirmId ?? item.RankConfirmId,
+                        presentRank: item.presentRank ?? item.PresentRank ?? null,
+                        rankConfirmDate: item.rankConfirmDate ?? item.RankConfirmDate ?? null,
+                        auth: item.auth ?? item.Auth ?? null,
+                        remarks: item.remarks ?? item.Remarks ?? null,
+                        filesReferences: item.filesReferences ?? item.FilesReferences ?? null
+                    }));
                 this.isLoading = false;
             },
             error: () => { this.rankList = []; this.isLoading = false; }
@@ -215,53 +208,29 @@ export class EmpRankConfirmationComponent implements OnInit {
         return `${day}-${month}-${d.getFullYear()}`;
     }
 
-    getOrderLabel(row: RankConfirmationListRow): string {
-        if (row.documentFile?.name) return row.documentFile.name;
-        if (row.documentPath) return row.documentPath.split(/[/\\]/).pop() ?? row.documentPath;
-        return row.documentFileName ?? '—';
+    parseFileRowsFromReferences(refsJson: string | null | undefined): FileRowData[] {
+        if (!refsJson || typeof refsJson !== 'string') return [];
+        try {
+            const refs = JSON.parse(refsJson) as { FileId?: number; fileName?: string }[];
+            if (!Array.isArray(refs)) return [];
+            return refs.map((r) => ({ displayName: r.fileName ?? '', file: null, fileId: r.FileId }));
+        } catch {
+            return [];
+        }
     }
 
-    truncateOrderName(row: RankConfirmationListRow, maxLen = 20): string {
-        const full = this.getOrderLabel(row);
-        return full === '—' || full.length <= maxLen ? full : full.slice(0, maxLen) + '...';
+    onFileRowsChange(event: FileRowData[]): void {
+        if (event && Array.isArray(event)) this.fileRows = event;
     }
 
-    viewOrder(row: RankConfirmationListRow): void {
-        if (row.documentFile) window.open(URL.createObjectURL(row.documentFile), '_blank');
-        else if (row.documentPath) window.open(row.documentPath, '_blank');
-    }
-
-    hasOrderFileInForm(): boolean {
-        const file = this.rankForm.get('documentFile')?.value as File | null;
-        const path = this.rankForm.get('documentPath')?.value as string | null;
-        return !!(file?.name || path);
-    }
-
-    getOrderLabelInForm(): string {
-        const file = this.rankForm.get('documentFile')?.value as File | null;
-        const path = this.rankForm.get('documentPath')?.value as string | null;
-        if (file?.name) return file.name;
-        if (path) return path.split(/[/\\]/).pop() ?? path;
-        return '—';
-    }
-
-    viewOrderInForm(): void {
-        const file = this.rankForm.get('documentFile')?.value as File | null;
-        const path = this.rankForm.get('documentPath')?.value as string | null;
-        if (file) window.open(URL.createObjectURL(file), '_blank');
-        else if (path) window.open(path, '_blank');
-    }
-
-    clearOrderInForm(): void {
-        this.rankForm.patchValue({ documentFile: null, documentPath: null, documentFileName: '' });
-    }
-
-    onOrderSelectInForm(event: { files: File[] }): void {
-        this.rankForm.patchValue({ documentFile: event.files?.[0] ?? null });
-    }
-
-    onDialogHide(): void {
-        this.rankForm.patchValue({ documentFile: null });
+    onDownloadFile(payload: { fileId: number; fileName: string }): void {
+        this.empService.downloadFile(payload.fileId).subscribe({
+            next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
+            error: (err) => {
+                console.error('Download failed', err);
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file' });
+            }
+        });
     }
 
     openAddDialog(): void {
@@ -271,15 +240,13 @@ export class EmpRankConfirmationComponent implements OnInit {
         }
         this.isEditMode = false;
         this.editingRankConfirmId = null;
+        this.fileRows = [];
         this.rankForm.reset({
             rankConfirmId: null,
             presentRank: null,
             rankConfirmDate: null,
             auth: '',
-            remarks: '',
-            documentFileName: '',
-            documentFile: null,
-            documentPath: null
+            remarks: ''
         });
         this.displayDialog = true;
     }
@@ -287,57 +254,83 @@ export class EmpRankConfirmationComponent implements OnInit {
     openEditDialog(row: RankConfirmationListRow): void {
         this.isEditMode = true;
         this.editingRankConfirmId = row.rankConfirmId;
+        this.fileRows = this.parseFileRowsFromReferences(row.filesReferences);
         const rankConfirmDate = row.rankConfirmDate ? (typeof row.rankConfirmDate === 'string' ? row.rankConfirmDate : new Date(row.rankConfirmDate).toISOString().substring(0, 10)) : null;
         this.rankForm.patchValue({
             rankConfirmId: row.rankConfirmId,
             presentRank: row.presentRank,
             rankConfirmDate: this.toDateForPicker(rankConfirmDate),
             auth: row.auth ?? '',
-            remarks: row.remarks ?? '',
-            documentFileName: row.documentFileName ?? '',
-            documentFile: null,
-            documentPath: row.documentPath ?? null
+            remarks: row.remarks ?? ''
         });
         this.displayDialog = true;
     }
 
     saveRank(): void {
         if (!this.selectedEmployeeId) return;
-        const v = this.rankForm.value;
-        const now = new Date().toISOString();
-        const newId = this.rankList.length > 0 ? Math.max(...this.rankList.map(r => r.rankConfirmId)) + 1 : 1;
-        const payload: Partial<RankConfirmationInfoModel> = {
-            employeeId: this.selectedEmployeeId,
-            rankConfirmId: this.isEditMode ? (this.editingRankConfirmId ?? 0) : newId,
-            presentRank: v.presentRank ?? null,
-            rankConfirmDate: this.toDateOnly(v.rankConfirmDate),
-            auth: v.auth || null,
-            remarks: v.remarks ?? '',
-            createdBy: 'user',
-            createdDate: now,
-            lastUpdatedBy: 'user',
-            lastupdate: now
+        const existingRefs = this.fileReferencesForm?.getExistingFileReferences() || [];
+        const filesToUpload = this.fileReferencesForm?.getFilesToUpload() || [];
+
+        const doSave = (filesReferencesJson: string | null) => {
+            const v = this.rankForm.value;
+            const now = new Date().toISOString();
+            const newId = this.rankList.length > 0 ? Math.max(...this.rankList.map(r => r.rankConfirmId)) + 1 : 1;
+            const payload: Partial<RankConfirmationInfoModel> = {
+                employeeId: this.selectedEmployeeId!,
+                rankConfirmId: this.isEditMode ? (this.editingRankConfirmId ?? 0) : newId,
+                presentRank: v.presentRank ?? null,
+                rankConfirmDate: this.toDateOnly(v.rankConfirmDate),
+                auth: v.auth || null,
+                remarks: v.remarks ?? '',
+                createdBy: 'user',
+                createdDate: now,
+                lastUpdatedBy: 'user',
+                lastupdate: now,
+                filesReferences: filesReferencesJson ?? undefined
+            };
+            this.isSaving = true;
+            const req = this.isEditMode ? this.rankConfirmationService.saveUpdate(payload) : this.rankConfirmationService.save(payload);
+            req.pipe(
+                map((res: any) => {
+                    const code = res?.statusCode ?? res?.StatusCode ?? 200;
+                    if (code !== 200) throw new Error(res?.description ?? res?.Description ?? 'Save failed');
+                    return res;
+                }),
+                catchError(err => {
+                    this.messageService.add({ severity: 'error', summary: this.isEditMode ? 'Update failed' : 'Save failed', detail: String(err?.error?.description ?? err?.error?.Description ?? err?.message) });
+                    return of(null);
+                })
+            ).subscribe(res => {
+                this.isSaving = false;
+                if (res != null) {
+                    this.messageService.add({ severity: 'success', summary: 'Saved', detail: this.isEditMode ? 'Rank confirmation updated.' : 'Rank confirmation added.' });
+                    this.displayDialog = false;
+                    this.loadRankList();
+                }
+            });
         };
-        this.isSaving = true;
-        const req = this.isEditMode ? this.rankConfirmationService.saveUpdate(payload) : this.rankConfirmationService.save(payload);
-        req.pipe(
-            map((res: any) => {
-                const code = res?.statusCode ?? res?.StatusCode ?? 200;
-                if (code !== 200) throw new Error(res?.description ?? res?.Description ?? 'Save failed');
-                return res;
-            }),
-            catchError(err => {
-                this.messageService.add({ severity: 'error', summary: this.isEditMode ? 'Update failed' : 'Save failed', detail: String(err?.error?.description ?? err?.error?.Description ?? err?.message) });
-                return of(null);
-            })
-        ).subscribe(res => {
-            this.isSaving = false;
-            if (res != null) {
-                this.messageService.add({ severity: 'success', summary: 'Saved', detail: this.isEditMode ? 'Rank confirmation updated.' : 'Rank confirmation added.' });
-                this.displayDialog = false;
-                this.loadRankList();
-            }
-        });
+
+        if (filesToUpload.length > 0) {
+            const uploads = filesToUpload.map((r: FileRowData) =>
+                this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
+            );
+            forkJoin(uploads).subscribe({
+                next: (results: unknown) => {
+                    const resultsArray = Array.isArray(results) ? results : [];
+                    const newRefs = (resultsArray as { fileId: number; fileName: string }[]).map((r) => ({ FileId: r.fileId, fileName: r.fileName }));
+                    const allRefs: { FileId: number; fileName: string }[] = [...existingRefs.map((r: { FileId: number; fileName: string }) => ({ FileId: r.FileId, fileName: r.fileName })), ...newRefs];
+                    const filesReferencesJson = allRefs.length > 0 ? JSON.stringify(allRefs) : null;
+                    doSave(filesReferencesJson);
+                },
+                error: (err) => {
+                    console.error('Error uploading files', err);
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to upload one or more files' });
+                }
+            });
+            return;
+        }
+        const filesReferencesJson = existingRefs.length > 0 ? JSON.stringify(existingRefs) : null;
+        doSave(filesReferencesJson);
     }
 
     confirmDelete(row: RankConfirmationListRow): void {

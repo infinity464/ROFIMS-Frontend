@@ -18,6 +18,7 @@ export interface RankConfirmationInfoModel {
     createdDate?: string | null;
     lastUpdatedBy?: string | null;
     lastupdate?: string | null;
+    filesReferences?: string | null;
 }
 
 @Injectable({
@@ -69,7 +70,8 @@ export class RankConfirmationInfoService {
             createdBy: payload.createdBy ?? 'user',
             createdDate: payload.createdDate ?? now,
             lastUpdatedBy: payload.lastUpdatedBy ?? 'user',
-            lastupdate: payload.lastupdate ?? now
+            lastupdate: payload.lastupdate ?? now,
+            filesReferences: payload.filesReferences ?? null
         };
     }
 }

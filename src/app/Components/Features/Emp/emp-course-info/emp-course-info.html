@@ -136,7 +136,14 @@
                 <input pInputText formControlName="remarks" class="w-full" placeholder="Remarks" />
             </div>
             <div class="col-span-full">
-                <p-button label="Upload Document" icon="pi pi-upload" severity="secondary" [outlined]="true" (onClick)="onUploadDocumentInDialog()"></p-button>
+                <app-file-references-form
+                    #fileReferencesForm
+                    [fileRows]="fileRows"
+                    [isViewMode]="false"
+                    title="Supporting Documents"
+                    (fileRowsChange)="onFileRowsChange($event)"
+                    (onDownloadFile)="onDownloadFile($event)">
+                </app-file-references-form>
             </div>
         </div>
     </form>

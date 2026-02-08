@@ -1,7 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { forkJoin } from 'rxjs';
 
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
@@ -18,6 +19,7 @@ import { EmpService } from '@/services/emp-service';
 import { EducationInfoService, EducationInfoModel } from '@/services/education-info-service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
+import { FileReferencesFormComponent, FileRowData } from '@components/Common/file-references-form/file-references-form';
 
 interface DropdownOption {
     label: string;
@@ -27,12 +29,14 @@ interface DropdownOption {
 @Component({
     selector: 'app-emp-education-info',
     standalone: true,
-    imports: [CommonModule, FormsModule, ReactiveFormsModule, InputTextModule, ButtonModule, Fluid, TooltipModule, TableModule, SelectModule, DialogModule, ConfirmDialogModule, DatePickerModule, EmployeeSearchComponent],
+    imports: [CommonModule, FormsModule, ReactiveFormsModule, InputTextModule, ButtonModule, Fluid, TooltipModule, TableModule, SelectModule, DialogModule, ConfirmDialogModule, DatePickerModule, EmployeeSearchComponent, FileReferencesFormComponent],
     providers: [ConfirmationService],
     templateUrl: './emp-education-info.html',
     styleUrl: './emp-education-info.scss'
 })
 export class EmpEducationInfoComponent implements OnInit {
+    @ViewChild('fileReferencesForm') fileReferencesForm!: any;
+
     employeeFound = false;
     selectedEmployeeId: number | null = null;
     employeeBasicInfo: any = null;
@@ -48,6 +52,7 @@ export class EmpEducationInfoComponent implements OnInit {
     educationForm!: FormGroup;
     editingEducationId: number | null = null;
 
+    fileRows: FileRowData[] = [];
     qualificationOptions: DropdownOption[] = [];
     institutionTypeOptions: DropdownOption[] = [];
     institutionNameOptions: DropdownOption[] = [];
@@ -169,12 +174,38 @@ export class EmpEducationInfoComponent implements OnInit {
                     passingYear: item.passingYear ?? item.PassingYear,
                     grade: item.grade ?? item.Grade,
                     gradePoint: item.gradePoint ?? item.GradePoint ?? null,
-                    remarks: item.remarks ?? item.Remarks
+                    remarks: item.remarks ?? item.Remarks,
+                    filesReferences: item.filesReferences ?? item.FilesReferences ?? null
                 }));
                 this.isLoading = false;
             },
             error: () => {
                 this.isLoading = false;
+            }
+        });
+    }
+
+    parseFileRowsFromReferences(refsJson: string | null | undefined): FileRowData[] {
+        if (!refsJson || typeof refsJson !== 'string') return [];
+        try {
+            const refs = JSON.parse(refsJson) as { FileId?: number; fileName?: string }[];
+            if (!Array.isArray(refs)) return [];
+            return refs.map((r) => ({ displayName: r.fileName ?? '', file: null, fileId: r.FileId }));
+        } catch {
+            return [];
+        }
+    }
+
+    onFileRowsChange(event: FileRowData[]): void {
+        if (event && Array.isArray(event)) this.fileRows = event;
+    }
+
+    onDownloadFile(payload: { fileId: number; fileName: string }): void {
+        this.empService.downloadFile(payload.fileId).subscribe({
+            next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
+            error: (err) => {
+                console.error('Download failed', err);
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file' });
             }
         });
     }
@@ -198,6 +229,7 @@ export class EmpEducationInfoComponent implements OnInit {
     openAddDialog(): void {
         this.isEditMode = false;
         this.editingEducationId = null;
+        this.fileRows = [];
         this.educationForm.reset({
             employeeId: this.selectedEmployeeId ?? 0,
             educationId: 0,
@@ -218,6 +250,7 @@ export class EmpEducationInfoComponent implements OnInit {
     openEditDialog(row: EducationInfoModel): void {
         this.isEditMode = true;
         this.editingEducationId = row.educationId;
+        this.fileRows = this.parseFileRowsFromReferences(row.filesReferences);
         const dateFrom = row.dateFrom ? new Date(row.dateFrom) : null;
         const dateTo = row.dateTo ? new Date(row.dateTo) : null;
         this.educationForm.patchValue({
@@ -242,45 +275,73 @@ export class EmpEducationInfoComponent implements OnInit {
             this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'No employee selected' });
             return;
         }
-        const formValue = this.educationForm.value;
-        const toDateStr = (d: Date | null): string | null => {
-            if (!d) return null;
-            const x = new Date(d);
-            return isNaN(x.getTime()) ? null : x.toISOString().slice(0, 10);
-        };
-        const payload: Partial<EducationInfoModel> = {
-            employeeId: this.selectedEmployeeId,
-            educationId: this.isEditMode ? (this.editingEducationId ?? 0) : 0,
-            examName: formValue.examName ?? null,
-            instituteType: formValue.instituteType ?? null,
-            instituteName: formValue.instituteName ?? null,
-            departmentName: formValue.departmentName ?? null,
-            subjectName: formValue.subjectName ?? null,
-            dateFrom: toDateStr(formValue.dateFrom),
-            dateTo: toDateStr(formValue.dateTo),
-            passingYear: formValue.passingYear ?? null,
-            grade: formValue.grade ?? null,
-            gradePoint: formValue.gradePoint && String(formValue.gradePoint).trim() ? String(formValue.gradePoint).trim() : null,
-            remarks: null,
-            createdBy: 'system',
-            lastUpdatedBy: 'system'
+        const existingRefs = this.fileReferencesForm?.getExistingFileReferences() || [];
+        const filesToUpload = this.fileReferencesForm?.getFilesToUpload() || [];
+
+        const doSave = (filesReferencesJson: string | null) => {
+            const formValue = this.educationForm.value;
+            const toDateStr = (d: Date | null): string | null => {
+                if (!d) return null;
+                const x = new Date(d);
+                return isNaN(x.getTime()) ? null : x.toISOString().slice(0, 10);
+            };
+            const payload: Partial<EducationInfoModel> = {
+                employeeId: this.selectedEmployeeId!,
+                educationId: this.isEditMode ? (this.editingEducationId ?? 0) : 0,
+                examName: formValue.examName ?? null,
+                instituteType: formValue.instituteType ?? null,
+                instituteName: formValue.instituteName ?? null,
+                departmentName: formValue.departmentName ?? null,
+                subjectName: formValue.subjectName ?? null,
+                dateFrom: toDateStr(formValue.dateFrom),
+                dateTo: toDateStr(formValue.dateTo),
+                passingYear: formValue.passingYear ?? null,
+                grade: formValue.grade ?? null,
+                gradePoint: formValue.gradePoint && String(formValue.gradePoint).trim() ? String(formValue.gradePoint).trim() : null,
+                remarks: null,
+                filesReferences: filesReferencesJson ?? undefined,
+                createdBy: 'system',
+                lastUpdatedBy: 'system'
+            };
+
+            this.isSaving = true;
+            const req = this.isEditMode ? this.educationInfoService.update(payload) : this.educationInfoService.save(payload);
+
+            req.subscribe({
+                next: () => {
+                    this.messageService.add({ severity: 'success', summary: 'Success', detail: this.isEditMode ? 'Education updated.' : 'Education added.' });
+                    this.displayDialog = false;
+                    this.loadEducationList();
+                    this.isSaving = false;
+                },
+                error: () => {
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to save education' });
+                    this.isSaving = false;
+                }
+            });
         };
 
-        this.isSaving = true;
-        const req = this.isEditMode ? this.educationInfoService.update(payload) : this.educationInfoService.save(payload);
-
-        req.subscribe({
-            next: () => {
-                this.messageService.add({ severity: 'success', summary: 'Success', detail: this.isEditMode ? 'Education updated.' : 'Education added.' });
-                this.displayDialog = false;
-                this.loadEducationList();
-                this.isSaving = false;
-            },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to save education' });
-                this.isSaving = false;
-            }
-        });
+        if (filesToUpload.length > 0) {
+            const uploads = filesToUpload.map((r: FileRowData) =>
+                this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
+            );
+            forkJoin(uploads).subscribe({
+                next: (results: unknown) => {
+                    const resultsArray = Array.isArray(results) ? results : [];
+                    const newRefs = (resultsArray as { fileId: number; fileName: string }[]).map((r) => ({ FileId: r.fileId, fileName: r.fileName }));
+                    const allRefs: { FileId: number; fileName: string }[] = [...existingRefs.map((r: { FileId: number; fileName: string }) => ({ FileId: r.FileId, fileName: r.fileName })), ...newRefs];
+                    const filesReferencesJson = allRefs.length > 0 ? JSON.stringify(allRefs) : null;
+                    doSave(filesReferencesJson);
+                },
+                error: (err) => {
+                    console.error('Error uploading files', err);
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to upload one or more files' });
+                }
+            });
+            return;
+        }
+        const filesReferencesJson = existingRefs.length > 0 ? JSON.stringify(existingRefs) : null;
+        doSave(filesReferencesJson);
     }
 
     confirmDelete(row: EducationInfoModel): void {
@@ -300,14 +361,6 @@ export class EmpEducationInfoComponent implements OnInit {
             },
             error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete' })
         });
-    }
-
-    onUploadDocument(row: EducationInfoModel): void {
-        this.messageService.add({ severity: 'info', summary: 'Document', detail: 'Upload not implemented. Education ID: ' + row.educationId });
-    }
-
-    onUploadDocumentInDialog(): void {
-        this.messageService.add({ severity: 'info', summary: 'Document', detail: 'Upload not implemented.' });
     }
 
     onEmployeeSearchFound(employee: EmployeeBasicInfo): void {
