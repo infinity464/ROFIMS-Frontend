@@ -15,6 +15,7 @@ export interface MOServHistoryModel {
     auth?: string | null;
     appointment?: number | null;
     remarks?: string | null;
+    filesReferences?: string | null;
     createdBy?: string | null;
     createdDate?: string;
     lastUpdatedBy?: string | null;
@@ -74,6 +75,7 @@ export class MOServHistoryService {
             auth: payload.auth ?? null,
             appointment: payload.appointment ?? null,
             remarks: payload.remarks ?? '',
+            filesReferences: payload.filesReferences ?? null,
             createdBy: payload.createdBy ?? 'user',
             createdDate: payload.createdDate ?? now,
             lastUpdatedBy: payload.lastUpdatedBy ?? 'user',
