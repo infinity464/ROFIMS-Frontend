@@ -1,7 +1,10 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { forkJoin } from 'rxjs';
+import { catchError, of, Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
@@ -15,7 +18,6 @@ import { MultiSelectModule } from 'primeng/multiselect';
 import { DialogModule } from 'primeng/dialog';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DatePickerModule } from 'primeng/datepicker';
-import { FileUploadModule } from 'primeng/fileupload';
 import { ToastModule } from 'primeng/toast';
 
 import { EmpService } from '@/services/emp-service';
@@ -23,9 +25,8 @@ import { ForeignVisitInfoService, ForeignVisitInfoModel, ForeignVisitFamilyInfoM
 import { CommonCodeService } from '@/services/common-code-service';
 import { FamilyInfoService, FamilyInfoModel } from '@/services/family-info-service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
+import { FileReferencesFormComponent, FileRowData } from '@components/Common/file-references-form/file-references-form';
 import { CodeType } from '@/models/enums';
-import { catchError, of, Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
 
 interface DropdownOption {
     label: string;
@@ -50,15 +51,17 @@ interface DropdownOption {
         DialogModule,
         ConfirmDialogModule,
         DatePickerModule,
-        FileUploadModule,
         ToastModule,
-        EmployeeSearchComponent
+        EmployeeSearchComponent,
+        FileReferencesFormComponent
     ],
     providers: [ConfirmationService, MessageService],
     templateUrl: './emp-foreign-visit.component.html',
     styleUrl: './emp-foreign-visit.component.scss'
 })
 export class EmpForeignVisit implements OnInit, OnDestroy {
+    @ViewChild('fileReferencesForm') fileReferencesForm!: any;
+
     employeeFound = false;
     selectedEmployeeId: number | null = null;
     employeeBasicInfo: any = null;
@@ -81,7 +84,7 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
 
     editingVisitId: number | null = null;
     selectedFamilyIdsForAdd: number[] = [];
-    uploadFileName = '';
+    fileRows: FileRowData[] = [];
     /** Pending family FMIDs to add when saving a new visit (Add mode). */
     pendingFamilyIds: number[] = [];
     /** Pending family remarks mapping: familyId -> remarks */
@@ -121,7 +124,6 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
             toDate: [null],
             withFamily: [false],
             auth: [''],
-            fileName: [''],
             remarks: ['']
         });
         this.visitForm.valueChanges.subscribe(() => this.visitForm.updateValueAndValidity({ emitEvent: false }));
@@ -239,6 +241,7 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
                     auth: x.auth ?? x.Auth ?? null,
                     remarks: x.remarks ?? x.Remarks ?? null,
                     fileName: x.fileName ?? x.FileName ?? null,
+                    filesReferences: x.filesReferences ?? x.FilesReferences ?? null,
                     createdBy: x.createdBy ?? x.CreatedBy,
                     createdDate: x.createdDate ?? x.CreatedDate,
                     lastUpdatedBy: x.lastUpdatedBy ?? x.LastUpdatedBy,
@@ -322,6 +325,31 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
             });
     }
 
+    parseFileRowsFromReferences(refsJson: string | null | undefined): FileRowData[] {
+        if (!refsJson || typeof refsJson !== 'string') return [];
+        try {
+            const refs = JSON.parse(refsJson) as { FileId?: number; fileName?: string }[];
+            if (!Array.isArray(refs)) return [];
+            return refs.map((r) => ({ displayName: r.fileName ?? '', file: null, fileId: r.FileId }));
+        } catch {
+            return [];
+        }
+    }
+
+    onFileRowsChange(event: FileRowData[]): void {
+        if (event && Array.isArray(event)) this.fileRows = event;
+    }
+
+    onDownloadFile(payload: { fileId: number; fileName: string }): void {
+        this.empService.downloadFile(payload.fileId).subscribe({
+            next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
+            error: (err) => {
+                console.error('Download failed', err);
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file' });
+            }
+        });
+    }
+
     getOptionLabel(options: DropdownOption[], value: number | null): string {
         if (value == null) return 'N/A';
         const o = options.find((x) => x.value === value);
@@ -366,6 +394,7 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
         this.pendingFamilyRemarks.clear();
         this.familyRemarksMap.clear();
         this.selectedFamilyIdsForAdd = [];
+        this.fileRows = [];
         this.visitForm.reset({
             subjectId: null,
             visitId: null,
@@ -374,10 +403,8 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
             toDate: null,
             withFamily: false,
             auth: '',
-            fileName: '',
             remarks: ''
         });
-        this.uploadFileName = '';
         this.displayDialog = true;
         console.log('✅ Dialog opened, isReadonly:', this.isReadonly);
     }
@@ -393,6 +420,7 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
         this.loadFamilyForVisit(row.foreignVisitId);
         const from = row.fromDate ? new Date(row.fromDate) : null;
         const to = row.toDate ? new Date(row.toDate) : null;
+        this.fileRows = this.parseFileRowsFromReferences(row.filesReferences);
         this.visitForm.patchValue({
             subjectId: row.subjectId,
             visitId: row.visitId,
@@ -401,10 +429,8 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
             toDate: to,
             withFamily: row.withFamily ?? false,
             auth: row.auth ?? '',
-            fileName: row.fileName ?? '',
             remarks: row.remarks ?? ''
         });
-        this.uploadFileName = row.fileName ?? '';
         this.displayDialog = true;
     }
 
@@ -413,34 +439,39 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
             this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'No employee selected' });
             return;
         }
-        const v = this.visitForm.value;
-        const toDateStr = (d: Date | null): string | null => {
-            if (!d) return null;
-            const x = new Date(d);
-            return isNaN(x.getTime()) ? null : x.toISOString();
-        };
-        const payload: Partial<ForeignVisitInfoModel> = {
-            employeeId: this.selectedEmployeeId,
-            foreignVisitId: this.isEditMode ? (this.editingVisitId ?? 0) : 0,
-            subjectId: v.subjectId ?? null,
-            destinationCountryId: v.destinationCountryId ?? null,
-            visitId: v.visitId ?? null,
-            fromDate: toDateStr(v.fromDate),
-            toDate: toDateStr(v.toDate),
-            withFamily: v.withFamily ?? false,
-            auth: (v.auth && String(v.auth).trim()) || null,
-            remarks: (v.remarks && String(v.remarks).trim()) || null,
-            fileName: (v.fileName && String(v.fileName).trim()) || (this.uploadFileName && this.uploadFileName.trim()) || null,
-            createdBy: 'system',
-            lastUpdatedBy: 'system'
-        };
+        const existingRefs = this.fileReferencesForm?.getExistingFileReferences() || [];
+        const filesToUpload = this.fileReferencesForm?.getFilesToUpload() || [];
 
-        this.isSaving = true;
-        const req = this.isEditMode
-            ? this.foreignVisitService.updateVisit(payload)
-            : this.foreignVisitService.saveVisit(payload);
+        const doSave = (filesReferencesJson: string | null) => {
+            const v = this.visitForm.value;
+            const toDateStr = (d: Date | null): string | null => {
+                if (!d) return null;
+                const x = new Date(d);
+                return isNaN(x.getTime()) ? null : x.toISOString();
+            };
+            const payload: Partial<ForeignVisitInfoModel> = {
+                employeeId: this.selectedEmployeeId!,
+                foreignVisitId: this.isEditMode ? (this.editingVisitId ?? 0) : 0,
+                subjectId: v.subjectId ?? null,
+                destinationCountryId: v.destinationCountryId ?? null,
+                visitId: v.visitId ?? null,
+                fromDate: toDateStr(v.fromDate),
+                toDate: toDateStr(v.toDate),
+                withFamily: v.withFamily ?? false,
+                auth: (v.auth && String(v.auth).trim()) || null,
+                remarks: (v.remarks && String(v.remarks).trim()) || null,
+                fileName: null,
+                filesReferences: filesReferencesJson ?? undefined,
+                createdBy: 'system',
+                lastUpdatedBy: 'system'
+            };
 
-        req.subscribe({
+            this.isSaving = true;
+            const req = this.isEditMode
+                ? this.foreignVisitService.updateVisit(payload)
+                : this.foreignVisitService.saveVisit(payload);
+
+            req.subscribe({
             next: (res: any) => {
                 const entity = res?.data ?? res?.Data ?? res;
                 const newVisitId = entity?.foreignVisitId ?? entity?.ForeignVisitId ?? (Array.isArray(entity) ? entity[0]?.foreignVisitId ?? entity[0]?.ForeignVisitId : null);
@@ -470,6 +501,29 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
                 this.isSaving = false;
             }
         });
+        };
+
+        if (filesToUpload.length > 0) {
+            const uploads = filesToUpload.map((r: FileRowData) =>
+                this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
+            );
+            forkJoin(uploads).subscribe({
+                next: (results: unknown) => {
+                    const resultsArray = Array.isArray(results) ? results : [];
+                    const newRefs = (resultsArray as { fileId: number; fileName: string }[]).map((r) => ({ FileId: r.fileId, fileName: r.fileName }));
+                    const allRefs: { FileId: number; fileName: string }[] = [...existingRefs.map((r: { FileId: number; fileName: string }) => ({ FileId: r.FileId, fileName: r.fileName })), ...newRefs];
+                    const filesReferencesJson = allRefs.length > 0 ? JSON.stringify(allRefs) : null;
+                    doSave(filesReferencesJson);
+                },
+                error: (err) => {
+                    console.error('Error uploading files', err);
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to upload one or more files' });
+                }
+            });
+            return;
+        }
+        const filesReferencesJson = existingRefs.length > 0 ? JSON.stringify(existingRefs) : null;
+        doSave(filesReferencesJson);
     }
 
     private addPendingFamilyMembers(foreignVisitId: number): void {
@@ -682,11 +736,6 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
         }
     }
 
-
-    onFileSelect(event: any): void {
-        const file = event?.currentFiles?.[0] || event?.files?.[0];
-        if (file?.name) this.uploadFileName = file.name;
-    }
 
     onEmployeeSearchFound(employee: EmployeeBasicInfo): void {
         this.employeeFound = true;

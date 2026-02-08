@@ -50,8 +50,6 @@
                                 <th style="width: 90px; background: var(--surface-100)">To</th>
                                 <th style="min-width: 140px; background: var(--surface-100)">Reason</th>
                                 <th style="min-width: 120px; background: var(--surface-100)">Auth</th>
-                                <th style="min-width: 140px; background: var(--surface-100)">File Name</th>
-                                <th style="min-width: 140px; background: var(--surface-100)">Upload Document</th>
                                 <th style="width: 120px; background: var(--surface-100)">Actions</th>
                             </tr>
                         </ng-template>
@@ -63,16 +61,6 @@
                                 <td>{{ formatDate(row.toDate) }}</td>
                                 <td>{{ row.reason || '—' }}</td>
                                 <td>{{ row.auth || '—' }}</td>
-                                <td class="text-600">{{ row.fileName || '—' }}</td>
-                                <td>
-                                    @if (row.fileName) {
-                                        <div class="flex align-items-center gap-2 flex-nowrap surface-100 border-round p-2">
-                                            <span class="text-700 text-sm flex-grow-1 overflow-hidden text-overflow-ellipsis white-space-nowrap" style="min-width: 0;" [title]="row.fileName">{{ row.fileName }}</span>
-                                        </div>
-                                    } @else {
-                                        <span class="text-500">—</span>
-                                    }
-                                </td>
                                 <td>
                                     <div class="flex gap-1">
                                         <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="info" pTooltip="Edit" (onClick)="openEditDialog(row)"></p-button>
@@ -85,7 +73,7 @@
                         </ng-template>
                         <ng-template pTemplate="emptymessage">
                             <tr>
-                                <td [attr.colspan]="9" class="text-center py-4 text-500">No medical records. Click "Add row" to add.</td>
+                                <td [attr.colspan]="7" class="text-center py-4 text-500">No medical records. Click "Add row" to add.</td>
                             </tr>
                         </ng-template>
                     </p-table>
@@ -114,8 +102,7 @@
     [closable]="true"
     [draggable]="false"
     [resizable]="false"
-    styleClass="medical-record-dialog"
-    (onHide)="onDialogHide()">
+    styleClass="medical-record-dialog">
     <form [formGroup]="medicalForm" class="medical-record-form">
         <div class="form-rows">
             <!-- Row 1: Medical Category Type | From -->
@@ -170,23 +157,17 @@
                 </div>
             </div>
 
-            <!-- Row 4: File Name (DB column) | Upload File -->
+            <!-- Supporting Documents -->
             <div class="form-row flex gap-3 mb-0">
-                <div class="form-field flex-1">
-                    <label class="form-label">File Name</label>
-                    <input pInputText formControlName="fileName" class="w-full" placeholder="File name" />
-                </div>
-                <div class="form-field flex-1 form-row-upload">
-                    <label class="form-label">Upload File</label>
-                    @if (hasFileInForm()) {
-                        <div class="flex align-items-center gap-2 surface-100 border-round p-2">
-                            <span class="text-700 text-sm flex-grow-1 overflow-hidden text-overflow-ellipsis" [title]="getFileLabelInForm()">{{ getFileLabelInForm() }}</span>
-                            <p-button icon="pi pi-eye" [rounded]="true" [text]="true" severity="secondary" pTooltip="View" (onClick)="viewFileInForm()" styleClass="p-button-sm"></p-button>
-                            <p-button icon="pi pi-times" [rounded]="true" [text]="true" severity="danger" pTooltip="Remove" (onClick)="clearFileInForm()" styleClass="p-button-sm"></p-button>
-                        </div>
-                    } @else {
-                        <p-fileUpload mode="basic" chooseLabel="Choose File" [auto]="false" [customUpload]="true" (onSelect)="onFileSelectInForm($event)" styleClass="p-button-sm"></p-fileUpload>
-                    }
+                <div class="form-field flex-1 col-span-full">
+                    <app-file-references-form
+                        #fileReferencesForm
+                        [fileRows]="fileRows"
+                        [isViewMode]="false"
+                        title="Supporting Documents"
+                        (fileRowsChange)="onFileRowsChange($event)"
+                        (onDownloadFile)="onDownloadFile($event)">
+                    </app-file-references-form>
                 </div>
             </div>
         </div>

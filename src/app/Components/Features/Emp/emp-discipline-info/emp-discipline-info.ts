@@ -1,9 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
+import { forkJoin } from 'rxjs';
 
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
@@ -21,6 +22,7 @@ import { EmpService } from '@/services/emp-service';
 import { DisciplineInfoService, DisciplineInfoModel } from '@/services/discipline-info.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
+import { FileReferencesFormComponent, FileRowData } from '@components/Common/file-references-form/file-references-form';
 
 export interface DisciplineListRow extends DisciplineInfoModel {
     employeeId: number;
@@ -44,13 +46,16 @@ export interface DisciplineListRow extends DisciplineInfoModel {
         ConfirmDialogModule,
         DatePickerModule,
         TextareaModule,
-        EmployeeSearchComponent
+        EmployeeSearchComponent,
+        FileReferencesFormComponent
     ],
     providers: [ConfirmationService],
     templateUrl: './emp-discipline-info.html',
     styleUrl: './emp-discipline-info.scss'
 })
 export class EmpDisciplineInfoComponent implements OnInit {
+    @ViewChild('fileReferencesForm') fileReferencesForm!: any;
+
     employeeFound = false;
     selectedEmployeeId: number | null = null;
     employeeBasicInfo: any = null;
@@ -66,6 +71,7 @@ export class EmpDisciplineInfoComponent implements OnInit {
     disciplineForm!: FormGroup;
     editingDisciplineId: number | null = null;
 
+    fileRows: FileRowData[] = [];
     offenceTypeOptions: { label: string; value: number }[] = [];
     briefStatementOptions: { label: string; value: number }[] = [];
     punishmentTypeOptions: { label: string; value: number }[] = [];
@@ -100,8 +106,7 @@ export class EmpDisciplineInfoComponent implements OnInit {
             punishmentDateMotherOrg: [null],
             action: [''],
             auth: [''],
-            remarks: [''],
-            fileName: ['']
+            remarks: ['']
         });
     }
 
@@ -187,11 +192,37 @@ export class EmpDisciplineInfoComponent implements OnInit {
                     action: item.action ?? item.Action ?? null,
                     auth: item.auth ?? item.Auth ?? null,
                     remarks: item.remarks ?? item.Remarks ?? null,
-                    fileName: item.fileName ?? item.FileName ?? null
+                    fileName: item.fileName ?? item.FileName ?? null,
+                    filesReferences: item.filesReferences ?? item.FilesReferences ?? null
                 }));
                 this.isLoading = false;
             },
             error: () => { this.disciplineList = []; this.isLoading = false; }
+        });
+    }
+
+    parseFileRowsFromReferences(refsJson: string | null | undefined): FileRowData[] {
+        if (!refsJson || typeof refsJson !== 'string') return [];
+        try {
+            const refs = JSON.parse(refsJson) as { FileId?: number; fileName?: string }[];
+            if (!Array.isArray(refs)) return [];
+            return refs.map((r) => ({ displayName: r.fileName ?? '', file: null, fileId: r.FileId }));
+        } catch {
+            return [];
+        }
+    }
+
+    onFileRowsChange(event: FileRowData[]): void {
+        if (event && Array.isArray(event)) this.fileRows = event;
+    }
+
+    onDownloadFile(payload: { fileId: number; fileName: string }): void {
+        this.empService.downloadFile(payload.fileId).subscribe({
+            next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
+            error: (err) => {
+                console.error('Download failed', err);
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file' });
+            }
         });
     }
 
@@ -216,6 +247,7 @@ export class EmpDisciplineInfoComponent implements OnInit {
         }
         this.isEditMode = false;
         this.editingDisciplineId = null;
+        this.fileRows = [];
         this.disciplineForm.reset({
             disciplineId: null,
             offenseDate: null,
@@ -228,8 +260,7 @@ export class EmpDisciplineInfoComponent implements OnInit {
             punishmentDateMotherOrg: null,
             action: '',
             auth: '',
-            remarks: '',
-            fileName: ''
+            remarks: ''
         });
         this.displayDialog = true;
     }
@@ -240,6 +271,7 @@ export class EmpDisciplineInfoComponent implements OnInit {
         const offenseDate = row.offenseDate ? (typeof row.offenseDate === 'string' ? row.offenseDate : new Date(row.offenseDate).toISOString().substring(0, 10)) : null;
         const punishmentDate = row.punishmentDate ? (typeof row.punishmentDate === 'string' ? row.punishmentDate : new Date(row.punishmentDate).toISOString().substring(0, 10)) : null;
         const punishmentDateMO = row.punishmentDateMotherOrg ? (typeof row.punishmentDateMotherOrg === 'string' ? row.punishmentDateMotherOrg : new Date(row.punishmentDateMotherOrg).toISOString().substring(0, 10)) : null;
+        this.fileRows = this.parseFileRowsFromReferences(row.filesReferences);
         this.disciplineForm.patchValue({
             disciplineId: row.disciplineId,
             offenseDate,
@@ -252,58 +284,85 @@ export class EmpDisciplineInfoComponent implements OnInit {
             punishmentDateMotherOrg: punishmentDateMO,
             action: row.action ?? '',
             auth: row.auth ?? '',
-            remarks: row.remarks ?? '',
-            fileName: row.fileName ?? ''
+            remarks: row.remarks ?? ''
         });
         this.displayDialog = true;
     }
 
     saveDiscipline(): void {
         if (!this.selectedEmployeeId) return;
-        const v = this.disciplineForm.value;
-        const now = new Date().toISOString();
-        const payload: DisciplineInfoModel = {
-            employeeId: this.selectedEmployeeId,
-            disciplineId: this.isEditMode ? (this.editingDisciplineId ?? 0) : 0,
-            offenseDate: this.toDateString(v.offenseDate),
-            offenseType: v.offenseType ?? null,
-            briefStatementOfOffenceId: v.briefStatementOfOffenceId ?? null,
-            offenseDetails: v.offenseDetails || null,
-            punishmentTypeRAB: v.punishmentTypeRAB ?? null,
-            punishmentDate: this.toDateString(v.punishmentDate),
-            punishmentTypeMotherOrg: v.punishmentTypeMotherOrg ?? null,
-            punishmentDateMotherOrg: this.toDateString(v.punishmentDateMotherOrg),
-            action: v.action || null,
-            auth: v.auth || null,
-            remarks: v.remarks || null,
-            fileName: v.fileName || null,
-            createdBy: 'user',
-            createdDate: now,
-            lastUpdatedBy: 'user',
-            lastupdate: now
+        const existingRefs = this.fileReferencesForm?.getExistingFileReferences() || [];
+        const filesToUpload = this.fileReferencesForm?.getFilesToUpload() || [];
+
+        const doSave = (filesReferencesJson: string | null) => {
+            const v = this.disciplineForm.value;
+            const now = new Date().toISOString();
+            const payload: DisciplineInfoModel = {
+                employeeId: this.selectedEmployeeId!,
+                disciplineId: this.isEditMode ? (this.editingDisciplineId ?? 0) : 0,
+                offenseDate: this.toDateString(v.offenseDate),
+                offenseType: v.offenseType ?? null,
+                briefStatementOfOffenceId: v.briefStatementOfOffenceId ?? null,
+                offenseDetails: v.offenseDetails || null,
+                punishmentTypeRAB: v.punishmentTypeRAB ?? null,
+                punishmentDate: this.toDateString(v.punishmentDate),
+                punishmentTypeMotherOrg: v.punishmentTypeMotherOrg ?? null,
+                punishmentDateMotherOrg: this.toDateString(v.punishmentDateMotherOrg),
+                action: v.action || null,
+                auth: v.auth || null,
+                remarks: v.remarks || null,
+                fileName: null,
+                filesReferences: filesReferencesJson ?? undefined,
+                createdBy: 'user',
+                createdDate: now,
+                lastUpdatedBy: 'user',
+                lastupdate: now
+            };
+            this.isSaving = true;
+            const req = this.isEditMode
+                ? this.disciplineInfoService.update(payload)
+                : this.disciplineInfoService.save(payload);
+            req.pipe(
+                map((res: any) => {
+                    const code = res?.statusCode ?? res?.StatusCode ?? 200;
+                    if (code !== 200) throw new Error(res?.description ?? res?.Description ?? 'Save failed');
+                    return res;
+                }),
+                catchError(err => {
+                    this.messageService.add({ severity: 'error', summary: 'Save failed', detail: String(err?.error?.description ?? err?.error?.Description ?? err?.message ?? 'Save failed') });
+                    return of(null);
+                })
+            ).subscribe(res => {
+                this.isSaving = false;
+                if (res != null) {
+                    this.messageService.add({ severity: 'success', summary: 'Saved', detail: this.isEditMode ? 'Discipline record updated.' : 'Discipline record added.' });
+                    this.displayDialog = false;
+                    this.loadDisciplineList();
+                }
+            });
         };
-        this.isSaving = true;
-        const req = this.isEditMode
-            ? this.disciplineInfoService.update(payload)
-            : this.disciplineInfoService.save(payload);
-        req.pipe(
-            map((res: any) => {
-                const code = res?.statusCode ?? res?.StatusCode ?? 200;
-                if (code !== 200) throw new Error(res?.description ?? res?.Description ?? 'Save failed');
-                return res;
-            }),
-            catchError(err => {
-                this.messageService.add({ severity: 'error', summary: 'Save failed', detail: String(err?.error?.description ?? err?.error?.Description ?? err?.message ?? 'Save failed') });
-                return of(null);
-            })
-        ).subscribe(res => {
-            this.isSaving = false;
-            if (res != null) {
-                this.messageService.add({ severity: 'success', summary: 'Saved', detail: this.isEditMode ? 'Discipline record updated.' : 'Discipline record added.' });
-                this.displayDialog = false;
-                this.loadDisciplineList();
-            }
-        });
+
+        if (filesToUpload.length > 0) {
+            const uploads = filesToUpload.map((r: FileRowData) =>
+                this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
+            );
+            forkJoin(uploads).subscribe({
+                next: (results: unknown) => {
+                    const resultsArray = Array.isArray(results) ? results : [];
+                    const newRefs = (resultsArray as { fileId: number; fileName: string }[]).map((r) => ({ FileId: r.fileId, fileName: r.fileName }));
+                    const allRefs: { FileId: number; fileName: string }[] = [...existingRefs.map((r: { FileId: number; fileName: string }) => ({ FileId: r.FileId, fileName: r.fileName })), ...newRefs];
+                    const filesReferencesJson = allRefs.length > 0 ? JSON.stringify(allRefs) : null;
+                    doSave(filesReferencesJson);
+                },
+                error: (err) => {
+                    console.error('Error uploading files', err);
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to upload one or more files' });
+                }
+            });
+            return;
+        }
+        const filesReferencesJson = existingRefs.length > 0 ? JSON.stringify(existingRefs) : null;
+        doSave(filesReferencesJson);
     }
 
     confirmDelete(row: DisciplineListRow): void {

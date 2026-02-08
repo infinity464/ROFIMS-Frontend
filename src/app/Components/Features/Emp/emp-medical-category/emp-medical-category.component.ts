@@ -1,7 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { forkJoin } from 'rxjs';
 
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
@@ -10,7 +11,6 @@ import { MessageService, ConfirmationService } from 'primeng/api';
 import { TooltipModule } from 'primeng/tooltip';
 import { TableModule } from 'primeng/table';
 import { SelectModule } from 'primeng/select';
-import { FileUploadModule } from 'primeng/fileupload';
 import { DialogModule } from 'primeng/dialog';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DatePickerModule } from 'primeng/datepicker';
@@ -21,6 +21,7 @@ import { MedicalInfoService, MedicalInfoModel } from '@/services/medical-info.se
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { CodeType } from '@/models/enums';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
+import { FileReferencesFormComponent, FileRowData } from '@components/Common/file-references-form/file-references-form';
 
 @Component({
     selector: 'app-emp-medical-category',
@@ -35,18 +36,20 @@ import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/
         TooltipModule,
         TableModule,
         SelectModule,
-        FileUploadModule,
         DialogModule,
         ConfirmDialogModule,
         DatePickerModule,
         TextareaModule,
-        EmployeeSearchComponent
+        EmployeeSearchComponent,
+        FileReferencesFormComponent
     ],
     providers: [ConfirmationService],
     templateUrl: './emp-medical-category.component.html',
     styleUrl: './emp-medical-category.component.scss'
 })
 export class EmpMedicalCategory implements OnInit {
+    @ViewChild('fileReferencesForm') fileReferencesForm!: any;
+
     employeeFound = false;
     selectedEmployeeId: number | null = null;
     employeeBasicInfo: any = null;
@@ -62,6 +65,7 @@ export class EmpMedicalCategory implements OnInit {
     medicalForm!: FormGroup;
     editingMedicalInfoId: number | null = null;
 
+    fileRows: FileRowData[] = [];
     medicalCategoryOptions: { label: string; value: number }[] = [];
 
     constructor(
@@ -108,9 +112,7 @@ export class EmpMedicalCategory implements OnInit {
             toDate: [null, Validators.required],
             reason: [''],
             auth: [''],
-            remarks: [''],
-            fileName: [''],
-            documentFile: [null as File | null]
+            remarks: ['']
         });
     }
 
@@ -166,8 +168,34 @@ export class EmpMedicalCategory implements OnInit {
             reason: item.reason ?? item.Reason ?? null,
             auth: item.auth ?? item.Auth ?? null,
             remarks: item.remarks ?? item.Remarks ?? null,
-            fileName: item.fileName ?? item.FileName ?? null
+            fileName: item.fileName ?? item.FileName ?? null,
+            filesReferences: item.filesReferences ?? item.FilesReferences ?? null
         };
+    }
+
+    parseFileRowsFromReferences(refsJson: string | null | undefined): FileRowData[] {
+        if (!refsJson || typeof refsJson !== 'string') return [];
+        try {
+            const refs = JSON.parse(refsJson) as { FileId?: number; fileName?: string }[];
+            if (!Array.isArray(refs)) return [];
+            return refs.map((r) => ({ displayName: r.fileName ?? '', file: null, fileId: r.FileId }));
+        } catch {
+            return [];
+        }
+    }
+
+    onFileRowsChange(event: FileRowData[]): void {
+        if (event && Array.isArray(event)) this.fileRows = event;
+    }
+
+    onDownloadFile(payload: { fileId: number; fileName: string }): void {
+        this.empService.downloadFile(payload.fileId).subscribe({
+            next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
+            error: (err) => {
+                console.error('Download failed', err);
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file' });
+            }
+        });
     }
 
     getMedicalCategoryLabel(medicalCategoryId: number): string {
@@ -188,6 +216,7 @@ export class EmpMedicalCategory implements OnInit {
     openAddDialog(): void {
         this.isEditMode = false;
         this.editingMedicalInfoId = null;
+        this.fileRows = [];
         this.medicalForm.reset({
             medicalInfoId: 0,
             employeeId: this.selectedEmployeeId ?? 0,
@@ -196,9 +225,7 @@ export class EmpMedicalCategory implements OnInit {
             toDate: null,
             reason: '',
             auth: '',
-            remarks: '',
-            fileName: '',
-            documentFile: null
+            remarks: ''
         });
         this.displayDialog = true;
     }
@@ -206,6 +233,7 @@ export class EmpMedicalCategory implements OnInit {
     openEditDialog(row: MedicalInfoModel): void {
         this.isEditMode = true;
         this.editingMedicalInfoId = row.medicalInfoId;
+        this.fileRows = this.parseFileRowsFromReferences(row.filesReferences);
         const fromDate = row.fromDate ? new Date(row.fromDate) : null;
         const toDate = row.toDate ? new Date(row.toDate) : null;
         this.medicalForm.patchValue({
@@ -216,9 +244,7 @@ export class EmpMedicalCategory implements OnInit {
             toDate,
             reason: row.reason ?? '',
             auth: row.auth ?? '',
-            remarks: row.remarks ?? '',
-            fileName: row.fileName ?? '',
-            documentFile: null
+            remarks: row.remarks ?? ''
         });
         this.displayDialog = true;
     }
@@ -233,44 +259,72 @@ export class EmpMedicalCategory implements OnInit {
             this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'No employee selected' });
             return;
         }
-        const formValue = this.medicalForm.value;
-        const fromDate = formValue.fromDate instanceof Date ? formValue.fromDate.toISOString() : formValue.fromDate;
-        const toDate = formValue.toDate instanceof Date ? formValue.toDate.toISOString() : formValue.toDate;
-        const payload: Partial<MedicalInfoModel> = {
-            medicalInfoId: this.isEditMode ? (this.editingMedicalInfoId ?? 0) : 0,
-            employeeId: this.selectedEmployeeId,
-            medicalCategoryId: formValue.medicalCategoryId,
-            fromDate: fromDate ?? new Date().toISOString(),
-            toDate: toDate ?? new Date().toISOString(),
-            reason: formValue.reason || null,
-            auth: formValue.auth || null,
-            remarks: formValue.remarks || null,
-            fileName: formValue.fileName || null,
-            createdBy: 'user',
-            lastUpdatedBy: 'user'
+        const existingRefs = this.fileReferencesForm?.getExistingFileReferences() || [];
+        const filesToUpload = this.fileReferencesForm?.getFilesToUpload() || [];
+
+        const doSave = (filesReferencesJson: string | null) => {
+            const formValue = this.medicalForm.value;
+            const fromDate = formValue.fromDate instanceof Date ? formValue.fromDate.toISOString() : formValue.fromDate;
+            const toDate = formValue.toDate instanceof Date ? formValue.toDate.toISOString() : formValue.toDate;
+            const payload: Partial<MedicalInfoModel> = {
+                medicalInfoId: this.isEditMode ? (this.editingMedicalInfoId ?? 0) : 0,
+                employeeId: this.selectedEmployeeId!,
+                medicalCategoryId: formValue.medicalCategoryId,
+                fromDate: fromDate ?? new Date().toISOString(),
+                toDate: toDate ?? new Date().toISOString(),
+                reason: formValue.reason || null,
+                auth: formValue.auth || null,
+                remarks: formValue.remarks || null,
+                fileName: null,
+                filesReferences: filesReferencesJson ?? undefined,
+                createdBy: 'user',
+                lastUpdatedBy: 'user'
+            };
+
+            this.isSaving = true;
+            const req = this.isEditMode
+                ? this.medicalInfoService.update(payload)
+                : this.medicalInfoService.save(payload);
+
+            req.subscribe({
+                next: () => {
+                    this.messageService.add({
+                        severity: 'success',
+                        summary: 'Success',
+                        detail: this.isEditMode ? 'Medical record updated.' : 'Medical record added.'
+                    });
+                    this.displayDialog = false;
+                    this.loadMedicalList();
+                    this.isSaving = false;
+                },
+                error: () => {
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to save medical record' });
+                    this.isSaving = false;
+                }
+            });
         };
 
-        this.isSaving = true;
-        const req = this.isEditMode
-            ? this.medicalInfoService.update(payload)
-            : this.medicalInfoService.save(payload);
-
-        req.subscribe({
-            next: () => {
-                this.messageService.add({
-                    severity: 'success',
-                    summary: 'Success',
-                    detail: this.isEditMode ? 'Medical record updated.' : 'Medical record added.'
-                });
-                this.displayDialog = false;
-                this.loadMedicalList();
-                this.isSaving = false;
-            },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to save medical record' });
-                this.isSaving = false;
-            }
-        });
+        if (filesToUpload.length > 0) {
+            const uploads = filesToUpload.map((r: FileRowData) =>
+                this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
+            );
+            forkJoin(uploads).subscribe({
+                next: (results: unknown) => {
+                    const resultsArray = Array.isArray(results) ? results : [];
+                    const newRefs = (resultsArray as { fileId: number; fileName: string }[]).map((r) => ({ FileId: r.fileId, fileName: r.fileName }));
+                    const allRefs: { FileId: number; fileName: string }[] = [...existingRefs.map((r: { FileId: number; fileName: string }) => ({ FileId: r.FileId, fileName: r.fileName })), ...newRefs];
+                    const filesReferencesJson = allRefs.length > 0 ? JSON.stringify(allRefs) : null;
+                    doSave(filesReferencesJson);
+                },
+                error: (err) => {
+                    console.error('Error uploading files', err);
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to upload one or more files' });
+                }
+            });
+            return;
+        }
+        const filesReferencesJson = existingRefs.length > 0 ? JSON.stringify(existingRefs) : null;
+        doSave(filesReferencesJson);
     }
 
     confirmDelete(row: MedicalInfoModel): void {
@@ -305,36 +359,6 @@ export class EmpMedicalCategory implements OnInit {
         this.selectedEmployeeId = null;
         this.employeeBasicInfo = null;
         this.medicalList = [];
-    }
-
-    hasFileInForm(): boolean {
-        const file = this.medicalForm.get('documentFile')?.value as File | null;
-        return !!(file?.name);
-    }
-
-    getFileLabelInForm(): string {
-        const file = this.medicalForm.get('documentFile')?.value as File | null;
-        return file?.name ?? this.medicalForm.get('fileName')?.value ?? '—';
-    }
-
-    viewFileInForm(): void {
-        const file = this.medicalForm.get('documentFile')?.value as File | null;
-        if (file) window.open(URL.createObjectURL(file), '_blank');
-    }
-
-    clearFileInForm(): void {
-        this.medicalForm.patchValue({ documentFile: null, fileName: '' });
-    }
-
-    onFileSelectInForm(event: { files: File[] }): void {
-        const file = event.files?.[0] ?? null;
-        if (file) {
-            this.medicalForm.patchValue({ documentFile: file, fileName: file.name });
-        }
-    }
-
-    onDialogHide(): void {
-        this.medicalForm.patchValue({ documentFile: null });
     }
 
     enableEditMode(): void {

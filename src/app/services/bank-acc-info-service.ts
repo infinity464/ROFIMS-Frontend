@@ -12,6 +12,7 @@ export interface BankAccInfoModel {
     accountNameEN: string;
     accountNameBN: string;
     remarks: string | null;
+    filesReferences?: string | null;
     createdBy?: string;
     createdDate?: string;
     lastUpdatedBy?: string;
