@@ -1,0 +1,21 @@
+:host {
+  display: block;
+  min-height: 100%;
+  padding-bottom: 2rem;
+}
+
+::ng-deep .identity-user-employee-mapping-page .card:last-child {
+  margin-bottom: 1.5rem;
+}
+
+::ng-deep .identity-user-employee-mapping-page p-table {
+  display: block;
+}
+
+::ng-deep .identity-user-employee-mapping-page .p-datatable-wrapper {
+  min-height: 200px;
+}
+
+.min-w-12rem {
+  min-width: 12rem;
+}

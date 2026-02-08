@@ -1,0 +1,62 @@
+<p-toast />
+<p-confirmDialog />
+<p-fluid>
+  <div class="card">
+    <div class="font-semibold text-xl mb-4">Role List &amp; Add Role</div>
+    <form [formGroup]="form" (ngSubmit)="onSubmit()">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div class="field md:col-span-2">
+          <label for="roleName" class="block mb-2">Role Name <span class="text-red-500">*</span></label>
+          <input
+            pInputText
+            id="roleName"
+            formControlName="name"
+            placeholder="Enter role name"
+            class="w-full"
+          />
+          @if (form.get('name')?.invalid && form.get('name')?.touched) {
+            <small class="text-red-500 block mt-1">Role name is required</small>
+          }
+        </div>
+        <div class="field flex items-end gap-2">
+          <p-button
+            [label]="editingRoleId ? 'Update Role' : 'Add Role'"
+            type="submit"
+            [loading]="isSubmitting"
+            [disabled]="form.invalid || isSubmitting"
+          />
+          @if (editingRoleId) {
+            <p-button label="Cancel" severity="secondary" type="button" (onClick)="onReset()" [disabled]="isSubmitting" />
+          }
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="card mt-4">
+    <div class="font-semibold text-lg mb-4">Roles</div>
+    <p-table [value]="roles" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]">
+      <ng-template pTemplate="header">
+        <tr>
+          <th style="width: 5%">#</th>
+          <th>Role Name</th>
+          <th style="width: 12%">Action</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-role let-rowIndex="rowIndex">
+        <tr>
+          <td>{{ rowIndex + 1 }}</td>
+          <td>{{ role.name }}</td>
+          <td>
+            <button pButton icon="pi pi-pencil" (click)="onEdit(role)" pTooltip="Edit"></button>
+          </td>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="3">No roles found.</td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </div>
+</p-fluid>

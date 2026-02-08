@@ -1,0 +1,75 @@
+<p-toast />
+<p-fluid class="identity-user-employee-mapping-page">
+  <div class="card">
+    <div class="font-semibold text-xl mb-4">Identity User – Employee Mapping</div>
+    <p class="text-color-secondary mb-4">
+      Link each identity user to an employee from the employee table. Select an employee and click Map, or Clear to remove the link.
+    </p>
+  </div>
+
+  <div class="card mt-4">
+    <p-table
+      [value]="mappings"
+      [loading]="loading"
+      [paginator]="true"
+      [rows]="10"
+      [rowsPerPageOptions]="[10, 25, 50]"
+    >
+      <ng-template pTemplate="header">
+        <tr>
+          <th style="width: 5%">#</th>
+          <th>Email</th>
+          <th>User Name</th>
+          <th>Mapped Employee</th>
+          <th style="width: 28%">Action</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+        <tr>
+          <td>{{ rowIndex + 1 }}</td>
+          <td>{{ row.email }}</td>
+          <td>{{ row.userName || '-' }}</td>
+          <td>{{ mappedEmployeeDisplay(row) }}</td>
+          <td>
+            <div class="flex gap-2 align-items-center flex-wrap">
+              <p-select
+                [ngModel]="selectedEmployeeIdByUser[row.userId] ?? row.employeeId"
+                (ngModelChange)="selectedEmployeeIdByUser[row.userId] = $event"
+                [options]="employees"
+                optionLabel="displayLabel"
+                optionValue="employeeID"
+                placeholder="Select employee"
+                styleClass="w-full min-w-12rem"
+                [filter]="true"
+                [showClear]="true"
+                appendTo="body"
+              />
+              <p-button
+                label="Map"
+                icon="pi pi-check"
+                (onClick)="onMap(row)"
+                [loading]="savingUserId === row.userId"
+                [disabled]="savingUserId !== null"
+                pTooltip="Save mapping"
+              />
+              <p-button
+                label="Clear"
+                icon="pi pi-times"
+                severity="secondary"
+                (onClick)="onClear(row)"
+                [loading]="savingUserId === row.userId"
+                [disabled]="savingUserId !== null || !row.employeeId"
+                pTooltip="Remove mapping"
+              />
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="5">No identity users found.</td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </div>
+</p-fluid>
