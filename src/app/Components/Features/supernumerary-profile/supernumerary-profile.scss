@@ -1,6 +1,6 @@
+$section-margin: 1rem;
+
 .supernumerary-profile-page {
-    max-width: 56rem;
-    margin: 0 auto;
 }
 
 /* Header: title left, empty placeholder box top right */
@@ -8,8 +8,8 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 1.5rem;
     gap: 1rem;
+    margin-bottom: $section-margin;
 }
 
 .profile-header-left {
@@ -21,7 +21,6 @@
 .profile-title {
     font-size: 1.5rem;
     font-weight: 700;
-    margin: 0;
 }
 
 .profile-placeholder-box {
@@ -34,15 +33,19 @@
 
 /* Core details: label normal, value bold; pairs on same line */
 .core-details {
-    margin-bottom: 1.5rem;
+    margin: $section-margin 0;
 }
 
 .core-row {
     display: flex;
     flex-wrap: wrap;
     gap: 2rem 6rem;
-    margin-bottom: 2rem;
     align-items: baseline;
+    margin-bottom: $section-margin;
+
+    &:last-child {
+        margin-bottom: 0;
+    }
 
     .detail-item {
         white-space: nowrap;
@@ -71,13 +74,13 @@
 
 /* Address sections: heading bold + underlined; two columns */
 .address-section {
-    margin-bottom: 1.25rem;
+    margin: $section-margin 0;
 }
 
 .address-heading {
     font-weight: 700;
     text-decoration: underline;
-    margin-bottom: 0.5rem;
+    margin-bottom: $section-margin;
 }
 
 .address-grid {
@@ -89,10 +92,12 @@
 .address-col {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: $section-margin;
 }
 
 .addr-row {
+    /* spacing between rows (e.g. Post Office / Division) comes from .address-col gap */
+
     .addr-label {
         font-weight: normal;
     }
@@ -102,13 +107,26 @@
     }
 }
 
-.reliever-heading {
-    font-weight: 700;
-    margin-bottom: 0.75rem;
+.reliever-section {
+    margin: $section-margin 0;
+    padding-top: $section-margin;
 }
 
-.reliever-table {
-    margin-top: 0.5rem;
+.reliever-heading {
+    font-weight: 700;
+    margin-bottom: $section-margin;
+}
+
+.relieved-by-row {
+    margin-bottom: $section-margin;
+
+    .detail-label {
+        font-weight: normal;
+    }
+
+    .detail-value {
+        font-weight: 700;
+    }
 }
 
 @media (max-width: 768px) {
