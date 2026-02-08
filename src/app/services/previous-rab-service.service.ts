@@ -15,6 +15,7 @@ export interface VwPreviousRABServiceInfoModel {
     postingAuth?: string | null;
     remarks?: string | null;
     documentPath?: string | null;
+    filesReferences?: string | null;
     createdBy?: string | null;
     createdDate?: string;
     lastUpdatedBy?: string | null;
@@ -39,6 +40,7 @@ export interface PreviousRABServiceInfoModel {
     appointment?: number | null;
     postingAuth?: string | null;
     remarks?: string | null;
+    filesReferences?: string | null;
     createdBy?: string | null;
     createdDate?: string;
     lastUpdatedBy?: string | null;
@@ -80,6 +82,17 @@ export class PreviousRABServiceService {
         return this.http.delete(`${this.apiUrl}/DeleteAsyn/${employeeId}/${previousRABServiceID}`);
     }
 
+    /** Get a single record by keys (returns entity including filesReferences). */
+    getByKeys(employeeId: number, previousRABServiceID: number): Observable<PreviousRABServiceInfoModel | null> {
+        return this.http.get<PreviousRABServiceInfoModel[]>(`${this.apiUrl}/GetByEmployeeId/${employeeId}`).pipe(
+            map((list: any) => {
+                const arr = Array.isArray(list) ? list : [];
+                const item = arr.find((x: any) => (x.previousRABServiceID ?? x.PreviousRABServiceID) === previousRABServiceID);
+                return item ?? null;
+            })
+        );
+    }
+
     /** Send camelCase so ASP.NET Core JSON binder maps to C# model (default uses camelCase). */
     private toApiPayload(payload: Partial<PreviousRABServiceInfoModel>): any {
         const now = new Date().toISOString();
@@ -93,6 +106,7 @@ export class PreviousRABServiceService {
             appointment: payload.appointment ?? null,
             postingAuth: payload.postingAuth ?? null,
             remarks: payload.remarks ?? null,
+            filesReferences: payload.filesReferences ?? null,
             createdBy: payload.createdBy ?? 'user',
             createdDate: payload.createdDate ?? now,
             lastUpdatedBy: payload.lastUpdatedBy ?? 'user',

@@ -1,7 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
@@ -21,8 +21,9 @@ import { EmpService } from '@/services/emp-service';
 import { PreviousRABServiceService } from '@/services/previous-rab-service.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
+import { FileReferencesFormComponent, FileRowData } from '@components/Common/file-references-form/file-references-form';
 
-/** List row for display in table (includes document display fields) */
+/** List row for display in table */
 export interface PreviousRABServiceListRow {
     previousRABServiceID: number;
     rabUnitCodeId: number | null;
@@ -32,9 +33,7 @@ export interface PreviousRABServiceListRow {
     appointment: number | null;
     postingAuth: string | null;
     remarks: string | null;
-    documentPath?: string | null;
-    documentFileName?: string | null;
-    documentFile?: File | null;
+    filesReferences?: string | null;
 }
 
 @Component({
@@ -50,17 +49,20 @@ export interface PreviousRABServiceListRow {
         TooltipModule,
         TableModule,
         SelectModule,
-        FileUploadModule,
         DialogModule,
         ConfirmDialogModule,
         CheckboxModule,
-        EmployeeSearchComponent
+        EmployeeSearchComponent,
+        FileReferencesFormComponent
     ],
     providers: [ConfirmationService],
     templateUrl: './emp-previous-rab-service.html',
     styleUrl: './emp-previous-rab-service.scss'
 })
 export class EmpPreviousRabService implements OnInit {
+    @ViewChild('fileReferencesForm') fileReferencesForm!: any; // FileReferencesFormComponent
+    fileRows: FileRowData[] = [];
+
     employeeFound = false;
     selectedEmployeeId: number | null = null;
     employeeBasicInfo: any = null;
@@ -87,8 +89,7 @@ export class EmpPreviousRabService implements OnInit {
         private commonCodeService: CommonCodeService,
         private messageService: MessageService,
         private confirmationService: ConfirmationService,
-        private route: ActivatedRoute,
-        private router: Router
+        private route: ActivatedRoute
     ) {}
 
     ngOnInit(): void {
@@ -116,10 +117,7 @@ export class EmpPreviousRabService implements OnInit {
             isCurrentlyActive: [false],
             appointment: [null],
             postingAuth: [''],
-            remarks: [''],
-            documentFileName: [''],
-            documentFile: [null as File | null],
-            documentPath: [null as string | null]
+            remarks: ['']
         });
         this.serviceForm.get('isCurrentlyActive')?.valueChanges.subscribe(active => {
             const toControl = this.serviceForm.get('serviceTo');
@@ -199,8 +197,6 @@ export class EmpPreviousRabService implements OnInit {
                 this.serviceList = arr
                     .filter((item: any) => (item.employeeID ?? item.EmployeeID) === this.selectedEmployeeId)
                     .map((item: any) => {
-                        const docPath = item.documentPath ?? item.DocumentPath ?? null;
-                        const docName = docPath ? (docPath.split(/[/\\]/).pop() ?? '') : '';
                         const isActive = item.isCurrentlyActive ?? item.IsCurrentlyActive;
                         return {
                             previousRABServiceID: item.previousRABServiceID ?? item.PreviousRABServiceID,
@@ -211,9 +207,7 @@ export class EmpPreviousRabService implements OnInit {
                             appointment: item.appointment ?? item.Appointment ?? null,
                             postingAuth: item.postingAuth ?? item.PostingAuth ?? null,
                             remarks: item.remarks ?? item.Remarks ?? null,
-                            documentPath: docPath,
-                            documentFileName: docName,
-                            documentFile: null as File | null
+                            filesReferences: item.filesReferences ?? item.FilesReferences ?? null
                         };
                     });
                 this.isLoading = false;
@@ -238,30 +232,10 @@ export class EmpPreviousRabService implements OnInit {
         return isNaN(d.getTime()) ? '—' : String(d.getFullYear());
     }
 
-    getPostingOrderLabel(row: PreviousRABServiceListRow): string {
-        if (row.documentFile?.name) return row.documentFile.name;
-        if (row.documentPath) return row.documentPath.split(/[/\\]/).pop() ?? row.documentPath;
-        return row.documentFileName ?? '—';
-    }
-
-    truncatePostingOrderName(row: PreviousRABServiceListRow, maxLen: number = 20): string {
-        const full = this.getPostingOrderLabel(row);
-        if (full === '—') return full;
-        return full.length <= maxLen ? full : full.slice(0, maxLen) + '...';
-    }
-
-    viewPostingOrder(row: PreviousRABServiceListRow): void {
-        if (row.documentFile) {
-            const url = URL.createObjectURL(row.documentFile);
-            window.open(url, '_blank');
-        } else if (row.documentPath) {
-            window.open(row.documentPath, '_blank');
-        }
-    }
-
     openAddDialog(): void {
         this.isEditMode = false;
         this.editingServiceId = null;
+        this.fileRows = [];
         this.serviceForm.reset({
             previousRABServiceID: null,
             rabUnitCodeId: null,
@@ -270,10 +244,7 @@ export class EmpPreviousRabService implements OnInit {
             isCurrentlyActive: false,
             appointment: null,
             postingAuth: '',
-            remarks: '',
-            documentFileName: '',
-            documentFile: null,
-            documentPath: null
+            remarks: ''
         });
         this.serviceForm.get('serviceTo')?.enable();
         this.displayDialog = true;
@@ -292,53 +263,40 @@ export class EmpPreviousRabService implements OnInit {
             isCurrentlyActive: row.isCurrentlyActive ?? false,
             appointment: row.appointment,
             postingAuth: row.postingAuth ?? '',
-            remarks: row.remarks ?? '',
-            documentFileName: row.documentFileName ?? '',
-            documentFile: null,
-            documentPath: row.documentPath ?? null
+            remarks: row.remarks ?? ''
         });
+        // Load file references (FilesReferences JSON: [{ FileId, fileName }])
+        const refsJson = row.filesReferences;
+        if (refsJson && typeof refsJson === 'string') {
+            try {
+                const refs = JSON.parse(refsJson) as { FileId?: number; fileName?: string }[];
+                this.fileRows = Array.isArray(refs) ? refs.map((r) => ({ displayName: r.fileName ?? '', file: null, fileId: r.FileId })) : [];
+            } catch {
+                this.fileRows = [];
+            }
+        } else {
+            this.fileRows = [];
+        }
         const toControl = this.serviceForm.get('serviceTo');
         if (row.isCurrentlyActive && toControl) toControl.disable();
         else toControl?.enable();
         this.displayDialog = true;
     }
 
-    hasPostingOrderFileInForm(): boolean {
-        const file = this.serviceForm.get('documentFile')?.value as File | null;
-        const path = this.serviceForm.get('documentPath')?.value as string | null;
-        return !!(file?.name || path);
-    }
-
-    getPostingOrderLabelInForm(): string {
-        const file = this.serviceForm.get('documentFile')?.value as File | null;
-        const path = this.serviceForm.get('documentPath')?.value as string | null;
-        if (file?.name) return file.name;
-        if (path) return path.split(/[/\\]/).pop() ?? path;
-        return '—';
-    }
-
-    viewPostingOrderInForm(): void {
-        const file = this.serviceForm.get('documentFile')?.value as File | null;
-        const path = this.serviceForm.get('documentPath')?.value as string | null;
-        if (file) {
-            const url = URL.createObjectURL(file);
-            window.open(url, '_blank');
-        } else if (path) {
-            window.open(path, '_blank');
+    onFileRowsChange(event: FileRowData[]): void {
+        if (event && Array.isArray(event)) {
+            this.fileRows = event;
         }
     }
 
-    clearPostingOrderInForm(): void {
-        this.serviceForm.patchValue({ documentFile: null, documentPath: null, documentFileName: '' });
-    }
-
-    onPostingOrderSelectInForm(event: { files: File[] }): void {
-        const file = event.files?.[0] ?? null;
-        this.serviceForm.patchValue({ documentFile: file });
-    }
-
-    onDialogHide(): void {
-        this.serviceForm.patchValue({ documentFile: null });
+    onDownloadFile(payload: { fileId: number; fileName: string }): void {
+        this.empService.downloadFile(payload.fileId).subscribe({
+            next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
+            error: (err) => {
+                console.error('Download failed', err);
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file' });
+            }
+        });
     }
 
     saveService(): void {
@@ -356,24 +314,30 @@ export class EmpPreviousRabService implements OnInit {
         const newId = this.serviceList.length > 0
             ? Math.max(...this.serviceList.map(r => r.previousRABServiceID)) + 1
             : 1;
-        const payload = {
-            employeeID: this.selectedEmployeeId,
-            previousRABServiceID: this.isEditMode ? (this.editingServiceId ?? 0) : newId,
-            rabUnitCodeId: v.rabUnitCodeId ?? null,
-            serviceFrom: this.toDateOnly(v.serviceFrom),
-            serviceTo: this.toDateOnly(v.serviceTo),
-            isCurrentlyActive: v.isCurrentlyActive === true,
-            appointment: v.appointment ?? null,
-            postingAuth: v.postingAuth || null,
-            remarks: v.remarks || null,
-            createdBy: 'user',
-            createdDate: now,
-            lastUpdatedBy: 'user',
-            lastupdate: now
-        };
+        const existingRefs = this.fileReferencesForm?.getExistingFileReferences() ?? [];
+        const filesToUpload = this.fileReferencesForm?.getFilesToUpload() ?? [];
 
-        this.isSaving = true;
-        const req = this.previousRABService.saveUpdate(payload).pipe(
+        const employeeId = this.selectedEmployeeId;
+        const doSave = (filesReferencesJson: string | null) => {
+            const payload = {
+                employeeID: employeeId as number,
+                previousRABServiceID: this.isEditMode ? (this.editingServiceId ?? 0) : newId,
+                rabUnitCodeId: v.rabUnitCodeId ?? null,
+                serviceFrom: this.toDateOnly(v.serviceFrom),
+                serviceTo: this.toDateOnly(v.serviceTo),
+                isCurrentlyActive: v.isCurrentlyActive === true,
+                appointment: v.appointment ?? null,
+                postingAuth: v.postingAuth || null,
+                remarks: v.remarks || null,
+                filesReferences: filesReferencesJson,
+                createdBy: 'user',
+                createdDate: now,
+                lastUpdatedBy: 'user',
+                lastupdate: now
+            };
+
+            this.isSaving = true;
+            const req = this.previousRABService.saveUpdate(payload).pipe(
             map((res: any) => {
                 const code = res?.statusCode ?? res?.StatusCode ?? 200;
                 if (code !== 200) throw new Error(res?.description ?? res?.Description ?? 'Save failed');
@@ -386,14 +350,40 @@ export class EmpPreviousRabService implements OnInit {
             })
         );
 
-        req.subscribe(res => {
-            this.isSaving = false;
-            if (res != null) {
-                this.messageService.add({ severity: 'success', summary: 'Saved', detail: this.isEditMode ? 'Previous RAB service updated.' : 'Previous RAB service added.' });
-                this.displayDialog = false;
-                this.loadServiceList();
-            }
-        });
+            req.subscribe(res => {
+                this.isSaving = false;
+                if (res != null) {
+                    this.messageService.add({ severity: 'success', summary: 'Saved', detail: this.isEditMode ? 'Previous RAB service updated.' : 'Previous RAB service added.' });
+                    this.displayDialog = false;
+                    this.loadServiceList();
+                }
+            });
+        };
+
+        if (filesToUpload.length > 0) {
+            const uploads = filesToUpload.map((r: FileRowData) =>
+                this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
+            );
+            this.isSaving = true;
+            forkJoin(uploads).subscribe({
+                next: (results: unknown) => {
+                    const resultsArray = Array.isArray(results) ? results : [];
+                    const newRefs = (resultsArray as { fileId: number; fileName: string }[]).map((r) => ({ FileId: r.fileId, fileName: r.fileName }));
+                    const allRefs: { FileId: number; fileName: string }[] = [...existingRefs.map((r: { FileId: number; fileName: string }) => ({ FileId: r.FileId, fileName: r.fileName })), ...newRefs];
+                    const filesReferencesJson = allRefs.length > 0 ? JSON.stringify(allRefs) : null;
+                    doSave(filesReferencesJson);
+                },
+                error: (err) => {
+                    this.isSaving = false;
+                    console.error('Error uploading files', err);
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to upload one or more files' });
+                }
+            });
+            return;
+        }
+
+        const filesReferencesJson = existingRefs.length > 0 ? JSON.stringify(existingRefs) : null;
+        doSave(filesReferencesJson);
     }
 
     confirmDelete(row: PreviousRABServiceListRow): void {
@@ -434,18 +424,6 @@ export class EmpPreviousRabService implements OnInit {
     enableEditMode(): void {
         this.mode = 'edit';
         this.isReadonly = false;
-    }
-
-    cancelEdit(): void {
-        if (!this.selectedEmployeeId) return;
-        this.mode = 'view';
-        this.isReadonly = true;
-        this.loadServiceList();
-        this.messageService.add({ severity: 'info', summary: 'Cancelled', detail: 'Changes discarded.' });
-    }
-
-    goBack(): void {
-        this.router.navigate(['/emp-list']);
     }
 
     resetForm(): void {
