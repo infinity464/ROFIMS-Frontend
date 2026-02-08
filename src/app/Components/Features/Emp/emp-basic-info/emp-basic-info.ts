@@ -389,6 +389,16 @@ export class EmpBasicInfo implements OnInit {
         }
     }
 
+    onDownloadFile(payload: { fileId: number; fileName: string }): void {
+        this.empService.downloadFile(payload.fileId).subscribe({
+            next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
+            error: (err) => {
+                console.error('Download failed', err);
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file' });
+            }
+        });
+    }
+
     // Copy permanent address data to present address form
     copyPermanentToPresent(): void {
         const permanentData = this.permanentAddressForm?.getFormData();

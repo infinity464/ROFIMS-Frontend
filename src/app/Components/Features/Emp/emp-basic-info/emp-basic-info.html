@@ -421,7 +421,8 @@
             [fileRows]="fileRows"
             [isViewMode]="isViewMode"
             title="Files"
-            (fileRowsChange)="onFileRowsChange($event)">
+            (fileRowsChange)="onFileRowsChange($event)"
+            (onDownloadFile)="onDownloadFile($event)">
         </app-file-references-form>
 
         <!-- Reliever Section -->

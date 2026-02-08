@@ -1,8 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
+import { forkJoin } from 'rxjs';
 
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
@@ -19,6 +20,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { EmpService } from '@/services/emp-service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
+import { FileReferencesFormComponent, FileRowData } from '@components/Common/file-references-form/file-references-form';
 
 @Component({
     selector: 'app-emp-personal-info',
@@ -37,15 +39,21 @@ import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/
         FileUploadModule,
         RadioButtonModule,
         TooltipModule,
-        EmployeeSearchComponent
+        EmployeeSearchComponent,
+        FileReferencesFormComponent
     ],
     templateUrl: './emp-personal-info.html',
     styleUrl: './emp-personal-info.scss'
 })
 export class EmpPersonalInfo implements OnInit {
+    @ViewChild('fileReferencesForm') fileReferencesForm!: any; // FileReferencesFormComponent
+
     // Employee lookup
     employeeFound: boolean = false;
     selectedEmployeeId: number | null = null;
+
+    // File references (FilesReferences JSON) – same approach as emp-basic-info
+    fileRows: FileRowData[] = [];
 
     // Employee basic info (auto-loaded from search)
     employeeBasicInfo: any = null;
@@ -78,9 +86,6 @@ export class EmpPersonalInfo implements OnInit {
 
     // Investigation Experience toggle
     showInvestigationExperience: boolean = false;
-
-    // File upload
-    uploadedFiles: any[] = [];
 
     // Mode: 'search' (default), 'view' (readonly), 'edit'
     mode: 'search' | 'view' | 'edit' = 'search';
@@ -325,6 +330,7 @@ export class EmpPersonalInfo implements OnInit {
                     this.populateFormWithPersonalInfo(personalInfo);
                 } else {
                     this.personalInfoExists = false;
+                    this.fileRows = [];
                 }
             },
             error: (err) => {
@@ -383,28 +389,42 @@ export class EmpPersonalInfo implements OnInit {
         }, { emitEvent: false }); // Prevent auto-conversion trigger during load
 
         this.showInvestigationExperience = data.HasInvestigationExp || data.hasInvestigationExp || false;
+
+        // Load file references (same shape as emp-basic-info: [{ FileId, fileName }])
+        const refsJson = data.FilesReferences || data.filesReferences;
+        if (refsJson && typeof refsJson === 'string') {
+            try {
+                const refs = JSON.parse(refsJson) as { FileId?: number; fileName?: string }[];
+                if (Array.isArray(refs)) {
+                    this.fileRows = refs.map((r) => ({ displayName: r.fileName || '', file: null, fileId: r.FileId }));
+                } else {
+                    this.fileRows = [];
+                }
+            } catch {
+                this.fileRows = [];
+            }
+        } else {
+            this.fileRows = [];
+        }
     }
 
-    // File upload handler
-    onFileUpload(event: any): void {
-        for (let file of event.files) {
-            this.uploadedFiles.push(file);
+    onFileRowsChange(event: FileRowData[]): void {
+        if (event && Array.isArray(event)) {
+            this.fileRows = event;
         }
-        this.messageService.add({
-            severity: 'info',
-            summary: 'File Uploaded',
-            detail: 'File uploaded successfully'
+    }
+
+    onDownloadFile(payload: { fileId: number; fileName: string }): void {
+        this.empService.downloadFile(payload.fileId).subscribe({
+            next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
+            error: (err) => {
+                console.error('Download failed', err);
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file' });
+            }
         });
     }
 
-    onFileRemove(event: any): void {
-        const index = this.uploadedFiles.indexOf(event.file);
-        if (index > -1) {
-            this.uploadedFiles.splice(index, 1);
-        }
-    }
-
-    // Save or Update personal information
+    // Save or Update personal information (with file uploads like emp-basic-info)
     saveAll(): void {
         if (!this.selectedEmployeeId) {
             this.messageService.add({
@@ -415,34 +435,64 @@ export class EmpPersonalInfo implements OnInit {
             return;
         }
 
-        const personalInfoPayload = this.buildPersonalInfoPayload();
+        const existingRefs = this.fileReferencesForm?.getExistingFileReferences() || [];
+        const filesToUpload = this.fileReferencesForm?.getFilesToUpload() || [];
 
-        // Call UpdateAsyn if record exists, otherwise SaveAsyn
-        const saveOrUpdate$ = this.personalInfoExists
-            ? this.empService.updatePersonalInfo(personalInfoPayload)
-            : this.empService.savePersonalInfo(personalInfoPayload);
+        const doSave = (filesReferencesJson: string | null) => {
+            const personalInfoPayload = this.buildPersonalInfoPayload(filesReferencesJson);
+            const saveOrUpdate$ = this.personalInfoExists
+                ? this.empService.updatePersonalInfo(personalInfoPayload)
+                : this.empService.savePersonalInfo(personalInfoPayload);
 
-        saveOrUpdate$.subscribe({
-            next: (res) => {
-                this.personalInfoExists = true; // After save, record now exists
-                this.messageService.add({
-                    severity: 'success',
-                    summary: 'Success',
-                    detail: this.personalInfoExists ? 'Personal information updated successfully!' : 'Personal information saved successfully!'
-                });
-            },
-            error: (err) => {
-                console.error('Failed to save/update personal info', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Failed to save personal information'
-                });
-            }
-        });
+            saveOrUpdate$.subscribe({
+                next: (res) => {
+                    this.personalInfoExists = true;
+                    this.messageService.add({
+                        severity: 'success',
+                        summary: 'Success',
+                        detail: 'Personal information saved successfully!'
+                    });
+                },
+                error: (err) => {
+                    console.error('Failed to save/update personal info', err);
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'Error',
+                        detail: 'Failed to save personal information'
+                    });
+                }
+            });
+        };
+
+        if (filesToUpload.length > 0) {
+            const uploads = filesToUpload.map((r: FileRowData) =>
+                this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
+            );
+            forkJoin(uploads).subscribe({
+                next: (results: unknown) => {
+                    const resultsArray = Array.isArray(results) ? results : [];
+                    const newRefs = (resultsArray as { fileId: number; fileName: string }[]).map((r) => ({ FileId: r.fileId, fileName: r.fileName }));
+                    const allRefs: { FileId: number; fileName: string }[] = [...existingRefs.map((r: { FileId: number; fileName: string }) => ({ FileId: r.FileId, fileName: r.fileName })), ...newRefs];
+                    const filesReferencesJson = allRefs.length > 0 ? JSON.stringify(allRefs) : null;
+                    doSave(filesReferencesJson);
+                },
+                error: (err) => {
+                    console.error('Error uploading files', err);
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'Error',
+                        detail: 'Failed to upload one or more files'
+                    });
+                }
+            });
+            return;
+        }
+
+        const filesReferencesJson = existingRefs.length > 0 ? JSON.stringify(existingRefs) : null;
+        doSave(filesReferencesJson);
     }
 
-    buildPersonalInfoPayload(): any {
+    buildPersonalInfoPayload(filesReferencesJson?: string | null): any {
         const formValue = this.personalInfoForm.getRawValue();
 
         // Convert Feet/Inch to total inches for Height
@@ -481,6 +531,7 @@ export class EmpPersonalInfo implements OnInit {
             Weight: weightKg,
             DrivingLicenseNo: formValue.drivingLicenseNo,
             ServiceIdCardNo: formValue.serviceIdCardNo,
+            FilesReferences: filesReferencesJson ?? undefined,
             CreatedBy: 'system',
             CreatedDate: new Date().toISOString(),
             LastUpdatedBy: 'system',
@@ -502,7 +553,7 @@ export class EmpPersonalInfo implements OnInit {
         this.employeeFound = false;
         this.selectedEmployeeId = null;
         this.employeeBasicInfo = null;
-        this.uploadedFiles = [];
+        this.fileRows = [];
         this.showInvestigationExperience = false;
         this.personalInfoExists = false;
     }

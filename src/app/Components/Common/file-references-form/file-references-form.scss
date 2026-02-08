@@ -2,82 +2,116 @@
     display: block;
 }
 
-// Files section: spacing between rows and button
-.files-section {
-    .file-row + .file-row {
-        margin-top: 1rem;
-    }
+// Tabular layout: Supporting Documents
+.file-references-table {
+    overflow-x: auto;
 }
 
-// Each file row: card-style with subtle shadow, professional look
-.file-row {
-    background: var(--p-content-background, #fff);
+.file-references-table__table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    border: 1px solid rgba(0, 0, 0, 0.1);
     border-radius: var(--p-border-radius-md, 0.5rem);
-    padding: 1.25rem 1.5rem;
+    background: var(--p-content-background, #fff);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    transition: box-shadow 0.2s ease;
-
-    &:hover {
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    }
-
-    // Responsive: stack on tablets (768px - 991px)
-    @media (max-width: 991px) {
-        padding: 1rem;
-
-        > div {
-            flex-direction: column !important;
-            align-items: stretch !important;
-
-            > div {
-                margin-bottom: 1rem;
-                min-width: 100% !important;
-                max-width: 100% !important;
-                flex: 1 1 100% !important;
-            }
-        }
-    }
-
-    // Responsive: stack on mobile (below 768px)
-    @media (max-width: 767px) {
-        padding: 1rem 0.75rem;
-
-        > div {
-            flex-direction: column !important;
-            align-items: stretch !important;
-            gap: 0.75rem !important;
-
-            > div {
-                margin-bottom: 0.5rem;
-                min-width: 100% !important;
-                max-width: 100% !important;
-                flex: 1 1 100% !important;
-                padding-top: 0 !important;
-            }
-        }
-    }
 }
 
-// File row delete button
-.file-row-delete-btn {
-    flex: 0 0 50px;
-    display: flex;
-    justify-content: flex-end;
-    align-items: flex-start;
-    padding-top: 32px;
+.file-references-table__th {
+    text-align: left;
+    font-weight: 600;
+    color: var(--p-text-color, #374151);
+    padding: 0.75rem 1rem;
+    background: transparent;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+    white-space: nowrap;
+}
 
-    @media (max-width: 991px) {
-        flex: 1 1 100%;
-        justify-content: flex-end;
-        align-items: center;
-        padding-top: 0;
+.file-references-table__th--name {
+    min-width: 200px;
+    width: 28%;
+}
+
+.file-references-table__th--file {
+    min-width: 80px;
+    width: 12%;
+}
+
+.file-references-table__th--upload {
+    min-width: 240px;
+    width: 42%;
+}
+
+.file-references-table__th--action {
+    min-width: 70px;
+    width: 10%;
+    text-align: center;
+}
+
+.file-references-table__row {
+    transition: background 0.15s ease;
+}
+
+.file-references-table__row:hover {
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.file-references-table__row + .file-references-table__row .file-references-table__td {
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.file-references-table__td {
+    padding: 0.875rem 1rem;
+    vertical-align: middle;
+}
+
+.file-references-table__td--name input {
+    min-width: 0;
+}
+
+.file-references-table__td--action {
+    text-align: center;
+}
+
+.file-references-table__add {
+    margin-top: 1rem;
+}
+
+// File status labels
+.file-status {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--p-border-radius-sm, 0.25rem);
+    font-size: 0.8125rem;
+    font-weight: 500;
+}
+
+.file-status--saved {
+    color: var(--p-green-700, #15803d);
+    background: var(--p-green-100, #dcfce7);
+}
+
+.file-status--new {
+    color: var(--p-blue-700, #1d4ed8);
+    background: var(--p-blue-100, #dbeafe);
+}
+
+// Responsive: stack on smaller screens (hide table, show card-style rows if needed)
+@media (max-width: 767px) {
+    .file-references-table__table {
+        font-size: 0.9rem;
     }
 
-    @media (max-width: 767px) {
-        flex: 1 1 100%;
-        justify-content: flex-end;
-        align-items: center;
-        padding-top: 0;
+    .file-references-table__th,
+    .file-references-table__td {
+        padding: 0.5rem 0.75rem;
+    }
+
+    .file-references-table__th--name,
+    .file-references-table__th--file,
+    .file-references-table__th--upload,
+    .file-references-table__th--action {
+        min-width: 0;
+        width: auto;
     }
 }

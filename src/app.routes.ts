@@ -87,6 +87,10 @@ import { Religion } from '@/Components/basic-setup/religion/religion';
 import { RabIdSerial } from '@/Components/basic-setup/rab-id-serial/rab-id-serial';
 import { CalendarComponent } from '@/Components/Features/calendar/calendar.component';
 import { TaskEventListComponent } from '@/Components/Features/calendar/task-event-list.component';
+import { ChatContainerComponent } from '@/Components/Features/chat/chat-container.component';
+import { IdentityUserCreateComponent } from '@/Components/Features/identity/identity-user-create/identity-user-create.component';
+import { RoleListComponent } from '@/Components/Features/identity/role-list/role-list.component';
+import { IdentityUserEmployeeMappingComponent } from '@/Components/Features/identity/identity-user-employee-mapping/identity-user-employee-mapping.component';
 
 export const appRoutes: Routes = [
     // Public routes
@@ -103,6 +107,10 @@ export const appRoutes: Routes = [
             { path: 'dashboard', component: Dashboard },
             { path: 'calendar', component: CalendarComponent },
             { path: 'task-event-list', component: TaskEventListComponent },
+            { path: 'chat', component: ChatContainerComponent },
+            { path: 'identity/user-create', component: IdentityUserCreateComponent },
+            { path: 'identity/roles', component: RoleListComponent },
+            { path: 'identity/user-employee-mapping', component: IdentityUserEmployeeMappingComponent },
             { path: 'employee-info', component: Employeeinfo },
             { path: 'basic-setup/division', component: Division },
             { path: 'basic-setup/district', component: District },

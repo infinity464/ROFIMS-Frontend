@@ -248,4 +248,19 @@ export class EmpService {
         if (displayName != null && displayName.trim() !== '') form.append('fileName', displayName.trim());
         return this.http.post<{ fileId: number; fileName: string }>(`${this.empApi}/FileInformation/Upload`, form);
     }
+
+    /** Download a file by FileID. Returns blob. Use with triggerFileDownload(blob, fileName) to save. */
+    downloadFile(fileId: number): Observable<Blob> {
+        return this.http.get(`${this.empApi}/FileInformation/Download/${fileId}`, { responseType: 'blob' });
+    }
+
+    /** Trigger browser download of a blob with the given file name. */
+    triggerFileDownload(blob: Blob, fileName: string): void {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName || 'download';
+        a.click();
+        URL.revokeObjectURL(url);
+    }
 }

@@ -207,30 +207,15 @@
                         </div>
                     </div>
 
-                    <!-- Supporting Documents -->
-                    <div class="flex flex-wrap gap-3 mb-4">
-                        <div class="flex-1">
-                            <label class="font-semibold block mb-2 text-700">Supporting Document Upload</label>
-                            <p-fileupload
-                                name="documents[]"
-                                [multiple]="true"
-                                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                                maxFileSize="5000000"
-                                (onUpload)="onFileUpload($event)"
-                                (onRemove)="onFileRemove($event)"
-                                [showUploadButton]="false"
-                                [showCancelButton]="false"
-                                chooseLabel="Choose Files"
-                                chooseIcon="pi pi-plus">
-                                <ng-template pTemplate="empty">
-                                    <div class="flex align-items-center justify-content-center flex-column py-3">
-                                        <i class="pi pi-cloud-upload text-2xl text-400 mb-2"></i>
-                                        <span class="text-500 text-sm">Drag and drop files or click to browse</span>
-                                    </div>
-                                </ng-template>
-                            </p-fileupload>
-                        </div>
-                    </div>
+                    <!-- File References (multiple files → FileInformation, stored in PersonalInfo.FilesReferences) -->
+                    <app-file-references-form
+                        #fileReferencesForm
+                        [fileRows]="fileRows"
+                        [isViewMode]="isReadonly"
+                        title="Supporting Documents"
+                        (fileRowsChange)="onFileRowsChange($event)"
+                        (onDownloadFile)="onDownloadFile($event)">
+                    </app-file-references-form>
                 </div>
             </form>
 

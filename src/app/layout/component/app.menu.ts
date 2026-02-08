@@ -76,7 +76,17 @@ export class AppMenu {
                 items: [
                     { label: 'Dashboard', icon: 'pi pi-fw pi-home', routerLink: ['/dashboard'], routerLinkActiveOptions: { paths: 'exact', queryParams: 'ignored', matrixParams: 'ignored', fragment: 'ignored' } },
                     { label: 'Task & Event List', icon: 'pi pi-fw pi-list', routerLink: ['/task-event-list'] },
-                    { label: 'Pending Task & Upcoming Event', icon: 'pi pi-fw pi-calendar', routerLink: ['/calendar'] }
+                    { label: 'Pending Task & Upcoming Event', icon: 'pi pi-fw pi-calendar', routerLink: ['/calendar'] },
+                    { label: 'Chat', icon: 'pi pi-fw pi-comments', routerLink: ['/chat'] }
+                ]
+            },
+            {
+                label: 'User Manage',
+                icon: 'pi pi-fw pi-users',
+                items: [
+                    { label: 'Create User', icon: 'pi pi-fw pi-user-plus', routerLink: ['/identity/user-create'] },
+                    { label: 'Roles', icon: 'pi pi-fw pi-list', routerLink: ['/identity/roles'] },
+                    { label: 'User–Employee Mapping', icon: 'pi pi-fw pi-id-card', routerLink: ['/identity/user-employee-mapping'] }
                 ]
             },
             {
