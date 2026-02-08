@@ -14,19 +14,23 @@ import { MessageService } from 'primeng/api';
 import { Fluid } from 'primeng/fluid';
 import { Checkbox } from 'primeng/checkbox';
 import { Dialog } from 'primeng/dialog';
+import { TooltipModule } from 'primeng/tooltip';
 import { AddressData, AddressFormConfig, AddressFormComponent } from '../../EmployeeInfo/address-form/address-form';
 import { forkJoin } from 'rxjs';
 import { LocationType, PostingStatus } from '@/models/enums';
 import { EmpPresentMemberCheckComponent } from '../emp-present-member-check/emp-present-member-check.component';
+import { FileReferencesFormComponent } from '@components/Common/file-references-form/file-references-form';
 
 @Component({
     selector: 'app-emp-basic-info',
-    imports: [FileUpload, Fluid, Button, ButtonModule, Select, DatePicker, ReactiveFormsModule, FormsModule, InputTextModule, AddressFormComponent, Checkbox, Dialog, EmpPresentMemberCheckComponent],
+    imports: [FileUpload, Fluid, Button, ButtonModule, Select, DatePicker, ReactiveFormsModule, FormsModule, InputTextModule, AddressFormComponent, Checkbox, Dialog, TooltipModule, EmpPresentMemberCheckComponent, FileReferencesFormComponent],
     templateUrl: './emp-basic-info.html',
-    styleUrl: './emp-basic-info.scss'
+    styleUrl: './emp-basic-info.scss',
+    standalone: true
 })
 export class EmpBasicInfo implements OnInit {
     @ViewChild('fileUpload') fileUpload!: FileUpload;
+    @ViewChild('fileReferencesForm') fileReferencesForm!: any; // FileReferencesFormComponent
     @ViewChild('permanentAddressForm') permanentAddressForm!: AddressFormComponent;
     @ViewChild('presentAddressForm') presentAddressForm!: AddressFormComponent;
     @ViewChild('wifePermanentAddressForm') wifePermanentAddressForm!: AddressFormComponent;
@@ -378,6 +382,13 @@ export class EmpBasicInfo implements OnInit {
         console.log('Address editing cancelled');
     }
 
+    onFileRowsChange(event: any): void {
+        // Handle the event emitted from FileReferencesFormComponent
+        if (event && Array.isArray(event)) {
+            this.fileRows = event;
+        }
+    }
+
     // Copy permanent address data to present address form
     copyPermanentToPresent(): void {
         const permanentData = this.permanentAddressForm?.getFormData();
@@ -441,18 +452,61 @@ export class EmpBasicInfo implements OnInit {
             return;
         }
 
-        // Step 1: Save or Update Employee
+        // Step 1: Build filesReferences (existing refs + upload new files)
+        const existingRefs = this.fileReferencesForm?.getExistingFileReferences() || [];
+        const filesToUpload = this.fileReferencesForm?.getFilesToUpload() || [];
+
+        if (filesToUpload.length > 0) {
+            const uploads = filesToUpload.map((r: any) =>
+                this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
+            );
+            forkJoin(uploads).subscribe({
+                next: (results: unknown) => {
+                    const resultsArray = Array.isArray(results) ? results : [];
+                    const newRefs = resultsArray.map((r: any) => ({ FileId: r.fileId, fileName: r.fileName }));
+                    const allRefs = [...existingRefs, ...newRefs];
+                    const filesReferencesJson = allRefs.length > 0 ? JSON.stringify(allRefs) : null;
+                    this.saveEmployeeWithFilesRefs(this.formattedDataForEmployee(), filesReferencesJson, permanentData!, presentData!, wifePermanentData, wifePresentData);
+                },
+                error: (err) => {
+                    console.error('Error uploading files', err);
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'Error',
+                        detail: 'Failed to upload one or more files'
+                    });
+                }
+            });
+            return;
+        }
+
+        const filesReferencesJson = existingRefs.length > 0 ? JSON.stringify(existingRefs) : null;
+        this.saveEmployeeWithFilesRefs(this.formattedDataForEmployee(), filesReferencesJson, permanentData!, presentData!, wifePermanentData, wifePresentData);
+    }
+
+    private formattedDataForEmployee(): any {
         const formValue = this.postingForm.getRawValue();
-        const formattedData = {
+        return {
             ...formValue,
             employeeID: this.generatedEmployeeId || 0,
             joiningDate: this.formatDate(formValue.joiningDate),
-            // Set PostingStatus to Supernumerary by default for new employees
             postingStatus: formValue.postingStatus || PostingStatus.Supernumerary,
-            // Include isReliever boolean and relieverId
             isReliever: this.isReliever,
             relieverId: this.isReliever && this.selectedRelieverEmployeeId ? this.selectedRelieverEmployeeId : null
         };
+    }
+
+    private saveEmployeeWithFilesRefs(
+        formattedData: any,
+        filesReferencesJson: string | null,
+        permanentData: { data: AddressData },
+        presentData: { data: AddressData },
+        wifePermanentData: { data: AddressData } | null,
+        wifePresentData: { data: AddressData } | null
+    ): void {
+        if (filesReferencesJson != null) {
+            formattedData.filesReferences = filesReferencesJson;
+        }
 
         // Determine whether to save or update
         const employeeRequest = this.isEditMode ? this.empService.updateEmployee(formattedData) : this.empService.saveEmployee(formattedData);
@@ -470,7 +524,7 @@ export class EmpBasicInfo implements OnInit {
                     this.wifePresentAddressConfig.employeeId = employeeId;
 
                     // Step 2: Save or Update addresses (only those with data)
-                    this.saveAllAddressesInternal(permanentData!.data, presentData!.data, this.wifePermanentAddressForm?.hasData() ? wifePermanentData!.data : null, this.wifePresentAddressForm?.hasData() ? wifePresentData!.data : null);
+                    this.saveAllAddressesInternal(permanentData.data, presentData.data, this.wifePermanentAddressForm?.hasData() && wifePermanentData ? wifePermanentData.data : null, this.wifePresentAddressForm?.hasData() && wifePresentData ? wifePresentData.data : null);
                 } else {
                     this.messageService.add({
                         severity: 'error',
@@ -572,6 +626,9 @@ export class EmpBasicInfo implements OnInit {
     imagePreview: string | null = null;
     selectedFile: File | null = null;
 
+    // File references (for FilesReferences JSON). fileId set when loading existing refs.
+    fileRows: { displayName: string; file: File | null; fileId?: number }[] = [];
+
     // Dropdown options
     motherOrganizations: MotherOrganizationModel[] = [];
     lastUnitOrganizations: MotherOrganizationModel[] = [];
@@ -669,6 +726,21 @@ export class EmpBasicInfo implements OnInit {
                     officerType: employee.officerType,
                     orgId: employee.orgId
                 });
+
+                // Load file references (display names from JSON; files are not re-fetched)
+                const refsJson = employee.filesReferences || employee.FilesReferences;
+                if (refsJson && typeof refsJson === 'string') {
+                    try {
+                        const refs = JSON.parse(refsJson) as { FileId?: number; fileName?: string }[];
+                        if (Array.isArray(refs)) {
+                            this.fileRows = refs.map((r) => ({ displayName: r.fileName || '', file: null, fileId: r.FileId }));
+                        }
+                    } catch {
+                        this.fileRows = [];
+                    }
+                } else {
+                    this.fileRows = [];
+                }
 
                 // Load dependent dropdowns based on employee data
                 if (employee.orgId) {

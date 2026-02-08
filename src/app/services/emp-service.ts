@@ -240,4 +240,12 @@ export class EmpService {
     deleteAdditionalRemarks(additionalRemarksId: number): Observable<any> {
         return this.http.delete(`${this.empApi}/AdditionalRemarksInfo/DeleteAsyn/${additionalRemarksId}`);
     }
+
+    /** Upload a file for employee references. File is stored on server (path from appsettings) and a FileInformation record is created. Returns { fileId, fileName } for FilesReferences JSON. */
+    uploadEmployeeFile(file: File, displayName?: string): Observable<{ fileId: number; fileName: string }> {
+        const form = new FormData();
+        form.append('file', file);
+        if (displayName != null && displayName.trim() !== '') form.append('fileName', displayName.trim());
+        return this.http.post<{ fileId: number; fileName: string }>(`${this.empApi}/FileInformation/Upload`, form);
+    }
 }

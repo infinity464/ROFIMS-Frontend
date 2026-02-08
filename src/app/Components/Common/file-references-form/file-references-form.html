@@ -1,0 +1,77 @@
+<div class="mt-1">
+    <div class="mb-2">
+        <h3 class="m-0 text-xl font-bold text-900">{{ title }}</h3>
+    </div>
+    <div class="files-section">
+        @for (row of fileRows; track $index) {
+<div class="file-row">
+    <div class="flex flex-wrap gap-4" style="width: 100%; align-items: flex-start;">
+
+        <!-- File Name Column -->
+        <div style="flex: 1 1 30%; min-width: 250px; max-width: 350px; display: flex; flex-direction: column;">
+            <label class="font-semibold mb-2 text-700">File name</label>
+            <input pInputText class="w-full" placeholder="e.g. Posting order 1"
+                [(ngModel)]="row.displayName" [ngModelOptions]="{standalone: true}"
+                [readonly]="isViewMode" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"/>
+        </div>
+
+        <!-- File Column -->
+        <div style="flex: 1 1 35%; min-width: 300px; display: flex; flex-direction: column;">
+            <label class="font-semibold mb-2 text-700">File</label>
+            @if (!isViewMode) {
+                @if (!row.file) {
+                    <p-fileUpload #fileUploadRow mode="basic" chooseLabel="Choose File" chooseIcon="pi pi-upload"
+                        [auto]="true" (onSelect)="onFileSelectForRow($index, $event)"
+                        [multiple]="false" styleClass="w-full">
+                    </p-fileUpload>
+                } @else {
+                    <div class="flex align-items-center gap-2 surface-100 border-round p-2">
+                        <i class="pi pi-file text-primary"></i>
+                        <span class="text-700 font-medium flex-1" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                            {{ row.file.name }}
+                        </span>
+                        <p-button
+                            icon="pi pi-eye"
+                            [rounded]="true"
+                            [text]="true"
+                            severity="info"
+                            size="small"
+                            pTooltip="Preview"
+                            (onClick)="openFilePreview($index)">
+                        </p-button>
+                        <p-button
+                            icon="pi pi-times"
+                            [rounded]="true"
+                            [text]="true"
+                            severity="danger"
+                            size="small"
+                            pTooltip="Remove"
+                            (onClick)="clearFileForRow($index)">
+                        </p-button>
+                    </div>
+                }
+            } @else if (row.displayName) {
+                <div class="flex align-items-center gap-2 surface-100 border-round p-2">
+                    <i class="pi pi-file text-primary"></i>
+                    <span class="text-700 font-medium">{{ row.displayName }}</span>
+                </div>
+            }
+        </div>
+
+        <!-- Delete Button Column (Aligned to the Right) -->
+        <div class="file-row-delete-btn">
+            @if (!isViewMode) {
+                <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" size="small" (onClick)="removeFileRow($index)" pTooltip="Remove row"></p-button>
+            }
+        </div>
+    </div>
+</div>
+
+                }
+                @if (!isViewMode) {
+                    <div class="flex justify-start mt-2">
+                        <p-button label="Add File" severity="primary" (onClick)="addFileRow()"></p-button>
+                    </div>
+                }
+            </div>
+        </div>

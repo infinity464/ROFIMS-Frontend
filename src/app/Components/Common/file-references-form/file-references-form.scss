@@ -2,24 +2,9 @@
     display: block;
 }
 
-// Ensure image preview container stays within bounds
-.image-preview-container {
-    position: relative;
-    overflow: hidden;
-    max-width: 220px;
-}
-
-// Ensure the card content doesn't overflow
-.card {
-    overflow: visible;
-}
-
 // Files section: spacing between rows and button
 .files-section {
     .file-row + .file-row {
-        margin-top: 1rem;
-    }
-    ::ng-deep .add-file-btn {
         margin-top: 1rem;
     }
 }
@@ -94,26 +79,5 @@
         justify-content: flex-end;
         align-items: center;
         padding-top: 0;
-    }
-}
-
-// Add new file: small, compact button (narrow width)
-::ng-deep .add-file-btn {
-    font-weight: 500 !important;
-    font-size: 0.875rem !important;
-    padding: 0.4rem 0.75rem !important;
-    min-width: unset !important;
-    .p-button-icon {
-        margin-right: 0.35rem;
-        font-size: 0.875rem;
-    }
-}
-
-// Save All Information: prominent success (green) button
-.save-all-btn {
-    font-weight: 600;
-    min-width: 12rem;
-    .p-button-icon {
-        margin-right: 0.5rem;
     }
 }

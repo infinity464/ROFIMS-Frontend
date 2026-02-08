@@ -415,6 +415,15 @@
           </app-address-form>
         </div>
 
+        <!-- File References Section -->
+        <app-file-references-form
+            #fileReferencesForm
+            [fileRows]="fileRows"
+            [isViewMode]="isViewMode"
+            title="Files"
+            (fileRowsChange)="onFileRowsChange($event)">
+        </app-file-references-form>
+
         <!-- Reliever Section -->
         <div class="mt-1">
             <div class="mb-2">
@@ -500,6 +509,8 @@
                     label="Save All Information"
                     icon="pi pi-check-circle"
                     size="large"
+                    severity="success"
+                    styleClass="save-all-btn"
                     [disabled]="isServiceIdDuplicate || isCheckingServiceId"
                     (onClick)="saveAll()">
                 </p-button>
