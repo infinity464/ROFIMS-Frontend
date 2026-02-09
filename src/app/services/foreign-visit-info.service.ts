@@ -16,6 +16,7 @@ export interface ForeignVisitInfoModel {
     auth: string | null;
     remarks: string | null;
     fileName: string | null;
+    filesReferences?: string | null;
     createdBy: string;
     createdDate: string;
     lastUpdatedBy: string;
@@ -90,6 +91,7 @@ export class ForeignVisitInfoService {
             auth: p.auth ?? null,
             remarks: p.remarks ?? null,
             fileName: p.fileName ?? null,
+            filesReferences: p.filesReferences ?? null,
             createdBy: p.createdBy ?? 'system',
             lastUpdatedBy: p.lastUpdatedBy ?? 'system'
         };

@@ -19,6 +19,7 @@ export interface DisciplineInfoModel {
     auth?: string | null;
     remarks?: string | null;
     fileName?: string | null;
+    filesReferences?: string | null;
     createdBy?: string;
     createdDate?: string;
     lastUpdatedBy?: string;
@@ -87,6 +88,7 @@ export class DisciplineInfoService {
             auth: p.auth ?? null,
             remarks: p.remarks ?? null,
             fileName: p.fileName ?? null,
+            filesReferences: p.filesReferences ?? null,
             createdBy: p.createdBy ?? 'user',
             createdDate: p.createdDate ?? now,
             lastUpdatedBy: p.lastUpdatedBy ?? 'user',

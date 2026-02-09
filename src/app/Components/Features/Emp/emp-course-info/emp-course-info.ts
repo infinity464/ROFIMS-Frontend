@@ -1,7 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { forkJoin } from 'rxjs';
 
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
@@ -20,6 +21,7 @@ import { CourseInfoService, CourseInfoModel } from '@/services/course-info-servi
 import { CommonCodeService } from '@/services/common-code-service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
+import { FileReferencesFormComponent, FileRowData } from '@components/Common/file-references-form/file-references-form';
 
 interface DropdownOption {
     label: string;
@@ -34,12 +36,14 @@ interface TrainingInstituteOption extends DropdownOption {
 @Component({
     selector: 'app-emp-course-info',
     standalone: true,
-    imports: [CommonModule, FormsModule, ReactiveFormsModule, InputTextModule, ButtonModule, Fluid, TooltipModule, TableModule, SelectModule, DialogModule, ConfirmDialogModule, DatePickerModule, AutoCompleteModule, EmployeeSearchComponent],
+    imports: [CommonModule, FormsModule, ReactiveFormsModule, InputTextModule, ButtonModule, Fluid, TooltipModule, TableModule, SelectModule, DialogModule, ConfirmDialogModule, DatePickerModule, AutoCompleteModule, EmployeeSearchComponent, FileReferencesFormComponent],
     providers: [ConfirmationService],
     templateUrl: './emp-course-info.html',
     styleUrl: './emp-course-info.scss'
 })
 export class EmpCourseInfoComponent implements OnInit {
+    @ViewChild('fileReferencesForm') fileReferencesForm!: any;
+
     employeeFound = false;
     selectedEmployeeId: number | null = null;
     employeeBasicInfo: any = null;
@@ -55,6 +59,7 @@ export class EmpCourseInfoComponent implements OnInit {
     courseForm!: FormGroup;
     editingCourseId: number | null = null;
 
+    fileRows: FileRowData[] = [];
     courseTypeOptions: DropdownOption[] = [];
     courseNameOptions: DropdownOption[] = [];
     trainingInstituteOptions: TrainingInstituteOption[] = [];
@@ -198,12 +203,38 @@ export class EmpCourseInfoComponent implements OnInit {
                     dateTo: item.dateTo ?? item.DateTo,
                     result: item.result ?? item.Result,
                     auth: item.auth ?? item.Auth,
-                    remarks: item.remarks ?? item.Remarks
+                    remarks: item.remarks ?? item.Remarks,
+                    filesReferences: item.filesReferences ?? item.FilesReferences ?? null
                 }));
                 this.isLoading = false;
             },
             error: () => {
                 this.isLoading = false;
+            }
+        });
+    }
+
+    parseFileRowsFromReferences(refsJson: string | null | undefined): FileRowData[] {
+        if (!refsJson || typeof refsJson !== 'string') return [];
+        try {
+            const refs = JSON.parse(refsJson) as { FileId?: number; fileName?: string }[];
+            if (!Array.isArray(refs)) return [];
+            return refs.map((r) => ({ displayName: r.fileName ?? '', file: null, fileId: r.FileId }));
+        } catch {
+            return [];
+        }
+    }
+
+    onFileRowsChange(event: FileRowData[]): void {
+        if (event && Array.isArray(event)) this.fileRows = event;
+    }
+
+    onDownloadFile(payload: { fileId: number; fileName: string }): void {
+        this.empService.downloadFile(payload.fileId).subscribe({
+            next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
+            error: (err) => {
+                console.error('Download failed', err);
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file' });
             }
         });
     }
@@ -245,6 +276,7 @@ export class EmpCourseInfoComponent implements OnInit {
     openAddDialog(): void {
         this.isEditMode = false;
         this.editingCourseId = null;
+        this.fileRows = [];
         this.courseForm.reset({
             employeeId: this.selectedEmployeeId ?? 0,
             courseId: 0,
@@ -265,6 +297,7 @@ export class EmpCourseInfoComponent implements OnInit {
     openEditDialog(row: CourseInfoModel): void {
         this.isEditMode = true;
         this.editingCourseId = row.courseId;
+        this.fileRows = this.parseFileRowsFromReferences(row.filesReferences);
         const dateFrom = row.dateFrom ? new Date(row.dateFrom) : null;
         const dateTo = row.dateTo ? new Date(row.dateTo) : null;
         const inst = row.trainingInstitueName != null ? this.trainingInstituteOptions.find((o) => o.value === row.trainingInstitueName) : null;
@@ -291,44 +324,72 @@ export class EmpCourseInfoComponent implements OnInit {
             this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'No employee selected' });
             return;
         }
-        const formValue = this.courseForm.value;
-        const toDateStr = (d: Date | null): string | null => {
-            if (!d) return null;
-            const x = new Date(d);
-            return isNaN(x.getTime()) ? null : x.toISOString().slice(0, 10);
-        };
-        const resultVal = formValue.result;
-        const resultStr = typeof resultVal === 'string' ? resultVal : (resultVal?.value ?? (resultVal ? String(resultVal) : null));
-        const payload: Partial<CourseInfoModel> = {
-            employeeId: this.selectedEmployeeId,
-            courseId: this.isEditMode ? (this.editingCourseId ?? 0) : 0,
-            courseType: formValue.courseType ?? null,
-            courseName: formValue.courseName ?? null,
-            trainingInstitueName: formValue.trainingInstitueName ?? null,
-            dateFrom: toDateStr(formValue.dateFrom),
-            dateTo: toDateStr(formValue.dateTo),
-            result: resultStr && String(resultStr).trim() ? String(resultStr).trim() : null,
-            auth: formValue.auth && String(formValue.auth).trim() ? String(formValue.auth).trim() : null,
-            remarks: formValue.remarks && String(formValue.remarks).trim() ? String(formValue.remarks).trim() : null,
-            createdBy: 'system',
-            lastUpdatedBy: 'system'
+        const existingRefs = this.fileReferencesForm?.getExistingFileReferences() || [];
+        const filesToUpload = this.fileReferencesForm?.getFilesToUpload() || [];
+
+        const doSave = (filesReferencesJson: string | null) => {
+            const formValue = this.courseForm.value;
+            const toDateStr = (d: Date | null): string | null => {
+                if (!d) return null;
+                const x = new Date(d);
+                return isNaN(x.getTime()) ? null : x.toISOString().slice(0, 10);
+            };
+            const resultVal = formValue.result;
+            const resultStr = typeof resultVal === 'string' ? resultVal : (resultVal?.value ?? (resultVal ? String(resultVal) : null));
+            const payload: Partial<CourseInfoModel> = {
+                employeeId: this.selectedEmployeeId!,
+                courseId: this.isEditMode ? (this.editingCourseId ?? 0) : 0,
+                courseType: formValue.courseType ?? null,
+                courseName: formValue.courseName ?? null,
+                trainingInstitueName: formValue.trainingInstitueName ?? null,
+                dateFrom: toDateStr(formValue.dateFrom),
+                dateTo: toDateStr(formValue.dateTo),
+                result: resultStr && String(resultStr).trim() ? String(resultStr).trim() : null,
+                auth: formValue.auth && String(formValue.auth).trim() ? String(formValue.auth).trim() : null,
+                remarks: formValue.remarks && String(formValue.remarks).trim() ? String(formValue.remarks).trim() : null,
+                filesReferences: filesReferencesJson ?? undefined,
+                createdBy: 'system',
+                lastUpdatedBy: 'system'
+            };
+
+            this.isSaving = true;
+            const req = this.isEditMode ? this.courseInfoService.update(payload) : this.courseInfoService.save(payload);
+
+            req.subscribe({
+                next: () => {
+                    this.messageService.add({ severity: 'success', summary: 'Success', detail: this.isEditMode ? 'Course updated.' : 'Course added.' });
+                    this.displayDialog = false;
+                    this.loadCourseList();
+                    this.isSaving = false;
+                },
+                error: () => {
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to save course' });
+                    this.isSaving = false;
+                }
+            });
         };
 
-        this.isSaving = true;
-        const req = this.isEditMode ? this.courseInfoService.update(payload) : this.courseInfoService.save(payload);
-
-        req.subscribe({
-            next: () => {
-                this.messageService.add({ severity: 'success', summary: 'Success', detail: this.isEditMode ? 'Course updated.' : 'Course added.' });
-                this.displayDialog = false;
-                this.loadCourseList();
-                this.isSaving = false;
-            },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to save course' });
-                this.isSaving = false;
-            }
-        });
+        if (filesToUpload.length > 0) {
+            const uploads = filesToUpload.map((r: FileRowData) =>
+                this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
+            );
+            forkJoin(uploads).subscribe({
+                next: (results: unknown) => {
+                    const resultsArray = Array.isArray(results) ? results : [];
+                    const newRefs = (resultsArray as { fileId: number; fileName: string }[]).map((r) => ({ FileId: r.fileId, fileName: r.fileName }));
+                    const allRefs: { FileId: number; fileName: string }[] = [...existingRefs.map((r: { FileId: number; fileName: string }) => ({ FileId: r.FileId, fileName: r.fileName })), ...newRefs];
+                    const filesReferencesJson = allRefs.length > 0 ? JSON.stringify(allRefs) : null;
+                    doSave(filesReferencesJson);
+                },
+                error: (err) => {
+                    console.error('Error uploading files', err);
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to upload one or more files' });
+                }
+            });
+            return;
+        }
+        const filesReferencesJson = existingRefs.length > 0 ? JSON.stringify(existingRefs) : null;
+        doSave(filesReferencesJson);
     }
 
     confirmDelete(row: CourseInfoModel): void {
@@ -353,14 +414,6 @@ export class EmpCourseInfoComponent implements OnInit {
     filterCourseResult(event: { query: string }): void {
         const query = (event.query || '').toLowerCase();
         this.courseResultSuggestions = this.courseResultOptions.filter((o) => o.label.toLowerCase().includes(query) || o.value.toLowerCase().includes(query));
-    }
-
-    onUploadDocument(row: CourseInfoModel): void {
-        this.messageService.add({ severity: 'info', summary: 'Document', detail: 'Upload not implemented. Course ID: ' + row.courseId });
-    }
-
-    onUploadDocumentInDialog(): void {
-        this.messageService.add({ severity: 'info', summary: 'Document', detail: 'Upload not implemented.' });
     }
 
     onEmployeeSearchFound(employee: EmployeeBasicInfo): void {

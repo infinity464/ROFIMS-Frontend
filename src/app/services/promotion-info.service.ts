@@ -20,6 +20,8 @@ export interface PromotionInfoModel {
     createdDate?: string | null;
     lastUpdatedBy?: string | null;
     lastupdate?: string | null;
+    /** JSON array of { FileId, fileName } for file references */
+    filesReferences?: string | null;
 }
 
 @Injectable({
@@ -73,7 +75,8 @@ export class PromotionInfoService {
             createdBy: payload.createdBy ?? 'user',
             createdDate: payload.createdDate ?? now,
             lastUpdatedBy: payload.lastUpdatedBy ?? 'user',
-            lastupdate: payload.lastupdate ?? now
+            lastupdate: payload.lastupdate ?? now,
+            filesReferences: payload.filesReferences ?? null
         };
     }
 }

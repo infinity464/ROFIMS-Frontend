@@ -21,6 +21,7 @@ export interface EducationInfoModel {
     createdDate?: string;
     lastUpdatedBy?: string;
     lastupdate?: string;
+    filesReferences?: string | null;
 }
 
 @Injectable({

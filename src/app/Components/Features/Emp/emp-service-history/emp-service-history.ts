@@ -1,9 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
+import { forkJoin } from 'rxjs';
 
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
@@ -12,7 +13,6 @@ import { MessageService, ConfirmationService } from 'primeng/api';
 import { TooltipModule } from 'primeng/tooltip';
 import { TableModule } from 'primeng/table';
 import { SelectModule } from 'primeng/select';
-import { FileUploadModule } from 'primeng/fileupload';
 import { DialogModule } from 'primeng/dialog';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 
@@ -21,6 +21,7 @@ import { MOServHistoryService } from '@/services/mo-serv-history.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { OrganizationService } from '@/Components/basic-setup/organization-setup/services/organization-service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
+import { FileReferencesFormComponent, FileRowData } from '@components/Common/file-references-form/file-references-form';
 
 interface OrgUnitOption {
     orgId: number;
@@ -37,6 +38,7 @@ export interface ServiceHistoryListRow {
     appointment: number | null;
     auth: string | null;
     remarks: string | null;
+    filesReferences?: string | null;
     documentPath?: string | null;
     documentFileName?: string | null;
     documentFile?: File | null;
@@ -55,16 +57,20 @@ export interface ServiceHistoryListRow {
         TooltipModule,
         TableModule,
         SelectModule,
-        FileUploadModule,
         DialogModule,
         ConfirmDialogModule,
-        EmployeeSearchComponent
+        EmployeeSearchComponent,
+        FileReferencesFormComponent
     ],
     providers: [ConfirmationService],
     templateUrl: './emp-service-history.html',
     styleUrl: './emp-service-history.scss'
 })
 export class EmpServiceHistory implements OnInit {
+    @ViewChild('fileReferencesForm') fileReferencesForm!: any;
+
+    fileRows: FileRowData[] = [];
+
     employeeFound = false;
     selectedEmployeeId: number | null = null;
     employeeBasicInfo: any = null;
@@ -120,10 +126,7 @@ export class EmpServiceHistory implements OnInit {
             serviceTo: [null],
             appointment: [null],
             auth: [''],
-            remarks: [''],
-            documentFileName: [''],
-            documentFile: [null as File | null],
-            documentPath: [null as string | null]
+            remarks: ['']
         });
     }
 
@@ -218,8 +221,16 @@ export class EmpServiceHistory implements OnInit {
                 this.serviceList = arr
                     .filter((item: any) => (item.employeeID ?? item.EmployeeID) === this.selectedEmployeeId)
                     .map((item: any) => {
-                        const docPath = (item as any).documentPath ?? (item as any).DocumentPath ?? null;
-                        const docName = docPath ? (docPath.split(/[/\\]/).pop() ?? '') : '';
+                        const filesRefs = (item as any).filesReferences ?? (item as any).FilesReferences ?? null;
+                        let docName = '';
+                        if (filesRefs && typeof filesRefs === 'string') {
+                            try {
+                                const refs = JSON.parse(filesRefs) as { fileName?: string }[];
+                                if (Array.isArray(refs) && refs.length > 0) {
+                                    docName = refs.length === 1 ? (refs[0].fileName ?? '') : `${refs.length} files`;
+                                }
+                            } catch { /* ignore */ }
+                        }
                         return {
                             servHisID: item.servHisID ?? item.ServHisID,
                             orgUnitId: (item as any).orgUnitId ?? (item as any).OrgUnitId ?? null,
@@ -229,8 +240,9 @@ export class EmpServiceHistory implements OnInit {
                             appointment: item.appointment ?? (item as any).Appointment ?? null,
                             auth: item.auth ?? (item as any).Auth ?? null,
                             remarks: item.remarks ?? (item as any).Remarks ?? null,
-                            documentPath: docPath,
-                            documentFileName: docName,
+                            filesReferences: filesRefs,
+                            documentPath: null,
+                            documentFileName: docName || null,
                             documentFile: null as File | null
                         };
                     });
@@ -275,37 +287,19 @@ export class EmpServiceHistory implements OnInit {
         else if (row.documentPath) window.open(row.documentPath, '_blank');
     }
 
-    hasPostingOrderFileInForm(): boolean {
-        const file = this.serviceForm.get('documentFile')?.value as File | null;
-        const path = this.serviceForm.get('documentPath')?.value as string | null;
-        return !!(file?.name || path);
-    }
-
-    getPostingOrderLabelInForm(): string {
-        const file = this.serviceForm.get('documentFile')?.value as File | null;
-        const path = this.serviceForm.get('documentPath')?.value as string | null;
-        if (file?.name) return file.name;
-        if (path) return path.split(/[/\\]/).pop() ?? path;
-        return '—';
-    }
-
-    viewPostingOrderInForm(): void {
-        const file = this.serviceForm.get('documentFile')?.value as File | null;
-        const path = this.serviceForm.get('documentPath')?.value as string | null;
-        if (file) window.open(URL.createObjectURL(file), '_blank');
-        else if (path) window.open(path, '_blank');
-    }
-
-    clearPostingOrderInForm(): void {
-        this.serviceForm.patchValue({ documentFile: null, documentPath: null, documentFileName: '' });
-    }
-
-    onPostingOrderSelectInForm(event: { files: File[] }): void {
-        this.serviceForm.patchValue({ documentFile: event.files?.[0] ?? null });
+    downloadFirstFileFromRow(row: ServiceHistoryListRow): void {
+        const refsJson = row.filesReferences;
+        if (!refsJson || typeof refsJson !== 'string') return;
+        try {
+            const refs = JSON.parse(refsJson) as { FileId?: number; fileName?: string }[];
+            if (Array.isArray(refs) && refs.length > 0 && refs[0].FileId) {
+                this.onDownloadFile({ fileId: refs[0].FileId, fileName: refs[0].fileName || 'download' });
+            }
+        } catch { /* ignore */ }
     }
 
     onDialogHide(): void {
-        this.serviceForm.patchValue({ documentFile: null });
+        this.fileRows = [];
     }
 
     openAddDialog(): void {
@@ -315,6 +309,7 @@ export class EmpServiceHistory implements OnInit {
         }
         this.isEditMode = false;
         this.editingServHisId = null;
+        this.fileRows = [];
         this.serviceForm.reset({
             servHisID: null,
             orgUnitId: null,
@@ -323,10 +318,7 @@ export class EmpServiceHistory implements OnInit {
             serviceTo: null,
             appointment: null,
             auth: '',
-            remarks: '',
-            documentFileName: '',
-            documentFile: null,
-            documentPath: null
+            remarks: ''
         });
         this.displayDialog = true;
     }
@@ -344,16 +336,46 @@ export class EmpServiceHistory implements OnInit {
             serviceTo,
             appointment: row.appointment,
             auth: row.auth ?? '',
-            remarks: row.remarks ?? '',
-            documentFileName: row.documentFileName ?? '',
-            documentFile: null,
-            documentPath: row.documentPath ?? null
+            remarks: row.remarks ?? ''
         });
+        // Load file references from FilesReferences JSON
+        const refsJson = row.filesReferences;
+        if (refsJson && typeof refsJson === 'string') {
+            try {
+                const refs = JSON.parse(refsJson) as { FileId?: number; fileName?: string }[];
+                if (Array.isArray(refs)) {
+                    this.fileRows = refs.map((r) => ({ displayName: r.fileName ?? '', file: null, fileId: r.FileId }));
+                } else {
+                    this.fileRows = [];
+                }
+            } catch {
+                this.fileRows = [];
+            }
+        } else {
+            this.fileRows = [];
+        }
         this.displayDialog = true;
     }
 
+    onFileRowsChange(event: FileRowData[]): void {
+        if (event && Array.isArray(event)) {
+            this.fileRows = event;
+        }
+    }
+
+    onDownloadFile(payload: { fileId: number; fileName: string }): void {
+        this.empService.downloadFile(payload.fileId).subscribe({
+            next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
+            error: (err) => {
+                console.error('Download failed', err);
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file' });
+            }
+        });
+    }
+
     saveService(): void {
-        if (!this.selectedEmployeeId) return;
+        const employeeId = this.selectedEmployeeId;
+        if (!employeeId) return;
         if (this.serviceForm.get('orgUnitId')?.invalid) {
             this.serviceForm.get('orgUnitId')?.markAsTouched();
             this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Organization Unit.' });
@@ -361,44 +383,74 @@ export class EmpServiceHistory implements OnInit {
         }
         const v = this.serviceForm.value;
         const now = new Date().toISOString();
-        const payload = {
-            servHisID: this.isEditMode ? (this.editingServHisId ?? 0) : 0,
-            employeeID: this.selectedEmployeeId,
-            orgId: this.selectedOrgId ?? null,
-            orgUnitId: v.orgUnitId ?? null,
-            locationName: v.locationName || null,
-            serviceFrom: this.toDateOnly(v.serviceFrom),
-            serviceTo: this.toDateOnly(v.serviceTo),
-            auth: v.auth || null,
-            appointment: v.appointment ?? null,
-            remarks: v.remarks ?? '',
-            createdBy: 'user',
-            createdDate: now,
-            lastUpdatedBy: 'user',
-            lastupdate: now
+
+        const existingRefs = this.fileReferencesForm?.getExistingFileReferences() || [];
+        const filesToUpload = this.fileReferencesForm?.getFilesToUpload() || [];
+
+        const doSave = (filesReferencesJson: string | null) => {
+            const payload = {
+                servHisID: this.isEditMode ? (this.editingServHisId ?? 0) : 0,
+                employeeID: employeeId,
+                orgId: this.selectedOrgId ?? null,
+                orgUnitId: v.orgUnitId ?? null,
+                locationName: v.locationName || null,
+                serviceFrom: this.toDateOnly(v.serviceFrom),
+                serviceTo: this.toDateOnly(v.serviceTo),
+                auth: v.auth || null,
+                appointment: v.appointment ?? null,
+                remarks: v.remarks ?? '',
+                filesReferences: filesReferencesJson,
+                createdBy: 'user',
+                createdDate: now,
+                lastUpdatedBy: 'user',
+                lastupdate: now
+            };
+            this.isSaving = true;
+            const req = this.isEditMode
+                ? this.moServHistoryService.saveUpdate(payload)
+                : this.moServHistoryService.save(payload);
+            req.pipe(
+                map((res: any) => {
+                    const code = res?.statusCode ?? res?.StatusCode ?? 200;
+                    if (code !== 200) throw new Error(res?.description ?? res?.Description ?? 'Save failed');
+                    return res;
+                }),
+                catchError(err => {
+                    this.messageService.add({ severity: 'error', summary: 'Save failed', detail: String(err?.error?.description ?? err?.error?.Description ?? err?.message ?? 'Save failed') });
+                    return of(null);
+                })
+            ).subscribe(res => {
+                this.isSaving = false;
+                if (res != null) {
+                    this.messageService.add({ severity: 'success', summary: 'Saved', detail: this.isEditMode ? 'Service history updated.' : 'Service history added.' });
+                    this.displayDialog = false;
+                    this.loadServiceList();
+                }
+            });
         };
-        this.isSaving = true;
-        const req = this.isEditMode
-            ? this.moServHistoryService.saveUpdate(payload)
-            : this.moServHistoryService.save(payload);
-        req.pipe(
-            map((res: any) => {
-                const code = res?.statusCode ?? res?.StatusCode ?? 200;
-                if (code !== 200) throw new Error(res?.description ?? res?.Description ?? 'Save failed');
-                return res;
-            }),
-            catchError(err => {
-                this.messageService.add({ severity: 'error', summary: 'Save failed', detail: String(err?.error?.description ?? err?.error?.Description ?? err?.message ?? 'Save failed') });
-                return of(null);
-            })
-        ).subscribe(res => {
-            this.isSaving = false;
-            if (res != null) {
-                this.messageService.add({ severity: 'success', summary: 'Saved', detail: this.isEditMode ? 'Service history updated.' : 'Service history added.' });
-                this.displayDialog = false;
-                this.loadServiceList();
-            }
-        });
+
+        if (filesToUpload.length > 0) {
+            const uploads = filesToUpload.map((r: FileRowData) =>
+                this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
+            );
+            forkJoin(uploads).subscribe({
+                next: (results: unknown) => {
+                    const resultsArray = Array.isArray(results) ? results : [];
+                    const newRefs = (resultsArray as { fileId: number; fileName: string }[]).map((r) => ({ FileId: r.fileId, fileName: r.fileName }));
+                    const allRefs: { FileId: number; fileName: string }[] = [...existingRefs.map((r: { FileId: number; fileName: string }) => ({ FileId: r.FileId, fileName: r.fileName })), ...newRefs];
+                    const filesReferencesJson = allRefs.length > 0 ? JSON.stringify(allRefs) : null;
+                    doSave(filesReferencesJson);
+                },
+                error: (err) => {
+                    console.error('Error uploading files', err);
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to upload one or more files' });
+                }
+            });
+            return;
+        }
+
+        const filesReferencesJson = existingRefs.length > 0 ? JSON.stringify(existingRefs) : null;
+        doSave(filesReferencesJson);
     }
 
     confirmDelete(row: ServiceHistoryListRow): void {

@@ -217,23 +217,16 @@
                 </div>
             }
 
-            <div>
-                <label class="font-semibold block mb-2 text-700">File Upload</label>
-                <p-fileUpload
-                    name="demo[]"
-                    [showUploadButton]="false"
-                    [showCancelButton]="false"
-                    (onSelect)="onFileSelect($event)"
-                    [auto]="false"
-                    accept="*"
-                    styleClass="w-full">
-                </p-fileUpload>
-                @if (uploadFileName) {
-                    <small class="text-600 block mt-2">Selected: {{ uploadFileName }}</small>
-                }
+            <div class="col-span-2">
+                <app-file-references-form
+                    #fileReferencesForm
+                    [fileRows]="fileRows"
+                    [isViewMode]="false"
+                    title="Supporting Documents"
+                    (fileRowsChange)="onFileRowsChange($event)"
+                    (onDownloadFile)="onDownloadFile($event)">
+                </app-file-references-form>
             </div>
-
-                
         </div>
     </form>
     <ng-template pTemplate="footer">

@@ -1,9 +1,6 @@
 <p-fluid>
     <div class="mb-5 card">
         <div class="flex align-items-center gap-3 mb-4">
-            @if (mode !== 'search') {
-                <p-button icon="pi pi-arrow-left" [rounded]="true" [text]="true" severity="secondary" pTooltip="Back to List" (onClick)="goBack()"></p-button>
-            }
             <h3 class="m-0 text-xl font-bold text-900" style="display: inline-flex; align-items: center; gap: 0.5rem;">
                 Service History in Mother Organization Entry
                 @if (mode === 'view') {
@@ -71,10 +68,14 @@
                                 <td>{{ row.remarks || '—' }}</td>
                                 <td class="text-600">{{ row.documentFileName || '—' }}</td>
                                 <td>
-                                    @if (row.documentPath || row.documentFile) {
+                                    @if (row.filesReferences || row.documentPath || row.documentFile) {
                                         <div class="flex align-items-center gap-2 flex-nowrap surface-100 border-round p-2">
                                             <span class="text-700 text-sm flex-grow-1 overflow-hidden text-overflow-ellipsis white-space-nowrap" style="min-width: 0;" [title]="getPostingOrderLabel(row)">{{ truncatePostingOrderName(row) }}</span>
-                                            <p-button icon="pi pi-eye" [rounded]="true" [text]="true" severity="secondary" pTooltip="View file" (onClick)="viewPostingOrder(row)" styleClass="p-button-sm"></p-button>
+                                            @if (row.documentPath || row.documentFile) {
+                                                <p-button icon="pi pi-eye" [rounded]="true" [text]="true" severity="secondary" pTooltip="View file" (onClick)="viewPostingOrder(row)" styleClass="p-button-sm"></p-button>
+                                            } @else if (row.filesReferences) {
+                                                <p-button icon="pi pi-download" [rounded]="true" [text]="true" severity="secondary" pTooltip="Download first file" (onClick)="downloadFirstFileFromRow(row)" styleClass="p-button-sm"></p-button>
+                                            }
                                         </div>
                                     } @else {
                                         <span class="text-500">—</span>
@@ -101,11 +102,9 @@
 
             <div class="flex justify-end mt-4 gap-2">
                 @if (mode === 'view') {
-                    <p-button label="Back to List" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" (onClick)="goBack()"></p-button>
                     <p-button label="Edit" icon="pi pi-pencil" (onClick)="enableEditMode()"></p-button>
                 } @else {
                     <p-button label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" (onClick)="resetForm()" [disabled]="isSaving"></p-button>
-                    <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="cancelEdit()" [disabled]="isSaving"></p-button>
                 }
             </div>
         }
@@ -171,27 +170,18 @@
                     <label class="font-semibold block mb-2 text-700">Remarks</label>
                     <input pInputText formControlName="remarks" class="w-full" placeholder="Remarks" />
                 </div>
-                <div class="form-field flex-1">
-                    <label class="font-semibold block mb-2 text-700">File Name</label>
-                    <input pInputText formControlName="documentFileName" class="w-full" placeholder="File name" />
-                </div>
             </div>
-            <div class="form-row form-row-upload mb-4">
-                <label class="font-semibold text-700">Upload Posting Order</label>
-                @if (hasPostingOrderFileInForm()) {
-                    <div class="flex align-items-center gap-2 surface-100 border-round p-2 mb-2">
-                        <span class="text-700 text-sm flex-grow-1 overflow-hidden text-overflow-ellipsis" [title]="getPostingOrderLabelInForm()">{{ getPostingOrderLabelInForm() }}</span>
-                        <p-button icon="pi pi-eye" [rounded]="true" [text]="true" severity="secondary" pTooltip="View" (onClick)="viewPostingOrderInForm()" styleClass="p-button-sm"></p-button>
-                        <p-button icon="pi pi-times" [rounded]="true" [text]="true" severity="danger" pTooltip="Remove" (onClick)="clearPostingOrderInForm()" styleClass="p-button-sm"></p-button>
-                    </div>
-                } @else {
-                    <p-fileUpload mode="basic" chooseLabel="Choose File" [auto]="false" [customUpload]="true" (onSelect)="onPostingOrderSelectInForm($event)" styleClass="p-button-sm"></p-fileUpload>
-                }
-            </div>
+            <app-file-references-form
+                #fileReferencesForm
+                [fileRows]="fileRows"
+                [isViewMode]="isReadonly"
+                title="Supporting Documents"
+                (fileRowsChange)="onFileRowsChange($event)"
+                (onDownloadFile)="onDownloadFile($event)">
+            </app-file-references-form>
         </div>
     </form>
     <ng-template pTemplate="footer">
-        <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="displayDialog = false" [disabled]="isSaving"></p-button>
         <p-button label="Save" icon="pi pi-check" [loading]="isSaving" [disabled]="isSaving" (onClick)="saveService()"></p-button>
     </ng-template>
 </p-dialog>

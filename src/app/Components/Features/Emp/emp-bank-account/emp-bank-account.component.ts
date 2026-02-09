@@ -1,7 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { forkJoin } from 'rxjs';
 
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
@@ -19,16 +20,19 @@ import { MasterBasicSetupService } from '@/Components/basic-setup/shared/service
 import { BankModel } from '@/Components/basic-setup/shared/models/bank';
 import { BankBranchModel } from '@/Components/basic-setup/shared/models/bank-branch';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
+import { FileReferencesFormComponent, FileRowData } from '@components/Common/file-references-form/file-references-form';
 
 @Component({
     selector: 'app-emp-bank-account',
     standalone: true,
-    imports: [CommonModule, FormsModule, ReactiveFormsModule, InputTextModule, ButtonModule, Fluid, TooltipModule, TableModule, SelectModule, DialogModule, ConfirmDialogModule, EmployeeSearchComponent],
+    imports: [CommonModule, FormsModule, ReactiveFormsModule, InputTextModule, ButtonModule, Fluid, TooltipModule, TableModule, SelectModule, DialogModule, ConfirmDialogModule, EmployeeSearchComponent, FileReferencesFormComponent],
     providers: [ConfirmationService],
     templateUrl: './emp-bank-account.component.html',
     styleUrl: './emp-bank-account.component.scss'
 })
 export class EmpBankAccount implements OnInit {
+    @ViewChild('fileReferencesForm') fileReferencesForm!: any;
+
     employeeFound = false;
     selectedEmployeeId: number | null = null;
     employeeBasicInfo: any = null;
@@ -44,6 +48,7 @@ export class EmpBankAccount implements OnInit {
     bankAccForm!: FormGroup;
     editingBankInfoId: number | null = null;
 
+    fileRows: FileRowData[] = [];
     banks: BankModel[] = [];
     bankBranches: BankBranchModel[] = [];
     branchOptions: BankBranchModel[] = [];
@@ -143,7 +148,8 @@ export class EmpBankAccount implements OnInit {
                     accountNumber: item.accountNumber ?? item.AccountNumber ?? '',
                     accountNameEN: item.accountNameEN ?? item.AccountNameEN ?? '',
                     accountNameBN: item.accountNameBN ?? item.AccountNameBN ?? '',
-                    remarks: item.remarks ?? item.Remarks ?? null
+                    remarks: item.remarks ?? item.Remarks ?? null,
+                    filesReferences: item.filesReferences ?? item.FilesReferences ?? null
                 }));
                 this.isLoading = false;
             },
@@ -163,9 +169,35 @@ export class EmpBankAccount implements OnInit {
         return b ? b.branchNameEN || b.branchNameBN || '' : 'N/A';
     }
 
+    parseFileRowsFromReferences(refsJson: string | null | undefined): FileRowData[] {
+        if (!refsJson || typeof refsJson !== 'string') return [];
+        try {
+            const refs = JSON.parse(refsJson) as { FileId?: number; fileName?: string }[];
+            if (!Array.isArray(refs)) return [];
+            return refs.map((r) => ({ displayName: r.fileName ?? '', file: null, fileId: r.FileId }));
+        } catch {
+            return [];
+        }
+    }
+
+    onFileRowsChange(event: FileRowData[]): void {
+        if (event && Array.isArray(event)) this.fileRows = event;
+    }
+
+    onDownloadFile(payload: { fileId: number; fileName: string }): void {
+        this.empService.downloadFile(payload.fileId).subscribe({
+            next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
+            error: (err) => {
+                console.error('Download failed', err);
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file' });
+            }
+        });
+    }
+
     openAddDialog(): void {
         this.isEditMode = false;
         this.editingBankInfoId = null;
+        this.fileRows = [];
         this.bankAccForm.reset({
             employeeId: this.selectedEmployeeId ?? 0,
             bankInfoId: 0,
@@ -181,6 +213,7 @@ export class EmpBankAccount implements OnInit {
     openEditDialog(row: BankAccInfoModel): void {
         this.isEditMode = true;
         this.editingBankInfoId = row.bankInfoId;
+        this.fileRows = this.parseFileRowsFromReferences(row.filesReferences);
         this.bankAccForm.patchValue({
             employeeId: row.employeeId,
             bankInfoId: row.bankInfoId,
@@ -203,34 +236,62 @@ export class EmpBankAccount implements OnInit {
             this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'No employee selected' });
             return;
         }
-        const formValue = this.bankAccForm.value;
-        const payload: Partial<BankAccInfoModel> = {
-            employeeId: this.selectedEmployeeId,
-            bankInfoId: this.isEditMode ? (this.editingBankInfoId ?? 0) : 0,
-            bankId: formValue.bankId,
-            branchId: formValue.branchId,
-            accountNumber: formValue.accountNumber,
-            accountNameEN: formValue.accountNameEN,
-            accountNameBN: '',
-            createdBy: 'system',
-            lastUpdatedBy: 'system'
+        const existingRefs = this.fileReferencesForm?.getExistingFileReferences() || [];
+        const filesToUpload = this.fileReferencesForm?.getFilesToUpload() || [];
+
+        const doSave = (filesReferencesJson: string | null) => {
+            const formValue = this.bankAccForm.value;
+            const payload: Partial<BankAccInfoModel> = {
+                employeeId: this.selectedEmployeeId!,
+                bankInfoId: this.isEditMode ? (this.editingBankInfoId ?? 0) : 0,
+                bankId: formValue.bankId,
+                branchId: formValue.branchId,
+                accountNumber: formValue.accountNumber,
+                accountNameEN: formValue.accountNameEN,
+                accountNameBN: '',
+                filesReferences: filesReferencesJson ?? undefined,
+                createdBy: 'system',
+                lastUpdatedBy: 'system'
+            };
+
+            this.isSaving = true;
+            const req = this.isEditMode ? this.bankAccInfoService.update(payload) : this.bankAccInfoService.save(payload);
+
+            req.subscribe({
+                next: () => {
+                    this.messageService.add({ severity: 'success', summary: 'Success', detail: this.isEditMode ? 'Bank account updated.' : 'Bank account added.' });
+                    this.displayDialog = false;
+                    this.loadBankAccList();
+                    this.isSaving = false;
+                },
+                error: () => {
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to save bank account' });
+                    this.isSaving = false;
+                }
+            });
         };
 
-        this.isSaving = true;
-        const req = this.isEditMode ? this.bankAccInfoService.update(payload) : this.bankAccInfoService.save(payload);
-
-        req.subscribe({
-            next: () => {
-                this.messageService.add({ severity: 'success', summary: 'Success', detail: this.isEditMode ? 'Bank account updated.' : 'Bank account added.' });
-                this.displayDialog = false;
-                this.loadBankAccList();
-                this.isSaving = false;
-            },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to save bank account' });
-                this.isSaving = false;
-            }
-        });
+        if (filesToUpload.length > 0) {
+            const uploads = filesToUpload.map((r: FileRowData) =>
+                this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
+            );
+            forkJoin(uploads).subscribe({
+                next: (results: unknown) => {
+                    const resultsArray = Array.isArray(results) ? results : [];
+                    const newRefs = (resultsArray as { fileId: number; fileName: string }[]).map((r) => ({ FileId: r.fileId, fileName: r.fileName }));
+                    const allRefs: { FileId: number; fileName: string }[] = [...existingRefs.map((r: { FileId: number; fileName: string }) => ({ FileId: r.FileId, fileName: r.fileName })), ...newRefs];
+                    const filesReferencesJson = allRefs.length > 0 ? JSON.stringify(allRefs) : null;
+                    doSave(filesReferencesJson);
+                },
+                error: (err) => {
+                    console.error('Error uploading files', err);
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to upload one or more files' });
+                }
+            });
+            return;
+        }
+        const filesReferencesJson = existingRefs.length > 0 ? JSON.stringify(existingRefs) : null;
+        doSave(filesReferencesJson);
     }
 
     confirmDelete(row: BankAccInfoModel): void {

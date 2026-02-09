@@ -18,6 +18,7 @@ export interface CourseInfoModel {
     createdDate?: string;
     lastUpdatedBy?: string;
     lastupdate?: string;
+    filesReferences?: string | null;
 }
 
 @Injectable({

@@ -1,9 +1,6 @@
 <p-fluid>
     <div class="mb-5 card">
         <div class="flex align-items-center gap-3 mb-4">
-            @if (mode !== 'search') {
-                <p-button icon="pi pi-arrow-left" [rounded]="true" [text]="true" severity="secondary" pTooltip="Back to List" (onClick)="goBack()"></p-button>
-            }
             <h3 class="m-0 text-xl font-bold text-900" style="display: inline-flex; align-items: center; gap: 0.5rem;">
                 Previous Service in RAB Entry
                 @if (mode === 'view') {
@@ -54,8 +51,6 @@
                                 <th style="width: 95px; background: var(--surface-100)">Appointment</th>
                                 <th style="min-width: 160px; background: var(--surface-100)">Posting Authority</th>
                                 <th style="min-width: 150px; background: var(--surface-100)">Remarks</th>
-                                <th style="min-width: 120px; background: var(--surface-100)">File Name</th>
-                                <th style="min-width: 120px; background: var(--surface-100)">Upload Posting Order</th>
                                 <th style="width: 120px; background: var(--surface-100)">Actions</th>
                             </tr>
                         </ng-template>
@@ -69,17 +64,6 @@
                                 <td>{{ getOptionLabel(appointmentOptions, row.appointment) }}</td>
                                 <td>{{ row.postingAuth || '—' }}</td>
                                 <td>{{ row.remarks || '—' }}</td>
-                                <td class="text-600">{{ row.documentFileName || '—' }}</td>
-                                <td>
-                                    @if (row.documentPath || row.documentFile) {
-                                        <div class="flex align-items-center gap-2 flex-nowrap surface-100 border-round p-2">
-                                            <span class="text-700 text-sm flex-grow-1 overflow-hidden text-overflow-ellipsis white-space-nowrap" style="min-width: 0;" [title]="getPostingOrderLabel(row)">{{ truncatePostingOrderName(row) }}</span>
-                                            <p-button icon="pi pi-eye" [rounded]="true" [text]="true" severity="secondary" pTooltip="View file" (onClick)="viewPostingOrder(row)" styleClass="p-button-sm"></p-button>
-                                        </div>
-                                    } @else {
-                                        <span class="text-500">—</span>
-                                    }
-                                </td>
                                 <td>
                                     <div class="flex gap-1">
                                         <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="info" pTooltip="Edit" (onClick)="openEditDialog(row)"></p-button>
@@ -92,7 +76,7 @@
                         </ng-template>
                         <ng-template pTemplate="emptymessage">
                             <tr>
-                                <td [attr.colspan]="11" class="text-center py-4 text-500">
+                                <td [attr.colspan]="9" class="text-center py-4 text-500">
                                     No previous RAB service entries. Click "Add row" to add.
                                 </td>
                             </tr>
@@ -103,11 +87,9 @@
 
             <div class="flex justify-end mt-4 gap-2">
                 @if (mode === 'view') {
-                    <p-button label="Back to List" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" (onClick)="goBack()"></p-button>
                     <p-button label="Edit" icon="pi pi-pencil" (onClick)="enableEditMode()"></p-button>
                 } @else {
                     <p-button label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" (onClick)="resetForm()" [disabled]="isSaving"></p-button>
-                    <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="cancelEdit()" [disabled]="isSaving"></p-button>
                 }
             </div>
         }
@@ -123,7 +105,7 @@
     [closable]="true"
     [draggable]="false"
     [resizable]="false"
-    (onHide)="onDialogHide()">
+    >
     <form [formGroup]="serviceForm" class="service-form mt-3">
         <div class="grid grid-cols-2 gap-4">
             <div>
@@ -166,25 +148,18 @@
                 <input pInputText formControlName="remarks" class="w-full" placeholder="Remarks" />
             </div>
             <div class="col-span-2">
-                <label class="font-semibold block mb-2 text-700">File Name</label>
-                <input pInputText formControlName="documentFileName" class="w-full" placeholder="File name" />
-            </div>
-            <div class="col-span-2">
-                <label class="font-semibold block mb-2 text-700">Upload Posting Order</label>
-                @if (hasPostingOrderFileInForm()) {
-                    <div class="flex align-items-center gap-2 surface-100 border-round p-2 mb-2">
-                        <span class="text-700 text-sm flex-grow-1 overflow-hidden text-overflow-ellipsis" [title]="getPostingOrderLabelInForm()">{{ getPostingOrderLabelInForm() }}</span>
-                        <p-button icon="pi pi-eye" [rounded]="true" [text]="true" severity="secondary" pTooltip="View" (onClick)="viewPostingOrderInForm()" styleClass="p-button-sm"></p-button>
-                        <p-button icon="pi pi-times" [rounded]="true" [text]="true" severity="danger" pTooltip="Remove" (onClick)="clearPostingOrderInForm()" styleClass="p-button-sm"></p-button>
-                    </div>
-                } @else {
-                    <p-fileUpload mode="basic" chooseLabel="Choose File" [auto]="false" [customUpload]="true" (onSelect)="onPostingOrderSelectInForm($event)" styleClass="p-button-sm"></p-fileUpload>
-                }
+                <app-file-references-form
+                    #fileReferencesForm
+                    [fileRows]="fileRows"
+                    [isViewMode]="isReadonly"
+                    title="Supporting Documents"
+                    (fileRowsChange)="onFileRowsChange($event)"
+                    (onDownloadFile)="onDownloadFile($event)">
+                </app-file-references-form>
             </div>
         </div>
     </form>
     <ng-template pTemplate="footer">
-        <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="displayDialog = false" [disabled]="isSaving"></p-button>
         <p-button label="Save" icon="pi pi-check" [loading]="isSaving" [disabled]="isSaving" (onClick)="saveService()"></p-button>
     </ng-template>
 </p-dialog>

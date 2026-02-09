@@ -134,6 +134,16 @@
                     <small class="text-red-500">Account name is required</small>
                 }
             </div>
+            <div class="col-span-2">
+                <app-file-references-form
+                    #fileReferencesForm
+                    [fileRows]="fileRows"
+                    [isViewMode]="false"
+                    title="Supporting Documents"
+                    (fileRowsChange)="onFileRowsChange($event)"
+                    (onDownloadFile)="onDownloadFile($event)">
+                </app-file-references-form>
+            </div>
         </div>
     </form>
     <ng-template pTemplate="footer">
