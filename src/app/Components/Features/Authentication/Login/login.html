@@ -42,7 +42,13 @@
                         </div>
                         <span class="font-medium no-underline ml-2 text-right cursor-pointer text-primary">Forgot password?</span>
                     </div>
-                    <p-button label="Sign In" styleClass="w-full" (onClick)="onLogin()"></p-button>
+                    <p-button
+                        label="Sign In"
+                        styleClass="w-full"
+                        [loading]="isLoading"
+                        [disabled]="isLoading"
+                        (onClick)="onLogin()">
+                    </p-button>
                 </div>
             </div>
         </div>

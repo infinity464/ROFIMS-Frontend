@@ -44,47 +44,47 @@ export class Login {
     private messageService: MessageService
   ) {}
 
- onLogin() {
-  this.isLoading = true;
+  onLogin(): void {
+    if (this.isLoading) return;
+    this.isLoading = true;
 
-  this.auth.login(this.email, this.password).subscribe({
-    next: (res) => {
-      this.isLoading = false;
-
-      // ✅ token missing/null check
-      if (!res?.token) {
+    this.auth.login(this.email, this.password).subscribe({
+      next: (res) => {
+        this.isLoading = false;
+        if (!res?.token) {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Login Failed',
+            detail: 'Invalid response. Please try again.',
+            life: 3000
+          });
+          return;
+        }
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Login Successful',
+          detail: 'Welcome back! Redirecting to dashboard...',
+          life: 2000
+        });
+        setTimeout(() => this.router.navigate(['/dashboard']), 800);
+      },
+      error: (err: { status?: number; message?: string }) => {
+        this.isLoading = false;
+        const detail =
+          err?.message ||
+          (err?.status === 401
+            ? 'Invalid email or password.'
+            : err?.status && err.status >= 500
+              ? 'Server error. Please try again later.'
+              : 'Network error. Please check your connection and try again.');
         this.messageService.add({
           severity: 'error',
           summary: 'Login Failed',
-          detail: 'Token not found. Please try again.',
-          life: 3000
+          detail,
+          life: 5000
         });
-        return;
       }
-
-      this.messageService.add({
-        severity: 'success',
-        summary: 'Login Successful',
-        detail: 'Welcome back! Redirecting to dashboard...',
-        life: 2000
-      });
-
-      setTimeout(() => {
-        this.router.navigate(['/dashboard']);
-      }, 800);
-    },
-
-    error: (err) => {
-      this.isLoading = false;
-
-      this.messageService.add({
-        severity: 'error',
-        summary: 'Login Failed',
-        detail: err?.error?.message || 'Invalid email or password. Try again.',
-        life: 3000
-      });
-    }
-  });
-}
+    });
+  }
 
 }
