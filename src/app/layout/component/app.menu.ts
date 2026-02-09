@@ -99,7 +99,7 @@ export class AppMenu {
                 ]
             },
             {
-                label: 'Emp',
+                label: 'Data Entry (Personal & Service)',
                 icon: 'pi pi-fw pi-users',
                 items: [
                     // { label: 'Employee List', icon: 'pi pi-fw pi-list', routerLink: ['/emp-list'] },
