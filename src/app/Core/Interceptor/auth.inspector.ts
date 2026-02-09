@@ -5,7 +5,7 @@ import { AuthenticationService } from '@/Components/Features/Authentication/Serv
 import { Router } from '@angular/router';
 
 function isAuthEndpoint(url: string): boolean {
-  return /\/Identity\/(GetToken|GetRefreshToken)/i.test(url);
+  return /\/Identity\/(GetToken|GetRefreshToken|GetForgotToken|ForgotPassword)/i.test(url);
 }
 
 export const AuthInterceptor: HttpInterceptorFn = (req, next) => {

@@ -40,7 +40,7 @@
                             <p-checkbox [(ngModel)]="checked" id="rememberme1" binary class="mr-2"></p-checkbox>
                             <label for="rememberme1">Remember me</label>
                         </div>
-                        <span class="font-medium no-underline ml-2 text-right cursor-pointer text-primary">Forgot password?</span>
+                        <button type="button" class="font-medium no-underline ml-2 text-right cursor-pointer text-primary border-none bg-transparent p-0" (click)="openForgotPassword()">Forgot password?</button>
                     </div>
                     <p-button
                         label="Sign In"
@@ -54,3 +54,33 @@
         </div>
     </div>
 </div>
+
+<!-- Forgot Password Dialog -->
+<p-dialog
+    header="Forgot Password"
+    [(visible)]="forgotPasswordVisible"
+    [modal]="true"
+    [style]="{ width: 'min(420px, 95vw)' }"
+    [closable]="true"
+    (onHide)="closeForgotPassword()"
+    styleClass="rounded-lg">
+    <div class="flex flex-col gap-4">
+        @if (forgotStep === 'request') {
+            <p class="text-muted-color mb-2">Enter your email to receive a password reset link.</p>
+            <label for="forgot-email" class="block text-surface-900 dark:text-surface-0 font-medium">Email</label>
+            <input pInputText id="forgot-email" type="email" placeholder="Email address" class="w-full" [(ngModel)]="forgotEmail" />
+            <p-button label="Send reset link" styleClass="w-full" [loading]="forgotLoading" [disabled]="forgotLoading" (onClick)="onForgotRequestSubmit()"></p-button>
+        } @else {
+            <p class="text-muted-color mb-2">Enter the token from your email and choose a new password.</p>
+            <label for="forgot-email-ro" class="block text-surface-900 dark:text-surface-0 font-medium">Email</label>
+            <input pInputText id="forgot-email-ro" type="email" class="w-full" [(ngModel)]="forgotEmail" [readonly]="true" />
+            <label for="forgot-token" class="block text-surface-900 dark:text-surface-0 font-medium">Reset token (from email)</label>
+            <input pInputText id="forgot-token" type="text" placeholder="Paste token from email" class="w-full mb-2" [(ngModel)]="forgotToken" />
+            <label for="forgot-new-pwd" class="block text-surface-900 dark:text-surface-0 font-medium">New password</label>
+            <p-password id="forgot-new-pwd" [(ngModel)]="forgotNewPassword" placeholder="New password" [toggleMask]="true" [feedback]="true" [fluid]="true" styleClass="mb-2"></p-password>
+            <label for="forgot-confirm-pwd" class="block text-surface-900 dark:text-surface-0 font-medium">Confirm password</label>
+            <p-password id="forgot-confirm-pwd" [(ngModel)]="forgotConfirmPassword" placeholder="Confirm" [toggleMask]="true" [feedback]="false" [fluid]="true"></p-password>
+            <p-button label="Reset password" styleClass="w-full mt-2" [loading]="forgotLoading" [disabled]="forgotLoading" (onClick)="onForgotResetSubmit()"></p-button>
+        }
+    </div>
+</p-dialog>
