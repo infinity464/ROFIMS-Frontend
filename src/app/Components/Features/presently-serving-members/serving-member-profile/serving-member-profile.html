@@ -358,6 +358,49 @@
             </div>
         </div>
 
+        <!-- Promotion Information -->
+        <div class="content-section text-900 border-top-1 surface-border">
+            <div class="section-heading">Promotion Information:</div>
+            <div class="family-table-wrapper">
+                <p-table
+                    [value]="promotionList"
+                    [tableStyle]="{ 'min-width': '52rem' }"
+                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
+                >
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 4rem">Ser</th>
+                            <th>Previous Rank</th>
+                            <th>Promoted Rank</th>
+                            <th>Promoted Date</th>
+                            <th>From Date</th>
+                            <th>To Date</th>
+                            <th>Probationary Period</th>
+                            <th>Auth</th>
+                            <th>Remarks</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                        <tr>
+                            <td>{{ rowIndex + 1 }}.</td>
+                            <td>{{ val(row.previousRank) }}</td>
+                            <td>{{ val(row.promotedRank) }}</td>
+                            <td>{{ formatDateOnly(row.promotedDate) }}</td>
+                            <td>{{ formatDateOnly(row.fromDate) }}</td>
+                            <td>{{ formatDateOnly(row.toDate) }}</td>
+                            <td>{{ val(row.probationaryPeriod) }}</td>
+                            <td>{{ val(row.auth) }}</td>
+                            <td>{{ val(row.remarks) }}</td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="9" class="text-center text-500 py-3">No promotion records.</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
     } @else if (!loading) {
         <p class="text-500 m-0">No profile data available.</p>
     }

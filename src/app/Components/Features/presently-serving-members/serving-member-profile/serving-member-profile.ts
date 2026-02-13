@@ -14,6 +14,7 @@ import { EducationInfoService, EducationInfoByEmployeeView } from '@/services/ed
 import { ForeignVisitInfoService, ForeignVisitInfoByEmployeeView } from '@/services/foreign-visit-info.service';
 import { LeaveInfoService, LeaveInfoByEmployeeView, LeaveInfoSummaryItem } from '@/services/leave-info.service';
 import { AdditionalRemarksInfoService, AdditionalRemarksInfo } from '@/services/additional-remarks-info.service';
+import { PromotionInfoService, PromotionInfoByEmployeeView } from '@/services/promotion-info.service';
 import { EmployeePersonalServiceOverview } from '@/models/employee-personal-service-overview.model';
 import { DialogModule } from 'primeng/dialog';
 import { TooltipModule } from 'primeng/tooltip';
@@ -36,6 +37,7 @@ export class ServingMemberProfile implements OnInit {
     foreignVisitList: ForeignVisitInfoByEmployeeView[] = [];
     leaveList: LeaveInfoByEmployeeView[] = [];
     additionalRemarksList: AdditionalRemarksInfo[] = [];
+    promotionList: PromotionInfoByEmployeeView[] = [];
     previousYearSummary: LeaveInfoSummaryItem[] = [];
     previousYearSummaryDialogVisible = false;
     previousYearSummaryLoading = false;
@@ -52,6 +54,7 @@ export class ServingMemberProfile implements OnInit {
         private foreignVisitInfoService: ForeignVisitInfoService,
         private leaveInfoService: LeaveInfoService,
         private additionalRemarksInfoService: AdditionalRemarksInfoService,
+        private promotionInfoService: PromotionInfoService,
         private messageService: MessageService
     ) {}
 
@@ -87,9 +90,10 @@ export class ServingMemberProfile implements OnInit {
             education: this.educationInfoService.getViewByEmployeeId(id),
             foreignVisit: this.foreignVisitInfoService.getViewByEmployeeId(id),
             leaveCurrentYear: this.leaveInfoService.getViewByEmployeeIdAndYear(id, currentYear),
-            additionalRemarks: this.additionalRemarksInfoService.getByEmployeeId(id)
+            additionalRemarks: this.additionalRemarksInfoService.getByEmployeeId(id),
+            promotion: this.promotionInfoService.getViewByEmployeeId(id)
         }).subscribe({
-            next: ({ profile, family, previousRab, bankAcc, education, foreignVisit, leaveCurrentYear, additionalRemarks }) => {
+            next: ({ profile, family, previousRab, bankAcc, education, foreignVisit, leaveCurrentYear, additionalRemarks, promotion }) => {
                 this.profile = profile;
                 this.familyList = family ?? [];
                 this.previousRabList = previousRab ?? [];
@@ -98,6 +102,7 @@ export class ServingMemberProfile implements OnInit {
                 this.foreignVisitList = foreignVisit ?? [];
                 this.leaveList = leaveCurrentYear ?? [];
                 this.additionalRemarksList = additionalRemarks ?? [];
+                this.promotionList = promotion ?? [];
                 this.loading = false;
             },
             error: (err) => {
