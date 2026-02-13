@@ -358,6 +358,98 @@
             </div>
         </div>
 
+        <!-- Discipline Information -->
+        <div class="content-section text-900 border-top-1 surface-border">
+            <div class="section-heading">Discipline Information:</div>
+            <div class="family-table-wrapper">
+                <p-table
+                    [value]="disciplineList"
+                    [tableStyle]="{ 'min-width': '56rem' }"
+                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
+                >
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 4rem">Ser</th>
+                            <th>Offense Date</th>
+                            <th>Offense Type</th>
+                            <th>Brief Statement</th>
+                            <th>Offense Details</th>
+                            <th>Punishment (RAB)</th>
+                            <th>Punishment Date</th>
+                            <th>Punishment (MO)</th>
+                            <th>Punishment Date (MO)</th>
+                            <th>Auth</th>
+                            <th>Remarks</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                        <tr>
+                            <td>{{ rowIndex + 1 }}.</td>
+                            <td>{{ formatDateOnly(row.offenseDate) }}</td>
+                            <td>{{ val(row.offenseType) }}</td>
+                            <td>{{ val(row.briefStatementOfOffence) }}</td>
+                            <td>{{ val(row.offenseDetails) }}</td>
+                            <td>{{ val(row.punishmentTypeRAB) }}</td>
+                            <td>{{ formatDateOnly(row.punishmentDate) }}</td>
+                            <td>{{ val(row.punishmentTypeMotherOrg) }}</td>
+                            <td>{{ formatDateOnly(row.punishmentDateMotherOrg) }}</td>
+                            <td>{{ val(row.auth) }}</td>
+                            <td>{{ val(row.remarks) }}</td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="11" class="text-center text-500 py-3">No discipline records.</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
+
+        <!-- Course Information -->
+        <div class="content-section text-900 border-top-1 surface-border">
+            <div class="section-heading">Course Information:</div>
+            <div class="family-table-wrapper">
+                <p-table
+                    [value]="courseList"
+                    [tableStyle]="{ 'min-width': '44rem' }"
+                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
+                >
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 4rem">Ser</th>
+                            <th>Course Type</th>
+                            <th>Course Name</th>
+                            <th>Training Institute</th>
+                            <th>Date From</th>
+                            <th>Date To</th>
+                            <th>Result</th>
+                            <th>Auth</th>
+                            <th>Remarks</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                        <tr>
+                            <td>{{ rowIndex + 1 }}.</td>
+                            <td>{{ val(row.courseType) }}</td>
+                            <td>{{ val(row.courseName) }}</td>
+                            <td>{{ val(row.trainingInstituteName) }}</td>
+                            <td>{{ formatDateOnly(row.dateFrom) }}</td>
+                            <td>{{ formatDateOnly(row.dateTo) }}</td>
+                            <td>{{ val(row.result) }}</td>
+                            <td>{{ val(row.auth) }}</td>
+                            <td>{{ val(row.remarks) }}</td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="9" class="text-center text-500 py-3">No course records.</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
+
         <!-- Promotion Information -->
         <div class="content-section text-900 border-top-1 surface-border">
             <div class="section-heading">Promotion Information:</div>

@@ -14,6 +14,8 @@ import { EducationInfoService, EducationInfoByEmployeeView } from '@/services/ed
 import { ForeignVisitInfoService, ForeignVisitInfoByEmployeeView } from '@/services/foreign-visit-info.service';
 import { LeaveInfoService, LeaveInfoByEmployeeView, LeaveInfoSummaryItem } from '@/services/leave-info.service';
 import { AdditionalRemarksInfoService, AdditionalRemarksInfo } from '@/services/additional-remarks-info.service';
+import { DisciplineInfoService, DisciplineInfoByEmployeeView } from '@/services/discipline-info.service';
+import { CourseInfoService, CourseInfoByEmployeeView } from '@/services/course-info-service';
 import { PromotionInfoService, PromotionInfoByEmployeeView } from '@/services/promotion-info.service';
 import { EmployeePersonalServiceOverview } from '@/models/employee-personal-service-overview.model';
 import { DialogModule } from 'primeng/dialog';
@@ -37,6 +39,8 @@ export class ServingMemberProfile implements OnInit {
     foreignVisitList: ForeignVisitInfoByEmployeeView[] = [];
     leaveList: LeaveInfoByEmployeeView[] = [];
     additionalRemarksList: AdditionalRemarksInfo[] = [];
+    disciplineList: DisciplineInfoByEmployeeView[] = [];
+    courseList: CourseInfoByEmployeeView[] = [];
     promotionList: PromotionInfoByEmployeeView[] = [];
     previousYearSummary: LeaveInfoSummaryItem[] = [];
     previousYearSummaryDialogVisible = false;
@@ -54,6 +58,8 @@ export class ServingMemberProfile implements OnInit {
         private foreignVisitInfoService: ForeignVisitInfoService,
         private leaveInfoService: LeaveInfoService,
         private additionalRemarksInfoService: AdditionalRemarksInfoService,
+        private disciplineInfoService: DisciplineInfoService,
+        private courseInfoService: CourseInfoService,
         private promotionInfoService: PromotionInfoService,
         private messageService: MessageService
     ) {}
@@ -91,9 +97,11 @@ export class ServingMemberProfile implements OnInit {
             foreignVisit: this.foreignVisitInfoService.getViewByEmployeeId(id),
             leaveCurrentYear: this.leaveInfoService.getViewByEmployeeIdAndYear(id, currentYear),
             additionalRemarks: this.additionalRemarksInfoService.getByEmployeeId(id),
+            discipline: this.disciplineInfoService.getViewByEmployeeId(id),
+            course: this.courseInfoService.getViewByEmployeeId(id),
             promotion: this.promotionInfoService.getViewByEmployeeId(id)
         }).subscribe({
-            next: ({ profile, family, previousRab, bankAcc, education, foreignVisit, leaveCurrentYear, additionalRemarks, promotion }) => {
+            next: ({ profile, family, previousRab, bankAcc, education, foreignVisit, leaveCurrentYear, additionalRemarks, discipline, course, promotion }) => {
                 this.profile = profile;
                 this.familyList = family ?? [];
                 this.previousRabList = previousRab ?? [];
@@ -102,6 +110,8 @@ export class ServingMemberProfile implements OnInit {
                 this.foreignVisitList = foreignVisit ?? [];
                 this.leaveList = leaveCurrentYear ?? [];
                 this.additionalRemarksList = additionalRemarks ?? [];
+                this.disciplineList = discipline ?? [];
+                this.courseList = course ?? [];
                 this.promotionList = promotion ?? [];
                 this.loading = false;
             },
