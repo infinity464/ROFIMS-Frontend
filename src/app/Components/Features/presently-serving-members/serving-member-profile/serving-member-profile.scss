@@ -1,0 +1,117 @@
+$section-margin: 1rem;
+
+.serving-member-profile-page {
+}
+
+/* Header: title left, empty placeholder box top right */
+.profile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: $section-margin;
+}
+
+.profile-header-left {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.profile-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.profile-placeholder-box {
+    flex-shrink: 0;
+    width: 120px;
+    height: 100px;
+    border: 1px solid var(--surface-border);
+    background: var(--surface-card);
+}
+
+/* Section heading (same as address-heading in supernumerary) */
+.content-section {
+    margin: $section-margin 0;
+}
+
+.section-heading {
+    font-weight: 700;
+    text-decoration: underline;
+    margin-bottom: $section-margin;
+}
+
+/* Core details: label normal, value bold; pairs on same line */
+.core-details {
+    margin: $section-margin 0;
+}
+
+.core-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2rem 6rem;
+    align-items: baseline;
+    margin-bottom: $section-margin;
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+
+    .detail-item {
+        white-space: nowrap;
+    }
+
+    .detail-label {
+        font-weight: normal;
+    }
+
+    .detail-value {
+        font-weight: 700;
+    }
+}
+
+.core-row-full .detail-item {
+    white-space: normal;
+}
+
+.core-row-four .detail-item {
+    min-width: 0;
+}
+
+.core-row-three .detail-item {
+    min-width: 0;
+}
+
+/* Family Information table */
+.family-table-wrapper {
+    overflow-x: auto;
+}
+
+.family-info-table {
+    ::ng-deep .p-datatable-table {
+        border: 1px solid var(--surface-border);
+    }
+    ::ng-deep th,
+    ::ng-deep td {
+        border: 1px solid var(--surface-border);
+        padding: 0.5rem 0.75rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .profile-header {
+        flex-direction: column;
+    }
+
+    .profile-placeholder-box {
+        width: 100%;
+        max-width: 120px;
+    }
+
+    .core-row-four,
+    .core-row-three {
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+}

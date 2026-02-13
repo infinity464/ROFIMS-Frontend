@@ -1,0 +1,64 @@
+/**
+ * Single row from vw_EmployeePersonalServiceOverview (Basic Service + Other Personal Information).
+ * API: GET EmployeeInfo/GetEmployeePersonalServiceOverview/{employeeID}
+ */
+export interface EmployeePersonalServiceOverview {
+    employeeID: number;
+    serviceId: string | null;
+    rabId: string | null;
+    prefixId: number | null;
+    prefix: string | null;
+    nameEnglish: string | null;
+    appointmentId: number | null;
+    appointment: string | null;
+    memberTypeId: number | null;
+    memberType: string | null;
+    motherOrganizationId: number | null;
+    motherOrganization: string | null;
+    armyRankId: number | null;
+    armyRank: string | null;
+    corpsId: number | null;
+    corps: string | null;
+    tradeId: number | null;
+    trade: string | null;
+    tradeRemarks: string | null;
+    genderId: number | null;
+    gender: string | null;
+    dateOfCommission: string | null;
+    dateOfJoiningInServiceTraining: string | null;
+    motherUnitId: number | null;
+    motherUnit: string | null;
+    location: string | null;
+    rabUnitId: number | null;
+    rabUnit: string | null;
+    status: boolean | null;
+    postingStatus: string | null;
+    joiningDate: string | null;
+    permanentDistrictType: number | null;
+    permanentDistrictTypeName: string | null;
+    // Other Personal Information
+    nid: string | null;
+    courseBatch: string | null;
+    dateOfBirth: string | null;
+    bloodGroup: string | null;
+    mobileNo: string | null;
+    emailAddress: string | null;
+    emergencyContactNo: string | null;
+    passportNo: string | null;
+    identificationMark: string | null;
+    height: number | null;
+    weight: number | null;
+    gallantryAwardsDecoration: string | null;
+    religionId: number | null;
+    religion: string | null;
+    maritalStatusId: number | null;
+    maritalStatus: string | null;
+    educationQualificationId: number | null;
+    educationQualification: string | null;
+    professionalQualificationId: number | null;
+    professionalQualification: string | null;
+    personalQualificationId: number | null;
+    personalQualification: string | null;
+    medicalCategoryId: number | null;
+    medicalCategory: string | null;
+}

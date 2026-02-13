@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
 import { TableModule, TableLazyLoadEvent } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { MessageService } from 'primeng/api';
@@ -10,7 +11,7 @@ import { EmployeeServiceOverview } from '@/models/employee-service-overview.mode
 @Component({
     selector: 'app-presently-serving-members',
     standalone: true,
-    imports: [CommonModule, TableModule, ButtonModule, Toast],
+    imports: [CommonModule, RouterModule, TableModule, ButtonModule, Toast],
     providers: [MessageService],
     templateUrl: './presently-serving-members.html',
     styleUrl: './presently-serving-members.scss'
@@ -73,9 +74,5 @@ export class PresentlyServingMembers implements OnInit {
         } catch {
             return value;
         }
-    }
-
-    onAction(row: EmployeeServiceOverview): void {
-        // Placeholder for future action buttons
     }
 }

@@ -1,0 +1,131 @@
+<p-toast></p-toast>
+
+<div class="card serving-member-profile-page text-900">
+    <div class="profile-header">
+        <div class="profile-header-left">
+            <p-button icon="pi pi-arrow-left" label="Back" [rounded]="true" [text]="true" severity="secondary" (onClick)="goBack()" styleClass="p-button-sm"></p-button>
+            <h1 class="profile-title m-0 text-2xl font-bold text-900">Serving Member Profile</h1>
+        </div>
+        <div class="profile-placeholder-box" aria-hidden="true"></div>
+    </div>
+
+    @if (loading) {
+        <div class="flex align-items-center justify-content-center p-5">
+            <i class="pi pi-spin pi-spinner text-4xl text-500"></i>
+        </div>
+    } @else if (profile) {
+        <!-- Basic Service Information -->
+        <div class="content-section text-900">
+            <div class="section-heading">Basic Service Information</div>
+            <div class="core-details">
+                <div class="core-row">
+                    <span class="detail-item"><span class="detail-label">Service ID:  </span> <span class="detail-value">{{ val(profile.serviceId) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">RAB ID:  </span> <span class="detail-value">{{ val(profile.rabId) }}</span></span>
+                </div>
+                <div class="core-row core-row-full">
+                    <span class="detail-item"><span class="detail-label">Name English: </span> <span class="detail-value">{{ val(profile.nameEnglish) }}</span></span>
+                </div>
+                <div class="core-row core-row-four">
+                    <span class="detail-item"><span class="detail-label">Appointment: </span> <span class="detail-value">{{ val(profile.appointment) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Member Type: </span> <span class="detail-value">{{ val(profile.memberType) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Mother Organization: </span> <span class="detail-value">{{ val(profile.motherOrganization) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Rank: </span> <span class="detail-value">{{ val(profile.armyRank) }}</span></span>
+                </div>
+                <div class="core-row core-row-four">
+                    <span class="detail-item"><span class="detail-label">Corps: </span> <span class="detail-value">{{ val(profile.corps) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Trade: </span> <span class="detail-value">{{ tradeDisplay(profile) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Gender: </span> <span class="detail-value">{{ val(profile.gender) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Date of Commission: </span> <span class="detail-value">{{ formatDateShort(profile.dateOfCommission) }}</span></span>
+                </div>
+                <div class="core-row core-row-three">
+                    <span class="detail-item"><span class="detail-label">Date of Joining in Service/Training: </span> <span class="detail-value">{{ formatDateShort(profile.dateOfJoiningInServiceTraining) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Mother Unit: </span> <span class="detail-value">{{ val(profile.motherUnit) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Location: </span> <span class="detail-value">{{ val(profile.location) }}</span></span>
+                </div>
+                <div class="core-row">
+                    <span class="detail-item"><span class="detail-label">RAB Unit: </span> <span class="detail-value">{{ val(profile.rabUnit) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Joining Date: </span> <span class="detail-value">{{ formatDateShort(profile.joiningDate) }}</span></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Other Personal Information -->
+        <div class="content-section text-900 border-top-1 surface-border">
+            <div class="section-heading">Other Personal Information:</div>
+            <div class="core-details">
+                <div class="core-row core-row-four">
+                    <span class="detail-item"><span class="detail-label">Course/Batch: </span> <span class="detail-value">{{ val(profile.courseBatch) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Date of Join in Service: </span> <span class="detail-value">{{ formatDateShort(profile.dateOfJoiningInServiceTraining) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Date of Commission: </span> <span class="detail-value">{{ formatDateShort(profile.dateOfCommission) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Education Qualification: </span> <span class="detail-value">{{ val(profile.educationQualification) }}</span></span>
+                </div>
+                <div class="core-row core-row-four">
+                    <span class="detail-item"><span class="detail-label">Professional Qualification: </span> <span class="detail-value">{{ val(profile.professionalQualification) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Personal Qualification: </span> <span class="detail-value">{{ val(profile.personalQualification) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Gallantry Awards/Decoration: </span> <span class="detail-value">{{ val(profile.gallantryAwardsDecoration) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Blood Group: </span> <span class="detail-value">{{ val(profile.bloodGroup) }}</span></span>
+                </div>
+                <div class="core-row core-row-four">
+                    <span class="detail-item"><span class="detail-label">NID: </span> <span class="detail-value">{{ val(profile.nid) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Email Address: </span> <span class="detail-value">{{ val(profile.emailAddress) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Date of Birth: </span> <span class="detail-value">{{ formatDateShort(profile.dateOfBirth) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Passport No: </span> <span class="detail-value">{{ val(profile.passportNo) }}</span></span>
+                </div>
+                <div class="core-row core-row-four">
+                    <span class="detail-item"><span class="detail-label">Height: </span> <span class="detail-value">{{ heightDisplay(profile) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Medical Category: </span> <span class="detail-value">{{ val(profile.medicalCategory) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Mobile No: </span> <span class="detail-value">{{ val(profile.mobileNo) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Emergency Contact No: </span> <span class="detail-value">{{ val(profile.emergencyContactNo) }}</span></span>
+                </div>
+                <div class="core-row core-row-four">
+                    <span class="detail-item"><span class="detail-label">Religion: </span> <span class="detail-value">{{ val(profile.religion) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Marital Status: </span> <span class="detail-value">{{ val(profile.maritalStatus) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Weight: </span> <span class="detail-value">{{ weightDisplay(profile) }}</span></span>
+                </div>
+                <div class="core-row core-row-full">
+                    <span class="detail-item"><span class="detail-label">Identification Mark: </span> <span class="detail-value">{{ val(profile.identificationMark) }}</span></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Family Information -->
+        <div class="content-section text-900 border-top-1 surface-border">
+            <div class="section-heading">Family Information:</div>
+            <div class="family-table-wrapper">
+                <p-table
+                    [value]="familyList"
+                    [tableStyle]="{ 'min-width': '40rem' }"
+                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
+                >
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 4rem">Ser</th>
+                            <th>Name</th>
+                            <th>Relation</th>
+                            <th>Date of Birth</th>
+                            <th>Occupation</th>
+                            <th>Mobile No</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                        <tr>
+                            <td>{{ rowIndex + 1 }}.</td>
+                            <td>{{ val(row.name) }}</td>
+                            <td>{{ val(row.relation) }}</td>
+                            <td>{{ formatFamilyDob(row.dateOfBirth) }}</td>
+                            <td>{{ val(row.occupation) }}</td>
+                            <td>{{ familyMobile(row) }}</td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="6" class="text-center text-500 py-3">No family records.</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
+    } @else if (!loading) {
+        <p class="text-500 m-0">No profile data available.</p>
+    }
+</div>

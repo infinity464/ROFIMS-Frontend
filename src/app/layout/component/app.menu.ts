@@ -73,22 +73,9 @@ export class AppMenu {
             {
                 label: 'Home',
                 icon: 'pi pi-fw pi-th-large',
-                items: [
-                    { label: 'Dashboard', icon: 'pi pi-fw pi-home', routerLink: ['/dashboard'], routerLinkActiveOptions: { paths: 'exact', queryParams: 'ignored', matrixParams: 'ignored', fragment: 'ignored' } },
-                    { label: 'Task & Event List', icon: 'pi pi-fw pi-list', routerLink: ['/task-event-list'] },
-                    { label: 'Pending Task & Upcoming Event', icon: 'pi pi-fw pi-calendar', routerLink: ['/calendar'] },
-                    { label: 'Chat', icon: 'pi pi-fw pi-comments', routerLink: ['/chat'] }
-                ]
+                items: [{ label: 'Dashboard', icon: 'pi pi-fw pi-home', routerLink: ['/dashboard'], routerLinkActiveOptions: { paths: 'exact', queryParams: 'ignored', matrixParams: 'ignored', fragment: 'ignored' } }]
             },
-            {
-                label: 'User Manage',
-                icon: 'pi pi-fw pi-users',
-                items: [
-                    { label: 'Create User', icon: 'pi pi-fw pi-user-plus', routerLink: ['/identity/user-create'] },
-                    { label: 'Roles', icon: 'pi pi-fw pi-list', routerLink: ['/identity/roles'] },
-                    { label: 'User–Employee Mapping', icon: 'pi pi-fw pi-id-card', routerLink: ['/identity/user-employee-mapping'] }
-                ]
-            },
+
             {
                 label: 'Data Entry (New & Re-Joining)',
                 icon: 'pi pi-fw pi-user-plus',
@@ -128,6 +115,19 @@ export class AppMenu {
                 label: 'Organization Setup',
                 icon: 'pi pi-fw pi-user-plus',
                 items: [{ label: 'Presently Serving Members', icon: 'pi pi-fw pi-users', routerLink: ['/presently-serving-members'] }]
+            },
+            {
+                label: 'Pending Task & Upcoming Event',
+                icon: 'pi pi-fw pi-users',
+                items: [
+                    { label: 'Task & Event List', icon: 'pi pi-fw pi-list', routerLink: ['/task-event-list'] },
+                    { label: 'Pending Task & Upcoming Event', icon: 'pi pi-fw pi-calendar', routerLink: ['/calendar'] }
+                ]
+            },
+            {
+                label: 'Message/Chat',
+                icon: 'pi pi-fw pi-users',
+                items: [{ label: 'Chat', icon: 'pi pi-fw pi-comments', routerLink: ['/chat'] }]
             },
             {
                 label: 'Basic Setup',
@@ -188,6 +188,15 @@ export class AppMenu {
                     { label: 'Bank Branch', icon: 'pi pi-fw pi-building', routerLink: ['/basic-setup/bank-branch'] }
 
                     // Newly added
+                ]
+            },
+            {
+                label: 'User Manage',
+                icon: 'pi pi-fw pi-users',
+                items: [
+                    { label: 'Create User', icon: 'pi pi-fw pi-user-plus', routerLink: ['/identity/user-create'] },
+                    { label: 'Roles', icon: 'pi pi-fw pi-list', routerLink: ['/identity/roles'] },
+                    { label: 'User–Employee Mapping', icon: 'pi pi-fw pi-id-card', routerLink: ['/identity/user-employee-mapping'] }
                 ]
             }
 

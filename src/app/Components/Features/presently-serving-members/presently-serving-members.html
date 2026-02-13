@@ -47,9 +47,10 @@
                 <td>{{ formatDate(row.joiningDate) }}</td>
                 <td>{{ row.permanentDistrictTypeName || '-' }}</td>
                 <td>
-                    <div class="flex gap-1">
-                        <!-- Action buttons will be added here later -->
-                    </div>
+                    <a [routerLink]="['/presently-serving-members/profile', row.employeeID]" class="p-button p-button-rounded p-button-text p-button-sm">
+                        <i class="pi pi-user mr-1"></i>
+                        <span>Profile</span>
+                    </a>
                 </td>
             </tr>
         </ng-template>
