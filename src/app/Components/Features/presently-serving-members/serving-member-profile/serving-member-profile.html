@@ -23,7 +23,7 @@
                     <span class="detail-item"><span class="detail-label">RAB ID:  </span> <span class="detail-value">{{ val(profile.rabId) }}</span></span>
                 </div>
                 <div class="core-row core-row-full">
-                    <span class="detail-item"><span class="detail-label">Name English: </span> <span class="detail-value">{{ val(profile.nameEnglish) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Name English: </span> <span class="detail-value">{{ getFormattedName(profile) }}</span></span>
                 </div>
                 <div class="core-row core-row-four">
                     <span class="detail-item"><span class="detail-label">Appointment: </span> <span class="detail-value">{{ val(profile.appointment) }}</span></span>
@@ -34,7 +34,7 @@
                 <div class="core-row core-row-four">
                     <span class="detail-item"><span class="detail-label">Corps: </span> <span class="detail-value">{{ val(profile.corps) }}</span></span>
                     <span class="detail-item"><span class="detail-label">Trade: </span> <span class="detail-value">{{ tradeDisplay(profile) }}</span></span>
-                    <span class="detail-item"><span class="detail-label">Gender: </span> <span class="detail-value">{{ val(profile.gender) }}</span></span>
+                <!--<span class="detail-item"><span class="detail-label">Gender: </span> <span class="detail-value">{{ val(profile.gender) }}</span></span> -->
                     <span class="detail-item"><span class="detail-label">Date of Commission: </span> <span class="detail-value">{{ formatDateShort(profile.dateOfCommission) }}</span></span>
                 </div>
                 <div class="core-row core-row-three">
@@ -352,6 +352,92 @@
                     <ng-template pTemplate="emptymessage">
                         <tr>
                             <td colspan="2" class="text-center text-500 py-3">No additional remarks.</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
+
+        <!-- Address Information -->
+        <div class="content-section text-900 border-top-1 surface-border">
+            <div class="section-heading">Address Information:</div>
+            <div class="family-table-wrapper">
+                <p-table
+                    [value]="addressList"
+                    [tableStyle]="{ 'min-width': '52rem' }"
+                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
+                >
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 4rem">Ser</th>
+                            <th>Location Type</th>
+                            <th>Division</th>
+                            <th>District</th>
+                            <th>Thana</th>
+                            <th>Post Office</th>
+                            <th>Address (EN)</th>
+                            <th>House/Road</th>
+                            <th>Active</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                        <tr>
+                            <td>{{ rowIndex + 1 }}.</td>
+                            <td>{{ val(row.locationType) }}</td>
+                            <td>{{ val(row.division) }}</td>
+                            <td>{{ val(row.district) }}</td>
+                            <td>{{ val(row.thana) }}</td>
+                            <td>{{ val(row.postOffice) }}</td>
+                            <td>{{ val(row.addressAreaEN) }}</td>
+                            <td>{{ val(row.houseRoad) }}</td>
+                            <td>{{ row.active ? 'Yes' : 'No' }}</td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="9" class="text-center text-500 py-3">No address records.</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
+
+        <!-- Service History (Mother Organization) -->
+        <div class="content-section text-900 border-top-1 surface-border">
+            <div class="section-heading">Service History (Mother Organization):</div>
+            <div class="family-table-wrapper">
+                <p-table
+                    [value]="moServHistoryList"
+                    [tableStyle]="{ 'min-width': '48rem' }"
+                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
+                >
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 4rem">Ser</th>
+                            <th>Organization</th>
+                            <th>Location</th>
+                            <th>Service From</th>
+                            <th>Service To</th>
+                            <th>Appointment</th>
+                            <th>Auth</th>
+                            <th>Remarks</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                        <tr>
+                            <td>{{ rowIndex + 1 }}.</td>
+                            <td>{{ val(row.organizationName) }}</td>
+                            <td>{{ val(row.locationName) }}</td>
+                            <td>{{ formatDateOnly(row.serviceFrom) }}</td>
+                            <td>{{ formatDateOnly(row.serviceTo) }}</td>
+                            <td>{{ val(row.appointment) }}</td>
+                            <td>{{ val(row.auth) }}</td>
+                            <td>{{ val(row.remarks) }}</td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="8" class="text-center text-500 py-3">No service history records.</td>
                         </tr>
                     </ng-template>
                 </p-table>

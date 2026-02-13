@@ -14,6 +14,8 @@ import { EducationInfoService, EducationInfoByEmployeeView } from '@/services/ed
 import { ForeignVisitInfoService, ForeignVisitInfoByEmployeeView } from '@/services/foreign-visit-info.service';
 import { LeaveInfoService, LeaveInfoByEmployeeView, LeaveInfoSummaryItem } from '@/services/leave-info.service';
 import { AdditionalRemarksInfoService, AdditionalRemarksInfo } from '@/services/additional-remarks-info.service';
+import { AddressInfoService, AddressInfoByEmployeeView } from '@/services/address-info.service';
+import { MOServHistoryService, MOServHistoryByEmployeeView } from '@/services/mo-serv-history.service';
 import { DisciplineInfoService, DisciplineInfoByEmployeeView } from '@/services/discipline-info.service';
 import { CourseInfoService, CourseInfoByEmployeeView } from '@/services/course-info-service';
 import { PromotionInfoService, PromotionInfoByEmployeeView } from '@/services/promotion-info.service';
@@ -39,6 +41,8 @@ export class ServingMemberProfile implements OnInit {
     foreignVisitList: ForeignVisitInfoByEmployeeView[] = [];
     leaveList: LeaveInfoByEmployeeView[] = [];
     additionalRemarksList: AdditionalRemarksInfo[] = [];
+    addressList: AddressInfoByEmployeeView[] = [];
+    moServHistoryList: MOServHistoryByEmployeeView[] = [];
     disciplineList: DisciplineInfoByEmployeeView[] = [];
     courseList: CourseInfoByEmployeeView[] = [];
     promotionList: PromotionInfoByEmployeeView[] = [];
@@ -58,6 +62,8 @@ export class ServingMemberProfile implements OnInit {
         private foreignVisitInfoService: ForeignVisitInfoService,
         private leaveInfoService: LeaveInfoService,
         private additionalRemarksInfoService: AdditionalRemarksInfoService,
+        private addressInfoService: AddressInfoService,
+        private moServHistoryService: MOServHistoryService,
         private disciplineInfoService: DisciplineInfoService,
         private courseInfoService: CourseInfoService,
         private promotionInfoService: PromotionInfoService,
@@ -97,11 +103,13 @@ export class ServingMemberProfile implements OnInit {
             foreignVisit: this.foreignVisitInfoService.getViewByEmployeeId(id),
             leaveCurrentYear: this.leaveInfoService.getViewByEmployeeIdAndYear(id, currentYear),
             additionalRemarks: this.additionalRemarksInfoService.getByEmployeeId(id),
+            address: this.addressInfoService.getViewByEmployeeId(id),
+            moServHistory: this.moServHistoryService.getViewByEmployeeId(id),
             discipline: this.disciplineInfoService.getViewByEmployeeId(id),
             course: this.courseInfoService.getViewByEmployeeId(id),
             promotion: this.promotionInfoService.getViewByEmployeeId(id)
         }).subscribe({
-            next: ({ profile, family, previousRab, bankAcc, education, foreignVisit, leaveCurrentYear, additionalRemarks, discipline, course, promotion }) => {
+            next: ({ profile, family, previousRab, bankAcc, education, foreignVisit, leaveCurrentYear, additionalRemarks, address, moServHistory, discipline, course, promotion }) => {
                 this.profile = profile;
                 this.familyList = family ?? [];
                 this.previousRabList = previousRab ?? [];
@@ -110,6 +118,8 @@ export class ServingMemberProfile implements OnInit {
                 this.foreignVisitList = foreignVisit ?? [];
                 this.leaveList = leaveCurrentYear ?? [];
                 this.additionalRemarksList = additionalRemarks ?? [];
+                this.addressList = address ?? [];
+                this.moServHistoryList = moServHistory ?? [];
                 this.disciplineList = discipline ?? [];
                 this.courseList = course ?? [];
                 this.promotionList = promotion ?? [];
@@ -219,4 +229,16 @@ export class ServingMemberProfile implements OnInit {
     closePreviousYearSummaryDialog(): void {
         this.previousYearSummaryDialogVisible = false;
     }
+
+    getFormattedName(profile: any): string {
+        return [
+          profile?.nameEnglish,
+          profile?.gallantryAwardsDecoration,
+          profile?.professionalQualification,
+          profile?.corps
+        ]
+        .filter(value => value && value.trim() !== '')
+        .join(', ');
+      }
+      
 }
