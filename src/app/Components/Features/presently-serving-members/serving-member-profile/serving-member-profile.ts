@@ -5,9 +5,10 @@ import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { MessageService } from 'primeng/api';
 import { Toast } from 'primeng/toast';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { ServingMembersService } from '@/services/serving-members.service';
-import { EmpService } from '@/services/emp-service';
+import { EmpService, EmployeeDocumentReferenceItem } from '@/services/emp-service';
 import { FamilyInfoService, FamilyInfoByEmployeeView } from '@/services/family-info-service';
 import { PreviousRABServiceService, VwPreviousRABServiceInfoModel } from '@/services/previous-rab-service.service';
 import { BankAccInfoService, BankAccInfoByEmployeeView } from '@/services/bank-acc-info-service';
@@ -50,6 +51,7 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
     disciplineList: DisciplineInfoByEmployeeView[] = [];
     courseList: CourseInfoByEmployeeView[] = [];
     promotionList: PromotionInfoByEmployeeView[] = [];
+    documentList: EmployeeDocumentReferenceItem[] = [];
     previousYearSummary: LeaveInfoSummaryItem[] = [];
     previousYearSummaryDialogVisible = false;
     previousYearSummaryLoading = false;
@@ -174,9 +176,10 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
             moServHistory: this.moServHistoryService.getViewByEmployeeId(id),
             discipline: this.disciplineInfoService.getViewByEmployeeId(id),
             course: this.courseInfoService.getViewByEmployeeId(id),
-            promotion: this.promotionInfoService.getViewByEmployeeId(id)
+            promotion: this.promotionInfoService.getViewByEmployeeId(id),
+            documents: this.empService.getEmployeeDocumentReferences(id).pipe(catchError(() => of([])))
         }).subscribe({
-            next: ({ profile, family, previousRab, bankAcc, education, foreignVisit, leaveCurrentYear, additionalRemarks, address, moServHistory, discipline, course, promotion }) => {
+            next: ({ profile, family, previousRab, bankAcc, education, foreignVisit, leaveCurrentYear, additionalRemarks, address, moServHistory, discipline, course, promotion, documents }) => {
                 this.profile = profile;
                 this.familyList = family ?? [];
                 this.loadProfileImage(profile);
@@ -191,6 +194,7 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
                 this.disciplineList = discipline ?? [];
                 this.courseList = course ?? [];
                 this.promotionList = promotion ?? [];
+                this.documentList = documents ?? [];
                 this.loading = false;
             },
             error: (err) => {
@@ -336,5 +340,42 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
 
     getFormattedName(profile: any): string {
         return [profile?.nameEnglish, profile?.gallantryAwardsDecoration, profile?.professionalQualification, profile?.corps].filter((value) => value && value.trim() !== '').join(', ');
+    }
+
+    /** Document list: source table label for display. Accepts row (camelCase or PascalCase). */
+    getDocumentSourceLabel(row: { sourceTable?: string; SourceTable?: string }): string {
+        const sourceTable = row?.sourceTable ?? row?.SourceTable ?? '';
+        const labels: Record<string, string> = {
+            PersonalInfo: 'Personal Info',
+            EmployeeInfo: 'Employee Info',
+            PreviousRABServiceInfo: 'Previous RAB Service',
+            PromotionInfo: 'Promotion',
+            RankConfirmationInfo: 'Rank Confirmation',
+            BankAccInfo: 'Bank Account',
+            CourseInfo: 'Course',
+            DisciplineInfo: 'Discipline',
+            EducationInfo: 'Education',
+            ForeignVisitInfo: 'Foreign Visit',
+            MedicalInfo: 'Medical',
+            MOServHistory: 'MO Service History',
+            NomineeInfo: 'Nominee'
+        };
+        return labels[sourceTable] ?? (sourceTable || 'Document');
+    }
+
+    /** Document row file name (camelCase or PascalCase from API). */
+    getDocumentFileName(row: { fileName?: string; FileName?: string }): string {
+        return row?.fileName ?? row?.FileName ?? '-';
+    }
+
+    /** Download document by file id; display name from item (fileName or FileName). */
+    downloadDocument(item: EmployeeDocumentReferenceItem): void {
+        const fileId = item.fileId ?? (item as { FileId?: number }).FileId;
+        const fileName = item.fileName ?? (item as { FileName?: string }).FileName ?? 'download';
+        if (fileId == null) return;
+        this.empService.downloadFile(fileId).subscribe({
+            next: (blob) => this.empService.triggerFileDownload(blob, fileName),
+            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file.' })
+        });
     }
 }
