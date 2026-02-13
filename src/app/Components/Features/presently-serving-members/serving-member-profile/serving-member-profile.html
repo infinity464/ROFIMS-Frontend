@@ -285,7 +285,90 @@
                 </p-table>
             </div>
         </div>
+
+        <!-- Leave (Current Year) -->
+        <div class="content-section text-900 border-top-1 surface-border">
+            <div class="section-heading flex align-items-center gap-2">
+                <span>Leave ({{ currentYear }})</span>
+                <i
+                    class="pi pi-info-circle cursor-pointer text-primary"
+                    pTooltip="Previous Year Leave Summary"
+                    (click)="openPreviousYearLeaveSummary()"
+                    aria-label="View previous year leave summary"
+                ></i>
+            </div>
+            <div class="family-table-wrapper">
+                <p-table
+                    [value]="leaveList"
+                    [tableStyle]="{ 'min-width': '36rem' }"
+                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
+                >
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 4rem">Ser</th>
+                            <th>Type of Leave</th>
+                            <th>Duration From</th>
+                            <th>Duration To</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                        <tr>
+                            <td>{{ rowIndex + 1 }}.</td>
+                            <td>{{ val(row.typeOfLeave) }}</td>
+                            <td>{{ formatDateOnly(row.durationFrom) }}</td>
+                            <td>{{ formatDateOnly(row.durationTo) }}</td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="4" class="text-center text-500 py-3">No leave records for current year.</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
     } @else if (!loading) {
         <p class="text-500 m-0">No profile data available.</p>
     }
 </div>
+
+<!-- Previous Year Leave Summary Dialog -->
+<p-dialog
+    header="Previous Year Leave Summary ({{ previousYear }})"
+    [(visible)]="previousYearSummaryDialogVisible"
+    [modal]="true"
+    [style]="{ width: '28rem' }"
+    [closable]="true"
+    (onHide)="closePreviousYearSummaryDialog()"
+    styleClass="text-900"
+>
+    @if (previousYearSummaryLoading) {
+        <div class="flex align-items-center justify-content-center py-4">
+            <i class="pi pi-spin pi-spinner text-2xl text-500"></i>
+        </div>
+    } @else {
+        <p-table
+            [value]="previousYearSummary"
+            styleClass="p-datatable-sm p-datatable-gridlines"
+            [tableStyle]="{ 'min-width': '20rem' }"
+        >
+            <ng-template pTemplate="header">
+                <tr>
+                    <th>Type of Leave</th>
+                    <th style="width: 5rem">Count</th>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-row>
+                <tr>
+                    <td>{{ val(row.typeOfLeave) }}</td>
+                    <td>{{ row.count }}</td>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td colspan="2" class="text-center text-500 py-2">No leave records for previous year.</td>
+                </tr>
+            </ng-template>
+        </p-table>
+    }
+</p-dialog>

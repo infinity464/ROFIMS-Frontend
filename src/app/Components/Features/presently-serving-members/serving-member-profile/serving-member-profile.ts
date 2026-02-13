@@ -12,12 +12,15 @@ import { PreviousRABServiceService, VwPreviousRABServiceInfoModel } from '@/serv
 import { BankAccInfoService, BankAccInfoByEmployeeView } from '@/services/bank-acc-info-service';
 import { EducationInfoService, EducationInfoByEmployeeView } from '@/services/education-info-service';
 import { ForeignVisitInfoService, ForeignVisitInfoByEmployeeView } from '@/services/foreign-visit-info.service';
+import { LeaveInfoService, LeaveInfoByEmployeeView, LeaveInfoSummaryItem } from '@/services/leave-info.service';
 import { EmployeePersonalServiceOverview } from '@/models/employee-personal-service-overview.model';
+import { DialogModule } from 'primeng/dialog';
+import { TooltipModule } from 'primeng/tooltip';
 
 @Component({
     selector: 'app-serving-member-profile',
     standalone: true,
-    imports: [CommonModule, RouterModule, ButtonModule, TableModule, Toast],
+    imports: [CommonModule, RouterModule, ButtonModule, TableModule, Toast, DialogModule, TooltipModule],
     providers: [MessageService],
     templateUrl: './serving-member-profile.html',
     styleUrl: './serving-member-profile.scss'
@@ -30,6 +33,10 @@ export class ServingMemberProfile implements OnInit {
     bankAccList: BankAccInfoByEmployeeView[] = [];
     educationList: EducationInfoByEmployeeView[] = [];
     foreignVisitList: ForeignVisitInfoByEmployeeView[] = [];
+    leaveList: LeaveInfoByEmployeeView[] = [];
+    previousYearSummary: LeaveInfoSummaryItem[] = [];
+    previousYearSummaryDialogVisible = false;
+    previousYearSummaryLoading = false;
     loading = false;
 
     constructor(
@@ -41,8 +48,17 @@ export class ServingMemberProfile implements OnInit {
         private bankAccInfoService: BankAccInfoService,
         private educationInfoService: EducationInfoService,
         private foreignVisitInfoService: ForeignVisitInfoService,
+        private leaveInfoService: LeaveInfoService,
         private messageService: MessageService
     ) {}
+
+    get currentYear(): number {
+        return new Date().getFullYear();
+    }
+
+    get previousYear(): number {
+        return this.currentYear - 1;
+    }
 
     ngOnInit(): void {
         const id = this.route.snapshot.paramMap.get('employeeId');
@@ -59,21 +75,24 @@ export class ServingMemberProfile implements OnInit {
         if (this.employeeId == null) return;
         const id = this.employeeId;
         this.loading = true;
+        const currentYear = this.currentYear;
         forkJoin({
             profile: this.servingMembersService.getEmployeePersonalServiceOverview(id),
             family: this.familyInfoService.getFamilyInfoByEmployeeView(id),
             previousRab: this.previousRabService.getViewByEmployeeId(id),
             bankAcc: this.bankAccInfoService.getViewByEmployeeId(id),
             education: this.educationInfoService.getViewByEmployeeId(id),
-            foreignVisit: this.foreignVisitInfoService.getViewByEmployeeId(id)
+            foreignVisit: this.foreignVisitInfoService.getViewByEmployeeId(id),
+            leaveCurrentYear: this.leaveInfoService.getViewByEmployeeIdAndYear(id, currentYear)
         }).subscribe({
-            next: ({ profile, family, previousRab, bankAcc, education, foreignVisit }) => {
+            next: ({ profile, family, previousRab, bankAcc, education, foreignVisit, leaveCurrentYear }) => {
                 this.profile = profile;
                 this.familyList = family ?? [];
                 this.previousRabList = previousRab ?? [];
                 this.bankAccList = bankAcc ?? [];
                 this.educationList = education ?? [];
                 this.foreignVisitList = foreignVisit ?? [];
+                this.leaveList = leaveCurrentYear ?? [];
                 this.loading = false;
             },
             error: (err) => {
@@ -158,5 +177,26 @@ export class ServingMemberProfile implements OnInit {
         } catch {
             return value;
         }
+    }
+
+    openPreviousYearLeaveSummary(): void {
+        if (this.employeeId == null) return;
+        this.previousYearSummaryDialogVisible = true;
+        this.previousYearSummaryLoading = true;
+        this.previousYearSummary = [];
+        this.leaveInfoService.getSummaryByEmployeeAndYear(this.employeeId, this.previousYear).subscribe({
+            next: (list) => {
+                this.previousYearSummary = list ?? [];
+                this.previousYearSummaryLoading = false;
+            },
+            error: () => {
+                this.previousYearSummaryLoading = false;
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load previous year leave summary.' });
+            }
+        });
+    }
+
+    closePreviousYearSummaryDialog(): void {
+        this.previousYearSummaryDialogVisible = false;
     }
 }
