@@ -181,7 +181,7 @@ export class EmpBasicInfo implements OnInit {
             AddressAreaBN: data.villageBangla || '',
             DivisionType: data.division,
             DistrictType: data.district,
-            ThanType: data.upazila,
+            ThanaType: data.upazila,
             PostOfficeType: data.postOffice,
             HouseRoad: data.houseRoad || '',
             Active: true, // New addresses are active by default
@@ -235,7 +235,7 @@ export class EmpBasicInfo implements OnInit {
             AddressAreaBN: data.villageBangla || '',
             DivisionType: data.division,
             DistrictType: data.district,
-            ThanType: data.upazila,
+            ThanaType: data.upazila,
             PostOfficeType: data.postOffice,
             HouseRoad: data.houseRoad || '',
             Active: true, // New addresses are active by default
@@ -290,7 +290,7 @@ export class EmpBasicInfo implements OnInit {
             AddressAreaBN: data.villageBangla || '',
             DivisionType: data.division,
             DistrictType: data.district,
-            ThanType: data.upazila,
+            ThanaType: data.upazila,
             PostOfficeType: data.postOffice,
             HouseRoad: data.houseRoad || '',
             Active: true, // New addresses are active by default
@@ -345,7 +345,7 @@ export class EmpBasicInfo implements OnInit {
             AddressAreaBN: data.villageBangla || '',
             DivisionType: data.division,
             DistrictType: data.district,
-            ThanType: data.upazila,
+            ThanaType: data.upazila,
             PostOfficeType: data.postOffice,
             HouseRoad: data.houseRoad || '',
             Active: true, // New addresses are active by default
@@ -467,28 +467,14 @@ export class EmpBasicInfo implements OnInit {
         const filesToUpload = this.fileReferencesForm?.getFilesToUpload() || [];
 
         const doSave = (filesRefsJson: string | null, profileImgsJson: string | null) => {
-            this.saveEmployeeWithFilesRefs(
-                this.formattedDataForEmployee(),
-                filesRefsJson,
-                profileImgsJson,
-                permanentData!,
-                presentData!,
-                wifePermanentData,
-                wifePresentData
-            );
+            this.saveEmployeeWithFilesRefs(this.formattedDataForEmployee(), filesRefsJson, profileImgsJson, permanentData!, presentData!, wifePermanentData, wifePresentData);
         };
 
         if (filesToUpload.length > 0 || this.selectedFile) {
-            const fileRefUploads = filesToUpload.map((r: any) =>
-                this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
-            );
-            const profileUpload$ = this.selectedFile
-                ? this.empService.uploadEmployeeFile(this.selectedFile, this.selectedFileName || this.selectedFile.name)
-                : null;
+            const fileRefUploads = filesToUpload.map((r: any) => this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name));
+            const profileUpload$ = this.selectedFile ? this.empService.uploadEmployeeFile(this.selectedFile, this.selectedFileName || this.selectedFile.name) : null;
 
-            const allUploads = profileUpload$
-                ? [...fileRefUploads, profileUpload$]
-                : fileRefUploads;
+            const allUploads = profileUpload$ ? [...fileRefUploads, profileUpload$] : fileRefUploads;
 
             forkJoin(allUploads).subscribe({
                 next: (results: unknown) => {
@@ -500,9 +486,7 @@ export class EmpBasicInfo implements OnInit {
                     const allRefs = [...existingRefs, ...newRefs];
                     const filesReferencesJson = allRefs.length > 0 ? JSON.stringify(allRefs) : null;
 
-                    const profileImagesJson = profileResult
-                        ? JSON.stringify([{ FileId: (profileResult as any).fileId, fileName: (profileResult as any).fileName }])
-                        : this.getProfileImagesJson();
+                    const profileImagesJson = profileResult ? JSON.stringify([{ FileId: (profileResult as any).fileId, fileName: (profileResult as any).fileName }]) : this.getProfileImagesJson();
 
                     doSave(filesReferencesJson, profileImagesJson);
                 },
@@ -575,7 +559,12 @@ export class EmpBasicInfo implements OnInit {
                     this.wifePresentAddressConfig.employeeId = employeeId;
 
                     // Step 2: Save or Update addresses (only those with data)
-                    this.saveAllAddressesInternal(permanentData.data, presentData.data, this.wifePermanentAddressForm?.hasData() && wifePermanentData ? wifePermanentData.data : null, this.wifePresentAddressForm?.hasData() && wifePresentData ? wifePresentData.data : null);
+                    this.saveAllAddressesInternal(
+                        permanentData.data,
+                        presentData.data,
+                        this.wifePermanentAddressForm?.hasData() && wifePermanentData ? wifePermanentData.data : null,
+                        this.wifePresentAddressForm?.hasData() && wifePresentData ? wifePresentData.data : null
+                    );
                 } else {
                     this.messageService.add({
                         severity: 'error',
@@ -609,7 +598,7 @@ export class EmpBasicInfo implements OnInit {
                 AddressAreaBN: data.villageBangla || '',
                 DivisionType: data.division,
                 DistrictType: data.district,
-                ThanType: data.upazila,
+                ThanaType: data.upazila,
                 PostOfficeType: data.postOffice,
                 HouseRoad: data.houseRoad || '',
                 Active: true, // New addresses are active by default
@@ -870,7 +859,7 @@ export class EmpBasicInfo implements OnInit {
                     const addressId = addr.addressId || addr.AddressId;
                     const empId = addr.employeeID || addr.EmployeeID;
                     const divisionType = addr.divisionType || addr.DivisionType;
-                    const thanType = addr.thanType || addr.ThanType;
+                    const ThanaType = addr.ThanaType || addr.ThanaType;
                     const postOfficeType = addr.postOfficeType || addr.PostOfficeType;
                     const postCode = addr.postCode || addr.PostCode || '';
                     const addressAreaEN = addr.addressAreaEN || addr.AddressAreaEN || '';
@@ -890,7 +879,7 @@ export class EmpBasicInfo implements OnInit {
                         employeeId: empId,
                         division: divisionType,
                         district: districtValue,
-                        upazila: thanType,
+                        upazila: ThanaType,
                         postOffice: postOfficeType,
                         postCode: postCode,
                         villageEnglish: addressAreaEN,

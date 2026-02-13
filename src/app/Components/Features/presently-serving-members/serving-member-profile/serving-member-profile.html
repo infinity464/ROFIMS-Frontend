@@ -49,6 +49,62 @@
             </div>
         </div>
 
+                <!-- Own Address Information (Permanent & Present; multiple allowed) -->
+                <div class="content-section text-900 border-top-1 surface-border">
+                    <div class="section-heading">Own Address Information:</div>
+                    @if (ownAddressList.length === 0) {
+                        <div class="address-empty text-500 py-2">No own address records.</div>
+                    } @else {
+                        <div class="address-blocks">
+                            @for (addr of ownAddressList; track addr.ser) {
+                                <div class="address-block">
+                                    <div class="address-block-type">{{ getAddressTypeLabel(addr) }}</div>
+                                    <div class="address-fields">
+                                        <div class="address-row">
+                                            <span class="address-field"><span class="address-label">House/Area:</span> {{ val(addr.houseRoad) }}</span>
+                                            <span class="address-field"><span class="address-label">Village:</span> {{ val(addr.addressAreaEN) }}</span>
+                                            <span class="address-field"><span class="address-label">Post Office:</span> {{ val(addr.postOffice) }}</span>
+                                        </div>
+                                        <div class="address-row">
+                                            <span class="address-field"><span class="address-label">Thana:</span> {{ val(addr.thana) }}</span>
+                                            <span class="address-field"><span class="address-label">District:</span> {{ val(addr.district) }}</span>
+                                            <span class="address-field"><span class="address-label">Division:</span> {{ val(addr.division) }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+        
+                <!-- Wife Address Information (WifePermanent & WifePresent; multiple allowed) -->
+                <div class="content-section text-900 border-top-1 surface-border">
+                    <div class="section-heading">Wife Address Information:</div>
+                    @if (wifeAddressList.length === 0) {
+                        <div class="address-empty text-500 py-2">No wife address records.</div>
+                    } @else {
+                        <div class="address-blocks">
+                            @for (addr of wifeAddressList; track addr.ser) {
+                                <div class="address-block">
+                                    <div class="address-block-type">{{ getAddressTypeLabel(addr) }}</div>
+                                    <div class="address-fields">
+                                        <div class="address-row">
+                                            <span class="address-field"><span class="address-label">House/Area:</span> {{ val(addr.houseRoad) }}</span>
+                                            <span class="address-field"><span class="address-label">Village:</span> {{ val(addr.addressAreaEN) }}</span>
+                                            <span class="address-field"><span class="address-label">Post Office:</span> {{ val(addr.postOffice) }}</span>
+                                        </div>
+                                        <div class="address-row">
+                                            <span class="address-field"><span class="address-label">Thana:</span> {{ val(addr.thana) }}</span>
+                                            <span class="address-field"><span class="address-label">District:</span> {{ val(addr.district) }}</span>
+                                            <span class="address-field"><span class="address-label">Division:</span> {{ val(addr.division) }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+
         <!-- Other Personal Information -->
         <div class="content-section text-900 border-top-1 surface-border">
             <div class="section-heading">Other Personal Information:</div>
@@ -358,49 +414,7 @@
             </div>
         </div>
 
-        <!-- Address Information -->
-        <div class="content-section text-900 border-top-1 surface-border">
-            <div class="section-heading">Address Information:</div>
-            <div class="family-table-wrapper">
-                <p-table
-                    [value]="addressList"
-                    [tableStyle]="{ 'min-width': '52rem' }"
-                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
-                >
-                    <ng-template pTemplate="header">
-                        <tr>
-                            <th style="width: 4rem">Ser</th>
-                            <th>Location Type</th>
-                            <th>Division</th>
-                            <th>District</th>
-                            <th>Thana</th>
-                            <th>Post Office</th>
-                            <th>Address (EN)</th>
-                            <th>House/Road</th>
-                            <th>Active</th>
-                        </tr>
-                    </ng-template>
-                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
-                        <tr>
-                            <td>{{ rowIndex + 1 }}.</td>
-                            <td>{{ val(row.locationType) }}</td>
-                            <td>{{ val(row.division) }}</td>
-                            <td>{{ val(row.district) }}</td>
-                            <td>{{ val(row.thana) }}</td>
-                            <td>{{ val(row.postOffice) }}</td>
-                            <td>{{ val(row.addressAreaEN) }}</td>
-                            <td>{{ val(row.houseRoad) }}</td>
-                            <td>{{ row.active ? 'Yes' : 'No' }}</td>
-                        </tr>
-                    </ng-template>
-                    <ng-template pTemplate="emptymessage">
-                        <tr>
-                            <td colspan="9" class="text-center text-500 py-3">No address records.</td>
-                        </tr>
-                    </ng-template>
-                </p-table>
-            </div>
-        </div>
+
 
         <!-- Service History (Mother Organization) -->
         <div class="content-section text-900 border-top-1 surface-border">

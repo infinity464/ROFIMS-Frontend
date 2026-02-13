@@ -39,7 +39,7 @@ export interface AddressInfoModelLower {
     addressAreaBN: string;
 
     divisionType?: number;
-    thanType?: number;
+    ThanaType?: number;
     postOfficeType?: number;
 
     createdBy: string;
@@ -61,7 +61,7 @@ export interface AddressInfoModel {
     AddressAreaEN?: string;
     AddressAreaBN?: string;
     DivisionType?: number;
-    ThanType?: number;
+    ThanaType?: number;
     PostOfficeType?: number;
     CreatedBy?: string;
     CreatedDate?: Date | string;

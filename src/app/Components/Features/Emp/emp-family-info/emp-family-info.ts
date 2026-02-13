@@ -158,7 +158,7 @@ export class EmpFamilyInfo implements OnInit {
         // Load Relation dropdown
         this.commonCodeService.getAllActiveCommonCodesType('Relationship').subscribe({
             next: (data) => {
-                this.relationOptions = data.map(item => ({
+                this.relationOptions = data.map((item) => ({
                     label: item.codeValueEN || item.displayCodeValueEN,
                     value: item.codeId
                 }));
@@ -168,7 +168,7 @@ export class EmpFamilyInfo implements OnInit {
         // Load MaritalStatus dropdown
         this.commonCodeService.getAllActiveCommonCodesType('MaritalStatus').subscribe({
             next: (data) => {
-                this.maritalStatusOptions = data.map(item => ({
+                this.maritalStatusOptions = data.map((item) => ({
                     label: item.codeValueEN || item.displayCodeValueEN,
                     value: item.codeId
                 }));
@@ -178,7 +178,7 @@ export class EmpFamilyInfo implements OnInit {
         // Load Occupation dropdown
         this.commonCodeService.getAllActiveCommonCodesType('Occupation').subscribe({
             next: (data) => {
-                this.occupationOptions = data.map(item => ({
+                this.occupationOptions = data.map((item) => ({
                     label: item.codeValueEN || item.displayCodeValueEN,
                     value: item.codeId
                 }));
@@ -187,7 +187,7 @@ export class EmpFamilyInfo implements OnInit {
     }
 
     checkRouteParams(): void {
-        this.route.queryParams.subscribe(params => {
+        this.route.queryParams.subscribe((params) => {
             const employeeId = params['id'];
             const mode = params['mode'];
             if (employeeId) {
@@ -221,7 +221,7 @@ export class EmpFamilyInfo implements OnInit {
         this.isLoading = true;
         this.familyInfoService.getByEmployeeId(this.selectedEmployeeId).subscribe({
             next: (data: any[]) => {
-                this.familyMembers = data.map(item => ({
+                this.familyMembers = data.map((item) => ({
                     employeeId: item.employeeId || item.EmployeeId,
                     fmid: item.fmid || item.FMID,
                     relation: item.relation || item.Relation,
@@ -246,19 +246,19 @@ export class EmpFamilyInfo implements OnInit {
 
     getRelationName(relationId: number | null): string {
         if (!relationId) return 'N/A';
-        const option = this.relationOptions.find(o => o.value === relationId);
+        const option = this.relationOptions.find((o) => o.value === relationId);
         return option ? option.label : 'N/A';
     }
 
     getMaritalStatusName(statusId: number | null): string {
         if (!statusId) return 'N/A';
-        const option = this.maritalStatusOptions.find(o => o.value === statusId);
+        const option = this.maritalStatusOptions.find((o) => o.value === statusId);
         return option ? option.label : 'N/A';
     }
 
     getOccupationName(occupationId: number | null): string {
         if (!occupationId) return 'N/A';
-        const option = this.occupationOptions.find(o => o.value === occupationId);
+        const option = this.occupationOptions.find((o) => o.value === occupationId);
         return option ? option.label : 'N/A';
     }
 
@@ -306,17 +306,14 @@ export class EmpFamilyInfo implements OnInit {
 
         this.empService.getAddressesByEmployeeId(member.employeeId).subscribe({
             next: (addresses: any[]) => {
-                const familyAddresses = addresses.filter(addr =>
-                    (addr.fmid || addr.FMID) === member.fmid &&
-                    (addr.active !== false && addr.Active !== false)
-                );
+                const familyAddresses = addresses.filter((addr) => (addr.fmid || addr.FMID) === member.fmid && addr.active !== false && addr.Active !== false);
 
-                const permanentAddr = familyAddresses.find(addr => {
+                const permanentAddr = familyAddresses.find((addr) => {
                     const locationType = (addr.locationType || addr.LocationType || '').toLowerCase();
                     return locationType === LocationType.Permanent.toLowerCase() || locationType.includes('permanent');
                 });
 
-                const presentAddr = familyAddresses.find(addr => {
+                const presentAddr = familyAddresses.find((addr) => {
                     const locationType = (addr.locationType || addr.LocationType || '').toLowerCase();
                     return locationType === LocationType.Present.toLowerCase() || locationType.includes('present');
                 });
@@ -338,7 +335,7 @@ export class EmpFamilyInfo implements OnInit {
 
     saveFamily(): void {
         if (this.familyForm.invalid) {
-            Object.keys(this.familyForm.controls).forEach(key => {
+            Object.keys(this.familyForm.controls).forEach((key) => {
                 this.familyForm.get(key)?.markAsTouched();
             });
             this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Please fill required fields' });
@@ -506,18 +503,15 @@ export class EmpFamilyInfo implements OnInit {
         this.empService.getAddressesByEmployeeId(member.employeeId).subscribe({
             next: (addresses: any[]) => {
                 // Filter addresses by FMID for this family member
-                const familyAddresses = addresses.filter(addr =>
-                    (addr.fmid || addr.FMID) === member.fmid &&
-                    (addr.active !== false && addr.Active !== false)
-                );
+                const familyAddresses = addresses.filter((addr) => (addr.fmid || addr.FMID) === member.fmid && addr.active !== false && addr.Active !== false);
 
                 // Find permanent and present addresses
-                const permanentAddr = familyAddresses.find(addr => {
+                const permanentAddr = familyAddresses.find((addr) => {
                     const locationType = (addr.locationType || addr.LocationType || '').toLowerCase();
                     return locationType === LocationType.Permanent.toLowerCase() || locationType.includes('permanent');
                 });
 
-                const presentAddr = familyAddresses.find(addr => {
+                const presentAddr = familyAddresses.find((addr) => {
                     const locationType = (addr.locationType || addr.LocationType || '').toLowerCase();
                     return locationType === LocationType.Present.toLowerCase() || locationType.includes('present');
                 });
@@ -546,7 +540,7 @@ export class EmpFamilyInfo implements OnInit {
             employeeId: addr.employeeID || addr.EmployeeID,
             division: addr.divisionType || addr.DivisionType,
             district: addr.districtType || addr.DistrictType,
-            upazila: addr.thanType || addr.ThanType,
+            upazila: addr.ThanaType || addr.ThanaType,
             postOffice: addr.postOfficeType || addr.PostOfficeType,
             postCode: addr.postCode || addr.PostCode || '',
             villageEnglish: addr.addressAreaEN || addr.AddressAreaEN || '',
@@ -649,7 +643,7 @@ export class EmpFamilyInfo implements OnInit {
             HouseRoad: data.houseRoad || '',
             DivisionType: data.division,
             DistrictType: data.district,
-            ThanType: data.upazila,
+            ThanaType: data.upazila,
             PostOfficeType: data.postOffice,
             Active: true,
             CreatedBy: 'system',
@@ -693,7 +687,7 @@ export class EmpFamilyInfo implements OnInit {
 
     saveFamilyWithAddress(): void {
         if (this.familyForm.invalid) {
-            Object.keys(this.familyForm.controls).forEach(key => {
+            Object.keys(this.familyForm.controls).forEach((key) => {
                 this.familyForm.get(key)?.markAsTouched();
             });
             this.activeDialogTab = '0'; // Switch to basic info tab to show errors
@@ -721,16 +715,12 @@ export class EmpFamilyInfo implements OnInit {
             StatusDate: new Date().toISOString()
         };
 
-        const saveObservable = this.isEditMode
-            ? this.familyInfoService.update(payload)
-            : this.familyInfoService.save(payload);
+        const saveObservable = this.isEditMode ? this.familyInfoService.update(payload) : this.familyInfoService.save(payload);
 
         saveObservable.subscribe({
             next: (response: any) => {
                 // Get FMID - for edit mode use existing, for new get from response
-                const fmid = this.isEditMode
-                    ? this.editingFmid!
-                    : (response?.data?.fmid || response?.data?.FMID || response?.FMID || response?.fmid);
+                const fmid = this.isEditMode ? this.editingFmid! : response?.data?.fmid || response?.data?.FMID || response?.FMID || response?.fmid;
 
                 if (fmid && this.selectedEmployeeId) {
                     // Save addresses if filled
@@ -759,16 +749,12 @@ export class EmpFamilyInfo implements OnInit {
 
         // Save permanent address if filled
         if (permanentFormData?.data?.division) {
-            savePromises.push(
-                this.saveFamilyAddress(permanentFormData.data, LocationType.Permanent, employeeId, fmid, this.dialogPermanentAddressId).toPromise()
-            );
+            savePromises.push(this.saveFamilyAddress(permanentFormData.data, LocationType.Permanent, employeeId, fmid, this.dialogPermanentAddressId).toPromise());
         }
 
         // Save present address if filled
         if (presentFormData?.data?.division) {
-            savePromises.push(
-                this.saveFamilyAddress(presentFormData.data, LocationType.Present, employeeId, fmid, this.dialogPresentAddressId).toPromise()
-            );
+            savePromises.push(this.saveFamilyAddress(presentFormData.data, LocationType.Present, employeeId, fmid, this.dialogPresentAddressId).toPromise());
         }
 
         if (savePromises.length > 0) {

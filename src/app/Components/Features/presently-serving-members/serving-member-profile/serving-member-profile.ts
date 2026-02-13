@@ -20,6 +20,7 @@ import { DisciplineInfoService, DisciplineInfoByEmployeeView } from '@/services/
 import { CourseInfoService, CourseInfoByEmployeeView } from '@/services/course-info-service';
 import { PromotionInfoService, PromotionInfoByEmployeeView } from '@/services/promotion-info.service';
 import { EmployeePersonalServiceOverview } from '@/models/employee-personal-service-overview.model';
+import { LocationType } from '@/models/enums';
 import { DialogModule } from 'primeng/dialog';
 import { TooltipModule } from 'primeng/tooltip';
 
@@ -70,8 +71,39 @@ export class ServingMemberProfile implements OnInit {
         private messageService: MessageService
     ) {}
 
+    /** LocationType enum for template (address type labels). */
+    readonly LocationType = LocationType;
+
     get currentYear(): number {
         return new Date().getFullYear();
+    }
+
+    /** Own addresses: Permanent and Present (employee can have multiple of each). */
+    get ownAddressList(): AddressInfoByEmployeeView[] {
+        if (!this.addressList?.length) return [];
+        const own = [LocationType.Permanent, LocationType.Present];
+        return this.addressList.filter((a) => {
+            const t = (a.locationType ?? '').trim();
+            return own.some((type) => t === type);
+        });
+    }
+
+    /** Wife addresses: WifePermanent and WifePresent (employee can have multiple of each). */
+    get wifeAddressList(): AddressInfoByEmployeeView[] {
+        if (!this.addressList?.length) return [];
+        const wife = [LocationType.WifePermanent, LocationType.WifePresent];
+        return this.addressList.filter((a) => {
+            const t = (a.locationType ?? '').trim();
+            return wife.some((type) => t === type);
+        });
+    }
+
+    /** Display label for address type: "Permanent Address" or "Present Address". */
+    getAddressTypeLabel(addr: AddressInfoByEmployeeView): string {
+        const t = (addr.locationType ?? '').trim();
+        if (t === LocationType.Permanent || t === LocationType.WifePermanent) return 'Permanent Address';
+        if (t === LocationType.Present || t === LocationType.WifePresent) return 'Present Address';
+        return t || 'Address';
     }
 
     get previousYear(): number {
