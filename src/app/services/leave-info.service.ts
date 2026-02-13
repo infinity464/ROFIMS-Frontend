@@ -35,6 +35,6 @@ export class LeaveInfoService {
 
     /** Gets leave summary (Type of Leave, Count) for the given employee and year (e.g. previous year). */
     getSummaryByEmployeeAndYear(employeeId: number, year: number): Observable<LeaveInfoSummaryItem[]> {
-        return this.http.get<LeaveInfoSummaryItem[]>(`${this.apiUrl}/SummaryByEmployeeAndYear/${employeeId}/${year}`).pipe(map((res: any) => (Array.isArray(res) ? res : [])));
+        return this.http.get<LeaveInfoSummaryItem[]>(`${this.apiUrl}/GetSummaryByEmployeeAndYear/${employeeId}/${year}`).pipe(map((res: any) => (Array.isArray(res) ? res : [])));
     }
 }

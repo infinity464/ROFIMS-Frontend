@@ -327,6 +327,37 @@
                 </p-table>
             </div>
         </div>
+
+        <!-- Additional Remarks -->
+        <div class="content-section text-900 border-top-1 surface-border">
+            <div class="section-heading">Additional Remarks:</div>
+            <div class="family-table-wrapper">
+                <p-table
+                    [value]="additionalRemarksList"
+                    [tableStyle]="{ 'min-width': '40rem' }"
+                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
+                >
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 4rem">Ser</th>
+                            <th>Additional Remarks</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                        <tr>
+                            <td>{{ rowIndex + 1 }}.</td>
+                            <td>{{ val(row.additionalRemarks) }}</td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="2" class="text-center text-500 py-3">No additional remarks.</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
+
     } @else if (!loading) {
         <p class="text-500 m-0">No profile data available.</p>
     }
