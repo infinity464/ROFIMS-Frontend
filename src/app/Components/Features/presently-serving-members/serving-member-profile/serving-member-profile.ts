@@ -106,6 +106,37 @@ export class ServingMemberProfile implements OnInit {
         return t || 'Address';
     }
 
+    /** Family members whose relation does not contain "in-law". */
+    get familyInfoList(): FamilyInfoByEmployeeView[] {
+        if (!this.familyList?.length) return [];
+        const inLawPattern = /in-law/i;
+        return this.familyList.filter((f) => !inLawPattern.test((f.relation ?? '').trim()));
+    }
+
+    /** Family members whose relation contains "in-law" (wife's family). */
+    get wifeFamilyInfoList(): FamilyInfoByEmployeeView[] {
+        if (!this.familyList?.length) return [];
+        const inLawPattern = /in-law/i;
+        return this.familyList.filter((f) => inLawPattern.test((f.relation ?? '').trim()));
+    }
+
+    /** RAB service records where IsCurrentlyActive is true (present posting). */
+    get presentRabList(): VwPreviousRABServiceInfoModel[] {
+        if (!this.previousRabList?.length) return [];
+        return this.previousRabList.filter((r) => this.isRabServiceCurrentlyActive(r));
+    }
+
+    /** RAB service records where IsCurrentlyActive is not true (previous postings). */
+    get previousOnlyRabList(): VwPreviousRABServiceInfoModel[] {
+        if (!this.previousRabList?.length) return [];
+        return this.previousRabList.filter((r) => !this.isRabServiceCurrentlyActive(r));
+    }
+
+    private isRabServiceCurrentlyActive(r: VwPreviousRABServiceInfoModel): boolean {
+        const active = r.isCurrentlyActive ?? (r as { IsCurrentlyActive?: boolean }).IsCurrentlyActive;
+        return active === true;
+    }
+
     get previousYear(): number {
         return this.currentYear - 1;
     }
@@ -263,14 +294,6 @@ export class ServingMemberProfile implements OnInit {
     }
 
     getFormattedName(profile: any): string {
-        return [
-          profile?.nameEnglish,
-          profile?.gallantryAwardsDecoration,
-          profile?.professionalQualification,
-          profile?.corps
-        ]
-        .filter(value => value && value.trim() !== '')
-        .join(', ');
-      }
-      
+        return [profile?.nameEnglish, profile?.gallantryAwardsDecoration, profile?.professionalQualification, profile?.corps].filter((value) => value && value.trim() !== '').join(', ');
+    }
 }

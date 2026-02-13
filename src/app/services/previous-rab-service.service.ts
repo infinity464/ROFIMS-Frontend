@@ -28,6 +28,7 @@ export interface VwPreviousRABServiceInfoModel {
     rabUnitNameBN?: string | null;
     appointmentName?: string | null;
     appointmentNameBN?: string | null;
+    isCurrentlyActive?: boolean | null;
 }
 
 export interface PreviousRABServiceInfoModel {

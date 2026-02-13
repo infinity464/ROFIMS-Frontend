@@ -144,12 +144,12 @@
             </div>
         </div>
 
-        <!-- Family Information -->
+        <!-- Family Info (excludes in-law relations) -->
         <div class="content-section text-900 border-top-1 surface-border">
-            <div class="section-heading">Family Information:</div>
+            <div class="section-heading">Family Info:</div>
             <div class="family-table-wrapper">
                 <p-table
-                    [value]="familyList"
+                    [value]="familyInfoList"
                     [tableStyle]="{ 'min-width': '40rem' }"
                     styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
                 >
@@ -182,12 +182,90 @@
             </div>
         </div>
 
-        <!-- Previous RAB Service Information -->
+        <!-- Wife Family Info (relation contains "in-law") -->
+        <div class="content-section text-900 border-top-1 surface-border">
+            <div class="section-heading">Wife Family Info:</div>
+            <div class="family-table-wrapper">
+                <p-table
+                    [value]="wifeFamilyInfoList"
+                    [tableStyle]="{ 'min-width': '40rem' }"
+                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
+                >
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 4rem">Ser</th>
+                            <th>Name</th>
+                            <th>Relation</th>
+                            <th>Date of Birth</th>
+                            <th>Occupation</th>
+                            <th>Mobile No</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                        <tr>
+                            <td>{{ rowIndex + 1 }}.</td>
+                            <td>{{ val(row.name) }}</td>
+                            <td>{{ val(row.relation) }}</td>
+                            <td>{{ formatFamilyDob(row.dateOfBirth) }}</td>
+                            <td>{{ val(row.occupation) }}</td>
+                            <td>{{ familyMobile(row) }}</td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="6" class="text-center text-500 py-3">No wife family records.</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
+
+        <!-- Present RAB Service Info (IsCurrentlyActive = true) -->
+        <div class="content-section text-900 border-top-1 surface-border">
+            <div class="section-heading">Present RAB Service Info:</div>
+            <div class="family-table-wrapper">
+                <p-table
+                    [value]="presentRabList"
+                    [tableStyle]="{ 'min-width': '50rem' }"
+                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
+                >
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 4rem">Ser</th>
+                            <th>RAB Unit</th>
+                            <th>Service From</th>
+                            <th>Service To</th>
+                            <th>Appointment</th>
+                            <th>Posting Auth</th>
+                            <th>Remarks</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                        <tr>
+                            <td>{{ rowIndex + 1 }}.</td>
+                            <td>{{ val(row.rabUnitName) }}</td>
+                            <td>{{ formatDateOnly(row.serviceFrom) }}</td>
+                            <td>{{ formatDateOnly(row.serviceTo) }}</td>
+                            <td>{{ val(row.appointmentName) }}</td>
+                            <td>{{ val(row.postingAuth) }}</td>
+                            <td>{{ val(row.remarks) }}</td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="7" class="text-center text-500 py-3">No present RAB service records.</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
+
+        <!-- Previous RAB Service Information (IsCurrentlyActive = false) -->
         <div class="content-section text-900 border-top-1 surface-border">
             <div class="section-heading">Previous RAB Service Information:</div>
             <div class="family-table-wrapper">
                 <p-table
-                    [value]="previousRabList"
+                    [value]="previousOnlyRabList"
                     [tableStyle]="{ 'min-width': '50rem' }"
                     styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
                 >
