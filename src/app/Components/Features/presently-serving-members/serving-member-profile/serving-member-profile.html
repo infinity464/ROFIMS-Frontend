@@ -125,6 +125,166 @@
                 </p-table>
             </div>
         </div>
+
+        <!-- Previous RAB Service Information -->
+        <div class="content-section text-900 border-top-1 surface-border">
+            <div class="section-heading">Previous RAB Service Information:</div>
+            <div class="family-table-wrapper">
+                <p-table
+                    [value]="previousRabList"
+                    [tableStyle]="{ 'min-width': '50rem' }"
+                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
+                >
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 4rem">Ser</th>
+                            <th>RAB Unit</th>
+                            <th>Service From</th>
+                            <th>Service To</th>
+                            <th>Appointment</th>
+                            <th>Posting Auth</th>
+                            <th>Remarks</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                        <tr>
+                            <td>{{ rowIndex + 1 }}.</td>
+                            <td>{{ val(row.rabUnitName) }}</td>
+                            <td>{{ formatDateOnly(row.serviceFrom) }}</td>
+                            <td>{{ formatDateOnly(row.serviceTo) }}</td>
+                            <td>{{ val(row.appointmentName) }}</td>
+                            <td>{{ val(row.postingAuth) }}</td>
+                            <td>{{ val(row.remarks) }}</td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="7" class="text-center text-500 py-3">No previous RAB service records.</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
+
+        <!-- Bank Account Information -->
+        <div class="content-section text-900 border-top-1 surface-border">
+            <div class="section-heading">Bank Account Information:</div>
+            <div class="family-table-wrapper">
+                <p-table
+                    [value]="bankAccList"
+                    [tableStyle]="{ 'min-width': '40rem' }"
+                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
+                >
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 4rem">Ser</th>
+                            <th>Bank Name</th>
+                            <th>Branch Name</th>
+                            <th>Account Name</th>
+                            <th>Account Number</th>
+                            <th>Remarks</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                        <tr>
+                            <td>{{ rowIndex + 1 }}.</td>
+                            <td>{{ val(row.bankName) }}</td>
+                            <td>{{ val(row.branchName) }}</td>
+                            <td>{{ val(row.accountName) }}</td>
+                            <td>{{ val(row.accountNumber) }}</td>
+                            <td>{{ val(row.remarks) }}</td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="6" class="text-center text-500 py-3">No bank account records.</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
+
+        <!-- Education Information -->
+        <div class="content-section text-900 border-top-1 surface-border">
+            <div class="section-heading">Education Information:</div>
+            <div class="family-table-wrapper">
+                <p-table
+                    [value]="educationList"
+                    [tableStyle]="{ 'min-width': '56rem' }"
+                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
+                >
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 4rem">Ser</th>
+                            <th>Duration (From - To)</th>
+                            <th>School/College/University</th>
+                            <th>Exam/Degree</th>
+                            <th>Subject/Department</th>
+                            <th>Result</th>
+                            <th>Grade Point</th>
+                            <th>Passing Year</th>
+                            <th>Remarks</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                        <tr>
+                            <td>{{ rowIndex + 1 }}.</td>
+                            <td>{{ formatDateOnly(row.durationFrom) }} - {{ formatDateOnly(row.durationTo) }}</td>
+                            <td>{{ val(row.schoolCollegeUniversity) }}</td>
+                            <td>{{ val(row.nameOfExamDegree) }}</td>
+                            <td>{{ val(row.subjectsDepartments) }}</td>
+                            <td>{{ val(row.result) }}</td>
+                            <td>{{ val(row.gradePoint) }}</td>
+                            <td>{{ val(row.passingYear) }}</td>
+                            <td>{{ val(row.remarks) }}</td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="9" class="text-center text-500 py-3">No education records.</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
+
+        <!-- Foreign Visit Information -->
+        <div class="content-section text-900 border-top-1 surface-border">
+            <div class="section-heading">Foreign Visit Information:</div>
+            <div class="family-table-wrapper">
+                <p-table
+                    [value]="foreignVisitList"
+                    [tableStyle]="{ 'min-width': '44rem' }"
+                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
+                >
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 4rem">Ser</th>
+                            <th>Country</th>
+                            <th>Duration From</th>
+                            <th>Duration To</th>
+                            <th>Reason for Visiting</th>
+                            <th>Related Documents</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                        <tr>
+                            <td>{{ rowIndex + 1 }}.</td>
+                            <td>{{ val(row.nameOfCountry) }}</td>
+                            <td>{{ formatDateTime(row.durationFrom) }}</td>
+                            <td>{{ formatDateTime(row.durationTo) }}</td>
+                            <td>{{ val(row.reasonForVisiting) }}</td>
+                            <td>{{ val(row.relatedDocuments) }}</td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="6" class="text-center text-500 py-3">No foreign visit records.</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
     } @else if (!loading) {
         <p class="text-500 m-0">No profile data available.</p>
     }
