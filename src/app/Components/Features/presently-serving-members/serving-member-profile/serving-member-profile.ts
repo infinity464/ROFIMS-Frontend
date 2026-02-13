@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
@@ -7,6 +7,7 @@ import { MessageService } from 'primeng/api';
 import { Toast } from 'primeng/toast';
 import { forkJoin } from 'rxjs';
 import { ServingMembersService } from '@/services/serving-members.service';
+import { EmpService } from '@/services/emp-service';
 import { FamilyInfoService, FamilyInfoByEmployeeView } from '@/services/family-info-service';
 import { PreviousRABServiceService, VwPreviousRABServiceInfoModel } from '@/services/previous-rab-service.service';
 import { BankAccInfoService, BankAccInfoByEmployeeView } from '@/services/bank-acc-info-service';
@@ -32,9 +33,11 @@ import { TooltipModule } from 'primeng/tooltip';
     templateUrl: './serving-member-profile.html',
     styleUrl: './serving-member-profile.scss'
 })
-export class ServingMemberProfile implements OnInit {
+export class ServingMemberProfile implements OnInit, OnDestroy {
     employeeId: number | null = null;
     profile: EmployeePersonalServiceOverview | null = null;
+    /** Object URL for profile image (from FileInformation/Download). Revoke in ngOnDestroy. */
+    profileImageUrl: string | null = null;
     familyList: FamilyInfoByEmployeeView[] = [];
     previousRabList: VwPreviousRABServiceInfoModel[] = [];
     bankAccList: BankAccInfoByEmployeeView[] = [];
@@ -68,7 +71,8 @@ export class ServingMemberProfile implements OnInit {
         private disciplineInfoService: DisciplineInfoService,
         private courseInfoService: CourseInfoService,
         private promotionInfoService: PromotionInfoService,
-        private messageService: MessageService
+        private messageService: MessageService,
+        private empService: EmpService
     ) {}
 
     /** LocationType enum for template (address type labels). */
@@ -175,6 +179,7 @@ export class ServingMemberProfile implements OnInit {
             next: ({ profile, family, previousRab, bankAcc, education, foreignVisit, leaveCurrentYear, additionalRemarks, address, moServHistory, discipline, course, promotion }) => {
                 this.profile = profile;
                 this.familyList = family ?? [];
+                this.loadProfileImage(profile);
                 this.previousRabList = previousRab ?? [];
                 this.bankAccList = bankAcc ?? [];
                 this.educationList = education ?? [];
@@ -202,6 +207,42 @@ export class ServingMemberProfile implements OnInit {
 
     goBack(): void {
         this.router.navigate(['/presently-serving-members']);
+    }
+
+    ngOnDestroy(): void {
+        if (this.profileImageUrl) {
+            URL.revokeObjectURL(this.profileImageUrl);
+            this.profileImageUrl = null;
+        }
+    }
+
+    /** Parse profile image JSON and load image via FileInformation/Download; set profileImageUrl for display. */
+    private loadProfileImage(profile: EmployeePersonalServiceOverview | null): void {
+        if (this.profileImageUrl) {
+            URL.revokeObjectURL(this.profileImageUrl);
+            this.profileImageUrl = null;
+        }
+        const json = profile?.profileImages ?? (profile as { ProfileImages?: string })?.ProfileImages ?? null;
+        if (!json || typeof json !== 'string') return;
+        let refs: { FileId?: number; fileName?: string }[];
+        try {
+            refs = JSON.parse(json) as { FileId?: number; fileName?: string }[];
+        } catch {
+            return;
+        }
+        const first = Array.isArray(refs) && refs.length > 0 ? refs[0] : null;
+        const fileId = first?.FileId ?? (first as { fileId?: number })?.fileId;
+        if (fileId == null || fileId <= 0) return;
+        this.empService.downloadFile(fileId).subscribe({
+            next: (blob) => {
+                if (blob && blob.size > 0) {
+                    this.profileImageUrl = URL.createObjectURL(blob);
+                }
+            },
+            error: () => {
+                // Optional: show no image on error
+            }
+        });
     }
 
     private onError(message: string): void {

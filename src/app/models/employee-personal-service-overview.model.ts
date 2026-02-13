@@ -63,4 +63,8 @@ export interface EmployeePersonalServiceOverview {
     medicalCategory: string | null;
     batch: string | null;
     gallantryAwardsDecorationId: number | null;
+    hasInvestigationExp: boolean | null;
+    investigationExpDetails: string | null;
+    /** JSON array of profile image ref(s): e.g. [{"FileId":3,"fileName":"photo.png"}]. From EmployeeInfo.ProfileImages. */
+    profileImages?: string | null;
 }

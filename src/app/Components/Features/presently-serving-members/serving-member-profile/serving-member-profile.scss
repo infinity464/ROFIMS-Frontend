@@ -23,12 +23,39 @@ $section-margin: 1rem;
     font-weight: 700;
 }
 
-.profile-placeholder-box {
+/* Profile image: max 300x300; stored in FileStorage (e.g. C:\RFiles), ref in DB ProfileImages JSON */
+.profile-image-box {
     flex-shrink: 0;
     width: 120px;
     height: 100px;
+    max-width: 120px;
+    max-height: 100px;
     border: 1px solid var(--surface-border);
     background: var(--surface-card);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    margin-right: 50px;
+}
+
+.profile-image {
+    width: 100%;
+    height: 100%;
+    max-width: 300px;
+    max-height: 300px;
+    object-fit: cover;
+    display: block;
+}
+
+.profile-image-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-color-secondary);
+    font-size: 4rem;
 }
 
 /* Section heading (same as address-heading in supernumerary) */
@@ -38,13 +65,16 @@ $section-margin: 1rem;
 
 .section-heading {
     font-weight: 700;
-    text-decoration: underline;
+    font-size: 1.15rem;
     margin-bottom: $section-margin;
 }
 
-/* Core details: label normal, value bold; pairs on same line */
 .core-details {
     margin: $section-margin 0;
+    border: 1px solid var(--surface-border);
+    padding: 1rem;
+    border-radius: 4px;
+    background: var(--surface-card);
 }
 
 .core-row {
@@ -110,12 +140,12 @@ $section-margin: 1rem;
     gap: 1rem;
 }
 
-.address-block {
-    border: 1px solid var(--surface-border);
-    border-radius: 4px;
-    padding: 1rem;
-    background: var(--surface-card);
-}
+// .address-block {
+//     border: 1px solid var(--surface-border);
+//     border-radius: 4px;
+//     padding: 1rem;
+//     background: var(--surface-card);
+// }
 
 .address-block-type {
     font-weight: 700;
