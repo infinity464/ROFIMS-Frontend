@@ -61,4 +61,6 @@ export interface EmployeePersonalServiceOverview {
     personalQualification: string | null;
     medicalCategoryId: number | null;
     medicalCategory: string | null;
+    batch: string | null;
+    gallantryAwardsDecorationId: number | null;
 }
