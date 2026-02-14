@@ -6,6 +6,53 @@
         <p-button label="Refresh" icon="pi pi-refresh" (onClick)="refresh()" [loading]="loading"></p-button>
     </div>
 
+    <!-- Filter section -->
+    <div class="filter-section mb-4">
+        <div class="filter-row">
+            <label class="filter-label">Search by ID:</label>
+            <div class="filter-inputs">
+                <input pInputText type="text" [(ngModel)]="filter.rabId" placeholder="RAB ID" class="filter-input" />
+                <input pInputText type="text" [(ngModel)]="filter.serviceId" placeholder="Service ID" class="filter-input" />
+                <input pInputText type="text" [(ngModel)]="filter.nidId" placeholder="NID ID" class="filter-input" />
+            </div>
+        </div>
+        <div class="filter-row">
+            <label class="filter-label">Search by Name:</label>
+            <div class="filter-inputs">
+                <input pInputText type="text" [(ngModel)]="filter.nameBangla" placeholder="Name Bangla" class="filter-input" />
+                <input pInputText type="text" [(ngModel)]="filter.nameEnglish" placeholder="Name English" class="filter-input" />
+            </div>
+        </div>
+        <div class="filter-row">
+            <label class="filter-label">Search by:</label>
+            <div class="filter-inputs">
+                <p-select [(ngModel)]="filter.presentRabUnit" placeholder="Present RAB Unit" [options]="rabUnitOptions" optionLabel="label" optionValue="value" class="filter-input filter-select"></p-select>
+                <p-select [(ngModel)]="filter.rank" placeholder="Rank" [options]="rankOptions" optionLabel="label" optionValue="value" class="filter-input filter-select"></p-select>
+                <p-select [(ngModel)]="filter.corpsTrade" placeholder="Corps/Trade" [options]="corpsTradeOptions" optionLabel="label" optionValue="value" class="filter-input filter-select"></p-select>
+            </div>
+        </div>
+        <div class="filter-row">
+            <label class="filter-label">Search by RAB Duration:</label>
+            <div class="filter-inputs">
+                <p-datepicker [(ngModel)]="filter.durationFrom" placeholder="From" dateFormat="dd/mm/yy" class="filter-input filter-date"></p-datepicker>
+                <p-datepicker [(ngModel)]="filter.durationTo" placeholder="To" dateFormat="dd/mm/yy" class="filter-input filter-date"></p-datepicker>
+            </div>
+        </div>
+        <div class="filter-row">
+            <label class="filter-label">Search by Home District:</label>
+            <div class="filter-inputs">
+                <p-select [(ngModel)]="filter.wonHomeDistrict" placeholder="Won Home District" [options]="districtOptions" optionLabel="label" optionValue="value" class="filter-input filter-select"></p-select>
+                <p-select [(ngModel)]="filter.wifeHomeDistrict" placeholder="Wife Home District" [options]="districtOptions" optionLabel="label" optionValue="value" class="filter-input filter-select"></p-select>
+            </div>
+        </div>
+        <div class="filter-row">
+            <label class="filter-label">Search by Appointment:</label>
+            <div class="filter-inputs">
+                <p-select [(ngModel)]="filter.appointment" placeholder="Select Appointment" [options]="appointmentOptions" optionLabel="label" optionValue="value" class="filter-input filter-select"></p-select>
+            </div>
+        </div>
+    </div>
+
     <p-table
         [value]="list"
         [lazy]="true"

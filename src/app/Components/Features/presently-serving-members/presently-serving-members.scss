@@ -1,3 +1,47 @@
 :host {
     display: block;
 }
+
+.filter-section {
+    border: 1px solid var(--p-border-color, #dee2e6);
+    border-radius: var(--p-border-radius, 6px);
+    padding: 1rem 1.25rem;
+    background: var(--p-content-background, #fff);
+}
+
+.filter-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.875rem;
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+}
+
+.filter-label {
+    flex-shrink: 0;
+    min-width: 180px;
+    font-weight: 500;
+    color: var(--p-text-color, #495057);
+}
+
+.filter-inputs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    flex: 1;
+}
+
+.filter-input {
+    min-width: 140px;
+    flex: 1;
+    max-width: 220px;
+
+    &.filter-select,
+    &.filter-date {
+        min-width: 160px;
+        max-width: 240px;
+    }
+}
