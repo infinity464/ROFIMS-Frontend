@@ -138,6 +138,18 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
         return this.previousRabList.filter((r) => !this.isRabServiceCurrentlyActive(r));
     }
 
+    /** Foreign visits where VisitType is Official. */
+    get officialForeignVisitList(): ForeignVisitInfoByEmployeeView[] {
+        if (!this.foreignVisitList?.length) return [];
+        return this.foreignVisitList.filter((v) => (v.visitType ?? '').toString().trim().toLowerCase() === 'official');
+    }
+
+    /** Foreign visits where VisitType is not Official (Unofficial). */
+    get unofficialForeignVisitList(): ForeignVisitInfoByEmployeeView[] {
+        if (!this.foreignVisitList?.length) return [];
+        return this.foreignVisitList.filter((v) => (v.visitType ?? '').toString().trim().toLowerCase() !== 'official');
+    }
+
     private isRabServiceCurrentlyActive(r: VwPreviousRABServiceInfoModel): boolean {
         const active = r.isCurrentlyActive ?? (r as { IsCurrentlyActive?: boolean }).IsCurrentlyActive;
         return active === true;

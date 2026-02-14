@@ -69,6 +69,22 @@ $section-margin: 1rem;
     margin-bottom: $section-margin;
 }
 
+/* Foreign Visit subsections (Official / Unofficial) */
+.foreign-visit-subsection {
+    margin-top: 1.25rem;
+
+    &:first-of-type {
+        margin-top: 0;
+    }
+}
+
+.subsection-heading {
+    font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-color-secondary);
+}
+
 .core-details {
     margin: $section-margin 0;
     border: 1px solid var(--surface-border);

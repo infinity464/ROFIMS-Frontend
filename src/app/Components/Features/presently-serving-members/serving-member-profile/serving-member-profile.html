@@ -499,38 +499,81 @@
         <!-- Foreign Visit Information -->
         <div class="content-section text-900 border-top-1 surface-border">
             <div class="section-heading">Foreign Visit Information:</div>
-            <div class="family-table-wrapper">
-                <p-table
-                    [value]="foreignVisitList"
-                    [tableStyle]="{ 'min-width': '44rem' }"
-                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
-                >
-                    <ng-template pTemplate="header">
-                        <tr>
-                            <th style="width: 4rem">Ser</th>
-                            <th>Country</th>
-                            <th>Duration From</th>
-                            <th>Duration To</th>
-                            <th>Reason for Visiting</th>
-                            <th>Related Documents</th>
-                        </tr>
-                    </ng-template>
-                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
-                        <tr>
-                            <td>{{ rowIndex + 1 }}.</td>
-                            <td>{{ val(row.nameOfCountry) }}</td>
-                            <td>{{ formatDateTime(row.durationFrom) }}</td>
-                            <td>{{ formatDateTime(row.durationTo) }}</td>
-                            <td>{{ val(row.reasonForVisiting) }}</td>
-                            <td>{{ val(row.relatedDocuments) }}</td>
-                        </tr>
-                    </ng-template>
-                    <ng-template pTemplate="emptymessage">
-                        <tr>
-                            <td colspan="6" class="text-center text-500 py-3">No foreign visit records.</td>
-                        </tr>
-                    </ng-template>
-                </p-table>
+
+            <!-- Official Foreign Visit -->
+            <div class="foreign-visit-subsection">
+                <div class="subsection-heading">Official Foreign Visit</div>
+                <div class="family-table-wrapper">
+                    <p-table
+                        [value]="officialForeignVisitList"
+                        [tableStyle]="{ 'min-width': '44rem' }"
+                        styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
+                    >
+                        <ng-template pTemplate="header">
+                            <tr>
+                                <th style="width: 4rem">Ser</th>
+                                <th>Country</th>
+                                <th>Duration From</th>
+                                <th>Duration To</th>
+                                <th>Reason for Visiting</th>
+                                <th>Related Documents</th>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                            <tr>
+                                <td>{{ rowIndex + 1 }}.</td>
+                                <td>{{ val(row.nameOfCountry) }}</td>
+                                <td>{{ formatDateTime(row.durationFrom) }}</td>
+                                <td>{{ formatDateTime(row.durationTo) }}</td>
+                                <td>{{ val(row.reasonForVisiting) }}</td>
+                                <td>{{ val(row.relatedDocuments) }}</td>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="emptymessage">
+                            <tr>
+                                <td colspan="6" class="text-center text-500 py-3">No official foreign visit records.</td>
+                            </tr>
+                        </ng-template>
+                    </p-table>
+                </div>
+            </div>
+
+            <!-- Unofficial Foreign Visit -->
+            <div class="foreign-visit-subsection">
+                <div class="subsection-heading">Unofficial Foreign Visit</div>
+                <div class="family-table-wrapper">
+                    <p-table
+                        [value]="unofficialForeignVisitList"
+                        [tableStyle]="{ 'min-width': '44rem' }"
+                        styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
+                    >
+                        <ng-template pTemplate="header">
+                            <tr>
+                                <th style="width: 4rem">Ser</th>
+                                <th>Country</th>
+                                <th>Duration From</th>
+                                <th>Duration To</th>
+                                <th>Reason for Visiting</th>
+                                <th>Related Documents</th>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                            <tr>
+                                <td>{{ rowIndex + 1 }}.</td>
+                                <td>{{ val(row.nameOfCountry) }}</td>
+                                <td>{{ formatDateTime(row.durationFrom) }}</td>
+                                <td>{{ formatDateTime(row.durationTo) }}</td>
+                                <td>{{ val(row.reasonForVisiting) }}</td>
+                                <td>{{ val(row.relatedDocuments) }}</td>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="emptymessage">
+                            <tr>
+                                <td colspan="6" class="text-center text-500 py-3">No unofficial foreign visit records.</td>
+                            </tr>
+                        </ng-template>
+                    </p-table>
+                </div>
             </div>
         </div>
 

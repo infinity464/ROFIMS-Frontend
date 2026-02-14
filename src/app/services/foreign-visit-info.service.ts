@@ -13,6 +13,8 @@ export interface ForeignVisitInfoByEmployeeView {
     durationTo: string | null;
     reasonForVisiting: string | null;
     relatedDocuments: string | null;
+    visitId?: number | null;
+    visitType?: string | null;
 }
 
 export interface ForeignVisitInfoModel {

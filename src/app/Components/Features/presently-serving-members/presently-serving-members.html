@@ -3,7 +3,7 @@
 <div class="card">
     <div class="flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
         <h2 class="m-0 text-2xl font-bold text-900">Presently Serving Members List</h2>
-        <p-button label="Refresh" icon="pi pi-refresh" (onClick)="refresh()" [loading]="loading"></p-button>
+       <!--  <p-button label="Refresh" icon="pi pi-refresh" (onClick)="refresh()" [loading]="loading"></p-button> -->
     </div>
 
     <!-- Filter section -->
@@ -26,9 +26,10 @@
         <div class="filter-row">
             <label class="filter-label">Search by:</label>
             <div class="filter-inputs">
-                <p-select [(ngModel)]="filter.presentRabUnit" placeholder="Present RAB Unit" [options]="rabUnitOptions" optionLabel="label" optionValue="value" class="filter-input filter-select"></p-select>
+                <p-select [(ngModel)]="filter.rabUnit" placeholder="RAB Unit" [options]="rabUnitOptions" optionLabel="label" optionValue="value" class="filter-input filter-select"></p-select>
                 <p-select [(ngModel)]="filter.rank" placeholder="Rank" [options]="rankOptions" optionLabel="label" optionValue="value" class="filter-input filter-select"></p-select>
-                <p-select [(ngModel)]="filter.corpsTrade" placeholder="Corps/Trade" [options]="corpsTradeOptions" optionLabel="label" optionValue="value" class="filter-input filter-select"></p-select>
+                <p-select [(ngModel)]="filter.corps" placeholder="Corps" [options]="corpsOptions" optionLabel="label" optionValue="value" class="filter-input filter-select"></p-select>
+                <p-select [(ngModel)]="filter.trade" placeholder="Trade" [options]="tradeOptions" optionLabel="label" optionValue="value" class="filter-input filter-select"></p-select>
             </div>
         </div>
         <div class="filter-row">
@@ -41,14 +42,21 @@
         <div class="filter-row">
             <label class="filter-label">Search by Home District:</label>
             <div class="filter-inputs">
-                <p-select [(ngModel)]="filter.wonHomeDistrict" placeholder="Won Home District" [options]="districtOptions" optionLabel="label" optionValue="value" class="filter-input filter-select"></p-select>
-                <p-select [(ngModel)]="filter.wifeHomeDistrict" placeholder="Wife Home District" [options]="districtOptions" optionLabel="label" optionValue="value" class="filter-input filter-select"></p-select>
+                <p-select [(ngModel)]="filter.wonHomeDistrict" placeholder="Employee Own Permanent District" [options]="districtOptions" optionLabel="label" optionValue="value" class="filter-input filter-select"></p-select>
+                <p-select [(ngModel)]="filter.wifeHomeDistrict" placeholder="Wife Permanent Address District" [options]="districtOptions" optionLabel="label" optionValue="value" class="filter-input filter-select"></p-select>
             </div>
         </div>
         <div class="filter-row">
             <label class="filter-label">Search by Appointment:</label>
             <div class="filter-inputs">
                 <p-select [(ngModel)]="filter.appointment" placeholder="Select Appointment" [options]="appointmentOptions" optionLabel="label" optionValue="value" class="filter-input filter-select"></p-select>
+            </div>
+        </div>
+        <div class="filter-row filter-actions">
+            <span class="filter-label"></span>
+            <div class="filter-inputs">
+                <p-button label="Search" icon="pi pi-search" (onClick)="search()" [loading]="loading"></p-button>
+                <p-button label="Clear Filter" icon="pi pi-times" (onClick)="clearFilter()" severity="secondary"></p-button>
             </div>
         </div>
     </div>
