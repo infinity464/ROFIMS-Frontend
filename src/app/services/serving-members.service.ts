@@ -73,4 +73,15 @@ export class ServingMembersService {
     getEmployeePersonalServiceOverview(employeeId: number): Observable<EmployeePersonalServiceOverview> {
         return this.http.get<EmployeePersonalServiceOverview>(`${this.apiUrl}/GetEmployeePersonalServiceOverview/${employeeId}`);
     }
+
+    // --- Ex-Members (PostingStatus = ExMember; RAB Unit from Top 1 PreviousRABServiceInfo ORDER BY ServiceFrom DESC) ---
+
+    getExMembersPaginated(pageNo: number, rowPerPage: number): Observable<PagedResponse<EmployeeServiceOverview>> {
+        const params = new HttpParams().set('page_no', String(pageNo)).set('row_per_page', String(rowPerPage));
+        return this.http.get<PagedResponse<EmployeeServiceOverview>>(`${this.apiUrl}/GetBasicServiceInformationOfExMemberPaginated`, { params });
+    }
+
+    getExMembersPaginatedFiltered(request: ServingMemberPaginatedFilterRequest): Observable<PagedResponse<EmployeeServiceOverview>> {
+        return this.http.post<PagedResponse<EmployeeServiceOverview>>(`${this.apiUrl}/GetBasicServiceInformationOfExMemberPaginatedFiltered`, request);
+    }
 }

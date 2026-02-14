@@ -114,7 +114,10 @@ export class AppMenu {
             {
                 label: 'Organization Setup',
                 icon: 'pi pi-fw pi-user-plus',
-                items: [{ label: 'Presently Serving Members', icon: 'pi pi-fw pi-users', routerLink: ['/presently-serving-members'] }]
+                items: [
+                    { label: 'Presently Serving Members', icon: 'pi pi-fw pi-users', routerLink: ['/presently-serving-members'] },
+                    { label: 'Ex-Members', icon: 'pi pi-fw pi-user-minus', routerLink: ['/ex-members'] }
+                ]
             },
             {
                 label: 'Pending Task & Upcoming Event',
