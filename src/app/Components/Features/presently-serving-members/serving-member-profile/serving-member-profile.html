@@ -1,0 +1,831 @@
+<p-toast></p-toast>
+
+<div class="card serving-member-profile-page text-900">
+    <div class="profile-header">
+        <div class="profile-header-left">
+            <p-button icon="pi pi-arrow-left" label="Back" [rounded]="true" [text]="true" severity="secondary" (onClick)="goBack()" styleClass="p-button-sm"></p-button>
+            <h1 class="profile-title m-0 text-2xl font-bold text-900">Serving Member Profile</h1>
+        </div>
+        <div class="profile-image-box">
+            @if (profileImageUrl) {
+                <img [src]="profileImageUrl" alt="Profile" class="profile-image" />
+            } @else {
+                <div class="profile-image-placeholder" aria-hidden="true">
+                    <i class="pi pi-user"></i>
+                </div>
+            }
+        </div>
+    </div>
+
+    @if (loading) {
+        <div class="flex align-items-center justify-content-center p-5">
+            <i class="pi pi-spin pi-spinner text-4xl text-500"></i>
+        </div>
+    } @else if (profile) {
+        <!-- Basic Service Information -->
+        <div class="content-section text-900">
+            <div class="section-heading">Basic Service Information</div>
+            <div class="core-details">
+                <div class="core-row">
+                    <span class="detail-item"><span class="detail-label">Service ID:  </span> <span class="detail-value">{{ val(profile.serviceId) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">RAB ID:  </span> <span class="detail-value">{{ val(profile.rabId) }}</span></span>
+                </div>
+                <div class="core-row core-row-full">
+                    <span class="detail-item"><span class="detail-label">Name English: </span> <span class="detail-value">{{ getFormattedName(profile) }}</span></span>
+                </div>
+                <div class="core-row core-row-four">
+                    <span class="detail-item"><span class="detail-label">Appointment: </span> <span class="detail-value">{{ val(profile.appointment) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Member Type: </span> <span class="detail-value">{{ val(profile.memberType) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Mother Organization: </span> <span class="detail-value">{{ val(profile.motherOrganization) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Rank: </span> <span class="detail-value">{{ val(profile.armyRank) }}</span></span>
+                </div>
+                <div class="core-row core-row-four">
+                    <span class="detail-item"><span class="detail-label">Corps: </span> <span class="detail-value">{{ val(profile.corps) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Trade: </span> <span class="detail-value">{{ tradeDisplay(profile) }}</span></span>
+                <!--<span class="detail-item"><span class="detail-label">Gender: </span> <span class="detail-value">{{ val(profile.gender) }}</span></span> -->
+                    <span class="detail-item"><span class="detail-label">Date of Commission: </span> <span class="detail-value">{{ formatDateShort(profile.dateOfCommission) }}</span></span>
+                </div>
+                <div class="core-row core-row-three">
+                    <span class="detail-item"><span class="detail-label">Date of Joining in Service/Training: </span> <span class="detail-value">{{ formatDateShort(profile.dateOfJoiningInServiceTraining) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Mother Unit: </span> <span class="detail-value">{{ val(profile.motherUnit) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Location: </span> <span class="detail-value">{{ val(profile.location) }}</span></span>
+                </div>
+                <div class="core-row">
+                    <span class="detail-item"><span class="detail-label">RAB Unit: </span> <span class="detail-value">{{ val(profile.rabUnit) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Joining Date: </span> <span class="detail-value">{{ formatDateShort(profile.joiningDate) }}</span></span>
+                </div>
+            </div>
+        </div>
+
+                <!-- Own Address Information (Permanent & Present; multiple allowed) -->
+                <div class="content-section text-900 border-top-1 surface-border">
+                    <div class="section-heading">Own Address Information:</div>
+                    @if (ownAddressList.length === 0) {
+                        <div class="address-empty text-500 py-2">No own address records.</div>
+                    } @else {
+                        <div class="core-details">
+                            @for (addr of ownAddressList; track addr.ser) {
+                                <div class="address-block">
+                                    <div class="address-block-type">{{ getAddressTypeLabel(addr) }}</div>
+                                    <div class="address-fields">
+                                        <div class="address-row">
+                                            <span class="address-field"><span class="address-label">House/Area:</span> {{ val(addr.houseRoad) }}</span>
+                                            <span class="address-field"><span class="address-label">Village:</span> {{ val(addr.addressAreaEN) }}</span>
+                                            <span class="address-field"><span class="address-label">Post Office:</span> {{ val(addr.postOffice) }}</span>
+                                        </div>
+                                        <div class="address-row">
+                                            <span class="address-field"><span class="address-label">Thana:</span> {{ val(addr.thana) }}</span>
+                                            <span class="address-field"><span class="address-label">District:</span> {{ val(addr.district) }}</span>
+                                            <span class="address-field"><span class="address-label">Division:</span> {{ val(addr.division) }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+        
+                <!-- Wife Address Information (WifePermanent & WifePresent; multiple allowed) -->
+                <div class="content-section text-900 border-top-1 surface-border">
+                    <div class="section-heading">Wife Address Information:</div>
+                    @if (wifeAddressList.length === 0) {
+                        <div class="address-empty text-500 py-2">No wife address records.</div>
+                    } @else {
+                        <div class="core-details">
+                            @for (addr of wifeAddressList; track addr.ser) {
+                                <div class="address-block">
+                                    <div class="address-block-type">{{ getAddressTypeLabel(addr) }}</div>
+                                    <div class="address-fields">
+                                        <div class="address-row">
+                                            <span class="address-field"><span class="address-label">House/Area:</span> {{ val(addr.houseRoad) }}</span>
+                                            <span class="address-field"><span class="address-label">Village:</span> {{ val(addr.addressAreaEN) }}</span>
+                                            <span class="address-field"><span class="address-label">Post Office:</span> {{ val(addr.postOffice) }}</span>
+                                        </div>
+                                        <div class="address-row">
+                                            <span class="address-field"><span class="address-label">Thana:</span> {{ val(addr.thana) }}</span>
+                                            <span class="address-field"><span class="address-label">District:</span> {{ val(addr.district) }}</span>
+                                            <span class="address-field"><span class="address-label">Division:</span> {{ val(addr.division) }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+
+        <!-- Other Personal Information -->
+        <div class="content-section text-900 border-top-1 surface-border">
+            <div class="section-heading">Other Personal Information:</div>
+            <div class="core-details">
+                <div class="core-row core-row-four">
+                    <span class="detail-item"><span class="detail-label">Course/Batch: </span> <span class="detail-value">{{ val(profile.batch) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Date of Join in Service: </span> <span class="detail-value">{{ formatDateShort(profile.dateOfJoiningInServiceTraining) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Date of Commission: </span> <span class="detail-value">{{ formatDateShort(profile.dateOfCommission) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Education Qualification: </span> <span class="detail-value">{{ val(profile.educationQualification) }}</span></span>
+                </div>
+                <div class="core-row core-row-four">
+                    <span class="detail-item"><span class="detail-label">Professional Qualification: </span> <span class="detail-value">{{ val(profile.professionalQualification) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Personal Qualification: </span> <span class="detail-value">{{ val(profile.personalQualification) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Gallantry Awards/Decoration: </span> <span class="detail-value">{{ val(profile.gallantryAwardsDecoration) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Blood Group: </span> <span class="detail-value">{{ val(profile.bloodGroup) }}</span></span>
+                </div>
+                <div class="core-row core-row-four">
+                    <span class="detail-item"><span class="detail-label">NID: </span> <span class="detail-value">{{ val(profile.nid) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Email Address: </span> <span class="detail-value">{{ val(profile.emailAddress) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Date of Birth: </span> <span class="detail-value">{{ formatDateShort(profile.dateOfBirth) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Passport No: </span> <span class="detail-value">{{ val(profile.passportNo) }}</span></span>
+                </div>
+                <div class="core-row core-row-four">
+                    <span class="detail-item"><span class="detail-label">Height: </span> <span class="detail-value">{{ heightDisplay(profile) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Medical Category: </span> <span class="detail-value">{{ val(profile.medicalCategory) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Mobile No: </span> <span class="detail-value">{{ val(profile.mobileNo) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Emergency Contact No: </span> <span class="detail-value">{{ val(profile.emergencyContactNo) }}</span></span>
+                </div>
+                <div class="core-row core-row-four">
+                    <span class="detail-item"><span class="detail-label">Religion: </span> <span class="detail-value">{{ val(profile.religion) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Marital Status: </span> <span class="detail-value">{{ val(profile.maritalStatus) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">Weight: </span> <span class="detail-value">{{ weightDisplay(profile) }}</span></span>
+                </div>
+                <div class="core-row core-row-full">
+                    <span class="detail-item"><span class="detail-label">Identification Mark: </span> <span class="detail-value">{{ val(profile.identificationMark) }}</span></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Family Info (excludes in-law relations) -->
+        <div class="content-section text-900 border-top-1 surface-border">
+            <div class="section-heading">Family Info:</div>
+            <div class="family-table-wrapper">
+                <p-table
+                    [value]="familyInfoList"
+                    [tableStyle]="{ 'min-width': '40rem' }"
+                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
+                >
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 4rem">Ser</th>
+                            <th>Name</th>
+                            <th>Relation</th>
+                            <th>Date of Birth</th>
+                            <th>Occupation</th>
+                            <th>Mobile No</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                        <tr>
+                            <td>{{ rowIndex + 1 }}.</td>
+                            <td>{{ val(row.name) }}</td>
+                            <td>{{ val(row.relation) }}</td>
+                            <td>{{ formatFamilyDob(row.dateOfBirth) }}</td>
+                            <td>{{ val(row.occupation) }}</td>
+                            <td>{{ familyMobile(row) }}</td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="6" class="text-center text-500 py-3">No family records.</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
+
+        <!-- Wife Family Info (relation contains "in-law") -->
+        <div class="content-section text-900 border-top-1 surface-border">
+            <div class="section-heading">Wife Family Info:</div>
+            <div class="family-table-wrapper">
+                <p-table
+                    [value]="wifeFamilyInfoList"
+                    [tableStyle]="{ 'min-width': '40rem' }"
+                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
+                >
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 4rem">Ser</th>
+                            <th>Name</th>
+                            <th>Relation</th>
+                            <th>Date of Birth</th>
+                            <th>Occupation</th>
+                            <th>Mobile No</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                        <tr>
+                            <td>{{ rowIndex + 1 }}.</td>
+                            <td>{{ val(row.name) }}</td>
+                            <td>{{ val(row.relation) }}</td>
+                            <td>{{ formatFamilyDob(row.dateOfBirth) }}</td>
+                            <td>{{ val(row.occupation) }}</td>
+                            <td>{{ familyMobile(row) }}</td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="6" class="text-center text-500 py-3">No wife family records.</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
+
+        <!-- Present RAB Service Info (IsCurrentlyActive = true) -->
+        <div class="content-section text-900 border-top-1 surface-border">
+            <div class="section-heading">Present RAB Service Info:</div>
+            <div class="family-table-wrapper">
+                <p-table
+                    [value]="presentRabList"
+                    [tableStyle]="{ 'min-width': '50rem' }"
+                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
+                >
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 4rem">Ser</th>
+                            <th>RAB Unit</th>
+                            <th>Service From</th>
+                            <th>Service To</th>
+                            <th>Appointment</th>
+                            <th>Posting Auth</th>
+                            <th>Remarks</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                        <tr>
+                            <td>{{ rowIndex + 1 }}.</td>
+                            <td>{{ val(row.rabUnitName) }}</td>
+                            <td>{{ formatDateOnly(row.serviceFrom) }}</td>
+                            <td>{{ formatDateOnly(row.serviceTo) }}</td>
+                            <td>{{ val(row.appointmentName) }}</td>
+                            <td>{{ val(row.postingAuth) }}</td>
+                            <td>{{ val(row.remarks) }}</td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="7" class="text-center text-500 py-3">No present RAB service records.</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
+
+        <!-- Previous RAB Service Information (IsCurrentlyActive = false) -->
+        <div class="content-section text-900 border-top-1 surface-border">
+            <div class="section-heading">Previous RAB Service Information:</div>
+            <div class="family-table-wrapper">
+                <p-table
+                    [value]="previousOnlyRabList"
+                    [tableStyle]="{ 'min-width': '50rem' }"
+                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
+                >
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 4rem">Ser</th>
+                            <th>RAB Unit</th>
+                            <th>Service From</th>
+                            <th>Service To</th>
+                            <th>Appointment</th>
+                            <th>Posting Auth</th>
+                            <th>Remarks</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                        <tr>
+                            <td>{{ rowIndex + 1 }}.</td>
+                            <td>{{ val(row.rabUnitName) }}</td>
+                            <td>{{ formatDateOnly(row.serviceFrom) }}</td>
+                            <td>{{ formatDateOnly(row.serviceTo) }}</td>
+                            <td>{{ val(row.appointmentName) }}</td>
+                            <td>{{ val(row.postingAuth) }}</td>
+                            <td>{{ val(row.remarks) }}</td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="7" class="text-center text-500 py-3">No previous RAB service records.</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
+
+         <!-- Service History (Mother Organization) -->
+         <div class="content-section text-900 border-top-1 surface-border">
+            <div class="section-heading">Service History (Mother Organization):</div>
+            <div class="family-table-wrapper">
+                <p-table
+                    [value]="moServHistoryList"
+                    [tableStyle]="{ 'min-width': '48rem' }"
+                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
+                >
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 4rem">Ser</th>
+                            <th>Organization</th>
+                            <th>Location</th>
+                            <th>Service From</th>
+                            <th>Service To</th>
+                            <th>Appointment</th>
+                            <th>Auth</th>
+                            <th>Remarks</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                        <tr>
+                            <td>{{ rowIndex + 1 }}.</td>
+                            <td>{{ val(row.organizationName) }}</td>
+                            <td>{{ val(row.locationName) }}</td>
+                            <td>{{ formatDateOnly(row.serviceFrom) }}</td>
+                            <td>{{ formatDateOnly(row.serviceTo) }}</td>
+                            <td>{{ val(row.appointment) }}</td>
+                            <td>{{ val(row.auth) }}</td>
+                            <td>{{ val(row.remarks) }}</td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="8" class="text-center text-500 py-3">No service history records.</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
+        
+        <!-- Promotion Information -->
+        <div class="content-section text-900 border-top-1 surface-border">
+            <div class="section-heading">Promotion Information:</div>
+            <div class="family-table-wrapper">
+                <p-table
+                    [value]="promotionList"
+                    [tableStyle]="{ 'min-width': '52rem' }"
+                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
+                >
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 4rem">Ser</th>
+                            <th>Previous Rank</th>
+                            <th>Promoted Rank</th>
+                            <th>Promoted Date</th>
+                            <th>From Date</th>
+                            <th>To Date</th>
+                            <th>Probationary Period</th>
+                            <th>Auth</th>
+                            <th>Remarks</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                        <tr>
+                            <td>{{ rowIndex + 1 }}.</td>
+                            <td>{{ val(row.previousRank) }}</td>
+                            <td>{{ val(row.promotedRank) }}</td>
+                            <td>{{ formatDateOnly(row.promotedDate) }}</td>
+                            <td>{{ formatDateOnly(row.fromDate) }}</td>
+                            <td>{{ formatDateOnly(row.toDate) }}</td>
+                            <td>{{ val(row.probationaryPeriod) }}</td>
+                            <td>{{ val(row.auth) }}</td>
+                            <td>{{ val(row.remarks) }}</td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="9" class="text-center text-500 py-3">No promotion records.</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
+
+         <!-- Education Information -->
+         <div class="content-section text-900 border-top-1 surface-border">
+            <div class="section-heading">Education Information:</div>
+            <div class="family-table-wrapper">
+                <p-table
+                    [value]="educationList"
+                    [tableStyle]="{ 'min-width': '56rem' }"
+                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
+                >
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 4rem">Ser</th>
+                            <th>Duration (From - To)</th>
+                            <th>School/College/University</th>
+                            <th>Exam/Degree</th>
+                            <th>Subject/Department</th>
+                            <th>Result</th>
+                            <th>Grade Point</th>
+                            <th>Passing Year</th>
+                            <th>Remarks</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                        <tr>
+                            <td>{{ rowIndex + 1 }}.</td>
+                            <td>{{ formatDateOnly(row.durationFrom) }} - {{ formatDateOnly(row.durationTo) }}</td>
+                            <td>{{ val(row.schoolCollegeUniversity) }}</td>
+                            <td>{{ val(row.nameOfExamDegree) }}</td>
+                            <td>{{ val(row.subjectsDepartments) }}</td>
+                            <td>{{ val(row.result) }}</td>
+                            <td>{{ val(row.gradePoint) }}</td>
+                            <td>{{ val(row.passingYear) }}</td>
+                            <td>{{ val(row.remarks) }}</td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="9" class="text-center text-500 py-3">No education records.</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
+
+          <!-- Course Information -->
+          <div class="content-section text-900 border-top-1 surface-border">
+            <div class="section-heading">Course Information:</div>
+            <div class="family-table-wrapper">
+                <p-table
+                    [value]="courseList"
+                    [tableStyle]="{ 'min-width': '44rem' }"
+                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
+                >
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 4rem">Ser</th>
+                            <th>Course Type</th>
+                            <th>Course Name</th>
+                            <th>Training Institute</th>
+                            <th>Date From</th>
+                            <th>Date To</th>
+                            <th>Result</th>
+                            <th>Auth</th>
+                            <th>Remarks</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                        <tr>
+                            <td>{{ rowIndex + 1 }}.</td>
+                            <td>{{ val(row.courseType) }}</td>
+                            <td>{{ val(row.courseName) }}</td>
+                            <td>{{ val(row.trainingInstituteName) }}</td>
+                            <td>{{ formatDateOnly(row.dateFrom) }}</td>
+                            <td>{{ formatDateOnly(row.dateTo) }}</td>
+                            <td>{{ val(row.result) }}</td>
+                            <td>{{ val(row.auth) }}</td>
+                            <td>{{ val(row.remarks) }}</td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="9" class="text-center text-500 py-3">No course records.</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
+
+        <!-- Investigation Experience -->
+        <div class="content-section text-900 border-top-1 surface-border">
+            <div class="section-heading">Investigation Experience:</div>
+            <div class="core-details">
+                @if (profile?.hasInvestigationExp === true) {
+                    <div class="core-row core-row-full">
+                        <span class="detail-item"><span class="detail-label">Details: </span> <span class="detail-value">{{ val(profile.investigationExpDetails) }}</span></span>
+                    </div>
+                } @else {
+                    <div class="address-empty text-500 py-2">No investigation experience recorded.</div>
+                }
+            </div>
+        </div>
+
+        <!-- Foreign Visit Information -->
+        <div class="content-section text-900 border-top-1 surface-border">
+            <div class="section-heading">Foreign Visit Information:</div>
+
+            <!-- Official Foreign Visit -->
+            <div class="foreign-visit-subsection">
+                <div class="subsection-heading">Official Foreign Visit</div>
+                <div class="family-table-wrapper">
+                    <p-table
+                        [value]="officialForeignVisitList"
+                        [tableStyle]="{ 'min-width': '44rem' }"
+                        styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
+                    >
+                        <ng-template pTemplate="header">
+                            <tr>
+                                <th style="width: 4rem">Ser</th>
+                                <th>Country</th>
+                                <th>Duration From</th>
+                                <th>Duration To</th>
+                                <th>Reason for Visiting</th>
+                                <th>Related Documents</th>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                            <tr>
+                                <td>{{ rowIndex + 1 }}.</td>
+                                <td>{{ val(row.nameOfCountry) }}</td>
+                                <td>{{ formatDateTime(row.durationFrom) }}</td>
+                                <td>{{ formatDateTime(row.durationTo) }}</td>
+                                <td>{{ val(row.reasonForVisiting) }}</td>
+                                <td>{{ val(row.relatedDocuments) }}</td>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="emptymessage">
+                            <tr>
+                                <td colspan="6" class="text-center text-500 py-3">No official foreign visit records.</td>
+                            </tr>
+                        </ng-template>
+                    </p-table>
+                </div>
+            </div>
+
+            <!-- Unofficial Foreign Visit -->
+            <div class="foreign-visit-subsection">
+                <div class="subsection-heading">Unofficial Foreign Visit</div>
+                <div class="family-table-wrapper">
+                    <p-table
+                        [value]="unofficialForeignVisitList"
+                        [tableStyle]="{ 'min-width': '44rem' }"
+                        styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
+                    >
+                        <ng-template pTemplate="header">
+                            <tr>
+                                <th style="width: 4rem">Ser</th>
+                                <th>Country</th>
+                                <th>Duration From</th>
+                                <th>Duration To</th>
+                                <th>Reason for Visiting</th>
+                                <th>Related Documents</th>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                            <tr>
+                                <td>{{ rowIndex + 1 }}.</td>
+                                <td>{{ val(row.nameOfCountry) }}</td>
+                                <td>{{ formatDateTime(row.durationFrom) }}</td>
+                                <td>{{ formatDateTime(row.durationTo) }}</td>
+                                <td>{{ val(row.reasonForVisiting) }}</td>
+                                <td>{{ val(row.relatedDocuments) }}</td>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="emptymessage">
+                            <tr>
+                                <td colspan="6" class="text-center text-500 py-3">No unofficial foreign visit records.</td>
+                            </tr>
+                        </ng-template>
+                    </p-table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Leave (Current Year) -->
+        <div class="content-section text-900 border-top-1 surface-border">
+            <div class="section-heading flex align-items-center gap-2">
+                <span>Leave ({{ currentYear }})</span>
+                <i
+                    class="pi pi-info-circle cursor-pointer text-primary"
+                    pTooltip="Previous Year Leave Summary"
+                    (click)="openPreviousYearLeaveSummary()"
+                    aria-label="View previous year leave summary"
+                ></i>
+            </div>
+            <div class="family-table-wrapper">
+                <p-table
+                    [value]="leaveList"
+                    [tableStyle]="{ 'min-width': '36rem' }"
+                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
+                >
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 4rem">Ser</th>
+                            <th>Type of Leave</th>
+                            <th>Duration From</th>
+                            <th>Duration To</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                        <tr>
+                            <td>{{ rowIndex + 1 }}.</td>
+                            <td>{{ val(row.typeOfLeave) }}</td>
+                            <td>{{ formatDateOnly(row.durationFrom) }}</td>
+                            <td>{{ formatDateOnly(row.durationTo) }}</td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="4" class="text-center text-500 py-3">No leave records for current year.</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
+
+        <!-- Discipline Information -->
+        <div class="content-section text-900 border-top-1 surface-border">
+            <div class="section-heading">Discipline Information:</div>
+            <div class="family-table-wrapper">
+                <p-table
+                    [value]="disciplineList"
+                    [tableStyle]="{ 'min-width': '56rem' }"
+                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
+                >
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 4rem">Ser</th>
+                            <th>Offense Date</th>
+                            <th>Offense Type</th>
+                            <th>Brief Statement</th>
+                            <th>Offense Details</th>
+                            <th>Punishment (RAB)</th>
+                            <th>Punishment Date</th>
+                            <th>Punishment (MO)</th>
+                            <th>Punishment Date (MO)</th>
+                            <th>Auth</th>
+                            <th>Remarks</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                        <tr>
+                            <td>{{ rowIndex + 1 }}.</td>
+                            <td>{{ formatDateOnly(row.offenseDate) }}</td>
+                            <td>{{ val(row.offenseType) }}</td>
+                            <td>{{ val(row.briefStatementOfOffence) }}</td>
+                            <td>{{ val(row.offenseDetails) }}</td>
+                            <td>{{ val(row.punishmentTypeRAB) }}</td>
+                            <td>{{ formatDateOnly(row.punishmentDate) }}</td>
+                            <td>{{ val(row.punishmentTypeMotherOrg) }}</td>
+                            <td>{{ formatDateOnly(row.punishmentDateMotherOrg) }}</td>
+                            <td>{{ val(row.auth) }}</td>
+                            <td>{{ val(row.remarks) }}</td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="11" class="text-center text-500 py-3">No discipline records.</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
+
+          <!-- Bank Account Information -->
+          <div class="content-section text-900 border-top-1 surface-border">
+            <div class="section-heading">Bank Account Information:</div>
+            <div class="family-table-wrapper">
+                <p-table
+                    [value]="bankAccList"
+                    [tableStyle]="{ 'min-width': '40rem' }"
+                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
+                >
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 4rem">Ser</th>
+                            <th>Bank Name</th>
+                            <th>Branch Name</th>
+                            <th>Account Name</th>
+                            <th>Account Number</th>
+                            <th>Remarks</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                        <tr>
+                            <td>{{ rowIndex + 1 }}.</td>
+                            <td>{{ val(row.bankName) }}</td>
+                            <td>{{ val(row.branchName) }}</td>
+                            <td>{{ val(row.accountName) }}</td>
+                            <td>{{ val(row.accountNumber) }}</td>
+                            <td>{{ val(row.remarks) }}</td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="6" class="text-center text-500 py-3">No bank account records.</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
+
+
+        <!-- Additional Remarks -->
+        <div class="content-section text-900 border-top-1 surface-border">
+            <div class="section-heading">Additional Remarks:</div>
+            <div class="family-table-wrapper">
+                <p-table
+                    [value]="additionalRemarksList"
+                    [tableStyle]="{ 'min-width': '40rem' }"
+                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
+                >
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 4rem">Ser</th>
+                            <th>Additional Remarks</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                        <tr>
+                            <td>{{ rowIndex + 1 }}.</td>
+                            <td>{{ val(row.additionalRemarks) }}</td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="2" class="text-center text-500 py-3">No additional remarks.</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
+
+        <!-- Documents (files from PersonalInfo, EmployeeInfo, PreviousRABServiceInfo, etc.) -->
+        <div class="content-section text-900 border-top-1 surface-border">
+            <div class="section-heading">Documents</div>
+            @if (documentList.length === 0) {
+                <div class="text-500 py-2">No documents.</div>
+            } @else {
+                <p-table
+                    [value]="documentList"
+                    styleClass="p-datatable-sm p-datatable-gridlines"
+                    [tableStyle]="{ 'min-width': '24rem' }"
+                >
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 2rem">#</th>
+                            <th>Section</th>
+                            <th>File Name</th>
+                            <th style="width: 8rem">Action</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                        <tr>
+                            <td>{{ rowIndex + 1 }}.</td>
+                            <td>{{ getDocumentSourceLabel(row) }}</td>
+                            <td>{{ getDocumentFileName(row) }}</td>
+                            <td>
+                                <p-button
+                                    icon="pi pi-download"
+                                    label="Download"
+                                    [rounded]="true"
+                                    [text]="true"
+                                    severity="secondary"
+                                    size="small"
+                                    (onClick)="downloadDocument(row)"
+                                    pTooltip="Download file"
+                                ></p-button>
+                            </td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="4" class="text-center text-500 py-3">No documents.</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            }
+        </div>
+        
+       
+    } @else if (!loading) {
+        <p class="text-500 m-0">No profile data available.</p>
+    }
+</div>
+
+<!-- Previous Year Leave Summary Dialog -->
+<p-dialog
+    header="Previous Year Leave Summary ({{ previousYear }})"
+    [(visible)]="previousYearSummaryDialogVisible"
+    [modal]="true"
+    [style]="{ width: '28rem' }"
+    [closable]="true"
+    (onHide)="closePreviousYearSummaryDialog()"
+    styleClass="text-900"
+>
+    @if (previousYearSummaryLoading) {
+        <div class="flex align-items-center justify-content-center py-4">
+            <i class="pi pi-spin pi-spinner text-2xl text-500"></i>
+        </div>
+    } @else {
+        <p-table
+            [value]="previousYearSummary"
+            styleClass="p-datatable-sm p-datatable-gridlines"
+            [tableStyle]="{ 'min-width': '20rem' }"
+        >
+            <ng-template pTemplate="header">
+                <tr>
+                    <th>Type of Leave</th>
+                    <th style="width: 5rem">Count</th>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-row>
+                <tr>
+                    <td>{{ val(row.typeOfLeave) }}</td>
+                    <td>{{ row.count }}</td>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td colspan="2" class="text-center text-500 py-2">No leave records for previous year.</td>
+                </tr>
+            </ng-template>
+        </p-table>
+    }
+</p-dialog>

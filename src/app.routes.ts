@@ -77,6 +77,9 @@ import { RabIdAllocation } from '@/Components/Features/rab-id-allocation/rab-id-
 import { SupernumeraryList } from '@/Components/Features/supernumerary-list/supernumerary-list';
 import { SupernumeraryProfile } from '@/Components/Features/supernumerary-profile/supernumerary-profile';
 import { PresentlyServingMembers } from '@/Components/Features/presently-serving-members/presently-serving-members';
+import { ServingMemberProfile } from '@/Components/Features/presently-serving-members/serving-member-profile/serving-member-profile';
+import { ExMembers } from '@/Components/Features/ex-members/ex-members';
+import { ExMemberProfile } from '@/Components/Features/ex-members/ex-member-profile/ex-member-profile';
 import { Prefix } from '@/Components/basic-setup/prefix/prefix';
 import { Gender } from '@/Components/basic-setup/gender/gender';
 import { Bank } from '@/Components/basic-setup/bank/bank';
@@ -190,6 +193,9 @@ export const appRoutes: Routes = [
             { path: 'supernumerary-list', component: SupernumeraryList },
             { path: 'supernumerary-profile/:id', component: SupernumeraryProfile },
             { path: 'presently-serving-members', component: PresentlyServingMembers },
+            { path: 'presently-serving-members/profile/:employeeId', component: ServingMemberProfile },
+            { path: 'ex-members', component: ExMembers },
+            { path: 'ex-members/profile/:employeeId', component: ExMemberProfile },
 
             { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
             { path: 'documentation', component: Documentation },

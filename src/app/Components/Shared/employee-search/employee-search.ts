@@ -25,6 +25,7 @@ export interface EmployeeBasicInfo {
     tradeDisplay?: string;
     motherOrganizationDisplay?: string;
     memberTypeDisplay?: string;
+    orgId?: number;
 }
 
 @Component({
@@ -132,7 +133,8 @@ export class EmployeeSearchComponent {
                         unit: employee.Unit ?? employee.unit,
                         branch: employee.Branch ?? employee.branch,
                         trade: employee.Trade ?? employee.trade,
-                        memberType: employee.MemberType ?? employee.memberType
+                        memberType: employee.MemberType ?? employee.memberType,
+                        orgId: employee.orgId
                     };
                     this.employeeFound = true;
                     this.isSearching = false;

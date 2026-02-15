@@ -17,17 +17,7 @@ import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/
 @Component({
     selector: 'app-emp-address-info',
     standalone: true,
-    imports: [
-        CommonModule,
-        FormsModule,
-        ReactiveFormsModule,
-        InputTextModule,
-        ButtonModule,
-        Fluid,
-        TooltipModule,
-        AddressFormComponent,
-        EmployeeSearchComponent
-    ],
+    imports: [CommonModule, FormsModule, ReactiveFormsModule, InputTextModule, ButtonModule, Fluid, TooltipModule, AddressFormComponent, EmployeeSearchComponent],
     templateUrl: './emp-address-info.html',
     styleUrl: './emp-address-info.scss'
 })
@@ -81,7 +71,7 @@ export class EmpAddressInfo implements OnInit {
     }
 
     checkRouteParams(): void {
-        this.route.queryParams.subscribe(params => {
+        this.route.queryParams.subscribe((params) => {
             const employeeId = params['id'];
             const mode = params['mode'];
 
@@ -145,7 +135,7 @@ export class EmpAddressInfo implements OnInit {
         this.empService.getAddressesByEmployeeId(this.selectedEmployeeId).subscribe({
             next: (addresses: any[]) => {
                 // Find active permanent and present addresses
-                addresses.forEach(addr => {
+                addresses.forEach((addr) => {
                     const locationType = (addr.locationType || addr.LocationType || '').toLowerCase();
                     const isActive = addr.active !== false && addr.Active !== false;
 
@@ -153,7 +143,7 @@ export class EmpAddressInfo implements OnInit {
                         const addressData: AddressData = {
                             division: addr.divisionType || addr.DivisionType,
                             district: addr.districtType || addr.DistrictType,
-                            upazila: addr.thanType || addr.ThanType,
+                            upazila: addr.ThanaType || addr.ThanaType,
                             postOffice: addr.postOfficeType || addr.PostOfficeType,
                             postCode: addr.postCode || addr.PostCode || '',
                             villageEnglish: addr.addressAreaEN || addr.AddressAreaEN || '',
@@ -265,7 +255,10 @@ export class EmpAddressInfo implements OnInit {
                 LocationType.Permanent,
                 this.permanentAddressId,
                 () => checkComplete(),
-                () => { errorCount++; checkComplete(); }
+                () => {
+                    errorCount++;
+                    checkComplete();
+                }
             );
         }
 
@@ -276,19 +269,16 @@ export class EmpAddressInfo implements OnInit {
                 LocationType.Present,
                 this.presentAddressId,
                 () => checkComplete(),
-                () => { errorCount++; checkComplete(); }
+                () => {
+                    errorCount++;
+                    checkComplete();
+                }
             );
         }
     }
 
     // Deactivate old address and create new one
-    private deactivateAndCreateNew(
-        data: AddressData,
-        locationType: string,
-        existingAddressId: number | null,
-        onSuccess: () => void,
-        onError: () => void
-    ): void {
+    private deactivateAndCreateNew(data: AddressData, locationType: string, existingAddressId: number | null, onSuccess: () => void, onError: () => void): void {
         // New address payload (always create new with Active = true)
         const newAddressPayload = {
             EmployeeID: this.selectedEmployeeId,
@@ -301,7 +291,7 @@ export class EmpAddressInfo implements OnInit {
             AddressAreaBN: data.villageBangla || '',
             DivisionType: data.division,
             DistrictType: data.district,
-            ThanType: data.upazila,
+            ThanaType: data.upazila,
             PostOfficeType: data.postOffice,
             HouseRoad: data.houseRoad || '',
             Active: true,
@@ -316,9 +306,7 @@ export class EmpAddressInfo implements OnInit {
             this.empService.getAddressesByEmployeeId(this.selectedEmployeeId!).subscribe({
                 next: (addresses: any[]) => {
                     // Find the existing address
-                    const existingAddress = addresses.find(
-                        addr => (addr.addressId || addr.AddressId) === existingAddressId
-                    );
+                    const existingAddress = addresses.find((addr) => (addr.addressId || addr.AddressId) === existingAddressId);
 
                     if (existingAddress) {
                         // Create full deactivate payload with all fields
@@ -333,7 +321,7 @@ export class EmpAddressInfo implements OnInit {
                             AddressAreaBN: existingAddress.addressAreaBN || existingAddress.AddressAreaBN || '',
                             DivisionType: existingAddress.divisionType || existingAddress.DivisionType,
                             DistrictType: existingAddress.districtType || existingAddress.DistrictType,
-                            ThanType: existingAddress.thanType || existingAddress.ThanType,
+                            ThanaType: existingAddress.ThanaType || existingAddress.ThanaType,
                             PostOfficeType: existingAddress.postOfficeType || existingAddress.PostOfficeType,
                             HouseRoad: existingAddress.houseRoad || existingAddress.HouseRoad || '',
                             Active: false, // Deactivate

@@ -23,6 +23,14 @@ export interface PaginatedResponse<T> {
     pageSize: number;
 }
 
+/** One row from vw_EmployeeDocumentReferences: file reference from PersonalInfo, EmployeeInfo, etc. */
+export interface EmployeeDocumentReferenceItem {
+    employeeID: number;
+    sourceTable: string;
+    fileId: number;
+    fileName: string;
+}
+
 @Injectable({
     providedIn: 'root'
 })
@@ -252,6 +260,13 @@ export class EmpService {
     /** Download a file by FileID. Returns blob. Use with triggerFileDownload(blob, fileName) to save. */
     downloadFile(fileId: number): Observable<Blob> {
         return this.http.get(`${this.empApi}/FileInformation/Download/${fileId}`, { responseType: 'blob' });
+    }
+
+    /** Get all document references (file id and file name) for an employee from vw_EmployeeDocumentReferences. */
+    getEmployeeDocumentReferences(employeeId: number): Observable<EmployeeDocumentReferenceItem[]> {
+        return this.http.get<EmployeeDocumentReferenceItem[]>(`${this.empApi}/FileInformation/GetEmployeeDocumentReferences`, {
+            params: { employeeId: String(employeeId) }
+        });
     }
 
     /** Trigger browser download of a blob with the given file name. */

@@ -28,6 +28,7 @@ export interface VwPreviousRABServiceInfoModel {
     rabUnitNameBN?: string | null;
     appointmentName?: string | null;
     appointmentNameBN?: string | null;
+    isCurrentlyActive?: boolean | null;
 }
 
 export interface PreviousRABServiceInfoModel {
@@ -65,7 +66,7 @@ export class PreviousRABServiceService {
         if (Number.isNaN(id) || id <= 0) {
             return of([]);
         }
-        return this.http.get<VwPreviousRABServiceInfoModel[]>(`${this.apiUrl}/GetViewByEmployeeId/View/${id}`).pipe(map((res: any) => (Array.isArray(res) ? res : [])));
+        return this.http.get<VwPreviousRABServiceInfoModel[]>(`${this.apiUrl}/GetViewByEmployeeId/${id}`).pipe(map((res: any) => (Array.isArray(res) ? res : [])));
     }
 
     save(payload: Partial<PreviousRABServiceInfoModel>): Observable<any> {

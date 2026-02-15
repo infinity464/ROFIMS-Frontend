@@ -30,14 +30,14 @@ export interface FilterModel {
 }
 
 @Component({
-    selector: 'app-presently-serving-members',
+    selector: 'app-ex-members',
     standalone: true,
     imports: [CommonModule, FormsModule, RouterModule, TableModule, ButtonModule, InputTextModule, SelectModule, DatePickerModule, Toast],
     providers: [MessageService],
-    templateUrl: './presently-serving-members.html',
-    styleUrl: './presently-serving-members.scss'
+    templateUrl: './ex-members.html',
+    styleUrl: './ex-members.scss'
 })
-export class PresentlyServingMembers implements OnInit {
+export class ExMembers implements OnInit {
     list: EmployeeServiceOverview[] = [];
     loading = false;
     totalRecords = 0;
@@ -68,7 +68,6 @@ export class PresentlyServingMembers implements OnInit {
     districtOptions: { label: string; value: number }[] = [];
     appointmentOptions: { label: string; value: number }[] = [];
 
-    /** Whether list is using filter (so pagination uses filtered API). */
     useFilter = false;
 
     constructor(
@@ -125,7 +124,7 @@ export class PresentlyServingMembers implements OnInit {
         if (this.useFilter) {
             const filterReq = this.buildFilterRequest();
             this.servingMembersService
-                .getPresentlyServingMembersPaginatedFiltered({
+                .getExMembersPaginatedFiltered({
                     pagination: { page_no: pageNo, row_per_page: rows },
                     filter: filterReq
                 })
@@ -136,7 +135,7 @@ export class PresentlyServingMembers implements OnInit {
                         this.loading = false;
                     },
                     error: (err) => {
-                        console.error('Failed to load presently serving members', err);
+                        console.error('Failed to load ex-members', err);
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
@@ -146,14 +145,14 @@ export class PresentlyServingMembers implements OnInit {
                     }
                 });
         } else {
-            this.servingMembersService.getPresentlyServingMembersPaginated(pageNo, rows).subscribe({
+            this.servingMembersService.getExMembersPaginated(pageNo, rows).subscribe({
                 next: (res) => {
                     this.list = res.datalist ?? [];
                     this.totalRecords = res.pages?.rows ?? 0;
                     this.loading = false;
                 },
                 error: (err) => {
-                    console.error('Failed to load presently serving members', err);
+                    console.error('Failed to load ex-members', err);
                     this.messageService.add({
                         severity: 'error',
                         summary: 'Error',
@@ -209,11 +208,6 @@ export class PresentlyServingMembers implements OnInit {
             appointment: null
         };
         this.useFilter = false;
-        this.first = 0;
-        this.loadList(1, this.rows);
-    }
-
-    refresh(): void {
         this.first = 0;
         this.loadList(1, this.rows);
     }

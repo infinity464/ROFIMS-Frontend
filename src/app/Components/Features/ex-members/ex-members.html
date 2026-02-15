@@ -2,11 +2,10 @@
 
 <div class="card">
     <div class="flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
-        <h2 class="m-0 text-2xl font-bold text-900">Presently Serving Members List</h2>
-       <!--  <p-button label="Refresh" icon="pi pi-refresh" (onClick)="refresh()" [loading]="loading"></p-button> -->
+        <h2 class="m-0 text-2xl font-bold text-900">Ex-Members List</h2>
     </div>
 
-    <!-- Filter section -->
+    <!-- Filter section (same structure as presently-serving-members) -->
     <div class="filter-section mb-4">
         <div class="filter-row">
             <label class="filter-label">Search by ID:</label>
@@ -26,7 +25,7 @@
         <div class="filter-row">
             <label class="filter-label">Search by:</label>
             <div class="filter-inputs">
-                <p-select [(ngModel)]="filter.rabUnit" placeholder="RAB Unit" [options]="rabUnitOptions" optionLabel="label" optionValue="value" class="filter-input filter-select"></p-select>
+                <p-select [(ngModel)]="filter.rabUnit" placeholder="RAB Unit (Last Posting)" [options]="rabUnitOptions" optionLabel="label" optionValue="value" class="filter-input filter-select"></p-select>
                 <p-select [(ngModel)]="filter.rank" placeholder="Rank" [options]="rankOptions" optionLabel="label" optionValue="value" class="filter-input filter-select"></p-select>
                 <p-select [(ngModel)]="filter.corps" placeholder="Corps" [options]="corpsOptions" optionLabel="label" optionValue="value" class="filter-input filter-select"></p-select>
                 <p-select [(ngModel)]="filter.trade" placeholder="Trade" [options]="tradeOptions" optionLabel="label" optionValue="value" class="filter-input filter-select"></p-select>
@@ -84,7 +83,7 @@
                 <th style="min-width: 100px">Corps</th>
                 <th style="min-width: 100px">Trade</th>
                 <th style="min-width: 180px">Name</th>
-                <th style="min-width: 140px">RAB Unit</th>
+                <th style="min-width: 140px">RAB Unit (Last Posting)</th>
                 <th style="width: 120px">Joining Date in RAB</th>
                 <th style="min-width: 140px">Home District (Permanent)</th>
                 <th style="width: 100px">Action</th>
@@ -102,7 +101,7 @@
                 <td>{{ formatDate(row.joiningDate) }}</td>
                 <td>{{ row.permanentDistrictTypeName || '-' }}</td>
                 <td>
-                    <a [routerLink]="['/presently-serving-members/profile', row.employeeID]" class="p-button p-button-rounded p-button-text p-button-sm">
+                    <a [routerLink]="['/ex-members/profile', row.employeeID]" class="p-button p-button-rounded p-button-text p-button-sm">
                         <i class="pi pi-user mr-1"></i>
                         <span>Profile</span>
                     </a>

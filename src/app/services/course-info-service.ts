@@ -1,7 +1,25 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { environment } from '@/Core/Environments/environment';
+
+/** Row from vw_CourseInfoByEmployee. API: CourseInfo/ViewByEmployeeId/{employeeId} */
+export interface CourseInfoByEmployeeView {
+    employeeID: number;
+    ser: number;
+    courseTypeId?: number | null;
+    courseType: string | null;
+    courseNameId?: number | null;
+    courseName: string | null;
+    trainingInstituteId?: number | null;
+    trainingInstituteName: string | null;
+    dateFrom: string | null;
+    dateTo: string | null;
+    result: string | null;
+    auth: string | null;
+    remarks: string | null;
+}
 
 export interface CourseInfoModel {
     employeeId: number;
@@ -31,6 +49,11 @@ export class CourseInfoService {
 
     getByEmployeeId(employeeId: number): Observable<CourseInfoModel[]> {
         return this.http.get<CourseInfoModel[]>(`${this.apiUrl}/GetByEmployeeId/${employeeId}`);
+    }
+
+    /** Gets list from vw_CourseInfoByEmployee by employee ID (for profile display). */
+    getViewByEmployeeId(employeeId: number): Observable<CourseInfoByEmployeeView[]> {
+        return this.http.get<CourseInfoByEmployeeView[]>(`${this.apiUrl}/GetViewByEmployeeId/${employeeId}`).pipe(map((res: any) => (Array.isArray(res) ? res : [])));
     }
 
     save(payload: Partial<CourseInfoModel>): Observable<any> {

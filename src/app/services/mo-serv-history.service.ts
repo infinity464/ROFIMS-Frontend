@@ -4,6 +4,22 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '@/Core/Environments/environment';
 
+/** Row from vw_MOServHistoryByEmployee. API: MOServHistory/ViewByEmployeeId/{employeeId} */
+export interface MOServHistoryByEmployeeView {
+    employeeID: number;
+    ser: number;
+    orgId?: number | null;
+    organizationName: string | null;
+    orgUnitId?: number | null;
+    locationName: string | null;
+    serviceFrom: string | null;
+    serviceTo: string | null;
+    auth: string | null;
+    appointmentId?: number | null;
+    appointment: string | null;
+    remarks: string | null;
+}
+
 export interface MOServHistoryModel {
     servHisID: number;
     employeeID: number;
@@ -31,21 +47,20 @@ export class MOServHistoryService {
     constructor(private http: HttpClient) {}
 
     getAll(): Observable<MOServHistoryModel[]> {
-        return this.http
-            .get<MOServHistoryModel[]>(`${this.apiUrl}/GetAll`)
-            .pipe(map((res: any) => (Array.isArray(res) ? res : [])));
+        return this.http.get<MOServHistoryModel[]>(`${this.apiUrl}/GetAll`).pipe(map((res: any) => (Array.isArray(res) ? res : [])));
     }
 
     getByOrgId(orgId: number): Observable<MOServHistoryModel[]> {
-        return this.getAll().pipe(
-            map((list) => list.filter((x) => (x.orgId ?? (x as any).OrgId) === orgId))
-        );
+        return this.getAll().pipe(map((list) => list.filter((x) => (x.orgId ?? (x as any).OrgId) === orgId)));
     }
 
     getByEmployeeId(employeeId: number): Observable<MOServHistoryModel[]> {
-        return this.http
-            .get<MOServHistoryModel[]>(`${this.apiUrl}/GetByEmployeeId/${employeeId}`)
-            .pipe(map((res: any) => (Array.isArray(res) ? res : [])));
+        return this.http.get<MOServHistoryModel[]>(`${this.apiUrl}/GetByEmployeeId/${employeeId}`).pipe(map((res: any) => (Array.isArray(res) ? res : [])));
+    }
+
+    /** Gets list from vw_MOServHistoryByEmployee by employee ID (for profile display). */
+    getViewByEmployeeId(employeeId: number): Observable<MOServHistoryByEmployeeView[]> {
+        return this.http.get<MOServHistoryByEmployeeView[]>(`${this.apiUrl}/GetViewByEmployeeId/${employeeId}`).pipe(map((res: any) => (Array.isArray(res) ? res : [])));
     }
 
     save(payload: Partial<MOServHistoryModel>): Observable<any> {
