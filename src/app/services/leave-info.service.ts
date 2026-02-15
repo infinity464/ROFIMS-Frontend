@@ -10,6 +10,7 @@ export interface LeaveInfoByEmployeeView {
     ser: number;
     typeOfLeaveId: number;
     typeOfLeave: string | null;
+    typeOfLeaveBN?: string | null;
     durationFrom: string | null;
     durationTo: string | null;
 }

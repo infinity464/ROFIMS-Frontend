@@ -11,14 +11,18 @@ export interface DisciplineInfoByEmployeeView {
     offenseDate?: string | null;
     offenseTypeId?: number | null;
     offenseType: string | null;
+    offenseTypeBN?: string | null;
     briefStatementOfOffenceId?: number | null;
     briefStatementOfOffence: string | null;
+    briefStatementOfOffenceBN?: string | null;
     offenseDetails: string | null;
     punishmentTypeRABId?: number | null;
     punishmentTypeRAB: string | null;
+    punishmentTypeRABBN?: string | null;
     punishmentDate?: string | null;
     punishmentTypeMotherOrgId?: number | null;
     punishmentTypeMotherOrg: string | null;
+    punishmentTypeMotherOrgBN?: string | null;
     punishmentDateMotherOrg?: string | null;
     action: string | null;
     auth: string | null;

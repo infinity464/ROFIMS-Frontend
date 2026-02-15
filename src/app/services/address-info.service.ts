@@ -15,12 +15,16 @@ export interface AddressInfoByEmployeeView {
     addressAreaBN: string | null;
     divisionTypeId?: number | null;
     division: string | null;
+    divisionBN?: string | null;
     districtTypeId?: number | null;
     district: string | null;
+    districtBN?: string | null;
     thanTypeId?: number | null;
     thana: string | null;
+    thanaBN?: string | null;
     postOfficeTypeId?: number | null;
     postOffice: string | null;
+    postOfficeBN?: string | null;
     houseRoad: string | null;
     active: boolean;
 }

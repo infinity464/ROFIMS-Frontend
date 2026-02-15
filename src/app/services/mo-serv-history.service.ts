@@ -17,6 +17,7 @@ export interface MOServHistoryByEmployeeView {
     auth: string | null;
     appointmentId?: number | null;
     appointment: string | null;
+    appointmentBN?: string | null;
     remarks: string | null;
 }
 

@@ -10,11 +10,17 @@ export interface EducationInfoByEmployeeView {
     durationFrom: string | null;
     durationTo: string | null;
     schoolCollegeUniversity: string | null;
+    schoolCollegeUniversityBN?: string | null;
     instituteType: string | null;
+    instituteTypeBN?: string | null;
     nameOfExamDegree: string | null;
+    nameOfExamDegreeBN?: string | null;
     subjectsDepartments: string | null;
+    subjectsDepartmentsBN?: string | null;
     subject: string | null;
+    subjectBN?: string | null;
     result: string | null;
+    resultBN?: string | null;
     gradePoint: string | null;
     passingYear: number | null;
     remarks: string | null;

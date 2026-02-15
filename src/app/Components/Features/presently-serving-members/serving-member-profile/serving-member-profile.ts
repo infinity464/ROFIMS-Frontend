@@ -25,6 +25,8 @@ import { EmployeePersonalServiceOverview } from '@/models/employee-personal-serv
 import { LocationType } from '@/models/enums';
 import { DialogModule } from 'primeng/dialog';
 import { TooltipModule } from 'primeng/tooltip';
+import { PROFILE_LABELS, type ProfileLang } from '@/Core/i18n/profile-labels';
+import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 
 @Component({
     selector: 'app-serving-member-profile',
@@ -57,6 +59,9 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
     previousYearSummaryLoading = false;
     loading = false;
 
+    /** Profile display language (labels + code values + Bangla numerals for numbers/dates). */
+    profileLang: ProfileLang = 'en';
+
     constructor(
         private route: ActivatedRoute,
         private router: Router,
@@ -80,8 +85,55 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
     /** LocationType enum for template (address type labels). */
     readonly LocationType = LocationType;
 
+    /** Current profile labels (EN or BN) for template. */
+    get L(): (typeof PROFILE_LABELS)[ProfileLang] {
+        return PROFILE_LABELS[this.profileLang];
+    }
+
+    get isBn(): boolean {
+        return this.profileLang === 'bn';
+    }
+
+    toggleProfileLang(): void {
+        this.profileLang = this.profileLang === 'en' ? 'bn' : 'en';
+    }
+
+    /** Value with optional BN variant (for code/display fields from API). */
+    codeValue(enVal: string | null | undefined, bnVal: string | null | undefined): string {
+        if (this.isBn && (bnVal != null && bnVal !== '')) return bnVal;
+        return enVal != null && enVal !== '' ? enVal : '-';
+    }
+
+    /** Display value; when BN, converts digits to Bangla numerals. Use for IDs, numbers. */
+    valDisplay(v: string | number | null | undefined): string {
+        const s = this.val(v);
+        if (s === '-') return s;
+        return this.isBn ? BanglaNumerals.toBangla(s) : s;
+    }
+
+    /** Formatted date (dd-mm-yyyy); when BN, digits in Bangla. */
+    formatDateDisplay(value: string | null | undefined): string {
+        const s = this.formatDateShort(value ?? null);
+        return this.isBn ? BanglaNumerals.toBangla(s) : s;
+    }
+
     get currentYear(): number {
         return new Date().getFullYear();
+    }
+
+    /** Current year for display (Bangla numerals when BN). */
+    get currentYearDisplay(): string {
+        return this.isBn ? BanglaNumerals.toBangla(String(this.currentYear)) : String(this.currentYear);
+    }
+
+    /** Previous year for display (Bangla numerals when BN). */
+    get previousYearDisplay(): string {
+        return this.isBn ? BanglaNumerals.toBangla(String(this.previousYear)) : String(this.previousYear);
+    }
+
+    /** Table row number (1-based); Bangla numerals when BN. */
+    rowNum(i: number): string {
+        return this.isBn ? BanglaNumerals.toBangla(String(i + 1)) : String(i + 1);
     }
 
     /** Own addresses: Permanent and Present (employee can have multiple of each). */
@@ -104,12 +156,12 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
         });
     }
 
-    /** Display label for address type: "Permanent Address" or "Present Address". */
+    /** Display label for address type (uses L for EN/BN). */
     getAddressTypeLabel(addr: AddressInfoByEmployeeView): string {
         const t = (addr.locationType ?? '').trim();
-        if (t === LocationType.Permanent || t === LocationType.WifePermanent) return 'Permanent Address';
-        if (t === LocationType.Present || t === LocationType.WifePresent) return 'Present Address';
-        return t || 'Address';
+        if (t === LocationType.Permanent || t === LocationType.WifePermanent) return this.L['addressType.permanent'];
+        if (t === LocationType.Present || t === LocationType.WifePresent) return this.L['addressType.present'];
+        return t || this.L['addressType.address'];
     }
 
     /** Family members whose relation does not contain "in-law". */
@@ -288,7 +340,7 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
 
     tradeDisplay(p: EmployeePersonalServiceOverview | null): string {
         if (!p) return '-';
-        const t = p.trade?.trim();
+        const t = this.isBn ? (p.tradeBN ?? p.trade)?.trim() : p.trade?.trim();
         const r = p.tradeRemarks?.trim();
         if (t) return t;
         if (r) return `N/A (${r})`;
@@ -297,25 +349,29 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
 
     heightDisplay(p: EmployeePersonalServiceOverview | null): string {
         if (!p || p.height == null) return '-';
-        return `${p.height} Inch`;
+        const h = this.isBn ? BanglaNumerals.toBangla(String(p.height)) : String(p.height);
+        return `${h} Inch`;
     }
 
     weightDisplay(p: EmployeePersonalServiceOverview | null): string {
         if (!p || p.weight == null) return '-';
-        return `${p.weight} lbs`;
+        const w = this.isBn ? BanglaNumerals.toBangla(String(p.weight)) : String(p.weight);
+        return `${w} lbs`;
     }
 
-    /** Date of Birth for family table: dd-mm-yyyy. */
+    /** Date of Birth for family table: dd-mm-yyyy; when BN, digits in Bangla. */
     formatFamilyDob(value: string | null): string {
-        return this.formatDateShort(value);
+        return this.formatDateDisplay(value);
     }
 
     familyMobile(row: FamilyInfoByEmployeeView): string {
-        return this.val(row.mobileNo);
+        return this.valDisplay(row.mobileNo);
     }
 
+    /** Date only for tables; when BN, digits in Bangla. */
     formatDateOnly(value: string | null): string {
-        return this.formatDateShort(value);
+        const s = this.formatDateShort(value);
+        return this.isBn ? BanglaNumerals.toBangla(s) : s;
     }
 
     formatDateTime(value: string | null): string {
@@ -323,7 +379,8 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
         try {
             const d = new Date(value);
             if (isNaN(d.getTime())) return value;
-            return d.toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            const s = d.toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            return this.isBn ? BanglaNumerals.toBangla(s) : s;
         } catch {
             return value;
         }
@@ -350,8 +407,12 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
         this.previousYearSummaryDialogVisible = false;
     }
 
-    getFormattedName(profile: any): string {
-        return [profile?.nameEnglish, profile?.gallantryAwardsDecoration, profile?.professionalQualification, profile?.corps].filter((value) => value && value.trim() !== '').join(', ');
+    getFormattedName(profile: EmployeePersonalServiceOverview | null): string {
+        if (!profile) return '-';
+        const deco = this.isBn ? (profile.gallantryAwardsDecorationBN ?? profile.gallantryAwardsDecoration) : profile.gallantryAwardsDecoration;
+        const prof = this.isBn ? (profile.professionalQualificationBN ?? profile.professionalQualification) : profile.professionalQualification;
+        const crps = this.isBn ? (profile.corpsBN ?? profile.corps) : profile.corps;
+        return [profile.nameEnglish, deco, prof, crps].filter((value) => value && String(value).trim() !== '').join(', ');
     }
 
     /** Document list: source table label for display. Accepts row (camelCase or PascalCase). */

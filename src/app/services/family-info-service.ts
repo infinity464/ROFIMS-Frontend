@@ -10,9 +10,11 @@ export interface FamilyInfoByEmployeeView {
     name: string | null;
     relationId: number | null;
     relation: string | null;
+    relationBN?: string | null;
     dateOfBirth: string | null;
     occupationId: number | null;
     occupation: string | null;
+    occupationBN?: string | null;
     mobileNo: string | null;
 }
 

@@ -9,12 +9,15 @@ export interface ForeignVisitInfoByEmployeeView {
     employeeID: number;
     ser: number;
     nameOfCountry: string | null;
+    nameOfCountryBN?: string | null;
     durationFrom: string | null;
     durationTo: string | null;
     reasonForVisiting: string | null;
+    reasonForVisitingBN?: string | null;
     relatedDocuments: string | null;
     visitId?: number | null;
     visitType?: string | null;
+    visitTypeBN?: string | null;
 }
 
 export interface ForeignVisitInfoModel {
