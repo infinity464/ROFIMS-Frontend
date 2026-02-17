@@ -1,0 +1,71 @@
+<div class="document-list-container">
+  <h2>All Documents</h2>
+
+  @if (isLoading) {
+    <div class="loading">
+      <div class="spinner"></div>
+      <p>Loading documents...</p>
+    </div>
+  }
+
+  @if (error) {
+    <div class="alert alert-error">{{ error }}</div>
+  }
+
+  @if (!isLoading && documents.length === 0) {
+    <div class="no-documents">
+      <p>No documents found. Upload some PDFs to get started!</p>
+    </div>
+  }
+
+  @if (!isLoading && documents.length > 0) {
+    <div class="documents-table">
+      <table>
+        <thead>
+          <tr>
+            <th>File Name</th>
+            <th>Pages</th>
+            <th>Tags</th>
+            <th>Uploaded</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (doc of documents; track doc.id) {
+            <tr (click)="viewDocument(doc)" class="clickable">
+              <td class="file-name">{{ doc.originalFileName }}</td>
+              <td>{{ doc.totalPages }}</td>
+              <td>
+                <div class="tags">
+                  @for (tag of doc.tags; track tag) {
+                    <span class="tag">{{ tag }}</span>
+                  }
+                </div>
+              </td>
+              <td>{{ doc.uploadedAt | date:'medium' }}</td>
+              <td>
+                <span class="status" [ngClass]="getStatusClass(doc.status)">
+                  {{ doc.status }}
+                </span>
+              </td>
+              <td>
+                <button class="btn-delete" (click)="deleteDocument(doc, $event)">Delete</button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (totalPages > 1) {
+      <div class="pagination">
+        <button (click)="goToPage(1)" [disabled]="currentPage === 1">First</button>
+        <button (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1">Prev</button>
+        <span class="page-info">Page {{ currentPage }} of {{ totalPages }}</span>
+        <button (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages">Next</button>
+        <button (click)="goToPage(totalPages)" [disabled]="currentPage === totalPages">Last</button>
+      </div>
+    }
+  }
+</div>

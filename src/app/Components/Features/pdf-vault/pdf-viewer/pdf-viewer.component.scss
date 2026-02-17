@@ -1,0 +1,148 @@
+.pdf-viewer-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: #525659;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background-color: #323639;
+  color: white;
+  flex-shrink: 0;
+}
+
+.btn-back {
+  padding: 8px 16px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+
+  &:hover {
+    background-color: #0056b3;
+  }
+}
+
+.document-name {
+  font-weight: 500;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toolbar-controls {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.page-controls, .zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  button {
+    padding: 6px 12px;
+    background-color: #4a4d50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background-color: #5a5d60;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.page-info {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+
+  input {
+    width: 50px;
+    padding: 4px;
+    text-align: center;
+    border: 1px solid #666;
+    border-radius: 4px;
+    background-color: #4a4d50;
+    color: white;
+
+    &:focus {
+      outline: none;
+      border-color: #007bff;
+    }
+  }
+}
+
+.zoom-level {
+  min-width: 50px;
+  text-align: center;
+}
+
+.loading, .error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  color: white;
+
+  p {
+    margin-top: 20px;
+    font-size: 18px;
+  }
+
+  button {
+    margin-top: 20px;
+    padding: 10px 20px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+
+    &:hover {
+      background-color: #0056b3;
+    }
+  }
+}
+
+.spinner-large {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.pdf-container {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+
+  canvas {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  }
+}

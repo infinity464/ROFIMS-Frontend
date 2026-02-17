@@ -194,6 +194,15 @@ export class AppMenu {
                 ]
             },
             {
+                label: 'PDF Vault',
+                icon: 'pi pi-fw pi-file-pdf',
+                items: [
+                    { label: 'Search Documents', icon: 'pi pi-fw pi-search', routerLink: ['/pdf-vault/search'] },
+                    { label: 'Upload PDF', icon: 'pi pi-fw pi-upload', routerLink: ['/pdf-vault/upload'] },
+                    { label: 'All Documents', icon: 'pi pi-fw pi-list', routerLink: ['/pdf-vault/documents'] }
+                ]
+            },
+            {
                 label: 'User Manage',
                 icon: 'pi pi-fw pi-users',
                 items: [

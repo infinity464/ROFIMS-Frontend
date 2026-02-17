@@ -94,6 +94,10 @@ import { ChatContainerComponent } from '@/Components/Features/chat/chat-containe
 import { IdentityUserCreateComponent } from '@/Components/Features/identity/identity-user-create/identity-user-create.component';
 import { RoleListComponent } from '@/Components/Features/identity/role-list/role-list.component';
 import { IdentityUserEmployeeMappingComponent } from '@/Components/Features/identity/identity-user-employee-mapping/identity-user-employee-mapping.component';
+import { PdfUploadComponent } from '@/Components/Features/pdf-vault/pdf-upload/pdf-upload.component';
+import { PdfSearchComponent } from '@/Components/Features/pdf-vault/pdf-search/pdf-search.component';
+import { PdfDocumentListComponent } from '@/Components/Features/pdf-vault/pdf-document-list/pdf-document-list.component';
+import { PdfViewerComponent } from '@/Components/Features/pdf-vault/pdf-viewer/pdf-viewer.component';
 
 export const appRoutes: Routes = [
     // Public routes
@@ -196,6 +200,12 @@ export const appRoutes: Routes = [
             { path: 'presently-serving-members/profile/:employeeId', component: ServingMemberProfile },
             { path: 'ex-members', component: ExMembers },
             { path: 'ex-members/profile/:employeeId', component: ExMemberProfile },
+
+            // PDF Vault
+            { path: 'pdf-vault/search', component: PdfSearchComponent },
+            { path: 'pdf-vault/upload', component: PdfUploadComponent },
+            { path: 'pdf-vault/documents', component: PdfDocumentListComponent },
+            { path: 'pdf-vault/view/:id', component: PdfViewerComponent },
 
             { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
             { path: 'documentation', component: Documentation },

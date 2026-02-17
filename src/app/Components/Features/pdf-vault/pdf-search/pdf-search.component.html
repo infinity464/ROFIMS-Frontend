@@ -1,0 +1,115 @@
+<div class="search-container">
+  <h2>Search Documents</h2>
+
+  <div class="search-box">
+    <input
+      type="text"
+      [(ngModel)]="searchQuery"
+      placeholder="Enter keywords to search... (Bangla/English)"
+      (keyup.enter)="search()"
+      [disabled]="isSearching">
+    <button class="btn-search" (click)="search()" [disabled]="isSearching">
+      @if (isSearching) {
+        <span class="spinner"></span>
+      } @else {
+        Search
+      }
+    </button>
+  </div>
+
+  @if (availableTags.length > 0) {
+    <div class="tags-filter">
+      <label>Filter by Tags:</label>
+      <div class="tag-chips">
+        @for (tag of availableTags; track tag.id) {
+          <span
+            class="tag-chip"
+            [class.selected]="isTagSelected(tag.name)"
+            (click)="toggleTag(tag.name)">
+            {{ tag.name }}
+          </span>
+        }
+      </div>
+    </div>
+  }
+
+  @if (selectedTags.length > 0 || searchQuery) {
+    <button class="btn-clear" (click)="clearSearch()">Clear Search</button>
+  }
+
+  @if (searchError) {
+    <div class="alert alert-error">{{ searchError }}</div>
+  }
+
+  @if (searchResult) {
+    <div class="search-results">
+      <div class="results-header">
+        <span>Found {{ searchResult.totalCount }} results</span>
+      </div>
+
+      @if (searchResult.items.length === 0) {
+        <div class="no-results">
+          <p>No documents found matching your search criteria.</p>
+        </div>
+      } @else {
+        <div class="results-list">
+          @for (item of searchResult.items; track item.documentId + '-' + item.pageNumber) {
+            <div class="result-item" (click)="openDocument(item)">
+              <div class="result-header">
+                <span class="file-name">{{ item.fileName }}</span>
+                <span class="page-badge">Page {{ item.pageNumber }}</span>
+              </div>
+              <div class="result-snippet">{{ item.snippet }}</div>
+              @if (item.tags.length > 0) {
+                <div class="result-tags">
+                  @for (tag of item.tags; track tag) {
+                    <span class="tag-small">{{ tag }}</span>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        @if (searchResult.totalPages > 1) {
+          <div class="pagination">
+            <button
+              class="page-btn"
+              (click)="goToPage(1)"
+              [disabled]="currentPage === 1">
+              First
+            </button>
+            <button
+              class="page-btn"
+              (click)="goToPage(currentPage - 1)"
+              [disabled]="currentPage === 1">
+              Prev
+            </button>
+
+            @for (page of getPageNumbers(); track page) {
+              <button
+                class="page-btn"
+                [class.active]="page === currentPage"
+                (click)="goToPage(page)">
+                {{ page }}
+              </button>
+            }
+
+            <button
+              class="page-btn"
+              (click)="goToPage(currentPage + 1)"
+              [disabled]="currentPage === searchResult.totalPages">
+              Next
+            </button>
+            <button
+              class="page-btn"
+              (click)="goToPage(searchResult.totalPages)"
+              [disabled]="currentPage === searchResult.totalPages">
+              Last
+            </button>
+          </div>
+        }
+      }
+    </div>
+  }
+</div>
