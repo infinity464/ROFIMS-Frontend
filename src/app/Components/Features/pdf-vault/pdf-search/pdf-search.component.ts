@@ -2,6 +2,11 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { CardModule } from 'primeng/card';
+import { ButtonModule } from 'primeng/button';
+import { InputTextModule } from 'primeng/inputtext';
+import { TagModule } from 'primeng/tag';
+import { DividerModule } from 'primeng/divider';
 import { PdfVaultService } from '../services/pdf-vault.service';
 import { SearchResult, SearchResultItem } from '../models/search.model';
 import { PdfTag } from '../models/document.model';
@@ -9,7 +14,7 @@ import { PdfTag } from '../models/document.model';
 @Component({
   selector: 'app-pdf-search',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CardModule, ButtonModule, InputTextModule, TagModule, DividerModule],
   templateUrl: './pdf-search.component.html',
   styleUrl: './pdf-search.component.scss'
 })
@@ -110,10 +115,19 @@ export class PdfSearchComponent implements OnInit {
     const total = this.searchResult.totalPages;
     const current = this.currentPage;
     const pages: number[] = [];
-
     for (let i = Math.max(1, current - 2); i <= Math.min(total, current + 2); i++) {
       pages.push(i);
     }
     return pages;
+  }
+
+  getStatusSeverity(status: string): "success" | "info" | "warn" | "danger" | "secondary" | "contrast" | undefined {
+    switch (status) {
+      case 'ready': return 'success';
+      case 'pending': return 'warn';
+      case 'processing': return 'info';
+      case 'error': return 'danger';
+      default: return 'secondary';
+    }
   }
 }

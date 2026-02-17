@@ -1,12 +1,15 @@
 import { Component, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { CardModule } from 'primeng/card';
+import { ButtonModule } from 'primeng/button';
+import { InputTextModule } from 'primeng/inputtext';
 import { PdfVaultService } from '../services/pdf-vault.service';
 
 @Component({
   selector: 'app-pdf-upload',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CardModule, ButtonModule, InputTextModule],
   templateUrl: './pdf-upload.component.html',
   styleUrl: './pdf-upload.component.scss'
 })
@@ -73,7 +76,7 @@ export class PdfUploadComponent {
       .filter(t => t.length > 0);
 
     this.pdfVaultService.uploadDocument(this.selectedFile, tags).subscribe({
-      next: (doc) => {
+      next: () => {
         this.uploadSuccess = true;
         this.selectedFile = null;
         this.tagsInput = '';

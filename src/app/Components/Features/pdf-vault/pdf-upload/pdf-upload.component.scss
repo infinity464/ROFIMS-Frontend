@@ -1,173 +1,113 @@
-.upload-container {
-  max-width: 600px;
-  margin: 0 auto;
-  padding: 20px;
+:host {
+  display: block;
+  padding: 1.5rem;
+}
 
-  h2 {
-    margin-bottom: 20px;
-    color: #333;
-  }
+.upload-page {
+  max-width: 650px;
+  margin: 0 auto;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 1.25rem;
+  font-size: 1.25rem;
+  font-weight: 600;
 }
 
 .drop-zone {
-  border: 2px dashed #ccc;
-  border-radius: 8px;
-  padding: 40px;
+  border: 2px dashed var(--surface-border);
+  border-radius: var(--border-radius);
+  padding: 2.5rem;
   text-align: center;
   transition: all 0.3s ease;
-  background-color: #f9f9f9;
+  background-color: var(--surface-ground);
+  margin-bottom: 1.25rem;
 
   &:hover {
-    border-color: #007bff;
-    background-color: #f0f7ff;
+    border-color: var(--primary-color);
+    background-color: var(--primary-50, var(--surface-hover));
   }
 
   &.has-file {
-    border-color: #28a745;
-    background-color: #f0fff4;
+    border-color: var(--green-500);
+    background-color: var(--green-50, var(--surface-hover));
   }
 }
 
 .drop-zone-content {
-  .icon {
-    font-size: 48px;
+  .drop-icon {
+    font-size: 3rem;
+    color: var(--text-color-secondary);
+    margin-bottom: 0.75rem;
     display: block;
-    margin-bottom: 10px;
   }
 
   p {
-    margin: 10px 0;
-    color: #666;
+    margin: 0.75rem 0;
+    color: var(--text-color-secondary);
   }
 }
 
-.file-input-label {
-  display: inline-block;
-  padding: 10px 20px;
-  background-color: #007bff;
-  color: white;
-  border-radius: 4px;
+.browse-label {
   cursor: pointer;
-  transition: background-color 0.3s;
-
-  &:hover {
-    background-color: #0056b3;
-  }
 }
 
 .file-info {
-  .icon {
-    font-size: 36px;
+  .file-icon {
+    font-size: 2.5rem;
+    color: var(--red-500);
+    margin-bottom: 0.5rem;
     display: block;
-    margin-bottom: 10px;
   }
 
-  p {
-    margin: 5px 0;
-    color: #333;
+  .file-name {
+    margin: 0.25rem 0;
+    font-weight: 600;
+    color: var(--text-color);
   }
 
   .file-size {
-    color: #666;
-    font-size: 14px;
-  }
-}
-
-.btn-clear {
-  margin-top: 10px;
-  padding: 5px 15px;
-  background-color: #dc3545;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-
-  &:hover {
-    background-color: #c82333;
+    color: var(--text-color-secondary);
+    font-size: 0.875rem;
+    margin: 0.25rem 0 0.75rem;
   }
 }
 
 .tags-input {
-  margin: 20px 0;
+  margin-bottom: 1.25rem;
 
   label {
     display: block;
-    margin-bottom: 8px;
+    margin-bottom: 0.5rem;
     font-weight: 500;
-    color: #333;
-  }
-
-  input {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 14px;
-
-    &:focus {
-      outline: none;
-      border-color: #007bff;
-    }
-
-    &:disabled {
-      background-color: #f5f5f5;
-    }
+    font-size: 0.875rem;
+    color: var(--text-color-secondary);
   }
 }
 
-.alert {
-  padding: 12px 15px;
-  border-radius: 4px;
-  margin-bottom: 15px;
-
-  &-error {
-    background-color: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
-  }
-
-  &-success {
-    background-color: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
-  }
+.alert-error {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--border-radius);
+  background-color: var(--red-50);
+  color: var(--red-700);
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
 }
 
-.btn-upload {
-  width: 100%;
-  padding: 12px;
-  background-color: #28a745;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 16px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-
-  &:hover:not(:disabled) {
-    background-color: #218838;
-  }
-
-  &:disabled {
-    background-color: #ccc;
-    cursor: not-allowed;
-  }
-}
-
-.spinner {
-  display: inline-block;
-  width: 16px;
-  height: 16px;
-  border: 2px solid #ffffff;
-  border-radius: 50%;
-  border-top-color: transparent;
-  animation: spin 1s linear infinite;
-  margin-right: 8px;
-  vertical-align: middle;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+.alert-success {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--border-radius);
+  background-color: var(--green-50);
+  color: var(--green-700);
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
 }

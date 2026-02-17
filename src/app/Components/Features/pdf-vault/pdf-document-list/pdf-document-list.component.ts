@@ -1,13 +1,17 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
+import { CardModule } from 'primeng/card';
+import { TableModule } from 'primeng/table';
+import { ButtonModule } from 'primeng/button';
+import { TagModule } from 'primeng/tag';
 import { PdfVaultService } from '../services/pdf-vault.service';
 import { PdfDocument } from '../models/document.model';
 
 @Component({
   selector: 'app-pdf-document-list',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, CardModule, TableModule, ButtonModule, TagModule],
   templateUrl: './pdf-document-list.component.html',
   styleUrl: './pdf-document-list.component.scss'
 })
@@ -67,13 +71,13 @@ export class PdfDocumentListComponent implements OnInit {
     }
   }
 
-  getStatusClass(status: string): string {
+  getStatusSeverity(status: string): "success" | "info" | "warn" | "danger" | "secondary" | "contrast" | undefined {
     switch (status.toLowerCase()) {
-      case 'ready': return 'status-ready';
-      case 'pending': return 'status-pending';
-      case 'processing': return 'status-processing';
-      case 'error': return 'status-error';
-      default: return '';
+      case 'ready': return 'success';
+      case 'pending': return 'warn';
+      case 'processing': return 'info';
+      case 'error': return 'danger';
+      default: return 'secondary';
     }
   }
 
