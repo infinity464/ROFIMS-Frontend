@@ -5,5 +5,6 @@ export interface EquivalentRankModel {
   createdBy: string;
   createdDate: string;
   lastUpdatedBy: string;
-  lastUpdate: string;
+  /** Matches backend property name (Lastupdate) */
+  lastupdate: string;
 }

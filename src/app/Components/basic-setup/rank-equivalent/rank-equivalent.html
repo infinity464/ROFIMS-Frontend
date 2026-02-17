@@ -1,1 +1,80 @@
-<p>rank-equivalent works!</p>
+
+<p-fluid>
+    <div class="card">
+        <div class="font-semibold text-xl mb-5">{{ title }} Setup</div>
+
+        <form [formGroup]="rankEquivalentForm" (ngSubmit)="onSubmit()">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                <div>
+                    <label for="equivalentName" class="block mb-2">Equivalent Name <span class="text-red-500">*</span></label>
+                    <p-select
+                        id="equivalentName"
+                        formControlName="equivalentNameID"
+                        [options]="equivalentNameOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Select Equivalent Name"
+                        styleClass="w-full"
+                        [showClear]="true">
+                    </p-select>
+                    @if (rankEquivalentForm.get('equivalentNameID')?.invalid && rankEquivalentForm.get('equivalentNameID')?.touched) {
+                        <small class="text-red-500 block mt-1">Equivalent Name is required</small>
+                    }
+                </div>
+                <div>
+                    <label for="motherOrg" class="block mb-2">Mother Organization <span class="text-red-500">*</span></label>
+                    <p-select
+                        id="motherOrg"
+                        formControlName="motherOrgId"
+                        [options]="motherOrgOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Select Mother Organization"
+                        styleClass="w-full"
+                        [showClear]="true">
+                    </p-select>
+                    @if (rankEquivalentForm.get('motherOrgId')?.invalid && rankEquivalentForm.get('motherOrgId')?.touched) {
+                        <small class="text-red-500 block mt-1">Mother Organization is required</small>
+                    }
+                </div>
+                <div>
+                    <label for="motherOrgRank" class="block mb-2">Mother Organization Rank Name <span class="text-red-500">*</span></label>
+                    <p-select
+                        id="motherOrgRank"
+                        formControlName="motherOrgRankId"
+                        [options]="motherOrgRankOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Select Mother Org Rank"
+                        styleClass="w-full"
+                        [showClear]="true"
+                        [disabled]="!rankEquivalentForm.get('motherOrgId')?.value">
+                    </p-select>
+                    @if (rankEquivalentForm.get('motherOrgRankId')?.invalid && rankEquivalentForm.get('motherOrgRankId')?.touched) {
+                        <small class="text-red-500 block mt-1">Mother Organization Rank is required</small>
+                    }
+                </div>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-2 justify-end">
+                <p-button type="submit" [label]="editingKeys ? 'Update' : 'Save'" [disabled]="rankEquivalentForm.invalid || isSubmitting" [loading]="isSubmitting" [fluid]="false"></p-button>
+                <p-button type="button" label="Reset" severity="secondary" [fluid]="false" (click)="resetForm()"></p-button>
+            </div>
+        </form>
+    </div>
+</p-fluid>
+
+        <app-data-table
+            [config]="tableConfig"
+            [data]="rankEquivalentData"
+            [first]="first"
+            [totalRecords]="totalRecords"
+            [rows]="rows"
+            [loading]="loading"
+            (edit)="update($event)"
+            (delete)="delete($event.row, $event.event)"
+            (lazyLoad)="onLazyLoad($event)"
+            (search)="onSearch($event)">
+        </app-data-table>
+
+<p-toast></p-toast>
+<p-confirmDialog />
