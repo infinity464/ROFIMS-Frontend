@@ -25,6 +25,8 @@ import { EmployeePersonalServiceOverview } from '@/models/employee-personal-serv
 import { LocationType } from '@/models/enums';
 import { DialogModule } from 'primeng/dialog';
 import { TooltipModule } from 'primeng/tooltip';
+import { PROFILE_LABELS, type ProfileLang } from '@/Core/i18n/profile-labels';
+import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 
 @Component({
     selector: 'app-ex-member-profile',
@@ -56,6 +58,8 @@ export class ExMemberProfile implements OnInit, OnDestroy {
     previousYearSummaryLoading = false;
     loading = false;
 
+    profileLang: ProfileLang = 'en';
+
     constructor(
         private route: ActivatedRoute,
         private router: Router,
@@ -78,21 +82,62 @@ export class ExMemberProfile implements OnInit, OnDestroy {
 
     readonly LocationType = LocationType;
 
+    get L(): (typeof PROFILE_LABELS)[ProfileLang] {
+        return PROFILE_LABELS[this.profileLang];
+    }
+
+    get isBn(): boolean {
+        return this.profileLang === 'bn';
+    }
+
+    toggleProfileLang(): void {
+        this.profileLang = this.profileLang === 'en' ? 'bn' : 'en';
+    }
+
+    codeValue(enVal: string | null | undefined, bnVal: string | null | undefined): string {
+        if (this.isBn && (bnVal != null && bnVal !== '')) return bnVal;
+        return enVal != null && enVal !== '' ? enVal : '-';
+    }
+
+    valDisplay(v: string | number | null | undefined): string {
+        const s = this.val(v);
+        if (s === '-') return s;
+        return this.isBn ? BanglaNumerals.toBangla(s) : s;
+    }
+
+    formatDateDisplay(value: string | null | undefined): string {
+        const s = this.formatDateShort(value ?? null);
+        return this.isBn ? BanglaNumerals.toBangla(s) : s;
+    }
+
     get currentYear(): number {
         return new Date().getFullYear();
     }
 
-    /** RAB Unit for ex-member: Top 1 from previousServiceInfo ORDER BY durationFrom (serviceFrom) DESC. */
+    get currentYearDisplay(): string {
+        return this.isBn ? BanglaNumerals.toBangla(String(this.currentYear)) : String(this.currentYear);
+    }
+
+    get previousYearDisplay(): string {
+        return this.isBn ? BanglaNumerals.toBangla(String(this.previousYear)) : String(this.previousYear);
+    }
+
+    rowNum(i: number): string {
+        return this.isBn ? BanglaNumerals.toBangla(String(i + 1)) : String(i + 1);
+    }
+
+    /** RAB Unit for ex-member: Top 1 from previousServiceInfo ORDER BY durationFrom (serviceFrom) DESC. Uses BN when profileLang is bn. */
     get displayRabUnit(): string {
-        if (!this.previousRabList?.length) return this.profile?.rabUnit ?? '-';
+        if (!this.previousRabList?.length) return this.codeValue(this.profile?.rabUnit ?? null, this.profile?.rabUnitBN ?? null);
         const sorted = [...this.previousRabList].sort((a, b) => {
             const fromA = a.serviceFrom ?? '';
             const fromB = b.serviceFrom ?? '';
             return fromB.localeCompare(fromA);
         });
         const first = sorted[0];
-        const name = first?.rabUnitName ?? (first as { RABUnitName?: string })?.RABUnitName;
-        return name ?? this.profile?.rabUnit ?? '-';
+        const nameEn = first?.rabUnitName ?? (first as { RABUnitName?: string })?.RABUnitName;
+        const nameBn = first?.rabUnitNameBN ?? (first as { RABUnitNameBN?: string })?.RABUnitNameBN;
+        return this.codeValue(nameEn ?? this.profile?.rabUnit ?? null, nameBn ?? this.profile?.rabUnitBN ?? null);
     }
 
     get ownAddressList(): AddressInfoByEmployeeView[] {
@@ -115,9 +160,9 @@ export class ExMemberProfile implements OnInit, OnDestroy {
 
     getAddressTypeLabel(addr: AddressInfoByEmployeeView): string {
         const t = (addr.locationType ?? '').trim();
-        if (t === LocationType.Permanent || t === LocationType.WifePermanent) return 'Permanent Address';
-        if (t === LocationType.Present || t === LocationType.WifePresent) return 'Present Address';
-        return t || 'Address';
+        if (t === LocationType.Permanent || t === LocationType.WifePermanent) return this.L['addressType.permanent'];
+        if (t === LocationType.Present || t === LocationType.WifePresent) return this.L['addressType.present'];
+        return t || this.L['addressType.address'];
     }
 
     get familyInfoList(): FamilyInfoByEmployeeView[] {
@@ -276,7 +321,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
 
     tradeDisplay(p: EmployeePersonalServiceOverview | null): string {
         if (!p) return '-';
-        const t = p.trade?.trim();
+        const t = this.isBn ? (p.tradeBN ?? p.trade)?.trim() : p.trade?.trim();
         const r = p.tradeRemarks?.trim();
         if (t) return t;
         if (r) return `N/A (${r})`;
@@ -285,24 +330,27 @@ export class ExMemberProfile implements OnInit, OnDestroy {
 
     heightDisplay(p: EmployeePersonalServiceOverview | null): string {
         if (!p || p.height == null) return '-';
-        return `${p.height} Inch`;
+        const h = this.isBn ? BanglaNumerals.toBangla(String(p.height)) : String(p.height);
+        return `${h} Inch`;
     }
 
     weightDisplay(p: EmployeePersonalServiceOverview | null): string {
         if (!p || p.weight == null) return '-';
-        return `${p.weight} lbs`;
+        const w = this.isBn ? BanglaNumerals.toBangla(String(p.weight)) : String(p.weight);
+        return `${w} lbs`;
     }
 
     formatFamilyDob(value: string | null): string {
-        return this.formatDateShort(value);
+        return this.formatDateDisplay(value);
     }
 
     familyMobile(row: FamilyInfoByEmployeeView): string {
-        return this.val(row.mobileNo);
+        return this.valDisplay(row.mobileNo);
     }
 
     formatDateOnly(value: string | null): string {
-        return this.formatDateShort(value);
+        const s = this.formatDateShort(value);
+        return this.isBn ? BanglaNumerals.toBangla(s) : s;
     }
 
     formatDateTime(value: string | null): string {
@@ -310,7 +358,8 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         try {
             const d = new Date(value);
             if (isNaN(d.getTime())) return value;
-            return d.toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            const s = d.toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            return this.isBn ? BanglaNumerals.toBangla(s) : s;
         } catch {
             return value;
         }
@@ -337,8 +386,13 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         this.previousYearSummaryDialogVisible = false;
     }
 
-    getFormattedName(profile: { nameEnglish?: string | null; gallantryAwardsDecoration?: string | null; professionalQualification?: string | null; corps?: string | null }): string {
-        return [profile?.nameEnglish, profile?.gallantryAwardsDecoration, profile?.professionalQualification, profile?.corps].filter((value) => value && String(value).trim() !== '').join(', ');
+    getFormattedName(profile: EmployeePersonalServiceOverview | null): string {
+        if (!profile) return '-';
+        const namePart = this.isBn ? (profile.nameBN ?? profile.nameEnglish) : profile.nameEnglish;
+        const deco = this.isBn ? (profile.gallantryAwardsDecorationBN ?? profile.gallantryAwardsDecoration) : profile.gallantryAwardsDecoration;
+        const prof = this.isBn ? (profile.professionalQualificationBN ?? profile.professionalQualification) : profile.professionalQualification;
+        const crps = this.isBn ? (profile.corpsBN ?? profile.corps) : profile.corps;
+        return [namePart, deco, prof, crps].filter((value) => value && String(value).trim() !== '').join(', ');
     }
 
     getDocumentSourceLabel(row: { sourceTable?: string; SourceTable?: string }): string {

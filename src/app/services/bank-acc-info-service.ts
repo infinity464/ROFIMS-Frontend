@@ -8,8 +8,11 @@ export interface BankAccInfoByEmployeeView {
     employeeID: number;
     ser: number;
     bankName: string | null;
+    bankNameBN?: string | null;
     branchName: string | null;
+    branchNameBN?: string | null;
     accountName: string | null;
+    accountNameBN?: string | null;
     accountNumber: string | null;
     remarks: string | null;
 }

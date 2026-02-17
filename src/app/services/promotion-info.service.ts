@@ -30,8 +30,10 @@ export interface PromotionInfoByEmployeeView {
     ser: number;
     previousRankId?: number | null;
     previousRank: string | null;
+    previousRankBN?: string | null;
     promotedRankId?: number | null;
     promotedRank: string | null;
+    promotedRankBN?: string | null;
     promotedDate: string | null;
     auth: string | null;
     remarks: string | null;

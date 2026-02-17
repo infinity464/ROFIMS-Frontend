@@ -10,8 +10,10 @@ export interface CourseInfoByEmployeeView {
     ser: number;
     courseTypeId?: number | null;
     courseType: string | null;
+    courseTypeBN?: string | null;
     courseNameId?: number | null;
     courseName: string | null;
+    courseNameBN?: string | null;
     trainingInstituteId?: number | null;
     trainingInstituteName: string | null;
     dateFrom: string | null;

@@ -3,8 +3,9 @@
 <div class="card serving-member-profile-page text-900">
     <div class="profile-header">
         <div class="profile-header-left">
-            <p-button icon="pi pi-arrow-left" label="Back" [rounded]="true" [text]="true" severity="secondary" (onClick)="goBack()" styleClass="p-button-sm"></p-button>
-            <h1 class="profile-title m-0 text-2xl font-bold text-900">Serving Member Profile</h1>
+            <p-button icon="pi pi-arrow-left" [label]="L['button.back']" [rounded]="true" [text]="true" severity="secondary" (onClick)="goBack()" styleClass="p-button-sm"></p-button>
+            <h1 class="profile-title m-0 text-2xl font-bold text-900">{{ L['pageTitle.servingMember'] }}</h1>
+            <p-button [label]="profileLang === 'en' ? 'বাংলা' : 'English'" [rounded]="true" [text]="true" severity="secondary" (onClick)="toggleProfileLang()" styleClass="p-button-sm ml-2"></p-button>
         </div>
         <div class="profile-image-box">
             @if (profileImageUrl) {
@@ -24,44 +25,43 @@
     } @else if (profile) {
         <!-- Basic Service Information -->
         <div class="content-section text-900">
-            <div class="section-heading">Basic Service Information</div>
+            <div class="section-heading">{{ L['section.basicService'] }}</div>
             <div class="core-details">
                 <div class="core-row">
-                    <span class="detail-item"><span class="detail-label">Service ID:  </span> <span class="detail-value">{{ val(profile.serviceId) }}</span></span>
-                    <span class="detail-item"><span class="detail-label">RAB ID:  </span> <span class="detail-value">{{ val(profile.rabId) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">{{ L['field.serviceId'] }}  </span> <span class="detail-value">{{ valDisplay(profile.serviceId) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">{{ L['field.rabId'] }}  </span> <span class="detail-value">{{ valDisplay(profile.rabId) }}</span></span>
                 </div>
                 <div class="core-row core-row-full">
-                    <span class="detail-item"><span class="detail-label">Name English: </span> <span class="detail-value">{{ getFormattedName(profile) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">{{ isBn ? L['field.nameBangla'] : L['field.nameEnglish'] }} </span> <span class="detail-value">{{ getFormattedName(profile) }}</span></span>
                 </div>
                 <div class="core-row core-row-four">
-                    <span class="detail-item"><span class="detail-label">Appointment: </span> <span class="detail-value">{{ val(profile.appointment) }}</span></span>
-                    <span class="detail-item"><span class="detail-label">Member Type: </span> <span class="detail-value">{{ val(profile.memberType) }}</span></span>
-                    <span class="detail-item"><span class="detail-label">Mother Organization: </span> <span class="detail-value">{{ val(profile.motherOrganization) }}</span></span>
-                    <span class="detail-item"><span class="detail-label">Rank: </span> <span class="detail-value">{{ val(profile.armyRank) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">{{ L['field.appointment'] }} </span> <span class="detail-value">{{ codeValue(profile.appointment, profile.appointmentBN) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">{{ L['field.memberType'] }} </span> <span class="detail-value">{{ codeValue(profile.memberType, profile.memberTypeBN) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">{{ L['field.motherOrganization'] }} </span> <span class="detail-value">{{ codeValue(profile.motherOrganization, profile.motherOrganizationBN) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">{{ L['field.rank'] }} </span> <span class="detail-value">{{ codeValue(profile.armyRank, profile.armyRankBN) }}</span></span>
                 </div>
                 <div class="core-row core-row-four">
-                    <span class="detail-item"><span class="detail-label">Corps: </span> <span class="detail-value">{{ val(profile.corps) }}</span></span>
-                    <span class="detail-item"><span class="detail-label">Trade: </span> <span class="detail-value">{{ tradeDisplay(profile) }}</span></span>
-                <!--<span class="detail-item"><span class="detail-label">Gender: </span> <span class="detail-value">{{ val(profile.gender) }}</span></span> -->
-                    <span class="detail-item"><span class="detail-label">Date of Commission: </span> <span class="detail-value">{{ formatDateShort(profile.dateOfCommission) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">{{ L['field.corps'] }} </span> <span class="detail-value">{{ codeValue(profile.corps, profile.corpsBN) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">{{ L['field.trade'] }} </span> <span class="detail-value">{{ tradeDisplay(profile) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">{{ L['field.dateOfCommission'] }} </span> <span class="detail-value">{{ formatDateDisplay(profile.dateOfCommission) }}</span></span>
                 </div>
                 <div class="core-row core-row-three">
-                    <span class="detail-item"><span class="detail-label">Date of Joining in Service/Training: </span> <span class="detail-value">{{ formatDateShort(profile.dateOfJoiningInServiceTraining) }}</span></span>
-                    <span class="detail-item"><span class="detail-label">Mother Unit: </span> <span class="detail-value">{{ val(profile.motherUnit) }}</span></span>
-                    <span class="detail-item"><span class="detail-label">Location: </span> <span class="detail-value">{{ val(profile.location) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">{{ L['field.dateOfJoiningInServiceTraining'] }} </span> <span class="detail-value">{{ formatDateDisplay(profile.dateOfJoiningInServiceTraining) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">{{ L['field.motherUnit'] }} </span> <span class="detail-value">{{ codeValue(profile.motherUnit, profile.motherUnitBN) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">{{ L['field.location'] }} </span> <span class="detail-value">{{ codeValue(profile.location, profile.locationBN) }}</span></span>
                 </div>
                 <div class="core-row">
-                    <span class="detail-item"><span class="detail-label">RAB Unit: </span> <span class="detail-value">{{ val(profile.rabUnit) }}</span></span>
-                    <span class="detail-item"><span class="detail-label">Joining Date: </span> <span class="detail-value">{{ formatDateShort(profile.joiningDate) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">{{ L['field.rabUnit'] }} </span> <span class="detail-value">{{ codeValue(profile.rabUnit, profile.rabUnitBN) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">{{ L['field.joiningDate'] }} </span> <span class="detail-value">{{ formatDateDisplay(profile.joiningDate) }}</span></span>
                 </div>
             </div>
         </div>
 
                 <!-- Own Address Information (Permanent & Present; multiple allowed) -->
                 <div class="content-section text-900 border-top-1 surface-border">
-                    <div class="section-heading">Own Address Information:</div>
+                    <div class="section-heading">{{ L['section.ownAddress'] }}</div>
                     @if (ownAddressList.length === 0) {
-                        <div class="address-empty text-500 py-2">No own address records.</div>
+                        <div class="address-empty text-500 py-2">{{ L['empty.noOwnAddress'] }}</div>
                     } @else {
                         <div class="core-details">
                             @for (addr of ownAddressList; track addr.ser) {
@@ -69,14 +69,14 @@
                                     <div class="address-block-type">{{ getAddressTypeLabel(addr) }}</div>
                                     <div class="address-fields">
                                         <div class="address-row">
-                                            <span class="address-field"><span class="address-label">House/Area:</span> {{ val(addr.houseRoad) }}</span>
-                                            <span class="address-field"><span class="address-label">Village:</span> {{ val(addr.addressAreaEN) }}</span>
-                                            <span class="address-field"><span class="address-label">Post Office:</span> {{ val(addr.postOffice) }}</span>
+                                            <span class="address-field"><span class="address-label">{{ L['address.houseArea'] }}</span> {{ val(addr.houseRoad) }}</span>
+                                            <span class="address-field"><span class="address-label">{{ L['address.village'] }}</span> {{ val(addr.addressAreaEN) }}</span>
+                                            <span class="address-field"><span class="address-label">{{ L['address.postOffice'] }}</span> {{ codeValue(addr.postOffice, addr.postOfficeBN) }}</span>
                                         </div>
                                         <div class="address-row">
-                                            <span class="address-field"><span class="address-label">Thana:</span> {{ val(addr.thana) }}</span>
-                                            <span class="address-field"><span class="address-label">District:</span> {{ val(addr.district) }}</span>
-                                            <span class="address-field"><span class="address-label">Division:</span> {{ val(addr.division) }}</span>
+                                            <span class="address-field"><span class="address-label">{{ L['address.thana'] }}</span> {{ codeValue(addr.thana, addr.thanaBN) }}</span>
+                                            <span class="address-field"><span class="address-label">{{ L['address.district'] }}</span> {{ codeValue(addr.district, addr.districtBN) }}</span>
+                                            <span class="address-field"><span class="address-label">{{ L['address.division'] }}</span> {{ codeValue(addr.division, addr.divisionBN) }}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -87,9 +87,9 @@
         
                 <!-- Wife Address Information (WifePermanent & WifePresent; multiple allowed) -->
                 <div class="content-section text-900 border-top-1 surface-border">
-                    <div class="section-heading">Wife Address Information:</div>
+                    <div class="section-heading">{{ L['section.wifeAddress'] }}</div>
                     @if (wifeAddressList.length === 0) {
-                        <div class="address-empty text-500 py-2">No wife address records.</div>
+                        <div class="address-empty text-500 py-2">{{ L['empty.noWifeAddress'] }}</div>
                     } @else {
                         <div class="core-details">
                             @for (addr of wifeAddressList; track addr.ser) {
@@ -97,14 +97,14 @@
                                     <div class="address-block-type">{{ getAddressTypeLabel(addr) }}</div>
                                     <div class="address-fields">
                                         <div class="address-row">
-                                            <span class="address-field"><span class="address-label">House/Area:</span> {{ val(addr.houseRoad) }}</span>
-                                            <span class="address-field"><span class="address-label">Village:</span> {{ val(addr.addressAreaEN) }}</span>
-                                            <span class="address-field"><span class="address-label">Post Office:</span> {{ val(addr.postOffice) }}</span>
+                                            <span class="address-field"><span class="address-label">{{ L['address.houseArea'] }}</span> {{ val(addr.houseRoad) }}</span>
+                                            <span class="address-field"><span class="address-label">{{ L['address.village'] }}</span> {{ val(addr.addressAreaEN) }}</span>
+                                            <span class="address-field"><span class="address-label">{{ L['address.postOffice'] }}</span> {{ codeValue(addr.postOffice, addr.postOfficeBN) }}</span>
                                         </div>
                                         <div class="address-row">
-                                            <span class="address-field"><span class="address-label">Thana:</span> {{ val(addr.thana) }}</span>
-                                            <span class="address-field"><span class="address-label">District:</span> {{ val(addr.district) }}</span>
-                                            <span class="address-field"><span class="address-label">Division:</span> {{ val(addr.division) }}</span>
+                                            <span class="address-field"><span class="address-label">{{ L['address.thana'] }}</span> {{ codeValue(addr.thana, addr.thanaBN) }}</span>
+                                            <span class="address-field"><span class="address-label">{{ L['address.district'] }}</span> {{ codeValue(addr.district, addr.districtBN) }}</span>
+                                            <span class="address-field"><span class="address-label">{{ L['address.division'] }}</span> {{ codeValue(addr.division, addr.divisionBN) }}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -115,46 +115,46 @@
 
         <!-- Other Personal Information -->
         <div class="content-section text-900 border-top-1 surface-border">
-            <div class="section-heading">Other Personal Information:</div>
+            <div class="section-heading">{{ L['section.otherPersonal'] }}</div>
             <div class="core-details">
                 <div class="core-row core-row-four">
-                    <span class="detail-item"><span class="detail-label">Course/Batch: </span> <span class="detail-value">{{ val(profile.batch) }}</span></span>
-                    <span class="detail-item"><span class="detail-label">Date of Join in Service: </span> <span class="detail-value">{{ formatDateShort(profile.dateOfJoiningInServiceTraining) }}</span></span>
-                    <span class="detail-item"><span class="detail-label">Date of Commission: </span> <span class="detail-value">{{ formatDateShort(profile.dateOfCommission) }}</span></span>
-                    <span class="detail-item"><span class="detail-label">Education Qualification: </span> <span class="detail-value">{{ val(profile.educationQualification) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">{{ L['field.courseBatch'] }} </span> <span class="detail-value">{{ codeValue(profile.batch, profile.batchBN) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">{{ L['field.dateOfJoinInService'] }} </span> <span class="detail-value">{{ formatDateDisplay(profile.dateOfJoiningInServiceTraining) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">{{ L['field.dateOfCommission'] }} </span> <span class="detail-value">{{ formatDateDisplay(profile.dateOfCommission) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">{{ L['field.educationQualification'] }} </span> <span class="detail-value">{{ codeValue(profile.educationQualification, profile.educationQualificationBN) }}</span></span>
                 </div>
                 <div class="core-row core-row-four">
-                    <span class="detail-item"><span class="detail-label">Professional Qualification: </span> <span class="detail-value">{{ val(profile.professionalQualification) }}</span></span>
-                    <span class="detail-item"><span class="detail-label">Personal Qualification: </span> <span class="detail-value">{{ val(profile.personalQualification) }}</span></span>
-                    <span class="detail-item"><span class="detail-label">Gallantry Awards/Decoration: </span> <span class="detail-value">{{ val(profile.gallantryAwardsDecoration) }}</span></span>
-                    <span class="detail-item"><span class="detail-label">Blood Group: </span> <span class="detail-value">{{ val(profile.bloodGroup) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">{{ L['field.professionalQualification'] }} </span> <span class="detail-value">{{ codeValue(profile.professionalQualification, profile.professionalQualificationBN) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">{{ L['field.personalQualification'] }} </span> <span class="detail-value">{{ codeValue(profile.personalQualification, profile.personalQualificationBN) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">{{ L['field.gallantryAwards'] }} </span> <span class="detail-value">{{ codeValue(profile.gallantryAwardsDecoration, profile.gallantryAwardsDecorationBN) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">{{ L['field.bloodGroup'] }} </span> <span class="detail-value">{{ val(profile.bloodGroup) }}</span></span>
                 </div>
                 <div class="core-row core-row-four">
-                    <span class="detail-item"><span class="detail-label">NID: </span> <span class="detail-value">{{ val(profile.nid) }}</span></span>
-                    <span class="detail-item"><span class="detail-label">Email Address: </span> <span class="detail-value">{{ val(profile.emailAddress) }}</span></span>
-                    <span class="detail-item"><span class="detail-label">Date of Birth: </span> <span class="detail-value">{{ formatDateShort(profile.dateOfBirth) }}</span></span>
-                    <span class="detail-item"><span class="detail-label">Passport No: </span> <span class="detail-value">{{ val(profile.passportNo) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">{{ L['field.nid'] }} </span> <span class="detail-value">{{ valDisplay(profile.nid) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">{{ L['field.emailAddress'] }} </span> <span class="detail-value">{{ val(profile.emailAddress) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">{{ L['field.dateOfBirth'] }} </span> <span class="detail-value">{{ formatDateDisplay(profile.dateOfBirth) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">{{ L['field.passportNo'] }} </span> <span class="detail-value">{{ valDisplay(profile.passportNo) }}</span></span>
                 </div>
                 <div class="core-row core-row-four">
-                    <span class="detail-item"><span class="detail-label">Height: </span> <span class="detail-value">{{ heightDisplay(profile) }}</span></span>
-                    <span class="detail-item"><span class="detail-label">Medical Category: </span> <span class="detail-value">{{ val(profile.medicalCategory) }}</span></span>
-                    <span class="detail-item"><span class="detail-label">Mobile No: </span> <span class="detail-value">{{ val(profile.mobileNo) }}</span></span>
-                    <span class="detail-item"><span class="detail-label">Emergency Contact No: </span> <span class="detail-value">{{ val(profile.emergencyContactNo) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">{{ L['field.height'] }} </span> <span class="detail-value">{{ heightDisplay(profile) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">{{ L['field.medicalCategory'] }} </span> <span class="detail-value">{{ codeValue(profile.medicalCategory, profile.medicalCategoryBN) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">{{ L['field.mobileNo'] }} </span> <span class="detail-value">{{ valDisplay(profile.mobileNo) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">{{ L['field.emergencyContactNo'] }} </span> <span class="detail-value">{{ valDisplay(profile.emergencyContactNo) }}</span></span>
                 </div>
                 <div class="core-row core-row-four">
-                    <span class="detail-item"><span class="detail-label">Religion: </span> <span class="detail-value">{{ val(profile.religion) }}</span></span>
-                    <span class="detail-item"><span class="detail-label">Marital Status: </span> <span class="detail-value">{{ val(profile.maritalStatus) }}</span></span>
-                    <span class="detail-item"><span class="detail-label">Weight: </span> <span class="detail-value">{{ weightDisplay(profile) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">{{ L['field.religion'] }} </span> <span class="detail-value">{{ codeValue(profile.religion, profile.religionBN) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">{{ L['field.maritalStatus'] }} </span> <span class="detail-value">{{ codeValue(profile.maritalStatus, profile.maritalStatusBN) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">{{ L['field.weight'] }} </span> <span class="detail-value">{{ weightDisplay(profile) }}</span></span>
                 </div>
                 <div class="core-row core-row-full">
-                    <span class="detail-item"><span class="detail-label">Identification Mark: </span> <span class="detail-value">{{ val(profile.identificationMark) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">{{ L['field.identificationMark'] }} </span> <span class="detail-value">{{ val(profile.identificationMark) }}</span></span>
                 </div>
             </div>
         </div>
 
         <!-- Family Info (excludes in-law relations) -->
         <div class="content-section text-900 border-top-1 surface-border">
-            <div class="section-heading">Family Info:</div>
+            <div class="section-heading">{{ L['section.familyInfo'] }}</div>
             <div class="family-table-wrapper">
                 <p-table
                     [value]="familyInfoList"
@@ -163,27 +163,27 @@
                 >
                     <ng-template pTemplate="header">
                         <tr>
-                            <th style="width: 4rem">Ser</th>
-                            <th>Name</th>
-                            <th>Relation</th>
-                            <th>Date of Birth</th>
-                            <th>Occupation</th>
-                            <th>Mobile No</th>
+                            <th style="width: 4rem">{{ L['table.ser'] }}</th>
+                            <th>{{ L['table.name'] }}</th>
+                            <th>{{ L['table.relation'] }}</th>
+                            <th>{{ L['table.dateOfBirth'] }}</th>
+                            <th>{{ L['table.occupation'] }}</th>
+                            <th>{{ L['table.mobileNo'] }}</th>
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                         <tr>
-                            <td>{{ rowIndex + 1 }}.</td>
-                            <td>{{ val(row.name) }}</td>
-                            <td>{{ val(row.relation) }}</td>
+                            <td>{{ rowNum(rowIndex) }}.</td>
+                            <td>{{ codeValue(row.name, row.nameBN) }}</td>
+                            <td>{{ codeValue(row.relation, row.relationBN) }}</td>
                             <td>{{ formatFamilyDob(row.dateOfBirth) }}</td>
-                            <td>{{ val(row.occupation) }}</td>
+                            <td>{{ codeValue(row.occupation, row.occupationBN) }}</td>
                             <td>{{ familyMobile(row) }}</td>
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="emptymessage">
                         <tr>
-                            <td colspan="6" class="text-center text-500 py-3">No family records.</td>
+                            <td colspan="6" class="text-center text-500 py-3">{{ L['empty.noFamilyRecords'] }}</td>
                         </tr>
                     </ng-template>
                 </p-table>
@@ -192,7 +192,7 @@
 
         <!-- Wife Family Info (relation contains "in-law") -->
         <div class="content-section text-900 border-top-1 surface-border">
-            <div class="section-heading">Wife Family Info:</div>
+            <div class="section-heading">{{ L['section.wifeFamilyInfo'] }}</div>
             <div class="family-table-wrapper">
                 <p-table
                     [value]="wifeFamilyInfoList"
@@ -201,27 +201,27 @@
                 >
                     <ng-template pTemplate="header">
                         <tr>
-                            <th style="width: 4rem">Ser</th>
-                            <th>Name</th>
-                            <th>Relation</th>
-                            <th>Date of Birth</th>
-                            <th>Occupation</th>
-                            <th>Mobile No</th>
+                            <th style="width: 4rem">{{ L['table.ser'] }}</th>
+                            <th>{{ L['table.name'] }}</th>
+                            <th>{{ L['table.relation'] }}</th>
+                            <th>{{ L['table.dateOfBirth'] }}</th>
+                            <th>{{ L['table.occupation'] }}</th>
+                            <th>{{ L['table.mobileNo'] }}</th>
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                         <tr>
-                            <td>{{ rowIndex + 1 }}.</td>
-                            <td>{{ val(row.name) }}</td>
-                            <td>{{ val(row.relation) }}</td>
+                            <td>{{ rowNum(rowIndex) }}.</td>
+                            <td>{{ codeValue(row.name, row.nameBN) }}</td>
+                            <td>{{ codeValue(row.relation, row.relationBN) }}</td>
                             <td>{{ formatFamilyDob(row.dateOfBirth) }}</td>
-                            <td>{{ val(row.occupation) }}</td>
+                            <td>{{ codeValue(row.occupation, row.occupationBN) }}</td>
                             <td>{{ familyMobile(row) }}</td>
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="emptymessage">
                         <tr>
-                            <td colspan="6" class="text-center text-500 py-3">No wife family records.</td>
+                            <td colspan="6" class="text-center text-500 py-3">{{ L['empty.noWifeFamilyRecords'] }}</td>
                         </tr>
                     </ng-template>
                 </p-table>
@@ -230,7 +230,7 @@
 
         <!-- Present RAB Service Info (IsCurrentlyActive = true) -->
         <div class="content-section text-900 border-top-1 surface-border">
-            <div class="section-heading">Present RAB Service Info:</div>
+            <div class="section-heading">{{ L['section.presentRabService'] }}</div>
             <div class="family-table-wrapper">
                 <p-table
                     [value]="presentRabList"
@@ -239,29 +239,29 @@
                 >
                     <ng-template pTemplate="header">
                         <tr>
-                            <th style="width: 4rem">Ser</th>
-                            <th>RAB Unit</th>
-                            <th>Service From</th>
-                            <th>Service To</th>
-                            <th>Appointment</th>
-                            <th>Posting Auth</th>
-                            <th>Remarks</th>
+                            <th style="width: 4rem">{{ L['table.ser'] }}</th>
+                            <th>{{ L['table.rabUnit'] }}</th>
+                            <th>{{ L['table.serviceFrom'] }}</th>
+                            <th>{{ L['table.serviceTo'] }}</th>
+                            <th>{{ L['table.appointment'] }}</th>
+                            <th>{{ L['table.postingAuth'] }}</th>
+                            <th>{{ L['table.remarks'] }}</th>
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                         <tr>
-                            <td>{{ rowIndex + 1 }}.</td>
-                            <td>{{ val(row.rabUnitName) }}</td>
+                            <td>{{ rowNum(rowIndex) }}.</td>
+                            <td>{{ codeValue(row.rabUnitName, row.rabUnitNameBN) }}</td>
                             <td>{{ formatDateOnly(row.serviceFrom) }}</td>
                             <td>{{ formatDateOnly(row.serviceTo) }}</td>
-                            <td>{{ val(row.appointmentName) }}</td>
+                            <td>{{ codeValue(row.appointmentName, row.appointmentNameBN) }}</td>
                             <td>{{ val(row.postingAuth) }}</td>
                             <td>{{ val(row.remarks) }}</td>
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="emptymessage">
                         <tr>
-                            <td colspan="7" class="text-center text-500 py-3">No present RAB service records.</td>
+                            <td colspan="7" class="text-center text-500 py-3">{{ L['empty.noPresentRabRecords'] }}</td>
                         </tr>
                     </ng-template>
                 </p-table>
@@ -270,7 +270,7 @@
 
         <!-- Previous RAB Service Information (IsCurrentlyActive = false) -->
         <div class="content-section text-900 border-top-1 surface-border">
-            <div class="section-heading">Previous RAB Service Information:</div>
+            <div class="section-heading">{{ L['section.previousRabService'] }}</div>
             <div class="family-table-wrapper">
                 <p-table
                     [value]="previousOnlyRabList"
@@ -279,29 +279,29 @@
                 >
                     <ng-template pTemplate="header">
                         <tr>
-                            <th style="width: 4rem">Ser</th>
-                            <th>RAB Unit</th>
-                            <th>Service From</th>
-                            <th>Service To</th>
-                            <th>Appointment</th>
-                            <th>Posting Auth</th>
-                            <th>Remarks</th>
+                            <th style="width: 4rem">{{ L['table.ser'] }}</th>
+                            <th>{{ L['table.rabUnit'] }}</th>
+                            <th>{{ L['table.serviceFrom'] }}</th>
+                            <th>{{ L['table.serviceTo'] }}</th>
+                            <th>{{ L['table.appointment'] }}</th>
+                            <th>{{ L['table.postingAuth'] }}</th>
+                            <th>{{ L['table.remarks'] }}</th>
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                         <tr>
-                            <td>{{ rowIndex + 1 }}.</td>
-                            <td>{{ val(row.rabUnitName) }}</td>
+                            <td>{{ rowNum(rowIndex) }}.</td>
+                            <td>{{ codeValue(row.rabUnitName, row.rabUnitNameBN) }}</td>
                             <td>{{ formatDateOnly(row.serviceFrom) }}</td>
                             <td>{{ formatDateOnly(row.serviceTo) }}</td>
-                            <td>{{ val(row.appointmentName) }}</td>
+                            <td>{{ codeValue(row.appointmentName, row.appointmentNameBN) }}</td>
                             <td>{{ val(row.postingAuth) }}</td>
                             <td>{{ val(row.remarks) }}</td>
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="emptymessage">
                         <tr>
-                            <td colspan="7" class="text-center text-500 py-3">No previous RAB service records.</td>
+                            <td colspan="7" class="text-center text-500 py-3">{{ L['empty.noPreviousRabRecords'] }}</td>
                         </tr>
                     </ng-template>
                 </p-table>
@@ -310,7 +310,7 @@
 
          <!-- Service History (Mother Organization) -->
          <div class="content-section text-900 border-top-1 surface-border">
-            <div class="section-heading">Service History (Mother Organization):</div>
+            <div class="section-heading">{{ L['section.serviceHistoryMo'] }}</div>
             <div class="family-table-wrapper">
                 <p-table
                     [value]="moServHistoryList"
@@ -319,31 +319,31 @@
                 >
                     <ng-template pTemplate="header">
                         <tr>
-                            <th style="width: 4rem">Ser</th>
-                            <th>Organization</th>
-                            <th>Location</th>
-                            <th>Service From</th>
-                            <th>Service To</th>
-                            <th>Appointment</th>
-                            <th>Auth</th>
-                            <th>Remarks</th>
+                            <th style="width: 4rem">{{ L['table.ser'] }}</th>
+                            <th>{{ L['table.organization'] }}</th>
+                            <th>{{ L['table.location'] }}</th>
+                            <th>{{ L['table.serviceFrom'] }}</th>
+                            <th>{{ L['table.serviceTo'] }}</th>
+                            <th>{{ L['table.appointment'] }}</th>
+                            <th>{{ L['table.auth'] }}</th>
+                            <th>{{ L['table.remarks'] }}</th>
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                         <tr>
-                            <td>{{ rowIndex + 1 }}.</td>
+                            <td>{{ rowNum(rowIndex) }}.</td>
                             <td>{{ val(row.organizationName) }}</td>
                             <td>{{ val(row.locationName) }}</td>
                             <td>{{ formatDateOnly(row.serviceFrom) }}</td>
                             <td>{{ formatDateOnly(row.serviceTo) }}</td>
-                            <td>{{ val(row.appointment) }}</td>
+                            <td>{{ codeValue(row.appointment, row.appointmentBN) }}</td>
                             <td>{{ val(row.auth) }}</td>
                             <td>{{ val(row.remarks) }}</td>
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="emptymessage">
                         <tr>
-                            <td colspan="8" class="text-center text-500 py-3">No service history records.</td>
+                            <td colspan="8" class="text-center text-500 py-3">{{ L['empty.noServiceHistoryRecords'] }}</td>
                         </tr>
                     </ng-template>
                 </p-table>
@@ -352,7 +352,7 @@
         
         <!-- Promotion Information -->
         <div class="content-section text-900 border-top-1 surface-border">
-            <div class="section-heading">Promotion Information:</div>
+            <div class="section-heading">{{ L['section.promotion'] }}</div>
             <div class="family-table-wrapper">
                 <p-table
                     [value]="promotionList"
@@ -361,22 +361,22 @@
                 >
                     <ng-template pTemplate="header">
                         <tr>
-                            <th style="width: 4rem">Ser</th>
-                            <th>Previous Rank</th>
-                            <th>Promoted Rank</th>
-                            <th>Promoted Date</th>
-                            <th>From Date</th>
-                            <th>To Date</th>
-                            <th>Probationary Period</th>
-                            <th>Auth</th>
-                            <th>Remarks</th>
+                            <th style="width: 4rem">{{ L['table.ser'] }}</th>
+                            <th>{{ L['table.previousRank'] }}</th>
+                            <th>{{ L['table.promotedRank'] }}</th>
+                            <th>{{ L['table.promotedDate'] }}</th>
+                            <th>{{ L['table.fromDate'] }}</th>
+                            <th>{{ L['table.toDate'] }}</th>
+                            <th>{{ L['table.probationaryPeriod'] }}</th>
+                            <th>{{ L['table.auth'] }}</th>
+                            <th>{{ L['table.remarks'] }}</th>
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                         <tr>
-                            <td>{{ rowIndex + 1 }}.</td>
-                            <td>{{ val(row.previousRank) }}</td>
-                            <td>{{ val(row.promotedRank) }}</td>
+                            <td>{{ rowNum(rowIndex) }}.</td>
+                            <td>{{ codeValue(row.previousRank, row.previousRankBN) }}</td>
+                            <td>{{ codeValue(row.promotedRank, row.promotedRankBN) }}</td>
                             <td>{{ formatDateOnly(row.promotedDate) }}</td>
                             <td>{{ formatDateOnly(row.fromDate) }}</td>
                             <td>{{ formatDateOnly(row.toDate) }}</td>
@@ -387,7 +387,7 @@
                     </ng-template>
                     <ng-template pTemplate="emptymessage">
                         <tr>
-                            <td colspan="9" class="text-center text-500 py-3">No promotion records.</td>
+                            <td colspan="9" class="text-center text-500 py-3">{{ L['empty.noPromotionRecords'] }}</td>
                         </tr>
                     </ng-template>
                 </p-table>
@@ -396,7 +396,7 @@
 
          <!-- Education Information -->
          <div class="content-section text-900 border-top-1 surface-border">
-            <div class="section-heading">Education Information:</div>
+            <div class="section-heading">{{ L['section.education'] }}</div>
             <div class="family-table-wrapper">
                 <p-table
                     [value]="educationList"
@@ -405,33 +405,36 @@
                 >
                     <ng-template pTemplate="header">
                         <tr>
-                            <th style="width: 4rem">Ser</th>
-                            <th>Duration (From - To)</th>
-                            <th>School/College/University</th>
-                            <th>Exam/Degree</th>
-                            <th>Subject/Department</th>
-                            <th>Result</th>
-                            <th>Grade Point</th>
-                            <th>Passing Year</th>
-                            <th>Remarks</th>
+                            <th style="width: 4rem">{{ L['table.ser'] }}</th>
+                            <th>{{ L['table.durationFrom'] }}</th>
+                            <th>{{ L['table.durationTo'] }}</th>
+                            <th>{{ L['table.schoolCollegeUniversity'] }}</th>
+                            <th>{{ L['table.examDegree'] }}</th>
+                            <th>{{ L['table.subjectDepartment'] }}</th>
+                            <th>{{ L['table.result'] }}</th>
+                            <th>{{ L['table.gradePoint'] }}</th>
+                            <th>{{ L['table.passingYear'] }}</th>
+                            <!-- Remarks column hidden in UI (backend still has remarks) -->
+                            <!-- <th>{{ L['table.remarks'] }}</th> -->
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                         <tr>
-                            <td>{{ rowIndex + 1 }}.</td>
-                            <td>{{ formatDateOnly(row.durationFrom) }} - {{ formatDateOnly(row.durationTo) }}</td>
-                            <td>{{ val(row.schoolCollegeUniversity) }}</td>
-                            <td>{{ val(row.nameOfExamDegree) }}</td>
-                            <td>{{ val(row.subjectsDepartments) }}</td>
-                            <td>{{ val(row.result) }}</td>
-                            <td>{{ val(row.gradePoint) }}</td>
-                            <td>{{ val(row.passingYear) }}</td>
-                            <td>{{ val(row.remarks) }}</td>
+                            <td>{{ rowNum(rowIndex) }}.</td>
+                            <td>{{ formatDateOnly(row.durationFrom) }}</td>
+                            <td>{{ formatDateOnly(row.durationTo) }}</td>
+                            <td>{{ codeValue(row.schoolCollegeUniversity, row.schoolCollegeUniversityBN) }}</td>
+                            <td>{{ codeValue(row.nameOfExamDegree, row.nameOfExamDegreeBN) }}</td>
+                            <td>{{ codeValue(row.subjectsDepartments, row.subjectsDepartmentsBN) }}</td>
+                            <td>{{ codeValue(row.result, row.resultBN) }}</td>
+                            <td>{{ valDisplay(row.gradePoint) }}</td>
+                            <td>{{ valDisplay(row.passingYear) }}</td>
+                            <!-- <td>{{ val(row.remarks) }}</td> -->
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="emptymessage">
                         <tr>
-                            <td colspan="9" class="text-center text-500 py-3">No education records.</td>
+                            <td colspan="9" class="text-center text-500 py-3">{{ L['empty.noEducationRecords'] }}</td>
                         </tr>
                     </ng-template>
                 </p-table>
@@ -440,7 +443,7 @@
 
           <!-- Course Information -->
           <div class="content-section text-900 border-top-1 surface-border">
-            <div class="section-heading">Course Information:</div>
+            <div class="section-heading">{{ L['section.course'] }}</div>
             <div class="family-table-wrapper">
                 <p-table
                     [value]="courseList"
@@ -449,22 +452,22 @@
                 >
                     <ng-template pTemplate="header">
                         <tr>
-                            <th style="width: 4rem">Ser</th>
-                            <th>Course Type</th>
-                            <th>Course Name</th>
-                            <th>Training Institute</th>
-                            <th>Date From</th>
-                            <th>Date To</th>
-                            <th>Result</th>
-                            <th>Auth</th>
-                            <th>Remarks</th>
+                            <th style="width: 4rem">{{ L['table.ser'] }}</th>
+                            <th>{{ L['table.courseType'] }}</th>
+                            <th>{{ L['table.courseName'] }}</th>
+                            <th>{{ L['table.trainingInstitute'] }}</th>
+                            <th>{{ L['table.dateFrom'] }}</th>
+                            <th>{{ L['table.dateTo'] }}</th>
+                            <th>{{ L['table.result'] }}</th>
+                            <th>{{ L['table.auth'] }}</th>
+                            <th>{{ L['table.remarks'] }}</th>
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                         <tr>
-                            <td>{{ rowIndex + 1 }}.</td>
-                            <td>{{ val(row.courseType) }}</td>
-                            <td>{{ val(row.courseName) }}</td>
+                            <td>{{ rowNum(rowIndex) }}.</td>
+                            <td>{{ codeValue(row.courseType, row.courseTypeBN) }}</td>
+                            <td>{{ codeValue(row.courseName, row.courseNameBN) }}</td>
                             <td>{{ val(row.trainingInstituteName) }}</td>
                             <td>{{ formatDateOnly(row.dateFrom) }}</td>
                             <td>{{ formatDateOnly(row.dateTo) }}</td>
@@ -475,7 +478,7 @@
                     </ng-template>
                     <ng-template pTemplate="emptymessage">
                         <tr>
-                            <td colspan="9" class="text-center text-500 py-3">No course records.</td>
+                            <td colspan="9" class="text-center text-500 py-3">{{ L['empty.noCourseRecords'] }}</td>
                         </tr>
                     </ng-template>
                 </p-table>
@@ -484,25 +487,25 @@
 
         <!-- Investigation Experience -->
         <div class="content-section text-900 border-top-1 surface-border">
-            <div class="section-heading">Investigation Experience:</div>
+            <div class="section-heading">{{ L['section.investigation'] }}</div>
             <div class="core-details">
                 @if (profile?.hasInvestigationExp === true) {
                     <div class="core-row core-row-full">
-                        <span class="detail-item"><span class="detail-label">Details: </span> <span class="detail-value">{{ val(profile.investigationExpDetails) }}</span></span>
+                        <span class="detail-item"><span class="detail-label">{{ L['field.details'] }} </span> <span class="detail-value">{{ val(profile.investigationExpDetails) }}</span></span>
                     </div>
                 } @else {
-                    <div class="address-empty text-500 py-2">No investigation experience recorded.</div>
+                    <div class="address-empty text-500 py-2">{{ L['empty.noInvestigationRecorded'] }}</div>
                 }
             </div>
         </div>
 
         <!-- Foreign Visit Information -->
         <div class="content-section text-900 border-top-1 surface-border">
-            <div class="section-heading">Foreign Visit Information:</div>
+            <div class="section-heading">{{ L['section.foreignVisit'] }}</div>
 
             <!-- Official Foreign Visit -->
             <div class="foreign-visit-subsection">
-                <div class="subsection-heading">Official Foreign Visit</div>
+                <div class="subsection-heading">{{ L['section.officialForeignVisit'] }}</div>
                 <div class="family-table-wrapper">
                     <p-table
                         [value]="officialForeignVisitList"
@@ -511,27 +514,27 @@
                     >
                         <ng-template pTemplate="header">
                             <tr>
-                                <th style="width: 4rem">Ser</th>
-                                <th>Country</th>
-                                <th>Duration From</th>
-                                <th>Duration To</th>
-                                <th>Reason for Visiting</th>
-                                <th>Related Documents</th>
+                                <th style="width: 4rem">{{ L['table.ser'] }}</th>
+                                <th>{{ L['table.country'] }}</th>
+                                <th>{{ L['table.durationFrom'] }}</th>
+                                <th>{{ L['table.durationTo'] }}</th>
+                                <th>{{ L['table.reasonForVisiting'] }}</th>
+                                <th>{{ L['table.relatedDocuments'] }}</th>
                             </tr>
                         </ng-template>
                         <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                             <tr>
-                                <td>{{ rowIndex + 1 }}.</td>
-                                <td>{{ val(row.nameOfCountry) }}</td>
-                                <td>{{ formatDateTime(row.durationFrom) }}</td>
-                                <td>{{ formatDateTime(row.durationTo) }}</td>
-                                <td>{{ val(row.reasonForVisiting) }}</td>
+                                <td>{{ rowNum(rowIndex) }}.</td>
+                                <td>{{ codeValue(row.nameOfCountry, row.nameOfCountryBN) }}</td>
+                                <td>{{ formatDateOnly(row.durationFrom) }}</td>
+                                <td>{{ formatDateOnly(row.durationTo) }}</td>
+                                <td>{{ codeValue(row.reasonForVisiting, row.reasonForVisitingBN) }}</td>
                                 <td>{{ val(row.relatedDocuments) }}</td>
                             </tr>
                         </ng-template>
                         <ng-template pTemplate="emptymessage">
                             <tr>
-                                <td colspan="6" class="text-center text-500 py-3">No official foreign visit records.</td>
+                                <td colspan="6" class="text-center text-500 py-3">{{ L['empty.noOfficialForeignVisit'] }}</td>
                             </tr>
                         </ng-template>
                     </p-table>
@@ -540,7 +543,7 @@
 
             <!-- Unofficial Foreign Visit -->
             <div class="foreign-visit-subsection">
-                <div class="subsection-heading">Unofficial Foreign Visit</div>
+                <div class="subsection-heading">{{ L['section.unofficialForeignVisit'] }}</div>
                 <div class="family-table-wrapper">
                     <p-table
                         [value]="unofficialForeignVisitList"
@@ -549,27 +552,27 @@
                     >
                         <ng-template pTemplate="header">
                             <tr>
-                                <th style="width: 4rem">Ser</th>
-                                <th>Country</th>
-                                <th>Duration From</th>
-                                <th>Duration To</th>
-                                <th>Reason for Visiting</th>
-                                <th>Related Documents</th>
+                                <th style="width: 4rem">{{ L['table.ser'] }}</th>
+                                <th>{{ L['table.country'] }}</th>
+                                <th>{{ L['table.durationFrom'] }}</th>
+                                <th>{{ L['table.durationTo'] }}</th>
+                                <th>{{ L['table.reasonForVisiting'] }}</th>
+                                <th>{{ L['table.relatedDocuments'] }}</th>
                             </tr>
                         </ng-template>
                         <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                             <tr>
-                                <td>{{ rowIndex + 1 }}.</td>
-                                <td>{{ val(row.nameOfCountry) }}</td>
-                                <td>{{ formatDateTime(row.durationFrom) }}</td>
-                                <td>{{ formatDateTime(row.durationTo) }}</td>
-                                <td>{{ val(row.reasonForVisiting) }}</td>
+                                <td>{{ rowNum(rowIndex) }}.</td>
+                                <td>{{ codeValue(row.nameOfCountry, row.nameOfCountryBN) }}</td>
+                                <td>{{ formatDateOnly(row.durationFrom) }}</td>
+                                <td>{{ formatDateOnly(row.durationTo) }}</td>
+                                <td>{{ codeValue(row.reasonForVisiting, row.reasonForVisitingBN) }}</td>
                                 <td>{{ val(row.relatedDocuments) }}</td>
                             </tr>
                         </ng-template>
                         <ng-template pTemplate="emptymessage">
                             <tr>
-                                <td colspan="6" class="text-center text-500 py-3">No unofficial foreign visit records.</td>
+                                <td colspan="6" class="text-center text-500 py-3">{{ L['empty.noUnofficialForeignVisit'] }}</td>
                             </tr>
                         </ng-template>
                     </p-table>
@@ -580,12 +583,12 @@
         <!-- Leave (Current Year) -->
         <div class="content-section text-900 border-top-1 surface-border">
             <div class="section-heading flex align-items-center gap-2">
-                <span>Leave ({{ currentYear }})</span>
+                <span>{{ L['section.leave'] }} ({{ currentYearDisplay }})</span>
                 <i
                     class="pi pi-info-circle cursor-pointer text-primary"
-                    pTooltip="Previous Year Leave Summary"
+                    [pTooltip]="L['tooltip.viewPreviousYearLeaveSummary']"
                     (click)="openPreviousYearLeaveSummary()"
-                    aria-label="View previous year leave summary"
+                    [attr.aria-label]="L['tooltip.viewPreviousYearLeaveSummary']"
                 ></i>
             </div>
             <div class="family-table-wrapper">
@@ -596,23 +599,23 @@
                 >
                     <ng-template pTemplate="header">
                         <tr>
-                            <th style="width: 4rem">Ser</th>
-                            <th>Type of Leave</th>
-                            <th>Duration From</th>
-                            <th>Duration To</th>
+                            <th style="width: 4rem">{{ L['table.ser'] }}</th>
+                            <th>{{ L['table.typeOfLeave'] }}</th>
+                            <th>{{ L['table.durationFrom'] }}</th>
+                            <th>{{ L['table.durationTo'] }}</th>
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                         <tr>
-                            <td>{{ rowIndex + 1 }}.</td>
-                            <td>{{ val(row.typeOfLeave) }}</td>
+                            <td>{{ rowNum(rowIndex) }}.</td>
+                            <td>{{ codeValue(row.typeOfLeave, row.typeOfLeaveBN) }}</td>
                             <td>{{ formatDateOnly(row.durationFrom) }}</td>
                             <td>{{ formatDateOnly(row.durationTo) }}</td>
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="emptymessage">
                         <tr>
-                            <td colspan="4" class="text-center text-500 py-3">No leave records for current year.</td>
+                            <td colspan="4" class="text-center text-500 py-3">{{ L['empty.noLeaveCurrentYear'] }}</td>
                         </tr>
                     </ng-template>
                 </p-table>
@@ -621,7 +624,7 @@
 
         <!-- Discipline Information -->
         <div class="content-section text-900 border-top-1 surface-border">
-            <div class="section-heading">Discipline Information:</div>
+            <div class="section-heading">{{ L['section.discipline'] }}</div>
             <div class="family-table-wrapper">
                 <p-table
                     [value]="disciplineList"
@@ -630,29 +633,29 @@
                 >
                     <ng-template pTemplate="header">
                         <tr>
-                            <th style="width: 4rem">Ser</th>
-                            <th>Offense Date</th>
-                            <th>Offense Type</th>
-                            <th>Brief Statement</th>
-                            <th>Offense Details</th>
-                            <th>Punishment (RAB)</th>
-                            <th>Punishment Date</th>
-                            <th>Punishment (MO)</th>
-                            <th>Punishment Date (MO)</th>
-                            <th>Auth</th>
-                            <th>Remarks</th>
+                            <th style="width: 4rem">{{ L['table.ser'] }}</th>
+                            <th>{{ L['table.offenseDate'] }}</th>
+                            <th>{{ L['table.offenseType'] }}</th>
+                            <th>{{ L['table.briefStatement'] }}</th>
+                            <th>{{ L['table.offenseDetails'] }}</th>
+                            <th>{{ L['table.punishmentRab'] }}</th>
+                            <th>{{ L['table.punishmentDate'] }}</th>
+                            <th>{{ L['table.punishmentMo'] }}</th>
+                            <th>{{ L['table.punishmentDateMo'] }}</th>
+                            <th>{{ L['table.auth'] }}</th>
+                            <th>{{ L['table.remarks'] }}</th>
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                         <tr>
-                            <td>{{ rowIndex + 1 }}.</td>
+                            <td>{{ rowNum(rowIndex) }}.</td>
                             <td>{{ formatDateOnly(row.offenseDate) }}</td>
-                            <td>{{ val(row.offenseType) }}</td>
-                            <td>{{ val(row.briefStatementOfOffence) }}</td>
+                            <td>{{ codeValue(row.offenseType, row.offenseTypeBN) }}</td>
+                            <td>{{ codeValue(row.briefStatementOfOffence, row.briefStatementOfOffenceBN) }}</td>
                             <td>{{ val(row.offenseDetails) }}</td>
-                            <td>{{ val(row.punishmentTypeRAB) }}</td>
+                            <td>{{ codeValue(row.punishmentTypeRAB, row.punishmentTypeRABBN) }}</td>
                             <td>{{ formatDateOnly(row.punishmentDate) }}</td>
-                            <td>{{ val(row.punishmentTypeMotherOrg) }}</td>
+                            <td>{{ codeValue(row.punishmentTypeMotherOrg, row.punishmentTypeMotherOrgBN) }}</td>
                             <td>{{ formatDateOnly(row.punishmentDateMotherOrg) }}</td>
                             <td>{{ val(row.auth) }}</td>
                             <td>{{ val(row.remarks) }}</td>
@@ -660,7 +663,7 @@
                     </ng-template>
                     <ng-template pTemplate="emptymessage">
                         <tr>
-                            <td colspan="11" class="text-center text-500 py-3">No discipline records.</td>
+                            <td colspan="11" class="text-center text-500 py-3">{{ L['empty.noDisciplineRecords'] }}</td>
                         </tr>
                     </ng-template>
                 </p-table>
@@ -669,7 +672,7 @@
 
           <!-- Bank Account Information -->
           <div class="content-section text-900 border-top-1 surface-border">
-            <div class="section-heading">Bank Account Information:</div>
+            <div class="section-heading">{{ L['section.bankAccount'] }}</div>
             <div class="family-table-wrapper">
                 <p-table
                     [value]="bankAccList"
@@ -678,27 +681,27 @@
                 >
                     <ng-template pTemplate="header">
                         <tr>
-                            <th style="width: 4rem">Ser</th>
-                            <th>Bank Name</th>
-                            <th>Branch Name</th>
-                            <th>Account Name</th>
-                            <th>Account Number</th>
-                            <th>Remarks</th>
+                            <th style="width: 4rem">{{ L['table.ser'] }}</th>
+                            <th>{{ L['table.bankName'] }}</th>
+                            <th>{{ L['table.branchName'] }}</th>
+                            <th>{{ L['table.accountName'] }}</th>
+                            <th>{{ L['table.accountNumber'] }}</th>
+                            <th>{{ L['table.remarks'] }}</th>
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                         <tr>
-                            <td>{{ rowIndex + 1 }}.</td>
-                            <td>{{ val(row.bankName) }}</td>
-                            <td>{{ val(row.branchName) }}</td>
-                            <td>{{ val(row.accountName) }}</td>
-                            <td>{{ val(row.accountNumber) }}</td>
+                            <td>{{ rowNum(rowIndex) }}.</td>
+                            <td>{{ codeValue(row.bankName, row.bankNameBN) }}</td>
+                            <td>{{ codeValue(row.branchName, row.branchNameBN) }}</td>
+                            <td>{{ codeValue(row.accountName, row.accountNameBN) }}</td>
+                            <td>{{ valDisplay(row.accountNumber) }}</td>
                             <td>{{ val(row.remarks) }}</td>
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="emptymessage">
                         <tr>
-                            <td colspan="6" class="text-center text-500 py-3">No bank account records.</td>
+                            <td colspan="6" class="text-center text-500 py-3">{{ L['empty.noBankAccountRecords'] }}</td>
                         </tr>
                     </ng-template>
                 </p-table>
@@ -708,7 +711,7 @@
 
         <!-- Additional Remarks -->
         <div class="content-section text-900 border-top-1 surface-border">
-            <div class="section-heading">Additional Remarks:</div>
+            <div class="section-heading">{{ L['section.additionalRemarks'] }}</div>
             <div class="family-table-wrapper">
                 <p-table
                     [value]="additionalRemarksList"
@@ -717,19 +720,19 @@
                 >
                     <ng-template pTemplate="header">
                         <tr>
-                            <th style="width: 4rem">Ser</th>
-                            <th>Additional Remarks</th>
+                            <th style="width: 4rem">{{ L['table.ser'] }}</th>
+                            <th>{{ L['table.additionalRemarks'] }}</th>
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                         <tr>
-                            <td>{{ rowIndex + 1 }}.</td>
+                            <td>{{ rowNum(rowIndex) }}.</td>
                             <td>{{ val(row.additionalRemarks) }}</td>
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="emptymessage">
                         <tr>
-                            <td colspan="2" class="text-center text-500 py-3">No additional remarks.</td>
+                            <td colspan="2" class="text-center text-500 py-3">{{ L['empty.noAdditionalRemarks'] }}</td>
                         </tr>
                     </ng-template>
                 </p-table>
@@ -738,9 +741,9 @@
 
         <!-- Documents (files from PersonalInfo, EmployeeInfo, PreviousRABServiceInfo, etc.) -->
         <div class="content-section text-900 border-top-1 surface-border">
-            <div class="section-heading">Documents</div>
+            <div class="section-heading">{{ L['section.documents'] }}</div>
             @if (documentList.length === 0) {
-                <div class="text-500 py-2">No documents.</div>
+                <div class="text-500 py-2">{{ L['empty.noDocuments'] }}</div>
             } @else {
                 <p-table
                     [value]="documentList"
@@ -749,34 +752,34 @@
                 >
                     <ng-template pTemplate="header">
                         <tr>
-                            <th style="width: 2rem">#</th>
-                            <th>Section</th>
-                            <th>File Name</th>
-                            <th style="width: 8rem">Action</th>
+                            <th style="width: 2rem">{{ L['table.hash'] }}</th>
+                            <th>{{ L['table.section'] }}</th>
+                            <th>{{ L['table.fileName'] }}</th>
+                            <th style="width: 8rem">{{ L['table.action'] }}</th>
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                         <tr>
-                            <td>{{ rowIndex + 1 }}.</td>
+                            <td>{{ rowNum(rowIndex) }}.</td>
                             <td>{{ getDocumentSourceLabel(row) }}</td>
                             <td>{{ getDocumentFileName(row) }}</td>
                             <td>
                                 <p-button
                                     icon="pi pi-download"
-                                    label="Download"
+                                    [label]="L['button.download']"
                                     [rounded]="true"
                                     [text]="true"
                                     severity="secondary"
                                     size="small"
                                     (onClick)="downloadDocument(row)"
-                                    pTooltip="Download file"
+                                    [pTooltip]="L['tooltip.downloadFile']"
                                 ></p-button>
                             </td>
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="emptymessage">
                         <tr>
-                            <td colspan="4" class="text-center text-500 py-3">No documents.</td>
+                            <td colspan="4" class="text-center text-500 py-3">{{ L['empty.noDocuments'] }}</td>
                         </tr>
                     </ng-template>
                 </p-table>
@@ -785,13 +788,13 @@
         
        
     } @else if (!loading) {
-        <p class="text-500 m-0">No profile data available.</p>
+        <p class="text-500 m-0">{{ L['empty.noProfileData'] }}</p>
     }
 </div>
 
 <!-- Previous Year Leave Summary Dialog -->
 <p-dialog
-    header="Previous Year Leave Summary ({{ previousYear }})"
+    [header]="L['dialog.previousYearLeaveSummary'] + ' (' + previousYearDisplay + ')'"
     [(visible)]="previousYearSummaryDialogVisible"
     [modal]="true"
     [style]="{ width: '28rem' }"
@@ -811,19 +814,19 @@
         >
             <ng-template pTemplate="header">
                 <tr>
-                    <th>Type of Leave</th>
-                    <th style="width: 5rem">Count</th>
+                    <th>{{ L['table.typeOfLeave'] }}</th>
+                    <th style="width: 5rem">{{ L['table.count'] }}</th>
                 </tr>
             </ng-template>
             <ng-template pTemplate="body" let-row>
                 <tr>
                     <td>{{ val(row.typeOfLeave) }}</td>
-                    <td>{{ row.count }}</td>
+                    <td>{{ valDisplay(row.count) }}</td>
                 </tr>
             </ng-template>
             <ng-template pTemplate="emptymessage">
                 <tr>
-                    <td colspan="2" class="text-center text-500 py-2">No leave records for previous year.</td>
+                    <td colspan="2" class="text-center text-500 py-2">{{ L['empty.noLeavePreviousYear'] }}</td>
                 </tr>
             </ng-template>
         </p-table>
