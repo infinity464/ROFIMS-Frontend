@@ -98,6 +98,8 @@ import { PdfUploadComponent } from '@/Components/Features/pdf-vault/pdf-upload/p
 import { PdfSearchComponent } from '@/Components/Features/pdf-vault/pdf-search/pdf-search.component';
 import { PdfDocumentListComponent } from '@/Components/Features/pdf-vault/pdf-document-list/pdf-document-list.component';
 import { PdfViewerComponent } from '@/Components/Features/pdf-vault/pdf-viewer/pdf-viewer.component';
+import { PdfImageSearchComponent } from '@/Components/Features/pdf-vault/pdf-image-search/pdf-image-search.component';
+import { ImageUploadComponent } from '@/Components/Features/pdf-vault/image-upload/image-upload.component';
 
 export const appRoutes: Routes = [
     // Public routes
@@ -206,6 +208,10 @@ export const appRoutes: Routes = [
             { path: 'pdf-vault/upload', component: PdfUploadComponent },
             { path: 'pdf-vault/documents', component: PdfDocumentListComponent },
             { path: 'pdf-vault/view/:id', component: PdfViewerComponent },
+
+            // Image Vault
+            { path: 'image-vault/upload', component: ImageUploadComponent },
+            { path: 'image-vault/find', component: PdfImageSearchComponent },
 
             { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
             { path: 'documentation', component: Documentation },

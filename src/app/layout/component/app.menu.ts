@@ -203,6 +203,14 @@ export class AppMenu {
                 ]
             },
             {
+                label: 'Image Vault',
+                icon: 'pi pi-fw pi-image',
+                items: [
+                    { label: 'Upload Image', icon: 'pi pi-fw pi-upload', routerLink: ['/image-vault/upload'] },
+                    { label: 'Find Image', icon: 'pi pi-fw pi-search', routerLink: ['/image-vault/find'] }
+                ]
+            },
+            {
                 label: 'User Manage',
                 icon: 'pi pi-fw pi-users',
                 items: [

@@ -3,7 +3,7 @@
     <ng-template #header>
       <div class="card-header">
         <i class="pi pi-upload"></i>
-        <span>Upload PDF Document</span>
+        <span>Upload Image to Vault</span>
       </div>
     </ng-template>
 
@@ -16,30 +16,21 @@
       @if (!selectedFile) {
         <div class="drop-zone-content">
           <i class="pi pi-cloud-upload drop-icon"></i>
-          <p>Drag & drop a PDF file here or</p>
-          <input #fileInput type="file" accept=".pdf" (change)="onFileSelected($event)" hidden>
+          <p>Drag & drop an image here or</p>
+          <input #fileInput type="file" accept=".png,.jpg,.jpeg,.tif,.tiff,.bmp" (change)="onFileSelected($event)" hidden>
           <p-button label="Browse Files" icon="pi pi-folder-open" severity="info" [outlined]="true" (onClick)="fileInput.click()" />
+          <p class="hint">Supported formats: PNG, JPEG, TIFF, BMP</p>
         </div>
       } @else {
         <div class="file-info">
-          <i class="pi pi-file-pdf file-icon"></i>
+          @if (imagePreviewUrl) {
+            <img [src]="imagePreviewUrl" alt="Preview" class="image-preview" />
+          }
           <p class="file-name">{{ selectedFile.name }}</p>
           <p class="file-size">{{ (selectedFile.size / 1024 / 1024).toFixed(2) }} MB</p>
           <p-button label="Remove" icon="pi pi-times" severity="danger" size="small" [outlined]="true" (onClick)="clearSelection()" />
         </div>
       }
-    </div>
-
-    <div class="tags-input">
-      <label for="tags">Tags (comma-separated):</label>
-      <input
-        type="text"
-        pInputText
-        id="tags"
-        [(ngModel)]="tagsInput"
-        placeholder="e.g., Leave, Transfer, Official"
-        [disabled]="isUploading"
-        class="w-full">
     </div>
 
     @if (uploadError) {
@@ -52,12 +43,12 @@
     @if (uploadSuccess) {
       <div class="alert-success">
         <i class="pi pi-check-circle"></i>
-        Document uploaded successfully! It will be indexed shortly.
+        Image uploaded successfully to the vault!
       </div>
     }
 
     <p-button
-      label="Upload Document"
+      label="Upload Image"
       icon="pi pi-upload"
       severity="success"
       (onClick)="upload()"

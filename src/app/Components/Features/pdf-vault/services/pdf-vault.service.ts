@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, timeout } from 'rxjs';
 import { PdfDocument, PdfDocumentList, PageText, PdfTag } from '../models/document.model';
-import { SearchResult } from '../models/search.model';
+import { SearchResult, ImageDocument, ImageFindResult } from '../models/search.model';
 import { environment } from '@/Core/Environments/environment';
 
 @Injectable({
@@ -66,5 +66,26 @@ export class PdfVaultService {
 
   getTags(): Observable<PdfTag[]> {
     return this.http.get<PdfTag[]>(`${this.baseUrl}/tags`);
+  }
+
+  // Image Vault
+  uploadImage(file: File): Observable<ImageDocument> {
+    const formData = new FormData();
+    formData.append('image', file);
+    return this.http.post<ImageDocument>(`${this.baseUrl}/image-vault`, formData).pipe(
+      timeout(60000)
+    );
+  }
+
+  findImage(file: File): Observable<ImageFindResult> {
+    const formData = new FormData();
+    formData.append('image', file);
+    return this.http.post<ImageFindResult>(`${this.baseUrl}/image-vault/find`, formData).pipe(
+      timeout(60000)
+    );
+  }
+
+  getImageFileUrl(id: string): string {
+    return `${this.baseUrl}/image-vault/${id}/file`;
   }
 }

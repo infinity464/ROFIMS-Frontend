@@ -21,3 +21,22 @@ export interface SearchResultItem {
   score: number;
   tags: string[];
 }
+
+export interface ImageDocument {
+  id: string;
+  originalFileName: string;
+  fileSize: number;
+  uploadedAt: string;
+}
+
+export interface ImageDocumentList {
+  images: ImageDocument[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface ImageFindResult {
+  found: boolean;
+  image?: ImageDocument;
+}
