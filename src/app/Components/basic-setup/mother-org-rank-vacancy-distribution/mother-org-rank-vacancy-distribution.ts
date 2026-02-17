@@ -3,7 +3,9 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { FormsModule } from '@angular/forms';
 import { MasterBasicSetupService } from '../shared/services/MasterBasicSetupService';
 import { ConfirmationService, MessageService } from 'primeng/api';
+import { TreeNode } from 'primeng/api';
 import { Fluid } from 'primeng/fluid';
+import { TreeModule } from 'primeng/tree';
 import { DataTable } from '../shared/componets/data-table/data-table';
 import { SelectModule } from 'primeng/select';
 import { InputTextModule } from 'primeng/inputtext';
@@ -26,6 +28,7 @@ import { OrganizationModel } from '../organization-setup/models/organization';
         ReactiveFormsModule,
         FormsModule,
         Fluid,
+        TreeModule,
         DataTable,
         SelectModule,
         InputTextModule,
@@ -34,6 +37,7 @@ import { OrganizationModel } from '../organization-setup/models/organization';
         ConfirmDialogModule
     ],
     templateUrl: './mother-org-rank-vacancy-distribution.html',
+    styleUrls: ['./mother-org-rank-vacancy-distribution.scss'],
     providers: [MessageService, ConfirmationService]
 })
 export class MotherOrgRankVacancyDistributionComponent implements OnInit {
@@ -44,7 +48,9 @@ export class MotherOrgRankVacancyDistributionComponent implements OnInit {
     totalVacancy = 0;
     distributedTotal = 0;
 
-    rabOptions: { label: string; value: number }[] = [];
+    rabTreeNodes: TreeNode[] = [];
+    selectedRabNode: TreeNode | null = null;
+    rabTreeLoading = false;
     rabNameById: Record<number, string> = {};
     orgById: Record<number, OrganizationModel> = {};
     rankNameByKey: Record<string, string> = {};
@@ -75,7 +81,7 @@ export class MotherOrgRankVacancyDistributionComponent implements OnInit {
     ngOnInit(): void {
         this.initForm();
         this.loadVacancyList();
-        this.loadRabOptions();
+        this.loadRabTree();
     }
 
     initForm(): void {
@@ -114,47 +120,86 @@ export class MotherOrgRankVacancyDistributionComponent implements OnInit {
         });
     }
 
-    loadRabOptions(): void {
+    loadRabTree(): void {
+        this.rabTreeLoading = true;
         this.masterBasicSetupService.getAllByType('RabUnit').subscribe({
             next: (units) => {
                 const uList = units ?? [];
-                const options: { label: string; value: number }[] = uList.map((u) => {
-                    this.rabNameById[u.codeId] = `${u.codeValueEN ?? ''} (Unit)`;
-                    return { label: `${u.codeValueEN ?? ''} (Unit)`, value: u.codeId };
-                });
-                if (uList.length === 0) {
-                    this.rabOptions = options;
+                if (!uList.length) {
+                    this.rabTreeNodes = [];
+                    this.rabTreeLoading = false;
                     return;
                 }
                 const wingReqs = uList.map((u) => this.masterBasicSetupService.getByParentId(u.codeId));
                 forkJoin(wingReqs).subscribe({
-                    next: (wingArrays) => {
-                        const allWings = wingArrays.flat() as CommonCode[];
-                        allWings.forEach((w) => {
-                            options.push({ label: `${w.codeValueEN ?? ''} (Wing)`, value: w.codeId });
-                            this.rabNameById[w.codeId] = `${w.codeValueEN ?? ''} (Wing)`;
-                        });
+                    next: (wingsPerUnit) => {
+                        const allWings = wingsPerUnit.flat() as CommonCode[];
                         if (allWings.length === 0) {
-                            this.rabOptions = options;
-                            this.buildRabNameById(options);
+                            this.rabTreeNodes = uList.map((u) => {
+                                this.rabNameById[u.codeId] = `${u.codeValueEN ?? ''} (Unit)`;
+                                return {
+                                    label: `${u.codeValueEN ?? ''} (0)`,
+                                    data: { codeId: u.codeId, codeType: 'RabUnit' },
+                                    children: []
+                                } as TreeNode;
+                            });
+                            this.rabTreeLoading = false;
+                            if (this.selectedVacancy) this.loadDistribution();
                             return;
                         }
                         const branchReqs = allWings.map((w) => this.masterBasicSetupService.getByParentId(w.codeId));
                         forkJoin(branchReqs).subscribe({
-                            next: (branchArrays) => {
-                                (branchArrays.flat() as CommonCode[]).forEach((b) => {
-                                    options.push({ label: `${b.codeValueEN ?? ''} (Branch)`, value: b.codeId });
-                                    this.rabNameById[b.codeId] = `${b.codeValueEN ?? ''} (Branch)`;
-                                });
-                                this.rabOptions = options;
-                                this.buildRabNameById(options);
+                            next: (branchesPerWing) => {
+                                this.rabTreeNodes = this.buildRabTree(uList, wingsPerUnit, branchesPerWing);
+                                this.rabTreeLoading = false;
                                 if (this.selectedVacancy) this.loadDistribution();
-                            }
+                            },
+                            error: () => { this.rabTreeLoading = false; }
                         });
-                    }
+                    },
+                    error: () => { this.rabTreeLoading = false; }
                 });
-            }
+            },
+            error: () => { this.rabTreeLoading = false; }
         });
+    }
+
+    private buildRabTree(
+        units: CommonCode[],
+        wingsPerUnit: CommonCode[][],
+        branchesPerWing: CommonCode[][]
+    ): TreeNode[] {
+        let wingIndex = 0;
+        return units.map((unit) => {
+            this.rabNameById[unit.codeId] = `${unit.codeValueEN ?? ''} (Unit)`;
+            const wings = wingsPerUnit[units.indexOf(unit)] || [];
+            const children: TreeNode[] = wings.map((wing) => {
+                this.rabNameById[wing.codeId] = `${wing.codeValueEN ?? ''} (Wing)`;
+                const branches = branchesPerWing[wingIndex] || [];
+                wingIndex += 1;
+                const branchNodes: TreeNode[] = (branches as CommonCode[]).map((b) => {
+                    this.rabNameById[b.codeId] = `${b.codeValueEN ?? ''} (Branch)`;
+                    return { label: b.codeValueEN ?? '', data: { codeId: b.codeId, codeType: 'RabBranch' } } as TreeNode;
+                });
+                return {
+                    label: `${wing.codeValueEN ?? ''} (${branches.length})`,
+                    data: { codeId: wing.codeId, codeType: 'RabWing' },
+                    children: branchNodes
+                } as TreeNode;
+            });
+            return {
+                label: `${unit.codeValueEN ?? ''} (${wings.length})`,
+                data: { codeId: unit.codeId, codeType: 'RabUnit' },
+                children
+            } as TreeNode;
+        });
+    }
+
+    onRabNodeSelect(node: TreeNode): void {
+        const codeId = node?.data?.codeId;
+        if (codeId != null) {
+            this.distributionForm.patchValue({ rabCodeId: codeId });
+        }
     }
 
     onSelectVacancy(v: (MotherOrgRankVacancyModel & { orgName?: string; rankName?: string }) | null): void {
@@ -218,6 +263,7 @@ export class MotherOrgRankVacancyDistributionComponent implements OnInit {
                 if (res.statusCode === 200) {
                     this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Added' });
                     this.distributionForm.patchValue({ rabCodeId: null, quantity: null });
+                    this.selectedRabNode = null;
                     this.loadDistribution();
                 } else {
                     this.messageService.add({ severity: 'warn', summary: 'Warning', detail: res.description ?? 'Save failed' });
@@ -257,7 +303,4 @@ export class MotherOrgRankVacancyDistributionComponent implements OnInit {
         this.messageService.add({ severity: 'info', summary: 'Edit', detail: 'Change quantity by deleting and re-adding, or add an edit form as needed.' });
     }
 
-    private buildRabNameById(options: { label: string; value: number }[]): void {
-        options.forEach((o) => (this.rabNameById[o.value] = o.label));
     }
-}
