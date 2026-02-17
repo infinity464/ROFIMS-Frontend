@@ -1,0 +1,28 @@
+<p-fluid>
+    <div class="card">
+        <div class="font-semibold text-xl mb-5">{{ title }}</div>
+        <p class="text-color-secondary mb-4">
+            Define total vacancy (number of members) per Mother Organization and Rank. Then distribute them to RAB Unit/Wing/Branch from the Distribution page.
+        </p>
+        <app-dynamic-form
+            [config]="formConfig"
+            [form]="vacancyForm"
+            [editingId]="editingKeys ? 1 : null"
+            (save)="submit($event)"
+            (reset)="resetForm()"
+            [isSubmitting]="isSubmitting">
+        </app-dynamic-form>
+    </div>
+    <app-data-table
+        [config]="tableConfig"
+        [data]="vacancyData"
+        [first]="first"
+        [totalRecords]="totalRecords"
+        [rows]="rows"
+        [loading]="loading"
+        (edit)="update($event)"
+        (delete)="delete($event.row, $event.event)"
+        (lazyLoad)="onLazyLoad()"
+        (search)="onSearch($event)">
+    </app-data-table>
+</p-fluid>

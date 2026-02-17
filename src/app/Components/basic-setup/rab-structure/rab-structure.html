@@ -1,0 +1,22 @@
+<p-fluid>
+    <div class="card">
+        <div class="font-semibold text-xl mb-4">RAB Structure</div>
+        <p class="text-color-secondary mb-4">
+            Unit → Wing → Branch hierarchy. Expand or collapse nodes using the icons.
+        </p>
+        @if (loading) {
+            <div class="flex align-items-center gap-2 p-4">
+                <i class="pi pi-spin pi-spinner"></i>
+                <span>Loading structure…</span>
+            </div>
+        } @else {
+            <div class="rab-structure-tree">
+                <p-tree
+                    [value]="treeNodes"
+                    [loading]="loading"
+                    styleClass="rab-structure-tree-content">
+                </p-tree>
+            </div>
+        }
+    </div>
+</p-fluid>

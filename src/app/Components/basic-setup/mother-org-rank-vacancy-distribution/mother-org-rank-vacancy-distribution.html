@@ -1,0 +1,80 @@
+<p-fluid>
+    <p-toast />
+    <p-confirmDialog />
+    <div class="card">
+        <div class="font-semibold text-xl mb-4">{{ title }}</div>
+        <p class="text-color-secondary mb-4">
+            Select a vacancy (Mother Org + Rank), then add distribution rows to allocate that vacancy to RAB Unit, Wing, or Branch. Total distributed cannot exceed the defined vacancy.
+        </p>
+        <div class="grid mb-4">
+            <div class="col-12 md:col-6">
+                <label class="block mb-2 font-medium">Select Vacancy (Mother Org + Rank)</label>
+                <p-select
+                    [options]="vacancyList"
+                    [(ngModel)]="selectedVacancy"
+                    optionLabel="rankName"
+                    [placeholder]="'Select vacancy'"
+                    [filter]="true"
+                    filterBy="orgName,rankName"
+                    (ngModelChange)="onSelectVacancy($event)"
+                    styleClass="w-full">
+                    <ng-template let-v pTemplate="item">
+                        <span>{{ v.orgName }} → {{ v.rankName }} ({{ v.totalVacancy }})</span>
+                    </ng-template>
+                    <ng-template let-v pTemplate="label">
+                        <span>{{ v?.orgName }} → {{ v?.rankName }}</span>
+                    </ng-template>
+                </p-select>
+            </div>
+        </div>
+        @if (selectedVacancy) {
+            <div class="grid mb-4">
+                <div class="col-12 md:col-4">
+                    <span class="font-medium">Total Vacancy:</span>
+                    <span class="ml-2">{{ totalVacancy }}</span>
+                </div>
+                <div class="col-12 md:col-4">
+                    <span class="font-medium">Distributed:</span>
+                    <span class="ml-2" [class.text-orange-500]="distributedTotal > totalVacancy">{{ distributedTotal }}</span>
+                </div>
+            </div>
+            <form [formGroup]="distributionForm" class="grid mb-4">
+                <div class="col-12 md:col-4">
+                    <label class="block mb-2 font-medium">RAB Unit / Wing / Branch</label>
+                    <p-select
+                        formControlName="rabCodeId"
+                        [options]="rabOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Select"
+                        styleClass="w-full">
+                    </p-select>
+                </div>
+                <div class="col-12 md:col-2">
+                    <label class="block mb-2 font-medium">Quantity</label>
+                    <input
+                        type="number"
+                        pInputText
+                        class="w-full"
+                        formControlName="quantity"
+                        min="0"
+                        placeholder="0" />
+                </div>
+                <div class="col-12 md:col-2 flex align-items-end">
+                    <p-button label="Add" icon="pi pi-plus" (onClick)="addDistribution()" [loading]="isSubmitting"></p-button>
+                </div>
+            </form>
+            <app-data-table
+                [config]="tableConfig"
+                [data]="distributionData"
+                [first]="first"
+                [totalRecords]="totalRecords"
+                [rows]="rows"
+                [loading]="loading"
+                (edit)="editDistribution($event.row)"
+                (delete)="deleteDistribution($event.row, $event.event)"
+                (lazyLoad)="loadDistribution()">
+            </app-data-table>
+        }
+    </div>
+</p-fluid>
