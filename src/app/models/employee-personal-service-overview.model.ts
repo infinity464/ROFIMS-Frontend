@@ -10,6 +10,7 @@ export interface EmployeePersonalServiceOverview {
     prefix: string | null;
     prefixBN?: string | null;
     nameEnglish: string | null;
+    nameBN?: string | null;
     appointmentId: number | null;
     appointment: string | null;
     appointmentBN?: string | null;
@@ -18,6 +19,7 @@ export interface EmployeePersonalServiceOverview {
     memberTypeBN?: string | null;
     motherOrganizationId: number | null;
     motherOrganization: string | null;
+    motherOrganizationBN?: string | null;
     armyRankId: number | null;
     armyRank: string | null;
     armyRankBN?: string | null;
@@ -35,7 +37,9 @@ export interface EmployeePersonalServiceOverview {
     dateOfJoiningInServiceTraining: string | null;
     motherUnitId: number | null;
     motherUnit: string | null;
+    motherUnitBN?: string | null;
     location: string | null;
+    locationBN?: string | null;
     rabUnitId: number | null;
     rabUnit: string | null;
     rabUnitBN?: string | null;

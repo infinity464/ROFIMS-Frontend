@@ -32,12 +32,12 @@
                     <span class="detail-item"><span class="detail-label">{{ L['field.rabId'] }}  </span> <span class="detail-value">{{ valDisplay(profile.rabId) }}</span></span>
                 </div>
                 <div class="core-row core-row-full">
-                    <span class="detail-item"><span class="detail-label">{{ L['field.nameEnglish'] }} </span> <span class="detail-value">{{ getFormattedName(profile) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">{{ isBn ? L['field.nameBangla'] : L['field.nameEnglish'] }} </span> <span class="detail-value">{{ getFormattedName(profile) }}</span></span>
                 </div>
                 <div class="core-row core-row-four">
                     <span class="detail-item"><span class="detail-label">{{ L['field.appointment'] }} </span> <span class="detail-value">{{ codeValue(profile.appointment, profile.appointmentBN) }}</span></span>
                     <span class="detail-item"><span class="detail-label">{{ L['field.memberType'] }} </span> <span class="detail-value">{{ codeValue(profile.memberType, profile.memberTypeBN) }}</span></span>
-                    <span class="detail-item"><span class="detail-label">{{ L['field.motherOrganization'] }} </span> <span class="detail-value">{{ val(profile.motherOrganization) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">{{ L['field.motherOrganization'] }} </span> <span class="detail-value">{{ codeValue(profile.motherOrganization, profile.motherOrganizationBN) }}</span></span>
                     <span class="detail-item"><span class="detail-label">{{ L['field.rank'] }} </span> <span class="detail-value">{{ codeValue(profile.armyRank, profile.armyRankBN) }}</span></span>
                 </div>
                 <div class="core-row core-row-four">
@@ -47,8 +47,8 @@
                 </div>
                 <div class="core-row core-row-three">
                     <span class="detail-item"><span class="detail-label">{{ L['field.dateOfJoiningInServiceTraining'] }} </span> <span class="detail-value">{{ formatDateDisplay(profile.dateOfJoiningInServiceTraining) }}</span></span>
-                    <span class="detail-item"><span class="detail-label">{{ L['field.motherUnit'] }} </span> <span class="detail-value">{{ val(profile.motherUnit) }}</span></span>
-                    <span class="detail-item"><span class="detail-label">{{ L['field.location'] }} </span> <span class="detail-value">{{ val(profile.location) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">{{ L['field.motherUnit'] }} </span> <span class="detail-value">{{ codeValue(profile.motherUnit, profile.motherUnitBN) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">{{ L['field.location'] }} </span> <span class="detail-value">{{ codeValue(profile.location, profile.locationBN) }}</span></span>
                 </div>
                 <div class="core-row">
                     <span class="detail-item"><span class="detail-label">{{ L['field.rabUnit'] }} </span> <span class="detail-value">{{ codeValue(profile.rabUnit, profile.rabUnitBN) }}</span></span>
@@ -689,9 +689,9 @@
                     <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                         <tr>
                             <td>{{ rowNum(rowIndex) }}.</td>
-                            <td>{{ val(row.bankName) }}</td>
-                            <td>{{ val(row.branchName) }}</td>
-                            <td>{{ val(row.accountName) }}</td>
+                            <td>{{ codeValue(row.bankName, row.bankNameBN) }}</td>
+                            <td>{{ codeValue(row.branchName, row.branchNameBN) }}</td>
+                            <td>{{ codeValue(row.accountName, row.accountNameBN) }}</td>
                             <td>{{ valDisplay(row.accountNumber) }}</td>
                             <td>{{ val(row.remarks) }}</td>
                         </tr>
