@@ -174,7 +174,7 @@
                     <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                         <tr>
                             <td>{{ rowNum(rowIndex) }}.</td>
-                            <td>{{ val(row.name) }}</td>
+                            <td>{{ codeValue(row.name, row.nameBN) }}</td>
                             <td>{{ codeValue(row.relation, row.relationBN) }}</td>
                             <td>{{ formatFamilyDob(row.dateOfBirth) }}</td>
                             <td>{{ codeValue(row.occupation, row.occupationBN) }}</td>
@@ -212,7 +212,7 @@
                     <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                         <tr>
                             <td>{{ rowNum(rowIndex) }}.</td>
-                            <td>{{ val(row.name) }}</td>
+                            <td>{{ codeValue(row.name, row.nameBN) }}</td>
                             <td>{{ codeValue(row.relation, row.relationBN) }}</td>
                             <td>{{ formatFamilyDob(row.dateOfBirth) }}</td>
                             <td>{{ codeValue(row.occupation, row.occupationBN) }}</td>
@@ -406,27 +406,30 @@
                     <ng-template pTemplate="header">
                         <tr>
                             <th style="width: 4rem">{{ L['table.ser'] }}</th>
-                            <th>{{ L['table.durationFromTo'] }}</th>
+                            <th>{{ L['table.durationFrom'] }}</th>
+                            <th>{{ L['table.durationTo'] }}</th>
                             <th>{{ L['table.schoolCollegeUniversity'] }}</th>
                             <th>{{ L['table.examDegree'] }}</th>
                             <th>{{ L['table.subjectDepartment'] }}</th>
                             <th>{{ L['table.result'] }}</th>
                             <th>{{ L['table.gradePoint'] }}</th>
                             <th>{{ L['table.passingYear'] }}</th>
-                            <th>{{ L['table.remarks'] }}</th>
+                            <!-- Remarks column hidden in UI (backend still has remarks) -->
+                            <!-- <th>{{ L['table.remarks'] }}</th> -->
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                         <tr>
                             <td>{{ rowNum(rowIndex) }}.</td>
-                            <td>{{ formatDateOnly(row.durationFrom) }} - {{ formatDateOnly(row.durationTo) }}</td>
+                            <td>{{ formatDateOnly(row.durationFrom) }}</td>
+                            <td>{{ formatDateOnly(row.durationTo) }}</td>
                             <td>{{ codeValue(row.schoolCollegeUniversity, row.schoolCollegeUniversityBN) }}</td>
                             <td>{{ codeValue(row.nameOfExamDegree, row.nameOfExamDegreeBN) }}</td>
                             <td>{{ codeValue(row.subjectsDepartments, row.subjectsDepartmentsBN) }}</td>
                             <td>{{ codeValue(row.result, row.resultBN) }}</td>
                             <td>{{ valDisplay(row.gradePoint) }}</td>
                             <td>{{ valDisplay(row.passingYear) }}</td>
-                            <td>{{ val(row.remarks) }}</td>
+                            <!-- <td>{{ val(row.remarks) }}</td> -->
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="emptymessage">
@@ -523,8 +526,8 @@
                             <tr>
                                 <td>{{ rowNum(rowIndex) }}.</td>
                                 <td>{{ codeValue(row.nameOfCountry, row.nameOfCountryBN) }}</td>
-                                <td>{{ formatDateTime(row.durationFrom) }}</td>
-                                <td>{{ formatDateTime(row.durationTo) }}</td>
+                                <td>{{ formatDateOnly(row.durationFrom) }}</td>
+                                <td>{{ formatDateOnly(row.durationTo) }}</td>
                                 <td>{{ codeValue(row.reasonForVisiting, row.reasonForVisitingBN) }}</td>
                                 <td>{{ val(row.relatedDocuments) }}</td>
                             </tr>
@@ -561,8 +564,8 @@
                             <tr>
                                 <td>{{ rowNum(rowIndex) }}.</td>
                                 <td>{{ codeValue(row.nameOfCountry, row.nameOfCountryBN) }}</td>
-                                <td>{{ formatDateTime(row.durationFrom) }}</td>
-                                <td>{{ formatDateTime(row.durationTo) }}</td>
+                                <td>{{ formatDateOnly(row.durationFrom) }}</td>
+                                <td>{{ formatDateOnly(row.durationTo) }}</td>
                                 <td>{{ codeValue(row.reasonForVisiting, row.reasonForVisitingBN) }}</td>
                                 <td>{{ val(row.relatedDocuments) }}</td>
                             </tr>
