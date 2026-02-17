@@ -16,7 +16,6 @@
 .toolbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   padding: 8px 16px;
   background-color: #2c3e50;
   color: white;
@@ -46,77 +45,10 @@
 .document-name {
   font-weight: 500;
   font-size: 14px;
-  max-width: 280px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   opacity: 0.9;
-}
-
-.toolbar-controls {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-}
-
-.page-controls, .zoom-controls {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background-color: rgba(255, 255, 255, 0.1);
-  padding: 4px 8px;
-  border-radius: 6px;
-
-  button {
-    padding: 5px 10px;
-    background-color: rgba(255, 255, 255, 0.15);
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 13px;
-    transition: background-color 0.2s;
-
-    &:hover:not(:disabled) {
-      background-color: rgba(255, 255, 255, 0.25);
-    }
-
-    &:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-    }
-  }
-}
-
-.page-info {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 13px;
-
-  input {
-    width: 48px;
-    padding: 4px;
-    text-align: center;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 4px;
-    background-color: rgba(255, 255, 255, 0.1);
-    color: white;
-    font-size: 13px;
-
-    &:focus {
-      outline: none;
-      border-color: #3498db;
-      background-color: rgba(255, 255, 255, 0.2);
-    }
-  }
-}
-
-.zoom-level {
-  min-width: 45px;
-  text-align: center;
-  font-size: 13px;
-  font-weight: 500;
 }
 
 .loading, .error {
@@ -163,45 +95,14 @@
   }
 }
 
-/* Continuous scroll container */
-.pdf-scroller {
+.pdf-frame {
   flex: 1;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 20px 20px 40px;
-  gap: 16px;
-  background-color: #e8eaed;
+  width: 100%;
+  border: none;
   min-height: 0;
 }
 
-/* Individual page wrapper */
-.page-wrapper {
-  position: relative;
-  background-color: #fff;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
-  border-radius: 2px;
-  flex-shrink: 0;
-
-  canvas {
-    display: block;
-    max-width: none;
-  }
-}
-
-/* Placeholder label shown before page renders */
-.page-label {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 14px;
-  color: #999;
-  user-select: none;
-}
-
-/* ─── Dark Mode ─── */
+/* Dark Mode */
 :host-context(.app-dark) {
   .pdf-viewer-container {
     background-color: #1e1e2e;
@@ -210,18 +111,6 @@
   .toolbar {
     background-color: #1a1a2e;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-  }
-
-  .pdf-scroller {
-    background-color: #2a2a3a;
-  }
-
-  .page-wrapper {
-    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.4);
-  }
-
-  .page-label {
-    color: #666;
   }
 
   .loading, .error {

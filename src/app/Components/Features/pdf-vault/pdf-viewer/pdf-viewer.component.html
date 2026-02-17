@@ -5,29 +5,6 @@
     @if (document) {
       <span class="document-name">{{ document.originalFileName }}</span>
     }
-
-    <div class="toolbar-controls">
-      <div class="page-controls">
-        <button (click)="previousPage()" [disabled]="currentPage <= 1">◀</button>
-        <span class="page-info">
-          <input
-            type="number"
-            [value]="currentPage"
-            (change)="onPageInputChange($event)"
-            min="1"
-            [max]="totalPages">
-          / {{ totalPages }}
-        </span>
-        <button (click)="nextPage()" [disabled]="currentPage >= totalPages">▶</button>
-      </div>
-
-      <div class="zoom-controls">
-        <button (click)="zoomOut()" title="Zoom Out">−</button>
-        <span class="zoom-level">{{ (scale * 100).toFixed(0) }}%</span>
-        <button (click)="zoomIn()" title="Zoom In">+</button>
-        <button (click)="resetZoom()" title="Reset Zoom">Reset</button>
-      </div>
-    </div>
   </div>
 
   @if (isLoading) {
@@ -44,5 +21,7 @@
     </div>
   }
 
-  <div class="pdf-scroller" #pdfScroller></div>
+  @if (pdfUrl) {
+    <iframe [src]="pdfUrl" class="pdf-frame"></iframe>
+  }
 </div>
