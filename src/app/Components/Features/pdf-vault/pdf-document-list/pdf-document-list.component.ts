@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { CardModule } from 'primeng/card';
-import { TableModule } from 'primeng/table';
+import { TableModule, TableLazyLoadEvent } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
 import { PdfVaultService } from '../services/pdf-vault.service';
@@ -18,11 +18,11 @@ import { PdfDocument } from '../models/document.model';
 export class PdfDocumentListComponent implements OnInit {
   documents: PdfDocument[] = [];
   totalCount = 0;
-  currentPage = 1;
+  first = 0;
   pageSize = 20;
-  totalPages = 0;
   isLoading = true;
   error = '';
+  private initialLoadDone = false;
 
   constructor(
     private pdfVaultService: PdfVaultService,
@@ -30,23 +30,36 @@ export class PdfDocumentListComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.loadDocuments();
+    this.loadDocuments(1);
   }
 
-  loadDocuments(page: number = 1): void {
+  onPageChange(event: TableLazyLoadEvent): void {
+    // Skip the initial lazy load event since ngOnInit already loads page 1
+    if (!this.initialLoadDone) {
+      return;
+    }
+    const first = event.first ?? 0;
+    const rows = event.rows ?? this.pageSize;
+    this.first = first;
+    this.pageSize = rows;
+    const page = Math.floor(first / rows) + 1;
+    this.loadDocuments(page);
+  }
+
+  loadDocuments(page: number): void {
     this.isLoading = true;
-    this.currentPage = page;
 
     this.pdfVaultService.getDocuments(page, this.pageSize).subscribe({
       next: (result) => {
         this.documents = result.documents;
         this.totalCount = result.totalCount;
-        this.totalPages = Math.ceil(result.totalCount / this.pageSize);
         this.isLoading = false;
+        this.initialLoadDone = true;
       },
       error: (err) => {
         this.error = 'Failed to load documents';
         this.isLoading = false;
+        this.initialLoadDone = true;
         console.error('Error loading documents:', err);
       }
     });
@@ -59,9 +72,10 @@ export class PdfDocumentListComponent implements OnInit {
   deleteDocument(doc: PdfDocument, event: Event): void {
     event.stopPropagation();
     if (confirm(`Are you sure you want to delete "${doc.originalFileName}"?`)) {
+      const page = Math.floor(this.first / this.pageSize) + 1;
       this.pdfVaultService.deleteDocument(doc.id).subscribe({
         next: () => {
-          this.loadDocuments(this.currentPage);
+          this.loadDocuments(page);
         },
         error: (err) => {
           console.error('Error deleting document:', err);
@@ -78,12 +92,6 @@ export class PdfDocumentListComponent implements OnInit {
       case 'processing': return 'info';
       case 'error': return 'danger';
       default: return 'secondary';
-    }
-  }
-
-  goToPage(page: number): void {
-    if (page >= 1 && page <= this.totalPages) {
-      this.loadDocuments(page);
     }
   }
 }

@@ -194,19 +194,13 @@ export class AppMenu {
                 ]
             },
             {
-                label: 'PDF Vault',
-                icon: 'pi pi-fw pi-file-pdf',
+                label: 'Files Management',
+                icon: 'pi pi-fw pi-folder',
                 items: [
                     { label: 'Search Documents', icon: 'pi pi-fw pi-search', routerLink: ['/pdf-vault/search'] },
                     { label: 'Upload PDF', icon: 'pi pi-fw pi-upload', routerLink: ['/pdf-vault/upload'] },
-                    { label: 'All Documents', icon: 'pi pi-fw pi-list', routerLink: ['/pdf-vault/documents'] }
-                ]
-            },
-            {
-                label: 'Image Vault',
-                icon: 'pi pi-fw pi-image',
-                items: [
-                    { label: 'Upload Image', icon: 'pi pi-fw pi-upload', routerLink: ['/image-vault/upload'] },
+                    { label: 'All Documents', icon: 'pi pi-fw pi-list', routerLink: ['/pdf-vault/documents'] },
+                    { label: 'Upload Image', icon: 'pi pi-fw pi-image', routerLink: ['/image-vault/upload'] },
                     { label: 'Find Image', icon: 'pi pi-fw pi-search', routerLink: ['/image-vault/find'] }
                 ]
             },

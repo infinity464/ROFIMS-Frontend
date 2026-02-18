@@ -74,4 +74,8 @@ export class PdfViewerComponent implements OnInit, OnDestroy {
   goBack(): void {
     this.router.navigate(['/pdf-vault/search']);
   }
+
+  goToDocuments(): void {
+    this.router.navigate(['/pdf-vault/documents']);
+  }
 }

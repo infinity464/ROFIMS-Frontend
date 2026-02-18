@@ -1,6 +1,7 @@
 <div class="pdf-viewer-container">
   <div class="toolbar">
     <button class="btn-back" (click)="goBack()">← Back to Search</button>
+    <button class="btn-back btn-secondary" (click)="goToDocuments()">← Back to File List</button>
 
     @if (document) {
       <span class="document-name">{{ document.originalFileName }}</span>

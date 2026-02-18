@@ -7,7 +7,7 @@
     </div>
   </ng-template>
 
-  @if (isLoading) {
+  @if (isLoading && totalCount === 0) {
     <div class="loading">
       <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
       <p>Loading documents...</p>
@@ -21,19 +21,29 @@
     </div>
   }
 
-  @if (!isLoading && documents.length === 0 && !error) {
+  @if (!isLoading && totalCount === 0 && !error) {
     <div class="no-documents">
       <i class="pi pi-inbox" style="font-size: 2.5rem; color: var(--text-color-secondary)"></i>
       <p>No documents found. Upload some PDFs to get started!</p>
     </div>
   }
 
-  @if (!isLoading && documents.length > 0) {
+  @if (totalCount > 0) {
     <p-table
       [value]="documents"
       [tableStyle]="{ 'min-width': '60rem' }"
       styleClass="p-datatable-striped"
-      [rowHover]="true">
+      [rowHover]="true"
+      [lazy]="true"
+      [paginator]="true"
+      [rows]="pageSize"
+      [totalRecords]="totalCount"
+      [first]="first"
+      [rowsPerPageOptions]="[10, 20, 50]"
+      [showCurrentPageReport]="true"
+      currentPageReportTemplate="Showing {first} to {last} of {totalRecords} documents"
+      [loading]="isLoading"
+      (onLazyLoad)="onPageChange($event)">
 
       <ng-template #header>
         <tr>
@@ -77,15 +87,5 @@
         </tr>
       </ng-template>
     </p-table>
-
-    @if (totalPages > 1) {
-      <div class="pagination">
-        <p-button icon="pi pi-angle-double-left" [outlined]="true" size="small" (onClick)="goToPage(1)" [disabled]="currentPage === 1" />
-        <p-button icon="pi pi-angle-left" [outlined]="true" size="small" (onClick)="goToPage(currentPage - 1)" [disabled]="currentPage === 1" />
-        <span class="page-info">Page {{ currentPage }} of {{ totalPages }}</span>
-        <p-button icon="pi pi-angle-right" [outlined]="true" size="small" (onClick)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages" />
-        <p-button icon="pi pi-angle-double-right" [outlined]="true" size="small" (onClick)="goToPage(totalPages)" [disabled]="currentPage === totalPages" />
-      </div>
-    }
   }
 </p-card>
