@@ -1,0 +1,66 @@
+<p-fluid>
+  <div class="card">
+    <div class="font-semibold text-xl mb-5">{{ title }} Setup</div>
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+        <div>
+          <label for="name" class="block mb-2">Name <span class="text-red-500">*</span></label>
+          <input pInputText id="name" formControlName="name" placeholder="Template name" class="w-full" />
+          @if (form.get('name')?.invalid && form.get('name')?.touched) {
+            <small class="text-red-500 block mt-1">Name is required</small>
+          }
+        </div>
+        <div>
+          <label for="status" class="block mb-2">Status</label>
+          <p-selectButton formControlName="status" [options]="[{ label: 'Active', value: true }, { label: 'Inactive', value: false }]" optionLabel="label" optionValue="value" />
+        </div>
+        <div class="flex items-end">
+          <div class="flex align-items-center gap-2">
+            <p-checkbox formControlName="isRelatedToEmployee" [binary]="true" inputId="isRel" />
+            <label for="isRel">Related to Employee</label>
+          </div>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 gap-4 mb-4">
+        <div>
+          <label for="mainTextEn" class="block mb-2">Main Text (English)</label>
+          <textarea pTextarea id="mainTextEn" formControlName="mainTextEn" rows="4" class="w-full"></textarea>
+        </div>
+        <div>
+          <label for="mainTextBn" class="block mb-2">Main Text (Bangla)</label>
+          <textarea pTextarea id="mainTextBn" formControlName="mainTextBn" rows="4" class="w-full"></textarea>
+        </div>
+        <div>
+          <label for="remarks" class="block mb-2">Remarks</label>
+          <textarea pTextarea id="remarks" formControlName="remarks" rows="2" class="w-full"></textarea>
+        </div>
+        @if (isRelatedToEmployee) {
+          <div>
+            <label for="selJson" class="block mb-2">Selected Employee (JSON)</label>
+            <textarea pTextarea id="selJson" formControlName="selectedEmployeeJson" rows="3" class="w-full"></textarea>
+          </div>
+          <div>
+            <label for="appJson" class="block mb-2">Approver Chain (JSON)</label>
+            <textarea pTextarea id="appJson" formControlName="approverChainJson" rows="3" class="w-full"></textarea>
+          </div>
+        }
+      </div>
+      <div class="flex gap-2 justify-end mb-4">
+        <p-button type="submit" [label]="editingId ? 'Update' : 'Save'" [disabled]="form.invalid || isSubmitting" [loading]="isSubmitting" />
+        <p-button type="button" label="Reset" severity="secondary" (click)="resetForm()" [disabled]="isSubmitting" />
+      </div>
+    </form>
+  </div>
+  <app-data-table
+    [config]="tableConfig"
+    [data]="tableData"
+    [first]="first"
+    [totalRecords]="totalRecords"
+    [rows]="rows"
+    [loading]="loading"
+    (edit)="update($event)"
+    (delete)="delete($event.row, $event.event)"
+    (lazyLoad)="onLazyLoad($event)"
+    (search)="onSearch($event)">
+  </app-data-table>
+</p-fluid>

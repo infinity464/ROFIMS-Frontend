@@ -1,0 +1,253 @@
+<!-- "runtime.lastError: Could not establish connection" in console is from a browser extension, not this app. -->
+<p-fluid>
+  <p-toast></p-toast>
+  <div class="card">
+    @if (editMode && editLoadFailed) {
+      <div class="p-4 surface-100 border-round mb-4">
+        <p class="font-semibold text-900 m-0 mb-2">Could not load note sheet for update</p>
+        <p class="text-600 m-0 mb-3">If you see "Content unavailable" or empty fields, open this page from the Draft list so data loads correctly.</p>
+        <a [routerLink]="['/notesheet-list/draft']" class="p-button p-button-outlined">Go to Draft Note-Sheet List</a>
+        <span class="ml-2 text-sm text-500">Then click <strong>Update</strong> on the draft you want to edit.</span>
+      </div>
+    }
+    @if (editLoading) {
+      <div class="flex align-items-center justify-content-center p-4"><i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i><span class="ml-2">Loading note sheet...</span></div>
+    } @else {
+    <div class="font-semibold text-xl mb-4">{{ title }}</div>
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <div class="notesheet-form-table">
+        <div class="notesheet-row">
+          <div class="notesheet-label">{{ isBangla ? 'মন্তব্যপত্রের পাঠের ধরন' : 'Note-Sheet Text Type' }}</div>
+          <div class="notesheet-input-desc">
+            <p-select
+              formControlName="textType"
+              [options]="textTypeOptions"
+              optionLabel="label"
+              optionValue="value"
+              [placeholder]="isBangla ? 'বাংলা/ইংরেজি নির্বাচন করুন' : 'Bangla/English (Auto Select)'"
+              styleClass="w-full">
+            </p-select>
+            <span class="text-500 text-sm ml-2">{{ isBangla ? 'বাংলা/ইংরেজি (স্বয়ং নির্বাচন)' : 'Bangla/English (Auto Select)' }}</span>
+          </div>
+        </div>
+        <div class="notesheet-row">
+          <div class="notesheet-label">{{ isBangla ? 'তারিখ নির্বাচন করুন' : 'Select Date' }}</div>
+          <div class="notesheet-input-desc">
+            <p-datepicker formControlName="noteSheetDate" dateFormat="dd/mm/yy" styleClass="w-full" [placeholder]="isBangla ? 'তারিখ নির্বাচন করুন' : 'Select date'"></p-datepicker>
+            <span class="text-500 text-sm ml-2">{{ isBangla ? 'তারিখ পিকার' : 'Date Picker' }}</span>
+          </div>
+        </div>
+        <div class="notesheet-row">
+          <div class="notesheet-label">{{ isBangla ? 'উইং/ব্যাটালিয়ন' : 'Wing/Battalion' }}</div>
+          <div class="notesheet-input-desc">
+            <p-select
+              formControlName="wingBattalionId"
+              [options]="wingOptionsDisplay"
+              optionLabel="label"
+              optionValue="value"
+              [placeholder]="isBangla ? 'অ্যাডমিন অ্যান্ড ফাইন্যান্স উইং (স্বয়ং সেট)' : 'Admin & Finance Wing (Auto Set)'"
+              styleClass="w-full">
+            </p-select>
+            <span class="text-500 text-sm ml-2">{{ isBangla ? 'স্বয়ং সেট' : 'Auto Set' }}</span>
+          </div>
+        </div>
+        <div class="notesheet-row">
+          <div class="notesheet-label">{{ isBangla ? 'শাখার নাম' : 'Branch Name' }}</div>
+          <div class="notesheet-input-desc">
+            <p-select
+              formControlName="branchId"
+              [options]="branchOptionsDisplay"
+              optionLabel="label"
+              optionValue="value"
+              [placeholder]="isBangla ? 'পার্সোনাল ব্র (স্বয়ং সেট)' : 'Personal Br (Auto Set)'"
+              styleClass="w-full">
+            </p-select>
+            <span class="text-500 text-sm ml-2">{{ isBangla ? 'স্বয়ং সেট' : 'Auto Set' }}</span>
+          </div>
+        </div>
+        <div class="notesheet-row">
+          <div class="notesheet-label">{{ isBangla ? 'সূত্র নম্বর' : 'Reference Number' }}</div>
+          <div class="notesheet-input-desc">
+            <input pInputText formControlName="referenceNumber" [placeholder]="isBangla ? 'স্বয়ং নির্বাচন/হাতে লিখুন' : 'Auto Select/Manual Type'" class="w-full" />
+            <span class="text-500 text-sm ml-2">{{ isBangla ? 'স্বয়ং নির্বাচন/হাতে লিখুন' : 'Auto Select/Manual Type' }}</span>
+          </div>
+        </div>
+        <div class="notesheet-row">
+          <div class="notesheet-label">{{ isBangla ? 'মন্তব্যপত্র নম্বর' : 'Note Sheet No' }}</div>
+          <div class="notesheet-input-desc">
+            <input pInputText formControlName="noteSheetNo" [placeholder]="isBangla ? 'স্বয়ং তৈরি/হাতে লিখুন' : 'Auto Generated/Manual Type'" class="w-full" />
+            <span class="text-500 text-sm ml-2">{{ isBangla ? 'স্বয়ং তৈরি/হাতে লিখুন' : 'Auto Generated/Manual Type' }}</span>
+          </div>
+        </div>
+        <div class="notesheet-row">
+          <div class="notesheet-label">RAB ID</div>
+          <div class="notesheet-input-desc w-full">
+            <app-employee-search
+              (onEmployeeFound)="onEmployeeSelected($event)"
+              (onSearchReset)="onEmployeeSelected(null)">
+            </app-employee-search>
+            <span class="text-500 text-sm mt-1 block">{{ isBangla ? 'RAB ID নির্বাচন করলে প্রয়োজনীয় বিবরণ স্বয়ং যোগ হবে' : 'When Select RAB ID automatically add require details' }}</span>
+          </div>
+        </div>
+        <div class="notesheet-row">
+          <div class="notesheet-label">{{ isBangla ? 'বিষয়' : 'Subject' }}</div>
+          <div class="notesheet-input-desc">
+            <input pInputText formControlName="subject" [placeholder]="isBangla ? 'স্বয়ং নির্বাচন/হাতে লিখুন' : 'Auto Select/Manual Type'" class="w-full" />
+            @if (form.get('subject')?.invalid && form.get('subject')?.touched) {
+              <small class="text-red-500 block mt-1">{{ isBangla ? 'বিষয় আবশ্যক' : 'Subject is required' }}</small>
+            }
+            <span class="text-500 text-sm ml-2">{{ isBangla ? 'স্বয়ং নির্বাচন/হাতে লিখুন' : 'Auto Select/Manual Type' }}</span>
+          </div>
+        </div>
+        <div class="notesheet-row">
+          <div class="notesheet-label">{{ isBangla ? 'এক্স-বিডি ছুটির উদ্দেশ্য' : 'Purpose of Ex BD Leave' }}</div>
+          <div class="notesheet-input-desc">
+            <p-select
+              formControlName="purposeOfExBdLeaveId"
+              [options]="purposeOptionsDisplay"
+              optionLabel="label"
+              optionValue="value"
+              [placeholder]="isBangla ? 'ড্রপ ডাউন থেকে নির্বাচন করুন' : 'Auto Select from Drop Down'"
+              styleClass="w-full">
+            </p-select>
+            <span class="text-500 text-sm ml-2">{{ isBangla ? 'ড্রপ ডাউন থেকে নির্বাচন' : 'Auto Select from Drop Down' }}</span>
+          </div>
+        </div>
+        <div class="notesheet-row">
+          <div class="notesheet-label">{{ isBangla ? 'গন্তব্য দেশ' : 'Destination Country' }}</div>
+          <div class="notesheet-input-desc">
+            <p-select
+              formControlName="destinationCountryId"
+              [options]="countryOptionsDisplay"
+              optionLabel="label"
+              optionValue="value"
+              [placeholder]="isBangla ? 'ড্রপ ডাউন থেকে নির্বাচন করুন' : 'Auto Select from Drop Down'"
+              styleClass="w-full">
+            </p-select>
+            <span class="text-500 text-sm ml-2">{{ isBangla ? 'ড্রপ ডাউন থেকে নির্বাচন' : 'Auto Select from Drop Down' }}</span>
+          </div>
+        </div>
+        <div class="notesheet-row">
+          <div class="notesheet-label">{{ isBangla ? 'সফরের তারিখ' : 'Date of Visit' }}</div>
+          <div class="notesheet-input-desc flex flex-wrap gap-3">
+            <div class="flex flex-column gap-1">
+              <label class="text-sm font-medium">{{ isBangla ? 'থেকে' : 'From' }}</label>
+              <p-datepicker formControlName="dateOfVisitFrom" dateFormat="dd/mm/yy" styleClass="w-full" [placeholder]="isBangla ? 'তারিখ' : 'Date'"></p-datepicker>
+            </div>
+            <div class="flex flex-column gap-1">
+              <label class="text-sm font-medium">{{ isBangla ? 'পর্যন্ত' : 'To' }}</label>
+              <p-datepicker formControlName="dateOfVisitTo" dateFormat="dd/mm/yy" styleClass="w-full" [placeholder]="isBangla ? 'তারিখ' : 'Date'"></p-datepicker>
+            </div>
+            <span class="text-500 text-sm ml-2">{{ isBangla ? 'তারিখ পিকার' : 'Date Picker' }}</span>
+          </div>
+        </div>
+        <div class="notesheet-row">
+          <div class="notesheet-label">{{ isBangla ? 'মোট দিন' : 'Total Days' }}</div>
+          <div class="notesheet-input-desc">
+            <input pInputText formControlName="totalDays" type="number" readonly class="w-full max-w-8rem" />
+            <span class="text-500 text-sm ml-2">{{ isBangla ? 'স্বয়ং গণনা' : 'Auto Count' }}</span>
+          </div>
+        </div>
+        <div class="notesheet-row">
+          <div class="notesheet-label">{{ isBangla ? 'পরিবারের সদস্য যোগ করুন (প্রযোজ্য হলে)' : 'Add Family Member (If Applicable)' }}</div>
+          <div class="notesheet-input-desc">
+            <p-multiselect
+              formControlName="familyMemberIds"
+              [options]="familyMemberOptions"
+              optionLabel="label"
+              optionValue="value"
+              [placeholder]="isBangla ? 'পরিবারের তালিকা থেকে নির্বাচন করুন' : 'Auto Select from Family List'"
+              [disabled]="!selectedEmployeeId"
+              styleClass="w-full">
+            </p-multiselect>
+            <span class="text-500 text-sm ml-2">{{ isBangla ? 'পরিবারের তালিকা থেকে নির্বাচন (প্রথমে RAB ID নির্বাচন করুন)' : 'Auto Select from Family List (Select RAB ID first)' }}</span>
+          </div>
+        </div>
+        <div class="notesheet-row notesheet-row-maintext">
+          <div class="notesheet-label">{{ isBangla ? 'মূল পাঠ' : 'Main Text' }}</div>
+          <div class="notesheet-input-desc">
+            <p-editor formControlName="mainText" [style]="{ height: '220px' }" [placeholder]="isBangla ? 'টেক্সট এডিটর দিয়ে বিষয়বস্তু যোগ করুন...' : 'Add content using the text editor...'"></p-editor>
+            <span class="text-500 text-sm mt-1 block">{{ isBangla ? 'অনুচ্ছেদ (টেক্সট এডিটর দিয়ে আরও যোগ করুন)' : 'Paragraph (Add more by Text Editor)' }}</span>
+          </div>
+        </div>
+        <div class="notesheet-row">
+          <div class="notesheet-label">{{ isBangla ? 'প্রস্তুতকারী' : 'Prepared by' }}</div>
+          <div class="notesheet-input-desc">
+            <input pInputText formControlName="preparedBy" readonly class="w-full" />
+            <span class="text-500 text-sm ml-2">{{ isBangla ? 'স্বয়ং সেট (লগইন ব্যবহারকারী)' : 'Auto Set (Login User)' }}</span>
+          </div>
+        </div>
+        <div class="notesheet-row">
+          <div class="notesheet-label">{{ isBangla ? 'প্রারম্ভকারী নির্বাচন করুন' : 'Select Initiator' }}</div>
+          <div class="notesheet-input-desc">
+            <p-select
+              formControlName="initiatorId"
+              [options]="initiatorOptionsDisplay"
+              optionLabel="label"
+              optionValue="value"
+              [placeholder]="isBangla ? 'ড্রপ ডাউন থেকে নির্বাচন করুন' : 'Auto Select from Drop Down'"
+              styleClass="w-full">
+            </p-select>
+            <span class="text-500 text-sm ml-2">{{ isBangla ? 'ড্রপ ডাউন থেকে নির্বাচন' : 'Auto Select from Drop Down' }}</span>
+          </div>
+        </div>
+        <div class="notesheet-row">
+          <div class="notesheet-label">{{ isBangla ? 'সুপারিশকারী নির্বাচন করুন (প্রযোজ্য হলে)' : "Select Recommender's (If Applicable)" }}</div>
+          <div class="notesheet-input-desc">
+            <p-multiselect
+              formControlName="recommenderIds"
+              [options]="recommenderOptionsDisplay"
+              optionLabel="label"
+              optionValue="value"
+              [placeholder]="isBangla ? 'এক বা একাধিক সুপারিশকারী' : 'One or More Recommender'"
+              styleClass="w-full">
+            </p-multiselect>
+            @if (getSelectedRecommenderNames().length > 0) {
+              <div class="mt-2 p-2 surface-100 border-round">
+                <strong class="text-sm">{{ isBangla ? 'নির্ধারিত সুপারিশকারীর তালিকা:' : 'Assigned Recommender List:' }}</strong>
+                <ul class="list-none p-0 m-0 mt-1 text-sm">
+                  @for (name of getSelectedRecommenderNames(); track name) {
+                    <li class="py-0.5">• {{ name }}</li>
+                  }
+                </ul>
+              </div>
+            }
+          </div>
+        </div>
+        <div class="notesheet-row">
+          <div class="notesheet-label">{{ isBangla ? 'চূড়ান্ত অনুমোদনকারী নির্বাচন করুন' : 'Select Final Approver' }}</div>
+          <div class="notesheet-input-desc">
+            <p-select
+              formControlName="finalApproverId"
+              [options]="finalApproverOptionsDisplay"
+              optionLabel="label"
+              optionValue="value"
+              [placeholder]="isBangla ? 'ড্রপ ডাউন থেকে নির্বাচন করুন' : 'Auto Select from Drop Down'"
+              styleClass="w-full">
+            </p-select>
+            <span class="text-500 text-sm ml-2">{{ isBangla ? 'ড্রপ ডাউন থেকে নির্বাচন' : 'Auto Select from Drop Down' }}</span>
+          </div>
+        </div>
+        <div class="notesheet-row">
+          <div class="notesheet-label">{{ isBangla ? 'সহায়ক নথি আপলোড করুন' : 'Upload Supporting Document' }}</div>
+          <div class="notesheet-input-desc w-full">
+            <app-file-references-form
+              #fileReferencesForm
+              [fileRows]="fileRows"
+              [isViewMode]="false"
+              [title]="isBangla ? 'সহায়ক নথি' : 'Supporting Documents'"
+              (fileRowsChange)="onFileRowsChange($event)"
+              (onDownloadFile)="onDownloadFile($event)">
+            </app-file-references-form>
+            <span class="text-500 text-sm mt-1 block">{{ isBangla ? 'ফাইল আপলোড বিকল্প' : 'File Upload Option' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-content-center gap-2 mt-4">
+        <p-button type="submit" [label]="isBangla ? 'মন্তব্যপত্র তৈরি' : 'Generate Note Sheet'" icon="pi pi-file-edit" [loading]="isSubmitting" [disabled]="form.invalid" />
+      </div>
+    </form>
+    }
+  </div>
+</p-fluid>

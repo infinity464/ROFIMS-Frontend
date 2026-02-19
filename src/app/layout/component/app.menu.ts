@@ -185,9 +185,21 @@ export class AppMenu {
                     { label: 'Visit Subject Type', icon: 'pi pi-fw pi-list', routerLink: ['/basic-setup/subject-type'] },
 
                     { label: 'Bank', icon: 'pi pi-fw pi-wallet', routerLink: ['/basic-setup/bank'] },
-                    { label: 'Bank Branch', icon: 'pi pi-fw pi-building', routerLink: ['/basic-setup/bank-branch'] }
-
-                    // Newly added
+                    { label: 'Bank Branch', icon: 'pi pi-fw pi-building', routerLink: ['/basic-setup/bank-branch'] },
+                    { label: 'Notesheet Template', icon: 'pi pi-fw pi-file-edit', routerLink: ['/basic-setup/notesheet-template'] }
+                ]
+            },
+            {
+                label: 'NoteSheet',
+                icon: 'pi pi-fw pi-file-edit',
+                items: [
+                    { label: 'Generate NoteSheet', icon: 'pi pi-fw pi-plus', routerLink: ['/notesheet-generate'] },
+                    { label: 'Note-Sheet for Ex-BD Leave', icon: 'pi pi-fw pi-send', routerLink: ['/notesheet-ex-bd-leave'] },
+                    { label: 'Draft Note-Sheet List', icon: 'pi pi-fw pi-file-edit', routerLink: ['/notesheet-list/draft'] },
+                    { label: 'Pending for Approval', icon: 'pi pi-fw pi-clock', routerLink: ['/notesheet-list/pending'] },
+                    { label: 'Approved Note-Sheet List', icon: 'pi pi-fw pi-check-circle', routerLink: ['/notesheet-list/approved'] },
+                    { label: 'Declined Note-Sheet List', icon: 'pi pi-fw pi-times-circle', routerLink: ['/notesheet-list/declined'] },
+                    { label: 'All Note-Sheet', icon: 'pi pi-fw pi-list', routerLink: ['/notesheet-list/all'] }
                 ]
             }
 
