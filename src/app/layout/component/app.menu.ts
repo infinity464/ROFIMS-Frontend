@@ -112,6 +112,13 @@ export class AppMenu {
                 ]
             },
             {
+                label: 'Permanent Posting',
+                icon: 'pi pi-fw pi-send',
+                items: [
+                    { label: 'Perm Posting (Mother Org)', icon: 'pi pi-fw pi-building', routerLink: ['/emp-perm-posting-mother-org'] }
+                ]
+            },
+            {
                 label: 'Organization Setup',
                 icon: 'pi pi-fw pi-user-plus',
                 items: [

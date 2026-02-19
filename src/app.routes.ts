@@ -72,6 +72,7 @@ import { EmpForeignVisit } from '@/Components/Features/Emp/emp-foreign-visit/emp
 import { EmpLeaveInfo } from '@/Components/Features/Emp/emp-leave-info/emp-leave-info.component';
 import { EmpMedicalCategory } from '@/Components/Features/Emp/emp-medical-category/emp-medical-category.component';
 import { EmpAdditionalRemarks } from '@/Components/Features/Emp/emp-additional-remarks/emp-additional-remarks.component';
+import { EmpPermPostingMotherOrg } from '@/Components/Features/Emp/emp-perm-posting-mother-org/emp-perm-posting-mother-org.component';
 import { EmpPresentMemberCheckComponent } from '@/Components/Features/Emp/emp-present-member-check/emp-present-member-check.component';
 import { RabIdAllocation } from '@/Components/Features/rab-id-allocation/rab-id-allocation';
 import { SupernumeraryList } from '@/Components/Features/supernumerary-list/supernumerary-list';
@@ -194,6 +195,7 @@ export const appRoutes: Routes = [
             { path: 'emp-leave-info', component: EmpLeaveInfo },
             { path: 'emp-medical-category', component: EmpMedicalCategory },
             { path: 'emp-additional-remarks', component: EmpAdditionalRemarks },
+            { path: 'emp-perm-posting-mother-org', component: EmpPermPostingMotherOrg },
             { path: 'emp-present-member-check', component: EmpPresentMemberCheckComponent },
             { path: 'rab-id-allocation', component: RabIdAllocation },
             { path: 'supernumerary-list', component: SupernumeraryList },
