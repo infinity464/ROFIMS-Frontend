@@ -1,0 +1,68 @@
+<div class="upload-page">
+  <p-card>
+    <ng-template #header>
+      <div class="card-header">
+        <i class="pi pi-upload"></i>
+        <span>Upload PDF Document</span>
+      </div>
+    </ng-template>
+
+    <div
+      class="drop-zone"
+      [class.has-file]="selectedFile"
+      (dragover)="onDragOver($event)"
+      (drop)="onDrop($event)">
+
+      @if (!selectedFile) {
+        <div class="drop-zone-content">
+          <i class="pi pi-cloud-upload drop-icon"></i>
+          <p>Drag & drop a PDF file here or</p>
+          <input #fileInput type="file" accept=".pdf" (change)="onFileSelected($event)" hidden>
+          <p-button label="Browse Files" icon="pi pi-folder-open" severity="info" [outlined]="true" (onClick)="fileInput.click()" />
+        </div>
+      } @else {
+        <div class="file-info">
+          <i class="pi pi-file-pdf file-icon"></i>
+          <p class="file-name">{{ selectedFile.name }}</p>
+          <p class="file-size">{{ (selectedFile.size / 1024 / 1024).toFixed(2) }} MB</p>
+          <p-button label="Remove" icon="pi pi-times" severity="danger" size="small" [outlined]="true" (onClick)="clearSelection()" />
+        </div>
+      }
+    </div>
+
+    <div class="tags-input">
+      <label for="tags">Tags (comma-separated):</label>
+      <input
+        type="text"
+        pInputText
+        id="tags"
+        [(ngModel)]="tagsInput"
+        placeholder="e.g., Leave, Transfer, Official"
+        [disabled]="isUploading"
+        class="w-full">
+    </div>
+
+    @if (uploadError) {
+      <div class="alert-error">
+        <i class="pi pi-exclamation-triangle"></i>
+        {{ uploadError }}
+      </div>
+    }
+
+    @if (uploadSuccess) {
+      <div class="alert-success">
+        <i class="pi pi-check-circle"></i>
+        Document uploaded successfully! It will be indexed shortly.
+      </div>
+    }
+
+    <p-button
+      label="Upload Document"
+      icon="pi pi-upload"
+      severity="success"
+      (onClick)="upload()"
+      [disabled]="!selectedFile || isUploading"
+      [loading]="isUploading"
+      styleClass="w-full" />
+  </p-card>
+</div>

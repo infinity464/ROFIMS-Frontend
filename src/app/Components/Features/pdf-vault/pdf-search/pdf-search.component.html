@@ -1,0 +1,114 @@
+<p-card>
+  <ng-template #header>
+    <div class="card-header">
+      <i class="pi pi-search"></i>
+      <span>Search Documents</span>
+    </div>
+  </ng-template>
+
+  <div class="search-box">
+    <input
+      type="text"
+      pInputText
+      [(ngModel)]="searchQuery"
+      placeholder="Enter keywords to search... (Bangla/English)"
+      (keyup.enter)="search()"
+      [disabled]="isSearching"
+      class="search-input">
+    <p-button
+      label="Search"
+      icon="pi pi-search"
+      (onClick)="search()"
+      [disabled]="isSearching"
+      [loading]="isSearching" />
+  </div>
+
+  @if (availableTags.length > 0) {
+    <div class="tags-filter">
+      <label class="filter-label">Filter by Tags:</label>
+      <div class="tag-chips">
+        @for (tag of availableTags; track tag.id) {
+          <p-tag
+            [value]="tag.name"
+            [severity]="isTagSelected(tag.name) ? undefined : 'secondary'"
+            [style]="{ cursor: 'pointer' }"
+            (click)="toggleTag(tag.name)"
+            [rounded]="true" />
+        }
+      </div>
+    </div>
+  }
+
+  @if (selectedTags.length > 0 || searchQuery) {
+    <p-button
+      label="Clear Search"
+      icon="pi pi-times"
+      severity="secondary"
+      [outlined]="true"
+      size="small"
+      (onClick)="clearSearch()"
+      styleClass="mb-3" />
+  }
+
+  @if (searchError) {
+    <div class="alert-error">
+      <i class="pi pi-exclamation-triangle"></i>
+      {{ searchError }}
+    </div>
+  }
+
+  @if (searchResult) {
+    <p-divider />
+
+    <div class="results-header">
+      <span>Found <strong>{{ searchResult.totalCount }}</strong> results</span>
+    </div>
+
+    @if (searchResult.items.length === 0) {
+      <div class="no-results">
+        <i class="pi pi-inbox" style="font-size: 2rem; color: var(--text-color-secondary)"></i>
+        <p>No documents found matching your search criteria.</p>
+      </div>
+    } @else {
+      <div class="results-list">
+        @for (item of searchResult.items; track item.documentId + '-' + item.pageNumber) {
+          <div class="result-item" (click)="openDocument(item)">
+            <div class="result-header">
+              <span class="file-name">
+                <i class="pi pi-file-pdf"></i>
+                {{ item.fileName }}
+              </span>
+              <p-tag [value]="'Page ' + item.pageNumber" severity="success" [rounded]="true" />
+            </div>
+            <div class="result-snippet">{{ item.snippet }}</div>
+            @if (item.tags.length > 0) {
+              <div class="result-tags">
+                @for (tag of item.tags; track tag) {
+                  <p-tag [value]="tag" severity="secondary" size="small" />
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      @if (searchResult.totalPages > 1) {
+        <div class="pagination">
+          <p-button icon="pi pi-angle-double-left" [outlined]="true" size="small" (onClick)="goToPage(1)" [disabled]="currentPage === 1" />
+          <p-button icon="pi pi-angle-left" [outlined]="true" size="small" (onClick)="goToPage(currentPage - 1)" [disabled]="currentPage === 1" />
+
+          @for (page of getPageNumbers(); track page) {
+            <p-button
+              [label]="'' + page"
+              size="small"
+              [outlined]="page !== currentPage"
+              (onClick)="goToPage(page)" />
+          }
+
+          <p-button icon="pi pi-angle-right" [outlined]="true" size="small" (onClick)="goToPage(currentPage + 1)" [disabled]="currentPage === searchResult.totalPages" />
+          <p-button icon="pi pi-angle-double-right" [outlined]="true" size="small" (onClick)="goToPage(searchResult.totalPages)" [disabled]="currentPage === searchResult.totalPages" />
+        </div>
+      }
+    }
+  }
+</p-card>

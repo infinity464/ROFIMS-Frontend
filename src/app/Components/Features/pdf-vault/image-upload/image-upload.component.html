@@ -1,0 +1,59 @@
+<div class="upload-page">
+  <p-card>
+    <ng-template #header>
+      <div class="card-header">
+        <i class="pi pi-upload"></i>
+        <span>Upload Image to Vault</span>
+      </div>
+    </ng-template>
+
+    <div
+      class="drop-zone"
+      [class.has-file]="selectedFile"
+      (dragover)="onDragOver($event)"
+      (drop)="onDrop($event)">
+
+      @if (!selectedFile) {
+        <div class="drop-zone-content">
+          <i class="pi pi-cloud-upload drop-icon"></i>
+          <p>Drag & drop an image here or</p>
+          <input #fileInput type="file" accept=".png,.jpg,.jpeg,.tif,.tiff,.bmp" (change)="onFileSelected($event)" hidden>
+          <p-button label="Browse Files" icon="pi pi-folder-open" severity="info" [outlined]="true" (onClick)="fileInput.click()" />
+          <p class="hint">Supported formats: PNG, JPEG, TIFF, BMP</p>
+        </div>
+      } @else {
+        <div class="file-info">
+          @if (imagePreviewUrl) {
+            <img [src]="imagePreviewUrl" alt="Preview" class="image-preview" />
+          }
+          <p class="file-name">{{ selectedFile.name }}</p>
+          <p class="file-size">{{ (selectedFile.size / 1024 / 1024).toFixed(2) }} MB</p>
+          <p-button label="Remove" icon="pi pi-times" severity="danger" size="small" [outlined]="true" (onClick)="clearSelection()" />
+        </div>
+      }
+    </div>
+
+    @if (uploadError) {
+      <div class="alert-error">
+        <i class="pi pi-exclamation-triangle"></i>
+        {{ uploadError }}
+      </div>
+    }
+
+    @if (uploadSuccess) {
+      <div class="alert-success">
+        <i class="pi pi-check-circle"></i>
+        Image uploaded successfully to the vault!
+      </div>
+    }
+
+    <p-button
+      label="Upload Image"
+      icon="pi pi-upload"
+      severity="success"
+      (onClick)="upload()"
+      [disabled]="!selectedFile || isUploading"
+      [loading]="isUploading"
+      styleClass="w-full" />
+  </p-card>
+</div>

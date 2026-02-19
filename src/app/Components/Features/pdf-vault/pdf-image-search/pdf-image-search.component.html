@@ -1,0 +1,96 @@
+<div class="image-search-page">
+  <p-card>
+    <ng-template #header>
+      <div class="card-header">
+        <i class="pi pi-search"></i>
+        <span>Find Image in Vault</span>
+      </div>
+    </ng-template>
+
+    <div
+      class="drop-zone"
+      [class.has-file]="selectedFile"
+      (dragover)="onDragOver($event)"
+      (drop)="onDrop($event)">
+
+      @if (!selectedFile) {
+        <div class="drop-zone-content">
+          <i class="pi pi-cloud-upload drop-icon"></i>
+          <p>Drag & drop an image here or</p>
+          <input #fileInput type="file" accept=".png,.jpg,.jpeg,.tif,.tiff,.bmp" (change)="onFileSelected($event)" hidden>
+          <p-button label="Browse Files" icon="pi pi-folder-open" severity="info" [outlined]="true" (onClick)="fileInput.click()" />
+          <p class="hint">Supported formats: PNG, JPEG, TIFF, BMP</p>
+        </div>
+      } @else {
+        <div class="file-info">
+          @if (imagePreviewUrl) {
+            <img [src]="imagePreviewUrl" alt="Preview" class="image-preview" />
+          }
+          <p class="file-name">{{ selectedFile.name }}</p>
+          <p class="file-size">{{ (selectedFile.size / 1024 / 1024).toFixed(2) }} MB</p>
+          <p-button label="Remove" icon="pi pi-times" severity="danger" size="small" [outlined]="true" (onClick)="clearSelection()" />
+        </div>
+      }
+    </div>
+
+    @if (searchError) {
+      <div class="alert-error">
+        <i class="pi pi-exclamation-triangle"></i>
+        {{ searchError }}
+      </div>
+    }
+
+    <p-button
+      label="Find in Vault"
+      icon="pi pi-search"
+      severity="success"
+      (onClick)="search()"
+      [disabled]="!selectedFile || isSearching"
+      [loading]="isSearching"
+      styleClass="w-full" />
+
+    @if (findResult) {
+      <p-divider />
+
+      @if (findResult.found && findResult.image) {
+        <div class="match-found">
+          <div class="match-header">
+            <i class="pi pi-check-circle" style="color: var(--green-500); font-size: 1.25rem"></i>
+            <span>Image found in vault!</span>
+          </div>
+          <div class="match-details">
+            <p class="match-file-name">
+              <i class="pi pi-image"></i>
+              {{ findResult.image.originalFileName }}
+            </p>
+            <p class="match-meta">
+              {{ (findResult.image.fileSize / 1024 / 1024).toFixed(2) }} MB
+              &bull;
+              Uploaded {{ findResult.image.uploadedAt | date:'medium' }}
+            </p>
+          </div>
+          <div class="match-actions">
+            <p-button
+              label="Download"
+              icon="pi pi-download"
+              severity="info"
+              [outlined]="true"
+              size="small"
+              (onClick)="downloadImage()" />
+          </div>
+          @if (matchImageUrl) {
+            <div class="match-preview">
+              <img [src]="matchImageUrl" alt="Matched image" class="matched-image" />
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="no-match">
+          <i class="pi pi-times-circle" style="font-size: 2.5rem; color: var(--text-color-secondary)"></i>
+          <p>Image not found in the vault.</p>
+          <p class="hint">Upload this image first to store it in the vault.</p>
+        </div>
+      }
+    }
+  </p-card>
+</div>
