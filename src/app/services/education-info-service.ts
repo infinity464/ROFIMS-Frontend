@@ -3,6 +3,29 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '@/Core/Environments/environment';
 
+/** Row from vw_EducationInfoByEmployee. API: EducationInfo/ViewByEmployeeId/{employeeId} */
+export interface EducationInfoByEmployeeView {
+    employeeID: number;
+    ser: number;
+    durationFrom: string | null;
+    durationTo: string | null;
+    schoolCollegeUniversity: string | null;
+    schoolCollegeUniversityBN?: string | null;
+    instituteType: string | null;
+    instituteTypeBN?: string | null;
+    nameOfExamDegree: string | null;
+    nameOfExamDegreeBN?: string | null;
+    subjectsDepartments: string | null;
+    subjectsDepartmentsBN?: string | null;
+    subject: string | null;
+    subjectBN?: string | null;
+    result: string | null;
+    resultBN?: string | null;
+    gradePoint: string | null;
+    passingYear: number | null;
+    remarks: string | null;
+}
+
 export interface EducationInfoModel {
     employeeId: number;
     educationId: number;
@@ -34,6 +57,11 @@ export class EducationInfoService {
 
     getByEmployeeId(employeeId: number): Observable<EducationInfoModel[]> {
         return this.http.get<EducationInfoModel[]>(`${this.apiUrl}/GetByEmployeeId/${employeeId}`);
+    }
+
+    /** Gets list from vw_EducationInfoByEmployee. */
+    getViewByEmployeeId(employeeId: number): Observable<EducationInfoByEmployeeView[]> {
+        return this.http.get<EducationInfoByEmployeeView[]>(`${this.apiUrl}/GetViewByEmployeeId/${employeeId}`);
     }
 
     save(payload: Partial<EducationInfoModel>): Observable<any> {

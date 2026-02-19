@@ -3,7 +3,62 @@
 <div class="card">
     <div class="flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
         <h2 class="m-0 text-2xl font-bold text-900">Presently Serving Members List</h2>
-        <p-button label="Refresh" icon="pi pi-refresh" (onClick)="refresh()" [loading]="loading"></p-button>
+       <!--  <p-button label="Refresh" icon="pi pi-refresh" (onClick)="refresh()" [loading]="loading"></p-button> -->
+    </div>
+
+    <!-- Filter section -->
+    <div class="filter-section mb-4">
+        <div class="filter-row">
+            <label class="filter-label">Search by ID:</label>
+            <div class="filter-inputs">
+                <input pInputText type="text" [(ngModel)]="filter.rabId" placeholder="RAB ID" class="filter-input" />
+                <input pInputText type="text" [(ngModel)]="filter.serviceId" placeholder="Service ID" class="filter-input" />
+                <input pInputText type="text" [(ngModel)]="filter.nidId" placeholder="NID ID" class="filter-input" />
+            </div>
+        </div>
+        <div class="filter-row">
+            <label class="filter-label">Search by Name:</label>
+            <div class="filter-inputs">
+                <input pInputText type="text" [(ngModel)]="filter.nameBangla" placeholder="Name Bangla" class="filter-input" />
+                <input pInputText type="text" [(ngModel)]="filter.nameEnglish" placeholder="Name English" class="filter-input" />
+            </div>
+        </div>
+        <div class="filter-row">
+            <label class="filter-label">Search by:</label>
+            <div class="filter-inputs">
+                <p-select [(ngModel)]="filter.rabUnit" placeholder="RAB Unit" [options]="rabUnitOptions" optionLabel="label" optionValue="value" class="filter-input filter-select"></p-select>
+                <p-select [(ngModel)]="filter.rank" placeholder="Rank" [options]="rankOptions" optionLabel="label" optionValue="value" class="filter-input filter-select"></p-select>
+                <p-select [(ngModel)]="filter.corps" placeholder="Corps" [options]="corpsOptions" optionLabel="label" optionValue="value" class="filter-input filter-select"></p-select>
+                <p-select [(ngModel)]="filter.trade" placeholder="Trade" [options]="tradeOptions" optionLabel="label" optionValue="value" class="filter-input filter-select"></p-select>
+            </div>
+        </div>
+        <div class="filter-row">
+            <label class="filter-label">Search by RAB Duration:</label>
+            <div class="filter-inputs">
+                <p-datepicker [(ngModel)]="filter.durationFrom" placeholder="From" dateFormat="dd/mm/yy" class="filter-input filter-date"></p-datepicker>
+                <p-datepicker [(ngModel)]="filter.durationTo" placeholder="To" dateFormat="dd/mm/yy" class="filter-input filter-date"></p-datepicker>
+            </div>
+        </div>
+        <div class="filter-row">
+            <label class="filter-label">Search by Home District:</label>
+            <div class="filter-inputs">
+                <p-select [(ngModel)]="filter.wonHomeDistrict" placeholder="Employee Own Permanent District" [options]="districtOptions" optionLabel="label" optionValue="value" class="filter-input filter-select"></p-select>
+                <p-select [(ngModel)]="filter.wifeHomeDistrict" placeholder="Wife Permanent Address District" [options]="districtOptions" optionLabel="label" optionValue="value" class="filter-input filter-select"></p-select>
+            </div>
+        </div>
+        <div class="filter-row">
+            <label class="filter-label">Search by Appointment:</label>
+            <div class="filter-inputs">
+                <p-select [(ngModel)]="filter.appointment" placeholder="Select Appointment" [options]="appointmentOptions" optionLabel="label" optionValue="value" class="filter-input filter-select"></p-select>
+            </div>
+        </div>
+        <div class="filter-row filter-actions">
+            <span class="filter-label"></span>
+            <div class="filter-inputs">
+                <p-button label="Search" icon="pi pi-search" (onClick)="search()" [loading]="loading"></p-button>
+                <p-button label="Clear Filter" icon="pi pi-times" (onClick)="clearFilter()" severity="secondary"></p-button>
+            </div>
+        </div>
     </div>
 
     <p-table
@@ -47,9 +102,10 @@
                 <td>{{ formatDate(row.joiningDate) }}</td>
                 <td>{{ row.permanentDistrictTypeName || '-' }}</td>
                 <td>
-                    <div class="flex gap-1">
-                        <!-- Action buttons will be added here later -->
-                    </div>
+                    <a [routerLink]="['/presently-serving-members/profile', row.employeeID]" class="p-button p-button-rounded p-button-text p-button-sm">
+                        <i class="pi pi-user mr-1"></i>
+                        <span>Profile</span>
+                    </a>
                 </td>
             </tr>
         </ng-template>

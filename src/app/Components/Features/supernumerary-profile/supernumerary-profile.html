@@ -46,13 +46,13 @@
                 <div class="address-heading">Own Permanent Address: </div>
                 <div class="address-grid">
                     <div class="address-col">
-                        <div class="addr-row my-5"><span class="addr-label">Village/Area: </span> <span class="addr-value">{{ addrVal(profile.ownPermanentAddress, 'villageArea') }}</span></div>
-                        <div class="addr-row my-5"><span class="addr-label">District: </span> <span class="addr-value">{{ addrVal(profile.ownPermanentAddress, 'district') }}</span></div>
+                        <div class="addr-row"><span class="addr-label">Village/Area: </span> <span class="addr-value">{{ addrVal(profile.ownPermanentAddress, 'villageArea') }}</span></div>
+                        <div class="addr-row"><span class="addr-label">District: </span> <span class="addr-value">{{ addrVal(profile.ownPermanentAddress, 'district') }}</span></div>
                     </div>
                     <div class="address-col">
-                        <div class="addr-row my-5"><span class="addr-label">Post Office: </span> <span class="addr-value">{{ addrVal(profile.ownPermanentAddress, 'postOffice') }}</span></div>
-                        <div class="addr-row my-5"><span class="addr-label">Division: </span> <span class="addr-value">{{ addrVal(profile.ownPermanentAddress, 'division') }}</span></div>
-                        <div class="addr-row my-5"><span class="addr-label">Upazila/Thana: </span> <span class="addr-value">{{ addrVal(profile.ownPermanentAddress, 'upazilaThana') }}</span></div>
+                        <div class="addr-row"><span class="addr-label">Post Office: </span> <span class="addr-value">{{ addrVal(profile.ownPermanentAddress, 'postOffice') }}</span></div>
+                        <div class="addr-row"><span class="addr-label">Division: </span> <span class="addr-value">{{ addrVal(profile.ownPermanentAddress, 'division') }}</span></div>
+                        <div class="addr-row"><span class="addr-label">Upazila/Thana: </span> <span class="addr-value">{{ addrVal(profile.ownPermanentAddress, 'upazilaThana') }}</span></div>
                     </div>
                 </div>
             </div>
@@ -106,14 +106,12 @@
             </div>
         }
 
-        <!-- Reliever details -->
-        <div class="border-top-1 surface-border pt-3 mt-3 text-900">
-            <div class="reliever-heading">
-                Reliever of any presently serving member: {{ profile.hasRelievers ? 'Yes' : 'No' }} (if Yes show reliever details)
-            </div>
-            @if (profile.hasRelievers && profile.relievers?.length) {
+        <!-- Reliever table: only show when this employee has a reliever (relievedBy). e.g. MR A (RelieverId=MR B) sees MR B; MR B (RelieverId null) does not see this section. -->
+        @if (profile.relievedBy && relieverTableRows.length > 0) {
+            <div class="reliever-section border-top-1 surface-border text-900">
+                <div class="reliever-heading">Reliever Information</div>
                 <div class="reliever-table">
-                    <p-table [value]="profile.relievers" [tableStyle]="{ 'min-width': '40rem' }" styleClass="p-datatable-sm p-datatable-gridlines">
+                    <p-table [value]="relieverTableRows" [tableStyle]="{ 'min-width': '40rem' }" styleClass="p-datatable-sm p-datatable-gridlines">
                         <ng-template pTemplate="header">
                             <tr>
                                 <th style="width: 3rem">Ser</th>
@@ -124,7 +122,7 @@
                                 <th>Name</th>
                                 <th>Wing/Battalion</th>
                                 <th>Appointment</th>
-                                <th style="width: 6rem">Profile</th>
+                                <th style="width: 6rem">View</th>
                             </tr>
                         </ng-template>
                         <ng-template pTemplate="body" let-r let-rowIndex="rowIndex">
@@ -138,14 +136,14 @@
                                 <td>{{ r.wingBattalion || '-' }}</td>
                                 <td>{{ r.appointment || '-' }}</td>
                                 <td>
-                                    <p-button label="View" size="small" (onClick)="viewRelieverProfile(r.employeeID)"></p-button>
+                                    <button type="button" class="p-button p-button-sm p-component" (click)="onViewRelieverClick(r); $event.stopPropagation()">View</button>
                                 </td>
                             </tr>
                         </ng-template>
                     </p-table>
                 </div>
-            }
-        </div>
+            </div>
+        }
     } @else if (!loading) {
         <p class="text-500 m-0">No profile data available.</p>
     }
@@ -245,37 +243,6 @@
                             <div class="addr-row"><span class="addr-label">Upazila/Thana: </span> <span class="addr-value">{{ addrVal(relieverProfile.wifePresentAddress, 'upazilaThana') }}</span></div>
                         </div>
                     </div>
-                </div>
-            }
-            @if (relieverProfile.hasRelievers && relieverProfile.relievers?.length) {
-                <div class="border-top-1 surface-border pt-3 mt-3">
-                    <div class="reliever-heading">Reliever of any presently serving member: Yes (if Yes show reliever details)</div>
-                    <p-table [value]="relieverProfile.relievers" [tableStyle]="{ 'min-width': '30rem' }" styleClass="p-datatable-sm p-datatable-gridlines">
-                        <ng-template pTemplate="header">
-                            <tr>
-                                <th style="width: 3rem">Ser</th>
-                                <th>Service ID</th>
-                                <th>Rank</th>
-                                <th>Corps</th>
-                                <th>Trade</th>
-                                <th>Name</th>
-                                <th>Wing/Battalion</th>
-                                <th>Appointment</th>
-                            </tr>
-                        </ng-template>
-                        <ng-template pTemplate="body" let-r let-rowIndex="rowIndex">
-                            <tr>
-                                <td>{{ rowIndex + 1 }}.</td>
-                                <td>{{ r.serviceId || '-' }}</td>
-                                <td>{{ r.rank || '-' }}</td>
-                                <td>{{ r.corps || '-' }}</td>
-                                <td>{{ r.trade || '-' }}</td>
-                                <td>{{ r.name || '-' }}</td>
-                                <td>{{ r.wingBattalion || '-' }}</td>
-                                <td>{{ r.appointment || '-' }}</td>
-                            </tr>
-                        </ng-template>
-                    </p-table>
                 </div>
             }
         </div>

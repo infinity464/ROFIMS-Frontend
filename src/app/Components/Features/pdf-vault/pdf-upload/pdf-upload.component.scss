@@ -1,0 +1,113 @@
+:host {
+  display: block;
+  padding: 1.5rem;
+}
+
+.upload-page {
+  max-width: 650px;
+  margin: 0 auto;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 1.25rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.drop-zone {
+  border: 2px dashed var(--surface-border);
+  border-radius: var(--border-radius);
+  padding: 2.5rem;
+  text-align: center;
+  transition: all 0.3s ease;
+  background-color: var(--surface-ground);
+  margin-bottom: 1.25rem;
+
+  &:hover {
+    border-color: var(--primary-color);
+    background-color: var(--primary-50, var(--surface-hover));
+  }
+
+  &.has-file {
+    border-color: var(--green-500);
+    background-color: var(--green-50, var(--surface-hover));
+  }
+}
+
+.drop-zone-content {
+  .drop-icon {
+    font-size: 3rem;
+    color: var(--text-color-secondary);
+    margin-bottom: 0.75rem;
+    display: block;
+  }
+
+  p {
+    margin: 0.75rem 0;
+    color: var(--text-color-secondary);
+  }
+}
+
+.browse-label {
+  cursor: pointer;
+}
+
+.file-info {
+  .file-icon {
+    font-size: 2.5rem;
+    color: var(--red-500);
+    margin-bottom: 0.5rem;
+    display: block;
+  }
+
+  .file-name {
+    margin: 0.25rem 0;
+    font-weight: 600;
+    color: var(--text-color);
+  }
+
+  .file-size {
+    color: var(--text-color-secondary);
+    font-size: 0.875rem;
+    margin: 0.25rem 0 0.75rem;
+  }
+}
+
+.tags-input {
+  margin-bottom: 1.25rem;
+
+  label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    font-size: 0.875rem;
+    color: var(--text-color-secondary);
+  }
+}
+
+.alert-error {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--border-radius);
+  background-color: var(--red-50);
+  color: var(--red-700);
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+}
+
+.alert-success {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--border-radius);
+  background-color: var(--green-50);
+  color: var(--green-700);
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+}

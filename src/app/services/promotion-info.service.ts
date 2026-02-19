@@ -4,24 +4,43 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '@/Core/Environments/environment';
 
+/** PromotionInfo entity for CRUD. API: PromotionInfo/SaveAsyn, SaveUpdateAsyn, DeleteAsyn, GetByEmployeeId */
 export interface PromotionInfoModel {
     employeeID: number;
     promotionID: number;
     previousRank?: number | null;
     promotedRank?: number | null;
     promotedDate?: string | null;
-    auth?: string | null;
-    remarks?: string | null;
-    probationaryPeriod?: string | null;
     fromDate?: string | null;
     toDate?: string | null;
+    probationaryPeriod?: string | null;
+    auth?: string | null;
+    remarks?: string | null;
     isActive?: boolean;
-    createdBy?: string | null;
-    createdDate?: string | null;
-    lastUpdatedBy?: string | null;
-    lastupdate?: string | null;
-    /** JSON array of { FileId, fileName } for file references */
+    createdBy?: string;
+    createdDate?: string;
+    lastUpdatedBy?: string;
+    lastupdate?: string;
     filesReferences?: string | null;
+}
+
+/** Row from vw_PromotionInfoByEmployee. API: PromotionInfo/ViewByEmployeeId/{employeeId} */
+export interface PromotionInfoByEmployeeView {
+    employeeID: number;
+    ser: number;
+    previousRankId?: number | null;
+    previousRank: string | null;
+    previousRankBN?: string | null;
+    promotedRankId?: number | null;
+    promotedRank: string | null;
+    promotedRankBN?: string | null;
+    promotedDate: string | null;
+    auth: string | null;
+    remarks: string | null;
+    probationaryPeriod: string | null;
+    fromDate: string | null;
+    toDate: string | null;
+    isActive: boolean;
 }
 
 @Injectable({
@@ -32,51 +51,28 @@ export class PromotionInfoService {
 
     constructor(private http: HttpClient) {}
 
-    getAll(): Observable<PromotionInfoModel[]> {
-        return this.http
-            .get<PromotionInfoModel[]>(`${this.apiUrl}/GetAll`)
-            .pipe(map((res: any) => (Array.isArray(res) ? res : [])));
-    }
-
+    /** Gets promotion list by employee (entity list for CRUD). */
     getByEmployeeId(employeeId: number): Observable<PromotionInfoModel[]> {
-        return this.http
-            .get<PromotionInfoModel[]>(`${this.apiUrl}/GetByEmployeeId/${employeeId}`)
-            .pipe(map((res: any) => (Array.isArray(res) ? res : [])));
+        return this.http.get<PromotionInfoModel[]>(`${this.apiUrl}/GetByEmployeeId/${employeeId}`).pipe(map((res: any) => (Array.isArray(res) ? res : [])));
     }
 
+    /** Gets list from vw_PromotionInfoByEmployee by employee ID (for profile display). */
+    getViewByEmployeeId(employeeId: number): Observable<PromotionInfoByEmployeeView[]> {
+        return this.http.get<PromotionInfoByEmployeeView[]>(`${this.apiUrl}/GetViewByEmployeeId/${employeeId}`).pipe(map((res: any) => (Array.isArray(res) ? res : [])));
+    }
+
+    /** Create new promotion. */
     save(payload: Partial<PromotionInfoModel>): Observable<any> {
-        const body = this.toApiPayload(payload);
-        return this.http.post(`${this.apiUrl}/SaveAsyn`, body);
+        return this.http.post(`${this.apiUrl}/SaveAsyn`, payload);
     }
 
+    /** Update existing promotion. */
     saveUpdate(payload: Partial<PromotionInfoModel>): Observable<any> {
-        const body = this.toApiPayload(payload);
-        return this.http.post(`${this.apiUrl}/SaveUpdateAsyn`, body);
+        return this.http.post(`${this.apiUrl}/SaveUpdateAsyn`, payload);
     }
 
+    /** Delete promotion. */
     delete(employeeID: number, promotionID: number): Observable<any> {
         return this.http.delete(`${this.apiUrl}/DeleteAsyn/${employeeID}/${promotionID}`);
-    }
-
-    private toApiPayload(payload: Partial<PromotionInfoModel>): any {
-        const now = new Date().toISOString();
-        return {
-            employeeID: payload.employeeID ?? 0,
-            promotionID: payload.promotionID ?? 0,
-            previousRank: payload.previousRank ?? null,
-            promotedRank: payload.promotedRank ?? null,
-            promotedDate: payload.promotedDate ?? null,
-            auth: payload.auth ?? null,
-            remarks: payload.remarks ?? null,
-            probationaryPeriod: payload.probationaryPeriod ?? null,
-            fromDate: payload.fromDate ?? null,
-            toDate: payload.toDate ?? null,
-            isActive: payload.isActive ?? true,
-            createdBy: payload.createdBy ?? 'user',
-            createdDate: payload.createdDate ?? now,
-            lastUpdatedBy: payload.lastUpdatedBy ?? 'user',
-            lastupdate: payload.lastupdate ?? now,
-            filesReferences: payload.filesReferences ?? null
-        };
     }
 }

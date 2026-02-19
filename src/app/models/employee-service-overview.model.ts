@@ -35,6 +35,4 @@ export interface EmployeeServiceOverview {
     joiningDate: string | null;
     permanentDistrictType: number | null;
     permanentDistrictTypeName: string | null;
-    wifePermanentDistrictType: number | null;
-    wifePermanentDistrictTypeName: string | null;
 }

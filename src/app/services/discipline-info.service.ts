@@ -4,6 +4,31 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '@/Core/Environments/environment';
 
+/** Row from vw_DisciplineInfoByEmployee. API: DisciplineInfo/ViewByEmployeeId/{employeeId} */
+export interface DisciplineInfoByEmployeeView {
+    employeeID: number;
+    ser: number;
+    offenseDate?: string | null;
+    offenseTypeId?: number | null;
+    offenseType: string | null;
+    offenseTypeBN?: string | null;
+    briefStatementOfOffenceId?: number | null;
+    briefStatementOfOffence: string | null;
+    briefStatementOfOffenceBN?: string | null;
+    offenseDetails: string | null;
+    punishmentTypeRABId?: number | null;
+    punishmentTypeRAB: string | null;
+    punishmentTypeRABBN?: string | null;
+    punishmentDate?: string | null;
+    punishmentTypeMotherOrgId?: number | null;
+    punishmentTypeMotherOrg: string | null;
+    punishmentTypeMotherOrgBN?: string | null;
+    punishmentDateMotherOrg?: string | null;
+    action: string | null;
+    auth: string | null;
+    remarks: string | null;
+}
+
 export interface DisciplineInfoModel {
     employeeId: number;
     disciplineId?: number;
@@ -53,6 +78,13 @@ export class DisciplineInfoService {
                 )
             )
         );
+    }
+
+    /** Gets list from vw_DisciplineInfoByEmployee by employee ID (for profile display). */
+    getViewByEmployeeId(employeeId: number): Observable<DisciplineInfoByEmployeeView[]> {
+        return this.http
+            .get<DisciplineInfoByEmployeeView[]>(`${this.apiUrl}/GetViewByEmployeeId/${employeeId}`)
+            .pipe(map((res: any) => (Array.isArray(res) ? res : [])));
     }
 
     save(payload: DisciplineInfoModel): Observable<any> {

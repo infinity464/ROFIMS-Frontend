@@ -3,6 +3,20 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '@/Core/Environments/environment';
 
+/** Row from vw_BankAccInfoByEmployee. API: BankAccInfo/ViewByEmployeeId/{employeeId} */
+export interface BankAccInfoByEmployeeView {
+    employeeID: number;
+    ser: number;
+    bankName: string | null;
+    bankNameBN?: string | null;
+    branchName: string | null;
+    branchNameBN?: string | null;
+    accountName: string | null;
+    accountNameBN?: string | null;
+    accountNumber: string | null;
+    remarks: string | null;
+}
+
 export interface BankAccInfoModel {
     employeeId: number;
     bankInfoId: number;
@@ -29,6 +43,11 @@ export class BankAccInfoService {
 
     getByEmployeeId(employeeId: number): Observable<BankAccInfoModel[]> {
         return this.http.get<BankAccInfoModel[]>(`${this.apiUrl}/GetByEmployeeId/${employeeId}`);
+    }
+
+    /** Gets list from vw_BankAccInfoByEmployee (Ser, Bank, Branch, Account Name, Account Number, Remarks). */
+    getViewByEmployeeId(employeeId: number): Observable<BankAccInfoByEmployeeView[]> {
+        return this.http.get<BankAccInfoByEmployeeView[]>(`${this.apiUrl}/GetViewByEmployeeId/${employeeId}`);
     }
 
     getAll(): Observable<BankAccInfoModel[]> {

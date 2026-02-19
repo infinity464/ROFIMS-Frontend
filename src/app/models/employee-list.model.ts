@@ -61,7 +61,20 @@ export interface SupernumeraryEmpProfile {
     wifePermanentAddress: AddressBlock | null;
     wifePresentAddress: AddressBlock | null;
     hasRelievers: boolean;
-    relievers: RelieverRow[];
+    relievers?: RelieverRow[];
+    /** Who relieves this employee (RelieverId from EmployeeInfo). Null if not relieved by anyone. */
+    relievedBy?: RelievedByInfo | null;
+}
+
+export interface RelievedByInfo {
+    employeeID: number;
+    serviceId: string | null;
+    rank: string | null;
+    corps: string | null;
+    trade: string | null;
+    name: string | null;
+    wingBattalion: string | null;
+    appointment: string | null;
 }
 
 export interface AddressBlock {

@@ -4,6 +4,22 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '@/Core/Environments/environment';
 
+/** Row from vw_ForeignVisitInfoByEmployee. API: ForeignVisitInfo/ViewByEmployeeId/{employeeId} */
+export interface ForeignVisitInfoByEmployeeView {
+    employeeID: number;
+    ser: number;
+    nameOfCountry: string | null;
+    nameOfCountryBN?: string | null;
+    durationFrom: string | null;
+    durationTo: string | null;
+    reasonForVisiting: string | null;
+    reasonForVisitingBN?: string | null;
+    relatedDocuments: string | null;
+    visitId?: number | null;
+    visitType?: string | null;
+    visitTypeBN?: string | null;
+}
+
 export interface ForeignVisitInfoModel {
     employeeId: number;
     foreignVisitId: number;
@@ -46,20 +62,21 @@ export class ForeignVisitInfoService {
     constructor(private http: HttpClient) {}
 
     getVisitsByEmployeeId(employeeId: number): Observable<ForeignVisitInfoModel[]> {
-        return this.http
-            .get<ForeignVisitInfoModel[]>(`${this.visitUrl}/GetByEmployeeId/${employeeId}`)
-            .pipe(map((res: any) => (Array.isArray(res) ? res : [])));
+        return this.http.get<ForeignVisitInfoModel[]>(`${this.visitUrl}/GetByEmployeeId/${employeeId}`).pipe(map((res: any) => (Array.isArray(res) ? res : [])));
+    }
+
+    /** Gets list from vw_ForeignVisitInfoByEmployee (Ser, Country, Duration, Reason, Documents). */
+    getViewByEmployeeId(employeeId: number): Observable<ForeignVisitInfoByEmployeeView[]> {
+        return this.http.get<ForeignVisitInfoByEmployeeView[]>(`${this.visitUrl}/GetViewByEmployeeId/${employeeId}`).pipe(map((res: any) => (Array.isArray(res) ? res : [])));
     }
 
     getVisitByKeys(employeeId: number, foreignVisitId: number): Observable<ForeignVisitInfoModel | null> {
-        return this.http
-            .get<any>(`${this.visitUrl}/GetFilteredByKeysAsyn/${employeeId}/${foreignVisitId}`)
-            .pipe(
-                map((res: any) => {
-                    const arr = Array.isArray(res) ? res : res ? [res] : [];
-                    return arr.length ? arr[0] : null;
-                })
-            );
+        return this.http.get<any>(`${this.visitUrl}/GetFilteredByKeysAsyn/${employeeId}/${foreignVisitId}`).pipe(
+            map((res: any) => {
+                const arr = Array.isArray(res) ? res : res ? [res] : [];
+                return arr.length ? arr[0] : null;
+            })
+        );
     }
 
     saveVisit(payload: Partial<ForeignVisitInfoModel>): Observable<any> {
@@ -98,15 +115,11 @@ export class ForeignVisitInfoService {
     }
 
     getAllFamilyRecords(): Observable<ForeignVisitFamilyInfoModel[]> {
-        return this.http
-            .get<ForeignVisitFamilyInfoModel[]>(`${this.familyUrl}/GetAll`)
-            .pipe(map((res: any) => (Array.isArray(res) ? res : [])));
+        return this.http.get<ForeignVisitFamilyInfoModel[]>(`${this.familyUrl}/GetAll`).pipe(map((res: any) => (Array.isArray(res) ? res : [])));
     }
 
     getFamilyByEmployeeAndVisit(employeeId: number, foreignVisitId: number): Observable<ForeignVisitFamilyInfoModel[]> {
-        return this.getAllFamilyRecords().pipe(
-            map((list) => list.filter((x) => x.employeeId === employeeId && x.foreignVisitId === foreignVisitId))
-        );
+        return this.getAllFamilyRecords().pipe(map((list) => list.filter((x) => x.employeeId === employeeId && x.foreignVisitId === foreignVisitId)));
     }
 
     saveFamilyMember(payload: Partial<ForeignVisitFamilyInfoModel>): Observable<any> {

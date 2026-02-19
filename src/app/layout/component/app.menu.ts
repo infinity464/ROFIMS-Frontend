@@ -73,22 +73,9 @@ export class AppMenu {
             {
                 label: 'Home',
                 icon: 'pi pi-fw pi-th-large',
-                items: [
-                    { label: 'Dashboard', icon: 'pi pi-fw pi-home', routerLink: ['/dashboard'], routerLinkActiveOptions: { paths: 'exact', queryParams: 'ignored', matrixParams: 'ignored', fragment: 'ignored' } },
-                    { label: 'Task & Event List', icon: 'pi pi-fw pi-list', routerLink: ['/task-event-list'] },
-                    { label: 'Pending Task & Upcoming Event', icon: 'pi pi-fw pi-calendar', routerLink: ['/calendar'] },
-                    { label: 'Chat', icon: 'pi pi-fw pi-comments', routerLink: ['/chat'] }
-                ]
+                items: [{ label: 'Dashboard', icon: 'pi pi-fw pi-home', routerLink: ['/dashboard'], routerLinkActiveOptions: { paths: 'exact', queryParams: 'ignored', matrixParams: 'ignored', fragment: 'ignored' } }]
             },
-            {
-                label: 'User Manage',
-                icon: 'pi pi-fw pi-users',
-                items: [
-                    { label: 'Create User', icon: 'pi pi-fw pi-user-plus', routerLink: ['/identity/user-create'] },
-                    { label: 'Roles', icon: 'pi pi-fw pi-list', routerLink: ['/identity/roles'] },
-                    { label: 'User–Employee Mapping', icon: 'pi pi-fw pi-id-card', routerLink: ['/identity/user-employee-mapping'] }
-                ]
-            },
+
             {
                 label: 'Data Entry (New & Re-Joining)',
                 icon: 'pi pi-fw pi-user-plus',
@@ -99,7 +86,7 @@ export class AppMenu {
                 ]
             },
             {
-                label: 'Emp',
+                label: 'Data Entry (Personal & Service)',
                 icon: 'pi pi-fw pi-users',
                 items: [
                     // { label: 'Employee List', icon: 'pi pi-fw pi-list', routerLink: ['/emp-list'] },
@@ -127,7 +114,23 @@ export class AppMenu {
             {
                 label: 'Organization Setup',
                 icon: 'pi pi-fw pi-user-plus',
-                items: [{ label: 'Presently Serving Members', icon: 'pi pi-fw pi-users', routerLink: ['/presently-serving-members'] }]
+                items: [
+                    { label: 'Presently Serving Members', icon: 'pi pi-fw pi-users', routerLink: ['/presently-serving-members'] },
+                    { label: 'Ex-Members', icon: 'pi pi-fw pi-user-minus', routerLink: ['/ex-members'] }
+                ]
+            },
+            {
+                label: 'Pending Task & Upcoming Event',
+                icon: 'pi pi-fw pi-users',
+                items: [
+                    { label: 'Task & Event List', icon: 'pi pi-fw pi-list', routerLink: ['/task-event-list'] },
+                    { label: 'Pending Task & Upcoming Event', icon: 'pi pi-fw pi-calendar', routerLink: ['/calendar'] }
+                ]
+            },
+            {
+                label: 'Message/Chat',
+                icon: 'pi pi-fw pi-users',
+                items: [{ label: 'Chat', icon: 'pi pi-fw pi-comments', routerLink: ['/chat'] }]
             },
             {
                 label: 'Basic Setup',
@@ -200,6 +203,26 @@ export class AppMenu {
                     { label: 'Approved Note-Sheet List', icon: 'pi pi-fw pi-check-circle', routerLink: ['/notesheet-list/approved'] },
                     { label: 'Declined Note-Sheet List', icon: 'pi pi-fw pi-times-circle', routerLink: ['/notesheet-list/declined'] },
                     { label: 'All Note-Sheet', icon: 'pi pi-fw pi-list', routerLink: ['/notesheet-list/all'] }
+                ]
+            },
+            {
+                label: 'Files Management',
+                icon: 'pi pi-fw pi-folder',
+                items: [
+                    { label: 'Search Documents', icon: 'pi pi-fw pi-search', routerLink: ['/pdf-vault/search'] },
+                    { label: 'Upload PDF', icon: 'pi pi-fw pi-upload', routerLink: ['/pdf-vault/upload'] },
+                    { label: 'All Documents', icon: 'pi pi-fw pi-list', routerLink: ['/pdf-vault/documents'] },
+                    { label: 'Upload Image', icon: 'pi pi-fw pi-image', routerLink: ['/image-vault/upload'] },
+                    { label: 'Find Image', icon: 'pi pi-fw pi-search', routerLink: ['/image-vault/find'] }
+                ]
+            },
+            {
+                label: 'User Manage',
+                icon: 'pi pi-fw pi-users',
+                items: [
+                    { label: 'Create User', icon: 'pi pi-fw pi-user-plus', routerLink: ['/identity/user-create'] },
+                    { label: 'Roles', icon: 'pi pi-fw pi-list', routerLink: ['/identity/roles'] },
+                    { label: 'User–Employee Mapping', icon: 'pi pi-fw pi-id-card', routerLink: ['/identity/user-employee-mapping'] }
                 ]
             }
 

@@ -1,0 +1,91 @@
+<p-card>
+  <ng-template #header>
+    <div class="card-header">
+      <i class="pi pi-list"></i>
+      <span>All Documents</span>
+      <span class="doc-count" *ngIf="totalCount > 0">({{ totalCount }})</span>
+    </div>
+  </ng-template>
+
+  @if (isLoading && totalCount === 0) {
+    <div class="loading">
+      <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
+      <p>Loading documents...</p>
+    </div>
+  }
+
+  @if (error) {
+    <div class="alert-error">
+      <i class="pi pi-exclamation-triangle"></i>
+      {{ error }}
+    </div>
+  }
+
+  @if (!isLoading && totalCount === 0 && !error) {
+    <div class="no-documents">
+      <i class="pi pi-inbox" style="font-size: 2.5rem; color: var(--text-color-secondary)"></i>
+      <p>No documents found. Upload some PDFs to get started!</p>
+    </div>
+  }
+
+  @if (totalCount > 0) {
+    <p-table
+      [value]="documents"
+      [tableStyle]="{ 'min-width': '60rem' }"
+      styleClass="p-datatable-striped"
+      [rowHover]="true"
+      [lazy]="true"
+      [paginator]="true"
+      [rows]="pageSize"
+      [totalRecords]="totalCount"
+      [first]="first"
+      [rowsPerPageOptions]="[10, 20, 50]"
+      [showCurrentPageReport]="true"
+      currentPageReportTemplate="Showing {first} to {last} of {totalRecords} documents"
+      [loading]="isLoading"
+      (onLazyLoad)="onPageChange($event)">
+
+      <ng-template #header>
+        <tr>
+          <th>File Name</th>
+          <th style="width: 5rem">Pages</th>
+          <th style="width: 12rem">Tags</th>
+          <th style="width: 12rem">Uploaded</th>
+          <th style="width: 7rem">Status</th>
+          <th style="width: 6rem">Actions</th>
+        </tr>
+      </ng-template>
+
+      <ng-template #body let-doc>
+        <tr class="clickable-row" (click)="viewDocument(doc)">
+          <td>
+            <span class="file-name">
+              <i class="pi pi-file-pdf"></i>
+              {{ doc.originalFileName }}
+            </span>
+          </td>
+          <td>{{ doc.totalPages }}</td>
+          <td>
+            <div class="tags-cell">
+              @for (tag of doc.tags; track tag) {
+                <p-tag [value]="tag" severity="secondary" size="small" />
+              }
+            </div>
+          </td>
+          <td>{{ doc.uploadedAt | date:'medium' }}</td>
+          <td>
+            <p-tag [value]="doc.status" [severity]="getStatusSeverity(doc.status)" [rounded]="true" />
+          </td>
+          <td>
+            <p-button
+              icon="pi pi-trash"
+              severity="danger"
+              [outlined]="true"
+              size="small"
+              (onClick)="deleteDocument(doc, $event)" />
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  }
+</p-card>
