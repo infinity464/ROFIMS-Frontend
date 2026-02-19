@@ -2,9 +2,6 @@
     <p-toast />
     <div class="card">
         <div class="font-semibold text-xl mb-4">{{ title }}</div>
-        <p class="text-color-secondary mb-4">
-            Select a Mother Organization to view vacancy distribution by Unit / Wing / Branch and Rank in tabular form.
-        </p>
 
         <div class="grid align-items-end mb-4">
             <div class="col-12 md:col-4">
@@ -27,43 +24,57 @@
                 <i class="pi pi-spin pi-spinner"></i>
                 <span>Loading…</span>
             </div>
-        } @else if (selectedOrg && (dynamicColumns.length === 0 || pivotedRows.length === 0)) {
+        } @else if (selectedOrg && dynamicColumns.length === 0 && !loading) {
             <div class="p-4 border surface-border border-round text-color-secondary">
-                @if (dynamicColumns.length === 0) {
-                    No vacancy definitions found for this organization. Define vacancies under Mother Org Rank Vacancy first.
-                } @else {
-                    No distribution data yet. Use Vacancy Distribution (RAB) to assign quantities to RAB units/wings/branches.
-                }
+                No vacancy definitions found for this organization.
             </div>
-        } @else if (selectedOrg && dynamicColumns.length > 0) {
-            <div class="overflow-auto border surface-border border-round">
-                <p-table [value]="pivotedRows" styleClass="p-datatable-sm" [tableStyle]="{ 'min-width': '50rem' }">
-                    <ng-template pTemplate="header">
+        } @else if (selectedOrg && dynamicColumns.length > 0 && displayRows.length === 0 && !loading) {
+            <div class="p-4 border surface-border border-round text-color-secondary">
+                No distribution data yet. Use Vacancy Distribution (RAB) to assign quantities.
+            </div>
+        } @else if (selectedOrg && dynamicColumns.length > 0 && displayRows.length > 0) {
+            <div class="dist-summary-wrap">
+                <table class="dist-table">
+                    <thead>
                         <tr>
-                            <th style="min-width: 10rem;">Unit</th>
-                            <th style="min-width: 10rem;">Wing</th>
-                            <th style="min-width: 10rem;">Branch</th>
+                            <th class="dist-table__office">Office</th>
                             @for (col of dynamicColumns; track col.field) {
-                                <th style="min-width: 6rem;">{{ col.header }}</th>
+                                <th class="dist-table__rank">{{ col.header }}</th>
                             }
+                            <th class="dist-table__total">Total</th>
                         </tr>
-                    </ng-template>
-                    <ng-template pTemplate="body" let-row>
-                        <tr>
-                            <td>{{ row.unitName }}</td>
-                            <td>{{ row.wingName }}</td>
-                            <td>{{ row.branchName }}</td>
+                    </thead>
+                    <tbody>
+                        @for (row of displayRows; track row.rabCodeId) {
+                            <tr [class.dist-row--unit]="row.level === 0"
+                                [class.dist-row--wing]="row.level === 1"
+                                [class.dist-row--branch]="row.level === 2">
+                                <td class="dist-table__office">
+                                    <span [class.dist-row__indent1]="row.level === 1"
+                                          [class.dist-row__indent2]="row.level === 2">
+                                        @if (row.level > 0) {
+                                            <span class="dist-row__arrow">↳</span>
+                                        }
+                                        {{ row.officeName }}
+                                    </span>
+                                </td>
+                                @for (col of dynamicColumns; track col.field) {
+                                    <td class="dist-table__cell">{{ cellDisplay(row, col.field) }}</td>
+                                }
+                                <td class="dist-table__total">{{ row.total > 0 ? row.total : '—' }}</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr class="dist-row--footer">
+                            <td class="dist-table__office font-semibold">Total</td>
                             @for (col of dynamicColumns; track col.field) {
-                                <td>{{ getCellValue(row, col.field) }}</td>
+                                <td class="dist-table__cell font-semibold">{{ colTotalDisplay(col.field) }}</td>
                             }
+                            <td class="dist-table__total font-semibold">{{ grandTotal > 0 ? grandTotal : '—' }}</td>
                         </tr>
-                    </ng-template>
-                    <ng-template pTemplate="emptymessage">
-                        <tr>
-                            <td [attr.colspan]="dynamicColumns.length + 3">No distribution data.</td>
-                        </tr>
-                    </ng-template>
-                </p-table>
+                    </tfoot>
+                </table>
             </div>
         }
     </div>
