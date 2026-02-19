@@ -108,7 +108,7 @@ export class AppMenu {
                     { label: 'Foreign Visit', icon: 'pi pi-fw pi-globe', routerLink: ['/emp-foreign-visit'] },
                     { label: 'Leave Info', icon: 'pi pi-fw pi-calendar-minus', routerLink: ['/emp-leave-info'] },
                     { label: 'Medical Category', icon: 'pi pi-fw pi-heart', routerLink: ['/emp-medical-category'] },
-                    { label: 'Additional Remarks', icon: 'pi pi-fw pi-comment', routerLink: ['/emp-additional-remarks'] }
+                    { label: 'Additional Remarks', icon: 'pi pi-fw pi-comment', routerLink: ['/emp-additional-remarks'] },
                 ]
             },
             {
@@ -195,7 +195,8 @@ export class AppMenu {
                     { label: 'Visit Subject Type', icon: 'pi pi-fw pi-list', routerLink: ['/basic-setup/subject-type'] },
 
                     { label: 'Bank', icon: 'pi pi-fw pi-wallet', routerLink: ['/basic-setup/bank'] },
-                    { label: 'Bank Branch', icon: 'pi pi-fw pi-building', routerLink: ['/basic-setup/bank-branch'] }
+                    { label: 'Bank Branch', icon: 'pi pi-fw pi-building', routerLink: ['/basic-setup/bank-branch'] },
+                    { label: 'Absent Type', icon: 'pi pi-fw pi-ban', routerLink: ['/basic-setup/absent-type'] }
 
                     // Newly added
                 ]

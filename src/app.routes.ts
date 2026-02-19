@@ -89,6 +89,7 @@ import { TrainingInstitution } from '@/Components/basic-setup/training-instituti
 import { RankEquivalent } from '@/Components/basic-setup/rank-equivalent/rank-equivalent';
 import { Religion } from '@/Components/basic-setup/religion/religion';
 import { RabIdSerial } from '@/Components/basic-setup/rab-id-serial/rab-id-serial';
+import { AbsentType } from '@/Components/basic-setup/absent-type/absent-type';
 import { CalendarComponent } from '@/Components/Features/calendar/calendar.component';
 import { TaskEventListComponent } from '@/Components/Features/calendar/task-event-list.component';
 import { ChatContainerComponent } from '@/Components/Features/chat/chat-container.component';
@@ -175,6 +176,7 @@ export const appRoutes: Routes = [
             { path: 'basic-setup/rank-equivalent', component: RankEquivalent },
             { path: 'basic-setup/religion', component: Religion },
             { path: 'basic-setup/rab-id-serial', component: RabIdSerial },
+            { path: 'basic-setup/absent-type', component: AbsentType },
 
             // EMP
             { path: 'emp-list', component: EmpList },
