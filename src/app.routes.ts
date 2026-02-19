@@ -72,6 +72,7 @@ import { EmpForeignVisit } from '@/Components/Features/Emp/emp-foreign-visit/emp
 import { EmpLeaveInfo } from '@/Components/Features/Emp/emp-leave-info/emp-leave-info.component';
 import { EmpMedicalCategory } from '@/Components/Features/Emp/emp-medical-category/emp-medical-category.component';
 import { EmpAdditionalRemarks } from '@/Components/Features/Emp/emp-additional-remarks/emp-additional-remarks.component';
+import { EmpPersonalServiceInfoComponent } from '@/Components/Features/Emp/emp-personal-service-info/emp-personal-service-info';
 import { EmpPresentMemberCheckComponent } from '@/Components/Features/Emp/emp-present-member-check/emp-present-member-check.component';
 import { RabIdAllocation } from '@/Components/Features/rab-id-allocation/rab-id-allocation';
 import { SupernumeraryList } from '@/Components/Features/supernumerary-list/supernumerary-list';
@@ -92,6 +93,9 @@ import { NotesheetTemplateComponent } from '@/Components/basic-setup/notesheet-t
 import { NotesheetGenerateComponent } from '@/Components/Features/notesheet-generate/notesheet-generate';
 import { NotesheetExBdLeaveComponent } from '@/Components/Features/notesheet-ex-bd-leave/notesheet-ex-bd-leave';
 import { NotesheetListComponent } from '@/Components/Features/notesheet-list/notesheet-list';
+import { NewPostingOrderComponent } from '@/Components/Features/new-posting-order/new-posting-order';
+import { InterPostingOrderComponent } from '@/Components/Features/inter-posting-order/inter-posting-order';
+import { PendingJoiningListComponent } from '@/Components/Features/pending-joining-list/pending-joining-list';
 import { CalendarComponent } from '@/Components/Features/calendar/calendar.component';
 import { TaskEventListComponent } from '@/Components/Features/calendar/task-event-list.component';
 import { ChatContainerComponent } from '@/Components/Features/chat/chat-container.component';
@@ -188,9 +192,15 @@ export const appRoutes: Routes = [
             { path: 'notesheet-list/declined', component: NotesheetListComponent, data: { section: 'declined' } },
             { path: 'notesheet-list/all', component: NotesheetListComponent, data: { section: 'all' } },
 
+            // Posting (New Posting Order & Inter-Posting Order - ref. requirements p.43-58)
+            { path: 'posting/pending-joining', component: PendingJoiningListComponent },
+            { path: 'posting/new-posting-order', component: NewPostingOrderComponent },
+            { path: 'posting/inter-posting-order', component: InterPostingOrderComponent },
+
             // EMP
             { path: 'emp-list', component: EmpList },
             { path: 'emp-basic-info', component: EmpBasicInfo },
+            { path: 'emp-personal-service-info', component: EmpPersonalServiceInfoComponent },
             { path: 'emp-personal-info', component: EmpPersonalInfo },
             { path: 'emp-address-info', component: EmpAddressInfo },
             { path: 'emp-family-info', component: EmpFamilyInfo },

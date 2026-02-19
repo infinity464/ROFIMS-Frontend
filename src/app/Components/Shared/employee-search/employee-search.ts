@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { InputTextModule } from 'primeng/inputtext';
@@ -92,7 +92,10 @@ export interface EmployeeBasicInfo {
         </div>
     `
 })
-export class EmployeeSearchComponent {
+export class EmployeeSearchComponent implements OnChanges {
+    /** When set (e.g. in edit mode), load and display this employee so RAB info shows on Update. */
+    @Input() initialEmployeeId: number | null = null;
+
     @Output() onEmployeeFound = new EventEmitter<EmployeeBasicInfo>();
     @Output() onSearchReset = new EventEmitter<void>();
 
@@ -106,6 +109,72 @@ export class EmployeeSearchComponent {
         private empService: EmpService,
         private messageService: MessageService
     ) {}
+
+    ngOnChanges(changes: SimpleChanges): void {
+        const idChange = changes['initialEmployeeId'];
+        if (idChange && idChange.currentValue != null && idChange.currentValue > 0) {
+            const id = Number(idChange.currentValue);
+            if (id !== this.employeeInfo?.employeeID) this.loadEmployeeById(id);
+        } else if (idChange && (idChange.currentValue == null || idChange.currentValue === 0)) {
+            this.employeeFound = false;
+            this.employeeInfo = null;
+            this.searchRabId = '';
+            this.searchServiceId = '';
+        }
+    }
+
+    /** Load employee by ID and show in card (used when opening draft for update). */
+    loadEmployeeById(employeeId: number): void {
+        this.isSearching = true;
+        this.empService.getEmployeeById(employeeId).subscribe({
+            next: (employee: any) => {
+                if (employee) {
+                    const employeeID = employee.EmployeeID ?? employee.employeeID;
+                    this.employeeInfo = {
+                        employeeID,
+                        fullNameEN: employee.FullNameEN || employee.fullNameEN || '',
+                        fullNameBN: employee.FullNameBN || employee.fullNameBN,
+                        rabid: employee.RABID || employee.Rabid || employee.rabid || '',
+                        serviceId: employee.ServiceId || employee.serviceId || '',
+                        motherOrganization: employee.LastMotherUnit ?? employee.MotherOrganization ?? employee.motherOrganization,
+                        rank: employee.Rank ?? employee.rank,
+                        unit: employee.Unit ?? employee.unit,
+                        branch: employee.Branch ?? employee.branch,
+                        trade: employee.Trade ?? employee.trade,
+                        memberType: employee.MemberType ?? employee.memberType,
+                        orgId: employee.orgId
+                    };
+                    this.searchRabId = this.employeeInfo.rabid || '';
+                    this.searchServiceId = this.employeeInfo.serviceId || '';
+                    this.employeeFound = true;
+                    this.onEmployeeFound.emit(this.employeeInfo);
+                    this.empService.getEmployeeSearchInfo(employeeID).subscribe({
+                        next: (searchInfo) => {
+                            if (searchInfo && this.employeeInfo && this.employeeInfo.employeeID === employeeID) {
+                                this.employeeInfo = {
+                                    ...this.employeeInfo,
+                                    rankDisplay: searchInfo.rank ?? searchInfo.Rank,
+                                    corpsDisplay: searchInfo.corps ?? searchInfo.Corps,
+                                    tradeDisplay: searchInfo.trade ?? searchInfo.Trade,
+                                    motherOrganizationDisplay: searchInfo.motherOrganization ?? searchInfo.MotherOrganization,
+                                    memberTypeDisplay: searchInfo.memberType ?? searchInfo.MemberType
+                                };
+                            }
+                        }
+                    });
+                } else {
+                    this.employeeFound = false;
+                    this.employeeInfo = null;
+                }
+                this.isSearching = false;
+            },
+            error: () => {
+                this.isSearching = false;
+                this.employeeFound = false;
+                this.employeeInfo = null;
+            }
+        });
+    }
 
     search(): void {
         if (!this.searchRabId && !this.searchServiceId) {

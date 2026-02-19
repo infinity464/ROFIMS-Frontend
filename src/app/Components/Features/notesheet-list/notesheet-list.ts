@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '@/Core/Environments/environment';
@@ -16,6 +16,8 @@ import { EditorModule } from 'primeng/editor';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { EmpService } from '@/services/emp-service';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
+import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
+import { CommonCode } from '@/Components/basic-setup/shared/models/common-code';
 import { TooltipModule } from 'primeng/tooltip';
 import { forkJoin } from 'rxjs';
 import { map } from 'rxjs/operators';
@@ -89,8 +91,13 @@ export type NoteSheetSection = 'draft' | 'pending' | 'approved' | 'declined' | '
 export class NotesheetListComponent implements OnInit {
   private api = `${environment.apis.core}/NoteSheetInfo`;
 
+  @Input() sectionInput: NoteSheetSection | null = null;
   /** Which section to show (one page per section). */
   section: NoteSheetSection = 'draft';
+
+  unitLabelMap: Record<number, string> = {};
+  wingLabelMap: Record<number, string> = {};
+  branchLabelMap: Record<number, string> = {};
 
   draftList: NoteSheetInfoRow[] = [];
   pendingList: NoteSheetInfoRow[] = [];
@@ -140,7 +147,8 @@ export class NotesheetListComponent implements OnInit {
     private route: ActivatedRoute,
     private sanitizer: DomSanitizer,
     private empService: EmpService,
-    private noteSheetEditCache: NoteSheetEditCacheService
+    private noteSheetEditCache: NoteSheetEditCacheService,
+    private masterBasicSetup: MasterBasicSetupService
   ) {}
 
   /** Open preview dialog: fetch full note-sheet and show formal layout. Load approval chain for approved note-sheets. */
@@ -363,10 +371,17 @@ export class NotesheetListComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.route.data.subscribe((data) => {
-      this.section = (data['section'] as NoteSheetSection) || 'draft';
+    if (this.sectionInput) {
+      this.section = this.sectionInput;
+      this.loadLookups();
       this.loadSection();
-    });
+    } else {
+      this.route.data.subscribe((data) => {
+        this.section = (data['section'] as NoteSheetSection) || 'draft';
+        this.loadLookups();
+        this.loadSection();
+      });
+    }
     const user = this.sharedService.getCurrentUser?.();
     if (user) {
       this.http.get<any[]>(`${environment.apis.core}/EmployeeInfo/GetAll`).subscribe({
@@ -447,7 +462,51 @@ export class NotesheetListComponent implements OnInit {
     return this.statusLabels[id] ?? '-';
   }
 
-  formatDate(d: string | undefined): string {
+  private loadLookups(): void {
+    this.masterBasicSetup.getAllByType('RabUnit').subscribe({
+      next: (list) => this.buildUnitAndWingMaps(list),
+      error: () =>
+        this.masterBasicSetup.getAllByType('RABUNIT').subscribe({
+          next: (list) => this.buildUnitAndWingMaps(list),
+          error: () => {}
+        })
+    });
+    this.masterBasicSetup.getAllByType('RabBranch').subscribe({
+      next: (list) => {
+        this.branchLabelMap = {};
+        (list || []).forEach((c: CommonCode) => {
+          const id = c.codeId;
+          if (id != null) this.branchLabelMap[id] = (c.codeValueEN ?? c.displayCodeValueEN ?? '').trim() || '-';
+        });
+      },
+      error: () => {}
+    });
+  }
+
+  private buildUnitAndWingMaps(units: CommonCode[]): void {
+    this.unitLabelMap = {};
+    this.wingLabelMap = {};
+    (units || []).forEach((c: CommonCode) => {
+      const id = c.codeId;
+      if (id == null) return;
+      const label = (c.codeValueEN ?? c.displayCodeValueEN ?? '').trim() || '-';
+      const parentId = c.parentCodeId ?? (c as any).parentId;
+      if (parentId == null || parentId === 0) this.unitLabelMap[id] = label;
+      else this.wingLabelMap[id] = label;
+    });
+  }
+
+  getUnitLabel(id: number | null | undefined): string {
+    return id != null ? (this.unitLabelMap[id] ?? '-') : '-';
+  }
+  getWingLabel(id: number | null | undefined): string {
+    return id != null ? (this.wingLabelMap[id] ?? '-') : '-';
+  }
+  getBranchLabel(id: number | null | undefined): string {
+    return id != null ? (this.branchLabelMap[id] ?? '-') : '-';
+  }
+
+  formatDate(d: string | null | undefined): string {
     if (!d) return '-';
     try {
       const dt = new Date(d);

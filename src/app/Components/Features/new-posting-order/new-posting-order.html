@@ -1,0 +1,283 @@
+<p-toast></p-toast>
+<div class="posting-page">
+    <p-card>
+        <ng-template pTemplate="header">
+            <div class="flex align-items-center gap-2 p-3">
+                <i class="pi pi-send text-2xl"></i>
+                <span class="text-xl font-semibold">New Posting Order</span>
+            </div>
+        </ng-template>
+        <p class="m-0 mb-3">Create draft list from <strong>Supernumerary Post</strong>, add to note-sheet, generate, finalize and approve.</p>
+
+        <p-tabs [(value)]="activeTab" class="mt-2">
+            <p-tablist>
+                <p-tab [value]="0">(a) Create Draft New Posting List</p-tab>
+                <p-tab [value]="1">(b) Add to Note-Sheet</p-tab>
+                <p-tab [value]="2">(c) Generate Note-Sheet</p-tab>
+                <p-tab [value]="3">List</p-tab>
+            </p-tablist>
+            <p-tabpanels>
+                <!-- Tab 0: Create Draft List from Supernumerary -->
+                <p-tabpanel [value]="0">
+                    <div class="mb-3 flex flex-wrap gap-2 align-items-end">
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">Mother Organization</label>
+                            <p-select [options]="orgOptions" [(ngModel)]="selectedOrgId" (ngModelChange)="onOrgChange()" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" [style]="{ minWidth: '160px' }"></p-select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">Member Type</label>
+                            <p-select [options]="memberTypeOptions" [(ngModel)]="selectedMemberTypeId" (ngModelChange)="loadSupernumeraryList()" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" [style]="{ minWidth: '140px' }"></p-select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">Rank</label>
+                            <p-select [options]="rankOptions" [(ngModel)]="selectedRankId" (ngModelChange)="loadSupernumeraryList()" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" [style]="{ minWidth: '120px' }" [disabled]="!selectedOrgId"></p-select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">Trade</label>
+                            <p-select [options]="tradeOptions" [(ngModel)]="selectedTradeId" (ngModelChange)="loadSupernumeraryList()" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" [style]="{ minWidth: '120px' }" [disabled]="!selectedOrgId"></p-select>
+                        </div>
+                        <p-button label="Show List" icon="pi pi-refresh" (onClick)="loadSupernumeraryList()"></p-button>
+                    </div>
+                    <p-iconfield iconPosition="left" class="mb-2">
+                        <p-inputicon><i class="pi pi-search"></i></p-inputicon>
+                        <input pInputText type="text" placeholder="Search by Service ID / RAB ID" [(ngModel)]="searchText" />
+                    </p-iconfield>
+                    <p-table
+                        [value]="filteredSupernumeraryList"
+                        [loading]="loadingList"
+                        dataKey="employeeID"
+                        [(selection)]="selectedRows"
+                        [paginator]="true"
+                        [rows]="10"
+                        [rowsPerPageOptions]="[10, 20, 50]"
+                        styleClass="p-datatable-sm p-datatable-striped">
+                        <ng-template pTemplate="header">
+                            <tr>
+                                <th style="width: 3rem"><p-tableHeaderCheckbox></p-tableHeaderCheckbox></th>
+                                <th>Ser</th>
+                                <th>Service ID</th>
+                                <th>Rank</th>
+                                <th>Corps</th>
+                                <th>Trade</th>
+                                <th>Name</th>
+                                <th>Mother Unit</th>
+                                <th>Date of Join in RAB</th>
+                                <th>Action</th>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                            <tr>
+                                <td><p-tableCheckbox [value]="row" [disabled]="isInPostingProcess(row)"></p-tableCheckbox></td>
+                                <td>{{ rowIndex + 1 }}</td>
+                                <td>{{ row.prefixName ? row.prefixName + ' - ' : '' }}{{ row.serviceId || '-' }}</td>
+                                <td>{{ row.rankName || '-' }}</td>
+                                <td>{{ row.corpsName || '-' }}</td>
+                                <td>{{ row.tradeName || '-' }}</td>
+                                <td>{{ row.fullNameEN || '-' }}{{ row.corpsName ? ', ' + row.corpsName : '' }}</td>
+                                <td>{{ row.motherUnitName || '-' }}</td>
+                                <td>{{ formatDate(row.joiningDate) }}</td>
+                                <td>
+                                    @if (getActionLabel(row); as label) {
+                                        <span class="text-500">{{ label }}</span>
+                                    } @else {
+                                        <p-button label="Send to Draft Posting List" size="small" icon="pi pi-send" (onClick)="selectedRows = [row]; sendToDraftPostingList()"></p-button>
+                                    }
+                                </td>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="emptymessage">
+                            <tr><td colspan="10" class="text-center p-4">No records.</td></tr>
+                        </ng-template>
+                    </p-table>
+                    <div class="mt-3">
+                        <p-button label="Send selected to Draft Posting List" icon="pi pi-send" (onClick)="sendToDraftPostingList()" [disabled]="selectedRows.length === 0"></p-button>
+                    </div>
+                </p-tabpanel>
+
+                <!-- Tab 1: Add to Note-Sheet from Draft List -->
+                <p-tabpanel [value]="1">
+                    <p class="text-color-secondary mb-3">Select a Draft New Posting List and add its members to a new Draft New Posting Note-Sheet. Members will be removed from the draft list.</p>
+                    <div class="flex gap-2 align-items-end mb-3">
+                        <div class="flex-1">
+                            <label class="block text-sm font-semibold mb-1">Draft Posting List No</label>
+                            <p-select
+                                [options]="draftLists"
+                                [(ngModel)]="selectedDraftListId"
+                                optionLabel="listNo"
+                                optionValue="id"
+                                placeholder="Select list"
+                                styleClass="w-full">
+                                <ng-template pTemplate="item" let-item>
+                                    <span>{{ item.listNo }} ({{ item.listDate }}) - {{ item.members.length }} member(s)</span>
+                                </ng-template>
+                                <ng-template let-selected pTemplate="selectedItem">
+                                    {{ selected?.listNo }} ({{ selected?.members?.length }} member(s))
+                                </ng-template>
+                            </p-select>
+                        </div>
+                        <p-button label="Add to Note Sheet" icon="pi pi-file-edit" (onClick)="addToNoteSheet()" [disabled]="!selectedDraftListId"></p-button>
+                    </div>
+                    @if (getSelectedDraftList(); as list) {
+                        <p-table [value]="list.members" styleClass="p-datatable-sm">
+                            <ng-template pTemplate="header">
+                                <tr><th>Ser</th><th>Service ID</th><th>Rank</th><th>Name</th><th>Mother Unit</th></tr>
+                            </ng-template>
+                            <ng-template pTemplate="body" let-row let-i="rowIndex">
+                                <tr><td>{{ i + 1 }}</td><td>{{ row.serviceId }}</td><td>{{ row.rankName }}</td><td>{{ row.fullNameEN }}</td><td>{{ row.motherUnitName }}</td></tr>
+                            </ng-template>
+                        </p-table>
+                    }
+                    @if (draftLists.length === 0) {
+                        <p class="text-500">No draft lists. Create one from tab "(a) Create Draft New Posting List".</p>
+                    }
+                </p-tabpanel>
+
+                <!-- Tab 2: Generate Note-Sheet -->
+                <p-tabpanel [value]="2">
+                    <p class="text-color-secondary mb-3">Fill subject, main text, initiator and approvers for the selected Draft New Posting Note-Sheet.</p>
+                    <div class="flex flex-column gap-3 mb-3">
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">Draft Posting List No / Note-Sheet</label>
+                            <p-select
+                                [options]="draftNoteSheets"
+                                [(ngModel)]="selectedNoteSheetId"
+                                optionLabel="noteSheetNo"
+                                optionValue="id"
+                                placeholder="Select note-sheet"
+                                styleClass="w-full">
+                                <ng-template pTemplate="item" let-item>
+                                    <span>{{ item.noteSheetNo }} - {{ item.members?.length }} member(s)</span>
+                                </ng-template>
+                            </p-select>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-sm font-semibold mb-1">Note-Sheet Text Type</label>
+                                <p-select [options]="textTypeOptions" [(ngModel)]="generateTextType" optionLabel="label" optionValue="value" styleClass="w-full"></p-select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold mb-1">Select Date</label>
+                                <p-datepicker [(ngModel)]="generateDate" dateFormat="dd/mm/yy" styleClass="w-full"></p-datepicker>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">Reference Number</label>
+                            <input pInputText [(ngModel)]="generateRefNo" class="w-full" placeholder="Auto/Manual" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">Subject</label>
+                            <input pInputText [(ngModel)]="generateSubject" class="w-full" placeholder="Subject" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">Main Text</label>
+                            <textarea pInputText [(ngModel)]="generateMainText" class="w-full" rows="4" placeholder="Main text"></textarea>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-sm font-semibold mb-1">Initiator</label>
+                                <p-select [options]="initiatorOptions" [(ngModel)]="generateInitiatorId" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"></p-select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold mb-1">Recommender(s)</label>
+                                <p-multiSelect [options]="recommenderOptions" [(ngModel)]="generateRecommenderIds" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"></p-multiSelect>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold mb-1">Final Approver</label>
+                                <p-select [options]="finalApproverOptions" [(ngModel)]="generateFinalApproverId" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"></p-select>
+                            </div>
+                        </div>
+                        <p-button label="Save / Generate Note Sheet" icon="pi pi-check" (onClick)="generateNoteSheet()" [disabled]="!selectedNoteSheetId"></p-button>
+                    </div>
+                    @if (draftNoteSheets.length === 0) {
+                        <p class="text-500">No draft note-sheets. Add one from tab "(b) Add to Note-Sheet".</p>
+                    }
+                </p-tabpanel>
+
+                <!-- Tab 3: List by status -->
+                <p-tabpanel [value]="3">
+                    <div class="flex gap-2 mb-3">
+                        <p-button [label]="'Draft'" [outlined]="listStatusFilter !== 'Draft'" (onClick)="listStatusFilter = 'Draft'; onListStatusFilterChange()"></p-button>
+                        <p-button [label]="'Pending Finalized'" [outlined]="listStatusFilter !== 'PendingFinalized'" (onClick)="listStatusFilter = 'PendingFinalized'; onListStatusFilterChange()"></p-button>
+                        <p-button [label]="'Pending Approval'" [outlined]="listStatusFilter !== 'PendingApproval'" (onClick)="listStatusFilter = 'PendingApproval'; onListStatusFilterChange()"></p-button>
+                        <p-button [label]="'Approved'" [outlined]="listStatusFilter !== 'Approved'" (onClick)="listStatusFilter = 'Approved'; onListStatusFilterChange()"></p-button>
+                    </div>
+                    <p-table [value]="listNoteSheets" styleClass="p-datatable-sm">
+                        <ng-template pTemplate="header">
+                            <tr>
+                                <th>Note-Sheet No</th>
+                                <th>Date</th>
+                                <th>Subject</th>
+                                <th>Members</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="body" let-row>
+                            <tr>
+                                <td>{{ row.noteSheetNo }}</td>
+                                <td>{{ formatDate(row.noteSheetDate) }}</td>
+                                <td>{{ row.subject || '-' }}</td>
+                                <td>{{ row.members?.length ?? 0 }}</td>
+                                <td>{{ row.status }}</td>
+                                <td>
+                                    @if (row.status === 'Draft') {
+                                        <p-button label="Submit for Finalized" size="small" icon="pi pi-send" (onClick)="submitForFinalized(row.id)"></p-button>
+                                    }
+                                    @if (row.status === 'PendingFinalized') {
+                                        <p-button label="Finalize (Assign Units)" size="small" icon="pi pi-pencil" (onClick)="openFinalizeDialog(row)"></p-button>
+                                    }
+                                    @if (row.status === 'PendingApproval') {
+                                        <p-button label="Approve" size="small" icon="pi pi-check" severity="success" (onClick)="approve(row.id)"></p-button>
+                                    }
+                                </td>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="emptymessage">
+                            <tr><td colspan="6" class="text-center p-4">No note-sheets in this status.</td></tr>
+                        </ng-template>
+                    </p-table>
+                </p-tabpanel>
+            </p-tabpanels>
+        </p-tabs>
+
+        <!-- Finalize dialog: assign unit per member -->
+        <p-dialog header="Finalize – Assign Unit per Member" [(visible)]="showFinalizeDialog" [modal]="true" [style]="{ width: '36rem' }" (onHide)="finalizeSheet = null" [draggable]="false">
+            @if (finalizeSheet; as sheet) {
+                <p class="text-color-secondary mb-3">Select Posted To unit for each member. Warning shown if unit is in member’s home district.</p>
+                <p-table [value]="sheet.members" styleClass="p-datatable-sm">
+                    <ng-template pTemplate="header">
+                        <tr><th>Name</th><th>Rank</th><th>Posted To Unit</th></tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-m>
+                        <tr>
+                            <td>{{ m.fullNameEN }}</td>
+                            <td>{{ m.rankName }}</td>
+                            <td>
+                                <p-select
+                                    [options]="unitOptions"
+                                    [(ngModel)]="finalizeMemberUnits[m.employeeId]"
+                                    optionLabel="label"
+                                    optionValue="value"
+                                    placeholder="Select unit"
+                                    styleClass="w-full">
+                                </p-select>
+                                @if (m.homeDistrictName) {
+                                    <small class="text-500">Home: {{ m.homeDistrictName }}</small>
+                                }
+                            </td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            }
+            <ng-template pTemplate="footer">
+                <p-button label="Cancel" severity="secondary" (onClick)="showFinalizeDialog = false"></p-button>
+                <p-button label="Submit for Approval" icon="pi pi-send" (onClick)="submitFinalizedWithUnits()"></p-button>
+            </ng-template>
+        </p-dialog>
+
+        <ng-template pTemplate="footer">
+            <a pButton label="Supernumerary List" icon="pi pi-list" routerLink="/supernumerary-list" class="p-button-outlined"></a>
+            <a pButton label="Pending List for Joining" icon="pi pi-clock" routerLink="/posting/pending-joining" class="p-button-outlined ml-2"></a>
+        </ng-template>
+    </p-card>
+</div>

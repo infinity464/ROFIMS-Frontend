@@ -60,6 +60,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         { label: 'English', value: 'en' },
         { label: 'Bangla', value: 'bn' }
     ];
+    unitOptions: { label: string; labelBn: string | null; value: number }[] = [];
     wingOptions: { label: string; labelBn: string | null; value: number }[] = [];
     branchOptions: { label: string; labelBn: string | null; value: number }[] = [];
     purposeOfLeaveOptions: { label: string; labelBn: string | null; value: number }[] = [];
@@ -67,7 +68,8 @@ export class NotesheetExBdLeaveComponent implements OnInit {
     initiatorOptions: { label: string; labelBn: string | null; value: number }[] = [];
     recommenderOptions: { label: string; labelBn: string | null; value: number }[] = [];
     finalApproverOptions: { label: string; labelBn: string | null; value: number }[] = [];
-    familyMemberOptions: { label: string; value: number; fmid: number; employeeId: number }[] = [];
+    familyMemberOptions: { label: string; labelBn?: string; value: number; fmid: number; employeeId: number; relationLabel?: string }[] = [];
+    relationshipOptions: { label: string; labelBn: string | null; value: number }[] = [];
     fileRows: FileRowData[] = [];
     /** Selected employee from RAB ID search (auto-fill wing, branch, etc.) */
     selectedEmployee: EmployeeBasicInfo | null = null;
@@ -90,6 +92,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         this.form = this.fb.group({
             textType: ['en'],
             noteSheetDate: [null as Date | null, Validators.required],
+            unitId: [null as number | null],
             wingBattalionId: [null as number | null],
             branchId: [null as number | null],
             referenceNumber: [''],
@@ -114,6 +117,9 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         return this.form?.get('textType')?.value === 'bn';
     }
 
+    get unitOptionsDisplay(): { label: string; value: number }[] {
+        return this.unitOptions.map((o) => ({ label: this.isBangla && o.labelBn ? o.labelBn : o.label, value: o.value }));
+    }
     get wingOptionsDisplay(): { label: string; value: number }[] {
         return this.wingOptions.map((o) => ({ label: this.isBangla && o.labelBn ? o.labelBn : o.label, value: o.value }));
     }
@@ -137,8 +143,9 @@ export class NotesheetExBdLeaveComponent implements OnInit {
     }
 
     ngOnInit(): void {
-        this.loadWings();
+        this.loadUnits();
         this.loadBranches();
+        this.loadRelationships();
         this.loadPurposeOfLeave();
         this.loadCountries();
         this.loadApproverOptions();
@@ -146,6 +153,9 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         this.form.get('preparedBy')?.setValue(user);
         this.form.get('dateOfVisitFrom')?.valueChanges.subscribe(() => this.calculateTotalDays());
         this.form.get('dateOfVisitTo')?.valueChanges.subscribe(() => this.calculateTotalDays());
+        this.form.get('unitId')?.valueChanges.subscribe((unitId: number | null) => {
+            this.onUnitChange();
+        });
         this.route.queryParams.pipe(take(1)).subscribe((params) => {
             const id = params['id'];
             if (id != null && id !== '') {
@@ -187,8 +197,12 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         const familyInfoJson = d.familyInfoJson ?? d.FamilyInfoJson;
         try {
             if (familyInfoJson && typeof familyInfoJson === 'string') {
-                const arr = JSON.parse(familyInfoJson) as { familyMemberId?: number; FamilyMemberId?: number; employeeId?: number }[];
-                if (Array.isArray(arr)) familyMemberIds = arr.map((f) => f.familyMemberId ?? f.FamilyMemberId ?? 0).filter((id) => id > 0);
+                const arr = JSON.parse(familyInfoJson) as { familyMemberId?: number; FamilyMemberId?: number; fmid?: number; FMID?: number; employeeId?: number }[];
+                if (Array.isArray(arr)) {
+                    familyMemberIds = arr
+                        .map((f) => this.toNum(f.familyMemberId ?? f.FamilyMemberId ?? f.fmid ?? f.FMID) ?? 0)
+                        .filter((id) => id > 0);
+                }
             }
         } catch { /* ignore */ }
         const empId = this.toNum(d.employeeId ?? d.EmployeeId);
@@ -205,17 +219,22 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             const to = this.parseDate(toDate);
             if (from && to) totalDays = Math.max(0, Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)) + 1);
         }
-        const wingId = this.toNum(d.wingBattalionId ?? d.WingBattalionId);
+        const unitIdVal = this.toNum(d.unitId ?? d.UnitId);
+        const wingId = this.toNum(d.wingBattalionId ?? d.WingBattalionId ?? d.WingsBattalionId);
         const branchIdVal = this.toNum(d.branchId ?? d.BranchId);
+        if (unitIdVal != null && unitIdVal > 0) this.loadWingsForUnit(unitIdVal, () => {});
         const initiatorIdVal = this.toNum(d.initiatorId ?? d.InitiatorId);
         const finalApproverIdVal = this.toNum(d.finalApproverId ?? d.FinalApproverId);
+        const refNum = d.referenceNumber ?? d.ReferenceNumber;
+        const noteNo = d.noteSheetNo ?? d.NoteSheetNo;
         this.form.patchValue({
             textType: (d.textType ?? d.TextType) === 1 ? 'bn' : 'en',
             noteSheetDate: this.parseDate(noteSheetDate),
+            unitId: unitIdVal,
             wingBattalionId: wingId,
             branchId: branchIdVal,
-            referenceNumber: String(d.referenceNumber ?? d.ReferenceNumber ?? ''),
-            noteSheetNo: String(d.noteSheetNo ?? d.NoteSheetNo ?? ''),
+            referenceNumber: refNum != null ? String(refNum) : '',
+            noteSheetNo: noteNo != null ? String(noteNo) : '',
             rabIdEmployeeId: this.selectedEmployeeId,
             subject: String(d.subject ?? d.Subject ?? ''),
             purposeOfExBdLeaveId: purposeId,
@@ -259,14 +278,16 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             next: (data) => {
                 try {
                     this.editLoading = false;
-                    const raw = data != null && typeof data === 'object' ? (data.data ?? data.value ?? data) : data;
-                    const list = Array.isArray(raw) ? raw : raw != null && typeof raw === 'object' && !Array.isArray(raw) ? [raw] : [];
+                    const raw = data != null && typeof data === 'object'
+                        ? (data.data ?? data.value ?? data.result ?? data.items ?? data) : data;
+                    const list = Array.isArray(raw) ? raw : (raw != null && typeof raw === 'object' && !Array.isArray(raw) ? [raw] : []);
                     const d = list[0];
-                if (!d) {
-                    this.editLoadFailed = true;
-                    this.messageService.add({ severity: 'warn', summary: 'No data', detail: 'Note sheet not found or no data returned for update.' });
-                    return;
-                }
+                    if (!d) {
+                        this.editLoadFailed = true;
+                        this.messageService.add({ severity: 'warn', summary: 'No data', detail: 'Note sheet not found or no data returned for update.' });
+                        return;
+                    }
+                    this.noteSheetEditCache.set(noteSheetId, d);
                     this.applyNoteSheetToForm(d);
                 } catch (e) {
                     this.editLoading = false;
@@ -287,16 +308,63 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         });
     }
 
-    loadWings(): void {
-        this.masterBasicSetupService.getAllByType('RabWing').subscribe({
+    loadUnits(): void {
+        const mapList = (list: CommonCode[] | unknown) =>
+            (Array.isArray(list) ? list : []).map((c: CommonCode) => ({
+                label: c.codeValueEN || c.codeValueBN || String(c.codeId),
+                labelBn: c.codeValueBN ?? null,
+                value: c.codeId
+            }));
+        this.masterBasicSetupService.getAllByType('RabUnit').subscribe({
+            next: (list) => {
+                const opts = mapList(list);
+                if (opts.length > 0) {
+                    this.unitOptions = opts;
+                    return;
+                }
+                this.masterBasicSetupService.getAllByType('RABUNIT').subscribe({
+                    next: (list2) => {
+                        this.unitOptions = mapList(list2);
+                    },
+                    error: () => {}
+                });
+            },
+            error: () => {
+                this.masterBasicSetupService.getAllByType('RABUNIT').subscribe({
+                    next: (list) => {
+                        this.unitOptions = mapList(list);
+                    },
+                    error: () => {}
+                });
+            }
+        });
+    }
+
+    onUnitChange(): void {
+        const unitId = this.form.get('unitId')?.value;
+        this.form.patchValue({ wingBattalionId: null }, { emitEvent: false });
+        this.loadWingsForUnit(unitId ?? null);
+    }
+
+    loadWingsForUnit(unitId: number | null, done?: () => void): void {
+        if (unitId == null || unitId <= 0) {
+            this.wingOptions = [];
+            done?.();
+            return;
+        }
+        this.masterBasicSetupService.getByParentId(unitId).subscribe({
             next: (list) => {
                 this.wingOptions = (Array.isArray(list) ? list : []).map((c: CommonCode) => ({
                     label: c.codeValueEN || c.codeValueBN || String(c.codeId),
                     labelBn: c.codeValueBN ?? null,
                     value: c.codeId
                 }));
+                done?.();
             },
-            error: () => {}
+            error: () => {
+                this.wingOptions = [];
+                done?.();
+            }
         });
     }
 
@@ -376,16 +444,53 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         }
     }
 
+    loadRelationships(): void {
+        this.masterBasicSetupService.getAllByType('Relationship').subscribe({
+            next: (list) => {
+                this.relationshipOptions = (Array.isArray(list) ? list : []).map((c: CommonCode) => ({
+                    label: c.codeValueEN || c.codeValueBN || String(c.codeId),
+                    labelBn: c.codeValueBN ?? null,
+                    value: c.codeId
+                }));
+            },
+            error: () => {}
+        });
+    }
+
+    private getRelationLabel(relationId: number | null | undefined, forBangla: boolean): string {
+        if (relationId == null) return '';
+        const o = this.relationshipOptions.find((r) => r.value === relationId);
+        if (!o) return '';
+        return forBangla && o.labelBn ? o.labelBn : o.label;
+    }
+
     loadFamilyMembersForEmployee(employeeId: number, restoreSelectedIds?: number[]): void {
         this.familyInfoService.getByEmployeeId(employeeId).subscribe({
-            next: (data: FamilyInfoModel[]) => {
-                this.familyMemberOptions = (data || []).map((item: any) => ({
-                    label: (item.nameEN || item.NameEN || item.nameBN || item.NameBN || `FM ${item.fmid ?? item.FMID}`).trim(),
-                    value: item.fmid ?? item.FMID,
-                    fmid: item.fmid ?? item.FMID,
-                    employeeId: item.employeeId ?? item.EmployeeId ?? employeeId
-                }));
-                this.form.patchValue({ familyMemberIds: restoreSelectedIds ?? [] });
+            next: (data: FamilyInfoModel[] | any) => {
+                const list = Array.isArray(data) ? data : (data?.data ?? data?.value ?? []);
+                this.familyMemberOptions = (list || []).map((item: any) => {
+                    const fmid = item.fmid ?? item.FMID ?? 0;
+                    const name = (item.nameEN ?? item.NameEN ?? item.nameBN ?? item.NameBN ?? `FM ${fmid}`) || `FM ${fmid}`;
+                    const relationId = item.relation ?? item.Relation;
+                    const relationEn = this.getRelationLabel(relationId, false);
+                    const relationBn = this.getRelationLabel(relationId, true);
+                    const relationPart = relationEn ? ` (${relationEn})` : '';
+                    const relationPartBn = relationBn ? ` (${relationBn})` : '';
+                    const label = String(name).trim() + relationPart;
+                    const labelBn = (this.isBangla && relationPartBn) ? String(name).trim() + relationPartBn : undefined;
+                    return {
+                        label,
+                        labelBn,
+                        value: fmid,
+                        fmid,
+                        employeeId: item.employeeId ?? item.EmployeeId ?? employeeId,
+                        relationLabel: relationEn || relationBn || undefined
+                    };
+                });
+                const ids = restoreSelectedIds ?? this.form.get('familyMemberIds')?.value ?? [];
+                const toSet = Array.isArray(ids) ? ids : [];
+                this.form.patchValue({ familyMemberIds: toSet });
+                setTimeout(() => this.form.patchValue({ familyMemberIds: toSet }), 0);
             },
             error: () => {
                 this.familyMemberOptions = [];
@@ -416,6 +521,18 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         return ids
             .map((id) => {
                 const o = this.recommenderOptions.find((op) => op.value === id);
+                return o ? (this.isBangla && o.labelBn ? o.labelBn : o.label) : '';
+            })
+            .filter((l) => !!l);
+    }
+
+    /** Selected family members with relation, e.g. "Name (Son)", "Name (Wife)" - like recommender list. */
+    getSelectedFamilyMemberLabels(): string[] {
+        const ids = this.form.get('familyMemberIds')?.value as number[] | null;
+        if (!Array.isArray(ids) || ids.length === 0) return [];
+        return ids
+            .map((id) => {
+                const o = this.familyMemberOptions.find((op) => op.value === id);
                 return o ? (this.isBangla && o.labelBn ? o.labelBn : o.label) : '';
             })
             .filter((l) => !!l);
@@ -532,7 +649,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             lastupdate: now,
             noteSheetTemplateId: null,
             textType: d.textType === 'bn' ? 1 : 0,
-            unitId: null,
+            unitId: d.unitId ?? null,
             wingBattalionId: d.wingBattalionId ?? null,
             branchId: d.branchId ?? null,
             referenceNumber: d.referenceNumber != null ? String(d.referenceNumber) : null,
@@ -541,10 +658,11 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             finalApproverId: d.finalApproverId ?? null,
             familyInfoJson,
             filesReferences: filesReferencesJson,
-            purposeOfExBdLeaveId: d.purposeOfExBdLeaveId ?? null,
+            purposeId: d.purposeOfExBdLeaveId ?? null,
+            PurposeId: d.purposeOfExBdLeaveId ?? null,
             destinationCountryId: d.destinationCountryId ?? null,
-            dateOfVisitFrom: this.formatDate(d.dateOfVisitFrom),
-            dateOfVisitTo: this.formatDate(d.dateOfVisitTo),
+            fromDate: this.formatDate(d.dateOfVisitFrom),
+            toDate: this.formatDate(d.dateOfVisitTo),
             totalDays: d.totalDays ?? 0
         };
     }

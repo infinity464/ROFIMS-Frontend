@@ -38,21 +38,36 @@
           </div>
         </div>
         <div class="notesheet-row">
-          <div class="notesheet-label">{{ isBangla ? 'উইং/ব্যাটালিয়ন' : 'Wing/Battalion' }}</div>
+          <div class="notesheet-label">{{ isBangla ? 'ইউনিট নির্বাচন করুন' : 'Select Unit' }}</div>
+          <div class="notesheet-input-desc">
+            <p-select
+              formControlName="unitId"
+              [options]="unitOptionsDisplay"
+              optionLabel="label"
+              optionValue="value"
+              [placeholder]="isBangla ? 'প্রথমে ইউনিট নির্বাচন করুন' : 'Select Unit first'"
+              (onChange)="onUnitChange()"
+              styleClass="w-full">
+            </p-select>
+            <span class="text-500 text-sm ml-2">{{ isBangla ? 'ইউনিট (উইং ইউনিটের উপর নির্ভর করে)' : 'Unit (Wing depends on Unit)' }}</span>
+          </div>
+        </div>
+        <div class="notesheet-row">
+          <div class="notesheet-label">{{ isBangla ? 'উইং/ব্যাটালিয়ন নির্বাচন করুন' : 'Select Wing/Battalion' }}</div>
           <div class="notesheet-input-desc">
             <p-select
               formControlName="wingBattalionId"
               [options]="wingOptionsDisplay"
               optionLabel="label"
               optionValue="value"
-              [placeholder]="isBangla ? 'অ্যাডমিন অ্যান্ড ফাইন্যান্স উইং (স্বয়ং সেট)' : 'Admin & Finance Wing (Auto Set)'"
+              [placeholder]="isBangla ? 'প্রথমে ইউনিট, তারপর উইং নির্বাচন করুন' : 'Select Unit first, then Wing'"
               styleClass="w-full">
             </p-select>
-            <span class="text-500 text-sm ml-2">{{ isBangla ? 'স্বয়ং সেট' : 'Auto Set' }}</span>
+            <span class="text-500 text-sm ml-2">{{ isBangla ? 'ড্রপ ডাউন থেকে নির্বাচন (ইউনিটের পর)' : 'Auto Select from Drop Down (after Unit)' }}</span>
           </div>
         </div>
         <div class="notesheet-row">
-          <div class="notesheet-label">{{ isBangla ? 'শাখার নাম' : 'Branch Name' }}</div>
+          <div class="notesheet-label">{{ isBangla ? 'শাখার নাম নির্বাচন করুন' : 'Select Branch Name' }}</div>
           <div class="notesheet-input-desc">
             <p-select
               formControlName="branchId"
@@ -83,6 +98,7 @@
           <div class="notesheet-label">RAB ID</div>
           <div class="notesheet-input-desc w-full">
             <app-employee-search
+              [initialEmployeeId]="selectedEmployeeId"
               (onEmployeeFound)="onEmployeeSelected($event)"
               (onSearchReset)="onEmployeeSelected(null)">
             </app-employee-search>
@@ -156,11 +172,21 @@
               [options]="familyMemberOptions"
               optionLabel="label"
               optionValue="value"
-              [placeholder]="isBangla ? 'পরিবারের তালিকা থেকে নির্বাচন করুন' : 'Auto Select from Family List'"
+              [placeholder]="isBangla ? 'পরিবারের তালিকা থেকে নির্বাচন করুন (সম্পর্ক সহ)' : 'Select from Family List (with relation e.g. Son, Wife)'"
               [disabled]="!selectedEmployeeId"
               styleClass="w-full">
             </p-multiselect>
-            <span class="text-500 text-sm ml-2">{{ isBangla ? 'পরিবারের তালিকা থেকে নির্বাচন (প্রথমে RAB ID নির্বাচন করুন)' : 'Auto Select from Family List (Select RAB ID first)' }}</span>
+            @if (getSelectedFamilyMemberLabels().length > 0) {
+              <div class="mt-2 p-2 surface-100 border-round">
+                <strong class="text-sm">{{ isBangla ? 'নির্ধারিত পরিবারের সদস্যদের তালিকা:' : 'Selected Family Member List:' }}</strong>
+                <ul class="list-none p-0 m-0 mt-1 text-sm">
+                  @for (item of getSelectedFamilyMemberLabels(); track item) {
+                    <li class="py-0.5">• {{ item }}</li>
+                  }
+                </ul>
+              </div>
+            }
+            <span class="text-500 text-sm ml-2 mt-1 block">{{ isBangla ? 'পরিবারের তালিকা (সম্পর্ক সহ: পুত্র, স্ত্রী, পিতা, মাতা ইত্যাদি)। প্রথমে RAB ID নির্বাচন করুন।' : 'Family list with relation (Son, Wife, Father, Mother, etc.). Select RAB ID first.' }}</span>
           </div>
         </div>
         <div class="notesheet-row notesheet-row-maintext">
