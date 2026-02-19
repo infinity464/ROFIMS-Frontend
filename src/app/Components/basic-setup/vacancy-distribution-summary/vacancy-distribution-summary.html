@@ -1,0 +1,70 @@
+<p-fluid>
+    <p-toast />
+    <div class="card">
+        <div class="font-semibold text-xl mb-4">{{ title }}</div>
+        <p class="text-color-secondary mb-4">
+            Select a Mother Organization to view vacancy distribution by Unit / Wing / Branch and Rank in tabular form.
+        </p>
+
+        <div class="grid align-items-end mb-4">
+            <div class="col-12 md:col-4">
+                <label class="block mb-2 font-medium">Mother Organization</label>
+                <p-select
+                    [options]="orgList"
+                    [(ngModel)]="selectedOrg"
+                    optionLabel="orgNameEN"
+                    [placeholder]="'Select organization'"
+                    [filter]="true"
+                    filterBy="orgNameEN"
+                    (ngModelChange)="onOrgChange()"
+                    styleClass="w-full">
+                </p-select>
+            </div>
+        </div>
+
+        @if (loading) {
+            <div class="flex align-items-center justify-content-center gap-2 p-5 border surface-border border-round">
+                <i class="pi pi-spin pi-spinner"></i>
+                <span>Loading…</span>
+            </div>
+        } @else if (selectedOrg && (dynamicColumns.length === 0 || pivotedRows.length === 0)) {
+            <div class="p-4 border surface-border border-round text-color-secondary">
+                @if (dynamicColumns.length === 0) {
+                    No vacancy definitions found for this organization. Define vacancies under Mother Org Rank Vacancy first.
+                } @else {
+                    No distribution data yet. Use Vacancy Distribution (RAB) to assign quantities to RAB units/wings/branches.
+                }
+            </div>
+        } @else if (selectedOrg && dynamicColumns.length > 0) {
+            <div class="overflow-auto border surface-border border-round">
+                <p-table [value]="pivotedRows" styleClass="p-datatable-sm" [tableStyle]="{ 'min-width': '50rem' }">
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="min-width: 10rem;">Unit</th>
+                            <th style="min-width: 10rem;">Wing</th>
+                            <th style="min-width: 10rem;">Branch</th>
+                            @for (col of dynamicColumns; track col.field) {
+                                <th style="min-width: 6rem;">{{ col.header }}</th>
+                            }
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row>
+                        <tr>
+                            <td>{{ row.unitName }}</td>
+                            <td>{{ row.wingName }}</td>
+                            <td>{{ row.branchName }}</td>
+                            @for (col of dynamicColumns; track col.field) {
+                                <td>{{ getCellValue(row, col.field) }}</td>
+                            }
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td [attr.colspan]="dynamicColumns.length + 3">No distribution data.</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        }
+    </div>
+</p-fluid>

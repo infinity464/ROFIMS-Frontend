@@ -119,7 +119,7 @@
                     [totalRecords]="totalRecords"
                     [rows]="rows"
                     [loading]="loading"
-                    (edit)="editDistribution($event.row)"
+                    (edit)="editDistribution($event)"
                     (delete)="deleteDistribution($event.row, $event.event)"
                     (lazyLoad)="loadDistribution()">
                 </app-data-table>

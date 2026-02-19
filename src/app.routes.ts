@@ -46,6 +46,7 @@ import { OrganizationUnit } from '@/Components/basic-setup/organization-setup/or
 import { MotherOrgRank } from '@/Components/basic-setup/mother-org-rank/mother-org-rank';
 import { MotherOrgRankVacancyComponent } from '@/Components/basic-setup/mother-org-rank-vacancy/mother-org-rank-vacancy';
 import { MotherOrgRankVacancyDistributionComponent } from '@/Components/basic-setup/mother-org-rank-vacancy-distribution/mother-org-rank-vacancy-distribution';
+import { VacancyDistributionSummaryComponent } from '@/Components/basic-setup/vacancy-distribution-summary/vacancy-distribution-summary';
 import { Corps } from '@/Components/basic-setup/corps/corps';
 import { Batch } from '@/Components/basic-setup/batch/batch';
 import { Decoration } from '@/Components/basic-setup/decoration/decoration';
@@ -154,6 +155,7 @@ export const appRoutes: Routes = [
             { path: 'basic-setup/mother-org-rank', component: MotherOrgRank },
             { path: 'basic-setup/mother-org-rank-vacancy', component: MotherOrgRankVacancyComponent },
             { path: 'basic-setup/mother-org-rank-vacancy-distribution', component: MotherOrgRankVacancyDistributionComponent },
+            { path: 'basic-setup/vacancy-distribution-summary', component: VacancyDistributionSummaryComponent },
             { path: 'basic-setup/corps', component: Corps },
             { path: 'basic-setup/prefix', component: Prefix },
             { path: 'basic-setup/gender', component: Gender },

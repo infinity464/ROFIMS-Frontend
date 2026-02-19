@@ -141,6 +141,7 @@ export class AppMenu {
                     { label: 'Mother Org Rank', icon: 'pi pi-fw pi-map', routerLink: ['/basic-setup/mother-org-rank'] },
                     { label: 'Mother Org Rank Vacancy', icon: 'pi pi-fw pi-users', routerLink: ['/basic-setup/mother-org-rank-vacancy'] },
                     { label: 'Vacancy Distribution (RAB)', icon: 'pi pi-fw pi-share-alt', routerLink: ['/basic-setup/mother-org-rank-vacancy-distribution'] },
+                    { label: 'Distribution Summary (by Org)', icon: 'pi pi-fw pi-table', routerLink: ['/basic-setup/vacancy-distribution-summary'] },
                     { label: 'Equivalent Name', icon: 'pi pi-fw pi-clone', routerLink: ['/basic-setup/equivalent-name'] },
                     { label: 'Corps', icon: 'pi pi-fw pi-sign-out', routerLink: ['/basic-setup/corps'] },
                     { label: 'Trade', icon: 'pi pi-fw pi-sign-out', routerLink: ['/basic-setup/trade'] },

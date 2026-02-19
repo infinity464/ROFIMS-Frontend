@@ -60,6 +60,8 @@ export class MotherOrgRankVacancyDistributionComponent implements OnInit {
     rabNameById: Record<number, string> = {};
 
     distributionData: DistributionRow[] = [];
+    /** When set, we're in edit mode and Save performs update using this id */
+    editingDistributionId: number | null = null;
     tableConfig: TableConfig = {
         tableColumns: [
             { field: 'rabName', header: 'RAB Unit / Wing / Branch' },
@@ -144,21 +146,25 @@ export class MotherOrgRankVacancyDistributionComponent implements OnInit {
                 const wingsRequests = units.map((u) => this.masterBasicSetup.getByParentId(u.codeId));
                 forkJoin(wingsRequests).subscribe({
                     next: (wingsPerUnit) => {
-                        const allWings = wingsPerUnit.flat();
+                        const allWings = wingsPerUnit.flat() as CommonCode[];
+                        (units as CommonCode[]).forEach((u) => {
+                            this.rabNameById[u.codeId] = u.codeValueEN ?? '';
+                        });
+                        allWings.forEach((w) => {
+                            this.rabNameById[w.codeId] = w.codeValueEN ?? '';
+                        });
                         if (allWings.length === 0) {
                             this.rabTreeNodes = units.map((u) => ({
                                 label: `${u.codeValueEN || ''} (0)`,
                                 data: { codeId: u.codeId, codeType: 'RabUnit' },
                                 children: []
                             }));
-                            this.rabNameById = {};
                             this.rabTreeLoading = false;
                             return;
                         }
                         const branchesRequests = allWings.map((w) => this.masterBasicSetup.getByParentId(w.codeId));
                         forkJoin(branchesRequests).subscribe({
                             next: (branchesPerWing) => {
-                                this.rabNameById = {};
                                 let wingIndex = 0;
                                 this.rabTreeNodes = units.map((unit) => {
                                     const wings = wingsPerUnit[units.indexOf(unit)] || [];
@@ -208,7 +214,7 @@ export class MotherOrgRankVacancyDistributionComponent implements OnInit {
 
     onRabNodeSelect(node: TreeNode): void {
         const data = node?.data as { codeId: number; codeType: string } | undefined;
-        if (data?.codeType === 'RabBranch') {
+        if (data?.codeId != null && data?.codeType) {
             this.rabCodeId = data.codeId;
         } else {
             this.rabCodeId = null;
@@ -217,7 +223,7 @@ export class MotherOrgRankVacancyDistributionComponent implements OnInit {
 
     addDistribution(): void {
         if (!this.selectedVacancy || this.rabCodeId == null) {
-            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Select a vacancy and a RAB branch' });
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Select a vacancy and a RAB unit, wing, or branch' });
             return;
         }
         const qty = this.distributionForm.get('quantity')?.value ?? 0;
@@ -226,9 +232,7 @@ export class MotherOrgRankVacancyDistributionComponent implements OnInit {
             return;
         }
         const user = this.shareService.getCurrentUser?.() ?? 'System';
-        const existing = this.distributionData.find(
-            (r) => r.orgId === this.selectedVacancy!.orgId && r.motherOrgRankId === this.selectedVacancy!.motherOrgRankId && r.rabCodeId === this.rabCodeId
-        );
+        const isUpdate = this.editingDistributionId != null;
         const model: MotherOrgRankVacancyDistributionModel = {
             orgId: this.selectedVacancy.orgId,
             motherOrgRankId: this.selectedVacancy.motherOrgRankId,
@@ -237,26 +241,40 @@ export class MotherOrgRankVacancyDistributionComponent implements OnInit {
             createdBy: user,
             lastUpdatedBy: user
         };
-        if (existing?.id) {
-            model.id = existing.id;
+        if (isUpdate) {
+            model.id = this.editingDistributionId!;
+        } else {
+            const existing = this.distributionData.find(
+                (r) => r.orgId === this.selectedVacancy!.orgId && r.motherOrgRankId === this.selectedVacancy!.motherOrgRankId && r.rabCodeId === this.rabCodeId
+            );
+            if (existing?.id) {
+                model.id = existing.id;
+            }
         }
         this.isSubmitting = true;
-        const obs = model.id
+        const obs = model.id != null
             ? this.masterBasicSetup.updateMotherOrgRankVacancyDistribution(model)
             : this.masterBasicSetup.saveMotherOrgRankVacancyDistribution(model);
         obs.subscribe({
             next: (res) => {
                 if (res?.statusCode === 200) {
-                    this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Distribution saved' });
+                    this.messageService.add({ severity: 'success', summary: 'Success', detail: isUpdate ? 'Distribution updated' : 'Distribution saved' });
                     this.distributionForm.patchValue({ quantity: 0 });
+                    this.editingDistributionId = null;
                     this.loadDistribution();
                 } else {
                     this.messageService.add({ severity: 'warn', summary: 'Warning', detail: res?.description ?? 'Save failed' });
                 }
+            },
+            error: (err) => {
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: err?.error?.description ?? err?.message ?? 'Failed to save distribution'
+                });
                 this.isSubmitting = false;
             },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to save distribution' });
+            complete: () => {
                 this.isSubmitting = false;
             }
         });
@@ -273,10 +291,10 @@ export class MotherOrgRankVacancyDistributionComponent implements OnInit {
             .getMotherOrgRankVacancyDistributionByVacancy(this.selectedVacancy.orgId, this.selectedVacancy.motherOrgRankId)
             .subscribe({
                 next: (list) => {
-                    this.distributionData = (list ?? []).map((r) => ({
-                        ...r,
-                        rabName: this.rabNameById[r.rabCodeId] ?? String(r.rabCodeId)
-                    }));
+                    this.distributionData = (list ?? []).map((r: DistributionRow & { RABCodeId?: number }) => {
+                        const codeId = r.rabCodeId ?? r.RABCodeId ?? 0;
+                        return { ...r, rabCodeId: codeId, rabName: this.rabNameById[codeId] ?? String(codeId) };
+                    });
                     this.totalRecords = this.distributionData.length;
                     this.loading = false;
                 },
@@ -286,12 +304,16 @@ export class MotherOrgRankVacancyDistributionComponent implements OnInit {
             });
     }
 
-    editDistribution(row: DistributionRow): void {
+    editDistribution(row: DistributionRow | undefined): void {
+        if (!row) return;
+        this.editingDistributionId = row.id ?? null;
         this.distributionForm.patchValue({ quantity: row.quantity ?? 0 });
-        this.rabCodeId = row.rabCodeId;
-        const node = this.findNodeByCodeId(this.rabTreeNodes, row.rabCodeId);
-        if (node) {
-            this.selectedRabNode = node;
+        this.rabCodeId = row.rabCodeId ?? null;
+        if (this.rabCodeId != null) {
+            const node = this.findNodeByCodeId(this.rabTreeNodes, this.rabCodeId);
+            if (node) {
+                this.selectedRabNode = node;
+            }
         }
     }
 
