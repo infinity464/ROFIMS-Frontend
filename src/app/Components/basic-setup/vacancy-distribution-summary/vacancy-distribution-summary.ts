@@ -44,14 +44,19 @@ export class VacancyDistributionSummaryComponent implements OnInit {
     dynamicColumns: RankColumn[] = [];
     displayRows: DisplayRow[] = [];
 
-    /** column totals: field -> sum of all rows */
+    /** column totals: field -> sum of all rows (respects unit filter) */
     columnTotals: Record<string, number> = {};
     grandTotal = 0;
 
+    /** Optional filter: show only this Unit and its Wings/Branches. null = All */
+    selectedUnitFilter: number | null = null;
+    /** RAB Unit options for the filter dropdown */
+    rabUnitOptions: { codeId: number; label: string }[] = [];
+
     private rabNameById: Record<number, string> = {};
-    private rabTreeLoaded = false;
-    /** ordered list of all RAB codeIds: Unit > Wings under it > Branches under each wing */
-    private orderedRabIds: { codeId: number; level: 0 | 1 | 2 }[] = [];
+    /** ordered list: Unit > Wings under it > Branches; each item has unitCodeId for filtering */
+    private orderedRabIds: { codeId: number; level: 0 | 1 | 2; unitCodeId: number }[] = [];
+    private lastDistributionList: MotherOrgRankVacancyDistributionModel[] = [];
 
     constructor(
         private masterBasicSetup: MasterBasicSetupService,
@@ -68,8 +73,18 @@ export class VacancyDistributionSummaryComponent implements OnInit {
         this.displayRows = [];
         this.columnTotals = {};
         this.grandTotal = 0;
+        this.selectedUnitFilter = null;
         if (!this.selectedOrg) return;
         this.loadSummaryForOrg(this.selectedOrg.orgId);
+    }
+
+    onUnitFilterChange(): void {
+        this.buildDisplayRows(this.lastDistributionList);
+    }
+
+    /** Options for unit filter: All + each RAB Unit */
+    get unitFilterOptions(): { codeId: number | null; label: string }[] {
+        return [{ codeId: null, label: 'All' }, ...this.rabUnitOptions];
     }
 
     cellDisplay(row: DisplayRow, field: string): string {
@@ -91,50 +106,50 @@ export class VacancyDistributionSummaryComponent implements OnInit {
         });
     }
 
-    /** Load full RAB tree once, build name map and ordered id list (Unit → Wing → Branch) */
+    /** Load full RAB tree once, build name map, unit options, and ordered id list (Unit → Wing → Branch) */
     private loadRabTree(): void {
         this.masterBasicSetup.getAllByType('RabUnit').subscribe({
             next: (units) => {
-                if (!units?.length) { this.rabTreeLoaded = true; return; }
-                (units as CommonCode[]).forEach((u) => { this.rabNameById[u.codeId] = u.codeValueEN ?? ''; });
-                const wingsRequests = units.map((u) => this.masterBasicSetup.getByParentId(u.codeId));
+                const unitList = (units ?? []) as CommonCode[];
+                if (!unitList.length) { this.rabUnitOptions = []; return; }
+                unitList.forEach((u) => { this.rabNameById[u.codeId] = u.codeValueEN ?? ''; });
+                this.rabUnitOptions = unitList.map((u) => ({ codeId: u.codeId, label: u.codeValueEN ?? '' }));
+                const wingsRequests = unitList.map((u) => this.masterBasicSetup.getByParentId(u.codeId));
                 forkJoin(wingsRequests).subscribe({
                     next: (wingsPerUnit) => {
                         const allWings = wingsPerUnit.flat() as CommonCode[];
                         allWings.forEach((w) => { this.rabNameById[w.codeId] = w.codeValueEN ?? ''; });
                         if (allWings.length === 0) {
-                            this.orderedRabIds = (units as CommonCode[]).map((u) => ({ codeId: u.codeId, level: 0 as const }));
-                            this.rabTreeLoaded = true;
+                            this.orderedRabIds = unitList.map((u) => ({ codeId: u.codeId, level: 0 as const, unitCodeId: u.codeId }));
                             return;
                         }
                         const branchesRequests = allWings.map((w) => this.masterBasicSetup.getByParentId(w.codeId));
                         forkJoin(branchesRequests).subscribe({
                             next: (branchesPerWing) => {
-                                const ordered: { codeId: number; level: 0 | 1 | 2 }[] = [];
+                                const ordered: { codeId: number; level: 0 | 1 | 2; unitCodeId: number }[] = [];
                                 let wingIdx = 0;
-                                (units as CommonCode[]).forEach((unit) => {
-                                    ordered.push({ codeId: unit.codeId, level: 0 });
-                                    const wings = wingsPerUnit[units.indexOf(unit)] ?? [];
-                                    (wings as CommonCode[]).forEach((wing) => {
-                                        ordered.push({ codeId: wing.codeId, level: 1 });
+                                unitList.forEach((unit) => {
+                                    ordered.push({ codeId: unit.codeId, level: 0, unitCodeId: unit.codeId });
+                                    const wings = (wingsPerUnit[unitList.indexOf(unit)] ?? []) as CommonCode[];
+                                    wings.forEach((wing) => {
+                                        ordered.push({ codeId: wing.codeId, level: 1, unitCodeId: unit.codeId });
                                         const branches = (branchesPerWing[wingIdx] ?? []) as CommonCode[];
                                         branches.forEach((b) => {
                                             this.rabNameById[b.codeId] = b.codeValueEN ?? '';
-                                            ordered.push({ codeId: b.codeId, level: 2 });
+                                            ordered.push({ codeId: b.codeId, level: 2, unitCodeId: unit.codeId });
                                         });
                                         wingIdx++;
                                     });
                                 });
                                 this.orderedRabIds = ordered;
-                                this.rabTreeLoaded = true;
                             },
-                            error: () => { this.rabTreeLoaded = true; }
+                            error: () => {}
                         });
                     },
-                    error: () => { this.rabTreeLoaded = true; }
+                    error: () => {}
                 });
             },
-            error: () => { this.rabTreeLoaded = true; }
+            error: () => {}
         });
     }
 
@@ -161,6 +176,7 @@ export class VacancyDistributionSummaryComponent implements OnInit {
                             next: (distPerRank) => {
                                 const allDist: MotherOrgRankVacancyDistributionModel[] = [];
                                 distPerRank.forEach((list) => allDist.push(...(list ?? [])));
+                                this.lastDistributionList = allDist;
                                 this.buildDisplayRows(allDist);
                                 this.loading = false;
                             },
@@ -199,9 +215,12 @@ export class VacancyDistributionSummaryComponent implements OnInit {
         this.dynamicColumns.forEach((c) => { this.columnTotals[c.field] = 0; });
 
         const rows: DisplayRow[] = [];
-        const source = this.orderedRabIds.length
+        let source = this.orderedRabIds.length
             ? this.orderedRabIds
-            : Array.from(byRab.keys()).map((id) => ({ codeId: id, level: 0 as const }));
+            : Array.from(byRab.keys()).map((id) => ({ codeId: id, level: 0 as const, unitCodeId: id }));
+        if (this.selectedUnitFilter != null && this.orderedRabIds.length) {
+            source = source.filter((x) => x.unitCodeId === this.selectedUnitFilter);
+        }
 
         source.forEach(({ codeId, level }) => {
             const qtyByRankId = byRab.get(codeId) ?? {};

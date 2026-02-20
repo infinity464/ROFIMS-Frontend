@@ -17,6 +17,22 @@
                     styleClass="w-full">
                 </p-select>
             </div>
+            @if (selectedOrg && rabUnitOptions.length > 0) {
+                <div class="col-12 md:col-4">
+                    <label class="block mb-2 font-medium">Filter by RAB Unit <span class="text-color-secondary font-normal">(optional)</span></label>
+                    <p-select
+                        [options]="unitFilterOptions"
+                        [(ngModel)]="selectedUnitFilter"
+                        optionLabel="label"
+                        optionValue="codeId"
+                        [placeholder]="'All'"
+                        [filter]="true"
+                        filterBy="label"
+                        (ngModelChange)="onUnitFilterChange()"
+                        styleClass="w-full">
+                    </p-select>
+                </div>
+            }
         </div>
 
         @if (loading) {
