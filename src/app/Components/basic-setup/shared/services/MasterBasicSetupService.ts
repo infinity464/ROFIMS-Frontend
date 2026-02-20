@@ -9,6 +9,7 @@ import { BankModel } from '../models/bank';
 import { BankBranchModel } from '../models/bank-branch';
 import { TrainingInstituteModel } from '../models/training-institution';
 import { RabIdSerialModel } from '../models/rab-id-serial';
+import { NoteSheetTemplateModel } from '../models/notesheet-template';
 
 @Injectable({
     providedIn: 'root'
@@ -20,6 +21,7 @@ export class MasterBasicSetupService {
     private apiUrlBankBranch = `${environment.apis.core}/BankBranch`;
     private apiUrlTraining = `${environment.apis.core}/TrainingInstitute`;
     private apiUrlRabIdSerial = `${environment.apis.core}/RabIdSerial`;
+    private apiUrlNoteSheetTemplate = `${environment.apis.core}/NoteSheetTemplate`;
 
     getAllByType(codeType: string): Observable<CommonCode[]> {
         return this.http.get<CommonCode[]>(`${this.apiUrl}/GetByTypeAsyn/${codeType}`);
@@ -150,5 +152,21 @@ export class MasterBasicSetupService {
     // DELETE: delete RabIdSerial
     deleteRabIdSerial(id: number): Observable<any> {
         return this.http.delete(`${this.apiUrlRabIdSerial}/DeleteAsyn/${id}`);
+    }
+
+    getNoteSheetTemplates(): Observable<NoteSheetTemplateModel[]> {
+        return this.http.get<NoteSheetTemplateModel[]>(`${this.apiUrlNoteSheetTemplate}/GetAll`);
+    }
+    getNoteSheetTemplateById(id: number): Observable<NoteSheetTemplateModel[]> {
+        return this.http.get<NoteSheetTemplateModel[]>(`${this.apiUrlNoteSheetTemplate}/GetFilteredByKeysAsyn/${id}`);
+    }
+    createNoteSheetTemplate(model: NoteSheetTemplateModel): Observable<any> {
+        return this.http.post(`${this.apiUrlNoteSheetTemplate}/SaveAsyn`, model);
+    }
+    updateNoteSheetTemplate(model: NoteSheetTemplateModel): Observable<any> {
+        return this.http.put(`${this.apiUrlNoteSheetTemplate}/UpdateAsyn`, model);
+    }
+    deleteNoteSheetTemplate(id: number): Observable<any> {
+        return this.http.delete(`${this.apiUrlNoteSheetTemplate}/DeleteAsyn/${id}`);
     }
 }
