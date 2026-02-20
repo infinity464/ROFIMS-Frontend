@@ -1,0 +1,72 @@
+<p-fluid>
+    <div class="mb-5 card">
+        <div class="flex align-items-center gap-3 mb-4">
+            <h3 class="m-0 text-xl font-bold text-900" style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                <i class="pi pi-users text-primary"></i>
+                Data Entry (Personal & Service)
+            </h3>
+        </div>
+
+        <app-employee-search
+            [initialEmployeeId]="selectedEmployeeId"
+            (onEmployeeFound)="onEmployeeFound($event)"
+            (onSearchReset)="onSearchReset()">
+        </app-employee-search>
+
+        @if (employeeBasicInfo && selectedEmployeeId) {
+            <div class="surface-50 border-round-2xl p-4 mb-4">
+                <div class="flex flex-wrap gap-4">
+                    <div><span class="text-500 text-sm">Name:</span> <span class="ml-2 font-semibold">{{ employeeBasicInfo.fullNameEN || 'N/A' }}</span></div>
+                    <div><span class="text-500 text-sm">RAB ID:</span> <span class="ml-2 font-semibold">{{ employeeBasicInfo.rabid || 'N/A' }}</span></div>
+                    <div><span class="text-500 text-sm">Service ID:</span> <span class="ml-2 font-semibold">{{ employeeBasicInfo.serviceId || 'N/A' }}</span></div>
+                    <div><span class="text-500 text-sm">Rank:</span> <span class="ml-2 font-semibold">{{ employeeBasicInfo.rankDisplay ?? 'N/A' }}</span></div>
+                </div>
+            </div>
+
+            <p-tabs [(value)]="activeTab" class="mt-2">
+                <p-tablist>
+                    <p-tab [value]="0"><i class="pi pi-user mr-1"></i>Personal Info</p-tab>
+                    <p-tab [value]="1"><i class="pi pi-map-marker mr-1"></i>Address Info</p-tab>
+                    <p-tab [value]="2"><i class="pi pi-users mr-1"></i>Family Info</p-tab>
+                    <p-tab [value]="3"><i class="pi pi-user-plus mr-1"></i>Nominee Info</p-tab>
+                    <p-tab [value]="4"><i class="pi pi-history mr-1"></i>Previous RAB Service</p-tab>
+                    <p-tab [value]="5"><i class="pi pi-clock mr-1"></i>Service History</p-tab>
+                    <p-tab [value]="6"><i class="pi pi-arrow-up mr-1"></i>Promotion Info</p-tab>
+                    <p-tab [value]="7"><i class="pi pi-check-circle mr-1"></i>Rank Confirmation</p-tab>
+                    <p-tab [value]="8"><i class="pi pi-book mr-1"></i>Education Info</p-tab>
+                    <p-tab [value]="9"><i class="pi pi-graduation-cap mr-1"></i>Course Info</p-tab>
+                    <p-tab [value]="10"><i class="pi pi-exclamation-triangle mr-1"></i>Discipline Info</p-tab>
+                    <p-tab [value]="11"><i class="pi pi-wallet mr-1"></i>Bank Account</p-tab>
+                    <p-tab [value]="12"><i class="pi pi-globe mr-1"></i>Foreign Visit</p-tab>
+                    <p-tab [value]="13"><i class="pi pi-calendar-minus mr-1"></i>Leave Info</p-tab>
+                    <p-tab [value]="14"><i class="pi pi-heart mr-1"></i>Medical Category</p-tab>
+                    <p-tab [value]="15"><i class="pi pi-comment mr-1"></i>Additional Remarks</p-tab>
+                </p-tablist>
+                <p-tabpanels>
+                    <p-tabpanel [value]="0"><app-emp-personal-info></app-emp-personal-info></p-tabpanel>
+                    <p-tabpanel [value]="1"><app-emp-address-info></app-emp-address-info></p-tabpanel>
+                    <p-tabpanel [value]="2"><app-emp-family-info></app-emp-family-info></p-tabpanel>
+                    <p-tabpanel [value]="3"><app-emp-nominee-info></app-emp-nominee-info></p-tabpanel>
+                    <p-tabpanel [value]="4"><app-emp-previous-rab-service></app-emp-previous-rab-service></p-tabpanel>
+                    <p-tabpanel [value]="5"><app-emp-service-history></app-emp-service-history></p-tabpanel>
+                    <p-tabpanel [value]="6"><app-emp-promotion-info></app-emp-promotion-info></p-tabpanel>
+                    <p-tabpanel [value]="7"><app-emp-rank-confirmation></app-emp-rank-confirmation></p-tabpanel>
+                    <p-tabpanel [value]="8"><app-emp-education-info></app-emp-education-info></p-tabpanel>
+                    <p-tabpanel [value]="9"><app-emp-course-info></app-emp-course-info></p-tabpanel>
+                    <p-tabpanel [value]="10"><app-emp-discipline-info></app-emp-discipline-info></p-tabpanel>
+                    <p-tabpanel [value]="11"><app-emp-bank-account></app-emp-bank-account></p-tabpanel>
+                    <p-tabpanel [value]="12"><app-emp-foreign-visit></app-emp-foreign-visit></p-tabpanel>
+                    <p-tabpanel [value]="13"><app-emp-leave-info></app-emp-leave-info></p-tabpanel>
+                    <p-tabpanel [value]="14"><app-emp-medical-category></app-emp-medical-category></p-tabpanel>
+                    <p-tabpanel [value]="15"><app-emp-additional-remarks></app-emp-additional-remarks></p-tabpanel>
+                </p-tabpanels>
+            </p-tabs>
+
+            <div class="flex justify-end mt-4">
+                <p-button label="Back to List" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" (onClick)="goBack()"></p-button>
+            </div>
+        } @else {
+            <p class="text-500 text-center py-8">Search and select an employee to view or edit Personal &amp; Service Information.</p>
+        }
+    </div>
+</p-fluid>

@@ -1,0 +1,125 @@
+<p-toast></p-toast>
+<div class="posting-page">
+    <p-card>
+        <ng-template pTemplate="header">
+            <div class="flex align-items-center gap-2 p-3">
+                <i class="pi pi-clock text-2xl"></i>
+                <span class="text-xl font-semibold">Pending List for Joining</span>
+            </div>
+        </ng-template>
+        <p class="m-0 mb-3">
+            Members with approved Posting Order who have not yet joined the unit. Use <strong>Join</strong> to record joining date and CC/MO/Article 47.
+        </p>
+        <p-tabs [(value)]="activeTab" class="mt-2">
+            <p-tablist>
+                <p-tab [value]="0">New Posting</p-tab>
+                <p-tab [value]="1">Inter Posting</p-tab>
+            </p-tablist>
+            <p-tabpanels>
+                <p-tabpanel [value]="0">
+                    <p-table [value]="pendingNew" styleClass="p-datatable-sm">
+                        <ng-template pTemplate="header">
+                            <tr>
+                                <th>Order No</th>
+                                <th>Service ID</th>
+                                <th>RAB ID</th>
+                                <th>Name</th>
+                                <th>Rank</th>
+                                <th>Posted To Unit</th>
+                                <th>Action</th>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="body" let-row>
+                            <tr>
+                                <td>{{ row.orderNo }}</td>
+                                <td>{{ row.serviceId || '-' }}</td>
+                                <td>{{ row.rabID || '-' }}</td>
+                                <td>{{ row.fullNameEN || '-' }}</td>
+                                <td>{{ row.rankName || '-' }}</td>
+                                <td>{{ row.postedToUnitName || '-' }}</td>
+                                <td><p-button label="Join" size="small" icon="pi pi-check" (onClick)="openJoinDialog(row)"></p-button></td>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="emptymessage">
+                            <tr><td colspan="7" class="text-center p-4">No pending joining (New Posting).</td></tr>
+                        </ng-template>
+                    </p-table>
+                </p-tabpanel>
+                <p-tabpanel [value]="1">
+                    <p-table [value]="pendingInter" styleClass="p-datatable-sm">
+                        <ng-template pTemplate="header">
+                            <tr>
+                                <th>Order No</th>
+                                <th>Service ID</th>
+                                <th>RAB ID</th>
+                                <th>Name</th>
+                                <th>Rank</th>
+                                <th>From Unit</th>
+                                <th>Posted To Unit</th>
+                                <th>Action</th>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="body" let-row>
+                            <tr>
+                                <td>{{ row.orderNo }}</td>
+                                <td>{{ row.serviceId || '-' }}</td>
+                                <td>{{ row.rabID || '-' }}</td>
+                                <td>{{ row.fullNameEN || '-' }}</td>
+                                <td>{{ row.rankName || '-' }}</td>
+                                <td>{{ row.postingFromUnitName || '-' }}</td>
+                                <td>{{ row.postedToUnitName || '-' }}</td>
+                                <td><p-button label="Join" size="small" icon="pi pi-check" (onClick)="openJoinDialog(row)"></p-button></td>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="emptymessage">
+                            <tr><td colspan="8" class="text-center p-4">No pending joining (Inter Posting).</td></tr>
+                        </ng-template>
+                    </p-table>
+                </p-tabpanel>
+            </p-tabpanels>
+        </p-tabs>
+
+        <!-- Join dialog -->
+        <p-dialog
+            header="Record Joining"
+            [(visible)]="showJoinDialog"
+            [modal]="true"
+            [style]="{ width: '28rem' }"
+            (onHide)="joinItem = null"
+            [draggable]="false"
+            [resizable]="false">
+            @if (joinItem; as item) {
+                <div class="flex flex-column gap-3">
+                    <div><span class="text-500 font-semibold">RAB ID:</span> {{ item.rabID || '-' }}</div>
+                    <div><span class="text-500 font-semibold">Service ID:</span> {{ item.serviceId || '-' }}</div>
+                    <div><span class="text-500 font-semibold">Name:</span> {{ item.fullNameEN || '-' }}</div>
+                    <div><span class="text-500 font-semibold">Rank:</span> {{ item.rankName || '-' }}</div>
+                    <div><span class="text-500 font-semibold">Posting From:</span> {{ item.postingFromUnitName || '-' }}</div>
+                    <div><span class="text-500 font-semibold">Posted To:</span> {{ item.postedToUnitName || '-' }}</div>
+                    <div>
+                        <label class="block font-semibold mb-1">Joining Date</label>
+                        <p-datepicker [(ngModel)]="joinDate" dateFormat="dd/mm/yy" styleClass="w-full" placeholder="Select date"></p-datepicker>
+                    </div>
+                    <div>
+                        <label class="block font-semibold mb-1">CC/MO/Article 47 No</label>
+                        <input pInputText [(ngModel)]="ccMoArticle47No" class="w-full" placeholder="Optional" />
+                    </div>
+                    <div>
+                        <label class="block font-semibold mb-1">Upload CC/MO/Article 47</label>
+                        <input type="file" class="w-full" accept=".pdf,.doc,.docx,image/*" />
+                        <small class="text-500">Optional file upload (backend integration pending)</small>
+                    </div>
+                </div>
+            }
+            <ng-template pTemplate="footer">
+                <p-button label="Cancel" severity="secondary" (onClick)="showJoinDialog = false"></p-button>
+                <p-button label="Submit" icon="pi pi-check" (onClick)="submitJoin()"></p-button>
+            </ng-template>
+        </p-dialog>
+
+        <ng-template pTemplate="footer">
+            <a pButton label="New Posting Order" icon="pi pi-send" routerLink="/posting/new-posting-order" class="p-button-outlined mr-2"></a>
+            <a pButton label="Inter-Posting Order" icon="pi pi-arrows-h" routerLink="/posting/inter-posting-order" class="p-button-outlined"></a>
+        </ng-template>
+    </p-card>
+</div>

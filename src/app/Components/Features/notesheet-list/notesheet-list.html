@@ -1,0 +1,445 @@
+<p-fluid>
+  <p-toast></p-toast>
+
+  <div class="card mb-4">
+    @switch (section) {
+      @case ('draft') {
+        <h2 class="m-0 text-2xl font-bold text-900 mb-2">Draft Note-Sheet List</h2>
+        <p class="text-600 m-0">Submit for approval when ready. You can Update, Preview, Edit main text, then Submit for approval.</p>
+      }
+      @case ('pending') {
+        <h2 class="m-0 text-2xl font-bold text-900 mb-2">Pending for Approval Note-Sheet List</h2>
+        <p class="text-600 m-0">Approve, Decline, or Back with remark as per workflow.</p>
+      }
+      @case ('approved') {
+        <h2 class="m-0 text-2xl font-bold text-900 mb-2">Approved Note-Sheet List</h2>
+        <p class="text-600 m-0">Note-sheets that have been approved.</p>
+      }
+      @case ('declined') {
+        <h2 class="m-0 text-2xl font-bold text-900 mb-2">Declined Note-Sheet List</h2>
+        <p class="text-600 m-0">Note-sheets that have been declined.</p>
+      }
+      @case ('all') {
+        <h2 class="m-0 text-2xl font-bold text-900 mb-2">All Note-Sheet</h2>
+        <p class="text-600 m-0">All note-sheets regardless of status.</p>
+      }
+    }
+  </div>
+
+  @if (section === 'draft') {
+  <div class="card mb-4">
+    <h3 class="text-xl font-semibold text-900 mb-3">Draft Note-Sheet List (Submit for approval)</h3>
+    <p-table [value]="draftList" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines">
+      <ng-template pTemplate="header">
+        <tr>
+          <th style="width: 50px">Ser</th>
+          <th>Note-Sheet Date</th>
+          <th>Note-Sheet No</th>
+          <th>Unit</th>
+          <th>Wing/Battalion</th>
+          <th>Branch</th>
+          <th>Subject</th>
+          <th>Back Remark</th>
+          <th>Supporting Documents</th>
+          <th style="min-width: 260px">Action</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+        <tr>
+          <td>{{ rowIndex + 1 }}</td>
+          <td>{{ formatDate(row.noteSheetDate) }}</td>
+          <td>{{ row.noteSheetNo || '-' }}</td>
+          <td>{{ getUnitLabel(row.unitId) }}</td>
+          <td>{{ getWingLabel(row.wingBattalionId) }}</td>
+          <td>{{ getBranchLabel(row.branchId) }}</td>
+          <td>{{ row.subject || '-' }}</td>
+          <td><span class="text-sm" [title]="row.remark || ''">{{ row.remark || '—' }}</span></td>
+          <td class="text-sm">
+            @if (getRowSupportingDocumentsWithIds(row).length > 0) {
+              <div class="flex flex-column gap-1">
+                @for (doc of getRowSupportingDocumentsWithIds(row); track doc.fileId) {
+                  <div class="flex align-items-center gap-1 flex-wrap">
+                    <span class="flex-1 text-overflow-ellipsis" style="min-width: 0;">{{ doc.fileName }}</span>
+                    <p-button type="button" icon="pi pi-eye" [rounded]="true" [text]="true" size="small" pTooltip="Preview" (onClick)="onPreviewSupportingDoc(doc.fileId, doc.fileName)"></p-button>
+                    <p-button type="button" icon="pi pi-download" [rounded]="true" [text]="true" size="small" pTooltip="Download" (onClick)="onDownloadSupportingDoc(doc.fileId, doc.fileName)"></p-button>
+                  </div>
+                }
+              </div>
+            } @else {
+              <span class="text-500">—</span>
+            }
+          </td>
+          <td>
+            <p-button type="button" label="Update" icon="pi pi-pencil" [text]="true" size="small" (onClick)="goToUpdate(row)" class="mr-1"></p-button>
+            <p-button type="button" label="Preview" icon="pi pi-eye" [text]="true" size="small" (onClick)="openPreview(row)" class="mr-1"></p-button>
+            <p-button type="button" label="Edit main text" icon="pi pi-file-edit" [text]="true" size="small" (onClick)="openEditMainText(row)" class="mr-1"></p-button>
+            <p-button type="button" label="Submit for approval" icon="pi pi-send" [text]="true" size="small" (onClick)="submitForApproval(row)"></p-button>
+          </td>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="emptymessage">
+        <tr><td colspan="10" class="text-center text-500">No draft note-sheets.</td></tr>
+      </ng-template>
+    </p-table>
+  </div>
+  }
+
+  @if (section === 'pending') {
+  <div class="card mb-4">
+    <h3 class="text-xl font-semibold text-900 mb-3">Pending for Approval Note-Sheet List</h3>
+    <p-table [value]="pendingList" [loading]="loading" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines">
+      <ng-template pTemplate="header">
+        <tr>
+          <th style="width: 50px">Ser</th>
+          <th>Note-Sheet Date</th>
+          <th>Note-Sheet No</th>
+          <th>Unit</th>
+          <th>Wing/Battalion</th>
+          <th>Branch</th>
+          <th>Sub-Branch</th>
+          <th>Subject</th>
+          <th>Present Status</th>
+          <th>Supporting Documents</th>
+          <th style="min-width: 280px">Action</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+        <tr>
+          <td>{{ rowIndex + 1 }}</td>
+          <td>{{ formatDate(row.noteSheetDate) }}</td>
+          <td>{{ row.noteSheetNo || '-' }}</td>
+          <td>{{ getUnitLabel(row.unitId) }}</td>
+          <td>{{ getWingLabel(row.wingBattalionId) }}</td>
+          <td>{{ getBranchLabel(row.branchId) }}</td>
+          <td>–</td>
+          <td>{{ row.subject || '-' }}</td>
+          <td>{{ presentStatus(row) }}</td>
+          <td class="text-sm">
+            @if (getRowSupportingDocumentsWithIds(row).length > 0) {
+              <div class="flex flex-column gap-1">
+                @for (doc of getRowSupportingDocumentsWithIds(row); track doc.fileId) {
+                  <div class="flex align-items-center gap-1 flex-wrap">
+                    <span class="flex-1 text-overflow-ellipsis" style="min-width: 0;">{{ doc.fileName }}</span>
+                    <p-button type="button" icon="pi pi-eye" [rounded]="true" [text]="true" size="small" pTooltip="Preview" (onClick)="onPreviewSupportingDoc(doc.fileId, doc.fileName)"></p-button>
+                    <p-button type="button" icon="pi pi-download" [rounded]="true" [text]="true" size="small" pTooltip="Download" (onClick)="onDownloadSupportingDoc(doc.fileId, doc.fileName)"></p-button>
+                  </div>
+                }
+              </div>
+            } @else {
+              <span class="text-500">—</span>
+            }
+          </td>
+          <td>
+            <p-button type="button" label="Preview" icon="pi pi-eye" [text]="true" size="small" (onClick)="openPreview(row)" class="mr-1"></p-button>
+            <p-button type="button" label="Approve" icon="pi pi-check" [text]="true" size="small" (onClick)="openRemarkDialog(row, 'approve')" class="mr-1"></p-button>
+            <p-button type="button" label="Decline" icon="pi pi-times" [text]="true" severity="danger" size="small" (onClick)="openRemarkDialog(row, 'decline')" class="mr-1"></p-button>
+            <p-button type="button" label="Back" icon="pi pi-replay" [text]="true" severity="secondary" size="small" (onClick)="openRemarkDialog(row, 'back')"></p-button>
+          </td>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="emptymessage">
+        <tr><td colspan="11" class="text-center text-500">No pending note-sheets.</td></tr>
+      </ng-template>
+    </p-table>
+  </div>
+  }
+
+  @if (section === 'approved') {
+  <div class="card mb-4">
+    <h3 class="text-xl font-semibold text-900 mb-3">Approved Note-Sheet List</h3>
+    <p-table [value]="approvedList" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines">
+      <ng-template pTemplate="header">
+        <tr>
+          <th style="width: 50px">Ser</th>
+          <th>Note-Sheet Date</th>
+          <th>Note-Sheet No</th>
+          <th>Unit</th>
+          <th>Wing/Battalion</th>
+          <th>Branch</th>
+          <th>Sub-Branch</th>
+          <th>Subject</th>
+          <th>Supporting Documents</th>
+          <th>Approved by</th>
+          <th>Approved Date</th>
+          <th style="min-width: 100px">Action</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+        <tr>
+          <td>{{ rowIndex + 1 }}</td>
+          <td>{{ formatDate(row.noteSheetDate) }}</td>
+          <td>{{ row.noteSheetNo || '-' }}</td>
+          <td>{{ getUnitLabel(row.unitId) }}</td>
+          <td>{{ getWingLabel(row.wingBattalionId) }}</td>
+          <td>{{ getBranchLabel(row.branchId) }}</td>
+          <td>–</td>
+          <td>{{ row.subject || '-' }}</td>
+          <td class="text-sm">
+            @if (getRowSupportingDocumentsWithIds(row).length > 0) {
+              <div class="flex flex-column gap-1">
+                @for (doc of getRowSupportingDocumentsWithIds(row); track doc.fileId) {
+                  <div class="flex align-items-center gap-1 flex-wrap">
+                    <span class="flex-1 text-overflow-ellipsis" style="min-width: 0;">{{ doc.fileName }}</span>
+                    <p-button type="button" icon="pi pi-eye" [rounded]="true" [text]="true" size="small" pTooltip="Preview" (onClick)="onPreviewSupportingDoc(doc.fileId, doc.fileName)"></p-button>
+                    <p-button type="button" icon="pi pi-download" [rounded]="true" [text]="true" size="small" pTooltip="Download" (onClick)="onDownloadSupportingDoc(doc.fileId, doc.fileName)"></p-button>
+                  </div>
+                }
+              </div>
+            } @else {
+              <span class="text-500">—</span>
+            }
+          </td>
+          <td>{{ row.approvedByEmployeeId ?? '-' }}</td>
+          <td>{{ formatDate(row.approvedDate) }}</td>
+          <td>
+            <p-button type="button" label="Preview" icon="pi pi-eye" [text]="true" size="small" (onClick)="openPreview(row)"></p-button>
+          </td>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="emptymessage">
+        <tr><td colspan="12" class="text-center text-500">No approved note-sheets.</td></tr>
+      </ng-template>
+    </p-table>
+  </div>
+  }
+
+  @if (section === 'declined') {
+  <div class="card mb-4">
+    <h3 class="text-xl font-semibold text-900 mb-3">Declined Note-Sheet List</h3>
+    <p-table [value]="declinedList" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines">
+      <ng-template pTemplate="header">
+        <tr>
+          <th style="width: 50px">Ser</th>
+          <th>Note-Sheet Date</th>
+          <th>Note-Sheet No</th>
+          <th>Unit</th>
+          <th>Wing/Battalion</th>
+          <th>Branch</th>
+          <th>Sub-Branch</th>
+          <th>Subject</th>
+          <th>Supporting Documents</th>
+          <th>Declined by</th>
+          <th>Declined Date</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+        <tr>
+          <td>{{ rowIndex + 1 }}</td>
+          <td>{{ formatDate(row.noteSheetDate) }}</td>
+          <td>{{ row.noteSheetNo || '-' }}</td>
+          <td>{{ getUnitLabel(row.unitId) }}</td>
+          <td>{{ getWingLabel(row.wingBattalionId) }}</td>
+          <td>{{ getBranchLabel(row.branchId) }}</td>
+          <td>–</td>
+          <td>{{ row.subject || '-' }}</td>
+          <td class="text-sm">
+            @if (getRowSupportingDocumentsWithIds(row).length > 0) {
+              <div class="flex flex-column gap-1">
+                @for (doc of getRowSupportingDocumentsWithIds(row); track doc.fileId) {
+                  <div class="flex align-items-center gap-1 flex-wrap">
+                    <span class="flex-1 text-overflow-ellipsis" style="min-width: 0;">{{ doc.fileName }}</span>
+                    <p-button type="button" icon="pi pi-eye" [rounded]="true" [text]="true" size="small" pTooltip="Preview" (onClick)="onPreviewSupportingDoc(doc.fileId, doc.fileName)"></p-button>
+                    <p-button type="button" icon="pi pi-download" [rounded]="true" [text]="true" size="small" pTooltip="Download" (onClick)="onDownloadSupportingDoc(doc.fileId, doc.fileName)"></p-button>
+                  </div>
+                }
+              </div>
+            } @else {
+              <span class="text-500">—</span>
+            }
+          </td>
+          <td>{{ row.declinedByEmployeeId ?? '-' }}</td>
+          <td>{{ formatDate(row.declinedDate) }}</td>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="emptymessage">
+        <tr><td colspan="11" class="text-center text-500">No declined note-sheets.</td></tr>
+      </ng-template>
+    </p-table>
+  </div>
+  }
+
+  @if (section === 'all') {
+  <div class="card mb-4">
+    <h3 class="text-xl font-semibold text-900 mb-3">All Note-Sheet</h3>
+    <p-table [value]="allList" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" styleClass="p-datatable-striped p-datatable-gridlines">
+      <ng-template pTemplate="header">
+        <tr>
+          <th style="width: 50px">Ser</th>
+          <th>Note-Sheet Date</th>
+          <th>Note-Sheet No</th>
+          <th>Unit</th>
+          <th>Wing/Battalion</th>
+          <th>Branch</th>
+          <th>Sub-Branch</th>
+          <th>Subject</th>
+          <th>Supporting Documents</th>
+          <th>Note-Sheet Status</th>
+          <th style="min-width: 100px">Action</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+        <tr>
+          <td>{{ rowIndex + 1 }}</td>
+          <td>{{ formatDate(row.noteSheetDate) }}</td>
+          <td>{{ row.noteSheetNo || '-' }}</td>
+          <td>{{ getUnitLabel(row.unitId) }}</td>
+          <td>{{ getWingLabel(row.wingBattalionId) }}</td>
+          <td>{{ getBranchLabel(row.branchId) }}</td>
+          <td>–</td>
+          <td>{{ row.subject || '-' }}</td>
+          <td class="text-sm">
+            @if (getRowSupportingDocumentsWithIds(row).length > 0) {
+              <div class="flex flex-column gap-1">
+                @for (doc of getRowSupportingDocumentsWithIds(row); track doc.fileId) {
+                  <div class="flex align-items-center gap-1 flex-wrap">
+                    <span class="flex-1 text-overflow-ellipsis" style="min-width: 0;">{{ doc.fileName }}</span>
+                    <p-button type="button" icon="pi pi-eye" [rounded]="true" [text]="true" size="small" pTooltip="Preview" (onClick)="onPreviewSupportingDoc(doc.fileId, doc.fileName)"></p-button>
+                    <p-button type="button" icon="pi pi-download" [rounded]="true" [text]="true" size="small" pTooltip="Download" (onClick)="onDownloadSupportingDoc(doc.fileId, doc.fileName)"></p-button>
+                  </div>
+                }
+              </div>
+            } @else {
+              <span class="text-500">—</span>
+            }
+          </td>
+          <td>{{ statusLabel(row) }}</td>
+          <td>
+            <p-button type="button" label="Preview" icon="pi pi-eye" [text]="true" size="small" (onClick)="openPreview(row)"></p-button>
+          </td>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="emptymessage">
+        <tr><td colspan="11" class="text-center text-500">No note-sheets.</td></tr>
+      </ng-template>
+    </p-table>
+  </div>
+  }
+
+  <!-- Remark dialog for Approve / Decline / Back -->
+  <p-dialog header="{{ remarkAction === 'approve' ? 'Approve' : remarkAction === 'decline' ? 'Decline' : 'Back' }} with remark" [(visible)]="showRemarkDialog" [modal]="true" [style]="{ width: '28rem' }" (onHide)="selectedRow = null; remarkAction = null" [draggable]="false" [resizable]="false">
+    <div class="flex flex-col gap-2">
+      <label class="font-medium">Remark (optional for Approve)</label>
+      <textarea pTextarea [(ngModel)]="remarkText" rows="3" class="w-full"></textarea>
+    </div>
+    <ng-template pTemplate="footer">
+      <p-button type="button" label="Cancel" [text]="true" (onClick)="showRemarkDialog = false"></p-button>
+      <p-button type="button" label="Submit" icon="pi pi-check" (onClick)="submitRemark()"></p-button>
+    </ng-template>
+  </p-dialog>
+
+  <!-- Preview dialog: formal note-sheet layout; Ex-BD Leave shows type-specific title and details -->
+  <p-dialog
+    header="{{ getPreviewDialogHeader() }}"
+    [(visible)]="showPreviewDialog"
+    [modal]="true"
+    [style]="{ width: '42rem', maxWidth: '95vw' }"
+    [contentStyle]="{ overflow: 'auto' }"
+    (onHide)="previewNoteSheet = null; initiatorDetails = null; approversDetails = []"
+    [draggable]="false"
+    [resizable]="true">
+    @if (previewLoading) {
+      <div class="flex align-items-center justify-content-center p-4"><i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i></div>
+    } @else if (previewNoteSheet) {
+      <div class="notesheet-preview-doc surface-50 p-4 border-round">
+        <div class="text-center mb-3">
+          <div class="font-bold text-xl text-900">{{ isPreviewEnglish() ? 'NOTE SHEET' : 'মন্তব্যপত্র' }}</div>
+          @if (!isPreviewEnglish()) {
+            <div class="font-semibold text-lg text-800 mt-1">মন্তব্যপত্র</div>
+          }
+        </div>
+        <div class="text-center font-bold text-900 mb-3">{{ previewNoteSheet.subject || '' }}</div>
+        <div class="mb-2">
+          <span class="font-semibold">{{ isPreviewEnglish() ? 'Reference:' : 'সুত্রঃ' }}</span>
+          <span class="ml-2">{{ previewNoteSheet.referenceNumber || (isPreviewEnglish() ? '—' : '—') }}</span>
+        </div>
+        @if (isPreviewExBdLeave()) {
+          <div class="mb-3 p-2 surface-100 border-round text-sm">
+            <strong class="block mb-1">{{ isPreviewEnglish() ? 'Ex-BD Leave details' : 'এক্স-বিডি ছুটির বিবরণ' }}</strong>
+            <div class="flex flex-wrap gap-3 mt-1">
+              @if (previewNoteSheet.purposeOfExBdLeaveId != null) {
+                <span>{{ isPreviewEnglish() ? 'Purpose:' : 'উদ্দেশ্য:' }} {{ previewNoteSheet.purposeOfExBdLeaveId }}</span>
+              }
+              @if (previewNoteSheet.destinationCountryId != null) {
+                <span>{{ isPreviewEnglish() ? 'Destination Country:' : 'গন্তব্য দেশ:' }} {{ previewNoteSheet.destinationCountryId }}</span>
+              }
+              @if (previewNoteSheet.dateOfVisitFrom || previewNoteSheet.dateOfVisitTo) {
+                <span>{{ isPreviewEnglish() ? 'Visit:' : 'সফর:' }} {{ formatDate(previewNoteSheet.dateOfVisitFrom) }} – {{ formatDate(previewNoteSheet.dateOfVisitTo) }}</span>
+              }
+              @if (previewNoteSheet.totalDays != null && previewNoteSheet.totalDays > 0) {
+                <span>{{ isPreviewEnglish() ? 'Total Days:' : 'মোট দিন:' }} {{ previewNoteSheet.totalDays }}</span>
+              }
+              @if (getPreviewExBdFamilySummary()) {
+                <span>{{ isPreviewEnglish() ? 'Family:' : 'পরিবার:' }} {{ getPreviewExBdFamilySummary() }}</span>
+              }
+            </div>
+          </div>
+        }
+        <div class="notesheet-preview-body border-1 surface-border border-round p-3 mb-3" [innerHTML]="getPreviewMainTextSafe()"></div>
+        @if (getPreviewSupportingDocumentsWithIds().length > 0) {
+          <div class="mb-3 p-2 surface-100 border-round">
+            <strong class="text-sm">{{ isPreviewEnglish() ? 'Supporting Documents:' : 'সহায়ক নথি:' }}</strong>
+            <div class="flex flex-column gap-1 mt-2">
+              @for (doc of getPreviewSupportingDocumentsWithIds(); track doc.fileId) {
+                <div class="flex align-items-center gap-2">
+                  <span class="text-sm flex-1" style="min-width: 0; overflow: hidden; text-overflow: ellipsis;">{{ doc.fileName }}</span>
+                  <p-button type="button" icon="pi pi-eye" [rounded]="true" [text]="true" size="small" pTooltip="Preview" (onClick)="onPreviewSupportingDoc(doc.fileId, doc.fileName)"></p-button>
+                  <p-button type="button" icon="pi pi-download" [rounded]="true" [text]="true" size="small" pTooltip="Download" (onClick)="onDownloadSupportingDoc(doc.fileId, doc.fileName)"></p-button>
+                </div>
+              }
+            </div>
+          </div>
+        }
+        <div class="mb-3">{{ isPreviewEnglish() ? 'Presented for your kind approval.' : 'আপনার সদয় অনুমোদনের জন্য উপস্থাপন করা হলো।' }}</div>
+        <div class="flex justify-content-between align-items-start gap-4">
+          <div class="flex flex-column gap-2">
+            @for (item of approversDetails; track item.step + item.rabId) {
+              <div class="flex flex-column text-sm">
+                <span class="font-semibold text-700">{{ item.step }}</span>
+                <span>{{ item.name }}</span>
+                <span class="text-600">RAB ID: {{ item.rabId }}</span>
+                <span class="text-600">{{ isPreviewEnglish() ? 'Rank:' : 'পদ:' }} {{ item.rank }}</span>
+                <span class="text-600">{{ isPreviewEnglish() ? 'Current Service Rank:' : 'বর্তমান সেবা পদ:' }} {{ item.serviceRank }}</span>
+              </div>
+            }
+          </div>
+          <div class="text-right flex flex-column gap-2">
+            @if (initiatorDetails) {
+              <div class="flex flex-column text-sm align-items-end">
+                <span class="font-semibold text-700">{{ initiatorDetails.step }}</span>
+                <span>{{ initiatorDetails.name }}</span>
+                <span class="text-600">RAB ID: {{ initiatorDetails.rabId }}</span>
+                <span class="text-600">{{ isPreviewEnglish() ? 'Rank:' : 'পদ:' }} {{ initiatorDetails.rank }}</span>
+                <span class="text-600">{{ isPreviewEnglish() ? 'Current Service Rank:' : 'বর্তমান সেবা পদ:' }} {{ initiatorDetails.serviceRank }}</span>
+              </div>
+            }
+            <div>
+              <div class="font-medium">{{ previewNoteSheet.preparedBy || '—' }}</div>
+              <div class="text-sm text-600">{{ isPreviewEnglish() ? 'Prepared by' : 'প্রস্তুতকারী' }}</div>
+              <div class="text-sm text-500">{{ formatDate(previewNoteSheet.noteSheetDate) }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+  </p-dialog>
+
+  <!-- Edit main text modal -->
+  <p-dialog
+    header="Edit main text"
+    [(visible)]="showEditMainTextDialog"
+    [modal]="true"
+    [style]="{ width: '36rem' }"
+    [contentStyle]="{ overflow: 'auto' }"
+    (onHide)="editMainTextNoteSheet = null; mainTextEditValue = ''"
+    [draggable]="false"
+    [resizable]="false">
+    <div class="flex flex-col gap-2">
+      <label class="font-medium">Main Text</label>
+      <p-editor [(ngModel)]="mainTextEditValue" [style]="{ height: '220px' }" placeholder="Edit content..."></p-editor>
+    </div>
+    <ng-template pTemplate="footer">
+      <p-button label="Cancel" [text]="true" (onClick)="showEditMainTextDialog = false"></p-button>
+      <p-button label="Save" icon="pi pi-check" [loading]="savingMainText" (onClick)="saveMainText()"></p-button>
+    </ng-template>
+  </p-dialog>
+</p-fluid>

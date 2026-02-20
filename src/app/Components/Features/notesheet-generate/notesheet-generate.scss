@@ -1,0 +1,56 @@
+// NoteSheet Generate – form layout like screenshot (two-column table style)
+.notesheet-form-table {
+  border: 1px solid var(--surface-border);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+
+.notesheet-row {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 1rem;
+  align-items: start;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--surface-border);
+  min-height: 3rem;
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.notesheet-row-maintext {
+  align-items: start;
+  min-height: 260px;
+}
+
+.notesheet-label {
+  font-weight: 500;
+  color: var(--text-color);
+  padding-top: 0.25rem;
+}
+
+.notesheet-input-desc {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+@media (max-width: 768px) {
+  .notesheet-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Preview dialog – formal note-sheet layout */
+.notesheet-preview-doc {
+  font-family: inherit;
+  line-height: 1.5;
+  .notesheet-preview-body {
+    min-height: 4rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+    ::ng-deep p { margin: 0 0 0.5rem 0; }
+    ::ng-deep p:last-child { margin-bottom: 0; }
+  }
+}
