@@ -1,0 +1,25 @@
+:host ::ng-deep {
+  // Make dialog content stretch so footer stays at bottom
+  .p-dialog {
+    display: flex;
+    flex-direction: column;
+
+    .p-dialog-content {
+      flex: 1;
+    }
+  }
+
+  // Compact file-references titles inside the dialog
+  .file-section-compact {
+    app-file-references-form {
+      h3 {
+        font-size: 0.875rem !important;
+        font-weight: 600 !important;
+      }
+
+      .file-references-table__table {
+        font-size: 0.8125rem;
+      }
+    }
+  }
+}

@@ -108,7 +108,15 @@ export class AppMenu {
                     { label: 'Foreign Visit', icon: 'pi pi-fw pi-globe', routerLink: ['/emp-foreign-visit'] },
                     { label: 'Leave Info', icon: 'pi pi-fw pi-calendar-minus', routerLink: ['/emp-leave-info'] },
                     { label: 'Medical Category', icon: 'pi pi-fw pi-heart', routerLink: ['/emp-medical-category'] },
-                    { label: 'Additional Remarks', icon: 'pi pi-fw pi-comment', routerLink: ['/emp-additional-remarks'] }
+                    { label: 'Additional Remarks', icon: 'pi pi-fw pi-comment', routerLink: ['/emp-additional-remarks'] },
+                ]
+            },
+            {
+                label: 'Permanent Posting',
+                icon: 'pi pi-fw pi-send',
+                items: [
+                    { label: 'Perm Posting (Mother Org)', icon: 'pi pi-fw pi-building', routerLink: ['/emp-perm-posting-mother-org'] },
+                    { label: 'Present Status', icon: 'pi pi-fw pi-info-circle', routerLink: ['/emp-present-status'] }
                 ]
             },
             {
@@ -193,6 +201,9 @@ export class AppMenu {
 
                     { label: 'Bank', icon: 'pi pi-fw pi-wallet', routerLink: ['/basic-setup/bank'] },
                     { label: 'Bank Branch', icon: 'pi pi-fw pi-building', routerLink: ['/basic-setup/bank-branch'] },
+                    { label: 'Absent Type', icon: 'pi pi-fw pi-ban', routerLink: ['/basic-setup/absent-type'] },
+
+                    // Newly added
                     { label: 'Notesheet Template', icon: 'pi pi-fw pi-file-edit', routerLink: ['/basic-setup/notesheet-template'] }
                 ]
             },

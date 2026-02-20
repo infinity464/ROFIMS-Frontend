@@ -76,6 +76,8 @@ import { EmpForeignVisit } from '@/Components/Features/Emp/emp-foreign-visit/emp
 import { EmpLeaveInfo } from '@/Components/Features/Emp/emp-leave-info/emp-leave-info.component';
 import { EmpMedicalCategory } from '@/Components/Features/Emp/emp-medical-category/emp-medical-category.component';
 import { EmpAdditionalRemarks } from '@/Components/Features/Emp/emp-additional-remarks/emp-additional-remarks.component';
+import { EmpPermPostingMotherOrg } from '@/Components/Features/Emp/emp-perm-posting-mother-org/emp-perm-posting-mother-org.component';
+import { EmpPresentStatus } from '@/Components/Features/Emp/emp-present-status/emp-present-status';
 import { EmpPersonalServiceInfoComponent } from '@/Components/Features/Emp/emp-personal-service-info/emp-personal-service-info';
 import { EmpPresentMemberCheckComponent } from '@/Components/Features/Emp/emp-present-member-check/emp-present-member-check.component';
 import { RabIdAllocation } from '@/Components/Features/rab-id-allocation/rab-id-allocation';
@@ -93,6 +95,7 @@ import { TrainingInstitution } from '@/Components/basic-setup/training-instituti
 import { RankEquivalent } from '@/Components/basic-setup/rank-equivalent/rank-equivalent';
 import { Religion } from '@/Components/basic-setup/religion/religion';
 import { RabIdSerial } from '@/Components/basic-setup/rab-id-serial/rab-id-serial';
+import { AbsentType } from '@/Components/basic-setup/absent-type/absent-type';
 import { NotesheetTemplateComponent } from '@/Components/basic-setup/notesheet-template/notesheet-template';
 import { NotesheetGenerateComponent } from '@/Components/Features/notesheet-generate/notesheet-generate';
 import { NotesheetExBdLeaveComponent } from '@/Components/Features/notesheet-ex-bd-leave/notesheet-ex-bd-leave';
@@ -192,6 +195,7 @@ export const appRoutes: Routes = [
             { path: 'basic-setup/rank-equivalent', component: RankEquivalent },
             { path: 'basic-setup/religion', component: Religion },
             { path: 'basic-setup/rab-id-serial', component: RabIdSerial },
+            { path: 'basic-setup/absent-type', component: AbsentType },
             { path: 'basic-setup/notesheet-template', component: NotesheetTemplateComponent },
             { path: 'notesheet-generate', component: NotesheetGenerateComponent },
             { path: 'notesheet-ex-bd-leave', component: NotesheetExBdLeaveComponent },
@@ -231,6 +235,8 @@ export const appRoutes: Routes = [
             { path: 'emp-leave-info', component: EmpLeaveInfo },
             { path: 'emp-medical-category', component: EmpMedicalCategory },
             { path: 'emp-additional-remarks', component: EmpAdditionalRemarks },
+            { path: 'emp-perm-posting-mother-org', component: EmpPermPostingMotherOrg },
+            { path: 'emp-present-status', component: EmpPresentStatus },
             { path: 'emp-present-member-check', component: EmpPresentMemberCheckComponent },
             { path: 'rab-id-allocation', component: RabIdAllocation },
             { path: 'supernumerary-list', component: SupernumeraryList },

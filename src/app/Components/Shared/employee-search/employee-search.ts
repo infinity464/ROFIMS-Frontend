@@ -226,6 +226,7 @@ export class EmployeeSearchComponent implements OnChanges {
                 } else {
                     this.employeeFound = false;
                     this.employeeInfo = null;
+                    this.onSearchReset.emit();
                     this.messageService.add({
                         severity: 'warn',
                         summary: 'Not Found',
@@ -238,6 +239,7 @@ export class EmployeeSearchComponent implements OnChanges {
                 console.error('Search failed', err);
                 this.isSearching = false;
                 this.employeeFound = false;
+                this.onSearchReset.emit();
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
