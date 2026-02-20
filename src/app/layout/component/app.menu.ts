@@ -210,7 +210,9 @@ export class AppMenu {
                 icon: 'pi pi-fw pi-send',
                 items: [
                     { label: 'Pending List for Joining', icon: 'pi pi-fw pi-clock', routerLink: ['/posting/pending-joining'] },
-                    { label: 'New Posting Order', icon: 'pi pi-fw pi-user-plus', routerLink: ['/posting/new-posting-order'] },
+                    { label: 'Draft Posting', icon: 'pi pi-fw pi-file-edit', routerLink: ['/posting/new-posting-order/draft-posting'] },
+                    { label: 'Draft Notesheet', icon: 'pi pi-fw pi-file', routerLink: ['/posting/new-posting-order/draft-notesheet'] },
+                    { label: 'Notesheet Generate', icon: 'pi pi-fw pi-plus', routerLink: ['/posting/new-posting-order/notesheet-generate'] },
                     { label: 'Inter-Posting Order', icon: 'pi pi-fw pi-arrows-h', routerLink: ['/posting/inter-posting-order'] }
                 ]
             },
