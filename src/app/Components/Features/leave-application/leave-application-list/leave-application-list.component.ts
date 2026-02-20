@@ -5,6 +5,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { environment } from '@/Core/Environments/environment';
 import { SharedService } from '@/shared/services/shared-service';
 import { LeaveApplicationService, LeaveApplicationModel } from '@/services/leave-application.service';
+import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
 import { MessageService } from 'primeng/api';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
@@ -66,33 +67,34 @@ export class LeaveApplicationListComponent implements OnInit {
         private http: HttpClient,
         private sharedService: SharedService,
         private leaveAppService: LeaveApplicationService,
+        private identityMappingService: IdentityUserMappingService,
         private messageService: MessageService,
         private router: Router,
         private route: ActivatedRoute
     ) {}
 
     ngOnInit(): void {
-        const user = this.sharedService.getCurrentUser?.();
-        if (user) {
-            this.http.get<any[]>(`${environment.apis.core}/EmployeeInfo/GetAll`).subscribe({
-                next: (list) => {
-                    const me = (Array.isArray(list) ? list : []).find(
-                        (e: any) =>
-                            (e.fullNameEN || e.FullNameEN || '') === user ||
-                            (e.rabid || e.Rabid || '') === user
-                    );
-                    if (me) this.currentUserEmployeeId = me.employeeID ?? me.EmployeeID ?? 0;
+        const userId = this.sharedService.getCurrentUserId?.();
+        this.route.queryParams.subscribe((params) => {
+            this.applySectionFromParams(params);
+            this.loadSection();
+        });
+        if (userId) {
+            this.identityMappingService.getEmployeeIdForUser(userId).subscribe({
+                next: (empId) => {
+                    if (empId) this.currentUserEmployeeId = empId;
+                    this.loadSection();
                 }
             });
         }
-        this.route.queryParams.subscribe((params) => {
-            const s = params['section'] as LeaveApplicationSection | undefined;
-            if (s && ['pending', 'approved', 'declined'].includes(s)) this.section = s;
-            else if (this.sectionInput) this.section = this.sectionInput;
-            this.tabIndex = ['pending', 'approved', 'declined'].indexOf(this.section);
-            if (this.tabIndex < 0) this.tabIndex = 0;
-            this.loadSection();
-        });
+    }
+
+    private applySectionFromParams(params: Record<string, string | string[] | undefined>): void {
+        const s = params['section'] as LeaveApplicationSection | undefined;
+        if (s && ['pending', 'approved', 'declined'].includes(s)) this.section = s;
+        else if (this.sectionInput) this.section = this.sectionInput;
+        this.tabIndex = ['pending', 'approved', 'declined'].indexOf(this.section);
+        if (this.tabIndex < 0) this.tabIndex = 0;
     }
 
     loadSection(): void {
@@ -103,7 +105,7 @@ export class LeaveApplicationListComponent implements OnInit {
         };
         const statusMap = { pending: 2, approved: 3, declined: 4 } as const;
         const statusId = statusMap[this.section];
-        this.leaveAppService.getByStatus(statusId).subscribe({
+        this.leaveAppService.getByStatusForUser(statusId, this.currentUserEmployeeId).subscribe({
             next: (list) => {
                 if (this.section === 'pending') this.pendingList = list;
                 else if (this.section === 'approved') this.approvedList = list;
@@ -183,16 +185,8 @@ export class LeaveApplicationListComponent implements OnInit {
         });
     }
 
+    /** Only the final approver can approve or decline. */
     isPendingForMe(row: LeaveApplicationModel): boolean {
-        if (row.leaveApplicationStatusId !== 2) return false;
-        if (row.finalApproverId === this.currentUserEmployeeId) return true;
-        const j = row.recommenderIdsJson;
-        if (!j || typeof j !== 'string') return false;
-        try {
-            const arr = JSON.parse(j) as number[];
-            return Array.isArray(arr) && arr.includes(this.currentUserEmployeeId);
-        } catch {
-            return false;
-        }
+        return row.leaveApplicationStatusId === 2 && row.finalApproverId === this.currentUserEmployeeId;
     }
 }

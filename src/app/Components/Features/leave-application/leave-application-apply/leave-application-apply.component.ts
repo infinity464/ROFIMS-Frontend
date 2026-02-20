@@ -9,6 +9,7 @@ import { EmpService } from '@/services/emp-service';
 import { LeaveApplicationService, LeaveApplicationModel } from '@/services/leave-application.service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
+import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
 import { MessageService } from 'primeng/api';
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
@@ -70,6 +71,7 @@ export class LeaveApplicationApplyComponent implements OnInit {
         private empService: EmpService,
         private leaveAppService: LeaveApplicationService,
         private masterBasicSetup: MasterBasicSetupService,
+        private identityMappingService: IdentityUserMappingService,
         private messageService: MessageService,
         private router: Router,
         private route: ActivatedRoute
@@ -122,7 +124,6 @@ export class LeaveApplicationApplyComponent implements OnInit {
     }
 
     loadApproverOptions(): void {
-        const user = this.sharedService.getCurrentUser?.();
         this.http.get<any[]>(`${this.api}/GetAll`).subscribe({
             next: (list) => {
                 const arr = Array.isArray(list) ? list : [];
@@ -130,14 +131,11 @@ export class LeaveApplicationApplyComponent implements OnInit {
                     label: `${e.fullNameEN || e.FullNameEN || ''} (${e.rabid || e.Rabid || e.employeeID || e.EmployeeID})`,
                     value: e.employeeID ?? e.EmployeeID
                 }));
-                if (user) {
-                    const me = arr.find(
-                        (e: any) =>
-                            (e.fullNameEN || e.FullNameEN || '') === user ||
-                            (e.rabid || e.Rabid || '') === user ||
-                            (e.serviceId || e.ServiceId || '') === user
-                    );
-                    if (me) this.currentUserEmployeeId = me.employeeID ?? me.EmployeeID;
+                const userId = this.sharedService.getCurrentUserId?.();
+                if (userId) {
+                    this.identityMappingService.getEmployeeIdForUser(userId).subscribe({
+                        next: (empId) => { if (empId) this.currentUserEmployeeId = empId; }
+                    });
                 }
             },
             error: () => {}
@@ -145,34 +143,43 @@ export class LeaveApplicationApplyComponent implements OnInit {
     }
 
     loadCurrentUserAsApplicant(): void {
-        const user = this.sharedService.getCurrentUser?.();
-        if (!user) return;
-        this.http.get<any[]>(`${this.api}/GetAll`).subscribe({
-            next: (list) => {
-                const me = (Array.isArray(list) ? list : []).find(
-                    (e: any) =>
-                        (e.fullNameEN || e.FullNameEN || '') === user ||
-                        (e.rabid || e.Rabid || '') === user ||
-                        (e.serviceId || e.ServiceId || '') === user
-                );
-                if (me) {
-                    const empId = me.employeeID ?? me.EmployeeID;
-                    this.applicantEmployeeId = empId;
-                    this.applicantInfo = {
-                        employeeID: empId,
-                        fullNameEN: me.fullNameEN || me.FullNameEN || '',
-                        fullNameBN: me.fullNameBN || me.FullNameBN,
-                        rabid: me.rabid || me.Rabid || '',
-                        serviceId: me.serviceId || me.ServiceId || '',
-                        rankDisplay: me.rank ?? me.Rank,
-                        corpsDisplay: me.corps ?? me.Corps,
-                        tradeDisplay: me.trade ?? me.Trade,
-                        motherOrganizationDisplay: me.motherOrganization ?? me.MotherOrganization,
-                        memberTypeDisplay: me.memberType ?? me.MemberType
-                    };
-                    this.form.patchValue({ applicantEmployeeId: empId, appliedByEmployeeId: empId });
+        const userId = this.sharedService.getCurrentUserId?.();
+        if (!userId) return;
+        this.identityMappingService.getEmployeeIdForUser(userId).subscribe({
+            next: (empId) => {
+                if (!empId) {
+                    this.messageService.add({
+                        severity: 'warn',
+                        summary: 'Employee ID not found',
+                        detail: 'Your user account is not mapped to an employee. Please contact admin to set Identity User Mapping.'
+                    });
+                    return;
                 }
-            }
+                this.empService.getEmployeeById(empId).subscribe({
+                    next: (emp: any) => {
+                        if (!emp) return;
+                        const id = emp.employeeID ?? emp.EmployeeID;
+                        this.applicantEmployeeId = id;
+                        this.applicantInfo = {
+                            employeeID: id,
+                            fullNameEN: emp.fullNameEN ?? emp.FullNameEN ?? '',
+                            fullNameBN: emp.fullNameBN ?? emp.FullNameBN ?? '',
+                            rabid: emp.rabid ?? emp.Rabid ?? '',
+                            serviceId: emp.serviceId ?? emp.ServiceId ?? '',
+                            rankDisplay: emp.rank ?? emp.Rank,
+                            corpsDisplay: emp.corps ?? emp.Corps,
+                            tradeDisplay: emp.trade ?? emp.Trade,
+                            motherOrganizationDisplay: emp.motherOrganization ?? emp.MotherOrganization,
+                            memberTypeDisplay: emp.memberType ?? emp.MemberType
+                        };
+                        this.form.patchValue({ applicantEmployeeId: id, appliedByEmployeeId: id });
+                    },
+                    error: () =>
+                        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load employee details' })
+                });
+            },
+            error: () =>
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to resolve employee mapping' })
         });
     }
 

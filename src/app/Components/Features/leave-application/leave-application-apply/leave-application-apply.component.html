@@ -26,16 +26,7 @@
 
       @if (applyForSelf) {
         @if (applicantInfo) {
-          <div class="surface-100 border-round p-4 mb-4">
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div><span class="text-500 block text-sm">Name</span><span class="font-semibold">{{ applicantInfo.fullNameEN }}</span></div>
-              <div><span class="text-500 block text-sm">Rank</span><span class="font-semibold">{{ applicantInfo.rankDisplay ?? 'N/A' }}</span></div>
-              <div><span class="text-500 block text-sm">Corps</span><span class="font-semibold">{{ applicantInfo.corpsDisplay ?? 'N/A' }}</span></div>
-              <div><span class="text-500 block text-sm">Trade</span><span class="font-semibold">{{ applicantInfo.tradeDisplay ?? 'N/A' }}</span></div>
-              <div><span class="text-500 block text-sm">Mother Organization</span><span class="font-semibold">{{ applicantInfo.motherOrganizationDisplay ?? 'N/A' }}</span></div>
-              <div><span class="text-500 block text-sm">Member Type</span><span class="font-semibold">{{ applicantInfo.memberTypeDisplay ?? 'N/A' }}</span></div>
-            </div>
-          </div>
+         
         }
       } @else {
         <div class="mb-4">

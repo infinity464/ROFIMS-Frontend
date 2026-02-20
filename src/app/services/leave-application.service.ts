@@ -67,6 +67,15 @@ export class LeaveApplicationService {
         );
     }
 
+    /** Get applications by status, filtered to those visible to current user (applicant, appliedBy, or finalApprover). */
+    getByStatusForUser(leaveApplicationStatusId: number | null, currentUserEmployeeId: number): Observable<LeaveApplicationModel[]> {
+        const params: Record<string, string> = { currentUserEmployeeId: String(currentUserEmployeeId) };
+        if (leaveApplicationStatusId != null) params['leaveApplicationStatusId'] = String(leaveApplicationStatusId);
+        return this.http.get<LeaveApplicationModel[]>(`${this.apiUrl}/GetByStatusForUser`, { params }).pipe(
+            map((res: unknown) => (Array.isArray(res) ? res.map((r: any) => this.normalizeRow(r)) : []))
+        );
+    }
+
     getByApplicant(applicantEmployeeId: number): Observable<LeaveApplicationModel[]> {
         return this.http.get<LeaveApplicationModel[]>(`${this.apiUrl}/GetByApplicant/${applicantEmployeeId}`).pipe(
             map((res: unknown) => (Array.isArray(res) ? res.map((r: any) => this.normalizeRow(r)) : []))
