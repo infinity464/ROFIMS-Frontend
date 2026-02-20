@@ -138,17 +138,19 @@
       @if (previewRow) {
         <div class="flex flex-col gap-3">
           <div class="grid grid-cols-2 gap-2">
-            <div><span class="text-500 block text-sm">ID</span><span>{{ previewRow.leaveApplicationId }}</span></div>
             <div><span class="text-500 block text-sm">Applicant</span><span>{{ getApplicantName(previewRow.applicantEmployeeId) }}</span></div>
             <div><span class="text-500 block text-sm">Leave Type</span><span>{{ getLeaveTypeName(previewRow.leaveTypeId) }}</span></div>
             <div><span class="text-500 block text-sm">From</span><span>{{ formatDate(previewRow.fromDate) }}</span></div>
             <div><span class="text-500 block text-sm">To</span><span>{{ formatDate(previewRow.toDate) }}</span></div>
+            <div><span class="text-500 block text-sm">Total Days</span><span>{{ getTotalDays(previewRow.fromDate, previewRow.toDate) }}</span></div>
             <div><span class="text-500 block text-sm">Status</span><span>{{ statusLabel(previewRow) }}</span></div>
             @if (previewRow.addressDuringLeave) {
               <div class="col-span-2"><span class="text-500 block text-sm">Address During Leave</span><span>{{ previewRow.addressDuringLeave }}</span></div>
             }
-            @if (previewRow.remarks) {
-              <div class="col-span-2"><span class="text-500 block text-sm">Remarks</span><span>{{ previewRow.remarks }}</span></div>
+            @if (previewRow && isPendingForMe(previewRow)) {
+              <div class="col-span-2"><span class="text-500 block text-sm">Remark (editable)</span><textarea pTextarea [(ngModel)]="previewRemarkText" rows="3" class="w-full"></textarea></div>
+            } @else if (previewRow && (previewRow.remarks || previewRow.remark)) {
+              <div class="col-span-2"><span class="text-500 block text-sm">Remarks</span><span>{{ previewRow.remark ?? previewRow.remarks ?? '-' }}</span></div>
             }
           </div>
         </div>

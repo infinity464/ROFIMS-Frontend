@@ -58,6 +58,7 @@ export class LeaveApplicationListComponent implements OnInit {
 
     showPreviewModal = false;
     previewRow: LeaveApplicationModel | null = null;
+    previewRemarkText = '';
 
     employeeNameMap: Record<number, string> = {};
     leaveTypeNameMap: Record<number, string> = {};
@@ -141,26 +142,58 @@ export class LeaveApplicationListComponent implements OnInit {
 
     openPreview(row: LeaveApplicationModel): void {
         this.previewRow = row;
+        this.previewRemarkText = row.remarks ?? row.remark ?? '';
         this.showPreviewModal = true;
     }
 
     closePreview(): void {
         this.showPreviewModal = false;
         this.previewRow = null;
+        this.previewRemarkText = '';
     }
 
     approveFromPreview(): void {
-        if (this.previewRow) {
-            this.openRemarkDialog(this.previewRow, 'approve');
-            this.closePreview();
-        }
+        if (!this.previewRow) return;
+        const row = this.previewRow;
+        this.leaveAppService.approve(row.leaveApplicationId, this.currentUserEmployeeId, this.previewRemarkText).subscribe({
+            next: (res) => {
+                const code = res.statusCode ?? res.StatusCode ?? 0;
+                const msg = res.description ?? res.Description ?? '';
+                if (code === 200) {
+                    this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Action completed.' });
+                    this.closePreview();
+                    this.loadSection();
+                } else {
+                    this.messageService.add({ severity: 'warn', summary: 'Notice', detail: msg || 'Action failed.' });
+                }
+            },
+            error: (err) => {
+                const detail = err?.error?.description ?? err?.error?.Description ?? err?.message ?? 'Request failed.';
+                this.messageService.add({ severity: 'error', summary: 'Error', detail });
+            }
+        });
     }
 
     rejectFromPreview(): void {
-        if (this.previewRow) {
-            this.openRemarkDialog(this.previewRow, 'decline');
-            this.closePreview();
-        }
+        if (!this.previewRow) return;
+        const row = this.previewRow;
+        this.leaveAppService.decline(row.leaveApplicationId, this.currentUserEmployeeId, this.previewRemarkText).subscribe({
+            next: (res) => {
+                const code = res.statusCode ?? res.StatusCode ?? 0;
+                const msg = res.description ?? res.Description ?? '';
+                if (code === 200) {
+                    this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Action completed.' });
+                    this.closePreview();
+                    this.loadSection();
+                } else {
+                    this.messageService.add({ severity: 'warn', summary: 'Notice', detail: msg || 'Action failed.' });
+                }
+            },
+            error: (err) => {
+                const detail = err?.error?.description ?? err?.error?.Description ?? err?.message ?? 'Request failed.';
+                this.messageService.add({ severity: 'error', summary: 'Error', detail });
+            }
+        });
     }
 
     private applySectionFromParams(params: Record<string, string | string[] | undefined>): void {
@@ -206,6 +239,20 @@ export class LeaveApplicationListComponent implements OnInit {
             return isNaN(dt.getTime()) ? d : dt.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
         } catch {
             return d;
+        }
+    }
+
+    getTotalDays(fromDate: string | null | undefined, toDate: string | null | undefined): string {
+        if (!fromDate || !toDate) return '-';
+        try {
+            const from = new Date(fromDate);
+            const to = new Date(toDate);
+            if (isNaN(from.getTime()) || isNaN(to.getTime())) return '-';
+            const diffMs = to.getTime() - from.getTime();
+            const days = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
+            return String(days);
+        } catch {
+            return '-';
         }
     }
 
