@@ -1,0 +1,35 @@
+:host ::ng-deep {
+  p-datepicker {
+    .p-datepicker-trigger {
+      width: 100%;
+    }
+
+    .p-inputtext {
+      width: 100%;
+    }
+  }
+
+  p-select,
+  p-datepicker,
+  p-inputtext {
+    width: 100%;
+
+    .p-component {
+      width: 100%;
+    }
+  }
+
+  // Compact file-references titles inside the dialog
+  .file-section-compact {
+    app-file-references-form {
+      h3 {
+        font-size: 0.875rem !important;
+        font-weight: 600 !important;
+      }
+
+      .file-references-table__table {
+        font-size: 0.8125rem;
+      }
+    }
+  }
+}

@@ -1,0 +1,91 @@
+:host {
+    display: block;
+}
+
+.dist-summary-wrap {
+    overflow-x: auto;
+}
+
+.dist-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+
+    thead tr {
+        border-bottom: 2px solid var(--surface-border);
+    }
+
+    tfoot tr.dist-row--footer {
+        border-top: 2px solid var(--surface-border);
+    }
+
+    th, td {
+        padding: 0.6rem 1rem;
+        text-align: left;
+        white-space: nowrap;
+        border-bottom: 1px solid var(--surface-border);
+    }
+
+    th {
+        font-weight: 600;
+        color: var(--text-color);
+        background: transparent;
+    }
+
+    .dist-table__rank,
+    .dist-table__total,
+    .dist-table__cell {
+        text-align: right;
+    }
+
+    .dist-table__office {
+        min-width: 12rem;
+    }
+
+    .dist-table__rank,
+    .dist-table__cell {
+        min-width: 5rem;
+    }
+
+    .dist-table__total {
+        min-width: 5rem;
+        font-weight: 600;
+    }
+
+    /* Unit row: bold */
+    .dist-row--unit td {
+        font-weight: 700;
+    }
+
+    /* Wing and Branch: normal weight */
+    .dist-row--wing td,
+    .dist-row--branch td {
+        font-weight: 400;
+    }
+
+    /* Footer total row */
+    .dist-row--footer td {
+        font-weight: 700;
+        background: transparent;
+    }
+
+    /* Indentation for Wing and Branch */
+    .dist-row__indent1 {
+        padding-left: 1rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .dist-row__indent2 {
+        padding-left: 2rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .dist-row__arrow {
+        opacity: 0.5;
+        font-size: 0.8em;
+    }
+}

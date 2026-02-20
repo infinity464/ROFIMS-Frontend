@@ -1,0 +1,129 @@
+<p-fluid>
+    <p-toast />
+    <p-confirmDialog />
+
+    <div class="vd-card">
+
+        <div class="vd-header">
+            <span class="vd-header__eyebrow">Personnel Management</span>
+            <h2 class="vd-header__title">{{ title }}</h2>
+        </div>
+
+        <div class="vd-grid">
+
+            <div class="vd-controls">
+                <div class="vd-field">
+                    <label class="vd-label">Select Vacancy</label>
+                    <span class="vd-label__sub">Mother Org + Rank</span>
+                    <p-select
+                        [options]="vacancyList"
+                        [(ngModel)]="selectedVacancy"
+                        optionLabel="rankName"
+                        [placeholder]="'Select vacancy'"
+                        [filter]="true"
+                        filterBy="orgName,rankName"
+                        (ngModelChange)="onSelectVacancy($event)"
+                        styleClass="vd-select w-full">
+                        <ng-template let-v pTemplate="item">
+                            <span class="vd-select__item">
+                                <span class="vd-select__org">{{ v.orgName }}</span>
+                                <span class="vd-select__arrow">→</span>
+                                <span class="vd-select__rank">{{ v.rankName }}</span>
+                                <span class="vd-select__count">({{ v.totalVacancy }})</span>
+                            </span>
+                        </ng-template>
+                        <ng-template let-v pTemplate="label">
+                            <span>{{ v?.orgName }} → {{ v?.rankName }}</span>
+                        </ng-template>
+                    </p-select>
+                </div>
+
+                <form [formGroup]="distributionForm" class="vd-form-row">
+                    <div class="vd-field vd-field--qty">
+                        <label class="vd-label">Quantity</label>
+                        <input
+                            type="number"
+                            pInputText
+                            class="vd-input w-full"
+                            formControlName="quantity"
+                            min="0"
+                            placeholder="0" />
+                    </div>
+                    <div class="vd-field vd-field--save">
+                        <p-button
+                            label="Save"
+                            icon="pi pi-check"
+                            (onClick)="addDistribution()"
+                            [loading]="isSubmitting"
+                            styleClass="vd-btn-save w-full">
+                        </p-button>
+                    </div>
+                </form>
+
+                @if (selectedVacancy) {
+                    <div class="vd-stats">
+                        <div class="vd-stat">
+                            <span class="vd-stat__label">Total Vacancy</span>
+                            <span class="vd-stat__value">{{ totalVacancy }}</span>
+                        </div>
+                        <div class="vd-stat__divider"></div>
+                        <div class="vd-stat">
+                            <span class="vd-stat__label">Distributed</span>
+                            <span class="vd-stat__value" [class.vd-stat__value--over]="distributedTotal > totalVacancy">
+                                {{ distributedTotal }}
+                            </span>
+                        </div>
+                        <div class="vd-stat__divider"></div>
+                        <div class="vd-stat">
+                            <span class="vd-stat__label">Remaining</span>
+                            <span class="vd-stat__value" [class.vd-stat__value--over]="distributedTotal > totalVacancy">
+                                {{ totalVacancy - distributedTotal }}
+                            </span>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="vd-tree-panel">
+                <label class="vd-label">RAB Unit / Wing / Branch</label>
+
+                @if (rabTreeLoading) {
+                    <div class="vd-tree-loading">
+                        <i class="pi pi-spin pi-spinner"></i>
+                        <span>Loading tree…</span>
+                    </div>
+                } @else {
+                    <div class="vd-tree-wrap">
+                        <p-tree
+                            [value]="rabTreeNodes"
+                            selectionMode="single"
+                            [(selection)]="selectedRabNode"
+                            (onNodeSelect)="onRabNodeSelect($event.node)"
+                            styleClass="vd-tree w-full">
+                        </p-tree>
+                    </div>
+                }
+            </div>
+        </div>
+
+        @if (selectedVacancy) {
+            <div class="vd-table-section">
+                <div class="vd-table-header">
+                    <span class="vd-table-header__title">Distribution Records</span>
+                    <span class="vd-table-header__count">{{ totalRecords }} entries</span>
+                </div>
+                <app-data-table
+                    [config]="tableConfig"
+                    [data]="distributionData"
+                    [first]="first"
+                    [totalRecords]="totalRecords"
+                    [rows]="rows"
+                    [loading]="loading"
+                    (edit)="editDistribution($event)"
+                    (delete)="deleteDistribution($event.row, $event.event)"
+                    (lazyLoad)="loadDistribution()">
+                </app-data-table>
+            </div>
+        }
+    </div>
+</p-fluid>

@@ -108,7 +108,15 @@ export class AppMenu {
                     { label: 'Foreign Visit', icon: 'pi pi-fw pi-globe', routerLink: ['/emp-foreign-visit'] },
                     { label: 'Leave Info', icon: 'pi pi-fw pi-calendar-minus', routerLink: ['/emp-leave-info'] },
                     { label: 'Medical Category', icon: 'pi pi-fw pi-heart', routerLink: ['/emp-medical-category'] },
-                    { label: 'Additional Remarks', icon: 'pi pi-fw pi-comment', routerLink: ['/emp-additional-remarks'] }
+                    { label: 'Additional Remarks', icon: 'pi pi-fw pi-comment', routerLink: ['/emp-additional-remarks'] },
+                ]
+            },
+            {
+                label: 'Permanent Posting',
+                icon: 'pi pi-fw pi-send',
+                items: [
+                    { label: 'Perm Posting (Mother Org)', icon: 'pi pi-fw pi-building', routerLink: ['/emp-perm-posting-mother-org'] },
+                    { label: 'Present Status', icon: 'pi pi-fw pi-info-circle', routerLink: ['/emp-present-status'] }
                 ]
             },
             {
@@ -139,6 +147,9 @@ export class AppMenu {
                     { label: 'Mother Organization', icon: 'pi pi-fw pi-map', routerLink: ['/basic-setup/mother-org'] },
                     { label: 'Organization Unit', icon: 'pi pi-fw pi-map', routerLink: ['/basic-setup/organization-unit'] },
                     { label: 'Mother Org Rank', icon: 'pi pi-fw pi-map', routerLink: ['/basic-setup/mother-org-rank'] },
+                    { label: 'Mother Org Rank Vacancy', icon: 'pi pi-fw pi-users', routerLink: ['/basic-setup/mother-org-rank-vacancy'] },
+                    { label: 'Vacancy Distribution (RAB)', icon: 'pi pi-fw pi-share-alt', routerLink: ['/basic-setup/mother-org-rank-vacancy-distribution'] },
+                    { label: 'Distribution Summary (by Org)', icon: 'pi pi-fw pi-table', routerLink: ['/basic-setup/vacancy-distribution-summary'] },
                     { label: 'Equivalent Name', icon: 'pi pi-fw pi-clone', routerLink: ['/basic-setup/equivalent-name'] },
                     { label: 'Corps', icon: 'pi pi-fw pi-sign-out', routerLink: ['/basic-setup/corps'] },
                     { label: 'Trade', icon: 'pi pi-fw pi-sign-out', routerLink: ['/basic-setup/trade'] },
@@ -148,6 +159,7 @@ export class AppMenu {
                     { label: 'Officer Type', icon: 'pi pi-fw pi-user-edit', routerLink: ['basic-setup/officer-type'] },
                     { label: 'Appointment Category', icon: 'pi pi-fw pi-sitemap', routerLink: ['/basic-setup/appointment-category'] },
                     { label: 'RAB ID', icon: 'pi pi-fw pi-id-card', routerLink: ['/basic-setup/rab-id-serial'] },
+                    { label: 'RAB Structure', icon: 'pi pi-fw pi-sitemap', routerLink: ['/basic-setup/rab-structure'] },
                     { label: 'RAB Unit', icon: 'pi pi-fw pi-building', routerLink: ['/basic-setup/rab-unit'] },
                     { label: 'RAB Wing', icon: 'pi pi-fw pi-building', routerLink: ['basic-setup/rab-wing'] },
                     { label: 'RAB Branch', icon: 'pi pi-fw pi-clone', routerLink: ['/basic-setup/rab-branch'] },
@@ -189,6 +201,9 @@ export class AppMenu {
 
                     { label: 'Bank', icon: 'pi pi-fw pi-wallet', routerLink: ['/basic-setup/bank'] },
                     { label: 'Bank Branch', icon: 'pi pi-fw pi-building', routerLink: ['/basic-setup/bank-branch'] },
+                    { label: 'Absent Type', icon: 'pi pi-fw pi-ban', routerLink: ['/basic-setup/absent-type'] },
+
+                    // Newly added
                     { label: 'Notesheet Template', icon: 'pi pi-fw pi-file-edit', routerLink: ['/basic-setup/notesheet-template'] }
                 ]
             },
@@ -203,6 +218,14 @@ export class AppMenu {
                     { label: 'Approved Note-Sheet List', icon: 'pi pi-fw pi-check-circle', routerLink: ['/notesheet-list/approved'] },
                     { label: 'Declined Note-Sheet List', icon: 'pi pi-fw pi-times-circle', routerLink: ['/notesheet-list/declined'] },
                     { label: 'All Note-Sheet', icon: 'pi pi-fw pi-list', routerLink: ['/notesheet-list/all'] }
+                ]
+            },
+            {
+                label: 'Leave Application',
+                icon: 'pi pi-fw pi-calendar-minus',
+                items: [
+                    { label: 'Apply for Leave', icon: 'pi pi-fw pi-plus', routerLink: ['/leave-application/apply'] },
+                    { label: 'Leave Application List', icon: 'pi pi-fw pi-list', routerLink: ['/leave-application/list'] }
                 ]
             },
             {
