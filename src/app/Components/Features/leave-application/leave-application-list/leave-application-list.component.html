@@ -7,6 +7,15 @@
     </div>
     <p class="text-600 m-0 mb-3">View pending, approved, and declined leave applications. Approve or decline pending items.</p>
 
+    <div class="mb-4">
+      <label class="font-medium block mb-2">Type of Leave Application</label>
+      <div class="flex flex-wrap gap-2">
+        <p-button type="button" [label]="'My Application Status'" [outlined]="typeFilter !== 'myApplication'" (onClick)="setTypeFilter('myApplication')" size="small"></p-button>
+        <p-button type="button" [label]="'Apply for Other'" [outlined]="typeFilter !== 'applyForOther'" (onClick)="setTypeFilter('applyForOther')" size="small"></p-button>
+        <p-button type="button" [label]="'Action Taken by Me'" [outlined]="typeFilter !== 'actionTakenByMe'" (onClick)="setTypeFilter('actionTakenByMe')" size="small"></p-button>
+      </div>
+    </div>
+
     <p-tabs [(value)]="tabIndex" (valueChange)="onTabChangeByValue($event)">
       <p-tablist>
         <p-tab [value]="0">Pending</p-tab>
@@ -19,7 +28,7 @@
           @if (loading) {
             <p class="flex align-items-center"><i class="pi pi-spin pi-spinner mr-2"></i>Loading...</p>
           } @else {
-            <p-table [value]="pendingList" dataKey="leaveApplicationId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines">
+            <p-table [value]="filteredPendingList" dataKey="leaveApplicationId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines">
               <ng-template pTemplate="header">
                 <tr>
                   <th>ID</th>
@@ -53,7 +62,7 @@
           @if (loading) {
             <p class="flex align-items-center"><i class="pi pi-spin pi-spinner mr-2"></i>Loading...</p>
           } @else {
-            <p-table [value]="approvedList" dataKey="leaveApplicationId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines">
+            <p-table [value]="filteredApprovedList" dataKey="leaveApplicationId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines">
               <ng-template pTemplate="header">
                 <tr>
                   <th>ID</th>
@@ -91,7 +100,7 @@
           @if (loading) {
             <p class="flex align-items-center"><i class="pi pi-spin pi-spinner mr-2"></i>Loading...</p>
           } @else {
-            <p-table [value]="declinedList" dataKey="leaveApplicationId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines">
+            <p-table [value]="filteredDeclinedList" dataKey="leaveApplicationId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines">
               <ng-template pTemplate="header">
                 <tr>
                   <th>ID</th>

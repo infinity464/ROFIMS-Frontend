@@ -21,6 +21,8 @@ import { RouterModule } from '@angular/router';
 
 export type LeaveApplicationSection = 'pending' | 'approved' | 'declined';
 
+export type LeaveApplicationTypeFilter = 'myApplication' | 'applyForOther' | 'actionTakenByMe';
+
 @Component({
     selector: 'app-leave-application-list',
     standalone: true,
@@ -44,6 +46,7 @@ export class LeaveApplicationListComponent implements OnInit {
     @Input() sectionInput: LeaveApplicationSection | null = null;
     section: LeaveApplicationSection = 'pending';
     tabIndex = 0;
+    typeFilter: LeaveApplicationTypeFilter = 'myApplication';
 
     pendingList: LeaveApplicationModel[] = [];
     approvedList: LeaveApplicationModel[] = [];
@@ -202,6 +205,8 @@ export class LeaveApplicationListComponent implements OnInit {
         else if (this.sectionInput) this.section = this.sectionInput;
         this.tabIndex = ['pending', 'approved', 'declined'].indexOf(this.section);
         if (this.tabIndex < 0) this.tabIndex = 0;
+        const t = params['type'] as LeaveApplicationTypeFilter | undefined;
+        if (t && ['myApplication', 'applyForOther', 'actionTakenByMe'].includes(t)) this.typeFilter = t;
     }
 
     loadSection(): void {
@@ -309,5 +314,36 @@ export class LeaveApplicationListComponent implements OnInit {
     /** Only the final approver can approve or decline. */
     isPendingForMe(row: LeaveApplicationModel): boolean {
         return row.leaveApplicationStatusId === 2 && row.finalApproverId === this.currentUserEmployeeId;
+    }
+
+    private filterByType(list: LeaveApplicationModel[]): LeaveApplicationModel[] {
+        const me = this.currentUserEmployeeId;
+        if (this.typeFilter === 'myApplication') {
+            return list.filter((r) => r.applicantEmployeeId === me);
+        }
+        if (this.typeFilter === 'applyForOther') {
+            return list.filter((r) => r.appliedByEmployeeId === me && r.applicantEmployeeId !== me);
+        }
+        if (this.typeFilter === 'actionTakenByMe') {
+            return list.filter((r) => r.approvedByEmployeeId === me || r.declinedByEmployeeId === me);
+        }
+        return list;
+    }
+
+    get filteredPendingList(): LeaveApplicationModel[] {
+        return this.filterByType(this.pendingList);
+    }
+
+    get filteredApprovedList(): LeaveApplicationModel[] {
+        return this.filterByType(this.approvedList);
+    }
+
+    get filteredDeclinedList(): LeaveApplicationModel[] {
+        return this.filterByType(this.declinedList);
+    }
+
+    setTypeFilter(filter: LeaveApplicationTypeFilter): void {
+        this.typeFilter = filter;
+        this.router.navigate([], { queryParams: { type: filter }, queryParamsHandling: 'merge' });
     }
 }
