@@ -197,11 +197,9 @@ export class AppMenu {
 
                     { label: 'Bank', icon: 'pi pi-fw pi-wallet', routerLink: ['/basic-setup/bank'] },
                     { label: 'Bank Branch', icon: 'pi pi-fw pi-building', routerLink: ['/basic-setup/bank-branch'] },
-<<<<<<< HEAD
-                    { label: 'Absent Type', icon: 'pi pi-fw pi-ban', routerLink: ['/basic-setup/absent-type'] }
+                    { label: 'Absent Type', icon: 'pi pi-fw pi-ban', routerLink: ['/basic-setup/absent-type'] },
 
                     // Newly added
-=======
                     { label: 'Notesheet Template', icon: 'pi pi-fw pi-file-edit', routerLink: ['/basic-setup/notesheet-template'] }
                 ]
             },
@@ -225,7 +223,6 @@ export class AppMenu {
                     { label: 'Pending List for Joining', icon: 'pi pi-fw pi-clock', routerLink: ['/posting/pending-joining'] },
                     { label: 'New Posting Order', icon: 'pi pi-fw pi-user-plus', routerLink: ['/posting/new-posting-order'] },
                     { label: 'Inter-Posting Order', icon: 'pi pi-fw pi-arrows-h', routerLink: ['/posting/inter-posting-order'] }
->>>>>>> 60038e8b69c507fe0c5dbd8875b6b49c95d3bb26
                 ]
             },
             {
