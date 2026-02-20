@@ -15,10 +15,8 @@ export interface LeaveApplicationModel {
     relieverEmployeeId?: number | null;
     addressDuringLeave?: string | null;
     remarks?: string | null;
-    recommenderIdsJson?: string | null;
     finalApproverId?: number | null;
     leaveApplicationStatusId: number;
-    currentApprovalStep?: number | null;
     approvedByEmployeeId?: number | null;
     approvedDate?: string | null;
     declinedByEmployeeId?: number | null;
@@ -94,10 +92,8 @@ export class LeaveApplicationService {
             relieverEmployeeId: r.relieverEmployeeId ?? r.RelieverEmployeeId ?? null,
             addressDuringLeave: r.addressDuringLeave ?? r.AddressDuringLeave ?? null,
             remarks: r.remarks ?? r.Remarks ?? null,
-            recommenderIdsJson: r.recommenderIdsJson ?? r.RecommenderIdsJson ?? null,
             finalApproverId: r.finalApproverId ?? r.FinalApproverId ?? null,
             leaveApplicationStatusId: r.leaveApplicationStatusId ?? r.LeaveApplicationStatusId ?? 0,
-            currentApprovalStep: r.currentApprovalStep ?? r.CurrentApprovalStep ?? null,
             approvedByEmployeeId: r.approvedByEmployeeId ?? r.ApprovedByEmployeeId ?? null,
             approvedDate: r.approvedDate ?? r.ApprovedDate ?? null,
             declinedByEmployeeId: r.declinedByEmployeeId ?? r.DeclinedByEmployeeId ?? null,

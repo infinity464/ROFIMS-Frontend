@@ -23,7 +23,7 @@
               <ng-template pTemplate="header">
                 <tr>
                   <th>ID</th>
-                  <th>Applicant ID</th>
+                  <th>Applicant</th>
                   <th>Leave Type</th>
                   <th>From</th>
                   <th>To</th>
@@ -33,17 +33,12 @@
               <ng-template pTemplate="body" let-row>
                 <tr>
                   <td>{{ row.leaveApplicationId }}</td>
-                  <td>{{ row.applicantEmployeeId }}</td>
-                  <td>{{ row.leaveTypeId }}</td>
+                  <td>{{ getApplicantName(row.applicantEmployeeId) }}</td>
+                  <td>{{ getLeaveTypeName(row.leaveTypeId) }}</td>
                   <td>{{ formatDate(row.fromDate) }}</td>
                   <td>{{ formatDate(row.toDate) }}</td>
                   <td>
-                    @if (isPendingForMe(row)) {
-                      <p-button type="button" label="Approve" icon="pi pi-check" [text]="true" size="small" (onClick)="openRemarkDialog(row, 'approve')" class="mr-1"></p-button>
-                      <p-button type="button" label="Decline" icon="pi pi-times" [text]="true" size="small" severity="danger" (onClick)="openRemarkDialog(row, 'decline')"></p-button>
-                    } @else {
-                      <span class="text-500">-</span>
-                    }
+                    <p-button type="button" label="Preview" icon="pi pi-eye" [text]="true" size="small" (onClick)="openPreview(row)" class="mr-1"></p-button>
                   </td>
                 </tr>
               </ng-template>
@@ -62,27 +57,31 @@
               <ng-template pTemplate="header">
                 <tr>
                   <th>ID</th>
-                  <th>Applicant ID</th>
+                  <th>Applicant</th>
                   <th>Leave Type</th>
                   <th>From</th>
                   <th>To</th>
                   <th>Approved By</th>
                   <th>Approved Date</th>
+                  <th>Actions</th>
                 </tr>
               </ng-template>
               <ng-template pTemplate="body" let-row>
                 <tr>
                   <td>{{ row.leaveApplicationId }}</td>
-                  <td>{{ row.applicantEmployeeId }}</td>
-                  <td>{{ row.leaveTypeId }}</td>
+                  <td>{{ getApplicantName(row.applicantEmployeeId) }}</td>
+                  <td>{{ getLeaveTypeName(row.leaveTypeId) }}</td>
                   <td>{{ formatDate(row.fromDate) }}</td>
                   <td>{{ formatDate(row.toDate) }}</td>
-                  <td>{{ row.approvedByEmployeeId ?? '-' }}</td>
+                  <td>{{ getApplicantName(row.approvedByEmployeeId) }}</td>
                   <td>{{ formatDate(row.approvedDate) }}</td>
+                  <td>
+                    <p-button type="button" label="Preview" icon="pi pi-eye" [text]="true" size="small" (onClick)="openPreview(row)"></p-button>
+                  </td>
                 </tr>
               </ng-template>
               <ng-template pTemplate="emptymessage">
-                <tr><td colspan="8" class="text-center text-500">No approved applications.</td></tr>
+                <tr><td colspan="9" class="text-center text-500">No approved applications.</td></tr>
               </ng-template>
             </p-table>
           }
@@ -96,33 +95,72 @@
               <ng-template pTemplate="header">
                 <tr>
                   <th>ID</th>
-                  <th>Applicant ID</th>
+                  <th>Applicant</th>
                   <th>Leave Type</th>
                   <th>From</th>
                   <th>To</th>
                   <th>Declined By</th>
                   <th>Remark</th>
+                  <th>Actions</th>
                 </tr>
               </ng-template>
               <ng-template pTemplate="body" let-row>
                 <tr>
                   <td>{{ row.leaveApplicationId }}</td>
-                  <td>{{ row.applicantEmployeeId }}</td>
-                  <td>{{ row.leaveTypeId }}</td>
+                  <td>{{ getApplicantName(row.applicantEmployeeId) }}</td>
+                  <td>{{ getLeaveTypeName(row.leaveTypeId) }}</td>
                   <td>{{ formatDate(row.fromDate) }}</td>
                   <td>{{ formatDate(row.toDate) }}</td>
-                  <td>{{ row.declinedByEmployeeId ?? '-' }}</td>
+                  <td>{{ getApplicantName(row.declinedByEmployeeId) }}</td>
                   <td>{{ row.remark ?? '-' }}</td>
+                  <td>
+                    <p-button type="button" label="Preview" icon="pi pi-eye" [text]="true" size="small" (onClick)="openPreview(row)"></p-button>
+                  </td>
                 </tr>
               </ng-template>
               <ng-template pTemplate="emptymessage">
-                <tr><td colspan="8" class="text-center text-500">No declined applications.</td></tr>
+                <tr><td colspan="9" class="text-center text-500">No declined applications.</td></tr>
               </ng-template>
             </p-table>
           }
         </p-tabpanel>
       </p-tabpanels>
     </p-tabs>
+
+    <p-dialog
+      header="Preview Leave Application"
+      [(visible)]="showPreviewModal"
+      [modal]="true"
+      [style]="{ width: '36rem' }"
+      (onHide)="closePreview()"
+      [draggable]="false"
+      [resizable]="false">
+      @if (previewRow) {
+        <div class="flex flex-col gap-3">
+          <div class="grid grid-cols-2 gap-2">
+            <div><span class="text-500 block text-sm">ID</span><span>{{ previewRow.leaveApplicationId }}</span></div>
+            <div><span class="text-500 block text-sm">Applicant</span><span>{{ getApplicantName(previewRow.applicantEmployeeId) }}</span></div>
+            <div><span class="text-500 block text-sm">Leave Type</span><span>{{ getLeaveTypeName(previewRow.leaveTypeId) }}</span></div>
+            <div><span class="text-500 block text-sm">From</span><span>{{ formatDate(previewRow.fromDate) }}</span></div>
+            <div><span class="text-500 block text-sm">To</span><span>{{ formatDate(previewRow.toDate) }}</span></div>
+            <div><span class="text-500 block text-sm">Status</span><span>{{ statusLabel(previewRow) }}</span></div>
+            @if (previewRow.addressDuringLeave) {
+              <div class="col-span-2"><span class="text-500 block text-sm">Address During Leave</span><span>{{ previewRow.addressDuringLeave }}</span></div>
+            }
+            @if (previewRow.remarks) {
+              <div class="col-span-2"><span class="text-500 block text-sm">Remarks</span><span>{{ previewRow.remarks }}</span></div>
+            }
+          </div>
+        </div>
+      }
+      <ng-template pTemplate="footer">
+        <p-button label="Close" [text]="true" (onClick)="closePreview()"></p-button>
+        @if (previewRow && isPendingForMe(previewRow)) {
+          <p-button label="Accept" icon="pi pi-check" (onClick)="approveFromPreview()"></p-button>
+          <p-button label="Reject" icon="pi pi-times" severity="danger" (onClick)="rejectFromPreview()"></p-button>
+        }
+      </ng-template>
+    </p-dialog>
 
     <p-dialog
       [header]="remarkAction === 'approve' ? 'Approve with remark' : 'Decline with remark'"

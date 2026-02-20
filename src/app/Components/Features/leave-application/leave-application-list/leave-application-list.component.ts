@@ -6,6 +6,8 @@ import { environment } from '@/Core/Environments/environment';
 import { SharedService } from '@/shared/services/shared-service';
 import { LeaveApplicationService, LeaveApplicationModel } from '@/services/leave-application.service';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
+import { EmpService } from '@/services/emp-service';
+import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { MessageService } from 'primeng/api';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
@@ -54,6 +56,12 @@ export class LeaveApplicationListComponent implements OnInit {
     remarkText = '';
     selectedRow: LeaveApplicationModel | null = null;
 
+    showPreviewModal = false;
+    previewRow: LeaveApplicationModel | null = null;
+
+    employeeNameMap: Record<number, string> = {};
+    leaveTypeNameMap: Record<number, string> = {};
+
     private api = `${environment.apis.core}/LeaveApplication`;
 
     statusLabels: Record<number, string> = {
@@ -68,12 +76,16 @@ export class LeaveApplicationListComponent implements OnInit {
         private sharedService: SharedService,
         private leaveAppService: LeaveApplicationService,
         private identityMappingService: IdentityUserMappingService,
+        private empService: EmpService,
+        private masterBasicSetup: MasterBasicSetupService,
         private messageService: MessageService,
         private router: Router,
         private route: ActivatedRoute
     ) {}
 
     ngOnInit(): void {
+        this.loadEmployeeNames();
+        this.loadLeaveTypeNames();
         const userId = this.sharedService.getCurrentUserId?.();
         this.route.queryParams.subscribe((params) => {
             this.applySectionFromParams(params);
@@ -86,6 +98,68 @@ export class LeaveApplicationListComponent implements OnInit {
                     this.loadSection();
                 }
             });
+        }
+    }
+
+    loadEmployeeNames(): void {
+        this.http.get<any[]>(`${environment.apis.core}/EmployeeInfo/GetAll`).subscribe({
+            next: (list) => {
+                const arr = Array.isArray(list) ? list : [];
+                this.employeeNameMap = {};
+                arr.forEach((e: any) => {
+                    const id = e.employeeID ?? e.EmployeeID;
+                    const name = e.fullNameEN ?? e.FullNameEN ?? e.rabid ?? e.Rabid ?? String(id);
+                    if (id != null) this.employeeNameMap[id] = name;
+                });
+            }
+        });
+    }
+
+    loadLeaveTypeNames(): void {
+        this.masterBasicSetup.getAllByType('LeaveType').subscribe({
+            next: (list) => {
+                const arr = Array.isArray(list) ? list : [];
+                this.leaveTypeNameMap = {};
+                arr.forEach((c: any) => {
+                    const id = c.codeId ?? c.CodeId;
+                    const name = c.codeValueEN ?? c.CodeValueEN ?? String(id);
+                    if (id != null) this.leaveTypeNameMap[id] = name;
+                });
+            }
+        });
+    }
+
+    getApplicantName(empId: number | null | undefined): string {
+        if (empId == null) return '-';
+        return this.employeeNameMap[empId] ?? String(empId);
+    }
+
+    getLeaveTypeName(leaveTypeId: number | null | undefined): string {
+        if (leaveTypeId == null) return '-';
+        return this.leaveTypeNameMap[leaveTypeId] ?? String(leaveTypeId);
+    }
+
+    openPreview(row: LeaveApplicationModel): void {
+        this.previewRow = row;
+        this.showPreviewModal = true;
+    }
+
+    closePreview(): void {
+        this.showPreviewModal = false;
+        this.previewRow = null;
+    }
+
+    approveFromPreview(): void {
+        if (this.previewRow) {
+            this.openRemarkDialog(this.previewRow, 'approve');
+            this.closePreview();
+        }
+    }
+
+    rejectFromPreview(): void {
+        if (this.previewRow) {
+            this.openRemarkDialog(this.previewRow, 'decline');
+            this.closePreview();
         }
     }
 
