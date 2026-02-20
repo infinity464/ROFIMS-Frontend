@@ -72,8 +72,12 @@ import { EmpForeignVisit } from '@/Components/Features/Emp/emp-foreign-visit/emp
 import { EmpLeaveInfo } from '@/Components/Features/Emp/emp-leave-info/emp-leave-info.component';
 import { EmpMedicalCategory } from '@/Components/Features/Emp/emp-medical-category/emp-medical-category.component';
 import { EmpAdditionalRemarks } from '@/Components/Features/Emp/emp-additional-remarks/emp-additional-remarks.component';
+<<<<<<< HEAD
 import { EmpPermPostingMotherOrg } from '@/Components/Features/Emp/emp-perm-posting-mother-org/emp-perm-posting-mother-org.component';
 import { EmpPresentStatus } from '@/Components/Features/Emp/emp-present-status/emp-present-status';
+=======
+import { EmpPersonalServiceInfoComponent } from '@/Components/Features/Emp/emp-personal-service-info/emp-personal-service-info';
+>>>>>>> 60038e8b69c507fe0c5dbd8875b6b49c95d3bb26
 import { EmpPresentMemberCheckComponent } from '@/Components/Features/Emp/emp-present-member-check/emp-present-member-check.component';
 import { RabIdAllocation } from '@/Components/Features/rab-id-allocation/rab-id-allocation';
 import { SupernumeraryList } from '@/Components/Features/supernumerary-list/supernumerary-list';
@@ -90,7 +94,17 @@ import { TrainingInstitution } from '@/Components/basic-setup/training-instituti
 import { RankEquivalent } from '@/Components/basic-setup/rank-equivalent/rank-equivalent';
 import { Religion } from '@/Components/basic-setup/religion/religion';
 import { RabIdSerial } from '@/Components/basic-setup/rab-id-serial/rab-id-serial';
+<<<<<<< HEAD
 import { AbsentType } from '@/Components/basic-setup/absent-type/absent-type';
+=======
+import { NotesheetTemplateComponent } from '@/Components/basic-setup/notesheet-template/notesheet-template';
+import { NotesheetGenerateComponent } from '@/Components/Features/notesheet-generate/notesheet-generate';
+import { NotesheetExBdLeaveComponent } from '@/Components/Features/notesheet-ex-bd-leave/notesheet-ex-bd-leave';
+import { NotesheetListComponent } from '@/Components/Features/notesheet-list/notesheet-list';
+import { NewPostingOrderComponent } from '@/Components/Features/new-posting-order/new-posting-order';
+import { InterPostingOrderComponent } from '@/Components/Features/inter-posting-order/inter-posting-order';
+import { PendingJoiningListComponent } from '@/Components/Features/pending-joining-list/pending-joining-list';
+>>>>>>> 60038e8b69c507fe0c5dbd8875b6b49c95d3bb26
 import { CalendarComponent } from '@/Components/Features/calendar/calendar.component';
 import { TaskEventListComponent } from '@/Components/Features/calendar/task-event-list.component';
 import { ChatContainerComponent } from '@/Components/Features/chat/chat-container.component';
@@ -177,11 +191,29 @@ export const appRoutes: Routes = [
             { path: 'basic-setup/rank-equivalent', component: RankEquivalent },
             { path: 'basic-setup/religion', component: Religion },
             { path: 'basic-setup/rab-id-serial', component: RabIdSerial },
+<<<<<<< HEAD
             { path: 'basic-setup/absent-type', component: AbsentType },
+=======
+            { path: 'basic-setup/notesheet-template', component: NotesheetTemplateComponent },
+            { path: 'notesheet-generate', component: NotesheetGenerateComponent },
+            { path: 'notesheet-ex-bd-leave', component: NotesheetExBdLeaveComponent },
+            { path: 'notesheet-list', redirectTo: 'notesheet-list/draft', pathMatch: 'full' },
+            { path: 'notesheet-list/draft', component: NotesheetListComponent, data: { section: 'draft' } },
+            { path: 'notesheet-list/pending', component: NotesheetListComponent, data: { section: 'pending' } },
+            { path: 'notesheet-list/approved', component: NotesheetListComponent, data: { section: 'approved' } },
+            { path: 'notesheet-list/declined', component: NotesheetListComponent, data: { section: 'declined' } },
+            { path: 'notesheet-list/all', component: NotesheetListComponent, data: { section: 'all' } },
+
+            // Posting (New Posting Order & Inter-Posting Order - ref. requirements p.43-58)
+            { path: 'posting/pending-joining', component: PendingJoiningListComponent },
+            { path: 'posting/new-posting-order', component: NewPostingOrderComponent },
+            { path: 'posting/inter-posting-order', component: InterPostingOrderComponent },
+>>>>>>> 60038e8b69c507fe0c5dbd8875b6b49c95d3bb26
 
             // EMP
             { path: 'emp-list', component: EmpList },
             { path: 'emp-basic-info', component: EmpBasicInfo },
+            { path: 'emp-personal-service-info', component: EmpPersonalServiceInfoComponent },
             { path: 'emp-personal-info', component: EmpPersonalInfo },
             { path: 'emp-address-info', component: EmpAddressInfo },
             { path: 'emp-family-info', component: EmpFamilyInfo },

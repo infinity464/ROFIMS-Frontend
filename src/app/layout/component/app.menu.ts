@@ -91,7 +91,7 @@ export class AppMenu {
                 items: [
                     // { label: 'Employee List', icon: 'pi pi-fw pi-list', routerLink: ['/emp-list'] },
                     // { label: 'EmployeeInfo', routerLink: ['/employee-info'] },
-
+                    { label: 'Personal & Service (All Tabs)', icon: 'pi pi-fw pi-th-large', routerLink: ['/emp-personal-service-info'] },
                     // { label: 'Personal Info', icon: 'pi pi-fw pi-id-card', routerLink: ['/personal-info'] },
                     { label: 'Personal Info', icon: 'pi pi-fw pi-user', routerLink: ['/emp-personal-info'] },
                     { label: 'Address Info', icon: 'pi pi-fw pi-map-marker', routerLink: ['/emp-address-info'] },
@@ -197,9 +197,35 @@ export class AppMenu {
 
                     { label: 'Bank', icon: 'pi pi-fw pi-wallet', routerLink: ['/basic-setup/bank'] },
                     { label: 'Bank Branch', icon: 'pi pi-fw pi-building', routerLink: ['/basic-setup/bank-branch'] },
+<<<<<<< HEAD
                     { label: 'Absent Type', icon: 'pi pi-fw pi-ban', routerLink: ['/basic-setup/absent-type'] }
 
                     // Newly added
+=======
+                    { label: 'Notesheet Template', icon: 'pi pi-fw pi-file-edit', routerLink: ['/basic-setup/notesheet-template'] }
+                ]
+            },
+            {
+                label: 'NoteSheet',
+                icon: 'pi pi-fw pi-file-edit',
+                items: [
+                    { label: 'Generate NoteSheet', icon: 'pi pi-fw pi-plus', routerLink: ['/notesheet-generate'] },
+                    { label: 'Note-Sheet for Ex-BD Leave', icon: 'pi pi-fw pi-send', routerLink: ['/notesheet-ex-bd-leave'] },
+                    { label: 'Draft Note-Sheet List', icon: 'pi pi-fw pi-file-edit', routerLink: ['/notesheet-list/draft'] },
+                    { label: 'Pending for Approval', icon: 'pi pi-fw pi-clock', routerLink: ['/notesheet-list/pending'] },
+                    { label: 'Approved Note-Sheet List', icon: 'pi pi-fw pi-check-circle', routerLink: ['/notesheet-list/approved'] },
+                    { label: 'Declined Note-Sheet List', icon: 'pi pi-fw pi-times-circle', routerLink: ['/notesheet-list/declined'] },
+                    { label: 'All Note-Sheet', icon: 'pi pi-fw pi-list', routerLink: ['/notesheet-list/all'] }
+                ]
+            },
+            {
+                label: 'New Posting & Inter-Posting',
+                icon: 'pi pi-fw pi-send',
+                items: [
+                    { label: 'Pending List for Joining', icon: 'pi pi-fw pi-clock', routerLink: ['/posting/pending-joining'] },
+                    { label: 'New Posting Order', icon: 'pi pi-fw pi-user-plus', routerLink: ['/posting/new-posting-order'] },
+                    { label: 'Inter-Posting Order', icon: 'pi pi-fw pi-arrows-h', routerLink: ['/posting/inter-posting-order'] }
+>>>>>>> 60038e8b69c507fe0c5dbd8875b6b49c95d3bb26
                 ]
             },
             {
