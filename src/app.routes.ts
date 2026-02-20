@@ -97,6 +97,8 @@ import { NotesheetTemplateComponent } from '@/Components/basic-setup/notesheet-t
 import { NotesheetGenerateComponent } from '@/Components/Features/notesheet-generate/notesheet-generate';
 import { NotesheetExBdLeaveComponent } from '@/Components/Features/notesheet-ex-bd-leave/notesheet-ex-bd-leave';
 import { NotesheetListComponent } from '@/Components/Features/notesheet-list/notesheet-list';
+import { LeaveApplicationApplyComponent } from '@/Components/Features/leave-application/leave-application-apply/leave-application-apply.component';
+import { LeaveApplicationListComponent } from '@/Components/Features/leave-application/leave-application-list/leave-application-list.component';
 import { NewPostingOrderComponent } from '@/Components/Features/new-posting-order/new-posting-order';
 import { InterPostingOrderComponent } from '@/Components/Features/inter-posting-order/inter-posting-order';
 import { PendingJoiningListComponent } from '@/Components/Features/pending-joining-list/pending-joining-list';
@@ -199,6 +201,10 @@ export const appRoutes: Routes = [
             { path: 'notesheet-list/approved', component: NotesheetListComponent, data: { section: 'approved' } },
             { path: 'notesheet-list/declined', component: NotesheetListComponent, data: { section: 'declined' } },
             { path: 'notesheet-list/all', component: NotesheetListComponent, data: { section: 'all' } },
+
+            // Leave Application (apply and approve/reject - standalone from notesheet)
+            { path: 'leave-application/apply', component: LeaveApplicationApplyComponent },
+            { path: 'leave-application/list', component: LeaveApplicationListComponent },
 
             // Posting (New Posting Order & Inter-Posting Order - ref. requirements p.43-58)
             { path: 'posting/pending-joining', component: PendingJoiningListComponent },

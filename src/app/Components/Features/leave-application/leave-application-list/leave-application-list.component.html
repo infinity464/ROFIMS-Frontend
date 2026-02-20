@@ -1,0 +1,145 @@
+<p-fluid>
+  <p-toast></p-toast>
+  <div class="card">
+    <div class="flex align-items-center justify-content-between mb-4">
+      <h2 class="m-0 text-2xl font-bold text-900">Leave Applications</h2>
+      <p-button label="New Application" icon="pi pi-plus" [routerLink]="['/leave-application/apply']"></p-button>
+    </div>
+    <p class="text-600 m-0 mb-3">View pending, approved, and declined leave applications. Approve or decline pending items.</p>
+
+    <p-tabs [(value)]="tabIndex" (valueChange)="onTabChangeByValue($event)">
+      <p-tablist>
+        <p-tab [value]="0">Pending</p-tab>
+        <p-tab [value]="1">Approved</p-tab>
+        <p-tab [value]="2">Declined</p-tab>
+      </p-tablist>
+      <p-tabpanels>
+        <p-tabpanel [value]="0">
+          <h3 class="text-xl font-semibold text-900 mb-3">Pending for Approval</h3>
+          @if (loading) {
+            <p class="flex align-items-center"><i class="pi pi-spin pi-spinner mr-2"></i>Loading...</p>
+          } @else {
+            <p-table [value]="pendingList" dataKey="leaveApplicationId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines">
+              <ng-template pTemplate="header">
+                <tr>
+                  <th>ID</th>
+                  <th>Applicant ID</th>
+                  <th>Leave Type</th>
+                  <th>From</th>
+                  <th>To</th>
+                  <th>Actions</th>
+                </tr>
+              </ng-template>
+              <ng-template pTemplate="body" let-row>
+                <tr>
+                  <td>{{ row.leaveApplicationId }}</td>
+                  <td>{{ row.applicantEmployeeId }}</td>
+                  <td>{{ row.leaveTypeId }}</td>
+                  <td>{{ formatDate(row.fromDate) }}</td>
+                  <td>{{ formatDate(row.toDate) }}</td>
+                  <td>
+                    @if (isPendingForMe(row)) {
+                      <p-button type="button" label="Approve" icon="pi pi-check" [text]="true" size="small" (onClick)="openRemarkDialog(row, 'approve')" class="mr-1"></p-button>
+                      <p-button type="button" label="Decline" icon="pi pi-times" [text]="true" size="small" severity="danger" (onClick)="openRemarkDialog(row, 'decline')"></p-button>
+                    } @else {
+                      <span class="text-500">-</span>
+                    }
+                  </td>
+                </tr>
+              </ng-template>
+              <ng-template pTemplate="emptymessage">
+                <tr><td colspan="6" class="text-center text-500">No pending applications.</td></tr>
+              </ng-template>
+            </p-table>
+          }
+        </p-tabpanel>
+        <p-tabpanel [value]="1">
+          <h3 class="text-xl font-semibold text-900 mb-3">Approved Leave Applications</h3>
+          @if (loading) {
+            <p class="flex align-items-center"><i class="pi pi-spin pi-spinner mr-2"></i>Loading...</p>
+          } @else {
+            <p-table [value]="approvedList" dataKey="leaveApplicationId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines">
+              <ng-template pTemplate="header">
+                <tr>
+                  <th>ID</th>
+                  <th>Applicant ID</th>
+                  <th>Leave Type</th>
+                  <th>From</th>
+                  <th>To</th>
+                  <th>Approved By</th>
+                  <th>Approved Date</th>
+                </tr>
+              </ng-template>
+              <ng-template pTemplate="body" let-row>
+                <tr>
+                  <td>{{ row.leaveApplicationId }}</td>
+                  <td>{{ row.applicantEmployeeId }}</td>
+                  <td>{{ row.leaveTypeId }}</td>
+                  <td>{{ formatDate(row.fromDate) }}</td>
+                  <td>{{ formatDate(row.toDate) }}</td>
+                  <td>{{ row.approvedByEmployeeId ?? '-' }}</td>
+                  <td>{{ formatDate(row.approvedDate) }}</td>
+                </tr>
+              </ng-template>
+              <ng-template pTemplate="emptymessage">
+                <tr><td colspan="8" class="text-center text-500">No approved applications.</td></tr>
+              </ng-template>
+            </p-table>
+          }
+        </p-tabpanel>
+        <p-tabpanel [value]="2">
+          <h3 class="text-xl font-semibold text-900 mb-3">Declined Leave Applications</h3>
+          @if (loading) {
+            <p class="flex align-items-center"><i class="pi pi-spin pi-spinner mr-2"></i>Loading...</p>
+          } @else {
+            <p-table [value]="declinedList" dataKey="leaveApplicationId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines">
+              <ng-template pTemplate="header">
+                <tr>
+                  <th>ID</th>
+                  <th>Applicant ID</th>
+                  <th>Leave Type</th>
+                  <th>From</th>
+                  <th>To</th>
+                  <th>Declined By</th>
+                  <th>Remark</th>
+                </tr>
+              </ng-template>
+              <ng-template pTemplate="body" let-row>
+                <tr>
+                  <td>{{ row.leaveApplicationId }}</td>
+                  <td>{{ row.applicantEmployeeId }}</td>
+                  <td>{{ row.leaveTypeId }}</td>
+                  <td>{{ formatDate(row.fromDate) }}</td>
+                  <td>{{ formatDate(row.toDate) }}</td>
+                  <td>{{ row.declinedByEmployeeId ?? '-' }}</td>
+                  <td>{{ row.remark ?? '-' }}</td>
+                </tr>
+              </ng-template>
+              <ng-template pTemplate="emptymessage">
+                <tr><td colspan="8" class="text-center text-500">No declined applications.</td></tr>
+              </ng-template>
+            </p-table>
+          }
+        </p-tabpanel>
+      </p-tabpanels>
+    </p-tabs>
+
+    <p-dialog
+      [header]="remarkAction === 'approve' ? 'Approve with remark' : 'Decline with remark'"
+      [(visible)]="showRemarkDialog"
+      [modal]="true"
+      [style]="{ width: '28rem' }"
+      (onHide)="selectedRow = null; remarkAction = null"
+      [draggable]="false"
+      [resizable]="false">
+      <div class="flex flex-col gap-2">
+        <label class="font-medium">Remark (optional for Approve)</label>
+        <textarea pTextarea [(ngModel)]="remarkText" rows="3" class="w-full"></textarea>
+      </div>
+      <ng-template pTemplate="footer">
+        <p-button label="Cancel" [text]="true" (onClick)="showRemarkDialog = false"></p-button>
+        <p-button [label]="remarkAction === 'approve' ? 'Approve' : 'Decline'" (onClick)="submitRemark()"></p-button>
+      </ng-template>
+    </p-dialog>
+  </div>
+</p-fluid>

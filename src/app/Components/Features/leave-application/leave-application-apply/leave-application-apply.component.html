@@ -1,0 +1,125 @@
+<p-fluid>
+  <p-toast></p-toast>
+  <div class="card">
+    <div class="font-semibold text-xl mb-4">{{ title }}</div>
+    
+    <form [formGroup]="form" (ngSubmit)="submitForApproval()">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="font-medium block mb-2">Apply for</label>
+          <div class="flex gap-2">
+            <p-button
+              type="button"
+              [label]="'For myself'"
+              [outlined]="!applyForSelf"
+              (onClick)="setApplyForSelf(true)">
+            </p-button>
+            <p-button
+              type="button"
+              [label]="'For others'"
+              [outlined]="applyForSelf"
+              (onClick)="setApplyForSelf(false)">
+            </p-button>
+          </div>
+        </div>
+      </div>
+
+      @if (applyForSelf) {
+        @if (applicantInfo) {
+          <div class="surface-100 border-round p-4 mb-4">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div><span class="text-500 block text-sm">Name</span><span class="font-semibold">{{ applicantInfo.fullNameEN }}</span></div>
+              <div><span class="text-500 block text-sm">Rank</span><span class="font-semibold">{{ applicantInfo.rankDisplay ?? 'N/A' }}</span></div>
+              <div><span class="text-500 block text-sm">Corps</span><span class="font-semibold">{{ applicantInfo.corpsDisplay ?? 'N/A' }}</span></div>
+              <div><span class="text-500 block text-sm">Trade</span><span class="font-semibold">{{ applicantInfo.tradeDisplay ?? 'N/A' }}</span></div>
+              <div><span class="text-500 block text-sm">Mother Organization</span><span class="font-semibold">{{ applicantInfo.motherOrganizationDisplay ?? 'N/A' }}</span></div>
+              <div><span class="text-500 block text-sm">Member Type</span><span class="font-semibold">{{ applicantInfo.memberTypeDisplay ?? 'N/A' }}</span></div>
+            </div>
+          </div>
+        }
+      } @else {
+        <div class="mb-4">
+          <label class="font-medium block mb-2">RAB ID / Service ID (applicant)</label>
+          <app-employee-search
+            [initialEmployeeId]="applicantEmployeeId ?? null"
+            (onEmployeeFound)="onApplicantSelected($event)"
+            (onSearchReset)="onApplicantSelected(null)">
+          </app-employee-search>
+         
+        </div>
+      }
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="font-medium block mb-2">Leave Type</label>
+          <p-select
+            formControlName="leaveTypeId"
+            [options]="leaveTypeOptions"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Select Leave Type"
+            styleClass="w-full">
+          </p-select>
+        </div>
+        <div class="flex gap-2 md:gap-4">
+          <div class="flex-1">
+            <label class="font-medium block mb-2">From Date</label>
+            <p-datepicker formControlName="fromDate" dateFormat="dd/mm/yy" styleClass="w-full" placeholder="From"></p-datepicker>
+          </div>
+          <div class="flex-1">
+            <label class="font-medium block mb-2">To Date</label>
+            <p-datepicker formControlName="toDate" dateFormat="dd/mm/yy" styleClass="w-full" placeholder="To"></p-datepicker>
+          </div>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <div class="flex align-items-center gap-2 mb-2">
+          <p-checkbox [(ngModel)]="hasReliever" [ngModelOptions]="{ standalone: true }" [binary]="true" inputId="hasReliever" (onChange)="onRelieverCheckChange()"></p-checkbox>
+          <label for="hasReliever" class="font-medium cursor-pointer">Reliever</label>
+        </div>
+        @if (hasReliever) {
+          <div class="ml-4">
+            <label class="font-medium block mb-2">Reliever's Service ID / RAB ID</label>
+            <app-employee-search
+              (onEmployeeFound)="onRelieverSelected($event)"
+              (onSearchReset)="onRelieverSelected(null)">
+            </app-employee-search>
+            @if (relieverInfo) {
+              <p class="text-sm text-500 mt-1">{{ relieverInfo.fullNameEN }} ({{ relieverInfo.rabid }})</p>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="font-medium block mb-2">Address During Leave</label>
+          <textarea pTextarea formControlName="addressDuringLeave" rows="2" class="w-full" placeholder="Address during leave"></textarea>
+        </div>
+        <div>
+          <label class="font-medium block mb-2">Remarks</label>
+          <textarea pTextarea formControlName="remarks" rows="2" class="w-full" placeholder="Remarks"></textarea>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="font-medium block mb-2">Final Approver</label>
+          <p-select
+            formControlName="finalApproverId"
+            [options]="approverOptions"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Select final approver"
+            styleClass="w-full">
+          </p-select>
+        </div>
+      </div>
+
+      <div class="flex gap-2 mt-4">
+        <p-button type="submit" label="Submit" icon="pi pi-send" [loading]="isSaving"></p-button>
+      </div>
+    </form>
+  </div>
+</p-fluid>

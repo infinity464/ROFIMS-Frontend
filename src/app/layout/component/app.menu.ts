@@ -210,6 +210,14 @@ export class AppMenu {
                 ]
             },
             {
+                label: 'Leave Application',
+                icon: 'pi pi-fw pi-calendar-minus',
+                items: [
+                    { label: 'Apply for Leave', icon: 'pi pi-fw pi-plus', routerLink: ['/leave-application/apply'] },
+                    { label: 'Leave Application List', icon: 'pi pi-fw pi-list', routerLink: ['/leave-application/list'] }
+                ]
+            },
+            {
                 label: 'New Posting & Inter-Posting',
                 icon: 'pi pi-fw pi-send',
                 items: [
