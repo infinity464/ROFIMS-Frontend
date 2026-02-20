@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { CardModule } from 'primeng/card';
 import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
@@ -56,6 +56,8 @@ import { HttpClient } from '@angular/common/http';
 })
 export class NewPostingOrderComponent implements OnInit {
     activeTab = 0;
+    /** When true, only show the single panel for current route (no tab bar). */
+    singleSectionMode = false;
     /** Create Draft List: supernumerary list */
     supernumeraryList: EmployeeList[] = [];
     loadingList = false;
@@ -105,6 +107,8 @@ export class NewPostingOrderComponent implements OnInit {
     finalizeMemberUnits: Record<number, number> = {};
 
     constructor(
+        private route: ActivatedRoute,
+        private router: Router,
         private employeeListService: EmployeeListService,
         private commonCodeService: CommonCodeService,
         private postingService: PostingService,
@@ -115,6 +119,11 @@ export class NewPostingOrderComponent implements OnInit {
     ) {}
 
     ngOnInit(): void {
+        const tab = this.route.snapshot.data['activeTab'] as number | undefined;
+        if (typeof tab === 'number' && tab >= 0 && tab <= 3) {
+            this.activeTab = tab;
+            this.singleSectionMode = true;
+        }
         this.loadOrgOptions();
         this.loadMemberTypeOptions();
         this.loadSupernumeraryList();
@@ -258,7 +267,7 @@ export class NewPostingOrderComponent implements OnInit {
             next: () => {
                 this.messageService.add({ severity: 'success', summary: 'Sent', detail: `${toSend.length} member(s) added to Draft New Posting List.` });
                 this.selectedRows = [];
-                this.activeTab = 1;
+                this.router.navigate(['/posting/new-posting-order/draft-notesheet']);
                 this.loadSupernumeraryList();
             },
             error: (err) => {
@@ -278,7 +287,7 @@ export class NewPostingOrderComponent implements OnInit {
                 if (sheet) {
                     this.messageService.add({ severity: 'success', summary: 'Added', detail: 'Members moved to Draft New Posting Note-Sheet. Members removed from Draft Posting List.' });
                     this.selectedDraftListId = null;
-                    this.activeTab = 2;
+                    this.router.navigate(['/posting/new-posting-order/notesheet-generate']);
                     this.loadSupernumeraryList();
                 } else {
                     this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Could not create note-sheet.' });

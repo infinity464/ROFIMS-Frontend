@@ -10,14 +10,17 @@
         <p class="m-0 mb-3">Create draft list from <strong>Supernumerary Post</strong>, add to note-sheet, generate, finalize and approve.</p>
 
         <p-tabs [(value)]="activeTab" class="mt-2">
+            @if (!singleSectionMode) {
             <p-tablist>
                 <p-tab [value]="0">(a) Create Draft New Posting List</p-tab>
                 <p-tab [value]="1">(b) Add to Note-Sheet</p-tab>
                 <p-tab [value]="2">(c) Generate Note-Sheet</p-tab>
                 <p-tab [value]="3">List</p-tab>
             </p-tablist>
+            }
             <p-tabpanels>
                 <!-- Tab 0: Create Draft List from Supernumerary -->
+                @if (!singleSectionMode || activeTab === 0) {
                 <p-tabpanel [value]="0">
                     <div class="mb-3 flex flex-wrap gap-2 align-items-end">
                         <div>
@@ -93,7 +96,8 @@
                         <p-button label="Send selected to Draft Posting List" icon="pi pi-send" (onClick)="sendToDraftPostingList()" [disabled]="selectedRows.length === 0"></p-button>
                     </div>
                 </p-tabpanel>
-
+                }
+                @if (!singleSectionMode || activeTab === 1) {
                 <!-- Tab 1: Add to Note-Sheet from Draft List -->
                 <p-tabpanel [value]="1">
                     <p class="text-color-secondary mb-3">Select a Draft New Posting List and add its members to a new Draft New Posting Note-Sheet. Members will be removed from the draft list.</p>
@@ -128,10 +132,11 @@
                         </p-table>
                     }
                     @if (draftLists.length === 0) {
-                        <p class="text-500">No draft lists. Create one from tab "(a) Create Draft New Posting List".</p>
+                        <p class="text-500">No draft lists. Create one from Draft Posting.</p>
                     }
                 </p-tabpanel>
-
+                }
+                @if (!singleSectionMode || activeTab === 2) {
                 <!-- Tab 2: Generate Note-Sheet -->
                 <p-tabpanel [value]="2">
                     <p class="text-color-secondary mb-3">Fill subject, main text, initiator and approvers for the selected Draft New Posting Note-Sheet.</p>
@@ -189,10 +194,11 @@
                         <p-button label="Save / Generate Note Sheet" icon="pi pi-check" (onClick)="generateNoteSheet()" [disabled]="!selectedNoteSheetId"></p-button>
                     </div>
                     @if (draftNoteSheets.length === 0) {
-                        <p class="text-500">No draft note-sheets. Add one from tab "(b) Add to Note-Sheet".</p>
+                        <p class="text-500">No draft note-sheets. Add one from Draft Notesheet.</p>
                     }
                 </p-tabpanel>
-
+                }
+                @if (!singleSectionMode || activeTab === 3) {
                 <!-- Tab 3: List by status -->
                 <p-tabpanel [value]="3">
                     <div class="flex gap-2 mb-3">
@@ -237,6 +243,7 @@
                         </ng-template>
                     </p-table>
                 </p-tabpanel>
+                }
             </p-tabpanels>
         </p-tabs>
 

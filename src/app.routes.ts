@@ -212,7 +212,10 @@ export const appRoutes: Routes = [
 
             // Posting (New Posting Order & Inter-Posting Order - ref. requirements p.43-58)
             { path: 'posting/pending-joining', component: PendingJoiningListComponent },
-            { path: 'posting/new-posting-order', component: NewPostingOrderComponent },
+            { path: 'posting/new-posting-order', redirectTo: 'posting/new-posting-order/draft-posting', pathMatch: 'full' },
+            { path: 'posting/new-posting-order/draft-posting', component: NewPostingOrderComponent, data: { activeTab: 0 } },
+            { path: 'posting/new-posting-order/draft-notesheet', component: NewPostingOrderComponent, data: { activeTab: 1 } },
+            { path: 'posting/new-posting-order/notesheet-generate', component: NotesheetGenerateComponent },
             { path: 'posting/inter-posting-order', component: InterPostingOrderComponent },
 
             // EMP
