@@ -1,0 +1,97 @@
+<p-fluid>
+    <p-toast />
+    <div class="card">
+        <div class="font-semibold text-xl mb-4">{{ title }}</div>
+
+        <div class="grid align-items-end mb-4">
+            <div class="col-12 md:col-4">
+                <label class="block mb-2 font-medium">Mother Organization</label>
+                <p-select
+                    [options]="orgList"
+                    [(ngModel)]="selectedOrg"
+                    optionLabel="orgNameEN"
+                    [placeholder]="'Select organization'"
+                    [filter]="true"
+                    filterBy="orgNameEN"
+                    (ngModelChange)="onOrgChange()"
+                    styleClass="w-full">
+                </p-select>
+            </div>
+            @if (selectedOrg && rabUnitOptions.length > 0) {
+                <div class="col-12 md:col-4">
+                    <label class="block mb-2 font-medium">Filter by RAB Unit <span class="text-color-secondary font-normal">(optional)</span></label>
+                    <p-select
+                        [options]="unitFilterOptions"
+                        [(ngModel)]="selectedUnitFilter"
+                        optionLabel="label"
+                        optionValue="codeId"
+                        [placeholder]="'All'"
+                        [filter]="true"
+                        filterBy="label"
+                        (ngModelChange)="onUnitFilterChange()"
+                        styleClass="w-full">
+                    </p-select>
+                </div>
+            }
+        </div>
+
+        @if (loading) {
+            <div class="flex align-items-center justify-content-center gap-2 p-5 border surface-border border-round">
+                <i class="pi pi-spin pi-spinner"></i>
+                <span>Loading…</span>
+            </div>
+        } @else if (selectedOrg && dynamicColumns.length === 0 && !loading) {
+            <div class="p-4 border surface-border border-round text-color-secondary">
+                No vacancy definitions found for this organization.
+            </div>
+        } @else if (selectedOrg && dynamicColumns.length > 0 && displayRows.length === 0 && !loading) {
+            <div class="p-4 border surface-border border-round text-color-secondary">
+                No distribution data yet. Use Vacancy Distribution (RAB) to assign quantities.
+            </div>
+        } @else if (selectedOrg && dynamicColumns.length > 0 && displayRows.length > 0) {
+            <div class="dist-summary-wrap">
+                <table class="dist-table">
+                    <thead>
+                        <tr>
+                            <th class="dist-table__office">Office</th>
+                            @for (col of dynamicColumns; track col.field) {
+                                <th class="dist-table__rank">{{ col.header }}</th>
+                            }
+                            <th class="dist-table__total">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (row of displayRows; track row.rabCodeId) {
+                            <tr [class.dist-row--unit]="row.level === 0"
+                                [class.dist-row--wing]="row.level === 1"
+                                [class.dist-row--branch]="row.level === 2">
+                                <td class="dist-table__office">
+                                    <span [class.dist-row__indent1]="row.level === 1"
+                                          [class.dist-row__indent2]="row.level === 2">
+                                        @if (row.level > 0) {
+                                            <span class="dist-row__arrow">↳</span>
+                                        }
+                                        {{ row.officeName }}
+                                    </span>
+                                </td>
+                                @for (col of dynamicColumns; track col.field) {
+                                    <td class="dist-table__cell">{{ cellDisplay(row, col.field) }}</td>
+                                }
+                                <td class="dist-table__total">{{ row.total > 0 ? row.total : '—' }}</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr class="dist-row--footer">
+                            <td class="dist-table__office font-semibold">Total</td>
+                            @for (col of dynamicColumns; track col.field) {
+                                <td class="dist-table__cell font-semibold">{{ colTotalDisplay(col.field) }}</td>
+                            }
+                            <td class="dist-table__total font-semibold">{{ grandTotal > 0 ? grandTotal : '—' }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        }
+    </div>
+</p-fluid>

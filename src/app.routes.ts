@@ -35,6 +35,7 @@ import { EmployeeType } from '@/Components/basic-setup/employee-type/employee-ty
 import { AppointmentCategory } from '@/Components/basic-setup/appointment-category/appointment-category';
 import { RabId } from '@/Components/basic-setup/rab-id/rab-id';
 import { RabUnit } from '@/Components/basic-setup/rab-unit/rab-unit';
+import { RabStructureComponent } from '@/Components/basic-setup/rab-structure/rab-structure';
 import { OfficerType } from '@/Components/basic-setup/officer-type/officer-type';
 import { RabWing } from '@/Components/basic-setup/rab-wing/rab-wing';
 import { EducationInstitution } from '@/Components/basic-setup/education-institution/education-institution';
@@ -43,6 +44,9 @@ import { PersonalInfo } from '@/Components/Features/PersonalInfo/personal-info/p
 import { Organization } from '@/Components/basic-setup/organization-setup/organization/organization';
 import { OrganizationUnit } from '@/Components/basic-setup/organization-setup/organization-unit/organization-unit';
 import { MotherOrgRank } from '@/Components/basic-setup/mother-org-rank/mother-org-rank';
+import { MotherOrgRankVacancyComponent } from '@/Components/basic-setup/mother-org-rank-vacancy/mother-org-rank-vacancy';
+import { MotherOrgRankVacancyDistributionComponent } from '@/Components/basic-setup/mother-org-rank-vacancy-distribution/mother-org-rank-vacancy-distribution';
+import { VacancyDistributionSummaryComponent } from '@/Components/basic-setup/vacancy-distribution-summary/vacancy-distribution-summary';
 import { Corps } from '@/Components/basic-setup/corps/corps';
 import { Batch } from '@/Components/basic-setup/batch/batch';
 import { Decoration } from '@/Components/basic-setup/decoration/decoration';
@@ -96,6 +100,8 @@ import { NotesheetTemplateComponent } from '@/Components/basic-setup/notesheet-t
 import { NotesheetGenerateComponent } from '@/Components/Features/notesheet-generate/notesheet-generate';
 import { NotesheetExBdLeaveComponent } from '@/Components/Features/notesheet-ex-bd-leave/notesheet-ex-bd-leave';
 import { NotesheetListComponent } from '@/Components/Features/notesheet-list/notesheet-list';
+import { LeaveApplicationApplyComponent } from '@/Components/Features/leave-application/leave-application-apply/leave-application-apply.component';
+import { LeaveApplicationListComponent } from '@/Components/Features/leave-application/leave-application-list/leave-application-list.component';
 import { NewPostingOrderComponent } from '@/Components/Features/new-posting-order/new-posting-order';
 import { InterPostingOrderComponent } from '@/Components/Features/inter-posting-order/inter-posting-order';
 import { PendingJoiningListComponent } from '@/Components/Features/pending-joining-list/pending-joining-list';
@@ -159,12 +165,16 @@ export const appRoutes: Routes = [
             { path: 'basic-setup/employee-type', component: EmployeeType },
             { path: 'basic-setup/appointment-category', component: AppointmentCategory },
             { path: 'basic-setup/rab-id', component: RabId },
+            { path: 'basic-setup/rab-structure', component: RabStructureComponent },
             { path: 'basic-setup/rab-unit', component: RabUnit },
             { path: 'basic-setup/officer-type', component: OfficerType },
             { path: 'basic-setup/rab-wing', component: RabWing },
             { path: 'basic-setup/mother-org', component: Organization },
             { path: 'basic-setup/organization-unit', component: OrganizationUnit },
             { path: 'basic-setup/mother-org-rank', component: MotherOrgRank },
+            { path: 'basic-setup/mother-org-rank-vacancy', component: MotherOrgRankVacancyComponent },
+            { path: 'basic-setup/mother-org-rank-vacancy-distribution', component: MotherOrgRankVacancyDistributionComponent },
+            { path: 'basic-setup/vacancy-distribution-summary', component: VacancyDistributionSummaryComponent },
             { path: 'basic-setup/corps', component: Corps },
             { path: 'basic-setup/prefix', component: Prefix },
             { path: 'basic-setup/gender', component: Gender },
@@ -195,6 +205,10 @@ export const appRoutes: Routes = [
             { path: 'notesheet-list/approved', component: NotesheetListComponent, data: { section: 'approved' } },
             { path: 'notesheet-list/declined', component: NotesheetListComponent, data: { section: 'declined' } },
             { path: 'notesheet-list/all', component: NotesheetListComponent, data: { section: 'all' } },
+
+            // Leave Application (apply and approve/reject - standalone from notesheet)
+            { path: 'leave-application/apply', component: LeaveApplicationApplyComponent },
+            { path: 'leave-application/list', component: LeaveApplicationListComponent },
 
             // Posting (New Posting Order & Inter-Posting Order - ref. requirements p.43-58)
             { path: 'posting/pending-joining', component: PendingJoiningListComponent },
