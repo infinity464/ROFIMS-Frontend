@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '@/Core/Environments/environment';
+import { PagedResponse } from '@/Core/Models/Pagination';
 
 /** Leave application (system generated leave). Status: 1=Draft, 2=PendingApproval, 3=Approved, 4=Declined. */
 export interface LeaveApplicationModel {
@@ -71,6 +72,32 @@ export class LeaveApplicationService {
         if (leaveApplicationStatusId != null) params['leaveApplicationStatusId'] = String(leaveApplicationStatusId);
         return this.http.get<LeaveApplicationModel[]>(`${this.apiUrl}/GetByStatusForUser`, { params }).pipe(
             map((res: unknown) => (Array.isArray(res) ? res.map((r: any) => this.normalizeRow(r)) : []))
+        );
+    }
+
+    /** Get applications by status and type with server-side pagination. */
+    getByStatusForUserPaginated(
+        leaveApplicationStatusId: number | null,
+        currentUserEmployeeId: number,
+        typeFilter: string,
+        pageNo: number,
+        rowPerPage: number
+    ): Observable<PagedResponse<LeaveApplicationModel>> {
+        const params: Record<string, string> = {
+            currentUserEmployeeId: String(currentUserEmployeeId),
+            typeFilter,
+            page_no: String(pageNo),
+            row_per_page: String(rowPerPage)
+        };
+        if (leaveApplicationStatusId != null) params['leaveApplicationStatusId'] = String(leaveApplicationStatusId);
+        return this.http.get<{ datalist: unknown; pages: { Rows: number; TotalPages: number } }>(`${this.apiUrl}/GetByStatusForUserPaginated`, { params }).pipe(
+            map((res: any) => ({
+                datalist: (Array.isArray(res?.datalist) ? res.datalist : []).map((r: any) => this.normalizeRow(r)),
+                pages: {
+                    rows: res?.pages?.Rows ?? 0,
+                    totalPages: res?.pages?.TotalPages ?? 0
+                }
+            }))
         );
     }
 

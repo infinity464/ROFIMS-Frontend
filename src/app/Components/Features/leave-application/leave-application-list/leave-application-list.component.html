@@ -28,7 +28,7 @@
           @if (loading) {
             <p class="flex align-items-center"><i class="pi pi-spin pi-spinner mr-2"></i>Loading...</p>
           } @else {
-            <p-table [value]="filteredPendingList" dataKey="leaveApplicationId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines">
+            <p-table [value]="currentList" dataKey="leaveApplicationId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines">
               <ng-template pTemplate="header">
                 <tr>
                   <th>ID</th>
@@ -55,6 +55,14 @@
                 <tr><td colspan="6" class="text-center text-500">No pending applications.</td></tr>
               </ng-template>
             </p-table>
+            @if (totalRecords > pageSize) {
+              <p-paginator
+                [first]="(pageNumber - 1) * pageSize"
+                [rows]="pageSize"
+                [totalRecords]="totalRecords"
+                [rowsPerPageOptions]="[5, 10, 20, 50]"
+                (onPageChange)="onPageChange($event)"></p-paginator>
+            }
           }
         </p-tabpanel>
         <p-tabpanel [value]="1">
@@ -62,7 +70,7 @@
           @if (loading) {
             <p class="flex align-items-center"><i class="pi pi-spin pi-spinner mr-2"></i>Loading...</p>
           } @else {
-            <p-table [value]="filteredApprovedList" dataKey="leaveApplicationId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines">
+            <p-table [value]="currentList" dataKey="leaveApplicationId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines">
               <ng-template pTemplate="header">
                 <tr>
                   <th>ID</th>
@@ -93,6 +101,14 @@
                 <tr><td colspan="9" class="text-center text-500">No approved applications.</td></tr>
               </ng-template>
             </p-table>
+            @if (totalRecords > pageSize) {
+              <p-paginator
+                [first]="(pageNumber - 1) * pageSize"
+                [rows]="pageSize"
+                [totalRecords]="totalRecords"
+                [rowsPerPageOptions]="[5, 10, 20, 50]"
+                (onPageChange)="onPageChange($event)"></p-paginator>
+            }
           }
         </p-tabpanel>
         <p-tabpanel [value]="2">
@@ -100,7 +116,7 @@
           @if (loading) {
             <p class="flex align-items-center"><i class="pi pi-spin pi-spinner mr-2"></i>Loading...</p>
           } @else {
-            <p-table [value]="filteredDeclinedList" dataKey="leaveApplicationId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines">
+            <p-table [value]="currentList" dataKey="leaveApplicationId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines">
               <ng-template pTemplate="header">
                 <tr>
                   <th>ID</th>
@@ -131,6 +147,14 @@
                 <tr><td colspan="9" class="text-center text-500">No declined applications.</td></tr>
               </ng-template>
             </p-table>
+            @if (totalRecords > pageSize) {
+              <p-paginator
+                [first]="(pageNumber - 1) * pageSize"
+                [rows]="pageSize"
+                [totalRecords]="totalRecords"
+                [rowsPerPageOptions]="[5, 10, 20, 50]"
+                (onPageChange)="onPageChange($event)"></p-paginator>
+            }
           }
         </p-tabpanel>
       </p-tabpanels>

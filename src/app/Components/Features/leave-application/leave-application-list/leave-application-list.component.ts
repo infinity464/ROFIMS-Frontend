@@ -17,6 +17,8 @@ import { FormsModule } from '@angular/forms';
 import { ToastModule } from 'primeng/toast';
 import { FluidModule } from 'primeng/fluid';
 import { TabsModule } from 'primeng/tabs';
+import { PaginatorModule } from 'primeng/paginator';
+import type { PaginatorState } from 'primeng/types/paginator';
 import { RouterModule } from '@angular/router';
 
 export type LeaveApplicationSection = 'pending' | 'approved' | 'declined';
@@ -36,6 +38,7 @@ export type LeaveApplicationTypeFilter = 'myApplication' | 'applyForOther' | 'ac
         ToastModule,
         FluidModule,
         TabsModule,
+        PaginatorModule,
         RouterModule
     ],
     providers: [MessageService],
@@ -48,9 +51,10 @@ export class LeaveApplicationListComponent implements OnInit {
     tabIndex = 0;
     typeFilter: LeaveApplicationTypeFilter = 'myApplication';
 
-    pendingList: LeaveApplicationModel[] = [];
-    approvedList: LeaveApplicationModel[] = [];
-    declinedList: LeaveApplicationModel[] = [];
+    currentList: LeaveApplicationModel[] = [];
+    pageNumber = 1;
+    pageSize = 10;
+    totalRecords = 0;
     loading = false;
     currentUserEmployeeId = 0;
 
@@ -210,6 +214,10 @@ export class LeaveApplicationListComponent implements OnInit {
     }
 
     loadSection(): void {
+        if (this.currentUserEmployeeId <= 0) {
+            this.loading = false;
+            return;
+        }
         this.loading = true;
         const onError = () => {
             this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load list.' });
@@ -217,17 +225,15 @@ export class LeaveApplicationListComponent implements OnInit {
         };
         const statusMap = { pending: 2, approved: 3, declined: 4 } as const;
         const statusId = statusMap[this.section];
-        this.leaveAppService.getByStatusForUser(statusId, this.currentUserEmployeeId).subscribe({
-            next: (list) => {
-                if (this.section === 'pending') this.pendingList = list;
-                else if (this.section === 'approved') this.approvedList = list;
-                else this.declinedList = list;
+        this.leaveAppService.getByStatusForUserPaginated(statusId, this.currentUserEmployeeId, this.typeFilter, this.pageNumber, this.pageSize).subscribe({
+            next: (res) => {
+                this.currentList = res.datalist ?? [];
+                this.totalRecords = res.pages?.rows ?? 0;
                 this.loading = false;
             },
             error: () => {
-                if (this.section === 'pending') this.pendingList = [];
-                else if (this.section === 'approved') this.approvedList = [];
-                else this.declinedList = [];
+                this.currentList = [];
+                this.totalRecords = 0;
                 onError();
             }
         });
@@ -267,13 +273,21 @@ export class LeaveApplicationListComponent implements OnInit {
         this.tabIndex = tabIdx;
         const s = ['pending', 'approved', 'declined'][tabIdx] as LeaveApplicationSection;
         this.section = s;
+        this.pageNumber = 1;
         this.router.navigate([], { queryParams: { section: s }, queryParamsHandling: 'merge' });
         this.loadSection();
     }
 
     goToSection(s: LeaveApplicationSection): void {
         this.section = s;
+        this.pageNumber = 1;
         this.router.navigate([], { queryParams: { section: s }, queryParamsHandling: 'merge' });
+        this.loadSection();
+    }
+
+    onPageChange(event: PaginatorState): void {
+        this.pageNumber = (event.page ?? 0) + 1;
+        this.pageSize = event.rows ?? 10;
         this.loadSection();
     }
 
@@ -316,34 +330,9 @@ export class LeaveApplicationListComponent implements OnInit {
         return row.leaveApplicationStatusId === 2 && row.finalApproverId === this.currentUserEmployeeId;
     }
 
-    private filterByType(list: LeaveApplicationModel[]): LeaveApplicationModel[] {
-        const me = this.currentUserEmployeeId;
-        if (this.typeFilter === 'myApplication') {
-            return list.filter((r) => r.applicantEmployeeId === me);
-        }
-        if (this.typeFilter === 'applyForOther') {
-            return list.filter((r) => r.appliedByEmployeeId === me && r.applicantEmployeeId !== me);
-        }
-        if (this.typeFilter === 'actionTakenByMe') {
-            return list.filter((r) => r.approvedByEmployeeId === me || r.declinedByEmployeeId === me);
-        }
-        return list;
-    }
-
-    get filteredPendingList(): LeaveApplicationModel[] {
-        return this.filterByType(this.pendingList);
-    }
-
-    get filteredApprovedList(): LeaveApplicationModel[] {
-        return this.filterByType(this.approvedList);
-    }
-
-    get filteredDeclinedList(): LeaveApplicationModel[] {
-        return this.filterByType(this.declinedList);
-    }
-
     setTypeFilter(filter: LeaveApplicationTypeFilter): void {
         this.typeFilter = filter;
+        this.pageNumber = 1;
         this.router.navigate([], { queryParams: { type: filter }, queryParamsHandling: 'merge' });
     }
 }
