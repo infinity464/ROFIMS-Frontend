@@ -64,7 +64,12 @@ export class DraftCourseService {
         );
     }
 
-    addToDraftCourseList(courseNo: string, courseNameId: number, members: DraftCourseMemberRow[], createdBy: string): Observable<{ id: number; listNo: string }> {
+    addToDraftCourseList(
+        courseNo: string,
+        courseNameId: number,
+        members: DraftCourseMemberRow[],
+        createdBy: string
+    ): Observable<{ statusCode: number; description?: string; id: number; listNo: string }> {
         const body = {
             courseNo: courseNo?.trim() || '',
             courseNameId,
@@ -81,7 +86,12 @@ export class DraftCourseService {
             createdBy
         };
         return this.http.post<any>(`${API}/AddToDraftCourseList`, body).pipe(
-            map((r) => (r?.data ? { id: r.data.id, listNo: r.data.listNo } : { id: 0, listNo: '' }))
+            map((r) => ({
+                statusCode: r?.statusCode ?? 200,
+                description: r?.description,
+                id: r?.data?.id ?? r?.data?.Id ?? 0,
+                listNo: r?.data?.listNo ?? r?.data?.ListNo ?? ''
+            }))
         );
     }
 

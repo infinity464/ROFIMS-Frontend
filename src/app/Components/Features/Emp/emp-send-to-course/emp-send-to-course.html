@@ -58,39 +58,36 @@
     <p-card>
         <ng-template pTemplate="header">
             <div class="flex align-items-center gap-2 p-3">
-                <i class="pi pi-send text-2xl"></i>
-                <span class="text-xl font-semibold">Send Employees to Course (Draft)</span>
+                <span class="text-xl font-semibold">Create Orientation Training List of RFTS</span>
             </div>
         </ng-template>
-        <p class="m-0 mb-3">
-            Select a course to see employees who have not completed it, add selected employees to a draft (saved in database), then send them to the course from the draft. Draft persists across browser close.
-        </p>
+       
 
         <p-tabs [(value)]="activeTab" class="mt-2">
             <p-tablist>
-                <p-tab [value]="0">(a) Create Draft</p-tab>
-                <p-tab [value]="1">(b) Send from Draft</p-tab>
+                <p-tab [value]="0">Select Employee RFTS</p-tab>
+                <p-tab [value]="1">Final Approval</p-tab>
             </p-tablist>
             <p-tabpanels>
                 <!-- Tab 0: Create Draft -->
                 <p-tabpanel [value]="0">
-                    <p class="text-500 mb-3">Enter CourseNo (required), select a course to load employees, multi-select and add to draft.</p>
-                    <div class="mb-3 flex flex-wrap gap-4">
-                        <div class="flex-1 min-w-200">
-                            <label class="block text-sm font-semibold mb-1">CourseNo <span class="text-red-500">*</span></label>
-                            <input pInputText [(ngModel)]="courseNo" class="w-full" placeholder="e.g. CL-2025-001" />
-                        </div>
-                        <div class="flex-1 min-w-200">
-                            <label class="block text-sm font-semibold mb-1">Select Course</label>
+                    <p class="text-500 mb-3">.</p>
+                    <div class="flex flex-wrap gap-3 mb-4">
+                        <div style="min-width: 200px; max-width: 250px;">
+                            <label class="font-semibold block mb-2 text-700">Select Course</label>
                             <p-select
-                            [(ngModel)]="selectedCourseId"
-                            [options]="courseOptions"
-                            optionLabel="label"
-                            optionValue="value"
-                            placeholder="Select a course"
-                            styleClass="w-full md:w-30rem"
-                            (onChange)="onCourseSelect()">
-                        </p-select>
+                                [(ngModel)]="selectedCourseId"
+                                [options]="courseOptions"
+                                optionLabel="label"
+                                optionValue="value"
+                                placeholder="Select a course"
+                                styleClass="w-full"
+                                (onChange)="onCourseSelect()">
+                            </p-select>
+                        </div>
+                        <div style="min-width: 200px; max-width: 250px;">
+                            <label class="font-semibold block mb-2 text-700">CourseNo <span class="text-red-500">*</span></label>
+                            <input pInputText [(ngModel)]="courseNo" class="w-full" placeholder="e.g. CL-2025-001" />
                         </div>
                     </div>
                     <p-table
@@ -145,9 +142,8 @@
 
                 <!-- Tab 1: Send from Draft -->
                 <p-tabpanel [value]="1">
-                    <p class="text-500 mb-3">Select a draft and send its members to the course. Course records will be created and the draft will be removed.</p>
-                    <div class="mb-3">
-                        <p-button label="Refresh List" icon="pi pi-refresh" [loading]="isLoadingDrafts" (onClick)="loadDraftLists()"></p-button>
+                   <div class="mb-3">
+                    <!--    <p-button label="Refresh List" icon="pi pi-refresh" [loading]="isLoadingDrafts" (onClick)="loadDraftLists()"></p-button> -->
                     </div>
                     <p-table
                         [value]="draftLists"
@@ -158,7 +154,7 @@
                         dataKey="id">
                         <ng-template pTemplate="header">
                             <tr>
-                                <th>List No</th>
+                                <th>Course No</th>
                                 <th>Course</th>
                                 <th>Members</th>
                                 <th>Created</th>

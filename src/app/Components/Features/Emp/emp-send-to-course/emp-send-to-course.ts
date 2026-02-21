@@ -249,18 +249,27 @@ export class EmpSendToCourseComponent implements OnInit {
         const members = this.selectedRows.map((r) => this.toMemberRow(r));
         this.draftCourseService.addToDraftCourseList(this.courseNo.trim(), this.selectedCourseId, members, 'User').subscribe({
             next: (res) => {
-                this.messageService.add({
-                    severity: 'success',
-                    summary: 'Success',
-                    detail: `Added ${members.length} employee(s) to draft (${res.listNo}).`
-                });
-                this.selectedRows = [];
-                this.loadDraftLists();
-                this.courseNo = '';
+                if (res.statusCode === 200 && res.id) {
+                    this.messageService.add({
+                        severity: 'success',
+                        summary: 'Success',
+                        detail: `Added ${members.length} employee(s) to draft (${res.listNo}).`
+                    });
+                    this.selectedRows = [];
+                    this.loadDraftLists();
+                    this.courseNo = '';
+                } else {
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'Error',
+                        detail: res.description ?? 'Failed to add to draft.'
+                    });
+                }
                 this.isAddingToDraft = false;
             },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to add to draft.' });
+            error: (err) => {
+                const msg = err?.error?.description ?? err?.error?.message ?? 'Failed to add to draft.';
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: msg });
                 this.isAddingToDraft = false;
             }
         });
@@ -298,6 +307,21 @@ export class EmpSendToCourseComponent implements OnInit {
             remarks: ''
         });
         this.showSendCourseModal = true;
+        this.loadCourseTypeForDraft();
+    }
+
+    private loadCourseTypeForDraft(): void {
+        if (!this.selectedDraft?.courseNameId) return;
+        this.commonCodeService.getAllActiveCommonCodesType('CourseName').subscribe({
+            next: (codes) => {
+                const id = this.selectedDraft?.courseNameId;
+                const courseName = (codes ?? []).find((c) => c.codeId === id);
+                const parentId = courseName?.parentCodeId ?? null;
+                if (parentId != null) {
+                    this.courseForm.patchValue({ courseType: parentId }, { emitEvent: false });
+                }
+            }
+        });
     }
 
     sendFromDraft(): void {
