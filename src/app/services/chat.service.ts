@@ -31,7 +31,7 @@ export class ChatService {
   public groupMessagesSeen$ = this.groupMessagesSeenSubject.asObservable();
 
   /** Emitted when a leave application is submitted for approval and this user is the approver. */
-  private leaveApprovalRequestedSubject = new Subject<{ leaveApplicationId: number; applicantEmployeeId: number; fromDate: string; toDate: string; leaveTypeId: number; message: string }>();
+  private leaveApprovalRequestedSubject = new Subject<{ leaveApplicationId: number; applicantEmployeeId: number; fromDate: string; toDate: string; leaveTypeId: number; message: string; notificationId?: number }>();
   public leaveApprovalRequested$ = this.leaveApprovalRequestedSubject.asObservable();
 
   private connectionStatusSubject = new BehaviorSubject<boolean>(false);

@@ -9,7 +9,6 @@ import { LayoutService } from '../service/layout.service';
 import { FloatingChatWidgetComponent } from '@/Components/Features/chat/floating-chat-widget.component';
 import { ChatService } from '@/services/chat.service';
 import { NotificationService } from '@/services/notification.service';
-import { MessageService } from 'primeng/api';
 
 @Component({
     selector: 'app-layout',
@@ -43,8 +42,7 @@ export class AppLayout implements OnInit, OnDestroy {
         public renderer: Renderer2,
         public router: Router,
         private chatService: ChatService,
-        private notificationService: NotificationService,
-        private messageService: MessageService
+        private notificationService: NotificationService
     ) {
         this.overlayMenuOpenSubscription = this.layoutService.overlayOpen$.subscribe(() => {
             if (!this.menuOutsideClickListener) {
@@ -67,21 +65,16 @@ export class AppLayout implements OnInit, OnDestroy {
 
     ngOnInit(): void {
         this.chatService.connectToHub().catch(() => {});
+        this.notificationService.loadFromApi();
         this.leaveApprovalSub = this.chatService.leaveApprovalRequested$.subscribe((p) => {
             const msg = p?.message ?? 'A leave application requires your approval.';
             this.notificationService.add({
                 type: 'leaveApproval',
                 title: 'Leave Approval',
                 message: msg,
-                link: '/leave-application/list?section=pending',
-                data: { leaveApplicationId: p?.leaveApplicationId }
-            });
-            this.messageService.add({
-                severity: 'info',
-                summary: 'Leave Approval',
-                detail: msg,
-                life: 8000,
-                data: { leaveApplicationId: p?.leaveApplicationId }
+                link: '/leave-application/list?section=pending&type=actionRequiredByMe',
+                data: { leaveApplicationId: p?.leaveApplicationId },
+                serverId: p?.notificationId ?? undefined
             });
         });
     }

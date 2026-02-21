@@ -103,6 +103,7 @@ export class AppMenu {
                     { label: 'Rank Confirmation', icon: 'pi pi-fw pi-check-circle', routerLink: ['/emp-rank-confirmation'] },
                     { label: 'Education Info', icon: 'pi pi-fw pi-book', routerLink: ['/emp-education-info'] },
                     { label: 'Course Info', icon: 'pi pi-fw pi-graduation-cap', routerLink: ['/emp-course-info'] },
+                    { label: 'Send to Course (Draft)', icon: 'pi pi-fw pi-send', routerLink: ['/emp-send-to-course'] },
                     { label: 'Discipline Info', icon: 'pi pi-fw pi-exclamation-triangle', routerLink: ['/emp-discipline-info'] },
                     { label: 'Bank Account', icon: 'pi pi-fw pi-wallet', routerLink: ['/emp-bank-account'] },
                     { label: 'Foreign Visit', icon: 'pi pi-fw pi-globe', routerLink: ['/emp-foreign-visit'] },

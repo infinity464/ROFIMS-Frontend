@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '@/Core/Environments/environment';
+import { EmployeeSearchInfoModel } from '@/models/EmpModel';
 
 /** Row from vw_CourseInfoByEmployee. API: CourseInfo/ViewByEmployeeId/{employeeId} */
 export interface CourseInfoByEmployeeView {
@@ -68,5 +69,12 @@ export class CourseInfoService {
 
     delete(employeeId: number, courseId: number): Observable<any> {
         return this.http.delete(`${this.apiUrl}/DeleteAsyn/${employeeId}/${courseId}`);
+    }
+
+    /** Gets employees who have NOT completed the specified course (by CourseName CommonCode id). */
+    getEmployeesNotCompletedByCourseName(courseNameId: number): Observable<EmployeeSearchInfoModel[]> {
+        return this.http
+            .get<EmployeeSearchInfoModel[]>(`${this.apiUrl}/GetEmployeesNotCompletedByCourseName/${courseNameId}`)
+            .pipe(map((res) => (Array.isArray(res) ? res : [])));
     }
 }
