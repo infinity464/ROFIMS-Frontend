@@ -23,7 +23,7 @@ export class DraftCourseService {
                     members: (l.members ?? []).map((m: any) => ({
                         employeeId: m.employeeId ?? m.EmployeeId,
                         serviceId: m.serviceId ?? m.ServiceId ?? null,
-                        rabId: m.rabId ?? m.RabId ?? null,
+                        rabId: m.rabid ?? m.rabId ?? m.RabId ?? m.rabID ?? m.RABID ?? null,
                         fullNameEN: m.fullNameEN ?? m.FullNameEN ?? null,
                         rankName: m.rankName ?? m.RankName ?? null,
                         corpsName: m.corpsName ?? m.CorpsName ?? null,
@@ -50,7 +50,7 @@ export class DraftCourseService {
                     members: (l.members ?? []).map((m: any) => ({
                         employeeId: m.employeeId ?? m.EmployeeId,
                         serviceId: m.serviceId ?? m.ServiceId ?? null,
-                        rabId: m.rabId ?? m.RabId ?? null,
+                        rabId: m.rabid ?? m.rabId ?? m.RabId ?? m.rabID ?? m.RABID ?? null,
                         fullNameEN: m.fullNameEN ?? m.FullNameEN ?? null,
                         rankName: m.rankName ?? m.RankName ?? null,
                         corpsName: m.corpsName ?? m.CorpsName ?? null,

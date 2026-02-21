@@ -116,7 +116,7 @@
                                 <td><p-tableCheckbox [value]="row"></p-tableCheckbox></td>
                                 <td>{{ getVal(row, 'employeeID', 'EmployeeID') }}</td>
                                 <td>{{ getVal(row, 'fullNameEN', 'FullNameEN') }}</td>
-                                <td>{{ getVal(row, 'rabID', 'RABID') }}</td>
+                                <td>{{ getVal(row, 'rabid', 'rabId', 'rabID', 'RABID') }}</td>
                                 <td>{{ getVal(row, 'serviceId', 'ServiceId') }}</td>
                                 <td>{{ getVal(row, 'rank', 'Rank') }}</td>
                                 <td>{{ getVal(row, 'corps', 'Corps') }}</td>
@@ -160,6 +160,7 @@
                                 <th>Course</th>
                                 <th>Members</th>
                                 <th>Created</th>
+                                <th style="width: 100px">Action</th>
                             </tr>
                         </ng-template>
                         <ng-template pTemplate="body" let-row>
@@ -168,11 +169,22 @@
                                 <td>{{ row.courseName }}</td>
                                 <td>{{ row.members?.length ?? 0 }}</td>
                                 <td>{{ row.createdDate ? (row.createdDate | date:'short') : 'N/A' }}</td>
+                                <td>
+                                    <p-button
+                                        icon="pi pi-trash"
+                                        severity="danger"
+                                        [text]="true"
+                                        size="small"
+                                        [outlined]="true"
+                                        pTooltip="Delete"
+                                        (onClick)="deleteDraftRow(row); $event.stopPropagation()" [disabled]="isDeletingDraft">
+                                    </p-button>
+                                </td>
                             </tr>
                         </ng-template>
                         <ng-template pTemplate="emptymessage">
                             <tr>
-                                <td [attr.colspan]="4" class="text-center py-4">No drafts. Create one in the Create Draft tab.</td>
+                                <td [attr.colspan]="5" class="text-center py-4">No drafts. Create one in the Create Draft tab.</td>
                             </tr>
                         </ng-template>
                     </p-table>
@@ -202,7 +214,7 @@
                                         <td><p-tableCheckbox [value]="row"></p-tableCheckbox></td>
                                         
                                         <td>{{ row.fullNameEN || 'N/A' }}</td>
-                                        <td>{{ row.rabID || 'N/A' }}</td>
+                                        <td>{{ row.rabid ?? row.rabId ?? row.rabID ?? row.RABID ?? 'N/A' }}</td>
                                         <td>{{ row.serviceId || 'N/A' }}</td>
                                         <td>{{ row.rankName || 'N/A' }}</td>
                                         <td>{{ row.corpsName || 'N/A' }}</td>
@@ -210,15 +222,7 @@
                                 </ng-template>
                             </p-table>
                             <div class="mt-3 flex flex-wrap gap-2">
-                                <p-button
-                                    label="Delete Draft"
-                                    icon="pi pi-times-circle"
-                                    severity="danger"
-                                    [outlined]="true"
-                                    (onClick)="deleteDraft()"
-                                    [loading]="isDeletingDraft"
-                                    [disabled]="isDeletingDraft">
-                                </p-button>
+                               
                                 <p-button
                                     label="Remove Selected from Draft"
                                     icon="pi pi-trash"
@@ -273,7 +277,7 @@
                                                 <td><p-tableCheckbox [value]="row"></p-tableCheckbox></td>
                                               
                                                 <td>{{ getVal(row, 'fullNameEN', 'FullNameEN') }}</td>
-                                                <td>{{ getVal(row, 'rabID', 'RABID') }}</td>
+                                                <td>{{ getVal(row, 'rabid', 'rabId', 'rabID', 'RABID') }}</td>
                                                 <td>{{ getVal(row, 'serviceId', 'ServiceId') }}</td>
                                                 <td>{{ getVal(row, 'rank', 'Rank') }}</td>
                                             </tr>

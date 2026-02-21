@@ -15,6 +15,7 @@ import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { DatePickerModule } from 'primeng/datepicker';
 import { AutoCompleteModule } from 'primeng/autocomplete';
+import { TooltipModule } from 'primeng/tooltip';
 import { MessageService, ConfirmationService } from 'primeng/api';
 
 import { CourseInfoService } from '@/services/course-info-service';
@@ -53,7 +54,8 @@ interface TrainingInstituteOption extends DropdownOption {
         DialogModule,
         InputTextModule,
         DatePickerModule,
-        AutoCompleteModule
+        AutoCompleteModule,
+        TooltipModule
     ],
     providers: [MessageService, ConfirmationService],
     templateUrl: './emp-send-to-course.html',
@@ -184,9 +186,7 @@ export class EmpSendToCourseComponent implements OnInit {
 
     filterCourseResult(event: { query: string }): void {
         const query = (event.query || '').toLowerCase();
-        this.courseResultSuggestions = this.courseResultOptions.filter(
-            (o) => o.label.toLowerCase().includes(query) || o.value.toLowerCase().includes(query)
-        );
+        this.courseResultSuggestions = this.courseResultOptions.filter((o) => o.label.toLowerCase().includes(query) || o.value.toLowerCase().includes(query));
     }
 
     loadCourseOptions(): void {
@@ -209,6 +209,7 @@ export class EmpSendToCourseComponent implements OnInit {
         this.isLoadingEmployees = true;
         this.courseInfoService.getEmployeesNotCompletedByCourseName(this.selectedCourseId).subscribe({
             next: (data) => {
+                
                 this.employeeList = Array.isArray(data) ? data : [];
                 this.isLoadingEmployees = false;
             },
@@ -224,7 +225,7 @@ export class EmpSendToCourseComponent implements OnInit {
         return {
             employeeId: eid,
             serviceId: row.serviceId ?? row.ServiceId ?? null,
-            rabId: row.rabID ?? row.RABID ?? null,
+            rabId: (row as { rabid?: string; rabId?: string; rabID?: string; RABID?: string }).rabid ?? (row as { rabid?: string; rabId?: string; rabID?: string; RABID?: string }).rabId ?? row.rabID ?? row.RABID ?? null,
             fullNameEN: row.fullNameEN ?? row.FullNameEN ?? null,
             rankName: row.rank ?? row.Rank ?? null,
             corpsName: row.corps ?? row.Corps ?? null,
@@ -392,6 +393,39 @@ export class EmpSendToCourseComponent implements OnInit {
                             this.selectedDraft = null;
                             this.selectedDraftMembers = [];
                             this.showAddToDraftPanel = false;
+                            this.loadDraftLists();
+                        } else {
+                            this.messageService.add({ severity: 'error', summary: 'Error', detail: res.description });
+                        }
+                        this.isDeletingDraft = false;
+                    },
+                    error: (err) => {
+                        const msg = err?.error?.description ?? err?.error?.message ?? 'Failed to delete draft.';
+                        this.messageService.add({ severity: 'error', summary: 'Error', detail: msg });
+                        this.isDeletingDraft = false;
+                    }
+                });
+            }
+        });
+    }
+
+    deleteDraftRow(row: DraftCourseList): void {
+        this.confirmationService.confirm({
+            message: `Delete draft "${row.listNo}" and all its members? This cannot be undone.`,
+            header: 'Confirm Delete',
+            icon: 'pi pi-exclamation-triangle',
+            acceptButtonStyleClass: 'p-button-danger',
+            accept: () => {
+                this.isDeletingDraft = true;
+                this.draftCourseService.deleteDraft(row.id).subscribe({
+                    next: (res) => {
+                        if (res.statusCode === 200) {
+                            this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Draft deleted.' });
+                            if (this.selectedDraft?.id === row.id) {
+                                this.selectedDraft = null;
+                                this.selectedDraftMembers = [];
+                                this.showAddToDraftPanel = false;
+                            }
                             this.loadDraftLists();
                         } else {
                             this.messageService.add({ severity: 'error', summary: 'Error', detail: res.description });
