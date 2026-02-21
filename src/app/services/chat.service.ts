@@ -64,8 +64,8 @@ export class ChatService {
     try {
       const auth = localStorage.getItem('auth');
       if (auth) {
-        const parsed = JSON.parse(auth) as { token?: string };
-        return parsed?.token ?? null;
+        const parsed = JSON.parse(auth) as { token?: string; Token?: string };
+        return parsed?.token ?? parsed?.Token ?? null;
       }
     } catch {
       // ignore
@@ -111,6 +111,9 @@ export class ChatService {
     });
 
     this.hubConnection.on('LeaveApprovalRequested', (payload: any) => {
+      if (typeof console !== 'undefined' && console.debug) {
+        console.debug('[ChatService] LeaveApprovalRequested received', payload);
+      }
       this.leaveApprovalRequestedSubject.next(payload);
     });
 
