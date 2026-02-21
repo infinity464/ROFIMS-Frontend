@@ -2,9 +2,9 @@
 <p-fluid>
     <div class="mb-5 card">
         <div class="flex align-items-center gap-3 mb-4">
-            @if (mode !== 'search') {
+            <!-- @if (mode !== 'search') {
                 <p-button icon="pi pi-arrow-left" [rounded]="true" [text]="true" severity="secondary" pTooltip="Back to List" (onClick)="goBack()"></p-button>
-            }
+            } -->
             <h3 class="m-0 text-xl font-bold text-900" style="display: inline-flex; align-items: center; gap: 0.5rem;">
                 Foreign Visit Information Entry
                 @if (mode === 'view') {
@@ -23,7 +23,7 @@
                 (onSearchReset)="onEmployeeSearchReset()">
             </app-employee-search>
         }
-
+<!-- 
         @if (mode !== 'search' && employeeBasicInfo) {
             <div class="surface-50 border-round-2xl p-4 mb-4">
                 <div class="flex flex-wrap gap-4">
@@ -32,7 +32,7 @@
                     <div><span class="text-500 text-sm">Service ID:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.serviceId || employeeBasicInfo.ServiceId || 'N/A' }}</span></div>
                 </div>
             </div>
-        }
+        } -->
 
         @if (employeeFound) {
             <div class="surface-card border-round p-4 mb-4">
@@ -103,41 +103,45 @@
     [(visible)]="displayDialog"
     [modal]="true"
     [style]="{width: '720px'}"
-    [closable]="true">
+    [closable]="true"
+    [contentStyle]="{'overflow-y': 'auto', 'border-top': '2px solid var(--primary-color)'}">
     <form [formGroup]="visitForm" class="mt-3">
         <div class="grid grid-cols-2 gap-4">
             <div>
-                <label class="font-semibold block mb-2 text-700">Subject</label>
+                <label class="font-semibold block mb-2 text-700">Subject <span class="text-red-500">*</span></label>
                 <p-select
                     formControlName="subjectId"
                     [options]="subjectOptions"
                     optionLabel="label"
                     optionValue="value"
                     placeholder="Auto Select / Manual Type"
-                    styleClass="w-full"></p-select>
+                    styleClass="w-full"
+                    [filter]="true"></p-select>
             </div>
             <div>
-                <label class="font-semibold block mb-2 text-700">Purpose of Visit</label>
+                <label class="font-semibold block mb-2 text-700">Purpose of Visit <span class="text-red-500">*</span></label>
                 <p-select
                     formControlName="visitId"
                     [options]="purposeOfVisitOptions"
                     optionLabel="label"
                     optionValue="value"
                     placeholder="Select Purpose of Visit"
-                    styleClass="w-full"></p-select>
+                    styleClass="w-full"
+                    [filter]="true"></p-select>
             </div>
             <div>
-                <label class="font-semibold block mb-2 text-700">Destination Country</label>
+                <label class="font-semibold block mb-2 text-700">Destination Country <span class="text-red-500">*</span></label>
                 <p-select
                     formControlName="destinationCountryId"
                     [options]="destinationCountryOptions"
                     optionLabel="label"
                     optionValue="value"
                     placeholder="Select Destination Country"
-                    styleClass="w-full"></p-select>
+                    styleClass="w-full"
+                    [filter]="true"></p-select>
             </div>
             <div>
-                <label class="font-semibold block mb-2 text-700">Date of Visit – From</label>
+                <label class="font-semibold block mb-2 text-700">Date of Visit – From <span class="text-red-500">*</span></label>
                 <p-datepicker formControlName="fromDate" dateFormat="dd-mm-yy" placeholder="From" appendTo="body" styleClass="w-full"></p-datepicker>
             </div>
             <div>
@@ -164,7 +168,8 @@
                     optionLabel="label"
                     optionValue="value"
                     placeholder="Yes / No"
-                    styleClass="w-full"></p-select>
+                    styleClass="w-full"
+                    [filter]="true"></p-select>
             </div>
 
             @if (visitForm.get('withFamily')?.value) {
@@ -217,7 +222,7 @@
                 </div>
             }
 
-            <div class="col-span-2">
+            <div class="col-span-2 file-section-compact">
                 <app-file-references-form
                     #fileReferencesForm
                     [fileRows]="fileRows"
@@ -242,7 +247,8 @@
   [(visible)]="displayFamilyModal"
   [modal]="true"
   [style]="{ width: '450px' }"
-  [closable]="true">
+  [closable]="true"
+  [contentStyle]="{'border-top': '2px solid var(--primary-color)'}">
 
   @if (familyOptions.length > 0) {
     <div class="flex flex-column gap-2">

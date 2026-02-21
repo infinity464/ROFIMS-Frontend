@@ -1,9 +1,9 @@
 <p-fluid>
     <div class="mb-5 card">
         <div class="flex align-items-center gap-3 mb-4">
-            @if (mode !== 'search') {
+            <!-- @if (mode !== 'search') {
                 <p-button icon="pi pi-arrow-left" [rounded]="true" [text]="true" severity="secondary" pTooltip="Back to List" (onClick)="goBack()"></p-button>
-            }
+            } -->
             <h3 class="m-0 text-xl font-bold text-900" style="display: inline-flex; align-items: center; gap: 0.5rem;">
                 Promotion Information Entry
                 @if (mode === 'view') {
@@ -23,7 +23,7 @@
             </app-employee-search>
         }
 
-        @if (mode !== 'search' && employeeBasicInfo) {
+        <!-- @if (mode !== 'search' && employeeBasicInfo) {
             <div class="surface-50 border-round-2xl p-4 mb-4">
                 <div class="flex flex-wrap gap-4">
                     <div><span class="text-500 text-sm">Name:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.fullNameEN || employeeBasicInfo.FullNameEN || 'N/A' }}</span></div>
@@ -31,7 +31,7 @@
                     <div><span class="text-500 text-sm">Service ID:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.serviceId || employeeBasicInfo.ServiceId || 'N/A' }}</span></div>
                 </div>
             </div>
-        }
+        } -->
 
         @if (employeeFound) {
             <div class="surface-50 border-round-2xl p-4 mb-4">
@@ -109,20 +109,30 @@
     [closable]="true"
     [draggable]="false"
     [resizable]="false"
+    [contentStyle]="{'border-top': '2px solid var(--primary-color)'}"
     (onHide)="onDialogHide()">
     <form [formGroup]="promotionForm" class="promotion-form mt-3">
         <div class="grid grid-cols-2 gap-4">
             <div>
-                <label class="font-semibold block mb-2 text-700">Previous Rank</label>
-                <p-select formControlName="previousRank" [options]="rankOptions" optionLabel="label" optionValue="value" placeholder="Select previous rank" styleClass="w-full" appendTo="body"></p-select>
+                <label class="font-semibold block mb-2 text-700">Previous Rank <span class="text-red-500">*</span></label>
+                <p-select formControlName="previousRank" [options]="rankOptions" optionLabel="label" optionValue="value" placeholder="Select previous rank" styleClass="w-full" [filter]="true" appendTo="body"></p-select>
+                @if (promotionForm.get('previousRank')?.invalid && promotionForm.get('previousRank')?.touched) {
+                    <small class="text-red-500">Previous Rank is required</small>
+                }
             </div>
             <div>
-                <label class="font-semibold block mb-2 text-700">Promoted Rank</label>
-                <p-select formControlName="promotedRank" [options]="rankOptions" optionLabel="label" optionValue="value" placeholder="Select promoted rank" styleClass="w-full" appendTo="body"></p-select>
+                <label class="font-semibold block mb-2 text-700">Promoted Rank <span class="text-red-500">*</span></label>
+                <p-select formControlName="promotedRank" [options]="rankOptions" optionLabel="label" optionValue="value" placeholder="Select promoted rank" styleClass="w-full" [filter]="true" appendTo="body"></p-select>
+                @if (promotionForm.get('promotedRank')?.invalid && promotionForm.get('promotedRank')?.touched) {
+                    <small class="text-red-500">Promoted Rank is required</small>
+                }
             </div>
             <div>
-                <label class="font-semibold block mb-2 text-700">Date of Promotion</label>
+                <label class="font-semibold block mb-2 text-700">Date of Promotion <span class="text-red-500">*</span></label>
                 <p-datepicker formControlName="promotedDate" dateFormat="dd-mm-yy" placeholder="Select date" appendTo="body" styleClass="w-full"></p-datepicker>
+                @if (promotionForm.get('promotedDate')?.invalid && promotionForm.get('promotedDate')?.touched) {
+                    <small class="text-red-500">Date of Promotion is required</small>
+                }
             </div>
             <div>
                 <label class="font-semibold block mb-2 text-700">Prob. From</label>
@@ -131,6 +141,9 @@
             <div>
                 <label class="font-semibold block mb-2 text-700">Prob. To</label>
                 <p-datepicker formControlName="toDate" dateFormat="dd-mm-yy" placeholder="To" appendTo="body" styleClass="w-full"></p-datepicker>
+                @if (promotionForm.hasError('fromAfterTo')) {
+                    <small class="text-red-500">From date must be less than To date</small>
+                }
             </div>
             <div>
                 <label class="font-semibold block mb-2 text-700">Probationary Period</label>
@@ -144,7 +157,7 @@
                 <label class="font-semibold block mb-2 text-700">Remarks</label>
                 <input pInputText formControlName="remarks" class="w-full" placeholder="Remarks" />
             </div>
-            <div class="col-span-2">
+            <div class="col-span-2 file-section-compact">
                 <app-file-references-form
                     #fileReferencesForm
                     [fileRows]="fileRows"

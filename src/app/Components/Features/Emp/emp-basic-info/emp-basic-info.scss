@@ -9,6 +9,75 @@
     max-width: 220px;
 }
 
+// Card header with photo on the right
+.card-header-with-photo {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.5rem;
+
+    @media (max-width: 991px) {
+        flex-direction: column;
+    }
+}
+
+.card-header-left {
+    flex: 1;
+    min-width: 0;
+}
+
+.profile-photo-sidebar {
+    flex-shrink: 0;
+    width: 130px;
+    text-align: center;
+
+    @media (max-width: 991px) {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+}
+
+// Profile photo thumbnail styles
+.profile-photo-wrapper {
+    text-align: center;
+}
+
+.profile-photo-container {
+    width: 110px;
+    height: 135px;
+    margin: 0 auto;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 2px solid var(--surface-border, #dee2e6);
+    background: var(--surface-100, #f8f9fa);
+    cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+    &:hover {
+        border-color: var(--primary-color, #3B82F6);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    }
+}
+
+.profile-photo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.profile-photo-placeholder {
+    width: 110px;
+    height: 135px;
+    margin: 0 auto;
+    border-radius: 8px;
+    border: 2px dashed var(--surface-border, #dee2e6);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface-50, #fafafa);
+}
+
 // Ensure the card content doesn't overflow
 .card {
     overflow: visible;
@@ -116,4 +185,13 @@
     .p-button-icon {
         margin-right: 0.5rem;
     }
+}
+
+:host ::ng-deep .file-section-compact {
+  app-file-references-form h3 {
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+    color: var(--text-color-secondary) !important;
+    margin-bottom: 0.5rem !important;
+  }
 }

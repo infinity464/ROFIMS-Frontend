@@ -1,6 +1,6 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
@@ -92,7 +92,7 @@ export class EmpRankConfirmationComponent implements OnInit {
     buildForm(): void {
         this.rankForm = this.fb.group({
             rankConfirmId: [null],
-            presentRank: [null],
+            presentRank: [null, Validators.required],
             rankConfirmDate: [null],
             auth: [''],
             remarks: ['']
@@ -129,9 +129,13 @@ export class EmpRankConfirmationComponent implements OnInit {
             const m = d.match(/^(\d{4})-(\d{2})-(\d{2})/);
             if (m) return d.substring(0, 10);
             const parsed = new Date(d);
-            return isNaN(parsed.getTime()) ? null : parsed.toISOString().substring(0, 10);
+            if (isNaN(parsed.getTime())) return null;
+            return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}`;
         }
-        if (d instanceof Date) return isNaN(d.getTime()) ? null : d.toISOString().substring(0, 10);
+        if (d instanceof Date) {
+            if (isNaN(d.getTime())) return null;
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
         return null;
     }
 
@@ -255,7 +259,7 @@ export class EmpRankConfirmationComponent implements OnInit {
         this.isEditMode = true;
         this.editingRankConfirmId = row.rankConfirmId;
         this.fileRows = this.parseFileRowsFromReferences(row.filesReferences);
-        const rankConfirmDate = row.rankConfirmDate ? (typeof row.rankConfirmDate === 'string' ? row.rankConfirmDate : new Date(row.rankConfirmDate).toISOString().substring(0, 10)) : null;
+        const rankConfirmDate = this.toDateOnly(row.rankConfirmDate ?? null);
         this.rankForm.patchValue({
             rankConfirmId: row.rankConfirmId,
             presentRank: row.presentRank,
@@ -268,6 +272,10 @@ export class EmpRankConfirmationComponent implements OnInit {
 
     saveRank(): void {
         if (!this.selectedEmployeeId) return;
+        if (this.rankForm.invalid) {
+            this.rankForm.markAllAsTouched();
+            return;
+        }
         const existingRefs = this.fileReferencesForm?.getExistingFileReferences() || [];
         const filesToUpload = this.fileReferencesForm?.getFilesToUpload() || [];
 

@@ -1,9 +1,9 @@
 <p-fluid>
     <div class="mb-5 card">
         <div class="flex align-items-center gap-3 mb-4">
-            @if (mode !== 'search') {
+            <!-- @if (mode !== 'search') {
                 <p-button icon="pi pi-arrow-left" [rounded]="true" [text]="true" severity="secondary" pTooltip="Back to List" (onClick)="goBack()"></p-button>
-            }
+            } -->
             <h3 class="m-0 text-xl font-bold text-900" style="display: inline-flex; align-items: center; gap: 0.5rem;">
                 Medical Category Information
                 @if (mode === 'view') {
@@ -23,7 +23,7 @@
             </app-employee-search>
         }
 
-        @if (mode !== 'search' && employeeBasicInfo) {
+        <!-- @if (mode !== 'search' && employeeBasicInfo) {
             <div class="surface-50 border-round-2xl p-4 mb-4">
                 <div class="flex flex-wrap gap-4">
                     <div><span class="text-500 text-sm">Name:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.fullNameEN || employeeBasicInfo.FullNameEN || 'N/A' }}</span></div>
@@ -31,7 +31,7 @@
                     <div><span class="text-500 text-sm">Service ID:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.serviceId || employeeBasicInfo.ServiceId || 'N/A' }}</span></div>
                 </div>
             </div>
-        }
+        } -->
 
         @if (employeeFound) {
             <div class="surface-50 border-round-2xl p-4 mb-4">
@@ -98,7 +98,7 @@
     [(visible)]="displayDialog"
     [modal]="true"
     [style]="{ width: '640px' }"
-    [contentStyle]="{ padding: '1.25rem 1.5rem' }"
+    [contentStyle]="{ padding: '1.25rem 1.5rem', 'border-top': '2px solid var(--primary-color)' }"
     [closable]="true"
     [draggable]="false"
     [resizable]="false"
@@ -115,6 +115,7 @@
                         optionLabel="label"
                         optionValue="value"
                         placeholder="Select category"
+                        [filter]="true"
                         styleClass="w-full">
                     </p-select>
                     @if (medicalForm.get('medicalCategoryId')?.invalid && medicalForm.get('medicalCategoryId')?.touched) {
@@ -158,7 +159,7 @@
             </div>
 
             <!-- Supporting Documents -->
-            <div class="form-row flex gap-3 mb-0">
+            <div class="form-row flex gap-3 mb-0 file-section-compact">
                 <div class="form-field flex-1 col-span-full">
                     <app-file-references-form
                         #fileReferencesForm

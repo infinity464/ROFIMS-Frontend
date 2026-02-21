@@ -1,6 +1,6 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, FormsModule, ReactiveFormsModule, AbstractControl, ValidationErrors } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
@@ -93,15 +93,28 @@ export class EmpPromotionInfo implements OnInit {
     buildForm(): void {
         this.promotionForm = this.fb.group({
             promotionID: [null],
-            previousRank: [null],
-            promotedRank: [null],
-            promotedDate: [null],
+            previousRank: [null, Validators.required],
+            promotedRank: [null, Validators.required],
+            promotedDate: [null, Validators.required],
             fromDate: [null],
             toDate: [null],
             probationaryPeriod: [''],
             auth: [''],
             remarks: ['']
-        });
+        }, { validators: this.fromToDateValidator });
+    }
+
+    private fromToDateValidator(group: AbstractControl): ValidationErrors | null {
+        const from = group.get('fromDate')?.value;
+        const to = group.get('toDate')?.value;
+        if (!from || !to) return null;
+        const fromDate = from instanceof Date ? from : new Date(from);
+        const toDate = to instanceof Date ? to : new Date(to);
+        if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) return null;
+        // Compare date-only (strip time)
+        const fromDay = new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate()).getTime();
+        const toDay = new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate()).getTime();
+        return fromDay > toDay ? { fromAfterTo: true } : null;
     }
 
     private mapCommonCodeToOption(item: any): { label: string; value: number } {
@@ -134,9 +147,13 @@ export class EmpPromotionInfo implements OnInit {
             const m = d.match(/^(\d{4})-(\d{2})-(\d{2})/);
             if (m) return d.substring(0, 10);
             const parsed = new Date(d);
-            return isNaN(parsed.getTime()) ? null : parsed.toISOString().substring(0, 10);
+            if (isNaN(parsed.getTime())) return null;
+            return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}`;
         }
-        if (d instanceof Date) return isNaN(d.getTime()) ? null : d.toISOString().substring(0, 10);
+        if (d instanceof Date) {
+            if (isNaN(d.getTime())) return null;
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
         return null;
     }
 
@@ -290,6 +307,10 @@ export class EmpPromotionInfo implements OnInit {
 
     savePromotion(): void {
         if (!this.selectedEmployeeId) return;
+        if (this.promotionForm.invalid) {
+            this.promotionForm.markAllAsTouched();
+            return;
+        }
         const v = this.promotionForm.value;
         const now = new Date().toISOString();
         const newId = this.promotionList.length > 0 ? Math.max(...this.promotionList.map(r => r.promotionID)) + 1 : 1;

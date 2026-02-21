@@ -1,98 +1,61 @@
 <p-fluid>
+    @if (!hideSearchSection) {
     <app-emp-present-member-check
         (employeeNotFound)="showEntryForm = true"
         (employeeFound)="showEntryForm = false"
         (loadOldProfile)="onLoadOldProfile($event)" />
+    }
 
     @if (showEntryForm) {
     <div class="mb-5 card">
-        <div class="flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
-            <h3 class="m-0 text-xl font-bold text-900">{{ pageTitle }}</h3>
-            <!-- View mode buttons -->
-            @if (isViewMode || isEditMode) {
-                <div class="flex flex-wrap gap-2">
-                    <p-button
-                        label="Back to List"
-                        icon="pi pi-arrow-left"
-                        severity="secondary"
-                        [outlined]="true"
-                        (onClick)="goBackToList()">
-                    </p-button>
-                    @if (isViewMode) {
-                        <p-button
-                            label="Edit"
-                            icon="pi pi-pencil"
-                            (onClick)="switchToEditMode()">
-                        </p-button>
+        <div class="card-header-with-photo">
+            <div class="card-header-left">
+                <div class="flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+                    <h3 class="m-0 text-xl font-bold text-900">{{ pageTitle }}</h3>
+                    <!-- View mode buttons -->
+                    @if (isViewMode || isEditMode) {
+                        <div class="flex flex-wrap gap-2">
+                            @if (isViewMode) {
+                                <p-button
+                                    label="Edit"
+                                    icon="pi pi-pencil"
+                                    (onClick)="switchToEditMode()">
+                                </p-button>
+                            }
+                        </div>
                     }
                 </div>
-            }
+            </div>
         </div>
 
         <form [formGroup]="postingForm" (ngSubmit)="onSubmit()">
             <div class="surface-50 border-round-2xl p-4">
                 <!-- Row 1: 4 Fields -->
                 <div class="flex flex-wrap gap-3 mb-4">
-                    <div class="flex-1" style="min-width: 200px; max-width: 250px;">
-                        <label class="font-semibold block mb-2 text-700">Add Picture</label>
-
-                        @if (!isViewMode) {
-                            <!-- Show upload button if no image -->
-                            @if (!imagePreview) {
+                    <div style="flex: 0 0 auto;">
+                        @if (!imagePreview) {
+                            <label class="font-semibold block mb-2 text-700">Add Picture <small class="text-500 font-normal">(Max: 5MB)</small></label>
+                            @if (!isViewMode) {
                                 <p-fileUpload #fileUpload mode="basic" chooseLabel="Upload Picture" chooseIcon="pi pi-upload"
                                     name="picture" accept="image/*" [auto]="true" (onSelect)="onFileSelect($event)"
                                     maxFileSize="5000000" styleClass="w-full">
                                 </p-fileUpload>
-                                <small class="text-500">Max size: 5MB (JPG, PNG, GIF)</small>
-                            } @else {
-                                <!-- Show filename with preview and remove buttons -->
-                                <div class="flex align-items-center gap-2 surface-100 border-round p-2">
-                                    <i class="pi pi-image text-primary"></i>
-                                    <span class="text-700 font-medium flex-1" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                                        {{ selectedFileName || 'image.png' }}
-                                    </span>
-                                    <p-button
-                                        icon="pi pi-eye"
-                                        [rounded]="true"
-                                        [text]="true"
-                                        severity="info"
-                                        size="small"
-                                        pTooltip="Preview"
-                                        (onClick)="showImagePreviewModal = true">
-                                    </p-button>
-                                    <p-button
-                                        icon="pi pi-times"
-                                        [rounded]="true"
-                                        [text]="true"
-                                        severity="danger"
-                                        size="small"
-                                        pTooltip="Remove"
-                                        (onClick)="removeImage()">
-                                    </p-button>
-                                </div>
-                            }
-                        } @else {
-                            <!-- View mode: show filename if image exists -->
-                            @if (imagePreview) {
-                                <div class="flex align-items-center gap-2 surface-100 border-round p-2">
-                                    <i class="pi pi-image text-primary"></i>
-                                    <span class="text-700 font-medium flex-1">{{ selectedFileName || 'image.png' }}</span>
-                                    <p-button
-                                        icon="pi pi-eye"
-                                        [rounded]="true"
-                                        [text]="true"
-                                        severity="info"
-                                        size="small"
-                                        pTooltip="Preview"
-                                        (onClick)="showImagePreviewModal = true">
-                                    </p-button>
-                                </div>
                             } @else {
                                 <span class="text-500">No picture uploaded</span>
                             }
+                        } @else {
+                            <div style="position: relative; display: inline-block;">
+                                <img [src]="imagePreview" alt="Preview" (click)="showImagePreviewModal = true" pTooltip="Click to enlarge"
+                                    style="width: 120px; height: 100px; object-fit: cover; border-radius: 6px; border: 2px solid var(--surface-border, #dee2e6); cursor: pointer; display: block;" />
+                                @if (!isViewMode) {
+                                    <p-button icon="pi pi-times" [rounded]="true" severity="danger" size="small" pTooltip="Remove"
+                                        (onClick)="removeImage()"
+                                        [style]="{'position': 'absolute', 'top': '-8px', 'right': '-8px', 'width': '22px', 'height': '22px'}">
+                                    </p-button>
+                                }
+                            </div>
                         }
                     </div>
-
                     <div class="flex-1" style="min-width: 200px">
                         <label class="font-semibold block mb-2 text-700">
                             Mother Organization <span class="text-red-500">*</span>
@@ -137,6 +100,7 @@
                         </small>
                         }
                     </div>
+
                 </div>
 
                 <!-- Row 2: 4 Fields -->
@@ -200,6 +164,7 @@
                         </small>
                         }
                     </div>
+
                 </div>
 
                 <!-- Row 3: 4 Fields -->
@@ -254,6 +219,7 @@
                         <label class="font-semibold block mb-2 text-700">Trade Remarks</label>
                         <input pInputText class="w-full" placeholder="Enter remarks" formControlName="tradeMark" />
                     </div>
+
                 </div>
 
                 <!-- Row 4: 4 Fields -->
@@ -293,7 +259,8 @@
                             Service ID <span class="text-red-500">*</span>
                         </label>
                         <div class="p-inputgroup">
-                            <input pInputText class="w-full" placeholder="Only Number" formControlName="serviceId"
+                            <input pInputText class="w-full" [class.surface-100]="isEditMode" placeholder="Only Number" formControlName="serviceId"
+                                [readonly]="isEditMode"
                                 (blur)="checkServiceIdDuplicate($event.target.value)" />
                             @if (isCheckingServiceId) {
                                 <span class="p-inputgroup-addon">
@@ -416,6 +383,7 @@
         </div>
 
         <!-- File References Section -->
+        <div class="file-section-compact">
         <app-file-references-form
             #fileReferencesForm
             [fileRows]="fileRows"
@@ -424,6 +392,7 @@
             (fileRowsChange)="onFileRowsChange($event)"
             (onDownloadFile)="onDownloadFile($event)">
         </app-file-references-form>
+        </div>
 
         <!-- Reliever Section -->
         <div class="mt-1">
@@ -502,16 +471,23 @@
             </div>
         </div>
 
-        <!-- Save All Information Button - hidden in view mode -->
+        <!-- Save / Reset Buttons - hidden in view mode -->
         @if (!isViewMode) {
-            <div class="flex justify-end mt-4">
+            <div class="flex justify-end gap-2 mt-4">
+                @if (!isEditMode) {
+                <p-button
+                    type="button"
+                    label="Reset"
+                    icon="pi pi-refresh"
+                    severity="secondary"
+                    [outlined]="true"
+                    (onClick)="onReset()">
+                </p-button>
+                }
                 <p-button
                     type="button"
                     label="Save All Information"
                     icon="pi pi-check-circle"
-                    size="large"
-                    severity="success"
-                    styleClass="save-all-btn"
                     [disabled]="isServiceIdDuplicate || isCheckingServiceId"
                     (onClick)="saveAll()">
                 </p-button>
@@ -528,7 +504,8 @@
     [modal]="true"
     [style]="{ width: '500px', maxWidth: '90vw' }"
     [closable]="true"
-    [draggable]="false">
+    [draggable]="false"
+    [contentStyle]="{'border-top': '2px solid var(--primary-color)'}">
     <div class="flex justify-content-center">
         @if (imagePreview) {
             <img [src]="imagePreview" alt="Profile Picture"

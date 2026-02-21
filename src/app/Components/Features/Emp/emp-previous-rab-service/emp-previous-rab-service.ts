@@ -156,9 +156,13 @@ export class EmpPreviousRabService implements OnInit {
             const yearOnly = d.match(/^(\d{4})$/);
             if (yearOnly) return `${yearOnly[1]}-01-01`;
             const parsed = new Date(d);
-            return isNaN(parsed.getTime()) ? null : parsed.toISOString().substring(0, 10);
+            if (isNaN(parsed.getTime())) return null;
+            return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}`;
         }
-        if (d instanceof Date) return isNaN(d.getTime()) ? null : d.toISOString().substring(0, 10);
+        if (d instanceof Date) {
+            if (isNaN(d.getTime())) return null;
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
         return null;
     }
 
@@ -253,8 +257,8 @@ export class EmpPreviousRabService implements OnInit {
     openEditDialog(row: PreviousRABServiceListRow): void {
         this.isEditMode = true;
         this.editingServiceId = row.previousRABServiceID;
-        const serviceFrom = row.serviceFrom ? (typeof row.serviceFrom === 'string' ? row.serviceFrom : new Date(row.serviceFrom).toISOString().substring(0, 10)) : null;
-        const serviceTo = row.serviceTo ? (typeof row.serviceTo === 'string' ? row.serviceTo : new Date(row.serviceTo).toISOString().substring(0, 10)) : null;
+        const serviceFrom = this.toDateOnly(row.serviceFrom ?? null);
+        const serviceTo = this.toDateOnly(row.serviceTo ?? null);
         this.serviceForm.patchValue({
             previousRABServiceID: row.previousRABServiceID,
             rabUnitCodeId: row.rabUnitCodeId,

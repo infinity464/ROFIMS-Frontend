@@ -12,46 +12,6 @@
                 (onSearchReset)="onEmployeeSearchReset()">
             </app-employee-search>
         }
-
-        @if (mode !== 'search' && employeeBasicInfo) {
-            <div class="surface-50 border-round-2xl p-4 mb-4">
-                <div class="grid grid-cols-4 gap-6">
-                    <div>
-                        <p class="text-500 text-sm m-0 mb-2">NAME</p>
-                        <p class="text-900 font-semibold m-0">{{ employeeSearchInfo?.fullNameEN || employeeSearchInfo?.FullNameEN || employeeBasicInfo.fullNameEN || employeeBasicInfo.FullNameEN || 'N/A' }}</p>
-                    </div>
-                    <div>
-                        <p class="text-500 text-sm m-0 mb-2">RAB ID</p>
-                        <p class="text-900 font-semibold m-0">{{ employeeSearchInfo?.rabID || employeeSearchInfo?.RABID || employeeBasicInfo.rabid || employeeBasicInfo.Rabid || 'N/A' }}</p>
-                    </div>
-                    <div>
-                        <p class="text-500 text-sm m-0 mb-2">SERVICE ID</p>
-                        <p class="text-900 font-semibold m-0">{{ employeeSearchInfo?.serviceId || employeeSearchInfo?.ServiceId || employeeBasicInfo.serviceId || employeeBasicInfo.ServiceId || 'N/A' }}</p>
-                    </div>
-                    <div>
-                        <p class="text-500 text-sm m-0 mb-2">RANK</p>
-                        <p class="text-900 font-semibold m-0">{{ employeeSearchInfo?.rank || employeeSearchInfo?.Rank || 'N/A' }}</p>
-                    </div>
-                    <div>
-                        <p class="text-500 text-sm m-0 mb-2">CORPS</p>
-                        <p class="text-900 font-semibold m-0">{{ employeeSearchInfo?.corps || employeeSearchInfo?.Corps || 'N/A' }}</p>
-                    </div>
-                    <div>
-                        <p class="text-500 text-sm m-0 mb-2">TRADE</p>
-                        <p class="text-900 font-semibold m-0">{{ employeeSearchInfo?.trade || employeeSearchInfo?.Trade || 'N/A' }}</p>
-                    </div>
-                    <div>
-                        <p class="text-500 text-sm m-0 mb-2">MOTHER ORG</p>
-                        <p class="text-900 font-semibold m-0">{{ employeeSearchInfo?.motherOrganization || employeeSearchInfo?.MotherOrganization || 'N/A' }}</p>
-                    </div>
-                    <div>
-                        <p class="text-500 text-sm m-0 mb-2">MEMBER TYPE</p>
-                        <p class="text-900 font-semibold m-0">{{ employeeSearchInfo?.memberType || employeeSearchInfo?.MemberType || 'N/A' }}</p>
-                    </div>
-                </div>
-            </div>
-        }
-
         @if (employeeFound) {
             @if (isLoading) {
                 <div class="flex justify-content-center align-items-center p-4">
@@ -153,7 +113,8 @@
         [header]="isEditMode ? 'Edit Remark' : 'Add New Remark'"
         [modal]="true"
         [style]="{width: '500px'}"
-        [closable]="true">
+        [closable]="true"
+        [contentStyle]="{'border-top': '2px solid var(--primary-color)'}">
         <form [formGroup]="remarksForm">
             <label class="font-semibold block mb-2 text-700">Additional Remarks <span class="text-red-500">*</span></label>
             <textarea

@@ -187,14 +187,12 @@ export class EmpPresentMemberCheckComponent implements OnInit {
         this.exMemberViewList = [];
     }
 
-    /** Hide ex-member table and ask parent to show form and load this employee's data. */
+    /** Open old profile in a new browser tab in view mode. */
     viewOldProfile(): void {
         if (!this.exMemberEmployee) return;
         const id = (this.exMemberEmployee as any).employeeID ?? (this.exMemberEmployee as any).EmployeeID;
         if (id != null) {
-            this.loadOldProfile.emit(Number(id));
-            this.exMemberEmployee = null;
-            this.exMemberViewList = [];
+            window.open(`/emp-basic-info?id=${id}&mode=view`, '_blank');
         }
     }
 }

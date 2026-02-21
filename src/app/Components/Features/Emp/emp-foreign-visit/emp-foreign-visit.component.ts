@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { catchError, of, Subject } from 'rxjs';
@@ -117,10 +117,10 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
 
     initForm(): void {
         this.visitForm = this.fb.group({
-            subjectId: [null],
-            visitId: [null],
-            destinationCountryId: [null],
-            fromDate: [null],
+            subjectId: [null, Validators.required],
+            visitId: [null, Validators.required],
+            destinationCountryId: [null, Validators.required],
+            fromDate: [null, Validators.required],
             toDate: [null],
             withFamily: [false],
             auth: [''],
@@ -438,6 +438,21 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
         if (!this.selectedEmployeeId) {
             this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'No employee selected' });
             return;
+        }
+        if (this.visitForm.invalid) {
+            this.visitForm.markAllAsTouched();
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please fill all required fields' });
+            return;
+        }
+        const fromVal = this.visitForm.get('fromDate')?.value;
+        const toVal = this.visitForm.get('toDate')?.value;
+        if (fromVal && toVal) {
+            const from = new Date(fromVal);
+            const to = new Date(toVal);
+            if (to < from) {
+                this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'To date cannot be less than From date' });
+                return;
+            }
         }
         const existingRefs = this.fileReferencesForm?.getExistingFileReferences() || [];
         const filesToUpload = this.fileReferencesForm?.getFilesToUpload() || [];

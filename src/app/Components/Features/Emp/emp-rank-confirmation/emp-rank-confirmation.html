@@ -1,9 +1,9 @@
 <p-fluid>
     <div class="mb-5 card">
         <div class="flex align-items-center gap-3 mb-4">
-            @if (mode !== 'search') {
+            <!-- @if (mode !== 'search') {
                 <p-button icon="pi pi-arrow-left" [rounded]="true" [text]="true" severity="secondary" pTooltip="Back to List" (onClick)="goBack()"></p-button>
-            }
+            } -->
             <h3 class="m-0 text-xl font-bold text-900" style="display: inline-flex; align-items: center; gap: 0.5rem;">
                 Rank Confirmation Information Entry
                 @if (mode === 'view') {
@@ -23,7 +23,7 @@
             </app-employee-search>
         }
 
-        @if (mode !== 'search' && employeeBasicInfo) {
+        <!-- @if (mode !== 'search' && employeeBasicInfo) {
             <div class="surface-50 border-round-2xl p-4 mb-4">
                 <div class="flex flex-wrap gap-4">
                     <div><span class="text-500 text-sm">Name:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.fullNameEN || employeeBasicInfo.FullNameEN || 'N/A' }}</span></div>
@@ -31,7 +31,7 @@
                     <div><span class="text-500 text-sm">Service ID:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.serviceId || employeeBasicInfo.ServiceId || 'N/A' }}</span></div>
                 </div>
             </div>
-        }
+        } -->
 
         @if (employeeFound) {
             <div class="surface-50 border-round-2xl p-4 mb-4">
@@ -86,7 +86,6 @@
                     <p-button label="Edit" icon="pi pi-pencil" (onClick)="enableEditMode()"></p-button>
                 } @else {
                     <p-button label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" (onClick)="resetForm()" [disabled]="isSaving"></p-button>
-                    <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="cancelEdit()" [disabled]="isSaving"></p-button>
                 }
             </div>
         }
@@ -98,15 +97,19 @@
     [header]="isEditMode ? 'Edit Rank Confirmation' : 'Add Rank Confirmation'"
     [(visible)]="displayDialog"
     [modal]="true"
-    [style]="{ width: '560px' }"
+    [style]="{ width: '680px' }"
     [closable]="true"
     [draggable]="false"
-    [resizable]="false">
+    [resizable]="false"
+    [contentStyle]="{'border-top': '2px solid var(--primary-color)'}">
     <form [formGroup]="rankForm" class="rank-form mt-3">
         <div class="grid grid-cols-2 gap-4">
             <div>
-                <label class="font-semibold block mb-2 text-700">Rank Name</label>
-                <p-select formControlName="presentRank" [options]="rankOptions" optionLabel="label" optionValue="value" placeholder="Select rank" styleClass="w-full" appendTo="body"></p-select>
+                <label class="font-semibold block mb-2 text-700">Rank Name <span class="text-red-500">*</span></label>
+                <p-select formControlName="presentRank" [options]="rankOptions" optionLabel="label" optionValue="value" placeholder="Select rank" styleClass="w-full" [filter]="true" appendTo="body"></p-select>
+                @if (rankForm.get('presentRank')?.invalid && rankForm.get('presentRank')?.touched) {
+                    <small class="text-red-500">Rank Name is required</small>
+                }
             </div>
             <div>
                 <label class="font-semibold block mb-2 text-700">Rank Confirmation Date</label>
@@ -120,7 +123,7 @@
                 <label class="font-semibold block mb-2 text-700">Remarks</label>
                 <input pInputText formControlName="remarks" class="w-full" placeholder="Remarks" />
             </div>
-            <div class="col-span-2">
+            <div class="col-span-2 file-section-compact">
                 <app-file-references-form
                     #fileReferencesForm
                     [fileRows]="fileRows"

@@ -143,7 +143,7 @@ export class EmpAddressInfo implements OnInit {
                         const addressData: AddressData = {
                             division: addr.divisionType || addr.DivisionType,
                             district: addr.districtType || addr.DistrictType,
-                            upazila: addr.ThanaType || addr.ThanaType,
+                            upazila: addr.thanaType || addr.ThanaType,
                             postOffice: addr.postOfficeType || addr.PostOfficeType,
                             postCode: addr.postCode || addr.PostCode || '',
                             villageEnglish: addr.addressAreaEN || addr.AddressAreaEN || '',
@@ -321,7 +321,7 @@ export class EmpAddressInfo implements OnInit {
                             AddressAreaBN: existingAddress.addressAreaBN || existingAddress.AddressAreaBN || '',
                             DivisionType: existingAddress.divisionType || existingAddress.DivisionType,
                             DistrictType: existingAddress.districtType || existingAddress.DistrictType,
-                            ThanaType: existingAddress.ThanaType || existingAddress.ThanaType,
+                            ThanaType: existingAddress.thanaType || existingAddress.ThanaType,
                             PostOfficeType: existingAddress.postOfficeType || existingAddress.PostOfficeType,
                             HouseRoad: existingAddress.houseRoad || existingAddress.HouseRoad || '',
                             Active: false, // Deactivate

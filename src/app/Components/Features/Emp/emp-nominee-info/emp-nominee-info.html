@@ -20,7 +20,7 @@
             </app-employee-search>
         }
 
-        @if (mode !== 'search' && employeeBasicInfo) {
+        <!-- @if (mode !== 'search' && employeeBasicInfo) {
             <div class="surface-50 border-round-2xl p-4 mb-4">
                 <div class="flex flex-wrap gap-4">
                     <div><span class="text-500 text-sm">Name:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.fullNameEN || employeeBasicInfo.FullNameEN || 'N/A' }}</span></div>
@@ -28,7 +28,7 @@
                     <div><span class="text-500 text-sm">Service ID:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.serviceId || employeeBasicInfo.ServiceId || 'N/A' }}</span></div>
                 </div>
             </div>
-        }
+        } -->
 
         @if (employeeFound) {
             <form [formGroup]="nomineeForm" class="nominee-section">
@@ -106,14 +106,16 @@
                     </div>
 
                     <!-- File References (Supporting Documents – for first nominee in list) -->
-                    <app-file-references-form
-                        #fileReferencesForm
-                        [fileRows]="fileRows"
-                        [isViewMode]="isReadonly"
-                        title="Supporting Documents"
-                        (fileRowsChange)="onFileRowsChange($event)"
-                        (onDownloadFile)="onDownloadFile($event)">
-                    </app-file-references-form>
+                    <div class="file-section-compact">
+                        <app-file-references-form
+                            #fileReferencesForm
+                            [fileRows]="fileRows"
+                            [isViewMode]="isReadonly"
+                            title="Supporting Documents"
+                            (fileRowsChange)="onFileRowsChange($event)"
+                            (onDownloadFile)="onDownloadFile($event)">
+                        </app-file-references-form>
+                    </div>
                 </div>
             </form>
 
@@ -135,6 +137,7 @@
         [modal]="true"
         [style]="{ width: '600px' }"
         [closable]="true"
+        [contentStyle]="{'border-top': '2px solid var(--primary-color)'}"
         (onHide)="closeAddMemberModal()"
     >
         <p class="text-600 mb-3">Family members for this employee. Select one or more, then click "Add Selected".</p>

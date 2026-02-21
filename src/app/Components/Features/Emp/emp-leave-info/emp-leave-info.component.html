@@ -1,9 +1,9 @@
 <p-fluid>
     <div class="mb-5 card">
         <div class="flex align-items-center gap-3 mb-4">
-            @if (mode !== 'search') {
+            <!-- @if (mode !== 'search') {
                 <p-button icon="pi pi-arrow-left" [rounded]="true" [text]="true" severity="secondary" pTooltip="Back to List" (onClick)="goBack()"></p-button>
-            }
+            } -->
             <h3 class="m-0 text-xl font-bold text-900" style="display: inline-flex; align-items: center; gap: 0.5rem;">
                 Employee Leave Information
                 @if (mode === 'view') {
@@ -23,7 +23,7 @@
             </app-employee-search>
         }
 
-        @if (mode !== 'search' && employeeBasicInfo) {
+        <!-- @if (mode !== 'search' && employeeBasicInfo) {
             <div class="surface-50 border-round-2xl p-4 mb-4">
                 <div class="flex flex-wrap gap-4">
                     <div><span class="text-500 text-sm">Name:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.fullNameEN || employeeBasicInfo.FullNameEN || 'N/A' }}</span></div>
@@ -31,7 +31,7 @@
                     <div><span class="text-500 text-sm">Service ID:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.serviceId || employeeBasicInfo.ServiceId || 'N/A' }}</span></div>
                 </div>
             </div>
-        }
+        } -->
 
         @if (employeeFound) {
             <div class="surface-card border-round p-4 mb-4">
@@ -40,27 +40,26 @@
                     <p-button label="Add Leave" icon="pi pi-plus" (onClick)="openAddDialog()"></p-button>
                 </div>
 
-                <p-table [value]="leaveList" [loading]="isLoading" [tableStyle]="{'min-width': '50rem'}" styleClass="p-datatable-sm">
+                <p-table [value]="leaveList" [loading]="isLoading" styleClass="p-datatable-sm" responsiveLayout="scroll" [tableStyle]="{'min-width': '50rem'}">
                     <ng-template pTemplate="header">
                         <tr>
-                            <th>Leave Type</th>
-                            <th>From</th>
-                            <th>To</th>
-                            <th>Remarks</th>
-                            @if (isReadonly) {
-                                <th style="width: 100px;">Actions</th>
-                            }
-                            @if (!isReadonly) {
-                                <th style="width: 120px;">Actions</th>
-                            }
+                            <th style="width: 60px; background: var(--surface-100)">Ser</th>
+                            <th style="min-width: 120px; background: var(--surface-100)">Leave Type</th>
+                            <th style="width: 90px; background: var(--surface-100)">From</th>
+                            <th style="width: 90px; background: var(--surface-100)">To</th>
+                            <th style="width: 70px; background: var(--surface-100)">Days</th>
+                            <th style="min-width: 140px; background: var(--surface-100)">Remarks</th>
+                            <th style="width: 120px; background: var(--surface-100)">Actions</th>
                         </tr>
                     </ng-template>
-                    <ng-template pTemplate="body" let-row>
+                    <ng-template pTemplate="body" let-row let-i="rowIndex">
                         <tr>
+                            <td class="text-center font-semibold">{{ i + 1 }}</td>
                             <td>{{ getLeaveTypeName(row.leaveTypeId) }}</td>
                             <td>{{ formatDate(row.fromDate) }}</td>
                             <td>{{ formatDate(row.toDate) }}</td>
-                            <td>{{ row.remarks || 'N/A' }}</td>
+                            <td class="text-center font-semibold">{{ calculateDays(row.fromDate, row.toDate) }}</td>
+                            <td>{{ row.remarks || '—' }}</td>
                             <td>
                                 <div class="flex gap-1">
                                     <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="info" pTooltip="Edit" (onClick)="openEditDialog(row)"></p-button>
@@ -73,57 +72,63 @@
                     </ng-template>
                     <ng-template pTemplate="emptymessage">
                         <tr>
-                            <td [attr.colspan]="5" class="text-center py-4">
-                                <div class="flex flex-column align-items-center gap-3">
-                                    <span class="text-500">No leave records found.</span>
-                                </div>
-                            </td>
+                            <td [attr.colspan]="7" class="text-center py-4 text-500">No leave records found.</td>
                         </tr>
                     </ng-template>
                 </p-table>
+            </div>
+
+            <div class="flex justify-end mt-4 gap-2">
+                <p-button label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" (onClick)="onEmployeeSearchReset()"></p-button>
             </div>
         }
     </div>
 </p-fluid>
 
 <!-- Add/Edit Leave Dialog -->
-<p-dialog [header]="isEditMode ? 'Edit Leave' : 'Add Leave'" [(visible)]="displayDialog" [modal]="true" [style]="{width: '520px'}" [closable]="true">
-    <form [formGroup]="leaveForm" class="mt-3">
-        <div class="grid grid-cols-2 gap-4">
-            <div class="col-span-2">
-                <label class="font-semibold block mb-2 text-700">Leave Type <span class="text-red-500">*</span></label>
-                <p-select
-                    formControlName="leaveTypeId"
-                    [options]="leaveTypes"
-                    optionLabel="codeValueEN"
-                    optionValue="codeId"
-                    placeholder="Select Leave Type"
-                    styleClass="w-full">
-                </p-select>
-                @if (leaveForm.get('leaveTypeId')?.invalid && leaveForm.get('leaveTypeId')?.touched) {
-                    <small class="text-red-500">Leave type is required</small>
-                }
-            </div>
-            <div>
-                <label class="font-semibold block mb-2 text-700">From <span class="text-red-500">*</span></label>
-                <p-datepicker formControlName="fromDate" dateFormat="dd/mm/yy" [showIcon]="true" styleClass="w-full" placeholder="Select Date"></p-datepicker>
+<p-dialog [header]="isEditMode ? 'Edit Leave' : 'Add Leave'" [(visible)]="displayDialog" [modal]="true" [style]="{ width: '640px' }" [contentStyle]="{ padding: '1.25rem 1.5rem', 'border-top': '2px solid var(--primary-color)' }" [closable]="true" [draggable]="false" [resizable]="false" styleClass="leave-record-dialog">
+    <p-fluid>
+    <form [formGroup]="leaveForm" class="leave-record-form">
+        <!-- Row 1: Leave Type (full width) -->
+        <div class="mb-3">
+            <label class="form-label">Leave Type <span class="required">*</span></label>
+            <p-select
+                formControlName="leaveTypeId"
+                [options]="leaveTypes"
+                optionLabel="codeValueEN"
+                optionValue="codeId"
+                placeholder="Select Leave Type"
+                styleClass="w-full"
+                [filter]="true">
+            </p-select>
+            @if (leaveForm.get('leaveTypeId')?.invalid && leaveForm.get('leaveTypeId')?.touched) {
+                <small class="form-error">Required</small>
+            }
+        </div>
+        <!-- Row 2: From | To -->
+        <div class="form-row flex gap-3 mb-3">
+            <div class="form-field flex-1">
+                <label class="form-label">From <span class="required">*</span></label>
+                <p-datepicker formControlName="fromDate" dateFormat="dd-mm-yy" placeholder="From" appendTo="body" styleClass="w-full"></p-datepicker>
                 @if (leaveForm.get('fromDate')?.invalid && leaveForm.get('fromDate')?.touched) {
-                    <small class="text-red-500">From date is required</small>
+                    <small class="form-error">Required</small>
                 }
             </div>
-            <div>
-                <label class="font-semibold block mb-2 text-700">To <span class="text-red-500">*</span></label>
-                <p-datepicker formControlName="toDate" dateFormat="dd/mm/yy" [showIcon]="true" styleClass="w-full" placeholder="Select Date"></p-datepicker>
+            <div class="form-field flex-1">
+                <label class="form-label">To <span class="required">*</span></label>
+                <p-datepicker formControlName="toDate" dateFormat="dd-mm-yy" placeholder="To" appendTo="body" styleClass="w-full"></p-datepicker>
                 @if (leaveForm.get('toDate')?.invalid && leaveForm.get('toDate')?.touched) {
-                    <small class="text-red-500">To date is required</small>
+                    <small class="form-error">Required</small>
                 }
-            </div>
-            <div class="col-span-2">
-                <label class="font-semibold block mb-2 text-700">Remarks</label>
-                <textarea pInputTextarea formControlName="remarks" class="w-full" rows="3" placeholder="Remarks"></textarea>
             </div>
         </div>
+        <!-- Row 3: Remarks (full width) -->
+        <div class="mb-3">
+            <label class="form-label">Remarks</label>
+            <textarea pInputTextarea formControlName="remarks" class="w-full" rows="3" placeholder="Remarks"></textarea>
+        </div>
     </form>
+    </p-fluid>
     <ng-template pTemplate="footer">
         <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="displayDialog = false" [disabled]="isSaving"></p-button>
         <p-button label="Save" icon="pi pi-check" [loading]="isSaving" [disabled]="isSaving" (onClick)="saveLeave()"></p-button>

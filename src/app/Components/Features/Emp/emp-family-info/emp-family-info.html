@@ -1,9 +1,9 @@
 <p-fluid>
     <div class="mb-5 card">
         <div class="flex align-items-center gap-3 mb-4">
-            @if (mode !== 'search') {
+            <!-- @if (mode !== 'search') {
                 <p-button icon="pi pi-arrow-left" [rounded]="true" [text]="true" severity="secondary" pTooltip="Back to List" (onClick)="goBack()"></p-button>
-            }
+            } -->
             <h3 class="m-0 text-xl font-bold text-900" style="display: inline-flex; align-items: center; gap: 0.5rem;">
                 Employee Family Information
                 @if (mode === 'view') {
@@ -25,7 +25,7 @@
         }
 
         <!-- Employee Info Header for View/Edit Mode -->
-        @if (mode !== 'search' && employeeBasicInfo) {
+        <!-- @if (mode !== 'search' && employeeBasicInfo) {
             <div class="surface-50 border-round-2xl p-4 mb-4">
                 <div class="flex flex-wrap gap-4">
                     <div><span class="text-500 text-sm">Name:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.fullNameEN || employeeBasicInfo.FullNameEN || 'N/A' }}</span></div>
@@ -33,7 +33,7 @@
                     <div><span class="text-500 text-sm">Service ID:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.serviceId || employeeBasicInfo.ServiceId || 'N/A' }}</span></div>
                 </div>
             </div>
-        }
+        } -->
 
         <!-- Family Members Table -->
         @if (employeeFound) {
@@ -92,28 +92,27 @@
                     </ng-template>
                     <ng-template pTemplate="emptymessage">
                         <tr>
-                            <td [attr.colspan]="isReadonly ? 9 : 9" class="text-center py-4">
-                                <div class="flex flex-column align-items-center gap-3">
-                                    <span class="text-500">No family members found.</span>
-                                    <p-button label="Add New Family Member" icon="pi pi-plus" (onClick)="openAddDialog()"></p-button>
-                                </div>
+                            <td [attr.colspan]="9" class="text-center py-4">
+                                <span class="text-500">No family members found.</span>
                             </td>
                         </tr>
                     </ng-template>
                 </p-table>
             </div>
 
+            <div class="flex justify-end mt-4 gap-2">
+                <p-button label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" (onClick)="onEmployeeSearchReset()"></p-button>
+            </div>
         }
     </div>
 </p-fluid>
 
 <!-- Add/Edit Family Member Dialog -->
-<p-dialog [header]="isEditMode ? 'Edit Family Member' : 'Add Family Member'" [(visible)]="displayDialog" [modal]="true" [style]="{width: '900px'}" [closable]="true">
+<p-dialog [header]="isEditMode ? 'Edit Family Member' : 'Add Family Member'" [(visible)]="displayDialog" [modal]="true" [style]="{width: '900px'}" [closable]="true" [contentStyle]="{'border-top': '2px solid var(--primary-color)'}">
     <p-tabs [(value)]="activeDialogTab">
         <p-tablist>
             <p-tab value="0">Basic Info</p-tab>
-            <p-tab value="1">Permanent Address</p-tab>
-            <p-tab value="2">Present Address</p-tab>
+            <p-tab value="1">Address</p-tab>
         </p-tablist>
         <p-tabpanels>
             <!-- Basic Info Tab -->
@@ -122,14 +121,14 @@
                     <div class="grid grid-cols-2 gap-4">
                         <div class="col-span-1">
                             <label class="font-semibold block mb-2 text-700">Relation <span class="text-red-500">*</span></label>
-                            <p-select [options]="relationOptions" formControlName="relation" placeholder="Select Relation" [style]="{'width':'100%'}"></p-select>
+                            <p-select [options]="relationOptions" formControlName="relation" placeholder="Select Relation" [style]="{'width':'100%'}" [filter]="true"></p-select>
                             @if (familyForm.get('relation')?.invalid && familyForm.get('relation')?.touched) {
                                 <small class="text-red-500">Relation is required</small>
                             }
                         </div>
                         <div class="col-span-1">
                             <label class="font-semibold block mb-2 text-700">Date of Birth</label>
-                            <p-datepicker formControlName="dob" [showIcon]="true" dateFormat="dd/mm/yy" [style]="{'width':'100%'}"></p-datepicker>
+                            <p-datepicker formControlName="dob" dateFormat="dd-mm-yy" appendTo="body" styleClass="w-full"></p-datepicker>
                         </div>
                         <div class="col-span-1">
                             <label class="font-semibold block mb-2 text-700">Name (English) <span class="text-red-500">*</span></label>
@@ -144,11 +143,11 @@
                         </div>
                         <div class="col-span-1">
                             <label class="font-semibold block mb-2 text-700">Marital Status</label>
-                            <p-select [options]="maritalStatusOptions" formControlName="maritalStatus" placeholder="Select Status" [style]="{'width':'100%'}"></p-select>
+                            <p-select [options]="maritalStatusOptions" formControlName="maritalStatus" placeholder="Select Status" [style]="{'width':'100%'}" [filter]="true"></p-select>
                         </div>
                         <div class="col-span-1">
                             <label class="font-semibold block mb-2 text-700">Occupation</label>
-                            <p-select [options]="occupationOptions" formControlName="occupation" placeholder="Select Occupation" [style]="{'width':'100%'}"></p-select>
+                            <p-select [options]="occupationOptions" formControlName="occupation" placeholder="Select Occupation" [style]="{'width':'100%'}" [filter]="true"></p-select>
                         </div>
                         <div class="col-span-1">
                             <label class="font-semibold block mb-2 text-700">NID</label>
@@ -173,7 +172,7 @@
                 </form>
             </p-tabpanel>
 
-            <!-- Permanent Address Tab -->
+            <!-- Address Tab (Permanent + Present) -->
             <p-tabpanel value="1">
                 <div class="mt-3">
                     @if (displayDialog) {
@@ -186,14 +185,9 @@
                             [initialAddressData]="dialogPermanentAddressData ?? undefined"
                             [isOptional]="true">
                         </app-address-form>
-                    }
-                </div>
-            </p-tabpanel>
 
-            <!-- Present Address Tab -->
-            <p-tabpanel value="2">
-                <div class="mt-3">
-                    @if (displayDialog) {
+                        <p-divider></p-divider>
+
                         <app-address-form
                             #dialogPresentAddressForm
                             [config]="presentAddressConfig"
@@ -216,7 +210,7 @@
 </p-dialog>
 
 <!-- Address Dialog -->
-<p-dialog [header]="selectedFamilyMember ? 'Address for ' + selectedFamilyMember.nameEN : 'Family Member Address'" [(visible)]="displayAddressDialog" [modal]="true" [style]="{width: '900px'}" [closable]="true" (onHide)="closeAddressDialog()">
+<p-dialog [header]="selectedFamilyMember ? 'Address for ' + selectedFamilyMember.nameEN : 'Family Member Address'" [(visible)]="displayAddressDialog" [modal]="true" [style]="{width: '900px'}" [closable]="true" [contentStyle]="{'border-top': '2px solid var(--primary-color)'}" (onHide)="closeAddressDialog()">
     @if (isLoadingAddresses) {
         <div class="flex justify-content-center align-items-center py-5">
             <i class="pi pi-spin pi-spinner text-4xl"></i>

@@ -146,6 +146,14 @@ export class EmpLeaveInfo implements OnInit {
         return d.toLocaleDateString();
     }
 
+    calculateDays(fromDate: string | Date | null, toDate: string | Date | null): number | string {
+        if (!fromDate || !toDate) return '—';
+        const from = typeof fromDate === 'string' ? new Date(fromDate) : fromDate;
+        const to = typeof toDate === 'string' ? new Date(toDate) : toDate;
+        const diffMs = to.getTime() - from.getTime();
+        return Math.max(Math.ceil(diffMs / (1000 * 60 * 60 * 24)) + 1, 0);
+    }
+
     openAddDialog(): void {
         this.isEditMode = false;
         this.editingLeaveId = null;
