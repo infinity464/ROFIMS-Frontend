@@ -63,6 +63,7 @@ export class EmpSendToCourseComponent implements OnInit {
     activeTab = 0;
 
     /** Tab (a): Create Draft */
+    courseNo = '';
     courseOptions: DropdownOption[] = [];
     selectedCourseId: number | null = null;
     employeeList: EmployeeSearchInfoModel[] = [];
@@ -73,8 +74,14 @@ export class EmpSendToCourseComponent implements OnInit {
     /** Tab (b): Send from Draft */
     draftLists: DraftCourseList[] = [];
     selectedDraft: DraftCourseList | null = null;
+    selectedDraftMembers: DraftCourseMemberRow[] = [];
     isLoadingDrafts = false;
     isSending = false;
+    isRemovingFromDraft = false;
+    showAddToDraftPanel = false;
+    addToDraftEmployeeList: EmployeeSearchInfoModel[] = [];
+    addToDraftSelectedRows: EmployeeSearchInfoModel[] = [];
+    isLoadingAddToDraftEmployees = false;
 
     /** Send to Course modal */
     showSendCourseModal = false;
@@ -226,6 +233,10 @@ export class EmpSendToCourseComponent implements OnInit {
     }
 
     addToDraft(): void {
+        if (!this.courseNo?.trim()) {
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'CourseNo is required.' });
+            return;
+        }
         if (!this.selectedCourseId || this.selectedCourseId === 0) {
             this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Please select a course.' });
             return;
@@ -236,7 +247,7 @@ export class EmpSendToCourseComponent implements OnInit {
         }
         this.isAddingToDraft = true;
         const members = this.selectedRows.map((r) => this.toMemberRow(r));
-        this.draftCourseService.addToDraftCourseList(this.selectedCourseId, members, 'User').subscribe({
+        this.draftCourseService.addToDraftCourseList(this.courseNo.trim(), this.selectedCourseId, members, 'User').subscribe({
             next: (res) => {
                 this.messageService.add({
                     severity: 'success',
@@ -245,6 +256,7 @@ export class EmpSendToCourseComponent implements OnInit {
                 });
                 this.selectedRows = [];
                 this.loadDraftLists();
+                this.courseNo = '';
                 this.isAddingToDraft = false;
             },
             error: () => {
@@ -296,9 +308,6 @@ export class EmpSendToCourseComponent implements OnInit {
             const x = new Date(d);
             return isNaN(x.getTime()) ? null : x.toISOString().slice(0, 10);
         };
-        // #region agent log
-        fetch('http://127.0.0.1:7682/ingest/24c52934-7935-4f35-a09e-2dbd51502872',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7e8ff9'},body:JSON.stringify({sessionId:'7e8ff9',location:'emp-send-to-course.ts:sendFromDraft',message:'Form values before details',data:{rawDateFrom:v.dateFrom,rawDateTo:v.dateTo,rawDateFromType:typeof v.dateFrom,rawDateToType:typeof v.dateTo},timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
-        // #endregion
         const resultVal = v.result;
         const resultStr = typeof resultVal === 'string' ? resultVal : (resultVal?.value ?? (resultVal ? String(resultVal) : null));
         const details = {
@@ -310,9 +319,6 @@ export class EmpSendToCourseComponent implements OnInit {
             auth: v.auth && String(v.auth).trim() ? String(v.auth).trim() : null,
             remarks: v.remarks && String(v.remarks).trim() ? String(v.remarks).trim() : null
         };
-        // #region agent log
-        fetch('http://127.0.0.1:7682/ingest/24c52934-7935-4f35-a09e-2dbd51502872',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7e8ff9'},body:JSON.stringify({sessionId:'7e8ff9',location:'emp-send-to-course.ts:sendFromDraft',message:'Details object with dates',data:{dateFrom:details.dateFrom,dateTo:details.dateTo},timestamp:Date.now(),hypothesisId:'H2'})}).catch(()=>{});
-        // #endregion
         this.isSending = true;
         this.showSendCourseModal = false;
         this.draftCourseService.sendFromDraftToCourse(this.selectedDraft.id, 'User', details).subscribe({
@@ -343,5 +349,93 @@ export class EmpSendToCourseComponent implements OnInit {
             if (v != null && v !== '') return String(v);
         }
         return 'N/A';
+    }
+
+    removeFromDraft(): void {
+        if (!this.selectedDraft || !this.selectedDraftMembers?.length) return;
+        this.confirmationService.confirm({
+            message: `Remove ${this.selectedDraftMembers.length} member(s) from draft?`,
+            header: 'Confirm',
+            icon: 'pi pi-exclamation-triangle',
+            accept: () => {
+                this.isRemovingFromDraft = true;
+                const ids = this.selectedDraftMembers.map((m) => m.employeeId);
+                this.draftCourseService.removeMembersFromDraft(this.selectedDraft!.id, ids).subscribe({
+                    next: (res) => {
+                        if (res.statusCode === 200) {
+                            this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Member(s) removed.' });
+                            this.refreshSelectedDraft();
+                        } else {
+                            this.messageService.add({ severity: 'error', summary: 'Error', detail: res.description });
+                        }
+                        this.selectedDraftMembers = [];
+                        this.isRemovingFromDraft = false;
+                    },
+                    error: () => {
+                        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to remove.' });
+                        this.isRemovingFromDraft = false;
+                    }
+                });
+            }
+        });
+    }
+
+    loadEmployeesForAddToDraft(): void {
+        if (!this.selectedDraft?.courseNameId) return;
+        this.isLoadingAddToDraftEmployees = true;
+        this.addToDraftEmployeeList = [];
+        this.addToDraftSelectedRows = [];
+        this.courseInfoService.getEmployeesNotCompletedByCourseName(this.selectedDraft.courseNameId).subscribe({
+            next: (data) => {
+                const list = Array.isArray(data) ? data : [];
+                const existingIds = new Set((this.selectedDraft?.members ?? []).map((m) => m.employeeId));
+                this.addToDraftEmployeeList = list.filter((e) => {
+                    const eid = e.employeeID ?? e.EmployeeID ?? 0;
+                    return !existingIds.has(eid);
+                });
+                this.isLoadingAddToDraftEmployees = false;
+            },
+            error: () => {
+                this.addToDraftEmployeeList = [];
+                this.isLoadingAddToDraftEmployees = false;
+            }
+        });
+    }
+
+    addToExistingDraft(): void {
+        if (!this.selectedDraft || !this.addToDraftSelectedRows?.length) return;
+        this.isAddingToDraft = true;
+        const members = this.addToDraftSelectedRows.map((r) => this.toMemberRow(r));
+        this.draftCourseService.addMembersToDraft(this.selectedDraft.id, members).subscribe({
+            next: (res) => {
+                if (res.statusCode === 200) {
+                    this.messageService.add({ severity: 'success', summary: 'Success', detail: `Added ${members.length} employee(s) to draft.` });
+                    this.showAddToDraftPanel = false;
+                    this.addToDraftSelectedRows = [];
+                    this.addToDraftEmployeeList = [];
+                    this.refreshSelectedDraft();
+                } else {
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: res.description });
+                }
+                this.isAddingToDraft = false;
+            },
+            error: () => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to add to draft.' });
+                this.isAddingToDraft = false;
+            }
+        });
+    }
+
+    private refreshSelectedDraft(): void {
+        if (!this.selectedDraft) return;
+        this.draftCourseService.getDraftCourseListById(this.selectedDraft.id).subscribe({
+            next: (d) => {
+                if (d) {
+                    this.selectedDraft = d;
+                    this.selectedDraftMembers = [];
+                }
+                this.loadDraftLists();
+            }
+        });
     }
 }

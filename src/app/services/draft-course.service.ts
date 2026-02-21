@@ -64,8 +64,9 @@ export class DraftCourseService {
         );
     }
 
-    addToDraftCourseList(courseNameId: number, members: DraftCourseMemberRow[], createdBy: string): Observable<{ id: number; listNo: string }> {
+    addToDraftCourseList(courseNo: string, courseNameId: number, members: DraftCourseMemberRow[], createdBy: string): Observable<{ id: number; listNo: string }> {
         const body = {
+            courseNo: courseNo?.trim() || '',
             courseNameId,
             members: members.map((m) => ({
                 employeeId: m.employeeId,
@@ -102,9 +103,6 @@ export class DraftCourseService {
             if (details['auth'] != null && details['auth'] !== '') body['auth'] = details['auth'];
             if (details['remarks'] != null && details['remarks'] !== '') body['remarks'] = details['remarks'];
         }
-        // #region agent log
-        fetch('http://127.0.0.1:7682/ingest/24c52934-7935-4f35-a09e-2dbd51502872',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7e8ff9'},body:JSON.stringify({sessionId:'7e8ff9',location:'draft-course.service.ts:sendFromDraftToCourse',message:'Body before POST',data:{bodyDateFrom:body['dateFrom'],bodyDateTo:body['dateTo'],bodyKeys:Object.keys(body)},timestamp:Date.now(),hypothesisId:'H3'})}).catch(()=>{});
-        // #endregion
         return this.http
             .post<{ statusCode: number; description: string; recordsCreated: number }>(`${API}/SendFromDraftToCourse`, body)
             .pipe(
@@ -114,5 +112,30 @@ export class DraftCourseService {
                     recordsCreated: r?.recordsCreated ?? 0
                 }))
             );
+    }
+
+    removeMembersFromDraft(draftListId: number, employeeIds: number[]): Observable<{ statusCode: number; description: string }> {
+        return this.http
+            .post<{ statusCode: number; description: string }>(`${API}/RemoveMembersFromDraft`, { draftListId, employeeIds })
+            .pipe(map((r) => ({ statusCode: r?.statusCode ?? 500, description: r?.description ?? 'Unknown error' })));
+    }
+
+    addMembersToDraft(draftListId: number, members: DraftCourseMemberRow[]): Observable<{ statusCode: number; description: string }> {
+        const body = {
+            draftListId,
+            members: members.map((m) => ({
+                employeeId: m.employeeId,
+                serviceId: m.serviceId ?? null,
+                rabId: m.rabId ?? null,
+                fullNameEN: m.fullNameEN ?? null,
+                rankName: m.rankName ?? null,
+                corpsName: m.corpsName ?? null,
+                tradeName: m.tradeName ?? null,
+                motherUnitName: m.motherUnitName ?? null
+            }))
+        };
+        return this.http
+            .post<{ statusCode: number; description: string }>(`${API}/AddMembersToDraft`, body)
+            .pipe(map((r) => ({ statusCode: r?.statusCode ?? 500, description: r?.description ?? 'Unknown error' })));
     }
 }
