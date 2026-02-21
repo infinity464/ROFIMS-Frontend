@@ -130,6 +130,12 @@ export class DraftCourseService {
             .pipe(map((r) => ({ statusCode: r?.statusCode ?? 500, description: r?.description ?? 'Unknown error' })));
     }
 
+    deleteDraft(draftListId: number): Observable<{ statusCode: number; description: string }> {
+        return this.http
+            .post<{ statusCode: number; description: string }>(`${API}/DeleteDraft`, { draftListId })
+            .pipe(map((r) => ({ statusCode: r?.statusCode ?? 500, description: r?.description ?? 'Unknown error' })));
+    }
+
     addMembersToDraft(draftListId: number, members: DraftCourseMemberRow[]): Observable<{ statusCode: number; description: string }> {
         const body = {
             draftListId,

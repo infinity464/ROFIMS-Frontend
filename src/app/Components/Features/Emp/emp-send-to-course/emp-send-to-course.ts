@@ -78,6 +78,7 @@ export class EmpSendToCourseComponent implements OnInit {
     isLoadingDrafts = false;
     isSending = false;
     isRemovingFromDraft = false;
+    isDeletingDraft = false;
     showAddToDraftPanel = false;
     addToDraftEmployeeList: EmployeeSearchInfoModel[] = [];
     addToDraftSelectedRows: EmployeeSearchInfoModel[] = [];
@@ -373,6 +374,38 @@ export class EmpSendToCourseComponent implements OnInit {
             if (v != null && v !== '') return String(v);
         }
         return 'N/A';
+    }
+
+    deleteDraft(): void {
+        if (!this.selectedDraft) return;
+        this.confirmationService.confirm({
+            message: `Delete draft "${this.selectedDraft.listNo}" and all its members? This cannot be undone.`,
+            header: 'Confirm Delete',
+            icon: 'pi pi-exclamation-triangle',
+            acceptButtonStyleClass: 'p-button-danger',
+            accept: () => {
+                this.isDeletingDraft = true;
+                this.draftCourseService.deleteDraft(this.selectedDraft!.id).subscribe({
+                    next: (res) => {
+                        if (res.statusCode === 200) {
+                            this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Draft deleted.' });
+                            this.selectedDraft = null;
+                            this.selectedDraftMembers = [];
+                            this.showAddToDraftPanel = false;
+                            this.loadDraftLists();
+                        } else {
+                            this.messageService.add({ severity: 'error', summary: 'Error', detail: res.description });
+                        }
+                        this.isDeletingDraft = false;
+                    },
+                    error: (err) => {
+                        const msg = err?.error?.description ?? err?.error?.message ?? 'Failed to delete draft.';
+                        this.messageService.add({ severity: 'error', summary: 'Error', detail: msg });
+                        this.isDeletingDraft = false;
+                    }
+                });
+            }
+        });
     }
 
     removeFromDraft(): void {
