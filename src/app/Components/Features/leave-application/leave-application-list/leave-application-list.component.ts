@@ -23,7 +23,7 @@ import { RouterModule } from '@angular/router';
 
 export type LeaveApplicationSection = 'pending' | 'approved' | 'declined';
 
-export type LeaveApplicationTypeFilter = 'myApplication' | 'applyForOther' | 'actionTakenByMe';
+export type LeaveApplicationTypeFilter = 'myApplication' | 'applyForOther' | 'actionTakenByMe' | 'actionRequiredByMe';
 
 @Component({
     selector: 'app-leave-application-list',
@@ -49,7 +49,7 @@ export class LeaveApplicationListComponent implements OnInit {
     @Input() sectionInput: LeaveApplicationSection | null = null;
     section: LeaveApplicationSection = 'pending';
     tabIndex = 0;
-    typeFilter: LeaveApplicationTypeFilter = 'myApplication';
+    typeFilter: LeaveApplicationTypeFilter = 'actionRequiredByMe';
 
     currentList: LeaveApplicationModel[] = [];
     pageNumber = 1;
@@ -210,7 +210,7 @@ export class LeaveApplicationListComponent implements OnInit {
         this.tabIndex = ['pending', 'approved', 'declined'].indexOf(this.section);
         if (this.tabIndex < 0) this.tabIndex = 0;
         const t = params['type'] as LeaveApplicationTypeFilter | undefined;
-        if (t && ['myApplication', 'applyForOther', 'actionTakenByMe'].includes(t)) this.typeFilter = t;
+        if (t && ['myApplication', 'applyForOther', 'actionTakenByMe', 'actionRequiredByMe'].includes(t)) this.typeFilter = t;
     }
 
     loadSection(): void {

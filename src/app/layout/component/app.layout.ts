@@ -1,4 +1,4 @@
-import { Component, Renderer2, ViewChild } from '@angular/core';
+import { Component, OnDestroy, OnInit, Renderer2, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NavigationEnd, Router, RouterModule } from '@angular/router';
 import { filter, Subscription } from 'rxjs';
@@ -7,6 +7,8 @@ import { AppSidebar } from './app.sidebar';
 import { AppFooter } from './app.footer';
 import { LayoutService } from '../service/layout.service';
 import { FloatingChatWidgetComponent } from '@/Components/Features/chat/floating-chat-widget.component';
+import { ChatService } from '@/services/chat.service';
+import { MessageService } from 'primeng/api';
 
 @Component({
     selector: 'app-layout',
@@ -25,8 +27,9 @@ import { FloatingChatWidgetComponent } from '@/Components/Features/chat/floating
         <div class="layout-mask animate-fadein"></div>
     </div> `
 })
-export class AppLayout {
+export class AppLayout implements OnInit, OnDestroy {
     overlayMenuOpenSubscription: Subscription;
+    private leaveApprovalSub: Subscription | null = null;
 
     menuOutsideClickListener: any;
 
@@ -37,7 +40,9 @@ export class AppLayout {
     constructor(
         public layoutService: LayoutService,
         public renderer: Renderer2,
-        public router: Router
+        public router: Router,
+        private chatService: ChatService,
+        private messageService: MessageService
     ) {
         this.overlayMenuOpenSubscription = this.layoutService.overlayOpen$.subscribe(() => {
             if (!this.menuOutsideClickListener) {
@@ -55,6 +60,19 @@ export class AppLayout {
 
         this.router.events.pipe(filter((event) => event instanceof NavigationEnd)).subscribe(() => {
             this.hideMenu();
+        });
+    }
+
+    ngOnInit(): void {
+        this.chatService.connectToHub().catch(() => {});
+        this.leaveApprovalSub = this.chatService.leaveApprovalRequested$.subscribe((p) => {
+            this.messageService.add({
+                severity: 'info',
+                summary: 'Leave Approval',
+                detail: p?.message ?? 'A leave application requires your approval.',
+                life: 8000,
+                data: { leaveApplicationId: p?.leaveApplicationId }
+            });
         });
     }
 
@@ -101,7 +119,8 @@ export class AppLayout {
         };
     }
 
-    ngOnDestroy() {
+    ngOnDestroy(): void {
+        this.leaveApprovalSub?.unsubscribe();
         if (this.overlayMenuOpenSubscription) {
             this.overlayMenuOpenSubscription.unsubscribe();
         }

@@ -307,6 +307,11 @@ export class LeaveApplicationApplyComponent implements OnInit {
 
     submitForApproval(): void {
         if (!this.buildAndValidate()) return;
+        const finalApproverId = this.form.get('finalApproverId')?.value;
+        if (!finalApproverId) {
+            this.messageService.add({ severity: 'warn', summary: 'Required', detail: 'Please select Final Approver before submitting.' });
+            return;
+        }
         const payload = this.buildPayload(1);
         this.isSaving = true;
         const doSubmit = (id: number) => {
