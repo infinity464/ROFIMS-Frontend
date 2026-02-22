@@ -1,1 +1,10 @@
 // component styles
+
+:host ::ng-deep .file-section-compact {
+  app-file-references-form h3 {
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+    color: var(--text-color-secondary) !important;
+    margin-bottom: 0.5rem !important;
+  }
+}

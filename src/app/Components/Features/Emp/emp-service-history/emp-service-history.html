@@ -20,7 +20,7 @@
             </app-employee-search>
         }
 
-        @if (mode !== 'search' && employeeBasicInfo) {
+        <!-- @if (mode !== 'search' && employeeBasicInfo) {
             <div class="surface-50 border-round-2xl p-4 mb-4">
                 <div class="flex flex-wrap gap-4">
                     <div><span class="text-500 text-sm">Name:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.fullNameEN || employeeBasicInfo.FullNameEN || 'N/A' }}</span></div>
@@ -28,7 +28,7 @@
                     <div><span class="text-500 text-sm">Service ID:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.serviceId || employeeBasicInfo.ServiceId || 'N/A' }}</span></div>
                 </div>
             </div>
-        }
+        } -->
 
         @if (employeeFound) {
             <div class="surface-50 border-round-2xl p-4 mb-4">
@@ -120,6 +120,7 @@
     [closable]="true"
     [draggable]="false"
     [resizable]="false"
+    [contentStyle]="{'border-top': '2px solid var(--primary-color)'}"
     (onHide)="onDialogHide()">
     <form [formGroup]="serviceForm" class="service-form mt-3">
         <div class="service-form-rows">
@@ -134,6 +135,7 @@
                         placeholder="Select unit"
                         styleClass="w-full"
                         appendTo="body"
+                        [filter]="true"
                         (onChange)="onOrgUnitChangeInForm()"
                         [class.p-invalid]="serviceForm.get('orgUnitId')?.invalid && serviceForm.get('orgUnitId')?.touched"></p-select>
                     @if (serviceForm.get('orgUnitId')?.invalid && serviceForm.get('orgUnitId')?.touched) {
@@ -148,17 +150,17 @@
             <div class="form-row flex gap-3 mb-4">
                 <div class="form-field flex-1">
                     <label class="font-semibold block mb-2 text-700">From</label>
-                    <p-select formControlName="serviceFrom" [options]="yearOptions" optionLabel="label" optionValue="value" placeholder="From" styleClass="w-full" appendTo="body"></p-select>
+                    <p-select formControlName="serviceFrom" [options]="yearOptions" optionLabel="label" optionValue="value" placeholder="From" styleClass="w-full" [filter]="true" appendTo="body"></p-select>
                 </div>
                 <div class="form-field flex-1">
                     <label class="font-semibold block mb-2 text-700">To</label>
-                    <p-select formControlName="serviceTo" [options]="yearOptions" optionLabel="label" optionValue="value" placeholder="To" styleClass="w-full" appendTo="body"></p-select>
+                    <p-select formControlName="serviceTo" [options]="yearOptions" optionLabel="label" optionValue="value" placeholder="To" styleClass="w-full" [filter]="true" appendTo="body"></p-select>
                 </div>
             </div>
             <div class="form-row flex gap-3 mb-4">
                 <div class="form-field flex-1">
                     <label class="font-semibold block mb-2 text-700">Appointment</label>
-                    <p-select formControlName="appointment" [options]="appointmentOptions" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" appendTo="body"></p-select>
+                    <p-select formControlName="appointment" [options]="appointmentOptions" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" [filter]="true" appendTo="body"></p-select>
                 </div>
                 <div class="form-field flex-1">
                     <label class="font-semibold block mb-2 text-700">Posting Authority</label>
@@ -171,17 +173,20 @@
                     <input pInputText formControlName="remarks" class="w-full" placeholder="Remarks" />
                 </div>
             </div>
-            <app-file-references-form
-                #fileReferencesForm
-                [fileRows]="fileRows"
-                [isViewMode]="isReadonly"
-                title="Supporting Documents"
-                (fileRowsChange)="onFileRowsChange($event)"
-                (onDownloadFile)="onDownloadFile($event)">
-            </app-file-references-form>
+            <div class="file-section-compact">
+                <app-file-references-form
+                    #fileReferencesForm
+                    [fileRows]="fileRows"
+                    [isViewMode]="isReadonly"
+                    title="Supporting Documents"
+                    (fileRowsChange)="onFileRowsChange($event)"
+                    (onDownloadFile)="onDownloadFile($event)">
+                </app-file-references-form>
+            </div>
         </div>
     </form>
     <ng-template pTemplate="footer">
+        <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="displayDialog = false" [disabled]="isSaving"></p-button>
         <p-button label="Save" icon="pi pi-check" [loading]="isSaving" [disabled]="isSaving" (onClick)="saveService()"></p-button>
     </ng-template>
 </p-dialog>

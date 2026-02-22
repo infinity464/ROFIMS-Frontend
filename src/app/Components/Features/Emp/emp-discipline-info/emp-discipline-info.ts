@@ -1,6 +1,6 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
@@ -21,6 +21,8 @@ import { TextareaModule } from 'primeng/textarea';
 import { EmpService } from '@/services/emp-service';
 import { DisciplineInfoService, DisciplineInfoModel } from '@/services/discipline-info.service';
 import { CommonCodeService } from '@/services/common-code-service';
+import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
+import { SharedService } from '@/shared/services/shared-service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 import { FileReferencesFormComponent, FileRowData } from '@components/Common/file-references-form/file-references-form';
 
@@ -76,6 +78,12 @@ export class EmpDisciplineInfoComponent implements OnInit {
     briefStatementOptions: { label: string; value: number }[] = [];
     punishmentTypeOptions: { label: string; value: number }[] = [];
 
+    // Brief Statement of Offence dialog
+    showBriefStatementDialog = false;
+    newBriefStatementEN = '';
+    newBriefStatementBN = '';
+    isSavingBriefStatement = false;
+
     constructor(
         private fb: FormBuilder,
         private empService: EmpService,
@@ -83,6 +91,8 @@ export class EmpDisciplineInfoComponent implements OnInit {
         private commonCodeService: CommonCodeService,
         private messageService: MessageService,
         private confirmationService: ConfirmationService,
+        private masterBasicSetupService: MasterBasicSetupService,
+        private sharedService: SharedService,
         private route: ActivatedRoute,
         private router: Router
     ) {}
@@ -96,9 +106,9 @@ export class EmpDisciplineInfoComponent implements OnInit {
     buildForm(): void {
         this.disciplineForm = this.fb.group({
             disciplineId: [null],
-            offenseDate: [null],
-            offenseType: [null],
-            briefStatementOfOffenceId: [null],
+            offenseDate: [null, Validators.required],
+            offenseType: [null, Validators.required],
+            briefStatementOfOffenceId: [null, Validators.required],
             offenseDetails: [''],
             punishmentTypeRAB: [null],
             punishmentDate: [null],
@@ -140,9 +150,13 @@ export class EmpDisciplineInfoComponent implements OnInit {
             const m = d.match(/^(\d{4})-(\d{2})-(\d{2})/);
             if (m) return d.substring(0, 10);
             const parsed = new Date(d);
-            return isNaN(parsed.getTime()) ? null : parsed.toISOString().substring(0, 10);
+            if (isNaN(parsed.getTime())) return null;
+            return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}`;
         }
-        if (d instanceof Date) return isNaN(d.getTime()) ? null : d.toISOString().substring(0, 10);
+        if (d instanceof Date) {
+            if (isNaN(d.getTime())) return null;
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
         return null;
     }
 
@@ -235,7 +249,8 @@ export class EmpDisciplineInfoComponent implements OnInit {
     formatDate(value: Date | string | null): string {
         if (value == null) return '—';
         const d = typeof value === 'string' ? new Date(value) : value;
-        return isNaN(d.getTime()) ? '—' : d.toISOString().substring(0, 10);
+        if (isNaN(d.getTime())) return '—';
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     }
 
     onDialogHide(): void {}
@@ -268,9 +283,9 @@ export class EmpDisciplineInfoComponent implements OnInit {
     openEditDialog(row: DisciplineListRow): void {
         this.isEditMode = true;
         this.editingDisciplineId = row.disciplineId;
-        const offenseDate = row.offenseDate ? (typeof row.offenseDate === 'string' ? row.offenseDate : new Date(row.offenseDate).toISOString().substring(0, 10)) : null;
-        const punishmentDate = row.punishmentDate ? (typeof row.punishmentDate === 'string' ? row.punishmentDate : new Date(row.punishmentDate).toISOString().substring(0, 10)) : null;
-        const punishmentDateMO = row.punishmentDateMotherOrg ? (typeof row.punishmentDateMotherOrg === 'string' ? row.punishmentDateMotherOrg : new Date(row.punishmentDateMotherOrg).toISOString().substring(0, 10)) : null;
+        const offenseDate = this.toDateString(row.offenseDate ?? null);
+        const punishmentDate = this.toDateString(row.punishmentDate ?? null);
+        const punishmentDateMO = this.toDateString(row.punishmentDateMotherOrg ?? null);
         this.fileRows = this.parseFileRowsFromReferences(row.filesReferences);
         this.disciplineForm.patchValue({
             disciplineId: row.disciplineId,
@@ -291,6 +306,10 @@ export class EmpDisciplineInfoComponent implements OnInit {
 
     saveDiscipline(): void {
         if (!this.selectedEmployeeId) return;
+        if (this.disciplineForm.invalid) {
+            this.disciplineForm.markAllAsTouched();
+            return;
+        }
         const existingRefs = this.fileReferencesForm?.getExistingFileReferences() || [];
         const filesToUpload = this.fileReferencesForm?.getFilesToUpload() || [];
 
@@ -408,5 +427,58 @@ export class EmpDisciplineInfoComponent implements OnInit {
         this.selectedEmployeeId = null;
         this.employeeBasicInfo = null;
         this.disciplineList = [];
+    }
+
+    openAddBriefStatementDialog(): void {
+        this.newBriefStatementEN = '';
+        this.newBriefStatementBN = '';
+        this.showBriefStatementDialog = true;
+    }
+
+    saveNewBriefStatement(): void {
+        if (!this.newBriefStatementEN?.trim()) return;
+        this.isSavingBriefStatement = true;
+        const currentUser = this.sharedService.getCurrentUser();
+        const currentDateTime = this.sharedService.getCurrentDateTime();
+        const payload = {
+            codeId: 0,
+            orgId: 0,
+            codeType: 'BriefStatementOfOffence',
+            codeValueEN: this.newBriefStatementEN.trim(),
+            codeValueBN: this.newBriefStatementBN?.trim() || '',
+            commCode: null,
+            displayCodeValueEN: null,
+            displayCodeValueBN: null,
+            sortOrder: null,
+            level: null,
+            parentCodeId: null,
+            status: true,
+            createdBy: currentUser,
+            createdDate: currentDateTime,
+            lastUpdatedBy: currentUser,
+            lastupdate: currentDateTime
+        } as any;
+
+        this.masterBasicSetupService.create(payload).subscribe({
+            next: (res: any) => {
+                this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Brief Statement added successfully' });
+                this.showBriefStatementDialog = false;
+                this.isSavingBriefStatement = false;
+                // Reload dropdown and auto-select new entry
+                this.commonCodeService.getAllActiveCommonCodesType('BriefStatementOfOffence').pipe(catchError(() => of([] as any[]))).subscribe({
+                    next: (list: any[]) => {
+                        this.briefStatementOptions = (Array.isArray(list) ? list : []).map((item: any) => this.mapCommonCodeToOption(item));
+                        const newId = res?.codeId ?? res?.CodeId;
+                        if (newId) {
+                            this.disciplineForm.patchValue({ briefStatementOfOffenceId: newId });
+                        }
+                    }
+                });
+            },
+            error: () => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to add Brief Statement' });
+                this.isSavingBriefStatement = false;
+            }
+        });
     }
 }

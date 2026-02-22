@@ -43,6 +43,8 @@ export class EmpBasicInfo implements OnInit {
 
     /** When false, the entry form is hidden until search returns "employee not found". When true (or when opening with id in route), form is shown. */
     showEntryForm: boolean = false;
+    /** Hide search section when opened via query params (view/edit from another tab). */
+    hideSearchSection: boolean = false;
 
     // Image preview modal
     showImagePreviewModal: boolean = false;
@@ -707,7 +709,8 @@ export class EmpBasicInfo implements OnInit {
 
             if (employeeId) {
                 this.generatedEmployeeId = +employeeId;
-                this.showEntryForm = true; // Edit/View: always show form
+                this.showEntryForm = true;
+                this.hideSearchSection = true;
 
                 if (mode === 'edit') {
                     this.isEditMode = true;
@@ -729,15 +732,14 @@ export class EmpBasicInfo implements OnInit {
     onLoadOldProfile(employeeId: number): void {
         this.showEntryForm = true;
         this.generatedEmployeeId = employeeId;
-        this.isEditMode = true;
-        this.isViewMode = false;
-        this.pageTitle = 'New Posting Entry Form';
+        this.isViewMode = true;
+        this.isEditMode = false;
+        this.pageTitle = 'View Old Profile';
         this.presentAddressConfig.employeeId = employeeId;
         this.permanentAddressConfig.employeeId = employeeId;
         this.wifePermanentAddressConfig.employeeId = employeeId;
         this.wifePresentAddressConfig.employeeId = employeeId;
         this.loadEmployeeData(employeeId);
-        this.enableForm();
     }
 
     // Load employee data for view/edit mode
@@ -794,7 +796,24 @@ export class EmpBasicInfo implements OnInit {
                             const first = arr[0];
                             this.profileImageRef = { fileId: first.FileId ?? 0, fileName: first.fileName || '' };
                             this.selectedFileName = this.profileImageRef.fileName;
-                            this.imagePreview = null; // No blob from server; show filename only
+                            // Download and display the profile image
+                            if (this.profileImageRef.fileId) {
+                                this.empService.downloadFile(this.profileImageRef.fileId).subscribe({
+                                    next: (blob) => {
+                                        const reader = new FileReader();
+                                        reader.onload = (e: any) => {
+                                            this.imagePreview = e.target.result;
+                                        };
+                                        reader.readAsDataURL(blob);
+                                    },
+                                    error: (err) => {
+                                        console.error('Failed to load profile image', err);
+                                        this.imagePreview = null;
+                                    }
+                                });
+                            } else {
+                                this.imagePreview = null;
+                            }
                         } else {
                             this.profileImageRef = null;
                             this.selectedFileName = '';
@@ -859,7 +878,7 @@ export class EmpBasicInfo implements OnInit {
                     const addressId = addr.addressId || addr.AddressId;
                     const empId = addr.employeeID || addr.EmployeeID;
                     const divisionType = addr.divisionType || addr.DivisionType;
-                    const ThanaType = addr.ThanaType || addr.ThanaType;
+                    const ThanaType = addr.thanaType || addr.ThanaType;
                     const postOfficeType = addr.postOfficeType || addr.PostOfficeType;
                     const postCode = addr.postCode || addr.PostCode || '';
                     const addressAreaEN = addr.addressAreaEN || addr.AddressAreaEN || '';
@@ -922,8 +941,11 @@ export class EmpBasicInfo implements OnInit {
     // Enable form for edit mode
     enableForm(): void {
         this.postingForm.enable();
-        // Keep rabid disabled as it's always readonly
+        // Keep rabid and serviceId disabled as they're always readonly
         this.postingForm.get('rabid')?.disable();
+        if (this.isEditMode) {
+            this.postingForm.get('serviceId')?.disable();
+        }
     }
 
     // Go back to list

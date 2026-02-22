@@ -1,9 +1,9 @@
 <p-fluid>
     <div class="mb-5 card">
         <div class="flex align-items-center gap-3 mb-4">
-            @if (mode !== 'search') {
+            <!-- @if (mode !== 'search') {
                 <p-button icon="pi pi-arrow-left" [rounded]="true" [text]="true" severity="secondary" pTooltip="Back to List" (onClick)="goBack()"></p-button>
-            }
+            } -->
             <h3 class="m-0 text-xl font-bold text-900" style="display: inline-flex; align-items: center; gap: 0.5rem;">
                 Educational Information
                 @if (mode === 'view') {
@@ -23,7 +23,7 @@
             </app-employee-search>
         }
 
-        @if (mode !== 'search' && employeeBasicInfo) {
+        <!-- @if (mode !== 'search' && employeeBasicInfo) {
             <div class="surface-50 border-round-2xl p-4 mb-4">
                 <div class="flex flex-wrap gap-4">
                     <div><span class="text-500 text-sm">Name:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.fullNameEN || employeeBasicInfo.FullNameEN || 'N/A' }}</span></div>
@@ -31,7 +31,7 @@
                     <div><span class="text-500 text-sm">Service ID:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.serviceId || employeeBasicInfo.ServiceId || 'N/A' }}</span></div>
                 </div>
             </div>
-        }
+        } -->
 
         @if (employeeFound) {
             <div class="surface-card border-round p-4 mb-4">
@@ -87,33 +87,56 @@
                     </ng-template>
                 </p-table>
             </div>
+
+            <div class="flex justify-end mt-4 gap-2">
+                <p-button label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" (onClick)="onEmployeeSearchReset()"></p-button>
+            </div>
         }
     </div>
 </p-fluid>
 
 <!-- Add/Edit Education Dialog -->
-<p-dialog [header]="isEditMode ? 'Edit Education' : 'Add Education'" [(visible)]="displayDialog" [modal]="true" [style]="{width: '640px'}" [closable]="true">
+<p-dialog [header]="isEditMode ? 'Edit Education' : 'Add Education'" [(visible)]="displayDialog" [modal]="true" [style]="{width: '640px'}" [closable]="true" [contentStyle]="{'border-top': '2px solid var(--primary-color)'}">
     <form [formGroup]="educationForm" class="mt-3">
         <div class="grid grid-cols-2 gap-4">
             <div>
-                <label class="font-semibold block mb-2 text-700">Education Qualification</label>
-                <p-select formControlName="examName" [options]="qualificationOptions" optionLabel="label" optionValue="value" placeholder="Select Qualification" styleClass="w-full"></p-select>
+                <label class="font-semibold block mb-2 text-700">Education Qualification <span class="text-red-500">*</span></label>
+                <p-select formControlName="examName" [options]="qualificationOptions" optionLabel="label" optionValue="value" placeholder="Select Qualification" styleClass="w-full" [filter]="true"></p-select>
+                @if (educationForm.get('examName')?.invalid && educationForm.get('examName')?.touched) {
+                    <small class="text-red-500">Education Qualification is required</small>
+                }
             </div>
             <div>
-                <label class="font-semibold block mb-2 text-700">Educational Board/University Type</label>
-                <p-select formControlName="instituteType" [options]="institutionTypeOptions" optionLabel="label" optionValue="value" placeholder="Select Type" styleClass="w-full"></p-select>
+                <label class="font-semibold block mb-2 text-700">Educational Board/University Type <span class="text-red-500">*</span></label>
+                <p-select formControlName="instituteType" [options]="institutionTypeOptions" optionLabel="label" optionValue="value" placeholder="Select Type" styleClass="w-full" [filter]="true"></p-select>
+                @if (educationForm.get('instituteType')?.invalid && educationForm.get('instituteType')?.touched) {
+                    <small class="text-red-500">Educational Board/University Type is required</small>
+                }
             </div>
             <div>
-                <label class="font-semibold block mb-2 text-700">Educational Institution Name</label>
-                <p-select formControlName="instituteName" [options]="institutionNameOptions" optionLabel="label" optionValue="value" placeholder="Select Institution" styleClass="w-full"></p-select>
+                <label class="font-semibold block mb-2 text-700">Educational Institution Name <span class="text-red-500">*</span></label>
+                <div style="display: flex; align-items: center; gap: 0.35rem;">
+                    <div style="flex: 1; min-width: 0;">
+                        <p-select formControlName="instituteName" [options]="institutionNameOptions" optionLabel="label" optionValue="value" placeholder="Select Institution" styleClass="w-full" [filter]="true" filterPlaceholder="Search Institution" appendTo="body"></p-select>
+                    </div>
+                    <button type="button" pButton icon="pi pi-plus"
+                        class="p-button-sm p-button-outlined p-button-success"
+                        style="flex-shrink: 0; width: 2rem; height: 2rem; padding: 0;"
+                        pTooltip="Add New Institution" tooltipPosition="top"
+                        (click)="openAddInstitutionDialog()">
+                    </button>
+                </div>
+                @if (educationForm.get('instituteName')?.invalid && educationForm.get('instituteName')?.touched) {
+                    <small class="text-red-500">Educational Institution Name is required</small>
+                }
             </div>
             <div>
                 <label class="font-semibold block mb-2 text-700">Educational Department</label>
-                <p-select formControlName="departmentName" [options]="departmentOptions" optionLabel="label" optionValue="value" placeholder="Select Department" styleClass="w-full"></p-select>
+                <p-select formControlName="departmentName" [options]="departmentOptions" optionLabel="label" optionValue="value" placeholder="Select Department" styleClass="w-full" [filter]="true"></p-select>
             </div>
             <div>
                 <label class="font-semibold block mb-2 text-700">Education Subject</label>
-                <p-select formControlName="subjectName" [options]="subjectOptions" optionLabel="label" optionValue="value" placeholder="Select Subject" styleClass="w-full"></p-select>
+                <p-select formControlName="subjectName" [options]="subjectOptions" optionLabel="label" optionValue="value" placeholder="Select Subject" styleClass="w-full" [filter]="true"></p-select>
             </div>
             <div class="w-full">
                 <label class="font-semibold block mb-2 text-700">Date From</label>
@@ -125,13 +148,13 @@
             </div>
             <div>
                 <label class="font-semibold block mb-2 text-700">Grade</label>
-                <p-select formControlName="grade" [options]="gradeOptions" optionLabel="label" optionValue="value" placeholder="Select Level (Education Result)" styleClass="w-full"></p-select>
+                <p-select formControlName="grade" [options]="gradeOptions" optionLabel="label" optionValue="value" placeholder="Select Level (Education Result)" styleClass="w-full" [filter]="true"></p-select>
             </div>
             <div>
                 <label class="font-semibold block mb-2 text-700">Grade Point</label>
                 <input pInputText formControlName="gradePoint" class="w-full" placeholder="Grade Point" />
             </div>
-            <div class="col-span-full">
+            <div class="col-span-full file-section-compact">
                 <app-file-references-form
                     #fileReferencesForm
                     [fileRows]="fileRows"
@@ -146,6 +169,28 @@
     <ng-template pTemplate="footer">
         <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="displayDialog = false" [disabled]="isSaving"></p-button>
         <p-button label="Save" icon="pi pi-check" [loading]="isSaving" [disabled]="isSaving" (onClick)="saveEducation()"></p-button>
+    </ng-template>
+</p-dialog>
+
+<!-- Add New Institution Dialog -->
+<p-dialog header="Add New Institution" [(visible)]="showInstitutionDialog" [modal]="true" [style]="{width: '500px'}" [closable]="true" [contentStyle]="{'border-top': '2px solid var(--primary-color)'}" appendTo="body">
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <div>
+            <label class="font-semibold block mb-2 text-700">Institution Type <span class="text-red-500">*</span></label>
+            <p-select [options]="institutionTypeOptions" [(ngModel)]="newInstitutionTypeId" optionLabel="label" optionValue="value" placeholder="Select Institution Type" styleClass="w-full" [filter]="true" appendTo="body"></p-select>
+        </div>
+        <div>
+            <label class="font-semibold block mb-2 text-700">Institution Name (English) <span class="text-red-500">*</span></label>
+            <input pInputText style="width: 100%;" [(ngModel)]="newInstitutionNameEN" placeholder="Enter institution name in English" />
+        </div>
+        <div>
+            <label class="font-semibold block mb-2 text-700">Institution Name (Bangla)</label>
+            <input pInputText style="width: 100%;" [(ngModel)]="newInstitutionNameBN" placeholder="Enter institution name in Bangla" />
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="showInstitutionDialog = false"></p-button>
+        <p-button label="Save" icon="pi pi-check" [loading]="isSavingInstitution" [disabled]="!newInstitutionNameEN?.trim() || !newInstitutionTypeId" (onClick)="saveNewInstitution()"></p-button>
     </ng-template>
 </p-dialog>
 

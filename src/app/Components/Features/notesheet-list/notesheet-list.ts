@@ -25,6 +25,7 @@ import { map } from 'rxjs/operators';
 export interface NoteSheetInfoRow {
   noteSheetId: number;
   noteSheetNo: string;
+  draftPostingListNo?: string;
   noteSheetDate: string;
   wingBattalionId?: number;
   branchId?: number;

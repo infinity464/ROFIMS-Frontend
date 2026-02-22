@@ -25,6 +25,8 @@ export interface BankAccInfoModel {
     accountNumber: string;
     accountNameEN: string;
     accountNameBN: string;
+    routingNumber: string | null;
+    swiftCode: string | null;
     remarks: string | null;
     filesReferences?: string | null;
     createdBy?: string;

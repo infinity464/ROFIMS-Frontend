@@ -2,9 +2,9 @@
 <p-fluid>
     <div class="mb-5 card">
         <div class="flex align-items-center gap-3 mb-4">
-            @if (mode !== 'search') {
+            <!-- @if (mode !== 'search') {
                 <p-button icon="pi pi-arrow-left" [rounded]="true" [text]="true" severity="secondary" pTooltip="Back to List" (onClick)="goBack()"></p-button>
-            }
+            } -->
             <h3 class="m-0 text-xl font-bold text-900" style="display: inline-flex; align-items: center; gap: 0.5rem;">
                 Employee Present Status
                 @if (mode === 'view') {
@@ -96,10 +96,11 @@
                 @if (mode === 'view') {
                     <p-button type="button" label="Back to List" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" (onClick)="goBack()"></p-button>
                     <p-button type="button" label="Edit" icon="pi pi-pencil" (onClick)="enableEditMode()"></p-button>
+                } @else if (mode === 'edit') {
+                    <p-button type="button" label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" (onClick)="onEmployeeSearchReset()"></p-button>
+                    <p-button type="button" label="Back to List" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" (onClick)="goBack()"></p-button>
                 } @else {
-                    @if (mode === 'edit') {
-                        <p-button type="button" label="Back to List" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" (onClick)="goBack()"></p-button>
-                    }
+                    <p-button type="button" label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" (onClick)="onEmployeeSearchReset()"></p-button>
                 }
             </div>
         }
@@ -122,7 +123,7 @@
             <!-- Present Status Type -->
             <div class="col-span-2">
                 <label class="font-semibold block mb-2 text-700">Present Status Type <span class="text-red-500">*</span></label>
-                <p-select formControlName="presentStatusType" [options]="statusTypes" optionLabel="label" optionValue="value" placeholder="Select Status Type" styleClass="w-full"></p-select>
+                <p-select formControlName="presentStatusType" [options]="statusTypes" optionLabel="label" optionValue="value" placeholder="Select Status Type" styleClass="w-full" [filter]="true"></p-select>
             </div>
 
             <!-- ========== Regular Posting Out ========== -->

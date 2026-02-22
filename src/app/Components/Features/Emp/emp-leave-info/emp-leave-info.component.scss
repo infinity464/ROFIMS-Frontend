@@ -1,1 +1,61 @@
-// component styles
+// component styles (follow emp-medical-category)
+.leave-record-form .form-row {
+    display: flex;
+    gap: 1rem;
+}
+.leave-record-form .form-row .form-field {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+:host ::ng-deep .leave-record-form p-datepicker {
+    width: 100%;
+}
+:host ::ng-deep .leave-record-form .p-datepicker .p-inputtext {
+    width: 100% !important;
+}
+
+.form-field {
+    margin-bottom: 1rem;
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+}
+
+.form-label {
+    display: block;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--text-color);
+    margin-bottom: 0.375rem;
+}
+
+.form-label .required {
+    color: var(--red-500, #e24c4c);
+}
+
+.form-error {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--red-500);
+    margin-top: 0.25rem;
+}
+
+:host ::ng-deep .leave-record-dialog {
+    .p-dialog-header {
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid var(--surface-border);
+    }
+    .p-dialog-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+    }
+}
+
+:host ::ng-deep .dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    width: 100%;
+}

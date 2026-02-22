@@ -14,14 +14,14 @@
         </app-employee-search>
 
         @if (employeeBasicInfo && selectedEmployeeId) {
-            <div class="surface-50 border-round-2xl p-4 mb-4">
+            <!-- <div class="surface-50 border-round-2xl p-4 mb-4">
                 <div class="flex flex-wrap gap-4">
                     <div><span class="text-500 text-sm">Name:</span> <span class="ml-2 font-semibold">{{ employeeBasicInfo.fullNameEN || 'N/A' }}</span></div>
                     <div><span class="text-500 text-sm">RAB ID:</span> <span class="ml-2 font-semibold">{{ employeeBasicInfo.rabid || 'N/A' }}</span></div>
                     <div><span class="text-500 text-sm">Service ID:</span> <span class="ml-2 font-semibold">{{ employeeBasicInfo.serviceId || 'N/A' }}</span></div>
                     <div><span class="text-500 text-sm">Rank:</span> <span class="ml-2 font-semibold">{{ employeeBasicInfo.rankDisplay ?? 'N/A' }}</span></div>
                 </div>
-            </div>
+            </div> -->
 
             <p-tabs [(value)]="activeTab" class="mt-2">
                 <p-tablist>
@@ -65,8 +65,6 @@
             <div class="flex justify-end mt-4">
                 <p-button label="Back to List" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" (onClick)="goBack()"></p-button>
             </div>
-        } @else {
-            <p class="text-500 text-center py-8">Search and select an employee to view or edit Personal &amp; Service Information.</p>
-        }
+        } 
     </div>
 </p-fluid>

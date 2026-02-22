@@ -84,6 +84,13 @@
           </div>
         </div>
         <div class="notesheet-row">
+          <div class="notesheet-label">{{ isBangla ? 'খসড়া পোস্টিং তালিকা নং' : 'Draft Posting List No' }}</div>
+          <div class="notesheet-input-desc">
+            <input pInputText formControlName="draftPostingListNo" [placeholder]="isBangla ? 'খসড়া পোস্টিং তালিকা নম্বর' : 'Draft Posting List No'" class="w-full" />
+            <span class="text-500 text-sm ml-2">{{ isBangla ? 'নতুন পোস্টিং অর্ডার হতে নির্বাচন করুন' : 'Select from New Posting Order' }}</span>
+          </div>
+        </div>
+        <div class="notesheet-row">
           <div class="notesheet-label">{{ isBangla ? 'বিষয়' : 'Subject' }}</div>
           <div class="notesheet-input-desc">
             <input pInputText formControlName="subject" [placeholder]="isBangla ? 'স্বয়ং নির্বাচন/হাতে লিখুন' : 'Auto Select/Manual Type'" class="w-full" />

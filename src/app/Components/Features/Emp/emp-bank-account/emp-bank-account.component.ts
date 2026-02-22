@@ -78,7 +78,10 @@ export class EmpBankAccount implements OnInit {
             bankId: [null, Validators.required],
             branchId: [null, Validators.required],
             accountNumber: ['', Validators.required],
-            accountNameEN: ['', Validators.required]
+            accountNameEN: ['', Validators.required],
+            routingNumber: [''],
+            swiftCode: [''],
+            remarks: ['']
         });
     }
 
@@ -148,6 +151,8 @@ export class EmpBankAccount implements OnInit {
                     accountNumber: item.accountNumber ?? item.AccountNumber ?? '',
                     accountNameEN: item.accountNameEN ?? item.AccountNameEN ?? '',
                     accountNameBN: item.accountNameBN ?? item.AccountNameBN ?? '',
+                    routingNumber: item.routingNumber ?? item.RoutingNumber ?? null,
+                    swiftCode: item.swiftCode ?? item.SwiftCode ?? null,
                     remarks: item.remarks ?? item.Remarks ?? null,
                     filesReferences: item.filesReferences ?? item.FilesReferences ?? null
                 }));
@@ -204,7 +209,10 @@ export class EmpBankAccount implements OnInit {
             bankId: null,
             branchId: null,
             accountNumber: '',
-            accountNameEN: ''
+            accountNameEN: '',
+            routingNumber: '',
+            swiftCode: '',
+            remarks: ''
         });
         this.updateBranchOptions();
         this.displayDialog = true;
@@ -220,7 +228,10 @@ export class EmpBankAccount implements OnInit {
             bankId: row.bankId,
             branchId: row.branchId,
             accountNumber: row.accountNumber,
-            accountNameEN: row.accountNameEN
+            accountNameEN: row.accountNameEN,
+            routingNumber: row.routingNumber ?? '',
+            swiftCode: row.swiftCode ?? '',
+            remarks: row.remarks ?? ''
         });
         this.updateBranchOptions();
         this.displayDialog = true;
@@ -249,6 +260,9 @@ export class EmpBankAccount implements OnInit {
                 accountNumber: formValue.accountNumber,
                 accountNameEN: formValue.accountNameEN,
                 accountNameBN: '',
+                routingNumber: formValue.routingNumber || null,
+                swiftCode: formValue.swiftCode || null,
+                remarks: formValue.remarks || null,
                 filesReferences: filesReferencesJson ?? undefined,
                 createdBy: 'system',
                 lastUpdatedBy: 'system'

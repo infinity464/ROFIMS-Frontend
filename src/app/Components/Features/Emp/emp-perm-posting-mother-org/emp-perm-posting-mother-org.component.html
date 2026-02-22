@@ -2,9 +2,9 @@
 <p-fluid>
     <div class="mb-5 card">
         <div class="flex align-items-center gap-3 mb-4">
-            @if (mode !== 'search') {
+            <!-- @if (mode !== 'search') {
                 <p-button icon="pi pi-arrow-left" [rounded]="true" [text]="true" severity="secondary" pTooltip="Back to List" (onClick)="goBack()"></p-button>
-            }
+            } -->
             <h3 class="m-0 text-xl font-bold text-900" style="display: inline-flex; align-items: center; gap: 0.5rem;">
                 Permanent Posting (Mother Org) Entry
                 @if (mode === 'view') {
@@ -24,7 +24,7 @@
             </app-employee-search>
         }
 
-        @if (mode !== 'search' && employeeBasicInfo) {
+        <!-- @if (mode !== 'search' && employeeBasicInfo) {
             <div class="surface-50 border-round-2xl p-4 mb-4">
                 <div class="flex flex-wrap gap-4">
                     <div><span class="text-500 text-sm">Name:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.fullNameEN || employeeBasicInfo.FullNameEN || 'N/A' }}</span></div>
@@ -32,7 +32,7 @@
                     <div><span class="text-500 text-sm">Service ID:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.serviceId || employeeBasicInfo.ServiceId || 'N/A' }}</span></div>
                 </div>
             </div>
-        }
+        } -->
 
         @if (employeeFound) {
             <div class="surface-card border-round p-4 mb-4">
@@ -113,6 +113,7 @@
                     optionLabel="label"
                     optionValue="value"
                     placeholder="Select"
+                    [filter]="true"
                     styleClass="w-full"></p-select>
             </div>
 
@@ -144,6 +145,7 @@
                         optionLabel="label"
                         optionValue="value"
                         placeholder="Select"
+                        [filter]="true"
                         styleClass="w-full"></p-select>
                 </div>
 
@@ -164,6 +166,7 @@
                     optionLabel="label"
                     optionValue="value"
                     placeholder="Select"
+                    [filter]="true"
                     styleClass="w-full"></p-select>
             </div>
 
@@ -182,6 +185,7 @@
                     optionLabel="label"
                     optionValue="value"
                     placeholder="Select"
+                    [filter]="true"
                     styleClass="w-full"></p-select>
             </div>
 

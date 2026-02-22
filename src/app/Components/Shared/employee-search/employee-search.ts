@@ -34,7 +34,7 @@ export interface EmployeeBasicInfo {
     imports: [CommonModule, FormsModule, InputTextModule, ButtonModule],
     template: `
         <div class="surface-50 border-round-2xl p-4 mb-4">
-            <div class="flex flex-wrap gap-3 mb-4">
+            <div class="flex flex-wrap align-items-end gap-3">
                 <div style="min-width: 200px; max-width: 250px;">
                     <label class="font-semibold block mb-2 text-700">RAB ID</label>
                     <input pInputText class="w-full" placeholder="Enter RAB ID" [(ngModel)]="searchRabId" (keyup.enter)="search()" />
@@ -47,48 +47,18 @@ export interface EmployeeBasicInfo {
                     <label class="font-semibold block mb-2 text-700">&nbsp;</label>
                     <p-button label="Search" icon="pi pi-search" [loading]="isSearching" (onClick)="search()"></p-button>
                 </div>
+                @if (employeeFound && employeeInfo) {
+                    <div class="ml-3">
+                        <label class="font-semibold block mb-2 text-700">&nbsp;</label>
+                        <div class="flex align-items-center gap-3 px-3 shadow-1" style="line-height: 2.25rem; border: 1px solid var(--primary-color); border-radius: 2rem; background: var(--primary-50, rgba(16,185,129,0.05));">
+                            <span><i class="pi pi-user text-primary mr-1"></i><span class="text-600"> Name : </span> <span class="font-semibold">{{ employeeInfo.fullNameEN || 'N/A' }}</span></span>
+                            <span><i class="pi pi-id-card text-primary mr-1"></i><span class="text-600"> Rab Id : </span> <span class="font-semibold">{{ employeeInfo.rabid || 'N/A' }}</span></span>
+                            <span><i class="pi pi-bookmark text-primary mr-1"></i><span class="text-600"> Service Id : </span> <span class="font-semibold">{{ employeeInfo.serviceId || 'N/A' }}</span></span>
+                            <span><i class="pi pi-building text-primary mr-1"></i><span class="text-600"> Mother Org : </span> <span class="font-semibold">{{ employeeInfo.motherOrganizationDisplay ?? employeeInfo.motherOrganization ?? 'N/A' }}</span></span>
+                        </div>
+                    </div>
+                }
             </div>
-
-            @if (employeeFound && employeeInfo) {
-                <div class="border border-gray-300 rounded-lg p-4 mb-4 mt-8">
-                    <div class="grid grid-cols-4 gap-5">
-                        <div class="border-r border-gray-300 pr-4">
-                            <div class="text-sm mb-2">NAME</div>
-                            <div class="text-xl font-bold">{{ employeeInfo.fullNameEN || 'N/A' }}</div>
-                        </div>
-                        <div class="border-r border-gray-300 pr-4">
-                            <div class="text-sm mb-2">RAB ID</div>
-                            <div class="text-xl font-bold">{{ employeeInfo.rabid || 'N/A' }}</div>
-                        </div>
-                        <div class="border-r border-gray-300 pr-4">
-                            <div class="text-sm mb-2">SERVICE ID</div>
-                            <div class="text-xl font-bold">{{ employeeInfo.serviceId || 'N/A' }}</div>
-                        </div>
-                        <div class="pl-4">
-                            <div class="text-sm mb-2">RANK</div>
-                            <div class="text-xl font-bold">{{ employeeInfo.rankDisplay ?? employeeInfo.rank ?? 'N/A' }}</div>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-4 gap-5 mt-5">
-                        <div class="border-r border-gray-300 pr-4">
-                            <div class="text-sm mb-2">CORPS</div>
-                            <div class="text-xl font-bold">{{ employeeInfo.corpsDisplay ?? employeeInfo.branch ?? 'N/A' }}</div>
-                        </div>
-                        <div class="border-r border-gray-300 pr-4">
-                            <div class="text-sm mb-2">TRADE</div>
-                            <div class="text-xl font-bold">{{ employeeInfo.tradeDisplay ?? employeeInfo.trade ?? 'N/A' }}</div>
-                        </div>
-                        <div class="border-r border-gray-300 pr-4">
-                            <div class="text-sm mb-2">MOTHER ORG</div>
-                            <div class="text-xl font-bold">{{ employeeInfo.motherOrganizationDisplay ?? employeeInfo.motherOrganization ?? 'N/A' }}</div>
-                        </div>
-                        <div class="pl-4">
-                            <div class="text-sm mb-2">MEMBER TYPE</div>
-                            <div class="text-xl font-bold">{{ employeeInfo.memberTypeDisplay ?? employeeInfo.memberType ?? 'N/A' }}</div>
-                        </div>
-                    </div>
-                </div>
-            }
         </div>
     `
 })

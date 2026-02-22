@@ -88,6 +88,7 @@ export class NotesheetGenerateComponent implements OnInit {
     ) {
         this.form = this.fb.group({
             noteSheetTemplateId: [null as number | null],
+            draftPostingListNo: [''],
             textType: ['en'],
             noteSheetDate: [null as Date | null, Validators.required],
             unitId: [null as number | null],
@@ -169,6 +170,7 @@ export class NotesheetGenerateComponent implements OnInit {
         }
         this.form.patchValue({
             noteSheetTemplateId: d.noteSheetTemplateId ?? d.NoteSheetTemplateId ?? null,
+            draftPostingListNo: String(d.draftPostingListNo ?? d.DraftPostingListNo ?? ''),
             textType: (d.textType ?? d.TextType) === 1 ? 'bn' : 'en',
             noteSheetDate,
             unitId: d.unitId ?? d.UnitId ?? null,
@@ -550,6 +552,7 @@ export class NotesheetGenerateComponent implements OnInit {
             createdDate: now,
             lastupdate: now,
             noteSheetTemplateId: d.noteSheetTemplateId ?? null,
+            draftPostingListNo: (d.draftPostingListNo && String(d.draftPostingListNo).trim()) || null,
             textType: d.textType === 'bn' ? 1 : 0,
             unitId: d.unitId ?? null,
             wingBattalionId: d.wingBattalionId ?? null,

@@ -1,9 +1,9 @@
 <p-fluid>
     <div class="mb-5 card">
         <div class="flex align-items-center gap-3 mb-4">
-            @if (mode !== 'search') {
+            <!-- @if (mode !== 'search') {
                 <p-button icon="pi pi-arrow-left" [rounded]="true" [text]="true" severity="secondary" pTooltip="Back to List" (onClick)="goBack()"></p-button>
-            }
+            } -->
             <h3 class="m-0 text-xl font-bold text-900" style="display: inline-flex; align-items: center; gap: 0.5rem;">
                 Discipline Information Entry
                 @if (mode === 'view') {
@@ -23,7 +23,7 @@
             </app-employee-search>
         }
 
-        @if (mode !== 'search' && employeeBasicInfo) {
+        <!-- @if (mode !== 'search' && employeeBasicInfo) {
             <div class="surface-50 border-round-2xl p-4 mb-4">
                 <div class="flex flex-wrap gap-4">
                     <div><span class="text-500 text-sm">Name:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.fullNameEN || employeeBasicInfo.FullNameEN || 'N/A' }}</span></div>
@@ -31,7 +31,7 @@
                     <div><span class="text-500 text-sm">Service ID:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.serviceId || employeeBasicInfo.ServiceId || 'N/A' }}</span></div>
                 </div>
             </div>
-        }
+        } -->
 
         @if (employeeFound) {
             <div class="surface-50 border-round-2xl p-4 mb-4">
@@ -114,72 +114,102 @@
     [closable]="true"
     [draggable]="false"
     [resizable]="false"
+    [contentStyle]="{'border-top': '2px solid var(--primary-color)'}"
     (onHide)="onDialogHide()">
     <form [formGroup]="disciplineForm" class="discipline-form mt-3">
-        <div class="form-row flex gap-3 mb-3">
-            <div class="form-field flex-1">
-                <label class="font-semibold block mb-2 text-700">Offence Type</label>
-                <p-select formControlName="offenseType" [options]="offenceTypeOptions" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" appendTo="body"></p-select>
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="font-semibold block mb-2 text-700">Offence Type <span class="text-red-500">*</span></label>
+                <p-select formControlName="offenseType" [options]="offenceTypeOptions" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" [filter]="true" appendTo="body"></p-select>
+                @if (disciplineForm.get('offenseType')?.invalid && disciplineForm.get('offenseType')?.touched) {
+                    <small class="text-red-500">Offence Type is required</small>
+                }
             </div>
-            <div class="form-field flex-1">
-                <label class="font-semibold block mb-2 text-700">Offence Date</label>
+            <div>
+                <label class="font-semibold block mb-2 text-700">Offence Date <span class="text-red-500">*</span></label>
                 <p-datepicker formControlName="offenseDate" dateFormat="dd-mm-yy" [showIcon]="true" styleClass="w-full" placeholder="Select date" appendTo="body"></p-datepicker>
+                @if (disciplineForm.get('offenseDate')?.invalid && disciplineForm.get('offenseDate')?.touched) {
+                    <small class="text-red-500">Offence Date is required</small>
+                }
             </div>
-        </div>
-        <div class="form-row flex gap-3 mb-3">
-            <div class="form-field flex-1">
-                <label class="font-semibold block mb-2 text-700">Brief Statement of Offence</label>
-                <p-select formControlName="briefStatementOfOffenceId" [options]="briefStatementOptions" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" appendTo="body"></p-select>
+            <div class="col-span-2">
+                <label class="font-semibold block mb-2 text-700">Brief Statement of Offence <span class="text-red-500">*</span></label>
+                <div style="display: flex; align-items: center; gap: 0.35rem;">
+                    <div style="flex: 1; min-width: 0;">
+                        <p-select formControlName="briefStatementOfOffenceId" [options]="briefStatementOptions" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" [filter]="true" filterPlaceholder="Search Statement" appendTo="body"></p-select>
+                    </div>
+                    <button type="button" pButton icon="pi pi-plus"
+                        class="p-button-sm p-button-outlined p-button-success"
+                        style="flex-shrink: 0; width: 2rem; height: 2rem; padding: 0;"
+                        pTooltip="Add New Brief Statement" tooltipPosition="top"
+                        (click)="openAddBriefStatementDialog()">
+                    </button>
+                </div>
+                @if (disciplineForm.get('briefStatementOfOffenceId')?.invalid && disciplineForm.get('briefStatementOfOffenceId')?.touched) {
+                    <small class="text-red-500">Brief Statement of Offence is required</small>
+                }
             </div>
-        </div>
-        <div class="form-row mb-3">
-            <label class="font-semibold block mb-2 text-700">Offence Details</label>
-            <textarea pInputTextarea formControlName="offenseDetails" rows="2" class="w-full" placeholder="Offence details"></textarea>
-        </div>
-        <div class="form-row flex gap-3 mb-3">
-            <div class="form-field flex-1">
+            <div class="col-span-2">
+                <label class="font-semibold block mb-2 text-700">Offence Details</label>
+                <textarea pInputTextarea formControlName="offenseDetails" rows="2" class="w-full" placeholder="Offence details"></textarea>
+            </div>
+            <div>
                 <label class="font-semibold block mb-2 text-700">Action/Punishment by RAB</label>
-                <p-select formControlName="punishmentTypeRAB" [options]="punishmentTypeOptions" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" appendTo="body"></p-select>
+                <p-select formControlName="punishmentTypeRAB" [options]="punishmentTypeOptions" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" [filter]="true" appendTo="body"></p-select>
             </div>
-            <div class="form-field flex-1">
+            <div>
                 <label class="font-semibold block mb-2 text-700">Date of Punishment (RAB)</label>
                 <p-datepicker formControlName="punishmentDate" dateFormat="dd-mm-yy" [showIcon]="true" styleClass="w-full" placeholder="Select date" appendTo="body"></p-datepicker>
             </div>
-        </div>
-        <div class="form-row flex gap-3 mb-3">
-            <div class="form-field flex-1">
+            <div>
                 <label class="font-semibold block mb-2 text-700">Action/Punishment by Mother Org</label>
-                <p-select formControlName="punishmentTypeMotherOrg" [options]="punishmentTypeOptions" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" appendTo="body"></p-select>
+                <p-select formControlName="punishmentTypeMotherOrg" [options]="punishmentTypeOptions" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" [filter]="true" appendTo="body"></p-select>
             </div>
-            <div class="form-field flex-1">
+            <div>
                 <label class="font-semibold block mb-2 text-700">Date of Punishment (MO)</label>
                 <p-datepicker formControlName="punishmentDateMotherOrg" dateFormat="dd-mm-yy" [showIcon]="true" styleClass="w-full" placeholder="Select date" appendTo="body"></p-datepicker>
             </div>
-        </div>
-        <div class="form-row flex gap-3 mb-3">
-            <div class="form-field flex-1">
+            <div>
                 <label class="font-semibold block mb-2 text-700">Auth</label>
                 <input pInputText formControlName="auth" class="w-full" placeholder="Auth" />
             </div>
-            <div class="form-field flex-1">
+            <div>
                 <label class="font-semibold block mb-2 text-700">Remarks</label>
                 <input pInputText formControlName="remarks" class="w-full" placeholder="Remarks" />
             </div>
-        </div>
-        <div class="form-row mb-3">
-            <app-file-references-form
-                #fileReferencesForm
-                [fileRows]="fileRows"
-                [isViewMode]="false"
-                title="Supporting Documents"
-                (fileRowsChange)="onFileRowsChange($event)"
-                (onDownloadFile)="onDownloadFile($event)">
-            </app-file-references-form>
+            <div class="col-span-2 file-section-compact">
+                <app-file-references-form
+                    #fileReferencesForm
+                    [fileRows]="fileRows"
+                    [isViewMode]="false"
+                    title="Supporting Documents"
+                    (fileRowsChange)="onFileRowsChange($event)"
+                    (onDownloadFile)="onDownloadFile($event)">
+                </app-file-references-form>
+            </div>
         </div>
     </form>
     <ng-template pTemplate="footer">
         <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="displayDialog = false" [disabled]="isSaving"></p-button>
         <p-button label="Save" icon="pi pi-check" [loading]="isSaving" [disabled]="isSaving" (onClick)="saveDiscipline()"></p-button>
+    </ng-template>
+</p-dialog>
+
+<!-- Add New Brief Statement of Offence Dialog -->
+<p-dialog header="Add New Brief Statement of Offence" [(visible)]="showBriefStatementDialog" [modal]="true" [style]="{width: '500px'}" [closable]="true" [contentStyle]="{'border-top': '2px solid var(--primary-color)'}" appendTo="body">
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <div>
+            <label class="font-semibold block mb-2 text-700">Statement (English) <span class="text-red-500">*</span></label>
+            <input pInputText style="width: 100%;" [(ngModel)]="newBriefStatementEN" placeholder="Enter brief statement in English" />
+        </div>
+        <div>
+            <label class="font-semibold block mb-2 text-700">Statement (Bangla)</label>
+            <input pInputText style="width: 100%;" [(ngModel)]="newBriefStatementBN" placeholder="Enter brief statement in Bangla" />
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="showBriefStatementDialog = false"></p-button>
+        <p-button label="Save" icon="pi pi-check" [loading]="isSavingBriefStatement" [disabled]="!newBriefStatementEN?.trim()" (onClick)="saveNewBriefStatement()"></p-button>
     </ng-template>
 </p-dialog>
 

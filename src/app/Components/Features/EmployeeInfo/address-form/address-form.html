@@ -39,7 +39,7 @@
       <div class="flex flex-wrap gap-3 mb-3">
 
         <!-- Division -->
-        <div class="flex-1" style="min-width: 200px">
+        <div class="flex-1" style="min-width: 160px">
           <label class="font-semibold block mb-2 text-700">
             Division <span class="text-red-500">*</span>
           </label>
@@ -61,7 +61,7 @@
         </div>
 
         <!-- District -->
-        <div class="flex-1" style="min-width: 200px">
+        <div class="flex-1" style="min-width: 160px">
           <label class="font-semibold block mb-2 text-700">
             District <span class="text-red-500">*</span>
           </label>
@@ -83,7 +83,7 @@
         </div>
 
         <!-- Upazila -->
-        <div class="flex-1" style="min-width: 200px">
+        <div class="flex-1" style="min-width: 160px">
           <label class="font-semibold block mb-2 text-700">
             Upazila/Thana <span class="text-red-500">*</span>
           </label>
@@ -106,28 +106,43 @@
         </div>
 
         <!-- Post Office -->
-        <div class="flex-1" style="min-width: 200px">
+        <div class="flex-1" style="min-width: 170px">
           <label class="font-semibold block mb-2 text-700">
             Post Office <span class="text-red-500">*</span>
           </label>
-          <p-select
-            [options]="postOffices"
-            formControlName="postOffice"
-            optionLabel="codeValueEN"
-            optionValue="codeId"
-            placeholder="Select Post Office"
-            styleClass="w-full"
-            [filter]="true"
-            filterPlaceholder="Search Post Office"
-            [disabled]="!addressForm.get('upazila')?.value">
-          </p-select>
+          <div style="display: flex; align-items: center; gap: 0.35rem;">
+            <div style="flex: 1; min-width: 0;">
+              <p-select
+                [options]="postOffices"
+                formControlName="postOffice"
+                optionLabel="codeValueEN"
+                optionValue="codeId"
+                placeholder="Select Post Office"
+                styleClass="w-full"
+                [filter]="true"
+                filterPlaceholder="Search Post Office"
+                [disabled]="!addressForm.get('upazila')?.value">
+              </p-select>
+            </div>
+            <button
+              type="button"
+              pButton
+              icon="pi pi-plus"
+              class="p-button-sm p-button-outlined p-button-success"
+              style="flex-shrink: 0; width: 2rem; height: 2rem; padding: 0;"
+              pTooltip="Add New Post Office"
+              tooltipPosition="top"
+              (click)="openAddPostOfficeDialog()"
+              [disabled]="!addressForm.get('upazila')?.value">
+            </button>
+          </div>
           @if (isFieldInvalid('postOffice')) {
             <small class="text-red-500">{{ getErrorMessage('postOffice') }}</small>
           }
         </div>
 
         <!-- Post Code -->
-        <div class="flex-1" style="min-width: 150px">
+        <div class="flex-1" style="min-width: 120px; max-width: 160px">
           <label class="font-semibold block mb-2 text-700">
             Post Code
           </label>
@@ -194,3 +209,35 @@
 
   </form>
 </ng-template>
+
+<!-- Add Post Office Dialog -->
+<p-dialog header="Add New Post Office" [(visible)]="showPostOfficeDialog" [modal]="true" [style]="{width: '500px'}" [closable]="true" [contentStyle]="{'border-top': '2px solid var(--primary-color)'}" appendTo="body">
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+            <div>
+                <label class="font-semibold block mb-2 text-700">Division</label>
+                <input pInputText style="width: 100%;" [value]="getSelectedDivisionName()" [disabled]="true" />
+            </div>
+            <div>
+                <label class="font-semibold block mb-2 text-700">District</label>
+                <input pInputText style="width: 100%;" [value]="getSelectedDistrictName()" [disabled]="true" />
+            </div>
+            <div>
+                <label class="font-semibold block mb-2 text-700">Upazila/Thana</label>
+                <input pInputText style="width: 100%;" [value]="getSelectedUpazilaName()" [disabled]="true" />
+            </div>
+        </div>
+        <div>
+            <label class="font-semibold block mb-2 text-700">Post Office Name (English) <span class="text-red-500">*</span></label>
+            <input pInputText style="width: 100%;" [(ngModel)]="newPostOfficeNameEN" placeholder="Enter post office name in English" />
+        </div>
+        <div>
+            <label class="font-semibold block mb-2 text-700">Post Office Name (Bangla)</label>
+            <input pInputText style="width: 100%;" [(ngModel)]="newPostOfficeNameBN" placeholder="Enter post office name in Bangla" />
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="showPostOfficeDialog = false"></p-button>
+        <p-button label="Save" icon="pi pi-check" [loading]="isSavingPostOffice" [disabled]="!newPostOfficeNameEN?.trim()" (onClick)="saveNewPostOffice()"></p-button>
+    </ng-template>
+</p-dialog>

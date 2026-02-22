@@ -1,6 +1,6 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
 
@@ -20,6 +20,7 @@ import { EmpService } from '@/services/emp-service';
 import { CourseInfoService, CourseInfoModel } from '@/services/course-info-service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
+import { SharedService } from '@/shared/services/shared-service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 import { FileReferencesFormComponent, FileRowData } from '@components/Common/file-references-form/file-references-form';
 
@@ -67,11 +68,20 @@ export class EmpCourseInfoComponent implements OnInit {
     courseResultOptions: { label: string; value: string }[] = [];
     courseResultSuggestions: { label: string; value: string }[] = [];
 
+    // Add Training Institute dialog
+    showInstituteDialog = false;
+    newInstituteNameEN = '';
+    newInstituteNameBN = '';
+    newInstituteCountryId: number | null = null;
+    newInstituteLocation = '';
+    isSavingInstitute = false;
+
     constructor(
         private empService: EmpService,
         private courseInfoService: CourseInfoService,
         private commonCodeService: CommonCodeService,
         private masterBasicSetupService: MasterBasicSetupService,
+        private sharedService: SharedService,
         private messageService: MessageService,
         private confirmationService: ConfirmationService,
         private route: ActivatedRoute,
@@ -101,8 +111,8 @@ export class EmpCourseInfoComponent implements OnInit {
         this.courseForm = this.fb.group({
             employeeId: [0],
             courseId: [0],
-            courseType: [null],
-            courseName: [null],
+            courseType: [null, Validators.required],
+            courseName: [null, Validators.required],
             trainingInstitueName: [null],
             countryDisplay: [''], // read-only from Training Institute
             locationDisplay: [''], // read-only from Training Institute
@@ -324,6 +334,10 @@ export class EmpCourseInfoComponent implements OnInit {
             this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'No employee selected' });
             return;
         }
+        if (this.courseForm.invalid) {
+            this.courseForm.markAllAsTouched();
+            return;
+        }
         const existingRefs = this.fileReferencesForm?.getExistingFileReferences() || [];
         const filesToUpload = this.fileReferencesForm?.getFilesToUpload() || [];
 
@@ -438,5 +452,56 @@ export class EmpCourseInfoComponent implements OnInit {
 
     goBack(): void {
         this.router.navigate(['/emp-list']);
+    }
+
+    openAddInstituteDialog(): void {
+        this.newInstituteNameEN = '';
+        this.newInstituteNameBN = '';
+        this.newInstituteCountryId = null;
+        this.newInstituteLocation = '';
+        this.showInstituteDialog = true;
+    }
+
+    saveNewInstitute(): void {
+        if (!this.newInstituteNameEN?.trim()) return;
+        this.isSavingInstitute = true;
+        const currentUser = this.sharedService.getCurrentUser();
+        const payload = {
+            trainingInstituteId: 0,
+            trainingInstituteNameEN: this.newInstituteNameEN.trim(),
+            trainingInstituteNameBN: this.newInstituteNameBN?.trim() || '',
+            countryId: this.newInstituteCountryId ?? 0,
+            location: this.newInstituteLocation?.trim() || '',
+            createdBy: currentUser,
+            createdDate: new Date(),
+            lastUpdatedBy: currentUser,
+            lastUpdate: new Date()
+        };
+        this.masterBasicSetupService.createInstitute(payload).subscribe({
+            next: (res: any) => {
+                this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Training Institute created successfully' });
+                this.showInstituteDialog = false;
+                this.isSavingInstitute = false;
+                // Reload institute options and auto-select
+                this.masterBasicSetupService.getAllInstitute().subscribe({
+                    next: (data) => {
+                        this.trainingInstituteOptions = (data || []).map((d: any) => ({
+                            label: d.trainingInstituteNameEN ?? d.TrainingInstituteNameEN ?? String(d.trainingInstituteId),
+                            value: d.trainingInstituteId ?? d.TrainingInstituteId,
+                            location: d.location ?? d.Location ?? '',
+                            countryId: d.countryId ?? d.CountryId ?? null
+                        }));
+                        const newId = res?.trainingInstituteId ?? res?.TrainingInstituteId;
+                        if (newId) {
+                            this.courseForm.patchValue({ trainingInstitueName: newId });
+                        }
+                    }
+                });
+            },
+            error: () => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to create training institute' });
+                this.isSavingInstitute = false;
+            }
+        });
     }
 }

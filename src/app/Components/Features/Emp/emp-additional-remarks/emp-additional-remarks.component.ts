@@ -142,7 +142,6 @@ export class EmpAdditionalRemarks implements OnInit {
         this.employeeFound = true;
         this.selectedEmployeeId = employee.employeeID;
         this.employeeBasicInfo = employee;
-        this.mode = 'edit';
         this.isReadonly = false;
         this.loadEmployeeSearchInfo();
         this.loadRemarksList();

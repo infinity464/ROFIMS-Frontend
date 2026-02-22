@@ -1,10 +1,7 @@
 <p-fluid>
     <div class="mb-5 card">
         <div class="flex align-items-center gap-3 mb-4">
-            @if (mode !== 'search') {
-                <p-button icon="pi pi-arrow-left" [rounded]="true" [text]="true" severity="secondary" pTooltip="Back to List" (onClick)="goBack()"></p-button>
-            }
-            <h3 class="m-0 text-xl font-bold text-900" style="display: inline-flex; align-items: center; gap: 0.5rem;">
+            <h3 class="m-0 text-xl font-bold text-600" style="display: inline-flex; align-items: center; gap: 0.5rem;">
                 Employee Address Information
                 @if (mode === 'view') {
                     <span class="text-500 text-base font-normal">(View Mode)</span>
@@ -25,7 +22,7 @@
         }
 
         <!-- Employee Info Header for View/Edit Mode -->
-        @if (mode !== 'search' && employeeBasicInfo) {
+        <!-- @if (mode !== 'search' && employeeBasicInfo) {
             <div class="surface-50 border-round-2xl p-4 mb-4">
                 <div class="flex flex-wrap gap-4">
                     <div>
@@ -42,7 +39,7 @@
                     </div>
                 </div>
             </div>
-        }
+        } -->
 
         <!-- Address Forms -->
         @if (employeeFound) {

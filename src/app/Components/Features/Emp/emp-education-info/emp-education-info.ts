@@ -1,6 +1,6 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
 
@@ -18,6 +18,8 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { EmpService } from '@/services/emp-service';
 import { EducationInfoService, EducationInfoModel } from '@/services/education-info-service';
 import { CommonCodeService } from '@/services/common-code-service';
+import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
+import { SharedService } from '@/shared/services/shared-service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 import { FileReferencesFormComponent, FileRowData } from '@components/Common/file-references-form/file-references-form';
 
@@ -60,10 +62,19 @@ export class EmpEducationInfoComponent implements OnInit {
     subjectOptions: DropdownOption[] = [];
     gradeOptions: DropdownOption[] = [];
 
+    // Add Institution dialog
+    showInstitutionDialog = false;
+    newInstitutionNameEN = '';
+    newInstitutionNameBN = '';
+    newInstitutionTypeId: number | null = null;
+    isSavingInstitution = false;
+
     constructor(
         private empService: EmpService,
         private educationInfoService: EducationInfoService,
         private commonCodeService: CommonCodeService,
+        private masterBasicSetupService: MasterBasicSetupService,
+        private sharedService: SharedService,
         private messageService: MessageService,
         private confirmationService: ConfirmationService,
         private route: ActivatedRoute,
@@ -82,9 +93,9 @@ export class EmpEducationInfoComponent implements OnInit {
         this.educationForm = this.fb.group({
             employeeId: [0],
             educationId: [0],
-            examName: [null],
-            instituteType: [null],
-            instituteName: [null],
+            examName: [null, Validators.required],
+            instituteType: [null, Validators.required],
+            instituteName: [null, Validators.required],
             departmentName: [null],
             subjectName: [null],
             dateFrom: [null],
@@ -275,6 +286,10 @@ export class EmpEducationInfoComponent implements OnInit {
             this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'No employee selected' });
             return;
         }
+        if (this.educationForm.invalid) {
+            this.educationForm.markAllAsTouched();
+            return;
+        }
         const existingRefs = this.fileReferencesForm?.getExistingFileReferences() || [];
         const filesToUpload = this.fileReferencesForm?.getFilesToUpload() || [];
 
@@ -384,5 +399,65 @@ export class EmpEducationInfoComponent implements OnInit {
     }
     goBack(): void {
         this.router.navigate(['/emp-list']);
+    }
+
+    openAddInstitutionDialog(): void {
+        this.newInstitutionNameEN = '';
+        this.newInstitutionNameBN = '';
+        this.newInstitutionTypeId = this.educationForm.get('instituteType')?.value || null;
+        this.showInstitutionDialog = true;
+    }
+
+    saveNewInstitution(): void {
+        if (!this.newInstitutionNameEN?.trim()) return;
+        if (!this.newInstitutionTypeId) {
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Please select an Institution Type first' });
+            return;
+        }
+        this.isSavingInstitution = true;
+        const currentUser = this.sharedService.getCurrentUser();
+        const currentDateTime = this.sharedService.getCurrentDateTime();
+        const payload = {
+            orgId: 0,
+            codeId: 0,
+            codeType: 'EducationInstitution',
+            codeValueEN: this.newInstitutionNameEN.trim(),
+            codeValueBN: this.newInstitutionNameBN?.trim() || '',
+            parentCodeId: this.newInstitutionTypeId,
+            commCode: null,
+            displayCodeValueEN: null,
+            displayCodeValueBN: null,
+            sortOrder: null,
+            level: null,
+            status: true,
+            createdBy: currentUser,
+            createdDate: currentDateTime,
+            lastUpdatedBy: currentUser,
+            lastupdate: currentDateTime
+        } as any;
+        this.masterBasicSetupService.create(payload).subscribe({
+            next: (res: any) => {
+                this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Institution created successfully' });
+                this.showInstitutionDialog = false;
+                this.isSavingInstitution = false;
+                // Reload institution options and auto-select
+                this.commonCodeService.getAllActiveCommonCodesType('EducationInstitution').subscribe({
+                    next: (data) => {
+                        this.institutionNameOptions = (data || []).map((d: any) => ({
+                            label: d.codeValueEN || d.displayCodeValueEN || String(d.codeId),
+                            value: d.codeId
+                        }));
+                        const newId = res?.codeId || res?.CodeId;
+                        if (newId) {
+                            this.educationForm.patchValue({ instituteName: newId });
+                        }
+                    }
+                });
+            },
+            error: () => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to create institution' });
+                this.isSavingInstitution = false;
+            }
+        });
     }
 }

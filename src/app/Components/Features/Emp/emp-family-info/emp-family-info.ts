@@ -14,6 +14,7 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { DialogModule } from 'primeng/dialog';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TabsModule } from 'primeng/tabs';
+import { DividerModule } from 'primeng/divider';
 
 import { EmpService } from '@/services/emp-service';
 import { CommonCodeService } from '@/services/common-code-service';
@@ -54,6 +55,7 @@ interface FamilyMember {
         DialogModule,
         ConfirmDialogModule,
         TabsModule,
+        DividerModule,
         AddressFormComponent,
         EmployeeSearchComponent
     ],
@@ -540,7 +542,7 @@ export class EmpFamilyInfo implements OnInit {
             employeeId: addr.employeeID || addr.EmployeeID,
             division: addr.divisionType || addr.DivisionType,
             district: addr.districtType || addr.DistrictType,
-            upazila: addr.ThanaType || addr.ThanaType,
+            upazila: addr.thanaType || addr.ThanaType,
             postOffice: addr.postOfficeType || addr.PostOfficeType,
             postCode: addr.postCode || addr.PostCode || '',
             villageEnglish: addr.addressAreaEN || addr.AddressAreaEN || '',

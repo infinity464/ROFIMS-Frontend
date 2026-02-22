@@ -7,8 +7,12 @@ import { Checkbox } from 'primeng/checkbox';
 import { Select } from 'primeng/select';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
+import { DialogModule } from 'primeng/dialog';
+import { TooltipModule } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
 import { forkJoin } from 'rxjs';
+import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
+import { SharedService } from '@/shared/services/shared-service';
 
 export interface AddressData {
     employeeId?: number;
@@ -36,7 +40,7 @@ export interface AddressFormConfig {
     standalone: true,
     templateUrl: './address-form.html',
     styleUrls: ['./address-form.scss'],
-    imports: [Fluid, InputTextModule, Checkbox, Select, ButtonModule, CommonModule, FormsModule, ReactiveFormsModule]
+    imports: [Fluid, InputTextModule, Checkbox, Select, ButtonModule, CommonModule, FormsModule, ReactiveFormsModule, DialogModule, TooltipModule]
 })
 export class AddressFormComponent implements OnInit, OnChanges {
     @Input() config!: AddressFormConfig;
@@ -59,10 +63,18 @@ export class AddressFormComponent implements OnInit, OnChanges {
     upazilas: any[] = [];
     postOffices: any[] = [];
 
+    // Add Post Office dialog
+    showPostOfficeDialog: boolean = false;
+    newPostOfficeNameEN: string = '';
+    newPostOfficeNameBN: string = '';
+    isSavingPostOffice: boolean = false;
+
     constructor(
         private fb: FormBuilder,
         private commonCodeService: CommonCodeService,
-        private messageService: MessageService
+        private messageService: MessageService,
+        private masterBasicSetupService: MasterBasicSetupService,
+        private sharedService: SharedService
     ) {}
 
     ngOnInit(): void {
@@ -416,5 +428,89 @@ export class AddressFormComponent implements OnInit, OnChanges {
     hasData(): boolean {
         const division = this.addressForm.get('division')?.value;
         return division !== null && division !== undefined;
+    }
+
+    // --- Add Post Office dialog ---
+
+    openAddPostOfficeDialog(): void {
+        this.newPostOfficeNameEN = '';
+        this.newPostOfficeNameBN = '';
+        this.showPostOfficeDialog = true;
+    }
+
+    getSelectedDivisionName(): string {
+        const id = this.addressForm.get('division')?.value;
+        return this.divisions.find(d => d.codeId === id)?.codeValueEN || '';
+    }
+
+    getSelectedDistrictName(): string {
+        const id = this.addressForm.get('district')?.value;
+        return this.districts.find(d => d.codeId === id)?.codeValueEN || '';
+    }
+
+    getSelectedUpazilaName(): string {
+        const id = this.addressForm.get('upazila')?.value;
+        return this.upazilas.find(d => d.codeId === id)?.codeValueEN || '';
+    }
+
+    saveNewPostOffice(): void {
+        if (!this.newPostOfficeNameEN?.trim()) return;
+
+        const upazilaId = this.addressForm.get('upazila')?.value;
+        if (!upazilaId) return;
+
+        this.isSavingPostOffice = true;
+        const currentUser = this.sharedService.getCurrentUser();
+        const currentDateTime = this.sharedService.getCurrentDateTime();
+
+        const payload = {
+            orgId: 0,
+            codeId: 0,
+            codeType: 'PostOffice',
+            codeValueEN: this.newPostOfficeNameEN.trim(),
+            codeValueBN: this.newPostOfficeNameBN?.trim() || null,
+            commCode: null,
+            displayCodeValueEN: null,
+            displayCodeValueBN: null,
+            status: true,
+            parentCodeId: upazilaId,
+            sortOrder: null,
+            level: null,
+            createdBy: currentUser,
+            createdDate: currentDateTime,
+            lastUpdatedBy: currentUser,
+            lastupdate: currentDateTime
+        };
+
+        this.masterBasicSetupService.create(payload as any).subscribe({
+            next: (res) => {
+                this.messageService.add({
+                    severity: 'success',
+                    summary: 'Success',
+                    detail: 'Post Office created successfully'
+                });
+                this.showPostOfficeDialog = false;
+                this.isSavingPostOffice = false;
+
+                // Reload post offices and auto-select the new one
+                this.commonCodeService.getAllActiveCommonCodesByParentId(upazilaId).subscribe({
+                    next: (postOffices) => {
+                        this.postOffices = postOffices;
+                        if (res?.codeId) {
+                            this.addressForm.patchValue({ postOffice: res.codeId });
+                        }
+                    }
+                });
+            },
+            error: (err) => {
+                console.error('Error creating post office:', err);
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: 'Failed to create post office'
+                });
+                this.isSavingPostOffice = false;
+            }
+        });
     }
 }
