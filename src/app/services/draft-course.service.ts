@@ -105,6 +105,7 @@ export class DraftCourseService {
             createdBy
         };
         if (details) {
+            if (details['courseNo'] != null && details['courseNo'] !== '') body['courseNo'] = details['courseNo'];
             if (details['courseType'] != null) body['courseType'] = details['courseType'];
             if (details['trainingInstituteId'] != null) body['trainingInstituteId'] = details['trainingInstituteId'];
             if (details['dateFrom'] != null && details['dateFrom'] !== '') body['dateFrom'] = details['dateFrom'];

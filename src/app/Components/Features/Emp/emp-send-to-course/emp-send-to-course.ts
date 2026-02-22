@@ -445,6 +445,7 @@ export class EmpSendToCourseComponent implements OnInit {
         const resultVal = v.result;
         const resultStr = typeof resultVal === 'string' ? resultVal : (resultVal?.value ?? (resultVal ? String(resultVal) : null));
         const details = {
+            courseNo: this.selectedDraft?.listNo ?? null,
             courseType: v.courseType ?? null,
             trainingInstituteId: v.trainingInstitueName ?? null,
             dateFrom: toDateStr(v.dateFrom),

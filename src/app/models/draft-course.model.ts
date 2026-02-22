@@ -16,6 +16,7 @@ export interface DraftCourseMemberRow {
 
 /** Optional course details when sending from draft to course. */
 export interface SendToCourseDetails {
+    courseNo?: string | null;
     courseType?: number | null;
     trainingInstituteId?: number | null;
     dateFrom?: string | null;

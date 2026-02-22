@@ -103,13 +103,12 @@ export class AppMenu {
                     { label: 'Rank Confirmation', icon: 'pi pi-fw pi-check-circle', routerLink: ['/emp-rank-confirmation'] },
                     { label: 'Education Info', icon: 'pi pi-fw pi-book', routerLink: ['/emp-education-info'] },
                     { label: 'Course Info', icon: 'pi pi-fw pi-graduation-cap', routerLink: ['/emp-course-info'] },
-                    { label: 'Send to Course (Draft)', icon: 'pi pi-fw pi-send', routerLink: ['/emp-send-to-course'] },
                     { label: 'Discipline Info', icon: 'pi pi-fw pi-exclamation-triangle', routerLink: ['/emp-discipline-info'] },
                     { label: 'Bank Account', icon: 'pi pi-fw pi-wallet', routerLink: ['/emp-bank-account'] },
                     { label: 'Foreign Visit', icon: 'pi pi-fw pi-globe', routerLink: ['/emp-foreign-visit'] },
                     { label: 'Leave Info', icon: 'pi pi-fw pi-calendar-minus', routerLink: ['/emp-leave-info'] },
                     { label: 'Medical Category', icon: 'pi pi-fw pi-heart', routerLink: ['/emp-medical-category'] },
-                    { label: 'Additional Remarks', icon: 'pi pi-fw pi-comment', routerLink: ['/emp-additional-remarks'] },
+                    { label: 'Additional Remarks', icon: 'pi pi-fw pi-comment', routerLink: ['/emp-additional-remarks'] }
                 ]
             },
             {
@@ -209,7 +208,7 @@ export class AppMenu {
                 ]
             },
             {
-                label: 'NoteSheet',
+                label: 'Office Management',
                 icon: 'pi pi-fw pi-file-edit',
                 items: [
                     { label: 'Generate NoteSheet', icon: 'pi pi-fw pi-plus', routerLink: ['/notesheet-generate'] },
@@ -218,17 +217,12 @@ export class AppMenu {
                     { label: 'Pending for Approval', icon: 'pi pi-fw pi-clock', routerLink: ['/notesheet-list/pending'] },
                     { label: 'Approved Note-Sheet List', icon: 'pi pi-fw pi-check-circle', routerLink: ['/notesheet-list/approved'] },
                     { label: 'Declined Note-Sheet List', icon: 'pi pi-fw pi-times-circle', routerLink: ['/notesheet-list/declined'] },
-                    { label: 'All Note-Sheet', icon: 'pi pi-fw pi-list', routerLink: ['/notesheet-list/all'] }
+                    { label: 'All Note-Sheet', icon: 'pi pi-fw pi-list', routerLink: ['/notesheet-list/all'] },
+                    { label: 'Leave Application List', icon: 'pi pi-fw pi-list', routerLink: ['/leave-application/list'] },
+                    { label: 'RFTS Training', icon: 'pi pi-fw pi-send', routerLink: ['/emp-send-to-course'] }
                 ]
             },
-            {
-                label: 'Leave Application',
-                icon: 'pi pi-fw pi-calendar-minus',
-                items: [
-                    { label: 'Apply for Leave', icon: 'pi pi-fw pi-plus', routerLink: ['/leave-application/apply'] },
-                    { label: 'Leave Application List', icon: 'pi pi-fw pi-list', routerLink: ['/leave-application/list'] }
-                ]
-            },
+
             {
                 label: 'New Posting & Inter-Posting',
                 icon: 'pi pi-fw pi-send',
