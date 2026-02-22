@@ -1,6 +1,8 @@
 import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { ConfirmationService } from 'primeng/api';
 import { ChatService } from '@/services/chat.service';
 import { ChatUserDto, DirectConversation, DirectMessageDto, GroupDto, GroupMessageDto } from '@/models/chat.model';
 import { Subject } from 'rxjs';
@@ -9,7 +11,8 @@ import { takeUntil } from 'rxjs/operators';
 @Component({
   selector: 'app-chat-container',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, ConfirmDialogModule],
+  providers: [ConfirmationService],
   template: `
     <div class="chat-container flex h-[calc(100vh-80px)] bg-surface-0 dark:bg-surface-900">
       <!-- Sidebar - Conversations List -->
@@ -402,6 +405,7 @@ import { takeUntil } from 'rxjs/operators';
           </div>
         </div>
       </div>
+      <p-confirmDialog />
     </div>
   `,
   styles: [`
@@ -463,7 +467,7 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
   createGroupSelectedUserIds: string[] = [];
   creatingGroup = false;
 
-  constructor(private chatService: ChatService, private fb: FormBuilder) {
+  constructor(private chatService: ChatService, private fb: FormBuilder, private confirmationService: ConfirmationService) {
     this.messageForm = this.fb.group({
       messageContent: ['', [Validators.required, Validators.minLength(1)]]
     });
@@ -600,11 +604,19 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
   }
 
   deleteGroupMessage(messageId: number): void {
-    if (!confirm('Delete this message?')) return;
-    this.chatService.deleteGroupMessage(messageId).then(() => {
-      const m = this.groupMessages.find(x => x.messageId === messageId);
-      if (m) m.isDeleted = true;
-    }).catch(() => {});
+    this.confirmationService.confirm({
+      message: 'Are you sure you want to delete this message?',
+      header: 'Delete Confirmation',
+      icon: 'pi pi-exclamation-triangle',
+      rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+      acceptButtonProps: { label: 'Delete', severity: 'danger' },
+      accept: () => {
+        this.chatService.deleteGroupMessage(messageId).then(() => {
+          const m = this.groupMessages.find(x => x.messageId === messageId);
+          if (m) m.isDeleted = true;
+        }).catch(() => {});
+      }
+    });
   }
 
   showCreateGroupModal(): void {
@@ -937,11 +949,19 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
   }
 
   deleteMessage(messageId: number): void {
-    if (!confirm('Delete this message? It can only be deleted before the recipient sees it.')) return;
-    this.chatService.deleteDirectMessage(messageId).then(() => {
-      const m = this.messages.find(x => x.messageId === messageId);
-      if (m) m.isDeleted = true;
-    }).catch(() => {});
+    this.confirmationService.confirm({
+      message: 'Delete this message? It can only be deleted before the recipient sees it.',
+      header: 'Delete Confirmation',
+      icon: 'pi pi-exclamation-triangle',
+      rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+      acceptButtonProps: { label: 'Delete', severity: 'danger' },
+      accept: () => {
+        this.chatService.deleteDirectMessage(messageId).then(() => {
+          const m = this.messages.find(x => x.messageId === messageId);
+          if (m) m.isDeleted = true;
+        }).catch(() => {});
+      }
+    });
   }
 
   onSelectUserChat(): void {

@@ -8,10 +8,11 @@ import { catchError } from 'rxjs/operators';
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
 import { Fluid } from 'primeng/fluid';
-import { MessageService } from 'primeng/api';
+import { MessageService, ConfirmationService } from 'primeng/api';
 import { TooltipModule } from 'primeng/tooltip';
 import { TableModule } from 'primeng/table';
 import { DialogModule } from 'primeng/dialog';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { InputNumberModule } from 'primeng/inputnumber';
 
 import { EmpService } from '@/services/emp-service';
@@ -43,10 +44,12 @@ export interface FamilyMemberOption {
         TooltipModule,
         TableModule,
         DialogModule,
+        ConfirmDialogModule,
         InputNumberModule,
         EmployeeSearchComponent,
         FileReferencesFormComponent
     ],
+    providers: [ConfirmationService],
     templateUrl: './emp-nominee-info.html',
     styleUrl: './emp-nominee-info.scss'
 })
@@ -83,6 +86,7 @@ export class EmpNomineeInfo implements OnInit {
         private nomineeInfoService: NomineeInfoService,
         private commonCodeService: CommonCodeService,
         private messageService: MessageService,
+        private confirmationService: ConfirmationService,
         private route: ActivatedRoute,
         private router: Router
     ) {}
@@ -133,8 +137,18 @@ export class EmpNomineeInfo implements OnInit {
     }
 
     removeNominee(index: number): void {
-        this.nominees.removeAt(index);
-        this.nominees.controls.forEach((ctrl, i) => ctrl.get('ser')?.setValue(i + 1));
+        const nomineeName = this.nominees.at(index)?.get('nomineeName')?.value || 'this nominee';
+        this.confirmationService.confirm({
+            message: `Are you sure you want to remove ${nomineeName}?`,
+            header: 'Delete Confirmation',
+            icon: 'pi pi-exclamation-triangle',
+            rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+            acceptButtonProps: { label: 'Remove', severity: 'danger' },
+            accept: () => {
+                this.nominees.removeAt(index);
+                this.nominees.controls.forEach((ctrl, i) => ctrl.get('ser')?.setValue(i + 1));
+            }
+        });
     }
 
     openAddMemberModal(): void {
