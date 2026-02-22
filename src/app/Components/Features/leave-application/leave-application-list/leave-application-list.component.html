@@ -1,11 +1,51 @@
 <p-fluid>
   <p-toast></p-toast>
   <div class="card">
-    <div class="flex align-items-center justify-content-between mb-4">
-      <h2 class="m-0 text-2xl font-bold text-900">Leave Applications</h2>
+    <div class="flex align-items-center gap-3 mb-4">
+      <h2 class="m-0 text-2xl font-bold text-900 flex-grow-1">Leave Applications</h2>
       <p-button label="New Application" icon="pi pi-plus" [routerLink]="['/leave-application/apply']"></p-button>
     </div>
-    <p class="text-600 m-0 mb-3">View pending, approved, and declined leave applications. Approve or decline pending items.</p>
+   
+    <div class="mb-4">
+      <label class="font-medium block mb-2">Type of Leave Application</label>
+      <div class="flex flex-wrap gap-2">
+        <p-button type="button" [label]="'Action Required by Me'" [outlined]="typeFilter !== 'actionRequiredByMe'" (onClick)="setTypeFilter('actionRequiredByMe')" size="small"></p-button>
+        <p-button type="button" [label]="'My Application Status'" [outlined]="typeFilter !== 'myApplication'" (onClick)="setTypeFilter('myApplication')" size="small"></p-button>
+        <p-button type="button" [label]="'Apply for Other'" [outlined]="typeFilter !== 'applyForOther'" (onClick)="setTypeFilter('applyForOther')" size="small"></p-button>
+        <p-button type="button" [label]="'Action Taken by Me'" [outlined]="typeFilter !== 'actionTakenByMe'" (onClick)="setTypeFilter('actionTakenByMe')" size="small"></p-button>
+      </div>
+    </div>
+
+    <!-- Filter section (same structure as ex-members list filter) -->
+    <div class="filter-section mb-4">
+      <div class="filter-row">
+        <label class="filter-label">Search by ID:</label>
+        <div class="filter-inputs">
+          <input pInputText type="text" [(ngModel)]="filterRabId" placeholder="RAB ID" class="filter-input" />
+          <input pInputText type="text" [(ngModel)]="filterServiceId" placeholder="Service ID" class="filter-input" />
+        </div>
+      </div>
+      <div class="filter-row">
+        <label class="filter-label">Search by:</label>
+        <div class="filter-inputs">
+          <p-select [(ngModel)]="filterLeaveTypeId" placeholder="Leave Type" [options]="leaveTypeOptions" optionLabel="label" optionValue="value" class="filter-input filter-select" [showClear]="true"></p-select>
+        </div>
+      </div>
+      <div class="filter-row">
+        <label class="filter-label">Search by Leave Date Range:</label>
+        <div class="filter-inputs">
+          <p-datepicker [(ngModel)]="filterFromDate" placeholder="From" dateFormat="dd/mm/yy" class="filter-input filter-date"></p-datepicker>
+          <p-datepicker [(ngModel)]="filterToDate" placeholder="To" dateFormat="dd/mm/yy" class="filter-input filter-date"></p-datepicker>
+        </div>
+      </div>
+      <div class="filter-row filter-actions">
+        <span class="filter-label"></span>
+        <div class="filter-inputs">
+          <p-button label="Search" icon="pi pi-search" (onClick)="search()" [loading]="loading"></p-button>
+          <p-button label="Clear Filter" icon="pi pi-times" (onClick)="clearFilter()" severity="secondary"></p-button>
+        </div>
+      </div>
+    </div>
 
     <p-tabs [(value)]="tabIndex" (valueChange)="onTabChangeByValue($event)">
       <p-tablist>
@@ -19,11 +59,12 @@
           @if (loading) {
             <p class="flex align-items-center"><i class="pi pi-spin pi-spinner mr-2"></i>Loading...</p>
           } @else {
-            <p-table [value]="pendingList" dataKey="leaveApplicationId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines">
+            <p-table [value]="currentList" dataKey="leaveApplicationId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines">
               <ng-template pTemplate="header">
                 <tr>
-                  <th>ID</th>
-                  <th>Applicant ID</th>
+                  <th>RAB ID</th>
+                  <th>Service ID</th>
+                  <th>Applicant</th>
                   <th>Leave Type</th>
                   <th>From</th>
                   <th>To</th>
@@ -32,25 +73,29 @@
               </ng-template>
               <ng-template pTemplate="body" let-row>
                 <tr>
-                  <td>{{ row.leaveApplicationId }}</td>
-                  <td>{{ row.applicantEmployeeId }}</td>
-                  <td>{{ row.leaveTypeId }}</td>
+                  <td>{{ getApplicantRabId(row.applicantEmployeeId) }}</td>
+                  <td>{{ getApplicantServiceId(row.applicantEmployeeId) }}</td>
+                  <td>{{ getApplicantName(row.applicantEmployeeId) }}</td>
+                  <td>{{ getLeaveTypeName(row.leaveTypeId) }}</td>
                   <td>{{ formatDate(row.fromDate) }}</td>
                   <td>{{ formatDate(row.toDate) }}</td>
                   <td>
-                    @if (isPendingForMe(row)) {
-                      <p-button type="button" label="Approve" icon="pi pi-check" [text]="true" size="small" (onClick)="openRemarkDialog(row, 'approve')" class="mr-1"></p-button>
-                      <p-button type="button" label="Decline" icon="pi pi-times" [text]="true" size="small" severity="danger" (onClick)="openRemarkDialog(row, 'decline')"></p-button>
-                    } @else {
-                      <span class="text-500">-</span>
-                    }
+                    <p-button type="button" label="Preview" icon="pi pi-eye" [text]="true" size="small" (onClick)="openPreview(row)" class="mr-1"></p-button>
                   </td>
                 </tr>
               </ng-template>
               <ng-template pTemplate="emptymessage">
-                <tr><td colspan="6" class="text-center text-500">No pending applications.</td></tr>
+                <tr><td colspan="7" class="text-center text-500">No pending applications.</td></tr>
               </ng-template>
             </p-table>
+            @if (totalRecords > pageSize) {
+              <p-paginator
+                [first]="(pageNumber - 1) * pageSize"
+                [rows]="pageSize"
+                [totalRecords]="totalRecords"
+                [rowsPerPageOptions]="[5, 10, 20, 50]"
+                (onPageChange)="onPageChange($event)"></p-paginator>
+            }
           }
         </p-tabpanel>
         <p-tabpanel [value]="1">
@@ -58,33 +103,47 @@
           @if (loading) {
             <p class="flex align-items-center"><i class="pi pi-spin pi-spinner mr-2"></i>Loading...</p>
           } @else {
-            <p-table [value]="approvedList" dataKey="leaveApplicationId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines">
+            <p-table [value]="currentList" dataKey="leaveApplicationId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines">
               <ng-template pTemplate="header">
                 <tr>
-                  <th>ID</th>
-                  <th>Applicant ID</th>
+                  <th>RAB ID</th>
+                  <th>Service ID</th>
+                  <th>Applicant</th>
                   <th>Leave Type</th>
                   <th>From</th>
                   <th>To</th>
                   <th>Approved By</th>
                   <th>Approved Date</th>
+                  <th>Actions</th>
                 </tr>
               </ng-template>
               <ng-template pTemplate="body" let-row>
                 <tr>
-                  <td>{{ row.leaveApplicationId }}</td>
-                  <td>{{ row.applicantEmployeeId }}</td>
-                  <td>{{ row.leaveTypeId }}</td>
+                  <td>{{ getApplicantRabId(row.applicantEmployeeId) }}</td>
+                  <td>{{ getApplicantServiceId(row.applicantEmployeeId) }}</td>
+                  <td>{{ getApplicantName(row.applicantEmployeeId) }}</td>
+                  <td>{{ getLeaveTypeName(row.leaveTypeId) }}</td>
                   <td>{{ formatDate(row.fromDate) }}</td>
                   <td>{{ formatDate(row.toDate) }}</td>
-                  <td>{{ row.approvedByEmployeeId ?? '-' }}</td>
+                  <td>{{ getApplicantName(row.approvedByEmployeeId) }}</td>
                   <td>{{ formatDate(row.approvedDate) }}</td>
+                  <td>
+                    <p-button type="button" label="Preview" icon="pi pi-eye" [text]="true" size="small" (onClick)="openPreview(row)"></p-button>
+                  </td>
                 </tr>
               </ng-template>
               <ng-template pTemplate="emptymessage">
-                <tr><td colspan="8" class="text-center text-500">No approved applications.</td></tr>
+                <tr><td colspan="10" class="text-center text-500">No approved applications.</td></tr>
               </ng-template>
             </p-table>
+            @if (totalRecords > pageSize) {
+              <p-paginator
+                [first]="(pageNumber - 1) * pageSize"
+                [rows]="pageSize"
+                [totalRecords]="totalRecords"
+                [rowsPerPageOptions]="[5, 10, 20, 50]"
+                (onPageChange)="onPageChange($event)"></p-paginator>
+            }
           }
         </p-tabpanel>
         <p-tabpanel [value]="2">
@@ -92,37 +151,88 @@
           @if (loading) {
             <p class="flex align-items-center"><i class="pi pi-spin pi-spinner mr-2"></i>Loading...</p>
           } @else {
-            <p-table [value]="declinedList" dataKey="leaveApplicationId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines">
+            <p-table [value]="currentList" dataKey="leaveApplicationId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines">
               <ng-template pTemplate="header">
                 <tr>
-                  <th>ID</th>
-                  <th>Applicant ID</th>
+                  <th>RAB ID</th>
+                  <th>Service ID</th>
+                  <th>Applicant</th>
                   <th>Leave Type</th>
                   <th>From</th>
                   <th>To</th>
                   <th>Declined By</th>
                   <th>Remark</th>
+                  <th>Actions</th>
                 </tr>
               </ng-template>
               <ng-template pTemplate="body" let-row>
                 <tr>
-                  <td>{{ row.leaveApplicationId }}</td>
-                  <td>{{ row.applicantEmployeeId }}</td>
-                  <td>{{ row.leaveTypeId }}</td>
+                  <td>{{ getApplicantRabId(row.applicantEmployeeId) }}</td>
+                  <td>{{ getApplicantServiceId(row.applicantEmployeeId) }}</td>
+                  <td>{{ getApplicantName(row.applicantEmployeeId) }}</td>
+                  <td>{{ getLeaveTypeName(row.leaveTypeId) }}</td>
                   <td>{{ formatDate(row.fromDate) }}</td>
                   <td>{{ formatDate(row.toDate) }}</td>
-                  <td>{{ row.declinedByEmployeeId ?? '-' }}</td>
+                  <td>{{ getApplicantName(row.declinedByEmployeeId) }}</td>
                   <td>{{ row.remark ?? '-' }}</td>
+                  <td>
+                    <p-button type="button" label="Preview" icon="pi pi-eye" [text]="true" size="small" (onClick)="openPreview(row)"></p-button>
+                  </td>
                 </tr>
               </ng-template>
               <ng-template pTemplate="emptymessage">
-                <tr><td colspan="8" class="text-center text-500">No declined applications.</td></tr>
+                <tr><td colspan="10" class="text-center text-500">No declined applications.</td></tr>
               </ng-template>
             </p-table>
+            @if (totalRecords > pageSize) {
+              <p-paginator
+                [first]="(pageNumber - 1) * pageSize"
+                [rows]="pageSize"
+                [totalRecords]="totalRecords"
+                [rowsPerPageOptions]="[5, 10, 20, 50]"
+                (onPageChange)="onPageChange($event)"></p-paginator>
+            }
           }
         </p-tabpanel>
       </p-tabpanels>
     </p-tabs>
+
+    <p-dialog
+      header="Preview Leave Application"
+      [(visible)]="showPreviewModal"
+      [modal]="true"
+      [style]="{ width: '36rem' }"
+      (onHide)="closePreview()"
+      [draggable]="false"
+      [resizable]="false">
+      @if (previewRow) {
+        <div class="flex flex-col gap-3">
+          <div class="grid grid-cols-2 gap-2">
+            <div><span class="text-500 block text-sm">Applicant</span><span>{{ getApplicantName(previewRow.applicantEmployeeId) }}</span></div>
+            <div><span class="text-500 block text-sm">Leave Type</span><span>{{ getLeaveTypeName(previewRow.leaveTypeId) }}</span></div>
+            <div><span class="text-500 block text-sm">From</span><span>{{ formatDate(previewRow.fromDate) }}</span></div>
+            <div><span class="text-500 block text-sm">To</span><span>{{ formatDate(previewRow.toDate) }}</span></div>
+            <div><span class="text-500 block text-sm">Total Days</span><span>{{ getTotalDays(previewRow.fromDate, previewRow.toDate) }}</span></div>
+            <div><span class="text-500 block text-sm">Status</span><span>{{ statusLabel(previewRow) }}</span></div>
+            @if (previewRow.addressDuringLeave) {
+              <div class="col-span-2"><span class="text-500 block text-sm">Address During Leave</span><span>{{ previewRow.addressDuringLeave }}</span></div>
+            }
+            @if (previewRow && isPendingForMe(previewRow)) {
+              <div class="col-span-2"><span class="text-500 block text-sm">Remark (editable)</span><textarea pTextarea [(ngModel)]="previewRemarkText" rows="3" class="w-full"></textarea></div>
+            } @else if (previewRow && (previewRow.remarks || previewRow.remark)) {
+              <div class="col-span-2"><span class="text-500 block text-sm">Remarks</span><span>{{ previewRow.remark ?? previewRow.remarks ?? '-' }}</span></div>
+            }
+          </div>
+        </div>
+      }
+      <ng-template pTemplate="footer">
+        <p-button label="Close" [text]="true" (onClick)="closePreview()"></p-button>
+        @if (previewRow && isPendingForMe(previewRow)) {
+          <p-button label="Accept" icon="pi pi-check" (onClick)="approveFromPreview()"></p-button>
+          <p-button label="Reject" icon="pi pi-times" severity="danger" (onClick)="rejectFromPreview()"></p-button>
+        }
+      </ng-template>
+    </p-dialog>
 
     <p-dialog
       [header]="remarkAction === 'approve' ? 'Approve with remark' : 'Decline with remark'"

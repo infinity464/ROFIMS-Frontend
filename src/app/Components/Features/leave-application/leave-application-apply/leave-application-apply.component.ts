@@ -14,7 +14,6 @@ import { MessageService } from 'primeng/api';
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
-import { MultiSelectModule } from 'primeng/multiselect';
 import { DatePickerModule } from 'primeng/datepicker';
 import { CheckboxModule } from 'primeng/checkbox';
 import { TextareaModule } from 'primeng/textarea';
@@ -34,7 +33,6 @@ import { RouterModule } from '@angular/router';
         InputTextModule,
         ButtonModule,
         SelectModule,
-        MultiSelectModule,
         DatePickerModule,
         CheckboxModule,
         TextareaModule,
@@ -106,7 +104,6 @@ export class LeaveApplicationApplyComponent implements OnInit {
             relieverEmployeeId: [null as number | null],
             addressDuringLeave: [''],
             remarks: [''],
-            recommenderIds: [[] as number[]],
             finalApproverId: [null as number | null]
         });
     }
@@ -228,14 +225,6 @@ export class LeaveApplicationApplyComponent implements OnInit {
                 }
                 const from = d.fromDate ? new Date(d.fromDate) : null;
                 const to = d.toDate ? new Date(d.toDate) : null;
-                let recommenderIds: number[] = [];
-                try {
-                    const j = d.recommenderIdsJson ?? (d as any).RecommenderIdsJson;
-                    if (j && typeof j === 'string') {
-                        const arr = JSON.parse(j);
-                        recommenderIds = Array.isArray(arr) ? arr.map((r: any) => (typeof r === 'number' ? r : (r.employeeId ?? r.EmployeeId ?? 0))) : [];
-                    }
-                } catch {}
                 this.form.patchValue({
                     applicantEmployeeId: d.applicantEmployeeId ?? (d as any).ApplicantEmployeeId,
                     leaveTypeId: d.leaveTypeId ?? (d as any).LeaveTypeId,
@@ -244,7 +233,6 @@ export class LeaveApplicationApplyComponent implements OnInit {
                     relieverEmployeeId: d.relieverEmployeeId ?? (d as any).RelieverEmployeeId ?? null,
                     addressDuringLeave: d.addressDuringLeave ?? (d as any).AddressDuringLeave ?? '',
                     remarks: d.remarks ?? (d as any).Remarks ?? '',
-                    recommenderIds,
                     finalApproverId: d.finalApproverId ?? (d as any).FinalApproverId ?? null
                 });
                 this.applicantEmployeeId = d.applicantEmployeeId ?? (d as any).ApplicantEmployeeId;
@@ -319,6 +307,11 @@ export class LeaveApplicationApplyComponent implements OnInit {
 
     submitForApproval(): void {
         if (!this.buildAndValidate()) return;
+        const finalApproverId = this.form.get('finalApproverId')?.value;
+        if (!finalApproverId) {
+            this.messageService.add({ severity: 'warn', summary: 'Required', detail: 'Please select Final Approver before submitting.' });
+            return;
+        }
         const payload = this.buildPayload(1);
         this.isSaving = true;
         const doSubmit = (id: number) => {
@@ -408,8 +401,6 @@ export class LeaveApplicationApplyComponent implements OnInit {
         const applicantId = this.form.get('applicantEmployeeId')?.value ?? this.applicantEmployeeId;
         const user = this.sharedService.getCurrentUser?.() ?? '';
         const appliedBy = this.currentUserEmployeeId ?? applicantId ?? this.form.get('appliedByEmployeeId')?.value;
-        const recommenderIds = (this.form.get('recommenderIds')?.value as number[]) ?? [];
-        const recommenderIdsJson = JSON.stringify(recommenderIds);
         return {
             applicantEmployeeId: applicantId,
             appliedByEmployeeId: appliedBy ?? applicantId,
@@ -419,7 +410,6 @@ export class LeaveApplicationApplyComponent implements OnInit {
             relieverEmployeeId: this.form.get('relieverEmployeeId')?.value ?? null,
             addressDuringLeave: this.form.get('addressDuringLeave')?.value ?? '',
             remarks: this.form.get('remarks')?.value ?? '',
-            recommenderIdsJson,
             finalApproverId: this.form.get('finalApproverId')?.value ?? null,
             leaveApplicationStatusId: statusId,
             createdBy: user,

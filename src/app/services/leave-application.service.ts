@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '@/Core/Environments/environment';
+import { PagedResponse } from '@/Core/Models/Pagination';
 
 /** Leave application (system generated leave). Status: 1=Draft, 2=PendingApproval, 3=Approved, 4=Declined. */
 export interface LeaveApplicationModel {
@@ -15,10 +16,8 @@ export interface LeaveApplicationModel {
     relieverEmployeeId?: number | null;
     addressDuringLeave?: string | null;
     remarks?: string | null;
-    recommenderIdsJson?: string | null;
     finalApproverId?: number | null;
     leaveApplicationStatusId: number;
-    currentApprovalStep?: number | null;
     approvedByEmployeeId?: number | null;
     approvedDate?: string | null;
     declinedByEmployeeId?: number | null;
@@ -28,6 +27,15 @@ export interface LeaveApplicationModel {
     createdDate?: string;
     lastUpdatedBy?: string;
     lastupdate?: string;
+}
+
+/** Filter params for GetByStatusForUserPaginated (server-side). */
+export interface LeaveApplicationFilterParams {
+    rabId?: string;
+    serviceId?: string;
+    leaveTypeId?: number;
+    fromDate?: string; // yyyy-MM-dd
+    toDate?: string;
 }
 
 export interface ResultViewModel {
@@ -76,6 +84,40 @@ export class LeaveApplicationService {
         );
     }
 
+    /** Get applications by status and type with server-side pagination. Optional filter. */
+    getByStatusForUserPaginated(
+        leaveApplicationStatusId: number | null,
+        currentUserEmployeeId: number,
+        typeFilter: string,
+        pageNo: number,
+        rowPerPage: number,
+        filter?: LeaveApplicationFilterParams
+    ): Observable<PagedResponse<LeaveApplicationModel>> {
+        const params: Record<string, string> = {
+            currentUserEmployeeId: String(currentUserEmployeeId),
+            typeFilter,
+            page_no: String(pageNo),
+            row_per_page: String(rowPerPage)
+        };
+        if (leaveApplicationStatusId != null) params['leaveApplicationStatusId'] = String(leaveApplicationStatusId);
+        if (filter) {
+            if (filter.rabId?.trim()) params['rabId'] = filter.rabId.trim();
+            if (filter.serviceId?.trim()) params['serviceId'] = filter.serviceId.trim();
+            if (filter.leaveTypeId != null && filter.leaveTypeId > 0) params['leaveTypeId'] = String(filter.leaveTypeId);
+            if (filter.fromDate) params['fromDate'] = filter.fromDate;
+            if (filter.toDate) params['toDate'] = filter.toDate;
+        }
+        return this.http.get<{ datalist: unknown; pages: { Rows: number; TotalPages: number } }>(`${this.apiUrl}/GetByStatusForUserPaginated`, { params }).pipe(
+            map((res: any) => ({
+                datalist: (Array.isArray(res?.datalist) ? res.datalist : []).map((r: any) => this.normalizeRow(r)),
+                pages: {
+                    rows: res?.pages?.Rows ?? 0,
+                    totalPages: res?.pages?.TotalPages ?? 0
+                }
+            }))
+        );
+    }
+
     getByApplicant(applicantEmployeeId: number): Observable<LeaveApplicationModel[]> {
         return this.http.get<LeaveApplicationModel[]>(`${this.apiUrl}/GetByApplicant/${applicantEmployeeId}`).pipe(
             map((res: unknown) => (Array.isArray(res) ? res.map((r: any) => this.normalizeRow(r)) : []))
@@ -94,10 +136,8 @@ export class LeaveApplicationService {
             relieverEmployeeId: r.relieverEmployeeId ?? r.RelieverEmployeeId ?? null,
             addressDuringLeave: r.addressDuringLeave ?? r.AddressDuringLeave ?? null,
             remarks: r.remarks ?? r.Remarks ?? null,
-            recommenderIdsJson: r.recommenderIdsJson ?? r.RecommenderIdsJson ?? null,
             finalApproverId: r.finalApproverId ?? r.FinalApproverId ?? null,
             leaveApplicationStatusId: r.leaveApplicationStatusId ?? r.LeaveApplicationStatusId ?? 0,
-            currentApprovalStep: r.currentApprovalStep ?? r.CurrentApprovalStep ?? null,
             approvedByEmployeeId: r.approvedByEmployeeId ?? r.ApprovedByEmployeeId ?? null,
             approvedDate: r.approvedDate ?? r.ApprovedDate ?? null,
             declinedByEmployeeId: r.declinedByEmployeeId ?? r.DeclinedByEmployeeId ?? null,

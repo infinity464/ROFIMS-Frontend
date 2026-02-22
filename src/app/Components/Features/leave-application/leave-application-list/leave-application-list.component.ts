@@ -4,20 +4,29 @@ import { HttpClient } from '@angular/common/http';
 import { Router, ActivatedRoute } from '@angular/router';
 import { environment } from '@/Core/Environments/environment';
 import { SharedService } from '@/shared/services/shared-service';
-import { LeaveApplicationService, LeaveApplicationModel } from '@/services/leave-application.service';
+import { LeaveApplicationService, LeaveApplicationModel, LeaveApplicationFilterParams } from '@/services/leave-application.service';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
+import { EmpService } from '@/services/emp-service';
+import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { MessageService } from 'primeng/api';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
+import { InputTextModule } from 'primeng/inputtext';
+import { SelectModule } from 'primeng/select';
+import { DatePickerModule } from 'primeng/datepicker';
 import { DialogModule } from 'primeng/dialog';
 import { TextareaModule } from 'primeng/textarea';
 import { FormsModule } from '@angular/forms';
 import { ToastModule } from 'primeng/toast';
 import { FluidModule } from 'primeng/fluid';
 import { TabsModule } from 'primeng/tabs';
+import { PaginatorModule } from 'primeng/paginator';
+import type { PaginatorState } from 'primeng/types/paginator';
 import { RouterModule } from '@angular/router';
 
 export type LeaveApplicationSection = 'pending' | 'approved' | 'declined';
+
+export type LeaveApplicationTypeFilter = 'myApplication' | 'applyForOther' | 'actionTakenByMe' | 'actionRequiredByMe';
 
 @Component({
     selector: 'app-leave-application-list',
@@ -27,11 +36,15 @@ export type LeaveApplicationSection = 'pending' | 'approved' | 'declined';
         FormsModule,
         TableModule,
         ButtonModule,
+        InputTextModule,
+        SelectModule,
+        DatePickerModule,
         DialogModule,
         TextareaModule,
         ToastModule,
         FluidModule,
         TabsModule,
+        PaginatorModule,
         RouterModule
     ],
     providers: [MessageService],
@@ -42,10 +55,12 @@ export class LeaveApplicationListComponent implements OnInit {
     @Input() sectionInput: LeaveApplicationSection | null = null;
     section: LeaveApplicationSection = 'pending';
     tabIndex = 0;
+    typeFilter: LeaveApplicationTypeFilter = 'actionRequiredByMe';
 
-    pendingList: LeaveApplicationModel[] = [];
-    approvedList: LeaveApplicationModel[] = [];
-    declinedList: LeaveApplicationModel[] = [];
+    currentList: LeaveApplicationModel[] = [];
+    pageNumber = 1;
+    pageSize = 10;
+    totalRecords = 0;
     loading = false;
     currentUserEmployeeId = 0;
 
@@ -53,6 +68,22 @@ export class LeaveApplicationListComponent implements OnInit {
     remarkAction: 'approve' | 'decline' | null = null;
     remarkText = '';
     selectedRow: LeaveApplicationModel | null = null;
+
+    showPreviewModal = false;
+    previewRow: LeaveApplicationModel | null = null;
+    previewRemarkText = '';
+
+    employeeNameMap: Record<number, string> = {};
+    employeeRabIdMap: Record<number, string> = {};
+    employeeServiceIdMap: Record<number, string> = {};
+    leaveTypeNameMap: Record<number, string> = {};
+    leaveTypeOptions: { label: string; value: number }[] = [];
+
+    filterRabId = '';
+    filterServiceId = '';
+    filterLeaveTypeId: number | null = null;
+    filterFromDate: Date | null = null;
+    filterToDate: Date | null = null;
 
     private api = `${environment.apis.core}/LeaveApplication`;
 
@@ -68,12 +99,16 @@ export class LeaveApplicationListComponent implements OnInit {
         private sharedService: SharedService,
         private leaveAppService: LeaveApplicationService,
         private identityMappingService: IdentityUserMappingService,
+        private empService: EmpService,
+        private masterBasicSetup: MasterBasicSetupService,
         private messageService: MessageService,
         private router: Router,
         private route: ActivatedRoute
     ) {}
 
     ngOnInit(): void {
+        this.loadEmployeeNames();
+        this.loadLeaveTypeNames();
         const userId = this.sharedService.getCurrentUserId?.();
         this.route.queryParams.subscribe((params) => {
             this.applySectionFromParams(params);
@@ -89,15 +124,173 @@ export class LeaveApplicationListComponent implements OnInit {
         }
     }
 
+    loadEmployeeNames(): void {
+        this.http.get<any[]>(`${environment.apis.core}/EmployeeInfo/GetAll`).subscribe({
+            next: (list) => {
+                const arr = Array.isArray(list) ? list : [];
+                this.employeeNameMap = {};
+                this.employeeRabIdMap = {};
+                this.employeeServiceIdMap = {};
+                arr.forEach((e: any) => {
+                    const id = e.employeeID ?? e.EmployeeID;
+                    const name = e.fullNameEN ?? e.FullNameEN ?? e.rabid ?? e.Rabid ?? String(id);
+                    const rabId = e.rabid ?? e.rabId ?? e.rabID ?? e.RABID ?? null;
+                    const serviceId = e.serviceId ?? e.ServiceId ?? null;
+                    if (id != null) {
+                        this.employeeNameMap[id] = name;
+                        if (rabId != null && rabId !== '') this.employeeRabIdMap[id] = String(rabId);
+                        if (serviceId != null && serviceId !== '') this.employeeServiceIdMap[id] = String(serviceId);
+                    }
+                });
+            }
+        });
+    }
+
+    loadLeaveTypeNames(): void {
+        this.masterBasicSetup.getAllByType('LeaveType').subscribe({
+            next: (list) => {
+                const arr = Array.isArray(list) ? list : [];
+                this.leaveTypeNameMap = {};
+                this.leaveTypeOptions = [];
+                arr.forEach((c: any) => {
+                    const id = c.codeId ?? c.CodeId;
+                    const name = c.codeValueEN ?? c.CodeValueEN ?? String(id);
+                    if (id != null) {
+                        this.leaveTypeNameMap[id] = name;
+                        this.leaveTypeOptions.push({ label: name, value: id });
+                    }
+                });
+            }
+        });
+    }
+
+    buildFilterParams(): LeaveApplicationFilterParams | undefined {
+        const hasRab = (this.filterRabId || '').trim();
+        const hasSvc = (this.filterServiceId || '').trim();
+        const hasLt = this.filterLeaveTypeId != null && this.filterLeaveTypeId > 0;
+        const hasFrom = !!this.filterFromDate;
+        const hasTo = !!this.filterToDate;
+        if (!hasRab && !hasSvc && !hasLt && !hasFrom && !hasTo) return undefined;
+        const toDateStr = (d: Date | null): string | undefined => {
+            if (!d) return undefined;
+            const x = new Date(d);
+            return isNaN(x.getTime()) ? undefined : x.toISOString().slice(0, 10);
+        };
+        return {
+            rabId: hasRab ? this.filterRabId.trim() : undefined,
+            serviceId: hasSvc ? this.filterServiceId.trim() : undefined,
+            leaveTypeId: hasLt ? this.filterLeaveTypeId! : undefined,
+            fromDate: toDateStr(this.filterFromDate),
+            toDate: toDateStr(this.filterToDate)
+        };
+    }
+
+    search(): void {
+        this.pageNumber = 1;
+        this.loadSection();
+    }
+
+    clearFilter(): void {
+        this.filterRabId = '';
+        this.filterServiceId = '';
+        this.filterLeaveTypeId = null;
+        this.filterFromDate = null;
+        this.filterToDate = null;
+        this.pageNumber = 1;
+        this.loadSection();
+    }
+
+    getApplicantName(empId: number | null | undefined): string {
+        if (empId == null) return '-';
+        return this.employeeNameMap[empId] ?? String(empId);
+    }
+
+    getApplicantRabId(empId: number | null | undefined): string {
+        if (empId == null) return '-';
+        return this.employeeRabIdMap[empId] ?? '-';
+    }
+
+    getApplicantServiceId(empId: number | null | undefined): string {
+        if (empId == null) return '-';
+        return this.employeeServiceIdMap[empId] ?? '-';
+    }
+
+    getLeaveTypeName(leaveTypeId: number | null | undefined): string {
+        if (leaveTypeId == null) return '-';
+        return this.leaveTypeNameMap[leaveTypeId] ?? String(leaveTypeId);
+    }
+
+    openPreview(row: LeaveApplicationModel): void {
+        this.previewRow = row;
+        this.previewRemarkText = row.remarks ?? row.remark ?? '';
+        this.showPreviewModal = true;
+    }
+
+    closePreview(): void {
+        this.showPreviewModal = false;
+        this.previewRow = null;
+        this.previewRemarkText = '';
+    }
+
+    approveFromPreview(): void {
+        if (!this.previewRow) return;
+        const row = this.previewRow;
+        this.leaveAppService.approve(row.leaveApplicationId, this.currentUserEmployeeId, this.previewRemarkText).subscribe({
+            next: (res) => {
+                const code = res.statusCode ?? res.StatusCode ?? 0;
+                const msg = res.description ?? res.Description ?? '';
+                if (code === 200) {
+                    this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Action completed.' });
+                    this.closePreview();
+                    this.loadSection();
+                } else {
+                    this.messageService.add({ severity: 'warn', summary: 'Notice', detail: msg || 'Action failed.' });
+                }
+            },
+            error: (err) => {
+                const detail = err?.error?.description ?? err?.error?.Description ?? err?.message ?? 'Request failed.';
+                this.messageService.add({ severity: 'error', summary: 'Error', detail });
+            }
+        });
+    }
+
+    rejectFromPreview(): void {
+        if (!this.previewRow) return;
+        const row = this.previewRow;
+        this.leaveAppService.decline(row.leaveApplicationId, this.currentUserEmployeeId, this.previewRemarkText).subscribe({
+            next: (res) => {
+                const code = res.statusCode ?? res.StatusCode ?? 0;
+                const msg = res.description ?? res.Description ?? '';
+                if (code === 200) {
+                    this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Action completed.' });
+                    this.closePreview();
+                    this.loadSection();
+                } else {
+                    this.messageService.add({ severity: 'warn', summary: 'Notice', detail: msg || 'Action failed.' });
+                }
+            },
+            error: (err) => {
+                const detail = err?.error?.description ?? err?.error?.Description ?? err?.message ?? 'Request failed.';
+                this.messageService.add({ severity: 'error', summary: 'Error', detail });
+            }
+        });
+    }
+
     private applySectionFromParams(params: Record<string, string | string[] | undefined>): void {
         const s = params['section'] as LeaveApplicationSection | undefined;
         if (s && ['pending', 'approved', 'declined'].includes(s)) this.section = s;
         else if (this.sectionInput) this.section = this.sectionInput;
         this.tabIndex = ['pending', 'approved', 'declined'].indexOf(this.section);
         if (this.tabIndex < 0) this.tabIndex = 0;
+        const t = params['type'] as LeaveApplicationTypeFilter | undefined;
+        if (t && ['myApplication', 'applyForOther', 'actionTakenByMe', 'actionRequiredByMe'].includes(t)) this.typeFilter = t;
     }
 
     loadSection(): void {
+        if (this.currentUserEmployeeId <= 0) {
+            this.loading = false;
+            return;
+        }
         this.loading = true;
         const onError = () => {
             this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load list.' });
@@ -105,17 +298,16 @@ export class LeaveApplicationListComponent implements OnInit {
         };
         const statusMap = { pending: 2, approved: 3, declined: 4 } as const;
         const statusId = statusMap[this.section];
-        this.leaveAppService.getByStatusForUser(statusId, this.currentUserEmployeeId).subscribe({
-            next: (list) => {
-                if (this.section === 'pending') this.pendingList = list;
-                else if (this.section === 'approved') this.approvedList = list;
-                else this.declinedList = list;
+        const filter = this.buildFilterParams();
+        this.leaveAppService.getByStatusForUserPaginated(statusId, this.currentUserEmployeeId, this.typeFilter, this.pageNumber, this.pageSize, filter).subscribe({
+            next: (res) => {
+                this.currentList = res.datalist ?? [];
+                this.totalRecords = res.pages?.rows ?? 0;
                 this.loading = false;
             },
             error: () => {
-                if (this.section === 'pending') this.pendingList = [];
-                else if (this.section === 'approved') this.approvedList = [];
-                else this.declinedList = [];
+                this.currentList = [];
+                this.totalRecords = 0;
                 onError();
             }
         });
@@ -135,19 +327,41 @@ export class LeaveApplicationListComponent implements OnInit {
         }
     }
 
+    getTotalDays(fromDate: string | null | undefined, toDate: string | null | undefined): string {
+        if (!fromDate || !toDate) return '-';
+        try {
+            const from = new Date(fromDate);
+            const to = new Date(toDate);
+            if (isNaN(from.getTime()) || isNaN(to.getTime())) return '-';
+            const diffMs = to.getTime() - from.getTime();
+            const days = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
+            return String(days);
+        } catch {
+            return '-';
+        }
+    }
+
     onTabChangeByValue(value: number | string | undefined): void {
         const idx = typeof value === 'number' ? value : typeof value === 'string' ? parseInt(value, 10) : 0;
         const tabIdx = !isNaN(idx) && idx >= 0 ? idx : 0;
         this.tabIndex = tabIdx;
         const s = ['pending', 'approved', 'declined'][tabIdx] as LeaveApplicationSection;
         this.section = s;
+        this.pageNumber = 1;
         this.router.navigate([], { queryParams: { section: s }, queryParamsHandling: 'merge' });
         this.loadSection();
     }
 
     goToSection(s: LeaveApplicationSection): void {
         this.section = s;
+        this.pageNumber = 1;
         this.router.navigate([], { queryParams: { section: s }, queryParamsHandling: 'merge' });
+        this.loadSection();
+    }
+
+    onPageChange(event: PaginatorState): void {
+        this.pageNumber = (event.page ?? 0) + 1;
+        this.pageSize = event.rows ?? 10;
         this.loadSection();
     }
 
@@ -188,5 +402,11 @@ export class LeaveApplicationListComponent implements OnInit {
     /** Only the final approver can approve or decline. */
     isPendingForMe(row: LeaveApplicationModel): boolean {
         return row.leaveApplicationStatusId === 2 && row.finalApproverId === this.currentUserEmployeeId;
+    }
+
+    setTypeFilter(filter: LeaveApplicationTypeFilter): void {
+        this.typeFilter = filter;
+        this.pageNumber = 1;
+        this.router.navigate([], { queryParams: { type: filter }, queryParamsHandling: 'merge' });
     }
 }
