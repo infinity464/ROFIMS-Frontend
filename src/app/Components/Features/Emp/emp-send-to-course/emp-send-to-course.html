@@ -90,6 +90,39 @@
                             <input pInputText [(ngModel)]="courseNo" class="w-full" placeholder="e.g. CL-2025-001" />
                         </div>
                     </div>
+                    <!-- Filter section (same structure as ex-members list filter) -->
+                    <div class="filter-section mb-4">
+                        <div class="filter-row">
+                            <label class="filter-label">Search by ID:</label>
+                            <div class="filter-inputs">
+                                <input pInputText type="text" [(ngModel)]="filterRabId" placeholder="RAB ID" class="filter-input" />
+                                <input pInputText type="text" [(ngModel)]="filterServiceId" placeholder="Service ID" class="filter-input" />
+                            </div>
+                        </div>
+                        <div class="filter-row">
+                            <label class="filter-label">Search by:</label>
+                            <div class="filter-inputs">
+                                <p-select [(ngModel)]="filterMotherOrg" placeholder="Mother Organization" [options]="motherOrgFilterOptions" optionLabel="label" optionValue="value" class="filter-input filter-select" [showClear]="true"></p-select>
+                                <p-select [(ngModel)]="filterRank" placeholder="Rank" [options]="rankFilterOptions" optionLabel="label" optionValue="value" class="filter-input filter-select" [showClear]="true"></p-select>
+                                <p-select [(ngModel)]="filterCorps" placeholder="Corps" [options]="corpsFilterOptions" optionLabel="label" optionValue="value" class="filter-input filter-select" [showClear]="true"></p-select>
+                                <p-select [(ngModel)]="filterTrade" placeholder="Trade" [options]="tradeFilterOptions" optionLabel="label" optionValue="value" class="filter-input filter-select" [showClear]="true"></p-select>
+                            </div>
+                        </div>
+                        <div class="filter-row">
+                            <label class="filter-label">Search by Date of Joining:</label>
+                            <div class="filter-inputs">
+                                <p-datepicker [(ngModel)]="filterDateFrom" placeholder="From" dateFormat="dd/mm/yy" class="filter-input filter-date"></p-datepicker>
+                                <p-datepicker [(ngModel)]="filterDateTo" placeholder="To" dateFormat="dd/mm/yy" class="filter-input filter-date"></p-datepicker>
+                            </div>
+                        </div>
+                        <div class="filter-row filter-actions">
+                            <span class="filter-label"></span>
+                            <div class="filter-inputs">
+                                <p-button label="Search" icon="pi pi-search" (onClick)="applyFilters()" [loading]="isLoadingEmployees" [disabled]="!selectedCourseId || isLoadingEmployees"></p-button>
+                                <p-button label="Clear Filter" icon="pi pi-times" (onClick)="clearFilters()" severity="secondary" [disabled]="!selectedCourseId"></p-button>
+                            </div>
+                        </div>
+                    </div>
                     <p-table
                         [value]="employeeList"
                         [loading]="isLoadingEmployees"
@@ -102,7 +135,7 @@
                         <ng-template pTemplate="header">
                             <tr>
                                 <th style="width: 3rem"><p-tableHeaderCheckbox></p-tableHeaderCheckbox></th>
-                                <th>Employee ID</th>
+                           
                                 <th>Name</th>
                                 <th>RAB ID</th>
                                 <th>Service ID</th>
@@ -114,7 +147,7 @@
                         <ng-template pTemplate="body" let-row>
                             <tr>
                                 <td><p-tableCheckbox [value]="row"></p-tableCheckbox></td>
-                                <td>{{ getVal(row, 'employeeID', 'EmployeeID') }}</td>
+                               
                                 <td>{{ getVal(row, 'fullNameEN', 'FullNameEN') }}</td>
                                 <td>{{ getVal(row, 'rabid', 'rabId', 'rabID', 'RABID') }}</td>
                                 <td>{{ getVal(row, 'serviceId', 'ServiceId') }}</td>

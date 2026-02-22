@@ -1,12 +1,11 @@
 <p-fluid>
   <p-toast></p-toast>
   <div class="card">
-    <div class="flex align-items-center justify-content-between mb-4">
-      <h2 class="m-0 text-2xl font-bold text-900">Leave Applications</h2>
+    <div class="flex align-items-center gap-3 mb-4">
+      <h2 class="m-0 text-2xl font-bold text-900 flex-grow-1">Leave Applications</h2>
       <p-button label="New Application" icon="pi pi-plus" [routerLink]="['/leave-application/apply']"></p-button>
     </div>
-    <p class="text-600 m-0 mb-3">View pending, approved, and declined leave applications. Approve or decline pending items.</p>
-
+   
     <div class="mb-4">
       <label class="font-medium block mb-2">Type of Leave Application</label>
       <div class="flex flex-wrap gap-2">
@@ -14,6 +13,37 @@
         <p-button type="button" [label]="'My Application Status'" [outlined]="typeFilter !== 'myApplication'" (onClick)="setTypeFilter('myApplication')" size="small"></p-button>
         <p-button type="button" [label]="'Apply for Other'" [outlined]="typeFilter !== 'applyForOther'" (onClick)="setTypeFilter('applyForOther')" size="small"></p-button>
         <p-button type="button" [label]="'Action Taken by Me'" [outlined]="typeFilter !== 'actionTakenByMe'" (onClick)="setTypeFilter('actionTakenByMe')" size="small"></p-button>
+      </div>
+    </div>
+
+    <!-- Filter section (same structure as ex-members list filter) -->
+    <div class="filter-section mb-4">
+      <div class="filter-row">
+        <label class="filter-label">Search by ID:</label>
+        <div class="filter-inputs">
+          <input pInputText type="text" [(ngModel)]="filterRabId" placeholder="RAB ID" class="filter-input" />
+          <input pInputText type="text" [(ngModel)]="filterServiceId" placeholder="Service ID" class="filter-input" />
+        </div>
+      </div>
+      <div class="filter-row">
+        <label class="filter-label">Search by:</label>
+        <div class="filter-inputs">
+          <p-select [(ngModel)]="filterLeaveTypeId" placeholder="Leave Type" [options]="leaveTypeOptions" optionLabel="label" optionValue="value" class="filter-input filter-select" [showClear]="true"></p-select>
+        </div>
+      </div>
+      <div class="filter-row">
+        <label class="filter-label">Search by Leave Date Range:</label>
+        <div class="filter-inputs">
+          <p-datepicker [(ngModel)]="filterFromDate" placeholder="From" dateFormat="dd/mm/yy" class="filter-input filter-date"></p-datepicker>
+          <p-datepicker [(ngModel)]="filterToDate" placeholder="To" dateFormat="dd/mm/yy" class="filter-input filter-date"></p-datepicker>
+        </div>
+      </div>
+      <div class="filter-row filter-actions">
+        <span class="filter-label"></span>
+        <div class="filter-inputs">
+          <p-button label="Search" icon="pi pi-search" (onClick)="search()" [loading]="loading"></p-button>
+          <p-button label="Clear Filter" icon="pi pi-times" (onClick)="clearFilter()" severity="secondary"></p-button>
+        </div>
       </div>
     </div>
 
@@ -32,7 +62,8 @@
             <p-table [value]="currentList" dataKey="leaveApplicationId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines">
               <ng-template pTemplate="header">
                 <tr>
-                  <th>ID</th>
+                  <th>RAB ID</th>
+                  <th>Service ID</th>
                   <th>Applicant</th>
                   <th>Leave Type</th>
                   <th>From</th>
@@ -42,7 +73,8 @@
               </ng-template>
               <ng-template pTemplate="body" let-row>
                 <tr>
-                  <td>{{ row.leaveApplicationId }}</td>
+                  <td>{{ getApplicantRabId(row.applicantEmployeeId) }}</td>
+                  <td>{{ getApplicantServiceId(row.applicantEmployeeId) }}</td>
                   <td>{{ getApplicantName(row.applicantEmployeeId) }}</td>
                   <td>{{ getLeaveTypeName(row.leaveTypeId) }}</td>
                   <td>{{ formatDate(row.fromDate) }}</td>
@@ -53,7 +85,7 @@
                 </tr>
               </ng-template>
               <ng-template pTemplate="emptymessage">
-                <tr><td colspan="6" class="text-center text-500">No pending applications.</td></tr>
+                <tr><td colspan="7" class="text-center text-500">No pending applications.</td></tr>
               </ng-template>
             </p-table>
             @if (totalRecords > pageSize) {
@@ -74,7 +106,8 @@
             <p-table [value]="currentList" dataKey="leaveApplicationId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines">
               <ng-template pTemplate="header">
                 <tr>
-                  <th>ID</th>
+                  <th>RAB ID</th>
+                  <th>Service ID</th>
                   <th>Applicant</th>
                   <th>Leave Type</th>
                   <th>From</th>
@@ -86,7 +119,8 @@
               </ng-template>
               <ng-template pTemplate="body" let-row>
                 <tr>
-                  <td>{{ row.leaveApplicationId }}</td>
+                  <td>{{ getApplicantRabId(row.applicantEmployeeId) }}</td>
+                  <td>{{ getApplicantServiceId(row.applicantEmployeeId) }}</td>
                   <td>{{ getApplicantName(row.applicantEmployeeId) }}</td>
                   <td>{{ getLeaveTypeName(row.leaveTypeId) }}</td>
                   <td>{{ formatDate(row.fromDate) }}</td>
@@ -99,7 +133,7 @@
                 </tr>
               </ng-template>
               <ng-template pTemplate="emptymessage">
-                <tr><td colspan="9" class="text-center text-500">No approved applications.</td></tr>
+                <tr><td colspan="10" class="text-center text-500">No approved applications.</td></tr>
               </ng-template>
             </p-table>
             @if (totalRecords > pageSize) {
@@ -120,7 +154,8 @@
             <p-table [value]="currentList" dataKey="leaveApplicationId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines">
               <ng-template pTemplate="header">
                 <tr>
-                  <th>ID</th>
+                  <th>RAB ID</th>
+                  <th>Service ID</th>
                   <th>Applicant</th>
                   <th>Leave Type</th>
                   <th>From</th>
@@ -132,7 +167,8 @@
               </ng-template>
               <ng-template pTemplate="body" let-row>
                 <tr>
-                  <td>{{ row.leaveApplicationId }}</td>
+                  <td>{{ getApplicantRabId(row.applicantEmployeeId) }}</td>
+                  <td>{{ getApplicantServiceId(row.applicantEmployeeId) }}</td>
                   <td>{{ getApplicantName(row.applicantEmployeeId) }}</td>
                   <td>{{ getLeaveTypeName(row.leaveTypeId) }}</td>
                   <td>{{ formatDate(row.fromDate) }}</td>
@@ -145,7 +181,7 @@
                 </tr>
               </ng-template>
               <ng-template pTemplate="emptymessage">
-                <tr><td colspan="9" class="text-center text-500">No declined applications.</td></tr>
+                <tr><td colspan="10" class="text-center text-500">No declined applications.</td></tr>
               </ng-template>
             </p-table>
             @if (totalRecords > pageSize) {

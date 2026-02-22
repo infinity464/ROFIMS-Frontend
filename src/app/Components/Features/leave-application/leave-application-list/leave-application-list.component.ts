@@ -4,13 +4,16 @@ import { HttpClient } from '@angular/common/http';
 import { Router, ActivatedRoute } from '@angular/router';
 import { environment } from '@/Core/Environments/environment';
 import { SharedService } from '@/shared/services/shared-service';
-import { LeaveApplicationService, LeaveApplicationModel } from '@/services/leave-application.service';
+import { LeaveApplicationService, LeaveApplicationModel, LeaveApplicationFilterParams } from '@/services/leave-application.service';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
 import { EmpService } from '@/services/emp-service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { MessageService } from 'primeng/api';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
+import { InputTextModule } from 'primeng/inputtext';
+import { SelectModule } from 'primeng/select';
+import { DatePickerModule } from 'primeng/datepicker';
 import { DialogModule } from 'primeng/dialog';
 import { TextareaModule } from 'primeng/textarea';
 import { FormsModule } from '@angular/forms';
@@ -33,6 +36,9 @@ export type LeaveApplicationTypeFilter = 'myApplication' | 'applyForOther' | 'ac
         FormsModule,
         TableModule,
         ButtonModule,
+        InputTextModule,
+        SelectModule,
+        DatePickerModule,
         DialogModule,
         TextareaModule,
         ToastModule,
@@ -68,7 +74,16 @@ export class LeaveApplicationListComponent implements OnInit {
     previewRemarkText = '';
 
     employeeNameMap: Record<number, string> = {};
+    employeeRabIdMap: Record<number, string> = {};
+    employeeServiceIdMap: Record<number, string> = {};
     leaveTypeNameMap: Record<number, string> = {};
+    leaveTypeOptions: { label: string; value: number }[] = [];
+
+    filterRabId = '';
+    filterServiceId = '';
+    filterLeaveTypeId: number | null = null;
+    filterFromDate: Date | null = null;
+    filterToDate: Date | null = null;
 
     private api = `${environment.apis.core}/LeaveApplication`;
 
@@ -114,10 +129,18 @@ export class LeaveApplicationListComponent implements OnInit {
             next: (list) => {
                 const arr = Array.isArray(list) ? list : [];
                 this.employeeNameMap = {};
+                this.employeeRabIdMap = {};
+                this.employeeServiceIdMap = {};
                 arr.forEach((e: any) => {
                     const id = e.employeeID ?? e.EmployeeID;
                     const name = e.fullNameEN ?? e.FullNameEN ?? e.rabid ?? e.Rabid ?? String(id);
-                    if (id != null) this.employeeNameMap[id] = name;
+                    const rabId = e.rabid ?? e.rabId ?? e.rabID ?? e.RABID ?? null;
+                    const serviceId = e.serviceId ?? e.ServiceId ?? null;
+                    if (id != null) {
+                        this.employeeNameMap[id] = name;
+                        if (rabId != null && rabId !== '') this.employeeRabIdMap[id] = String(rabId);
+                        if (serviceId != null && serviceId !== '') this.employeeServiceIdMap[id] = String(serviceId);
+                    }
                 });
             }
         });
@@ -128,18 +151,68 @@ export class LeaveApplicationListComponent implements OnInit {
             next: (list) => {
                 const arr = Array.isArray(list) ? list : [];
                 this.leaveTypeNameMap = {};
+                this.leaveTypeOptions = [];
                 arr.forEach((c: any) => {
                     const id = c.codeId ?? c.CodeId;
                     const name = c.codeValueEN ?? c.CodeValueEN ?? String(id);
-                    if (id != null) this.leaveTypeNameMap[id] = name;
+                    if (id != null) {
+                        this.leaveTypeNameMap[id] = name;
+                        this.leaveTypeOptions.push({ label: name, value: id });
+                    }
                 });
             }
         });
     }
 
+    buildFilterParams(): LeaveApplicationFilterParams | undefined {
+        const hasRab = (this.filterRabId || '').trim();
+        const hasSvc = (this.filterServiceId || '').trim();
+        const hasLt = this.filterLeaveTypeId != null && this.filterLeaveTypeId > 0;
+        const hasFrom = !!this.filterFromDate;
+        const hasTo = !!this.filterToDate;
+        if (!hasRab && !hasSvc && !hasLt && !hasFrom && !hasTo) return undefined;
+        const toDateStr = (d: Date | null): string | undefined => {
+            if (!d) return undefined;
+            const x = new Date(d);
+            return isNaN(x.getTime()) ? undefined : x.toISOString().slice(0, 10);
+        };
+        return {
+            rabId: hasRab ? this.filterRabId.trim() : undefined,
+            serviceId: hasSvc ? this.filterServiceId.trim() : undefined,
+            leaveTypeId: hasLt ? this.filterLeaveTypeId! : undefined,
+            fromDate: toDateStr(this.filterFromDate),
+            toDate: toDateStr(this.filterToDate)
+        };
+    }
+
+    search(): void {
+        this.pageNumber = 1;
+        this.loadSection();
+    }
+
+    clearFilter(): void {
+        this.filterRabId = '';
+        this.filterServiceId = '';
+        this.filterLeaveTypeId = null;
+        this.filterFromDate = null;
+        this.filterToDate = null;
+        this.pageNumber = 1;
+        this.loadSection();
+    }
+
     getApplicantName(empId: number | null | undefined): string {
         if (empId == null) return '-';
         return this.employeeNameMap[empId] ?? String(empId);
+    }
+
+    getApplicantRabId(empId: number | null | undefined): string {
+        if (empId == null) return '-';
+        return this.employeeRabIdMap[empId] ?? '-';
+    }
+
+    getApplicantServiceId(empId: number | null | undefined): string {
+        if (empId == null) return '-';
+        return this.employeeServiceIdMap[empId] ?? '-';
     }
 
     getLeaveTypeName(leaveTypeId: number | null | undefined): string {
@@ -225,7 +298,8 @@ export class LeaveApplicationListComponent implements OnInit {
         };
         const statusMap = { pending: 2, approved: 3, declined: 4 } as const;
         const statusId = statusMap[this.section];
-        this.leaveAppService.getByStatusForUserPaginated(statusId, this.currentUserEmployeeId, this.typeFilter, this.pageNumber, this.pageSize).subscribe({
+        const filter = this.buildFilterParams();
+        this.leaveAppService.getByStatusForUserPaginated(statusId, this.currentUserEmployeeId, this.typeFilter, this.pageNumber, this.pageSize, filter).subscribe({
             next: (res) => {
                 this.currentList = res.datalist ?? [];
                 this.totalRecords = res.pages?.rows ?? 0;

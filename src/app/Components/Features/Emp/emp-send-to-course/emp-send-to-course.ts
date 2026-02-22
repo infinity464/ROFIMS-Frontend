@@ -18,7 +18,7 @@ import { AutoCompleteModule } from 'primeng/autocomplete';
 import { TooltipModule } from 'primeng/tooltip';
 import { MessageService, ConfirmationService } from 'primeng/api';
 
-import { CourseInfoService } from '@/services/course-info-service';
+import { CourseInfoService, EmployeeCourseFilterParams } from '@/services/course-info-service';
 import { DraftCourseService } from '@/services/draft-course.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
@@ -73,6 +73,20 @@ export class EmpSendToCourseComponent implements OnInit {
     isLoadingEmployees = false;
     isAddingToDraft = false;
 
+    /** Filters for Select Employee RFTS */
+    filterServiceId = '';
+    filterRabId = '';
+    filterMotherOrg: string | null = null;
+    filterRank: string | null = null;
+    filterCorps: string | null = null;
+    filterTrade: string | null = null;
+    filterDateFrom: Date | null = null;
+    filterDateTo: Date | null = null;
+    motherOrgFilterOptions: { label: string; value: string }[] = [];
+    rankFilterOptions: { label: string; value: string }[] = [];
+    corpsFilterOptions: { label: string; value: string }[] = [];
+    tradeFilterOptions: { label: string; value: string }[] = [];
+
     /** Tab (b): Send from Draft */
     draftLists: DraftCourseList[] = [];
     selectedDraft: DraftCourseList | null = null;
@@ -111,6 +125,7 @@ export class EmpSendToCourseComponent implements OnInit {
         this.loadCourseOptions();
         this.loadDraftLists();
         this.loadSendCourseDropdowns();
+        this.loadFilterOptions();
         this.courseForm.get('trainingInstitueName')?.valueChanges.subscribe((instituteId) => {
             const inst = this.trainingInstituteOptions.find((o) => o.value === instituteId);
             const countryLabel = inst?.countryId != null ? this.getOptionLabel(this.countryOptions, inst.countryId) : '';
@@ -202,20 +217,113 @@ export class EmpSendToCourseComponent implements OnInit {
 
     onCourseSelect(): void {
         this.selectedRows = [];
+        this.resetFilters();
         if (this.selectedCourseId == null || this.selectedCourseId === 0) {
             this.employeeList = [];
             return;
         }
+        this.loadEmployeesWithFilters();
+    }
+
+    loadEmployeesWithFilters(): void {
+        if (!this.selectedCourseId) return;
         this.isLoadingEmployees = true;
-        this.courseInfoService.getEmployeesNotCompletedByCourseName(this.selectedCourseId).subscribe({
+        const filter = this.buildFilterParams();
+        this.courseInfoService.getEmployeesNotCompletedByCourseName(this.selectedCourseId, filter).subscribe({
             next: (data) => {
-                
                 this.employeeList = Array.isArray(data) ? data : [];
                 this.isLoadingEmployees = false;
             },
             error: () => {
                 this.employeeList = [];
                 this.isLoadingEmployees = false;
+            }
+        });
+    }
+
+    private buildFilterParams(): EmployeeCourseFilterParams | undefined {
+        const hasSvc = (this.filterServiceId || '').trim();
+        const hasRab = (this.filterRabId || '').trim();
+        const hasMo = !!this.filterMotherOrg?.trim();
+        const hasRank = !!this.filterRank?.trim();
+        const hasCorps = !!this.filterCorps?.trim();
+        const hasTrade = !!this.filterTrade?.trim();
+        const hasFrom = !!this.filterDateFrom;
+        const hasTo = !!this.filterDateTo;
+        if (!hasSvc && !hasRab && !hasMo && !hasRank && !hasCorps && !hasTrade && !hasFrom && !hasTo) return undefined;
+        const toDateStr = (d: Date | null): string | undefined => {
+            if (!d) return undefined;
+            const x = new Date(d);
+            return isNaN(x.getTime()) ? undefined : x.toISOString().slice(0, 10);
+        };
+        return {
+            serviceId: hasSvc ? this.filterServiceId.trim() : undefined,
+            rabId: hasRab ? this.filterRabId.trim() : undefined,
+            motherOrganization: hasMo ? this.filterMotherOrg!.trim() : undefined,
+            rank: hasRank ? this.filterRank!.trim() : undefined,
+            corps: hasCorps ? this.filterCorps!.trim() : undefined,
+            trade: hasTrade ? this.filterTrade!.trim() : undefined,
+            joiningDateFrom: toDateStr(this.filterDateFrom),
+            joiningDateTo: toDateStr(this.filterDateTo)
+        };
+    }
+
+    applyFilters(): void {
+        this.selectedRows = [];
+        this.loadEmployeesWithFilters();
+    }
+
+    clearFilters(): void {
+        this.resetFilters();
+        this.selectedRows = [];
+        this.loadEmployeesWithFilters();
+    }
+
+    private resetFilters(): void {
+        this.filterServiceId = '';
+        this.filterRabId = '';
+        this.filterMotherOrg = null;
+        this.filterRank = null;
+        this.filterCorps = null;
+        this.filterTrade = null;
+        this.filterDateFrom = null;
+        this.filterDateTo = null;
+    }
+
+    loadFilterOptions(): void {
+        this.commonCodeService.getAllActiveMotherOrgs().subscribe({
+            next: (data) => {
+                const arr = (data || []).filter((o: any) => (o.orgNameEN ?? o.OrgNameEN)?.trim());
+                this.motherOrgFilterOptions = arr
+                    .map((o: any) => ({ label: o.orgNameEN ?? o.OrgNameEN, value: o.orgNameEN ?? o.OrgNameEN }))
+                    .sort((a: { label: string }, b: { label: string }) => a.label.localeCompare(b.label));
+            }
+        });
+        this.commonCodeService.getAllActiveCommonCodesType('Corps').subscribe({
+            next: (data) => {
+                const arr = (data || []).filter((d: any) => (d.codeValueEN ?? d.CodeValueEN)?.trim());
+                this.corpsFilterOptions = arr.map((d: any) => ({
+                    label: d.codeValueEN ?? d.CodeValueEN,
+                    value: d.codeValueEN ?? d.CodeValueEN
+                }));
+            }
+        });
+        this.commonCodeService.getAllActiveCommonCodesType('Trade').subscribe({
+            next: (data) => {
+                const arr = (data || []).filter((d: any) => (d.codeValueEN ?? d.CodeValueEN)?.trim());
+                this.tradeFilterOptions = arr.map((d: any) => ({
+                    label: d.codeValueEN ?? d.CodeValueEN,
+                    value: d.codeValueEN ?? d.CodeValueEN
+                }));
+            }
+        });
+        this.commonCodeService.getAllActiveCommonCodesType('MotherOrgRank').subscribe({
+            next: (data) => {
+                const arr = (data || []).filter((d: any) => (d.codeValueEN ?? d.CodeValueEN)?.trim());
+                this.rankFilterOptions = arr.map((d: any) => ({
+                    label: d.codeValueEN ?? d.CodeValueEN,
+                    value: d.codeValueEN ?? d.CodeValueEN
+                }));
             }
         });
     }
@@ -476,7 +584,8 @@ export class EmpSendToCourseComponent implements OnInit {
         this.isLoadingAddToDraftEmployees = true;
         this.addToDraftEmployeeList = [];
         this.addToDraftSelectedRows = [];
-        this.courseInfoService.getEmployeesNotCompletedByCourseName(this.selectedDraft.courseNameId).subscribe({
+        const filter = this.buildFilterParams();
+        this.courseInfoService.getEmployeesNotCompletedByCourseName(this.selectedDraft.courseNameId, filter).subscribe({
             next: (data) => {
                 const list = Array.isArray(data) ? data : [];
                 const existingIds = new Set((this.selectedDraft?.members ?? []).map((m) => m.employeeId));

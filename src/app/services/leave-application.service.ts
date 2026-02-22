@@ -29,6 +29,15 @@ export interface LeaveApplicationModel {
     lastupdate?: string;
 }
 
+/** Filter params for GetByStatusForUserPaginated (server-side). */
+export interface LeaveApplicationFilterParams {
+    rabId?: string;
+    serviceId?: string;
+    leaveTypeId?: number;
+    fromDate?: string; // yyyy-MM-dd
+    toDate?: string;
+}
+
 export interface ResultViewModel {
     statusCode?: number;
     StatusCode?: number;
@@ -75,13 +84,14 @@ export class LeaveApplicationService {
         );
     }
 
-    /** Get applications by status and type with server-side pagination. */
+    /** Get applications by status and type with server-side pagination. Optional filter. */
     getByStatusForUserPaginated(
         leaveApplicationStatusId: number | null,
         currentUserEmployeeId: number,
         typeFilter: string,
         pageNo: number,
-        rowPerPage: number
+        rowPerPage: number,
+        filter?: LeaveApplicationFilterParams
     ): Observable<PagedResponse<LeaveApplicationModel>> {
         const params: Record<string, string> = {
             currentUserEmployeeId: String(currentUserEmployeeId),
@@ -90,6 +100,13 @@ export class LeaveApplicationService {
             row_per_page: String(rowPerPage)
         };
         if (leaveApplicationStatusId != null) params['leaveApplicationStatusId'] = String(leaveApplicationStatusId);
+        if (filter) {
+            if (filter.rabId?.trim()) params['rabId'] = filter.rabId.trim();
+            if (filter.serviceId?.trim()) params['serviceId'] = filter.serviceId.trim();
+            if (filter.leaveTypeId != null && filter.leaveTypeId > 0) params['leaveTypeId'] = String(filter.leaveTypeId);
+            if (filter.fromDate) params['fromDate'] = filter.fromDate;
+            if (filter.toDate) params['toDate'] = filter.toDate;
+        }
         return this.http.get<{ datalist: unknown; pages: { Rows: number; TotalPages: number } }>(`${this.apiUrl}/GetByStatusForUserPaginated`, { params }).pipe(
             map((res: any) => ({
                 datalist: (Array.isArray(res?.datalist) ? res.datalist : []).map((r: any) => this.normalizeRow(r)),
