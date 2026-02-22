@@ -13,6 +13,7 @@ import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 
 import { AuthenticationService } from '../Service/authentication';
+import { UserMenuService } from '@/services/user-menu.service';
 import { AppFloatingConfigurator } from '@/layout/component/app.floatingconfigurator';
 
 @Component({
@@ -53,7 +54,8 @@ export class Login implements OnInit {
   constructor(
     private auth: AuthenticationService,
     private router: Router,
-    private messageService: MessageService
+    private messageService: MessageService,
+    private userMenuService: UserMenuService
   ) {}
 
   ngOnInit(): void {
@@ -70,8 +72,8 @@ export class Login implements OnInit {
 
     this.auth.login(this.email, this.password).subscribe({
       next: (res) => {
-        this.isLoading = false;
         if (!res?.token) {
+          this.isLoading = false;
           this.messageService.add({
             severity: 'error',
             summary: 'Login Failed',
@@ -85,13 +87,32 @@ export class Login implements OnInit {
         } else {
           this.auth.setRememberMeEmail(null);
         }
-        this.messageService.add({
-          severity: 'success',
-          summary: 'Login Successful',
-          detail: 'Welcome back! Redirecting to dashboard...',
-          life: 2000
+
+        // Load user menus based on role, then navigate
+        this.userMenuService.loadUserMenus(res.roleId).subscribe({
+          next: (menus) => {
+            this.userMenuService.storeMenus(menus);
+            this.isLoading = false;
+            this.messageService.add({
+              severity: 'success',
+              summary: 'Login Successful',
+              detail: 'Welcome back! Redirecting to dashboard...',
+              life: 2000
+            });
+            setTimeout(() => this.router.navigate(['/dashboard']), 500);
+          },
+          error: () => {
+            // Menu load failed — still allow login, sidebar will be empty
+            this.isLoading = false;
+            this.messageService.add({
+              severity: 'success',
+              summary: 'Login Successful',
+              detail: 'Welcome back! Redirecting to dashboard...',
+              life: 2000
+            });
+            setTimeout(() => this.router.navigate(['/dashboard']), 500);
+          }
         });
-        setTimeout(() => this.router.navigate(['/dashboard']), 800);
       },
       error: (err: { status?: number; message?: string }) => {
         this.isLoading = false;

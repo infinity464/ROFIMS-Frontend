@@ -34,3 +34,27 @@ export interface MenuPermissionRow {
     canUpdate: boolean;
     canDelete: boolean;
 }
+
+/**
+ * Returned by GetUserMenus endpoint: menu + permission flags for the logged-in user's role.
+ * Stored in localStorage for dynamic sidebar rendering.
+ */
+export interface UserMenuModel {
+    menuId: number;
+    menuNameEn: string;
+    menuNameBangla: string | null;
+    parentMenuId: number | null;
+    iconName: string | null;
+    menuType: number;
+    routerName: string | null;
+    exactMatch: boolean;
+    isExternal: boolean;
+    url: string | null;
+    target: string | null;
+    sortOrder: number;
+    permissionKey: string | null;
+    canView: boolean;
+    canInsert: boolean;
+    canUpdate: boolean;
+    canDelete: boolean;
+}
