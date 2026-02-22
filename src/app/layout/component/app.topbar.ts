@@ -29,45 +29,6 @@ import { NotificationService } from '@/services/notification.service';
         </div>
 
         <div class="layout-topbar-actions">
-            <div class="relative" #notificationContainer>
-                @let count = unreadCount$ | async;
-                <button
-                    type="button"
-                    class="layout-topbar-action relative overflow-visible"
-                    (click)="toggleNotificationPanel()">
-                    <i class="pi pi-bell"></i>
-                    @if ((count ?? 0) > 0) {
-                        <span class="notification-badge absolute -top-1 -right-1 min-w-[20px] h-[20px] rounded-full bg-red-500 text-white text-xs font-semibold flex items-center justify-center px-1 shadow">{{ (count ?? 0) > 99 ? '99+' : count }}</span>
-                    }
-                </button>
-                @if (showNotificationPanel) {
-                <div
-                    class="absolute right-0 top-full mt-1 w-80 max-h-96 overflow-auto bg-surface-0 dark:bg-surface-800 border border-surface-200 dark:border-surface-600 rounded-lg shadow-lg z-[9999]">
-                    <div class="p-3 border-b border-surface-200 dark:border-surface-600 flex justify-between items-center">
-                        <span class="font-semibold">Notifications</span>
-                        @if ((count ?? 0) > 0) {
-                            <button type="button" class="text-sm text-primary" (click)="markAllRead($event)">Mark all read</button>
-                        }
-                    </div>
-                    @if (notificationService.notifications.length === 0) {
-                        <div class="p-4 text-surface-500 text-center text-sm">No notifications</div>
-                    } @else {
-                        <div class="divide-y divide-surface-200 dark:divide-surface-600">
-                            @for (n of notificationService.notifications; track n.id) {
-                                <div
-                                    (click)="onNotificationClick(n, $event)"
-                                    class="block p-3 hover:bg-surface-100 dark:hover:bg-surface-700 cursor-pointer"
-                                    [class.bg-primary-50]="!n.read"
-                                    [class.dark:bg-primary-900/20]="!n.read">
-                                    <div class="font-medium text-sm">{{ n.title }}</div>
-                                    <div class="text-surface-600 dark:text-surface-400 text-xs mt-0.5">{{ n.message }}</div>
-                                </div>
-                            }
-                        </div>
-                    }
-                </div>
-                }
-            </div>
             <div class="layout-config-menu">
                 <button type="button" class="layout-topbar-action" (click)="toggleDarkMode()">
                     <i [ngClass]="{ 'pi ': true, 'pi-moon': layoutService.isDarkTheme(), 'pi-sun': !layoutService.isDarkTheme() }"></i>
@@ -94,12 +55,41 @@ import { NotificationService } from '@/services/notification.service';
 
             <div class="layout-topbar-menu hidden lg:block">
                 <div class="layout-topbar-menu-content">
-                    <p-toggleButton [(ngModel)]="isEnglish" onLabel="EN" offLabel="BN" size="small" class="min-w-16" (onChange)="toggleLanguage()"> </p-toggleButton>
+                    <!-- <p-toggleButton [(ngModel)]="isEnglish" onLabel="EN" offLabel="BN" size="small" class="min-w-16" (onChange)="toggleLanguage()"> </p-toggleButton> -->
 
-                    <button type="button" class="layout-topbar-action">
-                        <i class="pi pi-inbox"></i>
-                        <span>Messages</span>
-                    </button>
+                    <div class="relative" #notificationContainer>
+                        @let count = unreadCount$ | async;
+                        <button type="button" class="layout-topbar-action relative overflow-visible" (click)="toggleNotificationPanel()">
+                            <i class="pi pi-bell"></i>
+                            @if ((count ?? 0) > 0) {
+                                <span class="notification-badge absolute -top-1 -right-1 min-w-[20px] h-[20px] rounded-full bg-red-500 text-white text-xs font-semibold flex items-center justify-center px-1 shadow">{{
+                                    (count ?? 0) > 99 ? '99+' : count
+                                }}</span>
+                            }
+                        </button>
+                        @if (showNotificationPanel) {
+                            <div class="absolute right-0 top-full mt-1 w-80 max-h-96 overflow-auto bg-surface-0 dark:bg-surface-800 border border-surface-200 dark:border-surface-600 rounded-lg shadow-lg z-[9999]">
+                                <div class="p-3 border-b border-surface-200 dark:border-surface-600 flex justify-between items-center">
+                                    <span class="font-semibold">Notifications</span>
+                                    @if ((count ?? 0) > 0) {
+                                        <button type="button" class="text-sm text-primary" (click)="markAllRead($event)">Mark all read</button>
+                                    }
+                                </div>
+                                @if (notificationService.notifications.length === 0) {
+                                    <div class="p-4 text-surface-500 text-center text-sm">No notifications</div>
+                                } @else {
+                                    <div class="divide-y divide-surface-200 dark:divide-surface-600">
+                                        @for (n of notificationService.notifications; track n.id) {
+                                            <div (click)="onNotificationClick(n, $event)" class="block p-3 hover:bg-surface-100 dark:hover:bg-surface-700 cursor-pointer" [class.bg-primary-50]="!n.read" [class.dark:bg-primary-900/20]="!n.read">
+                                                <div class="font-medium text-sm">{{ n.title }}</div>
+                                                <div class="text-surface-600 dark:text-surface-400 text-xs mt-0.5">{{ n.message }}</div>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
 
                     <button type="button" class="layout-topbar-action">
                         <i class="pi pi-user"></i>
@@ -128,7 +118,12 @@ export class AppTopbar implements OnInit, OnDestroy {
     ) {
         this.loadDarkModePreference();
         // #region agent log
-        const _log = (m: string, d: Record<string, unknown>) => fetch('http://127.0.0.1:7682/ingest/24c52934-7935-4f35-a09e-2dbd51502872', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '3a6509' }, body: JSON.stringify({ sessionId: '3a6509', location: 'app.topbar', message: m, data: d, timestamp: Date.now(), hypothesisId: d['h'] as string }) }).catch(() => {});
+        const _log = (m: string, d: Record<string, unknown>) =>
+            fetch('http://127.0.0.1:7682/ingest/24c52934-7935-4f35-a09e-2dbd51502872', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '3a6509' },
+                body: JSON.stringify({ sessionId: '3a6509', location: 'app.topbar', message: m, data: d, timestamp: Date.now(), hypothesisId: d['h'] as string })
+            }).catch(() => {});
         // #endregion
         this.unreadCount$ = this.notificationService.notifications$.pipe(
             map(() => this.notificationService.getUnreadCount()),
