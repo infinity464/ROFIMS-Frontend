@@ -101,6 +101,8 @@ export interface EmployeeSearchInfoModel {
     MemberTypeId?: number;
     memberType?: string;
     MemberType?: string;
+    joiningDate?: string;
+    JoiningDate?: string;
 }
 
 // ============ SEARCH CRITERIA ============

@@ -1,0 +1,334 @@
+<p-toast></p-toast>
+<p-confirmDialog></p-confirmDialog>
+
+<!-- Send to Course - Course Details Modal -->
+<p-dialog header="Add Course" [(visible)]="showSendCourseModal" [modal]="true" [style]="{width: '640px'}" [closable]="true">
+    <p class="text-500 mb-3">Enter course details for the selected employees. Course Name is from the draft.</p>
+    <form [formGroup]="courseForm" class="mt-3">
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="font-semibold block mb-2 text-700">Course Type</label>
+                <p-select formControlName="courseType" [options]="courseTypeOptions" optionLabel="label" optionValue="value" placeholder="Select Course Type" styleClass="w-full"></p-select>
+            </div>
+            <div>
+                <label class="font-semibold block mb-2 text-700">Course Name</label>
+                <input pInputText formControlName="courseNameDisplay" class="w-full" placeholder="From draft" readonly />
+            </div>
+            <div>
+                <label class="font-semibold block mb-2 text-700">Training Institute Name</label>
+                <p-select formControlName="trainingInstitueName" [options]="trainingInstituteOptions" optionLabel="label" optionValue="value" placeholder="Select Institute" styleClass="w-full"></p-select>
+            </div>
+            <div>
+                <label class="font-semibold block mb-2 text-700">Country</label>
+                <input pInputText formControlName="countryDisplay" class="w-full" placeholder="From Training Institute" readonly />
+            </div>
+            <div>
+                <label class="font-semibold block mb-2 text-700">Location</label>
+                <input pInputText formControlName="locationDisplay" class="w-full" placeholder="From Training Institute" readonly />
+            </div>
+            <div class="w-full">
+                <label class="font-semibold block mb-2 text-700">From</label>
+                <p-datepicker formControlName="dateFrom" dateFormat="dd/mm/yy" [showIcon]="true" styleClass="w-full" [style]="{'width': '100%'}" placeholder="From"></p-datepicker>
+            </div>
+            <div class="w-full">
+                <label class="font-semibold block mb-2 text-700">To</label>
+                <p-datepicker formControlName="dateTo" dateFormat="dd/mm/yy" [showIcon]="true" styleClass="w-full" [style]="{'width': '100%'}" placeholder="To"></p-datepicker>
+            </div>
+            <div>
+                <label class="font-semibold block mb-2 text-700">Course Result</label>
+                <p-autocomplete formControlName="result" [suggestions]="courseResultSuggestions" optionLabel="label" optionValue="value" (completeMethod)="filterCourseResult($event)" [dropdown]="true" placeholder="Select or type result" styleClass="w-full" [inputStyle]="{'width': '100%'}"></p-autocomplete>
+            </div>
+            <div>
+                <label class="font-semibold block mb-2 text-700">Auth</label>
+                <input pInputText formControlName="auth" class="w-full" placeholder="Auth" />
+            </div>
+            <div class="col-span-full">
+                <label class="font-semibold block mb-2 text-700">Remarks</label>
+                <input pInputText formControlName="remarks" class="w-full" placeholder="Remarks" />
+            </div>
+        </div>
+    </form>
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="showSendCourseModal = false" [disabled]="isSending"></p-button>
+        <p-button label="Save" icon="pi pi-check" [loading]="isSending" [disabled]="isSending" (onClick)="sendFromDraft()"></p-button>
+    </ng-template>
+</p-dialog>
+
+<p-fluid>
+    <p-card>
+        <ng-template pTemplate="header">
+            <div class="flex align-items-center gap-2 p-3">
+                <span class="text-xl font-semibold">Create Orientation Training List of RFTS</span>
+            </div>
+        </ng-template>
+       
+
+        <p-tabs [(value)]="activeTab" class="mt-2">
+            <p-tablist>
+                <p-tab [value]="0">Select Employee RFTS</p-tab>
+                <p-tab [value]="1">Final Approval</p-tab>
+            </p-tablist>
+            <p-tabpanels>
+                <!-- Tab 0: Create Draft -->
+                <p-tabpanel [value]="0">
+                    <p class="text-500 mb-3">.</p>
+                    <div class="flex flex-wrap gap-3 mb-4">
+                        <div style="min-width: 200px; max-width: 250px;">
+                            <label class="font-semibold block mb-2 text-700">Select Course</label>
+                            <p-select
+                                [(ngModel)]="selectedCourseId"
+                                [options]="courseOptions"
+                                optionLabel="label"
+                                optionValue="value"
+                                placeholder="Select a course"
+                                styleClass="w-full"
+                                (onChange)="onCourseSelect()">
+                            </p-select>
+                        </div>
+                        <div style="min-width: 200px; max-width: 250px;">
+                            <label class="font-semibold block mb-2 text-700">CourseNo <span class="text-red-500">*</span></label>
+                            <input pInputText [(ngModel)]="courseNo" class="w-full" placeholder="e.g. CL-2025-001" />
+                        </div>
+                    </div>
+                    <!-- Filter section (same structure as ex-members list filter) -->
+                    <div class="filter-section mb-4">
+                        <div class="filter-row">
+                            <label class="filter-label">Search by ID:</label>
+                            <div class="filter-inputs">
+                                <input pInputText type="text" [(ngModel)]="filterRabId" placeholder="RAB ID" class="filter-input" />
+                                <input pInputText type="text" [(ngModel)]="filterServiceId" placeholder="Service ID" class="filter-input" />
+                            </div>
+                        </div>
+                        <div class="filter-row">
+                            <label class="filter-label">Search by:</label>
+                            <div class="filter-inputs">
+                                <p-select [(ngModel)]="filterMotherOrg" placeholder="Mother Organization" [options]="motherOrgFilterOptions" optionLabel="label" optionValue="value" class="filter-input filter-select" [showClear]="true"></p-select>
+                                <p-select [(ngModel)]="filterRank" placeholder="Rank" [options]="rankFilterOptions" optionLabel="label" optionValue="value" class="filter-input filter-select" [showClear]="true"></p-select>
+                                <p-select [(ngModel)]="filterCorps" placeholder="Corps" [options]="corpsFilterOptions" optionLabel="label" optionValue="value" class="filter-input filter-select" [showClear]="true"></p-select>
+                                <p-select [(ngModel)]="filterTrade" placeholder="Trade" [options]="tradeFilterOptions" optionLabel="label" optionValue="value" class="filter-input filter-select" [showClear]="true"></p-select>
+                            </div>
+                        </div>
+                        <div class="filter-row">
+                            <label class="filter-label">Search by Date of Joining:</label>
+                            <div class="filter-inputs">
+                                <p-datepicker [(ngModel)]="filterDateFrom" placeholder="From" dateFormat="dd/mm/yy" class="filter-input filter-date"></p-datepicker>
+                                <p-datepicker [(ngModel)]="filterDateTo" placeholder="To" dateFormat="dd/mm/yy" class="filter-input filter-date"></p-datepicker>
+                            </div>
+                        </div>
+                        <div class="filter-row filter-actions">
+                            <span class="filter-label"></span>
+                            <div class="filter-inputs">
+                                <p-button label="Search" icon="pi pi-search" (onClick)="applyFilters()" [loading]="isLoadingEmployees" [disabled]="!selectedCourseId || isLoadingEmployees"></p-button>
+                                <p-button label="Clear Filter" icon="pi pi-times" (onClick)="clearFilters()" severity="secondary" [disabled]="!selectedCourseId"></p-button>
+                            </div>
+                        </div>
+                    </div>
+                    <p-table
+                        [value]="employeeList"
+                        [loading]="isLoadingEmployees"
+                        dataKey="employeeID"
+                        [(selection)]="selectedRows"
+                        [paginator]="true"
+                        [rows]="10"
+                        [rowsPerPageOptions]="[10, 20, 50]"
+                        styleClass="p-datatable-sm p-datatable-striped">
+                        <ng-template pTemplate="header">
+                            <tr>
+                                <th style="width: 3rem"><p-tableHeaderCheckbox></p-tableHeaderCheckbox></th>
+                           
+                                <th>Name</th>
+                                <th>RAB ID</th>
+                                <th>Service ID</th>
+                                <th>Rank</th>
+                                <th>Corps</th>
+                                <th>Mother Org</th>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="body" let-row>
+                            <tr>
+                                <td><p-tableCheckbox [value]="row"></p-tableCheckbox></td>
+                               
+                                <td>{{ getVal(row, 'fullNameEN', 'FullNameEN') }}</td>
+                                <td>{{ getVal(row, 'rabid', 'rabId', 'rabID', 'RABID') }}</td>
+                                <td>{{ getVal(row, 'serviceId', 'ServiceId') }}</td>
+                                <td>{{ getVal(row, 'rank', 'Rank') }}</td>
+                                <td>{{ getVal(row, 'corps', 'Corps') }}</td>
+                                <td>{{ getVal(row, 'motherOrganization', 'MotherOrganization') }}</td>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="emptymessage">
+                            <tr>
+                                <td [attr.colspan]="8" class="text-center py-4">Select a course to load employees, or no employees need this course.</td>
+                            </tr>
+                        </ng-template>
+                    </p-table>
+                    <div class="mt-3 flex justify-end">
+                        <p-button
+                            label="Add Selected for Final Approval"
+                            icon="pi pi-plus"
+                            severity="primary"
+                            [fluid]="false"
+                            (onClick)="addToDraft()"
+                            [loading]="isAddingToDraft"
+                            [disabled]="!courseNo?.trim() || selectedRows.length === 0 || isAddingToDraft">
+                        </p-button>
+                    </div>
+                </p-tabpanel>
+
+                <!-- Tab 1: Send from Draft -->
+                <p-tabpanel [value]="1">
+                   <div class="mb-3">
+                    <!--    <p-button label="Refresh List" icon="pi pi-refresh" [loading]="isLoadingDrafts" (onClick)="loadDraftLists()"></p-button> -->
+                    </div>
+                    <p-table
+                        [value]="draftLists"
+                        [loading]="isLoadingDrafts"
+                        styleClass="p-datatable-sm p-datatable-striped"
+                        [selectionMode]="'single'"
+                        [(selection)]="selectedDraft"
+                        dataKey="id">
+                        <ng-template pTemplate="header">
+                            <tr>
+                                <th>Course No</th>
+                                <th>Course</th>
+                                <th>Members</th>
+                                <th>Created</th>
+                                <th style="width: 100px">Action</th>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="body" let-row>
+                            <tr [pSelectableRow]="row">
+                                <td>{{ row.listNo }}</td>
+                                <td>{{ row.courseName }}</td>
+                                <td>{{ row.members?.length ?? 0 }}</td>
+                                <td>{{ row.createdDate ? (row.createdDate | date:'short') : 'N/A' }}</td>
+                                <td>
+                                    <p-button
+                                        icon="pi pi-trash"
+                                        severity="danger"
+                                        [text]="true"
+                                        size="small"
+                                        [outlined]="true"
+                                        pTooltip="Delete"
+                                        (onClick)="deleteDraftRow(row); $event.stopPropagation()" [disabled]="isDeletingDraft">
+                                    </p-button>
+                                </td>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="emptymessage">
+                            <tr>
+                                <td [attr.colspan]="5" class="text-center py-4">No drafts. Create one in the Create Draft tab.</td>
+                            </tr>
+                        </ng-template>
+                    </p-table>
+                    @if (selectedDraft) {
+                        <div class="mt-4">
+                            <h4 class="mb-2">Members in selected draft</h4>
+                            <p-table
+                                [value]="selectedDraft.members"
+                                styleClass="p-datatable-sm"
+                                dataKey="employeeId"
+                                [(selection)]="selectedDraftMembers"
+                                [paginator]="(selectedDraft?.members?.length ?? 0) > 5"
+                                [rows]="5">
+                                <ng-template pTemplate="header">
+                                    <tr>
+                                        <th style="width: 3rem"><p-tableHeaderCheckbox></p-tableHeaderCheckbox></th>
+
+                                        <th>Name</th>
+                                        <th>RAB ID</th>
+                                        <th>Service ID</th>
+                                        <th>Rank</th>
+                                        <th>Corps</th>
+                                    </tr>
+                                </ng-template>
+                                <ng-template pTemplate="body" let-row>
+                                    <tr [pSelectableRow]="row">
+                                        <td><p-tableCheckbox [value]="row"></p-tableCheckbox></td>
+                                        
+                                        <td>{{ row.fullNameEN || 'N/A' }}</td>
+                                        <td>{{ row.rabid ?? row.rabId ?? row.rabID ?? row.RABID ?? 'N/A' }}</td>
+                                        <td>{{ row.serviceId || 'N/A' }}</td>
+                                        <td>{{ row.rankName || 'N/A' }}</td>
+                                        <td>{{ row.corpsName || 'N/A' }}</td>
+                                    </tr>
+                                </ng-template>
+                            </p-table>
+                            <div class="mt-3 flex flex-wrap gap-2">
+                               
+                                <p-button
+                                    label="Remove Selected from Draft"
+                                    icon="pi pi-trash"
+                                    severity="secondary"
+                                    [outlined]="true"
+                                    (onClick)="removeFromDraft()"
+                                    [loading]="isRemovingFromDraft"
+                                    [disabled]="!selectedDraftMembers?.length || isRemovingFromDraft">
+                                </p-button>
+                                <p-button
+                                    label="Add Others to This Draft"
+                                    icon="pi pi-user-plus"
+                                    severity="secondary"
+                                    [outlined]="true"
+                                    (onClick)="showAddToDraftPanel = true; loadEmployeesForAddToDraft()"
+                                    [disabled]="isAddingToDraft">
+                                </p-button>
+                                <p-button
+                                    label="Approve"
+                                    icon="pi pi-send"
+                                    
+                                    severity="primary"
+                                    [loading]="isSending"
+                                    [disabled]="isSending"
+                                    (onClick)="openSendCourseModal()">
+                                </p-button>
+                            </div>
+                            @if (showAddToDraftPanel) {
+                                <div class="mt-4 p-3 surface-100 border-round">
+                                    <h5 class="mb-2">Add employees to draft: {{ selectedDraft?.listNo }}</h5>
+                                    <p class="text-500 mb-2">Select employees to add (course: {{ selectedDraft?.courseName }})</p>
+                                    <p-table
+                                        [value]="addToDraftEmployeeList"
+                                        [loading]="isLoadingAddToDraftEmployees"
+                                        dataKey="employeeID"
+                                        [(selection)]="addToDraftSelectedRows"
+                                        [paginator]="true"
+                                        [rows]="5"
+                                        styleClass="p-datatable-sm">
+                                        <ng-template pTemplate="header">
+                                            <tr>
+                                                <th style="width: 3rem"><p-tableHeaderCheckbox></p-tableHeaderCheckbox></th>
+                                               
+                                                <th>Name</th>
+                                                <th>RAB ID</th>
+                                                <th>Service ID</th>
+                                                <th>Rank</th>
+                                            </tr>
+                                        </ng-template>
+                                        <ng-template pTemplate="body" let-row>
+                                            <tr [pSelectableRow]="row">
+                                                <td><p-tableCheckbox [value]="row"></p-tableCheckbox></td>
+                                              
+                                                <td>{{ getVal(row, 'fullNameEN', 'FullNameEN') }}</td>
+                                                <td>{{ getVal(row, 'rabid', 'rabId', 'rabID', 'RABID') }}</td>
+                                                <td>{{ getVal(row, 'serviceId', 'ServiceId') }}</td>
+                                                <td>{{ getVal(row, 'rank', 'Rank') }}</td>
+                                            </tr>
+                                        </ng-template>
+                                        <ng-template pTemplate="emptymessage">
+                                            <tr><td [attr.colspan]="6" class="text-center py-2">No employees available to add.</td></tr>
+                                        </ng-template>
+                                    </p-table>
+                                    <div class="mt-2 flex gap-2">
+                                        <p-button label="Add Selected" icon="pi pi-plus" (onClick)="addToExistingDraft()" [loading]="isAddingToDraft" [disabled]="!addToDraftSelectedRows?.length || isAddingToDraft"></p-button>
+                                        <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="showAddToDraftPanel = false; addToDraftSelectedRows = []; addToDraftEmployeeList = []"></p-button>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </p-tabpanel>
+            </p-tabpanels>
+        </p-tabs>
+    </p-card>
+</p-fluid>

@@ -66,6 +66,10 @@
             display: none;
         }
 
+        .notification-badge {
+            display: flex !important;
+        }
+
         &.layout-topbar-action-highlight {
             background-color: var(--primary-color);
             color: var(--primary-contrast-color);

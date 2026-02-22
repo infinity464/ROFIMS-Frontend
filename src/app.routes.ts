@@ -70,6 +70,7 @@ import { EmpPromotionInfo } from '@/Components/Features/Emp/emp-promotion-info/e
 import { EmpRankConfirmationComponent } from '@/Components/Features/Emp/emp-rank-confirmation/emp-rank-confirmation';
 import { EmpEducationInfoComponent } from '@/Components/Features/Emp/emp-education-info/emp-education-info';
 import { EmpCourseInfoComponent } from '@/Components/Features/Emp/emp-course-info/emp-course-info';
+import { EmpSendToCourseComponent } from '@/Components/Features/Emp/emp-send-to-course/emp-send-to-course';
 import { EmpDisciplineInfoComponent } from '@/Components/Features/Emp/emp-discipline-info/emp-discipline-info';
 import { EmpBankAccount } from '@/Components/Features/Emp/emp-bank-account/emp-bank-account.component';
 import { EmpForeignVisit } from '@/Components/Features/Emp/emp-foreign-visit/emp-foreign-visit.component';
@@ -234,6 +235,7 @@ export const appRoutes: Routes = [
             { path: 'emp-rank-confirmation', component: EmpRankConfirmationComponent },
             { path: 'emp-education-info', component: EmpEducationInfoComponent },
             { path: 'emp-course-info', component: EmpCourseInfoComponent },
+            { path: 'emp-send-to-course', component: EmpSendToCourseComponent },
             { path: 'emp-discipline-info', component: EmpDisciplineInfoComponent },
             { path: 'emp-bank-account', component: EmpBankAccount },
             { path: 'emp-foreign-visit', component: EmpForeignVisit },

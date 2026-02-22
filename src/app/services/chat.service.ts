@@ -30,6 +30,10 @@ export class ChatService {
   private groupMessagesSeenSubject = new Subject<{ messageIds: number[]; groupId: number; seenByUserId: string }>();
   public groupMessagesSeen$ = this.groupMessagesSeenSubject.asObservable();
 
+  /** Emitted when a leave application is submitted for approval and this user is the approver. */
+  private leaveApprovalRequestedSubject = new Subject<{ leaveApplicationId: number; applicantEmployeeId: number; fromDate: string; toDate: string; leaveTypeId: number; message: string; notificationId?: number }>();
+  public leaveApprovalRequested$ = this.leaveApprovalRequestedSubject.asObservable();
+
   private connectionStatusSubject = new BehaviorSubject<boolean>(false);
   public connectionStatus$ = this.connectionStatusSubject.asObservable();
 
@@ -60,8 +64,8 @@ export class ChatService {
     try {
       const auth = localStorage.getItem('auth');
       if (auth) {
-        const parsed = JSON.parse(auth) as { token?: string };
-        return parsed?.token ?? null;
+        const parsed = JSON.parse(auth) as { token?: string; Token?: string };
+        return parsed?.token ?? parsed?.Token ?? null;
       }
     } catch {
       // ignore
@@ -104,6 +108,13 @@ export class ChatService {
     });
     this.hubConnection.on('GroupMessagesSeen', (payload: { messageIds: number[]; groupId: number; seenByUserId: string }) => {
       this.groupMessagesSeenSubject.next(payload);
+    });
+
+    this.hubConnection.on('LeaveApprovalRequested', (payload: any) => {
+      if (typeof console !== 'undefined' && console.debug) {
+        console.debug('[ChatService] LeaveApprovalRequested received', payload);
+      }
+      this.leaveApprovalRequestedSubject.next(payload);
     });
 
     this.hubConnection.on('Error', (message: string) => {
