@@ -117,6 +117,8 @@ import { PdfDocumentListComponent } from '@/Components/Features/pdf-vault/pdf-do
 import { PdfViewerComponent } from '@/Components/Features/pdf-vault/pdf-viewer/pdf-viewer.component';
 import { PdfImageSearchComponent } from '@/Components/Features/pdf-vault/pdf-image-search/pdf-image-search.component';
 import { ImageUploadComponent } from '@/Components/Features/pdf-vault/image-upload/image-upload.component';
+import { MenuManagement } from '@/Components/Features/menu-management/menu-management';
+import { RoleMenuPermission } from '@/Components/Features/role-menu-permission/role-menu-permission';
 
 export const appRoutes: Routes = [
     // Public routes
@@ -258,6 +260,12 @@ export const appRoutes: Routes = [
             // Image Vault
             { path: 'image-vault/upload', component: ImageUploadComponent },
             { path: 'image-vault/find', component: PdfImageSearchComponent },
+
+            // Menu Management
+            { path: 'menu-management', component: MenuManagement },
+
+            // Role Menu Permissions
+            { path: 'identity/role-menu-permission', component: RoleMenuPermission },
 
             { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
             { path: 'documentation', component: Documentation },

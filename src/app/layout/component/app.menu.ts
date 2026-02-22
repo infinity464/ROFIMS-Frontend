@@ -203,6 +203,8 @@ export class AppMenu {
                     { label: 'Bank Branch', icon: 'pi pi-fw pi-building', routerLink: ['/basic-setup/bank-branch'] },
                     { label: 'Absent Type', icon: 'pi pi-fw pi-ban', routerLink: ['/basic-setup/absent-type'] },
 
+                    { label: 'Training Institution', icon: 'pi pi-fw pi-building', routerLink: ['/basic-setup/training-institution'] },
+
                     // Newly added
                     { label: 'Notesheet Template', icon: 'pi pi-fw pi-file-edit', routerLink: ['/basic-setup/notesheet-template'] }
                 ]
@@ -256,7 +258,15 @@ export class AppMenu {
                 items: [
                     { label: 'Create User', icon: 'pi pi-fw pi-user-plus', routerLink: ['/identity/user-create'] },
                     { label: 'Roles', icon: 'pi pi-fw pi-list', routerLink: ['/identity/roles'] },
-                    { label: 'User–Employee Mapping', icon: 'pi pi-fw pi-id-card', routerLink: ['/identity/user-employee-mapping'] }
+                    { label: 'User–Employee Mapping', icon: 'pi pi-fw pi-id-card', routerLink: ['/identity/user-employee-mapping'] },
+                    { label: 'Role Menu Permission', icon: 'pi pi-fw pi-shield', routerLink: ['/identity/role-menu-permission'] }
+                ]
+            },
+            {
+                label: 'System Administration',
+                icon: 'pi pi-fw pi-sliders-h',
+                items: [
+                    { label: 'Menu Management', icon: 'pi pi-fw pi-bars', routerLink: ['/menu-management'] }
                 ]
             }
 

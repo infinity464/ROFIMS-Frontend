@@ -169,3 +169,37 @@ export enum CodeType {
     Upazila = 'Upazila',
     VisitType = 'VisitType'
 }
+
+// Menu Type (matches backend TINYINT: 0=Header/Group, 1=AngularRoute, 2=ExternalLink, 3=Action)
+export enum MenuType {
+    Header = 0,
+    AngularRoute = 1,
+    ExternalLink = 2,
+    Action = 3
+}
+
+export const MenuTypeOptions = [
+    { label: 'Header / Group', value: MenuType.Header },
+    { label: 'Angular Route', value: MenuType.AngularRoute },
+    { label: 'External Link', value: MenuType.ExternalLink },
+    { label: 'Action', value: MenuType.Action }
+];
+
+// Icon Type for menu icons
+export enum IconType {
+    PrimeIcon = 'pi',
+    Material = 'material',
+    FontAwesome = 'fa'
+}
+
+export const IconTypeOptions = [
+    { label: 'PrimeNG Icon (pi)', value: IconType.PrimeIcon },
+    { label: 'Material Icon', value: IconType.Material },
+    { label: 'Font Awesome (fa)', value: IconType.FontAwesome }
+];
+
+// Link Target for external links
+export const LinkTargetOptions = [
+    { label: 'Same Window (_self)', value: '_self' },
+    { label: 'New Tab (_blank)', value: '_blank' }
+];
