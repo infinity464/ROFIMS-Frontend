@@ -386,8 +386,10 @@ export class EmpPromotionInfo implements OnInit {
     confirmDelete(row: PromotionListRow): void {
         this.confirmationService.confirm({
             message: 'Delete this promotion record?',
-            header: 'Confirm Delete',
+            header: 'Delete Confirmation',
             icon: 'pi pi-exclamation-triangle',
+            rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+            acceptButtonProps: { label: 'Delete', severity: 'danger' },
             accept: () => this.deletePromotion(row)
         });
     }

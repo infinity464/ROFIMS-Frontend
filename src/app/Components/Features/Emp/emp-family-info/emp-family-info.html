@@ -55,10 +55,10 @@
                             <th>NID</th>
                             <th>Mobile</th>
                             @if (isReadonly) {
-                                <th style="width: 100px;">Actions</th>
+                                <th style="width: 150px;">Actions</th>
                             }
                             @if (!isReadonly) {
-                                <th style="width: 120px;">Actions</th>
+                                <th style="width: 150px;">Actions</th>
                             }
                         </tr>
                     </ng-template>
@@ -77,6 +77,7 @@
                                     <div class="flex gap-1">
                                         <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="info" pTooltip="Edit" (onClick)="openEditDialog(member)"></p-button>
                                         <p-button icon="pi pi-map-marker" [rounded]="true" [text]="true" severity="success" pTooltip="View Address" (onClick)="openAddressDialog(member)"></p-button>
+                                        <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" pTooltip="Delete" (onClick)="confirmDelete(member)"></p-button>
                                     </div>
                                 </td>
                             }
@@ -85,6 +86,7 @@
                                     <div class="flex gap-2">
                                         <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="info" pTooltip="Edit" (onClick)="openEditDialog(member)"></p-button>
                                         <p-button icon="pi pi-map-marker" [rounded]="true" [text]="true" severity="success" pTooltip="Address" (onClick)="openAddressDialog(member)"></p-button>
+                                        <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" pTooltip="Delete" (onClick)="confirmDelete(member)"></p-button>
                                     </div>
                                 </td>
                             }
@@ -205,7 +207,7 @@
     </p-tabs>
     <ng-template pTemplate="footer">
         <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="displayDialog = false"></p-button>
-        <p-button label="Save" icon="pi pi-check" [loading]="isSaving" (onClick)="saveFamilyWithAddress()"></p-button>
+        <p-button [label]="isEditMode ? 'Update' : 'Save'" icon="pi pi-check" [loading]="isSaving" (onClick)="saveFamilyWithAddress()"></p-button>
     </ng-template>
 </p-dialog>
 

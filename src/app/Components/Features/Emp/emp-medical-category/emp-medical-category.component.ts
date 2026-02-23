@@ -330,8 +330,10 @@ export class EmpMedicalCategory implements OnInit {
     confirmDelete(row: MedicalInfoModel): void {
         this.confirmationService.confirm({
             message: `Delete this medical record (${this.getMedicalCategoryLabel(row.medicalCategoryId)})?`,
-            header: 'Confirm Delete',
+            header: 'Delete Confirmation',
             icon: 'pi pi-exclamation-triangle',
+            rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+            acceptButtonProps: { label: 'Delete', severity: 'danger' },
             accept: () => this.deleteMedical(row)
         });
     }

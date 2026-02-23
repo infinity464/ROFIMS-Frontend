@@ -387,8 +387,10 @@ export class EmpDisciplineInfoComponent implements OnInit {
     confirmDelete(row: DisciplineListRow): void {
         this.confirmationService.confirm({
             message: 'Delete this discipline record?',
-            header: 'Confirm Delete',
+            header: 'Delete Confirmation',
             icon: 'pi pi-exclamation-triangle',
+            rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+            acceptButtonProps: { label: 'Delete', severity: 'danger' },
             accept: () => this.deleteDiscipline(row)
         });
     }

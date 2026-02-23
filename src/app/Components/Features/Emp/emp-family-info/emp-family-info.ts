@@ -425,8 +425,10 @@ export class EmpFamilyInfo implements OnInit {
     confirmDelete(member: FamilyMember): void {
         this.confirmationService.confirm({
             message: `Are you sure you want to delete ${member.nameEN}?`,
-            header: 'Confirm Delete',
+            header: 'Delete Confirmation',
             icon: 'pi pi-exclamation-triangle',
+            rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+            acceptButtonProps: { label: 'Delete', severity: 'danger' },
             accept: () => {
                 this.deleteFamilyMember(member);
             }

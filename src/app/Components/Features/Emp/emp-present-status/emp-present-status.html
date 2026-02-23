@@ -257,7 +257,7 @@
 
     <ng-template pTemplate="footer">
         <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="closeDialog()" [disabled]="isSaving"></p-button>
-        <p-button label="Save" icon="pi pi-check" (onClick)="saveRecord()" [loading]="isSaving" [disabled]="isSaving"></p-button>
+        <p-button [label]="isEditMode ? 'Update' : 'Save'" icon="pi pi-check" (onClick)="saveRecord()" [loading]="isSaving" [disabled]="isSaving"></p-button>
     </ng-template>
 </p-dialog>
 

@@ -232,8 +232,10 @@ export class EmpLeaveInfo implements OnInit {
     confirmDelete(row: LeaveInfoModel): void {
         this.confirmationService.confirm({
             message: `Delete leave record (${this.getLeaveTypeName(row.leaveTypeId)} - ${this.formatDate(row.fromDate)} to ${this.formatDate(row.toDate)})?`,
-            header: 'Confirm Delete',
+            header: 'Delete Confirmation',
             icon: 'pi pi-exclamation-triangle',
+            rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+            acceptButtonProps: { label: 'Delete', severity: 'danger' },
             accept: () => this.deleteLeave(row)
         });
     }

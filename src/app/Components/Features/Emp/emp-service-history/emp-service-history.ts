@@ -460,8 +460,10 @@ export class EmpServiceHistory implements OnInit {
     confirmDelete(row: ServiceHistoryListRow): void {
         this.confirmationService.confirm({
             message: 'Delete this service history record?',
-            header: 'Confirm Delete',
+            header: 'Delete Confirmation',
             icon: 'pi pi-exclamation-triangle',
+            rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+            acceptButtonProps: { label: 'Delete', severity: 'danger' },
             accept: () => this.deleteService(row)
         });
     }

@@ -5,6 +5,9 @@ import { TreeTableModule } from 'primeng/treetable';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { CheckboxModule } from 'primeng/checkbox';
+import { InputTextModule } from 'primeng/inputtext';
+import { IconFieldModule } from 'primeng/iconfield';
+import { InputIconModule } from 'primeng/inputicon';
 import { Toast } from 'primeng/toast';
 import { Tag } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
@@ -30,6 +33,9 @@ import { MenuType, MenuTypeOptions } from '@/models/enums';
         ButtonModule,
         SelectModule,
         CheckboxModule,
+        InputTextModule,
+        IconFieldModule,
+        InputIconModule,
         Toast,
         Tag,
         TooltipModule,
@@ -44,8 +50,19 @@ export class RoleMenuPermission implements OnInit {
     menus: MenuModel[] = [];
     selectedRole: ApplicationRole | null = null;
     treeData: TreeNode[] = [];
+    allTreeData: TreeNode[] = [];
     loading = false;
     saving = false;
+
+    // Filter & Search
+    selectedMenuTypeFilter: number | null = null;
+    searchText: string = '';
+    menuTypeFilterOptions = [
+        { label: 'Header / Group', value: MenuType.Header },
+        { label: 'Angular Route', value: MenuType.AngularRoute },
+        { label: 'External Link', value: MenuType.ExternalLink },
+        { label: 'Action', value: MenuType.Action }
+    ];
 
     // Expose for template
     MenuType = MenuType;
@@ -153,7 +170,49 @@ export class RoleMenuPermission implements OnInit {
         };
         sortNodes(roots);
 
-        this.treeData = roots;
+        this.allTreeData = roots;
+        this.applyFilters();
+    }
+
+    applyMenuTypeFilter(): void {
+        this.applyFilters();
+    }
+
+    onSearchChange(): void {
+        this.applyFilters();
+    }
+
+    private applyFilters(): void {
+        const typeFilter = this.selectedMenuTypeFilter;
+        const search = (this.searchText || '').trim().toLowerCase();
+
+        if (typeFilter == null && !search) {
+            this.treeData = this.deepCloneNodes(this.allTreeData);
+            return;
+        }
+
+        this.treeData = this.filterTreeNodes(this.allTreeData, typeFilter, search);
+    }
+
+    private filterTreeNodes(nodes: TreeNode[], typeFilter: number | null, search: string): TreeNode[] {
+        const result: TreeNode[] = [];
+        for (const node of nodes) {
+            const row = node.data as MenuPermissionRow;
+            const nameMatch = !search || row.menuNameEn.toLowerCase().includes(search);
+            const typeMatch = typeFilter == null || row.menuType === typeFilter;
+            const selfMatch = nameMatch && typeMatch;
+
+            const filteredChildren = node.children ? this.filterTreeNodes(node.children, typeFilter, search) : [];
+
+            if (selfMatch || filteredChildren.length > 0) {
+                result.push({ ...node, children: filteredChildren, expanded: true });
+            }
+        }
+        return result;
+    }
+
+    private deepCloneNodes(nodes: TreeNode[]): TreeNode[] {
+        return nodes.map(n => ({ ...n, children: n.children ? this.deepCloneNodes(n.children) : [] }));
     }
 
     onPermissionChange(row: MenuPermissionRow): void {

@@ -93,9 +93,10 @@ export class EmpList implements OnInit {
     confirmDelete(employee: any): void {
         this.confirmationService.confirm({
             message: `Are you sure you want to delete ${employee.fullNameEN}?`,
-            header: 'Confirm Delete',
+            header: 'Delete Confirmation',
             icon: 'pi pi-exclamation-triangle',
-            acceptButtonStyleClass: 'p-button-danger',
+            rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+            acceptButtonProps: { label: 'Delete', severity: 'danger' },
             accept: () => {
                 this.deleteEmployee(employee);
             }

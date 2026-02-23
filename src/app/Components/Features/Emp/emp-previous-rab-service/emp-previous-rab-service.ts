@@ -393,8 +393,10 @@ export class EmpPreviousRabService implements OnInit {
     confirmDelete(row: PreviousRABServiceListRow): void {
         this.confirmationService.confirm({
             message: 'Delete this previous RAB service record?',
-            header: 'Confirm Delete',
+            header: 'Delete Confirmation',
             icon: 'pi pi-exclamation-triangle',
+            rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+            acceptButtonProps: { label: 'Delete', severity: 'danger' },
             accept: () => this.deleteService(row)
         });
     }

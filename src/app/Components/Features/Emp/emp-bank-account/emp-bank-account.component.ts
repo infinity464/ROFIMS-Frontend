@@ -311,8 +311,10 @@ export class EmpBankAccount implements OnInit {
     confirmDelete(row: BankAccInfoModel): void {
         this.confirmationService.confirm({
             message: `Delete account ${row.accountNumber}?`,
-            header: 'Confirm Delete',
+            header: 'Delete Confirmation',
             icon: 'pi pi-exclamation-triangle',
+            rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+            acceptButtonProps: { label: 'Delete', severity: 'danger' },
             accept: () => this.deleteBankAcc(row)
         });
     }

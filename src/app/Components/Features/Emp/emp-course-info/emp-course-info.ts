@@ -409,8 +409,10 @@ export class EmpCourseInfoComponent implements OnInit {
     confirmDelete(row: CourseInfoModel): void {
         this.confirmationService.confirm({
             message: 'Delete this course record?',
-            header: 'Confirm Delete',
+            header: 'Delete Confirmation',
             icon: 'pi pi-exclamation-triangle',
+            rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+            acceptButtonProps: { label: 'Delete', severity: 'danger' },
             accept: () => this.deleteCourse(row)
         });
     }

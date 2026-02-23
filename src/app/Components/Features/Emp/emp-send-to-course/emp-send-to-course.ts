@@ -490,9 +490,10 @@ export class EmpSendToCourseComponent implements OnInit {
         if (!this.selectedDraft) return;
         this.confirmationService.confirm({
             message: `Delete draft "${this.selectedDraft.listNo}" and all its members? This cannot be undone.`,
-            header: 'Confirm Delete',
+            header: 'Delete Confirmation',
             icon: 'pi pi-exclamation-triangle',
-            acceptButtonStyleClass: 'p-button-danger',
+            rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+            acceptButtonProps: { label: 'Delete', severity: 'danger' },
             accept: () => {
                 this.isDeletingDraft = true;
                 this.draftCourseService.deleteDraft(this.selectedDraft!.id).subscribe({
@@ -521,9 +522,10 @@ export class EmpSendToCourseComponent implements OnInit {
     deleteDraftRow(row: DraftCourseList): void {
         this.confirmationService.confirm({
             message: `Delete draft "${row.listNo}" and all its members? This cannot be undone.`,
-            header: 'Confirm Delete',
+            header: 'Delete Confirmation',
             icon: 'pi pi-exclamation-triangle',
-            acceptButtonStyleClass: 'p-button-danger',
+            rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+            acceptButtonProps: { label: 'Delete', severity: 'danger' },
             accept: () => {
                 this.isDeletingDraft = true;
                 this.draftCourseService.deleteDraft(row.id).subscribe({
@@ -555,8 +557,10 @@ export class EmpSendToCourseComponent implements OnInit {
         if (!this.selectedDraft || !this.selectedDraftMembers?.length) return;
         this.confirmationService.confirm({
             message: `Remove ${this.selectedDraftMembers.length} member(s) from draft?`,
-            header: 'Confirm',
+            header: 'Delete Confirmation',
             icon: 'pi pi-exclamation-triangle',
+            rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+            acceptButtonProps: { label: 'Remove', severity: 'danger' },
             accept: () => {
                 this.isRemovingFromDraft = true;
                 const ids = this.selectedDraftMembers.map((m) => m.employeeId);

@@ -486,7 +486,7 @@
                 }
                 <p-button
                     type="button"
-                    label="Save All Information"
+                    [label]="isEditMode ? 'Update All Information' : 'Save All Information'"
                     icon="pi pi-check-circle"
                     [disabled]="isServiceIdDuplicate || isCheckingServiceId"
                     (onClick)="saveAll()">

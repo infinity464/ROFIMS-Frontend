@@ -589,8 +589,10 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
     confirmDelete(row: ForeignVisitInfoModel): void {
         this.confirmationService.confirm({
             message: 'Delete this foreign visit record?',
-            header: 'Confirm Delete',
+            header: 'Delete Confirmation',
             icon: 'pi pi-exclamation-triangle',
+            rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+            acceptButtonProps: { label: 'Delete', severity: 'danger' },
             accept: () => this.deleteVisit(row)
         });
     }
@@ -732,8 +734,10 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
         } else if (item.foreignVisitFamilyId != null) {
             this.confirmationService.confirm({
                 message: 'Remove this family member from the visit?',
-                header: 'Confirm',
+                header: 'Delete Confirmation',
                 icon: 'pi pi-exclamation-triangle',
+                rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+                acceptButtonProps: { label: 'Remove', severity: 'danger' },
                 accept: () => {
                     const fm = this.familyListForVisit.find((f) => f.foreignVisitFamilyId === item.foreignVisitFamilyId);
                     if (fm) {

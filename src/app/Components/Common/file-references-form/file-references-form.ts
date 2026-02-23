@@ -5,6 +5,10 @@ import { FileUpload } from 'primeng/fileupload';
 import { Button } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { TooltipModule } from 'primeng/tooltip';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { ConfirmationService, MessageService } from 'primeng/api';
+import { ToastModule } from 'primeng/toast';
+import { EmpService } from '../../../services/emp-service';
 
 export interface FileRowData {
     displayName: string;
@@ -17,7 +21,8 @@ export interface FileRowData {
     templateUrl: './file-references-form.html',
     styleUrl: './file-references-form.scss',
     standalone: true,
-    imports: [CommonModule, FormsModule, FileUpload, Button, InputTextModule, TooltipModule]
+    imports: [CommonModule, FormsModule, FileUpload, Button, InputTextModule, TooltipModule, ConfirmDialogModule, ToastModule],
+    providers: [ConfirmationService, MessageService]
 })
 export class FileReferencesFormComponent implements OnInit, OnChanges {
     @Input() fileRows: FileRowData[] = [];
@@ -31,6 +36,12 @@ export class FileReferencesFormComponent implements OnInit, OnChanges {
 
     /** Local copy so template updates when parent sets fileRows asynchronously (e.g. after load). */
     rows: FileRowData[] = [];
+
+    constructor(
+        private confirmationService: ConfirmationService,
+        private messageService: MessageService,
+        private empService: EmpService
+    ) {}
 
     ngOnInit(): void {
         this.rows = Array.isArray(this.fileRows) && this.fileRows.length > 0 ? [...this.fileRows] : [];
@@ -50,9 +61,37 @@ export class FileReferencesFormComponent implements OnInit, OnChanges {
     }
 
     removeFileRow(index: number): void {
-        this.fileRows.splice(index, 1);
-        this.rows = [...this.fileRows];
-        this.emitChanges();
+        const row = this.fileRows[index];
+        if (!row) return;
+        const fileName = row.displayName || 'this file';
+        this.confirmationService.confirm({
+            message: `Are you sure you want to remove "${fileName}"?`,
+            header: 'Delete Confirmation',
+            icon: 'pi pi-exclamation-triangle',
+            rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+            acceptButtonProps: { label: 'Remove', severity: 'danger' },
+            accept: () => {
+                if (row.fileId != null) {
+                    // Saved file — delete from server
+                    this.empService.deleteFile(row.fileId).subscribe({
+                        next: () => {
+                            this.messageService.add({ severity: 'success', summary: 'Deleted', detail: `"${fileName}" removed from server.` });
+                            this.fileRows.splice(index, 1);
+                            this.rows = [...this.fileRows];
+                            this.emitChanges();
+                        },
+                        error: () => {
+                            this.messageService.add({ severity: 'error', summary: 'Error', detail: `Failed to delete "${fileName}" from server.` });
+                        }
+                    });
+                } else {
+                    // New unsaved file — just remove locally
+                    this.fileRows.splice(index, 1);
+                    this.rows = [...this.fileRows];
+                    this.emitChanges();
+                }
+            }
+        });
     }
 
     onFileSelectForRow(index: number, event: { files: File[] }): void {

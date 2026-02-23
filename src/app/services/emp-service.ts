@@ -262,6 +262,11 @@ export class EmpService {
         return this.http.get(`${this.empApi}/FileInformation/Download/${fileId}`, { responseType: 'blob' });
     }
 
+    /** Delete a file by FileID. Removes the physical file and database record from the server. */
+    deleteFile(fileId: number): Observable<any> {
+        return this.http.delete(`${this.empApi}/FileInformation/Delete/${fileId}`);
+    }
+
     /** Get all document references (file id and file name) for an employee from vw_EmployeeDocumentReferences. */
     getEmployeeDocumentReferences(employeeId: number): Observable<EmployeeDocumentReferenceItem[]> {
         return this.http.get<EmployeeDocumentReferenceItem[]>(`${this.empApi}/FileInformation/GetEmployeeDocumentReferences`, {

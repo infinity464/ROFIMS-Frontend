@@ -40,21 +40,21 @@
 
         <ng-template pTemplate="colgroup">
             <colgroup>
+                <col style="width: 26%">
+                <!-- <col style="width: 18%"> Menu Name (BN) - hidden -->
+                <col style="width: 12%">
                 <col style="width: 22%">
-                <col style="width: 18%">
-                <col style="width: 10%">
-                <col style="width: 18%">
-                <col style="width: 6%">
-                <col style="width: 6%">
-                <col style="width: 6%">
-                <col style="width: 14%">
+                <col style="width: 8%">
+                <col style="width: 8%">
+                <col style="width: 8%">
+                <col style="width: 16%">
             </colgroup>
         </ng-template>
 
         <ng-template pTemplate="header">
             <tr>
                 <th>Menu Name (EN)</th>
-                <th>Menu Name (BN)</th>
+                <!-- <th>Menu Name (BN)</th> -->
                 <th class="text-center">Type</th>
                 <th>Route / URL</th>
                 <th class="text-center">Order</th>
@@ -73,9 +73,9 @@
                     }
                     <span [class]="rowData.parentMenuId ? 'text-700' : 'font-bold text-900'">{{ rowData.menuNameEn }}</span>
                 </td>
-                <td class="cell-nowrap">
+                <!-- <td class="cell-nowrap">
                     <span class="text-700">{{ rowData.menuNameBangla || '-' }}</span>
-                </td>
+                </td> -->
                 <td class="text-center">
                     <p-tag [value]="getMenuTypeLabel(rowData.menuType)" [severity]="getMenuTypeSeverity(rowData.menuType)" [style]="{'font-size': '0.75rem'}"></p-tag>
                 </td>
@@ -106,7 +106,9 @@
                 <td class="text-center">
                     <div class="flex flex-nowrap gap-1 justify-content-center">
                         <p-button icon="pi pi-eye" size="small" [rounded]="true" [text]="true" severity="info" pTooltip="View" tooltipPosition="top" (onClick)="openViewDialog(rowData)"></p-button>
-                        <p-button icon="pi pi-plus" size="small" [rounded]="true" [text]="true" severity="success" pTooltip="Add Child" tooltipPosition="top" (onClick)="openNewDialog(rowData.id)"></p-button>
+                        @if (rowData.menuType === MenuType.Header) {
+                            <p-button icon="pi pi-plus" size="small" [rounded]="true" [text]="true" severity="success" pTooltip="Add Child" tooltipPosition="top" (onClick)="openNewDialog(rowData.id)"></p-button>
+                        }
                         <p-button icon="pi pi-pencil" size="small" [rounded]="true" [text]="true" pTooltip="Edit" tooltipPosition="top" (onClick)="openEditDialog(rowData)"></p-button>
                         <p-button icon="pi pi-trash" size="small" [rounded]="true" [text]="true" severity="danger" pTooltip="Delete" tooltipPosition="top" (onClick)="confirmDelete(rowData, $event)"></p-button>
                     </div>
@@ -116,7 +118,7 @@
 
         <ng-template pTemplate="emptymessage">
             <tr>
-                <td colspan="8" class="text-center p-4">
+                <td colspan="7" class="text-center p-4">
                     <div class="flex flex-column align-items-center gap-3 py-5">
                         <i class="pi pi-bars text-5xl text-400"></i>
                         <span class="text-lg text-500">No menus found. Click "Add Root Menu" to create one.</span>
@@ -147,10 +149,10 @@
                     <small class="text-red-500 block mt-1">Menu name is required</small>
                 }
             </div>
-            <div>
+            <!-- <div>
                 <label class="font-medium block mb-2">Menu Name (Bangla)</label>
                 <input pInputText formControlName="menuNameBangla" placeholder="মেনু নাম লিখুন" class="w-full" />
-            </div>
+            </div> -->
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -279,9 +281,9 @@
             }
             <div>
                 <div class="text-xl font-bold text-900">{{ viewingMenu.menuNameEn }}</div>
-                @if (viewingMenu.menuNameBangla) {
+                <!-- @if (viewingMenu.menuNameBangla) {
                     <div class="text-lg text-600">{{ viewingMenu.menuNameBangla }}</div>
-                }
+                } -->
             </div>
             <div class="ml-auto">
                 <p-tag [value]="getMenuTypeLabel(viewingMenu.menuType)" [severity]="getMenuTypeSeverity(viewingMenu.menuType)"></p-tag>

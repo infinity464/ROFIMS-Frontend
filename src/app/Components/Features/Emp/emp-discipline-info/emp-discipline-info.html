@@ -191,7 +191,7 @@
     </form>
     <ng-template pTemplate="footer">
         <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="displayDialog = false" [disabled]="isSaving"></p-button>
-        <p-button label="Save" icon="pi pi-check" [loading]="isSaving" [disabled]="isSaving" (onClick)="saveDiscipline()"></p-button>
+        <p-button [label]="isEditMode ? 'Update' : 'Save'" icon="pi pi-check" [loading]="isSaving" [disabled]="isSaving" (onClick)="saveDiscipline()"></p-button>
     </ng-template>
 </p-dialog>
 
