@@ -1,0 +1,9 @@
+:host {
+    display: block;
+}
+
+:host-context(.app-dark) {
+    background-color: var(--surface-ground);
+    display: block;
+    min-height: 100%;
+}

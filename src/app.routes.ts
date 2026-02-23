@@ -120,6 +120,7 @@ import { PdfImageSearchComponent } from '@/Components/Features/pdf-vault/pdf-ima
 import { ImageUploadComponent } from '@/Components/Features/pdf-vault/image-upload/image-upload.component';
 import { MenuManagement } from '@/Components/Features/menu-management/menu-management';
 import { RoleMenuPermission } from '@/Components/Features/role-menu-permission/role-menu-permission';
+import { EmployeeReportsComponent } from '@/Components/Features/employee-reports/employee-reports.component';
 
 export const appRoutes: Routes = [
     // Public routes
@@ -262,6 +263,9 @@ export const appRoutes: Routes = [
             // Image Vault
             { path: 'image-vault/upload', component: ImageUploadComponent },
             { path: 'image-vault/find', component: PdfImageSearchComponent },
+
+            // Employee Reports
+            { path: 'employee-reports', component: EmployeeReportsComponent },
 
             // Menu Management
             { path: 'menu-management', component: MenuManagement },
