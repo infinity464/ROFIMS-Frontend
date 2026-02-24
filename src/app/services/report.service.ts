@@ -10,6 +10,8 @@ import type {
   BatchCourseReportRow,
   EducationReportParams,
   EducationReportRow,
+  GenericReportParams,
+  GenericReportRow,
   ReportPagedResponse,
 } from '@/models/report.model';
 import type { PagedResponse } from '@/Core/Models/Pagination';
@@ -59,6 +61,50 @@ export class ReportService {
     return this.http
       .post<ReportPagedResponse<EducationReportRow>>(
         `${this.apiUrl}/GetEducationReport`,
+        params
+      )
+      .pipe(map(normalizePages));
+  }
+
+  getMotherOrgReport(
+    params: GenericReportParams
+  ): Observable<PagedResponse<GenericReportRow>> {
+    return this.http
+      .post<ReportPagedResponse<GenericReportRow>>(
+        `${this.apiUrl}/GetMotherOrgReport`,
+        params
+      )
+      .pipe(map(normalizePages));
+  }
+
+  getOfficerTypeReport(
+    params: GenericReportParams
+  ): Observable<PagedResponse<GenericReportRow>> {
+    return this.http
+      .post<ReportPagedResponse<GenericReportRow>>(
+        `${this.apiUrl}/GetOfficerTypeReport`,
+        params
+      )
+      .pipe(map(normalizePages));
+  }
+
+  getRabUnitReport(
+    params: GenericReportParams
+  ): Observable<PagedResponse<GenericReportRow>> {
+    return this.http
+      .post<ReportPagedResponse<GenericReportRow>>(
+        `${this.apiUrl}/GetRabUnitReport`,
+        params
+      )
+      .pipe(map(normalizePages));
+  }
+
+  getWingsReport(
+    params: GenericReportParams
+  ): Observable<PagedResponse<GenericReportRow>> {
+    return this.http
+      .post<ReportPagedResponse<GenericReportRow>>(
+        `${this.apiUrl}/GetWingsReport`,
         params
       )
       .pipe(map(normalizePages));

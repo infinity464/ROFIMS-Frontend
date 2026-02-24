@@ -355,6 +355,17 @@
 }
 .report-btn-search:hover { transform: translateY(-1px); box-shadow: 0 5px 16px rgba(0, 180, 160, 0.4); }
 
+/* Placeholder when report type has no component yet */
+.report-placeholder {
+  padding: 24px 20px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.9rem;
+  background: var(--surface);
+  border: 1.5px dashed var(--border);
+  border-radius: 14px;
+}
+
 /* ----- Results card ----- */
 .report-results-card {
   border: 1.5px solid var(--border);

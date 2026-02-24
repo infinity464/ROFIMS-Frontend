@@ -5,18 +5,33 @@ import { ButtonModule } from 'primeng/button';
 import { ReportMemberAppointmentComponent } from './report-member-appointment/report-member-appointment.component';
 import { ReportBatchCourseComponent } from './report-batch-course/report-batch-course.component';
 import { ReportEducationComponent } from './report-education/report-education.component';
+import { ReportMotherOrgComponent } from './report-mother-org/report-mother-org.component';
+import { ReportOfficerTypeComponent } from './report-officer-type/report-officer-type.component';
+import { ReportRabUnitComponent } from './report-rab-unit/report-rab-unit.component';
+import { ReportWingsComponent } from './report-wings/report-wings.component';
 import { SelectModule } from 'primeng/select';
 import { REPORT_LABELS, type ReportLang } from '@/Core/i18n/report-labels';
 import { CommonCodeService } from '@/services/common-code-service';
 import type { CommonCodeModel } from '@/models/common-code-model';
 
-export type ReportType = 'memberAppointment' | 'batchCourse' | 'education';
+export type ReportType =
+    | 'memberAppointment'
+    | 'batchCourse'
+    | 'education'
+    | 'motherOrg'
+    | 'officerType'
+    | 'rabUnit'
+    | 'wings';
 
 /** Common code type name per report type (for dropdown options). */
 const COMMON_CODE_TYPE_BY_REPORT: Record<ReportType, string> = {
     memberAppointment: 'AppointmentCategory',
     batchCourse: 'CourseName',
     education: 'EducationQualification',
+    motherOrg: 'MotherOrg',
+    officerType: 'OfficerType',
+    rabUnit: 'RabUnit',
+    wings: 'Wing',
 };
 
 @Component({
@@ -30,6 +45,10 @@ const COMMON_CODE_TYPE_BY_REPORT: Record<ReportType, string> = {
         ReportMemberAppointmentComponent,
         ReportBatchCourseComponent,
         ReportEducationComponent,
+        ReportMotherOrgComponent,
+        ReportOfficerTypeComponent,
+        ReportRabUnitComponent,
+        ReportWingsComponent,
     ],
     templateUrl: './employee-reports.component.html',
     styleUrls: ['./employee-reports.component.scss', './report-theme.scss'],
@@ -43,6 +62,10 @@ export class EmployeeReportsComponent implements OnInit {
         { label: 'Appointment', value: 'memberAppointment' },
         { label: 'Course', value: 'batchCourse' },
         { label: 'Education', value: 'education' },
+        { label: 'Mother Org', value: 'motherOrg' },
+        { label: 'Officer Type', value: 'officerType' },
+        { label: 'RAB UNIT', value: 'rabUnit' },
+        { label: 'Wings', value: 'wings' },
     ];
 
     /** Common code options for the selected report type. When user selects one, filter fires. */

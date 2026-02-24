@@ -15,6 +15,10 @@ export const REPORT_LABELS = {
         'report.title.memberAppointment': 'Type of member / appointment category / wing / battalion / mother organization',
         'report.title.batchCourse': 'Service length, Batch/course (e.g. 31st BCS / 71 BMA LC)',
         'report.title.education': 'Honors / higher education subjects',
+        'report.title.motherOrg': 'Mother Organization',
+        'report.title.officerType': 'Officer Type',
+        'report.title.rabUnit': 'RAB Unit',
+        'report.title.wings': 'Wings',
 
         'report.search.createList': 'Search',
         'report.search.motherOrg': 'Mother Organization',
@@ -68,6 +72,10 @@ export const REPORT_LABELS = {
         'report.title.memberAppointment': 'সদস্যের ধরণ / নিয়োগ ক্যাটাগরি / উইং / ব্যাটালিয়ন / মাতৃ সংস্থা',
         'report.title.batchCourse': 'সেবার মেয়াদ, ব্যাচ/কোর্স (যেমন ৩১তম BCS / 71 BMA LC)',
         'report.title.education': 'সম্মান / উচ্চ শিক্ষা বিষয়',
+        'report.title.motherOrg': 'মাতৃ সংস্থা',
+        'report.title.officerType': 'অফিসার ধরণ',
+        'report.title.rabUnit': 'র‍্যাব ইউনিট',
+        'report.title.wings': 'উইং',
 
         'report.search.createList': 'অনুসন্ধান',
         'report.search.motherOrg': 'মাতৃ সংস্থা',

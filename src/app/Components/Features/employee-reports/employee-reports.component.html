@@ -52,6 +52,18 @@
                 @case ('education') {
                     <app-report-education [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" />
                 }
+                @case ('motherOrg') {
+                    <app-report-mother-org [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" />
+                }
+                @case ('officerType') {
+                    <app-report-officer-type [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" />
+                }
+                @case ('rabUnit') {
+                    <app-report-rab-unit [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" />
+                }
+                @case ('wings') {
+                    <app-report-wings [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" />
+                }
             }
         </div>
     }

@@ -77,6 +77,20 @@ export interface EducationReportParams {
   pagination: ReportPagination;
 }
 
+/** Report D–G: Mother Org, Officer Type, RAB Unit, Wings – same row shape as Appointment. */
+export interface GenericReportRow extends ReportRowBase {
+  rmks?: string | null;
+}
+
+/** Request for Mother Org / Officer Type / RAB Unit / Wings reports. */
+export interface GenericReportParams {
+  orgId?: number | null;
+  rankId?: number | null;
+  tradeId?: number | null;
+  commonCodeId?: number | null;
+  pagination: ReportPagination;
+}
+
 /** Backend paged response (may use Rows/TotalPages). */
 export interface ReportPagedResponse<T> {
   datalist: T[];
