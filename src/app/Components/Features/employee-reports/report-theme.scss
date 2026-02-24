@@ -4,11 +4,10 @@
  */
 *, *::before, *::after { box-sizing: border-box; }
 
-/* ----- Light theme (reference variables) ----- */
+/* ----- Light theme: use topbar/theme primary (like emp-basic-info) ----- */
 .employee-reports-page {
-  --teal: #00b4a0;
-  --teal-dark: #008f7e;
-  --teal-bg: rgba(0, 180, 160, 0.07);
+  --report-accent: var(--primary-color);
+  --report-accent-bg: color-mix(in srgb, var(--primary-color) 12%, transparent);
   --navy: #0f1f3d;
   --border: #e4e9f2;
   --border-light: #f0f3f9;
@@ -24,11 +23,10 @@
   font-family: 'DM Sans', 'Lato', sans-serif;
 }
 
-/* Dark: use same theme variables as Ex-Member Profile (surface-ground, surface-card, text-color, surface-border). */
+/* Dark: use theme primary for accents. */
 :host-context(.app-dark) {
-  --teal: #00d4bc;
-  --teal-dark: #00b4a0;
-  --teal-bg: rgba(0, 212, 188, 0.15);
+  --report-accent: var(--primary-color);
+  --report-accent-bg: color-mix(in srgb, var(--primary-color) 18%, transparent);
   --navy: var(--text-color);
   --border: var(--surface-border);
   --border-light: var(--surface-border);
@@ -52,8 +50,8 @@
   border-color: var(--surface-border);
 }
 :host-context(.app-dark) .report-filter-header.open .report-chevron {
-  border-color: var(--teal);
-  background: var(--teal-bg);
+  border-color: var(--report-accent);
+  background: var(--report-accent-bg);
 }
 :host-context(.app-dark) .report-btn-clear {
   background: var(--surface-card) !important;
@@ -66,8 +64,8 @@
   color: var(--text-color);
 }
 :host-context(.app-dark) .report-btn-export:hover {
-  border-color: var(--teal);
-  background: var(--teal-bg) !important;
+  border-color: var(--report-accent);
+  background: var(--report-accent-bg) !important;
 }
 :host-context(.app-dark) .report-chevron {
   background: var(--surface-card) !important;
@@ -92,9 +90,8 @@
   color: var(--text-color-secondary);
 }
 .app-dark .employee-reports-page {
-  --teal: #00d4bc;
-  --teal-dark: #00b4a0;
-  --teal-bg: rgba(0, 212, 188, 0.15);
+  --report-accent: var(--primary-color);
+  --report-accent-bg: color-mix(in srgb, var(--primary-color) 18%, transparent);
   --navy: var(--text-color);
   --border: var(--surface-border);
   --border-light: var(--surface-border);
@@ -134,8 +131,8 @@
 
 .report-lang-toggle {
   font-size: 0.8rem;
-  color: var(--teal);
-  border: 1.5px solid var(--teal);
+  color: var(--primary-color);
+  border: 1.5px solid var(--primary-color);
   background: none;
   padding: 4px 14px;
   border-radius: 20px;
@@ -143,7 +140,7 @@
   font-weight: 500;
   transition: all 0.18s;
 }
-.report-lang-toggle:hover { background: var(--teal); color: #fff; }
+.report-lang-toggle:hover { background: var(--primary-color); color: var(--primary-contrast-color); }
 
 /* ----- Report type card ----- */
 .report-type-card {
@@ -172,7 +169,7 @@
   font-weight: 700;
   letter-spacing: 0.13em;
   text-transform: uppercase;
-  color: var(--teal);
+  color: var(--primary-color);
   margin-bottom: 12px;
 }
 .rt-select-wrap { position: relative; max-width: 320px; }
@@ -188,8 +185,8 @@
   background: var(--white);
 }
 .rt-select-wrap .p-select:focus-within .p-select-label {
-  border-color: var(--teal);
-  box-shadow: 0 0 0 3px rgba(0, 180, 160, 0.11);
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px var(--report-accent-bg);
 }
 .app-dark .employee-reports-page .rt-select-wrap .p-select .p-select-label {
   background: var(--white);
@@ -224,7 +221,7 @@
 .report-filter-icon {
   width: 32px; height: 32px;
   border-radius: 8px;
-  background: var(--teal-bg);
+  background: var(--report-accent-bg);
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
 }
@@ -238,8 +235,8 @@
 .report-filter-header-right { display: flex; align-items: center; gap: 10px; }
 
 .report-filters-badge {
-  background: var(--teal);
-  color: #fff;
+  background: var(--primary-color);
+  color: var(--primary-contrast-color);
   font-size: 0.68rem;
   font-weight: 700;
   padding: 2px 8px;
@@ -258,9 +255,9 @@
   flex-shrink: 0;
 }
 .report-chevron svg { transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1); }
-.report-filter-header.open .report-chevron { border-color: var(--teal); background: var(--teal-bg); }
+.report-filter-header.open .report-chevron { border-color: var(--report-accent); background: var(--report-accent-bg); }
 .report-filter-header.open .report-chevron svg { transform: rotate(180deg); }
-.report-filter-header.open .report-chevron path { stroke: var(--teal); }
+.report-filter-header.open .report-chevron path { stroke: var(--report-accent); }
 
 .report-filter-body {
   max-height: 0;
@@ -312,8 +309,8 @@
 }
 .report-filter-body-inner .p-select:focus-within .p-select-label,
 .report-filter-body-inner .p-inputtext:focus {
-  border-color: var(--teal);
-  box-shadow: 0 0 0 3px rgba(0, 180, 160, 0.11);
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px var(--report-accent-bg);
 }
 .app-dark .employee-reports-page .report-filter-body-inner .p-select .p-select-label,
 .app-dark .employee-reports-page .report-filter-body-inner .p-inputtext {
@@ -346,14 +343,14 @@
   height: 36px; padding: 0 22px;
   border-radius: 8px;
   border: none;
-  background: linear-gradient(135deg, var(--teal), var(--teal-dark));
+  background: var(--primary-color);
   font-size: 0.84rem; font-weight: 600;
-  color: #fff; cursor: pointer;
+  color: var(--primary-contrast-color); cursor: pointer;
   display: inline-flex; align-items: center; gap: 7px;
-  box-shadow: 0 3px 10px rgba(0, 180, 160, 0.3);
+  box-shadow: 0 3px 10px var(--report-accent-bg);
   transition: all 0.18s;
 }
-.report-btn-search:hover { transform: translateY(-1px); box-shadow: 0 5px 16px rgba(0, 180, 160, 0.4); }
+.report-btn-search:hover { transform: translateY(-1px); box-shadow: 0 5px 16px color-mix(in srgb, var(--primary-color) 35%, transparent); }
 
 /* Placeholder when report type has no component yet */
 .report-placeholder {
@@ -418,7 +415,7 @@
 }
 .app-dark .employee-reports-page .report-btn-export { color: var(--text); }
 .report-btn-export:hover { border-color: var(--navy); background: var(--surface); }
-.app-dark .employee-reports-page .report-btn-export:hover { border-color: var(--teal); background: var(--teal-bg); }
+.app-dark .employee-reports-page .report-btn-export:hover { border-color: var(--report-accent); background: var(--report-accent-bg); }
 
 /* Export dropdown */
 .report-export-wrap {
@@ -472,9 +469,9 @@
 .report-badge-corps {
   display: inline-block; padding: 2px 8px; border-radius: 5px;
   font-size: 0.72rem; font-weight: 600;
-  background: rgba(0, 180, 160, 0.1); color: var(--teal-dark);
+  background: var(--report-accent-bg); color: var(--primary-color);
 }
-.app-dark .employee-reports-page .report-badge-corps { background: var(--teal-bg); color: var(--teal); }
+.app-dark .employee-reports-page .report-badge-corps { background: var(--report-accent-bg); color: var(--report-accent); }
 .report-badge-unit {
   display: inline-block; padding: 2px 8px; border-radius: 5px;
   font-size: 0.72rem; font-weight: 600;
@@ -502,7 +499,7 @@
   border-bottom: 1px solid var(--border-light);
 }
 .report-results-card .p-datatable .p-datatable-tbody > tr:last-child > td { border-bottom: none; }
-.report-results-card .p-datatable .p-datatable-tbody > tr:hover { background: var(--teal-bg); }
+.report-results-card .p-datatable .p-datatable-tbody > tr:hover { background: var(--report-accent-bg); }
 
 .report-table-wrap { overflow-x: auto; }
 
@@ -520,8 +517,8 @@
   background: var(--white);
   color: var(--muted);
 }
-.report-results-card .p-paginator .p-paginator-button:hover:not(:disabled) { border-color: var(--teal); color: var(--teal); }
-.report-results-card .p-paginator .p-paginator-button.p-highlight { background: var(--teal); border-color: var(--teal); color: #fff; font-weight: 700; }
+.report-results-card .p-paginator .p-paginator-button:hover:not(:disabled) { border-color: var(--primary-color); color: var(--primary-color); }
+.report-results-card .p-paginator .p-paginator-button.p-highlight { background: var(--primary-color); border-color: var(--primary-color); color: var(--primary-contrast-color); font-weight: 700; }
 .report-results-card .p-paginator .p-dropdown {
   height: 30px;
   border-radius: 7px;
