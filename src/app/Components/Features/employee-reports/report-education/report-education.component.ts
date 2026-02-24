@@ -57,11 +57,11 @@ export class ReportEducationComponent implements OnInit, OnChanges {
     }
 
     get reportTitle(): string {
-        return this.L[this.lang]['report.title.education'];
+        return this.L['en']['report.title.education'];
     }
 
     getExportData(): { columns: string[]; rows: string[][] } {
-        const L = this.L[this.lang];
+        const L = this.L['en'];
         const columns = [
             L['report.table.ser'],
             L['report.table.orgName'],
@@ -172,7 +172,7 @@ export class ReportEducationComponent implements OnInit, OnChanges {
     }
 
     filterSubtitle(): string {
-        const L = this.L[this.lang];
+        const L = this.L['en'];
         if (this.activeFilterCount === 0) return L['report.search.panelSubtitle'];
         const n = this.lang === 'bn' ? BanglaNumerals.toBangla(String(this.activeFilterCount)) : String(this.activeFilterCount);
         return n + ' ' + L['report.search.panelSubtitleApplied'];

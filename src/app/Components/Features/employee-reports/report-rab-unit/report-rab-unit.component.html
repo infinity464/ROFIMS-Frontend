@@ -9,7 +9,7 @@
                 </svg>
             </div>
             <div>
-                <div class="report-filter-title">{{ L[lang]['report.search.createList'] }}</div>
+                <div class="report-filter-title">{{ L['en']['report.search.createList'] }}</div>
                 <div class="report-filter-subtitle">{{ filterSubtitle() }}</div>
             </div>
         </div>
@@ -27,7 +27,7 @@
         <div class="report-filter-body-inner">
             <div class="report-fields-row">
                 <div class="report-filter-field">
-                    <label>{{ L[lang]['report.search.motherOrg'] }}</label>
+                    <label>{{ L['en']['report.search.motherOrg'] }}</label>
                     <p-select
                         [options]="orgOptions"
                         [(ngModel)]="selectedOrgId"
@@ -41,7 +41,7 @@
                     </p-select>
                 </div>
                 <div class="report-filter-field">
-                    <label>{{ L[lang]['report.search.rank'] }}</label>
+                    <label>{{ L['en']['report.search.rank'] }}</label>
                     <p-select
                         [options]="rankOptions"
                         [(ngModel)]="selectedRankId"
@@ -55,7 +55,7 @@
                     </p-select>
                 </div>
                 <div class="report-filter-field">
-                    <label>{{ L[lang]['report.search.trade'] }}</label>
+                    <label>{{ L['en']['report.search.trade'] }}</label>
                     <p-select
                         [options]="tradeOptions"
                         [(ngModel)]="selectedTradeId"
@@ -75,14 +75,14 @@
                     <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                         <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
                     </svg>
-                    {{ L[lang]['report.search.clear'] }}
+                    {{ L['en']['report.search.clear'] }}
                 </button>
                 <button type="button" class="report-btn-search" (click)="load()">
                     <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                         <circle cx="6" cy="6" r="4.5" stroke="white" stroke-width="1.6"/>
                         <path d="M10 10l2.5 2.5" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
                     </svg>
-                    {{ L[lang]['report.search.search'] }}
+                    {{ L['en']['report.search.search'] }}
                 </button>
             </div>
         </div>
@@ -92,8 +92,8 @@
 <div class="report-results-card">
     <div class="report-results-header">
         <div class="report-results-title">
-            {{ L[lang]['report.results.title'] }}
-            <span class="report-results-count">{{ displayNum(totalRecords) }} {{ L[lang]['report.results.records'] }}</span>
+            {{ L['en']['report.results.title'] }}
+            <span class="report-results-count">{{ displayNum(totalRecords) }} {{ L['en']['report.results.records'] }}</span>
         </div>
         <div class="report-results-actions">
             <button type="button" class="report-lang-toggle" (click)="langToggle.emit()">
@@ -104,7 +104,7 @@
                     <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
                         <path d="M6.5 1v7M3.5 5.5l3 3 3-3M1.5 10.5h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
-                    {{ L[lang]['report.search.export'] }}
+                    {{ L['en']['report.search.export'] }}
                 </button>
                 @if (exportDropdownOpen) {
                 <div class="report-export-dropdown" (click)="$event.stopPropagation()">
@@ -140,15 +140,15 @@
             [showCurrentPageReport]="false">
             <ng-template pTemplate="header">
                 <tr>
-                    <th>{{ L[lang]['report.table.ser'] }}</th>
-                    <th>{{ L[lang]['report.table.orgName'] }}</th>
-                    <th>{{ L[lang]['report.table.serviceId'] }}</th>
-                    <th>{{ L[lang]['report.table.rank'] }}</th>
-                    <th>{{ L[lang]['report.table.corps'] }}</th>
-                    <th>{{ L[lang]['report.table.trade'] }}</th>
-                    <th>{{ L[lang]['report.table.name'] }}</th>
-                    <th>{{ L[lang]['report.table.presentUnit'] }}</th>
-                    <th>{{ L[lang]['report.table.rmks'] }}</th>
+                    <th>{{ L['en']['report.table.ser'] }}</th>
+                    <th>{{ L['en']['report.table.orgName'] }}</th>
+                    <th>{{ L['en']['report.table.serviceId'] }}</th>
+                    <th>{{ L['en']['report.table.rank'] }}</th>
+                    <th>{{ L['en']['report.table.corps'] }}</th>
+                    <th>{{ L['en']['report.table.trade'] }}</th>
+                    <th>{{ L['en']['report.table.name'] }}</th>
+                    <th>{{ L['en']['report.table.presentUnit'] }}</th>
+                    <th>{{ L['en']['report.table.rmks'] }}</th>
                 </tr>
             </ng-template>
             <ng-template pTemplate="body" let-row>
@@ -178,7 +178,7 @@
             </ng-template>
             <ng-template pTemplate="emptymessage">
                 <tr>
-                    <td colspan="9" class="text-center p-4">{{ L[lang]['report.empty'] }}</td>
+                    <td colspan="9" class="text-center p-4">{{ L['en']['report.empty'] }}</td>
                 </tr>
             </ng-template>
         </p-table>
