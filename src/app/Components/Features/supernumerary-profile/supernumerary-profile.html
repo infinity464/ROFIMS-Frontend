@@ -4,9 +4,17 @@
     <div class="profile-header">
         <div class="profile-header-left">
             <p-button icon="pi pi-arrow-left" label="Back" [rounded]="true" [text]="true" severity="secondary" (onClick)="goBack()" styleClass="p-button-sm"></p-button>
-            <h1 class="profile-title m-0 text-2xl font-bold text-900">Supernumerary Emp Profile</h1>
+            <h1 class="profile-title m-0 text-2xl font-bold text-900">Supernumerary Profile</h1>
         </div>
-        <div class="profile-placeholder-box" aria-hidden="true"></div>
+        <div class="profile-image-box">
+            @if (profileImageUrl) {
+                <img [src]="profileImageUrl" alt="Profile" class="profile-image" />
+            } @else {
+                <div class="profile-image-placeholder" aria-hidden="true">
+                    <i class="pi pi-user"></i>
+                </div>
+            }
+        </div>
     </div>
 
     @if (loading) {

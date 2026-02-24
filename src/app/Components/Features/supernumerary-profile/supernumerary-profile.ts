@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
@@ -7,6 +7,7 @@ import { Toast } from 'primeng/toast';
 import { DialogModule } from 'primeng/dialog';
 import { MessageService } from 'primeng/api';
 import { EmployeeListService } from '@/services/employee-list.service';
+import { EmpService } from '@/services/emp-service';
 import { SupernumeraryEmpProfile, AddressBlock, RelieverRow } from '@/models/employee-list.model';
 
 @Component({
@@ -17,9 +18,10 @@ import { SupernumeraryEmpProfile, AddressBlock, RelieverRow } from '@/models/emp
     templateUrl: './supernumerary-profile.html',
     styleUrl: './supernumerary-profile.scss'
 })
-export class SupernumeraryProfile implements OnInit {
+export class SupernumeraryProfile implements OnInit, OnDestroy {
     employeeId: number | null = null;
     profile: SupernumeraryEmpProfile | null = null;
+    profileImageUrl: string | null = null;
     loading = false;
 
     /** Reliever table rows - use property instead of function for reliable p-table button clicks */
@@ -29,7 +31,8 @@ export class SupernumeraryProfile implements OnInit {
         private route: ActivatedRoute,
         private router: Router,
         private employeeListService: EmployeeListService,
-        private messageService: MessageService
+        private messageService: MessageService,
+        private empService: EmpService
     ) {}
 
     ngOnInit(): void {
@@ -49,6 +52,7 @@ export class SupernumeraryProfile implements OnInit {
         this.employeeListService.getSupernumeraryEmpProfile(this.employeeId).subscribe({
             next: (p) => {
                 this.profile = p ?? null;
+                this.loadProfileImage(p ?? null);
                 this.relieverTableRows = this.buildRelieverTableRows(p ?? null);
                 this.loading = false;
             },
@@ -70,6 +74,39 @@ export class SupernumeraryProfile implements OnInit {
 
     goBack(): void {
         this.router.navigate(['/supernumerary-list']);
+    }
+
+    ngOnDestroy(): void {
+        if (this.profileImageUrl) {
+            URL.revokeObjectURL(this.profileImageUrl);
+            this.profileImageUrl = null;
+        }
+    }
+
+    private loadProfileImage(profile: SupernumeraryEmpProfile | null): void {
+        if (this.profileImageUrl) {
+            URL.revokeObjectURL(this.profileImageUrl);
+            this.profileImageUrl = null;
+        }
+        const json = profile?.profileImages ?? (profile as { ProfileImages?: string })?.ProfileImages ?? null;
+        if (!json || typeof json !== 'string') return;
+        let refs: { FileId?: number; fileName?: string }[];
+        try {
+            refs = JSON.parse(json) as { FileId?: number; fileName?: string }[];
+        } catch {
+            return;
+        }
+        const first = Array.isArray(refs) && refs.length > 0 ? refs[0] : null;
+        const fileId = first?.FileId ?? (first as { fileId?: number })?.fileId;
+        if (fileId == null || fileId <= 0) return;
+        this.empService.downloadFile(fileId).subscribe({
+            next: (blob) => {
+                if (blob && blob.size > 0) {
+                    this.profileImageUrl = URL.createObjectURL(blob);
+                }
+            },
+            error: () => {}
+        });
     }
 
     relieverDialogVisible = false;
@@ -119,7 +156,7 @@ export class SupernumeraryProfile implements OnInit {
     hasAddress(addr: AddressBlock | null | undefined): boolean {
         if (!addr) return false;
         const keys: (keyof AddressBlock)[] = ['villageArea', 'district', 'postOffice', 'division', 'upazilaThana'];
-        return keys.some((k) => addr[k] != null && String(addr[k]).trim() !== '');
+        return keys.some((k) => this.getAddrField(addr, k) !== '-');
     }
 
     formatDateOfJoining(value: string | null): string {
@@ -139,14 +176,29 @@ export class SupernumeraryProfile implements OnInit {
     /** Single-line address for inline display; for section layout use address field getters below. */
     formatAddressLine(addr: AddressBlock | null | undefined): string {
         if (!addr) return '-';
-        const parts = [addr.villageArea, addr.district, addr.postOffice, addr.division, addr.upazilaThana].filter(Boolean);
-        return parts.length ? parts.join(', ') : '-';
+        const parts = ['villageArea', 'district', 'postOffice', 'division', 'upazilaThana'].map((k) => this.getAddrField(addr, k as keyof AddressBlock));
+        return parts.filter((p) => p !== '-').length ? parts.filter((p) => p !== '-').join(', ') : '-';
+    }
+
+    /** Get address field value; API may return PascalCase (VillageArea, District, etc.) so check both. */
+    getAddrField(addr: AddressBlock | null | undefined, key: keyof AddressBlock): string {
+        if (!addr) return '-';
+        const camel = addr[key];
+        if (camel != null && camel !== '') return camel;
+        const pascalMap: Record<keyof AddressBlock, string> = {
+            villageArea: 'VillageArea',
+            district: 'District',
+            postOffice: 'PostOffice',
+            division: 'Division',
+            upazilaThana: 'UpazilaThana'
+        };
+        const pascalKey = pascalMap[key];
+        const v = pascalKey ? (addr as unknown as Record<string, unknown>)[pascalKey] : undefined;
+        return v != null && v !== '' ? String(v) : '-';
     }
 
     addrVal(addr: AddressBlock | null | undefined, key: keyof AddressBlock): string {
-        if (!addr) return '-';
-        const v = addr[key];
-        return v != null && v !== '' ? v : '-';
+        return this.getAddrField(addr, key);
     }
 
     /** Build combined rows for reliever table: RelievedBy (if any) + Relievers. */
