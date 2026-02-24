@@ -113,17 +113,17 @@ export class EmployeeReportsComponent implements OnInit {
         });
     }
 
-    /** For Mother Org report the second dropdown is "Mother Org"; for others "Common Code". */
-    get commonCodeDropdownLabel(): string {
+    /** Top section (report type card) stays in English only. */
+    get commonCodeDropdownLabelEn(): string {
         return this.reportType === 'motherOrg'
-            ? this.L[this.reportLang]['report.motherOrgLabel']
-            : this.L[this.reportLang]['report.commonCodeLabel'];
+            ? this.L['en']['report.motherOrgLabel']
+            : this.L['en']['report.commonCodeLabel'];
     }
 
-    get commonCodePlaceholder(): string {
+    get commonCodePlaceholderEn(): string {
         return this.reportType === 'motherOrg'
-            ? this.L[this.reportLang]['report.placeholderMotherOrg']
-            : this.L[this.reportLang]['report.placeholderCommonCode'];
+            ? this.L['en']['report.placeholderMotherOrg']
+            : this.L['en']['report.placeholderCommonCode'];
     }
 
     /** When common code is selected, child report components receive it and run load (filter fires). */

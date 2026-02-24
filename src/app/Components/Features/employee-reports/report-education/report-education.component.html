@@ -95,14 +95,18 @@
             {{ L[lang]['report.results.title'] }}
             <span class="report-results-count">{{ displayNum(totalRecords) }} {{ L[lang]['report.results.records'] }}</span>
         </div>
-        <div class="report-export-wrap">
-            <button type="button" class="report-btn-export" (click)="toggleExportDropdown($event)">
-                <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                    <path d="M6.5 1v7M3.5 5.5l3 3 3-3M1.5 10.5h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                {{ L[lang]['report.search.export'] }}
+        <div class="report-results-actions">
+            <button type="button" class="report-lang-toggle" (click)="langToggle.emit()">
+                {{ lang === 'en' ? 'বাংলা' : 'English' }}
             </button>
-            @if (exportDropdownOpen) {
+            <div class="report-export-wrap">
+                <button type="button" class="report-btn-export" (click)="toggleExportDropdown($event)">
+                    <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                        <path d="M6.5 1v7M3.5 5.5l3 3 3-3M1.5 10.5h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    {{ L[lang]['report.search.export'] }}
+                </button>
+                @if (exportDropdownOpen) {
                 <div class="report-export-dropdown" (click)="$event.stopPropagation()">
                     <button type="button" class="report-export-item report-export-pdf" (click)="exportAs('pdf')">
                         <span class="report-export-icon">⬇</span> PDF
@@ -114,7 +118,8 @@
                         <span class="report-export-icon">⬇</span> Excel
                     </button>
                 </div>
-            }
+                }
+            </div>
         </div>
     </div>
 

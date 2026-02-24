@@ -1,4 +1,4 @@
-import { Component, HostListener, Input, OnChanges, OnInit, SimpleChanges } from '@angular/core';
+import { Component, EventEmitter, HostListener, Input, OnChanges, OnInit, Output, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -37,6 +37,7 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
     @Input() lang: ReportLang = 'en';
     /** When container common code is selected, filter runs (load). */
     @Input() commonCodeId: number | null = null;
+    @Output() langToggle = new EventEmitter<void>();
 
     orgOptions: MotherOrganizationModel[] = [];
     selectedOrgId: number | null = null;
