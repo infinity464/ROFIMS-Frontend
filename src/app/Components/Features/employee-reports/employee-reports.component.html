@@ -23,7 +23,7 @@
                 </div>
             </div>
             <div class="report-type-field">
-                <div class="rt-label">{{ L[reportLang]['report.commonCodeLabel'] }}</div>
+                <div class="rt-label">{{ commonCodeDropdownLabel }}</div>
                 <div class="rt-select-wrap">
                     <p-select
                         [options]="commonCodeOptions"
@@ -32,7 +32,7 @@
                         optionLabel="label"
                         optionValue="value"
                         [inputId]="'report-commoncode-select'"
-                        [placeholder]="L[reportLang]['report.placeholderCommonCode']"
+                        [placeholder]="commonCodePlaceholder"
                         appendTo="body"
                         [filter]="true" />
                 </div>

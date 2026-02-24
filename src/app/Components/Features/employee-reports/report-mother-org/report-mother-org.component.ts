@@ -30,6 +30,9 @@ export class ReportMotherOrgComponent implements OnInit, OnChanges {
 
     orgOptions: MotherOrganizationModel[] = [];
     selectedOrgId: number | null = null;
+    /** Mother Org Units (children of selected Mother Org); loaded when commonCodeId is set. */
+    motherOrgUnitOptions: MotherOrganizationModel[] = [];
+    selectedMotherOrgUnitId: number | null = null;
     rankOptions: { label: string; value: number }[] = [];
     tradeOptions: { label: string; value: number }[] = [];
     selectedRankId: number | null = null;
@@ -112,14 +115,44 @@ export class ReportMotherOrgComponent implements OnInit, OnChanges {
 
     ngOnInit(): void {
         this.loadOrgOptions();
+        if (this.commonCodeId != null) {
+            this.loadMotherOrgUnitsAndRankTrade(this.commonCodeId);
+        }
         this.load();
     }
 
     ngOnChanges(changes: SimpleChanges): void {
-        if (changes['commonCodeId'] && !changes['commonCodeId'].firstChange) {
-            this.first = 0;
-            this.load();
+        if (changes['commonCodeId']) {
+            this.motherOrgUnitOptions = [];
+            this.selectedMotherOrgUnitId = null;
+            const id = this.commonCodeId;
+            if (id != null) {
+                this.loadMotherOrgUnitsAndRankTrade(id);
+            } else {
+                this.rankOptions = [];
+                this.tradeOptions = [];
+            }
+            if (!changes['commonCodeId'].firstChange) {
+                this.first = 0;
+                this.load();
+            }
         }
+    }
+
+    /** Load mother org units and rank/trade options when org is fixed from parent (commonCodeId). */
+    private loadMotherOrgUnitsAndRankTrade(orgId: number): void {
+        this.commonCodeService.getAllActiveMotherOrgUnits(orgId).subscribe({
+            next: (units) => (this.motherOrgUnitOptions = units ?? []),
+            error: () => (this.motherOrgUnitOptions = []),
+        });
+        this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'MotherOrgRank').subscribe({
+            next: (codes: CommonCodeModel[]) =>
+                (this.rankOptions = codes.map((c) => ({ label: c.codeValueEN || String(c.codeId), value: c.codeId }))),
+        });
+        this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'Trade').subscribe({
+            next: (codes: CommonCodeModel[]) =>
+                (this.tradeOptions = codes.map((c) => ({ label: c.codeValueEN || String(c.codeId), value: c.codeId }))),
+        });
     }
 
     loadOrgOptions(): void {
@@ -156,7 +189,8 @@ export class ReportMotherOrgComponent implements OnInit, OnChanges {
 
     get activeFilterCount(): number {
         let c = 0;
-        if (this.selectedOrgId != null) c++;
+        if (this.commonCodeId == null && this.selectedOrgId != null) c++;
+        if (this.selectedMotherOrgUnitId != null) c++;
         if (this.selectedRankId != null) c++;
         if (this.selectedTradeId != null) c++;
         return c;
@@ -175,10 +209,19 @@ export class ReportMotherOrgComponent implements OnInit, OnChanges {
 
     clearFilters(): void {
         this.selectedOrgId = null;
+        this.selectedMotherOrgUnitId = null;
         this.selectedRankId = null;
         this.selectedTradeId = null;
-        this.rankOptions = [];
-        this.tradeOptions = [];
+        if (this.commonCodeId != null) {
+            this.rankOptions = [];
+            this.tradeOptions = [];
+            this.motherOrgUnitOptions = [];
+            this.loadMotherOrgUnitsAndRankTrade(this.commonCodeId);
+        } else {
+            this.rankOptions = [];
+            this.tradeOptions = [];
+            this.motherOrgUnitOptions = [];
+        }
         this.first = 0;
     }
 
@@ -193,10 +236,11 @@ export class ReportMotherOrgComponent implements OnInit, OnChanges {
         const page_no = Math.floor(this.first / this.rows) + 1;
         this.reportService
             .getMotherOrgReport({
-                orgId: this.selectedOrgId ?? undefined,
+                orgId: (this.selectedOrgId ?? this.commonCodeId) ?? undefined,
                 rankId: this.selectedRankId ?? undefined,
                 tradeId: this.selectedTradeId ?? undefined,
                 commonCodeId: this.commonCodeId ?? undefined,
+                motherUnitId: this.selectedMotherOrgUnitId ?? undefined,
                 pagination: { page_no, row_per_page: this.rows },
             })
             .subscribe({

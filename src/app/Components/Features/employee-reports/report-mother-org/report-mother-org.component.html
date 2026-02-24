@@ -26,16 +26,33 @@
     <div class="report-filter-body" [class.open]="filterOpen">
         <div class="report-filter-body-inner">
             <div class="report-fields-row">
+                @if (commonCodeId == null) {
+                    <div class="report-filter-field">
+                        <label>{{ L[lang]['report.search.motherOrg'] }}</label>
+                        <p-select
+                            [options]="orgOptions"
+                            [(ngModel)]="selectedOrgId"
+                            (ngModelChange)="onOrgChange()"
+                            optionLabel="orgNameEN"
+                            optionValue="orgId"
+                            placeholder="Select"
+                            styleClass="w-full"
+                            [filter]="true"
+                            appendTo="body">
+                        </p-select>
+                    </div>
+                }
                 <div class="report-filter-field">
-                    <label>{{ L[lang]['report.search.motherOrg'] }}</label>
+                    <label>{{ L[lang]['report.search.motherOrgUnit'] }}</label>
                     <p-select
-                        [options]="orgOptions"
-                        [(ngModel)]="selectedOrgId"
-                        (ngModelChange)="onOrgChange()"
+                        [options]="motherOrgUnitOptions"
+                        [(ngModel)]="selectedMotherOrgUnitId"
+                        (ngModelChange)="onFilterChange()"
                         optionLabel="orgNameEN"
                         optionValue="orgId"
                         placeholder="Select"
                         styleClass="w-full"
+                        [disabled]="commonCodeId == null"
                         [filter]="true"
                         appendTo="body">
                     </p-select>
@@ -50,7 +67,7 @@
                         optionValue="value"
                         placeholder="Select"
                         styleClass="w-full"
-                        [disabled]="selectedOrgId == null"
+                        [disabled]="(commonCodeId ?? selectedOrgId) == null"
                         appendTo="body">
                     </p-select>
                 </div>
@@ -64,7 +81,7 @@
                         optionValue="value"
                         placeholder="Select"
                         styleClass="w-full"
-                        [disabled]="selectedOrgId == null"
+                        [disabled]="(commonCodeId ?? selectedOrgId) == null"
                         appendTo="body">
                     </p-select>
                 </div>

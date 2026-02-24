@@ -82,12 +82,13 @@ export interface GenericReportRow extends ReportRowBase {
   rmks?: string | null;
 }
 
-/** Request for Mother Org / Officer Type / RAB Unit / Wings reports. */
+/** Request for Mother Org / Officer Type / RAB Unit / Wings reports. motherUnitId = Mother Org Unit (child org) for Mother Org report only. */
 export interface GenericReportParams {
   orgId?: number | null;
   rankId?: number | null;
   tradeId?: number | null;
   commonCodeId?: number | null;
+  motherUnitId?: number | null;
   pagination: ReportPagination;
 }
 

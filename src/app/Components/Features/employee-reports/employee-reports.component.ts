@@ -13,6 +13,7 @@ import { SelectModule } from 'primeng/select';
 import { REPORT_LABELS, type ReportLang } from '@/Core/i18n/report-labels';
 import { CommonCodeService } from '@/services/common-code-service';
 import type { CommonCodeModel } from '@/models/common-code-model';
+import type { MotherOrganizationModel } from '@/models/mother-org-model';
 
 export type ReportType =
     | 'memberAppointment'
@@ -84,6 +85,20 @@ export class EmployeeReportsComponent implements OnInit {
     }
 
     loadCommonCodeOptions(): void {
+        if (this.reportType === 'motherOrg') {
+            this.commonCodeService.getAllActiveMotherOrgs().subscribe({
+                next: (list: MotherOrganizationModel[]) => {
+                    this.commonCodeOptions = (list || []).map((c) => ({
+                        label: c.orgNameEN || String(c.orgId),
+                        value: c.orgId,
+                    }));
+                },
+                error: () => {
+                    this.commonCodeOptions = [];
+                },
+            });
+            return;
+        }
         const codeType = COMMON_CODE_TYPE_BY_REPORT[this.reportType];
         this.commonCodeService.getAllActiveCommonCodesType(codeType).subscribe({
             next: (list: CommonCodeModel[]) => {
@@ -96,6 +111,19 @@ export class EmployeeReportsComponent implements OnInit {
                 this.commonCodeOptions = [];
             },
         });
+    }
+
+    /** For Mother Org report the second dropdown is "Mother Org"; for others "Common Code". */
+    get commonCodeDropdownLabel(): string {
+        return this.reportType === 'motherOrg'
+            ? this.L[this.reportLang]['report.motherOrgLabel']
+            : this.L[this.reportLang]['report.commonCodeLabel'];
+    }
+
+    get commonCodePlaceholder(): string {
+        return this.reportType === 'motherOrg'
+            ? this.L[this.reportLang]['report.placeholderMotherOrg']
+            : this.L[this.reportLang]['report.placeholderCommonCode'];
     }
 
     /** When common code is selected, child report components receive it and run load (filter fires). */
