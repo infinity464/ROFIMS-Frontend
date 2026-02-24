@@ -113,6 +113,9 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: 20px;
+  background: var(--white);
+  padding: 0;
+  border-radius: 0;
 }
 .report-page-title {
   font-size: 1.5rem;
@@ -121,8 +124,13 @@
   letter-spacing: -0.02em;
   margin: 0;
 }
+:host-context(.app-dark) .report-page-header {
+  background: transparent;
+}
 .app-dark .employee-reports-page .report-page-title,
-:host-context(.app-dark) .report-page-title { color: var(--text); }
+:host-context(.app-dark) .report-page-title {
+  color: var(--text-color) !important;
+}
 
 .report-lang-toggle {
   font-size: 0.8rem;
@@ -145,6 +153,19 @@
   margin-bottom: 12px;
   background: var(--white);
   box-shadow: var(--shadow-sm);
+}
+.report-type-row {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+.report-type-field {
+  flex: 1;
+  min-width: 200px;
+}
+.report-type-field .rt-select-wrap {
+  max-width: 100%;
 }
 .rt-label {
   font-size: 0.65rem;
@@ -381,6 +402,46 @@
 .app-dark .employee-reports-page .report-btn-export { color: var(--text); }
 .report-btn-export:hover { border-color: var(--navy); background: var(--surface); }
 .app-dark .employee-reports-page .report-btn-export:hover { border-color: var(--teal); background: var(--teal-bg); }
+
+/* Export dropdown */
+.report-export-wrap {
+  position: relative;
+}
+.report-export-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 6px;
+  min-width: 140px;
+  padding: 6px 0;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+}
+.report-export-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 14px;
+  border: none;
+  background: none;
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+.report-export-item:hover {
+  background: #f7fafc;
+}
+.report-export-icon {
+  font-size: 0.75rem;
+}
+.report-export-pdf { color: #e74c3c; }
+.report-export-word { color: #2980b9; }
+.report-export-excel { color: #27ae60; }
 
 /* Table cell badges (used inside p-table) */
 .report-ser-num {

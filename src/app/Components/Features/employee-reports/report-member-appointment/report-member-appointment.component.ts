@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, HostListener, Input, OnChanges, OnInit, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -9,6 +9,7 @@ import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { ReportService } from '@/services/report.service';
 import { CommonCodeService } from '@/services/common-code-service';
+import { ExportService } from '@/services/export.service';
 import { REPORT_LABELS, type ReportLang } from '@/Core/i18n/report-labels';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import type { MemberAppointmentReportRow } from '@/models/report.model';
@@ -31,10 +32,11 @@ import type { CommonCodeModel } from '@/models/common-code-model';
     templateUrl: './report-member-appointment.component.html',
     styleUrls: ['./report-member-appointment.component.scss', '../report-theme.scss'],
 })
-export class ReportMemberAppointmentComponent implements OnInit {
+export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
     L = REPORT_LABELS;
-    /** Language (EN/BN); passed from container, English by default. */
     @Input() lang: ReportLang = 'en';
+    /** When container common code is selected, filter runs (load). */
+    @Input() commonCodeId: number | null = null;
 
     orgOptions: MotherOrganizationModel[] = [];
     selectedOrgId: number | null = null;
@@ -51,15 +53,87 @@ export class ReportMemberAppointmentComponent implements OnInit {
     rows = 20;
     totalRecords = 0;
 
+    exportDropdownOpen = false;
+
     constructor(
         private reportService: ReportService,
         private commonCodeService: CommonCodeService,
-        private messageService: MessageService
+        private messageService: MessageService,
+        private exportService: ExportService
     ) {}
+
+    @HostListener('document:click')
+    onDocumentClick(): void {
+        this.exportDropdownOpen = false;
+    }
+
+    get reportTitle(): string {
+        return this.L[this.lang]['report.title.memberAppointment'];
+    }
+
+    getExportData(): { columns: string[]; rows: string[][] } {
+        const L = this.L[this.lang];
+        const columns = [
+            L['report.table.ser'],
+            L['report.table.orgName'],
+            L['report.table.serviceId'],
+            L['report.table.rank'],
+            L['report.table.corps'],
+            L['report.table.trade'],
+            L['report.table.name'],
+            L['report.table.presentUnit'],
+            L['report.table.joiningDate'],
+            L['report.table.rmks'],
+        ];
+        const rows = this.list.map((row) => [
+            this.displayNum(row.ser),
+            this.codeValue(row.orgName, row.orgNameBN),
+            this.displayNum(row.serviceId),
+            this.codeValue(row.rank, row.rankBN),
+            this.codeValue(row.corps, row.corpsBN),
+            this.codeValue(row.trade, row.tradeBN),
+            this.codeValue(row.name, row.nameBN),
+            this.codeValue(row.presentUnit, row.presentUnitBN),
+            this.formatDate(row.joiningDate),
+            row.rmks ?? '—',
+        ]);
+        return { columns, rows };
+    }
+
+    toggleExportDropdown(event: Event): void {
+        event.stopPropagation();
+        this.exportDropdownOpen = !this.exportDropdownOpen;
+    }
+
+    async exportAs(type: 'pdf' | 'word' | 'excel'): Promise<void> {
+        const { columns, rows } = this.getExportData();
+        const config = {
+            title: this.reportTitle,
+            lang: this.lang,
+            columns,
+            rows,
+            showPageNumbers: true,
+        };
+        if (type === 'pdf') {
+            this.exportService.exportPDF(config);
+        } else if (type === 'word') {
+            await this.exportService.exportWord(config);
+        } else {
+            this.exportService.exportExcel(config);
+        }
+        this.exportDropdownOpen = false;
+    }
 
     ngOnInit(): void {
         this.loadOrgOptions();
         this.load();
+    }
+
+    ngOnChanges(changes: SimpleChanges): void {
+        if (changes['commonCodeId'] && !changes['commonCodeId'].firstChange) {
+            this.first = 0;
+            this.load();
+        }
     }
 
     /** Filter panel collapsed state. */
@@ -97,10 +171,6 @@ export class ReportMemberAppointmentComponent implements OnInit {
         this.tradeOptions = [];
         this.first = 0;
         // User clicks Search to apply
-    }
-
-    onExport(): void {
-        this.messageService.add({ severity: 'info', summary: 'Export', detail: 'Export feature can be wired to download report data.' });
     }
 
     loadOrgOptions(): void {
@@ -183,7 +253,11 @@ export class ReportMemberAppointmentComponent implements OnInit {
         if (v == null || v === '') return '-';
         try {
             const d = new Date(v);
-            const s = isNaN(d.getTime()) ? v : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+            if (isNaN(d.getTime())) return v;
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = String(d.getFullYear());
+            const s = `${day}-${month}-${year}`;
             return this.lang === 'bn' ? BanglaNumerals.toBangla(s) : s;
         } catch {
             return v;
@@ -195,6 +269,12 @@ export class ReportMemberAppointmentComponent implements OnInit {
         if (v == null || v === '') return '-';
         const s = String(v);
         return this.lang === 'bn' ? BanglaNumerals.toBangla(s) : s;
+    }
+
+    /** Name and common codes: use Bangla when lang is bn. */
+    codeValue(enVal: string | null | undefined, bnVal: string | null | undefined): string {
+        if (this.lang === 'bn' && bnVal != null && bnVal.trim() !== '') return bnVal.trim();
+        return enVal ?? bnVal ?? '—';
     }
 
 }

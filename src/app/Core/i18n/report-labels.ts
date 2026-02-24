@@ -9,6 +9,8 @@ export const REPORT_LABELS = {
         'report.pageTitle': 'Employee Reports',
         'report.reportTypeLabel': 'Report type',
         'report.placeholderReportType': 'Select report type',
+        'report.commonCodeLabel': 'Common Code',
+        'report.placeholderCommonCode': 'Select common code',
 
         'report.title.memberAppointment': 'Type of member / appointment category / wing / battalion / mother organization',
         'report.title.batchCourse': 'Service length, Batch/course (e.g. 31st BCS / 71 BMA LC)',
@@ -60,6 +62,8 @@ export const REPORT_LABELS = {
         'report.pageTitle': 'কর্মচারী প্রতিবেদন',
         'report.reportTypeLabel': 'প্রতিবেদনের ধরণ',
         'report.placeholderReportType': 'প্রতিবেদনের ধরণ নির্বাচন করুন',
+        'report.commonCodeLabel': 'কমন কোড',
+        'report.placeholderCommonCode': 'কমন কোড নির্বাচন করুন',
 
         'report.title.memberAppointment': 'সদস্যের ধরণ / নিয়োগ ক্যাটাগরি / উইং / ব্যাটালিয়ন / মাতৃ সংস্থা',
         'report.title.batchCourse': 'সেবার মেয়াদ, ব্যাচ/কোর্স (যেমন ৩১তম BCS / 71 BMA LC)',

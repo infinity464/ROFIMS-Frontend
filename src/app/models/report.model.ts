@@ -13,30 +13,39 @@ export interface ReportPagination {
 export interface ReportRowBase {
   ser?: number;
   orgName?: string | null;
+  orgNameBN?: string | null;
   serviceId?: string | null;
   rank?: string | null;
+  rankBN?: string | null;
   corps?: string | null;
+  corpsBN?: string | null;
   trade?: string | null;
+  tradeBN?: string | null;
   name?: string | null;
+  nameBN?: string | null;
   presentUnit?: string | null;
+  presentUnitBN?: string | null;
 }
 
-/** Report A: Member / Appointment – Joining Date, Rmks. */
+/** Report A: Appointment – Joining Date, Rmks. */
 export interface MemberAppointmentReportRow extends ReportRowBase {
   joiningDate?: string | null;
   rmks?: string | null;
 }
 
-/** Report B: Batch/Course – Course/Batch, Rmks. */
+/** Report B: Course – Course/Batch, Rmks. */
 export interface BatchCourseReportRow extends ReportRowBase {
   courseBatch?: string | null;
+  courseBatchBN?: string | null;
   rmks?: string | null;
 }
 
 /** Report C: Education – Higher Education Qualification, Subject. */
 export interface EducationReportRow extends ReportRowBase {
   higherEducationQualification?: string | null;
+  higherEducationQualificationBN?: string | null;
   subject?: string | null;
+  subjectBN?: string | null;
 }
 
 /** Request for Report A (filters + pagination). */

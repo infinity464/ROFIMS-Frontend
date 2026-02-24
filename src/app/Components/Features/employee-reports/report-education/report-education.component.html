@@ -95,12 +95,27 @@
             {{ L[lang]['report.results.title'] }}
             <span class="report-results-count">{{ displayNum(totalRecords) }} {{ L[lang]['report.results.records'] }}</span>
         </div>
-        <button type="button" class="report-btn-export" (click)="onExport()">
-            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                <path d="M6.5 1v7M3.5 5.5l3 3 3-3M1.5 10.5h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            {{ L[lang]['report.search.export'] }}
-        </button>
+        <div class="report-export-wrap">
+            <button type="button" class="report-btn-export" (click)="toggleExportDropdown($event)">
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                    <path d="M6.5 1v7M3.5 5.5l3 3 3-3M1.5 10.5h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                {{ L[lang]['report.search.export'] }}
+            </button>
+            @if (exportDropdownOpen) {
+                <div class="report-export-dropdown" (click)="$event.stopPropagation()">
+                    <button type="button" class="report-export-item report-export-pdf" (click)="exportAs('pdf')">
+                        <span class="report-export-icon">⬇</span> PDF
+                    </button>
+                    <button type="button" class="report-export-item report-export-word" (click)="exportAs('word')">
+                        <span class="report-export-icon">⬇</span> Word
+                    </button>
+                    <button type="button" class="report-export-item report-export-excel" (click)="exportAs('excel')">
+                        <span class="report-export-icon">⬇</span> Excel
+                    </button>
+                </div>
+            }
+        </div>
     </div>
 
     <div class="report-table-wrap">
@@ -114,6 +129,7 @@
             [paginator]="true"
             (onPage)="onPage($event)"
             [rowsPerPageOptions]="[20, 50, 100]"
+            paginatorDropdownAppendTo="body"
             [tableStyle]="{ 'min-width': '60rem' }"
             styleClass="p-datatable-sm"
             [showCurrentPageReport]="false">
@@ -134,27 +150,27 @@
             <ng-template pTemplate="body" let-row>
                 <tr>
                     <td><span class="report-ser-num">{{ displayNum(row.ser) }}</span></td>
-                    <td>{{ row.orgName ?? '—' }}</td>
+                    <td>{{ codeValue(row.orgName, row.orgNameBN) }}</td>
                     <td>{{ displayNum(row.serviceId) }}</td>
-                    <td>{{ row.rank ?? '—' }}</td>
+                    <td>{{ codeValue(row.rank, row.rankBN) }}</td>
                     <td>
-                        @if (row.corps) {
-                            <span class="report-badge-corps">{{ row.corps }}</span>
+                        @if (codeValue(row.corps, row.corpsBN) !== '—') {
+                            <span class="report-badge-corps">{{ codeValue(row.corps, row.corpsBN) }}</span>
                         } @else {
                             <span class="report-dash">—</span>
                         }
                     </td>
-                    <td>{{ row.trade ?? '—' }}</td>
-                    <td>{{ row.name ?? '—' }}</td>
+                    <td>{{ codeValue(row.trade, row.tradeBN) }}</td>
+                    <td>{{ codeValue(row.name, row.nameBN) }}</td>
                     <td>
-                        @if (row.presentUnit) {
-                            <span class="report-badge-unit">{{ row.presentUnit }}</span>
+                        @if (codeValue(row.presentUnit, row.presentUnitBN) !== '—') {
+                            <span class="report-badge-unit">{{ codeValue(row.presentUnit, row.presentUnitBN) }}</span>
                         } @else {
                             <span class="report-dash">—</span>
                         }
                     </td>
-                    <td>{{ row.higherEducationQualification ?? '—' }}</td>
-                    <td>{{ row.subject ?? '—' }}</td>
+                    <td>{{ codeValue(row.higherEducationQualification, row.higherEducationQualificationBN) }}</td>
+                    <td>{{ codeValue(row.subject, row.subjectBN) }}</td>
                 </tr>
             </ng-template>
             <ng-template pTemplate="emptymessage">

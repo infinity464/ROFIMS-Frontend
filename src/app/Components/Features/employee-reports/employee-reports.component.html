@@ -7,30 +7,52 @@
     </div>
 
     <div class="report-type-card">
-        <div class="rt-label">{{ L[reportLang]['report.reportTypeLabel'] }}</div>
-        <div class="rt-select-wrap">
-            <p-select
-                [options]="reportTypes"
-                [(ngModel)]="reportType"
-                optionLabel="label"
-                optionValue="value"
-                [inputId]="'report-type-select'"
-                [placeholder]="L[reportLang]['report.placeholderReportType']"
-                appendTo="body" />
+        <div class="report-type-row">
+            <div class="report-type-field">
+                <div class="rt-label">{{ L[reportLang]['report.reportTypeLabel'] }}</div>
+                <div class="rt-select-wrap">
+                    <p-select
+                        [options]="reportTypes"
+                        [(ngModel)]="reportType"
+                        (ngModelChange)="onReportTypeChange()"
+                        optionLabel="label"
+                        optionValue="value"
+                        [inputId]="'report-type-select'"
+                        [placeholder]="L[reportLang]['report.placeholderReportType']"
+                        appendTo="body" />
+                </div>
+            </div>
+            <div class="report-type-field">
+                <div class="rt-label">{{ L[reportLang]['report.commonCodeLabel'] }}</div>
+                <div class="rt-select-wrap">
+                    <p-select
+                        [options]="commonCodeOptions"
+                        [(ngModel)]="selectedCommonCodeId"
+                        (ngModelChange)="onCommonCodeChange()"
+                        optionLabel="label"
+                        optionValue="value"
+                        [inputId]="'report-commoncode-select'"
+                        [placeholder]="L[reportLang]['report.placeholderCommonCode']"
+                        appendTo="body"
+                        [filter]="true" />
+                </div>
+            </div>
         </div>
     </div>
 
-    <div>
-        @switch (reportType) {
-            @case ('memberAppointment') {
-                <app-report-member-appointment [lang]="reportLang" />
+    @if (selectedCommonCodeId != null) {
+        <div>
+            @switch (reportType) {
+                @case ('memberAppointment') {
+                    <app-report-member-appointment [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" />
+                }
+                @case ('batchCourse') {
+                    <app-report-batch-course [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" />
+                }
+                @case ('education') {
+                    <app-report-education [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" />
+                }
             }
-            @case ('batchCourse') {
-                <app-report-batch-course [lang]="reportLang" />
-            }
-            @case ('education') {
-                <app-report-education [lang]="reportLang" />
-            }
-        }
-    </div>
+        </div>
+    }
 </div>
