@@ -2,41 +2,14 @@
     display: block;
 }
 
-// Ensure image preview container stays within bounds
+// Image preview container (component-specific)
 .image-preview-container {
     position: relative;
     overflow: hidden;
     max-width: 220px;
 }
 
-// Card header with photo on the right
-.card-header-with-photo {
-    display: flex;
-    align-items: flex-start;
-    gap: 1.5rem;
-
-    @media (max-width: 991px) {
-        flex-direction: column;
-    }
-}
-
-.card-header-left {
-    flex: 1;
-    min-width: 0;
-}
-
-.profile-photo-sidebar {
-    flex-shrink: 0;
-    width: 130px;
-    text-align: center;
-
-    @media (max-width: 991px) {
-        width: 100%;
-        margin-bottom: 0.5rem;
-    }
-}
-
-// Profile photo thumbnail styles
+// Profile photo thumbnail styles (component-specific)
 .profile-photo-wrapper {
     text-align: center;
 }
@@ -76,11 +49,6 @@
     align-items: center;
     justify-content: center;
     background: var(--surface-50, #fafafa);
-}
-
-// Ensure the card content doesn't overflow
-.card {
-    overflow: visible;
 }
 
 // Files section: spacing between rows and button
@@ -175,15 +143,6 @@
     .p-button-icon {
         margin-right: 0.35rem;
         font-size: 0.875rem;
-    }
-}
-
-// Save All Information: prominent success (green) button
-.save-all-btn {
-    font-weight: 600;
-    min-width: 12rem;
-    .p-button-icon {
-        margin-right: 0.5rem;
     }
 }
 

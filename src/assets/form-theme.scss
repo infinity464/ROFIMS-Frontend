@@ -1,0 +1,283 @@
+/**
+ * Central form theme – card, sections, rows, fields, buttons.
+ * Use these generic classes in any component (emp-basic-info, emp-personal-info, etc.).
+ */
+
+/* ----- Card wrapper ----- */
+.form-card {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: var(--surface-card, #fff);
+  border-radius: var(--content-border-radius, 12px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--surface-border, #dee2e6);
+  overflow: visible;
+}
+
+/* ----- Card header: title + optional actions ----- */
+.form-card-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.form-card-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-color, #1e293b);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.form-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ----- Content section (group of fields) ----- */
+.form-section {
+  background: var(--surface-50, #f8fafc);
+  border-radius: 1rem;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.form-section:last-child {
+  margin-bottom: 0;
+}
+
+/* Same margin as form-section margin-bottom; use on first section after content with no bottom margin */
+.form-section-spacer {
+  margin-top: 1rem;
+}
+
+/* Larger top margin for the first section after main form (e.g. Permanent Address) to match gap between other sections */
+.form-section-spacer-first {
+  margin-top: 1.5rem;
+}
+
+.form-section-sm {
+  background: var(--surface-100, #f1f5f9);
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+}
+
+/* ----- Form row (horizontal flex) ----- */
+.form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.form-row:last-child {
+  margin-bottom: 0;
+}
+
+/* ----- Single field wrapper ----- */
+.form-field {
+  flex: 1 1 0%;
+  min-width: 200px;
+}
+
+.form-field-fixed {
+  flex: 0 0 auto;
+}
+
+/* ----- Label ----- */
+.form-label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--text-color-secondary, #64748b);
+  margin-bottom: 0.5rem;
+}
+
+.form-label-required {
+  color: var(--p-danger-color, #ef4444);
+}
+
+/* ----- Error message ----- */
+.form-error {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--p-danger-color, #ef4444);
+  margin-top: 0.25rem;
+}
+
+/* ----- Action buttons container ----- */
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+/* ----- Generic button classes (use with <button> or wrap p-button) ----- */
+.form-btn-primary {
+  font-weight: 600;
+  min-width: 10rem;
+}
+
+.form-btn-secondary {
+  font-weight: 500;
+}
+
+/* Override Prime buttons when inside form-actions (optional) */
+.form-actions .p-button.form-btn-primary .p-button-icon,
+.form-actions .p-button.form-btn-secondary .p-button-icon {
+  margin-right: 0.5rem;
+}
+
+/* ----- Subsection title (e.g. "Reliever Information") ----- */
+.form-subtitle {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-color, #1e293b);
+}
+
+/* ----- Summary / info block (e.g. selected member details) ----- */
+.form-summary {
+  background: var(--surface-100, #f1f5f9);
+  border-radius: var(--content-border-radius, 8px);
+  padding: 0.75rem 1rem;
+  margin-top: 0.5rem;
+}
+
+.form-summary-title {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-color-secondary, #64748b);
+}
+
+.form-summary-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.form-summary-item {
+  font-size: 0.875rem;
+}
+
+.form-summary-item .label {
+  color: var(--text-color-secondary, #64748b);
+}
+
+.form-summary-item .value {
+  margin-left: 0.5rem;
+  font-weight: 600;
+  color: var(--text-color, #1e293b);
+}
+
+/* ----- Dark mode (when .app-dark is on body/document or :root) ----- */
+.app-dark .form-card,
+:root[class*='app-dark'] .form-card {
+  background: var(--surface-card);
+  border-color: var(--surface-border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.app-dark .form-card-title {
+  color: var(--text-color);
+}
+
+.app-dark .form-section,
+:root[class*='app-dark'] .form-section {
+  background: var(--surface-hover) !important;
+  border: 1px solid var(--surface-border);
+  color: var(--text-color);
+}
+
+.app-dark .form-section-sm,
+:root[class*='app-dark'] .form-section-sm {
+  background: var(--surface-hover) !important;
+  border: 1px solid var(--surface-border);
+  color: var(--text-color);
+}
+
+.app-dark .form-label {
+  color: var(--text-color-secondary);
+}
+
+.app-dark .form-subtitle {
+  color: var(--text-color);
+}
+
+.app-dark .form-summary {
+  background: var(--surface-hover);
+  border: 1px solid var(--surface-border);
+}
+
+.app-dark .form-summary-title {
+  color: var(--text-color-secondary);
+}
+
+.app-dark .form-summary-item .label {
+  color: var(--text-color-secondary);
+}
+
+.app-dark .form-summary-item .value {
+  color: var(--text-color);
+}
+
+/* Form controls: visible borders and icons in dark mode */
+.app-dark .form-card .p-inputtext,
+.app-dark .form-card .p-select .p-select-label,
+.app-dark .form-card .p-datepicker .p-inputtext,
+.app-dark .form-card .p-datepicker input {
+  border: 1px solid var(--surface-border);
+  background: var(--p-input-background, var(--surface-card));
+  color: var(--p-input-text-color, var(--text-color));
+}
+
+.app-dark .form-card .p-inputtext:focus,
+.app-dark .form-card .p-select:focus-within .p-select-label,
+.app-dark .form-card .p-datepicker:focus-within .p-inputtext {
+  border-color: var(--primary-color);
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 25%, transparent);
+}
+
+/* Datepicker trigger button and icon visible in dark mode */
+.app-dark .form-card .p-datepicker .p-datepicker-trigger,
+.app-dark .form-card .p-datepicker .p-button,
+.app-dark .form-card .p-datepicker [class*="trigger"] {
+  color: var(--text-color) !important;
+  border-color: var(--surface-border);
+  background: var(--p-input-background, var(--surface-card));
+}
+
+.app-dark .form-card .p-datepicker .p-icon,
+.app-dark .form-card .p-datepicker svg,
+.app-dark .form-card .p-datepicker [class*="icon"] {
+  color: var(--text-color) !important;
+  fill: var(--text-color);
+}
+
+/* Select dropdown chevron visible */
+.app-dark .form-card .p-select .p-icon,
+.app-dark .form-card .p-select svg,
+.app-dark .form-card .p-select [class*="trigger"] {
+  color: var(--text-color) !important;
+  fill: var(--text-color);
+}
+
+/* Input group addon (e.g. spinner) in dark mode */
+.app-dark .form-card .p-inputgroup .p-inputgroup-addon {
+  background: var(--surface-hover);
+  border-color: var(--surface-border);
+  color: var(--text-color);
+}
