@@ -2,526 +2,681 @@
  * Employee Reports – reference design.
  * Uses global theme: .app-dark on document (topbar toggle) for dark mode.
  */
-*, *::before, *::after { box-sizing: border-box; }
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
 
 /* ----- Light theme: use topbar/theme primary (like emp-basic-info) ----- */
 .employee-reports-page {
-  --report-accent: var(--primary-color);
-  --report-accent-bg: color-mix(in srgb, var(--primary-color) 12%, transparent);
-  --navy: #0f1f3d;
-  --border: #e4e9f2;
-  --border-light: #f0f3f9;
-  --text: #1a2744;
-  --muted: #8a96b0;
-  --surface: #f7f9fc;
-  --white: #ffffff;
-  --shadow-sm: 0 1px 4px rgba(15, 31, 61, 0.07);
-  --shadow: 0 2px 16px rgba(15, 31, 61, 0.09);
-  background: var(--white);
-  padding: 32px 24px;
-  color: var(--text);
-  font-family: 'DM Sans', 'Lato', sans-serif;
+    --report-accent: var(--primary-color);
+    --report-accent-bg: color-mix(in srgb, var(--primary-color) 12%, transparent);
+    --navy: #0f1f3d;
+    --border: #e4e9f2;
+    --border-light: #f0f3f9;
+    --text: #1a2744;
+    --muted: #8a96b0;
+    --surface: #f7f9fc;
+    --white: #ffffff;
+    --shadow-sm: 0 1px 4px rgba(15, 31, 61, 0.07);
+    --shadow: 0 2px 16px rgba(15, 31, 61, 0.09);
+    background: var(--white);
+    padding: 8px 12px;
+    color: var(--text);
+    font-family: 'DM Sans', 'Lato', sans-serif;
 }
 
 /* Dark: use theme primary for accents. */
 :host-context(.app-dark) {
-  --report-accent: var(--primary-color);
-  --report-accent-bg: color-mix(in srgb, var(--primary-color) 18%, transparent);
-  --navy: var(--text-color);
-  --border: var(--surface-border);
-  --border-light: var(--surface-border);
-  --text: var(--text-color);
-  --muted: var(--text-color-secondary);
-  --surface: var(--surface-ground);
-  --white: var(--surface-card);
-  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.2);
-  --shadow: 0 2px 16px rgba(0, 0, 0, 0.25);
+    --report-accent: var(--primary-color);
+    --report-accent-bg: color-mix(in srgb, var(--primary-color) 18%, transparent);
+    --navy: var(--text-color);
+    --border: var(--surface-border);
+    --border-light: var(--surface-border);
+    --text: var(--text-color);
+    --muted: var(--text-color-secondary);
+    --surface: var(--surface-ground);
+    --white: var(--surface-card);
+    --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.2);
+    --shadow: 0 2px 16px rgba(0, 0, 0, 0.25);
 }
 
 /* Page and cards: same as Ex-Member Profile (unified dark background, cards use surface-card). */
 :host-context(.app-dark) .employee-reports-page {
-  background: var(--surface-ground) !important;
-  color: var(--text-color);
+    background: var(--surface-ground) !important;
+    color: var(--text-color);
 }
 :host-context(.app-dark) .report-type-card,
 :host-context(.app-dark) .report-filter-card,
 :host-context(.app-dark) .report-results-card {
-  background: var(--surface-card) !important;
-  border-color: var(--surface-border);
+    background: var(--surface-card) !important;
+    border-color: var(--surface-border);
 }
 :host-context(.app-dark) .report-filter-header.open .report-chevron {
-  border-color: var(--report-accent);
-  background: var(--report-accent-bg);
+    border-color: var(--report-accent);
+    background: var(--report-accent-bg);
 }
 :host-context(.app-dark) .report-btn-clear {
-  background: var(--surface-card) !important;
-  border-color: var(--surface-border);
-  color: var(--text-color-secondary);
+    background: var(--surface-card) !important;
+    border-color: var(--surface-border);
+    color: var(--text-color-secondary);
 }
 :host-context(.app-dark) .report-btn-export {
-  background: var(--surface-card) !important;
-  border-color: var(--surface-border);
-  color: var(--text-color);
+    background: var(--surface-card) !important;
+    border-color: var(--surface-border);
+    color: var(--text-color);
 }
 :host-context(.app-dark) .report-btn-export:hover {
-  border-color: var(--report-accent);
-  background: var(--report-accent-bg) !important;
+    border-color: var(--report-accent);
+    background: var(--report-accent-bg) !important;
 }
 :host-context(.app-dark) .report-chevron {
-  background: var(--surface-card) !important;
-  border-color: var(--surface-border);
+    background: var(--surface-card) !important;
+    border-color: var(--surface-border);
 }
 :host-context(.app-dark) .report-results-card .p-datatable .p-datatable-thead > tr > th {
-  background: var(--surface-card) !important;
-  color: var(--text-color-secondary);
-  border-color: var(--surface-border);
+    background: var(--surface-card) !important;
+    color: var(--text-color-secondary);
+    border-color: var(--surface-border);
 }
 :host-context(.app-dark) .report-results-card .p-datatable .p-datatable-tbody > tr > td {
-  color: var(--text-color);
-  border-color: var(--surface-border);
+    color: var(--text-color);
+    border-color: var(--surface-border);
 }
 :host-context(.app-dark) .report-results-card .p-paginator {
-  background: var(--surface-card) !important;
-  border-color: var(--surface-border);
+    background: var(--surface-card) !important;
+    border-color: var(--surface-border);
 }
 :host-context(.app-dark) .report-results-card .p-paginator .p-paginator-button {
-  background: var(--surface-card) !important;
-  border-color: var(--surface-border);
-  color: var(--text-color-secondary);
+    background: var(--surface-card) !important;
+    border-color: var(--surface-border);
+    color: var(--text-color-secondary);
 }
 .app-dark .employee-reports-page {
-  --report-accent: var(--primary-color);
-  --report-accent-bg: color-mix(in srgb, var(--primary-color) 18%, transparent);
-  --navy: var(--text-color);
-  --border: var(--surface-border);
-  --border-light: var(--surface-border);
-  --text: var(--text-color);
-  --muted: var(--text-color-secondary);
-  --surface: var(--surface-ground);
-  --white: var(--surface-card);
-  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.2);
-  --shadow: 0 2px 16px rgba(0, 0, 0, 0.25);
-  background: var(--surface-ground);
+    --report-accent: var(--primary-color);
+    --report-accent-bg: color-mix(in srgb, var(--primary-color) 18%, transparent);
+    --navy: var(--text-color);
+    --border: var(--surface-border);
+    --border-light: var(--surface-border);
+    --text: var(--text-color);
+    --muted: var(--text-color-secondary);
+    --surface: var(--surface-ground);
+    --white: var(--surface-card);
+    --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.2);
+    --shadow: 0 2px 16px rgba(0, 0, 0, 0.25);
+    background: var(--surface-ground);
 }
 
 /* ----- Page header ----- */
 .report-page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 20px;
-  background: var(--white);
-  padding: 0;
-  border-radius: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    background: var(--white);
+    padding: 0;
+    border-radius: 0;
 }
 .report-page-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--navy);
-  letter-spacing: -0.02em;
-  margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--navy);
+    letter-spacing: -0.02em;
+    margin: 0;
 }
 :host-context(.app-dark) .report-page-header {
-  background: transparent;
+    background: transparent;
 }
 .app-dark .employee-reports-page .report-page-title,
 :host-context(.app-dark) .report-page-title {
-  color: var(--text-color) !important;
+    color: var(--text-color) !important;
 }
 
 .report-lang-toggle {
-  font-size: 0.8rem;
-  color: var(--primary-color);
-  border: 1.5px solid var(--primary-color);
-  background: none;
-  padding: 4px 14px;
-  border-radius: 20px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: all 0.18s;
+    font-size: 0.8rem;
+    color: var(--primary-color);
+    border: 1.5px solid var(--primary-color);
+    background: none;
+    padding: 4px 14px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.18s;
 }
-.report-lang-toggle:hover { background: var(--primary-color); color: var(--primary-contrast-color); }
+.report-lang-toggle:hover {
+    background: var(--primary-color);
+    color: var(--primary-contrast-color);
+}
 
 /* ----- Report type card ----- */
 .report-type-card {
-  border: 1.5px solid var(--border);
-  border-radius: 14px;
-  padding: 16px 20px;
-  margin-bottom: 12px;
-  background: var(--white);
-  box-shadow: var(--shadow-sm);
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 20px;
+    margin-bottom: 12px;
+    background: var(--white);
+    box-shadow: var(--shadow-sm);
 }
 .report-type-row {
-  display: flex;
-  gap: 24px;
-  flex-wrap: wrap;
-  align-items: flex-end;
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    align-items: flex-end;
 }
 .report-type-field {
-  flex: 1;
-  min-width: 200px;
+    flex: 1;
+    min-width: 200px;
 }
 .report-type-field .rt-select-wrap {
-  max-width: 100%;
+    max-width: 100%;
 }
 .rt-label {
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.13em;
-  text-transform: uppercase;
-  color: var(--primary-color);
-  margin-bottom: 12px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--primary-color);
+    margin-bottom: 12px;
 }
-.rt-select-wrap { position: relative; max-width: 320px; }
-.rt-select-wrap .p-select { width: 100%; }
+.rt-select-wrap {
+    position: relative;
+    max-width: 320px;
+}
+.rt-select-wrap .p-select {
+    width: 100%;
+}
 .rt-select-wrap .p-select .p-select-label {
-  height: 42px;
-  border: 1.5px solid var(--border);
-  border-radius: 10px;
-  padding: 0 40px 0 14px;
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: var(--text);
-  background: var(--white);
+    height: 42px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 0 40px 0 14px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text);
+    background: var(--white);
 }
 .rt-select-wrap .p-select:focus-within .p-select-label {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px var(--report-accent-bg);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px var(--report-accent-bg);
 }
 .app-dark .employee-reports-page .rt-select-wrap .p-select .p-select-label {
-  background: var(--white);
-  color: var(--text);
-  border-color: var(--border);
+    background: var(--white);
+    color: var(--text);
+    border-color: var(--border);
 }
 
 /* ----- Collapsible filter card ----- */
 .report-filter-card {
-  border: 1.5px solid var(--border);
-  border-radius: 14px;
-  background: var(--white);
-  box-shadow: var(--shadow-sm);
-  margin-bottom: 16px;
-  overflow: hidden;
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    background: var(--white);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 16px;
+    overflow: hidden;
 }
 .report-filter-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 20px;
-  cursor: pointer;
-  user-select: none;
-  border-bottom: 1.5px solid transparent;
-  transition: border-color 0.2s, background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    cursor: pointer;
+    user-select: none;
+    border-bottom: 1.5px solid transparent;
+    transition:
+        border-color 0.2s,
+        background 0.2s;
 }
-.report-filter-header:hover { background: var(--surface); }
-.report-filter-header.open { border-bottom-color: var(--border-light); }
+.report-filter-header:hover {
+    background: var(--surface);
+}
+.report-filter-header.open {
+    border-bottom-color: var(--border-light);
+}
 
-.report-filter-header-left { display: flex; align-items: center; gap: 10px; }
+.report-filter-header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
 
 .report-filter-icon {
-  width: 32px; height: 32px;
-  border-radius: 8px;
-  background: var(--report-accent-bg);
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--report-accent-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
 }
-.report-filter-icon svg { flex-shrink: 0; }
+.report-filter-icon svg {
+    flex-shrink: 0;
+}
 
-.report-filter-title { font-size: 0.88rem; font-weight: 600; color: var(--navy); }
-.report-filter-subtitle { font-size: 0.73rem; color: var(--muted); margin-top: 1px; }
+.report-filter-title {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--navy);
+}
+.report-filter-subtitle {
+    font-size: 0.73rem;
+    color: var(--muted);
+    margin-top: 1px;
+}
 .app-dark .employee-reports-page .report-filter-title,
-:host-context(.app-dark) .report-filter-title { color: var(--text); }
+:host-context(.app-dark) .report-filter-title {
+    color: var(--text);
+}
 
-.report-filter-header-right { display: flex; align-items: center; gap: 10px; }
+.report-filter-header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
 
 .report-filters-badge {
-  background: var(--primary-color);
-  color: var(--primary-contrast-color);
-  font-size: 0.68rem;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 10px;
-  display: none;
+    background: var(--primary-color);
+    color: var(--primary-contrast-color);
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+    display: none;
 }
-.report-filters-badge.show { display: inline-flex; }
+.report-filters-badge.show {
+    display: inline-flex;
+}
 
 .report-chevron {
-  width: 28px; height: 28px;
-  border-radius: 7px;
-  border: 1.5px solid var(--border);
-  background: var(--white);
-  display: flex; align-items: center; justify-content: center;
-  transition: all 0.22s;
-  flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+    border: 1.5px solid var(--border);
+    background: var(--white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.22s;
+    flex-shrink: 0;
 }
-.report-chevron svg { transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1); }
-.report-filter-header.open .report-chevron { border-color: var(--report-accent); background: var(--report-accent-bg); }
-.report-filter-header.open .report-chevron svg { transform: rotate(180deg); }
-.report-filter-header.open .report-chevron path { stroke: var(--report-accent); }
+.report-chevron svg {
+    transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.report-filter-header.open .report-chevron {
+    border-color: var(--report-accent);
+    background: var(--report-accent-bg);
+}
+.report-filter-header.open .report-chevron svg {
+    transform: rotate(180deg);
+}
+.report-filter-header.open .report-chevron path {
+    stroke: var(--report-accent);
+}
 
 .report-filter-body {
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.32s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.report-filter-body.open { max-height: 500px; }
-.report-filter-body-inner { padding: 18px 20px 16px; }
+.report-filter-body.open {
+    max-height: 500px;
+}
+.report-filter-body-inner {
+    padding: 18px 20px 16px;
+}
 
 .report-fields-row {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  margin-bottom: 14px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    margin-bottom: 14px;
 }
-.report-filter-field { flex: 1; min-width: 130px; }
-/* From/To date: equal margin and width so they align with dropdowns */
+.report-filter-field {
+    flex: 1 1 0%;
+    min-width: 130px;
+}
 .report-filter-field.report-filter-field-date {
-  min-width: 140px;
-  margin-right: 0;
+    flex: 1 1 0%;
+    min-width: 130px;
+    margin-right: 0;
 }
 .report-filter-body-inner .report-filter-field .p-datepicker {
-  width: 100%;
+    width: 100%;
+    min-width: 0;
 }
 .report-filter-body-inner .report-filter-field .p-datepicker .p-inputtext {
-  width: 100%;
+    width: 100%;
+    min-width: 0;
 }
 .report-filter-field label {
-  display: block;
-  font-size: 0.69rem;
-  font-weight: 600;
-  color: var(--muted);
-  letter-spacing: 0.05em;
-  margin-bottom: 5px;
-  text-transform: uppercase;
+    display: block;
+    font-size: 0.69rem;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    margin-bottom: 5px;
+    text-transform: uppercase;
 }
 .report-filter-body-inner .p-select .p-select-label,
 .report-filter-body-inner .p-inputtext,
 .report-filter-body-inner .p-datepicker input {
-  width: 100%;
-  height: 38px;
-  border: 1.5px solid var(--border);
-  border-radius: 8px;
-  padding: 0 12px;
-  font-size: 0.85rem;
-  color: var(--text);
-  background: var(--white);
+    width: 100%;
+    height: 38px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 0 12px;
+    font-size: 0.85rem;
+    color: var(--text);
+    background: var(--white);
 }
 .report-filter-body-inner .p-select:focus-within .p-select-label,
 .report-filter-body-inner .p-inputtext:focus {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px var(--report-accent-bg);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px var(--report-accent-bg);
 }
 .app-dark .employee-reports-page .report-filter-body-inner .p-select .p-select-label,
 .app-dark .employee-reports-page .report-filter-body-inner .p-inputtext {
-  background: var(--white);
-  color: var(--text);
+    background: var(--white);
+    color: var(--text);
 }
 
 .report-filter-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  border-top: 1px solid var(--border-light);
-  padding-top: 14px;
-  margin-top: 2px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    border-top: 1px solid var(--border-light);
+    padding-top: 14px;
+    margin-top: 2px;
 }
 
 .report-btn-clear {
-  height: 36px; padding: 0 16px;
-  border-radius: 8px;
-  border: 1.5px solid var(--border);
-  background: var(--white);
-  font-size: 0.82rem; font-weight: 500;
-  color: var(--muted); cursor: pointer;
-  display: inline-flex; align-items: center; gap: 6px;
-  transition: all 0.18s;
+    height: 36px;
+    padding: 0 16px;
+    border-radius: 8px;
+    border: 1.5px solid var(--border);
+    background: var(--white);
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--muted);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.18s;
 }
-.report-btn-clear:hover { border-color: #e05252; color: #e05252; }
+.report-btn-clear:hover {
+    border-color: #e05252;
+    color: #e05252;
+}
 
 .report-btn-search {
-  height: 36px; padding: 0 22px;
-  border-radius: 8px;
-  border: none;
-  background: var(--primary-color);
-  font-size: 0.84rem; font-weight: 600;
-  color: var(--primary-contrast-color); cursor: pointer;
-  display: inline-flex; align-items: center; gap: 7px;
-  box-shadow: 0 3px 10px var(--report-accent-bg);
-  transition: all 0.18s;
+    height: 36px;
+    padding: 0 22px;
+    border-radius: 8px;
+    border: none;
+    background: var(--primary-color);
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: var(--primary-contrast-color);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    box-shadow: 0 3px 10px var(--report-accent-bg);
+    transition: all 0.18s;
 }
-.report-btn-search:hover { transform: translateY(-1px); box-shadow: 0 5px 16px color-mix(in srgb, var(--primary-color) 35%, transparent); }
+.report-btn-search:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 16px color-mix(in srgb, var(--primary-color) 35%, transparent);
+}
+.app-dark .employee-reports-page .report-btn-search,
+:host-context(.app-dark) .report-btn-search {
+    color: var(--primary-contrast-color) !important;
+}
+.app-dark .employee-reports-page .report-btn-search:hover,
+:host-context(.app-dark) .report-btn-search:hover {
+    color: var(--primary-contrast-color) !important;
+}
 
 /* Placeholder when report type has no component yet */
 .report-placeholder {
-  padding: 24px 20px;
-  text-align: center;
-  color: var(--muted);
-  font-size: 0.9rem;
-  background: var(--surface);
-  border: 1.5px dashed var(--border);
-  border-radius: 14px;
+    padding: 24px 20px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.9rem;
+    background: var(--surface);
+    border: 1.5px dashed var(--border);
+    border-radius: 14px;
 }
 
 /* ----- Results card ----- */
 .report-results-card {
-  border: 1.5px solid var(--border);
-  border-radius: 14px;
-  background: var(--white);
-  box-shadow: var(--shadow-sm);
-  overflow: hidden;
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    background: var(--white);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
 }
 
 .report-results-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 20px;
-  border-bottom: 1.5px solid var(--border-light);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-bottom: 1.5px solid var(--border-light);
 }
 .report-results-title {
-  font-size: 0.88rem;
-  font-weight: 600;
-  color: var(--navy);
-  display: flex; align-items: center; gap: 8px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--navy);
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 .app-dark .employee-reports-page .report-results-title,
-:host-context(.app-dark) .report-results-title { color: var(--text); }
+:host-context(.app-dark) .report-results-title {
+    color: var(--text-color) !important;
+}
 .report-results-count {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--muted);
-  font-size: 0.72rem;
-  font-weight: 600;
-  padding: 2px 9px;
-  border-radius: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 2px 9px;
+    border-radius: 10px;
+}
+.app-dark .employee-reports-page .report-results-count,
+:host-context(.app-dark) .report-results-count {
+    color: var(--text-color-secondary) !important;
+    border-color: var(--surface-border);
+    background: var(--surface-ground);
 }
 
 .report-results-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .report-btn-export {
-  height: 32px; padding: 0 14px;
-  border-radius: 7px;
-  border: 1.5px solid var(--border);
-  background: var(--white);
-  font-size: 0.78rem; font-weight: 500;
-  color: var(--navy); cursor: pointer;
-  display: inline-flex; align-items: center; gap: 6px;
-  transition: all 0.18s;
+    height: 32px;
+    padding: 0 14px;
+    border-radius: 7px;
+    border: 1.5px solid var(--border);
+    background: var(--white);
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--navy);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.18s;
 }
-.app-dark .employee-reports-page .report-btn-export { color: var(--text); }
-.report-btn-export:hover { border-color: var(--navy); background: var(--surface); }
-.app-dark .employee-reports-page .report-btn-export:hover { border-color: var(--report-accent); background: var(--report-accent-bg); }
+.app-dark .employee-reports-page .report-btn-export {
+    color: var(--text);
+}
+.report-btn-export:hover {
+    border-color: var(--navy);
+    background: var(--surface);
+}
+.app-dark .employee-reports-page .report-btn-export:hover {
+    border-color: var(--report-accent);
+    background: var(--report-accent-bg);
+}
 
 /* Export dropdown */
 .report-export-wrap {
-  position: relative;
+    position: relative;
 }
 .report-export-dropdown {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  margin-top: 6px;
-  min-width: 140px;
-  padding: 6px 0;
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  z-index: 100;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 6px;
+    min-width: 140px;
+    padding: 6px 0;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 100;
 }
 .report-export-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 8px 14px;
-  border: none;
-  background: none;
-  font-size: 0.85rem;
-  cursor: pointer;
-  text-align: left;
-  transition: background 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 14px;
+    border: none;
+    background: none;
+    font-size: 0.85rem;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s;
 }
 .report-export-item:hover {
-  background: #f7fafc;
+    background: #f7fafc;
 }
 .report-export-icon {
-  font-size: 0.75rem;
+    font-size: 0.75rem;
 }
-.report-export-pdf { color: #e74c3c; }
-.report-export-word { color: #2980b9; }
-.report-export-excel { color: #27ae60; }
+.report-export-pdf {
+    color: #e74c3c;
+}
+.report-export-word {
+    color: #2980b9;
+}
+.report-export-excel {
+    color: #27ae60;
+}
 
 /* Table cell badges (used inside p-table) */
 .report-ser-num {
-  width: 26px; height: 26px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  display: inline-flex; align-items: center; justify-content: center;
-  font-size: 0.74rem; font-weight: 600; color: var(--muted);
+    width: 26px;
+    height: 26px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--muted);
 }
 .report-badge-corps {
-  display: inline-block; padding: 2px 8px; border-radius: 5px;
-  font-size: 0.72rem; font-weight: 600;
-  background: var(--report-accent-bg); color: var(--primary-color);
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 5px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    background: var(--report-accent-bg);
+    color: var(--primary-color);
 }
-.app-dark .employee-reports-page .report-badge-corps { background: var(--report-accent-bg); color: var(--report-accent); }
+.app-dark .employee-reports-page .report-badge-corps {
+    background: var(--report-accent-bg);
+    color: var(--report-accent);
+}
 .report-badge-unit {
-  display: inline-block; padding: 2px 8px; border-radius: 5px;
-  font-size: 0.72rem; font-weight: 600;
-  background: rgba(15, 31, 61, 0.07); color: var(--navy);
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 5px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    background: rgba(15, 31, 61, 0.07);
+    color: var(--navy);
 }
-.app-dark .employee-reports-page .report-badge-unit { background: rgba(255,255,255,0.08); color: var(--text); }
-.report-dash { color: #c8d0df; }
-.app-dark .employee-reports-page .report-dash { color: var(--muted); }
+.app-dark .employee-reports-page .report-badge-unit {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text);
+}
+.report-dash {
+    color: #c8d0df;
+}
+.app-dark .employee-reports-page .report-dash {
+    color: var(--muted);
+}
 
 /* PrimeNG table inside results – match reference thead/tbody */
 .report-results-card .p-datatable .p-datatable-thead > tr > th {
-  padding: 10px 14px;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
-  background: var(--surface);
-  border-bottom: 1.5px solid var(--border);
+    padding: 10px 14px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: var(--surface);
+    border-bottom: 1.5px solid var(--border);
 }
 .report-results-card .p-datatable .p-datatable-tbody > tr > td {
-  padding: 11px 14px;
-  font-size: 0.83rem;
-  color: var(--text);
-  border-bottom: 1px solid var(--border-light);
+    padding: 11px 14px;
+    font-size: 0.83rem;
+    color: var(--text);
+    border-bottom: 1px solid var(--border-light);
 }
-.report-results-card .p-datatable .p-datatable-tbody > tr:last-child > td { border-bottom: none; }
-.report-results-card .p-datatable .p-datatable-tbody > tr:hover { background: var(--report-accent-bg); }
+.report-results-card .p-datatable .p-datatable-tbody > tr:last-child > td {
+    border-bottom: none;
+}
+.report-results-card .p-datatable .p-datatable-tbody > tr:hover {
+    background: var(--report-accent-bg);
+}
 
-.report-table-wrap { overflow-x: auto; }
+.report-table-wrap {
+    overflow-x: auto;
+}
 
 /* Pagination – style PrimeNG paginator to match reference */
 .report-results-card .p-paginator {
-  padding: 14px 20px;
-  border-top: 1.5px solid var(--border-light);
-  background: var(--white);
-  gap: 4px;
+    padding: 14px 20px;
+    border-top: 1.5px solid var(--border-light);
+    background: var(--white);
+    gap: 4px;
 }
 .report-results-card .p-paginator .p-paginator-button {
-  min-width: 30px; height: 30px;
-  border-radius: 7px;
-  border: 1.5px solid var(--border);
-  background: var(--white);
-  color: var(--muted);
+    min-width: 30px;
+    height: 30px;
+    border-radius: 7px;
+    border: 1.5px solid var(--border);
+    background: var(--white);
+    color: var(--muted);
 }
-.report-results-card .p-paginator .p-paginator-button:hover:not(:disabled) { border-color: var(--primary-color); color: var(--primary-color); }
-.report-results-card .p-paginator .p-paginator-button.p-highlight { background: var(--primary-color); border-color: var(--primary-color); color: var(--primary-contrast-color); font-weight: 700; }
+.report-results-card .p-paginator .p-paginator-button:hover:not(:disabled) {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+.report-results-card .p-paginator .p-paginator-button.p-highlight {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: var(--primary-contrast-color);
+    font-weight: 700;
+}
 .report-results-card .p-paginator .p-dropdown {
-  height: 30px;
-  border-radius: 7px;
-  border: 1.5px solid var(--border);
-  font-size: 0.78rem;
+    height: 30px;
+    border-radius: 7px;
+    border: 1.5px solid var(--border);
+    font-size: 0.78rem;
 }

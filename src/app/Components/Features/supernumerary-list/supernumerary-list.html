@@ -1,99 +1,255 @@
 <p-toast></p-toast>
 
-<!-- Card 1: Filters – responsive: wrap on small screens, single line on large -->
-<div class="card mb-4">
-    <h2 class="m-0 text-2xl font-bold text-900 mb-4">Supernumerary List</h2>
-    <!-- Row 1: 4 dropdowns – side by side on large, wrap on small -->
-    <div class="filter-row-dropdowns flex flex-wrap gap-4 mb-4">
-        <div class="filter-field">
-            <label for="org" class="font-semibold block mb-2 text-700">Mother Organization</label>
-            <p-select id="org" [options]="orgOptions" [(ngModel)]="selectedOrgId" (ngModelChange)="onOrgChange()" optionLabel="orgNameEN" optionValue="orgId" placeholder="Select organization" styleClass="w-full" [filter]="true"> </p-select>
+<div class="employee-reports-page">
+    <!-- Title + filter in same card -->
+    <div class="report-filter-card">
+        <div class="report-filter-card-title">
+            <h1 class="report-page-title">Supernumerary List</h1>
         </div>
-        <div class="filter-field">
-            <label for="memberType" class="font-semibold block mb-2 text-700">Member Type</label>
-            <p-select id="memberType" [options]="memberTypeOptions" [(ngModel)]="selectedMemberTypeId" (ngModelChange)="onMemberTypeChange()" placeholder="Select member type" optionLabel="label" optionValue="value" styleClass="w-full"> </p-select>
-        </div>
-        <div class="filter-field">
-            <label for="rank" class="font-semibold block mb-2 text-700">Rank</label>
-            <p-select id="rank" [options]="rankOptions" [(ngModel)]="selectedRankId" (ngModelChange)="onFilterChange()" placeholder="Select rank" optionLabel="label" optionValue="value" styleClass="w-full" [disabled]="selectedOrgId == null"> </p-select>
-        </div>
-        <div class="filter-field">
-            <label for="trade" class="font-semibold block mb-2 text-700">Trade</label>
-            <p-select id="trade" [options]="tradeOptions" [(ngModel)]="selectedTradeId" (ngModelChange)="onFilterChange()" placeholder="Select trade" optionLabel="label" optionValue="value" styleClass="w-full" [disabled]="selectedOrgId == null"> </p-select>
-        </div>
-    </div>
-    <!-- Row 2: Date ranges – same width as dropdown row on large -->
-    <div class="filter-row-dates flex flex-wrap gap-4 align-items-end">
-        <div class="filter-field filter-field-date">
-            <label class="font-semibold block mb-2 text-700">Date of Joining</label>
-            <div class="flex gap-2 flex-wrap">
-                <div class="filter-date-half"><p-datepicker [(ngModel)]="joiningDateFrom" (ngModelChange)="onFilterChange()" dateFormat="dd-mm-yy" placeholder="From" appendTo="body" styleClass="w-full"> </p-datepicker></div>
-                <div class="filter-date-half"><p-datepicker [(ngModel)]="joiningDateTo" (ngModelChange)="onFilterChange()" dateFormat="dd-mm-yy" placeholder="To" appendTo="body" styleClass="w-full"> </p-datepicker></div>
+        <div class="report-filter-header" [class.open]="filterOpen" (click)="toggleFilter()" role="button" tabindex="0" (keydown.enter)="toggleFilter()" (keydown.space)="toggleFilter()">
+            <div class="report-filter-header-left">
+                <div class="report-filter-icon">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M2 4h12M4 8h8M6 12h4" stroke="var(--primary-color)" stroke-width="1.8" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <div>
+                    <div class="report-filter-title">Search &amp; filter</div>
+                    <div class="report-filter-subtitle">Organization, member type, rank, trade, dates</div>
+                </div>
+            </div>
+            <div class="report-filter-header-right">
+                <span class="report-filters-badge" [class.show]="activeFilterCount > 0">{{ activeFilterCount }} active</span>
+                <div class="report-chevron">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                        <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
             </div>
         </div>
-        <div class="filter-field filter-field-date">
-            <label class="font-semibold block mb-2 text-700">Date of Join in RAB</label>
-            <div class="flex gap-2 flex-wrap">
-                <div class="filter-date-half"><p-datepicker [(ngModel)]="joiningDateInRABFrom" (ngModelChange)="onFilterChange()" dateFormat="dd-mm-yy" placeholder="From" appendTo="body" styleClass="w-full"> </p-datepicker></div>
-                <div class="filter-date-half"><p-datepicker [(ngModel)]="joiningDateInRABTo" (ngModelChange)="onFilterChange()" dateFormat="dd-mm-yy" placeholder="To" appendTo="body" styleClass="w-full"> </p-datepicker></div>
-            </div>
-        </div>
-    </div>
-</div>
 
-<!-- Card 2: Table -->
-<div class="card">
-    <div class="flex justify-between items-center flex-column sm:flex-row mb-4">
-        <p-iconfield iconPosition="left" class="ml-auto">
-            <p-inputicon>
-                <i class="pi pi-search"></i>
-            </p-inputicon>
-            <input pInputText type="text" placeholder="Search by Service ID / RAB ID" [(ngModel)]="searchText" (ngModelChange)="onSearchChange()" />
-        </p-iconfield>
-    </div>
-    <p-table [value]="filteredList" [loading]="loading" dataKey="employeeID" [lazy]="false" [first]="first" [rows]="rows" [paginator]="true" (onPage)="onPage($event)" [rowsPerPageOptions]="[10, 20, 50]" [tableStyle]="{ 'min-width': '60rem' }" styleClass="p-datatable-striped p-datatable-gridlines" currentPageReportTemplate="Showing {first} to {last} of {totalRecords} entries">
-        <ng-template pTemplate="header">
-            <tr>
-                <th style="width: 50px; white-space: nowrap">Ser</th>
-                <th style="width: 120px; white-space: nowrap">Service ID</th>
-                <th style="min-width: 100px; white-space: nowrap">Rank</th>
-                <th style="min-width: 100px; white-space: nowrap">Corps</th>
-                <th style="min-width: 100px; white-space: nowrap">Trade</th>
-                <th style="min-width: 160px; white-space: nowrap">Name</th>
-                <th style="min-width: 140px; white-space: nowrap">Mother Unit</th>
-                <th style="width: 120px; white-space: nowrap">Date of Join in Rab</th>
-                <th style="min-width: 120px; white-space: nowrap">Reliever Svc ID</th>
-                <th style="width: 160px; white-space: nowrap; text-align: center; vertical-align: middle">Action</th>
-            </tr>
-        </ng-template>
-        <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
-            <tr>
-                <td>{{ first + rowIndex + 1 }}</td>
-                <td style="white-space: nowrap"><span class="font-semibold">{{ row.prefixName ? row.prefixName + " - " : "" }}{{ row.serviceId || '-' }}</span></td>
-                <td>{{ row.rankName || '-' }}</td>
-                <td>{{ row.corpsName || '-' }}</td>
-                <td>{{ row.tradeName || '-' }}</td>
-                <td>{{ row.fullNameEN || '-' }}{{ row.corpsName ? ", " + row.corpsName : "" }}</td>
-                <td>{{ row.motherUnitName || '-' }}</td>
-                <td>{{ formatDate(row.joiningDate) }}</td>
-                <td style="white-space: nowrap">{{ row.relieverId ? (row.relieverPrefixName ? row.relieverPrefixName + " - " : "") + (row.relieverServiceId || '-') : '-' }}</td>
-                <td style="text-align: center; vertical-align: middle; white-space: nowrap">
-                    <span class="action-buttons">
-                        <p-button label="Profile" size="small" [routerLink]="['/supernumerary-profile', row.employeeID]"></p-button>
-                        <p-button label="Send New Posting list" size="small" (onClick)="onSendNewPostingList(row)"></p-button>
-                    </span>
-                </td>
-            </tr>
-        </ng-template>
-        <ng-template pTemplate="emptymessage">
-            <tr>
-                <td colspan="10" class="text-center p-4">
-                    <div class="flex flex-column align-items-center gap-3 py-5">
-                        <i class="pi pi-list text-5xl text-400"></i>
-                        <span class="text-lg text-500">No records found.</span>
+        <div class="report-filter-body" [class.open]="filterOpen">
+            <div class="report-filter-body-inner">
+                <div class="report-fields-row">
+                    <div class="report-filter-field">
+                        <label>Mother Organization</label>
+                        <p-select
+                            id="org"
+                            [options]="orgOptions"
+                            [(ngModel)]="selectedOrgId"
+                            (ngModelChange)="onOrgChange()"
+                            optionLabel="orgNameEN"
+                            optionValue="orgId"
+                            placeholder="Select"
+                            styleClass="w-full"
+                            [filter]="true"
+                            appendTo="body">
+                        </p-select>
                     </div>
-                </td>
-            </tr>
-        </ng-template>
-    </p-table>
+                    <div class="report-filter-field">
+                        <label>Member Type</label>
+                        <p-select
+                            id="memberType"
+                            [options]="memberTypeOptions"
+                            [(ngModel)]="selectedMemberTypeId"
+                            (ngModelChange)="onMemberTypeChange()"
+                            optionLabel="label"
+                            optionValue="value"
+                            placeholder="Select"
+                            styleClass="w-full"
+                            appendTo="body">
+                        </p-select>
+                    </div>
+                    <div class="report-filter-field">
+                        <label>Rank</label>
+                        <p-select
+                            id="rank"
+                            [options]="rankOptions"
+                            [(ngModel)]="selectedRankId"
+                            (ngModelChange)="onFilterChange()"
+                            optionLabel="label"
+                            optionValue="value"
+                            placeholder="Select"
+                            styleClass="w-full"
+                            [disabled]="selectedOrgId == null"
+                            appendTo="body">
+                        </p-select>
+                    </div>
+                    <div class="report-filter-field">
+                        <label>Trade</label>
+                        <p-select
+                            id="trade"
+                            [options]="tradeOptions"
+                            [(ngModel)]="selectedTradeId"
+                            (ngModelChange)="onFilterChange()"
+                            optionLabel="label"
+                            optionValue="value"
+                            placeholder="Select"
+                            styleClass="w-full"
+                            [disabled]="selectedOrgId == null"
+                            appendTo="body">
+                        </p-select>
+                    </div>
+                </div>
+                <div class="report-fields-row">
+                    <div class="report-filter-field report-filter-field-date">
+                        <label>Date of joining from</label>
+                        <p-datepicker
+                            [(ngModel)]="joiningDateFrom"
+                            (ngModelChange)="onFilterChange()"
+                            dateFormat="dd-mm-yy"
+                            placeholder="From"
+                            appendTo="body"
+                            styleClass="w-full">
+                        </p-datepicker>
+                    </div>
+                    <div class="report-filter-field report-filter-field-date">
+                        <label>Date of joining to</label>
+                        <p-datepicker
+                            [(ngModel)]="joiningDateTo"
+                            (ngModelChange)="onFilterChange()"
+                            dateFormat="dd-mm-yy"
+                            placeholder="To"
+                            appendTo="body"
+                            styleClass="w-full">
+                        </p-datepicker>
+                    </div>
+                    <div class="report-filter-field report-filter-field-date">
+                        <label>Date of join in RAB from</label>
+                        <p-datepicker
+                            [(ngModel)]="joiningDateInRABFrom"
+                            (ngModelChange)="onFilterChange()"
+                            dateFormat="dd-mm-yy"
+                            placeholder="From"
+                            appendTo="body"
+                            styleClass="w-full">
+                        </p-datepicker>
+                    </div>
+                    <div class="report-filter-field report-filter-field-date">
+                        <label>Date of join in RAB to</label>
+                        <p-datepicker
+                            [(ngModel)]="joiningDateInRABTo"
+                            (ngModelChange)="onFilterChange()"
+                            dateFormat="dd-mm-yy"
+                            placeholder="To"
+                            appendTo="body"
+                            styleClass="w-full">
+                        </p-datepicker>
+                    </div>
+                </div>
+
+                <div class="report-filter-actions">
+                    <button type="button" class="report-btn-clear" (click)="clearFilters()">
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                            <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                        </svg>
+                        Clear
+                    </button>
+                    <button type="button" class="report-btn-search" (click)="loadData()" [disabled]="loading">
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                            <circle cx="6" cy="6" r="4.5" stroke="white" stroke-width="1.6"/>
+                            <path d="M10 10l2.5 2.5" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
+                        </svg>
+                        Search
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results card -->
+    <div class="report-results-card">
+        <div class="report-results-header">
+            <div class="report-results-title">
+                Results
+                <span class="report-results-count">{{ filteredList.length }} record(s)</span>
+            </div>
+            <div class="report-results-actions">
+                <div class="report-search-wrap">
+                    <span class="report-search-icon">
+                        <i class="pi pi-search"></i>
+                    </span>
+                    <input
+                        pInputText
+                        type="text"
+                        placeholder="Search by Service ID / RAB ID"
+                        [(ngModel)]="searchText"
+                        (ngModelChange)="onSearchChange()"
+                        class="report-search-input" />
+                </div>
+            </div>
+        </div>
+
+        <div class="report-table-wrap">
+            <p-table
+                [value]="filteredList"
+                [loading]="loading"
+                dataKey="employeeID"
+                [lazy]="false"
+                [first]="first"
+                [rows]="rows"
+                [paginator]="true"
+                (onPage)="onPage($event)"
+                [rowsPerPageOptions]="[10, 20, 50]"
+                [tableStyle]="{ 'min-width': '60rem' }"
+                styleClass="p-datatable-sm"
+                paginatorDropdownAppendTo="body"
+                [showCurrentPageReport]="false">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th>Ser</th>
+                        <th>Service ID</th>
+                        <th>Rank</th>
+                        <th>Corps</th>
+                        <th>Trade</th>
+                        <th>Name</th>
+                        <th>Mother Unit</th>
+                        <th>Date of Join in RAB</th>
+                        <th>Reliever Svc ID</th>
+                        <th>Action</th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                    <tr>
+                        <td><span class="report-ser-num">{{ first + rowIndex + 1 }}</span></td>
+                        <td style="white-space: nowrap"><span class="font-semibold">{{ row.prefixName ? row.prefixName + " - " : "" }}{{ row.serviceId || '—' }}</span></td>
+                        <td>{{ row.rankName || '—' }}</td>
+                        <td>
+                            @if (row.corpsName) {
+                                <span class="report-badge-corps">{{ row.corpsName }}</span>
+                            } @else {
+                                <span class="report-dash">—</span>
+                            }
+                        </td>
+                        <td>{{ row.tradeName || '—' }}</td>
+                        <td>{{ row.fullNameEN || '—' }}{{ row.corpsName ? ", " + row.corpsName : "" }}</td>
+                        <td>
+                            @if (row.motherUnitName) {
+                                <span class="report-badge-unit">{{ row.motherUnitName }}</span>
+                            } @else {
+                                <span class="report-dash">—</span>
+                            }
+                        </td>
+                        <td>{{ formatDate(row.joiningDate) }}</td>
+                        <td style="white-space: nowrap">{{ row.relieverId ? (row.relieverPrefixName ? row.relieverPrefixName + " - " : "") + (row.relieverServiceId || '—') : '—' }}</td>
+                        <td>
+                            <span class="report-action-buttons">
+                                <a [routerLink]="['/supernumerary-profile', row.employeeID]" class="report-link-profile">
+                                    <i class="pi pi-user"></i> Profile
+                                </a>
+                                <button type="button" class="report-btn-secondary" (click)="onSendNewPostingList(row)">
+                                    Send New Posting list
+                                </button>
+                            </span>
+                        </td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="10" class="text-center p-4">No records found.</td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </div>
+    </div>
 </div>

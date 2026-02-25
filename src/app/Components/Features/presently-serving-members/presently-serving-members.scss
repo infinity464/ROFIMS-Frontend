@@ -1,52 +1,46 @@
+/**
+ * Presently Serving Members – matches employee-reports style (report-theme).
+ * Page wrapper uses .employee-reports-page from report-theme.scss.
+ */
+
 :host {
-    display: block;
+  display: block;
 }
 
-.filter-section {
-    border: 1px solid var(--p-border-color, #dee2e6);
-    border-radius: var(--p-border-radius, 6px);
-    padding: 1rem 1.25rem;
-    background: var(--p-content-background, #fff);
+:host-context(.app-dark) {
+  background-color: var(--surface-ground);
+  display: block;
+  min-height: 100%;
 }
 
-.filter-row {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 0.875rem;
-
-    &:last-child {
-        margin-bottom: 0;
-    }
+/* Collapsible filter has more rows – allow taller open state (override report-theme) */
+.employee-reports-page .report-filter-card .report-filter-body.open {
+  max-height: 720px;
 }
 
-.filter-label {
-    flex-shrink: 0;
-    min-width: 180px;
-    font-weight: 500;
-    color: var(--p-text-color, #495057);
+/* Profile link in table – small primary-style link */
+.report-link-profile {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--primary-color);
+  text-decoration: none;
+  padding: 4px 10px;
+  border-radius: 6px;
+  transition: background 0.15s, color 0.15s;
 }
 
-.filter-inputs {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-    flex: 1;
+.report-link-profile:hover {
+  background: var(--report-accent-bg);
+  color: var(--primary-color);
 }
 
-.filter-input {
-    min-width: 140px;
-    flex: 1;
-    max-width: 220px;
-
-    &.filter-select,
-    &.filter-date {
-        min-width: 160px;
-        max-width: 240px;
-    }
+:host-context(.app-dark) .report-link-profile {
+  color: var(--primary-color);
 }
 
-.filter-actions {
-    margin-top: 0.5rem;
-    margin-bottom: 0;
+:host-context(.app-dark) .report-link-profile:hover {
+  background: var(--report-accent-bg);
 }

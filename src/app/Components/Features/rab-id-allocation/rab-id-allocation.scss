@@ -1,15 +1,43 @@
-// Same card + dropdown style as Supernumerary list
-.filter-field {
-  flex: 1 1 220px;
-  min-width: 0;
+/**
+ * RAB ID Allocation – matches employee-reports style (report-theme).
+ * Page wrapper uses .employee-reports-page from report-theme.scss.
+ */
+
+:host {
+  display: block;
 }
 
-@media (min-width: 992px) {
-  .filter-row-dropdowns {
-    flex-wrap: nowrap;
-  }
-  .filter-row-dropdowns .filter-field {
-    flex: 1 0 0;
-    min-width: 0;
-  }
+:host-context(.app-dark) {
+  background-color: var(--surface-ground);
+  display: block;
+  min-height: 100%;
+}
+
+/* MultiSelect in report-type-card: align with p-select height and border */
+.employee-reports-page .report-type-card .rt-select-wrap .p-multiselect {
+  width: 100%;
+}
+
+.employee-reports-page .report-type-card .rt-select-wrap .p-multiselect .p-multiselect-label {
+  height: 42px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 0 40px 0 14px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text);
+  background: var(--white);
+  min-height: 42px;
+}
+
+.employee-reports-page .report-type-card .rt-select-wrap .p-multiselect:focus-within .p-multiselect-label,
+.employee-reports-page .report-type-card .rt-select-wrap .p-multiselect.p-focus .p-multiselect-label {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px var(--report-accent-bg);
+}
+
+:host-context(.app-dark) .employee-reports-page .report-type-card .rt-select-wrap .p-multiselect .p-multiselect-label {
+  background: var(--surface-card);
+  color: var(--text-color);
+  border-color: var(--surface-border);
 }

@@ -35,7 +35,7 @@ export interface FilterModel {
     imports: [CommonModule, FormsModule, RouterModule, TableModule, ButtonModule, InputTextModule, SelectModule, DatePickerModule, Toast],
     providers: [MessageService],
     templateUrl: './presently-serving-members.html',
-    styleUrl: './presently-serving-members.scss'
+    styleUrls: ['./presently-serving-members.scss', '../employee-reports/report-theme.scss'],
 })
 export class PresentlyServingMembers implements OnInit {
     list: EmployeeServiceOverview[] = [];
@@ -70,6 +70,9 @@ export class PresentlyServingMembers implements OnInit {
 
     /** Whether list is using filter (so pagination uses filtered API). */
     useFilter = false;
+
+    /** Collapsible filter panel open by default. */
+    filterOpen = true;
 
     constructor(
         private servingMembersService: ServingMembersService,
@@ -216,6 +219,31 @@ export class PresentlyServingMembers implements OnInit {
     refresh(): void {
         this.first = 0;
         this.loadList(1, this.rows);
+    }
+
+    toggleFilter(): void {
+        this.filterOpen = !this.filterOpen;
+    }
+
+    /** Number of filter criteria currently set (for badge). */
+    get activeFilterCount(): number {
+        const f = this.filter;
+        let n = 0;
+        if (f.rabId?.trim()) n++;
+        if (f.serviceId?.trim()) n++;
+        if (f.nidId?.trim()) n++;
+        if (f.nameBangla?.trim()) n++;
+        if (f.nameEnglish?.trim()) n++;
+        if (f.rabUnit != null) n++;
+        if (f.rank != null) n++;
+        if (f.corps != null) n++;
+        if (f.trade != null) n++;
+        if (f.durationFrom != null) n++;
+        if (f.durationTo != null) n++;
+        if (f.wonHomeDistrict != null) n++;
+        if (f.wifeHomeDistrict != null) n++;
+        if (f.appointment != null) n++;
+        return n;
     }
 
     formatDate(value: string | null): string {

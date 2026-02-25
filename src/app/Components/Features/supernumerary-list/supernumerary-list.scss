@@ -1,61 +1,158 @@
-// Action column: buttons side by side
-.action-buttons {
+/**
+ * Supernumerary List – matches employee-reports style (report-theme).
+ * Page wrapper uses .employee-reports-page from report-theme.scss.
+ */
+
+:host {
+  display: block;
+}
+
+:host-context(.app-dark) {
+  background-color: var(--surface-ground);
+  display: block;
+  min-height: 100%;
+}
+
+/* Title inside filter card (same card as Search & filter) */
+.report-filter-card-title {
+  padding: 16px 20px 0;
+  margin-bottom: 4px;
+}
+
+.report-filter-card-title .report-page-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--navy);
+  letter-spacing: -0.02em;
+}
+
+:host-context(.app-dark) .report-filter-card-title .report-page-title {
+  color: var(--text-color);
+}
+
+/* Collapsible filter: allow enough height for dropdowns + date row */
+.employee-reports-page .report-filter-card .report-filter-body.open {
+  max-height: 420px;
+}
+
+/* Date filter fields: same width as dropdowns (match report-fields-row flex) */
+.report-filter-field.report-filter-field-date {
+  display: flex;
+  flex-direction: column;
+}
+:host ::ng-deep .report-filter-field.report-filter-field-date p-datepicker,
+:host ::ng-deep .report-filter-field.report-filter-field-date .p-datepicker {
+  width: 100% !important;
+  min-width: 0;
+  display: block;
+}
+:host ::ng-deep .report-filter-field.report-filter-field-date .p-datepicker .p-inputtext,
+:host ::ng-deep .report-filter-field.report-filter-field-date .p-datepicker input {
+  width: 100% !important;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* Search input in results header – match report export button area */
+.report-search-wrap {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  flex-wrap: nowrap;
 }
 
-// Responsive filter section: wrap on small screens, single row on large
-.filter-field {
-  flex: 1 1 220px;
-  min-width: 0;
+.report-search-icon {
+  position: absolute;
+  left: 10px;
+  color: var(--muted);
+  pointer-events: none;
+  font-size: 0.9rem;
 }
 
-// Large screen: 4 dropdowns forced in one row, equal width
-@media (min-width: 992px) {
-  .filter-row-dropdowns {
-    flex-wrap: nowrap;
-  }
-  .filter-row-dropdowns .filter-field {
-    flex: 1 0 0;
-    min-width: 0;
-  }
-  // Date row: 2 equal blocks (same total width as dropdown row), so date fields match dropdown size
-  .filter-row-dates {
-    flex-wrap: nowrap;
-  }
-  .filter-row-dates .filter-field-date {
-    flex: 1 0 0;
-    min-width: 0;
-  }
-  .filter-row-dates .filter-date-half {
-    flex: 1 0 0;
-    min-width: 0;
-  }
+.report-search-input {
+  height: 32px;
+  padding: 0 12px 0 32px;
+  border: 1.5px solid var(--border);
+  border-radius: 7px;
+  font-size: 0.85rem;
+  color: var(--text);
+  background: var(--white);
+  min-width: 220px;
 }
 
-.filter-field-date {
-  flex: 1 1 280px;
-  min-width: 0;
+.report-search-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px var(--report-accent-bg);
 }
 
-.filter-date-half {
-  flex: 1 1 120px;
-  min-width: 0;
+:host-context(.app-dark) .report-search-input {
+  background: var(--surface-card);
+  color: var(--text-color);
+  border-color: var(--surface-border);
 }
 
-// Match date picker height to dropdown (PrimeNG select height)
-:host ::ng-deep .filter-field-date p-datepicker,
-:host ::ng-deep .filter-field-date .p-datepicker .p-inputtext {
-  min-height: 2.5rem;
-  width: 100%;
+/* Action column: profile link + secondary button */
+.report-action-buttons {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
-// On very small screens, stack date From/To vertically
-@media (max-width: 480px) {
-  .filter-date-half {
-    flex: 1 1 100%;
-  }
+.report-link-profile {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--primary-color);
+  text-decoration: none;
+  padding: 4px 10px;
+  border-radius: 6px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.report-link-profile:hover {
+  background: var(--report-accent-bg);
+  color: var(--primary-color);
+}
+
+.report-btn-secondary {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 6px;
+  border: 1.5px solid var(--border);
+  background: var(--white);
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--navy);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.report-btn-secondary:hover {
+  border-color: var(--primary-color);
+  background: var(--report-accent-bg);
+  color: var(--primary-color);
+}
+
+:host-context(.app-dark) .report-link-profile {
+  color: var(--primary-color);
+}
+
+:host-context(.app-dark) .report-link-profile:hover {
+  background: var(--report-accent-bg);
+}
+
+:host-context(.app-dark) .report-btn-secondary {
+  background: var(--surface-card);
+  border-color: var(--surface-border);
+  color: var(--text-color);
+}
+
+:host-context(.app-dark) .report-btn-secondary:hover {
+  border-color: var(--primary-color);
+  background: var(--report-accent-bg);
+  color: var(--primary-color);
 }
