@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, Input, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -32,6 +32,8 @@ import { FileReferencesFormComponent, FileRowData } from '@components/Common/fil
 })
 export class EmpBankAccount implements OnInit {
     @ViewChild('fileReferencesForm') fileReferencesForm!: any;
+
+    @Input() hideTitle = false;
 
     employeeFound = false;
     selectedEmployeeId: number | null = null;

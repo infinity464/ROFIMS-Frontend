@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild } from '@angular/core';
+import { Component, Input, OnInit, OnDestroy, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -61,6 +61,8 @@ interface DropdownOption {
 })
 export class EmpForeignVisit implements OnInit, OnDestroy {
     @ViewChild('fileReferencesForm') fileReferencesForm!: any;
+
+    @Input() hideTitle = false;
 
     employeeFound = false;
     selectedEmployeeId: number | null = null;

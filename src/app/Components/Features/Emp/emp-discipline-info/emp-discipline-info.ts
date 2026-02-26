@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, Input, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -57,6 +57,8 @@ export interface DisciplineListRow extends DisciplineInfoModel {
 })
 export class EmpDisciplineInfoComponent implements OnInit {
     @ViewChild('fileReferencesForm') fileReferencesForm!: any;
+
+    @Input() hideTitle = false;
 
     employeeFound = false;
     selectedEmployeeId: number | null = null;

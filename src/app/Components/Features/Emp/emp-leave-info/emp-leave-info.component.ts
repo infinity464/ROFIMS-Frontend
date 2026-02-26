@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -31,6 +31,8 @@ import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/
     styleUrl: './emp-leave-info.component.scss'
 })
 export class EmpLeaveInfo implements OnInit {
+    @Input() hideTitle = false;
+
     employeeFound = false;
     selectedEmployeeId: number | null = null;
     employeeBasicInfo: any = null;

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -58,6 +58,8 @@ interface AdditionalRemarksItem {
     styleUrl: './emp-additional-remarks.component.scss'
 })
 export class EmpAdditionalRemarks implements OnInit {
+    @Input() hideTitle = false;
+
     employeeFound = false;
     selectedEmployeeId: number | null = null;
     employeeBasicInfo: any = null;
