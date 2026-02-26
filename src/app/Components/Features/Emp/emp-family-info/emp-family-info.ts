@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, Input, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -64,6 +64,9 @@ interface FamilyMember {
     styleUrl: './emp-family-info.scss'
 })
 export class EmpFamilyInfo implements OnInit {
+    /** When true (e.g. inside tab view), the "Employee Family Information" title and header actions are hidden. */
+    @Input() hideTitle = false;
+
     employeeFound: boolean = false;
     selectedEmployeeId: number | null = null;
     employeeBasicInfo: any = null;

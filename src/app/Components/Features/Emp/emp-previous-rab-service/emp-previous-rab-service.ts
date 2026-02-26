@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, Input, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -61,6 +61,10 @@ export interface PreviousRABServiceListRow {
 })
 export class EmpPreviousRabService implements OnInit {
     @ViewChild('fileReferencesForm') fileReferencesForm!: any; // FileReferencesFormComponent
+
+    /** When true (e.g. inside tab view), the "Previous Service in RAB Entry" title and header actions are hidden. */
+    @Input() hideTitle = false;
+
     fileRows: FileRowData[] = [];
 
     employeeFound = false;
