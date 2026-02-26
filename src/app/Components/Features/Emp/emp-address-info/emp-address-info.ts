@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, Input, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -24,6 +24,9 @@ import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/
 export class EmpAddressInfo implements OnInit {
     @ViewChild('permanentAddressForm') permanentAddressForm!: AddressFormComponent;
     @ViewChild('presentAddressForm') presentAddressForm!: AddressFormComponent;
+
+    /** When true (e.g. inside tab view), the "Employee Address Information" title and header actions are hidden. */
+    @Input() hideTitle = false;
 
     // Employee lookup
     employeeFound: boolean = false;
