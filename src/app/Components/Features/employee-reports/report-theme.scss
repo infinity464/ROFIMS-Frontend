@@ -597,9 +597,10 @@
     background: var(--report-accent-bg);
     color: var(--primary-color);
 }
-.app-dark .employee-reports-page .report-badge-corps {
+.app-dark .employee-reports-page .report-badge-corps,
+:host-context(.app-dark) .employee-reports-page .report-badge-corps {
     background: var(--report-accent-bg);
-    color: var(--report-accent);
+    color: var(--primary-color);
 }
 .report-badge-unit {
     display: inline-block;
@@ -610,9 +611,10 @@
     background: rgba(15, 31, 61, 0.07);
     color: var(--navy);
 }
-.app-dark .employee-reports-page .report-badge-unit {
-    background: rgba(255, 255, 255, 0.08);
-    color: var(--text);
+.app-dark .employee-reports-page .report-badge-unit,
+:host-context(.app-dark) .employee-reports-page .report-badge-unit {
+    background: var(--report-accent-bg);
+    color: var(--primary-color);
 }
 .report-dash {
     color: #c8d0df;
