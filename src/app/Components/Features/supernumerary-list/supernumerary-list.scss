@@ -4,155 +4,161 @@
  */
 
 :host {
-  display: block;
+    display: block;
 }
 
 :host-context(.app-dark) {
-  background-color: var(--surface-ground);
-  display: block;
-  min-height: 100%;
+    background-color: var(--surface-ground);
+    display: block;
+    min-height: 100%;
 }
 
 /* Title inside filter card (same card as Search & filter) */
 .report-filter-card-title {
-  padding: 16px 20px 0;
-  margin-bottom: 4px;
+    padding: 25px 20px 0;
+    margin-bottom: 4px;
 }
 
 .report-filter-card-title .report-page-title {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--navy);
-  letter-spacing: -0.02em;
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--navy);
+    letter-spacing: -0.02em;
 }
 
 :host-context(.app-dark) .report-filter-card-title .report-page-title {
-  color: var(--text-color);
+    color: var(--text-color);
 }
 
 /* Collapsible filter: allow enough height for dropdowns + date row */
 .employee-reports-page .report-filter-card .report-filter-body.open {
-  max-height: 420px;
+    max-height: 420px;
+}
+
+.employee-reports-page {
+    border-radius: 5px;
 }
 
 /* Date filter fields: same width as dropdowns (match report-fields-row flex) */
 .report-filter-field.report-filter-field-date {
-  display: flex;
-  flex-direction: column;
+    display: flex;
+    flex-direction: column;
 }
 :host ::ng-deep .report-filter-field.report-filter-field-date p-datepicker,
 :host ::ng-deep .report-filter-field.report-filter-field-date .p-datepicker {
-  width: 100% !important;
-  min-width: 0;
-  display: block;
+    width: 100% !important;
+    min-width: 0;
+    display: block;
 }
 :host ::ng-deep .report-filter-field.report-filter-field-date .p-datepicker .p-inputtext,
 :host ::ng-deep .report-filter-field.report-filter-field-date .p-datepicker input {
-  width: 100% !important;
-  min-width: 0;
-  box-sizing: border-box;
+    width: 100% !important;
+    min-width: 0;
+    box-sizing: border-box;
 }
 
 /* Search input in results header – match report export button area */
 .report-search-wrap {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
 }
 
 .report-search-icon {
-  position: absolute;
-  left: 10px;
-  color: var(--muted);
-  pointer-events: none;
-  font-size: 0.9rem;
+    position: absolute;
+    left: 10px;
+    color: var(--muted);
+    pointer-events: none;
+    font-size: 0.9rem;
 }
 
 .report-search-input {
-  height: 32px;
-  padding: 0 12px 0 32px;
-  border: 1.5px solid var(--border);
-  border-radius: 7px;
-  font-size: 0.85rem;
-  color: var(--text);
-  background: var(--white);
-  min-width: 220px;
+    height: 32px;
+    padding: 0 12px 0 32px;
+    border: 1.5px solid var(--border);
+    border-radius: 7px;
+    font-size: 0.85rem;
+    color: var(--text);
+    background: var(--white);
+    min-width: 220px;
 }
 
 .report-search-input:focus {
-  outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px var(--report-accent-bg);
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px var(--report-accent-bg);
 }
 
 :host-context(.app-dark) .report-search-input {
-  background: var(--surface-card);
-  color: var(--text-color);
-  border-color: var(--surface-border);
+    background: var(--surface-card);
+    color: var(--text-color);
+    border-color: var(--surface-border);
 }
 
 /* Action column: profile link + secondary button */
 .report-action-buttons {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
 }
 
 .report-link-profile {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: var(--primary-color);
-  text-decoration: none;
-  padding: 4px 10px;
-  border-radius: 6px;
-  transition: background 0.15s, color 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--primary-color);
+    text-decoration: none;
+    padding: 4px 10px;
+    border-radius: 6px;
+    transition:
+        background 0.15s,
+        color 0.15s;
 }
 
 .report-link-profile:hover {
-  background: var(--report-accent-bg);
-  color: var(--primary-color);
+    background: var(--report-accent-bg);
+    color: var(--primary-color);
 }
 
 .report-btn-secondary {
-  height: 28px;
-  padding: 0 12px;
-  border-radius: 6px;
-  border: 1.5px solid var(--border);
-  background: var(--white);
-  font-size: 0.78rem;
-  font-weight: 500;
-  color: var(--navy);
-  cursor: pointer;
-  transition: all 0.15s;
+    height: 28px;
+    padding: 0 12px;
+    border-radius: 6px;
+    border: 1.5px solid var(--border);
+    background: var(--white);
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--navy);
+    cursor: pointer;
+    transition: all 0.15s;
 }
 
 .report-btn-secondary:hover {
-  border-color: var(--primary-color);
-  background: var(--report-accent-bg);
-  color: var(--primary-color);
+    border-color: var(--primary-color);
+    background: var(--report-accent-bg);
+    color: var(--primary-color);
 }
 
 :host-context(.app-dark) .report-link-profile {
-  color: var(--primary-color);
+    color: var(--primary-color);
 }
 
 :host-context(.app-dark) .report-link-profile:hover {
-  background: var(--report-accent-bg);
+    background: var(--report-accent-bg);
 }
 
 :host-context(.app-dark) .report-btn-secondary {
-  background: var(--surface-card);
-  border-color: var(--surface-border);
-  color: var(--text-color);
+    background: var(--surface-card);
+    border-color: var(--surface-border);
+    color: var(--text-color);
 }
 
 :host-context(.app-dark) .report-btn-secondary:hover {
-  border-color: var(--primary-color);
-  background: var(--report-accent-bg);
-  color: var(--primary-color);
+    border-color: var(--primary-color);
+    background: var(--report-accent-bg);
+    color: var(--primary-color);
 }
