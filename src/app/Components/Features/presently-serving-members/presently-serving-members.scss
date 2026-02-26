@@ -1,5 +1,5 @@
 /**
- * Presently Serving Members – matches employee-reports style (report-theme).
+ * Presently Serving Members – styled like Supernumerary List (report-theme).
  * Page wrapper uses .employee-reports-page from report-theme.scss.
  */
 
@@ -13,9 +13,83 @@
   min-height: 100%;
 }
 
+/* Title inside filter card (same card as Search & filter) – like Supernumerary List */
+.report-filter-card-title {
+  padding: 16px 20px 0;
+  margin-bottom: 4px;
+}
+
+.report-filter-card-title .report-page-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--navy);
+  letter-spacing: -0.02em;
+}
+
+:host-context(.app-dark) .report-filter-card-title .report-page-title {
+  color: var(--text-color);
+}
+
 /* Collapsible filter has more rows – allow taller open state (override report-theme) */
 .employee-reports-page .report-filter-card .report-filter-body.open {
   max-height: 720px;
+}
+
+/* Date filter fields: same width as dropdowns (match report-fields-row flex) */
+.report-filter-field.report-filter-field-date {
+  display: flex;
+  flex-direction: column;
+}
+:host ::ng-deep .report-filter-field.report-filter-field-date p-datepicker,
+:host ::ng-deep .report-filter-field.report-filter-field-date .p-datepicker {
+  width: 100% !important;
+  min-width: 0;
+  display: block;
+}
+:host ::ng-deep .report-filter-field.report-filter-field-date .p-datepicker .p-inputtext,
+:host ::ng-deep .report-filter-field.report-filter-field-date .p-datepicker input {
+  width: 100% !important;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* Search input in results header – like Supernumerary List */
+.report-search-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.report-search-icon {
+  position: absolute;
+  left: 10px;
+  color: var(--muted);
+  pointer-events: none;
+  font-size: 0.9rem;
+}
+
+.report-search-input {
+  height: 32px;
+  padding: 0 12px 0 32px;
+  border: 1.5px solid var(--border);
+  border-radius: 7px;
+  font-size: 0.85rem;
+  color: var(--text);
+  background: var(--white);
+  min-width: 220px;
+}
+
+.report-search-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px var(--report-accent-bg);
+}
+
+:host-context(.app-dark) .report-search-input {
+  background: var(--surface-card);
+  color: var(--text-color);
+  border-color: var(--surface-border);
 }
 
 /* Profile link in table – small primary-style link */

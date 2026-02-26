@@ -1,15 +1,11 @@
 <p-toast></p-toast>
 
 <div class="employee-reports-page">
-    <!-- Page title card (same as employee-reports report-type-card) -->
-    <div class="report-type-card">
-        <div class="report-page-header">
+    <!-- Title + filter in same card (like Supernumerary List) -->
+    <div class="report-filter-card">
+        <div class="report-filter-card-title">
             <h1 class="report-page-title">Presently Serving Members List</h1>
         </div>
-    </div>
-
-    <!-- Collapsible filter card (same style as report-mother-org) -->
-    <div class="report-filter-card">
         <div class="report-filter-header" [class.open]="filterOpen" (click)="toggleFilter()" role="button" tabindex="0" (keydown.enter)="toggleFilter()" (keydown.space)="toggleFilter()">
             <div class="report-filter-header-left">
                 <div class="report-filter-icon">
@@ -50,12 +46,36 @@
                 </div>
                 <div class="report-fields-row">
                     <div class="report-filter-field">
+                        <label>Name (English)</label>
+                        <input pInputText type="text" [(ngModel)]="filter.nameEnglish" placeholder="Name English" class="w-full" />
+                    </div>
+                    <div class="report-filter-field">
                         <label>Name (Bangla)</label>
                         <input pInputText type="text" [(ngModel)]="filter.nameBangla" placeholder="Name Bangla" class="w-full" />
                     </div>
                     <div class="report-filter-field">
-                        <label>Name (English)</label>
-                        <input pInputText type="text" [(ngModel)]="filter.nameEnglish" placeholder="Name English" class="w-full" />
+                        <label>Employee permanent district</label>
+                        <p-select
+                            [(ngModel)]="filter.wonHomeDistrict"
+                            [options]="districtOptions"
+                            optionLabel="label"
+                            optionValue="value"
+                            placeholder="Select"
+                            styleClass="w-full"
+                            appendTo="body">
+                        </p-select>
+                    </div>
+                    <div class="report-filter-field">
+                        <label>Wife permanent district</label>
+                        <p-select
+                            [(ngModel)]="filter.wifeHomeDistrict"
+                            [options]="districtOptions"
+                            optionLabel="label"
+                            optionValue="value"
+                            placeholder="Select"
+                            styleClass="w-full"
+                            appendTo="body">
+                        </p-select>
                     </div>
                 </div>
                 <div class="report-fields-row">
@@ -127,34 +147,6 @@
                             styleClass="w-full">
                         </p-datepicker>
                     </div>
-                </div>
-                <div class="report-fields-row">
-                    <div class="report-filter-field">
-                        <label>Employee permanent district</label>
-                        <p-select
-                            [(ngModel)]="filter.wonHomeDistrict"
-                            [options]="districtOptions"
-                            optionLabel="label"
-                            optionValue="value"
-                            placeholder="Select"
-                            styleClass="w-full"
-                            appendTo="body">
-                        </p-select>
-                    </div>
-                    <div class="report-filter-field">
-                        <label>Wife permanent district</label>
-                        <p-select
-                            [(ngModel)]="filter.wifeHomeDistrict"
-                            [options]="districtOptions"
-                            optionLabel="label"
-                            optionValue="value"
-                            placeholder="Select"
-                            styleClass="w-full"
-                            appendTo="body">
-                        </p-select>
-                    </div>
-                </div>
-                <div class="report-fields-row">
                     <div class="report-filter-field">
                         <label>Appointment</label>
                         <p-select
@@ -188,18 +180,32 @@
         </div>
     </div>
 
-    <!-- Results card (same style as employee-reports) -->
+    <!-- Results card -->
     <div class="report-results-card">
         <div class="report-results-header">
             <div class="report-results-title">
                 Results
-                <span class="report-results-count">{{ totalRecords }} record(s)</span>
+                <span class="report-results-count">{{ searchText ? filteredList.length : totalRecords }} record(s)</span>
+            </div>
+            <div class="report-results-actions">
+                <div class="report-search-wrap">
+                    <span class="report-search-icon">
+                        <i class="pi pi-search"></i>
+                    </span>
+                    <input
+                        pInputText
+                        type="text"
+                        placeholder="Search by Service ID / RAB ID"
+                        [(ngModel)]="searchText"
+                        (ngModelChange)="onSearchChange()"
+                        class="report-search-input" />
+                </div>
             </div>
         </div>
 
         <div class="report-table-wrap">
             <p-table
-                [value]="list"
+                [value]="filteredList"
                 [lazy]="true"
                 [loading]="loading"
                 [paginator]="true"
@@ -215,7 +221,7 @@
                 [showCurrentPageReport]="false">
                 <ng-template pTemplate="header">
                     <tr>
-                        <th>Sl No</th>
+                        <th>Ser</th>
                         <th>Service ID</th>
                         <th>Rank</th>
                         <th>Corps</th>

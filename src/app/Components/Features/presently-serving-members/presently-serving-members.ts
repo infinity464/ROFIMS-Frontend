@@ -43,6 +43,8 @@ export class PresentlyServingMembers implements OnInit {
     totalRecords = 0;
     first = 0;
     rows = 10;
+    /** Client-side search: filters current page by Service ID or RAB ID (partial, case-insensitive). */
+    searchText = '';
 
     filter: FilterModel = {
         rabId: '',
@@ -223,6 +225,21 @@ export class PresentlyServingMembers implements OnInit {
 
     toggleFilter(): void {
         this.filterOpen = !this.filterOpen;
+    }
+
+    /** Current page rows filtered by searchText (Service ID / RAB ID). */
+    get filteredList(): EmployeeServiceOverview[] {
+        const q = this.searchText?.trim()?.toLowerCase();
+        if (!q) return this.list;
+        return this.list.filter(
+            (r) =>
+                (r.serviceId ?? '').toLowerCase().includes(q) ||
+                (r.rabID ?? '').toLowerCase().includes(q)
+        );
+    }
+
+    onSearchChange(): void {
+        // filteredList getter handles display; no-op for optional side effects
     }
 
     /** Number of filter criteria currently set (for badge). */
