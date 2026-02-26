@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, Input, OnInit, ViewChild } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -47,6 +47,9 @@ import { FileReferencesFormComponent, FileRowData } from '@components/Common/fil
 })
 export class EmpPersonalInfo implements OnInit {
     @ViewChild('fileReferencesForm') fileReferencesForm!: any; // FileReferencesFormComponent
+
+    /** When true (e.g. inside tab view), the "Employee Personal Info" title and header actions are hidden. */
+    @Input() hideTitle = false;
 
     // Employee lookup
     employeeFound: boolean = false;
