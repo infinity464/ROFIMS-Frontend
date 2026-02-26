@@ -6,14 +6,19 @@ import { TableModule } from 'primeng/table';
 import { Toast } from 'primeng/toast';
 import { DialogModule } from 'primeng/dialog';
 import { MessageService } from 'primeng/api';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { EmployeeListService } from '@/services/employee-list.service';
-import { EmpService } from '@/services/emp-service';
+import { ServingMembersService } from '@/services/serving-members.service';
+import { EmpService, EmployeeDocumentReferenceItem } from '@/services/emp-service';
 import { SupernumeraryEmpProfile, AddressBlock, RelieverRow } from '@/models/employee-list.model';
+import { EmployeePersonalServiceOverview } from '@/models/employee-personal-service-overview.model';
+import { TooltipModule } from 'primeng/tooltip';
 
 @Component({
     selector: 'app-supernumerary-profile',
     standalone: true,
-    imports: [CommonModule, RouterModule, ButtonModule, TableModule, Toast, DialogModule],
+    imports: [CommonModule, RouterModule, ButtonModule, TableModule, Toast, DialogModule, TooltipModule],
     providers: [MessageService],
     templateUrl: './supernumerary-profile.html',
     styleUrl: './supernumerary-profile.scss'
@@ -27,10 +32,17 @@ export class SupernumeraryProfile implements OnInit, OnDestroy {
     /** Reliever table rows - use property instead of function for reliable p-table button clicks */
     relieverTableRows: Array<{ employeeID: number; serviceId: string | null; rank: string | null; corps: string | null; trade: string | null; name: string | null; wingBattalion: string | null; appointment: string | null }> = [];
 
+    /** Documents/Files from GetEmployeeDocumentReferences (like ex-member profile). */
+    documentList: EmployeeDocumentReferenceItem[] = [];
+
+    /** Joining date from GetEmployeePersonalServiceOverview (same source as ex-member profile). */
+    serviceOverview: EmployeePersonalServiceOverview | null = null;
+
     constructor(
         private route: ActivatedRoute,
         private router: Router,
         private employeeListService: EmployeeListService,
+        private servingMembersService: ServingMembersService,
         private messageService: MessageService,
         private empService: EmpService
     ) {}
@@ -48,12 +60,20 @@ export class SupernumeraryProfile implements OnInit, OnDestroy {
 
     loadProfile(): void {
         if (this.employeeId == null) return;
+        const id = this.employeeId;
         this.loading = true;
-        this.employeeListService.getSupernumeraryEmpProfile(this.employeeId).subscribe({
-            next: (p) => {
-                this.profile = p ?? null;
-                this.loadProfileImage(p ?? null);
-                this.relieverTableRows = this.buildRelieverTableRows(p ?? null);
+        forkJoin({
+            profile: this.employeeListService.getSupernumeraryEmpProfile(id),
+            overview: this.servingMembersService.getEmployeePersonalServiceOverview(id).pipe(
+                catchError(() => of(null))
+            )
+        }).subscribe({
+            next: ({ profile, overview }) => {
+                this.profile = profile ?? null;
+                this.serviceOverview = overview ?? null;
+                this.loadProfileImage(this.profile);
+                this.relieverTableRows = this.buildRelieverTableRows(this.profile);
+                this.loadDocuments();
                 this.loading = false;
             },
             error: (err) => {
@@ -152,6 +172,52 @@ export class SupernumeraryProfile implements OnInit, OnDestroy {
         this.relieverProfile = null;
     }
 
+    private loadDocuments(): void {
+        if (this.employeeId == null) return;
+        this.empService.getEmployeeDocumentReferences(this.employeeId).subscribe({
+            next: (list) => {
+                this.documentList = list ?? [];
+            },
+            error: () => {
+                this.documentList = [];
+            }
+        });
+    }
+
+    getDocumentSourceLabel(row: { sourceTable?: string; SourceTable?: string }): string {
+        const sourceTable = row?.sourceTable ?? row?.SourceTable ?? '';
+        const labels: Record<string, string> = {
+            PersonalInfo: 'Personal Info',
+            EmployeeInfo: 'Employee Info',
+            PreviousRABServiceInfo: 'Previous RAB Service',
+            PromotionInfo: 'Promotion',
+            RankConfirmationInfo: 'Rank Confirmation',
+            BankAccInfo: 'Bank Account',
+            CourseInfo: 'Course',
+            DisciplineInfo: 'Discipline',
+            EducationInfo: 'Education',
+            ForeignVisitInfo: 'Foreign Visit',
+            MedicalInfo: 'Medical',
+            MOServHistory: 'MO Service History',
+            NomineeInfo: 'Nominee'
+        };
+        return labels[sourceTable] ?? (sourceTable || 'Document');
+    }
+
+    getDocumentFileName(row: { fileName?: string; FileName?: string }): string {
+        return row?.fileName ?? row?.FileName ?? '-';
+    }
+
+    downloadDocument(item: EmployeeDocumentReferenceItem): void {
+        const fileId = item.fileId ?? (item as { FileId?: number }).FileId;
+        const fileName = item.fileName ?? (item as { FileName?: string }).FileName ?? 'download';
+        if (fileId == null) return;
+        this.empService.downloadFile(fileId).subscribe({
+            next: (blob) => this.empService.triggerFileDownload(blob, fileName),
+            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file.' })
+        });
+    }
+
     /** True if address block exists and has at least one non-empty field. */
     hasAddress(addr: AddressBlock | null | undefined): boolean {
         if (!addr) return false;
@@ -159,7 +225,19 @@ export class SupernumeraryProfile implements OnInit, OnDestroy {
         return keys.some((k) => this.getAddrField(addr, k) !== '-');
     }
 
-    formatDateOfJoining(value: string | null): string {
+    /** Get Date of Joining in RAB from profile; API may return camelCase or PascalCase (same as ex-member joiningDate). */
+    getDateOfJoiningInRAB(profile: SupernumeraryEmpProfile | null): string | null {
+        if (!profile) return null;
+        const raw = profile as unknown as Record<string, unknown>;
+        const val =
+            raw['dateOfJoiningInRAB'] ??
+            raw['DateOfJoiningInRAB'] ??
+            raw['joiningDate'] ??
+            raw['JoiningDate'];
+        return val != null && val !== '' ? String(val) : null;
+    }
+
+    formatDateOfJoining(value: string | null | undefined): string {
         if (value == null || value === '') return '-';
         try {
             const d = new Date(value);
@@ -183,6 +261,7 @@ export class SupernumeraryProfile implements OnInit, OnDestroy {
     /** Get address field value; API may return PascalCase (VillageArea, District, etc.) so check both. */
     getAddrField(addr: AddressBlock | null | undefined, key: keyof AddressBlock): string {
         if (!addr) return '-';
+        const raw = addr as unknown as Record<string, unknown>;
         const camel = addr[key];
         if (camel != null && camel !== '') return camel;
         const pascalMap: Record<keyof AddressBlock, string> = {
@@ -193,8 +272,17 @@ export class SupernumeraryProfile implements OnInit, OnDestroy {
             upazilaThana: 'UpazilaThana'
         };
         const pascalKey = pascalMap[key];
-        const v = pascalKey ? (addr as unknown as Record<string, unknown>)[pascalKey] : undefined;
-        return v != null && v !== '' ? String(v) : '-';
+        const v = pascalKey ? raw[pascalKey] : undefined;
+        if (v != null && v !== '') return String(v);
+        // Village/Area: backend may send VillageArea from HouseRoad ?? AddressAreaEN; support alternate keys
+        if (key === 'villageArea') {
+            const altKeys = ['Village', 'Area', 'AddressAreaEN', 'HouseRoad', 'addressAreaEN', 'houseRoad'];
+            for (const k of altKeys) {
+                const alt = raw[k];
+                if (alt != null && alt !== '') return String(alt);
+            }
+        }
+        return '-';
     }
 
     addrVal(addr: AddressBlock | null | undefined, key: keyof AddressBlock): string {
