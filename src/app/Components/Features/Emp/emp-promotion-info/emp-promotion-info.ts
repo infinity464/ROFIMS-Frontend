@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, Input, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, FormsModule, ReactiveFormsModule, AbstractControl, ValidationErrors } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -51,6 +51,9 @@ export interface PromotionListRow extends PromotionInfoModel {}
 })
 export class EmpPromotionInfo implements OnInit {
     @ViewChild('fileReferencesForm') fileReferencesForm!: any; // FileReferencesFormComponent
+
+    /** When true (e.g. inside tab view), the "Promotion Information Entry" title and header actions are hidden. */
+    @Input() hideTitle = false;
 
     employeeFound = false;
     selectedEmployeeId: number | null = null;

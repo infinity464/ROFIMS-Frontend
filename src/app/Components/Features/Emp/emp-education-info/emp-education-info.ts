@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, Input, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -38,6 +38,9 @@ interface DropdownOption {
 })
 export class EmpEducationInfoComponent implements OnInit {
     @ViewChild('fileReferencesForm') fileReferencesForm!: any;
+
+    /** When true (e.g. inside tab view), the "Educational Information" title and header actions are hidden. */
+    @Input() hideTitle = false;
 
     employeeFound = false;
     selectedEmployeeId: number | null = null;
