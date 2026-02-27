@@ -6,8 +6,6 @@ import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { InputTextModule } from 'primeng/inputtext';
-import { IconField } from 'primeng/iconfield';
-import { InputIcon } from 'primeng/inputicon';
 import { DatePickerModule } from 'primeng/datepicker';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
@@ -21,10 +19,10 @@ import { CommonCodeModel } from '@/models/common-code-model';
 @Component({
     selector: 'app-supernumerary-list',
     standalone: true,
-    imports: [CommonModule, FormsModule, RouterModule, TableModule, ButtonModule, SelectModule, InputTextModule, IconField, InputIcon, DatePickerModule, Toast, TooltipModule],
+    imports: [CommonModule, FormsModule, RouterModule, TableModule, ButtonModule, SelectModule, InputTextModule, DatePickerModule, Toast, TooltipModule],
     providers: [MessageService],
     templateUrl: './supernumerary-list.html',
-    styleUrl: './supernumerary-list.scss'
+    styleUrls: ['./supernumerary-list.scss', '../employee-reports/report-theme-common.scss'],
 })
 export class SupernumeraryList implements OnInit {
     list: EmployeeList[] = [];
@@ -33,6 +31,9 @@ export class SupernumeraryList implements OnInit {
     rows = 20;
     /** Client-side search: filters by Service ID or RAB ID (partial, case-insensitive). */
     searchText = '';
+
+    /** Collapsible filter panel open by default. */
+    filterOpen = true;
 
     orgOptions: MotherOrganizationModel[] = [];
     selectedOrgId: number | null = null;
@@ -170,6 +171,39 @@ export class SupernumeraryList implements OnInit {
 
     onSearchChange(): void {
         this.first = 0;
+    }
+
+    toggleFilter(): void {
+        this.filterOpen = !this.filterOpen;
+    }
+
+    /** Number of filter criteria currently set (for badge). */
+    get activeFilterCount(): number {
+        let n = 0;
+        if (this.selectedOrgId != null) n++;
+        if (this.selectedMemberTypeId != null) n++;
+        if (this.selectedRankId != null) n++;
+        if (this.selectedTradeId != null) n++;
+        if (this.joiningDateFrom != null) n++;
+        if (this.joiningDateTo != null) n++;
+        if (this.joiningDateInRABFrom != null) n++;
+        if (this.joiningDateInRABTo != null) n++;
+        return n;
+    }
+
+    clearFilters(): void {
+        this.selectedOrgId = null;
+        this.selectedMemberTypeId = null;
+        this.rankOptions = [];
+        this.selectedRankId = null;
+        this.tradeOptions = [];
+        this.selectedTradeId = null;
+        this.joiningDateFrom = null;
+        this.joiningDateTo = null;
+        this.joiningDateInRABFrom = null;
+        this.joiningDateInRABTo = null;
+        this.first = 0;
+        this.loadData();
     }
 
     loadData(): void {

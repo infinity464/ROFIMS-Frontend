@@ -15,6 +15,9 @@ export const PROFILE_LABELS = {
     'button.back': 'Back',
     'button.download': 'Download',
     'button.profile': 'Profile',
+    'button.edit': 'Edit',
+    'button.save': 'Save',
+    'button.cancel': 'Cancel',
 
     // Section headings
     'section.basicService': 'Basic Service Information',
@@ -188,6 +191,9 @@ export const PROFILE_LABELS = {
     'button.back': 'পিছনে',
     'button.download': 'ডাউনলোড',
     'button.profile': 'প্রোফাইল',
+    'button.edit': 'সম্পাদনা',
+    'button.save': 'সংরক্ষণ',
+    'button.cancel': 'বাতিল',
 
     'section.basicService': 'মৌলিক তথ্য',
     'section.ownAddress': 'নিজের ঠিকানার তথ্য:',

@@ -1,0 +1,66 @@
+<div class="employee-reports-page">
+    <div class="report-type-card">
+        <div class="report-page-header">
+            <h1 class="report-page-title">{{ L['en']['report.pageTitle'] }}</h1>
+        </div>
+        <div class="report-type-row">
+            <div class="report-type-field">
+                <div class="rt-label">{{ L['en']['report.reportTypeLabel'] }}</div>
+                <div class="rt-select-wrap">
+                    <p-select
+                        [options]="reportTypes"
+                        [(ngModel)]="reportType"
+                        (ngModelChange)="onReportTypeChange()"
+                        optionLabel="label"
+                        optionValue="value"
+                        [inputId]="'report-type-select'"
+                        [placeholder]="L['en']['report.placeholderReportType']"
+                        appendTo="body" />
+                </div>
+            </div>
+            <div class="report-type-field">
+                <div class="rt-label">{{ commonCodeDropdownLabelEn }}</div>
+                <div class="rt-select-wrap">
+                    <p-select
+                        [options]="commonCodeOptions"
+                        [(ngModel)]="selectedCommonCodeId"
+                        (ngModelChange)="onCommonCodeChange()"
+                        optionLabel="label"
+                        optionValue="value"
+                        [inputId]="'report-commoncode-select'"
+                        [placeholder]="commonCodePlaceholderEn"
+                        appendTo="body"
+                        [filter]="true" />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (selectedCommonCodeId != null) {
+        <div>
+            @switch (reportType) {
+                @case ('memberAppointment') {
+                    <app-report-member-appointment [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" (langToggle)="toggleReportLang()" />
+                }
+                @case ('batchCourse') {
+                    <app-report-batch-course [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" (langToggle)="toggleReportLang()" />
+                }
+                @case ('education') {
+                    <app-report-education [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" (langToggle)="toggleReportLang()" />
+                }
+                @case ('motherOrg') {
+                    <app-report-mother-org [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" (langToggle)="toggleReportLang()" />
+                }
+                @case ('officerType') {
+                    <app-report-officer-type [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" (langToggle)="toggleReportLang()" />
+                }
+                @case ('rabUnit') {
+                    <app-report-rab-unit [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" (langToggle)="toggleReportLang()" />
+                }
+                @case ('wings') {
+                    <app-report-wings [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" (langToggle)="toggleReportLang()" />
+                }
+            }
+        </div>
+    }
+</div>

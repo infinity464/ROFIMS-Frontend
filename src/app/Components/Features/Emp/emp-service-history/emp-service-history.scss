@@ -1,4 +1,8 @@
-// emp-service-history styles (match emp-education-info style)
+// emp-service-history styles – aligned with form-theme
+
+:host {
+    display: block;
+}
 
 // Modal: two fields per row (flex layout works in overlay)
 .service-form .service-form-rows .form-row {

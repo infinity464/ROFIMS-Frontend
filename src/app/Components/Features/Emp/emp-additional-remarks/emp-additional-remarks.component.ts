@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -58,6 +58,13 @@ interface AdditionalRemarksItem {
     styleUrl: './emp-additional-remarks.component.scss'
 })
 export class EmpAdditionalRemarks implements OnInit {
+    @Input() hideTitle = false;
+
+    @Input() embedMode = false;
+    @Input() externalEmployeeId: number | null = null;
+    @Output() saved = new EventEmitter<void>();
+    @Output() cancelled = new EventEmitter<void>();
+
     employeeFound = false;
     selectedEmployeeId: number | null = null;
     employeeBasicInfo: any = null;
@@ -85,6 +92,14 @@ export class EmpAdditionalRemarks implements OnInit {
 
     ngOnInit(): void {
         this.buildForm();
+        if (this.embedMode && this.externalEmployeeId != null) {
+            this.mode = 'edit';
+            this.isReadonly = false;
+            this.selectedEmployeeId = this.externalEmployeeId;
+            this.employeeFound = true;
+            this.loadEmployeeById(this.externalEmployeeId);
+            return;
+        }
         this.checkRouteParams();
     }
 
@@ -119,11 +134,17 @@ export class EmpAdditionalRemarks implements OnInit {
         }).subscribe({
             next: (data) => {
                 this.isLoading = false;
+                const empId = data.employee?.EmployeeID ?? (data.employee as any)?.employeeID;
                 if (data.employee) {
                     this.employeeFound = true;
-                    this.selectedEmployeeId = data.employee.EmployeeID;
+                    if (!this.embedMode) {
+                        this.selectedEmployeeId = empId ?? this.selectedEmployeeId ?? null;
+                    }
                     this.employeeBasicInfo = data.employee;
                     this.employeeSearchInfo = data.searchInfo;
+                    this.remarksList = Array.isArray(data.remarks) ? data.remarks : [];
+                } else if (this.embedMode && this.externalEmployeeId != null) {
+                    this.employeeFound = true;
                     this.remarksList = Array.isArray(data.remarks) ? data.remarks : [];
                 }
             },
@@ -262,6 +283,9 @@ export class EmpAdditionalRemarks implements OnInit {
                     });
                     this.closeDialog();
                     this.loadRemarksList();
+                    if (this.embedMode) {
+                        this.saved.emit();
+                    }
                 } else {
                     this.messageService.add({
                         severity: 'error',
@@ -312,6 +336,9 @@ export class EmpAdditionalRemarks implements OnInit {
                         detail: 'Remarks deleted successfully'
                     });
                     this.loadRemarksList();
+                    if (this.embedMode) {
+                        this.saved.emit();
+                    }
                 } else {
                     this.messageService.add({
                         severity: 'error',
@@ -331,7 +358,10 @@ export class EmpAdditionalRemarks implements OnInit {
     }
 
     goBack(): void {
-        // Navigate to employee list page
+        if (this.embedMode) {
+            this.cancelled.emit();
+            return;
+        }
         this.router.navigate(['/emp-list']);
     }
 

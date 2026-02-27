@@ -27,11 +27,45 @@ import { DialogModule } from 'primeng/dialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { PROFILE_LABELS, type ProfileLang } from '@/Core/i18n/profile-labels';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
+import { EmpPersonalInfo } from '@/Components/Features/Emp/emp-personal-info/emp-personal-info';
+import { EmpAddressInfo } from '@/Components/Features/Emp/emp-address-info/emp-address-info';
+import { EmpFamilyInfo } from '@/Components/Features/Emp/emp-family-info/emp-family-info';
+import { EmpPreviousRabService } from '@/Components/Features/Emp/emp-previous-rab-service/emp-previous-rab-service';
+import { EmpServiceHistory } from '@/Components/Features/Emp/emp-service-history/emp-service-history';
+import { EmpPromotionInfo } from '@/Components/Features/Emp/emp-promotion-info/emp-promotion-info';
+import { EmpEducationInfoComponent } from '@/Components/Features/Emp/emp-education-info/emp-education-info';
+import { EmpCourseInfoComponent } from '@/Components/Features/Emp/emp-course-info/emp-course-info';
+import { EmpForeignVisit } from '@/Components/Features/Emp/emp-foreign-visit/emp-foreign-visit.component';
+import { EmpLeaveInfo } from '@/Components/Features/Emp/emp-leave-info/emp-leave-info.component';
+import { EmpDisciplineInfoComponent } from '@/Components/Features/Emp/emp-discipline-info/emp-discipline-info';
+import { EmpBankAccount } from '@/Components/Features/Emp/emp-bank-account/emp-bank-account.component';
+import { EmpAdditionalRemarks } from '@/Components/Features/Emp/emp-additional-remarks/emp-additional-remarks.component';
 
 @Component({
     selector: 'app-ex-member-profile',
     standalone: true,
-    imports: [CommonModule, RouterModule, ButtonModule, TableModule, Toast, DialogModule, TooltipModule],
+    imports: [
+        CommonModule,
+        RouterModule,
+        ButtonModule,
+        TableModule,
+        Toast,
+        DialogModule,
+        TooltipModule,
+        EmpPersonalInfo,
+        EmpAddressInfo,
+        EmpFamilyInfo,
+        EmpPreviousRabService,
+        EmpServiceHistory,
+        EmpPromotionInfo,
+        EmpEducationInfoComponent,
+        EmpCourseInfoComponent,
+        EmpForeignVisit,
+        EmpLeaveInfo,
+        EmpDisciplineInfoComponent,
+        EmpBankAccount,
+        EmpAdditionalRemarks
+    ],
     providers: [MessageService],
     templateUrl: './ex-member-profile.html',
     styleUrl: './ex-member-profile.scss'
@@ -57,6 +91,9 @@ export class ExMemberProfile implements OnInit, OnDestroy {
     previousYearSummaryDialogVisible = false;
     previousYearSummaryLoading = false;
     loading = false;
+
+    /** Which section is in edit mode; null = all view. Only one section at a time. */
+    editingSection: string | null = null;
 
     profileLang: ProfileLang = 'en';
 
@@ -207,7 +244,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         }
     }
 
-    loadProfile(): void {
+    loadProfile(onComplete?: () => void): void {
         if (this.employeeId == null) return;
         const id = this.employeeId;
         this.loading = true;
@@ -245,6 +282,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
                 this.promotionList = promotion ?? [];
                 this.documentList = documents ?? [];
                 this.loading = false;
+                onComplete?.();
             },
             error: (err) => {
                 console.error('Failed to load profile', err);
@@ -254,12 +292,35 @@ export class ExMemberProfile implements OnInit, OnDestroy {
                     detail: err?.error?.message || 'Failed to load profile'
                 });
                 this.loading = false;
+                onComplete?.();
             }
         });
     }
 
     goBack(): void {
         this.router.navigate(['/ex-members']);
+    }
+
+    setEditingSection(section: string | null): void {
+        this.editingSection = section;
+    }
+
+    onSectionSaved(section: string): void {
+        this.editingSection = null;
+        if (this.employeeId != null) {
+            this.loadProfile();
+        }
+    }
+
+    /** Close edit mode and refresh profile (e.g. when user clicks Cancel/Back in embedded form). Preserves scroll position. */
+    closeSectionAndRefresh(): void {
+        const scrollY = window.scrollY;
+        this.editingSection = null;
+        if (this.employeeId != null) {
+            this.loadProfile(() => {
+                requestAnimationFrame(() => window.scrollTo(0, scrollY));
+            });
+        }
     }
 
     ngOnDestroy(): void {

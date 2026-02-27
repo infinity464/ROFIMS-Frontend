@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -61,6 +61,15 @@ export interface PreviousRABServiceListRow {
 })
 export class EmpPreviousRabService implements OnInit {
     @ViewChild('fileReferencesForm') fileReferencesForm!: any; // FileReferencesFormComponent
+
+    /** When true (e.g. inside tab view), the "Previous Service in RAB Entry" title and header actions are hidden. */
+    @Input() hideTitle = false;
+
+    @Input() embedMode = false;
+    @Input() externalEmployeeId: number | null = null;
+    @Output() saved = new EventEmitter<void>();
+    @Output() cancelled = new EventEmitter<void>();
+
     fileRows: FileRowData[] = [];
 
     employeeFound = false;
@@ -96,6 +105,14 @@ export class EmpPreviousRabService implements OnInit {
         this.buildForm();
         this.buildYearOptions();
         this.loadDropdowns();
+        if (this.embedMode && this.externalEmployeeId != null) {
+            this.mode = 'edit';
+            this.isReadonly = false;
+            this.selectedEmployeeId = this.externalEmployeeId;
+            this.employeeFound = true;
+            this.loadEmployeeById(this.externalEmployeeId);
+            return;
+        }
         this.checkRouteParams();
     }
 

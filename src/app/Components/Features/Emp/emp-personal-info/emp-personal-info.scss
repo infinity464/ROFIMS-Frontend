@@ -1,4 +1,8 @@
-// emp-personal-info styles
+// emp-personal-info styles – aligned with emp-basic-info (form-theme)
+
+:host {
+    display: block;
+}
 
 :host ::ng-deep .file-section-compact {
   app-file-references-form h3 {

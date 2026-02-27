@@ -1,0 +1,6 @@
+/**
+ * Employee Reports – reference design.
+ * Delegates to central report-theme-common.scss (shared with rab-id-allocation, supernumerary-list).
+ * Uses global theme: .app-dark on document (topbar toggle) for dark mode.
+ */
+@use './report-theme-common.scss';

@@ -1,4 +1,8 @@
-// emp-promotion-info styles (match emp-education-info style)
+// emp-promotion-info styles – aligned with form-theme
+
+:host {
+    display: block;
+}
 
 :host ::ng-deep .promotion-form .p-fileupload-choose-button svg[data-p-icon='plus'],
 :host ::ng-deep .promotion-form .p-fileupload-choose-button .p-button-icon,

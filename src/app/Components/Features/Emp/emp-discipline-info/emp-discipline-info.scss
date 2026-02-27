@@ -1,4 +1,8 @@
-// component styles
+// emp-discipline-info – aligned with form-theme
+
+:host {
+    display: block;
+}
 
 :host ::ng-deep .discipline-form p-datepicker,
 :host ::ng-deep .discipline-form .p-datepicker .p-inputtext {

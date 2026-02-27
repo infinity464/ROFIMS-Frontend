@@ -1,4 +1,8 @@
-// component styles
+// emp-additional-remarks – aligned with form-theme
+
+:host {
+    display: block;
+}
 
 :host ::ng-deep {
   // Form styling

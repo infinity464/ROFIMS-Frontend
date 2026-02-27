@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -44,6 +44,13 @@ interface TrainingInstituteOption extends DropdownOption {
 })
 export class EmpCourseInfoComponent implements OnInit {
     @ViewChild('fileReferencesForm') fileReferencesForm!: any;
+
+    @Input() hideTitle = false;
+
+    @Input() embedMode = false;
+    @Input() externalEmployeeId: number | null = null;
+    @Output() saved = new EventEmitter<void>();
+    @Output() cancelled = new EventEmitter<void>();
 
     employeeFound = false;
     selectedEmployeeId: number | null = null;
@@ -93,7 +100,6 @@ export class EmpCourseInfoComponent implements OnInit {
 
     ngOnInit(): void {
         this.loadDropdowns();
-        this.checkRouteParams();
         this.courseForm.get('trainingInstitueName')?.valueChanges.subscribe((instituteId) => {
             const institute = this.trainingInstituteOptions.find((o) => o.value === instituteId);
             const countryLabel = institute?.countryId != null ? this.getOptionLabel(this.countryOptions, institute.countryId) : '';
@@ -105,6 +111,15 @@ export class EmpCourseInfoComponent implements OnInit {
                 { emitEvent: false }
             );
         });
+        if (this.embedMode && this.externalEmployeeId != null) {
+            this.mode = 'edit';
+            this.isReadonly = false;
+            this.selectedEmployeeId = this.externalEmployeeId;
+            this.employeeFound = true;
+            this.loadEmployeeById(this.externalEmployeeId);
+            return;
+        }
+        this.checkRouteParams();
     }
 
     initForm(): void {
@@ -453,6 +468,10 @@ export class EmpCourseInfoComponent implements OnInit {
     }
 
     goBack(): void {
+        if (this.embedMode) {
+            this.cancelled.emit();
+            return;
+        }
         this.router.navigate(['/emp-list']);
     }
 

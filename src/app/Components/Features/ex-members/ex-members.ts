@@ -35,7 +35,7 @@ export interface FilterModel {
     imports: [CommonModule, FormsModule, RouterModule, TableModule, ButtonModule, InputTextModule, SelectModule, DatePickerModule, Toast],
     providers: [MessageService],
     templateUrl: './ex-members.html',
-    styleUrl: './ex-members.scss'
+    styleUrls: ['./ex-members.scss', '../employee-reports/report-theme.scss']
 })
 export class ExMembers implements OnInit {
     list: EmployeeServiceOverview[] = [];
@@ -43,6 +43,8 @@ export class ExMembers implements OnInit {
     totalRecords = 0;
     first = 0;
     rows = 10;
+    /** Client-side search: filters current page by Service ID or RAB ID (partial, case-insensitive). */
+    searchText = '';
 
     filter: FilterModel = {
         rabId: '',
@@ -69,6 +71,9 @@ export class ExMembers implements OnInit {
     appointmentOptions: { label: string; value: number }[] = [];
 
     useFilter = false;
+
+    /** Collapsible filter panel open by default. */
+    filterOpen = true;
 
     constructor(
         private servingMembersService: ServingMembersService,
@@ -210,6 +215,44 @@ export class ExMembers implements OnInit {
         this.useFilter = false;
         this.first = 0;
         this.loadList(1, this.rows);
+    }
+
+    toggleFilter(): void {
+        this.filterOpen = !this.filterOpen;
+    }
+
+    /** Current page rows filtered by searchText (Service ID / RAB ID). */
+    get filteredList(): EmployeeServiceOverview[] {
+        const q = this.searchText?.trim()?.toLowerCase();
+        if (!q) return this.list;
+        return this.list.filter(
+            (r) =>
+                (r.serviceId ?? '').toLowerCase().includes(q) ||
+                (r.rabID ?? '').toLowerCase().includes(q)
+        );
+    }
+
+    onSearchChange(): void {}
+
+    /** Number of filter criteria currently set (for badge). */
+    get activeFilterCount(): number {
+        const f = this.filter;
+        let n = 0;
+        if (f.rabId?.trim()) n++;
+        if (f.serviceId?.trim()) n++;
+        if (f.nidId?.trim()) n++;
+        if (f.nameBangla?.trim()) n++;
+        if (f.nameEnglish?.trim()) n++;
+        if (f.rabUnit != null) n++;
+        if (f.rank != null) n++;
+        if (f.corps != null) n++;
+        if (f.trade != null) n++;
+        if (f.durationFrom != null) n++;
+        if (f.durationTo != null) n++;
+        if (f.wonHomeDistrict != null) n++;
+        if (f.wifeHomeDistrict != null) n++;
+        if (f.appointment != null) n++;
+        return n;
     }
 
     formatDate(value: string | null): string {

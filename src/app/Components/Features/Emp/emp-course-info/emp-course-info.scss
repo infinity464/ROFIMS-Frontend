@@ -1,4 +1,8 @@
-// component styles
+// emp-course-info – aligned with form-theme
+
+:host {
+    display: block;
+}
 
 // Make datepicker fields same width as other form fields in the dialog
 :host ::ng-deep p-datepicker.w-full,

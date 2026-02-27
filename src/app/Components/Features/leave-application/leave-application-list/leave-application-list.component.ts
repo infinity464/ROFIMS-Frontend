@@ -1,6 +1,7 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
+import { Location } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { environment } from '@/Core/Environments/environment';
 import { SharedService } from '@/shared/services/shared-service';
@@ -18,7 +19,6 @@ import { DialogModule } from 'primeng/dialog';
 import { TextareaModule } from 'primeng/textarea';
 import { FormsModule } from '@angular/forms';
 import { ToastModule } from 'primeng/toast';
-import { FluidModule } from 'primeng/fluid';
 import { TabsModule } from 'primeng/tabs';
 import { PaginatorModule } from 'primeng/paginator';
 import type { PaginatorState } from 'primeng/types/paginator';
@@ -26,7 +26,8 @@ import { RouterModule } from '@angular/router';
 
 export type LeaveApplicationSection = 'pending' | 'approved' | 'declined';
 
-export type LeaveApplicationTypeFilter = 'myApplication' | 'applyForOther' | 'actionTakenByMe' | 'actionRequiredByMe';
+/** UI type; actionByMe sends actionRequiredByMe (pending) or actionTakenByMe (approved/declined) to API. */
+export type LeaveApplicationTypeFilter = 'myApplication' | 'applyForOther' | 'actionByMe';
 
 @Component({
     selector: 'app-leave-application-list',
@@ -42,20 +43,19 @@ export type LeaveApplicationTypeFilter = 'myApplication' | 'applyForOther' | 'ac
         DialogModule,
         TextareaModule,
         ToastModule,
-        FluidModule,
         TabsModule,
         PaginatorModule,
         RouterModule
     ],
     providers: [MessageService],
     templateUrl: './leave-application-list.component.html',
-    styleUrl: './leave-application-list.component.scss'
+    styleUrls: ['./leave-application-list.component.scss', '../../employee-reports/report-theme-common.scss']
 })
 export class LeaveApplicationListComponent implements OnInit {
     @Input() sectionInput: LeaveApplicationSection | null = null;
     section: LeaveApplicationSection = 'pending';
     tabIndex = 0;
-    typeFilter: LeaveApplicationTypeFilter = 'actionRequiredByMe';
+    typeFilter: LeaveApplicationTypeFilter = 'actionByMe';
 
     currentList: LeaveApplicationModel[] = [];
     pageNumber = 1;
@@ -85,6 +85,9 @@ export class LeaveApplicationListComponent implements OnInit {
     filterFromDate: Date | null = null;
     filterToDate: Date | null = null;
 
+    /** Collapsible search panel open by default (like Ex-Members List). */
+    filterOpen = true;
+
     private api = `${environment.apis.core}/LeaveApplication`;
 
     statusLabels: Record<number, string> = {
@@ -103,7 +106,8 @@ export class LeaveApplicationListComponent implements OnInit {
         private masterBasicSetup: MasterBasicSetupService,
         private messageService: MessageService,
         private router: Router,
-        private route: ActivatedRoute
+        private route: ActivatedRoute,
+        private location: Location
     ) {}
 
     ngOnInit(): void {
@@ -282,8 +286,9 @@ export class LeaveApplicationListComponent implements OnInit {
         else if (this.sectionInput) this.section = this.sectionInput;
         this.tabIndex = ['pending', 'approved', 'declined'].indexOf(this.section);
         if (this.tabIndex < 0) this.tabIndex = 0;
-        const t = params['type'] as LeaveApplicationTypeFilter | undefined;
-        if (t && ['myApplication', 'applyForOther', 'actionTakenByMe', 'actionRequiredByMe'].includes(t)) this.typeFilter = t;
+        const t = params['type'] as string | undefined;
+        if (t === 'actionRequiredByMe' || t === 'actionTakenByMe') this.typeFilter = 'actionByMe';
+        else if (t && ['myApplication', 'applyForOther', 'actionByMe'].includes(t)) this.typeFilter = t as LeaveApplicationTypeFilter;
     }
 
     loadSection(): void {
@@ -299,7 +304,10 @@ export class LeaveApplicationListComponent implements OnInit {
         const statusMap = { pending: 2, approved: 3, declined: 4 } as const;
         const statusId = statusMap[this.section];
         const filter = this.buildFilterParams();
-        this.leaveAppService.getByStatusForUserPaginated(statusId, this.currentUserEmployeeId, this.typeFilter, this.pageNumber, this.pageSize, filter).subscribe({
+        const apiTypeFilter = this.typeFilter === 'actionByMe'
+            ? (this.section === 'pending' ? 'actionRequiredByMe' : 'actionTakenByMe')
+            : this.typeFilter;
+        this.leaveAppService.getByStatusForUserPaginated(statusId, this.currentUserEmployeeId, apiTypeFilter, this.pageNumber, this.pageSize, filter).subscribe({
             next: (res) => {
                 this.currentList = res.datalist ?? [];
                 this.totalRecords = res.pages?.rows ?? 0;
@@ -348,14 +356,24 @@ export class LeaveApplicationListComponent implements OnInit {
         const s = ['pending', 'approved', 'declined'][tabIdx] as LeaveApplicationSection;
         this.section = s;
         this.pageNumber = 1;
-        this.router.navigate([], { queryParams: { section: s }, queryParamsHandling: 'merge' });
+        const tree = this.router.createUrlTree([], {
+            relativeTo: this.route,
+            queryParams: { section: s },
+            queryParamsHandling: 'merge'
+        });
+        this.location.replaceState(this.router.serializeUrl(tree));
         this.loadSection();
     }
 
     goToSection(s: LeaveApplicationSection): void {
         this.section = s;
         this.pageNumber = 1;
-        this.router.navigate([], { queryParams: { section: s }, queryParamsHandling: 'merge' });
+        const tree = this.router.createUrlTree([], {
+            relativeTo: this.route,
+            queryParams: { section: s },
+            queryParamsHandling: 'merge'
+        });
+        this.location.replaceState(this.router.serializeUrl(tree));
         this.loadSection();
     }
 
@@ -404,9 +422,31 @@ export class LeaveApplicationListComponent implements OnInit {
         return row.leaveApplicationStatusId === 2 && row.finalApproverId === this.currentUserEmployeeId;
     }
 
+    toggleFilter(): void {
+        this.filterOpen = !this.filterOpen;
+    }
+
+    /** Number of filter criteria currently set (for badge). */
+    get activeFilterCount(): number {
+        let n = 0;
+        if ((this.filterRabId || '').trim()) n++;
+        if ((this.filterServiceId || '').trim()) n++;
+        if (this.filterLeaveTypeId != null) n++;
+        if (this.filterFromDate != null) n++;
+        if (this.filterToDate != null) n++;
+        return n;
+    }
+
     setTypeFilter(filter: LeaveApplicationTypeFilter): void {
         this.typeFilter = filter;
         this.pageNumber = 1;
-        this.router.navigate([], { queryParams: { type: filter }, queryParamsHandling: 'merge' });
+        // Update URL without navigating so the page does not scroll to top
+        const tree = this.router.createUrlTree([], {
+            relativeTo: this.route,
+            queryParams: { type: filter },
+            queryParamsHandling: 'merge'
+        });
+        this.location.replaceState(this.router.serializeUrl(tree));
+        this.loadSection();
     }
 }

@@ -1,4 +1,8 @@
-// emp-rank-confirmation styles (match emp-education-info style)
+// emp-rank-confirmation styles – aligned with form-theme
+
+:host {
+    display: block;
+}
 
 :host ::ng-deep .rank-form .p-fileupload-choose-button svg[data-p-icon='plus'],
 :host ::ng-deep .rank-form .p-fileupload-choose-button .p-button-icon,

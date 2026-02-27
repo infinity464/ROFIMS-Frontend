@@ -72,7 +72,7 @@ export class AppLayout implements OnInit, OnDestroy {
                 type: 'leaveApproval',
                 title: 'Leave Approval',
                 message: msg,
-                link: '/leave-application/list?section=pending&type=actionRequiredByMe',
+                link: '/leave-application/list?section=pending&type=actionByMe',
                 data: { leaveApplicationId: p?.leaveApplicationId },
                 serverId: p?.notificationId ?? undefined
             });

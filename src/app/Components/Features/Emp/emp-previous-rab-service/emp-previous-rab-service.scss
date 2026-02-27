@@ -1,4 +1,8 @@
-// emp-previous-rab-service styles (match emp-education-info style)
+// emp-previous-rab-service styles – aligned with form-theme
+
+:host {
+    display: block;
+}
 
 // Modal: hide + icon and "No file chosen" on basic file upload so only "Choose File" shows
 :host ::ng-deep .service-form .p-fileupload-choose-button svg[data-p-icon='plus'],

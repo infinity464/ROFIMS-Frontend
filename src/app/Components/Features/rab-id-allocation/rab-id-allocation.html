@@ -1,65 +1,131 @@
 <p-toast></p-toast>
 <p-confirmDialog></p-confirmDialog>
 
-<!-- Card 1: Filters (same style as Supernumerary) -->
-<div class="card mb-4">
-    <h2 class="m-0 text-2xl font-bold text-900 mb-4">RAB ID Allocation</h2>
-    <div class="filter-row-dropdowns flex flex-wrap gap-4 mb-4">
-        <div class="filter-field">
-            <label for="orgs" class="font-semibold block mb-2 text-700">Organization(s)</label>
-            <p-multiSelect id="orgs" [options]="orgOptions" [(ngModel)]="selectedOrgIds" optionLabel="orgNameEN" optionValue="orgId" placeholder="Select organization(s)" [filter]="true" styleClass="w-full" display="chip"> </p-multiSelect>
+<div class="employee-reports-page">
+    <!-- Card 1: Filters (same style as employee-reports report-type-card) -->
+    <div class="report-type-card">
+        <div class="report-page-header">
+            <h1 class="report-page-title">RAB ID Allocation</h1>
         </div>
-        <div class="filter-field">
-            <label for="memberType" class="font-semibold block mb-2 text-700">Member Type</label>
-            <p-select id="memberType" [options]="memberTypeOptions" [(ngModel)]="selectedMemberTypeId" placeholder="Select member type" optionLabel="label" optionValue="value" styleClass="w-full"> </p-select>
+        <div class="report-type-row">
+            <div class="report-type-field">
+                <div class="rt-label">Organization(s)</div>
+                <div class="rt-select-wrap">
+                    <p-multiSelect
+                        id="orgs"
+                        [options]="orgOptions"
+                        [(ngModel)]="selectedOrgIds"
+                        optionLabel="orgNameEN"
+                        optionValue="orgId"
+                        placeholder="Select organization(s)"
+                        [filter]="true"
+                        styleClass="w-full"
+                        display="chip"
+                        appendTo="body">
+                    </p-multiSelect>
+                </div>
+            </div>
+            <div class="report-type-field">
+                <div class="rt-label">Member Type</div>
+                <div class="rt-select-wrap">
+                    <p-select
+                        id="memberType"
+                        [options]="memberTypeOptions"
+                        [(ngModel)]="selectedMemberTypeId"
+                        placeholder="Select member type"
+                        optionLabel="label"
+                        optionValue="value"
+                        styleClass="w-full"
+                        appendTo="body">
+                    </p-select>
+                </div>
+            </div>
+        </div>
+        <div class="report-filter-actions">
+            <button
+                type="button"
+                class="report-btn-search"
+                (click)="loadList()"
+                [disabled]="loading">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <circle cx="6" cy="6" r="4.5" stroke="white" stroke-width="1.6"/>
+                    <path d="M10 10l2.5 2.5" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
+                </svg>
+                Show List
+            </button>
         </div>
     </div>
-    <div class="flex align-items-end">
-        <p-button label="Show List" icon="pi pi-refresh" (onClick)="loadList()" [loading]="loading"> </p-button>
-    </div>
-</div>
 
-<!-- Card 2: Table -->
-<div class="card">
-    <div class="flex flex-wrap align-items-center justify-end gap-2 mb-3">
-        <p-button label="Generate Id" icon="pi pi-id-card" (onClick)="generateId()" [loading]="generatingId" [disabled]="!list?.length || loading"> </p-button>
+    <!-- Card 2: Table (same style as employee-reports report-results-card) -->
+    <div class="report-results-card">
+        <div class="report-results-header">
+            <div class="report-results-title">
+                Results
+                <span class="report-results-count">{{ list?.length ?? 0 }} record(s)</span>
+            </div>
+            <div class="report-results-actions">
+                <button
+                    type="button"
+                    class="report-btn-export"
+                    (click)="generateId()"
+                    [disabled]="!list?.length || loading || generatingId">
+                    <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                        <path d="M6.5 1v7M3.5 5.5l3 3 3-3M1.5 10.5h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    {{ generatingId ? 'Generating…' : 'Generate Id' }}
+                </button>
+            </div>
+        </div>
+
+        <div class="report-table-wrap">
+            <p-table
+                [value]="list"
+                [loading]="loading"
+                dataKey="employeeID"
+                [tableStyle]="{ 'min-width': '60rem' }"
+                styleClass="p-datatable-sm">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th>Sl No</th>
+                        <th>Service ID</th>
+                        <th>Rank</th>
+                        <th>Corps</th>
+                        <th>Trade</th>
+                        <th>Name (EN)</th>
+                        <th>Mother Unit</th>
+                        <th>Joining Date</th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                    <tr>
+                        <td><span class="report-ser-num">{{ rowIndex + 1 }}</span></td>
+                        <td style="white-space: nowrap"><span class="font-semibold">{{ row.prefixName ? row.prefixName + " - " : "" }}{{ row.serviceId || '—' }}</span></td>
+                        <td>{{ row.rankName || '—' }}</td>
+                        <td>
+                            @if (row.corpsName) {
+                                <span class="report-badge-corps">{{ row.corpsName }}</span>
+                            } @else {
+                                <span class="report-dash">—</span>
+                            }
+                        </td>
+                        <td>{{ row.tradeName || '—' }}</td>
+                        <td>{{ row.fullNameEN || '—' }}{{ row.corpsName ? ", " + row.corpsName : "" }}</td>
+                        <td>
+                            @if (row.motherUnitName) {
+                                <span class="report-badge-unit">{{ row.motherUnitName }}</span>
+                            } @else {
+                                <span class="report-dash">—</span>
+                            }
+                        </td>
+                        <td>{{ formatDate(row.joiningDate) }}</td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="8" class="text-center p-4">No records found.</td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </div>
     </div>
-    <p-table [value]="list" [loading]="loading" dataKey="employeeID" [tableStyle]="{ 'min-width': '60rem' }" styleClass="p-datatable-striped p-datatable-gridlines">
-        <ng-template pTemplate="header">
-            <tr>
-                <th style="width: 60px">Sl No</th>
-                <th style="width: 120px; white-space: nowrap">Service ID</th>                
-                <th style="min-width: 120px">Rank</th>
-                <th style="min-width: 120px">Corps</th>
-                <th style="min-width: 120px">Trade</th>
-                <th style="min-width: 180px">Name (EN)</th>
-                <th style="min-width: 160px">Mother Unit</th>
-                <th style="width: 120px">Joining Date</th>
-                
-            </tr>
-        </ng-template>
-        <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
-            <tr>
-                <td>{{ rowIndex + 1 }}</td>
-                <td style="white-space: nowrap"><span class="font-semibold">{{ row.prefixName ? row.prefixName + " - " : "" }}{{ row.serviceId || '-' }}</span></td>
-                
-                <td>{{ row.rankName || '-' }}</td>
-                <td>{{ row.corpsName || '-' }}</td>
-                <td>{{ row.tradeName || '-' }}</td>
-                <td>{{ row.fullNameEN || '-' }}{{row.corpsName ? ", " + row.corpsName : ""}}</td>
-                <td>{{ row.motherUnitName || '-' }}</td>
-                <td>{{ formatDate(row.joiningDate) }}</td>
-            </tr>
-        </ng-template>
-        <ng-template pTemplate="emptymessage">
-            <tr>
-                <td colspan="9" class="text-center p-4">
-                    <div class="flex flex-column align-items-center gap-3 py-5">
-                        
-                        <span class="text-lg text-500">No records found.</span>
-                    </div>
-                </td>
-            </tr>
-        </ng-template>
-    </p-table>
 </div>

@@ -47,6 +47,8 @@ export class AddressFormComponent implements OnInit, OnChanges {
     @Input() savedAddressId?: number; // Generated AddressId after save
     @Input() showButtons: boolean = true; // Control visibility of save/cancel buttons
     @Input() showCard: boolean = true; // Control visibility of card wrapper
+    /** When false, the inner surface-50 wrapper is omitted so content aligns with parent (e.g. RAB ID section). */
+    @Input() showInnerWrapper: boolean = true;
     @Input() isReadonly: boolean = false; // Control readonly mode
     @Input() initialAddressData?: AddressData; // Initial data for view/edit mode
     @Input() isOptional: boolean = false; // When true, fields are not required

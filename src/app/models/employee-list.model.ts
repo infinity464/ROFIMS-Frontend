@@ -64,6 +64,8 @@ export interface SupernumeraryEmpProfile {
     relievers?: RelieverRow[];
     /** Who relieves this employee (RelieverId from EmployeeInfo). Null if not relieved by anyone. */
     relievedBy?: RelievedByInfo | null;
+    /** JSON array of profile image ref(s), e.g. [{"FileId":3,"fileName":"photo.png"}]. From EmployeeInfo.ProfileImages. */
+    profileImages?: string | null;
 }
 
 export interface RelievedByInfo {

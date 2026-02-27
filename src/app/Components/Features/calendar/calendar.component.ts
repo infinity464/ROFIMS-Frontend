@@ -1,11 +1,11 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
-import { TagModule } from 'primeng/tag';
-import { Fluid } from 'primeng/fluid';
+import { ButtonModule } from 'primeng/button';
 import { CalendarService, CalendarEventApi } from '@/services/calendar.service';
+
+export type CalendarEventType = 'task' | 'event' | 'deadline';
 
 export interface CalendarEvent {
     id: string;
@@ -15,14 +15,14 @@ export interface CalendarEvent {
     allDay?: boolean;
     description?: string;
     reminder?: string;
-    type: 'task' | 'event';
+    type: CalendarEventType;
     color?: string;
 }
 
 @Component({
     selector: 'app-calendar',
     standalone: true,
-    imports: [CommonModule, RouterModule, ButtonModule, DialogModule, TagModule, Fluid],
+    imports: [CommonModule, RouterModule, DialogModule, ButtonModule],
     templateUrl: './calendar.component.html',
     styleUrl: './calendar.component.scss'
 })
@@ -63,7 +63,7 @@ export class CalendarComponent implements OnInit {
             allDay,
             description: (description != null && typeof description === 'string' ? description : undefined),
             reminder: (reminder != null && typeof reminder === 'string' ? reminder : undefined),
-            type: (eventType === 'task' || eventType === 'event' ? eventType : 'event') as 'task' | 'event',
+            type: (eventType === 'task' || eventType === 'event' || eventType === 'deadline' ? eventType : 'event') as CalendarEventType,
             color: (color != null && typeof color === 'string' ? color : undefined)
         };
     }
