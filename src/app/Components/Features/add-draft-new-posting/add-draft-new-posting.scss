@@ -1,0 +1,14 @@
+.add-draft-posting {
+  .draft-master-section {
+    border: 1px solid var(--surface-border);
+  }
+  .field {
+    min-width: 0;
+  }
+  .min-w-200px {
+    min-width: 200px;
+  }
+  .table-section {
+    min-width: 0;
+  }
+}

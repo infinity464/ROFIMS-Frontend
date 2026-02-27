@@ -84,6 +84,8 @@ import { EmpPresentMemberCheckComponent } from '@/Components/Features/Emp/emp-pr
 import { RabIdAllocation } from '@/Components/Features/rab-id-allocation/rab-id-allocation';
 import { SupernumeraryList } from '@/Components/Features/supernumerary-list/supernumerary-list';
 import { SupernumeraryProfile } from '@/Components/Features/supernumerary-profile/supernumerary-profile';
+import { AddDraftNewPostingComponent } from '@/Components/Features/add-draft-new-posting/add-draft-new-posting';
+import { PostingNotesheetGenerateComponent } from '@/Components/Features/posting-notesheet-generate/posting-notesheet-generate';
 import { PresentlyServingMembers } from '@/Components/Features/presently-serving-members/presently-serving-members';
 import { ServingMemberProfile } from '@/Components/Features/presently-serving-members/serving-member-profile/serving-member-profile';
 import { ExMembers } from '@/Components/Features/ex-members/ex-members';
@@ -103,9 +105,6 @@ import { NotesheetExBdLeaveComponent } from '@/Components/Features/notesheet-ex-
 import { NotesheetListComponent } from '@/Components/Features/notesheet-list/notesheet-list';
 import { LeaveApplicationApplyComponent } from '@/Components/Features/leave-application/leave-application-apply/leave-application-apply.component';
 import { LeaveApplicationListComponent } from '@/Components/Features/leave-application/leave-application-list/leave-application-list.component';
-import { NewPostingOrderComponent } from '@/Components/Features/new-posting-order/new-posting-order';
-import { InterPostingOrderComponent } from '@/Components/Features/inter-posting-order/inter-posting-order';
-import { PendingJoiningListComponent } from '@/Components/Features/pending-joining-list/pending-joining-list';
 import { CalendarComponent } from '@/Components/Features/calendar/calendar.component';
 import { TaskEventListComponent } from '@/Components/Features/calendar/task-event-list.component';
 import { ChatContainerComponent } from '@/Components/Features/chat/chat-container.component';
@@ -213,14 +212,6 @@ export const appRoutes: Routes = [
             { path: 'leave-application/apply', component: LeaveApplicationApplyComponent },
             { path: 'leave-application/list', component: LeaveApplicationListComponent },
 
-            // Posting (New Posting Order & Inter-Posting Order - ref. requirements p.43-58)
-            { path: 'posting/pending-joining', component: PendingJoiningListComponent },
-            { path: 'posting/new-posting-order', redirectTo: 'posting/new-posting-order/draft-posting', pathMatch: 'full' },
-            { path: 'posting/new-posting-order/draft-posting', component: NewPostingOrderComponent, data: { activeTab: 0 } },
-            { path: 'posting/new-posting-order/draft-notesheet', component: NewPostingOrderComponent, data: { activeTab: 1 } },
-            { path: 'posting/new-posting-order/notesheet-generate', component: NotesheetGenerateComponent },
-            { path: 'posting/inter-posting-order', component: InterPostingOrderComponent },
-
             // EMP
             { path: 'emp-list', component: EmpList },
             { path: 'emp-basic-info', component: EmpBasicInfo },
@@ -248,6 +239,8 @@ export const appRoutes: Routes = [
             { path: 'rab-id-allocation', component: RabIdAllocation },
             { path: 'supernumerary-list', component: SupernumeraryList },
             { path: 'supernumerary-profile/:id', component: SupernumeraryProfile },
+            { path: 'posting/add-draft-new-posting', component: AddDraftNewPostingComponent },
+            { path: 'posting/notesheet-generate', component: PostingNotesheetGenerateComponent },
             { path: 'presently-serving-members', component: PresentlyServingMembers },
             { path: 'presently-serving-members/profile/:employeeId', component: ServingMemberProfile },
             { path: 'ex-members', component: ExMembers },

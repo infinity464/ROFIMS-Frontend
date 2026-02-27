@@ -76,6 +76,41 @@ export enum PostingStatus {
     ExMember='ExMember'
 }
 
+/** IsSendingNotesheetStatus – stored in EmployeeInfo and DraftPostingDetail. */
+export enum IsSendingNotesheetStatus {
+    Draft = 'draft',
+    DraftPosting = 'draftPosting',
+    DraftNotesheet = 'draftNotesheet'
+}
+
+/** NoteSheetType – type of note-sheet (General, ExBDLeave, NewPosting, InterPosting). */
+export enum NoteSheetType {
+    General = 1,
+    ExBDLeave = 3,   // 2 reserved; 3 used by existing Ex-BD Leave data
+    NewPosting = 4,
+    InterPosting = 5
+}
+
+export const NoteSheetTypeOptions = [
+    { label: 'General', value: NoteSheetType.General },
+    { label: 'Ex-BD Leave', value: NoteSheetType.ExBDLeave },
+    { label: 'New Posting', value: NoteSheetType.NewPosting },
+    { label: 'Inter Posting', value: NoteSheetType.InterPosting }
+];
+
+/** DraftPostingStatus – status of a Draft New Posting master (new, approved, decline). */
+export enum DraftPostingStatus {
+    New = 'new',
+    Approved = 'approved',
+    Decline = 'decline'
+}
+
+export const DraftPostingStatusOptions = [
+    { label: 'New', value: DraftPostingStatus.New },
+    { label: 'Approved', value: DraftPostingStatus.Approved },
+    { label: 'Decline', value: DraftPostingStatus.Decline }
+];
+
 // Present Status Type
 export enum PresentStatusType {
     OnDuty = 'OnDuty',

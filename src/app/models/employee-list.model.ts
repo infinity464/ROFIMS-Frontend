@@ -16,6 +16,7 @@ export interface EmployeeList {
     officerType: number | null;
     orgId: number | null;
     joiningDate: string | null;
+    joiningDateInRAB?: string | null;
     prefixName: string | null;
     rankName: string | null;
     corpsName: string | null;
@@ -26,6 +27,8 @@ export interface EmployeeList {
     relieverId?: number | null;
     relieverServiceId?: string | null;
     relieverPrefixName?: string | null;
+    /** draft | draftPosting | draftNotesheet – used for action button label and disabled state. */
+    isSendingNotesheetStatus?: string | null;
 }
 
 /** Request for AllocateRabId API. */

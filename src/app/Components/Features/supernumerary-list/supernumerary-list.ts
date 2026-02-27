@@ -14,6 +14,7 @@ import { MessageService } from 'primeng/api';
 import { EmployeeListService, GetSupernumeraryListRequest } from '@/services/employee-list.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { EmployeeList } from '@/models/employee-list.model';
+import { IsSendingNotesheetStatus } from '@/models/enums';
 import { TooltipModule } from 'primeng/tooltip';
 import { MotherOrganizationModel } from '@/models/mother-org-model';
 import { CommonCodeModel } from '@/models/common-code-model';
@@ -201,12 +202,39 @@ export class SupernumeraryList implements OnInit {
         });
     }
 
+    /** Label for the posting action button based on IsSendingNotesheetStatus. */
+    getPostingActionLabel(row: EmployeeList): string {
+        const s = row.isSendingNotesheetStatus ?? '';
+        if (s === IsSendingNotesheetStatus.Draft) return 'Posting in Process';
+        if (s === IsSendingNotesheetStatus.DraftPosting) return 'Note-Sheet in Process';
+        return 'Send New Posting list';
+    }
+
+    /** Button is inactive (disabled) but still shown when draft or draftPosting. */
+    isPostingActionDisabled(row: EmployeeList): boolean {
+        const s = row.isSendingNotesheetStatus ?? '';
+        return s === IsSendingNotesheetStatus.Draft || s === IsSendingNotesheetStatus.DraftPosting;
+    }
+
     onSendNewPostingList(row: EmployeeList): void {
-        // TODO: wire to Send New Posting list API / navigation
-        this.messageService.add({
-            severity: 'info',
-            summary: 'Send New Posting list',
-            detail: `Under Development`
+        if (this.isPostingActionDisabled(row)) return;
+        this.employeeListService.setIsSendingNotesheetStatus(row.employeeID, IsSendingNotesheetStatus.Draft).subscribe({
+            next: (res) => {
+                const ok = res?.statusCode === 200 || (res as any)?.statusCode === 200;
+                this.messageService.add({
+                    severity: ok ? 'success' : 'warn',
+                    summary: 'Send New Posting list',
+                    detail: ok ? `IsSendingNotesheetStatus set to draft for ${row.serviceId ?? row.employeeID}` : (res?.description ?? 'Request completed')
+                });
+                if (ok) this.loadData();
+            },
+            error: (err) => {
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Send New Posting list',
+                    detail: err?.error?.description ?? err?.message ?? 'Failed to set status'
+                });
+            }
         });
     }
 

@@ -16,6 +16,7 @@ import { EditorModule } from 'primeng/editor';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { EmpService } from '@/services/emp-service';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
+import { NoteSheetType } from '@/models/enums';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { CommonCode } from '@/Components/basic-setup/shared/models/common-code';
 import { TooltipModule } from 'primeng/tooltip';
@@ -25,7 +26,6 @@ import { map } from 'rxjs/operators';
 export interface NoteSheetInfoRow {
   noteSheetId: number;
   noteSheetNo: string;
-  draftPostingListNo?: string;
   noteSheetDate: string;
   wingBattalionId?: number;
   branchId?: number;
@@ -216,9 +216,9 @@ export class NotesheetListComponent implements OnInit {
     return (this.previewNoteSheet?.textType ?? 0) === 0;
   }
 
-  /** Whether the previewed note sheet is Ex-BD Leave (type 3). */
+  /** Whether the previewed note sheet is Ex-BD Leave. */
   isPreviewExBdLeave(): boolean {
-    return this.previewNoteSheet?.noteSheetTypeId === 3;
+    return this.previewNoteSheet?.noteSheetTypeId === NoteSheetType.ExBDLeave;
   }
 
   /** Preview dialog header: type-specific (Ex-BD Leave vs general). */
@@ -360,7 +360,7 @@ export class NotesheetListComponent implements OnInit {
         const full = list[0] ?? null;
         if (full) this.noteSheetEditCache.set(row.noteSheetId, full);
         const noteSheetTypeId = full?.noteSheetTypeId ?? full?.NoteSheetTypeId ?? row.noteSheetTypeId;
-        const isExBdLeave = noteSheetTypeId === 3;
+        const isExBdLeave = noteSheetTypeId === NoteSheetType.ExBDLeave;
         const route = isExBdLeave ? '/notesheet-ex-bd-leave' : '/notesheet-generate';
         this.router.navigate([route], { queryParams: { id: row.noteSheetId } });
       },

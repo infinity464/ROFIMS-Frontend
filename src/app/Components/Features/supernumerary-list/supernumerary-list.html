@@ -80,7 +80,12 @@
                 <td style="text-align: center; vertical-align: middle; white-space: nowrap">
                     <span class="action-buttons">
                         <p-button label="Profile" size="small" [routerLink]="['/supernumerary-profile', row.employeeID]"></p-button>
-                        <p-button label="Send New Posting list" size="small" (onClick)="onSendNewPostingList(row)"></p-button>
+                        <p-button
+                            [label]="getPostingActionLabel(row)"
+                            size="small"
+                            [disabled]="isPostingActionDisabled(row)"
+                            (onClick)="onSendNewPostingList(row)"
+                        ></p-button>
                     </span>
                 </td>
             </tr>
