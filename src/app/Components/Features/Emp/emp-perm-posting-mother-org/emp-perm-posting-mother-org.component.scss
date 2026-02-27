@@ -1,3 +1,9 @@
+// emp-perm-posting-mother-org styles – aligned with emp-family-info (form-theme)
+
+:host {
+  display: block;
+}
+
 :host ::ng-deep {
   p-datepicker {
     .p-datepicker-trigger {

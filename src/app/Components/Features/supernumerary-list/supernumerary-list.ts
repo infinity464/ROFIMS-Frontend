@@ -22,7 +22,7 @@ import { CommonCodeModel } from '@/models/common-code-model';
     imports: [CommonModule, FormsModule, RouterModule, TableModule, ButtonModule, SelectModule, InputTextModule, DatePickerModule, Toast, TooltipModule],
     providers: [MessageService],
     templateUrl: './supernumerary-list.html',
-    styleUrls: ['./supernumerary-list.scss', '../employee-reports/report-theme.scss'],
+    styleUrls: ['./supernumerary-list.scss', '../employee-reports/report-theme-common.scss'],
 })
 export class SupernumeraryList implements OnInit {
     list: EmployeeList[] = [];
