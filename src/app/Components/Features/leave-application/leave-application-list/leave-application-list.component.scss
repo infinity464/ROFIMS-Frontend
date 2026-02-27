@@ -102,15 +102,24 @@
     padding: 0;
 }
 
-/* Datepicker in filter: full width */
-.report-filter-body-inner .report-filter-field-date .p-datepicker {
-    width: 100%;
-    min-width: 0;
+/* Date filter fields: same width as Leave Type (match supernumerary-list) */
+.report-filter-field.report-filter-field-date {
+    display: flex;
+    flex-direction: column;
 }
 
-.report-filter-body-inner .report-filter-field-date .p-datepicker .p-inputtext {
-    width: 100%;
+:host ::ng-deep .report-filter-field.report-filter-field-date p-datepicker,
+:host ::ng-deep .report-filter-field.report-filter-field-date .p-datepicker {
+    width: 100% !important;
     min-width: 0;
+    display: block;
+}
+
+:host ::ng-deep .report-filter-field.report-filter-field-date .p-datepicker .p-inputtext,
+:host ::ng-deep .report-filter-field.report-filter-field-date .p-datepicker input {
+    width: 100% !important;
+    min-width: 0;
+    box-sizing: border-box;
 }
 
 /* ── Preview modal (same style as calendar event dialog) ── */
