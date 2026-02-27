@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, OnDestroy, ViewChild } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, OnDestroy, Output, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -64,6 +64,11 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
 
     @Input() hideTitle = false;
 
+    @Input() embedMode = false;
+    @Input() externalEmployeeId: number | null = null;
+    @Output() saved = new EventEmitter<void>();
+    @Output() cancelled = new EventEmitter<void>();
+
     employeeFound = false;
     selectedEmployeeId: number | null = null;
     employeeBasicInfo: any = null;
@@ -114,6 +119,14 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
 
     ngOnInit(): void {
         this.loadDropdowns();
+        if (this.embedMode && this.externalEmployeeId != null) {
+            this.mode = 'edit';
+            this.isReadonly = false;
+            this.selectedEmployeeId = this.externalEmployeeId;
+            this.employeeFound = true;
+            this.loadEmployeeById(this.externalEmployeeId);
+            return;
+        }
         this.checkRouteParams();
     }
 
@@ -775,6 +788,10 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
         this.isReadonly = false;
     }
     goBack(): void {
+        if (this.embedMode) {
+            this.cancelled.emit();
+            return;
+        }
         this.router.navigate(['/emp-list']);
     }
     resetForm(): void {

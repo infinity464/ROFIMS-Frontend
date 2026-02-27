@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, ViewChild } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -41,6 +41,11 @@ export class EmpEducationInfoComponent implements OnInit {
 
     /** When true (e.g. inside tab view), the "Educational Information" title and header actions are hidden. */
     @Input() hideTitle = false;
+
+    @Input() embedMode = false;
+    @Input() externalEmployeeId: number | null = null;
+    @Output() saved = new EventEmitter<void>();
+    @Output() cancelled = new EventEmitter<void>();
 
     employeeFound = false;
     selectedEmployeeId: number | null = null;
@@ -89,6 +94,14 @@ export class EmpEducationInfoComponent implements OnInit {
 
     ngOnInit(): void {
         this.loadDropdowns();
+        if (this.embedMode && this.externalEmployeeId != null) {
+            this.mode = 'edit';
+            this.isReadonly = false;
+            this.selectedEmployeeId = this.externalEmployeeId;
+            this.employeeFound = true;
+            this.loadEmployeeById(this.externalEmployeeId);
+            return;
+        }
         this.checkRouteParams();
     }
 
@@ -403,6 +416,10 @@ export class EmpEducationInfoComponent implements OnInit {
         this.isReadonly = false;
     }
     goBack(): void {
+        if (this.embedMode) {
+            this.cancelled.emit();
+            return;
+        }
         this.router.navigate(['/emp-list']);
     }
 

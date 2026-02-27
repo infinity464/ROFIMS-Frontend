@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, ViewChild } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -27,6 +27,18 @@ export class EmpAddressInfo implements OnInit {
 
     /** When true (e.g. inside tab view), the "Employee Address Information" title and header actions are hidden. */
     @Input() hideTitle = false;
+
+    /** When true, component is embedded (e.g. in ex-member profile). Use externalEmployeeId, hide search, emit saved/cancelled. */
+    @Input() embedMode = false;
+
+    /** When embedMode is true, load and edit this employee's addresses. */
+    @Input() externalEmployeeId: number | null = null;
+
+    /** When embedMode is true: 'own' = Permanent+Present, 'wife' = WifePermanent+WifePresent. */
+    @Input() addressScope: 'own' | 'wife' = 'own';
+
+    @Output() saved = new EventEmitter<void>();
+    @Output() cancelled = new EventEmitter<void>();
 
     // Employee lookup
     employeeFound: boolean = false;
@@ -70,6 +82,15 @@ export class EmpAddressInfo implements OnInit {
     ) {}
 
     ngOnInit(): void {
+        if (this.embedMode && this.externalEmployeeId != null) {
+            this.mode = 'edit';
+            this.isReadonly = false;
+            this.selectedEmployeeId = this.externalEmployeeId;
+            this.employeeFound = true;
+            this.updateAddressConfigs();
+            this.loadEmployeeById(this.externalEmployeeId);
+            return;
+        }
         this.checkRouteParams();
     }
 
@@ -116,6 +137,10 @@ export class EmpAddressInfo implements OnInit {
             this.permanentAddressConfig.employeeId = this.selectedEmployeeId;
             this.presentAddressConfig.employeeId = this.selectedEmployeeId;
         }
+        const permType = this.addressScope === 'wife' ? LocationType.WifePermanent : LocationType.Permanent;
+        const presType = this.addressScope === 'wife' ? LocationType.WifePresent : LocationType.Present;
+        (this.permanentAddressConfig as { addressType: string }).addressType = permType;
+        (this.presentAddressConfig as { addressType: string }).addressType = presType;
     }
 
     // Handle employee search component events
@@ -154,10 +179,16 @@ export class EmpAddressInfo implements OnInit {
                             houseRoad: addr.houseRoad || addr.HouseRoad || ''
                         };
 
-                        if (locationType === LocationType.Permanent.toLowerCase()) {
+                        const permMatch = this.addressScope === 'wife'
+                            ? locationType === LocationType.WifePermanent.toLowerCase()
+                            : locationType === LocationType.Permanent.toLowerCase();
+                        const presMatch = this.addressScope === 'wife'
+                            ? locationType === LocationType.WifePresent.toLowerCase()
+                            : locationType === LocationType.Present.toLowerCase();
+                        if (permMatch) {
                             this.permanentAddressData = addressData;
                             this.permanentAddressId = addr.addressId || addr.AddressId;
-                        } else if (locationType === LocationType.Present.toLowerCase()) {
+                        } else if (presMatch) {
                             this.presentAddressData = addressData;
                             this.presentAddressId = addr.addressId || addr.AddressId;
                         }
@@ -195,6 +226,10 @@ export class EmpAddressInfo implements OnInit {
     }
 
     goBack(): void {
+        if (this.embedMode) {
+            this.cancelled.emit();
+            return;
+        }
         this.router.navigate(['/emp-list']);
     }
 
@@ -245,8 +280,11 @@ export class EmpAddressInfo implements OnInit {
                         summary: 'Success',
                         detail: 'Addresses saved successfully'
                     });
-                    this.isReadonly = true; // Back to readonly mode
-                    this.loadAddresses(); // Reload to get new data
+                    this.isReadonly = true;
+                    this.loadAddresses();
+                    if (this.embedMode) {
+                        this.saved.emit();
+                    }
                 }
             }
         };
@@ -255,7 +293,7 @@ export class EmpAddressInfo implements OnInit {
         if (permanentData?.data?.division) {
             this.deactivateAndCreateNew(
                 permanentData.data,
-                LocationType.Permanent,
+                this.permanentAddressConfig.addressType,
                 this.permanentAddressId,
                 () => checkComplete(),
                 () => {
@@ -269,7 +307,7 @@ export class EmpAddressInfo implements OnInit {
         if (presentData?.data?.division) {
             this.deactivateAndCreateNew(
                 presentData.data,
-                LocationType.Present,
+                this.presentAddressConfig.addressType,
                 this.presentAddressId,
                 () => checkComplete(),
                 () => {
