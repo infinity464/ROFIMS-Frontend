@@ -151,6 +151,13 @@ export class NotesheetListComponent implements OnInit {
   /** Prepared by employee details. */
   preparedByDetails: { step: string; name: string; rabId: string; rank: string; serviceRank: string; appointment: string; employeeId?: number; signatureDataUrl?: string } | null = null;
 
+  /** Preview inline edit */
+  previewEditing = false;
+  savingPreview = false;
+  editSubject = '';
+  editMainText = '';
+  editReferenceNumber = '';
+
   /** Edit main text modal */
   showEditMainTextDialog = false;
   editMainTextNoteSheet: NoteSheetInfoFull | null = null;
@@ -194,6 +201,7 @@ export class NotesheetListComponent implements OnInit {
     this.initiatorDetails = null;
     this.approversDetails = [];
     this.preparedByDetails = null;
+    this.previewEditing = false;
     this.showPreviewDialog = true;
     this.previewLoading = true;
     this.http.get<NoteSheetInfoFull[]>(`${this.api}/GetFilteredByKeysAsyn/${row.noteSheetId}`).subscribe({
@@ -302,6 +310,52 @@ export class NotesheetListComponent implements OnInit {
   /** Called when posting-order-preview saves successfully. */
   onPostingOrderSaved(): void {
     this.loadAll();
+  }
+
+  /** Whether the previewed notesheet is a draft (editable). */
+  isPreviewDraft(): boolean {
+    return (this.previewNoteSheet?.noteSheetStatusId ?? 0) === NoteSheetStatus.Draft;
+  }
+
+  togglePreviewEdit(): void {
+    this.editSubject = this.previewNoteSheet?.subject ?? '';
+    this.editMainText = this.previewNoteSheet?.mainText ?? '';
+    this.editReferenceNumber = this.previewNoteSheet?.referenceNumber ?? '';
+    this.previewEditing = true;
+  }
+
+  cancelPreviewEdit(): void {
+    this.previewEditing = false;
+  }
+
+  savePreviewChanges(): void {
+    if (!this.previewNoteSheet) return;
+    this.savingPreview = true;
+    const payload = {
+      ...this.previewNoteSheet,
+      subject: this.editSubject,
+      mainText: this.editMainText,
+      referenceNumber: this.editReferenceNumber
+    };
+    this.http.post<{ statusCode?: number }>(`${this.api}/UpdateAsyn`, payload).subscribe({
+      next: (res) => {
+        this.savingPreview = false;
+        if (res?.statusCode === 200) {
+          this.previewNoteSheet!.subject = this.editSubject;
+          this.previewNoteSheet!.mainText = this.editMainText;
+          this.previewNoteSheet!.referenceNumber = this.editReferenceNumber;
+          this.previewEditing = false;
+          this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Note sheet updated.' });
+          this.loadAll();
+        } else {
+          this.messageService.add({ severity: 'warn', summary: 'Notice', detail: 'Update failed.' });
+        }
+      },
+      error: () => {
+        this.savingPreview = false;
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Update failed.' });
+      }
+    });
   }
 
   /** Open employee details dialog for a note-sheet that has a draftPostingMasterId. */

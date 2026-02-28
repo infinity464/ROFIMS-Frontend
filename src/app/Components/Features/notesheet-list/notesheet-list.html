@@ -339,14 +339,21 @@
 
   <!-- Preview dialog: formal note-sheet layout; Ex-BD Leave shows type-specific title and details -->
   <p-dialog
-    header="{{ getPreviewDialogHeader() }}"
     [(visible)]="showPreviewDialog"
     [modal]="true"
     [style]="{ width: '58rem', maxWidth: '95vw' }"
     [contentStyle]="{ overflow: 'auto', 'border-top': '2px solid var(--primary-color)' }"
-    (onHide)="previewNoteSheet = null; initiatorDetails = null; approversDetails = []; preparedByDetails = null"
+    (onHide)="previewNoteSheet = null; initiatorDetails = null; approversDetails = []; preparedByDetails = null; previewEditing = false"
     [draggable]="false"
     [resizable]="true">
+    <ng-template pTemplate="header">
+      <div class="ns-preview-dialog-header">
+        <span class="font-semibold text-lg">{{ getPreviewDialogHeader() }}</span>
+        @if (previewNoteSheet && !isPreviewNewPosting() && !previewEditing && isPreviewDraft()) {
+          <p-button type="button" icon="pi pi-pencil" [rounded]="true" [text]="true" size="small" pTooltip="Edit" (onClick)="togglePreviewEdit()"></p-button>
+        }
+      </div>
+    </ng-template>
     @if (previewLoading) {
       <div class="flex align-items-center justify-content-center p-4"><i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i></div>
     } @else if (previewNoteSheet && isPreviewNewPosting()) {
@@ -362,9 +369,6 @@
       <div class="notesheet-preview-doc">
         <div class="ns-preview-header">
           <div class="ns-preview-title">{{ isPreviewEnglish() ? 'NOTE SHEET' : 'মন্তব্যপত্র' }}</div>
-          @if (!isPreviewEnglish()) {
-            <div class="ns-preview-subtitle">মন্তব্যপত্র</div>
-          }
         </div>
 
         <!-- Meta info -->
@@ -377,16 +381,23 @@
             <span class="ns-preview-meta-label">{{ isPreviewEnglish() ? 'Date:' : 'তারিখ:' }}</span>
             <span>{{ formatDate(previewNoteSheet.noteSheetDate) }}</span>
           </div>
-          @if (previewNoteSheet.referenceNumber) {
-            <div class="ns-preview-meta-item">
-              <span class="ns-preview-meta-label">{{ isPreviewEnglish() ? 'Reference:' : 'সুত্রঃ' }}</span>
-              <span>{{ previewNoteSheet.referenceNumber }}</span>
-            </div>
-          }
+          <div class="ns-preview-meta-item">
+            <span class="ns-preview-meta-label">{{ isPreviewEnglish() ? 'Reference:' : 'সুত্রঃ' }}</span>
+            @if (previewEditing) {
+              <input pInputText type="text" [(ngModel)]="editReferenceNumber" class="ns-inline-input" placeholder="Reference number" />
+            } @else {
+              <span>{{ previewNoteSheet.referenceNumber || '—' }}</span>
+            }
+          </div>
         </div>
 
         <!-- Subject -->
-        @if (previewNoteSheet.subject) {
+        @if (previewEditing) {
+          <div class="ns-preview-subject-edit">
+            <label class="ns-preview-body-label">{{ isPreviewEnglish() ? 'Subject' : 'বিষয়' }}</label>
+            <input pInputText type="text" [(ngModel)]="editSubject" class="w-full" placeholder="Subject" />
+          </div>
+        } @else if (previewNoteSheet.subject) {
           <div class="ns-preview-subject">{{ previewNoteSheet.subject }}</div>
         }
         @if (isPreviewExBdLeave()) {
@@ -414,7 +425,11 @@
         <!-- Main text body -->
         <div class="ns-preview-body-section">
           <div class="ns-preview-body-label">{{ isPreviewEnglish() ? 'Content' : 'বিষয়বস্তু' }}</div>
-          <div class="notesheet-preview-body" [innerHTML]="getPreviewMainTextSafe()"></div>
+          @if (previewEditing) {
+            <p-editor [(ngModel)]="editMainText" [style]="{ height: '220px' }" placeholder="Edit content..."></p-editor>
+          } @else {
+            <div class="notesheet-preview-body" [innerHTML]="getPreviewMainTextSafe()"></div>
+          }
         </div>
 
         @if (getPreviewSupportingDocumentsWithIds().length > 0) {
@@ -432,42 +447,50 @@
             </div>
           </div>
         }
-        <!-- Closing line -->
-        <div class="ns-preview-closing">{{ isPreviewEnglish() ? 'Presented for your kind approval.' : 'আপনার সদয় অনুমোদনের জন্য উপস্থাপন করা হলো।' }}</div>
+        <!-- Edit mode: Save / Cancel -->
+        @if (previewEditing) {
+          <div class="ns-preview-edit-actions">
+            <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="cancelPreviewEdit()"></p-button>
+            <p-button label="Save" icon="pi pi-check" [loading]="savingPreview" (onClick)="savePreviewChanges()"></p-button>
+          </div>
+        } @else {
+          <!-- Closing line -->
+          <div class="ns-preview-closing">{{ isPreviewEnglish() ? 'Presented for your kind approval.' : 'আপনার সদয় অনুমোদনের জন্য উপস্থাপন করা হলো।' }}</div>
 
-        <!-- Approval chain & Prepared by -->
-        <div class="ns-preview-signatories">
-          <div class="ns-preview-approvers">
-            @for (item of approversDetails; track item.step + item.rabId) {
+          <!-- Approval chain & Prepared by -->
+          <div class="ns-preview-signatories">
+            <div class="ns-preview-approvers">
+              @for (item of approversDetails; track item.step + item.rabId) {
+                <app-notesheet-signatory
+                  [detail]="item"
+                  [showSignature]="false"
+                  [isEnglish]="isPreviewEnglish()"
+                  align="left">
+                </app-notesheet-signatory>
+              }
+            </div>
+            <div class="ns-preview-initiator">
               <app-notesheet-signatory
-                [detail]="item"
+                [detail]="preparedByDetails"
                 [showSignature]="false"
                 [isEnglish]="isPreviewEnglish()"
-                align="left">
+                align="right"
+                [showDate]="true"
+                [dateValue]="formatDate(previewNoteSheet.noteSheetDate)"
+                [roleLabel]="isPreviewEnglish() ? 'Prepared by' : 'প্রস্তুতকারী'"
+                [fallbackName]="previewNoteSheet.preparedBy || '—'">
               </app-notesheet-signatory>
-            }
+              @if (initiatorDetails) {
+                <app-notesheet-signatory
+                  [detail]="initiatorDetails"
+                  [showSignature]="false"
+                  [isEnglish]="isPreviewEnglish()"
+                  align="right">
+                </app-notesheet-signatory>
+              }
+            </div>
           </div>
-          <div class="ns-preview-initiator">
-            <app-notesheet-signatory
-              [detail]="preparedByDetails"
-              [showSignature]="false"
-              [isEnglish]="isPreviewEnglish()"
-              align="right"
-              [showDate]="true"
-              [dateValue]="formatDate(previewNoteSheet.noteSheetDate)"
-              [roleLabel]="isPreviewEnglish() ? 'Prepared by' : 'প্রস্তুতকারী'"
-              [fallbackName]="previewNoteSheet.preparedBy || '—'">
-            </app-notesheet-signatory>
-            @if (initiatorDetails) {
-              <app-notesheet-signatory
-                [detail]="initiatorDetails"
-                [showSignature]="false"
-                [isEnglish]="isPreviewEnglish()"
-                align="right">
-              </app-notesheet-signatory>
-            }
-          </div>
-        </div>
+        }
       </div>
     }
   </p-dialog>

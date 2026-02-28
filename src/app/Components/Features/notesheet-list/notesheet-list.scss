@@ -236,3 +236,32 @@
   letter-spacing: 0.03em;
   margin-bottom: 0.125rem;
 }
+
+/* ── Preview dialog header with edit button ── */
+.ns-preview-dialog-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+/* ── Inline input for edit mode inside meta bar ── */
+.ns-inline-input {
+  max-width: 200px;
+  font-size: 0.875rem;
+}
+
+/* ── Subject edit block ── */
+.ns-preview-subject-edit {
+  margin-bottom: 1rem;
+}
+
+/* ── Save / Cancel action bar in edit mode ── */
+.ns-preview-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px dashed var(--surface-border, #dee2e6);
+  margin-top: 1rem;
+}

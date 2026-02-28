@@ -27,6 +27,7 @@ import { IdentityUserMappingService } from '@/services/identity-user-mapping.ser
 import { NoteSheetType } from '@/models/enums';
 import { NotesheetSignatoryComponent, SignatoryDetail } from '@/Components/Common/notesheet-signatory/notesheet-signatory';
 import { TooltipModule } from 'primeng/tooltip';
+import { ToastModule } from 'primeng/toast';
 
 @Component({
     selector: 'app-notesheet-generate',
@@ -44,7 +45,8 @@ import { TooltipModule } from 'primeng/tooltip';
         DialogModule,
         FileReferencesFormComponent,
         NotesheetSignatoryComponent,
-        TooltipModule
+        TooltipModule,
+        ToastModule
     ],
     templateUrl: './notesheet-generate.html',
     providers: [MessageService],
@@ -644,7 +646,7 @@ body{font-family:'Noto Sans Bengali','SolaimanLipi','Kalpurush',sans-serif;paddi
         const payload: Record<string, unknown> = {
             noteSheetId: 0,
             noteSheetType: NoteSheetType.General,
-            employeeId: 0,
+            employeeId: null,
             fileNumber: 0,
             noteSheetNo: (d.noteSheetNo && String(d.noteSheetNo).trim()) || 'AUTO',
             noteSheetDate: dateStr,

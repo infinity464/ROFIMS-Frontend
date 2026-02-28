@@ -8,13 +8,13 @@
       <div class="ns-gen-grid">
         <!-- Text Type -->
         <div class="ns-gen-field">
-          <label class="ns-gen-label">{{ isBangla ? 'পাঠের ধরন' : 'Text Type' }}</label>
+          <label class="ns-gen-label">Text Type</label>
           <p-select
             formControlName="textType"
             [options]="textTypeOptions"
             optionLabel="label"
             optionValue="value"
-            [placeholder]="isBangla ? 'বাংলা/ইংরেজি নির্বাচন করুন' : 'Select Language'"
+            placeholder="Select Language"
             (onChange)="onTextTypeChange()"
             styleClass="w-full">
           </p-select>
@@ -22,25 +22,25 @@
 
         <!-- Date -->
         <div class="ns-gen-field">
-          <label class="ns-gen-label">{{ isBangla ? 'তারিখ' : 'Date' }} <span class="ns-gen-req">*</span></label>
-          <p-datepicker formControlName="noteSheetDate" dateFormat="dd/mm/yy" styleClass="w-full" [placeholder]="isBangla ? 'তারিখ নির্বাচন করুন' : 'Select date'"></p-datepicker>
+          <label class="ns-gen-label">Date <span class="ns-gen-req">*</span></label>
+          <p-datepicker formControlName="noteSheetDate" dateFormat="dd/mm/yy" styleClass="w-full" placeholder="Select date"></p-datepicker>
         </div>
 
         <!-- Reference Number -->
         <div class="ns-gen-field">
-          <label class="ns-gen-label">{{ isBangla ? 'সূত্র নম্বর' : 'Reference Number' }}</label>
-          <input pInputText formControlName="referenceNumber" [placeholder]="isBangla ? 'সূত্র নম্বর লিখুন' : 'Enter reference number'" class="w-full" />
+          <label class="ns-gen-label">Reference Number</label>
+          <input pInputText formControlName="referenceNumber" placeholder="Enter reference number" class="w-full" />
         </div>
 
         <!-- Note Sheet No -->
         <div class="ns-gen-field">
-          <label class="ns-gen-label">{{ isBangla ? 'মন্তব্যপত্র নম্বর' : 'Note Sheet No' }}</label>
-          <input pInputText formControlName="noteSheetNo" [placeholder]="isBangla ? 'স্বয়ং তৈরি হবে' : 'Auto generated'" class="w-full" />
+          <label class="ns-gen-label">Note Sheet No</label>
+          <input pInputText formControlName="noteSheetNo" placeholder="Auto generated" class="w-full" />
         </div>
 
         <!-- Unit -->
         <div class="ns-gen-field">
-          <label class="ns-gen-label">{{ isBangla ? 'ইউনিট' : 'Unit' }}</label>
+          <label class="ns-gen-label">Unit</label>
           <p-select
             formControlName="unitId"
             [options]="unitOptionsDisplay"
@@ -49,7 +49,7 @@
             [filter]="true"
             filterBy="label"
             [showClear]="true"
-            [placeholder]="isBangla ? 'ইউনিট নির্বাচন করুন' : 'Select Unit'"
+            placeholder="Select Unit"
             (onChange)="onUnitChange()"
             styleClass="w-full">
           </p-select>
@@ -57,7 +57,7 @@
 
         <!-- Wing/Battalion -->
         <div class="ns-gen-field">
-          <label class="ns-gen-label">{{ isBangla ? 'উইং/ব্যাটালিয়ন' : 'Wing/Battalion' }}</label>
+          <label class="ns-gen-label">Wing/Battalion</label>
           <p-select
             formControlName="wingBattalionId"
             [options]="wingOptionsDisplay"
@@ -66,14 +66,14 @@
             [filter]="true"
             filterBy="label"
             [showClear]="true"
-            [placeholder]="isBangla ? 'উইং নির্বাচন করুন' : 'Select Wing'"
+            placeholder="Select Wing"
             styleClass="w-full">
           </p-select>
         </div>
 
         <!-- Branch -->
         <div class="ns-gen-field">
-          <label class="ns-gen-label">{{ isBangla ? 'শাখা' : 'Branch' }}</label>
+          <label class="ns-gen-label">Branch</label>
           <p-select
             formControlName="branchId"
             [options]="branchOptionsDisplay"
@@ -82,29 +82,29 @@
             [filter]="true"
             filterBy="label"
             [showClear]="true"
-            [placeholder]="isBangla ? 'শাখা নির্বাচন করুন' : 'Select Branch'"
+            placeholder="Select Branch"
             styleClass="w-full">
           </p-select>
         </div>
 
         <!-- Subject -->
         <div class="ns-gen-field ns-gen-span-2">
-          <label class="ns-gen-label">{{ isBangla ? 'বিষয়' : 'Subject' }} <span class="ns-gen-req">*</span></label>
-          <input pInputText formControlName="subject" [placeholder]="isBangla ? 'বিষয় লিখুন' : 'Enter subject'" class="w-full" />
+          <label class="ns-gen-label">Subject <span class="ns-gen-req">*</span></label>
+          <input pInputText formControlName="subject" placeholder="Enter subject" class="w-full" />
           @if (form.get('subject')?.invalid && form.get('subject')?.touched) {
-            <small class="ns-gen-error">{{ isBangla ? 'বিষয় আবশ্যক' : 'Subject is required' }}</small>
+            <small class="ns-gen-error">Subject is required</small>
           }
         </div>
 
         <!-- Main Text (full row) -->
         <div class="ns-gen-field ns-gen-full">
-          <label class="ns-gen-label">{{ isBangla ? 'মূল পাঠ' : 'Main Text' }}</label>
-          <p-editor formControlName="mainText" [style]="{ height: '220px' }" [placeholder]="isBangla ? 'বিষয়বস্তু লিখুন...' : 'Write content here...'"></p-editor>
+          <label class="ns-gen-label">Main Text</label>
+          <p-editor formControlName="mainText" [style]="{ height: '220px' }" placeholder="Write content here..."></p-editor>
         </div>
 
         <!-- Prepared By -->
         <div class="ns-gen-field">
-          <label class="ns-gen-label">{{ isBangla ? 'প্রস্তুতকারী' : 'Prepared By' }}</label>
+          <label class="ns-gen-label">Prepared By</label>
           @if (isPreparedByMapped) {
             <input pInputText formControlName="preparedBy" readonly class="w-full" />
           } @else {
@@ -116,7 +116,7 @@
               [filter]="true"
               filterBy="label"
               [showClear]="true"
-              [placeholder]="isBangla ? 'প্রস্তুতকারী নির্বাচন করুন' : 'Select Prepared By'"
+              placeholder="Select Prepared By"
               styleClass="w-full">
             </p-select>
           }
@@ -124,7 +124,7 @@
 
         <!-- Initiator -->
         <div class="ns-gen-field">
-          <label class="ns-gen-label">{{ isBangla ? 'প্রারম্ভকারী' : 'Initiator' }}</label>
+          <label class="ns-gen-label">Initiator</label>
           <p-select
             formControlName="initiatorId"
             [options]="initiatorOptionsDisplay"
@@ -133,14 +133,14 @@
             [filter]="true"
             filterBy="label"
             [showClear]="true"
-            [placeholder]="isBangla ? 'প্রারম্ভকারী নির্বাচন করুন' : 'Select Initiator'"
+            placeholder="Select Initiator"
             styleClass="w-full">
           </p-select>
         </div>
 
         <!-- Final Approver -->
         <div class="ns-gen-field">
-          <label class="ns-gen-label">{{ isBangla ? 'চূড়ান্ত অনুমোদনকারী' : 'Final Approver' }}</label>
+          <label class="ns-gen-label">Final Approver</label>
           <p-select
             formControlName="finalApproverId"
             [options]="finalApproverOptionsDisplay"
@@ -149,14 +149,14 @@
             [filter]="true"
             filterBy="label"
             [showClear]="true"
-            [placeholder]="isBangla ? 'চূড়ান্ত অনুমোদনকারী নির্বাচন করুন' : 'Select Final Approver'"
+            placeholder="Select Final Approver"
             styleClass="w-full">
           </p-select>
         </div>
 
         <!-- Recommenders (full row) -->
         <div class="ns-gen-field ns-gen-full">
-          <label class="ns-gen-label">{{ isBangla ? 'সুপারিশকারী' : 'Recommender(s)' }}</label>
+          <label class="ns-gen-label">Recommender(s)</label>
           <p-multiselect
             formControlName="recommenderIds"
             [options]="recommenderOptionsDisplay"
@@ -165,7 +165,7 @@
             [filter]="true"
             filterBy="label"
             [showClear]="true"
-            [placeholder]="isBangla ? 'সুপারিশকারী নির্বাচন করুন' : 'Select Recommender(s)'"
+            placeholder="Select Recommender(s)"
             styleClass="w-full">
           </p-multiselect>
           @if (getSelectedRecommenderNames().length > 0) {
@@ -179,12 +179,12 @@
 
         <!-- Supporting Documents (full row) -->
         <div class="ns-gen-field ns-gen-full">
-          <label class="ns-gen-label">{{ isBangla ? 'সহায়ক নথি' : 'Supporting Documents' }}</label>
+          <label class="ns-gen-label">Supporting Documents</label>
           <app-file-references-form
             #fileReferencesForm
             [fileRows]="fileRows"
             [isViewMode]="false"
-            [title]="isBangla ? 'সহায়ক নথি' : 'Supporting Documents'"
+            title="Supporting Documents"
             (fileRowsChange)="onFileRowsChange($event)"
             (onDownloadFile)="onDownloadFile($event)">
           </app-file-references-form>
@@ -193,11 +193,13 @@
 
       <!-- Actions -->
       <div class="ns-gen-actions">
-        <p-button type="button" [label]="isBangla ? 'প্রাকদর্শন' : 'Preview'" icon="pi pi-eye" severity="secondary" [outlined]="true" (onClick)="openPreview()" [disabled]="form.invalid" />
-        <p-button type="submit" [label]="isBangla ? 'মন্তব্যপত্র তৈরি' : 'Generate Note Sheet'" icon="pi pi-check" [loading]="isSubmitting" [disabled]="form.invalid" />
+        <p-button type="button" label="Preview" icon="pi pi-eye" severity="secondary" [outlined]="true" (onClick)="openPreview()" [disabled]="form.invalid" />
+        <p-button type="submit" label="Generate Note Sheet" icon="pi pi-check" [loading]="isSubmitting" [disabled]="form.invalid" />
       </div>
     </form>
   </div>
+
+  <p-toast></p-toast>
 
   <!-- Preview Dialog -->
   <p-dialog
