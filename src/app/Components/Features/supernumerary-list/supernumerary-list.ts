@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -15,6 +15,9 @@ import { EmployeeList } from '@/models/employee-list.model';
 import { TooltipModule } from 'primeng/tooltip';
 import { MotherOrganizationModel } from '@/models/mother-org-model';
 import { CommonCodeModel } from '@/models/common-code-model';
+import { PostingService } from '@/services/posting.service';
+import { SharedService } from '@/shared/services/shared-service';
+import { PostingMemberRow } from '@/models/posting.model';
 
 @Component({
     selector: 'app-supernumerary-list',
@@ -43,7 +46,10 @@ export class SupernumeraryList implements OnInit {
     constructor(
         private employeeListService: EmployeeListService,
         private commonCodeService: CommonCodeService,
-        private messageService: MessageService
+        private messageService: MessageService,
+        private postingService: PostingService,
+        private sharedService: SharedService,
+        private cdr: ChangeDetectorRef
     ) {}
 
     ngOnInit(): void {
@@ -222,6 +228,8 @@ export class SupernumeraryList implements OnInit {
             next: (res) => {
                 this.list = res ?? [];
                 this.loading = false;
+                const ids = this.list.map((r) => r.employeeID);
+                this.postingService.refreshEmployeePostingFlowStatus(ids, 'New').subscribe(() => this.cdr.detectChanges());
             },
             error: (err) => {
                 console.error('Failed to load supernumerary list', err);
@@ -235,12 +243,58 @@ export class SupernumeraryList implements OnInit {
         });
     }
 
+    /** Whether this row is in posting flow (draft list or note-sheet) – show status label, hide button. */
+    isInPostingProcess(row: EmployeeList): boolean {
+        return this.postingService.isEmployeeInPostingFlow(row.employeeID, 'New');
+    }
+
+    /** Action column label: "Posting in Process" | "Note Sheet in Process" | null (show button). */
+    getActionLabel(row: EmployeeList): string | null {
+        return this.postingService.getActionLabel(row.employeeID);
+    }
+
+    toPostingMemberRow(row: EmployeeList): PostingMemberRow {
+        return {
+            employeeId: row.employeeID,
+            serviceId: row.serviceId ?? null,
+            rabID: row.rabID ?? null,
+            fullNameEN: row.fullNameEN ?? null,
+            rankName: row.rankName ?? null,
+            corpsName: row.corpsName ?? null,
+            tradeName: row.tradeName ?? null,
+            motherUnitName: row.motherUnitName ?? null,
+            joiningDate: row.joiningDate ?? null,
+            relieverServiceId: row.relieverServiceId ?? null
+        };
+    }
+
     onSendNewPostingList(row: EmployeeList): void {
-        // TODO: wire to Send New Posting list API / navigation
-        this.messageService.add({
-            severity: 'info',
-            summary: 'Send New Posting list',
-            detail: `Under Development`
+        if (this.isInPostingProcess(row)) {
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'Already in process',
+                detail: this.getActionLabel(row) ?? 'This member is already in posting flow.'
+            });
+            return;
+        }
+        const user = this.sharedService.getCurrentUser?.() ?? 'User';
+        const members = [this.toPostingMemberRow(row)];
+        this.postingService.addToDraftNewPostingList(members, user).subscribe({
+            next: () => {
+                this.messageService.add({
+                    severity: 'success',
+                    summary: 'Sent',
+                    detail: 'Member added to Draft New Posting List.'
+                });
+                this.postingService.refreshEmployeePostingFlowStatus([row.employeeID], 'New').subscribe(() => this.cdr.detectChanges());
+            },
+            error: (err) => {
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: err?.error?.description ?? err?.error?.message ?? 'Failed to add to draft list.'
+                });
+            }
         });
     }
 

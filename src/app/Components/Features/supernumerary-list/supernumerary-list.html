@@ -237,9 +237,13 @@
                                 <a [routerLink]="['/supernumerary-profile', row.employeeID]" class="report-link-profile">
                                     <i class="pi pi-user"></i> Profile
                                 </a>
-                                <button type="button" class="report-btn-secondary" (click)="onSendNewPostingList(row)">
-                                    Send New Posting list
-                                </button>
+                                @if (getActionLabel(row); as label) {
+                                    <span class="text-500" title="Action inactive">{{ label }}</span>
+                                } @else {
+                                    <button type="button" class="report-btn-secondary" (click)="onSendNewPostingList(row)">
+                                        Send New Posting list
+                                    </button>
+                                }
                             </span>
                         </td>
                     </tr>
