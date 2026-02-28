@@ -151,9 +151,19 @@
   @if (!editing) {
     <div class="ns-preview-closing">{{ isEnglish ? 'Presented for your kind approval.' : 'আপনার সদয় অনুমোদনের জন্য উপস্থাপন করা হলো।' }}</div>
 
-    <!-- Approval chain: Prepared by → Initiator (right), Recommender(s) → Final Approver (left) -->
-    <div class="ns-preview-signatories">
-      <div class="ns-preview-approvers">
+    <!-- Approval chain: Initiator (right), then Recommender(s) + Final Approver (left) below -->
+    @if (initiatorDetails) {
+      <div class="ns-preview-initiator-block">
+        <app-notesheet-signatory
+          [detail]="initiatorDetails"
+          [showSignature]="shouldShowSignature(initiatorDetails.step)"
+          [isEnglish]="isEnglish"
+          align="right">
+        </app-notesheet-signatory>
+      </div>
+    }
+    @if (approversDetails.length > 0) {
+      <div class="ns-preview-approvers-block">
         @for (item of approversDetails; track item.step + item.rabId) {
           <app-notesheet-signatory
             [detail]="item"
@@ -163,26 +173,6 @@
           </app-notesheet-signatory>
         }
       </div>
-      <div class="ns-preview-initiator">
-        <app-notesheet-signatory
-          [detail]="preparedByDetails"
-          [showSignature]="shouldShowSignature('Prepared by')"
-          [isEnglish]="isEnglish"
-          align="right"
-          [showDate]="true"
-          [dateValue]="formatDate(noteSheet?.noteSheetDate)"
-          [roleLabel]="isEnglish ? 'Prepared by' : 'প্রস্তুতকারী'"
-          [fallbackName]="noteSheet?.preparedBy || '—'">
-        </app-notesheet-signatory>
-        @if (initiatorDetails) {
-          <app-notesheet-signatory
-            [detail]="initiatorDetails"
-            [showSignature]="shouldShowSignature(initiatorDetails.step)"
-            [isEnglish]="isEnglish"
-            align="right">
-          </app-notesheet-signatory>
-        }
-      </div>
-    </div>
+    }
   }
 </div>

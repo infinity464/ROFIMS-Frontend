@@ -258,12 +258,8 @@ export class PostingOrderPreviewComponent implements OnChanges, OnInit {
         // ── Spacer before signatures ──
         children.push(new Paragraph({ spacing: { before: 400 } }));
 
-        // ── Signature table (two columns: left = approvers, right = prepared by + initiator) ──
-        const noBorder = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
-        const noBorders = { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder };
-
         // Helper: build paragraphs for a signatory block
-        const buildSigParas = (detail: any, roleLabel: string, align: (typeof AlignmentType)[keyof typeof AlignmentType], showDate = false): Paragraph[] => {
+        const buildSigParas = (detail: any, roleLabel: string, align: (typeof AlignmentType)[keyof typeof AlignmentType]): Paragraph[] => {
             const paras: Paragraph[] = [];
             if (!detail) return paras;
             const showSig = detail.signatureDataUrl && this.shouldShowSignature(detail.step ?? roleLabel);
@@ -285,8 +281,7 @@ export class PostingOrderPreviewComponent implements OnChanges, OnInit {
                 detail.name,
                 detail.rabId && detail.rabId !== '-' ? `RAB ID: ${detail.rabId}` : '',
                 detail.rank && detail.rank !== '-' ? detail.rank : '',
-                detail.appointment && detail.appointment !== '-' ? detail.appointment : '',
-                showDate ? this.formatDate(this.noteSheet?.noteSheetDate) : ''
+                detail.appointment && detail.appointment !== '-' ? detail.appointment : ''
             ].filter(l => l && l !== '-' && l !== '—');
             lines.forEach(line => {
                 paras.push(new Paragraph({ children: [new TextRun({ text: line, size: 20, font })], alignment: align }));
@@ -294,58 +289,18 @@ export class PostingOrderPreviewComponent implements OnChanges, OnInit {
             return paras;
         };
 
-        // Left column: Recommenders + Final Approver
-        const leftParas: Paragraph[] = [];
-        for (const approver of this.approversDetails) {
-            leftParas.push(...buildSigParas(approver, this.translateStep(approver.step), AlignmentType.LEFT));
-            leftParas.push(new Paragraph({ spacing: { before: 100 } }));
-        }
-        if (!leftParas.length) leftParas.push(new Paragraph({}));
-
-        // Right column: Prepared by + Initiator
-        const rightParas: Paragraph[] = [];
-        const preparedByLabel = bn ? 'প্রস্তুতকারী' : 'Prepared by';
-        if (this.preparedByDetails) {
-            rightParas.push(...buildSigParas(this.preparedByDetails, preparedByLabel, AlignmentType.RIGHT, true));
-        } else {
-            const fallbackName = this.noteSheet?.preparedBy ?? '';
-            if (fallbackName) {
-                rightParas.push(new Paragraph({
-                    children: [new TextRun({ text: '______________________________', size: 20, font })],
-                    alignment: AlignmentType.RIGHT, spacing: { before: 200 }
-                }));
-                rightParas.push(new Paragraph({
-                    children: [new TextRun({ text: preparedByLabel, bold: true, size: 20, font })],
-                    alignment: AlignmentType.RIGHT
-                }));
-                rightParas.push(new Paragraph({ children: [new TextRun({ text: fallbackName, size: 20, font })], alignment: AlignmentType.RIGHT }));
-                rightParas.push(new Paragraph({ children: [new TextRun({ text: this.formatDate(this.noteSheet?.noteSheetDate), size: 20, font })], alignment: AlignmentType.RIGHT }));
-            }
-        }
+        // ── Vertical layout: Initiator (right) first, then Recommender(s) + Final Approver (left) ──
+        // Initiator (right-aligned)
         if (this.initiatorDetails) {
-            rightParas.push(new Paragraph({ spacing: { before: 100 } }));
-            rightParas.push(...buildSigParas(this.initiatorDetails, this.translateStep(this.initiatorDetails.step), AlignmentType.RIGHT));
+            children.push(...buildSigParas(this.initiatorDetails, this.translateStep(this.initiatorDetails.step), AlignmentType.RIGHT));
+            children.push(new Paragraph({ spacing: { before: 300 } }));
         }
-        if (!rightParas.length) rightParas.push(new Paragraph({}));
 
-        const sigTable = new Table({
-            width: { size: 100, type: WidthType.PERCENTAGE },
-            rows: [new TableRow({
-                children: [
-                    new TableCell({
-                        children: leftParas,
-                        borders: noBorders,
-                        width: { size: 50, type: WidthType.PERCENTAGE }
-                    }),
-                    new TableCell({
-                        children: rightParas,
-                        borders: noBorders,
-                        width: { size: 50, type: WidthType.PERCENTAGE }
-                    })
-                ]
-            })]
-        });
-        children.push(sigTable);
+        // Recommender(s) + Final Approver (left-aligned)
+        for (const approver of this.approversDetails) {
+            children.push(...buildSigParas(approver, this.translateStep(approver.step), AlignmentType.LEFT));
+            children.push(new Paragraph({ spacing: { before: 200 } }));
+        }
 
         const doc = new Document({
             sections: [{
@@ -564,11 +519,10 @@ export class PostingOrderPreviewComponent implements OnChanges, OnInit {
         return false;
     }
 
-    /** Build HTML signature blocks for all signatories (used by PDF exports). Two-column layout: left = approvers, right = initiator + prepared by. */
+    /** Build HTML signature blocks for all signatories (used by PDF exports). Two-column layout: left = approvers, right = initiator. */
     private buildSignatoriesHtml(): string {
-        const bn = !this.isEnglish;
         const sigImg = (detail: any, align: string) => detail?.signatureDataUrl && this.shouldShowSignature(detail.step)
-            ? `<img src="${detail.signatureDataUrl}" style="max-width:150px;max-height:50px;object-fit:contain;display:block;${align === 'right' ? 'margin-left:auto' : ''}" />`
+            ? `<img src="${detail.signatureDataUrl}" style="width:150px;height:50px;object-fit:contain;display:block;${align === 'right' ? 'margin-left:auto' : ''}" />`
             : '';
         const sigBlock = (detail: any, align: string, showDate = false) => {
             if (!detail) return '';
@@ -587,35 +541,22 @@ export class PostingOrderPreviewComponent implements OnChanges, OnInit {
             </div>`;
         };
 
-        // Left column: Recommenders + Final Approver
+        // Initiator (right-aligned, top)
+        let rightHtml = '';
+        if (this.initiatorDetails) {
+            rightHtml += sigBlock(this.initiatorDetails, 'right');
+        }
+
+        // Recommender(s) + Final Approver (left-aligned, below)
         let leftHtml = '';
         for (const approver of this.approversDetails) {
             leftHtml += sigBlock(approver, 'left');
         }
 
-        // Right column: Prepared by (first) + Initiator
-        let rightHtml = '';
-        if (this.preparedByDetails) {
-            rightHtml += sigBlock({ ...this.preparedByDetails, step: bn ? 'প্রস্তুতকারী' : 'Prepared by' }, 'right', true);
-        } else {
-            const fallbackName = this.noteSheet?.preparedBy ?? '';
-            if (fallbackName) {
-                rightHtml += `<div style="text-align:right;margin-top:20px;line-height:1.6">
-                    <div style="width:160px;border-bottom:1.5px solid #000;margin-bottom:4px;margin-left:auto"></div>
-                    <div style="font-weight:600;font-size:9pt;text-transform:uppercase;color:#000">${bn ? 'প্রস্তুতকারী' : 'Prepared by'}</div>
-                    <div><strong>${this.escapeHtml(fallbackName)}</strong></div>
-                    <div style="font-size:10pt">${this.escapeHtml(this.formatDate(this.noteSheet?.noteSheetDate))}</div>
-                </div>`;
-            }
-        }
-        if (this.initiatorDetails) {
-            rightHtml += sigBlock(this.initiatorDetails, 'right');
-        }
-
         if (!leftHtml && !rightHtml) return '';
-        return `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:40px;margin-top:30px">
-            <div>${leftHtml}</div>
-            <div>${rightHtml}</div>
+        return `<div style="margin-top:30px">
+            ${rightHtml ? `<div>${rightHtml}</div>` : ''}
+            ${leftHtml ? `<div style="margin-top:24px">${leftHtml}</div>` : ''}
         </div>`;
     }
 

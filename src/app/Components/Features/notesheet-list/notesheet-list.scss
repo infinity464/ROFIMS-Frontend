@@ -202,24 +202,16 @@
   padding-top: 1rem;
 }
 
-.ns-preview-signatories {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 2rem;
-}
-
-.ns-preview-approvers {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.ns-preview-initiator {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+/* ── Vertical signature layout: Initiator (right) then Approvers (left) ── */
+.ns-preview-initiator-block {
+  margin-bottom: 2rem;
   text-align: right;
+}
+
+.ns-preview-approvers-block {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
 .ns-preview-signatory {

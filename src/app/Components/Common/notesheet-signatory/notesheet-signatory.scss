@@ -2,6 +2,7 @@
     display: flex;
     flex-direction: column;
     gap: 0.125rem;
+    align-items: flex-start;
 
     &.align-right {
         align-items: flex-end;
@@ -29,8 +30,9 @@
 }
 
 .ns-signatory-signature {
-    max-width: 150px;
-    max-height: 50px;
+    width: 150px;
+    height: 50px;
     object-fit: contain;
     margin-bottom: 0.25rem;
+    display: block;
 }

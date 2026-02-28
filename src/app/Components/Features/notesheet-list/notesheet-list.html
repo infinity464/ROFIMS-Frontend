@@ -457,9 +457,19 @@
           <!-- Closing line -->
           <div class="ns-preview-closing">{{ isPreviewEnglish() ? 'Presented for your kind approval.' : 'আপনার সদয় অনুমোদনের জন্য উপস্থাপন করা হলো।' }}</div>
 
-          <!-- Approval chain & Prepared by -->
-          <div class="ns-preview-signatories">
-            <div class="ns-preview-approvers">
+          <!-- Approval chain -->
+          @if (initiatorDetails) {
+            <div class="ns-preview-initiator-block">
+              <app-notesheet-signatory
+                [detail]="initiatorDetails"
+                [showSignature]="false"
+                [isEnglish]="isPreviewEnglish()"
+                align="right">
+              </app-notesheet-signatory>
+            </div>
+          }
+          @if (approversDetails.length > 0) {
+            <div class="ns-preview-approvers-block">
               @for (item of approversDetails; track item.step + item.rabId) {
                 <app-notesheet-signatory
                   [detail]="item"
@@ -469,27 +479,7 @@
                 </app-notesheet-signatory>
               }
             </div>
-            <div class="ns-preview-initiator">
-              <app-notesheet-signatory
-                [detail]="preparedByDetails"
-                [showSignature]="false"
-                [isEnglish]="isPreviewEnglish()"
-                align="right"
-                [showDate]="true"
-                [dateValue]="formatDate(previewNoteSheet.noteSheetDate)"
-                [roleLabel]="isPreviewEnglish() ? 'Prepared by' : 'প্রস্তুতকারী'"
-                [fallbackName]="previewNoteSheet.preparedBy || '—'">
-              </app-notesheet-signatory>
-              @if (initiatorDetails) {
-                <app-notesheet-signatory
-                  [detail]="initiatorDetails"
-                  [showSignature]="false"
-                  [isEnglish]="isPreviewEnglish()"
-                  align="right">
-                </app-notesheet-signatory>
-              }
-            </div>
-          </div>
+          }
         }
       </div>
     }

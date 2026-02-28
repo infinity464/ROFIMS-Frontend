@@ -261,8 +261,17 @@
 
         <div class="ns-preview-closing">{{ isPreviewEnglish() ? 'Presented for your kind approval.' : 'আপনার সদয় অনুমোদনের জন্য উপস্থাপন করা হলো।' }}</div>
 
-        <div class="ns-preview-signatories">
-          <div class="ns-preview-approvers">
+        @if (initiatorDetails) {
+          <div class="ns-preview-initiator-block">
+            <app-notesheet-signatory
+              [detail]="initiatorDetails"
+              [isEnglish]="isPreviewEnglish()"
+              align="right">
+            </app-notesheet-signatory>
+          </div>
+        }
+        @if (approversDetails.length > 0) {
+          <div class="ns-preview-approvers-block">
             @for (item of approversDetails; track item.step + item.rabId) {
               <app-notesheet-signatory
                 [detail]="item"
@@ -271,25 +280,7 @@
               </app-notesheet-signatory>
             }
           </div>
-          <div class="ns-preview-initiator">
-            <app-notesheet-signatory
-              [detail]="null"
-              [isEnglish]="isPreviewEnglish()"
-              align="right"
-              [showDate]="true"
-              [dateValue]="formatPreviewDate()"
-              [roleLabel]="isPreviewEnglish() ? 'Prepared by' : 'প্রস্তুতকারী'"
-              [fallbackName]="form.get('preparedBy')?.value || '—'">
-            </app-notesheet-signatory>
-            @if (initiatorDetails) {
-              <app-notesheet-signatory
-                [detail]="initiatorDetails"
-                [isEnglish]="isPreviewEnglish()"
-                align="right">
-              </app-notesheet-signatory>
-            }
-          </div>
-        </div>
+        }
       </div>
     }
   </p-dialog>
