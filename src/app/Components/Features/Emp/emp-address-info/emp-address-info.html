@@ -1,83 +1,139 @@
 <p-fluid>
-    <div class="mb-5 card">
-        <div class="flex align-items-center gap-3 mb-4">
-            <h3 class="m-0 text-xl font-bold text-600" style="display: inline-flex; align-items: center; gap: 0.5rem;">
-                Employee Address Information
+    <div class="form-card">
+        @if (!hideTitle) {
+            <div class="form-card-header">
+                <h3 class="form-card-title">
+                    Employee Address Information
+                    @if (mode === 'view') {
+                        <span class="text-500 text-base font-normal">(View Mode)</span>
+                    }
+                    @if (mode === 'edit') {
+                        <span class="text-primary text-base font-normal">(Edit Mode)</span>
+                    }
+                </h3>
                 @if (mode === 'view') {
-                    <span class="text-500 text-base font-normal">(View Mode)</span>
-                    <p-button label="Edit" icon="pi pi-pencil" size="small" (onClick)="enableEditMode()"></p-button>
+                    <div class="form-card-actions">
+                        <p-button
+                            label="Edit"
+                            icon="pi pi-pencil"
+                            (onClick)="enableEditMode()">
+                        </p-button>
+                    </div>
                 }
-                @if (mode === 'edit') {
-                    <span class="text-primary text-base font-normal">(Edit Mode)</span>
-                }
-            </h3>
-        </div>
-
-        <!-- Employee Search Section - Only show in search mode -->
-        @if (mode === 'search') {
-            <app-employee-search
-                (onEmployeeFound)="onEmployeeSearchFound($event)"
-                (onSearchReset)="onEmployeeSearchReset()">
-            </app-employee-search>
+            </div>
         }
 
-        <!-- Employee Info Header for View/Edit Mode -->
-        <!-- @if (mode !== 'search' && employeeBasicInfo) {
-            <div class="surface-50 border-round-2xl p-4 mb-4">
-                <div class="flex flex-wrap gap-4">
-                    <div>
-                        <span class="text-500 text-sm">Name:</span>
-                        <span class="ml-2 font-semibold">{{ employeeBasicInfo.fullNameEN || employeeBasicInfo.FullNameEN || 'N/A' }}</span>
-                    </div>
-                    <div>
-                        <span class="text-500 text-sm">RAB ID:</span>
-                        <span class="ml-2 font-semibold">{{ employeeBasicInfo.rabid || employeeBasicInfo.Rabid || 'N/A' }}</span>
-                    </div>
-                    <div>
-                        <span class="text-500 text-sm">Service ID:</span>
-                        <span class="ml-2 font-semibold">{{ employeeBasicInfo.serviceId || employeeBasicInfo.ServiceId || 'N/A' }}</span>
-                    </div>
-                </div>
+        <!-- Employee Search Section - Only show in search mode (form-section for same left align as form) -->
+        @if (mode === 'search') {
+            <div class="form-section">
+                <app-employee-search
+                    (onEmployeeFound)="onEmployeeSearchFound($event)"
+                    (onSearchReset)="onEmployeeSearchReset()">
+                </app-employee-search>
             </div>
-        } -->
+        }
 
         <!-- Address Forms -->
         @if (employeeFound) {
-            <!-- Permanent Address -->
-            <app-address-form
-                #permanentAddressForm
-                [config]="permanentAddressConfig"
-                [isReadonly]="isReadonly"
-                [initialAddressData]="permanentAddressData"
-                [showButtons]="false">
-            </app-address-form>
+            <!-- Permanent Address (showInnerWrapper false so title/fields align with RAB ID section) -->
+            <div class="form-section">
+                <app-address-form
+                    #permanentAddressForm
+                    [config]="permanentAddressConfig"
+                    [isReadonly]="isReadonly"
+                    [initialAddressData]="permanentAddressData"
+                    [showButtons]="false"
+                    [showInnerWrapper]="false">
+                </app-address-form>
+            </div>
 
             <!-- Present Address -->
-            <app-address-form
-                #presentAddressForm
-                [config]="presentAddressConfig"
-                [isReadonly]="isReadonly"
-                [initialAddressData]="presentAddressData"
-                [showButtons]="false"
-                (onSameAsPresentRequest)="copyPermanentToPresent()">
-            </app-address-form>
+            <div class="form-section">
+                <app-address-form
+                    #presentAddressForm
+                    [config]="presentAddressConfig"
+                    [isReadonly]="isReadonly"
+                    [initialAddressData]="presentAddressData"
+                    [showButtons]="false"
+                    [showInnerWrapper]="false"
+                    (onSameAsPresentRequest)="copyPermanentToPresent()">
+                </app-address-form>
+            </div>
 
             <!-- Action Buttons -->
-            <div class="flex justify-end mt-4 gap-2">
-                @if (mode === 'view') {
-                    <p-button label="Back to List" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" (onClick)="goBack()"></p-button>
-                    <p-button label="Edit" icon="pi pi-pencil" (onClick)="enableEditMode()"></p-button>
-                } @else if (mode === 'edit') {
-                    <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="cancelEdit()"></p-button>
-                    <p-button label="Save" icon="pi pi-check" (onClick)="saveAllAddresses()"></p-button>
-                } @else if (mode === 'search' && isReadonly) {
-                    <p-button label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" (onClick)="resetForm()"></p-button>
-                    <p-button label="Edit" icon="pi pi-pencil" (onClick)="enableSearchEditMode()"></p-button>
-                } @else {
-                    <p-button label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" (onClick)="resetForm()"></p-button>
-                    <p-button label="Save" icon="pi pi-check" (onClick)="saveAllAddresses()"></p-button>
-                }
-            </div>
+            @if (mode === 'view') {
+                <div class="form-actions">
+                    <p-button
+                        type="button"
+                        label="Back to List"
+                        icon="pi pi-arrow-left"
+                        severity="secondary"
+                        [outlined]="true"
+                        styleClass="form-btn-secondary"
+                        (onClick)="goBack()">
+                    </p-button>
+                </div>
+            }
+            @if (mode === 'edit') {
+                <div class="form-actions">
+                    <p-button
+                        type="button"
+                        label="Cancel"
+                        icon="pi pi-times"
+                        severity="secondary"
+                        [outlined]="true"
+                        styleClass="form-btn-secondary"
+                        (onClick)="cancelEdit()">
+                    </p-button>
+                    <p-button
+                        type="button"
+                        label="Save"
+                        icon="pi pi-check"
+                        styleClass="form-btn-primary"
+                        (onClick)="saveAllAddresses()">
+                    </p-button>
+                </div>
+            }
+            @if (mode === 'search' && isReadonly) {
+                <div class="form-actions">
+                    <!-- <p-button
+                        type="button"
+                        label="Reset"
+                        icon="pi pi-refresh"
+                        severity="secondary"
+                        [outlined]="true"
+                        styleClass="form-btn-secondary"
+                        (onClick)="resetForm()">
+                    </p-button> -->
+                    <p-button
+                        type="button"
+                        label="Edit"
+                        icon="pi pi-pencil"
+                        styleClass="form-btn-primary"
+                        (onClick)="enableSearchEditMode()">
+                    </p-button>
+                </div>
+            }
+            @if (mode === 'search' && !isReadonly) {
+                <div class="form-actions">
+                    <!-- <p-button
+                        type="button"
+                        label="Reset"
+                        icon="pi pi-refresh"
+                        severity="secondary"
+                        [outlined]="true"
+                        styleClass="form-btn-secondary"
+                        (onClick)="resetForm()">
+                    </p-button> -->
+                    <p-button
+                        type="button"
+                        label="Save"
+                        icon="pi pi-check"
+                        styleClass="form-btn-primary"
+                        (onClick)="saveAllAddresses()">
+                    </p-button>
+                </div>
+            }
         }
     </div>
 </p-fluid>

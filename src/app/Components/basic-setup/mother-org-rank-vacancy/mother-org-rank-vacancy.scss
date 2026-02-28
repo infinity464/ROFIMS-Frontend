@@ -1,1 +1,38 @@
-// Mother Org Rank Vacancy styles
+/**
+ * Mother Org Rank Vacancy – report-style layout (same as rab-id-allocation).
+ * Uses .employee-reports-page from report-theme-common.scss.
+ */
+
+/* Data table inside results card: remove inner card border/shadow so it fits the report-results-card */
+.employee-reports-page .report-results-card .report-table-wrap .card {
+    border: none;
+    box-shadow: none;
+    margin: 0;
+    padding: 0 20px 20px;
+}
+
+/* Form inside report-type-card: optional alignment with report theme */
+.employee-reports-page .report-type-card app-dynamic-form label {
+    font-size: 0.69rem;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.employee-reports-page .report-type-card app-dynamic-form .p-select .p-select-label,
+.employee-reports-page .report-type-card app-dynamic-form .p-inputtext {
+    height: 42px;
+    border: 0.5px solid var(--border);
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text);
+    background: var(--white);
+}
+
+.employee-reports-page .report-type-card app-dynamic-form .p-select:focus-within .p-select-label,
+.employee-reports-page .report-type-card app-dynamic-form .p-inputtext:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px var(--report-accent-bg);
+}

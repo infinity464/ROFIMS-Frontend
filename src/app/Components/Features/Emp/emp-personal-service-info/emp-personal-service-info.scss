@@ -1,1 +1,37 @@
-:host { display: block; }
+:host {
+  display: block;
+}
+
+// When emp-personal-info (and similar tab content) is reused inside tab panels,
+// remove extra wrapper margin/padding so it doesn’t double up with the parent card.
+:host ::ng-deep p-tabpanel {
+  app-emp-personal-info,
+  app-emp-address-info,
+  app-emp-family-info,
+  app-emp-nominee-info,
+  app-emp-previous-rab-service,
+  app-emp-service-history,
+  app-emp-promotion-info,
+  app-emp-rank-confirmation,
+  app-emp-education-info,
+  app-emp-course-info,
+  app-emp-discipline-info,
+  app-emp-bank-account,
+  app-emp-foreign-visit,
+  app-emp-leave-info,
+  app-emp-medical-category,
+  app-emp-additional-remarks {
+    display: block;
+
+    p-fluid {
+      margin: 0;
+      padding: 0;
+    }
+
+    .card.mb-5,
+    .mb-5.card {
+      margin: 0;
+      padding: 0;
+    }
+  }
+}

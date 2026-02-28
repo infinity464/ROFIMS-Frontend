@@ -1,4 +1,8 @@
-// component styles
+// emp-bank-account – aligned with form-theme
+
+:host {
+    display: block;
+}
 
 :host ::ng-deep .file-section-compact {
   app-file-references-form h3 {

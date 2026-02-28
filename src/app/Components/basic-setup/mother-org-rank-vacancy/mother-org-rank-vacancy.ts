@@ -2,6 +2,8 @@ import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MasterBasicSetupService } from '../shared/services/MasterBasicSetupService';
 import { ConfirmationService, MessageService } from 'primeng/api';
+import { Toast } from 'primeng/toast';
+import { ConfirmDialog } from 'primeng/confirmdialog';
 import { DynamicFormComponent } from '../shared/componets/dynamic-form-component/dynamic-form';
 import { DataTable } from '../shared/componets/data-table/data-table';
 import { Fluid } from 'primeng/fluid';
@@ -16,9 +18,10 @@ import { forkJoin } from 'rxjs';
 @Component({
     selector: 'app-mother-org-rank-vacancy',
     standalone: true,
-    imports: [DynamicFormComponent, DataTable, Fluid],
+    imports: [DynamicFormComponent, DataTable, Fluid, Toast, ConfirmDialog],
+    providers: [MessageService, ConfirmationService],
     templateUrl: './mother-org-rank-vacancy.html',
-    styleUrl: './mother-org-rank-vacancy.scss'
+    styleUrls: ['./mother-org-rank-vacancy.scss', '../../Features/employee-reports/report-theme-common.scss']
 })
 export class MotherOrgRankVacancyComponent implements OnInit {
     title = 'Mother Org Rank Vacancy';

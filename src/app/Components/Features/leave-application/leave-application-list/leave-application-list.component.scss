@@ -1,53 +1,163 @@
-:host {
-  display: block;
+/**
+ * Leave Application List – report-style layout (same as rab-id-allocation / mother-org-rank-vacancy).
+ * Uses .employee-reports-page from report-theme-common.scss.
+ */
+
+/* Header row: title + New Application button (inside report-filter-card) */
+.leave-app-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
 }
 
-/* Filter section (same structure as ex-members list filter) */
-.filter-section {
-  border: 1px solid var(--p-border-color, #dee2e6);
-  border-radius: var(--p-border-radius, 6px);
-  padding: 1rem 1.25rem;
-  background: var(--p-content-background, #fff);
+/* Type filter buttons (My Actions, My Application Status, Apply for Other) */
+.report-type-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
-.filter-row {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 0.875rem;
+.report-btn-filter-tab {
+    height: 36px;
+    padding: 0 18px;
+    border-radius: 8px;
+    border: 0.5px solid var(--border);
+    background: var(--white);
+    font-size: 0.84rem;
+    font-weight: 500;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.18s;
+}
 
-  &:last-child {
+.report-btn-filter-tab:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    background: var(--report-accent-bg);
+}
+
+.report-btn-filter-tab.active {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: var(--primary-contrast-color);
+    font-weight: 600;
+}
+
+:host-context(.app-dark) .report-btn-filter-tab {
+    background: var(--surface-card);
+    border-color: var(--surface-border);
+    color: var(--text-color-secondary);
+}
+
+:host-context(.app-dark) .report-btn-filter-tab:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    background: var(--report-accent-bg);
+}
+
+:host-context(.app-dark) .report-btn-filter-tab.active {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: var(--primary-contrast-color);
+}
+
+/* Tab panel title inside results card */
+.report-panel-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--navy);
+    margin: 0 0 1rem 0;
+}
+
+:host-context(.app-dark) .report-panel-title {
+    color: var(--text-color);
+}
+
+/* Type of Leave Application row: above table inside results card */
+.leave-app-type-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 12px 20px;
+    border-bottom: 1.5px solid var(--border-light);
+}
+
+.leave-app-type-row .rt-label {
     margin-bottom: 0;
-  }
 }
 
-.filter-label {
-  flex-shrink: 0;
-  min-width: 180px;
-  font-weight: 500;
-  color: var(--p-text-color, #495057);
+/* Tabs + table inside results card */
+.leave-app-tabs-wrap {
+    padding: 0 20px 20px;
 }
 
-.filter-inputs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  flex: 1;
+.leave-app-tabs-wrap .p-tablist {
+    margin-bottom: 12px;
 }
 
-.filter-input {
-  min-width: 140px;
-  flex: 1;
-  max-width: 220px;
-
-  &.filter-select,
-  &.filter-date {
-    min-width: 160px;
-    max-width: 240px;
-  }
+.leave-app-tabs-wrap .p-tabpanels {
+    padding: 0;
 }
 
-.filter-actions {
-  margin-top: 0.5rem;
-  margin-bottom: 0;
+/* Date filter fields: same width as Leave Type (match supernumerary-list) */
+.report-filter-field.report-filter-field-date {
+    display: flex;
+    flex-direction: column;
+}
+
+:host ::ng-deep .report-filter-field.report-filter-field-date p-datepicker,
+:host ::ng-deep .report-filter-field.report-filter-field-date .p-datepicker {
+    width: 100% !important;
+    min-width: 0;
+    display: block;
+}
+
+:host ::ng-deep .report-filter-field.report-filter-field-date .p-datepicker .p-inputtext,
+:host ::ng-deep .report-filter-field.report-filter-field-date .p-datepicker input {
+    width: 100% !important;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+/* ── Preview modal (same style as calendar event dialog) ── */
+:host ::ng-deep .leave-preview-dialog .p-dialog-content {
+    padding: 1.25rem 1.5rem;
+}
+
+:host ::ng-deep .leave-preview-dialog .event-detail-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+:host ::ng-deep .leave-preview-dialog .detail-row {
+    display: flex;
+    gap: 0.85rem;
+    align-items: flex-start;
+}
+
+:host ::ng-deep .leave-preview-dialog .detail-icon {
+    width: 18px;
+    text-align: center;
+    color: var(--text-color-secondary, #6c757d);
+    font-size: 0.8rem;
+    margin-top: 0.15rem;
+    flex-shrink: 0;
+}
+
+:host ::ng-deep .leave-preview-dialog .detail-label {
+    font-size: 0.65rem;
+    color: var(--text-color-secondary, #6c757d);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 0.15rem;
+}
+
+:host ::ng-deep .leave-preview-dialog .detail-value {
+    font-size: 0.9rem;
+    color: var(--text-color, #212529);
+    line-height: 1.4;
 }

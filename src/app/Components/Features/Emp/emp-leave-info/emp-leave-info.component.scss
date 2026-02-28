@@ -1,4 +1,9 @@
-// component styles (follow emp-medical-category)
+// emp-leave-info – aligned with form-theme
+
+:host {
+    display: block;
+}
+
 .leave-record-form .form-row {
     display: flex;
     gap: 1rem;

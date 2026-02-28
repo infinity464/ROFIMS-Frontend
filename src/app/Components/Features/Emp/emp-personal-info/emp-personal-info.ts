@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output, ViewChild } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -47,6 +47,21 @@ import { FileReferencesFormComponent, FileRowData } from '@components/Common/fil
 })
 export class EmpPersonalInfo implements OnInit {
     @ViewChild('fileReferencesForm') fileReferencesForm!: any; // FileReferencesFormComponent
+
+    /** When true (e.g. inside tab view), the "Employee Personal Info" title and header actions are hidden. */
+    @Input() hideTitle = false;
+
+    /** When true, component is embedded (e.g. in ex-member profile). Use externalEmployeeId, hide search, emit saved/cancelled. */
+    @Input() embedMode = false;
+
+    /** When embedMode is true, load and edit this employee's personal info. */
+    @Input() externalEmployeeId: number | null = null;
+
+    /** Emitted after successful save when embedMode is true. */
+    @Output() saved = new EventEmitter<void>();
+
+    /** Emitted when user cancels edit when embedMode is true. */
+    @Output() cancelled = new EventEmitter<void>();
 
     // Employee lookup
     employeeFound: boolean = false;
@@ -106,6 +121,14 @@ export class EmpPersonalInfo implements OnInit {
     ngOnInit(): void {
         this.initializeForm();
         this.loadDropdownData();
+        if (this.embedMode && this.externalEmployeeId != null) {
+            this.mode = 'edit';
+            this.isReadonly = false;
+            this.selectedEmployeeId = this.externalEmployeeId;
+            this.employeeFound = true;
+            this.loadEmployeeById(this.externalEmployeeId);
+            return;
+        }
         this.checkRouteParams();
     }
 
@@ -174,6 +197,10 @@ export class EmpPersonalInfo implements OnInit {
     }
 
     goBack(): void {
+        if (this.embedMode) {
+            this.cancelled.emit();
+            return;
+        }
         this.router.navigate(['/emp-list']);
     }
 
@@ -457,6 +484,9 @@ export class EmpPersonalInfo implements OnInit {
                         summary: 'Success',
                         detail: 'Personal information saved successfully!'
                     });
+                    if (this.embedMode) {
+                        this.saved.emit();
+                    }
                 },
                 error: (err) => {
                     console.error('Failed to save/update personal info', err);

@@ -1,4 +1,8 @@
-// emp-family-info styles
+// emp-family-info styles – aligned with emp-basic-info / emp-personal-info (form-theme)
+
+:host {
+    display: block;
+}
 
 :host ::ng-deep {
   p-datepicker {

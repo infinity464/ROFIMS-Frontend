@@ -1,4 +1,8 @@
-// emp-nominee-info styles
+// emp-nominee-info styles – aligned with emp-basic-info / emp-personal-info (form-theme)
+
+:host {
+    display: block;
+}
 
 :host ::ng-deep {
   .file-section-compact {

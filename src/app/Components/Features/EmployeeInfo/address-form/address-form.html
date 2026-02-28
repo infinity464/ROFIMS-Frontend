@@ -1,10 +1,10 @@
 @if (config) {
   @if (showCard) {
-  <p-fluid>
-    <div class="card my-0 py-0">
+
+    <div class="my-0 py-0">
       <ng-container *ngTemplateOutlet="addressContent"></ng-container>
     </div>
-  </p-fluid>
+
   } @else {
     <ng-container *ngTemplateOutlet="addressContent"></ng-container>
   }
@@ -33,7 +33,7 @@
       }
     </div>
 
-    <div class="surface-50 border-round-xl p-3">
+    <div [class.surface-50]="showInnerWrapper" [class.border-round-xl]="showInnerWrapper" [class.py-3]="showInnerWrapper" [class.px-0]="showInnerWrapper">
 
       <!-- Row 1: Division -> District -> Upazila -> Post Office -->
       <div class="flex flex-wrap gap-3 mb-3">
