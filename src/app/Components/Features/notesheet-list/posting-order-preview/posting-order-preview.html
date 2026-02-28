@@ -1,0 +1,150 @@
+<div class="posting-order-preview">
+  <!-- Header -->
+  <div class="ns-preview-header">
+    <div class="ns-preview-title">{{ isEnglish ? 'POSTING ORDER – NOTE SHEET' : 'পোস্টিং অর্ডার – মন্তব্যপত্র' }}</div>
+    @if (!editing) {
+      <p-button class="po-edit-btn" type="button" icon="pi pi-pencil" [rounded]="true" [text]="true" size="small" pTooltip="Edit" (onClick)="toggleEdit()"></p-button>
+    }
+  </div>
+
+  <!-- Meta info -->
+  <div class="ns-preview-meta">
+    <div class="ns-preview-meta-item">
+      <span class="ns-preview-meta-label">{{ isEnglish ? 'Note-Sheet No:' : 'মন্তব্যপত্র নং:' }}</span>
+      <span>{{ noteSheet?.noteSheetNo || '—' }}</span>
+    </div>
+    <div class="ns-preview-meta-item">
+      <span class="ns-preview-meta-label">{{ isEnglish ? 'Date:' : 'তারিখ:' }}</span>
+      <span>{{ formatDate(noteSheet?.noteSheetDate) }}</span>
+    </div>
+    <div class="ns-preview-meta-item">
+      <span class="ns-preview-meta-label">{{ isEnglish ? 'Reference:' : 'সুত্রঃ' }}</span>
+      @if (editing) {
+        <input pInputText type="text" [(ngModel)]="editReferenceNumber" class="po-inline-input" placeholder="{{ isEnglish ? 'Reference number' : 'সুত্র নম্বর' }}" />
+      } @else {
+        <span>{{ noteSheet?.referenceNumber || '—' }}</span>
+      }
+    </div>
+    @if (draftMaster) {
+      <div class="ns-preview-meta-item">
+        <span class="ns-preview-meta-label">{{ isEnglish ? 'Draft Posting No:' : 'ড্রাফট পোস্টিং নং:' }}</span>
+        <span>{{ draftMaster.draftPostingNo || '—' }}</span>
+      </div>
+    }
+  </div>
+
+  <!-- Subject -->
+  @if (noteSheet?.subject) {
+    <div class="ns-preview-subject">{{ noteSheet.subject }}</div>
+  }
+
+  <!-- Main text body -->
+  <div class="ns-preview-body-section">
+    <div class="ns-preview-body-label">{{ isEnglish ? 'Content' : 'বিষয়বস্তু' }}</div>
+    @if (editing) {
+      <p-editor [(ngModel)]="editMainText" [style]="{ height: '200px' }" placeholder="{{ isEnglish ? 'Edit content...' : 'বিষয়বস্তু লিখুন...' }}"></p-editor>
+    } @else {
+      <div class="notesheet-preview-body" [innerHTML]="noteSheet?.mainText || ''"></div>
+    }
+  </div>
+
+  <!-- Employee list table -->
+  <div class="po-employee-section">
+    <div class="ns-preview-body-label">{{ isEnglish ? 'Employees in Posting List' : 'পোস্টিং তালিকার কর্মচারী' }}</div>
+    <p-table
+      [value]="employees"
+      [loading]="loadingEmployees"
+      styleClass="p-datatable-sm p-datatable-gridlines"
+      [tableStyle]="{ 'min-width': '100%' }">
+      <ng-template pTemplate="header">
+        <tr>
+          <th style="width: 50px">{{ isEnglish ? 'Ser' : 'ক্রমিক' }}</th>
+          <th>{{ isEnglish ? 'Service ID' : 'সার্ভিস আইডি' }}</th>
+          <th>{{ isEnglish ? 'Rank' : 'পদ' }}</th>
+          <th>{{ isEnglish ? 'Corps' : 'কোর' }}</th>
+          <th>{{ isEnglish ? 'Trade' : 'ট্রেড' }}</th>
+          <th>{{ isEnglish ? 'Name' : 'নাম' }}</th>
+          <th>{{ isEnglish ? 'Mother Unit' : 'মাতৃ ইউনিট' }}</th>
+          <th>{{ isEnglish ? 'Joining Date' : 'যোগদান তারিখ' }}</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-row let-i="rowIndex">
+        <tr>
+          <td class="text-center">{{ i + 1 }}</td>
+          <td class="font-semibold">{{ row.serviceId || '—' }}</td>
+          <td>{{ row.rank || '—' }}</td>
+          <td>{{ row.corps || '—' }}</td>
+          <td>{{ row.trade || '—' }}</td>
+          <td>{{ row.name || '—' }}</td>
+          <td>{{ row.motherUnit || '—' }}</td>
+          <td>{{ formatDate(row.rabJoingdate) }}</td>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="8" class="text-center text-500 py-3">
+            {{ isEnglish ? 'No employees in this posting list.' : 'এই পোস্টিং তালিকায় কোনো কর্মচারী নেই।' }}
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </div>
+
+  <!-- Note/Remarks -->
+  <div class="po-note-section">
+    <div class="ns-preview-body-label">{{ isEnglish ? 'Note / Remarks' : 'মন্তব্য' }}</div>
+    @if (editing) {
+      <textarea pTextarea [(ngModel)]="editNote" rows="3" class="w-full" placeholder="{{ isEnglish ? 'Note / Remarks' : 'মন্তব্য' }}"></textarea>
+    } @else {
+      @if (noteSheet?.note) {
+        <div class="po-note-text">{{ noteSheet.note }}</div>
+      } @else {
+        <div class="po-note-text text-500">{{ isEnglish ? 'No remarks.' : 'কোনো মন্তব্য নেই।' }}</div>
+      }
+    }
+  </div>
+
+  <!-- Edit mode: Save / Cancel buttons -->
+  @if (editing) {
+    <div class="po-edit-actions">
+      <p-button label="{{ isEnglish ? 'Cancel' : 'বাতিল' }}" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="cancelEdit()"></p-button>
+      <p-button label="{{ isEnglish ? 'Save' : 'সংরক্ষণ' }}" icon="pi pi-check" [loading]="saving" (onClick)="saveChanges()"></p-button>
+    </div>
+  }
+
+  <!-- Closing line -->
+  @if (!editing) {
+    <div class="ns-preview-closing">{{ isEnglish ? 'Presented for your kind approval.' : 'আপনার সদয় অনুমোদনের জন্য উপস্থাপন করা হলো।' }}</div>
+
+    <!-- Approval chain & Prepared by -->
+    <div class="ns-preview-signatories">
+      <div class="ns-preview-approvers">
+        @for (item of approversDetails; track item.step + item.rabId) {
+          <div class="ns-preview-signatory">
+            <span class="ns-preview-signatory-role">{{ item.step }}</span>
+            <span class="font-medium">{{ item.name }}</span>
+            <span class="text-600 text-sm">RAB ID: {{ item.rabId }}</span>
+            <span class="text-600 text-sm">{{ isEnglish ? 'Rank:' : 'পদ:' }} {{ item.rank }}</span>
+            <span class="text-600 text-sm">{{ isEnglish ? 'Current Service Rank:' : 'বর্তমান সেবা পদ:' }} {{ item.serviceRank }}</span>
+          </div>
+        }
+      </div>
+      <div class="ns-preview-initiator">
+        @if (initiatorDetails) {
+          <div class="ns-preview-signatory align-items-end">
+            <span class="ns-preview-signatory-role">{{ initiatorDetails.step }}</span>
+            <span class="font-medium">{{ initiatorDetails.name }}</span>
+            <span class="text-600 text-sm">RAB ID: {{ initiatorDetails.rabId }}</span>
+            <span class="text-600 text-sm">{{ isEnglish ? 'Rank:' : 'পদ:' }} {{ initiatorDetails.rank }}</span>
+            <span class="text-600 text-sm">{{ isEnglish ? 'Current Service Rank:' : 'বর্তমান সেবা পদ:' }} {{ initiatorDetails.serviceRank }}</span>
+          </div>
+        }
+        <div class="ns-preview-signatory align-items-end">
+          <span class="font-medium">{{ noteSheet?.preparedBy || '—' }}</span>
+          <span class="text-600 text-sm">{{ isEnglish ? 'Prepared by' : 'প্রস্তুতকারী' }}</span>
+          <span class="text-500 text-sm">{{ formatDate(noteSheet?.noteSheetDate) }}</span>
+        </div>
+      </div>
+    </div>
+  }
+</div>

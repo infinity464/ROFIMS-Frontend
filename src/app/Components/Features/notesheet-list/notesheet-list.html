@@ -321,7 +321,7 @@
   }
 
   <!-- Remark dialog for Approve / Decline / Back -->
-  <p-dialog header="{{ remarkAction === 'approve' ? 'Approve' : remarkAction === 'decline' ? 'Decline' : 'Back' }} with remark" [(visible)]="showRemarkDialog" [modal]="true" [style]="{ width: '28rem' }" (onHide)="selectedRow = null; remarkAction = null" [draggable]="false" [resizable]="false">
+  <p-dialog header="{{ remarkAction === 'approve' ? 'Approve' : remarkAction === 'decline' ? 'Decline' : 'Back' }} with Remark" [(visible)]="showRemarkDialog" [modal]="true" [style]="{ width: '28rem' }" [contentStyle]="{ 'border-top': '2px solid var(--primary-color)' }" (onHide)="selectedRow = null; remarkAction = null" [draggable]="false" [resizable]="false">
     <div class="flex flex-col gap-2">
       <label class="font-medium">Remark (optional for Approve)</label>
       <textarea pTextarea [(ngModel)]="remarkText" rows="3" class="w-full"></textarea>
@@ -337,29 +337,55 @@
     header="{{ getPreviewDialogHeader() }}"
     [(visible)]="showPreviewDialog"
     [modal]="true"
-    [style]="{ width: '42rem', maxWidth: '95vw' }"
-    [contentStyle]="{ overflow: 'auto' }"
+    [style]="{ width: '58rem', maxWidth: '95vw' }"
+    [contentStyle]="{ overflow: 'auto', 'border-top': '2px solid var(--primary-color)' }"
     (onHide)="previewNoteSheet = null; initiatorDetails = null; approversDetails = []"
     [draggable]="false"
     [resizable]="true">
     @if (previewLoading) {
       <div class="flex align-items-center justify-content-center p-4"><i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i></div>
+    } @else if (previewNoteSheet && isPreviewNewPosting()) {
+      <app-posting-order-preview
+        [noteSheet]="previewNoteSheet"
+        [isEnglish]="isPreviewEnglish()"
+        [initiatorDetails]="initiatorDetails"
+        [approversDetails]="approversDetails"
+        (saved)="onPostingOrderSaved()">
+      </app-posting-order-preview>
     } @else if (previewNoteSheet) {
-      <div class="notesheet-preview-doc surface-50 p-4 border-round">
-        <div class="text-center mb-3">
-          <div class="font-bold text-xl text-900">{{ isPreviewEnglish() ? 'NOTE SHEET' : 'মন্তব্যপত্র' }}</div>
+      <div class="notesheet-preview-doc">
+        <div class="ns-preview-header">
+          <div class="ns-preview-title">{{ isPreviewEnglish() ? 'NOTE SHEET' : 'মন্তব্যপত্র' }}</div>
           @if (!isPreviewEnglish()) {
-            <div class="font-semibold text-lg text-800 mt-1">মন্তব্যপত্র</div>
+            <div class="ns-preview-subtitle">মন্তব্যপত্র</div>
           }
         </div>
-        <div class="text-center font-bold text-900 mb-3">{{ previewNoteSheet.subject || '' }}</div>
-        <div class="mb-2">
-          <span class="font-semibold">{{ isPreviewEnglish() ? 'Reference:' : 'সুত্রঃ' }}</span>
-          <span class="ml-2">{{ previewNoteSheet.referenceNumber || (isPreviewEnglish() ? '—' : '—') }}</span>
+
+        <!-- Meta info -->
+        <div class="ns-preview-meta">
+          <div class="ns-preview-meta-item">
+            <span class="ns-preview-meta-label">{{ isPreviewEnglish() ? 'Note-Sheet No:' : 'মন্তব্যপত্র নং:' }}</span>
+            <span>{{ previewNoteSheet.noteSheetNo || '—' }}</span>
+          </div>
+          <div class="ns-preview-meta-item">
+            <span class="ns-preview-meta-label">{{ isPreviewEnglish() ? 'Date:' : 'তারিখ:' }}</span>
+            <span>{{ formatDate(previewNoteSheet.noteSheetDate) }}</span>
+          </div>
+          @if (previewNoteSheet.referenceNumber) {
+            <div class="ns-preview-meta-item">
+              <span class="ns-preview-meta-label">{{ isPreviewEnglish() ? 'Reference:' : 'সুত্রঃ' }}</span>
+              <span>{{ previewNoteSheet.referenceNumber }}</span>
+            </div>
+          }
         </div>
+
+        <!-- Subject -->
+        @if (previewNoteSheet.subject) {
+          <div class="ns-preview-subject">{{ previewNoteSheet.subject }}</div>
+        }
         @if (isPreviewExBdLeave()) {
-          <div class="mb-3 p-2 surface-100 border-round text-sm">
-            <strong class="block mb-1">{{ isPreviewEnglish() ? 'Ex-BD Leave details' : 'এক্স-বিডি ছুটির বিবরণ' }}</strong>
+          <div class="ns-preview-exbd">
+            <strong class="block mb-1">{{ isPreviewEnglish() ? 'Ex-BD Leave Details' : 'এক্স-বিডি ছুটির বিবরণ' }}</strong>
             <div class="flex flex-wrap gap-3 mt-1">
               @if (previewNoteSheet.purposeOfExBdLeaveId != null) {
                 <span>{{ isPreviewEnglish() ? 'Purpose:' : 'উদ্দেশ্য:' }} {{ previewNoteSheet.purposeOfExBdLeaveId }}</span>
@@ -379,13 +405,19 @@
             </div>
           </div>
         }
-        <div class="notesheet-preview-body border-1 surface-border border-round p-3 mb-3" [innerHTML]="getPreviewMainTextSafe()"></div>
+        <!-- Main text body -->
+        <div class="ns-preview-body-section">
+          <div class="ns-preview-body-label">{{ isPreviewEnglish() ? 'Content' : 'বিষয়বস্তু' }}</div>
+          <div class="notesheet-preview-body" [innerHTML]="getPreviewMainTextSafe()"></div>
+        </div>
+
         @if (getPreviewSupportingDocumentsWithIds().length > 0) {
-          <div class="mb-3 p-2 surface-100 border-round">
-            <strong class="text-sm">{{ isPreviewEnglish() ? 'Supporting Documents:' : 'সহায়ক নথি:' }}</strong>
+          <div class="ns-preview-docs">
+            <div class="ns-preview-docs-label">{{ isPreviewEnglish() ? 'Supporting Documents' : 'সহায়ক নথি' }}</div>
             <div class="flex flex-column gap-1 mt-2">
               @for (doc of getPreviewSupportingDocumentsWithIds(); track doc.fileId) {
                 <div class="flex align-items-center gap-2">
+                  <i class="pi pi-file text-500"></i>
                   <span class="text-sm flex-1" style="min-width: 0; overflow: hidden; text-overflow: ellipsis;">{{ doc.fileName }}</span>
                   <p-button type="button" icon="pi pi-eye" [rounded]="true" [text]="true" size="small" pTooltip="Preview" (onClick)="onPreviewSupportingDoc(doc.fileId, doc.fileName)"></p-button>
                   <p-button type="button" icon="pi pi-download" [rounded]="true" [text]="true" size="small" pTooltip="Download" (onClick)="onDownloadSupportingDoc(doc.fileId, doc.fileName)"></p-button>
@@ -394,33 +426,36 @@
             </div>
           </div>
         }
-        <div class="mb-3">{{ isPreviewEnglish() ? 'Presented for your kind approval.' : 'আপনার সদয় অনুমোদনের জন্য উপস্থাপন করা হলো।' }}</div>
-        <div class="flex justify-content-between align-items-start gap-4">
-          <div class="flex flex-column gap-2">
+        <!-- Closing line -->
+        <div class="ns-preview-closing">{{ isPreviewEnglish() ? 'Presented for your kind approval.' : 'আপনার সদয় অনুমোদনের জন্য উপস্থাপন করা হলো।' }}</div>
+
+        <!-- Approval chain & Prepared by -->
+        <div class="ns-preview-signatories">
+          <div class="ns-preview-approvers">
             @for (item of approversDetails; track item.step + item.rabId) {
-              <div class="flex flex-column text-sm">
-                <span class="font-semibold text-700">{{ item.step }}</span>
-                <span>{{ item.name }}</span>
-                <span class="text-600">RAB ID: {{ item.rabId }}</span>
-                <span class="text-600">{{ isPreviewEnglish() ? 'Rank:' : 'পদ:' }} {{ item.rank }}</span>
-                <span class="text-600">{{ isPreviewEnglish() ? 'Current Service Rank:' : 'বর্তমান সেবা পদ:' }} {{ item.serviceRank }}</span>
+              <div class="ns-preview-signatory">
+                <span class="ns-preview-signatory-role">{{ item.step }}</span>
+                <span class="font-medium">{{ item.name }}</span>
+                <span class="text-600 text-sm">RAB ID: {{ item.rabId }}</span>
+                <span class="text-600 text-sm">{{ isPreviewEnglish() ? 'Rank:' : 'পদ:' }} {{ item.rank }}</span>
+                <span class="text-600 text-sm">{{ isPreviewEnglish() ? 'Current Service Rank:' : 'বর্তমান সেবা পদ:' }} {{ item.serviceRank }}</span>
               </div>
             }
           </div>
-          <div class="text-right flex flex-column gap-2">
+          <div class="ns-preview-initiator">
             @if (initiatorDetails) {
-              <div class="flex flex-column text-sm align-items-end">
-                <span class="font-semibold text-700">{{ initiatorDetails.step }}</span>
-                <span>{{ initiatorDetails.name }}</span>
-                <span class="text-600">RAB ID: {{ initiatorDetails.rabId }}</span>
-                <span class="text-600">{{ isPreviewEnglish() ? 'Rank:' : 'পদ:' }} {{ initiatorDetails.rank }}</span>
-                <span class="text-600">{{ isPreviewEnglish() ? 'Current Service Rank:' : 'বর্তমান সেবা পদ:' }} {{ initiatorDetails.serviceRank }}</span>
+              <div class="ns-preview-signatory align-items-end">
+                <span class="ns-preview-signatory-role">{{ initiatorDetails.step }}</span>
+                <span class="font-medium">{{ initiatorDetails.name }}</span>
+                <span class="text-600 text-sm">RAB ID: {{ initiatorDetails.rabId }}</span>
+                <span class="text-600 text-sm">{{ isPreviewEnglish() ? 'Rank:' : 'পদ:' }} {{ initiatorDetails.rank }}</span>
+                <span class="text-600 text-sm">{{ isPreviewEnglish() ? 'Current Service Rank:' : 'বর্তমান সেবা পদ:' }} {{ initiatorDetails.serviceRank }}</span>
               </div>
             }
-            <div>
-              <div class="font-medium">{{ previewNoteSheet.preparedBy || '—' }}</div>
-              <div class="text-sm text-600">{{ isPreviewEnglish() ? 'Prepared by' : 'প্রস্তুতকারী' }}</div>
-              <div class="text-sm text-500">{{ formatDate(previewNoteSheet.noteSheetDate) }}</div>
+            <div class="ns-preview-signatory align-items-end">
+              <span class="font-medium">{{ previewNoteSheet.preparedBy || '—' }}</span>
+              <span class="text-600 text-sm">{{ isPreviewEnglish() ? 'Prepared by' : 'প্রস্তুতকারী' }}</span>
+              <span class="text-500 text-sm">{{ formatDate(previewNoteSheet.noteSheetDate) }}</span>
             </div>
           </div>
         </div>
@@ -430,21 +465,22 @@
 
   <!-- Edit main text modal -->
   <p-dialog
-    header="Edit main text"
+    header="Edit Main Text"
     [(visible)]="showEditMainTextDialog"
     [modal]="true"
-    [style]="{ width: '36rem' }"
-    [contentStyle]="{ overflow: 'auto' }"
+    [style]="{ width: '42rem' }"
+    [contentStyle]="{ overflow: 'auto', 'border-top': '2px solid var(--primary-color)' }"
     (onHide)="editMainTextNoteSheet = null; mainTextEditValue = ''"
     [draggable]="false"
     [resizable]="false">
-    <div class="flex flex-col gap-2">
-      <label class="font-medium">Main Text</label>
+    <div class="flex flex-col gap-2 mt-3">
+      <label class="font-semibold block mb-2 text-700">Main Text</label>
       <p-editor [(ngModel)]="mainTextEditValue" [style]="{ height: '220px' }" placeholder="Edit content..."></p-editor>
     </div>
     <ng-template pTemplate="footer">
-      <p-button label="Cancel" [text]="true" (onClick)="showEditMainTextDialog = false"></p-button>
+      <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="showEditMainTextDialog = false"></p-button>
       <p-button label="Save" icon="pi pi-check" [loading]="savingMainText" (onClick)="saveMainText()"></p-button>
     </ng-template>
   </p-dialog>
 </p-fluid>
+

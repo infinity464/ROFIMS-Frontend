@@ -27,6 +27,7 @@ import { InputIconModule } from 'primeng/inputicon';
 import { forkJoin } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { Table } from 'primeng/table';
+import { PostingOrderPreviewComponent } from './posting-order-preview/posting-order-preview';
 
 export interface NoteSheetInfoRow {
   noteSheetId: number;
@@ -71,6 +72,10 @@ export interface NoteSheetInfoFull extends NoteSheetInfoRow {
   dateOfVisitFrom?: string | null;
   dateOfVisitTo?: string | null;
   totalDays?: number | null;
+  /** New Posting specific */
+  draftPostingMasterId?: number | null;
+  note?: string | null;
+  preparedByEmployeeId?: number | null;
 }
 
 export type NoteSheetSection = 'draft' | 'pending' | 'approved' | 'declined' | 'all';
@@ -92,7 +97,8 @@ export type NoteSheetSection = 'draft' | 'pending' | 'approved' | 'declined' | '
     DatePickerModule,
     InputTextModule,
     IconFieldModule,
-    InputIconModule
+    InputIconModule,
+    PostingOrderPreviewComponent
   ],
   providers: [MessageService],
   templateUrl: './notesheet-list.html',
@@ -236,11 +242,23 @@ export class NotesheetListComponent implements OnInit {
     return this.previewNoteSheet?.noteSheetType === NoteSheetType.ExBDLeave;
   }
 
-  /** Preview dialog header: type-specific (Ex-BD Leave vs general). */
+  /** Called when posting-order-preview saves successfully. */
+  onPostingOrderSaved(): void {
+    this.loadAll();
+  }
+
+  /** Whether the previewed note sheet is New Posting. */
+  isPreviewNewPosting(): boolean {
+    return this.previewNoteSheet?.noteSheetType === NoteSheetType.NewPosting;
+  }
+
+  /** Preview dialog header: type-specific. */
   getPreviewDialogHeader(): string {
     const en = this.isPreviewEnglish();
     if (this.isPreviewExBdLeave())
       return en ? 'Note-Sheet for Ex-BD Leave – Preview' : 'এক্স-বিডি ছুটির মন্তব্যপত্র – প্রাকদর্শন';
+    if (this.isPreviewNewPosting())
+      return en ? 'Posting Order Note-Sheet – Preview' : 'পোস্টিং অর্ডার মন্তব্যপত্র – প্রাকদর্শন';
     return en ? 'Note Sheet – Preview' : 'মন্তব্যপত্র – প্রাকদর্শন';
   }
 
