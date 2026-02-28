@@ -274,6 +274,24 @@ export class EmpService {
         });
     }
 
+    /** Upload signature image for an employee. Accepts a Blob (cropped image). */
+    uploadSignature(employeeId: number, file: Blob): Observable<any> {
+        const form = new FormData();
+        form.append('employeeId', String(employeeId));
+        form.append('file', file, 'signature.png');
+        return this.http.post(`${this.empApi}/EmployeeInfo/UploadSignature`, form);
+    }
+
+    /** Get signature image URL for an employee. Returns the API URL string (not an Observable). */
+    getSignatureUrl(employeeId: number): string {
+        return `${this.empApi}/EmployeeInfo/GetSignature/${employeeId}`;
+    }
+
+    /** Get signature image as a Blob (uses HttpClient with auth headers). */
+    getSignatureBlob(employeeId: number): Observable<Blob> {
+        return this.http.get(`${this.empApi}/EmployeeInfo/GetSignature/${employeeId}`, { responseType: 'blob' });
+    }
+
     /** Trigger browser download of a blob with the given file name. */
     triggerFileDownload(blob: Blob, fileName: string): void {
         const url = URL.createObjectURL(blob);

@@ -1,0 +1,128 @@
+<p-toast></p-toast>
+
+<div class="form-card">
+    <div class="form-card-header">
+        <h3 class="form-card-title">Employee Signature Upload</h3>
+    </div>
+
+    <!-- Employee Search -->
+    <div class="form-section">
+        <app-employee-search
+            (onEmployeeFound)="onEmployeeFound($event)"
+            (onSearchReset)="onSearchReset()">
+        </app-employee-search>
+    </div>
+
+    @if (employeeId) {
+        <div class="form-section">
+            <!-- Row 1: File input + Crop toggle -->
+            <div class="form-row">
+                <div class="form-field" style="flex: 2; min-width: 300px;">
+                    <label class="form-label">Select Signature Image</label>
+                    <p-fileUpload
+                        #fileUploader
+                        mode="basic"
+                        chooseLabel="Choose Signature Image"
+                        chooseIcon="pi pi-image"
+                        accept="image/png,image/jpeg,image/jpg"
+                        (onSelect)="onFileSelected($event)"
+                        [auto]="false">
+                    </p-fileUpload>
+                    <small class="text-500 mt-1 block">PNG or JPG, max 1 MB. All signatures are stored at 600x200px.</small>
+                </div>
+                <div class="form-field-fixed" style="min-width: 160px;">
+                    <label class="form-label">Remove Background</label>
+                    <div class="flex align-items-center gap-2 pt-2">
+                        <p-toggleSwitch [(ngModel)]="removeBackground" (onChange)="onRemoveBackgroundChange()"></p-toggleSwitch>
+                        <span class="text-600 text-sm">{{ removeBackground ? 'On' : 'Off' }}</span>
+                    </div>
+                </div>
+                <div class="form-field-fixed" style="min-width: 140px;">
+                    <label class="form-label">Enable Crop</label>
+                    <div class="flex align-items-center gap-2 pt-2">
+                        <p-toggleSwitch [(ngModel)]="enableCrop" (onChange)="onCropToggleChange()"></p-toggleSwitch>
+                        <span class="text-600 text-sm">{{ enableCrop ? 'On' : 'Off' }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cropper (when crop is enabled and image selected) -->
+            @if (enableCrop && showCropper) {
+                <div class="form-row">
+                    <div class="form-field" style="flex: 2; min-width: 300px;">
+                        <div class="flex align-items-center justify-content-between mb-2">
+                            <label class="form-label mb-0">Crop Signature</label>
+                            <div class="flex align-items-center gap-2">
+                                <p-button icon="pi pi-minus" [rounded]="true" [text]="true" size="small" (onClick)="zoomOut()" pTooltip="Zoom Out"></p-button>
+                                <span class="text-600 text-sm" style="min-width: 40px; text-align: center;">{{ (zoomLevel * 100) | number:'1.0-0' }}%</span>
+                                <p-button icon="pi pi-plus" [rounded]="true" [text]="true" size="small" (onClick)="zoomIn()" pTooltip="Zoom In"></p-button>
+                                <p-button icon="pi pi-refresh" [rounded]="true" [text]="true" size="small" (onClick)="resetZoom()" pTooltip="Reset Zoom"></p-button>
+                            </div>
+                        </div>
+                        <div class="cropper-container">
+                            <image-cropper
+                                [imageFile]="imageFile ?? undefined"
+                                [maintainAspectRatio]="true"
+                                [aspectRatio]="3 / 1"
+                                [containWithinAspectRatio]="false"
+                                [allowMoveImage]="true"
+                                [transform]="transform"
+                                format="png"
+                                (imageCropped)="imageCropped($event)"
+                                (imageLoaded)="imageLoaded()"
+                                (loadImageFailed)="loadImageFailed()">
+                            </image-cropper>
+                        </div>
+                        <small class="text-500 mt-1 block">Drag image to move. Use +/- to zoom. Drag corners to resize crop.</small>
+                    </div>
+                    <div class="form-field" style="flex: 1; min-width: 200px;">
+                        @if (croppedImageUrl) {
+                            <label class="form-label">{{ processedPreviewUrl ? 'Preview (BG Removed)' : 'Cropped Preview' }}</label>
+                            <div class="signature-preview">
+                                <img [src]="processedPreviewUrl || croppedImageUrl" alt="Cropped signature" />
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+
+            <!-- Direct preview (when crop is disabled and image selected) -->
+            @if (!enableCrop && directPreviewUrl) {
+                <div class="form-row">
+                    <div class="form-field" style="max-width: 350px;">
+                        <label class="form-label">{{ processedPreviewUrl ? 'Preview (BG Removed)' : 'Selected Image Preview' }}</label>
+                        <div class="signature-preview">
+                            <img [src]="processedPreviewUrl || directPreviewUrl" alt="Selected signature" />
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Current Signature -->
+            @if (currentSignatureUrl) {
+                <div class="form-row">
+                    <div class="form-field" style="max-width: 350px;">
+                        <label class="form-label">Current Signature</label>
+                        <div class="signature-preview signature-preview-current">
+                            <img [src]="currentSignatureUrl" alt="Current signature" (error)="onSignatureLoadError()" />
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Actions -->
+            <div class="form-actions mt-3">
+                @if (showCropper || directFile) {
+                    <p-button label="Cancel" icon="pi pi-times" severity="secondary" (onClick)="resetSelection()"></p-button>
+                }
+                <p-button
+                    [label]="currentSignatureUrl ? 'Update Signature' : 'Upload Signature'"
+                    icon="pi pi-upload"
+                    [loading]="uploading"
+                    [disabled]="!hasImageReady"
+                    (onClick)="upload()">
+                </p-button>
+            </div>
+        </div>
+    }
+</div>

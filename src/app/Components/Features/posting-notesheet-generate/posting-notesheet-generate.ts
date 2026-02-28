@@ -11,6 +11,7 @@ import { SelectModule } from 'primeng/select';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { DatePickerModule } from 'primeng/datepicker';
 import { EditorModule } from 'primeng/editor';
+import { TextareaModule } from 'primeng/textarea';
 import { ToastModule } from 'primeng/toast';
 import { environment } from '@/Core/Environments/environment';
 import { HttpClient } from '@angular/common/http';
@@ -33,6 +34,7 @@ import { NoteSheetType } from '@/models/enums';
         MultiSelectModule,
         DatePickerModule,
         EditorModule,
+        TextareaModule,
         ToastModule,
         FileReferencesFormComponent
     ],
@@ -71,6 +73,7 @@ export class PostingNotesheetGenerateComponent implements OnInit {
             noteSheetDate: [null as Date | null, Validators.required],
             referenceNumber: [''],
             mainText: [''],
+            note: [''],
             preparedBy: [''],
             initiatorId: [null as number | null],
             recommenderIds: [[] as number[]],
@@ -163,6 +166,7 @@ export class PostingNotesheetGenerateComponent implements OnInit {
             noteSheetDate: null,
             referenceNumber: '',
             mainText: '',
+            note: '',
             preparedBy: user,
             initiatorId: null,
             recommenderIds: [],
@@ -275,7 +279,7 @@ export class PostingNotesheetGenerateComponent implements OnInit {
             noteSheetDate: dateStr,
             subject,
             mainText: d.mainText != null ? String(d.mainText) : '',
-            note: null,
+            note: d.note != null ? String(d.note) : null,
             initiatorId: d.initiatorId ?? 0,
             initiatorStatus: false,
             initiatorComments: '-',

@@ -111,7 +111,6 @@
                     <th style="min-width: 120px">Status</th>
                     <th style="min-width: 80px">Employees</th>
                     <th style="min-width: 100px">Created By</th>
-                    <th style="width: 100px; text-align: center">Action</th>
                 </tr>
             </ng-template>
             <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
@@ -122,14 +121,11 @@
                     <td>{{ getDraftPostingStatusLabel(row.draftPostingStatus) }}</td>
                     <td>{{ row.detailCount }}</td>
                     <td>{{ row.createdBy || '-' }}</td>
-                    <td style="text-align: center">
-                        <p-button label="Edit" icon="pi pi-pencil" size="small" (onClick)="onEditDraft(row)"></p-button>
-                    </td>
                 </tr>
             </ng-template>
             <ng-template pTemplate="emptymessage">
                 <tr>
-                    <td colspan="7" class="text-center p-4 text-500">No Draft New Posting saved yet. Select employees above and click Save.</td>
+                    <td colspan="6" class="text-center p-4 text-500">No Draft New Posting saved yet. Select employees above and click Save.</td>
                 </tr>
             </ng-template>
         </p-table>

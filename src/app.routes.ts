@@ -86,6 +86,7 @@ import { SupernumeraryList } from '@/Components/Features/supernumerary-list/supe
 import { SupernumeraryProfile } from '@/Components/Features/supernumerary-profile/supernumerary-profile';
 import { AddDraftNewPostingComponent } from '@/Components/Features/add-draft-new-posting/add-draft-new-posting';
 import { PostingNotesheetGenerateComponent } from '@/Components/Features/posting-notesheet-generate/posting-notesheet-generate';
+import { EmployeeSignatureUploadComponent } from '@/Components/Features/employee-signature-upload/employee-signature-upload';
 import { PresentlyServingMembers } from '@/Components/Features/presently-serving-members/presently-serving-members';
 import { ServingMemberProfile } from '@/Components/Features/presently-serving-members/serving-member-profile/serving-member-profile';
 import { ExMembers } from '@/Components/Features/ex-members/ex-members';
@@ -242,6 +243,7 @@ export const appRoutes: Routes = [
             { path: 'supernumerary-profile/:id', component: SupernumeraryProfile },
             { path: 'posting/add-draft-new-posting', component: AddDraftNewPostingComponent },
             { path: 'posting/notesheet-generate', component: PostingNotesheetGenerateComponent },
+            { path: 'employee-signature-upload', component: EmployeeSignatureUploadComponent },
             { path: 'presently-serving-members', component: PresentlyServingMembers },
             { path: 'presently-serving-members/profile/:employeeId', component: ServingMemberProfile },
             { path: 'ex-members', component: ExMembers },
