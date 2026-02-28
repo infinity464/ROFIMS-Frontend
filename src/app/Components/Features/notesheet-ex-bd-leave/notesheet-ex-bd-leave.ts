@@ -25,6 +25,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { take } from 'rxjs/operators';
 import { RouterLink } from '@angular/router';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
+import { NoteSheetType } from '@/models/enums';
 
 @Component({
     selector: 'app-notesheet-ex-bd-leave',
@@ -628,7 +629,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             : null;
         return {
             noteSheetId: 0,
-            noteSheetTypeId: 3,
+            noteSheetTypeId: NoteSheetType.ExBDLeave,
             employeeId: d.rabIdEmployeeId ?? 0,
             fileNumber: 0,
             noteSheetNo: (d.noteSheetNo && String(d.noteSheetNo).trim()) || 'AUTO',

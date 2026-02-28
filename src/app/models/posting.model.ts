@@ -77,6 +77,43 @@ export interface PostingNoteSheet {
     createdDate: string;
 }
 
+/** Draft New Posting master row (list below Add Draft New Posting). */
+export interface DraftPostingMasterDto {
+    id: number;
+    draftPostingNo: string;
+    draftPostingDate: string;
+    draftPostingStatus: string;
+    createdBy: string;
+    createdDate: string;
+    detailCount: number;
+}
+
+/** Detail row for GetDraftNewPostingById (Edit). */
+export interface DraftPostingDetailDto {
+    id: number;
+    employeeId: number;
+    serviceId: string;
+    rank: string;
+    corps: string;
+    trade: string;
+    name: string;
+    motherUnit: string;
+    rabJoingdate: string;
+}
+
+/** Draft New Posting by id with details (for Edit dialog). */
+export interface DraftPostingMasterWithDetailsDto {
+    id: number;
+    draftPostingNo: string;
+    draftPostingDate: string;
+    draftPostingStatus: string;
+    createdBy: string;
+    createdDate: string;
+    details: DraftPostingDetailDto[];
+}
+
+export type SaveDraftNewPostingResponse = { statusCode: number; description: string };
+
 /** Pending joining item (approved posting order, not yet joined). */
 export interface PendingJoiningItem {
     id: string;

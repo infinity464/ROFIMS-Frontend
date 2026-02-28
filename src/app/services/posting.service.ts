@@ -4,6 +4,8 @@ import { BehaviorSubject, Observable, map, tap } from 'rxjs';
 import { environment } from '@/Core/Environments/environment';
 import {
     DraftPostingList,
+    DraftPostingMasterDto,
+    DraftPostingMasterWithDetailsDto,
     PostingNoteSheet,
     PostingNoteSheetMember,
     PostingMemberRow,
@@ -97,6 +99,36 @@ export class PostingService {
 
     getDraftNewPostingListsSnapshot(): DraftPostingList[] {
         return this.draftNewLists$.value;
+    }
+
+    /** Save Draft New Posting: creates master + details, sets IsSendingNotesheetStatus to draftPosting for selected employees. */
+    saveDraftNewPosting(draftPostingNo: string, draftPostingDate: string, employeeIds: number[], createdBy: string): Observable<{ statusCode: number; description: string }> {
+        return this.http.post<{ statusCode: number; description: string }>(`${API}/SaveDraftNewPosting`, {
+            draftPostingNo,
+            draftPostingDate,
+            employeeIds,
+            createdBy
+        });
+    }
+
+    /** List Draft New Posting masters (for Add Draft New Posting page). */
+    getDraftNewPostingMasters(): Observable<DraftPostingMasterDto[]> {
+        return this.http.get<DraftPostingMasterDto[]>(`${API}/GetDraftNewPostingMasters`);
+    }
+
+    /** Get single Draft New Posting by id with details (for Edit). */
+    getDraftNewPostingById(id: number): Observable<DraftPostingMasterWithDetailsDto> {
+        return this.http.get<DraftPostingMasterWithDetailsDto>(`${API}/GetDraftNewPostingById/${id}`);
+    }
+
+    /** Update Draft New Posting master (DraftPostingNo, DraftPostingDate, DraftPostingStatus). */
+    updateDraftNewPosting(id: number, draftPostingNo: string, draftPostingDate: string, draftPostingStatus: string): Observable<{ statusCode: number; description: string }> {
+        return this.http.post<{ statusCode: number; description: string }>(`${API}/UpdateDraftNewPosting`, {
+            id,
+            draftPostingNo,
+            draftPostingDate,
+            draftPostingStatus
+        });
     }
 
     addToDraftNewPostingList(members: PostingMemberRow[], createdBy: string): Observable<{ id: number; listNo: string }> {

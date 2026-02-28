@@ -35,7 +35,6 @@
           <th style="width: 50px">Ser</th>
           <th>Note-Sheet Date</th>
           <th>Note-Sheet No</th>
-          <th>Draft Posting List No</th>
           <th>Unit</th>
           <th>Wing/Battalion</th>
           <th>Branch</th>
@@ -50,7 +49,6 @@
           <td>{{ rowIndex + 1 }}</td>
           <td>{{ formatDate(row.noteSheetDate) }}</td>
           <td>{{ row.noteSheetNo || '-' }}</td>
-          <td>{{ row.draftPostingListNo || '—' }}</td>
           <td>{{ getUnitLabel(row.unitId) }}</td>
           <td>{{ getWingLabel(row.wingBattalionId) }}</td>
           <td>{{ getBranchLabel(row.branchId) }}</td>

@@ -23,6 +23,7 @@ import { EmpService } from '@/services/emp-service';
 import { ActivatedRoute, Router } from '@angular/router';
 import { take, map } from 'rxjs/operators';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
+import { NoteSheetType } from '@/models/enums';
 
 @Component({
     selector: 'app-notesheet-generate',
@@ -88,7 +89,6 @@ export class NotesheetGenerateComponent implements OnInit {
     ) {
         this.form = this.fb.group({
             noteSheetTemplateId: [null as number | null],
-            draftPostingListNo: [''],
             textType: ['en'],
             noteSheetDate: [null as Date | null, Validators.required],
             unitId: [null as number | null],
@@ -131,7 +131,7 @@ export class NotesheetGenerateComponent implements OnInit {
         const cached = this.noteSheetEditCache.get(noteSheetId);
         if (cached != null && typeof cached === 'object') {
             const d = cached;
-            if (d.noteSheetTypeId === 3 || d.NoteSheetTypeId === 3) {
+            if (d.noteSheetTypeId === NoteSheetType.ExBDLeave || d.NoteSheetTypeId === NoteSheetType.ExBDLeave) {
                 this.noteSheetEditCache.set(noteSheetId, d);
                 this.router.navigate(['/notesheet-ex-bd-leave'], { queryParams: { id: noteSheetId } });
                 return;
@@ -147,7 +147,7 @@ export class NotesheetGenerateComponent implements OnInit {
                 const row = list[0];
                 if (!row) return;
                 const d = row;
-                if (d.noteSheetTypeId === 3 || d.NoteSheetTypeId === 3) {
+                if (d.noteSheetTypeId === NoteSheetType.ExBDLeave || d.NoteSheetTypeId === NoteSheetType.ExBDLeave) {
                     this.router.navigate(['/notesheet-ex-bd-leave'], { queryParams: { id: noteSheetId } });
                     return;
                 }
@@ -170,7 +170,6 @@ export class NotesheetGenerateComponent implements OnInit {
         }
         this.form.patchValue({
             noteSheetTemplateId: d.noteSheetTemplateId ?? d.NoteSheetTemplateId ?? null,
-            draftPostingListNo: String(d.draftPostingListNo ?? d.DraftPostingListNo ?? ''),
             textType: (d.textType ?? d.TextType) === 1 ? 'bn' : 'en',
             noteSheetDate,
             unitId: d.unitId ?? d.UnitId ?? null,
@@ -419,6 +418,28 @@ export class NotesheetGenerateComponent implements OnInit {
         });
     }
 
+    /** Reset form after successful save (create mode). */
+    private resetForm(): void {
+        const user = this.sharedService.getCurrentUser?.() ?? '';
+        this.form.reset({
+            noteSheetTemplateId: null,
+            textType: 'en',
+            noteSheetDate: null,
+            unitId: null,
+            wingBattalionId: null,
+            branchId: null,
+            referenceNumber: '',
+            noteSheetNo: '',
+            subject: '',
+            mainText: '',
+            preparedBy: user,
+            initiatorId: null,
+            recommenderIds: [],
+            finalApproverId: null
+        });
+        this.fileRows = [];
+    }
+
     submit(): void {
         if (this.form.invalid) {
             this.form.markAllAsTouched();
@@ -450,11 +471,15 @@ export class NotesheetGenerateComponent implements OnInit {
                             detail: this.editMode ? 'Note Sheet updated successfully.' : 'Note Sheet generated successfully.'
                         });
                         this.isSubmitting = false;
-                        if (this.editMode) this.router.navigate(['/notesheet-list/draft']);
+                        if (this.editMode) {
+                            this.router.navigate(['/notesheet-list/draft']);
+                        } else {
+                            this.resetForm();
+                        }
                     },
                     error: (err) => {
-                        if (err?.status === 400 && err?.error) {
-                            console.error('NoteSheet 400 response:', err.error);
+                        if (err?.status === 400 || err?.status === 500) {
+                            console.error('NoteSheet API error:', err?.status, err?.error);
                         }
                         const detail = this.getApiErrorMessage(err);
                         this.messageService.add({ severity: 'error', summary: 'Error', detail });
@@ -532,7 +557,7 @@ export class NotesheetGenerateComponent implements OnInit {
         const lastUpdatedBy = preparedBy;
         const payload: Record<string, unknown> = {
             noteSheetId: 0,
-            noteSheetTypeId: 1,
+            noteSheetTypeId: NoteSheetType.General,
             employeeId: 0,
             fileNumber: 0,
             noteSheetNo: (d.noteSheetNo && String(d.noteSheetNo).trim()) || 'AUTO',
@@ -552,7 +577,6 @@ export class NotesheetGenerateComponent implements OnInit {
             createdDate: now,
             lastupdate: now,
             noteSheetTemplateId: d.noteSheetTemplateId ?? null,
-            draftPostingListNo: (d.draftPostingListNo && String(d.draftPostingListNo).trim()) || null,
             textType: d.textType === 'bn' ? 1 : 0,
             unitId: d.unitId ?? null,
             wingBattalionId: d.wingBattalionId ?? null,
