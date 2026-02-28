@@ -16,7 +16,7 @@ import { EditorModule } from 'primeng/editor';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { EmpService } from '@/services/emp-service';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
-import { NoteSheetType } from '@/models/enums';
+import { NoteSheetType, NoteSheetStatus, NoteSheetApprovalStep } from '@/models/enums';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { CommonCode } from '@/Components/basic-setup/shared/models/common-code';
 import { TooltipModule } from 'primeng/tooltip';
@@ -24,12 +24,13 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { InputTextModule } from 'primeng/inputtext';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
-import { forkJoin } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { forkJoin, of } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
 import { Table } from 'primeng/table';
 import { PostingService } from '@/services/posting.service';
 import { DraftPostingEmployeeRow } from '@/models/posting.model';
 import { PostingOrderPreviewComponent } from './posting-order-preview/posting-order-preview';
+import { NotesheetSignatoryComponent } from '@/Components/Common/notesheet-signatory/notesheet-signatory';
 
 export interface NoteSheetInfoRow {
   noteSheetId: number;
@@ -102,7 +103,8 @@ export type NoteSheetSection = 'draft' | 'pending' | 'approved' | 'declined' | '
     InputTextModule,
     IconFieldModule,
     InputIconModule,
-    PostingOrderPreviewComponent
+    PostingOrderPreviewComponent,
+    NotesheetSignatoryComponent
   ],
   providers: [MessageService],
   templateUrl: './notesheet-list.html',
@@ -143,9 +145,11 @@ export class NotesheetListComponent implements OnInit {
   previewNoteSheet: NoteSheetInfoFull | null = null;
   previewLoading = false;
   /** Initiator details (show on right, below main text). */
-  initiatorDetails: { step: string; name: string; rabId: string; rank: string; serviceRank: string; appointment: string } | null = null;
+  initiatorDetails: { step: string; name: string; rabId: string; rank: string; serviceRank: string; appointment: string; employeeId?: number; signatureDataUrl?: string } | null = null;
   /** Approvers on left: Recommender(s) + Final Approver (dynamic, no static titles). */
-  approversDetails: { step: string; name: string; rabId: string; rank: string; serviceRank: string; appointment: string }[] = [];
+  approversDetails: { step: string; name: string; rabId: string; rank: string; serviceRank: string; appointment: string; employeeId?: number; signatureDataUrl?: string }[] = [];
+  /** Prepared by employee details. */
+  preparedByDetails: { step: string; name: string; rabId: string; rank: string; serviceRank: string; appointment: string; employeeId?: number; signatureDataUrl?: string } | null = null;
 
   /** Edit main text modal */
   showEditMainTextDialog = false;
@@ -160,15 +164,15 @@ export class NotesheetListComponent implements OnInit {
   loadingEmployees = false;
 
   readonly statusLabels: Record<number, string> = {
-    1: 'Draft',
-    2: 'Pending',
-    3: 'Approved',
-    4: 'Declined'
+    [NoteSheetStatus.Draft]: 'Draft',
+    [NoteSheetStatus.Pending]: 'Pending',
+    [NoteSheetStatus.Approved]: 'Approved',
+    [NoteSheetStatus.Declined]: 'Declined'
   };
   readonly stepLabels: Record<number, string> = {
-    1: 'Pending with Initiator',
-    2: 'Pending with Recommender',
-    3: 'Pending with Final Approver'
+    [NoteSheetApprovalStep.Initiator]: 'Pending with Initiator',
+    [NoteSheetApprovalStep.Recommender]: 'Pending with Recommender',
+    [NoteSheetApprovalStep.FinalApprover]: 'Pending with Final Approver'
   };
 
   constructor(
@@ -189,6 +193,7 @@ export class NotesheetListComponent implements OnInit {
     this.previewNoteSheet = null;
     this.initiatorDetails = null;
     this.approversDetails = [];
+    this.preparedByDetails = null;
     this.showPreviewDialog = true;
     this.previewLoading = true;
     this.http.get<NoteSheetInfoFull[]>(`${this.api}/GetFilteredByKeysAsyn/${row.noteSheetId}`).subscribe({
@@ -205,8 +210,9 @@ export class NotesheetListComponent implements OnInit {
     });
   }
 
-  /** Load approval chain: Initiator (right), Recommender(s) + Final Approver (left). All dynamic. */
+  /** Load approval chain: Prepared by, Initiator (right), Recommender(s) + Final Approver (left). All dynamic. Also loads signatures. */
   private loadApprovalChain(ns: NoteSheetInfoFull): void {
+    const preparedByEmpId = ns.preparedByEmployeeId && ns.preparedByEmployeeId > 0 ? ns.preparedByEmployeeId : null;
     const initiatorId = ns.initiatorId && ns.initiatorId > 0 ? ns.initiatorId : null;
     const approverIds: { empId: number; step: string }[] = [];
     try {
@@ -221,27 +227,66 @@ export class NotesheetListComponent implements OnInit {
         }
       }
     } catch { /* ignore */ }
-    if (ns.approvedByEmployeeId && ns.approvedByEmployeeId > 0) approverIds.push({ empId: ns.approvedByEmployeeId, step: 'Final Approver' });
-    const allIds = [...(initiatorId ? [{ empId: initiatorId, step: 'Initiator' }] : []), ...approverIds];
+    const finalApproverEmpId = (ns.approvedByEmployeeId && ns.approvedByEmployeeId > 0)
+      ? ns.approvedByEmployeeId
+      : (ns.finalApproverId && ns.finalApproverId > 0 ? ns.finalApproverId : null);
+    if (finalApproverEmpId) approverIds.push({ empId: finalApproverEmpId, step: 'Final Approver' });
+
+    const allIds = [
+      ...(preparedByEmpId ? [{ empId: preparedByEmpId, step: 'Prepared by' }] : []),
+      ...(initiatorId ? [{ empId: initiatorId, step: 'Initiator' }] : []),
+      ...approverIds
+    ];
     if (allIds.length === 0) return;
     const obs = allIds.map(({ empId, step }) =>
-      this.empService.getEmployeeSearchInfo(empId).pipe(
-        map((info) => {
-          const name = info?.fullNameEN ?? info?.FullNameEN ?? '-';
-          const rabId = info?.rabID ?? info?.RABID ?? '-';
+      forkJoin({
+        searchInfo: this.empService.getEmployeeSearchInfo(empId),
+        empInfo: this.empService.getEmployeeById(empId).pipe(catchError(() => of(null)))
+      }).pipe(
+        map(({ searchInfo, empInfo }) => {
+          const emp = empInfo as any;
+          const info = searchInfo as any;
+          const name = info?.fullNameEN ?? info?.FullNameEN ?? emp?.FullNameEN ?? emp?.fullNameEN ?? '-';
+          const rabId = emp?.RABID || emp?.Rabid || emp?.rabid || emp?.rabID || emp?.rabId
+            || info?.rabID || info?.RABID || info?.rabid || info?.Rabid || info?.rabId || '-';
           const rank = info?.rank ?? info?.Rank ?? '-';
-          const appointment = info?.appointment ?? info?.Appointment ?? '';
-          return { step, name, rabId, rank, serviceRank: rank, appointment };
+          const appointment = info?.appointment ?? info?.Appointment ?? emp?.Appointment ?? '';
+          return { step, name, rabId, rank, serviceRank: rank, appointment, employeeId: empId };
         })
       )
     );
     forkJoin(obs).subscribe({
       next: (results) => {
-        this.initiatorDetails = initiatorId ? results[0] ?? null : null;
-        this.approversDetails = approverIds.length > 0 ? results.slice(initiatorId ? 1 : 0) : [];
+        let idx = 0;
+        this.preparedByDetails = preparedByEmpId ? results[idx++] ?? null : null;
+        this.initiatorDetails = initiatorId ? results[idx++] ?? null : null;
+        this.approversDetails = approverIds.length > 0 ? results.slice(idx) : [];
+        this.loadSignaturesForChain();
       },
       error: () => {}
     });
+  }
+
+  /** Load signature images for all signatories in the approval chain. */
+  private loadSignaturesForChain(): void {
+    const allDetails = [
+      ...(this.preparedByDetails ? [this.preparedByDetails] : []),
+      ...(this.initiatorDetails ? [this.initiatorDetails] : []),
+      ...this.approversDetails
+    ].filter(d => d.employeeId && d.employeeId > 0);
+
+    for (const detail of allDetails) {
+      this.empService.getSignatureBlob(detail.employeeId!).subscribe({
+        next: (blob) => {
+          if (blob && blob.size > 0) {
+            const reader = new FileReader();
+            reader.onloadend = () => { detail.signatureDataUrl = reader.result as string; };
+            reader.readAsDataURL(blob);
+          }
+        },
+        error: () => { /* no signature available */ }
+      });
+    }
   }
 
   /** Whether preview is in English (textType 0 = en). */
@@ -491,10 +536,10 @@ export class NotesheetListComponent implements OnInit {
       this.loading = false;
     };
     const statusMap: Record<NoteSheetSection, string> = {
-      draft: '?noteSheetStatusId=1',
-      pending: '?noteSheetStatusId=2',
-      approved: '?noteSheetStatusId=3',
-      declined: '?noteSheetStatusId=4',
+      draft: `?noteSheetStatusId=${NoteSheetStatus.Draft}`,
+      pending: `?noteSheetStatusId=${NoteSheetStatus.Pending}`,
+      approved: `?noteSheetStatusId=${NoteSheetStatus.Approved}`,
+      declined: `?noteSheetStatusId=${NoteSheetStatus.Declined}`,
       all: ''
     };
     this.http.get<unknown>(`${base}${statusMap[this.section]}`).subscribe({
@@ -575,7 +620,7 @@ export class NotesheetListComponent implements OnInit {
   }
 
   presentStatus(row: NoteSheetInfoRow): string {
-    if (row.noteSheetStatusId !== 2) return '-';
+    if (row.noteSheetStatusId !== NoteSheetStatus.Pending) return '-';
     const step = row.currentApprovalStep ?? 1;
     return this.stepLabels[step] ?? `Step ${step}`;
   }

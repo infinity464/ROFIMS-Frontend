@@ -1,0 +1,26 @@
+.ns-signatory {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+
+    &.align-right {
+        align-items: flex-end;
+        text-align: right;
+    }
+}
+
+.ns-signatory-role {
+    font-weight: 600;
+    font-size: 0.8125rem;
+    color: var(--primary-color);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-bottom: 0.125rem;
+}
+
+.ns-signatory-signature {
+    max-width: 150px;
+    max-height: 50px;
+    object-fit: contain;
+    margin-bottom: 0.25rem;
+}

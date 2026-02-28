@@ -165,21 +165,6 @@
   text-align: right;
 }
 
-.ns-preview-signatory {
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-}
-
-.ns-preview-signatory-role {
-  font-weight: 600;
-  font-size: 0.8125rem;
-  color: var(--primary-color);
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  margin-bottom: 0.125rem;
-}
-
 /* ── Edit mode ── */
 .po-inline-input {
   padding: 0.25rem 0.5rem;

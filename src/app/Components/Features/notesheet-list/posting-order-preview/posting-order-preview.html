@@ -149,34 +149,37 @@
   @if (!editing) {
     <div class="ns-preview-closing">{{ isEnglish ? 'Presented for your kind approval.' : 'আপনার সদয় অনুমোদনের জন্য উপস্থাপন করা হলো।' }}</div>
 
-    <!-- Approval chain & Prepared by -->
+    <!-- Approval chain: Prepared by → Initiator (right), Recommender(s) → Final Approver (left) -->
     <div class="ns-preview-signatories">
       <div class="ns-preview-approvers">
         @for (item of approversDetails; track item.step + item.rabId) {
-          <div class="ns-preview-signatory">
-            <span class="ns-preview-signatory-role">{{ item.step }}</span>
-            <span class="font-medium">{{ item.name }}</span>
-            <span class="text-600 text-sm">RAB ID: {{ item.rabId }}</span>
-            <span class="text-600 text-sm">{{ isEnglish ? 'Rank:' : 'পদ:' }} {{ item.rank }}</span>
-            <span class="text-600 text-sm">{{ isEnglish ? 'Current Service Rank:' : 'বর্তমান সেবা পদ:' }} {{ item.serviceRank }}</span>
-          </div>
+          <app-notesheet-signatory
+            [detail]="item"
+            [showSignature]="shouldShowSignature(item.step)"
+            [isEnglish]="isEnglish"
+            align="left">
+          </app-notesheet-signatory>
         }
       </div>
       <div class="ns-preview-initiator">
+        <app-notesheet-signatory
+          [detail]="preparedByDetails"
+          [showSignature]="shouldShowSignature('Prepared by')"
+          [isEnglish]="isEnglish"
+          align="right"
+          [showDate]="true"
+          [dateValue]="formatDate(noteSheet?.noteSheetDate)"
+          [roleLabel]="isEnglish ? 'Prepared by' : 'প্রস্তুতকারী'"
+          [fallbackName]="noteSheet?.preparedBy || '—'">
+        </app-notesheet-signatory>
         @if (initiatorDetails) {
-          <div class="ns-preview-signatory align-items-end">
-            <span class="ns-preview-signatory-role">{{ initiatorDetails.step }}</span>
-            <span class="font-medium">{{ initiatorDetails.name }}</span>
-            <span class="text-600 text-sm">RAB ID: {{ initiatorDetails.rabId }}</span>
-            <span class="text-600 text-sm">{{ isEnglish ? 'Rank:' : 'পদ:' }} {{ initiatorDetails.rank }}</span>
-            <span class="text-600 text-sm">{{ isEnglish ? 'Current Service Rank:' : 'বর্তমান সেবা পদ:' }} {{ initiatorDetails.serviceRank }}</span>
-          </div>
+          <app-notesheet-signatory
+            [detail]="initiatorDetails"
+            [showSignature]="shouldShowSignature(initiatorDetails.step)"
+            [isEnglish]="isEnglish"
+            align="right">
+          </app-notesheet-signatory>
         }
-        <div class="ns-preview-signatory align-items-end">
-          <span class="font-medium">{{ noteSheet?.preparedBy || '—' }}</span>
-          <span class="text-600 text-sm">{{ isEnglish ? 'Prepared by' : 'প্রস্তুতকারী' }}</span>
-          <span class="text-500 text-sm">{{ formatDate(noteSheet?.noteSheetDate) }}</span>
-        </div>
       </div>
     </div>
   }

@@ -98,6 +98,21 @@ export const NoteSheetTypeOptions = [
     { label: 'Inter Posting', value: NoteSheetType.InterPosting }
 ];
 
+/** NoteSheetStatus – approval status of a note-sheet. */
+export enum NoteSheetStatus {
+    Draft = 1,
+    Pending = 2,
+    Approved = 3,
+    Declined = 4
+}
+
+/** NoteSheetApprovalStep – which approver the note-sheet is currently pending with. */
+export enum NoteSheetApprovalStep {
+    Initiator = 1,
+    Recommender = 2,
+    FinalApprover = 3
+}
+
 /** DraftPostingStatus – status of a Draft New Posting master (new, approved, decline). */
 export enum DraftPostingStatus {
     New = 'new',
