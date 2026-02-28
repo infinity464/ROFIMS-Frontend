@@ -213,7 +213,7 @@ export class PostingOrderPreviewComponent implements OnChanges, OnInit {
         const headerRow = new TableRow({
             tableHeader: true,
             children: cols.map(col => new TableCell({
-                children: [new Paragraph({ children: [new TextRun({ text: col, bold: true, size: 18, font })], alignment: AlignmentType.CENTER })],
+                children: [new Paragraph({ children: [new TextRun({ text: col, bold: true, size: 14, font })], alignment: AlignmentType.CENTER })],
                 borders: cellBorders,
                 width: { size: cellWidth, type: WidthType.DXA }
             }))
@@ -231,7 +231,7 @@ export class PostingOrderPreviewComponent implements OnChanges, OnInit {
                 emp.transferRabUnitName ?? '',
                 emp.remarks ?? ''
             ].map(val => new TableCell({
-                children: [new Paragraph({ children: [new TextRun({ text: val, size: 18, font })], spacing: { after: 40 } })],
+                children: [new Paragraph({ children: [new TextRun({ text: val, size: 14, font })], spacing: { after: 20 } })],
                 borders: cellBorders,
                 width: { size: cellWidth, type: WidthType.DXA }
             }))
@@ -304,7 +304,7 @@ export class PostingOrderPreviewComponent implements OnChanges, OnInit {
 
         const doc = new Document({
             sections: [{
-                properties: { page: { size: { orientation: PageOrientation.LANDSCAPE } } },
+                properties: { page: { size: { orientation: PageOrientation.PORTRAIT } } },
                 children
             }]
         });
@@ -352,13 +352,18 @@ export class PostingOrderPreviewComponent implements OnChanges, OnInit {
 
         // ── Offscreen container ──
         const container = document.createElement('div');
-        container.style.cssText = 'position:fixed;left:-9999px;top:0;width:1100px;padding:30px;background:#fff;z-index:-1';
+        container.style.cssText = 'position:absolute;left:-9999px;top:0;width:760px;padding:30px;background:#fff;z-index:-1;overflow:visible;box-sizing:border-box';
         container.innerHTML = `
-            <div style="font-family:${fontFamily};font-size:11pt;color:#000;line-height:1.6">
-                <h1 style="font-size:16pt;text-align:center;margin:0 0 10px 0">${this.escapeHtml(title)}</h1>
-                <div style="font-size:10pt;margin-bottom:12px;display:flex;gap:24px;flex-wrap:wrap">${metaParts.join('')}</div>
-                <div style="margin-bottom:12px">${this.noteSheet?.mainText ?? ''}</div>
-                <table style="width:100%;border-collapse:collapse;font-size:9pt">
+            <style>
+              .ns-pdf-wrap, .ns-pdf-wrap * { word-wrap:break-word!important; overflow-wrap:break-word!important; white-space:normal!important; max-width:100%!important; box-sizing:border-box!important; }
+              .ns-pdf-wrap img { max-width:100%!important; height:auto!important; }
+              .ns-pdf-wrap table, .ns-pdf-wrap th, .ns-pdf-wrap td { white-space:normal!important; }
+            </style>
+            <div class="ns-pdf-wrap" style="font-family:${fontFamily};font-size:10pt;color:#000;line-height:1.5;width:100%">
+                <h1 style="font-size:14pt;text-align:center;margin:0 0 10px 0">${this.escapeHtml(title)}</h1>
+                <div style="font-size:9pt;margin-bottom:10px;display:flex;gap:20px;flex-wrap:wrap">${metaParts.join('')}</div>
+                <div style="margin-bottom:10px;font-size:9pt">${this.noteSheet?.mainText ?? ''}</div>
+                <table style="width:100%;border-collapse:collapse;font-size:7pt">
                     <thead><tr>${headerCells}</tr></thead>
                     <tbody>${bodyRows}</tbody>
                 </table>
@@ -367,7 +372,7 @@ export class PostingOrderPreviewComponent implements OnChanges, OnInit {
             </div>`;
         container.querySelectorAll('th, td').forEach((cell: any) => {
             cell.style.border = '1px solid #000';
-            cell.style.padding = '4px 6px';
+            cell.style.padding = '2px 4px';
             cell.style.textAlign = 'left';
         });
         container.querySelectorAll('th').forEach((cell: any) => {
@@ -376,12 +381,13 @@ export class PostingOrderPreviewComponent implements OnChanges, OnInit {
         document.body.appendChild(container);
 
         try {
-            const canvas = await html2canvas(container, { scale: 1, useCORS: true, backgroundColor: '#ffffff', logging: false });
+            await new Promise(resolve => setTimeout(resolve, 300));
+            const canvas = await html2canvas(container, { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false, scrollY: -window.scrollY, height: container.scrollHeight, windowHeight: container.scrollHeight });
             const imgData = canvas.toDataURL('image/jpeg', 0.92);
             const imgWidth = canvas.width;
             const imgHeight = canvas.height;
 
-            const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
             const pdfWidth = pdf.internal.pageSize.getWidth() - 20;
             const pdfPageHeight = pdf.internal.pageSize.getHeight() - 20;
             const ratio = pdfWidth / imgWidth;
@@ -455,13 +461,13 @@ export class PostingOrderPreviewComponent implements OnChanges, OnInit {
         const html = `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><title>${this.escapeHtml(title)}</title>
 <style>
-    @page { size: A4 landscape; margin: 15mm; }
-    body { font-family: ${fontFamily}; font-size: 11pt; margin: 0; padding: 20px; color: #000; }
-    h1 { font-size: 16pt; text-align: center; margin: 0 0 12px 0; }
-    .meta { font-size: 10pt; margin-bottom: 14px; display: flex; gap: 28px; flex-wrap: wrap; }
-    .content { margin-bottom: 14px; line-height: 1.6; }
-    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-    th, td { border: 1px solid #000; padding: 5px 8px; font-size: 10pt; text-align: left; }
+    @page { size: A4 portrait; margin: 12mm; }
+    body { font-family: ${fontFamily}; font-size: 10pt; margin: 0; padding: 16px; color: #000; }
+    h1 { font-size: 14pt; text-align: center; margin: 0 0 10px 0; }
+    .meta { font-size: 9pt; margin-bottom: 10px; display: flex; gap: 20px; flex-wrap: wrap; }
+    .content { margin-bottom: 10px; line-height: 1.5; font-size: 9pt; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #000; padding: 2px 4px; font-size: 7pt; text-align: left; }
     th { font-weight: bold; }
     tr:nth-child(even) { background: #f5f5f5; }
     @media print { body { padding: 0; } tr:nth-child(even) { background: #f5f5f5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
@@ -510,8 +516,8 @@ export class PostingOrderPreviewComponent implements OnChanges, OnInit {
         // Initiator: show after initiator approved (step moved past Initiator) or fully approved/declined
         if (step === 'Initiator') return (statusId === NoteSheetStatus.Pending && currentStep >= NoteSheetApprovalStep.Recommender) || statusId >= NoteSheetStatus.Approved;
 
-        // Recommender(s): show after recommender approved (step moved past Recommender) or fully approved/declined
-        if (step.startsWith('Recommender')) return (statusId === NoteSheetStatus.Pending && currentStep >= NoteSheetApprovalStep.FinalApprover) || statusId >= NoteSheetStatus.Approved;
+        // Recommender(s): show individually as each signs (signatureDataUrl gate in template handles per-recommender)
+        if (step.startsWith('Recommender')) return (statusId === NoteSheetStatus.Pending && currentStep >= NoteSheetApprovalStep.Recommender) || statusId >= NoteSheetStatus.Approved;
 
         // Final Approver: show only after fully approved
         if (step === 'Final Approver') return statusId === NoteSheetStatus.Approved;

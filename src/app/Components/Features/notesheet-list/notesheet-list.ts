@@ -31,6 +31,13 @@ import { PostingService } from '@/services/posting.service';
 import { DraftPostingEmployeeRow } from '@/models/posting.model';
 import { PostingOrderPreviewComponent } from './posting-order-preview/posting-order-preview';
 import { NotesheetSignatoryComponent } from '@/Components/Common/notesheet-signatory/notesheet-signatory';
+import {
+    Document, Packer, Paragraph, TextRun,
+    AlignmentType, PageOrientation, ImageRun
+} from 'docx';
+import { saveAs } from 'file-saver';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 export interface NoteSheetInfoRow {
   noteSheetId: number;
@@ -317,6 +324,17 @@ export class NotesheetListComponent implements OnInit {
     return (this.previewNoteSheet?.noteSheetStatusId ?? 0) === NoteSheetStatus.Draft;
   }
 
+  shouldShowSignature(step: string): boolean {
+    const statusId = this.previewNoteSheet?.noteSheetStatusId ?? NoteSheetStatus.Draft;
+    const currentStep = this.previewNoteSheet?.currentApprovalStep ?? NoteSheetApprovalStep.Initiator;
+
+    if (step === 'Prepared by' || step === 'প্রস্তুতকারী') return true;
+    if (step === 'Initiator') return (statusId === NoteSheetStatus.Pending && currentStep >= NoteSheetApprovalStep.Recommender) || statusId >= NoteSheetStatus.Approved;
+    if (step.startsWith('Recommender')) return (statusId === NoteSheetStatus.Pending && currentStep >= NoteSheetApprovalStep.Recommender) || statusId >= NoteSheetStatus.Approved;
+    if (step === 'Final Approver') return statusId === NoteSheetStatus.Approved;
+    return false;
+  }
+
   togglePreviewEdit(): void {
     this.editSubject = this.previewNoteSheet?.subject ?? '';
     this.editMainText = this.previewNoteSheet?.mainText ?? '';
@@ -545,6 +563,286 @@ export class NotesheetListComponent implements OnInit {
         this.router.navigate(['/notesheet-generate'], { queryParams: { id: row.noteSheetId } });
       }
     });
+  }
+
+  // ─── General notesheet export helpers ─────────────────────────
+
+  private readonly stepTranslations: Record<string, string> = {
+    'Prepared by': 'প্রস্তুতকারী',
+    'Initiator': 'সূচনাকারী',
+    'Final Approver': 'চূড়ান্ত অনুমোদনকারী'
+  };
+
+  private translateStep(step: string): string {
+    if (this.isPreviewEnglish()) return step;
+    if (step.startsWith('Recommender')) {
+      const suffix = step.replace('Recommender', '').trim();
+      return suffix ? `সুপারিশকারী ${suffix}` : 'সুপারিশকারী';
+    }
+    return this.stepTranslations[step] ?? step;
+  }
+
+  private stripHtml(html: string): string {
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    return div.textContent || div.innerText || '';
+  }
+
+  private escapeHtml(s: string): string {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  private dataUrlToUint8Array(dataUrl: string): Uint8Array {
+    const base64 = dataUrl.split(',')[1];
+    const binary = atob(base64);
+    const array = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) { array[i] = binary.charCodeAt(i); }
+    return array;
+  }
+
+  // ─── General notesheet exports ──────────────────────────────
+
+  async exportGeneralWord(): Promise<void> {
+    const ns = this.previewNoteSheet;
+    if (!ns) return;
+    const bn = !this.isPreviewEnglish();
+    const font = bn ? 'SutonnyMJ' : 'Times New Roman';
+
+    const titlePara = new Paragraph({
+      children: [new TextRun({ text: bn ? 'মন্তব্যপত্র' : 'NOTE SHEET', bold: true, size: 32, font })],
+      alignment: AlignmentType.CENTER, spacing: { after: 200 }
+    });
+
+    const metaParts: string[] = [];
+    if (ns.noteSheetNo) metaParts.push(`${bn ? 'মন্তব্যপত্র নং:' : 'Note-Sheet No:'} ${ns.noteSheetNo}`);
+    if (ns.noteSheetDate) metaParts.push(`${bn ? 'তারিখ:' : 'Date:'} ${this.formatDate(ns.noteSheetDate)}`);
+    if (ns.referenceNumber) metaParts.push(`${bn ? 'সুত্র:' : 'Reference:'} ${ns.referenceNumber}`);
+    const metaPara = new Paragraph({
+      children: [new TextRun({ text: metaParts.join('    '), size: 20, font })],
+      spacing: { after: 200 }
+    });
+
+    const children: Paragraph[] = [titlePara, metaPara];
+
+    if (ns.subject) {
+      children.push(new Paragraph({
+        children: [new TextRun({ text: ns.subject, bold: true, size: 24, font })],
+        alignment: AlignmentType.CENTER, spacing: { after: 200 }
+      }));
+    }
+
+    const mainTextPlain = this.stripHtml(ns.mainText ?? '');
+    if (mainTextPlain) {
+      children.push(new Paragraph({
+        children: [new TextRun({ text: mainTextPlain, size: 22, font })],
+        spacing: { after: 200 }
+      }));
+    }
+
+    // Closing
+    children.push(new Paragraph({
+      children: [new TextRun({ text: bn ? 'আপনার সদয় অনুমোদনের জন্য উপস্থাপন করা হলো।' : 'Presented for your kind approval.', italics: true, size: 20, font })],
+      spacing: { before: 200, after: 300 }
+    }));
+
+    // Helper: build sig paragraphs
+    const buildSigParas = (detail: any, roleLabel: string, align: (typeof AlignmentType)[keyof typeof AlignmentType]): Paragraph[] => {
+      const paras: Paragraph[] = [];
+      if (!detail) return paras;
+      const showSig = detail.signatureDataUrl && this.shouldShowSignature(detail.step ?? roleLabel);
+      if (showSig) {
+        paras.push(new Paragraph({
+          children: [new ImageRun({ type: 'png', data: this.dataUrlToUint8Array(detail.signatureDataUrl), transformation: { width: 150, height: 50 } })],
+          alignment: align, spacing: { before: 200 }
+        }));
+      }
+      paras.push(new Paragraph({
+        children: [new TextRun({ text: '______________________________', size: 20, font })],
+        alignment: align, spacing: showSig ? {} : { before: 200 }
+      }));
+      paras.push(new Paragraph({
+        children: [new TextRun({ text: roleLabel, bold: true, size: 20, font })],
+        alignment: align
+      }));
+      const lines = [
+        detail.name,
+        detail.rabId && detail.rabId !== '-' ? `RAB ID: ${detail.rabId}` : '',
+        detail.rank && detail.rank !== '-' ? detail.rank : '',
+        detail.appointment && detail.appointment !== '-' ? detail.appointment : ''
+      ].filter((l: string) => l && l !== '-' && l !== '—');
+      lines.forEach((line: string) => {
+        paras.push(new Paragraph({ children: [new TextRun({ text: line, size: 20, font })], alignment: align }));
+      });
+      return paras;
+    };
+
+    // Initiator (right)
+    if (this.initiatorDetails) {
+      children.push(...buildSigParas(this.initiatorDetails, this.translateStep(this.initiatorDetails.step), AlignmentType.RIGHT));
+      children.push(new Paragraph({ spacing: { before: 300 } }));
+    }
+    // Recommender(s) + Final Approver (left)
+    for (const approver of this.approversDetails) {
+      children.push(...buildSigParas(approver, this.translateStep(approver.step), AlignmentType.LEFT));
+      children.push(new Paragraph({ spacing: { before: 200 } }));
+    }
+
+    const doc = new Document({
+      sections: [{ properties: { page: { size: { orientation: PageOrientation.PORTRAIT } } }, children }]
+    });
+    const blob = await Packer.toBlob(doc);
+    saveAs(blob, `NoteSheet_${ns.noteSheetNo ?? 'export'}.docx`);
+  }
+
+  async exportGeneralPdf(): Promise<void> {
+    const ns = this.previewNoteSheet;
+    if (!ns) return;
+    const bn = !this.isPreviewEnglish();
+    const fontFamily = bn ? "'Noto Sans Bengali', 'SolaimanLipi', 'Kalpurush', sans-serif" : "'Times New Roman', serif";
+    const title = bn ? 'মন্তব্যপত্র' : 'NOTE SHEET';
+
+    const metaParts: string[] = [];
+    if (ns.noteSheetNo) metaParts.push(`<span><strong>${bn ? 'মন্তব্যপত্র নং:' : 'Note-Sheet No:'}</strong> ${this.escapeHtml(ns.noteSheetNo)}</span>`);
+    if (ns.noteSheetDate) metaParts.push(`<span><strong>${bn ? 'তারিখ:' : 'Date:'}</strong> ${this.escapeHtml(this.formatDate(ns.noteSheetDate))}</span>`);
+    if (ns.referenceNumber) metaParts.push(`<span><strong>${bn ? 'সুত্র:' : 'Reference:'}</strong> ${this.escapeHtml(ns.referenceNumber)}</span>`);
+
+    const sigHtml = this.buildGeneralSignatoriesHtml();
+    const subjectHtml = ns.subject ? `<div style="text-align:center;font-weight:700;font-size:12pt;margin-bottom:10px;padding:6px;background:#f8fafc;border-radius:4px">${this.escapeHtml(ns.subject)}</div>` : '';
+    const closingText = bn ? 'আপনার সদয় অনুমোদনের জন্য উপস্থাপন করা হলো।' : 'Presented for your kind approval.';
+
+    const container = document.createElement('div');
+    container.style.cssText = 'position:absolute;left:-9999px;top:0;width:760px;padding:30px;background:#fff;z-index:-1;overflow:visible;box-sizing:border-box';
+    container.innerHTML = `
+      <style>
+        .ns-pdf-wrap, .ns-pdf-wrap * { word-wrap:break-word!important; overflow-wrap:break-word!important; white-space:normal!important; max-width:100%!important; box-sizing:border-box!important; }
+        .ns-pdf-wrap img { max-width:100%!important; height:auto!important; }
+      </style>
+      <div class="ns-pdf-wrap" style="font-family:${fontFamily};font-size:11pt;color:#000;line-height:1.6;width:100%">
+        <h1 style="font-size:16pt;text-align:center;margin:0 0 10px 0">${this.escapeHtml(title)}</h1>
+        <div style="font-size:10pt;margin-bottom:12px;display:flex;gap:24px;flex-wrap:wrap">${metaParts.join('')}</div>
+        ${subjectHtml}
+        <div style="margin-bottom:12px">${ns.mainText ?? ''}</div>
+        <p style="font-style:italic;color:#64748b;margin-top:16px;padding-top:10px;border-top:1px dashed #ccc">${this.escapeHtml(closingText)}</p>
+        ${sigHtml}
+      </div>`;
+    document.body.appendChild(container);
+
+    try {
+      await new Promise(resolve => setTimeout(resolve, 300));
+      const canvas = await html2canvas(container, { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false, scrollY: -window.scrollY, height: container.scrollHeight, windowHeight: container.scrollHeight });
+      const imgData = canvas.toDataURL('image/jpeg', 0.92);
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pdfWidth = pdf.internal.pageSize.getWidth() - 20;
+      const pdfPageHeight = pdf.internal.pageSize.getHeight() - 20;
+      const ratio = pdfWidth / imgWidth;
+      const scaledHeight = imgHeight * ratio;
+
+      if (scaledHeight <= pdfPageHeight) {
+        pdf.addImage(imgData, 'JPEG', 10, 10, pdfWidth, scaledHeight);
+      } else {
+        let remainingHeight = imgHeight;
+        let srcY = 0;
+        let page = 0;
+        const sliceHeight = Math.floor(pdfPageHeight / ratio);
+        while (remainingHeight > 0) {
+          if (page > 0) pdf.addPage();
+          const currentSlice = Math.min(sliceHeight, remainingHeight);
+          const sliceCanvas = document.createElement('canvas');
+          sliceCanvas.width = imgWidth;
+          sliceCanvas.height = currentSlice;
+          const ctx = sliceCanvas.getContext('2d')!;
+          ctx.drawImage(canvas, 0, srcY, imgWidth, currentSlice, 0, 0, imgWidth, currentSlice);
+          pdf.addImage(sliceCanvas.toDataURL('image/jpeg', 0.92), 'JPEG', 10, 10, pdfWidth, currentSlice * ratio);
+          srcY += currentSlice;
+          remainingHeight -= currentSlice;
+          page++;
+        }
+      }
+      pdf.save(`NoteSheet_${ns.noteSheetNo ?? 'export'}.pdf`);
+    } finally {
+      document.body.removeChild(container);
+    }
+  }
+
+  printGeneralPreview(): void {
+    const ns = this.previewNoteSheet;
+    if (!ns) return;
+    const bn = !this.isPreviewEnglish();
+    const fontFamily = bn ? "'Noto Sans Bengali', 'SolaimanLipi', 'Kalpurush', sans-serif" : "'Times New Roman', serif";
+    const title = bn ? 'মন্তব্যপত্র' : 'NOTE SHEET';
+
+    const metaParts: string[] = [];
+    if (ns.noteSheetNo) metaParts.push(`<strong>${bn ? 'মন্তব্যপত্র নং:' : 'Note-Sheet No:'}</strong> ${this.escapeHtml(ns.noteSheetNo)}`);
+    if (ns.noteSheetDate) metaParts.push(`<strong>${bn ? 'তারিখ:' : 'Date:'}</strong> ${this.escapeHtml(this.formatDate(ns.noteSheetDate))}`);
+    if (ns.referenceNumber) metaParts.push(`<strong>${bn ? 'সুত্র:' : 'Reference:'}</strong> ${this.escapeHtml(ns.referenceNumber)}`);
+
+    const sigHtml = this.buildGeneralSignatoriesHtml();
+    const subjectHtml = ns.subject ? `<div style="text-align:center;font-weight:700;font-size:12pt;margin-bottom:12px;padding:6px;background:#f8fafc;border-radius:4px">${this.escapeHtml(ns.subject)}</div>` : '';
+    const closingText = bn ? 'আপনার সদয় অনুমোদনের জন্য উপস্থাপন করা হলো।' : 'Presented for your kind approval.';
+
+    const html = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>${this.escapeHtml(title)}</title>
+<style>
+  @page { size: A4 portrait; margin: 15mm; }
+  body { font-family: ${fontFamily}; font-size: 11pt; margin: 0; padding: 20px; color: #000; line-height: 1.6; }
+  h1 { font-size: 16pt; text-align: center; margin: 0 0 12px 0; }
+  .meta { font-size: 10pt; margin-bottom: 14px; display: flex; gap: 28px; flex-wrap: wrap; }
+  .content { margin-bottom: 14px; }
+  .content p { margin: 0 0 0.5rem 0; }
+  @media print { body { padding: 0; } }
+</style></head><body>
+  <h1>${this.escapeHtml(title)}</h1>
+  <div class="meta">${metaParts.map(p => `<span>${p}</span>`).join('')}</div>
+  ${subjectHtml}
+  <div class="content">${ns.mainText ?? ''}</div>
+  <p style="font-style:italic;color:#64748b;margin-top:16px;padding-top:10px;border-top:1px dashed #ccc">${this.escapeHtml(closingText)}</p>
+  ${sigHtml}
+</body></html>`;
+
+    const win = window.open('', '_blank', 'width=800,height=700');
+    if (!win) return;
+    win.document.write(html);
+    win.document.close();
+    setTimeout(() => { win.print(); }, 600);
+  }
+
+  private buildGeneralSignatoriesHtml(): string {
+    const sigImg = (detail: any, align: string) => detail?.signatureDataUrl && this.shouldShowSignature(detail.step)
+      ? `<img src="${detail.signatureDataUrl}" style="width:150px;height:50px;object-fit:contain;display:block;${align === 'right' ? 'margin-left:auto' : ''}" />`
+      : '';
+    const sigBlock = (detail: any, align: string) => {
+      if (!detail) return '';
+      const lines = [
+        detail.rabId && detail.rabId !== '-' ? `RAB ID: ${detail.rabId}` : '',
+        detail.rank && detail.rank !== '-' ? detail.rank : '',
+        detail.appointment && detail.appointment !== '-' ? detail.appointment : ''
+      ].filter(Boolean);
+      return `<div style="text-align:${align};margin-top:20px;line-height:1.6">
+        ${sigImg(detail, align)}
+        <div style="width:160px;border-bottom:1.5px solid #000;margin-bottom:4px;${align === 'right' ? 'margin-left:auto' : ''}"></div>
+        <div style="font-weight:600;font-size:9pt;text-transform:uppercase;color:#000">${this.escapeHtml(this.translateStep(detail.step))}</div>
+        <div><strong>${this.escapeHtml(detail.name)}</strong></div>
+        ${lines.map((l: string) => `<div style="font-size:10pt">${this.escapeHtml(l)}</div>`).join('')}
+      </div>`;
+    };
+
+    let rightHtml = '';
+    if (this.initiatorDetails) {
+      rightHtml += sigBlock(this.initiatorDetails, 'right');
+    }
+    let leftHtml = '';
+    for (const approver of this.approversDetails) {
+      leftHtml += sigBlock(approver, 'left');
+    }
+
+    if (!leftHtml && !rightHtml) return '';
+    return `<div style="margin-top:30px">
+      ${rightHtml ? `<div>${rightHtml}</div>` : ''}
+      ${leftHtml ? `<div style="margin-top:24px">${leftHtml}</div>` : ''}
+    </div>`;
   }
 
   ngOnInit(): void {

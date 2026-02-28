@@ -1,6 +1,6 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { DomSanitizer } from '@angular/platform-browser';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { MessageService } from 'primeng/api';
 import { SharedService } from '@/shared/services/shared-service';
@@ -13,7 +13,6 @@ import { SelectModule } from 'primeng/select';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { DatePickerModule } from 'primeng/datepicker';
 import { EditorModule } from 'primeng/editor';
-import { DialogModule } from 'primeng/dialog';
 import { CommonCode } from '@/Components/basic-setup/shared/models/common-code';
 import { environment } from '@/Core/Environments/environment';
 import { HttpClient } from '@angular/common/http';
@@ -21,11 +20,10 @@ import { forkJoin } from 'rxjs';
 import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/file-references-form/file-references-form';
 import { EmpService } from '@/services/emp-service';
 import { ActivatedRoute, Router } from '@angular/router';
-import { take, map } from 'rxjs/operators';
+import { take } from 'rxjs/operators';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
 import { NoteSheetType } from '@/models/enums';
-import { NotesheetSignatoryComponent, SignatoryDetail } from '@/Components/Common/notesheet-signatory/notesheet-signatory';
 import { TooltipModule } from 'primeng/tooltip';
 import { ToastModule } from 'primeng/toast';
 
@@ -42,9 +40,7 @@ import { ToastModule } from 'primeng/toast';
         MultiSelectModule,
         DatePickerModule,
         EditorModule,
-        DialogModule,
         FileReferencesFormComponent,
-        NotesheetSignatoryComponent,
         TooltipModule,
         ToastModule
     ],
@@ -76,11 +72,6 @@ export class NotesheetGenerateComponent implements OnInit {
     finalApproverOptions: { label: string; labelBn: string | null; value: number }[] = [];
     /** Supporting documents – stored in NoteSheetInfo.FilesReferences (JSON array of { FileId, fileName }). */
     fileRows: FileRowData[] = [];
-    showPreviewDialog = false;
-    /** Initiator details (show on right, below main text). */
-    initiatorDetails: SignatoryDetail | null = null;
-    /** Approvers on left: Recommender(s) + Final Approver (dynamic). */
-    approversDetails: SignatoryDetail[] = [];
 
     @ViewChild('fileReferencesForm') fileReferencesForm!: FileReferencesFormComponent;
 
@@ -372,92 +363,6 @@ export class NotesheetGenerateComponent implements OnInit {
             .filter((l) => !!l);
     }
 
-    /** Open preview dialog with all form data. Load approval chain (initiator right, approvers left). */
-    openPreview(): void {
-        this.initiatorDetails = null;
-        this.approversDetails = [];
-        this.showPreviewDialog = true;
-        this.loadPreviewApprovalChain();
-    }
-
-    /** Load approval chain for preview: Initiator (right), Recommender(s) + Final Approver (left). */
-    private loadPreviewApprovalChain(): void {
-        const initiatorId = this.form.get('initiatorId')?.value as number | null;
-        const recommenderIds = (this.form.get('recommenderIds')?.value as number[]) ?? [];
-        const finalApproverId = this.form.get('finalApproverId')?.value as number | null;
-        const approverIds: { empId: number; step: string }[] = [];
-        recommenderIds.forEach((id, i) => {
-            if (id && id > 0) approverIds.push({ empId: id, step: `Recommender ${recommenderIds.length > 1 ? i + 1 : ''}`.trim() });
-        });
-        if (finalApproverId && finalApproverId > 0) approverIds.push({ empId: finalApproverId, step: 'Final Approver' });
-        const allIds = [...(initiatorId && initiatorId > 0 ? [{ empId: initiatorId, step: 'Initiator' }] : []), ...approverIds];
-        if (allIds.length === 0) return;
-        const obs = allIds.map(({ empId, step }) =>
-            this.empService.getEmployeeSearchInfo(empId).pipe(
-                map((info) => {
-                    const name = info?.fullNameEN ?? info?.FullNameEN ?? '-';
-                    const rabId = info?.rabID ?? info?.RABID ?? '-';
-                    const rank = info?.rank ?? info?.Rank ?? '-';
-                    const appointment = info?.appointment ?? info?.Appointment ?? '';
-                    return { step, name, rabId, rank, serviceRank: rank, appointment };
-                })
-            )
-        );
-        forkJoin(obs).subscribe({
-            next: (results) => {
-                this.initiatorDetails = initiatorId && initiatorId > 0 ? results[0] ?? null : null;
-                this.approversDetails = approverIds.length > 0 ? results.slice(initiatorId && initiatorId > 0 ? 1 : 0) : [];
-            },
-            error: () => {}
-        });
-    }
-
-    /** Whether preview is in English (textType en = English). */
-    isPreviewEnglish(): boolean {
-        return this.form.get('textType')?.value !== 'bn';
-    }
-
-    /** Sanitized main text for preview. */
-    getPreviewMainTextSafe(): SafeHtml {
-        const html = this.form.get('mainText')?.value ?? '';
-        return this.sanitizer.bypassSecurityTrustHtml(html || '');
-    }
-
-    /** Print the preview content via browser print dialog. */
-    printPreview(): void {
-        const previewEl = document.querySelector('.ns-gen-preview-doc');
-        if (!previewEl) return;
-        const printWindow = window.open('', '_blank', 'width=800,height=600');
-        if (!printWindow) return;
-        const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Note Sheet</title>
-<style>
-body{font-family:'Noto Sans Bengali','SolaimanLipi','Kalpurush',sans-serif;padding:2rem;color:#333;line-height:1.6}
-.ns-gen-preview-title{font-size:1.375rem;font-weight:700;text-align:center;text-transform:uppercase;letter-spacing:.03em;margin-bottom:.5rem}
-.ns-gen-preview-header{text-align:center;padding-bottom:.75rem;margin-bottom:1rem;border-bottom:2px solid #dee2e6}
-.ns-gen-preview-meta{display:flex;flex-wrap:wrap;gap:.5rem 2rem;padding:.75rem 1rem;background:#f8fafc;border:1px solid #dee2e6;border-radius:.5rem;margin-bottom:1rem;font-size:.9rem}
-.ns-gen-preview-meta-item{display:flex;gap:.4rem;align-items:baseline}
-.ns-gen-preview-meta-label{font-weight:600;color:#64748b}
-.ns-gen-preview-subject{text-align:center;font-weight:700;font-size:1.05rem;margin-bottom:1rem;padding:.5rem;background:#f8fafc;border-radius:.375rem}
-.ns-gen-preview-body-label{font-weight:600;font-size:.8125rem;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.5rem}
-.ns-gen-preview-body{min-height:4rem;padding:1rem;border:1px solid #dee2e6;border-radius:.5rem}
-.ns-gen-preview-body p{margin:0 0 .5rem}
-.ns-gen-preview-closing{font-style:italic;color:#64748b;margin-bottom:1.5rem;padding-top:1rem;border-top:1px dashed #dee2e6}
-.ns-preview-signatories{display:flex;justify-content:space-between;align-items:flex-start;gap:2rem}
-.ns-preview-approvers,.ns-preview-initiator{display:flex;flex-direction:column;gap:1rem}
-.ns-preview-initiator{text-align:right}
-.ns-signatory{display:flex;flex-direction:column;gap:.125rem}
-.ns-signatory.align-right{align-items:flex-end;text-align:right}
-.ns-signatory-line{width:160px;border-bottom:1px solid #000;margin-bottom:.25rem}
-.ns-signatory.align-right .ns-signatory-line{margin-left:auto}
-.ns-signatory-role{font-weight:600;font-size:.8125rem;color:#333;text-transform:uppercase;letter-spacing:.03em;margin-bottom:.125rem}
-@media print{body{padding:.5rem}}
-</style></head><body>${previewEl.innerHTML}</body></html>`;
-        printWindow.document.write(html);
-        printWindow.document.close();
-        printWindow.focus();
-        setTimeout(() => { printWindow.print(); printWindow.close(); }, 400);
-    }
-
     getInitiatorName(): string {
         const id = this.form.get('initiatorId')?.value;
         if (id == null) return '';
@@ -470,25 +375,6 @@ body{font-family:'Noto Sans Bengali','SolaimanLipi','Kalpurush',sans-serif;paddi
         if (id == null) return '';
         const opt = this.finalApproverOptions.find((o) => o.value === id);
         return opt?.label ?? '';
-    }
-
-    formatPreviewDate(): string {
-        const d = this.form.get('noteSheetDate')?.value;
-        if (!d) return '—';
-        try {
-            const dt = d instanceof Date ? d : new Date(d);
-            return isNaN(dt.getTime()) ? '—' : dt.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
-        } catch {
-            return '—';
-        }
-    }
-
-    /** Returns list of Supporting Documents file names for preview. */
-    getSupportingDocumentsList(): string[] {
-        if (!Array.isArray(this.fileRows) || this.fileRows.length === 0) return [];
-        return this.fileRows
-            .map((r) => r.displayName?.trim() || r.file?.name || '')
-            .filter((n) => n.length > 0);
     }
 
     onFileRowsChange(event: FileRowData[]): void {

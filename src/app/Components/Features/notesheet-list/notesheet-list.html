@@ -349,8 +349,15 @@
     <ng-template pTemplate="header">
       <div class="ns-preview-dialog-header">
         <span class="font-semibold text-lg">{{ getPreviewDialogHeader() }}</span>
-        @if (previewNoteSheet && !isPreviewNewPosting() && !previewEditing && isPreviewDraft()) {
-          <p-button type="button" icon="pi pi-pencil" [rounded]="true" [text]="true" size="small" pTooltip="Edit" (onClick)="togglePreviewEdit()"></p-button>
+        @if (previewNoteSheet && !isPreviewNewPosting() && !previewEditing) {
+          <div class="flex align-items-center gap-1" style="margin-left:auto">
+            <p-button type="button" icon="pi pi-file-word" [rounded]="true" [text]="true" size="small" pTooltip="Export Word" (onClick)="exportGeneralWord()"></p-button>
+            <p-button type="button" icon="pi pi-file-pdf" [rounded]="true" [text]="true" size="small" pTooltip="Export PDF" (onClick)="exportGeneralPdf()"></p-button>
+            <p-button type="button" icon="pi pi-print" [rounded]="true" [text]="true" size="small" pTooltip="Print" (onClick)="printGeneralPreview()"></p-button>
+            @if (isPreviewDraft()) {
+              <p-button type="button" icon="pi pi-pencil" [rounded]="true" [text]="true" size="small" pTooltip="Edit" (onClick)="togglePreviewEdit()"></p-button>
+            }
+          </div>
         }
       </div>
     </ng-template>
@@ -462,7 +469,7 @@
             <div class="ns-preview-initiator-block">
               <app-notesheet-signatory
                 [detail]="initiatorDetails"
-                [showSignature]="false"
+                [showSignature]="shouldShowSignature(initiatorDetails.step)"
                 [isEnglish]="isPreviewEnglish()"
                 align="right">
               </app-notesheet-signatory>
@@ -473,7 +480,7 @@
               @for (item of approversDetails; track item.step + item.rabId) {
                 <app-notesheet-signatory
                   [detail]="item"
-                  [showSignature]="false"
+                  [showSignature]="shouldShowSignature(item.step)"
                   [isEnglish]="isPreviewEnglish()"
                   align="left">
                 </app-notesheet-signatory>

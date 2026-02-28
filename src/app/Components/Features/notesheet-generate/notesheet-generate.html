@@ -193,95 +193,10 @@
 
       <!-- Actions -->
       <div class="ns-gen-actions">
-        <p-button type="button" label="Preview" icon="pi pi-eye" severity="secondary" [outlined]="true" (onClick)="openPreview()" [disabled]="form.invalid" />
         <p-button type="submit" label="Generate Note Sheet" icon="pi pi-check" [loading]="isSubmitting" [disabled]="form.invalid" />
       </div>
     </form>
   </div>
 
   <p-toast></p-toast>
-
-  <!-- Preview Dialog -->
-  <p-dialog
-    [(visible)]="showPreviewDialog"
-    [modal]="true"
-    [style]="{ width: '44rem', maxWidth: '95vw' }"
-    [contentStyle]="{ overflow: 'auto' }"
-    (onHide)="showPreviewDialog = false; initiatorDetails = null; approversDetails = []"
-    [draggable]="false"
-    [resizable]="true">
-    <ng-template pTemplate="header">
-      <div class="ns-gen-dialog-header">
-        <span class="ns-gen-dialog-title">{{ isPreviewEnglish() ? 'Note Sheet – Preview' : 'মন্তব্যপত্র – প্রাকদর্শন' }}</span>
-        <div class="ns-gen-dialog-actions">
-          <p-button type="button" icon="pi pi-print" [rounded]="true" [text]="true" size="small" pTooltip="Print" (onClick)="printPreview()"></p-button>
-        </div>
-      </div>
-    </ng-template>
-    @if (showPreviewDialog) {
-      <div class="ns-gen-preview-doc">
-        <div class="ns-preview-header">
-          <div class="ns-preview-title">{{ isPreviewEnglish() ? 'NOTE SHEET' : 'মন্তব্যপত্র' }}</div>
-        </div>
-
-        <div class="ns-preview-meta">
-          <div class="ns-preview-meta-item">
-            <span class="ns-preview-meta-label">{{ isPreviewEnglish() ? 'Note-Sheet No:' : 'মন্তব্যপত্র নং:' }}</span>
-            <span>{{ form.get('noteSheetNo')?.value || '—' }}</span>
-          </div>
-          <div class="ns-preview-meta-item">
-            <span class="ns-preview-meta-label">{{ isPreviewEnglish() ? 'Date:' : 'তারিখ:' }}</span>
-            <span>{{ formatPreviewDate() }}</span>
-          </div>
-          <div class="ns-preview-meta-item">
-            <span class="ns-preview-meta-label">{{ isPreviewEnglish() ? 'Reference:' : 'সুত্রঃ' }}</span>
-            <span>{{ form.get('referenceNumber')?.value || '—' }}</span>
-          </div>
-        </div>
-
-        @if (form.get('subject')?.value) {
-          <div class="ns-preview-subject">{{ form.get('subject')?.value }}</div>
-        }
-
-        <div class="ns-preview-body-section">
-          <div class="ns-preview-body-label">{{ isPreviewEnglish() ? 'Content' : 'বিষয়বস্তু' }}</div>
-          <div class="notesheet-preview-body" [innerHTML]="getPreviewMainTextSafe()"></div>
-        </div>
-
-        @if (getSupportingDocumentsList().length > 0) {
-          <div class="ns-gen-preview-docs">
-            <div class="ns-preview-body-label">{{ isPreviewEnglish() ? 'Supporting Documents' : 'সহায়ক নথি' }}</div>
-            <ul>
-              @for (name of getSupportingDocumentsList(); track name) {
-                <li>{{ name }}</li>
-              }
-            </ul>
-          </div>
-        }
-
-        <div class="ns-preview-closing">{{ isPreviewEnglish() ? 'Presented for your kind approval.' : 'আপনার সদয় অনুমোদনের জন্য উপস্থাপন করা হলো।' }}</div>
-
-        @if (initiatorDetails) {
-          <div class="ns-preview-initiator-block">
-            <app-notesheet-signatory
-              [detail]="initiatorDetails"
-              [isEnglish]="isPreviewEnglish()"
-              align="right">
-            </app-notesheet-signatory>
-          </div>
-        }
-        @if (approversDetails.length > 0) {
-          <div class="ns-preview-approvers-block">
-            @for (item of approversDetails; track item.step + item.rabId) {
-              <app-notesheet-signatory
-                [detail]="item"
-                [isEnglish]="isPreviewEnglish()"
-                align="left">
-              </app-notesheet-signatory>
-            }
-          </div>
-        }
-      </div>
-    }
-  </p-dialog>
 </p-fluid>
