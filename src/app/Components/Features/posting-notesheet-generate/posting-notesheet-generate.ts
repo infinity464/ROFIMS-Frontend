@@ -122,19 +122,19 @@ export class PostingNotesheetGenerateComponent implements OnInit {
 
     get initiatorOptionsDisplay(): { label: string; value: number }[] {
         return this.initiatorOptions.map((o) => ({
-            label: this.isBangla ? (o as any).labelBn || o.label : o.label,
+            label: o.label,
             value: o.value
         }));
     }
     get recommenderOptionsDisplay(): { label: string; value: number }[] {
         return this.recommenderOptions.map((o) => ({
-            label: this.isBangla ? (o as any).labelBn || o.label : o.label,
+            label: o.label,
             value: o.value
         }));
     }
     get finalApproverOptionsDisplay(): { label: string; value: number }[] {
         return this.finalApproverOptions.map((o) => ({
-            label: this.isBangla ? (o as any).labelBn || o.label : o.label,
+            label: o.label,
             value: o.value
         }));
     }

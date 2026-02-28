@@ -134,12 +134,18 @@ export interface DraftPostingEmployeeRow {
     isSendingNotesheetStatus: string | null;
     serviceId: string | null;
     prefixName: string | null;
+    prefixNameBN: string | null;
     fullNameEN: string | null;
+    fullNameBN: string | null;
     rabID: string | null;
     rankName: string | null;
+    rankNameBN: string | null;
     corpsName: string | null;
+    corpsNameBN: string | null;
     tradeName: string | null;
+    tradeNameBN: string | null;
     motherUnitName: string | null;
+    motherUnitNameBN: string | null;
     joiningDateInRAB: string | null;
     rankSortOrder: number | null;
     motherOrgSortOrder: number | null;

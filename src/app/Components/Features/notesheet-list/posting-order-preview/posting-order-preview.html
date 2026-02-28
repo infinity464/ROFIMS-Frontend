@@ -3,7 +3,12 @@
   <div class="ns-preview-header">
     <div class="ns-preview-title">{{ isEnglish ? 'POSTING ORDER – NOTE SHEET' : 'পোস্টিং অর্ডার – মন্তব্যপত্র' }}</div>
     @if (!editing) {
-      <p-button class="po-edit-btn" type="button" icon="pi pi-pencil" [rounded]="true" [text]="true" size="small" pTooltip="Edit" (onClick)="toggleEdit()"></p-button>
+      <div class="po-header-actions">
+        <p-button type="button" icon="pi pi-file-word" [rounded]="true" [text]="true" size="small" pTooltip="Export Word" (onClick)="exportWord()"></p-button>
+        <p-button type="button" icon="pi pi-file-pdf" [rounded]="true" [text]="true" size="small" pTooltip="Export PDF" (onClick)="exportPdfDirect()"></p-button>
+        <p-button type="button" icon="pi pi-print" [rounded]="true" [text]="true" size="small" pTooltip="Print" (onClick)="exportPdf()"></p-button>
+        <p-button class="po-edit-btn" type="button" icon="pi pi-pencil" [rounded]="true" [text]="true" size="small" pTooltip="Edit" (onClick)="toggleEdit()"></p-button>
+      </div>
     }
   </div>
 
@@ -74,11 +79,11 @@
         <tr>
           <td class="text-center">{{ i + 1 }}</td>
           <td class="font-semibold">{{ row.serviceId || '—' }}</td>
-          <td>{{ row.rankName || '—' }}</td>
-          <td>{{ row.corpsName || '—' }}</td>
-          <td>{{ row.tradeName || '—' }}</td>
-          <td>{{ row.fullNameEN || '—' }}</td>
-          <td>{{ row.motherUnitName || '—' }}</td>
+          <td>{{ isEnglish ? (row.rankName || '—') : (row.rankNameBN || row.rankName || '—') }}</td>
+          <td>{{ isEnglish ? (row.corpsName || '—') : (row.corpsNameBN || row.corpsName || '—') }}</td>
+          <td>{{ isEnglish ? (row.tradeName || '—') : (row.tradeNameBN || row.tradeName || '—') }}</td>
+          <td>{{ isEnglish ? (row.fullNameEN || '—') : (row.fullNameBN || row.fullNameEN || '—') }}</td>
+          <td>{{ isEnglish ? (row.motherUnitName || '—') : (row.motherUnitNameBN || row.motherUnitName || '—') }}</td>
           <td>{{ formatDate(row.joiningDateInRAB) }}</td>
           <td>
             @if (editing) {

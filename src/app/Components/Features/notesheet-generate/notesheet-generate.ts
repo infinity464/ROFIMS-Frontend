@@ -332,22 +332,22 @@ export class NotesheetGenerateComponent implements OnInit {
     }
 
     get unitOptionsDisplay(): { label: string; value: number }[] {
-        return this.unitOptions.map((o) => ({ label: this.isBangla && o.labelBn ? o.labelBn : o.label, value: o.value }));
+        return this.unitOptions.map((o) => ({ label: o.label, value: o.value }));
     }
     get wingOptionsDisplay(): { label: string; value: number }[] {
-        return this.wingOptions.map((o) => ({ label: this.isBangla && o.labelBn ? o.labelBn : o.label, value: o.value }));
+        return this.wingOptions.map((o) => ({ label: o.label, value: o.value }));
     }
     get branchOptionsDisplay(): { label: string; value: number }[] {
-        return this.branchOptions.map((o) => ({ label: this.isBangla && o.labelBn ? o.labelBn : o.label, value: o.value }));
+        return this.branchOptions.map((o) => ({ label: o.label, value: o.value }));
     }
     get initiatorOptionsDisplay(): { label: string; value: number }[] {
-        return this.initiatorOptions.map((o) => ({ label: this.isBangla && o.labelBn ? o.labelBn : o.label, value: o.value }));
+        return this.initiatorOptions.map((o) => ({ label: o.label, value: o.value }));
     }
     get recommenderOptionsDisplay(): { label: string; value: number }[] {
-        return this.recommenderOptions.map((o) => ({ label: this.isBangla && o.labelBn ? o.labelBn : o.label, value: o.value }));
+        return this.recommenderOptions.map((o) => ({ label: o.label, value: o.value }));
     }
     get finalApproverOptionsDisplay(): { label: string; value: number }[] {
-        return this.finalApproverOptions.map((o) => ({ label: this.isBangla && o.labelBn ? o.labelBn : o.label, value: o.value }));
+        return this.finalApproverOptions.map((o) => ({ label: o.label, value: o.value }));
     }
 
     onTextTypeChange(): void {
@@ -361,7 +361,7 @@ export class NotesheetGenerateComponent implements OnInit {
         return ids
             .map((id) => {
                 const o = this.recommenderOptions.find((op) => op.value === id);
-                return o ? (this.isBangla && o.labelBn ? o.labelBn : o.label) : '';
+                return o ? o.label : '';
             })
             .filter((l) => !!l);
     }

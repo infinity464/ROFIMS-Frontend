@@ -103,6 +103,12 @@ export interface EmployeeSearchInfoModel {
     MemberType?: string;
     joiningDate?: string;
     JoiningDate?: string;
+    appointmentId?: number;
+    AppointmentId?: number;
+    appointment?: string;
+    Appointment?: string;
+    appointmentBN?: string;
+    AppointmentBN?: string;
 }
 
 // ============ SEARCH CRITERIA ============

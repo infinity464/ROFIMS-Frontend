@@ -143,9 +143,9 @@ export class NotesheetListComponent implements OnInit {
   previewNoteSheet: NoteSheetInfoFull | null = null;
   previewLoading = false;
   /** Initiator details (show on right, below main text). */
-  initiatorDetails: { step: string; name: string; rabId: string; rank: string; serviceRank: string } | null = null;
+  initiatorDetails: { step: string; name: string; rabId: string; rank: string; serviceRank: string; appointment: string } | null = null;
   /** Approvers on left: Recommender(s) + Final Approver (dynamic, no static titles). */
-  approversDetails: { step: string; name: string; rabId: string; rank: string; serviceRank: string }[] = [];
+  approversDetails: { step: string; name: string; rabId: string; rank: string; serviceRank: string; appointment: string }[] = [];
 
   /** Edit main text modal */
   showEditMainTextDialog = false;
@@ -230,7 +230,8 @@ export class NotesheetListComponent implements OnInit {
           const name = info?.fullNameEN ?? info?.FullNameEN ?? '-';
           const rabId = info?.rabID ?? info?.RABID ?? '-';
           const rank = info?.rank ?? info?.Rank ?? '-';
-          return { step, name, rabId, rank, serviceRank: rank };
+          const appointment = info?.appointment ?? info?.Appointment ?? '';
+          return { step, name, rabId, rank, serviceRank: rank, appointment };
         })
       )
     );
