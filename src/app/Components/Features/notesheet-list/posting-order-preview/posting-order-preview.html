@@ -80,8 +80,32 @@
           <td>{{ row.fullNameEN || '—' }}</td>
           <td>{{ row.motherUnitName || '—' }}</td>
           <td>{{ formatDate(row.joiningDateInRAB) }}</td>
-          <td>{{ row.transferRabUnitName || '—' }}</td>
-          <td>{{ row.remarks || '—' }}</td>
+          <td>
+            @if (editing) {
+              <p-select
+                [(ngModel)]="row.transferRabUnitId"
+                [options]="rabUnitOptions"
+                optionLabel="label"
+                optionValue="value"
+                [showClear]="true"
+                [filter]="true"
+                filterBy="label"
+                placeholder="{{ isEnglish ? 'Select Unit' : 'ইউনিট নির্বাচন' }}"
+                appendTo="body"
+                styleClass="w-full"
+                [style]="{ 'min-width': '160px' }">
+              </p-select>
+            } @else {
+              {{ row.transferRabUnitName || '—' }}
+            }
+          </td>
+          <td>
+            @if (editing) {
+              <input pInputText type="text" [(ngModel)]="row.remarks" class="w-full" style="min-width: 120px" placeholder="{{ isEnglish ? 'Remarks' : 'মন্তব্য' }}" />
+            } @else {
+              {{ row.remarks || '—' }}
+            }
+          </td>
         </tr>
       </ng-template>
       <ng-template pTemplate="emptymessage">
