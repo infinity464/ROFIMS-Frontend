@@ -71,27 +71,38 @@ export class AddDraftNewPostingComponent implements OnInit {
         return this.list;
     }
 
-    /** Save enabled: add mode when employees selected, edit mode always. */
-    get isSaveEnabled(): boolean {
-        if (this.isEditMode) return true;
-        return (this.selectedRows?.length ?? 0) > 0;
-    }
-
     /** Save: create Draft New Posting (add) or update master (edit). */
     onSave(): void {
-        const dateStr = this.formatDateForApi(this.draftPostingDate);
-        if (!dateStr) {
-            this.messageService.add({ severity: 'warn', summary: 'Save', detail: 'Invalid date.' });
+        // Validate date
+        if (!this.draftPostingDate) {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select a date.' });
             return;
         }
+        const dateStr = this.formatDateForApi(this.draftPostingDate);
+        if (!dateStr) {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Invalid date format.' });
+            return;
+        }
+
+        // Validate draft posting list no
         if (!this.draftPostingListNo?.trim()) {
-            this.messageService.add({ severity: 'warn', summary: 'Save', detail: 'Enter Draft Posting List No.' });
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please enter Draft Posting List No.' });
+            return;
+        }
+
+        // Check duplicate posting list no (skip if editing the same record)
+        const trimmedNo = this.draftPostingListNo.trim();
+        const duplicate = this.draftMastersList.find(
+            (m) => m.draftPostingNo?.toLowerCase() === trimmedNo.toLowerCase() && m.id !== this.editDraftId
+        );
+        if (duplicate) {
+            this.messageService.add({ severity: 'warn', summary: 'Duplicate', detail: `Draft Posting List No "${trimmedNo}" already exists.` });
             return;
         }
 
         if (this.isEditMode && this.editDraftId) {
             this.saving = true;
-            this.postingService.updateDraftNewPosting(this.editDraftId, this.draftPostingListNo.trim(), dateStr, this.editDraftStatus).subscribe({
+            this.postingService.updateDraftNewPosting(this.editDraftId, trimmedNo, dateStr, this.editDraftStatus).subscribe({
                 next: (res: { statusCode?: number; description?: string }) => {
                     this.saving = false;
                     const ok = res?.statusCode === 200;
@@ -113,14 +124,16 @@ export class AddDraftNewPostingComponent implements OnInit {
             return;
         }
 
+        // Validate at least one employee selected (add mode only)
         const employeeIds = this.selectedRows?.map((r) => r.employeeID) ?? [];
         if (employeeIds.length === 0) {
-            this.messageService.add({ severity: 'warn', summary: 'Save', detail: 'Select at least one employee.' });
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select at least one employee from the table.' });
             return;
         }
+
         const createdBy = this.sharedService.getCurrentUser() ?? 'system';
         this.saving = true;
-        this.postingService.saveDraftNewPosting(this.draftPostingListNo.trim(), dateStr, employeeIds, createdBy).subscribe({
+        this.postingService.saveDraftNewPosting(trimmedNo, dateStr, employeeIds, createdBy).subscribe({
             next: (res: { statusCode?: number; description?: string }) => {
                 this.saving = false;
                 const ok = res?.statusCode === 200;
@@ -133,6 +146,8 @@ export class AddDraftNewPostingComponent implements OnInit {
                     this.loadData();
                     this.loadDraftMasters();
                     this.selectedRows = [];
+                    this.draftPostingDate = null;
+                    this.draftPostingListNo = '';
                 }
             },
             error: (err: { error?: { description?: string }; message?: string }) => {
@@ -178,7 +193,12 @@ export class AddDraftNewPostingComponent implements OnInit {
     }
 
     onAddAll(): void {
-        this.messageService.add({ severity: 'info', summary: 'Add All', detail: 'Add All – under development' });
+        if (this.list.length === 0) {
+            this.messageService.add({ severity: 'info', summary: 'Select All', detail: 'No employees available to select.' });
+            return;
+        }
+        this.selectedRows = [...this.list];
+        this.messageService.add({ severity: 'success', summary: 'Select All', detail: `${this.list.length} employee(s) selected.` });
     }
 
     onEditDraft(row: DraftPostingMasterDto): void {

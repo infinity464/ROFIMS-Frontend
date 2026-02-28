@@ -143,10 +143,13 @@ export class PostingNotesheetGenerateComponent implements OnInit {
         this.loadingDraftList = true;
         this.postingService.getDraftNewPostingMasters().subscribe({
             next: (list) => {
-                this.draftPostingOptions = (list ?? []).map((m) => ({
-                    label: `${m.draftPostingNo} (${m.draftPostingDate})`,
-                    value: m.id
-                }));
+                const currentMasterId = this.form.get('draftPostingMasterId')?.value;
+                this.draftPostingOptions = (list ?? [])
+                    .filter((m) => !m.hasNoteSheet || (this.editMode && m.id === currentMasterId))
+                    .map((m) => ({
+                        label: `${m.draftPostingNo} (${m.draftPostingDate})`,
+                        value: m.id
+                    }));
                 this.loadingDraftList = false;
             },
             error: () => {
@@ -349,6 +352,7 @@ export class PostingNotesheetGenerateComponent implements OnInit {
                             this.router.navigate(['/notesheet-list/draft']);
                         } else {
                             this.resetForm();
+                            this.loadDraftPostingMasters();
                         }
                     },
                     error: (err) => {
@@ -434,7 +438,7 @@ export class PostingNotesheetGenerateComponent implements OnInit {
         const payload: Record<string, unknown> = {
             noteSheetId: 0,
             noteSheetType: NoteSheetType.NewPosting,
-            employeeId: d.preparedByEmployeeId ?? 0,
+            employeeId: d.preparedByEmployeeId ?? null,
             fileNumber: 0,
             noteSheetNo,
             noteSheetDate: dateStr,

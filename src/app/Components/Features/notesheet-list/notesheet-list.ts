@@ -27,6 +27,8 @@ import { InputIconModule } from 'primeng/inputicon';
 import { forkJoin } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { Table } from 'primeng/table';
+import { PostingService } from '@/services/posting.service';
+import { DraftPostingEmployeeRow } from '@/models/posting.model';
 import { PostingOrderPreviewComponent } from './posting-order-preview/posting-order-preview';
 
 export interface NoteSheetInfoRow {
@@ -45,6 +47,8 @@ export interface NoteSheetInfoRow {
   declinedByEmployeeId?: number;
   declinedDate?: string;
   remark?: string;
+  referenceNumber?: string;
+  draftPostingMasterId?: number | null;
   /** JSON array of { FileId, fileName } from API */
   filesReferences?: string;
 }
@@ -149,6 +153,12 @@ export class NotesheetListComponent implements OnInit {
   mainTextEditValue = '';
   savingMainText = false;
 
+  /** Employee details dialog */
+  showEmployeesDialog = false;
+  employeesDialogTitle = '';
+  employeesList: DraftPostingEmployeeRow[] = [];
+  loadingEmployees = false;
+
   readonly statusLabels: Record<number, string> = {
     1: 'Draft',
     2: 'Pending',
@@ -170,7 +180,8 @@ export class NotesheetListComponent implements OnInit {
     private sanitizer: DomSanitizer,
     private empService: EmpService,
     private noteSheetEditCache: NoteSheetEditCacheService,
-    private masterBasicSetup: MasterBasicSetupService
+    private masterBasicSetup: MasterBasicSetupService,
+    private postingService: PostingService
   ) {}
 
   /** Open preview dialog: fetch full note-sheet and show formal layout. Load approval chain for approved note-sheets. */
@@ -245,6 +256,37 @@ export class NotesheetListComponent implements OnInit {
   /** Called when posting-order-preview saves successfully. */
   onPostingOrderSaved(): void {
     this.loadAll();
+  }
+
+  /** Open employee details dialog for a note-sheet that has a draftPostingMasterId. */
+  openEmployeesDialog(row: NoteSheetInfoRow): void {
+    const masterId = row.draftPostingMasterId;
+    if (!masterId) {
+      this.messageService.add({ severity: 'info', summary: 'Info', detail: 'No Draft Posting linked to this note-sheet.' });
+      return;
+    }
+    this.employeesDialogTitle = `Employees in Posting List – ${row.noteSheetNo || ''}`;
+    this.employeesList = [];
+    this.loadingEmployees = true;
+    this.showEmployeesDialog = true;
+    this.postingService.getDraftPostingEmployees(masterId).subscribe({
+      next: (list) => {
+        this.employeesList = list ?? [];
+        this.loadingEmployees = false;
+      },
+      error: () => {
+        this.loadingEmployees = false;
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load employee list.' });
+      }
+    });
+  }
+
+  formatEmployeeDate(value: string | null | undefined): string {
+    if (!value) return '-';
+    try {
+      const d = new Date(value);
+      return isNaN(d.getTime()) ? String(value) : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch { return String(value); }
   }
 
   /** Whether the previewed note sheet is New Posting. */

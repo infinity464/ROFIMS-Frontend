@@ -86,12 +86,18 @@ export interface DraftPostingMasterDto {
     createdBy: string;
     createdDate: string;
     detailCount: number;
+    hasNoteSheet: boolean;
 }
 
 /** Detail row for GetDraftNewPostingById (Edit). */
 export interface DraftPostingDetailDto {
     id: number;
     employeeId: number;
+    /** Transfer RAB Unit Id (FK to CommonCode). */
+    transferRabUnitId: number | null;
+    transferRabUnitName: string | null;
+    remarks: string | null;
+    // Employee display fields (populated from VwEmployeeList on the backend)
     serviceId: string;
     rank: string;
     corps: string;
@@ -113,6 +119,33 @@ export interface DraftPostingMasterWithDetailsDto {
 }
 
 export type SaveDraftNewPostingResponse = { statusCode: number; description: string };
+
+/** Row from vw_DraftPostingWithEmployees view. */
+export interface DraftPostingEmployeeRow {
+    draftPostingMasterId: number;
+    draftPostingNo: string;
+    draftPostingDate: string;
+    draftPostingStatus: string;
+    draftPostingDetailId: number;
+    employeeId: number;
+    transferRabUnitId: number | null;
+    transferRabUnitName: string | null;
+    remarks: string | null;
+    isSendingNotesheetStatus: string | null;
+    serviceId: string | null;
+    prefixName: string | null;
+    fullNameEN: string | null;
+    rabID: string | null;
+    rankName: string | null;
+    corpsName: string | null;
+    tradeName: string | null;
+    motherUnitName: string | null;
+    joiningDateInRAB: string | null;
+    rankSortOrder: number | null;
+    motherOrgSortOrder: number | null;
+    createdBy: string | null;
+    createdDate: string | null;
+}
 
 /** Pending joining item (approved posting order, not yet joined). */
 export interface PendingJoiningItem {

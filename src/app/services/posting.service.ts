@@ -6,6 +6,7 @@ import {
     DraftPostingList,
     DraftPostingMasterDto,
     DraftPostingMasterWithDetailsDto,
+    DraftPostingEmployeeRow,
     PostingNoteSheet,
     PostingNoteSheetMember,
     PostingMemberRow,
@@ -119,6 +120,11 @@ export class PostingService {
     /** Get single Draft New Posting by id with details (for Edit). */
     getDraftNewPostingById(id: number): Observable<DraftPostingMasterWithDetailsDto> {
         return this.http.get<DraftPostingMasterWithDetailsDto>(`${API}/GetDraftNewPostingById/${id}`);
+    }
+
+    /** Get employees in a Draft Posting list from vw_DraftPostingWithEmployees view. */
+    getDraftPostingEmployees(draftPostingMasterId: number): Observable<DraftPostingEmployeeRow[]> {
+        return this.http.get<DraftPostingEmployeeRow[]>(`${API}/GetDraftPostingEmployees/${draftPostingMasterId}`);
     }
 
     /** Update Draft New Posting master (DraftPostingNo, DraftPostingDate, DraftPostingStatus). */

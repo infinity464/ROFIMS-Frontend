@@ -11,7 +11,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
 import { environment } from '@/Core/Environments/environment';
 import { PostingService } from '@/services/posting.service';
-import { DraftPostingDetailDto, DraftPostingMasterWithDetailsDto } from '@/models/posting.model';
+import { DraftPostingEmployeeRow } from '@/models/posting.model';
 
 @Component({
     selector: 'app-posting-order-preview',
@@ -28,9 +28,8 @@ export class PostingOrderPreviewComponent implements OnChanges {
 
     @Output() saved = new EventEmitter<void>();
 
-    /** Draft posting master + employee details */
-    draftMaster: DraftPostingMasterWithDetailsDto | null = null;
-    employees: DraftPostingDetailDto[] = [];
+    /** Employees from vw_DraftPostingWithEmployees */
+    employees: DraftPostingEmployeeRow[] = [];
     loadingEmployees = false;
 
     /** Edit mode */
@@ -60,10 +59,9 @@ export class PostingOrderPreviewComponent implements OnChanges {
 
     private loadDraftPostingDetails(id: number): void {
         this.loadingEmployees = true;
-        this.postingService.getDraftNewPostingById(id).subscribe({
+        this.postingService.getDraftPostingEmployees(id).subscribe({
             next: (data) => {
-                this.draftMaster = data;
-                this.employees = data?.details ?? [];
+                this.employees = data ?? [];
                 this.loadingEmployees = false;
             },
             error: () => {

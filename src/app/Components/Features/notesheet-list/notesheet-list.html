@@ -36,6 +36,7 @@
           <th>Notesheet ID</th>
           <th>Date</th>
           <th>Note-Sheet No</th>
+          <th>Reference No</th>
           <th>Type</th>
           <th>Subject</th>
           <th>Back Remark</th>
@@ -49,6 +50,7 @@
           <td>{{ row.noteSheetId }}</td>
           <td>{{ formatDate(row.noteSheetDate) }}</td>
           <td>{{ row.noteSheetNo || '-' }}</td>
+          <td>{{ row.referenceNumber || '-' }}</td>
           <td>{{ noteSheetTypeLabel(row) }}</td>
           <td>{{ row.subject || '-' }}</td>
           <td><span class="text-sm" [title]="row.remark || ''">{{ row.remark || '—' }}</span></td>
@@ -57,6 +59,9 @@
               <p-button type="button" icon="pi pi-pencil" [rounded]="true" [text]="true" size="small" pTooltip="Update" (onClick)="goToUpdate(row)"></p-button>
               <p-button type="button" icon="pi pi-eye" [rounded]="true" [text]="true" size="small" pTooltip="Preview" (onClick)="openPreview(row)"></p-button>
               <p-button type="button" icon="pi pi-file-edit" [rounded]="true" [text]="true" size="small" pTooltip="Edit main text" (onClick)="openEditMainText(row)"></p-button>
+              @if (row.draftPostingMasterId) {
+                <p-button type="button" icon="pi pi-users" [rounded]="true" [text]="true" size="small" pTooltip="View Employees" (onClick)="openEmployeesDialog(row)"></p-button>
+              }
             </div>
           </td>
           <td>
@@ -65,7 +70,7 @@
         </tr>
       </ng-template>
       <ng-template pTemplate="emptymessage">
-        <tr><td colspan="9" class="text-center text-500">No draft note-sheets.</td></tr>
+        <tr><td colspan="10" class="text-center text-500">No draft note-sheets.</td></tr>
       </ng-template>
     </p-table>
   </div>
@@ -481,6 +486,61 @@
       <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="showEditMainTextDialog = false"></p-button>
       <p-button label="Save" icon="pi pi-check" [loading]="savingMainText" (onClick)="saveMainText()"></p-button>
     </ng-template>
+  </p-dialog>
+
+  <!-- Employees in Posting List dialog -->
+  <p-dialog
+    [header]="employeesDialogTitle"
+    [(visible)]="showEmployeesDialog"
+    [modal]="true"
+    [style]="{ width: '72rem', maxWidth: '95vw' }"
+    [contentStyle]="{ overflow: 'auto', 'border-top': '2px solid var(--primary-color)' }"
+    (onHide)="employeesList = []"
+    [draggable]="false"
+    [resizable]="true">
+    @if (loadingEmployees) {
+      <div class="flex align-items-center justify-content-center p-4"><i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i></div>
+    } @else {
+      <p-table
+        [value]="employeesList"
+        [tableStyle]="{ 'min-width': '60rem' }"
+        styleClass="p-datatable-striped p-datatable-gridlines p-datatable-sm"
+        [paginator]="employeesList.length > 10"
+        [rows]="10"
+        [rowsPerPageOptions]="[10, 25, 50]">
+        <ng-template pTemplate="header">
+          <tr>
+            <th style="width: 50px">Ser</th>
+            <th style="min-width: 120px">Service ID</th>
+            <th style="min-width: 100px">Rank</th>
+            <th style="min-width: 100px">Corps</th>
+            <th style="min-width: 100px">Trade</th>
+            <th style="min-width: 180px">Name</th>
+            <th style="min-width: 130px">Mother Unit</th>
+            <th style="min-width: 120px">Join in RAB</th>
+            <th style="min-width: 130px">Transfer Unit</th>
+            <th style="min-width: 120px">Remarks</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-emp let-rowIndex="rowIndex">
+          <tr>
+            <td>{{ rowIndex + 1 }}</td>
+            <td><span class="font-semibold">{{ emp.prefixName ? emp.prefixName + ' - ' : '' }}{{ emp.serviceId || '-' }}</span></td>
+            <td>{{ emp.rankName || '-' }}</td>
+            <td>{{ emp.corpsName || '-' }}</td>
+            <td>{{ emp.tradeName || '-' }}</td>
+            <td>{{ emp.fullNameEN || '-' }}{{ emp.corpsName ? ', ' + emp.corpsName : '' }}</td>
+            <td>{{ emp.motherUnitName || '-' }}</td>
+            <td>{{ formatEmployeeDate(emp.joiningDateInRAB) }}</td>
+            <td>{{ emp.transferRabUnitName || '-' }}</td>
+            <td>{{ emp.remarks || '-' }}</td>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+          <tr><td colspan="10" class="text-center p-4 text-500">No employees found in this posting list.</td></tr>
+        </ng-template>
+      </p-table>
+    }
   </p-dialog>
 </p-fluid>
 

@@ -25,10 +25,10 @@
         <span>{{ noteSheet?.referenceNumber || '—' }}</span>
       }
     </div>
-    @if (draftMaster) {
+    @if (employees.length) {
       <div class="ns-preview-meta-item">
         <span class="ns-preview-meta-label">{{ isEnglish ? 'Draft Posting No:' : 'ড্রাফট পোস্টিং নং:' }}</span>
-        <span>{{ draftMaster.draftPostingNo || '—' }}</span>
+        <span>{{ employees[0].draftPostingNo || '—' }}</span>
       </div>
     }
   </div>
@@ -66,23 +66,27 @@
           <th>{{ isEnglish ? 'Name' : 'নাম' }}</th>
           <th>{{ isEnglish ? 'Mother Unit' : 'মাতৃ ইউনিট' }}</th>
           <th>{{ isEnglish ? 'Joining Date' : 'যোগদান তারিখ' }}</th>
+          <th>{{ isEnglish ? 'Transfer Unit' : 'বদলি ইউনিট' }}</th>
+          <th>{{ isEnglish ? 'Remarks' : 'মন্তব্য' }}</th>
         </tr>
       </ng-template>
       <ng-template pTemplate="body" let-row let-i="rowIndex">
         <tr>
           <td class="text-center">{{ i + 1 }}</td>
           <td class="font-semibold">{{ row.serviceId || '—' }}</td>
-          <td>{{ row.rank || '—' }}</td>
-          <td>{{ row.corps || '—' }}</td>
-          <td>{{ row.trade || '—' }}</td>
-          <td>{{ row.name || '—' }}</td>
-          <td>{{ row.motherUnit || '—' }}</td>
-          <td>{{ formatDate(row.rabJoingdate) }}</td>
+          <td>{{ row.rankName || '—' }}</td>
+          <td>{{ row.corpsName || '—' }}</td>
+          <td>{{ row.tradeName || '—' }}</td>
+          <td>{{ row.fullNameEN || '—' }}</td>
+          <td>{{ row.motherUnitName || '—' }}</td>
+          <td>{{ formatDate(row.joiningDateInRAB) }}</td>
+          <td>{{ row.transferRabUnitName || '—' }}</td>
+          <td>{{ row.remarks || '—' }}</td>
         </tr>
       </ng-template>
       <ng-template pTemplate="emptymessage">
         <tr>
-          <td colspan="8" class="text-center text-500 py-3">
+          <td colspan="10" class="text-center text-500 py-3">
             {{ isEnglish ? 'No employees in this posting list.' : 'এই পোস্টিং তালিকায় কোনো কর্মচারী নেই।' }}
           </td>
         </tr>
