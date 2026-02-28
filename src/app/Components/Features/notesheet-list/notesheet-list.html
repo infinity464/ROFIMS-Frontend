@@ -1,106 +1,114 @@
 <p-fluid>
   <p-toast></p-toast>
 
-  <div class="card mb-4">
-    @switch (section) {
-      @case ('draft') {
-        <h2 class="m-0 text-2xl font-bold text-900 mb-2">Draft Note-Sheet List</h2>
-        <p class="text-600 m-0">Submit for approval when ready. You can Update, Preview, Edit main text, then Submit for approval.</p>
-      }
-      @case ('pending') {
-        <h2 class="m-0 text-2xl font-bold text-900 mb-2">Pending for Approval Note-Sheet List</h2>
-        <p class="text-600 m-0">Approve, Decline, or Back with remark as per workflow.</p>
-      }
-      @case ('approved') {
-        <h2 class="m-0 text-2xl font-bold text-900 mb-2">Approved Note-Sheet List</h2>
-        <p class="text-600 m-0">Note-sheets that have been approved.</p>
-      }
-      @case ('declined') {
-        <h2 class="m-0 text-2xl font-bold text-900 mb-2">Declined Note-Sheet List</h2>
-        <p class="text-600 m-0">Note-sheets that have been declined.</p>
-      }
-      @case ('all') {
-        <h2 class="m-0 text-2xl font-bold text-900 mb-2">All Note-Sheet</h2>
-        <p class="text-600 m-0">All note-sheets regardless of status.</p>
-      }
-    }
-  </div>
-
   @if (section === 'draft') {
-  <div class="card mb-4">
-    <h3 class="text-xl font-semibold text-900 mb-3">Draft Note-Sheet List (Submit for approval)</h3>
-    <p-table [value]="draftList" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines">
+  <div class="form-card">
+    <div class="form-card-header">
+      <h3 class="form-card-title">Draft Note-Sheet List</h3>
+    </div>
+    <p class="text-600 mt-0 mb-3">Submit for approval when ready. You can Update, Preview, Edit main text, then Submit for approval.</p>
+    <p-table #dt [value]="draftList" [loading]="loading" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" [globalFilterFields]="['noteSheetNo', 'subject', 'remark']">
+      <ng-template pTemplate="caption">
+        <div class="ns-filter-bar">
+          <div class="ns-filter-group">
+            <label>From Date</label>
+            <p-datepicker [(ngModel)]="filterDateFrom" dateFormat="dd/mm/yy" placeholder="dd/mm/yyyy" [showIcon]="true" appendTo="body" (onSelect)="applyDateFilter()" (onClear)="applyDateFilter()" [showClear]="true"></p-datepicker>
+          </div>
+          <div class="ns-filter-group">
+            <label>To Date</label>
+            <p-datepicker [(ngModel)]="filterDateTo" dateFormat="dd/mm/yy" placeholder="dd/mm/yyyy" [showIcon]="true" appendTo="body" (onSelect)="applyDateFilter()" (onClear)="applyDateFilter()" [showClear]="true"></p-datepicker>
+          </div>
+          <div class="ns-filter-btn">
+            <p-button icon="pi pi-filter-slash" label="Clear" severity="secondary" [outlined]="true" size="small" (onClick)="clearDateFilter()"></p-button>
+          </div>
+          <div class="ns-filter-search">
+            <label>Search</label>
+            <p-iconfield>
+              <p-inputicon styleClass="pi pi-search"></p-inputicon>
+              <input pInputText type="text" placeholder="Note-Sheet No, Subject..." (input)="onGlobalFilter(dt, $event)" />
+            </p-iconfield>
+          </div>
+        </div>
+      </ng-template>
       <ng-template pTemplate="header">
         <tr>
           <th style="width: 50px">Ser</th>
-          <th>Note-Sheet Date</th>
+          <th>Notesheet ID</th>
+          <th>Date</th>
           <th>Note-Sheet No</th>
-          <th>Unit</th>
-          <th>Wing/Battalion</th>
-          <th>Branch</th>
+          <th>Type</th>
           <th>Subject</th>
           <th>Back Remark</th>
-          <th>Supporting Documents</th>
-          <th style="min-width: 260px">Action</th>
+          <th style="width: 120px">Action</th>
+          <th style="width: 130px">Submit</th>
         </tr>
       </ng-template>
       <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
         <tr>
           <td>{{ rowIndex + 1 }}</td>
+          <td>{{ row.noteSheetId }}</td>
           <td>{{ formatDate(row.noteSheetDate) }}</td>
           <td>{{ row.noteSheetNo || '-' }}</td>
-          <td>{{ getUnitLabel(row.unitId) }}</td>
-          <td>{{ getWingLabel(row.wingBattalionId) }}</td>
-          <td>{{ getBranchLabel(row.branchId) }}</td>
+          <td>{{ noteSheetTypeLabel(row) }}</td>
           <td>{{ row.subject || '-' }}</td>
           <td><span class="text-sm" [title]="row.remark || ''">{{ row.remark || '—' }}</span></td>
-          <td class="text-sm">
-            @if (getRowSupportingDocumentsWithIds(row).length > 0) {
-              <div class="flex flex-column gap-1">
-                @for (doc of getRowSupportingDocumentsWithIds(row); track doc.fileId) {
-                  <div class="flex align-items-center gap-1 flex-wrap">
-                    <span class="flex-1 text-overflow-ellipsis" style="min-width: 0;">{{ doc.fileName }}</span>
-                    <p-button type="button" icon="pi pi-eye" [rounded]="true" [text]="true" size="small" pTooltip="Preview" (onClick)="onPreviewSupportingDoc(doc.fileId, doc.fileName)"></p-button>
-                    <p-button type="button" icon="pi pi-download" [rounded]="true" [text]="true" size="small" pTooltip="Download" (onClick)="onDownloadSupportingDoc(doc.fileId, doc.fileName)"></p-button>
-                  </div>
-                }
-              </div>
-            } @else {
-              <span class="text-500">—</span>
-            }
+          <td>
+            <div class="flex align-items-center gap-1">
+              <p-button type="button" icon="pi pi-pencil" [rounded]="true" [text]="true" size="small" pTooltip="Update" (onClick)="goToUpdate(row)"></p-button>
+              <p-button type="button" icon="pi pi-eye" [rounded]="true" [text]="true" size="small" pTooltip="Preview" (onClick)="openPreview(row)"></p-button>
+              <p-button type="button" icon="pi pi-file-edit" [rounded]="true" [text]="true" size="small" pTooltip="Edit main text" (onClick)="openEditMainText(row)"></p-button>
+            </div>
           </td>
           <td>
-            <p-button type="button" label="Update" icon="pi pi-pencil" [text]="true" size="small" (onClick)="goToUpdate(row)" class="mr-1"></p-button>
-            <p-button type="button" label="Preview" icon="pi pi-eye" [text]="true" size="small" (onClick)="openPreview(row)" class="mr-1"></p-button>
-            <p-button type="button" label="Edit main text" icon="pi pi-file-edit" [text]="true" size="small" (onClick)="openEditMainText(row)" class="mr-1"></p-button>
-            <p-button type="button" label="Submit for approval" icon="pi pi-send" [text]="true" size="small" (onClick)="submitForApproval(row)"></p-button>
+            <p-button type="button" icon="pi pi-send" label="Submit" size="small" severity="success" [outlined]="true" pTooltip="Submit for approval" (onClick)="submitForApproval(row)"></p-button>
           </td>
         </tr>
       </ng-template>
       <ng-template pTemplate="emptymessage">
-        <tr><td colspan="11" class="text-center text-500">No draft note-sheets.</td></tr>
+        <tr><td colspan="9" class="text-center text-500">No draft note-sheets.</td></tr>
       </ng-template>
     </p-table>
   </div>
   }
 
   @if (section === 'pending') {
-  <div class="card mb-4">
-    <h3 class="text-xl font-semibold text-900 mb-3">Pending for Approval Note-Sheet List</h3>
-    <p-table [value]="pendingList" [loading]="loading" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines">
+  <div class="form-card">
+    <div class="form-card-header">
+      <h3 class="form-card-title">Pending for Approval Note-Sheet List</h3>
+    </div>
+    <p class="text-600 mt-0 mb-3">Approve, Decline, or Back with remark as per workflow.</p>
+    <p-table #dt [value]="pendingList" [loading]="loading" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" [globalFilterFields]="['noteSheetNo', 'subject']">
+      <ng-template pTemplate="caption">
+        <div class="ns-filter-bar">
+          <div class="ns-filter-group">
+            <label>From Date</label>
+            <p-datepicker [(ngModel)]="filterDateFrom" dateFormat="dd/mm/yy" placeholder="dd/mm/yyyy" [showIcon]="true" appendTo="body" (onSelect)="applyDateFilter()" (onClear)="applyDateFilter()" [showClear]="true"></p-datepicker>
+          </div>
+          <div class="ns-filter-group">
+            <label>To Date</label>
+            <p-datepicker [(ngModel)]="filterDateTo" dateFormat="dd/mm/yy" placeholder="dd/mm/yyyy" [showIcon]="true" appendTo="body" (onSelect)="applyDateFilter()" (onClear)="applyDateFilter()" [showClear]="true"></p-datepicker>
+          </div>
+          <div class="ns-filter-btn">
+            <p-button icon="pi pi-filter-slash" label="Clear" severity="secondary" [outlined]="true" size="small" (onClick)="clearDateFilter()"></p-button>
+          </div>
+          <div class="ns-filter-search">
+            <label>Search</label>
+            <p-iconfield>
+              <p-inputicon styleClass="pi pi-search"></p-inputicon>
+              <input pInputText type="text" placeholder="Note-Sheet No, Subject..." (input)="onGlobalFilter(dt, $event)" />
+            </p-iconfield>
+          </div>
+        </div>
+      </ng-template>
       <ng-template pTemplate="header">
         <tr>
           <th style="width: 50px">Ser</th>
-          <th>Note-Sheet Date</th>
+          <th>Date</th>
           <th>Note-Sheet No</th>
-          <th>Unit</th>
-          <th>Wing/Battalion</th>
-          <th>Branch</th>
-          <th>Sub-Branch</th>
+          <th>Type</th>
           <th>Subject</th>
           <th>Present Status</th>
-          <th>Supporting Documents</th>
-          <th style="min-width: 280px">Action</th>
+          <th style="width: 160px">Action</th>
         </tr>
       </ng-template>
       <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
@@ -108,60 +116,65 @@
           <td>{{ rowIndex + 1 }}</td>
           <td>{{ formatDate(row.noteSheetDate) }}</td>
           <td>{{ row.noteSheetNo || '-' }}</td>
-          <td>{{ getUnitLabel(row.unitId) }}</td>
-          <td>{{ getWingLabel(row.wingBattalionId) }}</td>
-          <td>{{ getBranchLabel(row.branchId) }}</td>
-          <td>–</td>
+          <td>{{ noteSheetTypeLabel(row) }}</td>
           <td>{{ row.subject || '-' }}</td>
           <td>{{ presentStatus(row) }}</td>
-          <td class="text-sm">
-            @if (getRowSupportingDocumentsWithIds(row).length > 0) {
-              <div class="flex flex-column gap-1">
-                @for (doc of getRowSupportingDocumentsWithIds(row); track doc.fileId) {
-                  <div class="flex align-items-center gap-1 flex-wrap">
-                    <span class="flex-1 text-overflow-ellipsis" style="min-width: 0;">{{ doc.fileName }}</span>
-                    <p-button type="button" icon="pi pi-eye" [rounded]="true" [text]="true" size="small" pTooltip="Preview" (onClick)="onPreviewSupportingDoc(doc.fileId, doc.fileName)"></p-button>
-                    <p-button type="button" icon="pi pi-download" [rounded]="true" [text]="true" size="small" pTooltip="Download" (onClick)="onDownloadSupportingDoc(doc.fileId, doc.fileName)"></p-button>
-                  </div>
-                }
-              </div>
-            } @else {
-              <span class="text-500">—</span>
-            }
-          </td>
           <td>
-            <p-button type="button" label="Preview" icon="pi pi-eye" [text]="true" size="small" (onClick)="openPreview(row)" class="mr-1"></p-button>
-            <p-button type="button" label="Approve" icon="pi pi-check" [text]="true" size="small" (onClick)="openRemarkDialog(row, 'approve')" class="mr-1"></p-button>
-            <p-button type="button" label="Decline" icon="pi pi-times" [text]="true" severity="danger" size="small" (onClick)="openRemarkDialog(row, 'decline')" class="mr-1"></p-button>
-            <p-button type="button" label="Back" icon="pi pi-replay" [text]="true" severity="secondary" size="small" (onClick)="openRemarkDialog(row, 'back')"></p-button>
+            <div class="flex align-items-center gap-1">
+              <p-button type="button" icon="pi pi-eye" [rounded]="true" [text]="true" size="small" pTooltip="Preview" (onClick)="openPreview(row)"></p-button>
+              <p-button type="button" icon="pi pi-check" [rounded]="true" [text]="true" size="small" severity="success" pTooltip="Approve" (onClick)="openRemarkDialog(row, 'approve')"></p-button>
+              <p-button type="button" icon="pi pi-times" [rounded]="true" [text]="true" size="small" severity="danger" pTooltip="Decline" (onClick)="openRemarkDialog(row, 'decline')"></p-button>
+              <p-button type="button" icon="pi pi-replay" [rounded]="true" [text]="true" size="small" severity="secondary" pTooltip="Back" (onClick)="openRemarkDialog(row, 'back')"></p-button>
+            </div>
           </td>
         </tr>
       </ng-template>
       <ng-template pTemplate="emptymessage">
-        <tr><td colspan="11" class="text-center text-500">No pending note-sheets.</td></tr>
+        <tr><td colspan="7" class="text-center text-500">No pending note-sheets.</td></tr>
       </ng-template>
     </p-table>
   </div>
   }
 
   @if (section === 'approved') {
-  <div class="card mb-4">
-    <h3 class="text-xl font-semibold text-900 mb-3">Approved Note-Sheet List</h3>
-    <p-table [value]="approvedList" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines">
+  <div class="form-card">
+    <div class="form-card-header">
+      <h3 class="form-card-title">Approved Note-Sheet List</h3>
+    </div>
+    <p class="text-600 mt-0 mb-3">Note-sheets that have been approved.</p>
+    <p-table #dt [value]="approvedList" [loading]="loading" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" [globalFilterFields]="['noteSheetNo', 'subject']">
+      <ng-template pTemplate="caption">
+        <div class="ns-filter-bar">
+          <div class="ns-filter-group">
+            <label>From Date</label>
+            <p-datepicker [(ngModel)]="filterDateFrom" dateFormat="dd/mm/yy" placeholder="dd/mm/yyyy" [showIcon]="true" appendTo="body" (onSelect)="applyDateFilter()" (onClear)="applyDateFilter()" [showClear]="true"></p-datepicker>
+          </div>
+          <div class="ns-filter-group">
+            <label>To Date</label>
+            <p-datepicker [(ngModel)]="filterDateTo" dateFormat="dd/mm/yy" placeholder="dd/mm/yyyy" [showIcon]="true" appendTo="body" (onSelect)="applyDateFilter()" (onClear)="applyDateFilter()" [showClear]="true"></p-datepicker>
+          </div>
+          <div class="ns-filter-btn">
+            <p-button icon="pi pi-filter-slash" label="Clear" severity="secondary" [outlined]="true" size="small" (onClick)="clearDateFilter()"></p-button>
+          </div>
+          <div class="ns-filter-search">
+            <label>Search</label>
+            <p-iconfield>
+              <p-inputicon styleClass="pi pi-search"></p-inputicon>
+              <input pInputText type="text" placeholder="Note-Sheet No, Subject..." (input)="onGlobalFilter(dt, $event)" />
+            </p-iconfield>
+          </div>
+        </div>
+      </ng-template>
       <ng-template pTemplate="header">
         <tr>
           <th style="width: 50px">Ser</th>
-          <th>Note-Sheet Date</th>
+          <th>Date</th>
           <th>Note-Sheet No</th>
-          <th>Unit</th>
-          <th>Wing/Battalion</th>
-          <th>Branch</th>
-          <th>Sub-Branch</th>
+          <th>Type</th>
           <th>Subject</th>
-          <th>Supporting Documents</th>
           <th>Approved by</th>
           <th>Approved Date</th>
-          <th style="min-width: 100px">Action</th>
+          <th style="width: 80px">Action</th>
         </tr>
       </ng-template>
       <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
@@ -169,55 +182,60 @@
           <td>{{ rowIndex + 1 }}</td>
           <td>{{ formatDate(row.noteSheetDate) }}</td>
           <td>{{ row.noteSheetNo || '-' }}</td>
-          <td>{{ getUnitLabel(row.unitId) }}</td>
-          <td>{{ getWingLabel(row.wingBattalionId) }}</td>
-          <td>{{ getBranchLabel(row.branchId) }}</td>
-          <td>–</td>
+          <td>{{ noteSheetTypeLabel(row) }}</td>
           <td>{{ row.subject || '-' }}</td>
-          <td class="text-sm">
-            @if (getRowSupportingDocumentsWithIds(row).length > 0) {
-              <div class="flex flex-column gap-1">
-                @for (doc of getRowSupportingDocumentsWithIds(row); track doc.fileId) {
-                  <div class="flex align-items-center gap-1 flex-wrap">
-                    <span class="flex-1 text-overflow-ellipsis" style="min-width: 0;">{{ doc.fileName }}</span>
-                    <p-button type="button" icon="pi pi-eye" [rounded]="true" [text]="true" size="small" pTooltip="Preview" (onClick)="onPreviewSupportingDoc(doc.fileId, doc.fileName)"></p-button>
-                    <p-button type="button" icon="pi pi-download" [rounded]="true" [text]="true" size="small" pTooltip="Download" (onClick)="onDownloadSupportingDoc(doc.fileId, doc.fileName)"></p-button>
-                  </div>
-                }
-              </div>
-            } @else {
-              <span class="text-500">—</span>
-            }
-          </td>
           <td>{{ row.approvedByEmployeeId ?? '-' }}</td>
           <td>{{ formatDate(row.approvedDate) }}</td>
           <td>
-            <p-button type="button" label="Preview" icon="pi pi-eye" [text]="true" size="small" (onClick)="openPreview(row)"></p-button>
+            <div class="flex align-items-center gap-1">
+              <p-button type="button" icon="pi pi-eye" [rounded]="true" [text]="true" size="small" pTooltip="Preview" (onClick)="openPreview(row)"></p-button>
+            </div>
           </td>
         </tr>
       </ng-template>
       <ng-template pTemplate="emptymessage">
-        <tr><td colspan="12" class="text-center text-500">No approved note-sheets.</td></tr>
+        <tr><td colspan="8" class="text-center text-500">No approved note-sheets.</td></tr>
       </ng-template>
     </p-table>
   </div>
   }
 
   @if (section === 'declined') {
-  <div class="card mb-4">
-    <h3 class="text-xl font-semibold text-900 mb-3">Declined Note-Sheet List</h3>
-    <p-table [value]="declinedList" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines">
+  <div class="form-card">
+    <div class="form-card-header">
+      <h3 class="form-card-title">Declined Note-Sheet List</h3>
+    </div>
+    <p class="text-600 mt-0 mb-3">Note-sheets that have been declined.</p>
+    <p-table #dt [value]="declinedList" [loading]="loading" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" [globalFilterFields]="['noteSheetNo', 'subject']">
+      <ng-template pTemplate="caption">
+        <div class="ns-filter-bar">
+          <div class="ns-filter-group">
+            <label>From Date</label>
+            <p-datepicker [(ngModel)]="filterDateFrom" dateFormat="dd/mm/yy" placeholder="dd/mm/yyyy" [showIcon]="true" appendTo="body" (onSelect)="applyDateFilter()" (onClear)="applyDateFilter()" [showClear]="true"></p-datepicker>
+          </div>
+          <div class="ns-filter-group">
+            <label>To Date</label>
+            <p-datepicker [(ngModel)]="filterDateTo" dateFormat="dd/mm/yy" placeholder="dd/mm/yyyy" [showIcon]="true" appendTo="body" (onSelect)="applyDateFilter()" (onClear)="applyDateFilter()" [showClear]="true"></p-datepicker>
+          </div>
+          <div class="ns-filter-btn">
+            <p-button icon="pi pi-filter-slash" label="Clear" severity="secondary" [outlined]="true" size="small" (onClick)="clearDateFilter()"></p-button>
+          </div>
+          <div class="ns-filter-search">
+            <label>Search</label>
+            <p-iconfield>
+              <p-inputicon styleClass="pi pi-search"></p-inputicon>
+              <input pInputText type="text" placeholder="Note-Sheet No, Subject..." (input)="onGlobalFilter(dt, $event)" />
+            </p-iconfield>
+          </div>
+        </div>
+      </ng-template>
       <ng-template pTemplate="header">
         <tr>
           <th style="width: 50px">Ser</th>
-          <th>Note-Sheet Date</th>
+          <th>Date</th>
           <th>Note-Sheet No</th>
-          <th>Unit</th>
-          <th>Wing/Battalion</th>
-          <th>Branch</th>
-          <th>Sub-Branch</th>
+          <th>Type</th>
           <th>Subject</th>
-          <th>Supporting Documents</th>
           <th>Declined by</th>
           <th>Declined Date</th>
         </tr>
@@ -227,54 +245,57 @@
           <td>{{ rowIndex + 1 }}</td>
           <td>{{ formatDate(row.noteSheetDate) }}</td>
           <td>{{ row.noteSheetNo || '-' }}</td>
-          <td>{{ getUnitLabel(row.unitId) }}</td>
-          <td>{{ getWingLabel(row.wingBattalionId) }}</td>
-          <td>{{ getBranchLabel(row.branchId) }}</td>
-          <td>–</td>
+          <td>{{ noteSheetTypeLabel(row) }}</td>
           <td>{{ row.subject || '-' }}</td>
-          <td class="text-sm">
-            @if (getRowSupportingDocumentsWithIds(row).length > 0) {
-              <div class="flex flex-column gap-1">
-                @for (doc of getRowSupportingDocumentsWithIds(row); track doc.fileId) {
-                  <div class="flex align-items-center gap-1 flex-wrap">
-                    <span class="flex-1 text-overflow-ellipsis" style="min-width: 0;">{{ doc.fileName }}</span>
-                    <p-button type="button" icon="pi pi-eye" [rounded]="true" [text]="true" size="small" pTooltip="Preview" (onClick)="onPreviewSupportingDoc(doc.fileId, doc.fileName)"></p-button>
-                    <p-button type="button" icon="pi pi-download" [rounded]="true" [text]="true" size="small" pTooltip="Download" (onClick)="onDownloadSupportingDoc(doc.fileId, doc.fileName)"></p-button>
-                  </div>
-                }
-              </div>
-            } @else {
-              <span class="text-500">—</span>
-            }
-          </td>
           <td>{{ row.declinedByEmployeeId ?? '-' }}</td>
           <td>{{ formatDate(row.declinedDate) }}</td>
         </tr>
       </ng-template>
       <ng-template pTemplate="emptymessage">
-        <tr><td colspan="11" class="text-center text-500">No declined note-sheets.</td></tr>
+        <tr><td colspan="7" class="text-center text-500">No declined note-sheets.</td></tr>
       </ng-template>
     </p-table>
   </div>
   }
 
   @if (section === 'all') {
-  <div class="card mb-4">
-    <h3 class="text-xl font-semibold text-900 mb-3">All Note-Sheet</h3>
-    <p-table [value]="allList" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" styleClass="p-datatable-striped p-datatable-gridlines">
+  <div class="form-card">
+    <div class="form-card-header">
+      <h3 class="form-card-title">All Note-Sheet</h3>
+    </div>
+    <p class="text-600 mt-0 mb-3">All note-sheets regardless of status.</p>
+    <p-table #dt [value]="allList" [loading]="loading" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" styleClass="p-datatable-striped p-datatable-gridlines" [globalFilterFields]="['noteSheetNo', 'subject']">
+      <ng-template pTemplate="caption">
+        <div class="ns-filter-bar">
+          <div class="ns-filter-group">
+            <label>From Date</label>
+            <p-datepicker [(ngModel)]="filterDateFrom" dateFormat="dd/mm/yy" placeholder="dd/mm/yyyy" [showIcon]="true" appendTo="body" (onSelect)="applyDateFilter()" (onClear)="applyDateFilter()" [showClear]="true"></p-datepicker>
+          </div>
+          <div class="ns-filter-group">
+            <label>To Date</label>
+            <p-datepicker [(ngModel)]="filterDateTo" dateFormat="dd/mm/yy" placeholder="dd/mm/yyyy" [showIcon]="true" appendTo="body" (onSelect)="applyDateFilter()" (onClear)="applyDateFilter()" [showClear]="true"></p-datepicker>
+          </div>
+          <div class="ns-filter-btn">
+            <p-button icon="pi pi-filter-slash" label="Clear" severity="secondary" [outlined]="true" size="small" (onClick)="clearDateFilter()"></p-button>
+          </div>
+          <div class="ns-filter-search">
+            <label>Search</label>
+            <p-iconfield>
+              <p-inputicon styleClass="pi pi-search"></p-inputicon>
+              <input pInputText type="text" placeholder="Note-Sheet No, Subject..." (input)="onGlobalFilter(dt, $event)" />
+            </p-iconfield>
+          </div>
+        </div>
+      </ng-template>
       <ng-template pTemplate="header">
         <tr>
           <th style="width: 50px">Ser</th>
-          <th>Note-Sheet Date</th>
+          <th>Date</th>
           <th>Note-Sheet No</th>
-          <th>Unit</th>
-          <th>Wing/Battalion</th>
-          <th>Branch</th>
-          <th>Sub-Branch</th>
+          <th>Type</th>
           <th>Subject</th>
-          <th>Supporting Documents</th>
-          <th>Note-Sheet Status</th>
-          <th style="min-width: 100px">Action</th>
+          <th>Status</th>
+          <th style="width: 80px">Action</th>
         </tr>
       </ng-template>
       <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
@@ -282,34 +303,18 @@
           <td>{{ rowIndex + 1 }}</td>
           <td>{{ formatDate(row.noteSheetDate) }}</td>
           <td>{{ row.noteSheetNo || '-' }}</td>
-          <td>{{ getUnitLabel(row.unitId) }}</td>
-          <td>{{ getWingLabel(row.wingBattalionId) }}</td>
-          <td>{{ getBranchLabel(row.branchId) }}</td>
-          <td>–</td>
+          <td>{{ noteSheetTypeLabel(row) }}</td>
           <td>{{ row.subject || '-' }}</td>
-          <td class="text-sm">
-            @if (getRowSupportingDocumentsWithIds(row).length > 0) {
-              <div class="flex flex-column gap-1">
-                @for (doc of getRowSupportingDocumentsWithIds(row); track doc.fileId) {
-                  <div class="flex align-items-center gap-1 flex-wrap">
-                    <span class="flex-1 text-overflow-ellipsis" style="min-width: 0;">{{ doc.fileName }}</span>
-                    <p-button type="button" icon="pi pi-eye" [rounded]="true" [text]="true" size="small" pTooltip="Preview" (onClick)="onPreviewSupportingDoc(doc.fileId, doc.fileName)"></p-button>
-                    <p-button type="button" icon="pi pi-download" [rounded]="true" [text]="true" size="small" pTooltip="Download" (onClick)="onDownloadSupportingDoc(doc.fileId, doc.fileName)"></p-button>
-                  </div>
-                }
-              </div>
-            } @else {
-              <span class="text-500">—</span>
-            }
-          </td>
           <td>{{ statusLabel(row) }}</td>
           <td>
-            <p-button type="button" label="Preview" icon="pi pi-eye" [text]="true" size="small" (onClick)="openPreview(row)"></p-button>
+            <div class="flex align-items-center gap-1">
+              <p-button type="button" icon="pi pi-eye" [rounded]="true" [text]="true" size="small" pTooltip="Preview" (onClick)="openPreview(row)"></p-button>
+            </div>
           </td>
         </tr>
       </ng-template>
       <ng-template pTemplate="emptymessage">
-        <tr><td colspan="11" class="text-center text-500">No note-sheets.</td></tr>
+        <tr><td colspan="7" class="text-center text-500">No note-sheets.</td></tr>
       </ng-template>
     </p-table>
   </div>

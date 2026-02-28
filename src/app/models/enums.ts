@@ -85,10 +85,10 @@ export enum IsSendingNotesheetStatus {
 
 /** NoteSheetType – type of note-sheet (General, ExBDLeave, NewPosting, InterPosting). */
 export enum NoteSheetType {
-    General = 1,
-    ExBDLeave = 3,   // 2 reserved; 3 used by existing Ex-BD Leave data
-    NewPosting = 4,
-    InterPosting = 5
+    General = 'General',
+    ExBDLeave = 'ExBDLeave',
+    NewPosting = 'NewPosting',
+    InterPosting = 'InterPosting'
 }
 
 export const NoteSheetTypeOptions = [

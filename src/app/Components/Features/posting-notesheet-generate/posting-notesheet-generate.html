@@ -55,7 +55,21 @@
           </div>
           <div class="form-field">
             <label class="form-label">Prepared by</label>
-            <input pInputText class="w-full" formControlName="preparedBy" readonly />
+            @if (isPreparedByMapped) {
+              <input pInputText class="w-full" formControlName="preparedBy" readonly />
+            } @else {
+              <p-select
+                formControlName="preparedByEmployeeId"
+                [options]="initiatorOptionsDisplay"
+                optionLabel="label"
+                optionValue="value"
+                [filter]="true"
+                filterBy="label"
+                placeholder="Search & Select"
+                [showClear]="true"
+                styleClass="w-full">
+              </p-select>
+            }
           </div>
           <div class="form-field">
             <label class="form-label">Select Initiator</label>
@@ -138,7 +152,7 @@
       </div>
 
       <div class="form-actions">
-        <p-button type="submit" label="Generate Note Sheet" icon="pi pi-file-edit" [loading]="isSubmitting" [disabled]="form.invalid" />
+        <p-button type="submit" [label]="editMode ? 'Update Note Sheet' : 'Generate Note Sheet'" [icon]="editMode ? 'pi pi-check' : 'pi pi-file-edit'" [loading]="isSubmitting" [disabled]="form.invalid" />
       </div>
     </form>
   </div>

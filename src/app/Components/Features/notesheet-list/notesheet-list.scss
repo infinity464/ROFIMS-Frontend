@@ -2,6 +2,86 @@
   display: block;
 }
 
+/* ── Filter bar inside table caption ── */
+.ns-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem 1.25rem;
+  padding: 0.875rem 1rem;
+  background: var(--surface-50, #f8fafc);
+  border: 1px solid var(--surface-border, #dee2e6);
+  border-radius: 0.75rem;
+  margin-bottom: 0.25rem;
+
+  /* cancel p-fluid stretch for everything inside the bar */
+  ::ng-deep .p-fluid {
+    width: auto !important;
+    flex: none !important;
+  }
+}
+
+.ns-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  width: 190px;
+  flex: 0 0 auto;
+
+  label {
+    font-weight: 600;
+    font-size: 0.8125rem;
+    color: var(--text-color-secondary, #64748b);
+    display: block;
+  }
+
+  /* constrain the datepicker and its inner input */
+  ::ng-deep {
+    p-datepicker,
+    .p-datepicker {
+      width: 100% !important;
+      flex: none !important;
+    }
+    .p-datepicker-input,
+    .p-inputtext {
+      width: 100% !important;
+    }
+  }
+}
+
+.ns-filter-search {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-left: auto;
+  width: 240px;
+  flex: 0 0 auto;
+
+  label {
+    font-weight: 600;
+    font-size: 0.8125rem;
+    color: var(--text-color-secondary, #64748b);
+    display: block;
+  }
+
+  ::ng-deep {
+    p-iconfield,
+    .p-iconfield {
+      width: 100% !important;
+      flex: none !important;
+    }
+    .p-inputtext {
+      width: 100% !important;
+    }
+  }
+}
+
+.ns-filter-btn {
+  flex: 0 0 auto;
+  align-self: flex-end;
+  padding-bottom: 1px;
+}
+
 /* Preview dialog – formal note-sheet layout (screenshot-style) */
 .notesheet-preview-doc {
   font-family: inherit;

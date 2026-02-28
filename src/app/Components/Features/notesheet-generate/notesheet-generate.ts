@@ -23,6 +23,7 @@ import { EmpService } from '@/services/emp-service';
 import { ActivatedRoute, Router } from '@angular/router';
 import { take, map } from 'rxjs/operators';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
+import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
 import { NoteSheetType } from '@/models/enums';
 
 @Component({
@@ -54,6 +55,8 @@ export class NotesheetGenerateComponent implements OnInit {
     editId: number | null = null;
     /** When editing, keep original preparer (CreatedBy) so draft→approved does not change it */
     originalCreatedBy: string | null = null;
+    /** Whether the logged-in user has an employee mapping (show readonly vs dropdown) */
+    isPreparedByMapped = false;
     textTypeOptions = [
         { label: 'English', value: 'en' },
         { label: 'Bangla', value: 'bn' }
@@ -85,7 +88,8 @@ export class NotesheetGenerateComponent implements OnInit {
         private route: ActivatedRoute,
         private router: Router,
         private sanitizer: DomSanitizer,
-        private noteSheetEditCache: NoteSheetEditCacheService
+        private noteSheetEditCache: NoteSheetEditCacheService,
+        private identityMappingService: IdentityUserMappingService
     ) {
         this.form = this.fb.group({
             noteSheetTemplateId: [null as number | null],
@@ -99,6 +103,7 @@ export class NotesheetGenerateComponent implements OnInit {
             subject: ['', Validators.required],
             mainText: [''], // Rich editor (HTML)
             preparedBy: [''],
+            preparedByEmployeeId: [null as number | null],
             initiatorId: [null as number | null],
             recommenderIds: [[] as number[]],
             finalApproverId: [null as number | null]
@@ -111,6 +116,7 @@ export class NotesheetGenerateComponent implements OnInit {
         this.loadApproverOptions();
         const user = this.sharedService.getCurrentUser?.() ?? '';
         this.form.get('preparedBy')?.setValue(user);
+        this.resolvePreparedByMapping();
         this.route.queryParams.pipe(take(1)).subscribe((params) => {
             const id = params['id'];
             if (id != null && id !== '') {
@@ -131,7 +137,7 @@ export class NotesheetGenerateComponent implements OnInit {
         const cached = this.noteSheetEditCache.get(noteSheetId);
         if (cached != null && typeof cached === 'object') {
             const d = cached;
-            if (d.noteSheetTypeId === NoteSheetType.ExBDLeave || d.NoteSheetTypeId === NoteSheetType.ExBDLeave) {
+            if (d.noteSheetType === NoteSheetType.ExBDLeave || d.NoteSheetType === NoteSheetType.ExBDLeave) {
                 this.noteSheetEditCache.set(noteSheetId, d);
                 this.router.navigate(['/notesheet-ex-bd-leave'], { queryParams: { id: noteSheetId } });
                 return;
@@ -147,7 +153,7 @@ export class NotesheetGenerateComponent implements OnInit {
                 const row = list[0];
                 if (!row) return;
                 const d = row;
-                if (d.noteSheetTypeId === NoteSheetType.ExBDLeave || d.NoteSheetTypeId === NoteSheetType.ExBDLeave) {
+                if (d.noteSheetType === NoteSheetType.ExBDLeave || d.NoteSheetType === NoteSheetType.ExBDLeave) {
                     this.router.navigate(['/notesheet-ex-bd-leave'], { queryParams: { id: noteSheetId } });
                     return;
                 }
@@ -180,6 +186,7 @@ export class NotesheetGenerateComponent implements OnInit {
             subject: String(d.subject ?? d.Subject ?? ''),
             mainText: String(d.mainText ?? d.MainText ?? ''),
             preparedBy: d.createdBy ?? d.CreatedBy ?? d.lastUpdatedBy ?? d.LastUpdatedBy ?? user,
+            preparedByEmployeeId: d.preparedByEmployeeId ?? d.PreparedByEmployeeId ?? null,
             initiatorId: d.initiatorId ?? d.InitiatorId ?? null,
             recommenderIds,
             finalApproverId: d.finalApproverId ?? d.FinalApproverId ?? null
@@ -265,15 +272,52 @@ export class NotesheetGenerateComponent implements OnInit {
         });
     }
 
+    /** Check if logged-in user has an employee mapping. If yes, auto-set Prepared By (readonly). If not, show dropdown. */
+    private resolvePreparedByMapping(): void {
+        const userId = this.sharedService.getCurrentUserId?.();
+        if (!userId) {
+            this.isPreparedByMapped = false;
+            return;
+        }
+        this.identityMappingService.getEmployeeIdForUser(userId).subscribe({
+            next: (empId) => {
+                if (empId) {
+                    this.isPreparedByMapped = true;
+                    this.form.get('preparedByEmployeeId')?.setValue(empId);
+                    this.empService.getEmployeeById(empId).subscribe({
+                        next: (emp: any) => {
+                            const name = emp?.FullNameEN || emp?.fullNameEN || '';
+                            const rabId = emp?.RABID || emp?.rabid || emp?.Rabid || '';
+                            const serviceId = emp?.ServiceId || emp?.serviceId || '';
+                            const parts = [name, rabId ? `RAB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : ''].filter(Boolean);
+                            this.form.get('preparedBy')?.setValue(parts.join(' | ') || `Employee #${empId}`);
+                        }
+                    });
+                } else {
+                    this.isPreparedByMapped = false;
+                }
+            },
+            error: () => {
+                this.isPreparedByMapped = false;
+            }
+        });
+    }
+
     loadApproverOptions(): void {
         const api = `${environment.apis.core}/EmployeeInfo`;
         this.http.get<any[]>(`${api}/GetAll`).subscribe({
             next: (list) => {
-                const opts = (Array.isArray(list) ? list : []).map((e: any) => ({
-                    label: e.fullNameEN || e.FullNameEN || e.rabid || e.Rabid || `ID ${e.employeeID ?? e.EmployeeID}`,
-                    labelBn: e.fullNameBN || e.FullNameBN || null,
-                    value: e.employeeID ?? e.EmployeeID
-                }));
+                const opts = (Array.isArray(list) ? list : []).map((e: any) => {
+                    const name = e.fullNameEN || e.FullNameEN || '';
+                    const rabId = e.rabid || e.Rabid || e.RABID || '';
+                    const serviceId = e.serviceId || e.ServiceId || '';
+                    const parts = [name, rabId ? `RAB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : ''].filter(Boolean);
+                    return {
+                        label: parts.join(' | ') || `ID ${e.employeeID ?? e.EmployeeID}`,
+                        labelBn: e.fullNameBN || e.FullNameBN || null,
+                        value: e.employeeID ?? e.EmployeeID
+                    };
+                });
                 this.initiatorOptions = opts;
                 this.recommenderOptions = opts;
                 this.finalApproverOptions = opts;
@@ -433,11 +477,13 @@ export class NotesheetGenerateComponent implements OnInit {
             subject: '',
             mainText: '',
             preparedBy: user,
+            preparedByEmployeeId: null,
             initiatorId: null,
             recommenderIds: [],
             finalApproverId: null
         });
         this.fileRows = [];
+        this.resolvePreparedByMapping();
     }
 
     submit(): void {
@@ -557,7 +603,7 @@ export class NotesheetGenerateComponent implements OnInit {
         const lastUpdatedBy = preparedBy;
         const payload: Record<string, unknown> = {
             noteSheetId: 0,
-            noteSheetTypeId: NoteSheetType.General,
+            noteSheetType: NoteSheetType.General,
             employeeId: 0,
             fileNumber: 0,
             noteSheetNo: (d.noteSheetNo && String(d.noteSheetNo).trim()) || 'AUTO',
@@ -582,7 +628,7 @@ export class NotesheetGenerateComponent implements OnInit {
             wingBattalionId: d.wingBattalionId ?? null,
             branchId: d.branchId ?? null,
             referenceNumber: d.referenceNumber != null ? String(d.referenceNumber) : null,
-            preparedByEmployeeId: null,
+            preparedByEmployeeId: d.preparedByEmployeeId ?? null,
             recommenderIdsJson: d.recommenderIds?.length ? JSON.stringify(d.recommenderIds) : null,
             finalApproverId: d.finalApproverId ?? null,
             familyInfoJson: null

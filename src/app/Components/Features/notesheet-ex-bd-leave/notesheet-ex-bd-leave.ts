@@ -416,11 +416,17 @@ export class NotesheetExBdLeaveComponent implements OnInit {
     loadApproverOptions(): void {
         this.http.get<any[]>(`${environment.apis.core}/EmployeeInfo/GetAll`).subscribe({
             next: (list) => {
-                const opts = (Array.isArray(list) ? list : []).map((e: any) => ({
-                    label: e.fullNameEN || e.FullNameEN || e.rabid || e.Rabid || `ID ${e.employeeID ?? e.EmployeeID}`,
-                    labelBn: e.fullNameBN || e.FullNameBN || null,
-                    value: e.employeeID ?? e.EmployeeID
-                }));
+                const opts = (Array.isArray(list) ? list : []).map((e: any) => {
+                    const name = e.fullNameEN || e.FullNameEN || '';
+                    const rabId = e.rabid || e.Rabid || e.RABID || '';
+                    const serviceId = e.serviceId || e.ServiceId || '';
+                    const parts = [name, rabId ? `RAB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : ''].filter(Boolean);
+                    return {
+                        label: parts.join(' | ') || `ID ${e.employeeID ?? e.EmployeeID}`,
+                        labelBn: e.fullNameBN || e.FullNameBN || null,
+                        value: e.employeeID ?? e.EmployeeID
+                    };
+                });
                 this.initiatorOptions = opts;
                 this.recommenderOptions = opts;
                 this.finalApproverOptions = opts;
@@ -629,7 +635,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             : null;
         return {
             noteSheetId: 0,
-            noteSheetTypeId: NoteSheetType.ExBDLeave,
+            noteSheetType: NoteSheetType.ExBDLeave,
             employeeId: d.rabIdEmployeeId ?? 0,
             fileNumber: 0,
             noteSheetNo: (d.noteSheetNo && String(d.noteSheetNo).trim()) || 'AUTO',

@@ -20,8 +20,13 @@ import { NoteSheetType } from '@/models/enums';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { CommonCode } from '@/Components/basic-setup/shared/models/common-code';
 import { TooltipModule } from 'primeng/tooltip';
+import { DatePickerModule } from 'primeng/datepicker';
+import { InputTextModule } from 'primeng/inputtext';
+import { IconFieldModule } from 'primeng/iconfield';
+import { InputIconModule } from 'primeng/inputicon';
 import { forkJoin } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { Table } from 'primeng/table';
 
 export interface NoteSheetInfoRow {
   noteSheetId: number;
@@ -31,8 +36,8 @@ export interface NoteSheetInfoRow {
   branchId?: number;
   subject: string;
   noteSheetStatusId?: number;
-  /** 1 = general, 3 = Ex-BD Leave; used to route Update and Preview */
-  noteSheetTypeId?: number;
+  /** Type string: General, ExBDLeave, NewPosting, InterPosting; used to route Update and Preview */
+  noteSheetType?: string;
   currentApprovalStep?: number;
   approvedByEmployeeId?: number;
   approvedDate?: string;
@@ -83,7 +88,11 @@ export type NoteSheetSection = 'draft' | 'pending' | 'approved' | 'declined' | '
     ToastModule,
     FluidModule,
     EditorModule,
-    TooltipModule
+    TooltipModule,
+    DatePickerModule,
+    InputTextModule,
+    IconFieldModule,
+    InputIconModule
   ],
   providers: [MessageService],
   templateUrl: './notesheet-list.html',
@@ -105,7 +114,13 @@ export class NotesheetListComponent implements OnInit {
   approvedList: NoteSheetInfoRow[] = [];
   declinedList: NoteSheetInfoRow[] = [];
   allList: NoteSheetInfoRow[] = [];
+  /** Unfiltered copies for date filtering */
+  private _fullList: NoteSheetInfoRow[] = [];
   loading = false;
+
+  /** Date filter */
+  filterDateFrom: Date | null = null;
+  filterDateTo: Date | null = null;
 
   showRemarkDialog = false;
   remarkAction: 'approve' | 'decline' | 'back' | null = null;
@@ -218,7 +233,7 @@ export class NotesheetListComponent implements OnInit {
 
   /** Whether the previewed note sheet is Ex-BD Leave. */
   isPreviewExBdLeave(): boolean {
-    return this.previewNoteSheet?.noteSheetTypeId === NoteSheetType.ExBDLeave;
+    return this.previewNoteSheet?.noteSheetType === NoteSheetType.ExBDLeave;
   }
 
   /** Preview dialog header: type-specific (Ex-BD Leave vs general). */
@@ -359,9 +374,10 @@ export class NotesheetListComponent implements OnInit {
         const list = Array.isArray(raw) ? raw : raw != null && typeof raw === 'object' && !Array.isArray(raw) ? [raw] : [];
         const full = list[0] ?? null;
         if (full) this.noteSheetEditCache.set(row.noteSheetId, full);
-        const noteSheetTypeId = full?.noteSheetTypeId ?? full?.NoteSheetTypeId ?? row.noteSheetTypeId;
-        const isExBdLeave = noteSheetTypeId === NoteSheetType.ExBDLeave;
-        const route = isExBdLeave ? '/notesheet-ex-bd-leave' : '/notesheet-generate';
+        const noteSheetType = full?.noteSheetType ?? full?.NoteSheetType ?? row.noteSheetType;
+        let route = '/notesheet-generate';
+        if (noteSheetType === NoteSheetType.ExBDLeave) route = '/notesheet-ex-bd-leave';
+        else if (noteSheetType === NoteSheetType.NewPosting) route = '/posting/notesheet-generate';
         this.router.navigate([route], { queryParams: { id: row.noteSheetId } });
       },
       error: () => {
@@ -413,43 +429,88 @@ export class NotesheetListComponent implements OnInit {
       this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load note-sheet list.' });
       this.loading = false;
     };
-    switch (this.section) {
-      case 'draft':
-        this.http.get<unknown>(`${base}?noteSheetStatusId=1`).subscribe({
-          next: (data) => { this.draftList = this.parseListResponse(data); this.loading = false; },
-          error: () => { this.draftList = []; onError(); }
-        });
-        break;
-      case 'pending':
-        this.http.get<unknown>(`${base}?noteSheetStatusId=2`).subscribe({
-          next: (data) => { this.pendingList = this.parseListResponse(data); this.loading = false; },
-          error: () => { this.pendingList = []; onError(); }
-        });
-        break;
-      case 'approved':
-        this.http.get<unknown>(`${base}?noteSheetStatusId=3`).subscribe({
-          next: (data) => { this.approvedList = this.parseListResponse(data); this.loading = false; },
-          error: () => { this.approvedList = []; onError(); }
-        });
-        break;
-      case 'declined':
-        this.http.get<unknown>(`${base}?noteSheetStatusId=4`).subscribe({
-          next: (data) => { this.declinedList = this.parseListResponse(data); this.loading = false; },
-          error: () => { this.declinedList = []; onError(); }
-        });
-        break;
-      case 'all':
-        this.http.get<unknown>(`${base}`).subscribe({
-          next: (data) => { this.allList = this.parseListResponse(data); this.loading = false; },
-          error: () => { this.allList = []; onError(); }
-        });
-        break;
-    }
+    const statusMap: Record<NoteSheetSection, string> = {
+      draft: '?noteSheetStatusId=1',
+      pending: '?noteSheetStatusId=2',
+      approved: '?noteSheetStatusId=3',
+      declined: '?noteSheetStatusId=4',
+      all: ''
+    };
+    this.http.get<unknown>(`${base}${statusMap[this.section]}`).subscribe({
+      next: (data) => {
+        const list = this.parseListResponse(data);
+        this._fullList = list;
+        this.filterDateFrom = null;
+        this.filterDateTo = null;
+        this.setCurrentList(list);
+        this.loading = false;
+      },
+      error: () => {
+        this._fullList = [];
+        this.setCurrentList([]);
+        onError();
+      }
+    });
   }
 
   /** Used when a single-section action (e.g. submit) needs to refresh current list. */
   private loadAll(): void {
     this.loadSection();
+  }
+
+  /** Apply date range filter on current section list. */
+  applyDateFilter(): void {
+    const from = this.filterDateFrom;
+    const to = this.filterDateTo;
+    let filtered = [...this._fullList];
+    if (from) {
+      const fromTime = new Date(from.getFullYear(), from.getMonth(), from.getDate()).getTime();
+      filtered = filtered.filter((r) => {
+        const d = r.noteSheetDate ? new Date(r.noteSheetDate) : null;
+        return d ? d.getTime() >= fromTime : false;
+      });
+    }
+    if (to) {
+      const toTime = new Date(to.getFullYear(), to.getMonth(), to.getDate(), 23, 59, 59, 999).getTime();
+      filtered = filtered.filter((r) => {
+        const d = r.noteSheetDate ? new Date(r.noteSheetDate) : null;
+        return d ? d.getTime() <= toTime : false;
+      });
+    }
+    this.setCurrentList(filtered);
+  }
+
+  /** Clear date filters and restore full list. */
+  clearDateFilter(): void {
+    this.filterDateFrom = null;
+    this.filterDateTo = null;
+    this.setCurrentList([...this._fullList]);
+  }
+
+  /** Global search on table. */
+  onGlobalFilter(table: Table, event: Event): void {
+    table.filterGlobal((event.target as HTMLInputElement).value, 'contains');
+  }
+
+  private setCurrentList(list: NoteSheetInfoRow[]): void {
+    switch (this.section) {
+      case 'draft': this.draftList = list; break;
+      case 'pending': this.pendingList = list; break;
+      case 'approved': this.approvedList = list; break;
+      case 'declined': this.declinedList = list; break;
+      case 'all': this.allList = list; break;
+    }
+  }
+
+  readonly noteSheetTypeLabels: Record<string, string> = {
+    General: 'General',
+    ExBDLeave: 'Ex-BD Leave',
+    NewPosting: 'New Posting',
+    InterPosting: 'Inter Posting'
+  };
+
+  noteSheetTypeLabel(row: NoteSheetInfoRow): string {
+    return this.noteSheetTypeLabels[row.noteSheetType ?? ''] ?? row.noteSheetType ?? '-';
   }
 
   presentStatus(row: NoteSheetInfoRow): string {

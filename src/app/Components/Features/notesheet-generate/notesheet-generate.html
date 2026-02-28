@@ -103,8 +103,22 @@
         <div class="notesheet-row">
           <div class="notesheet-label">{{ isBangla ? 'প্রস্তুতকারী' : 'Prepared by' }}</div>
           <div class="notesheet-input-desc">
-            <input pInputText formControlName="preparedBy" readonly class="w-full" />
-            <span class="text-500 text-sm ml-2">{{ isBangla ? 'স্বয়ং সেট (লগইন ব্যবহারকারী)' : 'Auto Set (Login User)' }}</span>
+            @if (isPreparedByMapped) {
+              <input pInputText formControlName="preparedBy" readonly class="w-full" />
+              <span class="text-500 text-sm ml-2">{{ isBangla ? 'স্বয়ং সেট (ম্যাপড কর্মচারী)' : 'Auto Set (Mapped Employee)' }}</span>
+            } @else {
+              <p-select
+                formControlName="preparedByEmployeeId"
+                [options]="initiatorOptionsDisplay"
+                optionLabel="label"
+                optionValue="value"
+                [filter]="true"
+                [showClear]="true"
+                [placeholder]="isBangla ? 'প্রস্তুতকারী নির্বাচন করুন' : 'Select Prepared By'"
+                styleClass="w-full">
+              </p-select>
+              <span class="text-500 text-sm ml-2">{{ isBangla ? 'ড্রপ ডাউন থেকে নির্বাচন করুন' : 'Select from dropdown' }}</span>
+            }
           </div>
         </div>
         <div class="notesheet-row">
