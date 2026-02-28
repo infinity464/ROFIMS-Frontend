@@ -7,7 +7,9 @@
         <p-button type="button" icon="pi pi-file-word" [rounded]="true" [text]="true" size="small" pTooltip="Export Word" (onClick)="exportWord()"></p-button>
         <p-button type="button" icon="pi pi-file-pdf" [rounded]="true" [text]="true" size="small" pTooltip="Export PDF" (onClick)="exportPdfDirect()"></p-button>
         <p-button type="button" icon="pi pi-print" [rounded]="true" [text]="true" size="small" pTooltip="Print" (onClick)="exportPdf()"></p-button>
-        <p-button class="po-edit-btn" type="button" icon="pi pi-pencil" [rounded]="true" [text]="true" size="small" pTooltip="Edit" (onClick)="toggleEdit()"></p-button>
+        @if (!isApproved) {
+          <p-button class="po-edit-btn" type="button" icon="pi pi-pencil" [rounded]="true" [text]="true" size="small" pTooltip="Edit" (onClick)="toggleEdit()"></p-button>
+        }
       </div>
     }
   </div>

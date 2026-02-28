@@ -9,6 +9,16 @@
     }
 }
 
+.ns-signatory-line {
+    width: 160px;
+    border-bottom: 1px solid #000;
+    margin-bottom: 0.25rem;
+}
+
+.ns-signatory.align-right .ns-signatory-line {
+    margin-left: auto;
+}
+
 .ns-signatory-role {
     font-weight: 600;
     font-size: 0.8125rem;

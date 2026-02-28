@@ -3,6 +3,7 @@
         @if (detail.signatureDataUrl && showSignature) {
             <img [src]="detail.signatureDataUrl" class="ns-signatory-signature" alt="Signature" />
         }
+        <div class="ns-signatory-line"></div>
         <span class="ns-signatory-role">{{ getDisplayRole() }}</span>
         <span class="font-medium">{{ detail.name }}</span>
         <span class="text-600 text-sm">RAB ID: {{ detail.rabId }}</span>
@@ -12,6 +13,7 @@
             <span class="text-500 text-sm">{{ dateValue }}</span>
         }
     } @else if (fallbackName) {
+        <div class="ns-signatory-line"></div>
         <span class="ns-signatory-role">{{ roleLabel }}</span>
         <span class="font-medium">{{ fallbackName }}</span>
         @if (showDate && dateValue) {

@@ -47,6 +47,11 @@ export class PostingOrderPreviewComponent implements OnChanges, OnInit {
     /** RAB Unit dropdown options */
     rabUnitOptions: { label: string; value: number }[] = [];
 
+    /** Whether the notesheet is approved (edit disabled) */
+    get isApproved(): boolean {
+        return (this.noteSheet?.noteSheetStatusId ?? 0) === NoteSheetStatus.Approved;
+    }
+
     /** Edit mode */
     editing = false;
     saving = false;
@@ -253,76 +258,94 @@ export class PostingOrderPreviewComponent implements OnChanges, OnInit {
         // ── Spacer before signatures ──
         children.push(new Paragraph({ spacing: { before: 400 } }));
 
-        // ── Recommender(s) + Final Approver (left-aligned) ──
-        for (const approver of this.approversDetails) {
-            const showApproverSig = approver.signatureDataUrl && this.shouldShowSignature(approver.step);
-            if (showApproverSig) {
-                children.push(new Paragraph({
-                    children: [new ImageRun({ type: 'png', data: this.dataUrlToUint8Array(approver.signatureDataUrl), transformation: { width: 150, height: 50 } })],
-                    spacing: { before: 200 }
+        // ── Signature table (two columns: left = approvers, right = prepared by + initiator) ──
+        const noBorder = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+        const noBorders = { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder };
+
+        // Helper: build paragraphs for a signatory block
+        const buildSigParas = (detail: any, roleLabel: string, align: (typeof AlignmentType)[keyof typeof AlignmentType], showDate = false): Paragraph[] => {
+            const paras: Paragraph[] = [];
+            if (!detail) return paras;
+            const showSig = detail.signatureDataUrl && this.shouldShowSignature(detail.step ?? roleLabel);
+            if (showSig) {
+                paras.push(new Paragraph({
+                    children: [new ImageRun({ type: 'png', data: this.dataUrlToUint8Array(detail.signatureDataUrl), transformation: { width: 150, height: 50 } })],
+                    alignment: align, spacing: { before: 200 }
                 }));
             }
-            children.push(new Paragraph({
-                children: [new TextRun({ text: this.translateStep(approver.step), bold: true, size: 20, font })],
-                spacing: showApproverSig ? {} : { before: 200 }
+            paras.push(new Paragraph({
+                children: [new TextRun({ text: '______________________________', size: 20, font })],
+                alignment: align, spacing: showSig ? {} : { before: 200 }
             }));
-            const aLines = [approver.name, approver.rabId !== '-' ? `RAB ID: ${approver.rabId}` : '', approver.rank, approver.appointment].filter(l => l && l !== '-');
-            aLines.forEach(line => {
-                children.push(new Paragraph({ children: [new TextRun({ text: line, size: 20, font })] }));
+            paras.push(new Paragraph({
+                children: [new TextRun({ text: roleLabel, bold: true, size: 20, font })],
+                alignment: align
+            }));
+            const lines = [
+                detail.name,
+                detail.rabId && detail.rabId !== '-' ? `RAB ID: ${detail.rabId}` : '',
+                detail.rank && detail.rank !== '-' ? detail.rank : '',
+                detail.appointment && detail.appointment !== '-' ? detail.appointment : '',
+                showDate ? this.formatDate(this.noteSheet?.noteSheetDate) : ''
+            ].filter(l => l && l !== '-' && l !== '—');
+            lines.forEach(line => {
+                paras.push(new Paragraph({ children: [new TextRun({ text: line, size: 20, font })], alignment: align }));
             });
+            return paras;
+        };
+
+        // Left column: Recommenders + Final Approver
+        const leftParas: Paragraph[] = [];
+        for (const approver of this.approversDetails) {
+            leftParas.push(...buildSigParas(approver, this.translateStep(approver.step), AlignmentType.LEFT));
+            leftParas.push(new Paragraph({ spacing: { before: 100 } }));
         }
+        if (!leftParas.length) leftParas.push(new Paragraph({}));
 
-        // ── Spacer ──
-        children.push(new Paragraph({ spacing: { before: 300 } }));
-
-        // ── Prepared by (right-aligned, first) ──
+        // Right column: Prepared by + Initiator
+        const rightParas: Paragraph[] = [];
         const preparedByLabel = bn ? 'প্রস্তুতকারী' : 'Prepared by';
         if (this.preparedByDetails) {
-            const showPbSig = this.preparedByDetails.signatureDataUrl && this.shouldShowSignature('Prepared by');
-            if (showPbSig) {
-                children.push(new Paragraph({
-                    children: [new ImageRun({ type: 'png', data: this.dataUrlToUint8Array(this.preparedByDetails.signatureDataUrl), transformation: { width: 150, height: 50 } })],
-                    alignment: AlignmentType.RIGHT, spacing: { before: 200 }
-                }));
-            }
-            children.push(new Paragraph({
-                children: [new TextRun({ text: preparedByLabel, bold: true, size: 20, font })],
-                alignment: AlignmentType.RIGHT, spacing: showPbSig ? {} : { before: 200 }
-            }));
-            const pLines = [this.preparedByDetails.name, this.preparedByDetails.rabId !== '-' ? `RAB ID: ${this.preparedByDetails.rabId}` : '', this.preparedByDetails.rank, this.formatDate(this.noteSheet?.noteSheetDate)].filter(l => l && l !== '-' && l !== '—');
-            pLines.forEach(line => {
-                children.push(new Paragraph({ children: [new TextRun({ text: line, size: 20, font })], alignment: AlignmentType.RIGHT }));
-            });
+            rightParas.push(...buildSigParas(this.preparedByDetails, preparedByLabel, AlignmentType.RIGHT, true));
         } else {
             const fallbackName = this.noteSheet?.preparedBy ?? '';
             if (fallbackName) {
-                children.push(new Paragraph({
+                rightParas.push(new Paragraph({
+                    children: [new TextRun({ text: '______________________________', size: 20, font })],
+                    alignment: AlignmentType.RIGHT, spacing: { before: 200 }
+                }));
+                rightParas.push(new Paragraph({
                     children: [new TextRun({ text: preparedByLabel, bold: true, size: 20, font })],
-                    alignment: AlignmentType.RIGHT, spacing: { before: 200 }
+                    alignment: AlignmentType.RIGHT
                 }));
-                children.push(new Paragraph({ children: [new TextRun({ text: fallbackName, size: 20, font })], alignment: AlignmentType.RIGHT }));
-                children.push(new Paragraph({ children: [new TextRun({ text: this.formatDate(this.noteSheet?.noteSheetDate), size: 20, font })], alignment: AlignmentType.RIGHT }));
+                rightParas.push(new Paragraph({ children: [new TextRun({ text: fallbackName, size: 20, font })], alignment: AlignmentType.RIGHT }));
+                rightParas.push(new Paragraph({ children: [new TextRun({ text: this.formatDate(this.noteSheet?.noteSheetDate), size: 20, font })], alignment: AlignmentType.RIGHT }));
             }
         }
-
-        // ── Initiator (right-aligned, after prepared by) ──
         if (this.initiatorDetails) {
-            const showInitSig = this.initiatorDetails.signatureDataUrl && this.shouldShowSignature(this.initiatorDetails.step);
-            if (showInitSig) {
-                children.push(new Paragraph({
-                    children: [new ImageRun({ type: 'png', data: this.dataUrlToUint8Array(this.initiatorDetails.signatureDataUrl), transformation: { width: 150, height: 50 } })],
-                    alignment: AlignmentType.RIGHT, spacing: { before: 200 }
-                }));
-            }
-            children.push(new Paragraph({
-                children: [new TextRun({ text: this.translateStep(this.initiatorDetails.step), bold: true, size: 20, font })],
-                alignment: AlignmentType.RIGHT, spacing: showInitSig ? {} : { before: 200 }
-            }));
-            const iLines = [this.initiatorDetails.name, this.initiatorDetails.rabId !== '-' ? `RAB ID: ${this.initiatorDetails.rabId}` : '', this.initiatorDetails.rank].filter(l => l && l !== '-');
-            iLines.forEach(line => {
-                children.push(new Paragraph({ children: [new TextRun({ text: line, size: 20, font })], alignment: AlignmentType.RIGHT }));
-            });
+            rightParas.push(new Paragraph({ spacing: { before: 100 } }));
+            rightParas.push(...buildSigParas(this.initiatorDetails, this.translateStep(this.initiatorDetails.step), AlignmentType.RIGHT));
         }
+        if (!rightParas.length) rightParas.push(new Paragraph({}));
+
+        const sigTable = new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: [new TableRow({
+                children: [
+                    new TableCell({
+                        children: leftParas,
+                        borders: noBorders,
+                        width: { size: 50, type: WidthType.PERCENTAGE }
+                    }),
+                    new TableCell({
+                        children: rightParas,
+                        borders: noBorders,
+                        width: { size: 50, type: WidthType.PERCENTAGE }
+                    })
+                ]
+            })]
+        });
+        children.push(sigTable);
 
         const doc = new Document({
             sections: [{
@@ -338,8 +361,8 @@ export class PostingOrderPreviewComponent implements OnChanges, OnInit {
 
     async exportPdfDirect(): Promise<void> {
         const bn = !this.isEnglish;
-        const fontFamily = bn ? "'Noto Sans Bengali', 'SolaimanLipi', sans-serif" : "'Times New Roman', serif";
-        const title = bn ? 'পোস্টিং অর্ডার – মন্তব্যপত্র' : 'POSTING ORDER – NOTE SHEET';
+        const fontFamily = bn ? "'Noto Sans Bengali', 'SolaimanLipi', 'Kalpurush', sans-serif" : "'Times New Roman', serif";
+        const title = bn ? 'মন্তব্যপত্র' : 'NOTE SHEET';
 
         // ── Build meta ──
         const metaParts: string[] = [];
@@ -347,7 +370,7 @@ export class PostingOrderPreviewComponent implements OnChanges, OnInit {
         if (this.noteSheet?.noteSheetDate) metaParts.push(`<span><strong>${bn ? 'তারিখ:' : 'Date:'}</strong> ${this.escapeHtml(this.formatDate(this.noteSheet.noteSheetDate))}</span>`);
         if (this.noteSheet?.referenceNumber) metaParts.push(`<span><strong>${bn ? 'সুত্র:' : 'Reference:'}</strong> ${this.escapeHtml(this.noteSheet.referenceNumber)}</span>`);
 
-        // ── Build employee table rows ──
+        // ── Build employee table ──
         const cols = bn
             ? ['ক্রমিক', 'ব্যক্তিগত নম্বর', 'পদবি', 'ট্রেড', 'নাম', 'মাতৃ ইউনিট', 'যোগদান তারিখ', 'বদলি কর্মস্থল', 'মন্তব্য']
             : ['Ser', 'Service ID', 'Rank', 'Trade', 'Name', 'Mother Unit', 'Joining Date', 'Transfer Unit', 'Remarks'];
@@ -367,14 +390,12 @@ export class PostingOrderPreviewComponent implements OnChanges, OnInit {
             return `<tr>${vals.map(v => `<td>${this.escapeHtml(v)}</td>`).join('')}</tr>`;
         }).join('');
 
-        // ── Build signature blocks ──
         const sigHtml = this.buildSignatoriesHtml();
-
         const noteText = this.noteSheet?.note
             ? `<p style="margin-top:16px"><strong>${bn ? 'নোটঃ' : 'Note:'}</strong> ${this.escapeHtml(this.noteSheet.note)}</p>`
             : '';
 
-        // ── Create offscreen container ──
+        // ── Offscreen container ──
         const container = document.createElement('div');
         container.style.cssText = 'position:fixed;left:-9999px;top:0;width:1100px;padding:30px;background:#fff;z-index:-1';
         container.innerHTML = `
@@ -383,37 +404,37 @@ export class PostingOrderPreviewComponent implements OnChanges, OnInit {
                 <div style="font-size:10pt;margin-bottom:12px;display:flex;gap:24px;flex-wrap:wrap">${metaParts.join('')}</div>
                 <div style="margin-bottom:12px">${this.noteSheet?.mainText ?? ''}</div>
                 <table style="width:100%;border-collapse:collapse;font-size:9pt">
-                    <thead><tr style="background:#1e3a5f;color:#fff">${headerCells}</tr></thead>
+                    <thead><tr>${headerCells}</tr></thead>
                     <tbody>${bodyRows}</tbody>
                 </table>
                 ${noteText}
                 ${sigHtml}
             </div>`;
-        // table cell styles
         container.querySelectorAll('th, td').forEach((cell: any) => {
-            cell.style.border = '1px solid #333';
+            cell.style.border = '1px solid #000';
             cell.style.padding = '4px 6px';
             cell.style.textAlign = 'left';
+        });
+        container.querySelectorAll('th').forEach((cell: any) => {
+            cell.style.fontWeight = 'bold';
         });
         document.body.appendChild(container);
 
         try {
-            const canvas = await html2canvas(container, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
-            const imgData = canvas.toDataURL('image/png');
+            const canvas = await html2canvas(container, { scale: 1, useCORS: true, backgroundColor: '#ffffff', logging: false });
+            const imgData = canvas.toDataURL('image/jpeg', 0.92);
             const imgWidth = canvas.width;
             const imgHeight = canvas.height;
 
-            // A4 landscape dimensions in mm
             const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-            const pdfWidth = pdf.internal.pageSize.getWidth() - 20; // 10mm margin each side
+            const pdfWidth = pdf.internal.pageSize.getWidth() - 20;
             const pdfPageHeight = pdf.internal.pageSize.getHeight() - 20;
             const ratio = pdfWidth / imgWidth;
             const scaledHeight = imgHeight * ratio;
 
             if (scaledHeight <= pdfPageHeight) {
-                pdf.addImage(imgData, 'PNG', 10, 10, pdfWidth, scaledHeight);
+                pdf.addImage(imgData, 'JPEG', 10, 10, pdfWidth, scaledHeight);
             } else {
-                // Multi-page: slice the canvas
                 let remainingHeight = imgHeight;
                 let srcY = 0;
                 let page = 0;
@@ -427,17 +448,15 @@ export class PostingOrderPreviewComponent implements OnChanges, OnInit {
                     sliceCanvas.height = currentSlice;
                     const ctx = sliceCanvas.getContext('2d')!;
                     ctx.drawImage(canvas, 0, srcY, imgWidth, currentSlice, 0, 0, imgWidth, currentSlice);
-                    const sliceData = sliceCanvas.toDataURL('image/png');
-                    const sliceScaled = currentSlice * ratio;
-                    pdf.addImage(sliceData, 'PNG', 10, 10, pdfWidth, sliceScaled);
+                    const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.92);
+                    pdf.addImage(sliceData, 'JPEG', 10, 10, pdfWidth, currentSlice * ratio);
                     srcY += currentSlice;
                     remainingHeight -= currentSlice;
                     page++;
                 }
             }
 
-            const filename = `NoteSheet_${this.noteSheet?.noteSheetNo ?? 'export'}.pdf`;
-            pdf.save(filename);
+            pdf.save(`NoteSheet_${this.noteSheet?.noteSheetNo ?? 'export'}.pdf`);
         } finally {
             document.body.removeChild(container);
         }
@@ -445,19 +464,19 @@ export class PostingOrderPreviewComponent implements OnChanges, OnInit {
 
     exportPdf(): void {
         const bn = !this.isEnglish;
-        const fontFamily = bn ? "'SutonnyMJ', serif" : "'Times New Roman', serif";
+        const fontFamily = bn ? "'Noto Sans Bengali', 'SolaimanLipi', 'Kalpurush', sans-serif" : "'Times New Roman', serif";
         const title = bn ? 'মন্তব্যপত্র' : 'NOTE SHEET';
 
         const metaParts: string[] = [];
-        if (this.noteSheet?.noteSheetNo) metaParts.push(`${bn ? 'মন্তব্যপত্র নং:' : 'Note-Sheet No:'} ${this.noteSheet.noteSheetNo}`);
-        if (this.noteSheet?.noteSheetDate) metaParts.push(`${bn ? 'তারিখ:' : 'Date:'} ${this.formatDate(this.noteSheet.noteSheetDate)}`);
-        if (this.noteSheet?.referenceNumber) metaParts.push(`${bn ? 'সুত্র:' : 'Reference:'} ${this.noteSheet.referenceNumber}`);
+        if (this.noteSheet?.noteSheetNo) metaParts.push(`<strong>${bn ? 'মন্তব্যপত্র নং:' : 'Note-Sheet No:'}</strong> ${this.escapeHtml(this.noteSheet.noteSheetNo)}`);
+        if (this.noteSheet?.noteSheetDate) metaParts.push(`<strong>${bn ? 'তারিখ:' : 'Date:'}</strong> ${this.escapeHtml(this.formatDate(this.noteSheet.noteSheetDate))}`);
+        if (this.noteSheet?.referenceNumber) metaParts.push(`<strong>${bn ? 'সুত্র:' : 'Reference:'}</strong> ${this.escapeHtml(this.noteSheet.referenceNumber)}`);
 
         const cols = bn
             ? ['ক্রমিক', 'ব্যক্তিগত নম্বর', 'পদবি', 'ট্রেড', 'নাম', 'মাতৃ ইউনিট', 'যোগদান তারিখ', 'বদলি কর্মস্থল', 'মন্তব্য']
             : ['Ser', 'Service ID', 'Rank', 'Trade', 'Name', 'Mother Unit', 'Joining Date', 'Transfer Unit', 'Remarks'];
 
-        const headerCells = cols.map(c => `<th style="border:1px solid #000;padding:4px 6px;font-size:10pt">${this.escapeHtml(c)}</th>`).join('');
+        const headerCells = cols.map(c => `<th>${this.escapeHtml(c)}</th>`).join('');
         const bodyRows = this.employees.map((emp, i) => {
             const vals = [
                 String(i + 1),
@@ -470,7 +489,7 @@ export class PostingOrderPreviewComponent implements OnChanges, OnInit {
                 emp.transferRabUnitName ?? '',
                 emp.remarks ?? ''
             ];
-            return `<tr>${vals.map(v => `<td style="border:1px solid #000;padding:4px 6px;font-size:10pt">${this.escapeHtml(v)}</td>`).join('')}</tr>`;
+            return `<tr>${vals.map(v => `<td>${this.escapeHtml(v)}</td>`).join('')}</tr>`;
         }).join('');
 
         // Signatures
@@ -481,26 +500,30 @@ export class PostingOrderPreviewComponent implements OnChanges, OnInit {
         const html = `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><title>${this.escapeHtml(title)}</title>
 <style>
-    @font-face { font-family: 'SutonnyMJ'; src: url('/assets/fonts/SutonnyMJ.ttf') format('truetype'); }
     @page { size: A4 landscape; margin: 15mm; }
-    body { font-family: ${fontFamily}; font-size: 11pt; margin: 0; padding: 0; }
-    h1 { font-size: 16pt; text-align: center; margin-bottom: 8px; }
-    .meta { font-size: 10pt; margin-bottom: 12px; }
+    body { font-family: ${fontFamily}; font-size: 11pt; margin: 0; padding: 20px; color: #000; }
+    h1 { font-size: 16pt; text-align: center; margin: 0 0 12px 0; }
+    .meta { font-size: 10pt; margin-bottom: 14px; display: flex; gap: 28px; flex-wrap: wrap; }
+    .content { margin-bottom: 14px; line-height: 1.6; }
     table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    th, td { border: 1px solid #000; padding: 5px 8px; font-size: 10pt; text-align: left; }
+    th { font-weight: bold; }
+    tr:nth-child(even) { background: #f5f5f5; }
+    @media print { body { padding: 0; } tr:nth-child(even) { background: #f5f5f5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
 </style></head><body>
     <h1>${this.escapeHtml(title)}</h1>
-    <div class="meta">${metaParts.map(p => this.escapeHtml(p)).join('&emsp;&emsp;')}</div>
-    <div>${this.noteSheet?.mainText ?? ''}</div>
+    <div class="meta">${metaParts.map(p => `<span>${p}</span>`).join('')}</div>
+    <div class="content">${this.noteSheet?.mainText ?? ''}</div>
     <table><thead><tr>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table>
     ${noteText}
     ${sigHtml}
 </body></html>`;
 
-        const win = window.open('', '_blank', 'width=1000,height=700');
+        const win = window.open('', '_blank', 'width=1100,height=700');
         if (!win) return;
         win.document.write(html);
         win.document.close();
-        setTimeout(() => { win.print(); }, 800);
+        setTimeout(() => { win.print(); }, 600);
     }
 
     // ─── Helpers ──────────────────────────────────────────────────
@@ -557,7 +580,8 @@ export class PostingOrderPreviewComponent implements OnChanges, OnInit {
             ].filter(Boolean);
             return `<div style="text-align:${align};margin-top:20px;line-height:1.6">
                 ${sigImg(detail, align)}
-                <div style="font-weight:600;font-size:9pt;text-transform:uppercase;color:#1e3a5f">${this.escapeHtml(this.translateStep(detail.step))}</div>
+                <div style="width:160px;border-bottom:1.5px solid #000;margin-bottom:4px;${align === 'right' ? 'margin-left:auto' : ''}"></div>
+                <div style="font-weight:600;font-size:9pt;text-transform:uppercase;color:#000">${this.escapeHtml(this.translateStep(detail.step))}</div>
                 <div><strong>${this.escapeHtml(detail.name)}</strong></div>
                 ${lines.map(l => `<div style="font-size:10pt">${this.escapeHtml(l)}</div>`).join('')}
             </div>`;
@@ -577,7 +601,8 @@ export class PostingOrderPreviewComponent implements OnChanges, OnInit {
             const fallbackName = this.noteSheet?.preparedBy ?? '';
             if (fallbackName) {
                 rightHtml += `<div style="text-align:right;margin-top:20px;line-height:1.6">
-                    <div style="font-weight:600;font-size:9pt;text-transform:uppercase;color:#1e3a5f">${bn ? 'প্রস্তুতকারী' : 'Prepared by'}</div>
+                    <div style="width:160px;border-bottom:1.5px solid #000;margin-bottom:4px;margin-left:auto"></div>
+                    <div style="font-weight:600;font-size:9pt;text-transform:uppercase;color:#000">${bn ? 'প্রস্তুতকারী' : 'Prepared by'}</div>
                     <div><strong>${this.escapeHtml(fallbackName)}</strong></div>
                     <div style="font-size:10pt">${this.escapeHtml(this.formatDate(this.noteSheet?.noteSheetDate))}</div>
                 </div>`;

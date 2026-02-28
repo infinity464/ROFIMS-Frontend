@@ -25,6 +25,8 @@ import { take, map } from 'rxjs/operators';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
 import { NoteSheetType } from '@/models/enums';
+import { NotesheetSignatoryComponent, SignatoryDetail } from '@/Components/Common/notesheet-signatory/notesheet-signatory';
+import { TooltipModule } from 'primeng/tooltip';
 
 @Component({
     selector: 'app-notesheet-generate',
@@ -40,7 +42,9 @@ import { NoteSheetType } from '@/models/enums';
         DatePickerModule,
         EditorModule,
         DialogModule,
-        FileReferencesFormComponent
+        FileReferencesFormComponent,
+        NotesheetSignatoryComponent,
+        TooltipModule
     ],
     templateUrl: './notesheet-generate.html',
     providers: [MessageService],
@@ -72,9 +76,9 @@ export class NotesheetGenerateComponent implements OnInit {
     fileRows: FileRowData[] = [];
     showPreviewDialog = false;
     /** Initiator details (show on right, below main text). */
-    initiatorDetails: { step: string; name: string; rabId: string; rank: string; serviceRank: string } | null = null;
+    initiatorDetails: SignatoryDetail | null = null;
     /** Approvers on left: Recommender(s) + Final Approver (dynamic). */
-    approversDetails: { step: string; name: string; rabId: string; rank: string; serviceRank: string }[] = [];
+    approversDetails: SignatoryDetail[] = [];
 
     @ViewChild('fileReferencesForm') fileReferencesForm!: FileReferencesFormComponent;
 
@@ -392,7 +396,8 @@ export class NotesheetGenerateComponent implements OnInit {
                     const name = info?.fullNameEN ?? info?.FullNameEN ?? '-';
                     const rabId = info?.rabID ?? info?.RABID ?? '-';
                     const rank = info?.rank ?? info?.Rank ?? '-';
-                    return { step, name, rabId, rank, serviceRank: rank };
+                    const appointment = info?.appointment ?? info?.Appointment ?? '';
+                    return { step, name, rabId, rank, serviceRank: rank, appointment };
                 })
             )
         );
@@ -414,6 +419,41 @@ export class NotesheetGenerateComponent implements OnInit {
     getPreviewMainTextSafe(): SafeHtml {
         const html = this.form.get('mainText')?.value ?? '';
         return this.sanitizer.bypassSecurityTrustHtml(html || '');
+    }
+
+    /** Print the preview content via browser print dialog. */
+    printPreview(): void {
+        const previewEl = document.querySelector('.ns-gen-preview-doc');
+        if (!previewEl) return;
+        const printWindow = window.open('', '_blank', 'width=800,height=600');
+        if (!printWindow) return;
+        const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Note Sheet</title>
+<style>
+body{font-family:'Noto Sans Bengali','SolaimanLipi','Kalpurush',sans-serif;padding:2rem;color:#333;line-height:1.6}
+.ns-gen-preview-title{font-size:1.375rem;font-weight:700;text-align:center;text-transform:uppercase;letter-spacing:.03em;margin-bottom:.5rem}
+.ns-gen-preview-header{text-align:center;padding-bottom:.75rem;margin-bottom:1rem;border-bottom:2px solid #dee2e6}
+.ns-gen-preview-meta{display:flex;flex-wrap:wrap;gap:.5rem 2rem;padding:.75rem 1rem;background:#f8fafc;border:1px solid #dee2e6;border-radius:.5rem;margin-bottom:1rem;font-size:.9rem}
+.ns-gen-preview-meta-item{display:flex;gap:.4rem;align-items:baseline}
+.ns-gen-preview-meta-label{font-weight:600;color:#64748b}
+.ns-gen-preview-subject{text-align:center;font-weight:700;font-size:1.05rem;margin-bottom:1rem;padding:.5rem;background:#f8fafc;border-radius:.375rem}
+.ns-gen-preview-body-label{font-weight:600;font-size:.8125rem;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.5rem}
+.ns-gen-preview-body{min-height:4rem;padding:1rem;border:1px solid #dee2e6;border-radius:.5rem}
+.ns-gen-preview-body p{margin:0 0 .5rem}
+.ns-gen-preview-closing{font-style:italic;color:#64748b;margin-bottom:1.5rem;padding-top:1rem;border-top:1px dashed #dee2e6}
+.ns-preview-signatories{display:flex;justify-content:space-between;align-items:flex-start;gap:2rem}
+.ns-preview-approvers,.ns-preview-initiator{display:flex;flex-direction:column;gap:1rem}
+.ns-preview-initiator{text-align:right}
+.ns-signatory{display:flex;flex-direction:column;gap:.125rem}
+.ns-signatory.align-right{align-items:flex-end;text-align:right}
+.ns-signatory-line{width:160px;border-bottom:1px solid #000;margin-bottom:.25rem}
+.ns-signatory.align-right .ns-signatory-line{margin-left:auto}
+.ns-signatory-role{font-weight:600;font-size:.8125rem;color:#333;text-transform:uppercase;letter-spacing:.03em;margin-bottom:.125rem}
+@media print{body{padding:.5rem}}
+</style></head><body>${previewEl.innerHTML}</body></html>`;
+        printWindow.document.write(html);
+        printWindow.document.close();
+        printWindow.focus();
+        setTimeout(() => { printWindow.print(); printWindow.close(); }, 400);
     }
 
     getInitiatorName(): string {
