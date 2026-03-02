@@ -1,0 +1,326 @@
+:host {
+    display: block;
+    min-height: 100vh;
+    background: #d8d8d8;
+}
+
+/* ── Toolbar ──────────────────────────────────────── */
+.preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 1.5rem;
+    background: #fff;
+    border-bottom: 1px solid var(--surface-border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+.preview-actions { display: flex; gap: 0.5rem; }
+
+/* ── Loading / Error ──────────────────────────────── */
+.preview-loading,
+.preview-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    gap: 1rem;
+    color: var(--text-color-secondary);
+}
+
+/* ── A4 Container ─────────────────────────────────── */
+.a4-paper-container {
+    display: flex;
+    justify-content: center;
+    padding: 2rem;
+    min-height: calc(100vh - 60px);
+}
+
+.a4-paper {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 14mm 10mm 20mm;
+    background: #fff;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+    box-sizing: border-box;
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 12pt;
+    color: #000;
+    line-height: 1.7;
+    position: relative;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── Document number – top right ─────────────────── */
+.ns-page-no {
+    position: absolute;
+    top: 10mm;
+    right: 10mm;
+    font-size: 12pt;
+}
+
+/* ── Title block (above the box) ─────────────────── */
+.ns-title-block {
+    text-align: center;
+    margin-bottom: 8px;
+}
+.ns-title-en {
+    font-size: 16pt;
+    font-weight: bold;
+    text-decoration: underline;
+    letter-spacing: 2px;
+}
+.ns-title-bn {
+    font-size: 12pt;
+    text-decoration: underline;
+    margin-top: 2px;
+}
+
+/* ── Outer document box ───────────────────────────── */
+.ns-doc-box {
+    border: 1.5px solid #000;
+    flex: 1;
+    display: flex;
+    align-items: stretch;
+}
+
+/* Left column: all content */
+.ns-main-col {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Right column: সংলগ্নী নং — full height border */
+.ns-sanglagni-col {
+    border-left: 1.5px solid #000;
+    width: 60px;
+    min-width: 60px;
+    font-size: 10pt;
+    text-align: center;
+    padding: 6px 12px;
+    line-height: 1.4;
+}
+
+/* Header rows (subject + reference) */
+.ns-cell-subject {
+    padding: 7px 16px;
+    font-size: 12pt;
+    font-weight: bold;
+    text-decoration: underline;
+}
+.ns-cell-ref {
+    padding: 5px 16px;
+    font-size: 12pt;
+}
+.ns-ref-key {
+    font-weight: 700;
+    margin-right: 4px;
+}
+
+/* Body paragraph (serial + text) */
+.ns-para {
+    display: flex;
+    gap: 8px;
+    padding: 10px 16px;
+    font-size: 12pt;
+    line-height: 1.85;
+}
+.ns-para-no {
+    flex-shrink: 0;
+    font-weight: 700;
+    min-width: 30px;
+}
+.ns-para-text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+
+    ::ng-deep * {
+        max-width: 100% !important;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        white-space: normal;
+    }
+    ::ng-deep table {
+        width: 100%;
+        table-layout: fixed;
+    }
+    ::ng-deep p          { margin: 0 0 0.4rem; }
+    ::ng-deep p:last-child { margin-bottom: 0; }
+}
+
+/* ── Ex-BD Leave details ──────────────────────────── */
+.ns-exbd-info {
+    padding: 4px 16px 10px 52px;
+    font-size: 12pt;
+}
+.ns-exbd-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+.ns-exbd-label {
+    font-weight: 700;
+    min-width: 150px;
+    flex-shrink: 0;
+}
+
+/* ── New Posting table ────────────────────────────── */
+.ns-posting-table {
+    padding: 4px 16px 10px;
+    overflow-x: auto;
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 10pt;
+    }
+    th, td {
+        border: 1px solid #000;
+        padding: 5px 7px;
+        text-align: left;
+    }
+    th {
+        font-weight: bold;
+        background: #f0f0f0;
+        font-size: 9pt;
+        text-transform: uppercase;
+    }
+    tr:nth-child(even) { background: #fafafa; }
+
+    .ns-posting-note {
+        font-size: 10pt;
+        background: #fff !important;
+    }
+}
+
+/* ── Note ─────────────────────────────────────────── */
+.ns-note {
+    padding: 6px 16px;
+    font-size: 12pt;
+    border-top: 1px dashed #aaa;
+}
+
+/* ── Closing + Initiator signature ───────────────── */
+.ns-initiator-area {
+    padding: 14px 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.ns-closing-text {
+    font-size: 12pt;
+    text-indent: 2em;
+}
+.ns-initiator-sig {
+    align-self: flex-end;
+    text-align: center;
+    min-width: 200px;
+    max-width: 260px;
+}
+.ns-preparedby-sig {
+    align-self: flex-start;
+    text-align: center;
+    min-width: 200px;
+    max-width: 260px;
+}
+
+/* ── Approver sections ────────────────────────────── */
+.ns-approver-section {
+    padding: 10px 16px 24px;
+    min-height: 90px;
+}
+.ns-approver-role {
+    font-size: 12pt;
+    text-decoration: underline;
+    margin-bottom: 6px;
+}
+.ns-approver-body {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    min-height: 60px;
+
+    &--left {
+        justify-content: flex-start;
+        gap: 12px;
+
+        .ns-approver-sig-area {
+            text-align: left;
+        }
+    }
+}
+.ns-approver-left {
+    display: flex;
+    gap: 6px;
+    font-size: 12pt;
+    flex: 1;
+    flex-wrap: wrap;
+    align-items: flex-start;
+}
+.ns-approver-remark {
+    font-size: 12pt;
+    font-style: italic;
+}
+.ns-approver-sig-area {
+    text-align: center;
+    min-width: 120px;
+}
+
+/* ── Shared signature styles ──────────────────────── */
+.ns-sig-img {
+    max-width: 100px;
+    max-height: 40px;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto 4px;
+}
+.ns-sig-paren {
+    font-size: 11pt;
+    margin-bottom: 2px;
+}
+.ns-sig-appoint {
+    font-size: 11pt;
+}
+.ns-sig-date {
+    font-size: 11pt;
+    margin-top: 4px;
+}
+
+/* ── Print ────────────────────────────────────────── */
+@media print {
+    .no-print { display: none !important; }
+
+    :host { background: #fff; }
+
+    .a4-paper-container {
+        padding: 0;
+        min-height: auto;
+    }
+    .a4-paper {
+        width: 210mm;
+        min-height: 297mm;
+        padding: 14mm 10mm 20mm;
+        box-shadow: none;
+    }
+    .ns-posting-table table { page-break-inside: auto; }
+    .ns-posting-table tr    { page-break-inside: avoid; page-break-after: auto; }
+}
+
+/* ── Responsive ───────────────────────────────────── */
+@media screen and (max-width: 1200px) {
+    .a4-paper-container { padding: 1rem; }
+    .a4-paper {
+        width: 100%;
+        min-height: auto;
+        padding: 12mm 8mm;
+    }
+}

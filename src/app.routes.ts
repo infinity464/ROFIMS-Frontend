@@ -104,6 +104,10 @@ import { NotesheetTemplateComponent } from '@/Components/basic-setup/notesheet-t
 import { NotesheetGenerateComponent } from '@/Components/Features/notesheet-generate/notesheet-generate';
 import { NotesheetExBdLeaveComponent } from '@/Components/Features/notesheet-ex-bd-leave/notesheet-ex-bd-leave';
 import { NotesheetListComponent } from '@/Components/Features/notesheet-list/notesheet-list';
+import { NotesheetPreviewComponent } from '@/Components/Features/notesheet-preview/notesheet-preview';
+import { NotesheetPreviewGeneralComponent } from '@/Components/Features/notesheet-preview/general/notesheet-preview-general';
+import { NotesheetPreviewPostingComponent } from '@/Components/Features/notesheet-preview/posting/notesheet-preview-posting';
+import { NotesheetPreviewExbdComponent } from '@/Components/Features/notesheet-preview/exbd/notesheet-preview-exbd';
 import { LeaveApplicationApplyComponent } from '@/Components/Features/leave-application/leave-application-apply/leave-application-apply.component';
 import { LeaveApplicationListComponent } from '@/Components/Features/leave-application/leave-application-list/leave-application-list.component';
 import { CalendarComponent } from '@/Components/Features/calendar/calendar.component';
@@ -209,6 +213,10 @@ export const appRoutes: Routes = [
             { path: 'notesheet-list/approved', component: NotesheetListComponent, data: { section: 'approved' } },
             { path: 'notesheet-list/declined', component: NotesheetListComponent, data: { section: 'declined' } },
             { path: 'notesheet-list/all', component: NotesheetListComponent, data: { section: 'all' } },
+            { path: 'notesheet-preview',         component: NotesheetPreviewComponent },
+            { path: 'notesheet-preview/general', component: NotesheetPreviewGeneralComponent },
+            { path: 'notesheet-preview/posting', component: NotesheetPreviewPostingComponent },
+            { path: 'notesheet-preview/exbd',    component: NotesheetPreviewExbdComponent },
 
             // Leave Application (apply and approve/reject - standalone from notesheet)
             { path: 'leave-application/apply', component: LeaveApplicationApplyComponent },

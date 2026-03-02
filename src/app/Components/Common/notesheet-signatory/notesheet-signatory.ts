@@ -4,10 +4,13 @@ import { CommonModule } from '@angular/common';
 export interface SignatoryDetail {
     step: string;
     name: string;
+    nameBN?: string;
     rabId: string;
     rank: string;
+    rankBN?: string;
     serviceRank: string;
     appointment: string;
+    appointmentBN?: string;
     employeeId?: number;
     signatureDataUrl?: string;
 }

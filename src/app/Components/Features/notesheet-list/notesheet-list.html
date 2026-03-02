@@ -412,10 +412,10 @@
             <strong class="block mb-1">{{ isPreviewEnglish() ? 'Ex-BD Leave Details' : 'এক্স-বিডি ছুটির বিবরণ' }}</strong>
             <div class="flex flex-wrap gap-3 mt-1">
               @if (previewNoteSheet.purposeOfExBdLeaveId != null) {
-                <span>{{ isPreviewEnglish() ? 'Purpose:' : 'উদ্দেশ্য:' }} {{ previewNoteSheet.purposeOfExBdLeaveId }}</span>
+                <span>{{ isPreviewEnglish() ? 'Purpose:' : 'উদ্দেশ্য:' }} {{ getPurposeLabel(previewNoteSheet.purposeOfExBdLeaveId) }}</span>
               }
               @if (previewNoteSheet.destinationCountryId != null) {
-                <span>{{ isPreviewEnglish() ? 'Destination Country:' : 'গন্তব্য দেশ:' }} {{ previewNoteSheet.destinationCountryId }}</span>
+                <span>{{ isPreviewEnglish() ? 'Destination Country:' : 'গন্তব্য দেশ:' }} {{ getCountryLabel(previewNoteSheet.destinationCountryId) }}</span>
               }
               @if (previewNoteSheet.dateOfVisitFrom || previewNoteSheet.dateOfVisitTo) {
                 <span>{{ isPreviewEnglish() ? 'Visit:' : 'সফর:' }} {{ formatDate(previewNoteSheet.dateOfVisitFrom) }} – {{ formatDate(previewNoteSheet.dateOfVisitTo) }}</span>

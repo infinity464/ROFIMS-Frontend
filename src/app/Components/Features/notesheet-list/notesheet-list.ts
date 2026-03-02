@@ -19,6 +19,7 @@ import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.serv
 import { NoteSheetType, NoteSheetStatus, NoteSheetApprovalStep } from '@/models/enums';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { CommonCode } from '@/Components/basic-setup/shared/models/common-code';
+import { CommonCodeService } from '@/services/common-code-service';
 import { TooltipModule } from 'primeng/tooltip';
 import { DatePickerModule } from 'primeng/datepicker';
 import { InputTextModule } from 'primeng/inputtext';
@@ -127,6 +128,8 @@ export class NotesheetListComponent implements OnInit {
   unitLabelMap: Record<number, string> = {};
   wingLabelMap: Record<number, string> = {};
   branchLabelMap: Record<number, string> = {};
+  purposeLabelMap: Record<number, string> = {};
+  countryLabelMap: Record<number, string> = {};
 
   draftList: NoteSheetInfoRow[] = [];
   pendingList: NoteSheetInfoRow[] = [];
@@ -199,30 +202,19 @@ export class NotesheetListComponent implements OnInit {
     private empService: EmpService,
     private noteSheetEditCache: NoteSheetEditCacheService,
     private masterBasicSetup: MasterBasicSetupService,
-    private postingService: PostingService
+    private postingService: PostingService,
+    private commonCodeService: CommonCodeService
   ) {}
 
-  /** Open preview dialog: fetch full note-sheet and show formal layout. Load approval chain for approved note-sheets. */
+  /** Open preview page: navigate to the type-specific preview route */
   openPreview(row: NoteSheetInfoRow): void {
-    this.previewNoteSheet = null;
-    this.initiatorDetails = null;
-    this.approversDetails = [];
-    this.preparedByDetails = null;
-    this.previewEditing = false;
-    this.showPreviewDialog = true;
-    this.previewLoading = true;
-    this.http.get<NoteSheetInfoFull[]>(`${this.api}/GetFilteredByKeysAsyn/${row.noteSheetId}`).subscribe({
-      next: (data) => {
-        const list = Array.isArray(data) ? data : [];
-        this.previewNoteSheet = list[0] ?? null;
-        if (this.previewNoteSheet) this.loadApprovalChain(this.previewNoteSheet);
-        this.previewLoading = false;
-      },
-      error: () => {
-        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load note-sheet.' });
-        this.previewLoading = false;
-      }
-    });
+    let route = '/notesheet-preview/general';
+    if (row.noteSheetType === NoteSheetType.ExBDLeave) {
+      route = '/notesheet-preview/exbd';
+    } else if (row.noteSheetType === NoteSheetType.NewPosting || row.noteSheetType === NoteSheetType.InterPosting) {
+      route = '/notesheet-preview/posting';
+    }
+    this.router.navigate([route], { queryParams: { id: row.noteSheetId } });
   }
 
   /** Load approval chain: Prepared by, Initiator (right), Recommender(s) + Final Approver (left). All dynamic. Also loads signatures. */
@@ -1001,6 +993,26 @@ export class NotesheetListComponent implements OnInit {
       },
       error: () => {}
     });
+    this.commonCodeService.getAllActiveCommonCodesType('VisitType').subscribe({
+      next: (list) => {
+        this.purposeLabelMap = {};
+        (list || []).forEach((c: any) => {
+          const id = c.codeId;
+          if (id != null) this.purposeLabelMap[id] = (c.codeValueEN || c.displayCodeValueEN || c.codeValueBN || '').trim() || '-';
+        });
+      },
+      error: () => {}
+    });
+    this.commonCodeService.getAllActiveCommonCodesType('Country').subscribe({
+      next: (list) => {
+        this.countryLabelMap = {};
+        (list || []).forEach((c: any) => {
+          const id = c.codeId;
+          if (id != null) this.countryLabelMap[id] = (c.codeValueEN || c.displayCodeValueEN || c.codeValueBN || '').trim() || '-';
+        });
+      },
+      error: () => {}
+    });
   }
 
   private buildUnitAndWingMaps(units: CommonCode[]): void {
@@ -1024,6 +1036,12 @@ export class NotesheetListComponent implements OnInit {
   }
   getBranchLabel(id: number | null | undefined): string {
     return id != null ? (this.branchLabelMap[id] ?? '-') : '-';
+  }
+  getPurposeLabel(id: number | null | undefined): string {
+    return id != null ? (this.purposeLabelMap[id] ?? `${id}`) : '-';
+  }
+  getCountryLabel(id: number | null | undefined): string {
+    return id != null ? (this.countryLabelMap[id] ?? `${id}`) : '-';
   }
 
   formatDate(d: string | null | undefined): string {
