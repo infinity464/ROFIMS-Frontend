@@ -40,7 +40,7 @@
                     <div class="ns-cell-ref">
                         <ng-container *ngIf="noteSheet.referenceNumber">
                             <span class="ns-ref-key">{{ isEnglish() ? 'Reference:' : 'সূত্রঃ' }}</span>
-                            {{ noteSheet.referenceNumber }}
+                            <span [innerHTML]="getReferenceNumberSafe()"></span>
                         </ng-container>
                         <ng-container *ngIf="!noteSheet.referenceNumber && noteSheet.noteSheetDate">
                             <span class="ns-ref-key">{{ isEnglish() ? 'Date:' : 'তারিখঃ' }}</span>

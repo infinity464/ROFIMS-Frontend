@@ -27,7 +27,7 @@
       </span>
 
       <!-- Font Size -->
-      <span class="ql-formats">
+      <span class="ql-formats" [style.display]="toolbar !== 'full' ? 'none' : null">
         <select class="ql-size" title="Font Size">
           <option value="small">Small</option>
           <option value="" selected>Normal</option>
@@ -47,7 +47,7 @@
         </select>
       </span>
 
-      <!-- Basic formatting -->
+      <!-- Basic formatting (always shown) -->
       <span class="ql-formats">
         <button class="ql-bold" title="Bold"></button>
         <button class="ql-italic" title="Italic"></button>
@@ -56,24 +56,24 @@
       </span>
 
       <!-- Sub / Superscript -->
-      <span class="ql-formats">
+      <span class="ql-formats" [style.display]="toolbar !== 'full' ? 'none' : null">
         <button class="ql-script" value="sub" title="Subscript"></button>
         <button class="ql-script" value="super" title="Superscript"></button>
       </span>
 
       <!-- Colors -->
-      <span class="ql-formats">
+      <span class="ql-formats" [style.display]="toolbar !== 'full' ? 'none' : null">
         <select class="ql-color" title="Text Color"></select>
         <select class="ql-background" title="Background Color"></select>
       </span>
 
       <!-- Alignment -->
-      <span class="ql-formats">
+      <span class="ql-formats" [style.display]="toolbar !== 'full' ? 'none' : null">
         <select class="ql-align" title="Alignment"></select>
       </span>
 
       <!-- Lists & Indent -->
-      <span class="ql-formats">
+      <span class="ql-formats" [style.display]="toolbar !== 'full' ? 'none' : null">
         <button class="ql-list" value="ordered" title="Ordered List"></button>
         <button class="ql-list" value="bullet" title="Bullet List"></button>
         <button class="ql-indent" value="-1" title="Decrease Indent"></button>
@@ -81,24 +81,24 @@
       </span>
 
       <!-- Blockquote & Code -->
-      <span class="ql-formats">
+      <span class="ql-formats" [style.display]="toolbar !== 'full' ? 'none' : null">
         <button class="ql-blockquote" title="Blockquote"></button>
         <button class="ql-code-block" title="Code Block"></button>
       </span>
 
       <!-- Link & Image -->
-      <span class="ql-formats">
+      <span class="ql-formats" [style.display]="toolbar !== 'full' ? 'none' : null">
         <button class="ql-link" title="Insert Link"></button>
         <button class="ql-image" title="Insert Image"></button>
       </span>
 
-      <!-- Clean -->
+      <!-- Clean (always shown) -->
       <span class="ql-formats">
         <button class="ql-clean" title="Remove Formatting"></button>
       </span>
 
       <!-- Table Insert (custom) -->
-      <span class="ql-formats re-table-wrap">
+      <span class="ql-formats re-table-wrap" [style.display]="toolbar !== 'full' ? 'none' : null">
         <button
           type="button"
           class="re-table-btn ql-table"

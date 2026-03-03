@@ -50,7 +50,7 @@
           <td>{{ row.noteSheetId }}</td>
           <td>{{ formatDate(row.noteSheetDate) }}</td>
           <td>{{ row.noteSheetNo || '-' }}</td>
-          <td>{{ row.referenceNumber || '-' }}</td>
+          <td>{{ stripHtml(row.referenceNumber || '') || '-' }}</td>
           <td>{{ noteSheetTypeLabel(row) }}</td>
           <td>{{ row.subject || '-' }}</td>
           <td><span class="text-sm" [title]="row.remark || ''">{{ row.remark || '—' }}</span></td>
@@ -393,7 +393,7 @@
             @if (previewEditing) {
               <input pInputText type="text" [(ngModel)]="editReferenceNumber" class="ns-inline-input" placeholder="Reference number" />
             } @else {
-              <span>{{ previewNoteSheet.referenceNumber || '—' }}</span>
+              <span [innerHTML]="getPreviewReferenceNumberSafe()"></span>
             }
           </div>
         </div>

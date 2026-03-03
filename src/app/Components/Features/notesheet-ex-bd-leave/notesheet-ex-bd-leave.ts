@@ -27,7 +27,7 @@ import { take, map, catchError } from 'rxjs/operators';
 import { RouterLink } from '@angular/router';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
-import { NoteSheetType, NoteSheetStatus, NoteSheetApprovalStep } from '@/models/enums';
+import { NoteSheetType, NoteSheetCurrentStatus, ApprovalStatus } from '@/models/enums';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { NotesheetSignatoryComponent, SignatoryDetail } from '@/Components/Common/notesheet-signatory/notesheet-signatory';
 import {
@@ -868,16 +868,21 @@ export class NotesheetExBdLeaveComponent implements OnInit {
     }
 
     isViewDraft(): boolean {
-        return (this.viewNoteSheet?.noteSheetStatusId ?? 0) === NoteSheetStatus.Draft;
+        return this.viewNoteSheet?.currentStatus === NoteSheetCurrentStatus.Draft;
     }
 
     shouldShowSignature(step: string): boolean {
-        const statusId = this.viewNoteSheet?.noteSheetStatusId ?? NoteSheetStatus.Draft;
-        const currentStep = this.viewNoteSheet?.currentApprovalStep ?? NoteSheetApprovalStep.Initiator;
+        const ns = this.viewNoteSheet;
+        if (!ns) return false;
         if (step === 'Prepared by' || step === 'প্রস্তুতকারী') return true;
-        if (step === 'Initiator') return (statusId === NoteSheetStatus.Pending && currentStep >= NoteSheetApprovalStep.Recommender) || statusId >= NoteSheetStatus.Approved;
-        if (step.startsWith('Recommender')) return (statusId === NoteSheetStatus.Pending && currentStep >= NoteSheetApprovalStep.Recommender) || statusId >= NoteSheetStatus.Approved;
-        if (step === 'Final Approver') return statusId === NoteSheetStatus.Approved;
+        if (step === 'Initiator') return ns.initiatorStatus === ApprovalStatus.Approve;
+        if (step.startsWith('Recommender')) {
+            const cs: string = ns.currentStatus ?? '';
+            return cs === NoteSheetCurrentStatus.Recommender
+                || cs === NoteSheetCurrentStatus.FinalApproval
+                || cs === NoteSheetCurrentStatus.Cancel;
+        }
+        if (step === 'Final Approver') return ns.finalApprovalStatus === ApprovalStatus.Approve;
         return false;
     }
 

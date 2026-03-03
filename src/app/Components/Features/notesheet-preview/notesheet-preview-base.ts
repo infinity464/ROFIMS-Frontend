@@ -6,7 +6,7 @@ import { MessageService } from 'primeng/api';
 import { catchError, of } from 'rxjs';
 import { environment } from '@/Core/Environments/environment';
 import { EmpService } from '@/services/emp-service';
-import { NoteSheetType, NoteSheetStatus, NoteSheetApprovalStep } from '@/models/enums';
+import { NoteSheetType, NoteSheetCurrentStatus, ApprovalStatus } from '@/models/enums';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { SignatoryDetail } from '@/Components/Common/notesheet-signatory/notesheet-signatory';
 import { PostingService } from '@/services/posting.service';
@@ -25,14 +25,7 @@ export interface NoteSheetInfoFull {
     wingBattalionId?: number;
     branchId?: number;
     subject: string;
-    noteSheetStatusId?: number;
     noteSheetType?: string;
-    currentApprovalStep?: number;
-    approvedByEmployeeId?: number;
-    approvedDate?: string;
-    declinedByEmployeeId?: number;
-    declinedDate?: string;
-    remark?: string;
     referenceNumber?: string;
     draftPostingMasterId?: number | null;
     filesReferences?: string;
@@ -41,14 +34,33 @@ export interface NoteSheetInfoFull {
     textType?: number;
     unitId?: number;
     employeeId?: number;
+    isSecret?: boolean;
+    noteSheetOperationType?: string;
+    // ── Initiator ──────────────────────────────────────────────────────
     initiatorId?: number;
-    recommenderIdsJson?: string;
-    finalApproverId?: number;
+    initiatorStatus?: string;
+    initiatorApproveRemark?: string;
+    initiatorCancelRemark?: string;
+    initiatorApprovedDate?: string;
+    // ── Recommenders (JSON array of objects) ───────────────────────────
+    recommendersJson?: string;
+    // ── Final Approval ─────────────────────────────────────────────────
+    finalApprovalId?: number;
+    finalApprovalStatus?: string;
+    finalApprovalRemark?: string;
+    finalApprovalCancelRemark?: string;
+    finalApprovalApprovedDate?: string;
+    // ── Workflow state ─────────────────────────────────────────────────
+    currentStatus?: string;
+    // ── Audit ──────────────────────────────────────────────────────────
     familyInfoJson?: string;
     createdBy?: string;
     lastUpdatedBy?: string;
     createdDate?: string;
     lastupdate?: string;
+    isDeleted?: boolean;
+    deletedBy?: string;
+    // ── Leave (ExBD) ───────────────────────────────────────────────────
     purposeOfExBdLeaveId?: number | null;
     destinationCountryId?: number | null;
     dateOfVisitFrom?: string | null;
@@ -56,6 +68,12 @@ export interface NoteSheetInfoFull {
     totalDays?: number | null;
     note?: string | null;
     preparedByEmployeeId?: number | null;
+    // ── Legacy (kept for old cached data) ─────────────────────────────
+    /** @deprecated use finalApprovalId */
+    finalApproverId?: number;
+    /** @deprecated use recommendersJson */
+    recommenderIdsJson?: string;
+    remark?: string;
 }
 
 @Injectable()
@@ -165,20 +183,23 @@ export abstract class NotesheetPreviewBase implements OnInit {
         const approverIds: { empId: number; step: string }[] = [];
 
         try {
-            const json = this.noteSheet.recommenderIdsJson;
+            // New format: recommendersJson (array of objects); legacy: recommenderIdsJson (array of IDs)
+            const json = this.noteSheet.recommendersJson ?? this.noteSheet.recommenderIdsJson;
             if (json && typeof json === 'string') {
-                const arr = JSON.parse(json) as number[] | { EmployeeId?: number; employeeId?: number }[];
+                const arr = JSON.parse(json) as any[];
                 if (Array.isArray(arr)) {
                     arr.forEach((r, i) => {
-                        const id = typeof r === 'number' ? r : (r.EmployeeId ?? r.employeeId);
+                        const id = typeof r === 'number'
+                            ? r
+                            : (r.recomender_id ?? r.recomenderId ?? r.EmployeeId ?? r.employeeId);
                         if (id && id > 0) approverIds.push({ empId: id, step: `Recommender ${arr.length > 1 ? i + 1 : ''}`.trim() });
                     });
                 }
             }
         } catch { /* ignore */ }
 
-        const finalApproverEmpId = (this.noteSheet.approvedByEmployeeId && this.noteSheet.approvedByEmployeeId > 0)
-            ? this.noteSheet.approvedByEmployeeId
+        const finalApproverEmpId = (this.noteSheet.finalApprovalId && this.noteSheet.finalApprovalId > 0)
+            ? this.noteSheet.finalApprovalId
             : (this.noteSheet.finalApproverId && this.noteSheet.finalApproverId > 0 ? this.noteSheet.finalApproverId : null);
         if (finalApproverEmpId) approverIds.push({ empId: finalApproverEmpId, step: 'Final Approver' });
 
@@ -237,21 +258,18 @@ export abstract class NotesheetPreviewBase implements OnInit {
     isEnglish(): boolean { return (this.noteSheet?.textType ?? 0) === 0; }
     isExBdLeave(): boolean { return this.noteSheet?.noteSheetType === NoteSheetType.ExBDLeave; }
     isNewPosting(): boolean { return this.noteSheet?.noteSheetType === NoteSheetType.NewPosting; }
-    isApproved(): boolean { return (this.noteSheet?.noteSheetStatusId ?? 0) === NoteSheetStatus.Approved; }
+    isApproved(): boolean {
+        return this.noteSheet?.finalApprovalStatus === ApprovalStatus.Approve;
+    }
 
     // ─── Helpers ─────────────────────────────────────────────────────
 
     getApproverRemark(step: string): string {
-        const remark = this.noteSheet?.remark ?? '';
-        if (!remark) return '';
-        const statusId    = this.noteSheet?.noteSheetStatusId  ?? NoteSheetStatus.Draft;
-        const currentStep = this.noteSheet?.currentApprovalStep ?? NoteSheetApprovalStep.Initiator;
-        if (step === 'Final Approver') {
-            return (statusId === NoteSheetStatus.Approved || statusId === NoteSheetStatus.Declined) ? remark : '';
-        }
-        if (step.startsWith('Recommender')) {
-            return (statusId === NoteSheetStatus.Pending && currentStep >= NoteSheetApprovalStep.FinalApprover) ? remark : '';
-        }
+        if (!this.noteSheet) return '';
+        if (step === 'Final Approver')
+            return this.noteSheet.finalApprovalRemark ?? this.noteSheet.finalApprovalCancelRemark ?? '';
+        if (step === 'Initiator')
+            return this.noteSheet.initiatorApproveRemark ?? this.noteSheet.initiatorCancelRemark ?? '';
         return '';
     }
 
@@ -275,6 +293,10 @@ export abstract class NotesheetPreviewBase implements OnInit {
         return this.sanitizer.bypassSecurityTrustHtml(this.noteSheet?.mainText ?? '');
     }
 
+    getReferenceNumberSafe(): SafeHtml {
+        return this.sanitizer.bypassSecurityTrustHtml(this.noteSheet?.referenceNumber ?? '');
+    }
+
     getPurposeLabel(id: number | null | undefined): string {
         if (id == null) return '';
         return this.purposeLabelMap[id] ?? '';
@@ -296,12 +318,12 @@ export abstract class NotesheetPreviewBase implements OnInit {
     }
 
     shouldShowSignature(step: string): boolean {
-        const statusId    = this.noteSheet?.noteSheetStatusId  ?? NoteSheetStatus.Draft;
-        const currentStep = this.noteSheet?.currentApprovalStep ?? NoteSheetApprovalStep.Initiator;
+        const cs = this.noteSheet?.currentStatus;
         if (step === 'Prepared by' || step === 'প্রস্তুতকারী') return true;
         if (step === 'Initiator') return true;
-        if (step.startsWith('Recommender')) return (statusId === NoteSheetStatus.Pending && currentStep >= NoteSheetApprovalStep.Recommender) || statusId >= NoteSheetStatus.Approved;
-        if (step === 'Final Approver') return statusId === NoteSheetStatus.Approved;
+        if (step.startsWith('Recommender'))
+            return cs === NoteSheetCurrentStatus.FinalApproval || cs === NoteSheetCurrentStatus.Cancel || this.isApproved();
+        if (step === 'Final Approver') return this.isApproved();
         return false;
     }
 

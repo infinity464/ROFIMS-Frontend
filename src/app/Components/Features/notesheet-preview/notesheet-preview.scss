@@ -117,6 +117,14 @@
 .ns-cell-ref {
     padding: 5px 16px;
     font-size: 12pt;
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+
+    ::ng-deep p {
+        display: inline;
+        margin: 0;
+    }
 }
 .ns-ref-key {
     font-weight: 700;

@@ -16,7 +16,7 @@ import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { EmpService } from '@/services/emp-service';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
-import { NoteSheetType, NoteSheetStatus, NoteSheetApprovalStep } from '@/models/enums';
+import { NoteSheetType, NoteSheetCurrentStatus, ApprovalStatus } from '@/models/enums';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { CommonCode } from '@/Components/basic-setup/shared/models/common-code';
 import { CommonCodeService } from '@/services/common-code-service';
@@ -47,14 +47,12 @@ export interface NoteSheetInfoRow {
   wingBattalionId?: number;
   branchId?: number;
   subject: string;
-  noteSheetStatusId?: number;
+  /** Workflow position: draft | initiator | recommender | final_approval | cancel */
+  currentStatus?: string;
+  initiatorStatus?: string;
+  finalApprovalStatus?: string;
   /** Type string: General, ExBDLeave, NewPosting, InterPosting; used to route Update and Preview */
   noteSheetType?: string;
-  currentApprovalStep?: number;
-  approvedByEmployeeId?: number;
-  approvedDate?: string;
-  declinedByEmployeeId?: number;
-  declinedDate?: string;
   remark?: string;
   referenceNumber?: string;
   draftPostingMasterId?: number | null;
@@ -71,7 +69,9 @@ export interface NoteSheetInfoFull extends NoteSheetInfoRow {
   unitId?: number;
   employeeId?: number;
   initiatorId?: number;
+  recommendersJson?: string;
   recommenderIdsJson?: string;
+  finalApprovalId?: number;
   finalApproverId?: number;
   familyInfoJson?: string;
   filesReferences?: string;
@@ -180,16 +180,12 @@ export class NotesheetListComponent implements OnInit {
   employeesList: DraftPostingEmployeeRow[] = [];
   loadingEmployees = false;
 
-  readonly statusLabels: Record<number, string> = {
-    [NoteSheetStatus.Draft]: 'Draft',
-    [NoteSheetStatus.Pending]: 'Pending',
-    [NoteSheetStatus.Approved]: 'Approved',
-    [NoteSheetStatus.Declined]: 'Declined'
-  };
-  readonly stepLabels: Record<number, string> = {
-    [NoteSheetApprovalStep.Initiator]: 'Pending with Initiator',
-    [NoteSheetApprovalStep.Recommender]: 'Pending with Recommender',
-    [NoteSheetApprovalStep.FinalApprover]: 'Pending with Final Approver'
+  readonly statusLabels: Record<string, string> = {
+    [NoteSheetCurrentStatus.Draft]:         'Draft',
+    [NoteSheetCurrentStatus.Initiator]:     'Pending with Initiator',
+    [NoteSheetCurrentStatus.Recommender]:   'Pending with Recommender',
+    [NoteSheetCurrentStatus.FinalApproval]: 'Pending with Final Approver',
+    [NoteSheetCurrentStatus.Cancel]:        'Cancelled'
   };
 
   constructor(
@@ -234,8 +230,8 @@ export class NotesheetListComponent implements OnInit {
         }
       }
     } catch { /* ignore */ }
-    const finalApproverEmpId = (ns.approvedByEmployeeId && ns.approvedByEmployeeId > 0)
-      ? ns.approvedByEmployeeId
+    const finalApproverEmpId = (ns.finalApprovalId && ns.finalApprovalId > 0)
+      ? ns.finalApprovalId
       : (ns.finalApproverId && ns.finalApproverId > 0 ? ns.finalApproverId : null);
     if (finalApproverEmpId) approverIds.push({ empId: finalApproverEmpId, step: 'Final Approver' });
 
@@ -313,17 +309,22 @@ export class NotesheetListComponent implements OnInit {
 
   /** Whether the previewed notesheet is a draft (editable). */
   isPreviewDraft(): boolean {
-    return (this.previewNoteSheet?.noteSheetStatusId ?? 0) === NoteSheetStatus.Draft;
+    return this.previewNoteSheet?.currentStatus === NoteSheetCurrentStatus.Draft;
   }
 
   shouldShowSignature(step: string): boolean {
-    const statusId = this.previewNoteSheet?.noteSheetStatusId ?? NoteSheetStatus.Draft;
-    const currentStep = this.previewNoteSheet?.currentApprovalStep ?? NoteSheetApprovalStep.Initiator;
+    const ns = this.previewNoteSheet;
+    if (!ns) return false;
 
     if (step === 'Prepared by' || step === 'প্রস্তুতকারী') return true;
-    if (step === 'Initiator') return (statusId === NoteSheetStatus.Pending && currentStep >= NoteSheetApprovalStep.Recommender) || statusId >= NoteSheetStatus.Approved;
-    if (step.startsWith('Recommender')) return (statusId === NoteSheetStatus.Pending && currentStep >= NoteSheetApprovalStep.Recommender) || statusId >= NoteSheetStatus.Approved;
-    if (step === 'Final Approver') return statusId === NoteSheetStatus.Approved;
+    if (step === 'Initiator') return ns.initiatorStatus === ApprovalStatus.Approve;
+    if (step.startsWith('Recommender')) {
+      const cs = ns.currentStatus ?? '';
+      return cs === NoteSheetCurrentStatus.Recommender
+          || cs === NoteSheetCurrentStatus.FinalApproval
+          || cs === NoteSheetCurrentStatus.Cancel;
+    }
+    if (step === 'Final Approver') return ns.finalApprovalStatus === ApprovalStatus.Approve;
     return false;
   }
 
@@ -428,6 +429,11 @@ export class NotesheetListComponent implements OnInit {
   /** Sanitized main text for preview (formal doc uses same content). */
   getPreviewMainTextSafe(): SafeHtml {
     const html = this.previewNoteSheet?.mainText ?? '';
+    return this.sanitizer.bypassSecurityTrustHtml(html);
+  }
+
+  getPreviewReferenceNumberSafe(): SafeHtml {
+    const html = this.previewNoteSheet?.referenceNumber ?? '—';
     return this.sanitizer.bypassSecurityTrustHtml(html);
   }
 
@@ -574,7 +580,7 @@ export class NotesheetListComponent implements OnInit {
     return this.stepTranslations[step] ?? step;
   }
 
-  private stripHtml(html: string): string {
+  protected stripHtml(html: string): string {
     const div = document.createElement('div');
     div.innerHTML = html;
     return div.textContent || div.innerText || '';
@@ -880,10 +886,10 @@ export class NotesheetListComponent implements OnInit {
       this.loading = false;
     };
     const statusMap: Record<NoteSheetSection, string> = {
-      draft: `?noteSheetStatusId=${NoteSheetStatus.Draft}`,
-      pending: `?noteSheetStatusId=${NoteSheetStatus.Pending}`,
-      approved: `?noteSheetStatusId=${NoteSheetStatus.Approved}`,
-      declined: `?noteSheetStatusId=${NoteSheetStatus.Declined}`,
+      draft:    `?currentStatus=${NoteSheetCurrentStatus.Draft}`,
+      pending:  `?currentStatus=${NoteSheetCurrentStatus.Initiator}`,
+      approved: `?currentStatus=${NoteSheetCurrentStatus.FinalApproval}`,
+      declined: `?currentStatus=${NoteSheetCurrentStatus.Cancel}`,
       all: ''
     };
     this.http.get<unknown>(`${base}${statusMap[this.section]}`).subscribe({
@@ -964,14 +970,11 @@ export class NotesheetListComponent implements OnInit {
   }
 
   presentStatus(row: NoteSheetInfoRow): string {
-    if (row.noteSheetStatusId !== NoteSheetStatus.Pending) return '-';
-    const step = row.currentApprovalStep ?? 1;
-    return this.stepLabels[step] ?? `Step ${step}`;
+    return this.statusLabels[row.currentStatus ?? ''] ?? '-';
   }
 
   statusLabel(row: NoteSheetInfoRow): string {
-    const id = row.noteSheetStatusId ?? 0;
-    return this.statusLabels[id] ?? '-';
+    return this.statusLabels[row.currentStatus ?? ''] ?? '-';
   }
 
   private loadLookups(): void {

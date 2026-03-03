@@ -6,7 +6,7 @@
 
     <form [formGroup]="form" (ngSubmit)="submit()">
       <div class="ns-gen-grid">
-        <!-- Text Type -->
+        <!-- Row 1: Text Type | Date | Note Sheet No -->
         <div class="ns-gen-field">
           <label class="ns-gen-label">Text Type</label>
           <p-select
@@ -20,25 +20,23 @@
           </p-select>
         </div>
 
-        <!-- Date -->
         <div class="ns-gen-field">
           <label class="ns-gen-label">Date <span class="ns-gen-req">*</span></label>
           <p-datepicker formControlName="noteSheetDate" dateFormat="dd/mm/yy" styleClass="w-full" placeholder="Select date"></p-datepicker>
         </div>
 
-        <!-- Reference Number -->
-        <div class="ns-gen-field">
-          <label class="ns-gen-label">Reference Number</label>
-          <input pInputText formControlName="referenceNumber" placeholder="Enter reference number" class="w-full" />
-        </div>
-
-        <!-- Note Sheet No -->
         <div class="ns-gen-field">
           <label class="ns-gen-label">Note Sheet No</label>
           <input pInputText formControlName="noteSheetNo" placeholder="Auto generated" class="w-full" />
         </div>
 
-        <!-- Unit -->
+        <!-- Row 2: Reference Number (full width) -->
+        <div class="ns-gen-field ns-gen-full">
+          <label class="ns-gen-label">Reference Number</label>
+          <app-rich-editor formControlName="referenceNumber" height="80px" toolbar="minimal" placeholder="Enter reference number..."></app-rich-editor>
+        </div>
+
+        <!-- Row 3: Unit | Wing/Battalion | Branch -->
         <div class="ns-gen-field">
           <label class="ns-gen-label">Unit</label>
           <p-select
@@ -55,7 +53,6 @@
           </p-select>
         </div>
 
-        <!-- Wing/Battalion -->
         <div class="ns-gen-field">
           <label class="ns-gen-label">Wing/Battalion</label>
           <p-select
@@ -71,7 +68,6 @@
           </p-select>
         </div>
 
-        <!-- Branch -->
         <div class="ns-gen-field">
           <label class="ns-gen-label">Branch</label>
           <p-select
@@ -87,13 +83,36 @@
           </p-select>
         </div>
 
-        <!-- Subject -->
-        <div class="ns-gen-field ns-gen-span-2">
-          <label class="ns-gen-label">Subject <span class="ns-gen-req">*</span></label>
-          <input pInputText formControlName="subject" placeholder="Enter subject" class="w-full" />
-          @if (form.get('subject')?.invalid && form.get('subject')?.touched) {
-            <small class="ns-gen-error">Subject is required</small>
-          }
+        <!-- Row 4: Operation Type | Secret | Subject -->
+        <div class="ns-gen-field">
+          <label class="ns-gen-label">Operation Type</label>
+          <p-select
+            formControlName="noteSheetOperationType"
+            [options]="noteSheetOperationTypeOptions"
+            optionLabel="label"
+            optionValue="value"
+            [showClear]="true"
+            placeholder="Select type"
+            styleClass="w-full">
+          </p-select>
+        </div>
+
+        <div class="ns-gen-span-2 ns-gen-secret-subject">
+          <div class="ns-gen-field ns-gen-field--checkbox">
+            <label class="ns-gen-label">Secret</label>
+            <div class="ns-gen-checkbox-row">
+              <p-checkbox formControlName="isSecret" [binary]="true" inputId="isSecret"></p-checkbox>
+              <label for="isSecret" class="ns-gen-checkbox-label">Mark as Secret</label>
+            </div>
+          </div>
+
+          <div class="ns-gen-field">
+            <label class="ns-gen-label">Subject <span class="ns-gen-req">*</span></label>
+            <input pInputText formControlName="subject" placeholder="Enter subject" class="w-full" />
+            @if (form.get('subject')?.invalid && form.get('subject')?.touched) {
+              <small class="ns-gen-error">Subject is required</small>
+            }
+          </div>
         </div>
 
         <!-- Main Text (full row) -->

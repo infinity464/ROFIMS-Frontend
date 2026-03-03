@@ -85,33 +85,69 @@ export enum IsSendingNotesheetStatus {
 
 /** NoteSheetType – type of note-sheet (General, ExBDLeave, NewPosting, InterPosting). */
 export enum NoteSheetType {
-    General = 'General',
-    ExBDLeave = 'ExBDLeave',
-    NewPosting = 'NewPosting',
+    General      = 'General',
+    ExBDLeave    = 'ExBDLeave',
+    NewPosting   = 'NewPosting',
     InterPosting = 'InterPosting'
 }
 
 export const NoteSheetTypeOptions = [
-    { label: 'General', value: NoteSheetType.General },
-    { label: 'Ex-BD Leave', value: NoteSheetType.ExBDLeave },
-    { label: 'New Posting', value: NoteSheetType.NewPosting },
+    { label: 'General',       value: NoteSheetType.General },
+    { label: 'Ex-BD Leave',   value: NoteSheetType.ExBDLeave },
+    { label: 'New Posting',   value: NoteSheetType.NewPosting },
     { label: 'Inter Posting', value: NoteSheetType.InterPosting }
 ];
 
-/** NoteSheetStatus – approval status of a note-sheet. */
-export enum NoteSheetStatus {
-    Draft = 1,
-    Pending = 2,
-    Approved = 3,
-    Declined = 4
+/**
+ * NoteSheetCurrentStatus – overall workflow position of a note-sheet.
+ * Flow: Draft → Initiator → Recommender → FinalApproval | Cancel
+ * Matches NoteSheetInfo.CurrentStatus (NVARCHAR(20)).
+ */
+export enum NoteSheetCurrentStatus {
+    Draft         = 'draft',
+    Initiator     = 'initiator',
+    Recommender   = 'recommender',
+    FinalApproval = 'final_approval',
+    Cancel        = 'cancel'
 }
 
-/** NoteSheetApprovalStep – which approver the note-sheet is currently pending with. */
-export enum NoteSheetApprovalStep {
-    Initiator = 1,
-    Recommender = 2,
-    FinalApprover = 3
+export const NoteSheetCurrentStatusOptions = [
+    { label: 'Draft',          value: NoteSheetCurrentStatus.Draft },
+    { label: 'Initiator',      value: NoteSheetCurrentStatus.Initiator },
+    { label: 'Recommender',    value: NoteSheetCurrentStatus.Recommender },
+    { label: 'Final Approval', value: NoteSheetCurrentStatus.FinalApproval },
+    { label: 'Cancelled',      value: NoteSheetCurrentStatus.Cancel }
+];
+
+/**
+ * ApprovalStatus – individual step approval state.
+ * Used by InitiatorStatus, RecomenderStatus, FinalApprovalStatus (NVARCHAR(20)).
+ */
+export enum ApprovalStatus {
+    Pending = 'pending',
+    Approve = 'approve',
+    Cancel  = 'cancel'
 }
+
+export const ApprovalStatusOptions = [
+    { label: 'Pending',   value: ApprovalStatus.Pending },
+    { label: 'Approved',  value: ApprovalStatus.Approve },
+    { label: 'Cancelled', value: ApprovalStatus.Cancel }
+];
+
+/**
+ * NoteSheetOperationType – how the note-sheet was created.
+ * Matches NoteSheetInfo.NoteSheetOperationType (NVARCHAR(50)).
+ */
+export enum NoteSheetOperationType {
+    Manual         = 'manual',
+    SystemGenerate = 'system_generate'
+}
+
+export const NoteSheetOperationTypeOptions = [
+    { label: 'Manual',          value: NoteSheetOperationType.Manual },
+    { label: 'System Generate', value: NoteSheetOperationType.SystemGenerate }
+];
 
 /** DraftPostingStatus – status of a Draft New Posting master (new, approved, decline). */
 export enum DraftPostingStatus {

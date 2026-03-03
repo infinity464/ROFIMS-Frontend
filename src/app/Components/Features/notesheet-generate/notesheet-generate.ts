@@ -23,9 +23,10 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { take } from 'rxjs/operators';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
-import { NoteSheetType } from '@/models/enums';
+import { NoteSheetType, NoteSheetOperationTypeOptions } from '@/models/enums';
 import { TooltipModule } from 'primeng/tooltip';
 import { ToastModule } from 'primeng/toast';
+import { CheckboxModule } from 'primeng/checkbox';
 
 @Component({
     selector: 'app-notesheet-generate',
@@ -42,7 +43,8 @@ import { ToastModule } from 'primeng/toast';
         RichEditorComponent,
         FileReferencesFormComponent,
         TooltipModule,
-        ToastModule
+        ToastModule,
+        CheckboxModule
     ],
     templateUrl: './notesheet-generate.html',
     providers: [MessageService],
@@ -63,6 +65,7 @@ export class NotesheetGenerateComponent implements OnInit {
         { label: 'English', value: 'en' },
         { label: 'Bangla', value: 'bn' }
     ];
+    readonly noteSheetOperationTypeOptions = NoteSheetOperationTypeOptions;
     /** Options with both EN and BN labels; display getters pick by textType. */
     unitOptions: { label: string; labelBn: string | null; value: number }[] = [];
     wingOptions: { label: string; labelBn: string | null; value: number }[] = [];
@@ -103,7 +106,9 @@ export class NotesheetGenerateComponent implements OnInit {
             preparedByEmployeeId: [null as number | null],
             initiatorId: [null as number | null],
             recommenderIds: [[] as number[]],
-            finalApproverId: [null as number | null]
+            finalApproverId: [null as number | null],
+            isSecret: [false],
+            noteSheetOperationType: [null as string | null]
         });
     }
 
@@ -164,11 +169,21 @@ export class NotesheetGenerateComponent implements OnInit {
         this.originalCreatedBy = d.createdBy ?? d.CreatedBy ?? d.lastUpdatedBy ?? d.LastUpdatedBy ?? user ?? null;
         const noteSheetDate = (d.noteSheetDate ?? d.NoteSheetDate) != null ? this.parseDate(d.noteSheetDate ?? d.NoteSheetDate) : null;
         let recommenderIds: number[] = [];
+        const recommendersJson = d.recommendersJson ?? d.RecommendersJson;
         const recommenderIdsJson = d.recommenderIdsJson ?? d.RecommenderIdsJson;
-        if (recommenderIdsJson && typeof recommenderIdsJson === 'string') {
+        const rawJson = recommendersJson ?? recommenderIdsJson;
+        if (rawJson && typeof rawJson === 'string') {
             try {
-                const arr = JSON.parse(recommenderIdsJson);
-                recommenderIds = Array.isArray(arr) ? arr : [];
+                const arr = JSON.parse(rawJson);
+                if (Array.isArray(arr) && arr.length > 0) {
+                    if (typeof arr[0] === 'object' && arr[0] !== null) {
+                        // New format: array of recommender objects
+                        recommenderIds = arr.map((r: any) => r.recomender_id ?? r.recomenderId ?? r.RecomenderId).filter(Boolean);
+                    } else {
+                        // Legacy format: plain array of IDs
+                        recommenderIds = arr.filter((x: any) => typeof x === 'number');
+                    }
+                }
             } catch {}
         }
         this.form.patchValue({
@@ -186,7 +201,9 @@ export class NotesheetGenerateComponent implements OnInit {
             preparedByEmployeeId: d.preparedByEmployeeId ?? d.PreparedByEmployeeId ?? null,
             initiatorId: d.initiatorId ?? d.InitiatorId ?? null,
             recommenderIds,
-            finalApproverId: d.finalApproverId ?? d.FinalApproverId ?? null
+            finalApproverId: d.finalApprovalId ?? d.FinalApprovalId ?? null,
+            isSecret: !!(d.isSecret ?? d.IsSecret ?? false),
+            noteSheetOperationType: d.noteSheetOperationType ?? d.NoteSheetOperationType ?? null
         });
         if (d.createdBy ?? d.CreatedBy) this.form.get('preparedBy')?.setValue(d.createdBy ?? d.CreatedBy);
         const unitId = d.unitId ?? d.UnitId;
@@ -408,7 +425,9 @@ export class NotesheetGenerateComponent implements OnInit {
             preparedByEmployeeId: null,
             initiatorId: null,
             recommenderIds: [],
-            finalApproverId: null
+            finalApproverId: null,
+            isSecret: false,
+            noteSheetOperationType: null
         });
         this.fileRows = [];
         this.resolvePreparedByMapping();
@@ -529,37 +548,45 @@ export class NotesheetGenerateComponent implements OnInit {
         // When editing, never change the original preparer (CreatedBy); only lastUpdatedBy reflects who saved
         const createdBy = this.editMode && this.originalCreatedBy ? this.originalCreatedBy : preparedBy;
         const lastUpdatedBy = preparedBy;
+
+        const recommenderIds: number[] = Array.isArray(d.recommenderIds) ? d.recommenderIds : [];
+        const recommendersJson = recommenderIds.length
+            ? JSON.stringify(recommenderIds.map((id, idx) => ({
+                recomender_no: idx + 1,
+                recomender_id: id,
+                recomender_status: 'pending',
+                recomender_approve_remark: '',
+                recomender_cancel_remark: '',
+                recomender_approved_date: null
+            })))
+            : null;
+
         const payload: Record<string, unknown> = {
             noteSheetId: 0,
             noteSheetType: NoteSheetType.General,
-            employeeId: null,
-            fileNumber: 0,
             noteSheetNo: (d.noteSheetNo && String(d.noteSheetNo).trim()) || 'AUTO',
             noteSheetDate: dateStr,
+            noteSheetTemplateId: d.noteSheetTemplateId ?? null,
+            referenceNumber: d.referenceNumber != null ? String(d.referenceNumber) : null,
             subject: d.subject != null ? String(d.subject) : '',
             mainText: d.mainText != null ? String(d.mainText) : '',
             note: null,
-            initiatorId: d.initiatorId ?? 0,
-            initiatorStatus: false,
-            initiatorComments: (d as any).initiatorComments?.trim() || '-', // [Required] does not allow empty string
-            status: false,
-            noteSheetStatusId: 1,
-            currentApprovalStep: null,
-            remark: null,
-            createdBy,
-            lastUpdatedBy,
-            createdDate: now,
-            lastupdate: now,
-            noteSheetTemplateId: d.noteSheetTemplateId ?? null,
             textType: d.textType === 'bn' ? 1 : 0,
+            isSecret: d.isSecret ?? false,
+            noteSheetOperationType: d.noteSheetOperationType ?? null,
+            employeeId: null,
+            preparedByEmployeeId: d.preparedByEmployeeId ?? null,
             unitId: d.unitId ?? null,
             wingBattalionId: d.wingBattalionId ?? null,
             branchId: d.branchId ?? null,
-            referenceNumber: d.referenceNumber != null ? String(d.referenceNumber) : null,
-            preparedByEmployeeId: d.preparedByEmployeeId ?? null,
-            recommenderIdsJson: d.recommenderIds?.length ? JSON.stringify(d.recommenderIds) : null,
-            finalApproverId: d.finalApproverId ?? null,
-            familyInfoJson: null
+            initiatorId: d.initiatorId ?? 0,
+            recommendersJson,
+            finalApprovalId: d.finalApproverId ?? null,
+            familyInfoJson: null,
+            createdBy,
+            lastUpdatedBy,
+            createdDate: now,
+            lastupdate: now
         };
         if (filesReferencesJson != null && filesReferencesJson !== '') {
             payload['filesReferences'] = filesReferencesJson;

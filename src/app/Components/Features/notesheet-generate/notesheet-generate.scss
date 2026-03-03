@@ -65,6 +65,32 @@
   color: var(--text-color, #334155);
 }
 
+// ═══ Secret + Subject Inner Grid ═══
+.ns-gen-secret-subject {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 1rem;
+}
+
+// ═══ Checkbox Field ═══
+.ns-gen-field--checkbox {
+  justify-content: flex-start;
+}
+
+.ns-gen-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-top: 0.25rem;
+}
+
+.ns-gen-checkbox-label {
+  font-size: 0.875rem;
+  color: var(--text-color, #334155);
+  cursor: pointer;
+  user-select: none;
+}
+
 // ═══ Actions ═══
 .ns-gen-actions {
   display: flex;
@@ -74,9 +100,50 @@
 }
 
 // ═══ Responsive ═══
-@media (max-width: 768px) {
+
+// Tablet: 2-column layout
+@media (max-width: 1024px) and (min-width: 601px) {
+  .ns-gen-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .ns-gen-span-2 {
+    grid-column: span 2;
+  }
+
+  .ns-gen-secret-subject {
+    grid-template-columns: 1fr 2fr;
+  }
+}
+
+// Mobile: single column
+@media (max-width: 600px) {
   .ns-gen-grid {
     grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .ns-gen-span-2,
+  .ns-gen-full {
+    grid-column: 1 / -1;
+  }
+
+  .ns-gen-secret-subject {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .ns-gen-actions {
+    flex-direction: column;
+
+    p-button {
+      width: 100%;
+
+      ::ng-deep .p-button {
+        width: 100%;
+        justify-content: center;
+      }
+    }
   }
 }
 

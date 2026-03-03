@@ -42,6 +42,8 @@ type ResizeTarget =
 export class RichEditorComponent implements ControlValueAccessor, OnDestroy {
     @Input() height = '220px';
     @Input() placeholder = 'Write here...';
+    /** 'full' = all toolbar options; 'minimal' = bold/italic/underline/strike/clean only */
+    @Input() toolbar: 'full' | 'minimal' = 'full';
 
     @ViewChild(Editor) private editorRef!: Editor;
 
