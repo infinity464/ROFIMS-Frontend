@@ -1,0 +1,302 @@
+// ─── Quill font content classes ───────────────────────────────────────────────
+// These must be global (ViewEncapsulation.None) so they apply inside .ql-editor
+.ql-font-arial        { font-family: Arial, sans-serif !important; }
+.ql-font-times-new-roman { font-family: 'Times New Roman', serif !important; }
+.ql-font-georgia      { font-family: Georgia, serif !important; }
+.ql-font-garamond     { font-family: Garamond, serif !important; }
+.ql-font-palatino     { font-family: 'Palatino Linotype', Palatino, serif !important; }
+.ql-font-verdana      { font-family: Verdana, sans-serif !important; }
+.ql-font-tahoma       { font-family: Tahoma, sans-serif !important; }
+.ql-font-trebuchet-ms { font-family: 'Trebuchet MS', sans-serif !important; }
+.ql-font-courier-new  { font-family: 'Courier New', Courier, monospace !important; }
+.ql-font-impact       { font-family: Impact, Charcoal, sans-serif !important; }
+.ql-font-comic-sans   { font-family: 'Comic Sans MS', cursive !important; }
+
+// ─── Font option labels in the toolbar dropdown ────────────────────────────────
+.ql-picker.ql-font {
+  width: 140px !important;
+
+  .ql-picker-label::before,
+  .ql-picker-item::before { content: 'Default'; }
+
+  .ql-picker-label[data-value='arial']::before,
+  .ql-picker-item[data-value='arial']::before         { content: 'Arial';           font-family: Arial, sans-serif; }
+
+  .ql-picker-label[data-value='times-new-roman']::before,
+  .ql-picker-item[data-value='times-new-roman']::before { content: 'Times New Roman'; font-family: 'Times New Roman', serif; }
+
+  .ql-picker-label[data-value='georgia']::before,
+  .ql-picker-item[data-value='georgia']::before       { content: 'Georgia';         font-family: Georgia, serif; }
+
+  .ql-picker-label[data-value='garamond']::before,
+  .ql-picker-item[data-value='garamond']::before      { content: 'Garamond';        font-family: Garamond, serif; }
+
+  .ql-picker-label[data-value='palatino']::before,
+  .ql-picker-item[data-value='palatino']::before      { content: 'Palatino';        font-family: 'Palatino Linotype', serif; }
+
+  .ql-picker-label[data-value='verdana']::before,
+  .ql-picker-item[data-value='verdana']::before       { content: 'Verdana';         font-family: Verdana, sans-serif; }
+
+  .ql-picker-label[data-value='tahoma']::before,
+  .ql-picker-item[data-value='tahoma']::before        { content: 'Tahoma';          font-family: Tahoma, sans-serif; }
+
+  .ql-picker-label[data-value='trebuchet-ms']::before,
+  .ql-picker-item[data-value='trebuchet-ms']::before  { content: 'Trebuchet MS';    font-family: 'Trebuchet MS', sans-serif; }
+
+  .ql-picker-label[data-value='courier-new']::before,
+  .ql-picker-item[data-value='courier-new']::before   { content: 'Courier New';     font-family: 'Courier New', monospace; }
+
+  .ql-picker-label[data-value='impact']::before,
+  .ql-picker-item[data-value='impact']::before        { content: 'Impact';          font-family: Impact, sans-serif; }
+
+  .ql-picker-label[data-value='comic-sans']::before,
+  .ql-picker-item[data-value='comic-sans']::before    { content: 'Comic Sans MS';   font-family: 'Comic Sans MS', cursive; }
+}
+
+// ─── Wrapper ───────────────────────────────────────────────────────────────────
+.re-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+// ─── Table button ──────────────────────────────────────────────────────────────
+.re-table-wrap {
+  position: relative;
+  display: inline-flex !important;
+  align-items: center;
+}
+
+.re-table-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  padding: 3px 4px;
+  color: #444;
+  border-radius: 3px;
+  transition: color 0.15s, background 0.15s;
+
+  &:hover {
+    color: #06c;
+    background: rgba(0, 100, 200, 0.07);
+  }
+
+  svg {
+    display: block;
+  }
+}
+
+// ─── Table picker popup ────────────────────────────────────────────────────────
+.re-table-picker {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 9999;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 10px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.14);
+  min-width: 160px;
+}
+
+.re-table-picker-label {
+  text-align: center;
+  font-size: 11px;
+  color: #666;
+  margin-bottom: 8px;
+  min-height: 16px;
+}
+
+.re-table-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 22px);
+  gap: 3px;
+}
+
+.re-table-cell {
+  width: 22px;
+  height: 22px;
+  border: 1px solid #d1d5db;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s;
+
+  &.re-table-cell--active,
+  &:hover {
+    background: #dbeafe;
+    border-color: #3b82f6;
+  }
+}
+
+// ─── Custom size row ───────────────────────────────────────────────────────────
+.re-table-custom {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #eee;
+}
+
+.re-table-custom-label {
+  display: block;
+  font-size: 10px;
+  color: #888;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.re-table-custom-inputs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.re-table-custom-input {
+  width: 46px;
+  padding: 3px 5px;
+  font-size: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 3px;
+  text-align: center;
+  outline: none;
+  color: #333;
+
+  &:focus {
+    border-color: #3b82f6;
+  }
+
+  // hide browser spinners
+  &::-webkit-inner-spin-button,
+  &::-webkit-outer-spin-button { opacity: 1; height: 16px; }
+}
+
+.re-table-custom-sep {
+  font-size: 13px;
+  color: #555;
+  flex-shrink: 0;
+}
+
+.re-table-custom-btn {
+  padding: 3px 10px;
+  font-size: 12px;
+  border: 1px solid #3b82f6;
+  border-radius: 3px;
+  background: #3b82f6;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+
+  &:hover {
+    background: #2563eb;
+  }
+}
+
+// ─── Table right-border resize hint ────────────────────────────────────────────
+// Show a blue right-border on the whole table while the mouse is inside it.
+// This hints that the right edge is draggable (ew-resize cursor does the rest).
+.ql-editor table:hover {
+  border-right: 2.5px solid #3b82f6 !important;
+}
+
+// ─── Right-click context menu ──────────────────────────────────────────────────
+.re-ctx-menu {
+  position: fixed;
+  z-index: 99999;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  padding: 4px 0;
+  min-width: 180px;
+  font-size: 13px;
+  user-select: none;
+}
+
+.re-ctx-section {
+  padding: 4px 12px 2px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.re-ctx-divider {
+  height: 1px;
+  background: #e5e7eb;
+  margin: 4px 0;
+}
+
+.re-ctx-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 14px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #111827;
+  text-align: left;
+  white-space: nowrap;
+  transition: background 0.1s;
+
+  i { font-size: 11px; color: #6b7280; }
+
+  &:hover {
+    background: #f3f4f6;
+  }
+
+  &--danger {
+    color: #dc2626;
+    i { color: #dc2626; }
+    &:hover { background: #fef2f2; }
+  }
+}
+
+// ─── Tables: editor + every preview/view area ─────────────────────────────────
+// Use !important so Tailwind's preflight (border-width:0) doesn't win.
+.ql-editor table,
+.notesheet-preview-body table,
+.ql-editor table,
+[innerHTML] table {
+  border-collapse: collapse !important;
+  width: 100%;
+  margin: 6px 0;
+}
+
+.ql-editor table td,
+.ql-editor table th,
+.notesheet-preview-body table td,
+.notesheet-preview-body table th {
+  border: 1px solid #bbb !important;
+  padding: 5px 10px;
+  min-width: 60px;
+}
+
+// Catch-all: any table rendered inside Angular [innerHTML] bindings
+.notesheet-preview-doc table td,
+.notesheet-preview-doc table th,
+.ns-preview-body-section table td,
+.ns-preview-body-section table th {
+  border: 1px solid #bbb !important;
+  padding: 5px 10px;
+}
+
+// Class-based fallback: re-ns-table is added to every inserted table so
+// even if Quill's Delta round-trip strips inline styles, the border still shows
+.re-ns-table {
+  border-collapse: collapse !important;
+  width: 100%;
+  margin: 6px 0;
+}
+
+.re-ns-table td,
+.re-ns-table th {
+  border: 1px solid #bbb !important;
+  padding: 5px 10px;
+  min-width: 60px;
+}

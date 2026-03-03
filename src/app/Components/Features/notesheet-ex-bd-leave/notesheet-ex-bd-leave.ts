@@ -11,7 +11,7 @@ import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { DatePickerModule } from 'primeng/datepicker';
-import { EditorModule } from 'primeng/editor';
+import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import { CommonCode } from '@/Components/basic-setup/shared/models/common-code';
@@ -51,7 +51,7 @@ import html2canvas from 'html2canvas';
         SelectModule,
         MultiSelectModule,
         DatePickerModule,
-        EditorModule,
+        RichEditorComponent,
         ToastModule,
         TooltipModule,
         FileReferencesFormComponent,

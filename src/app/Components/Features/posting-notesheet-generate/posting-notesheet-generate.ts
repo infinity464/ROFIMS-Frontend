@@ -10,7 +10,7 @@ import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { DatePickerModule } from 'primeng/datepicker';
-import { EditorModule } from 'primeng/editor';
+import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor';
 import { TextareaModule } from 'primeng/textarea';
 import { ToastModule } from 'primeng/toast';
 import { environment } from '@/Core/Environments/environment';
@@ -37,7 +37,7 @@ import { NoteSheetType } from '@/models/enums';
         SelectModule,
         MultiSelectModule,
         DatePickerModule,
-        EditorModule,
+        RichEditorComponent,
         TextareaModule,
         ToastModule,
         FileReferencesFormComponent

@@ -12,7 +12,7 @@ import { ToastModule } from 'primeng/toast';
 import { SharedService } from '@/shared/services/shared-service';
 import { FluidModule } from 'primeng/fluid';
 import { ActivatedRoute, Router } from '@angular/router';
-import { EditorModule } from 'primeng/editor';
+import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { EmpService } from '@/services/emp-service';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
@@ -105,7 +105,7 @@ export type NoteSheetSection = 'draft' | 'pending' | 'approved' | 'declined' | '
     TextareaModule,
     ToastModule,
     FluidModule,
-    EditorModule,
+    RichEditorComponent,
     TooltipModule,
     DatePickerModule,
     InputTextModule,

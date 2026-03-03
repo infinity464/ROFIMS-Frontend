@@ -1,0 +1,185 @@
+<div class="re-wrapper" (click)="$event.stopPropagation()">
+  <p-editor
+    [(ngModel)]="_value"
+    (onTextChange)="onEditorChange($event)"
+    (onInit)="onEditorInit($event)"
+    [style]="{ height: height }"
+    [placeholder]="placeholder"
+    [readonly]="disabled">
+
+    <ng-template pTemplate="header">
+      <!-- Font Family -->
+      <span class="ql-formats">
+        <select class="ql-font" title="Font Family">
+          <option value="" selected>Default</option>
+          <option value="arial">Arial</option>
+          <option value="times-new-roman">Times New Roman</option>
+          <option value="georgia">Georgia</option>
+          <option value="garamond">Garamond</option>
+          <option value="palatino">Palatino</option>
+          <option value="verdana">Verdana</option>
+          <option value="tahoma">Tahoma</option>
+          <option value="trebuchet-ms">Trebuchet MS</option>
+          <option value="courier-new">Courier New</option>
+          <option value="impact">Impact</option>
+          <option value="comic-sans">Comic Sans MS</option>
+        </select>
+      </span>
+
+      <!-- Font Size -->
+      <span class="ql-formats">
+        <select class="ql-size" title="Font Size">
+          <option value="small">Small</option>
+          <option value="" selected>Normal</option>
+          <option value="large">Large</option>
+          <option value="huge">Huge</option>
+        </select>
+      </span>
+
+      <!-- Heading -->
+      <span class="ql-formats">
+        <select class="ql-header" title="Heading">
+          <option value="" selected>Normal</option>
+          <option value="1">H1</option>
+          <option value="2">H2</option>
+          <option value="3">H3</option>
+          <option value="4">H4</option>
+        </select>
+      </span>
+
+      <!-- Basic formatting -->
+      <span class="ql-formats">
+        <button class="ql-bold" title="Bold"></button>
+        <button class="ql-italic" title="Italic"></button>
+        <button class="ql-underline" title="Underline"></button>
+        <button class="ql-strike" title="Strikethrough"></button>
+      </span>
+
+      <!-- Sub / Superscript -->
+      <span class="ql-formats">
+        <button class="ql-script" value="sub" title="Subscript"></button>
+        <button class="ql-script" value="super" title="Superscript"></button>
+      </span>
+
+      <!-- Colors -->
+      <span class="ql-formats">
+        <select class="ql-color" title="Text Color"></select>
+        <select class="ql-background" title="Background Color"></select>
+      </span>
+
+      <!-- Alignment -->
+      <span class="ql-formats">
+        <select class="ql-align" title="Alignment"></select>
+      </span>
+
+      <!-- Lists & Indent -->
+      <span class="ql-formats">
+        <button class="ql-list" value="ordered" title="Ordered List"></button>
+        <button class="ql-list" value="bullet" title="Bullet List"></button>
+        <button class="ql-indent" value="-1" title="Decrease Indent"></button>
+        <button class="ql-indent" value="+1" title="Increase Indent"></button>
+      </span>
+
+      <!-- Blockquote & Code -->
+      <span class="ql-formats">
+        <button class="ql-blockquote" title="Blockquote"></button>
+        <button class="ql-code-block" title="Code Block"></button>
+      </span>
+
+      <!-- Link & Image -->
+      <span class="ql-formats">
+        <button class="ql-link" title="Insert Link"></button>
+        <button class="ql-image" title="Insert Image"></button>
+      </span>
+
+      <!-- Clean -->
+      <span class="ql-formats">
+        <button class="ql-clean" title="Remove Formatting"></button>
+      </span>
+
+      <!-- Table Insert (custom) -->
+      <span class="ql-formats re-table-wrap">
+        <button
+          type="button"
+          class="re-table-btn ql-table"
+          title="Insert Table"
+          (click)="toggleTablePicker($event)">
+          <!-- 2×2 grid icon -->
+          <svg viewBox="0 0 18 18" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="1.5" y="1.5" width="6" height="6" rx="0.75"/>
+            <rect x="10.5" y="1.5" width="6" height="6" rx="0.75"/>
+            <rect x="1.5" y="10.5" width="6" height="6" rx="0.75"/>
+            <rect x="10.5" y="10.5" width="6" height="6" rx="0.75"/>
+          </svg>
+        </button>
+
+        @if (showTablePicker) {
+          <div class="re-table-picker" (click)="$event.stopPropagation()">
+            <div class="re-table-picker-label">
+              {{ hoveredRow > 0 ? hoveredRow + ' × ' + hoveredCol + ' Table' : 'Insert Table' }}
+            </div>
+            <div class="re-table-picker-grid">
+              @for (r of pickerRows; track r) {
+                @for (c of pickerCols; track c) {
+                  <div
+                    class="re-table-cell"
+                    [class.re-table-cell--active]="r <= hoveredRow && c <= hoveredCol"
+                    (mouseenter)="hoverCell(r, c)"
+                    (click)="insertTable(r, c)">
+                  </div>
+                }
+              }
+            </div>
+            <div class="re-table-custom">
+              <span class="re-table-custom-label">Custom size</span>
+              <div class="re-table-custom-inputs">
+                <input type="number" class="re-table-custom-input" [(ngModel)]="customRows" min="1" max="50" placeholder="Rows" title="Rows" />
+                <span class="re-table-custom-sep">×</span>
+                <input type="number" class="re-table-custom-input" [(ngModel)]="customCols" min="1" max="20" placeholder="Cols" title="Cols" />
+                <button class="re-table-custom-btn" type="button" (click)="insertTable(customRows, customCols)">Insert</button>
+              </div>
+            </div>
+          </div>
+        }
+      </span>
+    </ng-template>
+  </p-editor>
+
+  <!-- Right-click context menu (position: fixed at click coords) -->
+  @if (showContextMenu) {
+    <div
+      class="re-ctx-menu"
+      [style.left.px]="contextMenuX"
+      [style.top.px]="contextMenuY"
+      (click)="$event.stopPropagation()">
+
+      <div class="re-ctx-section">Row</div>
+      <button class="re-ctx-item" (click)="ctxInsertRowAbove()">
+        <i class="pi pi-arrow-up"></i> Insert Row Above
+      </button>
+      <button class="re-ctx-item" (click)="ctxInsertRowBelow()">
+        <i class="pi pi-arrow-down"></i> Insert Row Below
+      </button>
+
+      <div class="re-ctx-section">Column</div>
+      <button class="re-ctx-item" (click)="ctxInsertColLeft()">
+        <i class="pi pi-arrow-left"></i> Insert Column Left
+      </button>
+      <button class="re-ctx-item" (click)="ctxInsertColRight()">
+        <i class="pi pi-arrow-right"></i> Insert Column Right
+      </button>
+
+      <div class="re-ctx-divider"></div>
+
+      <button class="re-ctx-item re-ctx-item--danger" (click)="ctxDeleteRow()">
+        <i class="pi pi-times"></i> Delete Row
+      </button>
+      <button class="re-ctx-item re-ctx-item--danger" (click)="ctxDeleteCol()">
+        <i class="pi pi-times"></i> Delete Column
+      </button>
+      <button class="re-ctx-item re-ctx-item--danger" (click)="ctxDeleteTable()">
+        <i class="pi pi-trash"></i> Delete Table
+      </button>
+    </div>
+  }
+</div>

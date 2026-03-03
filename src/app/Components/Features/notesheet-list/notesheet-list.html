@@ -433,7 +433,7 @@
         <div class="ns-preview-body-section">
           <div class="ns-preview-body-label">{{ isPreviewEnglish() ? 'Content' : 'বিষয়বস্তু' }}</div>
           @if (previewEditing) {
-            <p-editor [(ngModel)]="editMainText" [style]="{ height: '220px' }" placeholder="Edit content..."></p-editor>
+            <app-rich-editor [(ngModel)]="editMainText" height="220px" placeholder="Edit content..."></app-rich-editor>
           } @else {
             <div class="notesheet-preview-body" [innerHTML]="getPreviewMainTextSafe()"></div>
           }
@@ -504,7 +504,7 @@
     [resizable]="false">
     <div class="flex flex-col gap-2 mt-3">
       <label class="font-semibold block mb-2 text-700">Main Text</label>
-      <p-editor [(ngModel)]="mainTextEditValue" [style]="{ height: '220px' }" placeholder="Edit content..."></p-editor>
+      <app-rich-editor [(ngModel)]="mainTextEditValue" height="220px" placeholder="Edit content..."></app-rich-editor>
     </div>
     <ng-template pTemplate="footer">
       <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="showEditMainTextDialog = false"></p-button>

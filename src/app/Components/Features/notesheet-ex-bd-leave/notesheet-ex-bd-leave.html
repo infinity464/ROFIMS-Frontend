@@ -141,7 +141,7 @@
           <div class="ns-preview-body-section">
             <div class="ns-preview-body-label">Content</div>
             @if (viewEditing) {
-              <p-editor [(ngModel)]="editMainText" [style]="{ height: '220px' }" placeholder="Edit content..."></p-editor>
+              <app-rich-editor [(ngModel)]="editMainText" height="220px" placeholder="Edit content..."></app-rich-editor>
             } @else {
               <div class="notesheet-preview-body" [innerHTML]="getViewMainTextSafe()"></div>
             }
@@ -400,7 +400,7 @@
           <!-- Row 7: Main Text (full) -->
           <div class="ns-gen-field ns-gen-full">
             <label class="ns-gen-label">Main Text</label>
-            <p-editor formControlName="mainText" [style]="{ height: '220px' }" placeholder="Write content here..."></p-editor>
+            <app-rich-editor formControlName="mainText" height="220px" placeholder="Write content here..."></app-rich-editor>
           </div>
 
           <!-- Row 8: Prepared By | Initiator | Final Approver -->

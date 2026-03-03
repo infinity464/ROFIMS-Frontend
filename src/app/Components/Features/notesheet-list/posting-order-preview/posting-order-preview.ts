@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
-import { EditorModule } from 'primeng/editor';
+import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor';
 import { TextareaModule } from 'primeng/textarea';
 import { InputTextModule } from 'primeng/inputtext';
 import { TooltipModule } from 'primeng/tooltip';
@@ -27,7 +27,7 @@ import html2canvas from 'html2canvas';
 @Component({
     selector: 'app-posting-order-preview',
     standalone: true,
-    imports: [CommonModule, FormsModule, TableModule, ButtonModule, EditorModule, TextareaModule, InputTextModule, TooltipModule, SelectModule, NotesheetSignatoryComponent],
+    imports: [CommonModule, FormsModule, TableModule, ButtonModule, RichEditorComponent, TextareaModule, InputTextModule, TooltipModule, SelectModule, NotesheetSignatoryComponent],
     templateUrl: './posting-order-preview.html',
     styleUrl: './posting-order-preview.scss'
 })

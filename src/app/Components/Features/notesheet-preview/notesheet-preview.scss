@@ -151,7 +151,16 @@
     }
     ::ng-deep table {
         width: 100%;
-        table-layout: fixed;
+        table-layout: auto;
+        border-collapse: collapse !important;
+        margin: 6px 0;
+    }
+    ::ng-deep table td,
+    ::ng-deep table th {
+        border: 1px solid #000 !important;
+        padding: 5px 8px;
+        min-width: 40px;
+        white-space: normal;
     }
     ::ng-deep p          { margin: 0 0 0.4rem; }
     ::ng-deep p:last-child { margin-bottom: 0; }

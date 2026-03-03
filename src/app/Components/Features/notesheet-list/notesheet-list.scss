@@ -188,6 +188,8 @@
   max-width: 100%;
   ::ng-deep p { margin: 0 0 0.5rem 0; }
   ::ng-deep p:last-child { margin-bottom: 0; }
+  ::ng-deep table { white-space: normal; border-collapse: collapse; width: 100%; margin: 6px 0; }
+  ::ng-deep table td, ::ng-deep table th { border: 1px solid #bbb !important; padding: 5px 10px; min-width: 60px; white-space: normal; }
 }
 
 .ns-preview-docs {

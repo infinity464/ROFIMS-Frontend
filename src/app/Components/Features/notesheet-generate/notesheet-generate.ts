@@ -12,7 +12,7 @@ import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { DatePickerModule } from 'primeng/datepicker';
-import { EditorModule } from 'primeng/editor';
+import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor';
 import { CommonCode } from '@/Components/basic-setup/shared/models/common-code';
 import { environment } from '@/Core/Environments/environment';
 import { HttpClient } from '@angular/common/http';
@@ -39,7 +39,7 @@ import { ToastModule } from 'primeng/toast';
         SelectModule,
         MultiSelectModule,
         DatePickerModule,
-        EditorModule,
+        RichEditorComponent,
         FileReferencesFormComponent,
         TooltipModule,
         ToastModule
