@@ -1,5 +1,6 @@
 <p-fluid>
   <p-toast></p-toast>
+  <p-confirmDialog></p-confirmDialog>
 
   @if (section === 'draft') {
   <div class="form-card">
@@ -41,7 +42,7 @@
           <th>Subject</th>
           <th>Back Remark</th>
           <th style="width: 120px">Action</th>
-          <th style="width: 130px">Submit</th>
+          <th style="width: 150px">Status / Submit</th>
         </tr>
       </ng-template>
       <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
@@ -65,7 +66,17 @@
             </div>
           </td>
           <td>
-            <p-button type="button" icon="pi pi-send" label="Submit" size="small" severity="success" [outlined]="true" pTooltip="Submit for approval" (onClick)="submitForApproval(row)"></p-button>
+            @if (row.currentStatus === NoteSheetCurrentStatus.Draft) {
+              <p-button type="button" icon="pi pi-send" label="Submit" size="small" severity="success" [outlined]="true" pTooltip="Submit for approval" (onClick)="submitForApproval(row)"></p-button>
+            } @else if (row.currentStatus === NoteSheetCurrentStatus.Initiator) {
+              <span class="ns-status-badge ns-status-badge--initiator">
+                <i class="pi pi-clock"></i> Pending Initiator
+              </span>
+            } @else if (row.currentStatus === NoteSheetCurrentStatus.Recommender) {
+              <span class="ns-status-badge ns-status-badge--recommender">
+                <i class="pi pi-clock"></i> Pending Recommender
+              </span>
+            }
           </td>
         </tr>
       </ng-template>
@@ -127,9 +138,9 @@
           <td>
             <div class="flex align-items-center gap-1">
               <p-button type="button" icon="pi pi-eye" [rounded]="true" [text]="true" size="small" pTooltip="Preview" (onClick)="openPreview(row)"></p-button>
-              <p-button type="button" icon="pi pi-check" [rounded]="true" [text]="true" size="small" severity="success" pTooltip="Approve" (onClick)="openRemarkDialog(row, 'approve')"></p-button>
-              <p-button type="button" icon="pi pi-times" [rounded]="true" [text]="true" size="small" severity="danger" pTooltip="Decline" (onClick)="openRemarkDialog(row, 'decline')"></p-button>
-              <p-button type="button" icon="pi pi-replay" [rounded]="true" [text]="true" size="small" severity="secondary" pTooltip="Back" (onClick)="openRemarkDialog(row, 'back')"></p-button>
+              <p-button type="button" icon="pi pi-check" [rounded]="true" [text]="true" size="small" severity="success" pTooltip="Approve" (onClick)="openRemarkDialog(row, NoteSheetRemarkAction.Approve)"></p-button>
+              <p-button type="button" icon="pi pi-times" [rounded]="true" [text]="true" size="small" severity="danger" pTooltip="Decline" (onClick)="openRemarkDialog(row, NoteSheetRemarkAction.Decline)"></p-button>
+              <p-button type="button" icon="pi pi-replay" [rounded]="true" [text]="true" size="small" severity="secondary" pTooltip="Back" (onClick)="openRemarkDialog(row, NoteSheetRemarkAction.Back)"></p-button>
             </div>
           </td>
         </tr>
@@ -177,7 +188,6 @@
           <th>Note-Sheet No</th>
           <th>Type</th>
           <th>Subject</th>
-          <th>Approved by</th>
           <th>Approved Date</th>
           <th style="width: 80px">Action</th>
         </tr>
@@ -189,8 +199,7 @@
           <td>{{ row.noteSheetNo || '-' }}</td>
           <td>{{ noteSheetTypeLabel(row) }}</td>
           <td>{{ row.subject || '-' }}</td>
-          <td>{{ row.approvedByEmployeeId ?? '-' }}</td>
-          <td>{{ formatDate(row.approvedDate) }}</td>
+          <td>{{ formatDate(row.finalApprovalApprovedDate) }}</td>
           <td>
             <div class="flex align-items-center gap-1">
               <p-button type="button" icon="pi pi-eye" [rounded]="true" [text]="true" size="small" pTooltip="Preview" (onClick)="openPreview(row)"></p-button>
@@ -199,7 +208,7 @@
         </tr>
       </ng-template>
       <ng-template pTemplate="emptymessage">
-        <tr><td colspan="8" class="text-center text-500">No approved note-sheets.</td></tr>
+        <tr><td colspan="7" class="text-center text-500">No approved note-sheets.</td></tr>
       </ng-template>
     </p-table>
   </div>
@@ -326,14 +335,23 @@
   }
 
   <!-- Remark dialog for Approve / Decline / Back -->
-  <p-dialog header="{{ remarkAction === 'approve' ? 'Approve' : remarkAction === 'decline' ? 'Decline' : 'Back' }} with Remark" [(visible)]="showRemarkDialog" [modal]="true" [style]="{ width: '28rem' }" [contentStyle]="{ 'border-top': '2px solid var(--primary-color)' }" (onHide)="selectedRow = null; remarkAction = null" [draggable]="false" [resizable]="false">
+  <p-dialog header="{{ remarkAction === NoteSheetRemarkAction.Approve ? 'Approve' : remarkAction === NoteSheetRemarkAction.Decline ? 'Decline' : 'Back' }} with Remark" [(visible)]="showRemarkDialog" [modal]="true" [style]="{ width: '28rem' }" [contentStyle]="{ 'border-top': '2px solid var(--primary-color)' }" (onHide)="selectedRow = null; remarkAction = null" [draggable]="false" [resizable]="false">
     <div class="flex flex-col gap-2">
-      <label class="font-medium">Remark (optional for Approve)</label>
+      <label class="font-medium">
+        Remark
+        @if (remarkAction === NoteSheetRemarkAction.Decline) {
+          <span class="text-red-500"> * required</span>
+        } @else {
+          <span class="text-500"> (optional)</span>
+        }
+      </label>
       <textarea pTextarea [(ngModel)]="remarkText" rows="3" class="w-full"></textarea>
     </div>
     <ng-template pTemplate="footer">
       <p-button type="button" label="Cancel" [text]="true" (onClick)="showRemarkDialog = false"></p-button>
-      <p-button type="button" label="Submit" icon="pi pi-check" (onClick)="submitRemark()"></p-button>
+      <p-button type="button" label="Submit" icon="pi pi-check"
+        [disabled]="remarkAction === NoteSheetRemarkAction.Decline && !remarkText?.trim()"
+        (onClick)="submitRemark()"></p-button>
     </ng-template>
   </p-dialog>
 

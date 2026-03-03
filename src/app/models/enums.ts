@@ -135,6 +135,13 @@ export const ApprovalStatusOptions = [
     { label: 'Cancelled', value: ApprovalStatus.Cancel }
 ];
 
+/** NoteSheetRemarkAction – action type for the approve/decline/back remark dialog. */
+export enum NoteSheetRemarkAction {
+    Approve = 'approve',
+    Decline = 'decline',
+    Back    = 'back'
+}
+
 /**
  * NoteSheetOperationType – how the note-sheet was created.
  * Matches NoteSheetInfo.NoteSheetOperationType (NVARCHAR(50)).

@@ -2,10 +2,11 @@ import { Component, Input, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '@/Core/Environments/environment';
-import { MessageService } from 'primeng/api';
+import { MessageService, ConfirmationService } from 'primeng/api';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TextareaModule } from 'primeng/textarea';
 import { FormsModule } from '@angular/forms';
 import { ToastModule } from 'primeng/toast';
@@ -16,7 +17,7 @@ import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { EmpService } from '@/services/emp-service';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
-import { NoteSheetType, NoteSheetCurrentStatus, ApprovalStatus } from '@/models/enums';
+import { NoteSheetType, NoteSheetCurrentStatus, ApprovalStatus, NoteSheetRemarkAction } from '@/models/enums';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { CommonCode } from '@/Components/basic-setup/shared/models/common-code';
 import { CommonCodeService } from '@/services/common-code-service';
@@ -51,6 +52,9 @@ export interface NoteSheetInfoRow {
   currentStatus?: string;
   initiatorStatus?: string;
   finalApprovalStatus?: string;
+  finalApprovalApprovedDate?: string;
+  finalApprovalId?: number;
+  lastUpdatedBy?: string;
   /** Type string: General, ExBDLeave, NewPosting, InterPosting; used to route Update and Preview */
   noteSheetType?: string;
   remark?: string;
@@ -112,9 +116,10 @@ export type NoteSheetSection = 'draft' | 'pending' | 'approved' | 'declined' | '
     IconFieldModule,
     InputIconModule,
     PostingOrderPreviewComponent,
-    NotesheetSignatoryComponent
+    NotesheetSignatoryComponent,
+    ConfirmDialogModule
   ],
-  providers: [MessageService],
+  providers: [MessageService, ConfirmationService],
   templateUrl: './notesheet-list.html',
   styleUrl: './notesheet-list.scss'
 })
@@ -145,7 +150,7 @@ export class NotesheetListComponent implements OnInit {
   filterDateTo: Date | null = null;
 
   showRemarkDialog = false;
-  remarkAction: 'approve' | 'decline' | 'back' | null = null;
+  remarkAction: NoteSheetRemarkAction | null = null;
   remarkText = '';
   selectedRow: NoteSheetInfoRow | null = null;
   currentUserEmployeeId = 0;
@@ -188,9 +193,13 @@ export class NotesheetListComponent implements OnInit {
     [NoteSheetCurrentStatus.Cancel]:        'Cancelled'
   };
 
+  readonly NoteSheetCurrentStatus = NoteSheetCurrentStatus;
+  readonly NoteSheetRemarkAction  = NoteSheetRemarkAction;
+
   constructor(
     private http: HttpClient,
     private messageService: MessageService,
+    private confirmationService: ConfirmationService,
     private sharedService: SharedService,
     private router: Router,
     private route: ActivatedRoute,
@@ -855,14 +864,14 @@ export class NotesheetListComponent implements OnInit {
         this.loadSection();
       });
     }
-    const user = this.sharedService.getCurrentUser?.();
-    if (user) {
-      this.http.get<any[]>(`${environment.apis.core}/EmployeeInfo/GetAll`).subscribe({
+    const userId = this.sharedService.getCurrentUserId?.();
+    if (userId) {
+      this.http.get<any[]>(`${environment.apis.core}/IdentityUserMapping/GetMappings`).subscribe({
         next: (list) => {
           const me = (Array.isArray(list) ? list : []).find(
-            (e: any) => (e.fullNameEN || e.FullNameEN || '') === user || (e.rabid || e.Rabid || '') === user
+            (m: any) => m.userId === userId
           );
-          if (me) this.currentUserEmployeeId = me.employeeID ?? me.EmployeeID ?? 0;
+          if (me?.employeeId) this.currentUserEmployeeId = me.employeeId;
         },
         error: () => {}
       });
@@ -886,8 +895,8 @@ export class NotesheetListComponent implements OnInit {
       this.loading = false;
     };
     const statusMap: Record<NoteSheetSection, string> = {
-      draft:    `?currentStatus=${NoteSheetCurrentStatus.Draft}`,
-      pending:  `?currentStatus=${NoteSheetCurrentStatus.Initiator}`,
+      draft:    '',   // fetch all, filter client-side to show in-progress notesheets
+      pending:  '',   // fetch all, filter client-side to show all in-workflow items
       approved: `?currentStatus=${NoteSheetCurrentStatus.FinalApproval}`,
       declined: `?currentStatus=${NoteSheetCurrentStatus.Cancel}`,
       all: ''
@@ -950,13 +959,31 @@ export class NotesheetListComponent implements OnInit {
 
   private setCurrentList(list: NoteSheetInfoRow[]): void {
     switch (this.section) {
-      case 'draft': this.draftList = list; break;
-      case 'pending': this.pendingList = list; break;
-      case 'approved': this.approvedList = list; break;
+      case 'draft':
+        this.draftList = list.filter(r =>
+          r.currentStatus === NoteSheetCurrentStatus.Draft ||
+          r.currentStatus === NoteSheetCurrentStatus.Initiator ||
+          r.currentStatus === NoteSheetCurrentStatus.Recommender
+        );
+        break;
+      case 'pending':
+        this.pendingList = list.filter(r =>
+          r.currentStatus === NoteSheetCurrentStatus.Initiator ||
+          r.currentStatus === NoteSheetCurrentStatus.Recommender ||
+          (r.currentStatus === NoteSheetCurrentStatus.FinalApproval && r.finalApprovalStatus !== ApprovalStatus.Approve)
+        );
+        break;
+      case 'approved':
+        this.approvedList = list.filter(r =>
+          r.currentStatus === NoteSheetCurrentStatus.FinalApproval &&
+          r.finalApprovalStatus === ApprovalStatus.Approve
+        );
+        break;
       case 'declined': this.declinedList = list; break;
       case 'all': this.allList = list; break;
     }
   }
+
 
   readonly noteSheetTypeLabels: Record<string, string> = {
     General: 'General',
@@ -1057,7 +1084,7 @@ export class NotesheetListComponent implements OnInit {
     }
   }
 
-  openRemarkDialog(row: NoteSheetInfoRow, action: 'approve' | 'decline' | 'back'): void {
+  openRemarkDialog(row: NoteSheetInfoRow, action: NoteSheetRemarkAction): void {
     this.selectedRow = row;
     this.remarkAction = action;
     this.remarkText = '';
@@ -1066,12 +1093,16 @@ export class NotesheetListComponent implements OnInit {
 
   submitRemark(): void {
     if (!this.selectedRow || !this.remarkAction) return;
+    if (this.remarkAction === NoteSheetRemarkAction.Decline && !this.remarkText?.trim()) {
+      this.messageService.add({ severity: 'warn', summary: 'Remark Required', detail: 'Please provide a remark before declining.' });
+      return;
+    }
     const url = `${this.api}/${this.remarkAction.charAt(0).toUpperCase() + this.remarkAction.slice(1)}`;
-    // Backend expects ApproveDeclineBackRequest with PascalCase
     const body = {
       NoteSheetId: this.selectedRow.noteSheetId,
       EmployeeId: this.currentUserEmployeeId,
-      Remark: this.remarkText
+      Remark: this.remarkText,
+      LastUpdatedBy: this.sharedService.getCurrentUser?.() ?? 'system'
     };
     this.http.post<{ statusCode?: number; StatusCode?: number; description?: string; Description?: string }>(url, body, { observe: 'response' }).subscribe({
       next: (resp) => {
@@ -1094,13 +1125,25 @@ export class NotesheetListComponent implements OnInit {
   }
 
   submitForApproval(row: NoteSheetInfoRow): void {
-    // Backend expects SubmitForApprovalRequest; send PascalCase for compatibility
-    const req = { NoteSheetId: row.noteSheetId };
-    this.http.post<{ statusCode?: number; StatusCode?: number; description?: string; Description?: string }>(`${this.api}/SubmitForApproval`, req, { observe: 'response' }).subscribe({
+    this.confirmationService.confirm({
+      message: 'Do you want to submit this note-sheet for approval process?',
+      header: 'Submit for Approval',
+      acceptLabel: 'Submit',
+      rejectLabel: 'Cancel',
+      acceptButtonStyleClass: 'p-button-success',
+      accept: () => this.doSubmitForApproval(row)
+    });
+  }
+
+  private doSubmitForApproval(row: NoteSheetInfoRow): void {
+    const req = { NoteSheetId: row.noteSheetId, LastUpdatedBy: this.sharedService.getCurrentUser?.() ?? 'system' };
+    this.http.post<{ statusCode?: number; StatusCode?: number; description?: string; Description?: string }>(
+      `${this.api}/SubmitForApproval`, req, { observe: 'response' }
+    ).subscribe({
       next: (resp) => {
         const resBody = resp.body;
         const code = resBody?.statusCode ?? resBody?.StatusCode;
-        const msg = resBody?.description ?? resBody?.Description;
+        const msg  = resBody?.description ?? resBody?.Description;
         if (resp.status >= 200 && resp.status < 300 && (code == null || code === 200)) {
           this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Submitted for approval.' });
           this.loadAll();

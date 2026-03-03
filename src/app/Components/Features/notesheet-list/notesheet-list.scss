@@ -1,5 +1,49 @@
 :host {
   display: block;
+
+  ::ng-deep .p-datatable-caption {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+  }
+}
+
+/* ── Workflow status badges in draft list ── */
+.ns-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+
+  &--initiator {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fcd34d;
+  }
+
+  &--recommender {
+    background: #dbeafe;
+    color: #1e40af;
+    border: 1px solid #93c5fd;
+  }
+}
+
+:host-context(.app-dark) .ns-status-badge {
+  &--initiator {
+    background: rgba(146, 64, 14, 0.25);
+    color: #fcd34d;
+    border: 1px solid rgba(252, 211, 77, 0.35);
+  }
+
+  &--recommender {
+    background: rgba(30, 64, 175, 0.25);
+    color: #93c5fd;
+    border: 1px solid rgba(147, 197, 253, 0.35);
+  }
 }
 
 /* ── Filter bar inside table caption ── */
@@ -9,8 +53,6 @@
   align-items: flex-end;
   gap: 1rem 1.25rem;
   padding: 0.875rem 1rem;
-  background: var(--surface-50, #f8fafc);
-  border: 1px solid var(--surface-border, #dee2e6);
   border-radius: 0.75rem;
   margin-bottom: 0.25rem;
 
