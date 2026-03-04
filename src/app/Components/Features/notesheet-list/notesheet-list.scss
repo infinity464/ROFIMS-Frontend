@@ -30,6 +30,14 @@
     color: #1e40af;
     border: 1px solid #93c5fd;
   }
+
+  &--backed {
+    background: #fff7ed;
+    color: #9a3412;
+    border: 1px solid #fdba74;
+    margin-top: 0.25rem;
+    cursor: default;
+  }
 }
 
 :host-context(.app-dark) .ns-status-badge {
@@ -43,6 +51,12 @@
     background: rgba(30, 64, 175, 0.25);
     color: #93c5fd;
     border: 1px solid rgba(147, 197, 253, 0.35);
+  }
+
+  &--backed {
+    background: rgba(154, 52, 18, 0.2);
+    color: #fdba74;
+    border: 1px solid rgba(253, 186, 116, 0.35);
   }
 }
 

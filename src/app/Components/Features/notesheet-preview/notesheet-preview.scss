@@ -341,3 +341,100 @@
         padding: 12mm 8mm;
     }
 }
+
+/* ── Back History Timeline ─────────────────────────── */
+.ns-back-history {
+    max-width: 210mm;
+    margin: 1.5rem auto 2rem;
+    padding: 1.25rem 1.5rem;
+    background: var(--surface-card, #fff);
+    border: 1px solid var(--surface-border, #dee2e6);
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+
+    h3 {
+        margin: 0 0 1rem;
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-color, #1e293b);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+
+        i { color: var(--primary-color); }
+    }
+}
+
+.ns-back-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.ns-back-entry {
+    padding: 0.75rem 1rem;
+    background: var(--surface-50, #f8fafc);
+    border: 1px solid var(--surface-200, #e2e8f0);
+    border-left: 3px solid #f97316;
+    border-radius: 0.5rem;
+}
+
+.ns-back-entry-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    font-size: 0.875rem;
+    font-weight: 600;
+
+    .pi-arrow-right {
+        font-size: 0.75rem;
+        color: var(--text-color-secondary, #64748b);
+    }
+}
+
+.ns-back-from {
+    color: #dc2626;
+}
+
+.ns-back-to {
+    color: #2563eb;
+}
+
+.ns-back-date {
+    margin-left: auto;
+    font-weight: 400;
+    font-size: 0.8125rem;
+    color: var(--text-color-secondary, #64748b);
+}
+
+.ns-back-entry-by {
+    font-size: 0.8125rem;
+    color: var(--text-color-secondary, #64748b);
+    margin-top: 0.25rem;
+}
+
+.ns-back-entry-reason {
+    font-size: 0.875rem;
+    color: var(--text-color, #334155);
+    margin-top: 0.25rem;
+    padding: 0.375rem 0.5rem;
+    background: var(--surface-100, #f1f5f9);
+    border-radius: 0.25rem;
+}
+
+/* Dark mode */
+:host-context(.app-dark) {
+    .ns-back-entry {
+        background: rgba(255, 255, 255, 0.04);
+        border-color: rgba(255, 255, 255, 0.1);
+        border-left-color: #fb923c;
+    }
+
+    .ns-back-entry-reason {
+        background: rgba(255, 255, 255, 0.06);
+    }
+
+    .ns-back-from { color: #fca5a5; }
+    .ns-back-to   { color: #93c5fd; }
+}

@@ -6,7 +6,7 @@ import { MessageService } from 'primeng/api';
 import { catchError, of } from 'rxjs';
 import { environment } from '@/Core/Environments/environment';
 import { EmpService } from '@/services/emp-service';
-import { NoteSheetType, NoteSheetCurrentStatus, ApprovalStatus } from '@/models/enums';
+import { NoteSheetType, NoteSheetCurrentStatus, NoteSheetCurrentStatusOptions, ApprovalStatus } from '@/models/enums';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { SignatoryDetail } from '@/Components/Common/notesheet-signatory/notesheet-signatory';
 import { PostingService } from '@/services/posting.service';
@@ -76,6 +76,19 @@ export interface NoteSheetInfoFull {
     remark?: string;
 }
 
+export interface BackHistoryRow {
+    id: number;
+    noteSheetId: number;
+    backedByEmployeeId: number;
+    backedFromStatus: string;
+    backedToStatus: string;
+    backReason: string | null;
+    backedDate: string;
+    createdBy: string;
+    /** Resolved at runtime */
+    backedByName?: string;
+}
+
 @Injectable()
 export abstract class NotesheetPreviewBase implements OnInit {
 
@@ -95,6 +108,9 @@ export abstract class NotesheetPreviewBase implements OnInit {
     noteSheet: NoteSheetInfoFull | null = null;
     loading = false;
     error = false;
+
+    backHistory: BackHistoryRow[] = [];
+    loadingBackHistory = false;
 
     initiatorDetails: SignatoryDetail | null = null;
     approversDetails: SignatoryDetail[] = [];
@@ -148,6 +164,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
                 this.noteSheet = list[0] ?? null;
                 if (this.noteSheet) {
                     this.loadApprovalChain();
+                    this.loadBackHistory();
                     if (this.isNewPosting() && this.noteSheet.draftPostingMasterId) {
                         this.loadPostingEmployees();
                     }
@@ -340,6 +357,32 @@ export abstract class NotesheetPreviewBase implements OnInit {
             return suffix ? `সুপারিশকারী ${suffix}` : 'সুপারিশকারী';
         }
         return t[step] || step;
+    }
+
+    // ─── Back History ───────────────────────────────────────────
+
+    loadBackHistory(): void {
+        if (!this.noteSheetId) return;
+        this.loadingBackHistory = true;
+        this.http.get<BackHistoryRow[]>(`${this.api}/GetBackHistory`, { params: { noteSheetId: this.noteSheetId.toString() } })
+            .pipe(catchError(() => of([] as BackHistoryRow[])))
+            .subscribe({
+                next: (list) => {
+                    this.backHistory = list ?? [];
+                    this.loadingBackHistory = false;
+                    // resolve employee names
+                    for (const row of this.backHistory) {
+                        this.servingMembersService.getEmployeePersonalServiceOverview(row.backedByEmployeeId)
+                            .pipe(catchError(() => of(null)))
+                            .subscribe({ next: (emp) => { row.backedByName = emp?.nameEnglish ?? 'Unknown'; } });
+                    }
+                },
+                error: () => { this.loadingBackHistory = false; }
+            });
+    }
+
+    getStatusLabel(status: string): string {
+        return NoteSheetCurrentStatusOptions.find(o => o.value === status)?.label ?? status;
     }
 
     goBack(): void { this.router.navigate(['/notesheet-list/draft']); }

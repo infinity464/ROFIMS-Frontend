@@ -62,6 +62,10 @@ export interface NoteSheetInfoRow {
   draftPostingMasterId?: number | null;
   /** JSON array of { FileId, fileName } from API */
   filesReferences?: string;
+  /** True when this note sheet is currently in a step it was backed to. */
+  isCurrentlyBacked?: boolean;
+  /** Reason given for the most recent back action. */
+  lastBackRemark?: string;
 }
 
 /** Full model for single note-sheet (get by id, preview, update). */
@@ -1095,6 +1099,10 @@ export class NotesheetListComponent implements OnInit {
     if (!this.selectedRow || !this.remarkAction) return;
     if (this.remarkAction === NoteSheetRemarkAction.Decline && !this.remarkText?.trim()) {
       this.messageService.add({ severity: 'warn', summary: 'Remark Required', detail: 'Please provide a remark before declining.' });
+      return;
+    }
+    if (this.remarkAction === NoteSheetRemarkAction.Back && !this.remarkText?.trim()) {
+      this.messageService.add({ severity: 'warn', summary: 'Remark Required', detail: 'Please provide a remark before sending back.' });
       return;
     }
     const url = `${this.api}/${this.remarkAction.charAt(0).toUpperCase() + this.remarkAction.slice(1)}`;

@@ -133,7 +133,14 @@
           <td>{{ formatDate(row.noteSheetDate) }}</td>
           <td>{{ row.noteSheetNo || '-' }}</td>
           <td>{{ noteSheetTypeLabel(row) }}</td>
-          <td>{{ row.subject || '-' }}</td>
+          <td>
+            <div>{{ row.subject || '-' }}</div>
+            @if (row.isCurrentlyBacked) {
+              <span class="ns-status-badge ns-status-badge--backed" [pTooltip]="row.lastBackRemark || 'No reason provided'" tooltipPosition="top">
+                <i class="pi pi-replay"></i> Back করা হয়েছে
+              </span>
+            }
+          </td>
           <td>{{ presentStatus(row) }}</td>
           <td>
             <div class="flex align-items-center gap-1">
