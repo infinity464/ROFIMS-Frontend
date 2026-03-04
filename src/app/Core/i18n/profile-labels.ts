@@ -14,6 +14,7 @@ export const PROFILE_LABELS = {
     // Buttons
     'button.back': 'Back',
     'button.download': 'Download',
+    'button.export': 'Export',
     'button.profile': 'Profile',
     'button.edit': 'Edit',
     'button.save': 'Save',
@@ -96,6 +97,8 @@ export const PROFILE_LABELS = {
 
     // Table headers (shared where same)
     'table.ser': 'Ser',
+    'table.field': 'Field',
+    'table.value': 'Value',
     'table.name': 'Name',
     'table.relation': 'Relation',
     'table.dateOfBirth': 'Date of Birth',
@@ -190,6 +193,7 @@ export const PROFILE_LABELS = {
 
     'button.back': 'পিছনে',
     'button.download': 'ডাউনলোড',
+    'button.export': 'রপ্তানি',
     'button.profile': 'প্রোফাইল',
     'button.edit': 'সম্পাদনা',
     'button.save': 'সংরক্ষণ',
@@ -267,6 +271,8 @@ export const PROFILE_LABELS = {
     'addressType.address': 'ঠিকানা',
 
     'table.ser': 'নং',
+    'table.field': 'ক্ষেত্র',
+    'table.value': 'মান',
     'table.name': 'নাম',
     'table.relation': 'সম্পর্ক',
     'table.dateOfBirth': 'জন্ম তারিখ',
