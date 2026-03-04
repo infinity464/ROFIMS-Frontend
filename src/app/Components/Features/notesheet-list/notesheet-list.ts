@@ -17,7 +17,8 @@ import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { EmpService } from '@/services/emp-service';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
-import { NoteSheetType, NoteSheetCurrentStatus, ApprovalStatus, NoteSheetRemarkAction } from '@/models/enums';
+import { NoteSheetType, NoteSheetCurrentStatus, NoteSheetCurrentStatusOptions, ApprovalStatus, NoteSheetRemarkAction, ApprovalLogAction, ApprovalLogActionOptions } from '@/models/enums';
+import { ServingMembersService } from '@/services/serving-members.service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { CommonCode } from '@/Components/basic-setup/shared/models/common-code';
 import { CommonCodeService } from '@/services/common-code-service';
@@ -76,11 +77,22 @@ export interface NoteSheetInfoFull extends NoteSheetInfoRow {
   textType?: number; // 0 = English, 1 = Bangla
   unitId?: number;
   employeeId?: number;
+  // ── Initiator ──────────────────────────────────────────
   initiatorId?: number;
+  initiatorStatus?: string;
+  initiatorApproveRemark?: string;
+  initiatorCancelRemark?: string;
+  initiatorApprovedDate?: string;
+  // ── Recommenders ───────────────────────────────────────
   recommendersJson?: string;
   recommenderIdsJson?: string;
+  // ── Final Approval ─────────────────────────────────────
   finalApprovalId?: number;
   finalApproverId?: number;
+  finalApprovalRemark?: string;
+  finalApprovalCancelRemark?: string;
+  finalApprovalApprovedDate?: string;
+  // ── Other ──────────────────────────────────────────────
   familyInfoJson?: string;
   filesReferences?: string;
   createdBy?: string;
@@ -100,6 +112,18 @@ export interface NoteSheetInfoFull extends NoteSheetInfoRow {
 }
 
 export type NoteSheetSection = 'draft' | 'pending' | 'approved' | 'declined' | 'all';
+
+export interface ApprovalLogEntry {
+  step: string;
+  action: ApprovalLogAction;
+  date: string | null;
+  remark: string | null;
+  employeeId: number | null;
+  /** Resolved at runtime */
+  serviceId?: string;
+  name?: string;
+  rank?: string;
+}
 
 @Component({
   selector: 'app-notesheet-list',
@@ -162,6 +186,12 @@ export class NotesheetListComponent implements OnInit {
   /** Preview dialog */
   showPreviewDialog = false;
   previewNoteSheet: NoteSheetInfoFull | null = null;
+
+  /** Approval log dialog */
+  showApprovalLogDialog = false;
+  approvalLogEntries: ApprovalLogEntry[] = [];
+  approvalLogLoading = false;
+  approvalLogNoteSheetNo = '';
   previewLoading = false;
   /** Initiator details (show on right, below main text). */
   initiatorDetails: { step: string; name: string; rabId: string; rank: string; serviceRank: string; appointment: string; employeeId?: number; signatureDataUrl?: string } | null = null;
@@ -199,6 +229,7 @@ export class NotesheetListComponent implements OnInit {
 
   readonly NoteSheetCurrentStatus = NoteSheetCurrentStatus;
   readonly NoteSheetRemarkAction  = NoteSheetRemarkAction;
+  readonly ApprovalLogAction      = ApprovalLogAction;
 
   constructor(
     private http: HttpClient,
@@ -212,7 +243,8 @@ export class NotesheetListComponent implements OnInit {
     private noteSheetEditCache: NoteSheetEditCacheService,
     private masterBasicSetup: MasterBasicSetupService,
     private postingService: PostingService,
-    private commonCodeService: CommonCodeService
+    private commonCodeService: CommonCodeService,
+    private servingMembersService: ServingMembersService
   ) {}
 
   /** Open preview page: navigate to the type-specific preview route */
@@ -1164,5 +1196,173 @@ export class NotesheetListComponent implements OnInit {
         this.messageService.add({ severity: 'error', summary: 'Error', detail });
       }
     });
+  }
+
+  // ── Approval Log ────────────────────────────────────────────────────
+
+  openApprovalLog(row: NoteSheetInfoRow): void {
+    this.approvalLogEntries = [];
+    this.approvalLogLoading = true;
+    this.approvalLogNoteSheetNo = row.noteSheetNo || '';
+    this.showApprovalLogDialog = true;
+
+    // Fetch full notesheet + back history in parallel
+    forkJoin({
+      noteSheet: this.http.get<NoteSheetInfoFull[]>(`${this.api}/GetFilteredByKeysAsyn/${row.noteSheetId}`).pipe(
+        map(data => (Array.isArray(data) ? data[0] : null) as NoteSheetInfoFull | null),
+        catchError(() => of(null as NoteSheetInfoFull | null))
+      ),
+      backHistory: this.http.get<{ id: number; backedByEmployeeId: number; backedFromStatus: string; backedToStatus: string; backReason: string | null; backedDate: string; createdBy: string }[]>(
+        `${this.api}/GetBackHistory`, { params: { noteSheetId: row.noteSheetId.toString() } }
+      ).pipe(catchError(() => of([])))
+    }).subscribe({
+      next: ({ noteSheet, backHistory }) => {
+        if (!noteSheet) { this.approvalLogLoading = false; return; }
+        this.buildApprovalLog(noteSheet, backHistory);
+      },
+      error: () => { this.approvalLogLoading = false; }
+    });
+  }
+
+  private buildApprovalLog(
+    ns: NoteSheetInfoFull,
+    backHistory: { backedByEmployeeId: number; backedFromStatus: string; backedToStatus: string; backReason: string | null; backedDate: string }[]
+  ): void {
+    const entries: ApprovalLogEntry[] = [];
+
+    // 0. Prepared By
+    if (ns.preparedByEmployeeId && ns.preparedByEmployeeId > 0) {
+      entries.push({
+        step: 'Prepared By',
+        action: ApprovalLogAction.Approve,
+        date: ns.createdDate ?? null,
+        remark: null,
+        employeeId: ns.preparedByEmployeeId
+      });
+    }
+
+    // 1. Initiator
+    if (ns.initiatorId) {
+      entries.push({
+        step: 'Initiator',
+        action: (ns.initiatorStatus as ApprovalLogAction) ?? ApprovalLogAction.Pending,
+        date: ns.initiatorApprovedDate ?? null,
+        remark: ns.initiatorApproveRemark || ns.initiatorCancelRemark || null,
+        employeeId: ns.initiatorId
+      });
+    }
+
+    // 2. Recommenders
+    try {
+      const json = ns.recommendersJson;
+      if (json && typeof json === 'string') {
+        const arr = JSON.parse(json) as any[];
+        if (Array.isArray(arr)) {
+          arr.forEach((r, i) => {
+            entries.push({
+              step: arr.length > 1 ? `Recommender ${i + 1}` : 'Recommender',
+              action: (r.recomender_status as ApprovalLogAction) ?? ApprovalLogAction.Pending,
+              date: r.recomender_approved_date ?? null,
+              remark: r.recomender_approve_remark || r.recomender_cancel_remark || null,
+              employeeId: r.recomender_id ?? null
+            });
+          });
+        }
+      }
+    } catch { /* ignore */ }
+
+    // 3. Final Approval
+    if (ns.finalApprovalId) {
+      entries.push({
+        step: 'Final Approver',
+        action: (ns.finalApprovalStatus as ApprovalLogAction) ?? ApprovalLogAction.Pending,
+        date: ns.finalApprovalApprovedDate ?? null,
+        remark: ns.finalApprovalRemark || ns.finalApprovalCancelRemark || null,
+        employeeId: ns.finalApprovalId
+      });
+    }
+
+    // 4. Back history entries (interleaved by date, shown separately)
+    for (const bh of backHistory) {
+      entries.push({
+        step: `Back: ${this.getApprovalStatusLabel(bh.backedFromStatus)} → ${this.getApprovalStatusLabel(bh.backedToStatus)}`,
+        action: ApprovalLogAction.Back,
+        date: bh.backedDate,
+        remark: bh.backReason,
+        employeeId: bh.backedByEmployeeId
+      });
+    }
+
+    // Sort: entries with dates first (chronological), then pending at end
+    entries.sort((a, b) => {
+      if (!a.date && !b.date) return 0;
+      if (!a.date) return 1;
+      if (!b.date) return -1;
+      return new Date(a.date).getTime() - new Date(b.date).getTime();
+    });
+
+    this.approvalLogEntries = entries;
+
+    // Resolve employee details
+    const empIds = [...new Set(entries.filter(e => e.employeeId).map(e => e.employeeId!))];
+    if (empIds.length === 0) { this.approvalLogLoading = false; return; }
+
+    forkJoin(
+      empIds.map(id =>
+        this.servingMembersService.getEmployeePersonalServiceOverview(id).pipe(
+          catchError(() => of(null))
+        )
+      )
+    ).subscribe({
+      next: (results) => {
+        const empMap = new Map<number, { serviceId: string; name: string; rank: string }>();
+        results.forEach((emp, idx) => {
+          if (emp) {
+            empMap.set(empIds[idx], {
+              serviceId: emp.serviceId ?? emp.rabId ?? '-',
+              name: emp.nameEnglish ?? '-',
+              rank: emp.armyRank ?? '-'
+            });
+          }
+        });
+        for (const entry of this.approvalLogEntries) {
+          if (entry.employeeId && empMap.has(entry.employeeId)) {
+            const d = empMap.get(entry.employeeId)!;
+            entry.serviceId = d.serviceId;
+            entry.name = d.name;
+            entry.rank = d.rank;
+          }
+        }
+        this.approvalLogLoading = false;
+      },
+      error: () => { this.approvalLogLoading = false; }
+    });
+  }
+
+  getApprovalStatusLabel(status: string): string {
+    return NoteSheetCurrentStatusOptions.find(o => o.value === status)?.label ?? status;
+  }
+
+  getActionSeverity(action: ApprovalLogAction): string {
+    switch (action) {
+      case ApprovalLogAction.Approve: return 'success';
+      case ApprovalLogAction.Cancel:  return 'danger';
+      case ApprovalLogAction.Back:    return 'warn';
+      default:                        return 'info';
+    }
+  }
+
+  getActionLabel(action: ApprovalLogAction): string {
+    return ApprovalLogActionOptions.find(o => o.value === action)?.label ?? action;
+  }
+
+  getActionIcon(action: ApprovalLogAction): string {
+    switch (action) {
+      case ApprovalLogAction.Approve: return 'pi pi-check-circle';
+      case ApprovalLogAction.Cancel:  return 'pi pi-times-circle';
+      case ApprovalLogAction.Back:    return 'pi pi-replay';
+      case ApprovalLogAction.Pending: return 'pi pi-clock';
+      default:                        return 'pi pi-circle';
+    }
   }
 }

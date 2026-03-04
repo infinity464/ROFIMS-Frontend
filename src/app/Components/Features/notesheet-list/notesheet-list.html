@@ -60,6 +60,7 @@
               <p-button type="button" icon="pi pi-pencil" [rounded]="true" [text]="true" size="small" pTooltip="Update" (onClick)="goToUpdate(row)"></p-button>
               <p-button type="button" icon="pi pi-eye" [rounded]="true" [text]="true" size="small" pTooltip="Preview" (onClick)="openPreview(row)"></p-button>
               <p-button type="button" icon="pi pi-file-edit" [rounded]="true" [text]="true" size="small" pTooltip="Edit main text" (onClick)="openEditMainText(row)"></p-button>
+              <p-button type="button" icon="pi pi-list" [rounded]="true" [text]="true" size="small" severity="info" pTooltip="Approval Log" (onClick)="openApprovalLog(row)"></p-button>
               @if (row.draftPostingMasterId) {
                 <p-button type="button" icon="pi pi-users" [rounded]="true" [text]="true" size="small" pTooltip="View Employees" (onClick)="openEmployeesDialog(row)"></p-button>
               }
@@ -145,6 +146,7 @@
           <td>
             <div class="flex align-items-center gap-1">
               <p-button type="button" icon="pi pi-eye" [rounded]="true" [text]="true" size="small" pTooltip="Preview" (onClick)="openPreview(row)"></p-button>
+              <p-button type="button" icon="pi pi-list" [rounded]="true" [text]="true" size="small" severity="info" pTooltip="Approval Log" (onClick)="openApprovalLog(row)"></p-button>
               <p-button type="button" icon="pi pi-check" [rounded]="true" [text]="true" size="small" severity="success" pTooltip="Approve" (onClick)="openRemarkDialog(row, NoteSheetRemarkAction.Approve)"></p-button>
               <p-button type="button" icon="pi pi-times" [rounded]="true" [text]="true" size="small" severity="danger" pTooltip="Decline" (onClick)="openRemarkDialog(row, NoteSheetRemarkAction.Decline)"></p-button>
               <p-button type="button" icon="pi pi-replay" [rounded]="true" [text]="true" size="small" severity="secondary" pTooltip="Back" (onClick)="openRemarkDialog(row, NoteSheetRemarkAction.Back)"></p-button>
@@ -196,7 +198,7 @@
           <th>Type</th>
           <th>Subject</th>
           <th>Approved Date</th>
-          <th style="width: 80px">Action</th>
+          <th style="width: 120px">Action</th>
         </tr>
       </ng-template>
       <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
@@ -210,6 +212,7 @@
           <td>
             <div class="flex align-items-center gap-1">
               <p-button type="button" icon="pi pi-eye" [rounded]="true" [text]="true" size="small" pTooltip="Preview" (onClick)="openPreview(row)"></p-button>
+              <p-button type="button" icon="pi pi-list" [rounded]="true" [text]="true" size="small" severity="info" pTooltip="Approval Log" (onClick)="openApprovalLog(row)"></p-button>
             </div>
           </td>
         </tr>
@@ -259,6 +262,7 @@
           <th>Subject</th>
           <th>Declined by</th>
           <th>Declined Date</th>
+          <th style="width: 80px">Action</th>
         </tr>
       </ng-template>
       <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
@@ -270,10 +274,16 @@
           <td>{{ row.subject || '-' }}</td>
           <td>{{ row.declinedByEmployeeId ?? '-' }}</td>
           <td>{{ formatDate(row.declinedDate) }}</td>
+          <td>
+            <div class="flex align-items-center gap-1">
+              <p-button type="button" icon="pi pi-eye" [rounded]="true" [text]="true" size="small" pTooltip="Preview" (onClick)="openPreview(row)"></p-button>
+              <p-button type="button" icon="pi pi-list" [rounded]="true" [text]="true" size="small" severity="info" pTooltip="Approval Log" (onClick)="openApprovalLog(row)"></p-button>
+            </div>
+          </td>
         </tr>
       </ng-template>
       <ng-template pTemplate="emptymessage">
-        <tr><td colspan="7" class="text-center text-500">No declined note-sheets.</td></tr>
+        <tr><td colspan="8" class="text-center text-500">No declined note-sheets.</td></tr>
       </ng-template>
     </p-table>
   </div>
@@ -330,6 +340,7 @@
           <td>
             <div class="flex align-items-center gap-1">
               <p-button type="button" icon="pi pi-eye" [rounded]="true" [text]="true" size="small" pTooltip="Preview" (onClick)="openPreview(row)"></p-button>
+              <p-button type="button" icon="pi pi-list" [rounded]="true" [text]="true" size="small" severity="info" pTooltip="Approval Log" (onClick)="openApprovalLog(row)"></p-button>
             </div>
           </td>
         </tr>
@@ -589,6 +600,79 @@
           <tr><td colspan="10" class="text-center p-4 text-500">No employees found in this posting list.</td></tr>
         </ng-template>
       </p-table>
+    }
+  </p-dialog>
+
+  <!-- ── Approval Log Dialog ── -->
+  <p-dialog
+    header="Approval Log — {{ approvalLogNoteSheetNo }}"
+    [(visible)]="showApprovalLogDialog"
+    [modal]="true"
+    [style]="{ width: '680px', maxHeight: '85vh' }"
+    [draggable]="false"
+    [resizable]="false"
+    [closable]="true"
+    styleClass="ns-approval-log-dialog">
+
+    @if (approvalLogLoading) {
+      <div class="flex justify-content-center align-items-center py-5">
+        <i class="pi pi-spin pi-spinner" style="font-size:1.5rem"></i>
+        <span class="ml-2">Loading approval log...</span>
+      </div>
+    }
+
+    @if (!approvalLogLoading && approvalLogEntries.length === 0) {
+      <div class="text-center text-500 py-4">No approval log entries found.</div>
+    }
+
+    @if (!approvalLogLoading && approvalLogEntries.length > 0) {
+      <div class="ns-approval-log">
+        @for (entry of approvalLogEntries; track entry; let i = $index) {
+          <div class="ns-log-entry" [class.ns-log-entry--back]="entry.action === ApprovalLogAction.Back">
+            <div class="ns-log-marker">
+              <i [class]="getActionIcon(entry.action)" [ngClass]="{
+                'text-green-500': entry.action === ApprovalLogAction.Approve,
+                'text-red-500': entry.action === ApprovalLogAction.Cancel,
+                'text-orange-500': entry.action === ApprovalLogAction.Back,
+                'text-blue-400': entry.action === ApprovalLogAction.Pending
+              }"></i>
+              @if (i < approvalLogEntries.length - 1) {
+                <div class="ns-log-line"></div>
+              }
+            </div>
+            <div class="ns-log-content">
+              <div class="ns-log-header">
+                <span class="ns-log-step">{{ entry.step }}</span>
+                <span class="ns-log-action" [ngClass]="{
+                  'ns-log-action--approve': entry.action === ApprovalLogAction.Approve,
+                  'ns-log-action--cancel': entry.action === ApprovalLogAction.Cancel,
+                  'ns-log-action--back': entry.action === ApprovalLogAction.Back,
+                  'ns-log-action--pending': entry.action === ApprovalLogAction.Pending
+                }">{{ getActionLabel(entry.action) }}</span>
+              </div>
+              @if (entry.serviceId || entry.name) {
+                <div class="ns-log-user">
+                  @if (entry.serviceId) {
+                    <span class="ns-log-sid">{{ entry.serviceId }}</span>
+                  }
+                  @if (entry.name) {
+                    <span>{{ entry.name }}</span>
+                  }
+                  @if (entry.rank && entry.rank !== '-') {
+                    <span class="text-500">({{ entry.rank }})</span>
+                  }
+                </div>
+              }
+              @if (entry.date) {
+                <div class="ns-log-date"><i class="pi pi-calendar"></i> {{ formatDate(entry.date) }}</div>
+              }
+              @if (entry.remark) {
+                <div class="ns-log-remark">{{ entry.remark }}</div>
+              }
+            </div>
+          </div>
+        }
+      </div>
     }
   </p-dialog>
 </p-fluid>

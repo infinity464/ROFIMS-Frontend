@@ -142,6 +142,21 @@ export enum NoteSheetRemarkAction {
     Back    = 'back'
 }
 
+/** ApprovalLogAction – action type for approval log timeline entries. */
+export enum ApprovalLogAction {
+    Pending = 'pending',
+    Approve = 'approve',
+    Cancel  = 'cancel',
+    Back    = 'back'
+}
+
+export const ApprovalLogActionOptions = [
+    { label: 'Pending',  value: ApprovalLogAction.Pending },
+    { label: 'Approved', value: ApprovalLogAction.Approve },
+    { label: 'Declined', value: ApprovalLogAction.Cancel },
+    { label: 'Backed',   value: ApprovalLogAction.Back }
+];
+
 /**
  * NoteSheetOperationType – how the note-sheet was created.
  * Matches NoteSheetInfo.NoteSheetOperationType (NVARCHAR(50)).
