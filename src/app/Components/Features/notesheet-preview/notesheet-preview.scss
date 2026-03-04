@@ -312,6 +312,50 @@
     margin-top: 4px;
 }
 
+/* ── Edit Mode ────────────────────────────────────── */
+.ns-edit-field {
+    padding: 8px 16px;
+
+    .ns-edit-label {
+        display: block;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--text-color-secondary, #64748b);
+        margin-bottom: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    input, textarea {
+        font-size: 12pt;
+        font-family: 'Times New Roman', Times, serif;
+    }
+}
+
+.ns-edit-row {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.ns-edit-col {
+    flex: 1;
+    min-width: 200px;
+}
+
+.ns-approval-edit {
+    padding: 12px 16px;
+    border-top: 1px dashed #aaa;
+    margin-top: 8px;
+}
+
+.ns-approval-edit-title {
+    margin: 0 0 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-color, #1e293b);
+}
+
 /* ── Print ────────────────────────────────────────── */
 @media print {
     .no-print { display: none !important; }

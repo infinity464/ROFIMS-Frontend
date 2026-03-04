@@ -44,6 +44,7 @@ export class RichEditorComponent implements ControlValueAccessor, OnDestroy {
     @Input() placeholder = 'Write here...';
     /** 'full' = all toolbar options; 'minimal' = bold/italic/underline/strike/clean only */
     @Input() toolbar: 'full' | 'minimal' = 'full';
+    @Input() hideTable = false;
 
     @ViewChild(Editor) private editorRef!: Editor;
 

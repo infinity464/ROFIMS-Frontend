@@ -155,7 +155,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
         });
     }
 
-    private loadNoteSheet(): void {
+    protected loadNoteSheet(): void {
         if (!this.noteSheetId) return;
         this.loading = true;
         this.http.get<NoteSheetInfoFull[]>(`${this.api}/GetFilteredByKeysAsyn/${this.noteSheetId}`).subscribe({
@@ -190,7 +190,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
         });
     }
 
-    private loadApprovalChain(): void {
+    protected loadApprovalChain(): void {
         if (!this.noteSheet) return;
 
         const preparedByEmpId = this.noteSheet.preparedByEmployeeId && this.noteSheet.preparedByEmployeeId > 0

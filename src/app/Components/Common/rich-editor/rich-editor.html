@@ -98,7 +98,7 @@
       </span>
 
       <!-- Table Insert (custom) -->
-      <span class="ql-formats re-table-wrap" [style.display]="toolbar !== 'full' ? 'none' : null">
+      <span class="ql-formats re-table-wrap" [style.display]="toolbar !== 'full' || hideTable ? 'none' : null">
         <button
           type="button"
           class="re-table-btn ql-table"
