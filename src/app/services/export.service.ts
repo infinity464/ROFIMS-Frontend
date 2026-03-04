@@ -1,5 +1,4 @@
 import { Injectable } from '@angular/core';
-import { unicodeToBijoy } from '@abdalgolabs/ansi-unicode-converter';
 import {
     Document,
     Packer,
@@ -10,7 +9,6 @@ import {
     TableCell,
     WidthType,
     BorderStyle,
-    ShadingType,
     AlignmentType,
 } from 'docx';
 import { saveAs } from 'file-saver';
@@ -32,13 +30,14 @@ export class ExportService {
             month: 'long',
             day: 'numeric',
         });
-        const toBijoy = (s: string) =>
-            config.lang === 'bn' ? (unicodeToBijoy(s) ?? s) : s;
-        const title = toBijoy(config.title);
-        const dateText = toBijoy(dateStr);
-        const columns = config.columns.map(toBijoy);
-        const rows = config.rows.map((row) => row.map(toBijoy));
-        const fontFamily = config.lang === 'bn' ? "'SutonnyMJ', serif" : "'Times New Roman', serif";
+        const title = config.title;
+        const dateText = dateStr;
+        const columns = config.columns;
+        const rows = config.rows;
+        // Same font as Word: Nirmala UI (Bangla) / Times New Roman (English)
+        const fontFamily = config.lang === 'bn' ? "'Nirmala UI', serif" : "'Times New Roman', serif";
+        // Same sizes as Word: page header 14pt, table header 10pt, content 8pt (bn) / 11pt (en)
+        const sizeContentPt = config.lang === 'bn' ? '8pt' : '11pt';
         const pageFooter = config.showPageNumbers
             ? `
             @page {
@@ -62,17 +61,16 @@ export class ExportService {
         const headerCells = columns
             .map(
                 (c) =>
-                    `<th style="background:#1e3a5f;color:#fff;padding:8px 10px;font-weight:700;white-space:nowrap;word-break:keep-all;-webkit-print-color-adjust:exact">${escapeHtml(c)}</th>`
+                    `<th style="padding:8px 10px;font-weight:700;font-size:10pt;text-align:left;white-space:nowrap;word-break:keep-all">${escapeHtml(c)}</th>`
             )
             .join('');
         const dataRows = rows
             .map(
-                (row, i) => {
-                    const bg = i % 2 === 0 ? '#fff' : '#f7fafc';
+                (row) => {
                     const cells = row
                         .map(
                             (cell) =>
-                                `<td style="padding:6px 10px;white-space:nowrap;word-break:keep-all;background:${bg};-webkit-print-color-adjust:exact">${escapeHtml(cell)}</td>`
+                                `<td style="padding:6px 10px;white-space:nowrap;word-break:keep-all;font-size:${sizeContentPt}">${escapeHtml(cell)}</td>`
                         )
                         .join('');
                     return `<tr style="page-break-inside:avoid">${cells}</tr>`;
@@ -86,14 +84,12 @@ export class ExportService {
     <meta charset="UTF-8">
     <title>${escapeHtml(title)}</title>
     <style>
-        @font-face {
-            font-family: 'SutonnyMJ';
-            src: url('/assets/fonts/SutonnyMJ.ttf') format('truetype');
-        }
-        body { font-family: ${fontFamily}; font-size: 10pt; margin: 0; padding: 0; }
-        h1 { font-size: 16pt; font-weight: bold; text-align: center; margin-bottom: 8px; }
-        .date { font-size: 9pt; color: #555; text-align: center; margin-bottom: 16px; }
-        table { width: 100%; border-collapse: collapse; }
+        body { font-family: ${fontFamily}; font-size: ${sizeContentPt}; margin: 0; padding: 0; }
+        h1 { font-family: ${fontFamily}; font-size: 14pt; font-weight: bold; text-align: center; margin-bottom: 8px; }
+        .date { font-family: ${fontFamily}; font-size: 14pt; color: #555; text-align: center; margin-bottom: 16px; }
+        table { width: 100%; border-collapse: collapse; font-family: ${fontFamily}; }
+        thead th { font-family: ${fontFamily}; }
+        tbody td { font-family: ${fontFamily}; }
         ${pageFooter}
     </style>
 </head>
@@ -125,14 +121,17 @@ export class ExportService {
             month: 'long',
             day: 'numeric',
         });
-        const toBijoy = (s: string) =>
-            config.lang === 'bn' ? (unicodeToBijoy(s) ?? s) : s;
-        const font = config.lang === 'bn' ? 'SutonnyMJ' : 'Times New Roman';
-        const title = toBijoy(config.title);
-        const dateText = toBijoy(dateStr);
-        const columns = config.columns.map(toBijoy);
-        const rows = config.rows.map((row) => row.map(toBijoy));
+        // Use Nirmala UI for Bangla so Word renders Bengali Unicode without font embedding (ships with Windows 8+ / Office).
+        const font = config.lang === 'bn' ? 'Nirmala UI' : 'Times New Roman';
+        const title = config.title;
+        const dateText = dateStr;
+        const columns = config.columns;
+        const rows = config.rows;
         const cellWidth = Math.floor(9000 / Math.max(config.columns.length, 1));
+        // Font sizes in half-points: page header 14pt=28, table header 10pt=20, content bn 8pt=16 / en 11pt=22
+        const sizePageHeader = 28;
+        const sizeTableHeader = 20;
+        const sizeTableContent = config.lang === 'bn' ? 16 : 22;
 
         const headerRow = new TableRow({
             tableHeader: true,
@@ -141,12 +140,11 @@ export class ExportService {
                     new TableCell({
                         children: [
                             new Paragraph({
-                                children: [new TextRun({ text: col, bold: true, font })],
-                                alignment: AlignmentType.CENTER,
+                                children: [new TextRun({ text: col, bold: true, font, size: sizeTableHeader })],
+                                alignment: AlignmentType.LEFT,
                                 spacing: { after: 100 },
                             }),
                         ],
-                        shading: { fill: '1e3a5f', type: ShadingType.SOLID },
                         borders: {
                             top: { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
                             bottom: { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
@@ -166,7 +164,7 @@ export class ExportService {
                             new TableCell({
                                 children: [
                                     new Paragraph({
-                                        children: [new TextRun({ text: cell, font: font })],
+                                        children: [new TextRun({ text: cell, font, size: sizeTableContent })],
                                         spacing: { after: 100 },
                                     }),
                                 ],
@@ -196,9 +194,9 @@ export class ExportService {
                                 new TextRun({
                                     text: title,
                                     bold: true,
-                                    size: 72,
+                                    size: sizePageHeader,
                                     color: '1e3a5f',
-                                    font: font,
+                                    font,
                                 }),
                             ],
                             alignment: AlignmentType.CENTER,
@@ -208,9 +206,9 @@ export class ExportService {
                             children: [
                                 new TextRun({
                                     text: dateText,
-                                    size: 36,
+                                    size: sizePageHeader,
                                     color: '666666',
-                                    font: font,
+                                    font,
                                 }),
                             ],
                             alignment: AlignmentType.CENTER,
@@ -252,7 +250,7 @@ export class ExportService {
         ];
 
         const wb = XLSX.utils.book_new();
-        const sheetName = config.lang === 'bn' ? 'cÖwZ‡e`b' : 'Report';
+        const sheetName = config.lang === 'bn' ? 'প্রতিবেদন' : 'Report';
         XLSX.utils.book_append_sheet(wb, ws, sheetName);
 
         const filename = config.lang === 'bn' ? 'report_bn.xlsx' : 'report_en.xlsx';

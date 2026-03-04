@@ -57,11 +57,11 @@ export class ReportRabUnitComponent implements OnInit, OnChanges {
     }
 
     get reportTitle(): string {
-        return this.L['en']['report.title.rabUnit'];
+        return this.L[this.lang]['report.title.rabUnit'];
     }
 
     getExportData(): { columns: string[]; rows: string[][] } {
-        const L = this.L['en'];
+        const L = this.L[this.lang];
         const columns = [
             L['report.table.ser'],
             L['report.table.orgName'],
