@@ -17,6 +17,12 @@ import { NotesheetPreviewBase } from '../notesheet-preview-base';
 import { NoteSheetCurrentStatus, NoteSheetOperationTypeOptions } from '@/models/enums';
 import { environment } from '@/Core/Environments/environment';
 import { forkJoin } from 'rxjs';
+import {
+    Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+    WidthType, BorderStyle, AlignmentType, PageOrientation, ImageRun,
+    VerticalAlign, TableLayoutType, HeightRule
+} from 'docx';
+import { saveAs } from 'file-saver';
 
 @Component({
     selector: 'app-notesheet-preview-general',
@@ -290,6 +296,291 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase {
                 recomender_approved_date: existing?.recomender_approved_date ?? null
             };
         }));
+    }
+
+    // ── Export: capture actual preview DOM for exact match ────
+
+    /** Collect all <style> contents from the page (includes Angular scoped styles). */
+    private collectPageStyles(): string {
+        const styles: string[] = [];
+        document.querySelectorAll('style').forEach(el => {
+            if (el.textContent) styles.push(el.textContent);
+        });
+        return styles.join('\n');
+    }
+
+    /** Clone the .a4-paper element (view-mode only content). */
+    private clonePaperElement(): HTMLElement | null {
+        const paper = document.querySelector('.a4-paper');
+        if (!paper) return null;
+        const clone = paper.cloneNode(true) as HTMLElement;
+        // Remove any edit-mode elements that might be present
+        clone.querySelectorAll('.ns-edit-field, .ns-approval-edit').forEach(el => el.remove());
+        return clone;
+    }
+
+    override exportPdf(): void {
+        if (!this.noteSheet) return;
+        const clone = this.clonePaperElement();
+        if (!clone) return;
+
+        const css = this.collectPageStyles();
+        const win = window.open('', '_blank', 'width=1100,height=700');
+        if (!win) return;
+
+        win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>NoteSheet_${this.escapeHtml(this.noteSheet.noteSheetNo ?? 'export')}</title>
+<style>
+${css}
+@page { size: A4 portrait; margin: 15mm; }
+@media print { .no-print { display: none !important; } }
+body { margin: 0; padding: 0; background: #fff; }
+.a4-paper-container { padding: 0; display: flex; justify-content: center; }
+.a4-paper { box-shadow: none; margin: 0 auto; }
+</style></head><body>
+<div class="a4-paper-container">${clone.outerHTML}</div>
+</body></html>`);
+        win.document.close();
+        setTimeout(() => win.print(), 600);
+    }
+
+    override async exportWord(): Promise<void> {
+        if (!this.noteSheet) return;
+        const bn = !this.isEnglish();
+        // For Bangla (complex script), must set cs font + hint so Word uses proper line-breaking
+        const font = bn
+            ? { ascii: 'Nirmala UI', hAnsi: 'Nirmala UI', cs: 'Nirmala UI', hint: 'cs' as const }
+            : 'Times New Roman';
+        const csSize = bn ? 24 : undefined; // sizeComplexScript for Bangla
+        const lang = bn ? { value: 'bn-BD', bidirectional: 'bn-BD' } : undefined;
+        const thickBorder = { style: BorderStyle.SINGLE, size: 3, color: '000000' };
+        const noBorder = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+
+        // ── Build main column content ──
+        const mainChildren: (Paragraph | Table)[] = [];
+
+        // Subject (bold, underlined)
+        mainChildren.push(new Paragraph({
+            children: [new TextRun({ text: this.noteSheet.subject ?? '', bold: true, underline: {}, size: 24, sizeComplexScript: csSize, font, language: lang })],
+            spacing: { before: 140, after: 80 },
+            indent: { left: 240 }
+        }));
+
+        // Reference / Date
+        if (this.noteSheet.referenceNumber) {
+            mainChildren.push(new Paragraph({
+                children: [
+                    new TextRun({ text: bn ? 'সূত্রঃ ' : 'Reference: ', bold: true, size: 24, sizeComplexScript: csSize, font, language: lang }),
+                    new TextRun({ text: this.stripHtml(this.noteSheet.referenceNumber), size: 24, sizeComplexScript: csSize, font, language: lang })
+                ],
+                indent: { left: 240 }, spacing: { after: 80 }
+            }));
+        } else if (this.noteSheet.noteSheetDate) {
+            mainChildren.push(new Paragraph({
+                children: [
+                    new TextRun({ text: bn ? 'তারিখঃ ' : 'Date: ', bold: true, size: 24, sizeComplexScript: csSize, font, language: lang }),
+                    new TextRun({ text: this.formatDate(this.noteSheet.noteSheetDate), size: 24, sizeComplexScript: csSize, font, language: lang })
+                ],
+                indent: { left: 240 }, spacing: { after: 80 }
+            }));
+        }
+
+        // Serial number + Main text
+        const mainTextElements = this.parseHtmlToDocx(this.noteSheet.mainText ?? '', font, bn);
+        mainChildren.push(new Paragraph({
+            children: [new TextRun({ text: this.serial(1), bold: true, size: 24, sizeComplexScript: csSize, font, language: lang })],
+            indent: { left: 240 }, spacing: { before: 160, after: 40 }
+        }));
+        mainChildren.push(...mainTextElements);
+
+        // Note
+        if (this.noteSheet.note) {
+            mainChildren.push(new Paragraph({
+                children: [
+                    new TextRun({ text: bn ? 'নোটঃ ' : 'Note: ', bold: true, size: 24, sizeComplexScript: csSize, font, language: lang }),
+                    new TextRun({ text: this.noteSheet.note, size: 24, sizeComplexScript: csSize, font, language: lang })
+                ],
+                indent: { left: 240 }, spacing: { before: 80, after: 80 }
+            }));
+        }
+
+        // Closing text
+        mainChildren.push(new Paragraph({
+            children: [new TextRun({
+                text: bn ? 'আপনার সদয় অনুমোদনের জন্য উপস্থাপন করা হলো।' : 'Presented for your kind approval.',
+                size: 24, sizeComplexScript: csSize, font, language: lang
+            })],
+            indent: { left: 240, firstLine: 480 }, spacing: { before: 200 }
+        }));
+
+        // Initiator signature (right-aligned)
+        if (this.initiatorDetails) {
+            const d = this.initiatorDetails;
+            if (this.shouldShowSignature(d.step) && d.signatureDataUrl) {
+                try {
+                    mainChildren.push(new Paragraph({
+                        children: [new ImageRun({
+                            type: 'png', data: this.base64ToBytes(d.signatureDataUrl),
+                            transformation: { width: 100, height: 40 }
+                        })],
+                        alignment: AlignmentType.RIGHT, spacing: { before: 200 }
+                    }));
+                } catch { /* no sig */ }
+            }
+            const nameStr = bn ? (d.nameBN || d.name) : d.name;
+            const rankStr = (d.rank && d.rank !== '-') ? `, ${bn ? (d.rankBN || d.rank) : d.rank}` : '';
+            mainChildren.push(new Paragraph({
+                children: [new TextRun({ text: `(${nameStr}${rankStr})`, size: 22, sizeComplexScript: csSize, font, language: lang })],
+                alignment: AlignmentType.RIGHT,
+                spacing: !(this.shouldShowSignature(d.step) && d.signatureDataUrl) ? { before: 200 } : {}
+            }));
+            if (d.appointment || d.appointmentBN) {
+                mainChildren.push(new Paragraph({
+                    children: [new TextRun({ text: bn ? (d.appointmentBN || d.appointment) : d.appointment, size: 22, sizeComplexScript: csSize, font, language: lang })],
+                    alignment: AlignmentType.RIGHT
+                }));
+            }
+            if (this.noteSheet.noteSheetDate) {
+                mainChildren.push(new Paragraph({
+                    children: [new TextRun({ text: this.formatDate(this.noteSheet.noteSheetDate), size: 22, sizeComplexScript: csSize, font, language: lang })],
+                    alignment: AlignmentType.RIGHT
+                }));
+            }
+        }
+
+        // Approver sections
+        for (let i = 0; i < this.approversDetails.length; i++) {
+            const approver = this.approversDetails[i];
+            const role = bn ? (approver.appointmentBN || approver.appointment) : approver.appointment;
+            const remark = this.getApproverRemark(approver.step);
+            mainChildren.push(new Paragraph({
+                children: [new TextRun({ text: role, underline: {}, size: 24, sizeComplexScript: csSize, font, language: lang })],
+                indent: { left: 240 }, spacing: { before: 240 }
+            }));
+            const runs: TextRun[] = [new TextRun({ text: this.serial(i + 2), bold: true, size: 24, sizeComplexScript: csSize, font, language: lang })];
+            if (remark) runs.push(new TextRun({ text: ` ${remark}`, italics: true, size: 24, sizeComplexScript: csSize, font, language: lang }));
+            mainChildren.push(new Paragraph({ children: runs, indent: { left: 240 } }));
+            if (this.shouldShowSignature(approver.step) && approver.signatureDataUrl) {
+                try {
+                    mainChildren.push(new Paragraph({
+                        children: [new ImageRun({
+                            type: 'png', data: this.base64ToBytes(approver.signatureDataUrl),
+                            transformation: { width: 100, height: 40 }
+                        })],
+                        indent: { left: 240 }, spacing: { before: 80 }
+                    }));
+                } catch { /* no sig */ }
+            }
+        }
+
+        // ── Outer bordered table (main + sanglagni) ──
+        // Legal page 20160 - top 567 - bottom 400 = 19193 usable; header ~1200 twips
+        const rowHeight = 17800;
+        const outerTable = new Table({
+            layout: TableLayoutType.FIXED,
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            columnWidths: [10473, 800],
+            rows: [new TableRow({
+                height: { value: rowHeight, rule: HeightRule.ATLEAST },
+                children: [
+                    new TableCell({
+                        width: { size: 10473, type: WidthType.DXA },
+                        borders: { top: thickBorder, bottom: thickBorder, left: thickBorder, right: noBorder },
+                        margins: { right: 200 },
+                        children: mainChildren.length > 0 ? mainChildren : [new Paragraph({})]
+                    }),
+                    new TableCell({
+                        width: { size: 800, type: WidthType.DXA },
+                        borders: { top: thickBorder, bottom: thickBorder, left: thickBorder, right: thickBorder },
+                        verticalAlign: VerticalAlign.TOP,
+                        children: [
+                            new Paragraph({ children: [new TextRun({ text: bn ? 'সংলগ্নী' : 'Encl.', size: 20, font: bn ? 'Nirmala UI' : 'Times New Roman' })], alignment: AlignmentType.CENTER }),
+                            new Paragraph({ children: [new TextRun({ text: bn ? 'নং' : 'No.', size: 20, font: bn ? 'Nirmala UI' : 'Times New Roman' })], alignment: AlignmentType.CENTER })
+                        ]
+                    })
+                ]
+            })]
+        });
+
+        // ── Build document ──
+        const docChildren: (Paragraph | Table)[] = [];
+        docChildren.push(new Paragraph({
+            children: [new TextRun({ text: 'NOTE SHEET', bold: true, underline: {}, size: 32, font: 'Times New Roman' })],
+            alignment: AlignmentType.CENTER, spacing: { after: 40 }, keepNext: true
+        }));
+        docChildren.push(new Paragraph({
+            children: [new TextRun({ text: 'মন্তব্য পত্র', underline: {}, size: 24, font: 'Nirmala UI' })],
+            alignment: AlignmentType.CENTER, spacing: { after: 160 }, keepNext: true
+        }));
+        docChildren.push(outerTable);
+
+        const doc = new Document({
+            styles: bn ? { default: { document: { run: { language: { value: 'bn-BD', bidirectional: 'bn-BD' } } } } } : undefined,
+            sections: [{
+                properties: { page: { size: { width: 12240, height: 20160, orientation: PageOrientation.PORTRAIT }, margin: { top: 567, right: 400, bottom: 400, left: 567 } } },
+                children: docChildren
+            }]
+        });
+
+        saveAs(await Packer.toBlob(doc), `NoteSheet_${this.noteSheet.noteSheetNo ?? 'export'}.docx`);
+    }
+
+    // ── Parse HTML content into docx elements ─────────────────
+    private parseHtmlToDocx(html: string, font: any, bn = false): (Paragraph | Table)[] {
+        if (!html) return [];
+        const div = document.createElement('div');
+        div.innerHTML = html;
+        const result: (Paragraph | Table)[] = [];
+        const thinBorder = { style: BorderStyle.SINGLE, size: 1, color: '000000' };
+        const cellBorders = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
+        const lang = bn ? { value: 'bn-BD', bidirectional: 'bn-BD' } : undefined;
+        const csSize = bn ? 24 : undefined;
+
+        for (const node of Array.from(div.childNodes)) {
+            if (node.nodeType === Node.TEXT_NODE) {
+                const text = (node.textContent || '').trim();
+                if (text) result.push(new Paragraph({ children: [new TextRun({ text, size: 24, sizeComplexScript: csSize, font, language: lang })], indent: { left: 480 }, spacing: { after: 80 } }));
+            } else if (node.nodeType === Node.ELEMENT_NODE) {
+                const el = node as HTMLElement;
+                const tag = el.tagName.toLowerCase();
+                if (tag === 'table') {
+                    const rows: TableRow[] = [];
+                    el.querySelectorAll('tr').forEach(tr => {
+                        const cells: TableCell[] = [];
+                        tr.querySelectorAll('td, th').forEach(td => {
+                            cells.push(new TableCell({
+                                children: [new Paragraph({ children: [new TextRun({ text: (td.textContent || '').trim(), bold: td.tagName.toLowerCase() === 'th', size: 22, sizeComplexScript: bn ? 22 : undefined, font, language: lang })] })],
+                                borders: cellBorders
+                            }));
+                        });
+                        if (cells.length > 0) rows.push(new TableRow({ children: cells }));
+                    });
+                    if (rows.length > 0) result.push(new Table({ width: { size: 90, type: WidthType.PERCENTAGE }, rows, alignment: AlignmentType.CENTER }));
+                } else if (tag === 'ol' || tag === 'ul') {
+                    el.querySelectorAll(':scope > li').forEach(li => {
+                        const text = (li.textContent || '').trim();
+                        if (text) result.push(new Paragraph({ children: [new TextRun({ text: `• ${text}`, size: 24, sizeComplexScript: csSize, font, language: lang })], indent: { left: 720 }, spacing: { after: 60 } }));
+                    });
+                } else {
+                    const text = (el.textContent || '').trim();
+                    if (text) {
+                        const isBold = ['strong', 'b', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tag) || el.style.fontWeight === 'bold' || !!el.querySelector('strong, b');
+                        const isItalic = tag === 'em' || tag === 'i' || el.style.fontStyle === 'italic';
+                        result.push(new Paragraph({ children: [new TextRun({ text, bold: isBold, italics: isItalic, size: 24, sizeComplexScript: csSize, font, language: lang })], indent: { left: 480 }, spacing: { after: 80 } }));
+                    }
+                }
+            }
+        }
+        return result;
+    }
+
+    // ── Convert data URL to Uint8Array for ImageRun ───────────
+    private base64ToBytes(dataUrl: string): Uint8Array {
+        const base64 = dataUrl.split(',')[1];
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        return bytes;
     }
 
     // ── Format Date as yyyy-MM-dd for backend DateOnly ───────

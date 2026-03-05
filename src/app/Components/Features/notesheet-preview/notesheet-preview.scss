@@ -109,13 +109,13 @@
 
 /* Header rows (subject + reference) */
 .ns-cell-subject {
-    padding: 7px 16px;
+    padding: 7px 16px 7px 20px;
     font-size: 12pt;
     font-weight: bold;
     text-decoration: underline;
 }
 .ns-cell-ref {
-    padding: 5px 16px;
+    padding: 5px 16px 5px 20px;
     font-size: 12pt;
     display: flex;
     align-items: baseline;
@@ -135,7 +135,7 @@
 .ns-para {
     display: flex;
     gap: 8px;
-    padding: 10px 16px;
+    padding: 10px 16px 10px 20px;
     font-size: 12pt;
     line-height: 1.85;
 }
@@ -147,19 +147,31 @@
 .ns-para-text {
     flex: 1;
     min-width: 0;
-    overflow: hidden;
-    overflow-wrap: anywhere;
-    word-break: break-word;
+    // Only break words as a last resort; never split mid-glyph
+    overflow-wrap: break-word;
+    word-break: normal;
+    hyphens: none;
 
+    // Do NOT set overflow-wrap/word-break on ::ng-deep * — it forces breaks
+    // at inline-element (<span>) boundaries within a single Bangla word.
+    // Only reset white-space to ensure editor markup renders normally.
     ::ng-deep * {
-        max-width: 100% !important;
-        overflow-wrap: anywhere;
-        word-break: break-word;
         white-space: normal;
+        hyphens: none;
     }
+
+    // Block containers that may carry long text can break safely
+    ::ng-deep p,
+    ::ng-deep li,
+    ::ng-deep div {
+        overflow-wrap: break-word;
+        word-break: normal;
+        hyphens: none;
+    }
+
     ::ng-deep table {
         width: 100%;
-        table-layout: auto;
+        table-layout: fixed;
         border-collapse: collapse !important;
         margin: 6px 0;
     }
@@ -167,7 +179,9 @@
     ::ng-deep table th {
         border: 1px solid #000 !important;
         padding: 5px 8px;
-        min-width: 40px;
+        overflow-wrap: break-word;
+        word-break: normal;
+        hyphens: none;
         white-space: normal;
     }
     ::ng-deep p          { margin: 0 0 0.4rem; }
@@ -176,7 +190,7 @@
 
 /* ── Ex-BD Leave details ──────────────────────────── */
 .ns-exbd-info {
-    padding: 4px 16px 10px 52px;
+    padding: 4px 16px 10px 56px;
     font-size: 12pt;
 }
 .ns-exbd-row {
@@ -192,7 +206,7 @@
 
 /* ── New Posting table ────────────────────────────── */
 .ns-posting-table {
-    padding: 4px 16px 10px;
+    padding: 4px 16px 10px 20px;
     overflow-x: auto;
 
     table {
@@ -221,14 +235,14 @@
 
 /* ── Note ─────────────────────────────────────────── */
 .ns-note {
-    padding: 6px 16px;
+    padding: 6px 16px 6px 20px;
     font-size: 12pt;
     border-top: 1px dashed #aaa;
 }
 
 /* ── Closing + Initiator signature ───────────────── */
 .ns-initiator-area {
-    padding: 14px 16px 18px;
+    padding: 14px 16px 18px 20px;
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -252,7 +266,7 @@
 
 /* ── Approver sections ────────────────────────────── */
 .ns-approver-section {
-    padding: 10px 16px 24px;
+    padding: 10px 16px 24px 20px;
     min-height: 90px;
 }
 .ns-approver-role {
