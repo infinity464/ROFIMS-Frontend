@@ -307,11 +307,36 @@ export abstract class NotesheetPreviewBase implements OnInit {
     }
 
     getMainTextSafe(): SafeHtml {
-        return this.sanitizer.bypassSecurityTrustHtml(this.noteSheet?.mainText ?? '');
+        return this.sanitizer.bypassSecurityTrustHtml(
+            this.fixBanglaWordBreaks(this.noteSheet?.mainText ?? '')
+        );
     }
 
     getReferenceNumberSafe(): SafeHtml {
-        return this.sanitizer.bypassSecurityTrustHtml(this.noteSheet?.referenceNumber ?? '');
+        return this.sanitizer.bypassSecurityTrustHtml(
+            this.fixBanglaWordBreaks(this.noteSheet?.referenceNumber ?? '')
+        );
+    }
+
+    /**
+     * Fix word-breaking in rich-editor HTML for preview rendering.
+     *
+     * Quill converts every space to `&nbsp;` (non-breaking space).  This tells
+     * the browser "never break the line here", so the entire paragraph becomes
+     * one unbreakable run.  When it overflows, `overflow-wrap: break-word`
+     * splits at an arbitrary glyph — right in the middle of a Bangla word.
+     *
+     * The fix: replace `&nbsp;` with a normal space so the browser can find
+     * real word boundaries and wrap correctly.
+     */
+    private fixBanglaWordBreaks(html: string): string {
+        if (!html) return html;
+        // 1. Replace &nbsp; (and its raw Unicode char U+00A0) with a normal space
+        html = html.replace(/&nbsp;/gi, ' ');
+        html = html.replace(/\u00A0/g, ' ');
+        // 2. Remove Zero-Width Spaces (U+200B) inserted by Quill for cursor positioning
+        html = html.replace(/\u200B/g, '');
+        return html;
     }
 
     getPurposeLabel(id: number | null | undefined): string {
@@ -393,7 +418,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
     async exportWord(): Promise<void> {
         if (!this.noteSheet) return;
         const bn   = !this.isEnglish();
-        const font = bn ? 'SutonnyMJ' : 'Times New Roman';
+        const font = bn ? 'Nirmala UI' : 'Times New Roman';
         const thinBorder  = { style: BorderStyle.SINGLE, size: 1, color: '000000' };
         const cellBorders = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
 
@@ -410,11 +435,8 @@ export abstract class NotesheetPreviewBase implements OnInit {
             children: [new TextRun({ text: this.noteSheet.subject ?? '', bold: true, size: 24, font })],
             alignment: AlignmentType.CENTER, spacing: { after: 200 }
         });
-        const mainTextPara = new Paragraph({
-            children: [new TextRun({ text: this.stripHtml(this.noteSheet.mainText ?? ''), size: 22, font })],
-            spacing: { after: 200 }
-        });
-        const children: (Paragraph | Table)[] = [titlePara, metaPara, subjectPara, mainTextPara];
+        const mainTextParas = this.htmlToDocxChildren(this.noteSheet.mainText ?? '', font, 22, cellBorders);
+        const children: (Paragraph | Table)[] = [titlePara, metaPara, subjectPara, ...mainTextParas];
 
         if (this.isExBdLeave()) {
             const parts: string[] = [];
@@ -547,7 +569,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
     <div class="doc-box">
         <div class="box-header"><div class="box-subject">${this.escapeHtml(this.noteSheet.subject??'')}</div><div class="box-sanglagni">সংলগ্নী<br>নং</div></div>
         <div class="ref-line"><strong>${bn?'সূত্রঃ':'Reference:'}</strong> ${this.escapeHtml(this.noteSheet.referenceNumber??'')} &nbsp;&nbsp; <strong>${bn?'তারিখঃ':'Date:'}</strong> ${this.escapeHtml(this.formatDate(this.noteSheet.noteSheetDate))}</div>
-        <div class="para"><span class="para-no">১।</span><div>${this.noteSheet.mainText??''}</div></div>
+        <div class="para"><span class="para-no">১।</span><div>${this.fixBanglaWordBreaks(this.noteSheet.mainText??'')}</div></div>
         ${extraHtml}${noteText}
         <div class="closing">${closing}</div>
         ${sigHtml}
@@ -575,10 +597,83 @@ export abstract class NotesheetPreviewBase implements OnInit {
         return html;
     }
 
+    /**
+     * Parse rich-editor HTML into an array of docx Paragraphs / Tables,
+     * preserving paragraph breaks and table structure so Word can wrap
+     * Bangla text at real word boundaries instead of mid-glyph.
+     */
+    private htmlToDocxChildren(
+        html: string, font: string, size: number,
+        cellBorders: Record<string, { style: typeof BorderStyle.SINGLE; size: number; color: string }>
+    ): (Paragraph | Table)[] {
+        if (!html) return [new Paragraph({ spacing: { after: 200 } })];
+        // Replace &nbsp; BEFORE DOM parsing so no \u00A0 enters text nodes
+        html = this.fixBanglaWordBreaks(html);
+        const container = document.createElement('div');
+        container.innerHTML = html;
+        const result: (Paragraph | Table)[] = [];
+
+        const cleanText = (el: Element | ChildNode): string =>
+            (el.textContent || '').replace(/\u00A0/g, ' ').trim();
+
+        for (const node of Array.from(container.childNodes)) {
+            if (node.nodeType === Node.TEXT_NODE) {
+                const text = (node.textContent || '').replace(/\u00A0/g, ' ').trim();
+                if (text) {
+                    result.push(new Paragraph({
+                        children: [new TextRun({ text, size, font })],
+                        spacing: { after: 100 }
+                    }));
+                }
+            } else if (node.nodeType === Node.ELEMENT_NODE) {
+                const el = node as HTMLElement;
+                const tag = el.tagName.toLowerCase();
+
+                if (tag === 'table') {
+                    const rows = Array.from(el.querySelectorAll('tr'));
+                    if (rows.length > 0) {
+                        const cellWidth = Math.floor(14000 / Math.max(
+                            ...rows.map(r => r.querySelectorAll('td, th').length), 1
+                        ));
+                        const tableRows = rows.map(row => new TableRow({
+                            children: Array.from(row.querySelectorAll('td, th')).map(cell => new TableCell({
+                                children: [new Paragraph({
+                                    children: [new TextRun({
+                                        text: cleanText(cell) || ' ',
+                                        size: size - 2, font,
+                                        bold: cell.tagName.toLowerCase() === 'th'
+                                    })]
+                                })],
+                                borders: cellBorders,
+                                width: { size: cellWidth, type: WidthType.DXA }
+                            }))
+                        }));
+                        result.push(new Table({
+                            width: { size: 100, type: WidthType.PERCENTAGE },
+                            rows: tableRows
+                        }));
+                    }
+                } else {
+                    // <p>, <div>, <li>, etc. → one Paragraph per block element
+                    const text = cleanText(el);
+                    if (text) {
+                        result.push(new Paragraph({
+                            children: [new TextRun({ text, size, font })],
+                            spacing: { after: 100 }
+                        }));
+                    }
+                }
+            }
+        }
+
+        return result.length ? result : [new Paragraph({ spacing: { after: 200 } })];
+    }
+
     protected stripHtml(html: string): string {
         const tmp = document.createElement('div');
         tmp.innerHTML = html;
-        return tmp.textContent || tmp.innerText || '';
+        // textContent converts &nbsp; → \u00A0; replace with normal space
+        return (tmp.textContent || tmp.innerText || '').replace(/\u00A0/g, ' ');
     }
 
     protected escapeHtml(text: string): string {
