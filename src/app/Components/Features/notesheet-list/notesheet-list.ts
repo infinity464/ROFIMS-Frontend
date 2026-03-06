@@ -853,11 +853,13 @@ export class NotesheetListComponent implements OnInit {
   }
 
   private buildGeneralSignatoriesHtml(): string {
+    const marginCenter = 'margin-left:auto;margin-right:auto';
     const sigImg = (detail: any, align: string) => detail?.signatureDataUrl && this.shouldShowSignature(detail.step)
-      ? `<img src="${detail.signatureDataUrl}" style="width:150px;height:50px;object-fit:contain;display:block;${align === 'right' ? 'margin-left:auto' : ''}" />`
+      ? `<img src="${detail.signatureDataUrl}" style="width:150px;height:50px;object-fit:contain;display:block;${align === 'right' ? 'margin-left:auto' : align === 'center' ? marginCenter : ''}" />`
       : '';
     const sigBlock = (detail: any, align: string) => {
       if (!detail) return '';
+      const lineMargin = align === 'right' ? 'margin-left:auto' : align === 'center' ? marginCenter : '';
       const lines = [
         detail.rabId && detail.rabId !== '-' ? `RAB ID: ${detail.rabId}` : '',
         detail.rank && detail.rank !== '-' ? detail.rank : '',
@@ -865,7 +867,7 @@ export class NotesheetListComponent implements OnInit {
       ].filter(Boolean);
       return `<div style="text-align:${align};margin-top:20px;line-height:1.6">
         ${sigImg(detail, align)}
-        <div style="width:160px;border-bottom:1.5px solid #000;margin-bottom:4px;${align === 'right' ? 'margin-left:auto' : ''}"></div>
+        <div style="width:160px;border-bottom:1.5px solid #000;margin-bottom:4px;${lineMargin}"></div>
         <div style="font-weight:600;font-size:9pt;text-transform:uppercase;color:#000">${this.escapeHtml(this.translateStep(detail.step))}</div>
         <div><strong>${this.escapeHtml(detail.name)}</strong></div>
         ${lines.map((l: string) => `<div style="font-size:10pt">${this.escapeHtml(l)}</div>`).join('')}
@@ -876,15 +878,15 @@ export class NotesheetListComponent implements OnInit {
     if (this.initiatorDetails) {
       rightHtml += sigBlock(this.initiatorDetails, 'right');
     }
-    let leftHtml = '';
+    let centerHtml = '';
     for (const approver of this.approversDetails) {
-      leftHtml += sigBlock(approver, 'left');
+      centerHtml += sigBlock(approver, 'center');
     }
 
-    if (!leftHtml && !rightHtml) return '';
+    if (!centerHtml && !rightHtml) return '';
     return `<div style="margin-top:30px">
       ${rightHtml ? `<div>${rightHtml}</div>` : ''}
-      ${leftHtml ? `<div style="margin-top:24px">${leftHtml}</div>` : ''}
+      ${centerHtml ? `<div style="margin-top:24px">${centerHtml}</div>` : ''}
     </div>`;
   }
 

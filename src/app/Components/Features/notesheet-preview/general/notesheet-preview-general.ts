@@ -298,15 +298,17 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase {
         }));
     }
 
-    // ── Export: capture actual preview DOM for exact match ────
+    // ── Export: clone actual preview DOM for exact match ─────
 
-    /** Collect all <style> contents from the page (includes Angular scoped styles). */
+    /** Collect ALL CSS from the page (Angular scoped + global). */
     private collectPageStyles(): string {
-        const styles: string[] = [];
-        document.querySelectorAll('style').forEach(el => {
-            if (el.textContent) styles.push(el.textContent);
-        });
-        return styles.join('\n');
+        const chunks: string[] = [];
+        for (const sheet of Array.from(document.styleSheets)) {
+            try {
+                chunks.push(Array.from(sheet.cssRules).map(r => r.cssText).join('\n'));
+            } catch { /* skip cross-origin sheets */ }
+        }
+        return chunks.join('\n');
     }
 
     /** Clone the .a4-paper element (view-mode only content). */
@@ -319,29 +321,68 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase {
         return clone;
     }
 
+    /**
+     * Export PDF: opens browser print dialog → user clicks "Save as PDF".
+     * Uses the ACTUAL preview DOM clone so layout, borders, and signatures
+     * are pixel-perfect. Text is real HTML text → fully copyable/selectable.
+     */
     override exportPdf(): void {
         if (!this.noteSheet) return;
+
         const clone = this.clonePaperElement();
         if (!clone) return;
 
         const css = this.collectPageStyles();
-        const win = window.open('', '_blank', 'width=1100,height=700');
+
+        const win = window.open('', '_blank', 'width=950,height=700');
         if (!win) return;
 
-        win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
-<title>NoteSheet_${this.escapeHtml(this.noteSheet.noteSheetNo ?? 'export')}</title>
-<style>
-${css}
-@page { size: A4 portrait; margin: 15mm; }
-@media print { .no-print { display: none !important; } }
-body { margin: 0; padding: 0; background: #fff; }
-.a4-paper-container { padding: 0; display: flex; justify-content: center; }
-.a4-paper { box-shadow: none; margin: 0 auto; }
-</style></head><body>
-<div class="a4-paper-container">${clone.outerHTML}</div>
-</body></html>`);
+        win.document.write(
+            `<!DOCTYPE html><html><head><meta charset="UTF-8">` +
+            `<title>NoteSheet_${this.noteSheet.noteSheetNo ?? 'export'}</title>` +
+            `<style>${css}\n` +
+            `@page { size: legal; margin: 10mm 8mm; }\n` +
+            `html, body { margin: 0; padding: 0; background: #fff; }\n` +
+            `.a4-paper {\n` +
+            `  width: 100% !important;\n` +
+            `  min-height: auto !important;\n` +
+            `  padding: 6mm 4mm 10mm !important;\n` +
+            `  box-shadow: none !important;\n` +
+            `  margin: 0 !important;\n` +
+            `  display: flex !important;\n` +
+            `  flex-direction: column !important;\n` +
+            `  overflow: visible !important;\n` +
+            `}\n` +
+            `.ns-doc-box, .ns-sanglagni-col {\n` +
+            `  -webkit-box-decoration-break: clone;\n` +
+            `  box-decoration-break: clone;\n` +
+            `}\n` +
+            `.ns-main-col, .ns-sanglagni-col {\n` +
+            `  -webkit-box-decoration-break: clone;\n` +
+            `  box-decoration-break: clone;\n` +
+            `  padding-top: 6mm !important;\n` +
+            `  padding-bottom: 6mm !important;\n` +
+            `}\n` +
+            `.no-print { display: none !important; }\n` +
+            `</style></head><body>${clone.outerHTML}</body></html>`
+        );
+
         win.document.close();
-        setTimeout(() => win.print(), 600);
+
+        // Wait for images (signatures) to load before printing
+        const imgs = win.document.querySelectorAll('img');
+        if (imgs.length > 0) {
+            let loaded = 0;
+            const tryPrint = () => { if (++loaded >= imgs.length) setTimeout(() => win.print(), 300); };
+            imgs.forEach(img => {
+                if (img.complete) tryPrint();
+                else { img.onload = tryPrint; img.onerror = tryPrint; }
+            });
+            // Safety fallback
+            setTimeout(() => win.print(), 2500);
+        } else {
+            setTimeout(() => win.print(), 800);
+        }
     }
 
     override async exportWord(): Promise<void> {
@@ -385,8 +426,8 @@ body { margin: 0; padding: 0; background: #fff; }
             }));
         }
 
-        // Serial number + Main text
-        const mainTextElements = this.parseHtmlToDocx(this.noteSheet.mainText ?? '', font, bn);
+        // Serial number + Main text (fix &nbsp; so Word breaks at word boundaries, not mid-Bangla-word)
+        const mainTextElements = this.parseHtmlToDocx(this.fixBanglaWordBreaks(this.noteSheet.mainText ?? ''), font, bn);
         mainChildren.push(new Paragraph({
             children: [new TextRun({ text: this.serial(1), bold: true, size: 24, sizeComplexScript: csSize, font, language: lang })],
             indent: { left: 240 }, spacing: { before: 160, after: 40 }
@@ -448,7 +489,7 @@ body { margin: 0; padding: 0; background: #fff; }
             }
         }
 
-        // Approver sections
+        // Approver sections (signatures centered, like preview)
         for (let i = 0; i < this.approversDetails.length; i++) {
             const approver = this.approversDetails[i];
             const role = bn ? (approver.appointmentBN || approver.appointment) : approver.appointment;
@@ -467,14 +508,15 @@ body { margin: 0; padding: 0; background: #fff; }
                             type: 'png', data: this.base64ToBytes(approver.signatureDataUrl),
                             transformation: { width: 100, height: 40 }
                         })],
-                        indent: { left: 240 }, spacing: { before: 80 }
+                        alignment: AlignmentType.CENTER,
+                        spacing: { before: 80 }
                     }));
                 } catch { /* no sig */ }
             }
         }
 
         // ── Outer bordered table (main + sanglagni) ──
-        // Legal page 20160 - top 567 - bottom 400 = 19193 usable; header ~1200 twips
+        // Legal page (8.5"×14"): 12240×20160 twips; margins top 567, bottom/left/right 400
         const rowHeight = 17800;
         const outerTable = new Table({
             layout: TableLayoutType.FIXED,
@@ -517,12 +559,17 @@ body { margin: 0; padding: 0; background: #fff; }
         const doc = new Document({
             styles: bn ? { default: { document: { run: { language: { value: 'bn-BD', bidirectional: 'bn-BD' } } } } } : undefined,
             sections: [{
-                properties: { page: { size: { width: 12240, height: 20160, orientation: PageOrientation.PORTRAIT }, margin: { top: 567, right: 400, bottom: 400, left: 567 } } },
+                properties: { page: { size: { width: 12240, height: 20160, orientation: PageOrientation.PORTRAIT }, margin: { top: 567, right: 400, bottom: 400, left: 567 } } }, // Legal 8.5"×14"
                 children: docChildren
             }]
         });
 
         saveAs(await Packer.toBlob(doc), `NoteSheet_${this.noteSheet.noteSheetNo ?? 'export'}.docx`);
+    }
+
+    /** Normalize text for Word: replace non-breaking space and ZWSP so Word breaks at word boundaries (Bangla). */
+    private normalizeTextForWord(s: string): string {
+        return s.replace(/\u00A0/g, ' ').replace(/\u200B/g, '');
     }
 
     // ── Parse HTML content into docx elements ─────────────────
@@ -538,7 +585,7 @@ body { margin: 0; padding: 0; background: #fff; }
 
         for (const node of Array.from(div.childNodes)) {
             if (node.nodeType === Node.TEXT_NODE) {
-                const text = (node.textContent || '').trim();
+                const text = this.normalizeTextForWord((node.textContent || '').trim());
                 if (text) result.push(new Paragraph({ children: [new TextRun({ text, size: 24, sizeComplexScript: csSize, font, language: lang })], indent: { left: 480 }, spacing: { after: 80 } }));
             } else if (node.nodeType === Node.ELEMENT_NODE) {
                 const el = node as HTMLElement;
@@ -548,8 +595,9 @@ body { margin: 0; padding: 0; background: #fff; }
                     el.querySelectorAll('tr').forEach(tr => {
                         const cells: TableCell[] = [];
                         tr.querySelectorAll('td, th').forEach(td => {
+                            const cellText = this.normalizeTextForWord((td.textContent || '').trim());
                             cells.push(new TableCell({
-                                children: [new Paragraph({ children: [new TextRun({ text: (td.textContent || '').trim(), bold: td.tagName.toLowerCase() === 'th', size: 22, sizeComplexScript: bn ? 22 : undefined, font, language: lang })] })],
+                                children: [new Paragraph({ children: [new TextRun({ text: cellText, bold: td.tagName.toLowerCase() === 'th', size: 22, sizeComplexScript: bn ? 22 : undefined, font, language: lang })] })],
                                 borders: cellBorders
                             }));
                         });
@@ -558,11 +606,11 @@ body { margin: 0; padding: 0; background: #fff; }
                     if (rows.length > 0) result.push(new Table({ width: { size: 90, type: WidthType.PERCENTAGE }, rows, alignment: AlignmentType.CENTER }));
                 } else if (tag === 'ol' || tag === 'ul') {
                     el.querySelectorAll(':scope > li').forEach(li => {
-                        const text = (li.textContent || '').trim();
+                        const text = this.normalizeTextForWord((li.textContent || '').trim());
                         if (text) result.push(new Paragraph({ children: [new TextRun({ text: `• ${text}`, size: 24, sizeComplexScript: csSize, font, language: lang })], indent: { left: 720 }, spacing: { after: 60 } }));
                     });
                 } else {
-                    const text = (el.textContent || '').trim();
+                    const text = this.normalizeTextForWord((el.textContent || '').trim());
                     if (text) {
                         const isBold = ['strong', 'b', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tag) || el.style.fontWeight === 'bold' || !!el.querySelector('strong, b');
                         const isItalic = tag === 'em' || tag === 'i' || el.style.fontStyle === 'italic';

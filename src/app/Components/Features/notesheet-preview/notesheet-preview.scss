@@ -265,6 +265,7 @@
 }
 
 /* ── Approver sections ────────────────────────────── */
+/* First signature (initiator) stays right-aligned; approver signatures (২।, ৩।, …) are centered. */
 .ns-approver-section {
     padding: 10px 16px 24px 20px;
     min-height: 90px;
@@ -276,24 +277,19 @@
 }
 .ns-approver-body {
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
     align-items: flex-start;
     min-height: 60px;
+    gap: 0;
 
     &--left {
-        justify-content: flex-start;
         gap: 12px;
-
-        .ns-approver-sig-area {
-            text-align: left;
-        }
     }
 }
 .ns-approver-left {
     display: flex;
     gap: 6px;
     font-size: 12pt;
-    flex: 1;
     flex-wrap: wrap;
     align-items: flex-start;
 }
@@ -302,8 +298,10 @@
     font-style: italic;
 }
 .ns-approver-sig-area {
+    width: 100%;
     text-align: center;
-    min-width: 120px;
+    margin-top: 10px;
+    min-width: 0;
 }
 
 /* ── Shared signature styles ──────────────────────── */
@@ -381,11 +379,20 @@
         min-height: auto;
     }
     .a4-paper {
-        width: 210mm;
-        min-height: 297mm;
+        width: 8.5in;
+        min-height: 14in;
         padding: 14mm 10mm 20mm;
         box-shadow: none;
     }
+    /* Repeat borders on every printed page */
+    .ns-doc-box, .ns-sanglagni-col {
+        -webkit-box-decoration-break: clone;
+        box-decoration-break: clone;
+    }
+    /* Keep first signature right, approver signatures centered (same as screen) */
+    .ns-initiator-sig { align-self: flex-end; }
+    .ns-approver-body { flex-direction: column; align-items: flex-start; }
+    .ns-approver-sig-area { width: 100% !important; text-align: center !important; }
     .ns-posting-table table { page-break-inside: auto; }
     .ns-posting-table tr    { page-break-inside: avoid; page-break-after: auto; }
 }
