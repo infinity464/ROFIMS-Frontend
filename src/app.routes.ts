@@ -121,6 +121,7 @@ import { ImageUploadComponent } from '@/Components/Features/pdf-vault/image-uplo
 import { MenuManagement } from '@/Components/Features/menu-management/menu-management';
 import { RoleMenuPermission } from '@/Components/Features/role-menu-permission/role-menu-permission';
 import { EmployeeReportsComponent } from '@/Components/Features/employee-reports/employee-reports.component';
+import { RabUnitAor } from '@/Components/basic-setup/rab-unit-aor/rab-unit-aor';
 
 export const appRoutes: Routes = [
     // Public routes
@@ -171,6 +172,7 @@ export const appRoutes: Routes = [
             { path: 'basic-setup/rab-id', component: RabId },
             { path: 'basic-setup/rab-structure', component: RabStructureComponent },
             { path: 'basic-setup/rab-unit', component: RabUnit },
+            { path: 'basic-setup/rab-unit-aor', component: RabUnitAor },
             { path: 'basic-setup/officer-type', component: OfficerType },
             { path: 'basic-setup/rab-wing', component: RabWing },
             { path: 'basic-setup/mother-org', component: Organization },
