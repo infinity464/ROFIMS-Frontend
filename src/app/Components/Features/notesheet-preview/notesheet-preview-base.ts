@@ -433,7 +433,55 @@ export abstract class NotesheetPreviewBase implements OnInit {
     }
 
     goBack(): void { this.router.navigate(['/notesheet-list/draft']); }
-    printPage(): void { window.print(); }
+
+    /**
+     * Print via a clean new window so @page rules work
+     * (Angular view encapsulation blocks @page in component CSS).
+     */
+    printPage(): void {
+        const paper = document.querySelector('.a4-paper');
+        if (!paper) { window.print(); return; }
+
+        const clone = paper.cloneNode(true) as HTMLElement;
+        clone.querySelectorAll('.ns-edit-field, .ns-approval-edit').forEach(el => el.remove());
+
+        // Collect all CSS from the page (Angular scoped + global)
+        const chunks: string[] = [];
+        for (const sheet of Array.from(document.styleSheets)) {
+            try { chunks.push(Array.from(sheet.cssRules).map(r => r.cssText).join('\n')); }
+            catch { /* skip cross-origin */ }
+        }
+
+        const win = window.open('', '_blank', 'width=950,height=700');
+        if (!win) { window.print(); return; }
+
+        win.document.write(
+            `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Print</title>` +
+            `<style>${chunks.join('\n')}\n` +
+            `@page { margin: 5mm 8mm; }\n` +
+            `html, body { margin: 0; padding: 0; background: #fff; }\n` +
+            `.a4-paper {\n` +
+            `  width: 100% !important; min-height: auto !important;\n` +
+            `  padding: 5mm 8mm 5mm !important; box-shadow: none !important;\n` +
+            `  margin: 0 !important; overflow: visible !important;\n` +
+            `}\n` +
+            `.ns-approver-section { min-height: 50px !important; padding: 6px 16px 10px 20px !important; }\n` +
+            `.ns-initiator-area { padding: 8px 16px 8px 20px !important; }\n` +
+            `.no-print { display: none !important; }\n` +
+            `</style></head><body>${clone.outerHTML}</body></html>`
+        );
+        win.document.close();
+
+        const imgs = win.document.querySelectorAll('img');
+        if (imgs.length > 0) {
+            let loaded = 0;
+            const tryPrint = () => { if (++loaded >= imgs.length) setTimeout(() => win.print(), 300); };
+            imgs.forEach(img => { if (img.complete) tryPrint(); else { img.onload = tryPrint; img.onerror = tryPrint; } });
+            setTimeout(() => win.print(), 2000);
+        } else {
+            setTimeout(() => win.print(), 500);
+        }
+    }
 
     // ─── Export ──────────────────────────────────────────────────────
 

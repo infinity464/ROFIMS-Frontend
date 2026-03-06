@@ -379,15 +379,23 @@
         min-height: auto;
     }
     .a4-paper {
-        width: 8.5in;
-        min-height: 14in;
-        padding: 14mm 10mm 20mm;
+        width: 100%;
+        min-height: auto;
+        padding: 5mm 8mm 5mm;
         box-shadow: none;
     }
     /* Repeat borders on every printed page */
     .ns-doc-box, .ns-sanglagni-col {
         -webkit-box-decoration-break: clone;
         box-decoration-break: clone;
+    }
+    /* Reduce spacing so more content fits per page */
+    .ns-approver-section {
+        min-height: 50px;
+        padding: 6px 16px 10px 20px;
+    }
+    .ns-initiator-area {
+        padding: 8px 16px 8px 20px;
     }
     /* Keep first signature right, approver signatures centered (same as screen) */
     .ns-initiator-sig { align-self: flex-end; }

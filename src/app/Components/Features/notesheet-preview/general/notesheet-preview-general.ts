@@ -341,12 +341,12 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase {
             `<!DOCTYPE html><html><head><meta charset="UTF-8">` +
             `<title>NoteSheet_${this.noteSheet.noteSheetNo ?? 'export'}</title>` +
             `<style>${css}\n` +
-            `@page { size: legal; margin: 10mm 8mm; }\n` +
+            `@page { size: legal; margin: 5mm 8mm; }\n` +
             `html, body { margin: 0; padding: 0; background: #fff; }\n` +
             `.a4-paper {\n` +
             `  width: 100% !important;\n` +
             `  min-height: auto !important;\n` +
-            `  padding: 6mm 4mm 10mm !important;\n` +
+            `  padding: 5mm 4mm 5mm !important;\n` +
             `  box-shadow: none !important;\n` +
             `  margin: 0 !important;\n` +
             `  display: flex !important;\n` +
@@ -357,12 +357,8 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase {
             `  -webkit-box-decoration-break: clone;\n` +
             `  box-decoration-break: clone;\n` +
             `}\n` +
-            `.ns-main-col, .ns-sanglagni-col {\n` +
-            `  -webkit-box-decoration-break: clone;\n` +
-            `  box-decoration-break: clone;\n` +
-            `  padding-top: 6mm !important;\n` +
-            `  padding-bottom: 6mm !important;\n` +
-            `}\n` +
+            `.ns-approver-section { min-height: 50px !important; padding: 6px 16px 10px 20px !important; }\n` +
+            `.ns-initiator-area { padding: 8px 16px 8px 20px !important; }\n` +
             `.no-print { display: none !important; }\n` +
             `</style></head><body>${clone.outerHTML}</body></html>`
         );
