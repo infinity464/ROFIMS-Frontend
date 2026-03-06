@@ -28,7 +28,7 @@ export interface AddressData {
 
 export interface AddressFormConfig {
     title: string;
-    addressType: 'permanent' | 'present' | 'wife' | 'father' | 'mother' | 'emergency' | 'wifePresent';
+    addressType: 'permanent' | 'present' | 'spouse' | 'father' | 'mother' | 'emergency' | 'spousePresent';
     showSameAsPresent?: boolean;
     sameAsLabel?: string; // Custom label for "Same as" checkbox
     employeeId?: number;

@@ -7,8 +7,8 @@
 export enum LocationType {
     Permanent = 'Permanent',
     Present = 'Present',
-    WifePermanent = 'WifePermanent',
-    WifePresent = 'WifePresent'
+    SpousePermanent = 'SpousePermanent',
+    SpousePresent = 'SpousePresent'
 }
 
 // Gender Types

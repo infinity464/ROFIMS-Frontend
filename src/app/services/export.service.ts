@@ -441,25 +441,30 @@ ${sectionBlocks}
             );
 
             if (isLabelValue) {
-                // Web-like block: paragraphs with "Label: Value" pairs, max 3 per line, with line gap
+                // Separate table per row of 3 properties so each can be adjusted in Word
                 const pairs = sec.rows.map((row) => {
                     const r = row.slice(0, 2);
                     while (r.length < 2) r.push('');
                     return { label: r[0], value: r[1] };
                 });
+                const colWidth = 3000;
+                const labelValueBorders = { top: { style: BorderStyle.SINGLE, size: 1, color: 'e0e0e0' }, bottom: { style: BorderStyle.SINGLE, size: 1, color: 'e0e0e0' }, left: { style: BorderStyle.SINGLE, size: 1, color: 'e0e0e0' }, right: { style: BorderStyle.SINGLE, size: 1, color: 'e0e0e0' } };
                 for (let i = 0; i < pairs.length; i += 3) {
-                    const runParts: TextRun[] = [];
-                    for (let j = 0; j < 3 && i + j < pairs.length; j++) {
-                        if (j > 0) runParts.push(new TextRun({ text: '   ', font, size: sizeTableContent }));
+                    const cells: TableCell[] = [];
+                    for (let j = 0; j < 3; j++) {
                         const p = pairs[i + j];
-                        runParts.push(new TextRun({ text: p.label + ': ', font, size: sizeTableContent }), new TextRun({ text: p.value, font, size: sizeTableContent, bold: true }));
+                        const content = p
+                            ? [new Paragraph({ children: [new TextRun({ text: p.label + ': ', font, size: sizeTableContent }), new TextRun({ text: p.value, font, size: sizeTableContent, bold: true })], spacing: { after: 120 } })]
+                            : [new Paragraph({ children: [new TextRun({ text: ' ', font, size: sizeTableContent })], spacing: { after: 120 } })];
+                        cells.push(
+                            new TableCell({
+                                children: content,
+                                borders: labelValueBorders,
+                                width: { size: colWidth, type: WidthType.DXA },
+                            })
+                        );
                     }
-                    children.push(
-                        new Paragraph({
-                            children: runParts,
-                            spacing: { after: 180 },
-                        })
-                    );
+                    children.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [new TableRow({ children: cells })] }));
                 }
                 continue;
             }

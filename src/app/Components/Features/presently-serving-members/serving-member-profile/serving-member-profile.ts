@@ -146,21 +146,21 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
         });
     }
 
-    /** Wife addresses: WifePermanent and WifePresent (employee can have multiple of each). */
-    get wifeAddressList(): AddressInfoByEmployeeView[] {
+    /** Spouse addresses: SpousePermanent and SpousePresent (employee can have multiple of each). */
+    get spouseAddressList(): AddressInfoByEmployeeView[] {
         if (!this.addressList?.length) return [];
-        const wife = [LocationType.WifePermanent, LocationType.WifePresent];
+        const spouse = [LocationType.SpousePermanent, LocationType.SpousePresent];
         return this.addressList.filter((a) => {
             const t = (a.locationType ?? '').trim();
-            return wife.some((type) => t === type);
+            return spouse.some((type) => t === type);
         });
     }
 
     /** Display label for address type (uses L for EN/BN). */
     getAddressTypeLabel(addr: AddressInfoByEmployeeView): string {
         const t = (addr.locationType ?? '').trim();
-        if (t === LocationType.Permanent || t === LocationType.WifePermanent) return this.L['addressType.permanent'];
-        if (t === LocationType.Present || t === LocationType.WifePresent) return this.L['addressType.present'];
+        if (t === LocationType.Permanent || t === LocationType.SpousePermanent) return this.L['addressType.permanent'];
+        if (t === LocationType.Present || t === LocationType.SpousePresent) return this.L['addressType.present'];
         return t || this.L['addressType.address'];
     }
 
@@ -171,8 +171,8 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
         return this.familyList.filter((f) => !inLawPattern.test((f.relation ?? '').trim()));
     }
 
-    /** Family members whose relation contains "in-law" (wife's family). */
-    get wifeFamilyInfoList(): FamilyInfoByEmployeeView[] {
+    /** Family members whose relation contains "in-law" (spouse's family). */
+    get spouseFamilyInfoList(): FamilyInfoByEmployeeView[] {
         if (!this.familyList?.length) return [];
         const inLawPattern = /in-law/i;
         return this.familyList.filter((f) => inLawPattern.test((f.relation ?? '').trim()));

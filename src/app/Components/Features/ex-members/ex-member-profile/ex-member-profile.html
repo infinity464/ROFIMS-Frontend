@@ -119,22 +119,22 @@
                     }
                 </div>
         
-                <!-- Wife Address Information (WifePermanent & WifePresent; multiple allowed) -->
+                <!-- Spouse Address Information (SpousePermanent & SpousePresent; multiple allowed) -->
                 <div class="content-section text-900 border-top-1 surface-border">
                     <div class="section-heading flex align-items-center justify-content-between gap-2">
-                        <span>{{ L['section.wifeAddress'] }}</span>
-                        @if (editingSection !== 'wifeAddress') {
+                        <span>{{ L['section.spouseAddress'] }}</span>
+                        @if (editingSection !== 'spouseAddress') {
                             <p-button [icon]="'pi pi-pencil'" label="Edit" [rounded]="true" [text]="true" severity="secondary" size="small" (onClick)="setEditingSection('wifeAddress')" pTooltip="Edit"></p-button>
                         } @else {
                             <p-button [icon]="'pi pi-times'" label="Cancel" [rounded]="true" [text]="true" severity="secondary" size="small" (onClick)="closeSectionAndRefresh()" pTooltip="Cancel"></p-button>
                         }
                     </div>
-                    @if (editingSection !== 'wifeAddress') {
-                        @if (wifeAddressList.length === 0) {
-                            <div class="address-empty text-500 py-2">{{ L['empty.noWifeAddress'] }}</div>
+                    @if (editingSection !== 'spouseAddress') {
+                        @if (spouseAddressList.length === 0) {
+                            <div class="address-empty text-500 py-2">{{ L['empty.noSpouseAddress'] }}</div>
                         } @else {
                             <div class="core-details">
-                                @for (addr of wifeAddressList; track addr.ser) {
+                                @for (addr of spouseAddressList; track addr.ser) {
                                     <div class="address-block">
                                         <div class="address-block-type">{{ getAddressTypeLabel(addr) }}</div>
                                         <div class="address-fields">
@@ -154,8 +154,8 @@
                             </div>
                         }
                     }
-                    @if (editingSection === 'wifeAddress' && employeeId != null) {
-                        <app-emp-address-info [externalEmployeeId]="employeeId" [embedMode]="true" [hideTitle]="true" [addressScope]="'wife'" (saved)="onSectionSaved('wifeAddress')" (cancelled)="closeSectionAndRefresh()"></app-emp-address-info>
+                    @if (editingSection === 'spouseAddress' && employeeId != null) {
+                        <app-emp-address-info [externalEmployeeId]="employeeId" [embedMode]="true" [hideTitle]="true" [addressScope]="'spouse'" (saved)="onSectionSaved('spouseAddress')" (cancelled)="closeSectionAndRefresh()"></app-emp-address-info>
                     }
                 </div>
 
@@ -272,7 +272,7 @@
         <!-- Wife Family Info (relation contains "in-law") - same form as Family Info -->
         <div class="content-section text-900 border-top-1 surface-border">
             <div class="section-heading flex align-items-center justify-content-between gap-2">
-                <span>{{ L['section.wifeFamilyInfo'] }}</span>
+                <span>{{ L['section.spouseFamilyInfo'] }}</span>
                 @if (editingSection !== 'familyInfo') {
                     <p-button [icon]="'pi pi-pencil'" label="Edit" [rounded]="true" [text]="true" severity="secondary" size="small" (onClick)="setEditingSection('familyInfo')" pTooltip="Edit"></p-button>
                 } @else {
@@ -281,7 +281,7 @@
             </div>
             @if (editingSection !== 'familyInfo') {
                 <div class="family-table-wrapper">
-                    <p-table [value]="wifeFamilyInfoList" [tableStyle]="{ 'min-width': '40rem' }" styleClass="p-datatable-sm p-datatable-gridlines family-info-table">
+                    <p-table [value]="spouseFamilyInfoList" [tableStyle]="{ 'min-width': '40rem' }" styleClass="p-datatable-sm p-datatable-gridlines family-info-table">
                         <ng-template pTemplate="header">
                             <tr>
                                 <th style="width: 4rem">{{ L['table.ser'] }}</th>
@@ -303,7 +303,7 @@
                             </tr>
                         </ng-template>
                         <ng-template pTemplate="emptymessage">
-                            <tr><td colspan="6" class="text-center text-500 py-3">{{ L['empty.noWifeFamilyRecords'] }}</td></tr>
+                            <tr><td colspan="6" class="text-center text-500 py-3">{{ L['empty.noSpouseFamilyRecords'] }}</td></tr>
                         </ng-template>
                     </p-table>
                 </div>

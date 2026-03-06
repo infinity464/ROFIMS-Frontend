@@ -87,12 +87,12 @@
         
                 <!-- Wife Address Information (WifePermanent & WifePresent; multiple allowed) -->
                 <div class="content-section text-900 border-top-1 surface-border">
-                    <div class="section-heading">{{ L['section.wifeAddress'] }}</div>
-                    @if (wifeAddressList.length === 0) {
-                        <div class="address-empty text-500 py-2">{{ L['empty.noWifeAddress'] }}</div>
+                    <div class="section-heading">{{ L['section.spouseAddress'] }}</div>
+                    @if (spouseAddressList.length === 0) {
+                        <div class="address-empty text-500 py-2">{{ L['empty.noSpouseAddress'] }}</div>
                     } @else {
                         <div class="core-details">
-                            @for (addr of wifeAddressList; track addr.ser) {
+                            @for (addr of spouseAddressList; track addr.ser) {
                                 <div class="address-block">
                                     <div class="address-block-type">{{ getAddressTypeLabel(addr) }}</div>
                                     <div class="address-fields">
@@ -192,10 +192,10 @@
 
         <!-- Wife Family Info (relation contains "in-law") -->
         <div class="content-section text-900 border-top-1 surface-border">
-            <div class="section-heading">{{ L['section.wifeFamilyInfo'] }}</div>
+            <div class="section-heading">{{ L['section.spouseFamilyInfo'] }}</div>
             <div class="family-table-wrapper">
                 <p-table
-                    [value]="wifeFamilyInfoList"
+                    [value]="spouseFamilyInfoList"
                     [tableStyle]="{ 'min-width': '40rem' }"
                     styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
                 >
@@ -221,7 +221,7 @@
                     </ng-template>
                     <ng-template pTemplate="emptymessage">
                         <tr>
-                            <td colspan="6" class="text-center text-500 py-3">{{ L['empty.noWifeFamilyRecords'] }}</td>
+                            <td colspan="6" class="text-center text-500 py-3">{{ L['empty.noSpouseFamilyRecords'] }}</td>
                         </tr>
                     </ng-template>
                 </p-table>

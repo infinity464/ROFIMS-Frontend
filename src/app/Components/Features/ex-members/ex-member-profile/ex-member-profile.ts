@@ -174,19 +174,19 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         if (ownAddrRows.length === 0) ownAddrRows.push([L['empty.noOwnAddress'], '']);
         addSection(L['section.ownAddress'], [L['table.field'], L['table.value']], ownAddrRows, true);
 
-        // Wife Address
-        const wifeAddrRows: string[][] = [];
-        this.wifeAddressList.forEach((addr) => {
-            wifeAddrRows.push(kv(L['addressType.address'], this.getAddressTypeLabel(addr)));
-            wifeAddrRows.push(kv(L['address.houseArea'], this.val(addr.houseRoad)));
-            wifeAddrRows.push(kv(L['address.village'], this.val(addr.addressAreaEN)));
-            wifeAddrRows.push(kv(L['address.postOffice'], this.codeValue(addr.postOffice, addr.postOfficeBN)));
-            wifeAddrRows.push(kv(L['address.thana'], this.codeValue(addr.thana, addr.thanaBN)));
-            wifeAddrRows.push(kv(L['address.district'], this.codeValue(addr.district, addr.districtBN)));
-            wifeAddrRows.push(kv(L['address.division'], this.codeValue(addr.division, addr.divisionBN)));
+        // Spouse Address
+        const spouseAddrRows: string[][] = [];
+        this.spouseAddressList.forEach((addr) => {
+            spouseAddrRows.push(kv(L['addressType.address'], this.getAddressTypeLabel(addr)));
+            spouseAddrRows.push(kv(L['address.houseArea'], this.val(addr.houseRoad)));
+            spouseAddrRows.push(kv(L['address.village'], this.val(addr.addressAreaEN)));
+            spouseAddrRows.push(kv(L['address.postOffice'], this.codeValue(addr.postOffice, addr.postOfficeBN)));
+            spouseAddrRows.push(kv(L['address.thana'], this.codeValue(addr.thana, addr.thanaBN)));
+            spouseAddrRows.push(kv(L['address.district'], this.codeValue(addr.district, addr.districtBN)));
+            spouseAddrRows.push(kv(L['address.division'], this.codeValue(addr.division, addr.divisionBN)));
         });
-        if (wifeAddrRows.length === 0) wifeAddrRows.push([L['empty.noWifeAddress'], '']);
-        addSection(L['section.wifeAddress'], [L['table.field'], L['table.value']], wifeAddrRows, true);
+        if (spouseAddrRows.length === 0) spouseAddrRows.push([L['empty.noSpouseAddress'], '']);
+        addSection(L['section.spouseAddress'], [L['table.field'], L['table.value']], spouseAddrRows, true);
 
         // Other Personal (label-value)
         addSection(L['section.otherPersonal'], [L['table.field'], L['table.value']], [
@@ -224,8 +224,8 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         if (familyRows.length === 0) familyRows.push([L['empty.noFamilyRecords']]);
         addSection(L['section.familyInfo'], [L['table.ser'], L['table.name'], L['table.relation'], L['table.dateOfBirth'], L['table.occupation'], L['table.mobileNo']], familyRows);
 
-        // Wife Family Info
-        const wifeFamilyRows = this.wifeFamilyInfoList.map((row, i) => [
+        // Spouse Family Info
+        const spouseFamilyRows = this.spouseFamilyInfoList.map((row, i) => [
             this.rowNum(i) + '.',
             this.codeValue(row.name, row.nameBN),
             this.codeValue(row.relation, row.relationBN),
@@ -233,8 +233,8 @@ export class ExMemberProfile implements OnInit, OnDestroy {
             this.codeValue(row.occupation, row.occupationBN),
             this.familyMobile(row),
         ]);
-        if (wifeFamilyRows.length === 0) wifeFamilyRows.push([L['empty.noWifeFamilyRecords']]);
-        addSection(L['section.wifeFamilyInfo'], [L['table.ser'], L['table.name'], L['table.relation'], L['table.dateOfBirth'], L['table.occupation'], L['table.mobileNo']], wifeFamilyRows);
+        if (spouseFamilyRows.length === 0) spouseFamilyRows.push([L['empty.noSpouseFamilyRecords']]);
+        addSection(L['section.spouseFamilyInfo'], [L['table.ser'], L['table.name'], L['table.relation'], L['table.dateOfBirth'], L['table.occupation'], L['table.mobileNo']], spouseFamilyRows);
 
         // Previous RAB Service
         const prevRabRows = this.previousOnlyRabList.map((row, i) => [
@@ -479,19 +479,19 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         });
     }
 
-    get wifeAddressList(): AddressInfoByEmployeeView[] {
+    get spouseAddressList(): AddressInfoByEmployeeView[] {
         if (!this.addressList?.length) return [];
-        const wife = [LocationType.WifePermanent, LocationType.WifePresent];
+        const spouse = [LocationType.SpousePermanent, LocationType.SpousePresent];
         return this.addressList.filter((a) => {
             const t = (a.locationType ?? '').trim();
-            return wife.some((type) => t === type);
+            return spouse.some((type) => t === type);
         });
     }
 
     getAddressTypeLabel(addr: AddressInfoByEmployeeView): string {
         const t = (addr.locationType ?? '').trim();
-        if (t === LocationType.Permanent || t === LocationType.WifePermanent) return this.L['addressType.permanent'];
-        if (t === LocationType.Present || t === LocationType.WifePresent) return this.L['addressType.present'];
+        if (t === LocationType.Permanent || t === LocationType.SpousePermanent) return this.L['addressType.permanent'];
+        if (t === LocationType.Present || t === LocationType.SpousePresent) return this.L['addressType.present'];
         return t || this.L['addressType.address'];
     }
 
@@ -501,7 +501,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         return this.familyList.filter((f) => !inLawPattern.test((f.relation ?? '').trim()));
     }
 
-    get wifeFamilyInfoList(): FamilyInfoByEmployeeView[] {
+    get spouseFamilyInfoList(): FamilyInfoByEmployeeView[] {
         if (!this.familyList?.length) return [];
         const inLawPattern = /in-law/i;
         return this.familyList.filter((f) => inLawPattern.test((f.relation ?? '').trim()));
