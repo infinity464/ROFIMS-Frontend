@@ -17,7 +17,7 @@ import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { EmpService } from '@/services/emp-service';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
-import { NoteSheetType, NoteSheetCurrentStatus, NoteSheetCurrentStatusOptions, ApprovalStatus, NoteSheetRemarkAction, ApprovalLogAction, ApprovalLogActionOptions } from '@/models/enums';
+import { NoteSheetType, NoteSheetCurrentStatus, NoteSheetCurrentStatusOptions, ApprovalStatus, NoteSheetRemarkAction, ApprovalLogAction, ApprovalLogActionOptions, NoteSheetOperationType } from '@/models/enums';
 import { ServingMembersService } from '@/services/serving-members.service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { CommonCode } from '@/Components/basic-setup/shared/models/common-code';
@@ -67,6 +67,10 @@ export interface NoteSheetInfoRow {
   isCurrentlyBacked?: boolean;
   /** Reason given for the most recent back action. */
   lastBackRemark?: string;
+  /** Operation type: manual | system_generate */
+  noteSheetOperationType?: string;
+  /** Whether the note sheet is marked as secret */
+  isSecret?: boolean;
 }
 
 /** Full model for single note-sheet (get by id, preview, update). */
@@ -112,6 +116,14 @@ export interface NoteSheetInfoFull extends NoteSheetInfoRow {
 }
 
 export type NoteSheetSection = 'draft' | 'pending' | 'approved' | 'declined' | 'all';
+
+export const NOTE_SHEET_SECTIONS = {
+  DRAFT: 'draft' as NoteSheetSection,
+  PENDING: 'pending' as NoteSheetSection,
+  APPROVED: 'approved' as NoteSheetSection,
+  DECLINED: 'declined' as NoteSheetSection,
+  ALL: 'all' as NoteSheetSection,
+};
 
 export interface ApprovalLogEntry {
   step: string;
@@ -355,6 +367,13 @@ export class NotesheetListComponent implements OnInit {
   /** Whether the previewed notesheet is a draft (editable). */
   isPreviewDraft(): boolean {
     return this.previewNoteSheet?.currentStatus === NoteSheetCurrentStatus.Draft;
+  }
+
+  /** Whether the previewed notesheet can be edited (draft, or initiator in pending section). */
+  isPreviewEditable(): boolean {
+    if (this.previewNoteSheet?.currentStatus === NoteSheetCurrentStatus.Draft) return true;
+    if (this.section === NOTE_SHEET_SECTIONS.PENDING && this.previewNoteSheet?.currentStatus === NoteSheetCurrentStatus.Initiator) return true;
+    return false;
   }
 
   shouldShowSignature(step: string): boolean {
@@ -1034,11 +1053,23 @@ export class NotesheetListComponent implements OnInit {
     return this.noteSheetTypeLabels[row.noteSheetType ?? ''] ?? row.noteSheetType ?? '-';
   }
 
+  readonly operationTypeLabels: Record<string, string> = {
+    [NoteSheetOperationType.Manual]: 'Manual',
+    [NoteSheetOperationType.SystemGenerate]: 'System Generate'
+  };
+
+  operationTypeLabel(row: NoteSheetInfoRow): string {
+    return this.operationTypeLabels[row.noteSheetOperationType ?? ''] ?? row.noteSheetOperationType ?? '-';
+  }
+
   presentStatus(row: NoteSheetInfoRow): string {
     return this.statusLabels[row.currentStatus ?? ''] ?? '-';
   }
 
   statusLabel(row: NoteSheetInfoRow): string {
+    if (row.currentStatus === NoteSheetCurrentStatus.FinalApproval && row.finalApprovalStatus === ApprovalStatus.Approve) {
+      return 'Approved';
+    }
     return this.statusLabels[row.currentStatus ?? ''] ?? '-';
   }
 

@@ -98,17 +98,17 @@ export class NotesheetGenerateComponent implements OnInit {
             unitId: [null as number | null],
             wingBattalionId: [null as number | null],
             branchId: [null as number | null],
-            referenceNumber: [''],
+            referenceNumber: ['', Validators.required],
             noteSheetNo: [''],
             subject: ['', Validators.required],
             mainText: [''], // Rich editor (HTML)
             preparedBy: [''],
             preparedByEmployeeId: [null as number | null],
-            initiatorId: [null as number | null],
+            initiatorId: [null as number | null, Validators.required],
             recommenderIds: [[] as number[]],
-            finalApproverId: [null as number | null],
+            finalApproverId: [null as number | null, Validators.required],
             isSecret: [false],
-            noteSheetOperationType: [null as string | null]
+            noteSheetOperationType: [null as string | null, Validators.required]
         });
     }
 

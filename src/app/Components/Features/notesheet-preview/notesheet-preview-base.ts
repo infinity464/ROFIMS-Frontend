@@ -460,15 +460,23 @@ export abstract class NotesheetPreviewBase implements OnInit {
             `<style>${chunks.join('\n')}\n` +
             `@page { margin: 5mm 8mm; }\n` +
             `html, body { margin: 0; padding: 0; background: #fff; }\n` +
+            `.print-page-frame { position: relative; }\n` +
+            `.print-page-frame::before {\n` +
+            `  content: ''; position: fixed; top: 5mm; left: 8mm; right: 8mm; bottom: 5mm;\n` +
+            `  border: 1.5px solid #000; pointer-events: none; box-sizing: border-box;\n` +
+            `}\n` +
             `.a4-paper {\n` +
             `  width: 100% !important; min-height: auto !important;\n` +
             `  padding: 5mm 8mm 5mm !important; box-shadow: none !important;\n` +
             `  margin: 0 !important; overflow: visible !important;\n` +
             `}\n` +
+            `.ns-doc-box { display: table !important; width: 100% !important; table-layout: fixed !important; border-collapse: collapse !important; padding-top: 6mm !important; padding-bottom: 6mm !important; }\n` +
+            `.ns-main-col { display: table-cell !important; vertical-align: top !important; border: 1.5px solid #000 !important; }\n` +
+            `.ns-sanglagni-col { display: table-cell !important; vertical-align: top !important; width: 60px !important; min-width: 60px !important; border: 1.5px solid #000 !important; }\n` +
             `.ns-approver-section { min-height: 50px !important; padding: 6px 16px 10px 20px !important; }\n` +
             `.ns-initiator-area { padding: 8px 16px 8px 20px !important; }\n` +
             `.no-print { display: none !important; }\n` +
-            `</style></head><body>${clone.outerHTML}</body></html>`
+            `</style></head><body><div class="print-page-frame">${clone.outerHTML}</div></body></html>`
         );
         win.document.close();
 
@@ -750,6 +758,24 @@ export abstract class NotesheetPreviewBase implements OnInit {
     .approver-role { text-decoration: underline; font-size: 11pt; margin-bottom: 6px; }
     .signatures { display: flex; justify-content: space-between; margin-top: 20px; }
     .sig-block { text-align: center; width: 45%; }
+    /* Custom ordered list types (suffix space to avoid extra 0) */
+    @counter-style bangla-alpha { system: alphabetic; symbols: "অ" "আ" "ই" "ঈ" "উ" "ঊ" "ঋ" "এ" "ঐ" "ও" "ঔ" "ক" "খ" "গ" "ঘ" "ঙ" "চ" "ছ" "জ" "ঝ" "ঞ" "ট" "ঠ" "ড" "ঢ" "ণ" "ত" "থ" "দ" "ধ" "ন" "প" "ফ" "ব" "ভ" "ম" "য" "র" "ল" "শ" "ষ" "স" "হ"; suffix: " "; }
+    @counter-style bangla-ka { system: alphabetic; symbols: "ক" "খ" "গ" "ঘ" "ঙ" "চ" "ছ" "জ" "ঝ" "ঞ" "ট" "ঠ" "ড" "ঢ" "ণ" "ত" "থ" "দ" "ধ" "ন" "প" "ফ" "ব" "ভ" "ম" "য" "র" "ল" "শ" "ষ" "স" "হ"; suffix: " "; }
+    li[data-list] { list-style-type: none; }
+    ol { counter-reset: preview-list-0; padding-left: 1.5em; }
+    li[data-list="ordered"] { counter-increment: preview-list-0; }
+    li[data-list="ordered"]::before { content: counter(preview-list-0, decimal) '. '; margin-right: 0.3em; }
+    li[data-list="upper-roman"] { counter-increment: preview-list-0; }
+    li[data-list="upper-roman"]::before { content: counter(preview-list-0, upper-roman) '. '; margin-right: 0.3em; }
+    li[data-list="bangla-number"] { counter-increment: preview-list-0; }
+    li[data-list="bangla-number"]::before { content: counter(preview-list-0, bengali) '. '; margin-right: 0.3em; }
+    li[data-list="lower-alpha"] { counter-increment: preview-list-0; }
+    li[data-list="lower-alpha"]::before { content: counter(preview-list-0, lower-alpha) '. '; margin-right: 0.3em; }
+    li[data-list="bangla-alpha"] { counter-increment: preview-list-0; }
+    li[data-list="bangla-alpha"]::before { content: counter(preview-list-0, bangla-alpha); margin-right: 0.3em; }
+    li[data-list="bangla-ka"] { counter-increment: preview-list-0; }
+    li[data-list="bangla-ka"]::before { content: counter(preview-list-0, bangla-ka); margin-right: 0.3em; }
+    li[data-list="bullet"]::before { content: '• '; margin-right: 0.3em; }
 </style></head><body>
 <div class="a4-page">
     <div class="title">${this.escapeHtml(title)}</div>

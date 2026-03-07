@@ -300,3 +300,236 @@
   padding: 5px 10px;
   min-width: 60px;
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Custom Ordered List Types
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ── @counter-style for Bangla (vowels first) ───────────────────────────────────
+// suffix: "" avoids extra "0" rendering in editor (space added in content instead)
+@counter-style bangla-alpha {
+  system: alphabetic;
+  symbols: "অ" "আ" "ই" "ঈ" "উ" "ঊ" "ঋ" "এ" "ঐ" "ও" "ঔ"
+           "ক" "খ" "গ" "ঘ" "ঙ" "চ" "ছ" "জ" "ঝ" "ঞ"
+           "ট" "ঠ" "ড" "ঢ" "ণ" "ত" "থ" "দ" "ধ" "ন"
+           "প" "ফ" "ব" "ভ" "ম" "য" "র" "ল" "শ" "ষ" "স" "হ"
+           "ড়" "ঢ়" "য়" "ৎ" "ং" "ঃ" "ঁ";
+  suffix: "";
+}
+
+// ── @counter-style for Bangla consonants (ক খ গ ঘ) ─────────────────────────────
+@counter-style bangla-ka {
+  system: alphabetic;
+  symbols: "ক" "খ" "গ" "ঘ" "ঙ" "চ" "ছ" "জ" "ঝ" "ঞ"
+           "ট" "ঠ" "ড" "ঢ" "ণ" "ত" "থ" "দ" "ধ" "ন"
+           "প" "ফ" "ব" "ভ" "ম" "য" "র" "ল" "শ" "ষ" "স" "হ"
+           "ড়" "ঢ়" "য়" "ৎ" "ং" "ঃ" "ঁ";
+  suffix: "";
+}
+
+// ── A. EDITOR: Quill's .ql-ui::before rendering ────────────────────────────────
+// Prevent blocks inside list items from resetting list counters (fixes extra "0" / "0.")
+// Quill sets counter-reset on .ql-editor p/h1-h6; modern browsers use counter-set.
+// Both must be overridden. See: https://github.com/quilljs/quill/issues/3529
+.re-wrapper .ql-editor li[data-list] p,
+.re-wrapper .ql-editor li[data-list] h1,
+.re-wrapper .ql-editor li[data-list] h2,
+.re-wrapper .ql-editor li[data-list] h3,
+.re-wrapper .ql-editor li[data-list] h4,
+.re-wrapper .ql-editor li[data-list] h5,
+.re-wrapper .ql-editor li[data-list] h6 {
+  counter-reset: none !important;
+}
+@supports (counter-set: none) {
+  .re-wrapper .ql-editor li[data-list] p,
+  .re-wrapper .ql-editor li[data-list] h1,
+  .re-wrapper .ql-editor li[data-list] h2,
+  .re-wrapper .ql-editor li[data-list] h3,
+  .re-wrapper .ql-editor li[data-list] h4,
+  .re-wrapper .ql-editor li[data-list] h5,
+  .re-wrapper .ql-editor li[data-list] h6 {
+    counter-set: none !important;
+  }
+}
+
+.ql-editor li[data-list="upper-roman"]       { counter-increment: list-0; }
+.ql-editor li[data-list="upper-roman"] > .ql-ui:before {
+  content: counter(list-0, upper-roman) '. ' !important;
+}
+
+.ql-editor li[data-list="lower-roman"]       { counter-increment: list-0; }
+.ql-editor li[data-list="lower-roman"] > .ql-ui:before {
+  content: counter(list-0, lower-roman) '. ' !important;
+}
+
+.ql-editor li[data-list="upper-alpha"]       { counter-increment: list-0; }
+.ql-editor li[data-list="upper-alpha"] > .ql-ui:before {
+  content: counter(list-0, upper-alpha) '. ' !important;
+}
+
+.ql-editor li[data-list="bangla-number"]     { counter-increment: list-0; }
+.ql-editor li[data-list="bangla-number"] > .ql-ui:before {
+  content: counter(list-0, bengali) " " !important;
+}
+
+.ql-editor li[data-list="lower-alpha"]       { counter-increment: list-0; }
+.ql-editor li[data-list="lower-alpha"] > .ql-ui:before {
+  content: counter(list-0, lower-alpha) '. ' !important;
+}
+
+.ql-editor li[data-list="bangla-alpha"]      { counter-increment: list-0; }
+.ql-editor li[data-list="bangla-alpha"] > .ql-ui:before {
+  content: counter(list-0, bangla-alpha) " " !important;
+}
+
+.ql-editor li[data-list="bangla-ka"]         { counter-increment: list-0; }
+.ql-editor li[data-list="bangla-ka"] > .ql-ui:before {
+  content: counter(list-0, bangla-ka) " " !important;
+}
+
+// Reset sub-counters for custom types (same as Quill does for "ordered")
+.ql-editor li[data-list="upper-roman"],
+.ql-editor li[data-list="lower-roman"],
+.ql-editor li[data-list="upper-alpha"],
+.ql-editor li[data-list="bangla-number"],
+.ql-editor li[data-list="lower-alpha"],
+.ql-editor li[data-list="bangla-alpha"],
+.ql-editor li[data-list="bangla-ka"] {
+  counter-reset: list-1 list-2 list-3 list-4 list-5 list-6 list-7 list-8 list-9;
+}
+
+// ── B. PREVIEW: [innerHTML] rendering (no .ql-ui span) ─────────────────────────
+
+li[data-list="upper-roman"],
+li[data-list="lower-roman"],
+li[data-list="upper-alpha"],
+li[data-list="bangla-number"],
+li[data-list="lower-alpha"],
+li[data-list="bangla-alpha"],
+li[data-list="ordered"],
+li[data-list="bullet"] {
+  list-style-type: none;
+}
+
+ol:has(> li[data-list]) {
+  counter-reset: preview-list-0;
+  padding-left: 1.5em;
+}
+
+// Ordered (decimal) — preview
+:not(.ql-editor) ol li[data-list="ordered"] { counter-increment: preview-list-0; }
+:not(.ql-editor) ol li[data-list="ordered"]::before {
+  content: counter(preview-list-0, decimal) '. ';
+  margin-right: 0.3em;
+}
+
+// Upper Roman — preview
+:not(.ql-editor) ol li[data-list="upper-roman"] { counter-increment: preview-list-0; }
+:not(.ql-editor) ol li[data-list="upper-roman"]::before {
+  content: counter(preview-list-0, upper-roman) '. ';
+  margin-right: 0.3em;
+}
+
+// Lower Roman — preview
+:not(.ql-editor) ol li[data-list="lower-roman"] { counter-increment: preview-list-0; }
+:not(.ql-editor) ol li[data-list="lower-roman"]::before {
+  content: counter(preview-list-0, lower-roman) '. ';
+  margin-right: 0.3em;
+}
+
+// Upper Alpha — preview
+:not(.ql-editor) ol li[data-list="upper-alpha"] { counter-increment: preview-list-0; }
+:not(.ql-editor) ol li[data-list="upper-alpha"]::before {
+  content: counter(preview-list-0, upper-alpha) '. ';
+  margin-right: 0.3em;
+}
+
+// Bangla Numbers — preview
+:not(.ql-editor) ol li[data-list="bangla-number"] { counter-increment: preview-list-0; }
+:not(.ql-editor) ol li[data-list="bangla-number"]::before {
+  content: counter(preview-list-0, bengali) '. ';
+  margin-right: 0.3em;
+}
+
+// Lower Alpha — preview
+:not(.ql-editor) ol li[data-list="lower-alpha"] { counter-increment: preview-list-0; }
+:not(.ql-editor) ol li[data-list="lower-alpha"]::before {
+  content: counter(preview-list-0, lower-alpha) '. ';
+  margin-right: 0.3em;
+}
+
+// Bangla Alpha (অ আ ই) — preview
+:not(.ql-editor) ol li[data-list="bangla-alpha"] { counter-increment: preview-list-0; }
+:not(.ql-editor) ol li[data-list="bangla-alpha"]::before {
+  content: counter(preview-list-0, bangla-alpha);
+  margin-right: 0.3em;
+}
+
+// Bangla Ka (ক খ গ ঘ) — preview
+:not(.ql-editor) ol li[data-list="bangla-ka"] { counter-increment: preview-list-0; }
+:not(.ql-editor) ol li[data-list="bangla-ka"]::before {
+  content: counter(preview-list-0, bangla-ka);
+  margin-right: 0.3em;
+}
+
+// Bullet — preview
+:not(.ql-editor) ol li[data-list="bullet"]::before {
+  content: '\2022';
+  margin-right: 0.3em;
+}
+
+// ── C. TOOLBAR: dropdown labels ────────────────────────────────────────────────
+
+.ql-picker.ql-list {
+  width: 110px !important;
+
+  .ql-picker-label::before,
+  .ql-picker-item::before {
+    content: 'List' !important;
+  }
+
+  .ql-picker-label[data-value="ordered"]::before,
+  .ql-picker-item[data-value="ordered"]::before {
+    content: '1, 2, 3' !important;
+  }
+
+  .ql-picker-label[data-value="upper-roman"]::before,
+  .ql-picker-item[data-value="upper-roman"]::before {
+    content: 'I, II, III' !important;
+  }
+
+  .ql-picker-label[data-value="bangla-number"]::before,
+  .ql-picker-item[data-value="bangla-number"]::before {
+    content: '১, ২, ৩' !important;
+  }
+
+  .ql-picker-label[data-value="lower-alpha"]::before,
+  .ql-picker-item[data-value="lower-alpha"]::before {
+    content: 'a, b, c' !important;
+  }
+
+  .ql-picker-label[data-value="upper-alpha"]::before,
+  .ql-picker-item[data-value="upper-alpha"]::before {
+    content: 'A, B, C' !important;
+  }
+
+  .ql-picker-label[data-value="lower-roman"]::before,
+  .ql-picker-item[data-value="lower-roman"]::before {
+    content: 'i, ii, iii' !important;
+  }
+
+  .ql-picker-label[data-value="bangla-alpha"]::before,
+  .ql-picker-item[data-value="bangla-alpha"]::before {
+    content: 'অ, আ, ই' !important;
+  }
+
+  .ql-picker-label[data-value="bangla-ka"]::before,
+  .ql-picker-item[data-value="bangla-ka"]::before {
+    content: 'ক, খ, গ, ঘ' !important;
+  }
+
+  .ql-picker-label[data-value="bullet"]::before,
+  .ql-picker-item[data-value="bullet"]::before {
+    content: '• Bullet' !important;
+  }
+}

@@ -1,4 +1,4 @@
-import { Component, ViewChild } from '@angular/core';
+import { Component, Input, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MessageService } from 'primeng/api';
@@ -23,6 +23,14 @@ import {
     VerticalAlign, TableLayoutType, HeightRule
 } from 'docx';
 import { saveAs } from 'file-saver';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+import type {
+    NotesheetDocumentModel,
+    ContentBlock,
+    SignatoryBlock,
+    TextAlignment
+} from '../notesheet-document-model';
 
 @Component({
     selector: 'app-notesheet-preview-general',
@@ -39,6 +47,11 @@ import { saveAs } from 'file-saver';
 export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase {
 
     @ViewChild('fileReferencesForm') fileReferencesForm!: FileReferencesFormComponent;
+
+    // ── Button visibility (configurable by parent) ───────────
+    @Input() showEdit = true;
+    @Input() showWord = true;
+    @Input() showPdf = true;
 
     // ── Edit state ───────────────────────────────────────────
     editing = false;
@@ -72,7 +85,7 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase {
     // ── Computed ─────────────────────────────────────────────
     get canEdit(): boolean {
         const status = this.noteSheet?.currentStatus?.toLowerCase();
-        return status === NoteSheetCurrentStatus.Draft || status === NoteSheetCurrentStatus.Initiator;
+        return status === NoteSheetCurrentStatus.Draft;
     }
 
     get isDraftStatus(): boolean {
@@ -298,216 +311,434 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase {
         }));
     }
 
-    // ── Export: clone actual preview DOM for exact match ─────
-
-    /** Collect ALL CSS from the page (Angular scoped + global). */
-    private collectPageStyles(): string {
-        const chunks: string[] = [];
-        for (const sheet of Array.from(document.styleSheets)) {
-            try {
-                chunks.push(Array.from(sheet.cssRules).map(r => r.cssText).join('\n'));
-            } catch { /* skip cross-origin sheets */ }
-        }
-        return chunks.join('\n');
-    }
-
-    /** Clone the .a4-paper element (view-mode only content). */
-    private clonePaperElement(): HTMLElement | null {
-        const paper = document.querySelector('.a4-paper');
-        if (!paper) return null;
-        const clone = paper.cloneNode(true) as HTMLElement;
-        // Remove any edit-mode elements that might be present
-        clone.querySelectorAll('.ns-edit-field, .ns-approval-edit').forEach(el => el.remove());
-        return clone;
-    }
-
-    /**
-     * Export PDF: opens browser print dialog → user clicks "Save as PDF".
-     * Uses the ACTUAL preview DOM clone so layout, borders, and signatures
-     * are pixel-perfect. Text is real HTML text → fully copyable/selectable.
-     */
-    override exportPdf(): void {
+    /** Export PDF: builds from shared document model using jsPDF. */
+    override async exportPdf(): Promise<void> {
         if (!this.noteSheet) return;
-
-        const clone = this.clonePaperElement();
-        if (!clone) return;
-
-        const css = this.collectPageStyles();
-
-        const win = window.open('', '_blank', 'width=950,height=700');
-        if (!win) return;
-
-        win.document.write(
-            `<!DOCTYPE html><html><head><meta charset="UTF-8">` +
-            `<title>NoteSheet_${this.noteSheet.noteSheetNo ?? 'export'}</title>` +
-            `<style>${css}\n` +
-            `@page { size: legal; margin: 5mm 8mm; }\n` +
-            `html, body { margin: 0; padding: 0; background: #fff; }\n` +
-            `.a4-paper {\n` +
-            `  width: 100% !important;\n` +
-            `  min-height: auto !important;\n` +
-            `  padding: 5mm 4mm 5mm !important;\n` +
-            `  box-shadow: none !important;\n` +
-            `  margin: 0 !important;\n` +
-            `  display: flex !important;\n` +
-            `  flex-direction: column !important;\n` +
-            `  overflow: visible !important;\n` +
-            `}\n` +
-            `.ns-doc-box, .ns-sanglagni-col {\n` +
-            `  -webkit-box-decoration-break: clone;\n` +
-            `  box-decoration-break: clone;\n` +
-            `}\n` +
-            `.ns-approver-section { min-height: 50px !important; padding: 6px 16px 10px 20px !important; }\n` +
-            `.ns-initiator-area { padding: 8px 16px 8px 20px !important; }\n` +
-            `.no-print { display: none !important; }\n` +
-            `</style></head><body>${clone.outerHTML}</body></html>`
-        );
-
-        win.document.close();
-
-        // Wait for images (signatures) to load before printing
-        const imgs = win.document.querySelectorAll('img');
-        if (imgs.length > 0) {
-            let loaded = 0;
-            const tryPrint = () => { if (++loaded >= imgs.length) setTimeout(() => win.print(), 300); };
-            imgs.forEach(img => {
-                if (img.complete) tryPrint();
-                else { img.onload = tryPrint; img.onerror = tryPrint; }
-            });
-            // Safety fallback
-            setTimeout(() => win.print(), 2500);
-        } else {
-            setTimeout(() => win.print(), 800);
+        try {
+            const pdf = await this.buildPdfDocument();
+            pdf.save(`NoteSheet_${this.noteSheet.noteSheetNo ?? 'export'}.pdf`);
+        } catch (e) {
+            this.messageService.add({ severity: 'error', summary: 'Export Error', detail: 'Failed to generate PDF.' });
         }
     }
 
     override async exportWord(): Promise<void> {
         if (!this.noteSheet) return;
+        const doc = await this.buildWordDocument();
+        saveAs(await Packer.toBlob(doc), `NoteSheet_${this.noteSheet.noteSheetNo ?? 'export'}.docx`);
+    }
+
+    /** Build shared document model (used by both Word and PDF). */
+    private buildDocumentModel(): NotesheetDocumentModel {
+        if (!this.noteSheet) throw new Error('No noteSheet');
         const bn = !this.isEnglish();
-        // For Bangla (complex script), must set cs font + hint so Word uses proper line-breaking
+
+        const refHtml = this.fixBanglaWordBreaks(this.noteSheet.referenceNumber ?? '');
+        const refBlocks = refHtml ? this.parseHtmlToContentBlocks(refHtml) : [];
+
+        const mainHtml = this.fixBanglaWordBreaks(this.noteSheet.mainText ?? '');
+        const mainBlocks = this.parseHtmlToContentBlocks(mainHtml);
+
+        const model: NotesheetDocumentModel = {
+            isBangla: bn,
+            subject: this.noteSheet.subject ?? '',
+            referenceBlocks: refBlocks,
+            referenceLabel: bn ? 'সূত্রঃ ' : 'Reference: ',
+            dateLabel: bn ? 'তারিখঃ ' : 'Date: ',
+            dateValue: this.formatDate(this.noteSheet.noteSheetDate),
+            mainSerialText: this.serial(1),
+            mainBlocks,
+            closingText: bn ? 'আপনার সদয় অনুমোদনের জন্য উপস্থাপন করা হলো।' : 'Presented for your kind approval.',
+            approvers: [],
+            enclLabel: bn ? 'সংলগ্নী' : 'Encl.',
+            enclNoLabel: bn ? 'নং' : 'No.'
+        };
+        if (this.noteSheet.note) model.note = this.noteSheet.note;
+
+        if (this.initiatorDetails) {
+            const d = this.initiatorDetails;
+            const nameStr = bn ? (d.nameBN || d.name) : d.name;
+            const rankStr = (d.rank && d.rank !== '-') ? `, ${bn ? (d.rankBN || d.rank) : d.rank}` : '';
+            model.initiator = {
+                role: '',
+                serialText: '',
+                nameLine: `(${nameStr}${rankStr})`,
+                appointment: bn ? (d.appointmentBN || d.appointment) : d.appointment,
+                date: this.noteSheet.noteSheetDate ? this.formatDate(this.noteSheet.noteSheetDate) : undefined,
+                align: 'right',
+                signatureDataUrl: this.shouldShowSignature(d.step) ? d.signatureDataUrl : undefined
+            };
+        }
+
+        for (let i = 0; i < this.approversDetails.length; i++) {
+            const a = this.approversDetails[i];
+            const role = bn ? (a.appointmentBN || a.appointment) : a.appointment;
+            const remark = this.getApproverRemark(a.step);
+            model.approvers.push({
+                role,
+                serialText: this.serial(i + 2),
+                remark: remark || undefined,
+                signatureDataUrl: this.shouldShowSignature(a.step) ? a.signatureDataUrl : undefined,
+                nameLine: '',
+                align: 'center'
+            });
+        }
+        return model;
+    }
+
+    /** Parse HTML into shared content blocks. */
+    private parseHtmlToContentBlocks(html: string): ContentBlock[] {
+        if (!html) return [];
+        const div = document.createElement('div');
+        div.innerHTML = html;
+        const blocks: ContentBlock[] = [];
+
+        for (const node of Array.from(div.childNodes)) {
+            if (node.nodeType === Node.TEXT_NODE) {
+                const text = this.normalizeTextForWord((node.textContent || '').trim());
+                if (text) blocks.push({ type: 'paragraph', text, indent: 'normal' });
+            } else if (node.nodeType === Node.ELEMENT_NODE) {
+                const el = node as HTMLElement;
+                const tag = el.tagName.toLowerCase();
+                const alignment = this.getAlignmentAsText(el);
+
+                if (tag === 'table') {
+                    const rows: string[][] = [];
+                    el.querySelectorAll('tr').forEach(tr => {
+                        const cells: string[] = [];
+                        tr.querySelectorAll('td, th').forEach(td => {
+                            cells.push(this.normalizeTextForWord((td.textContent || '').trim()));
+                        });
+                        if (cells.length) rows.push(cells);
+                    });
+                    if (rows.length) blocks.push({ type: 'table', rows, alignment });
+                } else if (tag === 'ol' || tag === 'ul') {
+                    let listCounter = 0;
+                    el.querySelectorAll(':scope > li').forEach(li => {
+                        const text = this.normalizeTextForWord((li.textContent || '').trim());
+                        if (!text) return;
+                        listCounter++;
+                        const listType = li.getAttribute('data-list') || (tag === 'ol' ? 'ordered' : 'bullet');
+                        const prefix = this.getListPrefix(listType, listCounter);
+                        blocks.push({
+                            type: 'list',
+                            text: `${prefix}${text}`,
+                            indent: 'list',
+                            alignment
+                        });
+                    });
+                } else {
+                    const text = this.normalizeTextForWord((el.textContent || '').trim());
+                    if (text) {
+                        const bold = ['strong', 'b', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tag)
+                            || el.style.fontWeight === 'bold' || !!el.querySelector('strong, b');
+                        const italic = tag === 'em' || tag === 'i' || el.style.fontStyle === 'italic';
+                        blocks.push({ type: 'paragraph', text, bold, italic, indent: 'normal', alignment });
+                    }
+                }
+            }
+        }
+        return blocks;
+    }
+
+    private getAlignmentAsText(el: HTMLElement): TextAlignment | undefined {
+        const cls = (el.className || '').toString();
+        if (cls.includes('ql-align-justify')) return 'justify';
+        if (cls.includes('ql-align-center')) return 'center';
+        if (cls.includes('ql-align-right')) return 'right';
+        const ta = (el.style?.textAlign || '').toLowerCase();
+        if (ta === 'justify') return 'justify';
+        if (ta === 'center') return 'center';
+        if (ta === 'right') return 'right';
+        return undefined;
+    }
+
+    /** Build PDF from shared document model using html2canvas + jsPDF (legal paper). */
+    private async buildPdfDocument(): Promise<jsPDF> {
+        const model = this.buildDocumentModel();
+        const html = this.modelToHtml(model);
+        const fontFamily = model.isBangla ? "'Noto Sans Bengali','SolaimanLipi','Kalpurush',sans-serif" : "'Times New Roman',serif";
+
+        const container = document.createElement('div');
+        container.style.cssText = 'position:absolute;left:-9999px;top:0;width:720px;padding:14mm 10mm;font-size:12pt;line-height:1.6;background:#fff;z-index:-1;overflow:visible;box-sizing:border-box';
+        container.style.fontFamily = fontFamily;
+        container.innerHTML = `
+            <style>
+              .ns-pdf-wrap, .ns-pdf-wrap * { word-wrap:break-word!important; overflow-wrap:break-word!important; white-space:normal!important; max-width:100%!important; box-sizing:border-box!important; }
+              .ns-pdf-wrap img { max-width:100%!important; height:auto!important; }
+              .ns-pdf-wrap table, .ns-pdf-wrap th, .ns-pdf-wrap td { border:1px solid #000; padding:4px; white-space:normal!important; }
+              .ns-pdf-wrap th { font-weight:bold; }
+            </style>
+            <div class="ns-pdf-wrap" style="font-family:${fontFamily};color:#000;width:100%">${html}</div>`;
+
+        document.body.appendChild(container);
+
+        try {
+            await new Promise(resolve => setTimeout(resolve, 300));
+            const canvas = await html2canvas(container, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: '#ffffff',
+                logging: false,
+                scrollY: -window.scrollY,
+                height: container.scrollHeight,
+                windowHeight: container.scrollHeight
+            });
+            const imgData = canvas.toDataURL('image/jpeg', 0.92);
+            const imgWidth = canvas.width;
+            const imgHeight = canvas.height;
+
+            // Legal paper: 215.9mm x 355.6mm (8.5" x 14")
+            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'legal' });
+            const margin = 10;
+            const pdfWidth = pdf.internal.pageSize.getWidth() - margin * 2;
+            const pdfPageHeight = pdf.internal.pageSize.getHeight() - margin * 2;
+            const ratio = pdfWidth / imgWidth;
+            const scaledHeight = imgHeight * ratio;
+
+            if (scaledHeight <= pdfPageHeight) {
+                pdf.addImage(imgData, 'JPEG', margin, margin, pdfWidth, scaledHeight);
+            } else {
+                let remainingHeight = imgHeight;
+                let srcY = 0;
+                const sliceHeight = Math.floor(pdfPageHeight / ratio);
+                while (remainingHeight > 0) {
+                    const currentSlice = Math.min(sliceHeight, remainingHeight);
+                    const sliceCanvas = document.createElement('canvas');
+                    sliceCanvas.width = imgWidth;
+                    sliceCanvas.height = currentSlice;
+                    const ctx = sliceCanvas.getContext('2d')!;
+                    ctx.drawImage(canvas, 0, srcY, imgWidth, currentSlice, 0, 0, imgWidth, currentSlice);
+                    const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.92);
+                    const slicePdfH = currentSlice * ratio;
+                    if (srcY > 0) pdf.addPage('legal', 'p');
+                    pdf.addImage(sliceData, 'JPEG', margin, margin, pdfWidth, slicePdfH);
+                    srcY += currentSlice;
+                    remainingHeight -= currentSlice;
+                }
+            }
+            return pdf;
+        } finally {
+            document.body.removeChild(container);
+        }
+    }
+
+    /** Convert document model to HTML (layout matches Word: bordered doc-box + sanglagni). */
+    private modelToHtml(model: NotesheetDocumentModel): string {
+        const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        const block = (b: ContentBlock): string => {
+            if (b.type === 'table' && b.rows?.length) {
+                const th = (r: string[]) => r.map(c => `<th style="border:1px solid #000;padding:5px 8px;font-weight:bold">${esc(c)}</th>`).join('');
+                const td = (r: string[]) => r.map(c => `<td style="border:1px solid #000;padding:5px 8px">${esc(c)}</td>`).join('');
+                const header = b.rows[0] ? `<tr>${th(b.rows[0])}</tr>` : '';
+                const body = b.rows.slice(1).map(r => `<tr>${td(r)}</tr>`).join('');
+                return `<table style="width:100%;border-collapse:collapse;margin:6px 0"><thead>${header}</thead><tbody>${body}</tbody></table>`;
+            }
+            if (!b.text) return '';
+            const tag = b.bold ? 'strong' : b.italic ? 'em' : 'span';
+            const style = [`text-align:${b.alignment ?? 'left'}`];
+            if (b.indent === 'list') style.push('margin-left:1em');
+            return `<p style="${style.join(';')};margin:0 0 0.4rem"><${tag}>${esc(b.text)}</${tag}></p>`;
+        };
+
+        let mainContent = '';
+
+        // Subject (bold, underlined) – as per Word
+        mainContent += `<div style="padding:7px 16px 7px 20px;font-size:12pt;font-weight:bold;text-decoration:underline">${esc(model.subject)}</div>`;
+
+        // Reference / Date
+        mainContent += '<div style="padding:5px 16px 5px 20px;font-size:12pt">';
+        if (model.referenceBlocks.length > 0 || this.noteSheet?.referenceNumber) {
+            mainContent += `<span style="font-weight:700">${esc(model.referenceLabel)}</span>`;
+            if (model.referenceBlocks.length > 0) {
+                model.referenceBlocks.forEach(b => { mainContent += block(b); });
+            } else {
+                mainContent += esc(this.stripHtml(this.noteSheet!.referenceNumber ?? ''));
+            }
+        } else if (this.noteSheet?.noteSheetDate) {
+            mainContent += `<span style="font-weight:700">${esc(model.dateLabel)}</span>${esc(model.dateValue)}`;
+        }
+        mainContent += '</div>';
+
+        // Main text (serial 1. + content)
+        mainContent += '<div style="padding:10px 16px 10px 20px;font-size:12pt;line-height:1.85;display:flex;gap:8px">';
+        mainContent += `<span style="font-weight:700;min-width:30px;flex-shrink:0">${esc(model.mainSerialText)}</span>`;
+        mainContent += '<div style="flex:1;min-width:0">';
+        model.mainBlocks.forEach(b => { mainContent += block(b); });
+        mainContent += '</div></div>';
+
+        if (model.note) {
+            mainContent += `<div style="padding:5px 16px 5px 20px;font-size:12pt"><strong>${model.isBangla ? 'নোটঃ ' : 'Note: '}</strong>${esc(model.note)}</div>`;
+        }
+
+        // Closing text
+        mainContent += `<div style="padding:10px 16px 10px 20px;font-size:12pt;text-indent:2em">${esc(model.closingText)}</div>`;
+
+        // Initiator (right-aligned) – minimum gap for signature
+        if (model.initiator) {
+            mainContent += '<div style="padding:8px 16px 8px 20px;text-align:right;margin-top:24px;min-height:60px">';
+            if (model.initiator.signatureDataUrl) {
+                mainContent += `<img src="${model.initiator.signatureDataUrl}" style="max-width:80px;max-height:32px;display:block;margin-left:auto;margin-bottom:8px" />`;
+            } else {
+                mainContent += '<div style="min-height:48px;margin-bottom:8px"></div>';
+            }
+            mainContent += `<div style="font-size:11pt">${esc(model.initiator.nameLine)}</div>`;
+            if (model.initiator.appointment) mainContent += `<div>${esc(model.initiator.appointment)}</div>`;
+            if (model.initiator.date) mainContent += `<div>${esc(model.initiator.date)}</div>`;
+            mainContent += '</div>';
+        }
+
+        // Approvers – minimum gap for signature
+        model.approvers.forEach(ap => {
+            mainContent += '<div style="padding:6px 16px 10px 20px;min-height:60px;margin-top:12px">';
+            mainContent += `<div style="text-decoration:underline;font-size:12pt;margin-bottom:6px">${esc(ap.role)}</div>`;
+            mainContent += `<div style="font-size:12pt"><strong>${esc(ap.serialText)}</strong>${ap.remark ? `<em> ${esc(ap.remark)}</em>` : ''}</div>`;
+            if (ap.signatureDataUrl) {
+                mainContent += `<img src="${ap.signatureDataUrl}" style="max-width:80px;max-height:32px;display:block;margin:8px auto 0" />`;
+            } else {
+                mainContent += '<div style="min-height:48px;margin-top:8px"></div>';
+            }
+            mainContent += '</div>';
+        });
+
+        // Doc box: border 1.5px as per Word; main col + sanglagni col (border-left divider)
+        const sanglagniText = model.isBangla ? 'সংলগ্নী<br>নং' : 'Encl.<br>No.';
+        return `
+<div style="text-align:center;margin-bottom:8px">
+  <div style="font-size:16pt;font-weight:bold;text-decoration:underline;letter-spacing:2px">NOTE SHEET</div>
+  <div style="font-size:12pt;text-decoration:underline;margin-top:2px">মন্তব্য পত্র</div>
+</div>
+<div style="border:1.5px solid #000;display:table;width:100%;table-layout:fixed">
+  <div style="display:table-cell;vertical-align:top;width:auto">
+    ${mainContent}
+  </div>
+  <div style="display:table-cell;vertical-align:top;width:60px;min-width:60px;border-left:1.5px solid #000;font-size:10pt;text-align:center;padding:6px 12px;line-height:1.4">
+    ${sanglagniText}
+  </div>
+</div>`;
+    }
+
+    /** Build the Word document from shared document model. */
+    private async buildWordDocument(): Promise<Document> {
+        const model = this.buildDocumentModel();
+        const bn = model.isBangla;
         const font = bn
             ? { ascii: 'Nirmala UI', hAnsi: 'Nirmala UI', cs: 'Nirmala UI', hint: 'cs' as const }
             : 'Times New Roman';
-        const csSize = bn ? 24 : undefined; // sizeComplexScript for Bangla
+        const csSize = bn ? 24 : undefined;
         const lang = bn ? { value: 'bn-BD', bidirectional: 'bn-BD' } : undefined;
         const thickBorder = { style: BorderStyle.SINGLE, size: 3, color: '000000' };
         const noBorder = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
 
-        // ── Build main column content ──
         const mainChildren: (Paragraph | Table)[] = [];
 
-        // Subject (bold, underlined)
         mainChildren.push(new Paragraph({
-            children: [new TextRun({ text: this.noteSheet.subject ?? '', bold: true, underline: {}, size: 24, sizeComplexScript: csSize, font, language: lang })],
+            children: [new TextRun({ text: model.subject, bold: true, underline: {}, size: 24, sizeComplexScript: csSize, font, language: lang })],
             spacing: { before: 140, after: 80 },
             indent: { left: 240 }
         }));
 
-        // Reference / Date
-        if (this.noteSheet.referenceNumber) {
+        if (model.referenceBlocks.length > 0 || this.noteSheet?.referenceNumber) {
             mainChildren.push(new Paragraph({
-                children: [
-                    new TextRun({ text: bn ? 'সূত্রঃ ' : 'Reference: ', bold: true, size: 24, sizeComplexScript: csSize, font, language: lang }),
-                    new TextRun({ text: this.stripHtml(this.noteSheet.referenceNumber), size: 24, sizeComplexScript: csSize, font, language: lang })
-                ],
-                indent: { left: 240 }, spacing: { after: 80 }
+                children: [new TextRun({ text: model.referenceLabel, bold: true, size: 24, sizeComplexScript: csSize, font, language: lang })],
+                indent: { left: 240 }, spacing: { after: model.referenceBlocks.length > 0 ? 40 : 80 }
             }));
-        } else if (this.noteSheet.noteSheetDate) {
+            if (model.referenceBlocks.length > 0) {
+                mainChildren.push(...this.contentBlocksToDocx(model.referenceBlocks, font, bn));
+            } else {
+                const plain = this.stripHtml(this.noteSheet!.referenceNumber ?? '');
+                if (plain) mainChildren.push(new Paragraph({
+                    children: [new TextRun({ text: plain, size: 24, sizeComplexScript: csSize, font, language: lang })],
+                    indent: { left: 480 }, spacing: { after: 80 }
+                }));
+            }
+        } else if (this.noteSheet?.noteSheetDate) {
             mainChildren.push(new Paragraph({
                 children: [
-                    new TextRun({ text: bn ? 'তারিখঃ ' : 'Date: ', bold: true, size: 24, sizeComplexScript: csSize, font, language: lang }),
-                    new TextRun({ text: this.formatDate(this.noteSheet.noteSheetDate), size: 24, sizeComplexScript: csSize, font, language: lang })
+                    new TextRun({ text: model.dateLabel, bold: true, size: 24, sizeComplexScript: csSize, font, language: lang }),
+                    new TextRun({ text: model.dateValue, size: 24, sizeComplexScript: csSize, font, language: lang })
                 ],
                 indent: { left: 240 }, spacing: { after: 80 }
             }));
         }
 
-        // Serial number + Main text (fix &nbsp; so Word breaks at word boundaries, not mid-Bangla-word)
-        const mainTextElements = this.parseHtmlToDocx(this.fixBanglaWordBreaks(this.noteSheet.mainText ?? ''), font, bn);
         mainChildren.push(new Paragraph({
-            children: [new TextRun({ text: this.serial(1), bold: true, size: 24, sizeComplexScript: csSize, font, language: lang })],
+            children: [new TextRun({ text: model.mainSerialText, bold: true, size: 24, sizeComplexScript: csSize, font, language: lang })],
             indent: { left: 240 }, spacing: { before: 160, after: 40 }
         }));
-        mainChildren.push(...mainTextElements);
+        mainChildren.push(...this.contentBlocksToDocx(model.mainBlocks, font, bn));
 
-        // Note
-        if (this.noteSheet.note) {
+        if (model.note) {
             mainChildren.push(new Paragraph({
                 children: [
                     new TextRun({ text: bn ? 'নোটঃ ' : 'Note: ', bold: true, size: 24, sizeComplexScript: csSize, font, language: lang }),
-                    new TextRun({ text: this.noteSheet.note, size: 24, sizeComplexScript: csSize, font, language: lang })
+                    new TextRun({ text: model.note, size: 24, sizeComplexScript: csSize, font, language: lang })
                 ],
                 indent: { left: 240 }, spacing: { before: 80, after: 80 }
             }));
         }
 
-        // Closing text
         mainChildren.push(new Paragraph({
-            children: [new TextRun({
-                text: bn ? 'আপনার সদয় অনুমোদনের জন্য উপস্থাপন করা হলো।' : 'Presented for your kind approval.',
-                size: 24, sizeComplexScript: csSize, font, language: lang
-            })],
+            children: [new TextRun({ text: model.closingText, size: 24, sizeComplexScript: csSize, font, language: lang })],
             indent: { left: 240, firstLine: 480 }, spacing: { before: 200 }
         }));
 
-        // Initiator signature (right-aligned)
-        if (this.initiatorDetails) {
-            const d = this.initiatorDetails;
-            if (this.shouldShowSignature(d.step) && d.signatureDataUrl) {
+        // Initiator – minimum gap for signature (before: 280 twips)
+        if (model.initiator) {
+            if (model.initiator.signatureDataUrl) {
                 try {
                     mainChildren.push(new Paragraph({
                         children: [new ImageRun({
-                            type: 'png', data: this.base64ToBytes(d.signatureDataUrl),
+                            type: 'png', data: this.base64ToBytes(model.initiator.signatureDataUrl),
                             transformation: { width: 100, height: 40 }
                         })],
-                        alignment: AlignmentType.RIGHT, spacing: { before: 200 }
+                        alignment: AlignmentType.RIGHT, spacing: { before: 280, after: 80 }
                     }));
                 } catch { /* no sig */ }
+            } else {
+                mainChildren.push(new Paragraph({ alignment: AlignmentType.RIGHT, spacing: { before: 280, after: 80 } }));
             }
-            const nameStr = bn ? (d.nameBN || d.name) : d.name;
-            const rankStr = (d.rank && d.rank !== '-') ? `, ${bn ? (d.rankBN || d.rank) : d.rank}` : '';
             mainChildren.push(new Paragraph({
-                children: [new TextRun({ text: `(${nameStr}${rankStr})`, size: 22, sizeComplexScript: csSize, font, language: lang })],
+                children: [new TextRun({ text: model.initiator.nameLine, size: 22, sizeComplexScript: csSize, font, language: lang })],
                 alignment: AlignmentType.RIGHT,
-                spacing: !(this.shouldShowSignature(d.step) && d.signatureDataUrl) ? { before: 200 } : {}
+                spacing: !model.initiator.signatureDataUrl ? { before: 280 } : { after: 40 }
             }));
-            if (d.appointment || d.appointmentBN) {
+            if (model.initiator.appointment) {
                 mainChildren.push(new Paragraph({
-                    children: [new TextRun({ text: bn ? (d.appointmentBN || d.appointment) : d.appointment, size: 22, sizeComplexScript: csSize, font, language: lang })],
+                    children: [new TextRun({ text: model.initiator.appointment, size: 22, sizeComplexScript: csSize, font, language: lang })],
                     alignment: AlignmentType.RIGHT
                 }));
             }
-            if (this.noteSheet.noteSheetDate) {
+            if (model.initiator.date) {
                 mainChildren.push(new Paragraph({
-                    children: [new TextRun({ text: this.formatDate(this.noteSheet.noteSheetDate), size: 22, sizeComplexScript: csSize, font, language: lang })],
+                    children: [new TextRun({ text: model.initiator.date, size: 22, sizeComplexScript: csSize, font, language: lang })],
                     alignment: AlignmentType.RIGHT
                 }));
             }
         }
 
-        // Approver sections (signatures centered, like preview)
-        for (let i = 0; i < this.approversDetails.length; i++) {
-            const approver = this.approversDetails[i];
-            const role = bn ? (approver.appointmentBN || approver.appointment) : approver.appointment;
-            const remark = this.getApproverRemark(approver.step);
+        // Approvers – minimum gap for signature
+        for (const ap of model.approvers) {
             mainChildren.push(new Paragraph({
-                children: [new TextRun({ text: role, underline: {}, size: 24, sizeComplexScript: csSize, font, language: lang })],
-                indent: { left: 240 }, spacing: { before: 240 }
+                children: [new TextRun({ text: ap.role, underline: {}, size: 24, sizeComplexScript: csSize, font, language: lang })],
+                indent: { left: 240 }, spacing: { before: 280 }
             }));
-            const runs: TextRun[] = [new TextRun({ text: this.serial(i + 2), bold: true, size: 24, sizeComplexScript: csSize, font, language: lang })];
-            if (remark) runs.push(new TextRun({ text: ` ${remark}`, italics: true, size: 24, sizeComplexScript: csSize, font, language: lang }));
+            const runs: TextRun[] = [new TextRun({ text: ap.serialText, bold: true, size: 24, sizeComplexScript: csSize, font, language: lang })];
+            if (ap.remark) runs.push(new TextRun({ text: ` ${ap.remark}`, italics: true, size: 24, sizeComplexScript: csSize, font, language: lang }));
             mainChildren.push(new Paragraph({ children: runs, indent: { left: 240 } }));
-            if (this.shouldShowSignature(approver.step) && approver.signatureDataUrl) {
+            if (ap.signatureDataUrl) {
                 try {
                     mainChildren.push(new Paragraph({
                         children: [new ImageRun({
-                            type: 'png', data: this.base64ToBytes(approver.signatureDataUrl),
+                            type: 'png', data: this.base64ToBytes(ap.signatureDataUrl),
                             transformation: { width: 100, height: 40 }
                         })],
                         alignment: AlignmentType.CENTER,
-                        spacing: { before: 80 }
+                        spacing: { before: 100, after: 40 }
                     }));
                 } catch { /* no sig */ }
+            } else {
+                mainChildren.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 100, after: 40 } }));
             }
         }
 
@@ -552,15 +783,13 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase {
         }));
         docChildren.push(outerTable);
 
-        const doc = new Document({
+        return new Document({
             styles: bn ? { default: { document: { run: { language: { value: 'bn-BD', bidirectional: 'bn-BD' } } } } } : undefined,
             sections: [{
                 properties: { page: { size: { width: 12240, height: 20160, orientation: PageOrientation.PORTRAIT }, margin: { top: 567, right: 400, bottom: 400, left: 567 } } }, // Legal 8.5"×14"
                 children: docChildren
             }]
         });
-
-        saveAs(await Packer.toBlob(doc), `NoteSheet_${this.noteSheet.noteSheetNo ?? 'export'}.docx`);
     }
 
     /** Normalize text for Word: replace non-breaking space and ZWSP so Word breaks at word boundaries (Bangla). */
@@ -568,54 +797,85 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase {
         return s.replace(/\u00A0/g, ' ').replace(/\u200B/g, '');
     }
 
-    // ── Parse HTML content into docx elements ─────────────────
-    private parseHtmlToDocx(html: string, font: any, bn = false): (Paragraph | Table)[] {
-        if (!html) return [];
-        const div = document.createElement('div');
-        div.innerHTML = html;
+    /** Convert shared content blocks to docx Paragraph/Table elements. */
+    private contentBlocksToDocx(blocks: ContentBlock[], font: any, bn: boolean): (Paragraph | Table)[] {
         const result: (Paragraph | Table)[] = [];
         const thinBorder = { style: BorderStyle.SINGLE, size: 1, color: '000000' };
         const cellBorders = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
         const lang = bn ? { value: 'bn-BD', bidirectional: 'bn-BD' } : undefined;
         const csSize = bn ? 24 : undefined;
 
-        for (const node of Array.from(div.childNodes)) {
-            if (node.nodeType === Node.TEXT_NODE) {
-                const text = this.normalizeTextForWord((node.textContent || '').trim());
-                if (text) result.push(new Paragraph({ children: [new TextRun({ text, size: 24, sizeComplexScript: csSize, font, language: lang })], indent: { left: 480 }, spacing: { after: 80 } }));
-            } else if (node.nodeType === Node.ELEMENT_NODE) {
-                const el = node as HTMLElement;
-                const tag = el.tagName.toLowerCase();
-                if (tag === 'table') {
-                    const rows: TableRow[] = [];
-                    el.querySelectorAll('tr').forEach(tr => {
-                        const cells: TableCell[] = [];
-                        tr.querySelectorAll('td, th').forEach(td => {
-                            const cellText = this.normalizeTextForWord((td.textContent || '').trim());
-                            cells.push(new TableCell({
-                                children: [new Paragraph({ children: [new TextRun({ text: cellText, bold: td.tagName.toLowerCase() === 'th', size: 22, sizeComplexScript: bn ? 22 : undefined, font, language: lang })] })],
-                                borders: cellBorders
-                            }));
-                        });
-                        if (cells.length > 0) rows.push(new TableRow({ children: cells }));
-                    });
-                    if (rows.length > 0) result.push(new Table({ width: { size: 90, type: WidthType.PERCENTAGE }, rows, alignment: AlignmentType.CENTER }));
-                } else if (tag === 'ol' || tag === 'ul') {
-                    el.querySelectorAll(':scope > li').forEach(li => {
-                        const text = this.normalizeTextForWord((li.textContent || '').trim());
-                        if (text) result.push(new Paragraph({ children: [new TextRun({ text: `• ${text}`, size: 24, sizeComplexScript: csSize, font, language: lang })], indent: { left: 720 }, spacing: { after: 60 } }));
-                    });
-                } else {
-                    const text = this.normalizeTextForWord((el.textContent || '').trim());
-                    if (text) {
-                        const isBold = ['strong', 'b', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tag) || el.style.fontWeight === 'bold' || !!el.querySelector('strong, b');
-                        const isItalic = tag === 'em' || tag === 'i' || el.style.fontStyle === 'italic';
-                        result.push(new Paragraph({ children: [new TextRun({ text, bold: isBold, italics: isItalic, size: 24, sizeComplexScript: csSize, font, language: lang })], indent: { left: 480 }, spacing: { after: 80 } }));
-                    }
-                }
+        for (const b of blocks) {
+            if (b.type === 'table' && b.rows?.length) {
+                const rows: TableRow[] = b.rows.map((row, rowIdx) => new TableRow({
+                    children: row.map(cell => new TableCell({
+                        children: [new Paragraph({
+                            children: [new TextRun({
+                                text: cell,
+                                bold: rowIdx === 0,
+                                size: 22,
+                                sizeComplexScript: bn ? 22 : undefined,
+                                font,
+                                language: lang
+                            })]
+                        })],
+                        borders: cellBorders
+                    }))
+                }));
+                result.push(new Table({ width: { size: 90, type: WidthType.PERCENTAGE }, rows, alignment: AlignmentType.CENTER }));
+            } else if (b.text) {
+                let align: (typeof AlignmentType)[keyof typeof AlignmentType] | undefined;
+                if (b.alignment === 'center') align = AlignmentType.CENTER;
+                else if (b.alignment === 'right') align = AlignmentType.RIGHT;
+                else if (b.alignment === 'justify') align = AlignmentType.JUSTIFIED;
+                const indent = b.indent === 'list' ? { left: 720 } : { left: 480 };
+                const paraOpts: Record<string, unknown> = {
+                    children: [new TextRun({ text: b.text, bold: b.bold, italics: b.italic, size: 24, sizeComplexScript: csSize, font, language: lang })],
+                    indent,
+                    spacing: { after: b.indent === 'list' ? 60 : 80 }
+                };
+                if (align) paraOpts['alignment'] = align;
+                result.push(new Paragraph(paraOpts as any));
             }
         }
         return result;
+    }
+
+    // ── List prefix helpers for Word export ──────────────────────
+    private getListPrefix(listType: string, index: number): string {
+        switch (listType) {
+            case 'ordered': return `${index}. `;
+            case 'upper-roman': return `${this.toRoman(index).toUpperCase()}. `;
+            case 'lower-roman': return `${this.toRoman(index).toLowerCase()}. `;
+            case 'upper-alpha': return `${String.fromCharCode(64 + index)}. `;
+            case 'bangla-number': return `${this.toBanglaDigits(index)}. `;
+            case 'lower-alpha': return `${String.fromCharCode(96 + index)}. `;
+            case 'bangla-alpha': {
+                const letters = 'অআইঈউঊঋএঐওঔকখগঘঙচছজঝঞটঠডঢণতথদধনপফবভমযরলশষসহড়ঢ়য়ৎংঃঁ';
+                return `${[...letters][index - 1] ?? index} `;
+            }
+            case 'bangla-ka': {
+                const letters = 'কখগঘঙচছজঝঞটঠডঢণতথদধনপফবভমযরলশষসহড়ঢ়য়ৎংঃঁ';
+                return `${[...letters][index - 1] ?? index} `;
+            }
+            case 'bullet': return '• ';
+            default: return `${index}. `;
+        }
+    }
+
+    private toRoman(num: number): string {
+        const vals = [1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1];
+        const syms = ['M', 'CM', 'D', 'CD', 'C', 'XC', 'L', 'XL', 'X', 'IX', 'V', 'IV', 'I'];
+        let result = '';
+        for (let i = 0; i < vals.length; i++) {
+            while (num >= vals[i]) { result += syms[i]; num -= vals[i]; }
+        }
+        return result;
+    }
+
+    private toBanglaDigits(num: number): string {
+        const d = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+        return String(num).replace(/\d/g, c => d[+c]);
     }
 
     // ── Convert data URL to Uint8Array for ImageRun ───────────

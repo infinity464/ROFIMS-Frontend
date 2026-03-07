@@ -85,8 +85,11 @@ export class RichEditorComponent implements ControlValueAccessor, OnDestroy {
     registerOnTouched(fn: () => void)           { this.onTouched = fn; }
     setDisabledState(d: boolean)                { this.disabled = d; }
 
-    onEditorChange(event: any) {
-        const html = event.htmlValue ?? '';
+    onEditorChange(_event: any) {
+        // PrimeNG uses Quill's getSemanticHTML() for event.htmlValue, which
+        // strips custom data-list attributes (e.g. "upper-roman", "bangla-number").
+        // Read from quill.root.innerHTML instead, stripping Quill's internal UI spans.
+        const html = this._getCleanHtml() ?? '';
         this._value = html;
         this.onChange(html);
         this.onTouched();
@@ -317,7 +320,9 @@ export class RichEditorComponent implements ControlValueAccessor, OnDestroy {
         // Capture the HTML NOW — before re-enabling Quill.
         // quill.enable() causes the MutationObserver to flush, which
         // re-normalises the table and strips our inline width/margin changes.
-        const html = quill.root.innerHTML;
+        const div = (quill.root as HTMLElement).cloneNode(true) as HTMLElement;
+        div.querySelectorAll('.ql-ui').forEach(el => el.remove());
+        const html = div.innerHTML;
 
         if (!this.disabled) quill.enable();
 
@@ -325,6 +330,17 @@ export class RichEditorComponent implements ControlValueAccessor, OnDestroy {
         // so Quill never gets a chance to re-normalise and reset the table.
         this._value = html;
         this.onChange(html);
+    }
+
+    // ── HTML extraction (preserves custom data-list attributes) ─────────
+    /** Clone quill root, strip internal .ql-ui spans, return clean HTML. */
+    private _getCleanHtml(): string | null {
+        const quill: any = this.editorRef?.['quill'];
+        if (!quill) return null;
+        const div = (quill.root as HTMLElement).cloneNode(true) as HTMLElement;
+        div.querySelectorAll('.ql-ui').forEach(el => el.remove());
+        const html = div.innerHTML;
+        return html === '<p><br></p>' ? '' : html;
     }
 
     // ── DOM helpers ─────────────────────────────────────────────────────
@@ -345,12 +361,8 @@ export class RichEditorComponent implements ControlValueAccessor, OnDestroy {
     }
 
     private _sync() {
-        const quill: any = this.editorRef?.['quill'];
-        if (!quill) return;
-        // Read directly from the live DOM.
-        // Calling quill.update() first would re-normalise the table and
-        // strip any inline width / margin changes we just made.
-        const html = quill.root.innerHTML;
+        const html = this._getCleanHtml();
+        if (html === null) return;
         this._value = html;
         this.onChange(html);
     }

@@ -72,10 +72,20 @@
         <select class="ql-align" title="Alignment"></select>
       </span>
 
-      <!-- Lists & Indent -->
-      <span class="ql-formats" [style.display]="toolbar !== 'full' ? 'none' : null">
-        <button class="ql-list" value="ordered" title="Ordered List"></button>
-        <button class="ql-list" value="bullet" title="Bullet List"></button>
+      <!-- Lists & Indent (always visible for list support) -->
+      <span class="ql-formats">
+        <select class="ql-list" title="List Type">
+          <option selected>List</option>
+          <option value="bullet">• Bullet</option>
+          <option value="ordered">1, 2, 3</option>
+          <option value="lower-alpha">a, b, c</option>
+          <option value="upper-alpha">A, B, C</option>
+          <option value="lower-roman">i, ii, iii</option>
+          <option value="upper-roman">I, II, III</option>
+          <option value="bangla-number">১, ২, ৩</option>
+          <option value="bangla-alpha">অ, আ, ই (স্বরবর্ণ)</option>
+          <option value="bangla-ka">ক, খ, গ, ঘ (ব্যঞ্জনবর্ণ)</option>
+        </select>
         <button class="ql-indent" value="-1" title="Decrease Indent"></button>
         <button class="ql-indent" value="+1" title="Increase Indent"></button>
       </span>

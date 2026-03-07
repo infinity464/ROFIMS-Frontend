@@ -4,3 +4,28 @@
 @use './form-theme.scss';
 @use 'primeicons/primeicons.css';
 @use './demo/demo.scss';
+
+/* Quill list counter fix: prevent extra "0" / "0." after list markers (ক, খ, i, ii, etc) */
+/* Blocks inside list items must NOT reset counters. Loaded last to override Quill. */
+.ql-editor li[data-list] p,
+.ql-editor li[data-list] h1,
+.ql-editor li[data-list] h2,
+.ql-editor li[data-list] h3,
+.ql-editor li[data-list] h4,
+.ql-editor li[data-list] h5,
+.ql-editor li[data-list] h6,
+.ql-editor li[data-list] div {
+  counter-reset: none !important;
+}
+@supports (counter-set: none) {
+  .ql-editor li[data-list] p,
+  .ql-editor li[data-list] h1,
+  .ql-editor li[data-list] h2,
+  .ql-editor li[data-list] h3,
+  .ql-editor li[data-list] h4,
+  .ql-editor li[data-list] h5,
+  .ql-editor li[data-list] h6,
+  .ql-editor li[data-list] div {
+    counter-set: none !important;
+  }
+}

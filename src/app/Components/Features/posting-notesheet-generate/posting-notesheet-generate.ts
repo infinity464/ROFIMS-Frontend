@@ -12,6 +12,7 @@ import { MultiSelectModule } from 'primeng/multiselect';
 import { DatePickerModule } from 'primeng/datepicker';
 import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor';
 import { TextareaModule } from 'primeng/textarea';
+import { CheckboxModule } from 'primeng/checkbox';
 import { ToastModule } from 'primeng/toast';
 import { environment } from '@/Core/Environments/environment';
 import { HttpClient } from '@angular/common/http';
@@ -23,7 +24,7 @@ import { EmpService } from '@/services/emp-service';
 import { PostingService } from '@/services/posting.service';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
-import { NoteSheetType } from '@/models/enums';
+import { NoteSheetType, NoteSheetOperationTypeOptions } from '@/models/enums';
 
 @Component({
     selector: 'app-posting-notesheet-generate',
@@ -40,6 +41,7 @@ import { NoteSheetType } from '@/models/enums';
         RichEditorComponent,
         TextareaModule,
         ToastModule,
+        CheckboxModule,
         FileReferencesFormComponent
     ],
     templateUrl: './posting-notesheet-generate.html',
@@ -66,6 +68,7 @@ export class PostingNotesheetGenerateComponent implements OnInit {
     recommenderOptions: { label: string; value: number }[] = [];
     finalApproverOptions: { label: string; value: number }[] = [];
     fileRows: FileRowData[] = [];
+    readonly noteSheetOperationTypeOptions = NoteSheetOperationTypeOptions;
 
     @ViewChild('fileReferencesForm') fileReferencesForm!: FileReferencesFormComponent;
 
@@ -91,9 +94,11 @@ export class PostingNotesheetGenerateComponent implements OnInit {
             note: [''],
             preparedBy: [''],
             preparedByEmployeeId: [null as number | null],
-            initiatorId: [null as number | null],
+            initiatorId: [null as number | null, Validators.required],
             recommenderIds: [[] as number[]],
-            finalApproverId: [null as number | null]
+            finalApproverId: [null as number | null, Validators.required],
+            noteSheetOperationType: [null as string | null, Validators.required],
+            isSecret: [false]
         });
     }
 
@@ -265,7 +270,9 @@ export class PostingNotesheetGenerateComponent implements OnInit {
             preparedByEmployeeId: d.preparedByEmployeeId ?? d.PreparedByEmployeeId ?? null,
             initiatorId: d.initiatorId ?? d.InitiatorId ?? null,
             recommenderIds,
-            finalApproverId: d.finalApproverId ?? d.FinalApproverId ?? null
+            finalApproverId: d.finalApproverId ?? d.FinalApproverId ?? null,
+            noteSheetOperationType: d.noteSheetOperationType ?? d.NoteSheetOperationType ?? null,
+            isSecret: !!(d.isSecret ?? d.IsSecret ?? false)
         });
 
         const filesReferences = d.filesReferences ?? d.FilesReferences;
@@ -316,7 +323,9 @@ export class PostingNotesheetGenerateComponent implements OnInit {
             preparedByEmployeeId: null,
             initiatorId: null,
             recommenderIds: [],
-            finalApproverId: null
+            finalApproverId: null,
+            noteSheetOperationType: null,
+            isSecret: false
         });
         this.fileRows = [];
         this.resolvePreparedByMapping();
@@ -438,34 +447,29 @@ export class PostingNotesheetGenerateComponent implements OnInit {
         const payload: Record<string, unknown> = {
             noteSheetId: 0,
             noteSheetType: NoteSheetType.NewPosting,
-            employeeId: d.preparedByEmployeeId ?? null,
-            fileNumber: 0,
             noteSheetNo,
             noteSheetDate: dateStr,
+            noteSheetTemplateId: null,
+            referenceNumber: d.referenceNumber != null ? String(d.referenceNumber) : null,
             subject,
             mainText: d.mainText != null ? String(d.mainText) : '',
             note: d.note != null ? String(d.note) : null,
+            textType: d.textType === 'bn' ? 1 : 0,
+            isSecret: d.isSecret ?? false,
+            noteSheetOperationType: d.noteSheetOperationType ?? null,
+            employeeId: d.preparedByEmployeeId ?? null,
+            preparedByEmployeeId: d.preparedByEmployeeId ?? null,
+            unitId: null,
+            wingBattalionId: null,
+            branchId: null,
             initiatorId: d.initiatorId ?? 0,
-            initiatorStatus: false,
-            initiatorComments: '-',
-            status: false,
-            noteSheetStatusId: 1,
-            currentApprovalStep: null,
-            remark: null,
+            recommenderIdsJson: d.recommenderIds?.length ? JSON.stringify(d.recommenderIds) : null,
+            finalApprovalId: d.finalApproverId ?? null,
+            familyInfoJson: null,
             createdBy,
             lastUpdatedBy: preparedBy,
             createdDate: now,
             lastupdate: now,
-            noteSheetTemplateId: null,
-            textType: d.textType === 'bn' ? 1 : 0,
-            unitId: null,
-            wingBattalionId: null,
-            branchId: null,
-            referenceNumber: d.referenceNumber != null ? String(d.referenceNumber) : null,
-            preparedByEmployeeId: d.preparedByEmployeeId ?? null,
-            recommenderIdsJson: d.recommenderIds?.length ? JSON.stringify(d.recommenderIds) : null,
-            finalApproverId: d.finalApproverId ?? null,
-            familyInfoJson: null,
             draftPostingMasterId: d.draftPostingMasterId ?? null
         };
         if (filesReferencesJson != null && filesReferencesJson !== '') {

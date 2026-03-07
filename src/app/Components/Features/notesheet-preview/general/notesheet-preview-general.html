@@ -3,14 +3,12 @@
 <div class="preview-page">
 
     <div class="preview-header no-print">
-        <p-button icon="pi pi-arrow-left" label="Back" (onClick)="goBack()" styleClass="p-button-text"></p-button>
         <div class="preview-actions" *ngIf="noteSheet && !loading && !error">
-            <p-button *ngIf="canEdit && !editing" icon="pi pi-pencil" label="Edit" (onClick)="toggleEdit()" styleClass="p-button-outlined p-button-warning"></p-button>
+            <p-button *ngIf="showEdit && canEdit && !editing" icon="pi pi-pencil" label="Edit" (onClick)="toggleEdit()" styleClass="p-button-outlined p-button-warning"></p-button>
             <p-button *ngIf="editing" icon="pi pi-times" label="Cancel" (onClick)="cancelEdit()" styleClass="p-button-outlined p-button-secondary"></p-button>
             <p-button *ngIf="editing" icon="pi pi-check" label="Save" (onClick)="saveChanges()" [loading]="saving" styleClass="p-button-success"></p-button>
-            <p-button *ngIf="!editing" icon="pi pi-print"     label="Print" (onClick)="printPage()"  styleClass="p-button-outlined"></p-button>
-            <p-button *ngIf="!editing" icon="pi pi-file-word" label="Word"  (onClick)="exportWord()" styleClass="p-button-outlined"></p-button>
-            <p-button *ngIf="!editing" icon="pi pi-file-pdf"  label="PDF"   (onClick)="exportPdf()"  styleClass="p-button-outlined"></p-button>
+            <p-button *ngIf="showWord && !editing" icon="pi pi-file-word" label="Word"  (onClick)="exportWord()" styleClass="p-button-outlined"></p-button>
+            <p-button *ngIf="showPdf && !editing" icon="pi pi-file-pdf"  label="PDF"   (onClick)="exportPdf()"  styleClass="p-button-outlined"></p-button>
         </div>
     </div>
 
@@ -49,7 +47,7 @@
                     <div class="ns-cell-ref" *ngIf="!editing">
                         <ng-container *ngIf="noteSheet.referenceNumber">
                             <span class="ns-ref-key">{{ isEnglish() ? 'Reference:' : 'সূত্রঃ' }}</span>
-                            <span [innerHTML]="getReferenceNumberSafe()"></span>
+                            <div class="ns-ref-content" [innerHTML]="getReferenceNumberSafe()"></div>
                         </ng-container>
                         <ng-container *ngIf="!noteSheet.referenceNumber && noteSheet.noteSheetDate">
                             <span class="ns-ref-key">{{ isEnglish() ? 'Date:' : 'তারিখঃ' }}</span>

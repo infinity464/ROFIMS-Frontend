@@ -114,17 +114,48 @@
     font-weight: bold;
     text-decoration: underline;
 }
+@counter-style ns-bangla-alpha { system: alphabetic; symbols: "অ" "আ" "ই" "ঈ" "উ" "ঊ" "ঋ" "এ" "ঐ" "ও" "ঔ" "ক" "খ" "গ" "ঘ" "ঙ" "চ" "ছ" "জ" "ঝ" "ঞ" "ট" "ঠ" "ড" "ঢ" "ণ" "ত" "থ" "দ" "ধ" "ন" "প" "ফ" "ব" "ভ" "ম" "য" "র" "ল" "শ" "ষ" "স" "হ"; suffix: " "; }
+@counter-style ns-bangla-ka { system: alphabetic; symbols: "ক" "খ" "গ" "ঘ" "ঙ" "চ" "ছ" "জ" "ঝ" "ঞ" "ট" "ঠ" "ড" "ঢ" "ণ" "ত" "থ" "দ" "ধ" "ন" "প" "ফ" "ব" "ভ" "ম" "য" "র" "ল" "শ" "ষ" "স" "হ"; suffix: " "; }
+
+@mixin ns-rich-list-styles() {
+    ::ng-deep ol, ::ng-deep ul { padding-left: 1.5em; margin: 0.4rem 0; }
+    ::ng-deep ol > li, ::ng-deep ul > li { list-style: none !important; }
+    ::ng-deep ol { counter-reset: ns-list-0; }
+    ::ng-deep li[data-list="ordered"] { counter-increment: ns-list-0; }
+    ::ng-deep li[data-list="ordered"]::before { content: counter(ns-list-0, decimal) '. '; margin-right: 0.3em; }
+    ::ng-deep li[data-list="upper-roman"] { counter-increment: ns-list-0; }
+    ::ng-deep li[data-list="upper-roman"]::before { content: counter(ns-list-0, upper-roman) '. '; margin-right: 0.3em; }
+    ::ng-deep li[data-list="lower-roman"] { counter-increment: ns-list-0; }
+    ::ng-deep li[data-list="lower-roman"]::before { content: counter(ns-list-0, lower-roman) '. '; margin-right: 0.3em; }
+    ::ng-deep li[data-list="upper-alpha"] { counter-increment: ns-list-0; }
+    ::ng-deep li[data-list="upper-alpha"]::before { content: counter(ns-list-0, upper-alpha) '. '; margin-right: 0.3em; }
+    ::ng-deep li[data-list="lower-alpha"] { counter-increment: ns-list-0; }
+    ::ng-deep li[data-list="lower-alpha"]::before { content: counter(ns-list-0, lower-alpha) '. '; margin-right: 0.3em; }
+    ::ng-deep li[data-list="bangla-number"] { counter-increment: ns-list-0; }
+    ::ng-deep li[data-list="bangla-number"]::before { content: counter(ns-list-0, bengali) '. '; margin-right: 0.3em; }
+    ::ng-deep li[data-list="bullet"]::before { content: '• '; margin-right: 0.3em; }
+    ::ng-deep li[data-list="bangla-alpha"] { counter-increment: ns-list-0; }
+    ::ng-deep li[data-list="bangla-alpha"]::before { content: counter(ns-list-0, ns-bangla-alpha); margin-right: 0.3em; }
+    ::ng-deep li[data-list="bangla-ka"] { counter-increment: ns-list-0; }
+    ::ng-deep li[data-list="bangla-ka"]::before { content: counter(ns-list-0, ns-bangla-ka); margin-right: 0.3em; }
+    /* Fallback: ol/ul li without data-list (Quill default) */
+    ::ng-deep ol > li:not([data-list]) { counter-increment: ns-list-0; }
+    ::ng-deep ol > li:not([data-list])::before { content: counter(ns-list-0, decimal) '. ' !important; margin-right: 0.3em; display: inline; }
+    ::ng-deep ul > li:not([data-list])::before { content: '• ' !important; margin-right: 0.3em; display: inline; }
+}
+
 .ns-cell-ref {
     padding: 5px 16px 5px 20px;
     font-size: 12pt;
     display: flex;
-    align-items: baseline;
+    align-items: flex-start;
     flex-wrap: wrap;
+    gap: 0 4px;
 
-    ::ng-deep p {
-        display: inline;
-        margin: 0;
-    }
+    .ns-ref-content { flex: 1; min-width: 0; }
+    ::ng-deep .ns-ref-content p { margin: 0 0 0.4rem; display: inline; }
+    ::ng-deep .ns-ref-content p:last-child { margin-bottom: 0; }
+    @include ns-rich-list-styles();
 }
 .ns-ref-key {
     font-weight: 700;
@@ -186,6 +217,13 @@
     }
     ::ng-deep p          { margin: 0 0 0.4rem; }
     ::ng-deep p:last-child { margin-bottom: 0; }
+
+    /* Preserve rich editor alignment (Quill classes + inline styles) */
+    ::ng-deep .ql-align-justify { text-align: justify !important; }
+    ::ng-deep .ql-align-center { text-align: center !important; }
+    ::ng-deep .ql-align-right { text-align: right !important; }
+
+    @include ns-rich-list-styles();
 }
 
 /* ── Ex-BD Leave details ──────────────────────────── */
@@ -384,10 +422,38 @@
         padding: 5mm 8mm 5mm;
         box-shadow: none;
     }
-    /* Repeat borders on every printed page */
-    .ns-doc-box, .ns-sanglagni-col {
-        -webkit-box-decoration-break: clone;
-        box-decoration-break: clone;
+    /* Per-page fixed border: same rectangle on every printed page */
+    .a4-paper-container::before {
+        content: '';
+        position: fixed;
+        top: 5mm;
+        left: 8mm;
+        right: 8mm;
+        bottom: 5mm;
+        border: 1.5px solid #000;
+        pointer-events: none;
+        box-sizing: border-box;
+    }
+    /* Table layout: clean borders across page breaks (no flex fragmentation) */
+    .ns-doc-box {
+        display: table !important;
+        width: 100% !important;
+        table-layout: fixed !important;
+        border-collapse: collapse !important;
+        padding-top: 6mm !important;
+        padding-bottom: 6mm !important;
+    }
+    .ns-main-col {
+        display: table-cell !important;
+        vertical-align: top !important;
+        border: 1.5px solid #000 !important;
+    }
+    .ns-sanglagni-col {
+        display: table-cell !important;
+        vertical-align: top !important;
+        width: 60px !important;
+        min-width: 60px !important;
+        border: 1.5px solid #000 !important;
     }
     /* Reduce spacing so more content fits per page */
     .ns-approver-section {

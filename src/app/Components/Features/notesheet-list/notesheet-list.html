@@ -8,7 +8,7 @@
       <h3 class="form-card-title">Draft Note-Sheet List</h3>
     </div>
     <p class="text-600 mt-0 mb-3">Submit for approval when ready. You can Update, Preview, Edit main text, then Submit for approval.</p>
-    <p-table #dt [value]="draftList" [loading]="loading" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" [globalFilterFields]="['noteSheetNo', 'subject', 'remark']">
+    <p-table #dt [value]="draftList" [loading]="loading" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" [globalFilterFields]="['noteSheetNo', 'remark']">
       <ng-template pTemplate="caption">
         <div class="ns-filter-bar">
           <div class="ns-filter-group">
@@ -26,7 +26,7 @@
             <label>Search</label>
             <p-iconfield>
               <p-inputicon styleClass="pi pi-search"></p-inputicon>
-              <input pInputText type="text" placeholder="Note-Sheet No, Subject..." (input)="onGlobalFilter(dt, $event)" />
+              <input pInputText type="text" placeholder="Note-Sheet No..." (input)="onGlobalFilter(dt, $event)" />
             </p-iconfield>
           </div>
         </div>
@@ -39,7 +39,6 @@
           <th>Note-Sheet No</th>
           <th>Reference No</th>
           <th>Type</th>
-          <th>Subject</th>
           <th>Back Remark</th>
           <th style="width: 120px">Action</th>
           <th style="width: 150px">Status / Submit</th>
@@ -53,13 +52,16 @@
           <td>{{ row.noteSheetNo || '-' }}</td>
           <td>{{ stripHtml(row.referenceNumber || '') || '-' }}</td>
           <td>{{ noteSheetTypeLabel(row) }}</td>
-          <td>{{ row.subject || '-' }}</td>
           <td><span class="text-sm" [title]="row.remark || ''">{{ row.remark || '—' }}</span></td>
           <td>
             <div class="flex align-items-center gap-1">
-              <p-button type="button" icon="pi pi-pencil" [rounded]="true" [text]="true" size="small" pTooltip="Update" (onClick)="goToUpdate(row)"></p-button>
+              @if (row.currentStatus === NoteSheetCurrentStatus.Draft) {
+                <p-button type="button" icon="pi pi-pencil" [rounded]="true" [text]="true" size="small" pTooltip="Update" (onClick)="goToUpdate(row)"></p-button>
+              }
               <p-button type="button" icon="pi pi-eye" [rounded]="true" [text]="true" size="small" pTooltip="Preview" (onClick)="openPreview(row)"></p-button>
-              <p-button type="button" icon="pi pi-file-edit" [rounded]="true" [text]="true" size="small" pTooltip="Edit main text" (onClick)="openEditMainText(row)"></p-button>
+              @if (row.currentStatus === NoteSheetCurrentStatus.Draft) {
+                <p-button type="button" icon="pi pi-file-edit" [rounded]="true" [text]="true" size="small" pTooltip="Edit main text" (onClick)="openEditMainText(row)"></p-button>
+              }
               <p-button type="button" icon="pi pi-list" [rounded]="true" [text]="true" size="small" severity="info" pTooltip="Approval Log" (onClick)="openApprovalLog(row)"></p-button>
               @if (row.draftPostingMasterId) {
                 <p-button type="button" icon="pi pi-users" [rounded]="true" [text]="true" size="small" pTooltip="View Employees" (onClick)="openEmployeesDialog(row)"></p-button>
@@ -82,7 +84,7 @@
         </tr>
       </ng-template>
       <ng-template pTemplate="emptymessage">
-        <tr><td colspan="10" class="text-center text-500">No draft note-sheets.</td></tr>
+        <tr><td colspan="9" class="text-center text-500">No draft note-sheets.</td></tr>
       </ng-template>
     </p-table>
   </div>
@@ -94,7 +96,7 @@
       <h3 class="form-card-title">Pending for Approval Note-Sheet List</h3>
     </div>
     <p class="text-600 mt-0 mb-3">Approve, Decline, or Back with remark as per workflow.</p>
-    <p-table #dt [value]="pendingList" [loading]="loading" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" [globalFilterFields]="['noteSheetNo', 'subject']">
+    <p-table #dt [value]="pendingList" [loading]="loading" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" [globalFilterFields]="['noteSheetNo']">
       <ng-template pTemplate="caption">
         <div class="ns-filter-bar">
           <div class="ns-filter-group">
@@ -112,7 +114,7 @@
             <label>Search</label>
             <p-iconfield>
               <p-inputicon styleClass="pi pi-search"></p-inputicon>
-              <input pInputText type="text" placeholder="Note-Sheet No, Subject..." (input)="onGlobalFilter(dt, $event)" />
+              <input pInputText type="text" placeholder="Note-Sheet No..." (input)="onGlobalFilter(dt, $event)" />
             </p-iconfield>
           </div>
         </div>
@@ -123,7 +125,6 @@
           <th>Date</th>
           <th>Note-Sheet No</th>
           <th>Type</th>
-          <th>Subject</th>
           <th>Present Status</th>
           <th style="width: 160px">Action</th>
         </tr>
@@ -135,14 +136,13 @@
           <td>{{ row.noteSheetNo || '-' }}</td>
           <td>{{ noteSheetTypeLabel(row) }}</td>
           <td>
-            <div>{{ row.subject || '-' }}</div>
+            {{ presentStatus(row) }}
             @if (row.isCurrentlyBacked) {
               <span class="ns-status-badge ns-status-badge--backed" [pTooltip]="row.lastBackRemark || 'No reason provided'" tooltipPosition="top">
                 <i class="pi pi-replay"></i> Back করা হয়েছে
               </span>
             }
           </td>
-          <td>{{ presentStatus(row) }}</td>
           <td>
             <div class="flex align-items-center gap-1">
               <p-button type="button" icon="pi pi-eye" [rounded]="true" [text]="true" size="small" pTooltip="Preview" (onClick)="openPreview(row)"></p-button>
@@ -155,7 +155,7 @@
         </tr>
       </ng-template>
       <ng-template pTemplate="emptymessage">
-        <tr><td colspan="7" class="text-center text-500">No pending note-sheets.</td></tr>
+        <tr><td colspan="6" class="text-center text-500">No pending note-sheets.</td></tr>
       </ng-template>
     </p-table>
   </div>
@@ -167,7 +167,7 @@
       <h3 class="form-card-title">Approved Note-Sheet List</h3>
     </div>
     <p class="text-600 mt-0 mb-3">Note-sheets that have been approved.</p>
-    <p-table #dt [value]="approvedList" [loading]="loading" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" [globalFilterFields]="['noteSheetNo', 'subject']">
+    <p-table #dt [value]="approvedList" [loading]="loading" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" [globalFilterFields]="['noteSheetNo']">
       <ng-template pTemplate="caption">
         <div class="ns-filter-bar">
           <div class="ns-filter-group">
@@ -185,7 +185,7 @@
             <label>Search</label>
             <p-iconfield>
               <p-inputicon styleClass="pi pi-search"></p-inputicon>
-              <input pInputText type="text" placeholder="Note-Sheet No, Subject..." (input)="onGlobalFilter(dt, $event)" />
+              <input pInputText type="text" placeholder="Note-Sheet No..." (input)="onGlobalFilter(dt, $event)" />
             </p-iconfield>
           </div>
         </div>
@@ -196,7 +196,8 @@
           <th>Date</th>
           <th>Note-Sheet No</th>
           <th>Type</th>
-          <th>Subject</th>
+          <th>Operation Type</th>
+          <th>Secret</th>
           <th>Approved Date</th>
           <th style="width: 120px">Action</th>
         </tr>
@@ -207,7 +208,8 @@
           <td>{{ formatDate(row.noteSheetDate) }}</td>
           <td>{{ row.noteSheetNo || '-' }}</td>
           <td>{{ noteSheetTypeLabel(row) }}</td>
-          <td>{{ row.subject || '-' }}</td>
+          <td>{{ operationTypeLabel(row) }}</td>
+          <td>{{ row.isSecret ? 'Yes' : 'No' }}</td>
           <td>{{ formatDate(row.finalApprovalApprovedDate) }}</td>
           <td>
             <div class="flex align-items-center gap-1">
@@ -218,7 +220,7 @@
         </tr>
       </ng-template>
       <ng-template pTemplate="emptymessage">
-        <tr><td colspan="7" class="text-center text-500">No approved note-sheets.</td></tr>
+        <tr><td colspan="8" class="text-center text-500">No approved note-sheets.</td></tr>
       </ng-template>
     </p-table>
   </div>
@@ -230,7 +232,7 @@
       <h3 class="form-card-title">Declined Note-Sheet List</h3>
     </div>
     <p class="text-600 mt-0 mb-3">Note-sheets that have been declined.</p>
-    <p-table #dt [value]="declinedList" [loading]="loading" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" [globalFilterFields]="['noteSheetNo', 'subject']">
+    <p-table #dt [value]="declinedList" [loading]="loading" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" [globalFilterFields]="['noteSheetNo']">
       <ng-template pTemplate="caption">
         <div class="ns-filter-bar">
           <div class="ns-filter-group">
@@ -248,7 +250,7 @@
             <label>Search</label>
             <p-iconfield>
               <p-inputicon styleClass="pi pi-search"></p-inputicon>
-              <input pInputText type="text" placeholder="Note-Sheet No, Subject..." (input)="onGlobalFilter(dt, $event)" />
+              <input pInputText type="text" placeholder="Note-Sheet No..." (input)="onGlobalFilter(dt, $event)" />
             </p-iconfield>
           </div>
         </div>
@@ -259,7 +261,8 @@
           <th>Date</th>
           <th>Note-Sheet No</th>
           <th>Type</th>
-          <th>Subject</th>
+          <th>Operation Type</th>
+          <th>Secret</th>
           <th>Declined by</th>
           <th>Declined Date</th>
           <th style="width: 80px">Action</th>
@@ -271,7 +274,8 @@
           <td>{{ formatDate(row.noteSheetDate) }}</td>
           <td>{{ row.noteSheetNo || '-' }}</td>
           <td>{{ noteSheetTypeLabel(row) }}</td>
-          <td>{{ row.subject || '-' }}</td>
+          <td>{{ operationTypeLabel(row) }}</td>
+          <td>{{ row.isSecret ? 'Yes' : 'No' }}</td>
           <td>{{ row.declinedByEmployeeId ?? '-' }}</td>
           <td>{{ formatDate(row.declinedDate) }}</td>
           <td>
@@ -283,7 +287,7 @@
         </tr>
       </ng-template>
       <ng-template pTemplate="emptymessage">
-        <tr><td colspan="8" class="text-center text-500">No declined note-sheets.</td></tr>
+        <tr><td colspan="9" class="text-center text-500">No declined note-sheets.</td></tr>
       </ng-template>
     </p-table>
   </div>
@@ -295,7 +299,7 @@
       <h3 class="form-card-title">All Note-Sheet</h3>
     </div>
     <p class="text-600 mt-0 mb-3">All note-sheets regardless of status.</p>
-    <p-table #dt [value]="allList" [loading]="loading" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" styleClass="p-datatable-striped p-datatable-gridlines" [globalFilterFields]="['noteSheetNo', 'subject']">
+    <p-table #dt [value]="allList" [loading]="loading" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" styleClass="p-datatable-striped p-datatable-gridlines" [globalFilterFields]="['noteSheetNo']">
       <ng-template pTemplate="caption">
         <div class="ns-filter-bar">
           <div class="ns-filter-group">
@@ -313,7 +317,7 @@
             <label>Search</label>
             <p-iconfield>
               <p-inputicon styleClass="pi pi-search"></p-inputicon>
-              <input pInputText type="text" placeholder="Note-Sheet No, Subject..." (input)="onGlobalFilter(dt, $event)" />
+              <input pInputText type="text" placeholder="Note-Sheet No..." (input)="onGlobalFilter(dt, $event)" />
             </p-iconfield>
           </div>
         </div>
@@ -324,7 +328,8 @@
           <th>Date</th>
           <th>Note-Sheet No</th>
           <th>Type</th>
-          <th>Subject</th>
+          <th>Operation Type</th>
+          <th>Secret</th>
           <th>Status</th>
           <th style="width: 80px">Action</th>
         </tr>
@@ -335,7 +340,8 @@
           <td>{{ formatDate(row.noteSheetDate) }}</td>
           <td>{{ row.noteSheetNo || '-' }}</td>
           <td>{{ noteSheetTypeLabel(row) }}</td>
-          <td>{{ row.subject || '-' }}</td>
+          <td>{{ operationTypeLabel(row) }}</td>
+          <td>{{ row.isSecret ? 'Yes' : 'No' }}</td>
           <td>{{ statusLabel(row) }}</td>
           <td>
             <div class="flex align-items-center gap-1">
@@ -346,7 +352,7 @@
         </tr>
       </ng-template>
       <ng-template pTemplate="emptymessage">
-        <tr><td colspan="7" class="text-center text-500">No note-sheets.</td></tr>
+        <tr><td colspan="8" class="text-center text-500">No note-sheets.</td></tr>
       </ng-template>
     </p-table>
   </div>
@@ -390,7 +396,7 @@
             <p-button type="button" icon="pi pi-file-word" [rounded]="true" [text]="true" size="small" pTooltip="Export Word" (onClick)="exportGeneralWord()"></p-button>
             <p-button type="button" icon="pi pi-file-pdf" [rounded]="true" [text]="true" size="small" pTooltip="Export PDF" (onClick)="exportGeneralPdf()"></p-button>
             <p-button type="button" icon="pi pi-print" [rounded]="true" [text]="true" size="small" pTooltip="Print" (onClick)="printGeneralPreview()"></p-button>
-            @if (isPreviewDraft()) {
+            @if (isPreviewEditable()) {
               <p-button type="button" icon="pi pi-pencil" [rounded]="true" [text]="true" size="small" pTooltip="Edit" (onClick)="togglePreviewEdit()"></p-button>
             }
           </div>

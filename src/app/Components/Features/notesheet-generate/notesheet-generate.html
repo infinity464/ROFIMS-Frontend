@@ -32,8 +32,11 @@
 
         <!-- Row 2: Reference Number (full width) -->
         <div class="ns-gen-field ns-gen-full">
-          <label class="ns-gen-label">Reference Number</label>
+          <label class="ns-gen-label">Reference Number <span class="ns-gen-req">*</span></label>
           <app-rich-editor formControlName="referenceNumber" height="80px" toolbar="minimal" placeholder="Enter reference number..."></app-rich-editor>
+          @if (form.get('referenceNumber')?.invalid && form.get('referenceNumber')?.touched) {
+            <small class="ns-gen-error">Reference Number is required</small>
+          }
         </div>
 
         <!-- Row 3: Unit | Wing/Battalion | Branch -->
@@ -85,7 +88,7 @@
 
         <!-- Row 4: Operation Type | Secret | Subject -->
         <div class="ns-gen-field">
-          <label class="ns-gen-label">Operation Type</label>
+          <label class="ns-gen-label">Operation Type <span class="ns-gen-req">*</span></label>
           <p-select
             formControlName="noteSheetOperationType"
             [options]="noteSheetOperationTypeOptions"
@@ -95,6 +98,9 @@
             placeholder="Select type"
             styleClass="w-full">
           </p-select>
+          @if (form.get('noteSheetOperationType')?.invalid && form.get('noteSheetOperationType')?.touched) {
+            <small class="ns-gen-error">Operation Type is required</small>
+          }
         </div>
 
         <div class="ns-gen-span-2 ns-gen-secret-subject">
@@ -143,7 +149,7 @@
 
         <!-- Initiator -->
         <div class="ns-gen-field">
-          <label class="ns-gen-label">Initiator</label>
+          <label class="ns-gen-label">Initiator <span class="ns-gen-req">*</span></label>
           <p-select
             formControlName="initiatorId"
             [options]="initiatorOptionsDisplay"
@@ -155,11 +161,14 @@
             placeholder="Select Initiator"
             styleClass="w-full">
           </p-select>
+          @if (form.get('initiatorId')?.invalid && form.get('initiatorId')?.touched) {
+            <small class="ns-gen-error">Initiator is required</small>
+          }
         </div>
 
         <!-- Final Approver -->
         <div class="ns-gen-field">
-          <label class="ns-gen-label">Final Approver</label>
+          <label class="ns-gen-label">Final Approver <span class="ns-gen-req">*</span></label>
           <p-select
             formControlName="finalApproverId"
             [options]="finalApproverOptionsDisplay"
@@ -171,6 +180,9 @@
             placeholder="Select Final Approver"
             styleClass="w-full">
           </p-select>
+          @if (form.get('finalApproverId')?.invalid && form.get('finalApproverId')?.touched) {
+            <small class="ns-gen-error">Final Approver is required</small>
+          }
         </div>
 
         <!-- Recommenders (full row) -->
