@@ -61,8 +61,8 @@ export interface SupernumeraryEmpProfile {
     dateOfJoiningInRAB: string | null;
     ownPermanentAddress: AddressBlock | null;
     ownPresentAddress: AddressBlock | null;
-    wifePermanentAddress: AddressBlock | null;
-    wifePresentAddress: AddressBlock | null;
+    spousePermanentAddress: AddressBlock | null;
+    spousePresentAddress: AddressBlock | null;
     hasRelievers: boolean;
     relievers?: RelieverRow[];
     /** Who relieves this employee (RelieverId from EmployeeInfo). Null if not relieved by anyone. */

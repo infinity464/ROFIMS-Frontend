@@ -9,6 +9,7 @@ export interface EmpModel {
     Trade: number;
     TradeMark?: string;
     Gender: string;
+    MaritalStatus?: number | null;
     Prefix: string;
     ServiceId: string;
     RABID: string;
@@ -49,7 +50,7 @@ export interface AddressInfoModelLower {
     lastupdate: string;
 }
 
-export type LocationType = 'PERMANENT' | 'PRESENT' | 'WIFE_PERMANENT' | 'WIFE_PRESENT';
+export type LocationType = 'PERMANENT' | 'PRESENT' | 'SPOUSE_PERMANENT' | 'SPOUSE_PRESENT';
 
 export interface AddressInfoModel {
     EmployeeID: number;

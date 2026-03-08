@@ -16,6 +16,7 @@ import {
 } from '../models/mother-org-rank-vacancy';
 
 import { NoteSheetTemplateModel } from '../models/notesheet-template';
+import { RABUnitAORModel, ResultViewModel } from '../models/rab-unit-aor';
 
 
 @Injectable({
@@ -32,6 +33,7 @@ export class MasterBasicSetupService {
     private apiUrlMotherOrgRankVacancy = `${environment.apis.core}/MotherOrgRankVacancy`;
     private apiUrlMotherOrgRankVacancyDistribution = `${environment.apis.core}/MotherOrgRankVacancyDistribution`;
     private apiUrlNoteSheetTemplate = `${environment.apis.core}/NoteSheetTemplate`;
+    private apiUrlRABUnitAOR = `${environment.apis.core}/RABUnitAOR`;
 
 
     getAllByType(codeType: string): Observable<CommonCode[]> {
@@ -234,5 +236,26 @@ export class MasterBasicSetupService {
     }
     deleteNoteSheetTemplate(id: number): Observable<any> {
         return this.http.delete(`${this.apiUrlNoteSheetTemplate}/DeleteAsyn/${id}`);
+    }
+
+    // RABUnitAOR - Area of Responsibility (RAB Unit <-> Upazila mapping)
+    getRABUnitAORByUpazila(upazilaId: number): Observable<RABUnitAORModel[]> {
+        return this.http.get<RABUnitAORModel[]>(`${this.apiUrlRABUnitAOR}/GetByUpazila/${upazilaId}`);
+    }
+
+    getRABUnitAORByRabUnit(rabUnitId: number): Observable<RABUnitAORModel[]> {
+        return this.http.get<RABUnitAORModel[]>(`${this.apiUrlRABUnitAOR}/GetByRabUnit/${rabUnitId}`);
+    }
+
+    saveRABUnitAOR(model: RABUnitAORModel): Observable<ResultViewModel> {
+        return this.http.post<ResultViewModel>(`${this.apiUrlRABUnitAOR}/SaveAsyn`, model);
+    }
+
+    updateRABUnitAOR(model: RABUnitAORModel): Observable<ResultViewModel> {
+        return this.http.post<ResultViewModel>(`${this.apiUrlRABUnitAOR}/UpdateAsyn`, model);
+    }
+
+    deleteRABUnitAOR(aorId: number): Observable<ResultViewModel> {
+        return this.http.delete<ResultViewModel>(`${this.apiUrlRABUnitAOR}/DeleteAsyn/${aorId}`);
     }
 }
