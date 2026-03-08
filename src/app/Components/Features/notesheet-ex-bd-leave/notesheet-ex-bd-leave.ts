@@ -725,45 +725,53 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         const familyInfoJson = familyIds.length && this.selectedEmployeeId
             ? JSON.stringify(familyIds.map((fmid) => ({ employeeId: this.selectedEmployeeId, familyMemberId: fmid })))
             : null;
-        return {
+        const recommenderIds: number[] = Array.isArray(d.recommenderIds) ? d.recommenderIds : [];
+        const recommendersJson = recommenderIds.length
+            ? JSON.stringify(recommenderIds.map((id: number, idx: number) => ({
+                recomender_no: idx + 1,
+                recomender_id: id,
+                recomender_status: ApprovalStatus.Pending,
+                recomender_approve_remark: '',
+                recomender_cancel_remark: '',
+                recomender_approved_date: null
+            })))
+            : null;
+
+        const payload: Record<string, unknown> = {
             noteSheetId: 0,
             noteSheetType: NoteSheetType.ExBDLeave,
-            employeeId: d.rabIdEmployeeId ?? 0,
-            fileNumber: 0,
             noteSheetNo: (d.noteSheetNo && String(d.noteSheetNo).trim()) || 'AUTO',
             noteSheetDate: this.formatDate(d.noteSheetDate),
+            noteSheetTemplateId: null,
+            referenceNumber: d.referenceNumber != null ? String(d.referenceNumber) : null,
             subject: d.subject != null ? String(d.subject) : '',
             mainText: d.mainText != null ? String(d.mainText) : '',
             note: null,
-            initiatorId: d.initiatorId ?? 0,
-            initiatorStatus: false,
-            initiatorComments: '-',
-            status: false,
-            noteSheetStatusId: 1,
-            currentApprovalStep: null,
-            remark: null,
-            createdBy: preparedBy,
-            lastUpdatedBy: preparedBy,
-            createdDate: now,
-            lastupdate: now,
-            noteSheetTemplateId: null,
             textType: d.textType === 'bn' ? 1 : 0,
+            isSecret: d.isSecret ?? false,
+            noteSheetOperationType: d.noteSheetOperationType ?? null,
+            employeeId: d.rabIdEmployeeId ?? null,
+            preparedByEmployeeId: d.preparedByEmployeeId ?? null,
             unitId: d.unitId ?? null,
             wingBattalionId: d.wingBattalionId ?? null,
             branchId: d.branchId ?? null,
-            referenceNumber: d.referenceNumber != null ? String(d.referenceNumber) : null,
-            preparedByEmployeeId: d.preparedByEmployeeId ?? null,
-            recommenderIdsJson: d.recommenderIds?.length ? JSON.stringify(d.recommenderIds) : null,
-            finalApproverId: d.finalApproverId ?? null,
+            initiatorId: d.initiatorId ?? 0,
+            recommendersJson,
+            finalApprovalId: d.finalApproverId ?? null,
             familyInfoJson,
-            filesReferences: filesReferencesJson,
             purposeId: d.purposeOfExBdLeaveId ?? null,
-            PurposeId: d.purposeOfExBdLeaveId ?? null,
             destinationCountryId: d.destinationCountryId ?? null,
             fromDate: this.formatDate(d.dateOfVisitFrom),
             toDate: this.formatDate(d.dateOfVisitTo),
-            totalDays: d.totalDays ?? 0
+            createdBy: preparedBy,
+            lastUpdatedBy: preparedBy,
+            createdDate: now,
+            lastupdate: now
         };
+        if (filesReferencesJson != null && filesReferencesJson !== '') {
+            payload['filesReferences'] = filesReferencesJson;
+        }
+        return payload;
     }
 
     // ─── View Mode ──────────────────────────────────────────────
