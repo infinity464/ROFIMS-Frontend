@@ -35,44 +35,11 @@
 
                 <div class="ns-main-col">
 
-                    <!-- ── Subject ── -->
-                    <div class="ns-cell-subject" *ngIf="!editing">{{ noteSheet.subject }}</div>
+                    <!-- Subject/Reference/Date/Operation Type removed for posting notesheet -->
                     <div class="ns-edit-field" *ngIf="editing">
-                        <label class="ns-edit-label">Subject</label>
-                        <input pInputText [(ngModel)]="editSubject" placeholder="Subject" class="w-full" />
-                    </div>
-
-                    <!-- ── Reference / Date ── -->
-                    <div class="ns-cell-ref" *ngIf="!editing">
-                        <ng-container *ngIf="noteSheet.referenceNumber">
-                            <span class="ns-ref-key">{{ isEnglish() ? 'Reference:' : 'সূত্রঃ' }}</span>
-                            <div class="ns-ref-content" [innerHTML]="getReferenceNumberSafe()"></div>
-                        </ng-container>
-                        <ng-container *ngIf="!noteSheet.referenceNumber && noteSheet.noteSheetDate">
-                            <span class="ns-ref-key">{{ isEnglish() ? 'Date:' : 'তারিখঃ' }}</span>
-                            {{ formatDate(noteSheet.noteSheetDate) }}
-                        </ng-container>
-                    </div>
-                    <div class="ns-edit-field" *ngIf="editing">
-                        <label class="ns-edit-label">Reference Number</label>
-                        <app-rich-editor [(ngModel)]="editReferenceNumber" [hideTable]="true" height="120px"></app-rich-editor>
-                    </div>
-                    <div class="ns-edit-field ns-edit-row" *ngIf="editing">
-                        <div class="ns-edit-col">
-                            <label class="ns-edit-label">Date</label>
-                            <p-datepicker [(ngModel)]="editNoteSheetDate" dateFormat="dd/mm/yy" [showIcon]="true" styleClass="w-full" appendTo="body"></p-datepicker>
-                        </div>
-                        <div class="ns-edit-col">
-                            <label class="ns-edit-label">Text Type</label>
-                            <p-select [(ngModel)]="editTextType" [options]="textTypeOptions" optionLabel="label" optionValue="value"
-                                      styleClass="w-full" appendTo="body"></p-select>
-                        </div>
-                        <div class="ns-edit-col">
-                            <label class="ns-edit-label">Operation Type</label>
-                            <p-select [(ngModel)]="editOperationType" [options]="operationTypeOptions" optionLabel="label" optionValue="value"
-                                      placeholder="Select Operation Type" [showClear]="true" styleClass="w-full" appendTo="body"
-                                      [disabled]="isInitiatorStatus"></p-select>
-                        </div>
+                        <label class="ns-edit-label">Text Type</label>
+                        <p-select [(ngModel)]="editTextType" [options]="textTypeOptions" optionLabel="label" optionValue="value"
+                                  styleClass="w-full" appendTo="body"></p-select>
                     </div>
 
                     <!-- ── Main Text ── -->
@@ -85,13 +52,18 @@
                         <app-rich-editor [(ngModel)]="editMainText"></app-rich-editor>
                     </div>
 
-                    <!-- ── Posting: employee table (view mode) ── -->
-                    <div class="ns-posting-table" *ngIf="!editing && postingEmployees.length > 0">
+                    <div class="ns-edit-field" *ngIf="editing">
+                        <label class="ns-edit-label">{{ isEnglish() ? 'Note' : 'নোট' }}</label>
+                        <textarea pInputTextarea [(ngModel)]="editNote" rows="3" class="w-full" placeholder="{{ isEnglish() ? 'Note' : 'নোট' }}"></textarea>
+                    </div>
+
+                    <!-- ── Posting: employee table ── -->
+                    <div class="ns-posting-table" *ngIf="postingEmployees.length > 0">
                         <table>
                             <thead>
                                 <tr>
-                                    <th>Ser</th>
-                                    <th>Service ID</th>
+                                    <th>{{ isEnglish() ? 'Ser' : 'ক্রমিক' }}</th>
+                                    <th>{{ isEnglish() ? 'Service ID' : 'ব্যক্তিগত নম্বর' }}</th>
                                     <th>{{ isEnglish() ? 'Rank' : 'পদবি' }}</th>
                                     <th>{{ isEnglish() ? 'Trade' : 'ট্রেড' }}</th>
                                     <th>{{ isEnglish() ? 'Name' : 'নাম' }}</th>
@@ -102,17 +74,25 @@
                             </thead>
                             <tbody>
                                 <tr *ngFor="let emp of postingEmployees; let i = index">
-                                    <td>{{ i + 1 }}</td>
+                                    <td>{{ isEnglish() ? (i + 1) : serial(i + 1) }}</td>
                                     <td>{{ emp.serviceId || '-' }}</td>
                                     <td>{{ isEnglish() ? (emp.rankName || '-') : (emp.rankNameBN || emp.rankName || '-') }}</td>
                                     <td>{{ isEnglish() ? (emp.tradeName || '-') : (emp.tradeNameBN || emp.tradeName || '-') }}</td>
                                     <td>{{ isEnglish() ? (emp.fullNameEN || '-') : (emp.fullNameBN || emp.fullNameEN || '-') }}</td>
                                     <td>{{ isEnglish() ? (emp.motherUnitName || '-') : (emp.motherUnitNameBN || emp.motherUnitName || '-') }}</td>
-                                    <td>{{ emp.transferRabUnitName || '-' }}</td>
-                                    <td>{{ emp.remarks || '-' }}</td>
+                                    <td *ngIf="!editing">{{ emp.transferRabUnitName || '-' }}</td>
+                                    <td *ngIf="editing">
+                                        <p-select [(ngModel)]="emp.transferRabUnitId" [options]="rabUnitOptions" optionLabel="label" optionValue="value"
+                                                  placeholder="Select Unit" [filter]="true" filterBy="label" [showClear]="true"
+                                                  styleClass="w-full" appendTo="body" size="small"></p-select>
+                                    </td>
+                                    <td *ngIf="!editing">{{ emp.remarks || '-' }}</td>
+                                    <td *ngIf="editing">
+                                        <input pInputText [(ngModel)]="emp.remarks" placeholder="{{ isEnglish() ? 'Remarks' : 'মন্তব্য' }}" class="w-full" />
+                                    </td>
                                 </tr>
                             </tbody>
-                            <tfoot *ngIf="noteSheet.note">
+                            <tfoot *ngIf="!editing && noteSheet.note">
                                 <tr>
                                     <td colspan="8" class="ns-posting-note">
                                         <strong>{{ isEnglish() ? 'Note:' : 'নোটঃ' }}</strong> {{ noteSheet.note }}
@@ -166,9 +146,7 @@
 
                     <!-- ── Initiator Signature (view mode) ── -->
                     <div class="ns-initiator-area" *ngIf="!editing">
-                        <div class="ns-closing-text">
-                            {{ isEnglish() ? 'Presented for your kind approval.' : 'আপনার সদয় অনুমোদনের জন্য উপস্থাপন করা হলো।' }}
-                        </div>
+                        <!-- Closing text removed for posting notesheet -->
                         <div class="ns-initiator-sig" *ngIf="initiatorDetails">
                             <img *ngIf="shouldShowSignature(initiatorDetails.step) && initiatorDetails.signatureDataUrl"
                                  [src]="initiatorDetails.signatureDataUrl" class="ns-sig-img" alt="Signature" />
@@ -202,10 +180,7 @@
 
                 </div>
 
-                <div class="ns-sanglagni-col">
-                    <ng-container *ngIf="isEnglish()">Encl.<br>No.</ng-container>
-                    <ng-container *ngIf="!isEnglish()">সংলগ্নী<br>নং</ng-container>
-                </div>
+                <!-- সংলগ্নী/Encl. column removed for posting notesheet -->
 
             </div>
         </div>

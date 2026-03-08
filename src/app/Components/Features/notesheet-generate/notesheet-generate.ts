@@ -23,7 +23,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { take } from 'rxjs/operators';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
-import { NoteSheetType, NoteSheetOperationTypeOptions } from '@/models/enums';
+import { NoteSheetType, NoteSheetOperationTypeOptions, ApprovalStatus } from '@/models/enums';
 import { TooltipModule } from 'primeng/tooltip';
 import { ToastModule } from 'primeng/toast';
 import { CheckboxModule } from 'primeng/checkbox';
@@ -554,7 +554,7 @@ export class NotesheetGenerateComponent implements OnInit {
             ? JSON.stringify(recommenderIds.map((id, idx) => ({
                 recomender_no: idx + 1,
                 recomender_id: id,
-                recomender_status: 'pending',
+                recomender_status: ApprovalStatus.Pending,
                 recomender_approve_remark: '',
                 recomender_cancel_remark: '',
                 recomender_approved_date: null

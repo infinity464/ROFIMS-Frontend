@@ -14,7 +14,7 @@ import { NotesheetSignatoryComponent } from '@/Components/Common/notesheet-signa
 import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor';
 import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/file-references-form/file-references-form';
 import { NotesheetPreviewBase } from '../notesheet-preview-base';
-import { NoteSheetCurrentStatus, NoteSheetOperationTypeOptions } from '@/models/enums';
+import { NoteSheetCurrentStatus, NoteSheetOperationTypeOptions, ApprovalStatus } from '@/models/enums';
 import { environment } from '@/Core/Environments/environment';
 import { forkJoin } from 'rxjs';
 import {
@@ -303,7 +303,7 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase {
             return {
                 recomender_no: idx + 1,
                 recomender_id: id,
-                recomender_status: existing?.recomender_status ?? 'pending',
+                recomender_status: existing?.recomender_status ?? ApprovalStatus.Pending,
                 recomender_approve_remark: existing?.recomender_approve_remark ?? '',
                 recomender_cancel_remark: existing?.recomender_cancel_remark ?? '',
                 recomender_approved_date: existing?.recomender_approved_date ?? null
