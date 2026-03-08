@@ -313,8 +313,8 @@ export class ExportService {
                         )
                         .join('');
                     return `
-                    <div class="profile-section" style="margin-bottom: 1.5rem;">
-                        <h2 style="font-family: ${fontFamily}; font-size: 12pt; font-weight: bold; margin-bottom: 0.5rem; border-bottom: 1px solid #ccc;">${escapeHtml(sec.title)}</h2>
+                    <div class="profile-section" style="margin-bottom: 1.5rem; page-break-inside: avoid;">
+                        <h2 style="font-family: ${fontFamily}; font-size: 12pt; font-weight: bold; margin-bottom: 0.5rem; border-bottom: 1px solid #ccc; page-break-after: avoid;">${escapeHtml(sec.title)}</h2>
                         <div style="font-family: ${fontFamily}; border: 1px solid #e0e0e0; border-radius: 4px; padding: 12px 14px; background: #fafafa;">
                             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 1.5em;">${pairItems}</div>
                         </div>
@@ -332,8 +332,8 @@ export class ExportService {
                     })
                     .join('');
                 return `
-                    <div class="profile-section" style="margin-bottom: 1.5rem;">
-                        <h2 style="font-family: ${fontFamily}; font-size: 12pt; font-weight: bold; margin-bottom: 0.5rem; border-bottom: 1px solid #ccc;">${escapeHtml(sec.title)}</h2>
+                    <div class="profile-section" style="margin-bottom: 1.5rem; page-break-inside: avoid;">
+                        <h2 style="font-family: ${fontFamily}; font-size: 12pt; font-weight: bold; margin-bottom: 0.5rem; border-bottom: 1px solid #ccc; page-break-after: avoid;">${escapeHtml(sec.title)}</h2>
                         <table style="width: 100%; border-collapse: collapse; font-family: ${fontFamily};">
                             <thead><tr>${headerCells}</tr></thead>
                             <tbody>${dataRows}</tbody>
@@ -412,6 +412,7 @@ ${sectionBlocks}
                 new Paragraph({
                     children: [new TextRun({ text: sec.title, bold: true, size: sizeSectionHeader, font })],
                     spacing: { before: secIndex > 0 ? 200 : 0, after: 150 },
+                    keepNext: true,
                 })
             );
 
