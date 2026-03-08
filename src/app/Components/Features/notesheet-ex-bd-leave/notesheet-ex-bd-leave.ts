@@ -753,7 +753,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         const payload: Record<string, unknown> = {
             noteSheetId: 0,
             noteSheetType: NoteSheetType.ExBDLeave,
-            noteSheetNo: (d.noteSheetNo && String(d.noteSheetNo).trim()) || 'AUTO',
+            noteSheetNo: 'AUTO',
             noteSheetDate: this.formatDate(d.noteSheetDate),
             noteSheetTemplateId: null,
             referenceNumber: d.referenceNumber != null ? String(d.referenceNumber) : null,
