@@ -69,11 +69,27 @@
                         <label class="form-label">
                             Last Unit of Mother Organization <span class="form-label-required">*</span>
                         </label>
-                        <p-select [options]="lastUnitOrganizations" optionLabel="orgNameEN" optionValue="orgId"
-                            placeholder="Select Last Unit" styleClass="w-full" formControlName="lastMotherUnit"
-                            (onChange)="onLastUnitChange($event.value)"
-                            [filter]="true" filterPlaceholder="Search">
-                        </p-select>
+                        <div style="display: flex; align-items: center; gap: 0.35rem;">
+                            <div style="flex: 1; min-width: 0;">
+                                <p-select [options]="lastUnitOrganizations" optionLabel="orgNameEN" optionValue="orgId"
+                                    placeholder="Select Last Unit" styleClass="w-full" formControlName="lastMotherUnit"
+                                    (onChange)="onLastUnitChange($event.value)"
+                                    [filter]="true" filterPlaceholder="Search"
+                                    [disabled]="!postingForm.get('motherOrganization')?.value">
+                                </p-select>
+                            </div>
+                            <button
+                                type="button"
+                                pButton
+                                icon="pi pi-plus"
+                                class="p-button-sm p-button-outlined p-button-success"
+                                style="flex-shrink: 0; width: 2rem; height: 2rem; padding: 0;"
+                                pTooltip="Add Last Unit of Mother Organization setup"
+                                tooltipPosition="top"
+                                (click)="openAddLastUnitDialog()"
+                                [disabled]="!postingForm.get('motherOrganization')?.value || isViewMode">
+                            </button>
+                        </div>
                         @if (isFieldInvalid('lastMotherUnit')) {
                         <small class="form-error">{{ getErrorMessage('lastMotherUnit') }}</small>
                         }
@@ -239,7 +255,7 @@
                             Service ID <span class="form-label-required">*</span>
                         </label>
                         <div class="p-inputgroup">
-                            <input pInputText class="w-full" [class.surface-100]="isEditMode" placeholder="Only Number" formControlName="serviceId"
+                            <input pInputText class="w-full" [class.surface-100]="isEditMode" placeholder="Only Number (min 10 digits)" formControlName="serviceId"
                                 [readonly]="isEditMode"
                                 (blur)="checkServiceIdDuplicate($event.target.value)" />
                             @if (isCheckingServiceId) {
@@ -480,6 +496,51 @@
     </div>
     }
 </p-fluid>
+
+<!-- Add Last Unit of Mother Organization Dialog -->
+<p-dialog
+    header="Add Last Unit of Mother Organization setup"
+    [(visible)]="showLastUnitDialog"
+    [modal]="true"
+    [style]="{ width: '560px' }"
+    [closable]="true"
+    [contentStyle]="{'border-top': '2px solid var(--primary-color)'}"
+    appendTo="body">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Row 1 -->
+        <div>
+            <label class="font-semibold block mb-2 text-700">Mother Organization</label>
+            <input pInputText class="w-full" [value]="getSelectedMotherOrgName()" [disabled]="true" />
+        </div>
+        <div>
+            <label class="font-semibold block mb-2 text-700">Last Unit Name (English) <span class="text-red-500">*</span></label>
+            <input pInputText class="w-full" [(ngModel)]="newLastUnitNameEN" placeholder="Enter last unit name in English" />
+        </div>
+        <div>
+            <label class="font-semibold block mb-2 text-700">Last Unit Name (Bangla)</label>
+            <input pInputText class="w-full" [(ngModel)]="newLastUnitNameBN" placeholder="Enter last unit name in Bangla" />
+        </div>
+        <!-- Row 2 -->
+        <div>
+            <label class="font-semibold block mb-2 text-700">Location (English) <span class="text-red-500">*</span></label>
+            <input pInputText class="w-full" [(ngModel)]="newLastUnitLocationEN" placeholder="Enter location in English" />
+        </div>
+        <div>
+            <label class="font-semibold block mb-2 text-700">Location (Bangla)</label>
+            <input pInputText class="w-full" [(ngModel)]="newLastUnitLocationBN" placeholder="Enter location in Bangla" />
+        </div>
+        <div>
+            <label class="font-semibold block mb-2 text-700">Status</label>
+            <p-select [(ngModel)]="newLastUnitStatus" [options]="lastUnitStatusOptions" optionLabel="label"
+                optionValue="value" placeholder="Select status" styleClass="w-full">
+            </p-select>
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="showLastUnitDialog = false"></p-button>
+        <p-button label="Save" icon="pi pi-check" [loading]="isSavingLastUnit" [disabled]="!newLastUnitNameEN?.trim() || !newLastUnitLocationEN?.trim()" (onClick)="saveNewLastUnit()"></p-button>
+    </ng-template>
+</p-dialog>
 
 <!-- Image Preview Modal -->
 <p-dialog
