@@ -4,8 +4,6 @@ export const environment = {
         core: 'https://localhost:7187/rab/api',
         // core: 'http://114.134.95.234:31999/rab/api',
         auth: 'https://localhost:7187',
-        // auth: 'http://114.134.95.234:31999',
-        // pdfVault: 'http://localhost:5175/api'
-        pdfVault: 'http://114.134.95.234:31998/api'
+        // auth: 'http://114.134.95.234:31999'
     }
 };
