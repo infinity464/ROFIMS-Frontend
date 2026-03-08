@@ -380,6 +380,10 @@
         font-size: 12pt;
         font-family: 'Times New Roman', Times, serif;
     }
+
+    ::ng-deep app-file-references-form h3 {
+        font-size: 0.85rem !important;
+    }
 }
 
 .ns-edit-row {

@@ -159,6 +159,7 @@
                             <div class="ns-approver-sig-area">
                                 <img *ngIf="shouldShowSignature(approver.step) && approver.signatureDataUrl"
                                      [src]="approver.signatureDataUrl" class="ns-sig-img" alt="Signature" />
+                                <div class="ns-sig-date" *ngIf="getApproverDate(approver.step)">{{ getApproverDate(approver.step) }}</div>
                             </div>
                         </div>
                     </div>

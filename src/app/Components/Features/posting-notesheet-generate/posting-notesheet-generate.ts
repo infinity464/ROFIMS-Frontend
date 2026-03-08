@@ -24,7 +24,7 @@ import { EmpService } from '@/services/emp-service';
 import { PostingService } from '@/services/posting.service';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
-import { NoteSheetType, NoteSheetOperationTypeOptions } from '@/models/enums';
+import { NoteSheetType, NoteSheetOperationTypeOptions, ApprovalStatus } from '@/models/enums';
 
 @Component({
     selector: 'app-posting-notesheet-generate',
@@ -250,11 +250,19 @@ export class PostingNotesheetGenerateComponent implements OnInit {
         const noteSheetDate = (d.noteSheetDate ?? d.NoteSheetDate) != null ? this.parseDate(d.noteSheetDate ?? d.NoteSheetDate) : null;
 
         let recommenderIds: number[] = [];
+        const recommendersJson = d.recommendersJson ?? d.RecommendersJson;
         const recommenderIdsJson = d.recommenderIdsJson ?? d.RecommenderIdsJson;
-        if (recommenderIdsJson && typeof recommenderIdsJson === 'string') {
+        const rawJson = recommendersJson ?? recommenderIdsJson;
+        if (rawJson && typeof rawJson === 'string') {
             try {
-                const arr = JSON.parse(recommenderIdsJson);
-                recommenderIds = Array.isArray(arr) ? arr : [];
+                const arr = JSON.parse(rawJson);
+                if (Array.isArray(arr) && arr.length > 0) {
+                    if (typeof arr[0] === 'object' && arr[0] !== null) {
+                        recommenderIds = arr.map((r: any) => r.recomender_id ?? r.recomenderId ?? r.RecomenderId).filter(Boolean);
+                    } else {
+                        recommenderIds = arr.filter((x: any) => typeof x === 'number');
+                    }
+                }
             } catch {}
         }
 
@@ -270,7 +278,7 @@ export class PostingNotesheetGenerateComponent implements OnInit {
             preparedByEmployeeId: d.preparedByEmployeeId ?? d.PreparedByEmployeeId ?? null,
             initiatorId: d.initiatorId ?? d.InitiatorId ?? null,
             recommenderIds,
-            finalApproverId: d.finalApproverId ?? d.FinalApproverId ?? null,
+            finalApproverId: d.finalApprovalId ?? d.FinalApprovalId ?? null,
             noteSheetOperationType: d.noteSheetOperationType ?? d.NoteSheetOperationType ?? null,
             isSecret: !!(d.isSecret ?? d.IsSecret ?? false)
         });
@@ -444,6 +452,18 @@ export class PostingNotesheetGenerateComponent implements OnInit {
         const createdBy = this.editMode && this.originalCreatedBy ? this.originalCreatedBy : preparedBy;
         const subject = this.editMode ? this.originalSubject : null;
         const noteSheetNo = this.editMode ? d.noteSheetNo : this.generateNoteSheetNo();
+        const recommenderIds: number[] = Array.isArray(d.recommenderIds) ? d.recommenderIds : [];
+        const recommendersJson = recommenderIds.length
+            ? JSON.stringify(recommenderIds.map((id: number, idx: number) => ({
+                recomender_no: idx + 1,
+                recomender_id: id,
+                recomender_status: ApprovalStatus.Pending,
+                recomender_approve_remark: '',
+                recomender_cancel_remark: '',
+                recomender_approved_date: null
+            })))
+            : null;
+
         const payload: Record<string, unknown> = {
             noteSheetId: 0,
             noteSheetType: NoteSheetType.NewPosting,
@@ -463,7 +483,7 @@ export class PostingNotesheetGenerateComponent implements OnInit {
             wingBattalionId: null,
             branchId: null,
             initiatorId: d.initiatorId ?? 0,
-            recommenderIdsJson: d.recommenderIds?.length ? JSON.stringify(d.recommenderIds) : null,
+            recommendersJson,
             finalApprovalId: d.finalApproverId ?? null,
             familyInfoJson: null,
             createdBy,

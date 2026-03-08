@@ -14,7 +14,7 @@ import { NotesheetSignatoryComponent } from '@/Components/Common/notesheet-signa
 import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor';
 import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/file-references-form/file-references-form';
 import { NotesheetPreviewBase } from '../notesheet-preview-base';
-import { NoteSheetCurrentStatus, NoteSheetOperationTypeOptions } from '@/models/enums';
+import { NoteSheetCurrentStatus, NoteSheetOperationTypeOptions, ApprovalStatus } from '@/models/enums';
 import { environment } from '@/Core/Environments/environment';
 import { forkJoin } from 'rxjs';
 import {
@@ -59,6 +59,9 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
 
     // ── Employee dropdown options ────────────────────────────
     employeeOptions: { label: string; value: number }[] = [];
+
+    // ── RAB Unit dropdown options ─────────────────────────────
+    rabUnitOptions: { label: string; value: number }[] = [];
 
     // ── Edit model fields ────────────────────────────────────
     editSubject = '';
@@ -119,6 +122,20 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
         if (this.employeeOptions.length === 0) {
             this.loadEmployeeOptions();
         }
+        if (this.rabUnitOptions.length === 0) {
+            this.loadRabUnitOptions();
+        }
+    }
+
+    private loadRabUnitOptions(): void {
+        this.masterBasicSetup.getAllByType('RabUnit').subscribe({
+            next: (list) => {
+                this.rabUnitOptions = (list ?? []).map(c => ({
+                    label: c.codeValueEN ?? c.codeValueBN ?? `ID ${c.codeId}`,
+                    value: c.codeId
+                }));
+            }
+        });
     }
 
     cancelEdit(): void {
@@ -194,7 +211,16 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
                 payload['filesReferences'] = filesReferencesJson;
             }
 
-            this.http.post(`${this.api}/UpdateAsyn`, payload).subscribe({
+            const postingDetailItems = this.postingEmployees.map(emp => ({
+                id: emp.draftPostingDetailId,
+                transferRabUnitId: emp.transferRabUnitId,
+                remarks: emp.remarks
+            }));
+
+            const noteSheetUpdate$ = this.http.post(`${this.api}/UpdateAsyn`, payload);
+            const postingUpdate$ = this.postingService.updateDraftPostingDetails(postingDetailItems);
+
+            forkJoin([noteSheetUpdate$, postingUpdate$]).subscribe({
                 next: () => {
                     this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Note-sheet updated successfully.' });
                     this.editing = false;
@@ -301,7 +327,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
             return {
                 recomender_no: idx + 1,
                 recomender_id: id,
-                recomender_status: existing?.recomender_status ?? 'pending',
+                recomender_status: existing?.recomender_status ?? ApprovalStatus.Pending,
                 recomender_approve_remark: existing?.recomender_approve_remark ?? '',
                 recomender_cancel_remark: existing?.recomender_cancel_remark ?? '',
                 recomender_approved_date: existing?.recomender_approved_date ?? null
@@ -331,22 +357,19 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
         if (!this.noteSheet) throw new Error('No noteSheet');
         const bn = !this.isEnglish();
 
-        const refHtml = this.fixBanglaWordBreaks(this.noteSheet.referenceNumber ?? '');
-        const refBlocks = refHtml ? this.parseHtmlToContentBlocks(refHtml) : [];
-
         const mainHtml = this.fixBanglaWordBreaks(this.noteSheet.mainText ?? '');
         const mainBlocks = this.parseHtmlToContentBlocks(mainHtml);
 
         const model: NotesheetDocumentModel = {
             isBangla: bn,
-            subject: this.noteSheet.subject ?? '',
-            referenceBlocks: refBlocks,
-            referenceLabel: bn ? 'সূত্রঃ ' : 'Reference: ',
+            subject: '',
+            referenceBlocks: [],
+            referenceLabel: '',
             dateLabel: bn ? 'তারিখঃ ' : 'Date: ',
             dateValue: this.formatDate(this.noteSheet.noteSheetDate),
             mainSerialText: this.serial(1),
             mainBlocks,
-            closingText: bn ? 'আপনার সদয় অনুমোদনের জন্য উপস্থাপন করা হলো।' : 'Presented for your kind approval.',
+            closingText: '',
             approvers: [],
             enclLabel: bn ? 'সংলগ্নী' : 'Encl.',
             enclNoLabel: bn ? 'নং' : 'No.'
@@ -372,12 +395,14 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
             const a = this.approversDetails[i];
             const role = bn ? (a.appointmentBN || a.appointment) : a.appointment;
             const remark = this.getApproverRemark(a.step);
+            const approverDate = this.getApproverDate(a.step);
             model.approvers.push({
                 role,
                 serialText: this.serial(i + 2),
                 remark: remark || undefined,
                 signatureDataUrl: this.shouldShowSignature(a.step) ? a.signatureDataUrl : undefined,
                 nameLine: '',
+                date: approverDate || undefined,
                 align: 'center'
             });
         }
@@ -540,22 +565,9 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
 
         let mainContent = '';
 
-        // Subject
-        mainContent += `<div style="padding:7px 16px 7px 20px;font-size:12pt;font-weight:bold;text-decoration:underline">${esc(model.subject)}</div>`;
+        // Subject removed for posting notesheet
 
-        // Reference / Date
-        mainContent += '<div style="padding:5px 16px 5px 20px;font-size:12pt">';
-        if (model.referenceBlocks.length > 0 || this.noteSheet?.referenceNumber) {
-            mainContent += `<span style="font-weight:700">${esc(model.referenceLabel)}</span>`;
-            if (model.referenceBlocks.length > 0) {
-                model.referenceBlocks.forEach(b => { mainContent += block(b); });
-            } else {
-                mainContent += esc(this.stripHtml(this.noteSheet!.referenceNumber ?? ''));
-            }
-        } else if (this.noteSheet?.noteSheetDate) {
-            mainContent += `<span style="font-weight:700">${esc(model.dateLabel)}</span>${esc(model.dateValue)}`;
-        }
-        mainContent += '</div>';
+        // Reference/Date removed for posting notesheet
 
         // Main text
         mainContent += '<div style="padding:10px 16px 10px 20px;font-size:12pt;line-height:1.85;display:flex;gap:8px">';
@@ -567,21 +579,27 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
         // Posting employee table (posting-specific)
         if (this.isNewPosting() && this.postingEmployees.length > 0) {
             const bn = model.isBangla;
-            const cols = bn ? ['ক্রমিক','ব্যক্তিগত নম্বর','পদবি','ট্রেড','নাম','মাতৃ ইউনিট','বদলি কর্মস্থল','মন্তব্য'] : ['Ser','Service ID','Rank','Trade','Name','Mother Unit','Transfer Unit','Remarks'];
+            const cols = bn ? ['ক্রমিক','ব্যক্তিগত নম্বর','পদবি','ট্রেড','নাম','মাতৃ ইউনিট','বদলি ইউনিট','মন্তব্য'] : ['Ser','Service ID','Rank','Trade','Name','Mother Unit','Transfer Unit','Remarks'];
             const headerCells = cols.map(c => `<th style="border:1px solid #000;padding:5px 8px;font-weight:bold;font-size:9pt">${esc(c)}</th>`).join('');
             const bodyRows = this.postingEmployees.map((emp, i) => {
-                const vals = [String(i+1), emp.serviceId??'', bn?(emp.rankNameBN||emp.rankName||''):(emp.rankName??''), bn?(emp.tradeNameBN||emp.tradeName||''):(emp.tradeName??''), bn?(emp.fullNameBN||emp.fullNameEN||''):(emp.fullNameEN??''), bn?(emp.motherUnitNameBN||emp.motherUnitName||''):(emp.motherUnitName??''), emp.transferRabUnitName??'', emp.remarks??''];
+                const ser = bn ? this.toBanglaDigits(i + 1) : String(i + 1);
+                const transferUnit = bn ? (this.unitLabelMapBN[emp.transferRabUnitId!] || emp.transferRabUnitName || '') : (emp.transferRabUnitName ?? '');
+                const vals = [ser, emp.serviceId??'', bn?(emp.rankNameBN||emp.rankName||''):(emp.rankName??''), bn?(emp.tradeNameBN||emp.tradeName||''):(emp.tradeName??''), bn?(emp.fullNameBN||emp.fullNameEN||''):(emp.fullNameEN??''), bn?(emp.motherUnitNameBN||emp.motherUnitName||''):(emp.motherUnitName??''), transferUnit, emp.remarks??''];
                 return `<tr>${vals.map(v => `<td style="border:1px solid #000;padding:5px 8px;font-size:9pt">${esc(v)}</td>`).join('')}</tr>`;
             }).join('');
-            mainContent += `<div style="padding:0 16px 10px 20px"><table style="width:100%;border-collapse:collapse"><thead><tr>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table></div>`;
+            let tfoot = '';
+            if (model.note) {
+                tfoot = `<tfoot><tr><td colspan="8" style="border:1px solid #000;padding:5px 8px;font-size:9pt"><strong>${bn ? 'নোটঃ ' : 'Note: '}</strong>${esc(model.note)}</td></tr></tfoot>`;
+            }
+            mainContent += `<div style="padding:0 20px 10px 20px"><table style="width:100%;border-collapse:collapse"><thead><tr>${headerCells}</tr></thead><tbody>${bodyRows}</tbody>${tfoot}</table></div>`;
         }
 
-        if (model.note) {
+        if (model.note && !(this.isNewPosting() && this.postingEmployees.length > 0)) {
             mainContent += `<div style="padding:5px 16px 5px 20px;font-size:12pt"><strong>${model.isBangla ? 'নোটঃ ' : 'Note: '}</strong>${esc(model.note)}</div>`;
         }
 
         // Closing text
-        mainContent += `<div style="padding:10px 16px 10px 20px;font-size:12pt;text-indent:2em">${esc(model.closingText)}</div>`;
+        if (model.closingText) mainContent += `<div style="padding:10px 16px 10px 20px;font-size:12pt;text-indent:2em">${esc(model.closingText)}</div>`;
 
         // Initiator
         if (model.initiator) {
@@ -607,22 +625,17 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
             } else {
                 mainContent += '<div style="min-height:48px;margin-top:8px"></div>';
             }
+            if (ap.date) mainContent += `<div style="font-size:10pt;text-align:center">${esc(ap.date)}</div>`;
             mainContent += '</div>';
         });
 
-        const sanglagniText = model.isBangla ? 'সংলগ্নী<br>নং' : 'Encl.<br>No.';
         return `
 <div style="text-align:center;margin-bottom:8px">
   <div style="font-size:16pt;font-weight:bold;text-decoration:underline;letter-spacing:2px">NOTE SHEET</div>
   <div style="font-size:12pt;text-decoration:underline;margin-top:2px">মন্তব্য পত্র</div>
 </div>
-<div style="border:1.5px solid #000;display:table;width:100%;table-layout:fixed">
-  <div style="display:table-cell;vertical-align:top;width:auto">
+<div style="border:1.5px solid #000;width:100%">
     ${mainContent}
-  </div>
-  <div style="display:table-cell;vertical-align:top;width:60px;min-width:60px;border-left:1.5px solid #000;font-size:10pt;text-align:center;padding:6px 12px;line-height:1.4">
-    ${sanglagniText}
-  </div>
 </div>`;
     }
 
@@ -642,35 +655,9 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
 
         const mainChildren: (Paragraph | Table)[] = [];
 
-        mainChildren.push(new Paragraph({
-            children: [new TextRun({ text: model.subject, bold: true, underline: {}, size: 24, sizeComplexScript: csSize, font, language: lang })],
-            spacing: { before: 140, after: 80 },
-            indent: { left: 240 }
-        }));
+        // Subject removed for posting notesheet
 
-        if (model.referenceBlocks.length > 0 || this.noteSheet?.referenceNumber) {
-            mainChildren.push(new Paragraph({
-                children: [new TextRun({ text: model.referenceLabel, bold: true, size: 24, sizeComplexScript: csSize, font, language: lang })],
-                indent: { left: 240 }, spacing: { after: model.referenceBlocks.length > 0 ? 40 : 80 }
-            }));
-            if (model.referenceBlocks.length > 0) {
-                mainChildren.push(...this.contentBlocksToDocx(model.referenceBlocks, font, bn));
-            } else {
-                const plain = this.stripHtml(this.noteSheet!.referenceNumber ?? '');
-                if (plain) mainChildren.push(new Paragraph({
-                    children: [new TextRun({ text: plain, size: 24, sizeComplexScript: csSize, font, language: lang })],
-                    indent: { left: 480 }, spacing: { after: 80 }
-                }));
-            }
-        } else if (this.noteSheet?.noteSheetDate) {
-            mainChildren.push(new Paragraph({
-                children: [
-                    new TextRun({ text: model.dateLabel, bold: true, size: 24, sizeComplexScript: csSize, font, language: lang }),
-                    new TextRun({ text: model.dateValue, size: 24, sizeComplexScript: csSize, font, language: lang })
-                ],
-                indent: { left: 240 }, spacing: { after: 80 }
-            }));
-        }
+        // Reference/Date removed for posting notesheet
 
         mainChildren.push(new Paragraph({
             children: [new TextRun({ text: model.mainSerialText, bold: true, size: 24, sizeComplexScript: csSize, font, language: lang })],
@@ -680,24 +667,34 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
 
         // Posting employee table (posting-specific)
         if (this.isNewPosting() && this.postingEmployees.length > 0) {
-            const cols = bn ? ['ক্রমিক','ব্যক্তিগত নম্বর','পদবি','ট্রেড','নাম','মাতৃ ইউনিট','বদলি কর্মস্থল','মন্তব্য'] : ['Ser','Service ID','Rank','Trade','Name','Mother Unit','Transfer Unit','Remarks'];
+            const cols = bn ? ['ক্রমিক','ব্যক্তিগত নম্বর','পদবি','ট্রেড','নাম','মাতৃ ইউনিট','বদলি ইউনিট','মন্তব্য'] : ['Ser','Service ID','Rank','Trade','Name','Mother Unit','Transfer Unit','Remarks'];
             const cw = Math.floor(10400 / cols.length);
             const headerRow = new TableRow({ tableHeader: true, children: cols.map(c => new TableCell({
                 children: [new Paragraph({ children: [new TextRun({ text: c, size: 16, sizeComplexScript: bn ? 16 : undefined, bold: true, font, language: lang })], alignment: AlignmentType.CENTER })],
                 borders: cellBorders, width: { size: cw, type: WidthType.DXA },
             })) });
             const dataRows = this.postingEmployees.map((emp, i) => new TableRow({ children: [
-                String(i+1), emp.serviceId??'',
+                bn ? this.toBanglaDigits(i + 1) : String(i + 1), emp.serviceId??'',
                 bn?(emp.rankNameBN||emp.rankName||''):(emp.rankName??''),
                 bn?(emp.tradeNameBN||emp.tradeName||''):(emp.tradeName??''),
                 bn?(emp.fullNameBN||emp.fullNameEN||''):(emp.fullNameEN??''),
                 bn?(emp.motherUnitNameBN||emp.motherUnitName||''):(emp.motherUnitName??''),
-                emp.transferRabUnitName??'', emp.remarks??''
+                bn ? (this.unitLabelMapBN[emp.transferRabUnitId!] || emp.transferRabUnitName || '') : (emp.transferRabUnitName ?? ''), emp.remarks??''
             ].map(v => new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: v, size: 16, sizeComplexScript: bn ? 16 : undefined, font, language: lang })] })], borders: cellBorders, width: { size: cw, type: WidthType.DXA } })) }));
-            mainChildren.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [headerRow, ...dataRows] }));
+            const tableRows = [headerRow, ...dataRows];
+            if (model.note) {
+                tableRows.push(new TableRow({ children: [new TableCell({
+                    children: [new Paragraph({ children: [
+                        new TextRun({ text: bn ? 'নোটঃ ' : 'Note: ', bold: true, size: 16, sizeComplexScript: bn ? 16 : undefined, font, language: lang }),
+                        new TextRun({ text: model.note, size: 16, sizeComplexScript: bn ? 16 : undefined, font, language: lang })
+                    ] })],
+                    borders: cellBorders, columnSpan: 8, width: { size: 10400, type: WidthType.DXA }
+                })] }));
+            }
+            mainChildren.push(new Table({ width: { size: 95, type: WidthType.PERCENTAGE }, rows: tableRows, indent: { size: 240, type: WidthType.DXA } }));
         }
 
-        if (model.note) {
+        if (model.note && !(this.isNewPosting() && this.postingEmployees.length > 0)) {
             mainChildren.push(new Paragraph({
                 children: [
                     new TextRun({ text: bn ? 'নোটঃ ' : 'Note: ', bold: true, size: 24, sizeComplexScript: csSize, font, language: lang }),
@@ -707,10 +704,12 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
             }));
         }
 
-        mainChildren.push(new Paragraph({
-            children: [new TextRun({ text: model.closingText, size: 24, sizeComplexScript: csSize, font, language: lang })],
-            indent: { left: 240, firstLine: 480 }, spacing: { before: 200 }
-        }));
+        if (model.closingText) {
+            mainChildren.push(new Paragraph({
+                children: [new TextRun({ text: model.closingText, size: 24, sizeComplexScript: csSize, font, language: lang })],
+                indent: { left: 240, firstLine: 480 }, spacing: { before: 200 }
+            }));
+        }
 
         // Initiator
         if (model.initiator) {
@@ -769,31 +768,28 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
             } else {
                 mainChildren.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 100, after: 40 } }));
             }
+            if (ap.date) {
+                mainChildren.push(new Paragraph({
+                    children: [new TextRun({ text: ap.date, size: 20, sizeComplexScript: csSize, font, language: lang })],
+                    alignment: AlignmentType.CENTER
+                }));
+            }
         }
 
-        // Outer bordered table (main + sanglagni)
+        // Outer bordered table (no sanglagni for posting)
         const rowHeight = 17800;
         const outerTable = new Table({
             layout: TableLayoutType.FIXED,
             width: { size: 100, type: WidthType.PERCENTAGE },
-            columnWidths: [10473, 800],
+            columnWidths: [11273],
             rows: [new TableRow({
                 height: { value: rowHeight, rule: HeightRule.ATLEAST },
                 children: [
                     new TableCell({
-                        width: { size: 10473, type: WidthType.DXA },
-                        borders: { top: thickBorder, bottom: thickBorder, left: thickBorder, right: noBorder },
+                        width: { size: 11273, type: WidthType.DXA },
+                        borders: { top: thickBorder, bottom: thickBorder, left: thickBorder, right: thickBorder },
                         margins: { right: 200 },
                         children: mainChildren.length > 0 ? mainChildren : [new Paragraph({})]
-                    }),
-                    new TableCell({
-                        width: { size: 800, type: WidthType.DXA },
-                        borders: { top: thickBorder, bottom: thickBorder, left: thickBorder, right: thickBorder },
-                        verticalAlign: VerticalAlign.TOP,
-                        children: [
-                            new Paragraph({ children: [new TextRun({ text: bn ? 'সংলগ্নী' : 'Encl.', size: 20, font: bn ? 'Nirmala UI' : 'Times New Roman' })], alignment: AlignmentType.CENTER }),
-                            new Paragraph({ children: [new TextRun({ text: bn ? 'নং' : 'No.', size: 20, font: bn ? 'Nirmala UI' : 'Times New Roman' })], alignment: AlignmentType.CENTER })
-                        ]
                     })
                 ]
             })]

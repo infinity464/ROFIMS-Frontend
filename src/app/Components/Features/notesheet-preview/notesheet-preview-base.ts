@@ -127,6 +127,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
     purposeLabelMap: Record<number, string> = {};
     countryLabelMap: Record<number, string> = {};
     unitLabelMap: Record<number, string> = {};
+    unitLabelMapBN: Record<number, string> = {};
 
     ngOnInit(): void {
         this.loadLookups();
@@ -156,6 +157,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
         this.masterBasicSetup.getAllByType('RabUnit').subscribe({
             next: (list) => {
                 this.unitLabelMap = (list ?? []).reduce((acc, c) => { acc[c.codeId] = c.codeValueEN; return acc; }, {} as Record<number, string>);
+                this.unitLabelMapBN = (list ?? []).reduce((acc, c) => { acc[c.codeId] = c.codeValueBN || c.codeValueEN; return acc; }, {} as Record<number, string>);
             }
         });
     }
@@ -292,6 +294,43 @@ export abstract class NotesheetPreviewBase implements OnInit {
             return this.noteSheet.finalApprovalRemark ?? this.noteSheet.finalApprovalCancelRemark ?? '';
         if (step === 'Initiator')
             return this.noteSheet.initiatorApproveRemark ?? this.noteSheet.initiatorCancelRemark ?? '';
+        if (step.startsWith('Recommender')) {
+            try {
+                const json = this.noteSheet.recommendersJson ?? this.noteSheet.recommenderIdsJson;
+                if (json && typeof json === 'string') {
+                    const arr = JSON.parse(json) as any[];
+                    if (Array.isArray(arr)) {
+                        const numPart = step.replace('Recommender', '').trim();
+                        const idx = numPart ? parseInt(numPart, 10) - 1 : 0;
+                        const rec = arr[idx];
+                        if (rec) return rec.recomender_approve_remark ?? rec.recomender_cancel_remark ?? '';
+                    }
+                }
+            } catch { /* ignore */ }
+        }
+        return '';
+    }
+
+    getApproverDate(step: string): string {
+        if (!this.noteSheet) return '';
+        if (step === 'Final Approver')
+            return this.noteSheet.finalApprovalApprovedDate ? this.formatDate(this.noteSheet.finalApprovalApprovedDate) : '';
+        if (step === 'Initiator')
+            return this.noteSheet.initiatorApprovedDate ? this.formatDate(this.noteSheet.initiatorApprovedDate) : '';
+        if (step.startsWith('Recommender')) {
+            try {
+                const json = this.noteSheet.recommendersJson ?? this.noteSheet.recommenderIdsJson;
+                if (json && typeof json === 'string') {
+                    const arr = JSON.parse(json) as any[];
+                    if (Array.isArray(arr)) {
+                        const numPart = step.replace('Recommender', '').trim();
+                        const idx = numPart ? parseInt(numPart, 10) - 1 : 0;
+                        const rec = arr[idx];
+                        if (rec?.recomender_approved_date) return this.formatDate(rec.recomender_approved_date);
+                    }
+                }
+            } catch { /* ignore */ }
+        }
         return '';
     }
 
@@ -803,7 +842,9 @@ export abstract class NotesheetPreviewBase implements OnInit {
             if (!detail) return '';
             const showSig = detail.signatureDataUrl && this.shouldShowSignature(detail.step);
             const sigImg  = showSig && detail.signatureDataUrl ? `<img src="${detail.signatureDataUrl}" class="sig-img" />` : '';
-            return `<div class="approver-section"><div class="approver-role">${this.translateStep(detail.step)}</div>${sigImg}</div>`;
+            const dateStr = this.getApproverDate(detail.step);
+            const dateHtml = dateStr ? `<div style="font-size:10pt;text-align:center">${dateStr}</div>` : '';
+            return `<div class="approver-section"><div class="approver-role">${this.translateStep(detail.step)}</div>${sigImg}${dateHtml}</div>`;
         };
         let html = '';
         if (this.initiatorDetails) html += buildSig(this.initiatorDetails);
