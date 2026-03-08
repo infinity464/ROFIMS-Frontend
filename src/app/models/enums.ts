@@ -72,8 +72,9 @@ export enum EmployeeStatus {
 export enum PostingStatus {
     Supernumerary = 'Supernumerary',
     Pending = 'Pending',
-    Servings='Servings',
-    ExMember='ExMember'
+    PendingForJoining = 'PendingForJoining',
+    Servings = 'Servings',
+    ExMember = 'ExMember'
 }
 
 /** IsSendingNotesheetStatus – stored in EmployeeInfo and DraftPostingDetail. */
