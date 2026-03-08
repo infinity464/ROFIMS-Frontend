@@ -244,62 +244,19 @@
             <input pInputText formControlName="noteSheetNo" placeholder="Auto generated" class="w-full" />
           </div>
 
-          <!-- Row 2: Reference Number | Unit | Wing/Battalion -->
-          <div class="ns-gen-field">
-            <label class="ns-gen-label">Reference Number</label>
-            <input pInputText formControlName="referenceNumber" placeholder="Enter reference number" class="w-full" />
-          </div>
-
-          <!-- Row 3: Unit | Wing/Battalion | Branch -->
-          <div class="ns-gen-field">
-            <label class="ns-gen-label">Unit</label>
-            <p-select
-              formControlName="unitId"
-              [options]="unitOptionsDisplay"
-              optionLabel="label"
-              optionValue="value"
-              [filter]="true"
-              filterBy="label"
-              [showClear]="true"
-              placeholder="Select Unit"
-              (onChange)="onUnitChange()"
-              styleClass="w-full">
-            </p-select>
-          </div>
-
-          <div class="ns-gen-field">
-            <label class="ns-gen-label">Wing/Battalion</label>
-            <p-select
-              formControlName="wingBattalionId"
-              [options]="wingOptionsDisplay"
-              optionLabel="label"
-              optionValue="value"
-              [filter]="true"
-              filterBy="label"
-              [showClear]="true"
-              placeholder="Select Wing"
-              styleClass="w-full">
-            </p-select>
-          </div>
-
-          <div class="ns-gen-field">
-            <label class="ns-gen-label">Branch</label>
-            <p-select
-              formControlName="branchId"
-              [options]="branchOptionsDisplay"
-              optionLabel="label"
-              optionValue="value"
-              [filter]="true"
-              filterBy="label"
-              [showClear]="true"
-              placeholder="Select Branch"
-              styleClass="w-full">
-            </p-select>
+          <!-- Row 2: Operation Type | Secret + Subject -->
+          <!-- Row 3: Reference Number (full - rich editor) -->
+          <div class="ns-gen-field ns-gen-full">
+            <label class="ns-gen-label">Reference Number <span class="ns-gen-req">*</span></label>
+            <app-rich-editor formControlName="referenceNumber" height="80px" toolbar="minimal" placeholder="Enter reference number..."></app-rich-editor>
+            @if (form.get('referenceNumber')?.invalid && form.get('referenceNumber')?.touched) {
+              <small class="ns-gen-error">Reference Number is required</small>
+            }
           </div>
 
           <!-- Row 3: RAB Employee | Subject (span 2) -->
           <div class="ns-gen-field">
-            <label class="ns-gen-label">RAB Employee</label>
+            <label class="ns-gen-label">RAB Employee <span class="ns-gen-req">*</span></label>
             <p-select
               formControlName="rabIdEmployeeId"
               [options]="rabEmployeeOptionsDisplay"
@@ -312,6 +269,9 @@
               styleClass="w-full"
               (onChange)="onRabEmployeeChange($event.value)">
             </p-select>
+            @if (form.get('rabIdEmployeeId')?.invalid && form.get('rabIdEmployeeId')?.touched) {
+              <small class="ns-gen-error">RAB Employee is required</small>
+            }
           </div>
 
           <div class="ns-gen-field ns-gen-span-2">
@@ -322,9 +282,9 @@
             }
           </div>
 
-          <!-- Row 4: Purpose | Destination Country | Total Days -->
+          <!-- Row 5: Purpose | Destination Country | Total Days -->
           <div class="ns-gen-field">
-            <label class="ns-gen-label">Purpose of Ex-BD Leave</label>
+            <label class="ns-gen-label">Purpose of Ex-BD Leave <span class="ns-gen-req">*</span></label>
             <p-select
               formControlName="purposeOfExBdLeaveId"
               [options]="purposeOptionsDisplay"
@@ -336,10 +296,13 @@
               placeholder="Select Purpose"
               styleClass="w-full">
             </p-select>
+            @if (form.get('purposeOfExBdLeaveId')?.invalid && form.get('purposeOfExBdLeaveId')?.touched) {
+              <small class="ns-gen-error">Purpose is required</small>
+            }
           </div>
 
           <div class="ns-gen-field">
-            <label class="ns-gen-label">Destination Country</label>
+            <label class="ns-gen-label">Destination Country <span class="ns-gen-req">*</span></label>
             <p-select
               formControlName="destinationCountryId"
               [options]="countryOptionsDisplay"
@@ -351,6 +314,9 @@
               placeholder="Select Country"
               styleClass="w-full">
             </p-select>
+            @if (form.get('destinationCountryId')?.invalid && form.get('destinationCountryId')?.touched) {
+              <small class="ns-gen-error">Destination Country is required</small>
+            }
           </div>
 
           <div class="ns-gen-field">
@@ -358,24 +324,25 @@
             <input pInputText formControlName="totalDays" type="number" readonly class="w-full" />
           </div>
 
-          <!-- Row 5: Date of Visit From | Date of Visit To | (empty) -->
+          <!-- Row 6: Date of Visit From | Date of Visit To | Family Members -->
           <div class="ns-gen-field">
-            <label class="ns-gen-label">Date of Visit (From)</label>
+            <label class="ns-gen-label">Date of Visit (From) <span class="ns-gen-req">*</span></label>
             <p-datepicker formControlName="dateOfVisitFrom" dateFormat="dd/mm/yy" styleClass="w-full" placeholder="Select date"></p-datepicker>
+            @if (form.get('dateOfVisitFrom')?.invalid && form.get('dateOfVisitFrom')?.touched) {
+              <small class="ns-gen-error">Date of Visit (From) is required</small>
+            }
           </div>
 
           <div class="ns-gen-field">
-            <label class="ns-gen-label">Date of Visit (To)</label>
+            <label class="ns-gen-label">Date of Visit (To) <span class="ns-gen-req">*</span></label>
             <p-datepicker formControlName="dateOfVisitTo" dateFormat="dd/mm/yy" styleClass="w-full" placeholder="Select date"></p-datepicker>
+            @if (form.get('dateOfVisitTo')?.invalid && form.get('dateOfVisitTo')?.touched) {
+              <small class="ns-gen-error">Date of Visit (To) is required</small>
+            }
           </div>
 
           <div class="ns-gen-field">
-            <!-- empty cell for grid alignment -->
-          </div>
-
-          <!-- Row 6: Family Members (full) -->
-          <div class="ns-gen-field ns-gen-full">
-            <label class="ns-gen-label">Family Members (If Applicable)</label>
+            <label class="ns-gen-label">Family Members</label>
             <p-multiselect
               formControlName="familyMemberIds"
               [options]="familyMemberOptions"
@@ -395,6 +362,30 @@
                 }
               </div>
             }
+          </div>
+
+          <div class="ns-gen-field">
+            <label class="ns-gen-label">Operation Type <span class="ns-gen-req">*</span></label>
+            <p-select
+              formControlName="noteSheetOperationType"
+              [options]="noteSheetOperationTypeOptions"
+              optionLabel="label"
+              optionValue="value"
+              [showClear]="true"
+              placeholder="Select type"
+              styleClass="w-full">
+            </p-select>
+            @if (form.get('noteSheetOperationType')?.invalid && form.get('noteSheetOperationType')?.touched) {
+              <small class="ns-gen-error">Operation Type is required</small>
+            }
+          </div>
+
+          <div class="ns-gen-field ns-gen-field--checkbox">
+            <label class="ns-gen-label">Secret</label>
+            <div class="ns-gen-checkbox-row">
+              <p-checkbox formControlName="isSecret" [binary]="true" inputId="isSecret"></p-checkbox>
+              <label for="isSecret" class="ns-gen-checkbox-label">Mark as Secret</label>
+            </div>
           </div>
 
           <!-- Row 7: Main Text (full) -->
@@ -424,7 +415,7 @@
           </div>
 
           <div class="ns-gen-field">
-            <label class="ns-gen-label">Initiator</label>
+            <label class="ns-gen-label">Initiator <span class="ns-gen-req">*</span></label>
             <p-select
               formControlName="initiatorId"
               [options]="initiatorOptionsDisplay"
@@ -436,10 +427,13 @@
               placeholder="Select Initiator"
               styleClass="w-full">
             </p-select>
+            @if (form.get('initiatorId')?.invalid && form.get('initiatorId')?.touched) {
+              <small class="ns-gen-error">Initiator is required</small>
+            }
           </div>
 
           <div class="ns-gen-field">
-            <label class="ns-gen-label">Final Approver</label>
+            <label class="ns-gen-label">Final Approver <span class="ns-gen-req">*</span></label>
             <p-select
               formControlName="finalApproverId"
               [options]="finalApproverOptionsDisplay"
@@ -451,6 +445,9 @@
               placeholder="Select Final Approver"
               styleClass="w-full">
             </p-select>
+            @if (form.get('finalApproverId')?.invalid && form.get('finalApproverId')?.touched) {
+              <small class="ns-gen-error">Final Approver is required</small>
+            }
           </div>
 
           <!-- Row 9: Recommenders (full) -->

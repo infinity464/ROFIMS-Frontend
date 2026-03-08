@@ -14,6 +14,7 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
+import { CheckboxModule } from 'primeng/checkbox';
 import { CommonCode } from '@/Components/basic-setup/shared/models/common-code';
 import { environment } from '@/Core/Environments/environment';
 import { HttpClient } from '@angular/common/http';
@@ -27,7 +28,7 @@ import { take, map, catchError } from 'rxjs/operators';
 import { RouterLink } from '@angular/router';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
-import { NoteSheetType, NoteSheetCurrentStatus, ApprovalStatus } from '@/models/enums';
+import { NoteSheetType, NoteSheetCurrentStatus, ApprovalStatus, NoteSheetOperationTypeOptions } from '@/models/enums';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { NotesheetSignatoryComponent, SignatoryDetail } from '@/Components/Common/notesheet-signatory/notesheet-signatory';
 import {
@@ -56,7 +57,8 @@ import html2canvas from 'html2canvas';
         TooltipModule,
         FileReferencesFormComponent,
         RouterLink,
-        NotesheetSignatoryComponent
+        NotesheetSignatoryComponent,
+        CheckboxModule
     ],
     templateUrl: './notesheet-ex-bd-leave.html',
     providers: [MessageService],
@@ -74,6 +76,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         { label: 'English', value: 'en' },
         { label: 'Bangla', value: 'bn' }
     ];
+    readonly noteSheetOperationTypeOptions = NoteSheetOperationTypeOptions;
     unitOptions: { label: string; labelBn: string | null; value: number }[] = [];
     wingOptions: { label: string; labelBn: string | null; value: number }[] = [];
     branchOptions: { label: string; labelBn: string | null; value: number }[] = [];
@@ -139,22 +142,24 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             unitId: [null as number | null],
             wingBattalionId: [null as number | null],
             branchId: [null as number | null],
-            referenceNumber: [''],
+            referenceNumber: ['', Validators.required],
             noteSheetNo: [''],
-            rabIdEmployeeId: [null as number | null], // employee ID when RAB ID selected
+            noteSheetOperationType: [null as string | null, Validators.required],
+            isSecret: [false],
+            rabIdEmployeeId: [null as number | null, Validators.required], // employee ID when RAB ID selected
             subject: ['', Validators.required],
-            purposeOfExBdLeaveId: [null as number | null],
-            destinationCountryId: [null as number | null],
-            dateOfVisitFrom: [null as Date | null],
-            dateOfVisitTo: [null as Date | null],
+            purposeOfExBdLeaveId: [null as number | null, Validators.required],
+            destinationCountryId: [null as number | null, Validators.required],
+            dateOfVisitFrom: [null as Date | null, Validators.required],
+            dateOfVisitTo: [null as Date | null, Validators.required],
             totalDays: [0],
             familyMemberIds: [[] as number[]], // selected FMIDs for family list
             mainText: [''],
             preparedBy: [''],
             preparedByEmployeeId: [null as number | null],
-            initiatorId: [null as number | null],
+            initiatorId: [null as number | null, Validators.required],
             recommenderIds: [[] as number[]],
-            finalApproverId: [null as number | null]
+            finalApproverId: [null as number | null, Validators.required]
         });
     }
 
@@ -245,11 +250,17 @@ export class NotesheetExBdLeaveComponent implements OnInit {
 
     private applyNoteSheetToForm(d: any): void {
         let recommenderIds: number[] = [];
-        const recommenderIdsJson = d.recommenderIdsJson ?? d.RecommenderIdsJson;
+        const rawJson = d.recommendersJson ?? d.RecommendersJson ?? d.recommenderIdsJson ?? d.RecommenderIdsJson;
         try {
-            if (recommenderIdsJson && typeof recommenderIdsJson === 'string') {
-                const arr = JSON.parse(recommenderIdsJson) as number[] | { employeeId?: number; EmployeeId?: number }[];
-                recommenderIds = Array.isArray(arr) ? arr.map((r) => (typeof r === 'number' ? r : (r.employeeId ?? r.EmployeeId ?? 0))) : [];
+            if (rawJson && typeof rawJson === 'string') {
+                const arr = JSON.parse(rawJson) as any[];
+                if (Array.isArray(arr) && arr.length > 0) {
+                    if (typeof arr[0] === 'object' && arr[0] !== null) {
+                        recommenderIds = arr.map((r: any) => r.recomender_id ?? r.recomenderId ?? r.employeeId ?? r.EmployeeId ?? 0).filter(Boolean);
+                    } else {
+                        recommenderIds = arr.filter((x: any) => typeof x === 'number');
+                    }
+                }
             }
         } catch { /* ignore */ }
         let familyMemberIds: number[] = [];
@@ -283,7 +294,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         const branchIdVal = this.toNum(d.branchId ?? d.BranchId);
         if (unitIdVal != null && unitIdVal > 0) this.loadWingsForUnit(unitIdVal, () => {});
         const initiatorIdVal = this.toNum(d.initiatorId ?? d.InitiatorId);
-        const finalApproverIdVal = this.toNum(d.finalApproverId ?? d.FinalApproverId);
+        const finalApproverIdVal = this.toNum(d.finalApprovalId ?? d.FinalApprovalId ?? d.finalApproverId ?? d.FinalApproverId);
         const refNum = d.referenceNumber ?? d.ReferenceNumber;
         const noteNo = d.noteSheetNo ?? d.NoteSheetNo;
         this.form.patchValue({
@@ -294,6 +305,8 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             branchId: branchIdVal,
             referenceNumber: refNum != null ? String(refNum) : '',
             noteSheetNo: noteNo != null ? String(noteNo) : '',
+            noteSheetOperationType: d.noteSheetOperationType ?? d.NoteSheetOperationType ?? null,
+            isSecret: !!(d.isSecret ?? d.IsSecret ?? false),
             rabIdEmployeeId: this.selectedEmployeeId,
             subject: String(d.subject ?? d.Subject ?? ''),
             purposeOfExBdLeaveId: purposeId,
