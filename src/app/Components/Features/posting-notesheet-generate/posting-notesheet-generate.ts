@@ -434,16 +434,6 @@ export class PostingNotesheetGenerateComponent implements OnInit {
         return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
     }
 
-    /** Generate note-sheet number: NP-DD-MM-YYYY-XXXXXX */
-    private generateNoteSheetNo(): string {
-        const now = new Date();
-        const dd = String(now.getDate()).padStart(2, '0');
-        const mm = String(now.getMonth() + 1).padStart(2, '0');
-        const yyyy = now.getFullYear();
-        const random = String(Math.floor(100000 + Math.random() * 900000));
-        return `NP-${dd}-${mm}-${yyyy}-${random}`;
-    }
-
     private buildPayload(filesReferencesJson?: string | null): any {
         const d = this.form.getRawValue();
         const dateStr = this.formatNoteSheetDate(d.noteSheetDate);
@@ -451,7 +441,7 @@ export class PostingNotesheetGenerateComponent implements OnInit {
         const preparedBy = (d.preparedBy && String(d.preparedBy).trim()) || 'system';
         const createdBy = this.editMode && this.originalCreatedBy ? this.originalCreatedBy : preparedBy;
         const subject = this.editMode ? this.originalSubject : null;
-        const noteSheetNo = this.editMode ? d.noteSheetNo : this.generateNoteSheetNo();
+        const noteSheetNo = 'AUTO';
         const recommenderIds: number[] = Array.isArray(d.recommenderIds) ? d.recommenderIds : [];
         const recommendersJson = recommenderIds.length
             ? JSON.stringify(recommenderIds.map((id: number, idx: number) => ({

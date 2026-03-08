@@ -170,11 +170,10 @@ export class NoteSheetNumberConfigComponent implements OnInit {
 
         const existing = this.configs.find(c => c.configId === this.editingConfigId);
 
+        const formVal = this.configForm.getRawValue();
         const payload: any = {
             ...existing,
-            noteSheetType: this.configForm.value.noteSheetType,
-            prefix: this.configForm.value.prefix,
-            startNumber: this.configForm.value.startNumber,
+            prefix: formVal.prefix,
             lastUpdatedBy: this.currentUser,
             lastupdate: currentDateTime
         };
@@ -210,6 +209,9 @@ export class NoteSheetNumberConfigComponent implements OnInit {
             prefix: row.prefix,
             startNumber: row.startNumber
         });
+        // Disable fields that should not be changed after creation
+        this.configForm.get('noteSheetType')?.disable();
+        this.configForm.get('startNumber')?.disable();
     }
 
     onDelete(row: NoteSheetNumberConfigModel) {
@@ -243,6 +245,9 @@ export class NoteSheetNumberConfigComponent implements OnInit {
             prefix: null,
             startNumber: null
         });
+        // Re-enable fields that were disabled during edit
+        this.configForm.get('noteSheetType')?.enable();
+        this.configForm.get('startNumber')?.enable();
         this.isEditMode = false;
         this.editingConfigId = 0;
         this.isSubmitting = false;

@@ -564,7 +564,7 @@ export class NotesheetGenerateComponent implements OnInit {
         const payload: Record<string, unknown> = {
             noteSheetId: 0,
             noteSheetType: NoteSheetType.General,
-            noteSheetNo: (d.noteSheetNo && String(d.noteSheetNo).trim()) || 'AUTO',
+            noteSheetNo: 'AUTO',
             noteSheetDate: dateStr,
             noteSheetTemplateId: d.noteSheetTemplateId ?? null,
             referenceNumber: d.referenceNumber != null ? String(d.referenceNumber) : null,
