@@ -4,7 +4,7 @@
     <div class="profile-header">
         <div class="profile-header-left">
             <div class="flex align-items-center gap-2 flex-wrap">
-                <p-button icon="pi pi-arrow-left" [label]="L['button.back']" [rounded]="true" [text]="true" severity="secondary" (onClick)="goBack()" styleClass="p-button-sm"></p-button>
+                <p-button icon="pi pi-arrow-left" label="Back" [rounded]="true" [text]="true" severity="secondary" (onClick)="goBack()" styleClass="p-button-sm"></p-button>
                 <p-button [label]="profileLang === 'en' ? 'বাংলা' : 'English'" [rounded]="true" [text]="true" severity="secondary" (onClick)="toggleProfileLang()" styleClass="p-button-sm"></p-button>
                 @if (profile && !loading) {
                     <div class="profile-export-wrap">
