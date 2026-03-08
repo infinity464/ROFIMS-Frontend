@@ -372,12 +372,14 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
             const a = this.approversDetails[i];
             const role = bn ? (a.appointmentBN || a.appointment) : a.appointment;
             const remark = this.getApproverRemark(a.step);
+            const approverDate = this.getApproverDate(a.step);
             model.approvers.push({
                 role,
                 serialText: this.serial(i + 2),
                 remark: remark || undefined,
                 signatureDataUrl: this.shouldShowSignature(a.step) ? a.signatureDataUrl : undefined,
                 nameLine: '',
+                date: approverDate || undefined,
                 align: 'center'
             });
         }
@@ -607,6 +609,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
             } else {
                 mainContent += '<div style="min-height:48px;margin-top:8px"></div>';
             }
+            if (ap.date) mainContent += `<div style="font-size:10pt;text-align:center">${esc(ap.date)}</div>`;
             mainContent += '</div>';
         });
 
@@ -768,6 +771,12 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
                 } catch { /* no sig */ }
             } else {
                 mainChildren.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 100, after: 40 } }));
+            }
+            if (ap.date) {
+                mainChildren.push(new Paragraph({
+                    children: [new TextRun({ text: ap.date, size: 20, sizeComplexScript: csSize, font, language: lang })],
+                    alignment: AlignmentType.CENTER
+                }));
             }
         }
 
