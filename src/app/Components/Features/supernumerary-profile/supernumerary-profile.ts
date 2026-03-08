@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
@@ -14,6 +14,7 @@ import { EmpService, EmployeeDocumentReferenceItem } from '@/services/emp-servic
 import { SupernumeraryEmpProfile, AddressBlock, RelieverRow } from '@/models/employee-list.model';
 import { EmployeePersonalServiceOverview } from '@/models/employee-personal-service-overview.model';
 import { TooltipModule } from 'primeng/tooltip';
+import { ExportService, type ProfileExportConfig, type ProfileExportSection } from '@/services/export.service';
 
 @Component({
     selector: 'app-supernumerary-profile',
@@ -38,14 +39,142 @@ export class SupernumeraryProfile implements OnInit, OnDestroy {
     /** Joining date from GetEmployeePersonalServiceOverview (same source as ex-member profile). */
     serviceOverview: EmployeePersonalServiceOverview | null = null;
 
+    exportDropdownOpen = false;
+
     constructor(
         private route: ActivatedRoute,
         private router: Router,
         private employeeListService: EmployeeListService,
         private servingMembersService: ServingMembersService,
         private messageService: MessageService,
-        private empService: EmpService
+        private empService: EmpService,
+        private exportService: ExportService
     ) {}
+
+    @HostListener('document:click')
+    onDocumentClick(): void {
+        this.exportDropdownOpen = false;
+    }
+
+    toggleExportDropdown(event: Event): void {
+        event.stopPropagation();
+        this.exportDropdownOpen = !this.exportDropdownOpen;
+    }
+
+    getExportData(): ProfileExportConfig {
+        const p = this.profile;
+        const title = p ? `Supernumerary Profile - ${p.name || p.serviceId || ''}` : 'Supernumerary Profile';
+        const sections: ProfileExportSection[] = [];
+        const addSection = (secTitle: string, columns: string[], rows: string[][], noTableHeader?: boolean, addressSection?: boolean) =>
+            sections.push({ title: secTitle, columns, rows, noTableHeader, addressSection });
+        const kv = (label: string, value: string): [string, string] => [label, value];
+        const val = (v: string | number | null | undefined): string => (v == null || v === '') ? '-' : String(v);
+
+        if (!p) return { title, lang: 'en', sections, showPageNumbers: true };
+
+        // Basic Service Information
+        addSection('Basic Service Information', ['Field', 'Value'], [
+            kv('Service ID', val(p.serviceId)),
+            kv('RAB ID', val(p.rabId)),
+            kv('Name', val(p.name)),
+            kv('Type of Member', val(p.typeOfMember)),
+            kv('Rank', val(p.rank)),
+            kv('Corps', val(p.corpsName || p.corps)),
+            kv('Trade', val(p.trade) === '-' ? 'N/A' : val(p.trade)),
+            kv('Mother Organization', val(p.motherOrganization)),
+            kv('Last Unit', val(p.lastUnit)),
+            kv('Location', val(p.location)),
+            kv('Appointment', val(p.appointment)),
+            kv('Date of Joining in RAB', this.formatDateOfJoining(this.serviceOverview?.joiningDate ?? this.getDateOfJoiningInRAB(p))),
+        ], true);
+
+        // Own Permanent Address
+        if (this.hasAddress(p.ownPermanentAddress)) {
+            addSection('Own Permanent Address', ['Field', 'Value'], [
+                kv('Village/Area', this.addrVal(p.ownPermanentAddress, 'villageArea')),
+                kv('District', this.addrVal(p.ownPermanentAddress, 'district')),
+                kv('Post Office', this.addrVal(p.ownPermanentAddress, 'postOffice')),
+                kv('Division', this.addrVal(p.ownPermanentAddress, 'division')),
+                kv('Upazila/Thana', this.addrVal(p.ownPermanentAddress, 'upazilaThana')),
+            ], true, true);
+        }
+
+        // Own Present Address
+        if (this.hasAddress(p.ownPresentAddress)) {
+            addSection('Own Present Address', ['Field', 'Value'], [
+                kv('Village/Area', this.addrVal(p.ownPresentAddress, 'villageArea')),
+                kv('District', this.addrVal(p.ownPresentAddress, 'district')),
+                kv('Post Office', this.addrVal(p.ownPresentAddress, 'postOffice')),
+                kv('Division', this.addrVal(p.ownPresentAddress, 'division')),
+                kv('Upazila/Thana', this.addrVal(p.ownPresentAddress, 'upazilaThana')),
+            ], true, true);
+        }
+
+        // Spouse Present Address
+        if (this.hasAddress(p.spousePresentAddress)) {
+            addSection('Spouse Present Address', ['Field', 'Value'], [
+                kv('Village/Area', this.addrVal(p.spousePresentAddress, 'villageArea')),
+                kv('District', this.addrVal(p.spousePresentAddress, 'district')),
+                kv('Post Office', this.addrVal(p.spousePresentAddress, 'postOffice')),
+                kv('Division', this.addrVal(p.spousePresentAddress, 'division')),
+                kv('Upazila/Thana', this.addrVal(p.spousePresentAddress, 'upazilaThana')),
+            ], true, true);
+        }
+
+        // Spouse Permanent Address
+        if (this.hasAddress(p.spousePermanentAddress)) {
+            addSection('Spouse Permanent Address', ['Field', 'Value'], [
+                kv('Village/Area', this.addrVal(p.spousePermanentAddress, 'villageArea')),
+                kv('District', this.addrVal(p.spousePermanentAddress, 'district')),
+                kv('Post Office', this.addrVal(p.spousePermanentAddress, 'postOffice')),
+                kv('Division', this.addrVal(p.spousePermanentAddress, 'division')),
+                kv('Upazila/Thana', this.addrVal(p.spousePermanentAddress, 'upazilaThana')),
+            ], true, true);
+        }
+
+        // Reliever Information
+        if (p.relievedBy && this.relieverTableRows.length > 0) {
+            const relieverRows = this.relieverTableRows.map((r, i) => [
+                String(i + 1) + '.',
+                val(r.serviceId),
+                val(r.rank),
+                val(r.corps),
+                val(r.trade),
+                val(r.name),
+                val(r.wingBattalion),
+                val(r.appointment),
+            ]);
+            addSection('Reliever Information', ['Ser', 'Service ID', 'Rank', 'Corps', 'Trade', 'Name', 'Wing/Battalion', 'Appointment'], relieverRows);
+        }
+
+        // Documents
+        const docRows = this.documentList.map((row, i) => [String(i + 1) + '.', this.getDocumentSourceLabel(row), this.getDocumentFileName(row)]);
+        if (docRows.length === 0) docRows.push(['No documents available.']);
+        addSection('Files', ['Ser', 'Section', 'File Name'], docRows);
+
+        return { title, lang: 'en', sections, showPageNumbers: true };
+    }
+
+    async exportAs(type: 'pdf' | 'word'): Promise<void> {
+        const config: ProfileExportConfig = { ...this.getExportData() };
+        if (this.profileImageUrl) {
+            try {
+                const blob = await fetch(this.profileImageUrl).then((r) => r.blob());
+                const dataUrl = await new Promise<string>((res, rej) => {
+                    const r = new FileReader();
+                    r.onload = () => res(r.result as string);
+                    r.onerror = rej;
+                    r.readAsDataURL(blob);
+                });
+                config.imageDataUrl = dataUrl;
+            } catch {
+                // omit image if fetch/read fails
+            }
+        }
+        if (type === 'pdf') this.exportService.exportProfilePDF(config);
+        else if (type === 'word') await this.exportService.exportProfileWord(config);
+        this.exportDropdownOpen = false;
+    }
 
     ngOnInit(): void {
         const id = this.route.snapshot.paramMap.get('id');
