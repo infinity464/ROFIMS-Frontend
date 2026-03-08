@@ -159,7 +159,7 @@ export class EmpService {
         return this.http.get<any[]>(`${this.empApi}/PersonalInfo/GetFilteredByKeysAsyn/${employeeId}`).pipe(map((data) => (data && data.length > 0 ? data[0] : null)));
     }
 
-    // Get active addresses by employee ID (only Present and Permanent, not Wife addresses)
+    // Get active addresses by employee ID (only Present and Permanent, not Spouse addresses)
     getActiveAddressesByEmployeeId(employeeId: number): Observable<any[]> {
         return this.http.get<any[]>(`${this.empApi}/AddressInfo/GetByEmployeeId/${employeeId}`).pipe(
             map((addresses) => {
@@ -167,8 +167,8 @@ export class EmpService {
                 return addresses.filter((addr) => {
                     const locationType = (addr.locationType || addr.LocationType || '').toLowerCase();
                     const isActive = addr.active !== false && addr.Active !== false;
-                    const isNotWifeAddress = !locationType.includes('wife');
-                    return isActive && isNotWifeAddress;
+                    const isNotSpouseAddress = !locationType.includes('spouse');
+                    return isActive && isNotSpouseAddress;
                 });
             })
         );

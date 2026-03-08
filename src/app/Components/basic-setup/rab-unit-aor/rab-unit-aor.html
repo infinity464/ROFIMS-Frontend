@@ -1,0 +1,116 @@
+<p-fluid>
+    <p-toast></p-toast>
+    <p-confirmDialog></p-confirmDialog>
+
+    <div class="card">
+        <div class="font-semibold text-xl mb-5">{{ title }} Setup</div>
+
+        <form [formGroup]="form" (ngSubmit)="assignSelected()">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                <div>
+                    <label for="rabUnitId" class="block mb-2">RAB Unit <span class="text-red-500">*</span></label>
+                    <p-select
+                        id="rabUnitId"
+                        [options]="rabUnitOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        styleClass="w-full"
+                        placeholder="Select RAB Unit"
+                        formControlName="rabUnitId">
+                    </p-select>
+                    @if (form.get('rabUnitId')?.invalid && form.get('rabUnitId')?.touched) {
+                        <small class="text-red-500 block mt-1">RAB Unit is required</small>
+                    }
+                </div>
+                <div>
+                    <label for="divisionId" class="block mb-2">Division <span class="text-red-500">*</span></label>
+                    <p-select
+                        id="divisionId"
+                        [options]="divisionOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        styleClass="w-full"
+                        placeholder="Select Division"
+                        formControlName="divisionId">
+                    </p-select>
+                    @if (form.get('divisionId')?.invalid && form.get('divisionId')?.touched) {
+                        <small class="text-red-500 block mt-1">Division is required</small>
+                    }
+                </div>
+                <div>
+                    <label for="districtId" class="block mb-2">District <span class="text-red-500">*</span></label>
+                    <p-select
+                        id="districtId"
+                        [options]="districtOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        styleClass="w-full"
+                        placeholder="Select District"
+                        formControlName="districtId">
+                    </p-select>
+                    @if (form.get('districtId')?.invalid && form.get('districtId')?.touched) {
+                        <small class="text-red-500 block mt-1">District is required</small>
+                    }
+                </div>
+                <div class="md:col-span-2 lg:col-span-3">
+                    <label for="upazilaIds" class="block mb-2">Upazilas <span class="text-red-500">*</span></label>
+                    <p-multiselect
+                        id="upazilaIds"
+                        [options]="upazilaOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        styleClass="w-full"
+                        placeholder="Select one or more upazilas"
+                        [filter]="true"
+                        formControlName="upazilaIds">
+                    </p-multiselect>
+                    @if (form.get('upazilaIds')?.invalid && form.get('upazilaIds')?.touched) {
+                        <small class="text-red-500 block mt-1">Select at least one upazila</small>
+                    }
+                </div>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-2 justify-end">
+                <p-button type="submit" label="Assign Selected Upazilas" [disabled]="form.invalid || isSubmitting" [fluid]="false"></p-button>
+                <p-button type="button" label="Reset" severity="secondary" [fluid]="false" (click)="resetForm()"></p-button>
+            </div>
+        </form>
+    </div>
+
+    <div class="card mt-4">
+        <div class="flex justify-between items-center flex-column sm:flex-row">
+            <span class="font-medium">Assigned Upazilas</span>
+        </div>
+
+        @if (!form.value.rabUnitId) {
+            <div class="text-color-secondary py-4">Select a RAB Unit to see assigned upazilas.</div>
+        } @else if (assignedLoading) {
+            <div class="py-4">Loading...</div>
+        } @else if (assigned.length === 0) {
+            <div class="text-color-secondary py-4">No upazilas assigned.</div>
+        } @else {
+            <p-table [value]="assigned" [loading]="false" styleClass="p-datatable-sm p-datatable-striped">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th>#</th>
+                        <th>Division</th>
+                        <th>District</th>
+                        <th>Upazila</th>
+                        <th>Action</th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                    <tr>
+                        <td>{{ rowIndex + 1 }}</td>
+                        <td>{{ row.divisionName }}</td>
+                        <td>{{ row.districtName }}</td>
+                        <td>{{ row.upazilaName }}</td>
+                        <td>
+                            <button class="mx-2" pButton icon="pi pi-trash" (click)="removeAssignment(row, $event)" class="p-button-danger"></button>
+                        </td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        }
+    </div>
+</p-fluid>
+

@@ -33,7 +33,7 @@ export interface ServingMemberFilterRequest {
     joiningDateFrom?: string | null;
     joiningDateTo?: string | null;
     permanentDistrictType?: number | null;
-    wifePermanentDistrictType?: number | null;
+    spousePermanentDistrictType?: number | null;
     appointmentId?: number | null;
 }
 
@@ -64,7 +64,7 @@ export class ServingMembersService {
         return this.http.get<ServingMemberFilterOptions>(`${this.apiUrl}/GetServingMemberFilterOptions`);
     }
 
-    /** Gets presently serving members with filter and pagination. Home District = Permanent Address District; Wife Home District = Wife Permanent Address District. */
+    /** Gets presently serving members with filter and pagination. Home District = Permanent Address District; Spouse Home District = Spouse Permanent Address District. */
     getPresentlyServingMembersPaginatedFiltered(request: ServingMemberPaginatedFilterRequest): Observable<PagedResponse<EmployeeServiceOverview>> {
         return this.http.post<PagedResponse<EmployeeServiceOverview>>(`${this.apiUrl}/GetBasicServiceInformationOfServingMemberPaginatedFiltered`, request);
     }

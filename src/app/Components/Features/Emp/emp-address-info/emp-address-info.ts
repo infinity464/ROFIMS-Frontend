@@ -34,8 +34,8 @@ export class EmpAddressInfo implements OnInit {
     /** When embedMode is true, load and edit this employee's addresses. */
     @Input() externalEmployeeId: number | null = null;
 
-    /** When embedMode is true: 'own' = Permanent+Present, 'wife' = WifePermanent+WifePresent. */
-    @Input() addressScope: 'own' | 'wife' = 'own';
+    /** When embedMode is true: 'own' = Permanent+Present, 'spouse' = SpousePermanent+SpousePresent. */
+    @Input() addressScope: 'own' | 'spouse' = 'own';
 
     @Output() saved = new EventEmitter<void>();
     @Output() cancelled = new EventEmitter<void>();
@@ -137,8 +137,8 @@ export class EmpAddressInfo implements OnInit {
             this.permanentAddressConfig.employeeId = this.selectedEmployeeId;
             this.presentAddressConfig.employeeId = this.selectedEmployeeId;
         }
-        const permType = this.addressScope === 'wife' ? LocationType.WifePermanent : LocationType.Permanent;
-        const presType = this.addressScope === 'wife' ? LocationType.WifePresent : LocationType.Present;
+        const permType = this.addressScope === 'spouse' ? LocationType.SpousePermanent : LocationType.Permanent;
+        const presType = this.addressScope === 'spouse' ? LocationType.SpousePresent : LocationType.Present;
         (this.permanentAddressConfig as { addressType: string }).addressType = permType;
         (this.presentAddressConfig as { addressType: string }).addressType = presType;
     }
@@ -179,11 +179,11 @@ export class EmpAddressInfo implements OnInit {
                             houseRoad: addr.houseRoad || addr.HouseRoad || ''
                         };
 
-                        const permMatch = this.addressScope === 'wife'
-                            ? locationType === LocationType.WifePermanent.toLowerCase()
+                        const permMatch = this.addressScope === 'spouse'
+                            ? locationType === LocationType.SpousePermanent.toLowerCase()
                             : locationType === LocationType.Permanent.toLowerCase();
-                        const presMatch = this.addressScope === 'wife'
-                            ? locationType === LocationType.WifePresent.toLowerCase()
+                        const presMatch = this.addressScope === 'spouse'
+                            ? locationType === LocationType.SpousePresent.toLowerCase()
                             : locationType === LocationType.Present.toLowerCase();
                         if (permMatch) {
                             this.permanentAddressData = addressData;
@@ -324,6 +324,7 @@ export class EmpAddressInfo implements OnInit {
         const newAddressPayload = {
             EmployeeID: this.selectedEmployeeId,
             AddressId: 0, // New record
+            fmid: 0,
             FMID: 0,
             LocationType: locationType,
             LocationCode: `${data.division}-${data.district}-${data.upazila}`,

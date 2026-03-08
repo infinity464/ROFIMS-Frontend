@@ -11,7 +11,6 @@
     },
     "private": true,
     "dependencies": {
-        "@abdalgolabs/ansi-unicode-converter": "^1.0.5",
         "@angular/animations": "^20",
         "@angular/common": "^20",
         "@angular/compiler": "^20",

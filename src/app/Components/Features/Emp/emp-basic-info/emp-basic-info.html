@@ -213,6 +213,15 @@
                     </div>
 
                     <div class="form-field">
+                        <label class="form-label">Marital Status</label>
+                        <p-select [options]="maritalStatusOptions" optionLabel="codeValueEN" optionValue="codeId"
+                            placeholder="Select Marital Status" styleClass="w-full" formControlName="maritalStatus"
+                            (onChange)="onMaritalStatusChange($event.value)"
+                            [filter]="true" filterPlaceholder="Search">
+                        </p-select>
+                    </div>
+
+                    <div class="form-field">
                         <label class="form-label">
                             Select Prefix <span class="form-label-required">*</span>
                         </label>
@@ -253,6 +262,24 @@
                             formControlName="rabid" readonly />
                     </div>
                 </div>
+
+                <!-- Row: When Married - Relationship (Spouse, readonly) and Wife Name. Relationship control is enabled so its value is included in form payload. -->
+                @if (isMaritalStatusMarried) {
+                <div class="form-row">
+                    <div class="form-field">
+                        <label class="form-label">Relationship</label>
+                        <p-select [options]="relationOptions" optionLabel="codeValueEN" optionValue="codeId"
+                            styleClass="w-full" formControlName="relationship"
+                            placeholder="Spouse">
+                        </p-select>
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label">Spouse Name</label>
+                        <input pInputText class="w-full" placeholder="Enter spouse name"
+                            formControlName="spouseName" />
+                    </div>
+                </div>
+                }
 
                 <!-- Row 5: Name English, Name Bangla -->
                 <div class="form-row">
@@ -312,36 +339,36 @@
           </app-address-form>
         </div>
 
-        <!-- Wife Permanent Address Section (Optional) -->
+        <!-- Spouse Permanent Address Section (Optional) -->
         <div class="form-section">
           <app-address-form
-            #wifePermanentAddressForm
-            [config]="wifePermanentAddressConfig"
-            [savedAddressId]="wifePermanentAddressId"
+            #spousePermanentAddressForm
+            [config]="spousePermanentAddressConfig"
+            [savedAddressId]="spousePermanentAddressId"
             [showButtons]="false"
             [showCard]="false"
             [isReadonly]="isViewMode"
             [isOptional]="true"
-            [initialAddressData]="wifePermanentAddress"
-            (onSave)="saveWifePermanentAddress($event)"
+            [initialAddressData]="spousePermanentAddress"
+            (onSave)="saveSpousePermanentAddress($event)"
             (onCancel)="cancelAddress()">
           </app-address-form>
         </div>
 
-        <!-- Wife Present Address Section (Optional) -->
+        <!-- Spouse Present Address Section (Optional) -->
         <div class="form-section">
           <app-address-form
-            #wifePresentAddressForm
-            [config]="wifePresentAddressConfig"
-            [savedAddressId]="wifePresentAddressId"
+            #spousePresentAddressForm
+            [config]="spousePresentAddressConfig"
+            [savedAddressId]="spousePresentAddressId"
             [showButtons]="false"
             [showCard]="false"
             [isReadonly]="isViewMode"
             [isOptional]="true"
-            [initialAddressData]="wifePresentAddress"
-            (onSave)="saveWifePresentAddress($event)"
+            [initialAddressData]="spousePresentAddress"
+            (onSave)="saveSpousePresentAddress($event)"
             (onCancel)="cancelAddress()"
-            (onSameAsPresentRequest)="copyWifePermanentToWifePresent()">
+            (onSameAsPresentRequest)="copySpousePermanentToSpousePresent()">
           </app-address-form>
         </div>
 

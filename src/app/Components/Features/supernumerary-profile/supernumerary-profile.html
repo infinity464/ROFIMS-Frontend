@@ -83,34 +83,34 @@
                 </div>
             </div>
         }
-        @if (hasAddress(profile.wifePresentAddress)) {
+        @if (hasAddress(profile.spousePresentAddress)) {
             <div class="address-section text-900">
-                <div class="address-heading">Wife Present Address: </div>
+                <div class="address-heading">Spouse Present Address: </div>
                 <div class="address-grid">
                     <div class="address-col">
-                        <div class="addr-row"><span class="addr-label">Village/Area: </span> <span class="addr-value">{{ addrVal(profile.wifePresentAddress, 'villageArea') }}</span></div>
-                        <div class="addr-row"><span class="addr-label">District: </span> <span class="addr-value">{{ addrVal(profile.wifePresentAddress, 'district') }}</span></div>
+                        <div class="addr-row"><span class="addr-label">Village/Area: </span> <span class="addr-value">{{ addrVal(profile.spousePresentAddress, 'villageArea') }}</span></div>
+                        <div class="addr-row"><span class="addr-label">District: </span> <span class="addr-value">{{ addrVal(profile.spousePresentAddress, 'district') }}</span></div>
                     </div>
                     <div class="address-col">
-                        <div class="addr-row"><span class="addr-label">Post Office: </span> <span class="addr-value">{{ addrVal(profile.wifePresentAddress, 'postOffice') }}</span></div>
-                        <div class="addr-row"><span class="addr-label">Division: </span> <span class="addr-value">{{ addrVal(profile.wifePresentAddress, 'division') }}</span></div>
-                        <div class="addr-row"><span class="addr-label">Upazila/Thana: </span> <span class="addr-value">{{ addrVal(profile.wifePresentAddress, 'upazilaThana') }}</span></div>
+                        <div class="addr-row"><span class="addr-label">Post Office: </span> <span class="addr-value">{{ addrVal(profile.spousePresentAddress, 'postOffice') }}</span></div>
+                        <div class="addr-row"><span class="addr-label">Division: </span> <span class="addr-value">{{ addrVal(profile.spousePresentAddress, 'division') }}</span></div>
+                        <div class="addr-row"><span class="addr-label">Upazila/Thana: </span> <span class="addr-value">{{ addrVal(profile.spousePresentAddress, 'upazilaThana') }}</span></div>
                     </div>
                 </div>
             </div>
         }
-        @if (hasAddress(profile.wifePermanentAddress)) {
+        @if (hasAddress(profile.spousePermanentAddress)) {
             <div class="address-section text-900">
-                <div class="address-heading">Wife Permanent Address: </div>
+                <div class="address-heading">Spouse Permanent Address: </div>
                 <div class="address-grid">
                     <div class="address-col">
-                        <div class="addr-row"><span class="addr-label">Village/Area: </span> <span class="addr-value">{{ addrVal(profile.wifePermanentAddress, 'villageArea') }}</span></div>
-                        <div class="addr-row"><span class="addr-label">District: </span> <span class="addr-value">{{ addrVal(profile.wifePermanentAddress, 'district') }}</span></div>
+                        <div class="addr-row"><span class="addr-label">Village/Area: </span> <span class="addr-value">{{ addrVal(profile.spousePermanentAddress, 'villageArea') }}</span></div>
+                        <div class="addr-row"><span class="addr-label">District: </span> <span class="addr-value">{{ addrVal(profile.spousePermanentAddress, 'district') }}</span></div>
                     </div>
                     <div class="address-col">
-                        <div class="addr-row"><span class="addr-label">Post Office: </span> <span class="addr-value">{{ addrVal(profile.wifePermanentAddress, 'postOffice') }}</span></div>
-                        <div class="addr-row"><span class="addr-label">Division: </span> <span class="addr-value">{{ addrVal(profile.wifePermanentAddress, 'division') }}</span></div>
-                        <div class="addr-row"><span class="addr-label">Upazila/Thana: </span> <span class="addr-value">{{ addrVal(profile.wifePermanentAddress, 'upazilaThana') }}</span></div>
+                        <div class="addr-row"><span class="addr-label">Post Office: </span> <span class="addr-value">{{ addrVal(profile.spousePermanentAddress, 'postOffice') }}</span></div>
+                        <div class="addr-row"><span class="addr-label">Division: </span> <span class="addr-value">{{ addrVal(profile.spousePermanentAddress, 'division') }}</span></div>
+                        <div class="addr-row"><span class="addr-label">Upazila/Thana: </span> <span class="addr-value">{{ addrVal(profile.spousePermanentAddress, 'upazilaThana') }}</span></div>
                     </div>
                 </div>
             </div>
@@ -270,34 +270,34 @@
                     </div>
                 </div>
             }
-            @if (hasAddress(relieverProfile.wifePermanentAddress)) {
+            @if (hasAddress(relieverProfile.spousePermanentAddress)) {
                 <div class="address-section">
-                    <div class="address-heading">Wife Permanent Address: </div>
+                    <div class="address-heading">Spouse Permanent Address: </div>
                     <div class="address-grid">
                         <div class="address-col">
-                            <div class="addr-row"><span class="addr-label">Village/Area: </span> <span class="addr-value">{{ addrVal(relieverProfile.wifePermanentAddress, 'villageArea') }}</span></div>
-                            <div class="addr-row"><span class="addr-label">District: </span> <span class="addr-value">{{ addrVal(relieverProfile.wifePermanentAddress, 'district') }}</span></div>
+                            <div class="addr-row"><span class="addr-label">Village/Area: </span> <span class="addr-value">{{ addrVal(relieverProfile.spousePermanentAddress, 'villageArea') }}</span></div>
+                            <div class="addr-row"><span class="addr-label">District: </span> <span class="addr-value">{{ addrVal(relieverProfile.spousePermanentAddress, 'district') }}</span></div>
                         </div>
                         <div class="address-col">
-                            <div class="addr-row"><span class="addr-label">Post Office: </span> <span class="addr-value">{{ addrVal(relieverProfile.wifePermanentAddress, 'postOffice') }}</span></div>
-                            <div class="addr-row"><span class="addr-label">Division: </span> <span class="addr-value">{{ addrVal(relieverProfile.wifePermanentAddress, 'division') }}</span></div>
-                            <div class="addr-row"><span class="addr-label">Upazila/Thana: </span> <span class="addr-value">{{ addrVal(relieverProfile.wifePermanentAddress, 'upazilaThana') }}</span></div>
+                            <div class="addr-row"><span class="addr-label">Post Office: </span> <span class="addr-value">{{ addrVal(relieverProfile.spousePermanentAddress, 'postOffice') }}</span></div>
+                            <div class="addr-row"><span class="addr-label">Division: </span> <span class="addr-value">{{ addrVal(relieverProfile.spousePermanentAddress, 'division') }}</span></div>
+                            <div class="addr-row"><span class="addr-label">Upazila/Thana: </span> <span class="addr-value">{{ addrVal(relieverProfile.spousePermanentAddress, 'upazilaThana') }}</span></div>
                         </div>
                     </div>
                 </div>
             }
-            @if (hasAddress(relieverProfile.wifePresentAddress)) {
+            @if (hasAddress(relieverProfile.spousePresentAddress)) {
                 <div class="address-section">
-                    <div class="address-heading">Wife Present Address: </div>
+                    <div class="address-heading">Spouse Present Address: </div>
                     <div class="address-grid">
                         <div class="address-col">
-                            <div class="addr-row"><span class="addr-label">Village/Area: </span> <span class="addr-value">{{ addrVal(relieverProfile.wifePresentAddress, 'villageArea') }}</span></div>
-                            <div class="addr-row"><span class="addr-label">District: </span> <span class="addr-value">{{ addrVal(relieverProfile.wifePresentAddress, 'district') }}</span></div>
+                            <div class="addr-row"><span class="addr-label">Village/Area: </span> <span class="addr-value">{{ addrVal(relieverProfile.spousePresentAddress, 'villageArea') }}</span></div>
+                            <div class="addr-row"><span class="addr-label">District: </span> <span class="addr-value">{{ addrVal(relieverProfile.spousePresentAddress, 'district') }}</span></div>
                         </div>
                         <div class="address-col">
-                            <div class="addr-row"><span class="addr-label">Post Office: </span> <span class="addr-value">{{ addrVal(relieverProfile.wifePresentAddress, 'postOffice') }}</span></div>
-                            <div class="addr-row"><span class="addr-label">Division: </span> <span class="addr-value">{{ addrVal(relieverProfile.wifePresentAddress, 'division') }}</span></div>
-                            <div class="addr-row"><span class="addr-label">Upazila/Thana: </span> <span class="addr-value">{{ addrVal(relieverProfile.wifePresentAddress, 'upazilaThana') }}</span></div>
+                            <div class="addr-row"><span class="addr-label">Post Office: </span> <span class="addr-value">{{ addrVal(relieverProfile.spousePresentAddress, 'postOffice') }}</span></div>
+                            <div class="addr-row"><span class="addr-label">Division: </span> <span class="addr-value">{{ addrVal(relieverProfile.spousePresentAddress, 'division') }}</span></div>
+                            <div class="addr-row"><span class="addr-label">Upazila/Thana: </span> <span class="addr-value">{{ addrVal(relieverProfile.spousePresentAddress, 'upazilaThana') }}</span></div>
                         </div>
                     </div>
                 </div>

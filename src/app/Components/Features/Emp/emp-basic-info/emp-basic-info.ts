@@ -8,6 +8,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { Button, ButtonModule } from 'primeng/button';
 import { CommonCodeModel } from '@/models/common-code-model';
 import { EmpService } from '@/services/emp-service';
+import { FamilyInfoService } from '@/services/family-info-service';
 import { MotherOrganizationModel } from '@/models/mother-org-model';
 import { CommonCodeService } from '@/services/common-code-service';
 import { MessageService } from 'primeng/api';
@@ -16,7 +17,8 @@ import { Checkbox } from 'primeng/checkbox';
 import { Dialog } from 'primeng/dialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { AddressData, AddressFormConfig, AddressFormComponent } from '../../EmployeeInfo/address-form/address-form';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
+import { catchError, finalize, map, switchMap, tap } from 'rxjs/operators';
 import { LocationType, PostingStatus } from '@/models/enums';
 import { EmpPresentMemberCheckComponent } from '../emp-present-member-check/emp-present-member-check.component';
 import { FileReferencesFormComponent } from '@components/Common/file-references-form/file-references-form';
@@ -33,8 +35,8 @@ export class EmpBasicInfo implements OnInit {
     @ViewChild('fileReferencesForm') fileReferencesForm!: any; // FileReferencesFormComponent
     @ViewChild('permanentAddressForm') permanentAddressForm!: AddressFormComponent;
     @ViewChild('presentAddressForm') presentAddressForm!: AddressFormComponent;
-    @ViewChild('wifePermanentAddressForm') wifePermanentAddressForm!: AddressFormComponent;
-    @ViewChild('wifePresentAddressForm') wifePresentAddressForm!: AddressFormComponent;
+    @ViewChild('spousePermanentAddressForm') spousePermanentAddressForm!: AddressFormComponent;
+    @ViewChild('spousePresentAddressForm') spousePresentAddressForm!: AddressFormComponent;
 
     // View/Edit mode
     isViewMode: boolean = false;
@@ -56,14 +58,14 @@ export class EmpBasicInfo implements OnInit {
     // Store addresses
     presentAddress?: AddressData;
     permanentAddress?: AddressData;
-    wifePermanentAddress?: AddressData;
-    wifePresentAddress?: AddressData;
+    spousePermanentAddress?: AddressData;
+    spousePresentAddress?: AddressData;
 
     // Store generated AddressIds
     permanentAddressId?: number;
     presentAddressId?: number;
-    wifePermanentAddressId?: number;
-    wifePresentAddressId?: number;
+    spousePermanentAddressId?: number;
+    spousePresentAddressId?: number;
 
     // Permanent address config (first)
     permanentAddressConfig: AddressFormConfig = {
@@ -80,19 +82,19 @@ export class EmpBasicInfo implements OnInit {
         employeeId: this.employeeId
     };
 
-    // Wife Permanent address config
-    wifePermanentAddressConfig: AddressFormConfig = {
-        title: 'Wife Permanent Address',
-        addressType: 'wife',
+    // Spouse Permanent address config
+    spousePermanentAddressConfig: AddressFormConfig = {
+        title: 'Spouse Permanent Address',
+        addressType: 'spouse',
         employeeId: this.employeeId
     };
 
-    // Wife Present address config (with "Same as Wife Permanent" option)
-    wifePresentAddressConfig: AddressFormConfig = {
-        title: 'Wife Present Address',
-        addressType: 'wifePresent',
+    // Spouse Present address config (with "Same as Spouse Permanent" option)
+    spousePresentAddressConfig: AddressFormConfig = {
+        title: 'Spouse Present Address',
+        addressType: 'spousePresent',
         showSameAsPresent: true,
-        sameAsLabel: 'Same as Wife Permanent Address',
+        sameAsLabel: 'Same as Spouse Permanent Address',
         employeeId: this.employeeId
     };
 
@@ -270,8 +272,8 @@ export class EmpBasicInfo implements OnInit {
         });
     }
 
-    // Wife Permanent Address save handler
-    saveWifePermanentAddress(data: AddressData) {
+    // Spouse Permanent Address save handler
+    saveSpousePermanentAddress(data: AddressData) {
         if (!this.generatedEmployeeId) {
             this.messageService.add({
                 severity: 'warn',
@@ -285,7 +287,7 @@ export class EmpBasicInfo implements OnInit {
             EmployeeID: this.generatedEmployeeId,
             AddressId: 0,
             FMID: 0,
-            LocationType: LocationType.WifePermanent,
+            LocationType: LocationType.SpousePermanent,
             LocationCode: `${data.division}-${data.district}-${data.upazila}`,
             PostCode: data.postCode || '',
             AddressAreaEN: data.villageEnglish || '',
@@ -304,14 +306,14 @@ export class EmpBasicInfo implements OnInit {
 
         this.empService.saveAddress(addressPayload).subscribe({
             next: (res) => {
-                this.wifePermanentAddress = data;
+                this.spousePermanentAddress = data;
                 // Capture generated AddressId
                 const addressId = res?.data?.addressId || res?.Data?.AddressId || res?.addressId;
-                if (addressId) this.wifePermanentAddressId = addressId;
+                if (addressId) this.spousePermanentAddressId = addressId;
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Success',
-                    detail: 'Wife permanent address saved successfully'
+                    detail: 'Spouse permanent address saved successfully'
                 });
             },
             error: (err) => {
@@ -325,8 +327,8 @@ export class EmpBasicInfo implements OnInit {
         });
     }
 
-    // Wife Present Address save handler
-    saveWifePresentAddress(data: AddressData) {
+    // Spouse Present Address save handler
+    saveSpousePresentAddress(data: AddressData) {
         if (!this.generatedEmployeeId) {
             this.messageService.add({
                 severity: 'warn',
@@ -340,7 +342,7 @@ export class EmpBasicInfo implements OnInit {
             EmployeeID: this.generatedEmployeeId,
             AddressId: 0,
             FMID: 0,
-            LocationType: LocationType.WifePresent,
+            LocationType: LocationType.SpousePresent,
             LocationCode: `${data.division}-${data.district}-${data.upazila}`,
             PostCode: data.postCode || '',
             AddressAreaEN: data.villageEnglish || '',
@@ -359,14 +361,14 @@ export class EmpBasicInfo implements OnInit {
 
         this.empService.saveAddress(addressPayload).subscribe({
             next: (res) => {
-                this.wifePresentAddress = data;
+                this.spousePresentAddress = data;
                 // Capture generated AddressId
                 const addressId = res?.data?.addressId || res?.Data?.AddressId || res?.addressId;
-                if (addressId) this.wifePresentAddressId = addressId;
+                if (addressId) this.spousePresentAddressId = addressId;
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Success',
-                    detail: 'Wife present address saved successfully'
+                    detail: 'Spouse present address saved successfully'
                 });
             },
             error: (err) => {
@@ -409,11 +411,11 @@ export class EmpBasicInfo implements OnInit {
         }
     }
 
-    // Copy wife permanent address data to wife present address form
-    copyWifePermanentToWifePresent(): void {
-        const wifePermanentData = this.wifePermanentAddressForm?.getFormData();
-        if (wifePermanentData?.data) {
-            this.wifePresentAddressForm?.populateFromSourceAddress(wifePermanentData.data);
+    // Copy spouse permanent address data to spouse present address form
+    copySpousePermanentToSpousePresent(): void {
+        const spousePermanentData = this.spousePermanentAddressForm?.getFormData();
+        if (spousePermanentData?.data) {
+            this.spousePresentAddressForm?.populateFromSourceAddress(spousePermanentData.data);
         }
     }
 
@@ -445,8 +447,8 @@ export class EmpBasicInfo implements OnInit {
         // Get form data from all address forms
         const permanentData = this.permanentAddressForm?.getFormData();
         const presentData = this.presentAddressForm?.getFormData();
-        const wifePermanentData = this.wifePermanentAddressForm?.getFormData();
-        const wifePresentData = this.wifePresentAddressForm?.getFormData();
+        const spousePermanentData = this.spousePermanentAddressForm?.getFormData();
+        const spousePresentData = this.spousePresentAddressForm?.getFormData();
 
         // Only validate required addresses (permanent and present)
         // Wife addresses are optional
@@ -469,7 +471,7 @@ export class EmpBasicInfo implements OnInit {
         const filesToUpload = this.fileReferencesForm?.getFilesToUpload() || [];
 
         const doSave = (filesRefsJson: string | null, profileImgsJson: string | null) => {
-            this.saveEmployeeWithFilesRefs(this.formattedDataForEmployee(), filesRefsJson, profileImgsJson, permanentData!, presentData!, wifePermanentData, wifePresentData);
+            this.saveEmployeeWithFilesRefs(this.formattedDataForEmployee(), filesRefsJson, profileImgsJson, permanentData!, presentData!, spousePermanentData, spousePresentData);
         };
 
         if (filesToUpload.length > 0 || this.selectedFile) {
@@ -517,7 +519,8 @@ export class EmpBasicInfo implements OnInit {
             joiningDate: this.formatDate(formValue.joiningDate),
             postingStatus: formValue.postingStatus || PostingStatus.Supernumerary,
             isReliever: this.isReliever,
-            relieverId: this.isReliever && this.selectedRelieverEmployeeId ? this.selectedRelieverEmployeeId : null
+            relieverId: this.isReliever && this.selectedRelieverEmployeeId ? this.selectedRelieverEmployeeId : null,
+            maritalStatus: formValue.maritalStatus ?? null
         };
     }
 
@@ -535,8 +538,8 @@ export class EmpBasicInfo implements OnInit {
         profileImagesJson: string | null,
         permanentData: { data: AddressData },
         presentData: { data: AddressData },
-        wifePermanentData: { data: AddressData } | null,
-        wifePresentData: { data: AddressData } | null
+        spousePermanentData: { data: AddressData } | null,
+        spousePresentData: { data: AddressData } | null
     ): void {
         if (filesReferencesJson != null) {
             formattedData.filesReferences = filesReferencesJson;
@@ -557,16 +560,26 @@ export class EmpBasicInfo implements OnInit {
                     this.generatedEmployeeId = employeeId;
                     this.presentAddressConfig.employeeId = employeeId;
                     this.permanentAddressConfig.employeeId = employeeId;
-                    this.wifePermanentAddressConfig.employeeId = employeeId;
-                    this.wifePresentAddressConfig.employeeId = employeeId;
+                    this.spousePermanentAddressConfig.employeeId = employeeId;
+                    this.spousePresentAddressConfig.employeeId = employeeId;
 
-                    // Step 2: Save or Update addresses (only those with data)
-                    this.saveAllAddressesInternal(
-                        permanentData.data,
-                        presentData.data,
-                        this.wifePermanentAddressForm?.hasData() && wifePermanentData ? wifePermanentData.data : null,
-                        this.wifePresentAddressForm?.hasData() && wifePresentData ? wifePresentData.data : null
-                    );
+                    // Step 1.5: If Married, save/update spouse in FamilyInfo first so we have FMID for spouse addresses
+                    // Step 2: Then save addresses (spouse addresses will include spouse FMID in AddressInfo)
+                    this.saveSpouseIfMarried(employeeId).pipe(
+                        switchMap((spouseFmidFromApi) =>
+                            of(null).pipe(
+                                finalize(() =>
+                                    this.saveAllAddressesInternal(
+                                        permanentData.data,
+                                        presentData.data,
+                                        this.spousePermanentAddressForm?.hasData() && spousePermanentData ? spousePermanentData.data : null,
+                                        this.spousePresentAddressForm?.hasData() && spousePresentData ? spousePresentData.data : null,
+                                        spouseFmidFromApi
+                                    )
+                                )
+                            )
+                        )
+                    ).subscribe();
                 } else {
                     this.messageService.add({
                         severity: 'error',
@@ -586,13 +599,69 @@ export class EmpBasicInfo implements OnInit {
         });
     }
 
-    // Internal method to save or update all addresses
-    private saveAllAddressesInternal(permanent: AddressData, present: AddressData, wifePermanent: AddressData | null, wifePresent: AddressData | null): void {
-        const buildPayload = (data: AddressData, locationType: string, existingAddressId?: number) => {
+    /** When Marital Status is Married and Spouse Name is set, save or update spouse row in FamilyInfo. Returns Observable that emits the FMID to use for spouse addresses (from API on insert, or existing spouseFmid on update). */
+    private saveSpouseIfMarried(employeeId: number): import('rxjs').Observable<number | null> {
+        const formValue = this.postingForm.getRawValue();
+        const maritalId = formValue.maritalStatus;
+        const spouseName = (formValue.spouseName || '').trim();
+        const isMarried = this.maritalStatusOptions.some((m) => m.codeId === maritalId && (m.codeValueEN || (m as any).codeValueEn || '').toLowerCase().trim() === 'married');
+        const relationCodeId = formValue.relationship;
+        const shouldSave = relationCodeId != null && (isMarried || spouseName.length > 0 || this.spouseFmid != null);
+        if (!shouldSave) return of(null);
+
+        const nowIso = new Date().toISOString();
+        const payload: Record<string, unknown> = {
+            EmployeeId: employeeId,
+            Relation: relationCodeId,
+            NameEN: spouseName || null,
+            NameBN: null,
+            DOB: null,
+            MaritalStatus: null,
+            Occupation: null,
+            NID: null,
+            MobileNo: null,
+            PassportNo: null,
+            Email: null,
+            CreatedDate: nowIso,
+            LastUpdatedBy: 'system',
+            Lastupdate: nowIso,
+            StatusDate: nowIso
+        };
+        if (this.spouseFmid != null) {
+            payload['FMID'] = this.spouseFmid;
+        } else {
+            payload['FMID'] = 0;
+        }
+
+        const req = this.spouseFmid ? this.familyInfoService.update(payload) : this.familyInfoService.save(payload);
+        return req.pipe(
+            map((res: any) => {
+                // API returns ResultViewModel { Data = saved entity }; entity may use PascalCase or camelCase
+                const data = res?.data ?? res?.Data;
+                const fmid = data != null
+                    ? (data.FMID ?? data.fmid ?? (typeof data === 'number' ? data : undefined))
+                    : (res?.FMID ?? res?.fmid);
+                const resolved = fmid != null && fmid !== 0 ? +fmid : (this.spouseFmid ?? null);
+                if (this.spouseFmid == null && resolved != null) this.spouseFmid = resolved;
+                return resolved;
+            }),
+            catchError((err) => {
+                console.error('Error saving spouse', err);
+                return of(this.spouseFmid);
+            })
+        );
+    }
+
+    // Internal method to save or update all addresses (spouse addresses include spouse FMID for AddressInfo)
+    /** spouseFmidFromApi: FMID from spouse save response (use this for new spouse so address gets the generated FMID) */
+    private saveAllAddressesInternal(permanent: AddressData, present: AddressData, spousePermanent: AddressData | null, spousePresent: AddressData | null, spouseFmidFromApi?: number | null): void {
+        const buildPayload = (data: AddressData, locationType: string, existingAddressId?: number, fmid?: number) => {
+            const fmidVal = fmid ?? 0;
             const payload: any = {
                 EmployeeID: this.generatedEmployeeId,
                 AddressId: existingAddressId || 0,
-                FMID: 0,
+                FMID: fmidVal,
+                fmid: fmidVal,
                 LocationType: locationType,
                 LocationCode: `${data.division}-${data.district}-${data.upazila}`,
                 PostCode: data.postCode || '',
@@ -613,9 +682,11 @@ export class EmpBasicInfo implements OnInit {
             return payload;
         };
 
-        // For edit mode, use update if addressId exists; otherwise save
-        const getAddressRequest = (data: AddressData, locationType: string, existingAddressId?: number) => {
-            const payload = buildPayload(data, locationType, existingAddressId);
+        // For edit mode, use update if addressId exists; otherwise save. Wife addresses pass spouse FMID for AddressInfo.
+        // Prefer FMID from API response (spouseFmidFromApi) so new spouse insert gets the generated FMID.
+        const spouseFmid = (spouseFmidFromApi != null && spouseFmidFromApi !== 0 ? spouseFmidFromApi : this.spouseFmid) ?? 0;
+        const getAddressRequest = (data: AddressData, locationType: string, existingAddressId?: number, fmid?: number) => {
+            const payload = buildPayload(data, locationType, existingAddressId, fmid);
             return this.isEditMode && existingAddressId ? this.empService.updateAddress(payload) : this.empService.saveAddress(payload);
         };
 
@@ -625,27 +696,27 @@ export class EmpBasicInfo implements OnInit {
             present: getAddressRequest(present, LocationType.Present, this.presentAddressId)
         };
 
-        // Add wife addresses only if they have data
-        if (wifePermanent) {
-            saveRequests['wifePermanent'] = getAddressRequest(wifePermanent, LocationType.WifePermanent, this.wifePermanentAddressId);
+        // Add spouse addresses only if they have data; include spouse FMID so AddressInfo links to family member
+        if (spousePermanent) {
+            saveRequests['spousePermanent'] = getAddressRequest(spousePermanent, LocationType.SpousePermanent, this.spousePermanentAddressId, spouseFmid);
         }
-        if (wifePresent) {
-            saveRequests['wifePresent'] = getAddressRequest(wifePresent, LocationType.WifePresent, this.wifePresentAddressId);
+        if (spousePresent) {
+            saveRequests['spousePresent'] = getAddressRequest(spousePresent, LocationType.SpousePresent, this.spousePresentAddressId, spouseFmid);
         }
 
         forkJoin(saveRequests).subscribe({
             next: (results: any) => {
                 this.permanentAddress = permanent;
                 this.presentAddress = present;
-                if (wifePermanent) this.wifePermanentAddress = wifePermanent;
-                if (wifePresent) this.wifePresentAddress = wifePresent;
+                if (spousePermanent) this.spousePermanentAddress = spousePermanent;
+                if (spousePresent) this.spousePresentAddress = spousePresent;
 
                 // Only update addressIds for NEW addresses (not when updating existing ones)
                 const getAddressId = (res: any) => res?.data?.addressId || res?.Data?.AddressId || res?.addressId;
                 if (!this.permanentAddressId && results.permanent) this.permanentAddressId = getAddressId(results.permanent);
                 if (!this.presentAddressId && results.present) this.presentAddressId = getAddressId(results.present);
-                if (!this.wifePermanentAddressId && results.wifePermanent) this.wifePermanentAddressId = getAddressId(results.wifePermanent);
-                if (!this.wifePresentAddressId && results.wifePresent) this.wifePresentAddressId = getAddressId(results.wifePresent);
+                if (!this.spousePermanentAddressId && results.spousePermanent) this.spousePermanentAddressId = getAddressId(results.spousePermanent);
+                if (!this.spousePresentAddressId && results.spousePresent) this.spousePresentAddressId = getAddressId(results.spousePresent);
 
                 this.messageService.add({
                     severity: 'success',
@@ -684,11 +755,16 @@ export class EmpBasicInfo implements OnInit {
     corps: CommonCodeModel[] = [];
     trades: CommonCodeModel[] = [];
     genders: CommonCodeModel[] = [];
+    maritalStatusOptions: CommonCodeModel[] = [];
+    relationOptions: CommonCodeModel[] = [];
+    /** When editing, FMID of existing spouse row in FamilyInfo (for update). */
+    spouseFmid: number | null = null;
     prefixes: CommonCodeModel[] = [];
 
     constructor(
         private fb: FormBuilder,
         private empService: EmpService,
+        private familyInfoService: FamilyInfoService,
         private commonCodeService: CommonCodeService,
         private messageService: MessageService,
         private route: ActivatedRoute,
@@ -701,6 +777,8 @@ export class EmpBasicInfo implements OnInit {
         this.loadMemberType();
         this.loadAppointment();
         this.loadGender();
+        this.loadMaritalStatus();
+        this.loadRelationshipOptions();
 
         // Check for query params (view/edit mode)
         this.route.queryParams.subscribe((params) => {
@@ -737,8 +815,8 @@ export class EmpBasicInfo implements OnInit {
         this.pageTitle = 'View Old Profile';
         this.presentAddressConfig.employeeId = employeeId;
         this.permanentAddressConfig.employeeId = employeeId;
-        this.wifePermanentAddressConfig.employeeId = employeeId;
-        this.wifePresentAddressConfig.employeeId = employeeId;
+        this.spousePermanentAddressConfig.employeeId = employeeId;
+        this.spousePresentAddressConfig.employeeId = employeeId;
         this.loadEmployeeData(employeeId);
     }
 
@@ -760,6 +838,7 @@ export class EmpBasicInfo implements OnInit {
                     trade: employee.trade,
                     tradeMark: employee.tradeMark,
                     gender: employee.gender,
+                    maritalStatus: employee.maritalStatus ?? employee.MaritalStatus ?? null,
                     prefix: employee.prefix,
                     serviceId: employee.serviceId,
                     rabid: employee.rabid,
@@ -769,8 +848,10 @@ export class EmpBasicInfo implements OnInit {
                     postingStatus: employee.postingStatus,
                     status: employee.status,
                     officerType: employee.officerType,
-                    orgId: employee.orgId
+                    orgId: employee.orgId,
+                    spouseName: employee.spouseName ?? employee.wifeName ?? ''
                 });
+                this.spouseFmid = null;
 
                 // Load file references (display names from JSON; files are not re-fetched)
                 const refsJson = employee.filesReferences || employee.FilesReferences;
@@ -844,6 +925,47 @@ export class EmpBasicInfo implements OnInit {
                     this.loadTrade(employee.branch);
                 }
 
+                // Load spouse (Wife Name) from FamilyInfo when marital status is Married
+                const applySpouseFromFamilyList = (familyList: any[]) => {
+                    if (!familyList || !Array.isArray(familyList)) return;
+                    // Prefer matching by "Spouse" relation when options are loaded; else use first family member with Relation set so relationship gets a value
+                    const spouseCodeId = this.relationOptions.length > 0
+                        ? this.relationOptions.find((r) => (r.codeValueEN || (r as any).codeValueEn || '').toLowerCase() === 'spouse')?.codeId
+                        : undefined;
+                    let spouseRow = spouseCodeId != null
+                        ? familyList.find((f: any) => {
+                            const rel = f.relation ?? f.Relation;
+                            return rel != null && rel === spouseCodeId;
+                        })
+                        : null;
+                    if (!spouseRow && familyList.length > 0)
+                        spouseRow = familyList.find((f: any) => (f.relation ?? f.Relation) != null) ?? familyList[0];
+                    if (spouseRow) {
+                        const name = spouseRow.NameEN ?? (spouseRow as any).nameEN ?? '';
+                        const rawRel = spouseRow.Relation ?? (spouseRow as any).relation;
+                        const relationId = rawRel != null ? +rawRel : null;
+                        this.postingForm.patchValue({ spouseName: name, relationship: relationId });
+                        this.spouseFmid = spouseRow.FMID ?? (spouseRow as any).fmid ?? null;
+                    }
+                };
+                this.familyInfoService.getByEmployeeId(employeeId).subscribe({
+                    next: (familyList) => {
+                        if (this.relationOptions.length > 0) {
+                            applySpouseFromFamilyList(familyList);
+                        } else {
+                            // Relationship dropdown not loaded yet; load it then apply spouse so relation is set correctly
+                            this.commonCodeService.getAllActiveCommonCodesType('Relationship').subscribe({
+                                next: (res) => {
+                                    this.relationOptions = res;
+                                    applySpouseFromFamilyList(familyList);
+                                },
+                                error: () => applySpouseFromFamilyList(familyList)
+                            });
+                        }
+                    },
+                    error: () => {}
+                });
+
                 // Check reliever
                 if (employee.relieverId) {
                     this.isReliever = true;
@@ -916,12 +1038,12 @@ export class EmpBasicInfo implements OnInit {
                     } else if (normalizedType === LocationType.Present.toLowerCase()) {
                         this.presentAddress = addressData;
                         this.presentAddressId = addressId;
-                    } else if (normalizedType === LocationType.WifePermanent.toLowerCase()) {
-                        this.wifePermanentAddress = addressData;
-                        this.wifePermanentAddressId = addressId;
-                    } else if (normalizedType === LocationType.WifePresent.toLowerCase()) {
-                        this.wifePresentAddress = addressData;
-                        this.wifePresentAddressId = addressId;
+                    } else if (normalizedType === LocationType.SpousePermanent.toLowerCase()) {
+                        this.spousePermanentAddress = addressData;
+                        this.spousePermanentAddressId = addressId;
+                    } else if (normalizedType === LocationType.SpousePresent.toLowerCase()) {
+                        this.spousePresentAddress = addressData;
+                        this.spousePresentAddressId = addressId;
                     }
 
                     console.log(`Address loaded - Type: ${locationType}, AddressId: ${addressId}`);
@@ -941,7 +1063,7 @@ export class EmpBasicInfo implements OnInit {
     // Enable form for edit mode
     enableForm(): void {
         this.postingForm.enable();
-        // Keep rabid and serviceId disabled as they're always readonly
+        // Keep rabid and serviceId disabled as they're always readonly (relationship is readonly in UI when Married, not disabled)
         this.postingForm.get('rabid')?.disable();
         if (this.isEditMode) {
             this.postingForm.get('serviceId')?.disable();
@@ -981,6 +1103,9 @@ export class EmpBasicInfo implements OnInit {
             trade: [null, Validators.required],
             tradeMark: [''],
             gender: [null, Validators.required],
+            maritalStatus: [null],
+            relationship: [null],
+            spouseName: [''],
             prefix: [null, Validators.required],
             serviceId: ['', [Validators.required, Validators.pattern(/^\d+$/)]],
             rabid: [{ value: '', disabled: true }],
@@ -1121,6 +1246,60 @@ export class EmpBasicInfo implements OnInit {
         });
     }
 
+    loadMaritalStatus(): void {
+        this.commonCodeService.getAllActiveCommonCodesType('MaritalStatus').subscribe({
+            next: (res) => {
+                this.maritalStatusOptions = res;
+            },
+            error: (err) => {
+                console.error('Failed to load marital status', err);
+            }
+        });
+    }
+
+    loadRelationshipOptions(): void {
+        this.commonCodeService.getAllActiveCommonCodesType('Relationship').subscribe({
+            next: (res) => {
+                this.relationOptions = res;
+                // When saving new employee: if Marital Status is already Married but relationship was null (dropdown just loaded), set it to Spouse so spouse info saves
+                this.setRelationshipToSpouseIfMarried();
+            },
+            error: (err) => {
+                console.error('Failed to load relationship options', err);
+            }
+        });
+    }
+
+    /** Sets relationship form control to Spouse codeId when Marital Status is Married and relationship is not set (so spouse info and addresses save). */
+    private setRelationshipToSpouseIfMarried(): void {
+        if (this.relationOptions.length === 0) return;
+        const maritalStatusId = this.postingForm.get('maritalStatus')?.value;
+        const isMarried = maritalStatusId != null && this.maritalStatusOptions.some((m) => m.codeId === maritalStatusId && (m.codeValueEN || (m as any).codeValueEn || '').toLowerCase().trim() === 'married');
+        if (!isMarried) return;
+        const currentRel = this.postingForm.get('relationship')?.value;
+        if (currentRel != null) return;
+        const spouseCodeId = this.relationOptions.find((r) => (r.codeValueEN || (r as any).codeValueEn || '').toLowerCase().trim() === 'spouse')?.codeId;
+        if (spouseCodeId != null)
+            this.postingForm.patchValue({ relationship: spouseCodeId });
+    }
+
+    onMaritalStatusChange(value: number | null): void {
+        const isMarried = value != null && this.maritalStatusOptions.some((m) => m.codeId === value && (m.codeValueEN || (m as any).codeValueEn || '').toLowerCase().trim() === 'married');
+        if (!isMarried) {
+            this.postingForm.patchValue({ relationship: null, spouseName: '' });
+        } else {
+            // When user selects Married, set Relationship to Spouse so spouse info and addresses save (codeId is set)
+            this.setRelationshipToSpouseIfMarried();
+        }
+    }
+
+    /** True when Marital Status is Married (by commonCode codeValueEN). */
+    get isMaritalStatusMarried(): boolean {
+        const maritalStatusId = this.postingForm.get('maritalStatus')?.value;
+        if (maritalStatusId == null) return false;
+        return this.maritalStatusOptions.some((m) => m.codeId === maritalStatusId && (m.codeValueEN || '').toLowerCase() === 'married');
+    }
+
     loadOfficerType(codeId: number) {
         this.commonCodeService.getAllActiveCommonCodesByParentId(codeId).subscribe({
             next: (res) => {
@@ -1185,31 +1364,32 @@ export class EmpBasicInfo implements OnInit {
 
     onSubmit(): void {
         if (this.postingForm.valid) {
-            // Get the form value
-            const formValue = this.postingForm.getRawValue();
+            const formValueAfter = this.postingForm.getRawValue();
 
-            // Format the date to YYYY-MM-DD for backend
             const formattedData = {
-                ...formValue,
-                joiningDate: this.formatDate(formValue.joiningDate),
-                // Set PostingStatus to Supernumerary by default
-                postingStatus: formValue.postingStatus || PostingStatus.Supernumerary
+                ...formValueAfter,
+                employeeID: this.generatedEmployeeId || 0,
+                joiningDate: this.formatDate(formValueAfter.joiningDate),
+                postingStatus: formValueAfter.postingStatus || PostingStatus.Supernumerary,
+                maritalStatus: formValueAfter.maritalStatus ?? null,
+                relationship: formValueAfter.relationship ?? null
             };
 
             this.empService.saveEmployee(formattedData).subscribe({
                 next: (res) => {
                     console.log('Saved successfully', res);
 
-                    // Get generated EmployeeID from response
                     const employeeId = res?.data?.employeeID || res?.Data?.EmployeeID;
 
                     if (employeeId) {
                         this.generatedEmployeeId = employeeId;
-                        // Update address config with new EmployeeID
                         this.presentAddressConfig.employeeId = employeeId;
                         this.permanentAddressConfig.employeeId = employeeId;
-                        this.wifePermanentAddressConfig.employeeId = employeeId;
-                        this.wifePresentAddressConfig.employeeId = employeeId;
+                        this.spousePermanentAddressConfig.employeeId = employeeId;
+                        this.spousePresentAddressConfig.employeeId = employeeId;
+
+                        // Save spouse (Spouse Name) to FamilyInfo when Marital Status is Married
+                        this.saveSpouseIfMarried(employeeId);
                     }
 
                     this.messageService.add({

@@ -14,6 +14,7 @@ export const PROFILE_LABELS = {
     // Buttons
     'button.back': 'Back',
     'button.download': 'Download',
+    'button.export': 'Export',
     'button.profile': 'Profile',
     'button.edit': 'Edit',
     'button.save': 'Save',
@@ -22,10 +23,10 @@ export const PROFILE_LABELS = {
     // Section headings
     'section.basicService': 'Basic Service Information',
     'section.ownAddress': 'Own Address Information:',
-    'section.wifeAddress': 'Wife Address Information:',
+    'section.spouseAddress': 'Spouse Address Information:',
     'section.otherPersonal': 'Other Personal Information:',
     'section.familyInfo': 'Family Info:',
-    'section.wifeFamilyInfo': 'Wife Family Info:',
+    'section.spouseFamilyInfo': 'Spouse Family Info:',
     'section.presentRabService': 'Present RAB Service Info:',
     'section.previousRabService': 'Previous RAB Service Information:',
     'section.serviceHistoryMo': 'Service History (Mother Organization):',
@@ -96,6 +97,8 @@ export const PROFILE_LABELS = {
 
     // Table headers (shared where same)
     'table.ser': 'Ser',
+    'table.field': 'Field',
+    'table.value': 'Value',
     'table.name': 'Name',
     'table.relation': 'Relation',
     'table.dateOfBirth': 'Date of Birth',
@@ -155,9 +158,9 @@ export const PROFILE_LABELS = {
 
     // Empty / no-data messages
     'empty.noOwnAddress': 'No own address records.',
-    'empty.noWifeAddress': 'No wife address records.',
+    'empty.noSpouseAddress': 'No spouse address records.',
     'empty.noFamilyRecords': 'No family records.',
-    'empty.noWifeFamilyRecords': 'No wife family records.',
+    'empty.noSpouseFamilyRecords': 'No spouse family records.',
     'empty.noPresentRabRecords': 'No present RAB service records.',
     'empty.noPreviousRabRecords': 'No previous RAB service records.',
     'empty.noServiceHistoryRecords': 'No service history records.',
@@ -190,6 +193,7 @@ export const PROFILE_LABELS = {
 
     'button.back': 'পিছনে',
     'button.download': 'ডাউনলোড',
+    'button.export': 'রপ্তানি',
     'button.profile': 'প্রোফাইল',
     'button.edit': 'সম্পাদনা',
     'button.save': 'সংরক্ষণ',
@@ -197,10 +201,10 @@ export const PROFILE_LABELS = {
 
     'section.basicService': 'মৌলিক তথ্য',
     'section.ownAddress': 'নিজের ঠিকানার তথ্য:',
-    'section.wifeAddress': 'স্ত্রীর ঠিকানার তথ্য:',
+    'section.spouseAddress': 'স্ত্রী/পতির ঠিকানার তথ্য:',
     'section.otherPersonal': 'অন্যান্য ব্যক্তিগত তথ্য:',
     'section.familyInfo': 'পরিবারের তথ্য:',
-    'section.wifeFamilyInfo': 'স্ত্রীর পরিবারের তথ্য:',
+    'section.spouseFamilyInfo': 'স্ত্রী/পতির পরিবারের তথ্য:',
     'section.presentRabService': 'বর্তমান র‌্যাব সেবার তথ্য:',
     'section.previousRabService': 'পূর্ববর্তী র‌্যাব সেবার তথ্য:',
     'section.serviceHistoryMo': 'সেবার ইতিহাস (মাতৃ সংস্থা):',
@@ -267,6 +271,8 @@ export const PROFILE_LABELS = {
     'addressType.address': 'ঠিকানা',
 
     'table.ser': 'নং',
+    'table.field': 'ক্ষেত্র',
+    'table.value': 'মান',
     'table.name': 'নাম',
     'table.relation': 'সম্পর্ক',
     'table.dateOfBirth': 'জন্ম তারিখ',
@@ -325,9 +331,9 @@ export const PROFILE_LABELS = {
     'table.count': 'সংখ্যা',
 
     'empty.noOwnAddress': 'নিজের ঠিকানার কোন রেকর্ড নেই।',
-    'empty.noWifeAddress': 'স্ত্রীর ঠিকানার কোন রেকর্ড নেই।',
+    'empty.noSpouseAddress': 'স্ত্রী/পতির ঠিকানার কোন রেকর্ড নেই।',
     'empty.noFamilyRecords': 'পরিবারের কোন রেকর্ড নেই।',
-    'empty.noWifeFamilyRecords': 'স্ত্রীর পরিবারের কোন রেকর্ড নেই।',
+    'empty.noSpouseFamilyRecords': 'স্ত্রী/পতির পরিবারের কোন রেকর্ড নেই।',
     'empty.noPresentRabRecords': 'বর্তমান র‌্যাব সেবার কোন রেকর্ড নেই।',
     'empty.noPreviousRabRecords': 'পূর্ববর্তী র‌্যাব সেবার কোন রেকর্ড নেই।',
     'empty.noServiceHistoryRecords': 'সেবার ইতিহাসের কোন রেকর্ড নেই।',
