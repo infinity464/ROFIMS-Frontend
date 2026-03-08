@@ -73,26 +73,66 @@
 </p-fluid>
 
 <div class="card mt-4">
-    <div class="flex justify-between items-center flex-column sm:flex-row mb-4">
-        <p-iconfield iconPosition="left" class="ml-auto">
+    <div class="flex flex-wrap gap-3 mb-4">
+        <p-iconfield iconPosition="left" class="flex-1 min-w-[180px]">
             <p-inputicon>
                 <i class="pi pi-search"></i>
             </p-inputicon>
-            <input pInputText type="text" placeholder="Search keyword" (input)="onSearch($event)" />
+            <input pInputText type="text" placeholder="Search keyword" [(ngModel)]="searchValue"
+                (ngModelChange)="onSearch()" />
         </p-iconfield>
+        <p-button icon="pi pi-filter-slash" label="Clear filter" severity="secondary" [outlined]="true"
+            (onClick)="clearFilters()">
+        </p-button>
+        <p-select [options]="filterParentOptions" [(ngModel)]="filterParentId" optionLabel="label" optionValue="value"
+            placeholder="Parent Organization" (onChange)="onFilterChange()" [showClear]="true"
+            styleClass="w-full sm:w-[200px]">
+        </p-select>
+        <p-select [options]="filterStatusOptions" [(ngModel)]="filterStatus" optionLabel="label" optionValue="value"
+            placeholder="Status" (onChange)="onFilterChange()" [showClear]="true"
+            styleClass="w-full sm:w-[150px]">
+        </p-select>
+        <p-multiSelect [options]="cols" [(ngModel)]="selectedColumns" optionLabel="header" placeholder="Show columns"
+            [showToggleAll]="true" [filter]="false" display="chip" styleClass="w-full sm:w-[240px]">
+        </p-multiSelect>
     </div>
 
     <p-table [value]="filteredOrganizations" [paginator]="true" [first]="first" [rows]="rows"
-        [totalRecords]="totalRecords" [rowsPerPageOptions]="[10, 25, 50]">
+        [totalRecords]="totalRecords" [rowsPerPageOptions]="[10, 25, 50]"
+        sortMode="single" styleClass="p-datatable-sm">
         <ng-template pTemplate="header">
             <tr>
                 <th style="width: 5%">#</th>
-                <th>Unit  Name (English)</th>
-                <th>Unit Name (Bangla)</th>
-                <th>Unit Location (Bangla)</th>
-                <th>Unit Location (English)</th>
-                <th>Status</th>
-
+                @if (isColumnVisible('parentName')) {
+                    <th pSortableColumn="parentName">
+                        Parent Name <p-sortIcon field="parentName" />
+                    </th>
+                }
+                @if (isColumnVisible('orgNameEN')) {
+                    <th pSortableColumn="orgNameEN">
+                        Unit Name (English) <p-sortIcon field="orgNameEN" />
+                    </th>
+                }
+                @if (isColumnVisible('orgNameBN')) {
+                    <th pSortableColumn="orgNameBN">
+                        Unit Name (Bangla) <p-sortIcon field="orgNameBN" />
+                    </th>
+                }
+                @if (isColumnVisible('locationBN')) {
+                    <th pSortableColumn="locationBN">
+                        Unit Location (Bangla) <p-sortIcon field="locationBN" />
+                    </th>
+                }
+                @if (isColumnVisible('locationEN')) {
+                    <th pSortableColumn="locationEN">
+                        Unit Location (English) <p-sortIcon field="locationEN" />
+                    </th>
+                }
+                @if (isColumnVisible('status')) {
+                    <th pSortableColumn="status">
+                        Status <p-sortIcon field="status" />
+                    </th>
+                }
                 <th style="width: 15%">Action</th>
             </tr>
         </ng-template>
@@ -100,17 +140,31 @@
         <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
             <tr>
                 <td>{{ first + rowIndex + 1 }}</td>
-                <td>{{ row.orgNameEN }}</td>
-                <td>{{ row.orgNameBN }}</td>
-                <td>{{ row.locationBN }}</td>
-                <td>{{ row.locationEN}}</td>
-                <td>
-                    <span [ngClass]="{
-                                    'text-green-600 font-semibold': row.status,
-                                    'text-red-600 font-semibold': !row.status
-                                }">
-                        {{ row.status ? 'Active' : 'Inactive' }}
-                    </span></td>
+                @if (isColumnVisible('parentName')) {
+                    <td>{{ row.parentName || '-' }}</td>
+                }
+                @if (isColumnVisible('orgNameEN')) {
+                    <td>{{ row.orgNameEN }}</td>
+                }
+                @if (isColumnVisible('orgNameBN')) {
+                    <td>{{ row.orgNameBN }}</td>
+                }
+                @if (isColumnVisible('locationBN')) {
+                    <td>{{ row.locationBN }}</td>
+                }
+                @if (isColumnVisible('locationEN')) {
+                    <td>{{ row.locationEN }}</td>
+                }
+                @if (isColumnVisible('status')) {
+                    <td>
+                        <span [ngClass]="{
+                            'text-green-600 font-semibold': row.status,
+                            'text-red-600 font-semibold': !row.status
+                        }">
+                            {{ row.status ? 'Active' : 'Inactive' }}
+                        </span>
+                    </td>
+                }
                 <td>
                     <div class="flex gap-2">
                         <button class="mx-2" pButton icon="pi pi-pencil" (click)="onEdit(row)"></button>
@@ -120,11 +174,5 @@
                 </td>
             </tr>
         </ng-template>
-
-        <!-- <ng-template pTemplate="emptymessage">
-            <tr>
-                <td colspan="4" class="text-center">No organizations found.</td>
-            </tr>
-        </ng-template> -->
     </p-table>
 </div>
