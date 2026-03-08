@@ -16,6 +16,7 @@ import {
 } from '../models/mother-org-rank-vacancy';
 
 import { NoteSheetTemplateModel } from '../models/notesheet-template';
+import { NoteSheetNumberConfigModel } from '../models/notesheet-number-config';
 
 
 @Injectable({
@@ -32,6 +33,7 @@ export class MasterBasicSetupService {
     private apiUrlMotherOrgRankVacancy = `${environment.apis.core}/MotherOrgRankVacancy`;
     private apiUrlMotherOrgRankVacancyDistribution = `${environment.apis.core}/MotherOrgRankVacancyDistribution`;
     private apiUrlNoteSheetTemplate = `${environment.apis.core}/NoteSheetTemplate`;
+    private apiUrlNoteSheetNumberConfig = `${environment.apis.core}/NoteSheetNumberConfig`;
 
 
     getAllByType(codeType: string): Observable<CommonCode[]> {
@@ -234,5 +236,27 @@ export class MasterBasicSetupService {
     }
     deleteNoteSheetTemplate(id: number): Observable<any> {
         return this.http.delete(`${this.apiUrlNoteSheetTemplate}/DeleteAsyn/${id}`);
+    }
+
+    // NoteSheetNumberConfig CRUD
+
+    getAllNoteSheetNumberConfig(): Observable<NoteSheetNumberConfigModel[]> {
+        return this.http.get<NoteSheetNumberConfigModel[]>(`${this.apiUrlNoteSheetNumberConfig}/GetAll`);
+    }
+
+    getNoteSheetNumberConfigById(id: number): Observable<NoteSheetNumberConfigModel> {
+        return this.http.get<NoteSheetNumberConfigModel>(`${this.apiUrlNoteSheetNumberConfig}/GetFilteredByKeysAsyn/${id}`);
+    }
+
+    createNoteSheetNumberConfig(model: NoteSheetNumberConfigModel): Observable<any> {
+        return this.http.post(`${this.apiUrlNoteSheetNumberConfig}/SaveAsyn`, model);
+    }
+
+    updateNoteSheetNumberConfig(model: NoteSheetNumberConfigModel): Observable<any> {
+        return this.http.post(`${this.apiUrlNoteSheetNumberConfig}/UpdateAsyn`, model);
+    }
+
+    deleteNoteSheetNumberConfig(id: number): Observable<any> {
+        return this.http.delete(`${this.apiUrlNoteSheetNumberConfig}/DeleteAsyn/${id}`);
     }
 }
