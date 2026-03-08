@@ -20,15 +20,15 @@ import { forkJoin } from 'rxjs';
 import {
     Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
     WidthType, BorderStyle, AlignmentType, PageOrientation, ImageRun,
-    VerticalAlign, TableLayoutType, HeightRule
+    TableLayoutType, HeightRule
 } from 'docx';
 import { saveAs } from 'file-saver';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+
 import type {
     NotesheetDocumentModel,
     ContentBlock,
-    SignatoryBlock,
     TextAlignment
 } from '../notesheet-document-model';
 
@@ -88,7 +88,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
     // ── Computed ─────────────────────────────────────────────
     get canEdit(): boolean {
         const status = this.noteSheet?.currentStatus?.toLowerCase();
-        return status === NoteSheetCurrentStatus.Draft;
+        return status === NoteSheetCurrentStatus.Draft || status === NoteSheetCurrentStatus.Initiator;
     }
 
     get isDraftStatus(): boolean {
@@ -335,13 +335,73 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
         }));
     }
 
-    /** Export PDF: builds from shared document model using jsPDF. */
+    /** Export PDF: builds legal-size PDF from shared document model using html2canvas + jsPDF. */
     override async exportPdf(): Promise<void> {
         if (!this.noteSheet) return;
         try {
-            const pdf = await this.buildPdfDocument();
-            pdf.save(`NoteSheet_${this.noteSheet.noteSheetNo ?? 'export'}.pdf`);
-        } catch (e) {
+            const model = this.buildDocumentModel();
+            const html = this.modelToHtml(model);
+            const fontFamily = model.isBangla
+                ? "'Noto Sans Bengali','SolaimanLipi','Kalpurush','Nirmala UI',sans-serif"
+                : "'Times New Roman',serif";
+
+            const container = document.createElement('div');
+            container.style.cssText = 'position:absolute;left:-9999px;top:0;width:720px;padding:14mm 10mm;font-size:12pt;line-height:1.6;background:#fff;z-index:-1;overflow:visible;box-sizing:border-box';
+            container.style.fontFamily = fontFamily;
+            container.innerHTML = `
+                <style>
+                  .ns-pdf-wrap, .ns-pdf-wrap * { word-wrap:break-word!important; overflow-wrap:break-word!important; white-space:normal!important; max-width:100%!important; box-sizing:border-box!important; }
+                  .ns-pdf-wrap img { max-width:100%!important; height:auto!important; }
+                  .ns-pdf-wrap table, .ns-pdf-wrap th, .ns-pdf-wrap td { border:1px solid #000; padding:4px; white-space:normal!important; }
+                  .ns-pdf-wrap th { font-weight:bold; }
+                </style>
+                <div class="ns-pdf-wrap" style="font-family:${fontFamily};color:#000;width:100%">${html}</div>`;
+            document.body.appendChild(container);
+
+            try {
+                await new Promise(resolve => setTimeout(resolve, 300));
+                const canvas = await html2canvas(container, {
+                    scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false,
+                    scrollY: -window.scrollY, height: container.scrollHeight, windowHeight: container.scrollHeight
+                });
+                const imgData = canvas.toDataURL('image/jpeg', 0.92);
+                const imgWidth = canvas.width;
+                const imgHeight = canvas.height;
+
+                // Legal paper: 215.9mm × 355.6mm
+                const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'legal' });
+                const margin = 10;
+                const pdfWidth = pdf.internal.pageSize.getWidth() - margin * 2;
+                const pdfPageHeight = pdf.internal.pageSize.getHeight() - margin * 2;
+                const ratio = pdfWidth / imgWidth;
+                const scaledHeight = imgHeight * ratio;
+
+                if (scaledHeight <= pdfPageHeight) {
+                    pdf.addImage(imgData, 'JPEG', margin, margin, pdfWidth, scaledHeight);
+                } else {
+                    let remainingHeight = imgHeight;
+                    let srcY = 0;
+                    const sliceHeight = Math.floor(pdfPageHeight / ratio);
+                    while (remainingHeight > 0) {
+                        const currentSlice = Math.min(sliceHeight, remainingHeight);
+                        const sliceCanvas = document.createElement('canvas');
+                        sliceCanvas.width = imgWidth;
+                        sliceCanvas.height = currentSlice;
+                        const ctx = sliceCanvas.getContext('2d')!;
+                        ctx.drawImage(canvas, 0, srcY, imgWidth, currentSlice, 0, 0, imgWidth, currentSlice);
+                        const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.92);
+                        const slicePdfH = currentSlice * ratio;
+                        if (srcY > 0) pdf.addPage('legal', 'p');
+                        pdf.addImage(sliceData, 'JPEG', margin, margin, pdfWidth, slicePdfH);
+                        srcY += currentSlice;
+                        remainingHeight -= currentSlice;
+                    }
+                }
+                pdf.save(`NoteSheet_${this.noteSheet!.noteSheetNo ?? 'export'}.pdf`);
+            } finally {
+                document.body.removeChild(container);
+            }
+        } catch {
             this.messageService.add({ severity: 'error', summary: 'Export Error', detail: 'Failed to generate PDF.' });
         }
     }
@@ -380,14 +440,15 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
             const d = this.initiatorDetails;
             const nameStr = bn ? (d.nameBN || d.name) : d.name;
             const rankStr = (d.rank && d.rank !== '-') ? `, ${bn ? (d.rankBN || d.rank) : d.rank}` : '';
+            const approved = this.isInitiatorApproved();
             model.initiator = {
                 role: '',
                 serialText: '',
                 nameLine: `(${nameStr}${rankStr})`,
                 appointment: bn ? (d.appointmentBN || d.appointment) : d.appointment,
-                date: this.noteSheet.noteSheetDate ? this.formatDate(this.noteSheet.noteSheetDate) : undefined,
+                date: approved && this.noteSheet.noteSheetDate ? this.formatDate(this.noteSheet.noteSheetDate) : undefined,
                 align: 'right',
-                signatureDataUrl: this.shouldShowSignature(d.step) ? d.signatureDataUrl : undefined
+                signatureDataUrl: approved && this.shouldShowSignature(d.step) ? d.signatureDataUrl : undefined
             };
         }
 
@@ -474,75 +535,6 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
         if (ta === 'center') return 'center';
         if (ta === 'right') return 'right';
         return undefined;
-    }
-
-    /** Build PDF from shared document model using html2canvas + jsPDF (legal paper). */
-    private async buildPdfDocument(): Promise<jsPDF> {
-        const model = this.buildDocumentModel();
-        const html = this.modelToHtml(model);
-        const fontFamily = model.isBangla ? "'Noto Sans Bengali','SolaimanLipi','Kalpurush',sans-serif" : "'Times New Roman',serif";
-
-        const container = document.createElement('div');
-        container.style.cssText = 'position:absolute;left:-9999px;top:0;width:720px;padding:14mm 10mm;font-size:12pt;line-height:1.6;background:#fff;z-index:-1;overflow:visible;box-sizing:border-box';
-        container.style.fontFamily = fontFamily;
-        container.innerHTML = `
-            <style>
-              .ns-pdf-wrap, .ns-pdf-wrap * { word-wrap:break-word!important; overflow-wrap:break-word!important; white-space:normal!important; max-width:100%!important; box-sizing:border-box!important; }
-              .ns-pdf-wrap img { max-width:100%!important; height:auto!important; }
-              .ns-pdf-wrap table, .ns-pdf-wrap th, .ns-pdf-wrap td { border:1px solid #000; padding:4px; white-space:normal!important; }
-              .ns-pdf-wrap th { font-weight:bold; }
-            </style>
-            <div class="ns-pdf-wrap" style="font-family:${fontFamily};color:#000;width:100%">${html}</div>`;
-
-        document.body.appendChild(container);
-
-        try {
-            await new Promise(resolve => setTimeout(resolve, 300));
-            const canvas = await html2canvas(container, {
-                scale: 2,
-                useCORS: true,
-                backgroundColor: '#ffffff',
-                logging: false,
-                scrollY: -window.scrollY,
-                height: container.scrollHeight,
-                windowHeight: container.scrollHeight
-            });
-            const imgData = canvas.toDataURL('image/jpeg', 0.92);
-            const imgWidth = canvas.width;
-            const imgHeight = canvas.height;
-
-            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'legal' });
-            const margin = 10;
-            const pdfWidth = pdf.internal.pageSize.getWidth() - margin * 2;
-            const pdfPageHeight = pdf.internal.pageSize.getHeight() - margin * 2;
-            const ratio = pdfWidth / imgWidth;
-            const scaledHeight = imgHeight * ratio;
-
-            if (scaledHeight <= pdfPageHeight) {
-                pdf.addImage(imgData, 'JPEG', margin, margin, pdfWidth, scaledHeight);
-            } else {
-                let remainingHeight = imgHeight;
-                let srcY = 0;
-                const sliceHeight = Math.floor(pdfPageHeight / ratio);
-                while (remainingHeight > 0) {
-                    const currentSlice = Math.min(sliceHeight, remainingHeight);
-                    const sliceCanvas = document.createElement('canvas');
-                    sliceCanvas.width = imgWidth;
-                    sliceCanvas.height = currentSlice;
-                    const ctx = sliceCanvas.getContext('2d')!;
-                    ctx.drawImage(canvas, 0, srcY, imgWidth, currentSlice, 0, 0, imgWidth, currentSlice);
-                    const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.92);
-                    const slicePdfH = currentSlice * ratio;
-                    if (srcY > 0) pdf.addPage('legal', 'p');
-                    pdf.addImage(sliceData, 'JPEG', margin, margin, pdfWidth, slicePdfH);
-                    srcY += currentSlice;
-                    remainingHeight -= currentSlice;
-                }
-            }
-            return pdf;
-        } finally {
-            document.body.removeChild(container);
-        }
     }
 
     /** Convert document model to HTML (layout matches Word: bordered doc-box + sanglagni). */
@@ -649,7 +641,6 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
         const csSize = bn ? 24 : undefined;
         const lang = bn ? { value: 'bn-BD', bidirectional: 'bn-BD' } : undefined;
         const thickBorder = { style: BorderStyle.SINGLE, size: 3, color: '000000' };
-        const noBorder = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
         const thinBorder = { style: BorderStyle.SINGLE, size: 1, color: '000000' };
         const cellBorders = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
 

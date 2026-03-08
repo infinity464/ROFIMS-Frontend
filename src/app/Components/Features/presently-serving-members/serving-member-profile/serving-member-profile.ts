@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
@@ -27,6 +27,7 @@ import { DialogModule } from 'primeng/dialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { PROFILE_LABELS, type ProfileLang } from '@/Core/i18n/profile-labels';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
+import { ExportService, type ProfileExportConfig, type ProfileExportSection } from '@/services/export.service';
 
 @Component({
     selector: 'app-serving-member-profile',
@@ -79,8 +80,314 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
         private courseInfoService: CourseInfoService,
         private promotionInfoService: PromotionInfoService,
         private messageService: MessageService,
-        private empService: EmpService
+        private empService: EmpService,
+        private exportService: ExportService
     ) {}
+
+    exportDropdownOpen = false;
+
+    @HostListener('document:click')
+    onDocumentClick(): void {
+        this.exportDropdownOpen = false;
+    }
+
+    toggleExportDropdown(event: Event): void {
+        event.stopPropagation();
+        this.exportDropdownOpen = !this.exportDropdownOpen;
+    }
+
+    getExportData(): ProfileExportConfig {
+        const L = this.L;
+        const p = this.profile;
+        const title = p ? `${L['pageTitle.servingMember']} - ${this.getFormattedName(p)}` : L['pageTitle.servingMember'];
+        const sections: ProfileExportSection[] = [];
+        const addSection = (secTitle: string, columns: string[], rows: string[][], noTableHeader?: boolean, addressSection?: boolean, colsPerRow?: 2 | 3) =>
+            sections.push({ title: secTitle, columns, rows, noTableHeader, addressSection, colsPerRow });
+        const kv = (label: string, value: string): [string, string] => [label, value];
+
+        if (!p) return { title, lang: this.profileLang, sections, showPageNumbers: true };
+
+        // Basic Service (same as web: label-value block, no "Field"/"Value" header)
+        addSection(L['section.basicService'], [L['table.field'], L['table.value']], [
+            kv(this.isBn ? L['field.nameBangla'] : L['field.nameEnglish'], this.getFormattedName(p)),
+            kv(L['field.serviceId'], this.valDisplay(p.serviceId)),
+            kv(L['field.rabId'], this.valDisplay(p.rabId)),
+            kv(L['field.appointment'], this.codeValue(p.appointment, p.appointmentBN)),
+            kv(L['field.memberType'], this.codeValue(p.memberType, p.memberTypeBN)),
+            kv(L['field.motherOrganization'], this.codeValue(p.motherOrganization, p.motherOrganizationBN)),
+            kv(L['field.rank'], this.codeValue(p.armyRank, p.armyRankBN)),
+            kv(L['field.corps'], this.codeValue(p.corps, p.corpsBN)),
+            kv(L['field.trade'], this.tradeDisplay(p)),
+            kv(L['field.dateOfCommission'], this.formatDateDisplay(p.dateOfCommission)),
+            kv(L['field.dateOfJoiningInServiceTraining'], this.formatDateDisplay(p.dateOfJoiningInServiceTraining)),
+            kv(L['field.motherUnit'], this.codeValue(p.motherUnit, p.motherUnitBN)),
+            kv(L['field.location'], this.codeValue(p.location, p.locationBN)),
+            kv(L['field.rabUnit'], this.codeValue(p.rabUnit, p.rabUnitBN)),
+            kv(L['field.joiningDate'], this.formatDateDisplay(p.joiningDate)),
+        ], true);
+
+        // Own Address (label-value; one block per address)
+        const ownAddrRows: string[][] = [];
+        this.ownAddressList.forEach((addr) => {
+            ownAddrRows.push(kv(L['addressType.address'], this.getAddressTypeLabel(addr)));
+            ownAddrRows.push(kv(L['address.houseArea'], this.val(addr.houseRoad)));
+            ownAddrRows.push(kv(L['address.village'], this.val(addr.addressAreaEN)));
+            ownAddrRows.push(kv(L['address.postOffice'], this.codeValue(addr.postOffice, addr.postOfficeBN)));
+            ownAddrRows.push(kv(L['address.thana'], this.codeValue(addr.thana, addr.thanaBN)));
+            ownAddrRows.push(kv(L['address.district'], this.codeValue(addr.district, addr.districtBN)));
+            ownAddrRows.push(kv(L['address.division'], this.codeValue(addr.division, addr.divisionBN)));
+        });
+        if (ownAddrRows.length === 0) ownAddrRows.push([L['empty.noOwnAddress'], '']);
+        addSection(L['section.ownAddress'], [L['table.field'], L['table.value']], ownAddrRows, true, true);
+
+        // Spouse Address
+        const spouseAddrRows: string[][] = [];
+        this.spouseAddressList.forEach((addr) => {
+            spouseAddrRows.push(kv(L['addressType.address'], this.getAddressTypeLabel(addr)));
+            spouseAddrRows.push(kv(L['address.houseArea'], this.val(addr.houseRoad)));
+            spouseAddrRows.push(kv(L['address.village'], this.val(addr.addressAreaEN)));
+            spouseAddrRows.push(kv(L['address.postOffice'], this.codeValue(addr.postOffice, addr.postOfficeBN)));
+            spouseAddrRows.push(kv(L['address.thana'], this.codeValue(addr.thana, addr.thanaBN)));
+            spouseAddrRows.push(kv(L['address.district'], this.codeValue(addr.district, addr.districtBN)));
+            spouseAddrRows.push(kv(L['address.division'], this.codeValue(addr.division, addr.divisionBN)));
+        });
+        if (spouseAddrRows.length === 0) spouseAddrRows.push([L['empty.noSpouseAddress'], '']);
+        addSection(L['section.spouseAddress'], [L['table.field'], L['table.value']], spouseAddrRows, true, true);
+
+        // Other Personal (label-value)
+        addSection(L['section.otherPersonal'], [L['table.field'], L['table.value']], [
+            kv(L['field.courseBatch'], this.codeValue(p.batch, p.batchBN)),
+            kv(L['field.dateOfJoinInService'], this.formatDateDisplay(p.dateOfJoiningInServiceTraining)),
+            kv(L['field.dateOfCommission'], this.formatDateDisplay(p.dateOfCommission)),
+            kv(L['field.educationQualification'], this.codeValue(p.educationQualification, p.educationQualificationBN)),
+            kv(L['field.professionalQualification'], this.codeValue(p.professionalQualification, p.professionalQualificationBN)),
+            kv(L['field.personalQualification'], this.codeValue(p.personalQualification, p.personalQualificationBN)),
+            kv(L['field.gallantryAwards'], this.codeValue(p.gallantryAwardsDecoration, p.gallantryAwardsDecorationBN)),
+            kv(L['field.bloodGroup'], this.val(p.bloodGroup)),
+            kv(L['field.nid'], this.valDisplay(p.nid)),
+            kv(L['field.emailAddress'], this.val(p.emailAddress)),
+            kv(L['field.dateOfBirth'], this.formatDateDisplay(p.dateOfBirth)),
+            kv(L['field.passportNo'], this.valDisplay(p.passportNo)),
+            kv(L['field.height'], this.heightDisplay(p)),
+            kv(L['field.medicalCategory'], this.codeValue(p.medicalCategory, p.medicalCategoryBN)),
+            kv(L['field.mobileNo'], this.valDisplay(p.mobileNo)),
+            kv(L['field.emergencyContactNo'], this.valDisplay(p.emergencyContactNo)),
+            kv(L['field.religion'], this.codeValue(p.religion, p.religionBN)),
+            kv(L['field.maritalStatus'], this.codeValue(p.maritalStatus, p.maritalStatusBN)),
+            kv(L['field.weight'], this.weightDisplay(p)),
+            kv(L['field.identificationMark'], this.val(p.identificationMark)),
+        ], true, false, 2);
+
+        // Family Info
+        const familyRows = this.familyInfoList.map((row, i) => [
+            this.rowNum(i) + '.',
+            this.codeValue(row.name, row.nameBN),
+            this.codeValue(row.relation, row.relationBN),
+            this.formatFamilyDob(row.dateOfBirth),
+            this.codeValue(row.occupation, row.occupationBN),
+            this.familyMobile(row),
+        ]);
+        if (familyRows.length === 0) familyRows.push([L['empty.noFamilyRecords']]);
+        addSection(L['section.familyInfo'], [L['table.ser'], L['table.name'], L['table.relation'], L['table.dateOfBirth'], L['table.occupation'], L['table.mobileNo']], familyRows);
+
+        // Spouse Family Info
+        const spouseFamilyRows = this.spouseFamilyInfoList.map((row, i) => [
+            this.rowNum(i) + '.',
+            this.codeValue(row.name, row.nameBN),
+            this.codeValue(row.relation, row.relationBN),
+            this.formatFamilyDob(row.dateOfBirth),
+            this.codeValue(row.occupation, row.occupationBN),
+            this.familyMobile(row),
+        ]);
+        if (spouseFamilyRows.length === 0) spouseFamilyRows.push([L['empty.noSpouseFamilyRecords']]);
+        addSection(L['section.spouseFamilyInfo'], [L['table.ser'], L['table.name'], L['table.relation'], L['table.dateOfBirth'], L['table.occupation'], L['table.mobileNo']], spouseFamilyRows);
+
+        // Present RAB Service (serving members only)
+        const presentRabRows = this.presentRabList.map((row, i) => [
+            this.rowNum(i) + '.',
+            this.codeValue(row.rabUnitName, row.rabUnitNameBN),
+            this.formatDateOnly(row.serviceFrom),
+            this.formatDateOnly(row.serviceTo),
+            this.codeValue(row.appointmentName, row.appointmentNameBN),
+            this.val(row.postingAuth),
+            this.val(row.remarks),
+        ]);
+        if (presentRabRows.length === 0) presentRabRows.push([L['empty.noPresentRabRecords']]);
+        addSection(L['section.presentRabService'], [L['table.ser'], L['table.rabUnit'], L['table.serviceFrom'], L['table.serviceTo'], L['table.appointment'], L['table.postingAuth'], L['table.remarks']], presentRabRows);
+
+        // Previous RAB Service
+        const prevRabRows = this.previousOnlyRabList.map((row, i) => [
+            this.rowNum(i) + '.',
+            this.codeValue(row.rabUnitName, row.rabUnitNameBN),
+            this.formatDateOnly(row.serviceFrom),
+            this.formatDateOnly(row.serviceTo),
+            this.codeValue(row.appointmentName, row.appointmentNameBN),
+            this.val(row.postingAuth),
+            this.val(row.remarks),
+        ]);
+        if (prevRabRows.length === 0) prevRabRows.push([L['empty.noPreviousRabRecords']]);
+        addSection(L['section.previousRabService'], [L['table.ser'], L['table.rabUnit'], L['table.serviceFrom'], L['table.serviceTo'], L['table.appointment'], L['table.postingAuth'], L['table.remarks']], prevRabRows);
+
+        // Service History MO
+        const moRows = this.moServHistoryList.map((row, i) => [
+            this.rowNum(i) + '.',
+            this.val(row.organizationName),
+            this.val(row.locationName),
+            this.formatDateOnly(row.serviceFrom),
+            this.formatDateOnly(row.serviceTo),
+            this.codeValue(row.appointment, row.appointmentBN),
+            this.val(row.auth),
+            this.val(row.remarks),
+        ]);
+        if (moRows.length === 0) moRows.push([L['empty.noServiceHistoryRecords']]);
+        addSection(L['section.serviceHistoryMo'], [L['table.ser'], L['table.organization'], L['table.location'], L['table.serviceFrom'], L['table.serviceTo'], L['table.appointment'], L['table.auth'], L['table.remarks']], moRows);
+
+        // Promotion
+        const promRows = this.promotionList.map((row, i) => [
+            this.rowNum(i) + '.',
+            this.codeValue(row.previousRank, row.previousRankBN),
+            this.codeValue(row.promotedRank, row.promotedRankBN),
+            this.formatDateOnly(row.promotedDate),
+            this.formatDateOnly(row.fromDate),
+            this.formatDateOnly(row.toDate),
+            this.val(row.probationaryPeriod),
+            this.val(row.auth),
+            this.val(row.remarks),
+        ]);
+        if (promRows.length === 0) promRows.push([L['empty.noPromotionRecords']]);
+        addSection(L['section.promotion'], [L['table.ser'], L['table.previousRank'], L['table.promotedRank'], L['table.promotedDate'], L['table.fromDate'], L['table.toDate'], L['table.probationaryPeriod'], L['table.auth'], L['table.remarks']], promRows);
+
+        // Education
+        const eduRows = this.educationList.map((row, i) => [
+            this.rowNum(i) + '.',
+            this.formatDateOnly(row.durationFrom),
+            this.formatDateOnly(row.durationTo),
+            this.codeValue(row.schoolCollegeUniversity, row.schoolCollegeUniversityBN),
+            this.codeValue(row.nameOfExamDegree, row.nameOfExamDegreeBN),
+            this.codeValue(row.subjectsDepartments, row.subjectsDepartmentsBN),
+            this.codeValue(row.result, row.resultBN),
+            this.valDisplay(row.gradePoint),
+            this.valDisplay(row.passingYear),
+        ]);
+        if (eduRows.length === 0) eduRows.push([L['empty.noEducationRecords']]);
+        addSection(L['section.education'], [L['table.ser'], L['table.durationFrom'], L['table.durationTo'], L['table.schoolCollegeUniversity'], L['table.examDegree'], L['table.subjectDepartment'], L['table.result'], L['table.gradePoint'], L['table.passingYear']], eduRows);
+
+        // Course
+        const courseRows = this.courseList.map((row, i) => [
+            this.rowNum(i) + '.',
+            this.codeValue(row.courseType, row.courseTypeBN),
+            this.codeValue(row.courseName, row.courseNameBN),
+            this.val(row.trainingInstituteName),
+            this.formatDateOnly(row.dateFrom),
+            this.formatDateOnly(row.dateTo),
+            this.val(row.result),
+            this.val(row.auth),
+            this.val(row.remarks),
+        ]);
+        if (courseRows.length === 0) courseRows.push([L['empty.noCourseRecords']]);
+        addSection(L['section.course'], [L['table.ser'], L['table.courseType'], L['table.courseName'], L['table.trainingInstitute'], L['table.dateFrom'], L['table.dateTo'], L['table.result'], L['table.auth'], L['table.remarks']], courseRows);
+
+        // Investigation
+        addSection(L['section.investigation'], [L['table.field'], L['table.value']], [
+            p.hasInvestigationExp === true ? kv(L['field.details'], this.val(p.investigationExpDetails)) : [L['empty.noInvestigationRecorded'], ''],
+        ], true);
+
+        // Official Foreign Visit
+        const offFvRows = this.officialForeignVisitList.map((row, i) => [
+            this.rowNum(i) + '.',
+            this.codeValue(row.nameOfCountry, row.nameOfCountryBN),
+            this.formatDateOnly(row.durationFrom),
+            this.formatDateOnly(row.durationTo),
+            this.codeValue(row.reasonForVisiting, row.reasonForVisitingBN),
+            this.val(row.relatedDocuments),
+        ]);
+        if (offFvRows.length === 0) offFvRows.push([L['empty.noOfficialForeignVisit']]);
+        addSection(L['section.officialForeignVisit'], [L['table.ser'], L['table.country'], L['table.durationFrom'], L['table.durationTo'], L['table.reasonForVisiting'], L['table.relatedDocuments']], offFvRows);
+
+        // Unofficial Foreign Visit
+        const unoffFvRows = this.unofficialForeignVisitList.map((row, i) => [
+            this.rowNum(i) + '.',
+            this.codeValue(row.nameOfCountry, row.nameOfCountryBN),
+            this.formatDateOnly(row.durationFrom),
+            this.formatDateOnly(row.durationTo),
+            this.codeValue(row.reasonForVisiting, row.reasonForVisitingBN),
+            this.val(row.relatedDocuments),
+        ]);
+        if (unoffFvRows.length === 0) unoffFvRows.push([L['empty.noUnofficialForeignVisit']]);
+        addSection(L['section.unofficialForeignVisit'], [L['table.ser'], L['table.country'], L['table.durationFrom'], L['table.durationTo'], L['table.reasonForVisiting'], L['table.relatedDocuments']], unoffFvRows);
+
+        // Leave
+        const leaveRows = this.leaveList.map((row, i) => [
+            this.rowNum(i) + '.',
+            this.codeValue(row.typeOfLeave, row.typeOfLeaveBN),
+            this.formatDateOnly(row.durationFrom),
+            this.formatDateOnly(row.durationTo),
+        ]);
+        if (leaveRows.length === 0) leaveRows.push([L['empty.noLeaveCurrentYear']]);
+        addSection(`${L['section.leave']} (${this.currentYearDisplay})`, [L['table.ser'], L['table.typeOfLeave'], L['table.durationFrom'], L['table.durationTo']], leaveRows);
+
+        // Discipline
+        const discRows = this.disciplineList.map((row, i) => [
+            this.rowNum(i) + '.',
+            this.formatDateOnly(row.offenseDate),
+            this.codeValue(row.offenseType, row.offenseTypeBN),
+            this.codeValue(row.briefStatementOfOffence, row.briefStatementOfOffenceBN),
+            this.val(row.offenseDetails),
+            this.codeValue(row.punishmentTypeRAB, row.punishmentTypeRABBN),
+            this.formatDateOnly(row.punishmentDate),
+            this.codeValue(row.punishmentTypeMotherOrg, row.punishmentTypeMotherOrgBN),
+            this.formatDateOnly(row.punishmentDateMotherOrg),
+            this.val(row.auth),
+            this.val(row.remarks),
+        ]);
+        if (discRows.length === 0) discRows.push([L['empty.noDisciplineRecords']]);
+        addSection(L['section.discipline'], [L['table.ser'], L['table.offenseDate'], L['table.offenseType'], L['table.briefStatement'], L['table.offenseDetails'], L['table.punishmentRab'], L['table.punishmentDate'], L['table.punishmentMo'], L['table.punishmentDateMo'], L['table.auth'], L['table.remarks']], discRows);
+
+        // Bank Account
+        const bankRows = this.bankAccList.map((row, i) => [
+            this.rowNum(i) + '.',
+            this.codeValue(row.bankName, row.bankNameBN),
+            this.codeValue(row.branchName, row.branchNameBN),
+            this.codeValue(row.accountName, row.accountNameBN),
+            this.valDisplay(row.accountNumber),
+            this.val(row.remarks),
+        ]);
+        if (bankRows.length === 0) bankRows.push([L['empty.noBankAccountRecords']]);
+        addSection(L['section.bankAccount'], [L['table.ser'], L['table.bankName'], L['table.branchName'], L['table.accountName'], L['table.accountNumber'], L['table.remarks']], bankRows);
+
+        // Additional Remarks
+        const remRows = this.additionalRemarksList.map((row, i) => [this.rowNum(i) + '.', this.val(row.additionalRemarks)]);
+        if (remRows.length === 0) remRows.push([L['empty.noAdditionalRemarks']]);
+        addSection(L['section.additionalRemarks'], [L['table.ser'], L['table.additionalRemarks']], remRows);
+
+        // Documents
+        const docRows = this.documentList.map((row, i) => [this.rowNum(i) + '.', this.getDocumentSourceLabel(row), this.getDocumentFileName(row)]);
+        if (docRows.length === 0) docRows.push([L['empty.noDocuments']]);
+        addSection(L['section.documents'], [L['table.ser'], L['table.section'], L['table.fileName']], docRows);
+
+        return { title, lang: this.profileLang, sections, showPageNumbers: true };
+    }
+
+    async exportAs(type: 'pdf' | 'word'): Promise<void> {
+        const config: ProfileExportConfig = { ...this.getExportData(), lang: this.profileLang };
+        if (this.profileImageUrl) {
+            try {
+                const blob = await fetch(this.profileImageUrl).then((r) => r.blob());
+                const dataUrl = await new Promise<string>((res, rej) => {
+                    const r = new FileReader();
+                    r.onload = () => res(r.result as string);
+                    r.onerror = rej;
+                    r.readAsDataURL(blob);
+                });
+                config.imageDataUrl = dataUrl;
+            } catch {
+                // omit image if fetch/read fails
+            }
+        }
+        if (type === 'pdf') this.exportService.exportProfilePDF(config);
+        else if (type === 'word') await this.exportService.exportProfileWord(config);
+        this.exportDropdownOpen = false;
+    }
 
     /** LocationType enum for template (address type labels). */
     readonly LocationType = LocationType;
@@ -146,21 +453,21 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
         });
     }
 
-    /** Wife addresses: WifePermanent and WifePresent (employee can have multiple of each). */
-    get wifeAddressList(): AddressInfoByEmployeeView[] {
+    /** Spouse addresses: SpousePermanent and SpousePresent (employee can have multiple of each). */
+    get spouseAddressList(): AddressInfoByEmployeeView[] {
         if (!this.addressList?.length) return [];
-        const wife = [LocationType.WifePermanent, LocationType.WifePresent];
+        const spouse = [LocationType.SpousePermanent, LocationType.SpousePresent];
         return this.addressList.filter((a) => {
             const t = (a.locationType ?? '').trim();
-            return wife.some((type) => t === type);
+            return spouse.some((type) => t === type);
         });
     }
 
     /** Display label for address type (uses L for EN/BN). */
     getAddressTypeLabel(addr: AddressInfoByEmployeeView): string {
         const t = (addr.locationType ?? '').trim();
-        if (t === LocationType.Permanent || t === LocationType.WifePermanent) return this.L['addressType.permanent'];
-        if (t === LocationType.Present || t === LocationType.WifePresent) return this.L['addressType.present'];
+        if (t === LocationType.Permanent || t === LocationType.SpousePermanent) return this.L['addressType.permanent'];
+        if (t === LocationType.Present || t === LocationType.SpousePresent) return this.L['addressType.present'];
         return t || this.L['addressType.address'];
     }
 
@@ -171,8 +478,8 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
         return this.familyList.filter((f) => !inLawPattern.test((f.relation ?? '').trim()));
     }
 
-    /** Family members whose relation contains "in-law" (wife's family). */
-    get wifeFamilyInfoList(): FamilyInfoByEmployeeView[] {
+    /** Family members whose relation contains "in-law" (spouse's family). */
+    get spouseFamilyInfoList(): FamilyInfoByEmployeeView[] {
         if (!this.familyList?.length) return [];
         const inLawPattern = /in-law/i;
         return this.familyList.filter((f) => inLawPattern.test((f.relation ?? '').trim()));
@@ -369,8 +676,8 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
     }
 
     /** Date only for tables; when BN, digits in Bangla. */
-    formatDateOnly(value: string | null): string {
-        const s = this.formatDateShort(value);
+    formatDateOnly(value: string | null | undefined): string {
+        const s = this.formatDateShort(value ?? null);
         return this.isBn ? BanglaNumerals.toBangla(s) : s;
     }
 

@@ -17,7 +17,7 @@ import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { EmpService } from '@/services/emp-service';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
-import { NoteSheetType, NoteSheetCurrentStatus, NoteSheetCurrentStatusOptions, ApprovalStatus, NoteSheetRemarkAction, ApprovalLogAction, ApprovalLogActionOptions, NoteSheetOperationType } from '@/models/enums';
+import { NoteSheetType, NoteSheetCurrentStatus, NoteSheetCurrentStatusOptions, ApprovalStatus, NoteSheetRemarkAction, ApprovalLogAction, ApprovalLogActionOptions, NoteSheetOperationType, DraftPostingStatus, PostingStatus } from '@/models/enums';
 import { ServingMembersService } from '@/services/serving-members.service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { CommonCode } from '@/Components/basic-setup/shared/models/common-code';
@@ -1177,6 +1177,11 @@ export class NotesheetListComponent implements OnInit {
       Remark: this.remarkText,
       LastUpdatedBy: this.sharedService.getCurrentUser?.() ?? 'system'
     };
+    const row = this.selectedRow;
+    const isFinalApproval = this.remarkAction === NoteSheetRemarkAction.Approve
+        && row.currentStatus === NoteSheetCurrentStatus.FinalApproval;
+    const isPostingNoteSheet = row.noteSheetType === NoteSheetType.NewPosting && !!row.draftPostingMasterId;
+
     this.http.post<{ statusCode?: number; StatusCode?: number; description?: string; Description?: string }>(url, body, { observe: 'response' }).subscribe({
       next: (resp) => {
         const res = resp.body;
@@ -1185,6 +1190,12 @@ export class NotesheetListComponent implements OnInit {
         if (code === 200) {
           this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Action completed.' });
           this.showRemarkDialog = false;
+
+          // After final approval of a posting notesheet: update DraftPostingStatus + EmployeeInfo PostingStatus
+          if (isFinalApproval && isPostingNoteSheet) {
+            this.onPostingFinalApproval(row);
+          }
+
           this.loadAll();
         } else {
           this.messageService.add({ severity: 'warn', summary: 'Notice', detail: msg || 'Action failed.' });
@@ -1194,6 +1205,40 @@ export class NotesheetListComponent implements OnInit {
         const detail = err?.error?.description ?? err?.error?.Description ?? err?.error?.message ?? err?.message ?? 'Request failed.';
         this.messageService.add({ severity: 'error', summary: 'Error', detail });
       }
+    });
+  }
+
+  /** After final approval of a New Posting notesheet, update DraftPostingMaster status and employees PostingStatus. */
+  private onPostingFinalApproval(row: NoteSheetInfoRow): void {
+    const masterId = row.draftPostingMasterId!;
+
+    // 1. Update DraftPostingMaster status to 'approved'
+    this.postingService.getDraftPostingEmployees(masterId).subscribe({
+      next: (employees) => {
+        // Use first employee's draftPostingNo/Date for the master update
+        const first = employees?.[0];
+        if (first) {
+          this.postingService.updateDraftNewPosting(
+            masterId,
+            first.draftPostingNo,
+            first.draftPostingDate,
+            DraftPostingStatus.Approved
+          ).subscribe({
+            next: () => {},
+            error: () => this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Failed to update Draft Posting status.' })
+          });
+        }
+
+        // 2. Update each employee's PostingStatus to 'PendingForJoining'
+        const empIds = (employees ?? []).map(e => e.employeeId).filter(id => id > 0);
+        if (empIds.length > 0) {
+          this.postingService.updateEmployeesPostingStatus(empIds, PostingStatus.PendingForJoining).subscribe({
+            next: () => {},
+            error: () => this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Failed to update employee posting status.' })
+          });
+        }
+      },
+      error: () => this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Failed to load posting employees for status update.' })
     });
   }
 

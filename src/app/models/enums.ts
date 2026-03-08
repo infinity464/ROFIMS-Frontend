@@ -7,8 +7,8 @@
 export enum LocationType {
     Permanent = 'Permanent',
     Present = 'Present',
-    WifePermanent = 'WifePermanent',
-    WifePresent = 'WifePresent'
+    SpousePermanent = 'SpousePermanent',
+    SpousePresent = 'SpousePresent'
 }
 
 // Gender Types
@@ -72,8 +72,9 @@ export enum EmployeeStatus {
 export enum PostingStatus {
     Supernumerary = 'Supernumerary',
     Pending = 'Pending',
-    Servings='Servings',
-    ExMember='ExMember'
+    PendingForJoining = 'PendingForJoining',
+    Servings = 'Servings',
+    ExMember = 'ExMember'
 }
 
 /** IsSendingNotesheetStatus – stored in EmployeeInfo and DraftPostingDetail. */
@@ -118,6 +119,17 @@ export const NoteSheetCurrentStatusOptions = [
     { label: 'Final Approval', value: NoteSheetCurrentStatus.FinalApproval },
     { label: 'Cancelled',      value: NoteSheetCurrentStatus.Cancel }
 ];
+
+/**
+ * ApprovalStep – identifies each step/role in the approval chain.
+ * Used as the `step` identifier when loading signatory details.
+ */
+export enum ApprovalStep {
+    PreparedBy    = 'Prepared by',
+    Initiator     = 'Initiator',
+    Recommender   = 'Recommender',
+    FinalApprover = 'Final Approver'
+}
 
 /**
  * ApprovalStatus – individual step approval state.

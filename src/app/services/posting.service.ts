@@ -142,6 +142,14 @@ export class PostingService {
         });
     }
 
+    /** Update PostingStatus on EmployeeInfo for multiple employees (e.g. after final approval). */
+    updateEmployeesPostingStatus(employeeIds: number[], postingStatus: string): Observable<{ statusCode: number; description: string }> {
+        return this.http.post<{ statusCode: number; description: string }>(`${environment.apis.core}/EmployeeInfo/UpdatePostingStatus`, {
+            employeeIds,
+            postingStatus
+        });
+    }
+
     addToDraftNewPostingList(members: PostingMemberRow[], createdBy: string): Observable<{ id: number; listNo: string }> {
         const body = {
             members: members.map((m) => ({

@@ -3,9 +3,31 @@
 <div class="card ex-member-profile-page text-900">
     <div class="profile-header">
         <div class="profile-header-left">
-            <p-button icon="pi pi-arrow-left" [label]="L['button.back']" [rounded]="true" [text]="true" severity="secondary" (onClick)="goBack()" styleClass="p-button-sm"></p-button>
-            <h1 class="profile-title m-0 text-2xl font-bold text-900">{{ L['pageTitle.exMember'] }}</h1>
-            <p-button [label]="profileLang === 'en' ? 'বাংলা' : 'English'" [rounded]="true" [text]="true" severity="secondary" (onClick)="toggleProfileLang()" styleClass="p-button-sm ml-2"></p-button>
+            <div class="flex align-items-center gap-2 flex-wrap">
+                <p-button icon="pi pi-arrow-left" label="Back" [rounded]="true" [text]="true" severity="secondary" (onClick)="goBack()" styleClass="p-button-sm"></p-button>
+                <p-button [label]="profileLang === 'en' ? 'বাংলা' : 'English'" [rounded]="true" [text]="true" severity="secondary" (onClick)="toggleProfileLang()" styleClass="p-button-sm"></p-button>
+                @if (profile && !loading) {
+                    <div class="profile-export-wrap">
+                        <button type="button" class="profile-btn-export" (click)="toggleExportDropdown($event)">
+                            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                                <path d="M6.5 1v7M3.5 5.5l3 3 3-3M1.5 10.5h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Export
+                        </button>
+                        @if (exportDropdownOpen) {
+                            <div class="profile-export-dropdown" (click)="$event.stopPropagation()">
+                                <button type="button" class="profile-export-item" (click)="exportAs('pdf')">
+                                    <span class="profile-export-icon">⬇</span> PDF
+                                </button>
+                                <button type="button" class="profile-export-item" (click)="exportAs('word')">
+                                    <span class="profile-export-icon">⬇</span> Word
+                                </button>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+            <h1 class="profile-title m-0 text-2xl font-bold text-900 mt-2">{{ L['pageTitle.exMember'] }}</h1>
         </div>
         <div class="profile-image-box">
             @if (profileImageUrl) {
@@ -97,22 +119,22 @@
                     }
                 </div>
         
-                <!-- Wife Address Information (WifePermanent & WifePresent; multiple allowed) -->
+                <!-- Spouse Address Information (SpousePermanent & SpousePresent; multiple allowed) -->
                 <div class="content-section text-900 border-top-1 surface-border">
                     <div class="section-heading flex align-items-center justify-content-between gap-2">
-                        <span>{{ L['section.wifeAddress'] }}</span>
-                        @if (editingSection !== 'wifeAddress') {
+                        <span>{{ L['section.spouseAddress'] }}</span>
+                        @if (editingSection !== 'spouseAddress') {
                             <p-button [icon]="'pi pi-pencil'" label="Edit" [rounded]="true" [text]="true" severity="secondary" size="small" (onClick)="setEditingSection('wifeAddress')" pTooltip="Edit"></p-button>
                         } @else {
                             <p-button [icon]="'pi pi-times'" label="Cancel" [rounded]="true" [text]="true" severity="secondary" size="small" (onClick)="closeSectionAndRefresh()" pTooltip="Cancel"></p-button>
                         }
                     </div>
-                    @if (editingSection !== 'wifeAddress') {
-                        @if (wifeAddressList.length === 0) {
-                            <div class="address-empty text-500 py-2">{{ L['empty.noWifeAddress'] }}</div>
+                    @if (editingSection !== 'spouseAddress') {
+                        @if (spouseAddressList.length === 0) {
+                            <div class="address-empty text-500 py-2">{{ L['empty.noSpouseAddress'] }}</div>
                         } @else {
                             <div class="core-details">
-                                @for (addr of wifeAddressList; track addr.ser) {
+                                @for (addr of spouseAddressList; track addr.ser) {
                                     <div class="address-block">
                                         <div class="address-block-type">{{ getAddressTypeLabel(addr) }}</div>
                                         <div class="address-fields">
@@ -132,8 +154,8 @@
                             </div>
                         }
                     }
-                    @if (editingSection === 'wifeAddress' && employeeId != null) {
-                        <app-emp-address-info [externalEmployeeId]="employeeId" [embedMode]="true" [hideTitle]="true" [addressScope]="'wife'" (saved)="onSectionSaved('wifeAddress')" (cancelled)="closeSectionAndRefresh()"></app-emp-address-info>
+                    @if (editingSection === 'spouseAddress' && employeeId != null) {
+                        <app-emp-address-info [externalEmployeeId]="employeeId" [embedMode]="true" [hideTitle]="true" [addressScope]="'spouse'" (saved)="onSectionSaved('spouseAddress')" (cancelled)="closeSectionAndRefresh()"></app-emp-address-info>
                     }
                 </div>
 
@@ -250,7 +272,7 @@
         <!-- Wife Family Info (relation contains "in-law") - same form as Family Info -->
         <div class="content-section text-900 border-top-1 surface-border">
             <div class="section-heading flex align-items-center justify-content-between gap-2">
-                <span>{{ L['section.wifeFamilyInfo'] }}</span>
+                <span>{{ L['section.spouseFamilyInfo'] }}</span>
                 @if (editingSection !== 'familyInfo') {
                     <p-button [icon]="'pi pi-pencil'" label="Edit" [rounded]="true" [text]="true" severity="secondary" size="small" (onClick)="setEditingSection('familyInfo')" pTooltip="Edit"></p-button>
                 } @else {
@@ -259,7 +281,7 @@
             </div>
             @if (editingSection !== 'familyInfo') {
                 <div class="family-table-wrapper">
-                    <p-table [value]="wifeFamilyInfoList" [tableStyle]="{ 'min-width': '40rem' }" styleClass="p-datatable-sm p-datatable-gridlines family-info-table">
+                    <p-table [value]="spouseFamilyInfoList" [tableStyle]="{ 'min-width': '40rem' }" styleClass="p-datatable-sm p-datatable-gridlines family-info-table">
                         <ng-template pTemplate="header">
                             <tr>
                                 <th style="width: 4rem">{{ L['table.ser'] }}</th>
@@ -281,7 +303,7 @@
                             </tr>
                         </ng-template>
                         <ng-template pTemplate="emptymessage">
-                            <tr><td colspan="6" class="text-center text-500 py-3">{{ L['empty.noWifeFamilyRecords'] }}</td></tr>
+                            <tr><td colspan="6" class="text-center text-500 py-3">{{ L['empty.noSpouseFamilyRecords'] }}</td></tr>
                         </ng-template>
                     </p-table>
                 </div>

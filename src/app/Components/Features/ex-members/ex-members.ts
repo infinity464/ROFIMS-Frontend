@@ -25,7 +25,7 @@ export interface FilterModel {
     durationFrom: Date | null;
     durationTo: Date | null;
     wonHomeDistrict: number | null;
-    wifeHomeDistrict: number | null;
+    spouseHomeDistrict: number | null;
     appointment: number | null;
 }
 
@@ -59,7 +59,7 @@ export class ExMembers implements OnInit {
         durationFrom: null,
         durationTo: null,
         wonHomeDistrict: null,
-        wifeHomeDistrict: null,
+        spouseHomeDistrict: null,
         appointment: null
     };
 
@@ -184,7 +184,7 @@ export class ExMembers implements OnInit {
             joiningDateFrom: toDateOnly(this.filter.durationFrom),
             joiningDateTo: toDateOnly(this.filter.durationTo),
             permanentDistrictType: this.filter.wonHomeDistrict ?? undefined,
-            wifePermanentDistrictType: this.filter.wifeHomeDistrict ?? undefined,
+            spousePermanentDistrictType: this.filter.spouseHomeDistrict ?? undefined,
             appointmentId: this.filter.appointment ?? undefined
         };
     }
@@ -209,7 +209,7 @@ export class ExMembers implements OnInit {
             durationFrom: null,
             durationTo: null,
             wonHomeDistrict: null,
-            wifeHomeDistrict: null,
+            spouseHomeDistrict: null,
             appointment: null
         };
         this.useFilter = false;
@@ -250,7 +250,7 @@ export class ExMembers implements OnInit {
         if (f.durationFrom != null) n++;
         if (f.durationTo != null) n++;
         if (f.wonHomeDistrict != null) n++;
-        if (f.wifeHomeDistrict != null) n++;
+        if (f.spouseHomeDistrict != null) n++;
         if (f.appointment != null) n++;
         return n;
     }

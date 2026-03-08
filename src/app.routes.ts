@@ -101,6 +101,7 @@ import { Religion } from '@/Components/basic-setup/religion/religion';
 import { RabIdSerial } from '@/Components/basic-setup/rab-id-serial/rab-id-serial';
 import { AbsentType } from '@/Components/basic-setup/absent-type/absent-type';
 import { NotesheetTemplateComponent } from '@/Components/basic-setup/notesheet-template/notesheet-template';
+import { NoteSheetNumberConfigComponent } from '@/Components/basic-setup/notesheet-number-config/notesheet-number-config';
 import { NotesheetGenerateComponent } from '@/Components/Features/notesheet-generate/notesheet-generate';
 import { NotesheetExBdLeaveComponent } from '@/Components/Features/notesheet-ex-bd-leave/notesheet-ex-bd-leave';
 import { NotesheetListComponent } from '@/Components/Features/notesheet-list/notesheet-list';
@@ -116,15 +117,10 @@ import { ChatContainerComponent } from '@/Components/Features/chat/chat-containe
 import { IdentityUserCreateComponent } from '@/Components/Features/identity/identity-user-create/identity-user-create.component';
 import { RoleListComponent } from '@/Components/Features/identity/role-list/role-list.component';
 import { IdentityUserEmployeeMappingComponent } from '@/Components/Features/identity/identity-user-employee-mapping/identity-user-employee-mapping.component';
-import { PdfUploadComponent } from '@/Components/Features/pdf-vault/pdf-upload/pdf-upload.component';
-import { PdfSearchComponent } from '@/Components/Features/pdf-vault/pdf-search/pdf-search.component';
-import { PdfDocumentListComponent } from '@/Components/Features/pdf-vault/pdf-document-list/pdf-document-list.component';
-import { PdfViewerComponent } from '@/Components/Features/pdf-vault/pdf-viewer/pdf-viewer.component';
-import { PdfImageSearchComponent } from '@/Components/Features/pdf-vault/pdf-image-search/pdf-image-search.component';
-import { ImageUploadComponent } from '@/Components/Features/pdf-vault/image-upload/image-upload.component';
 import { MenuManagement } from '@/Components/Features/menu-management/menu-management';
 import { RoleMenuPermission } from '@/Components/Features/role-menu-permission/role-menu-permission';
 import { EmployeeReportsComponent } from '@/Components/Features/employee-reports/employee-reports.component';
+import { RabUnitAor } from '@/Components/basic-setup/rab-unit-aor/rab-unit-aor';
 
 export const appRoutes: Routes = [
     // Public routes
@@ -175,6 +171,7 @@ export const appRoutes: Routes = [
             { path: 'basic-setup/rab-id', component: RabId },
             { path: 'basic-setup/rab-structure', component: RabStructureComponent },
             { path: 'basic-setup/rab-unit', component: RabUnit },
+            { path: 'basic-setup/rab-unit-aor', component: RabUnitAor },
             { path: 'basic-setup/officer-type', component: OfficerType },
             { path: 'basic-setup/rab-wing', component: RabWing },
             { path: 'basic-setup/mother-org', component: Organization },
@@ -205,6 +202,7 @@ export const appRoutes: Routes = [
             { path: 'basic-setup/rab-id-serial', component: RabIdSerial },
             { path: 'basic-setup/absent-type', component: AbsentType },
             { path: 'basic-setup/notesheet-template', component: NotesheetTemplateComponent },
+            { path: 'basic-setup/notesheet-number-config', component: NoteSheetNumberConfigComponent },
             { path: 'notesheet-generate', component: NotesheetGenerateComponent },
             { path: 'notesheet-ex-bd-leave', component: NotesheetExBdLeaveComponent },
             { path: 'notesheet-list', redirectTo: 'notesheet-list/draft', pathMatch: 'full' },
@@ -256,16 +254,6 @@ export const appRoutes: Routes = [
             { path: 'presently-serving-members/profile/:employeeId', component: ServingMemberProfile },
             { path: 'ex-members', component: ExMembers },
             { path: 'ex-members/profile/:employeeId', component: ExMemberProfile },
-
-            // PDF Vault
-            { path: 'pdf-vault/search', component: PdfSearchComponent },
-            { path: 'pdf-vault/upload', component: PdfUploadComponent },
-            { path: 'pdf-vault/documents', component: PdfDocumentListComponent },
-            { path: 'pdf-vault/view/:id', component: PdfViewerComponent },
-
-            // Image Vault
-            { path: 'image-vault/upload', component: ImageUploadComponent },
-            { path: 'image-vault/find', component: PdfImageSearchComponent },
 
             // Employee Reports
             { path: 'employee-reports', component: EmployeeReportsComponent },

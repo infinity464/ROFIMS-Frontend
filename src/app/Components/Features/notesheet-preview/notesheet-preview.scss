@@ -178,6 +178,7 @@
 .ns-para-text {
     flex: 1;
     min-width: 0;
+    text-align: justify;
     // Only break words as a last resort; never split mid-glyph
     overflow-wrap: break-word;
     word-break: normal;

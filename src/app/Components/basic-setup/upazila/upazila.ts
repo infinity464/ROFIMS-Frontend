@@ -325,24 +325,21 @@ export class Upazila {
     }
 
     update(row: any) {
-    this.editingId = row.codeId;
+        this.editingId = row.codeId;
 
-    this.loadAnscestors(row.codeId);
+        this.loadAnscestors(row.codeId);
 
-    // Move the logic inside the loadAnscestors subscribe callback
-    this.masterBasicSetupService.getAncestorsOfCommonCode(row.codeId).subscribe({
-        next: (ancestors) => {
-            this.ancestors = ancestors;
-            console.log('Ancestors:', this.ancestors);
+        // Move the logic inside the loadAnscestors subscribe callback
+        this.masterBasicSetupService.getAncestorsOfCommonCode(row.codeId).subscribe({
+            next: (ancestors) => {
+                this.ancestors = ancestors;
+                console.log('Ancestors:', this.ancestors);
 
-            const divisionId = this.ancestors[0]?.codeId;
+                const divisionId = this.ancestors[0]?.codeId;
 
-            if (divisionId) {
-                console.log('Loading districts for divisionId:', divisionId);
-                this.loadDistricts(divisionId);
-
-                // Patch the form after districts are loaded
-                // Use setTimeout or subscribe to loadDistricts completion
+                if (divisionId) {
+                    console.log('Loading districts for divisionId:', divisionId);
+                    this.loadDistricts(divisionId);
 
                     this.upazilaForm.patchValue({
                         divisionId: divisionId,
@@ -351,15 +348,14 @@ export class Upazila {
                         codeValueBN: row.codeValueBN,
                         status: row.status
                     });
-
+                }
+            },
+            error: (err) => {
+                console.error('Error loading ancestors:', err);
             }
-        },
-        error: (err) => {
-            console.error('Error loading ancestors:', err);
-        }
-    });
+        });
 
-    console.log('Edit:', row);
+        console.log('Edit:', row);
 }
 
     delete(row: any, event: Event) {
