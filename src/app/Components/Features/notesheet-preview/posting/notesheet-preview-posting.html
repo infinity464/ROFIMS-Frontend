@@ -80,7 +80,7 @@
                                     <td>{{ isEnglish() ? (emp.tradeName || '-') : (emp.tradeNameBN || emp.tradeName || '-') }}</td>
                                     <td>{{ isEnglish() ? (emp.fullNameEN || '-') : (emp.fullNameBN || emp.fullNameEN || '-') }}</td>
                                     <td>{{ isEnglish() ? (emp.motherUnitName || '-') : (emp.motherUnitNameBN || emp.motherUnitName || '-') }}</td>
-                                    <td *ngIf="!editing">{{ emp.transferRabUnitName || '-' }}</td>
+                                    <td *ngIf="!editing">{{ isEnglish() ? (emp.transferRabUnitName || '-') : (emp.transferRabUnitId ? unitLabelMapBN[emp.transferRabUnitId] : null) || emp.transferRabUnitName || '-' }}</td>
                                     <td *ngIf="editing">
                                         <p-select [(ngModel)]="emp.transferRabUnitId" [options]="rabUnitOptions" optionLabel="label" optionValue="value"
                                                   placeholder="Select Unit" [filter]="true" filterBy="label" [showClear]="true"
@@ -109,7 +109,6 @@
 
                     <!-- ── Supporting Documents ── -->
                     <div class="ns-edit-field" *ngIf="editing">
-                        <label class="ns-edit-label">Supporting Documents</label>
                         <app-file-references-form
                             #fileReferencesForm
                             [fileRows]="fileRows"

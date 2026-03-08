@@ -583,7 +583,8 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
             const headerCells = cols.map(c => `<th style="border:1px solid #000;padding:5px 8px;font-weight:bold;font-size:9pt">${esc(c)}</th>`).join('');
             const bodyRows = this.postingEmployees.map((emp, i) => {
                 const ser = bn ? this.toBanglaDigits(i + 1) : String(i + 1);
-                const vals = [ser, emp.serviceId??'', bn?(emp.rankNameBN||emp.rankName||''):(emp.rankName??''), bn?(emp.tradeNameBN||emp.tradeName||''):(emp.tradeName??''), bn?(emp.fullNameBN||emp.fullNameEN||''):(emp.fullNameEN??''), bn?(emp.motherUnitNameBN||emp.motherUnitName||''):(emp.motherUnitName??''), emp.transferRabUnitName??'', emp.remarks??''];
+                const transferUnit = bn ? (this.unitLabelMapBN[emp.transferRabUnitId!] || emp.transferRabUnitName || '') : (emp.transferRabUnitName ?? '');
+                const vals = [ser, emp.serviceId??'', bn?(emp.rankNameBN||emp.rankName||''):(emp.rankName??''), bn?(emp.tradeNameBN||emp.tradeName||''):(emp.tradeName??''), bn?(emp.fullNameBN||emp.fullNameEN||''):(emp.fullNameEN??''), bn?(emp.motherUnitNameBN||emp.motherUnitName||''):(emp.motherUnitName??''), transferUnit, emp.remarks??''];
                 return `<tr>${vals.map(v => `<td style="border:1px solid #000;padding:5px 8px;font-size:9pt">${esc(v)}</td>`).join('')}</tr>`;
             }).join('');
             mainContent += `<div style="padding:0 16px 10px 20px"><table style="width:100%;border-collapse:collapse"><thead><tr>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table></div>`;
@@ -674,7 +675,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
                 bn?(emp.tradeNameBN||emp.tradeName||''):(emp.tradeName??''),
                 bn?(emp.fullNameBN||emp.fullNameEN||''):(emp.fullNameEN??''),
                 bn?(emp.motherUnitNameBN||emp.motherUnitName||''):(emp.motherUnitName??''),
-                emp.transferRabUnitName??'', emp.remarks??''
+                bn ? (this.unitLabelMapBN[emp.transferRabUnitId!] || emp.transferRabUnitName || '') : (emp.transferRabUnitName ?? ''), emp.remarks??''
             ].map(v => new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: v, size: 16, sizeComplexScript: bn ? 16 : undefined, font, language: lang })] })], borders: cellBorders, width: { size: cw, type: WidthType.DXA } })) }));
             mainChildren.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [headerRow, ...dataRows] }));
         }

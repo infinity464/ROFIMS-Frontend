@@ -127,6 +127,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
     purposeLabelMap: Record<number, string> = {};
     countryLabelMap: Record<number, string> = {};
     unitLabelMap: Record<number, string> = {};
+    unitLabelMapBN: Record<number, string> = {};
 
     ngOnInit(): void {
         this.loadLookups();
@@ -156,6 +157,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
         this.masterBasicSetup.getAllByType('RabUnit').subscribe({
             next: (list) => {
                 this.unitLabelMap = (list ?? []).reduce((acc, c) => { acc[c.codeId] = c.codeValueEN; return acc; }, {} as Record<number, string>);
+                this.unitLabelMapBN = (list ?? []).reduce((acc, c) => { acc[c.codeId] = c.codeValueBN || c.codeValueEN; return acc; }, {} as Record<number, string>);
             }
         });
     }
