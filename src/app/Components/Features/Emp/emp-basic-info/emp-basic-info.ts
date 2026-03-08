@@ -22,6 +22,8 @@ import { catchError, finalize, map, switchMap, tap } from 'rxjs/operators';
 import { LocationType, PostingStatus } from '@/models/enums';
 import { EmpPresentMemberCheckComponent } from '../emp-present-member-check/emp-present-member-check.component';
 import { FileReferencesFormComponent } from '@components/Common/file-references-form/file-references-form';
+import { OrganizationService } from '@/Components/basic-setup/organization-setup/services/organization-service';
+import { SharedService } from '@/shared/services/shared-service';
 
 @Component({
     selector: 'app-emp-basic-info',
@@ -761,6 +763,19 @@ export class EmpBasicInfo implements OnInit {
     spouseFmid: number | null = null;
     prefixes: CommonCodeModel[] = [];
 
+    // Add Last Unit of Mother Organization dialog (same pattern as Post Office setup)
+    showLastUnitDialog: boolean = false;
+    newLastUnitNameEN: string = '';
+    newLastUnitNameBN: string = '';
+    newLastUnitLocationEN: string = '';
+    newLastUnitLocationBN: string = '';
+    newLastUnitStatus: boolean = true;
+    lastUnitStatusOptions = [
+        { label: 'Active', value: true },
+        { label: 'Inactive', value: false }
+    ];
+    isSavingLastUnit: boolean = false;
+
     constructor(
         private fb: FormBuilder,
         private empService: EmpService,
@@ -768,7 +783,9 @@ export class EmpBasicInfo implements OnInit {
         private commonCodeService: CommonCodeService,
         private messageService: MessageService,
         private route: ActivatedRoute,
-        private router: Router
+        private router: Router,
+        private organizationService: OrganizationService,
+        private sharedService: SharedService
     ) {}
 
     ngOnInit(): void {
@@ -1107,7 +1124,7 @@ export class EmpBasicInfo implements OnInit {
             relationship: [null],
             spouseName: [''],
             prefix: [null, Validators.required],
-            serviceId: ['', [Validators.required, Validators.pattern(/^\d+$/)]],
+            serviceId: ['', [Validators.required, Validators.minLength(10), Validators.pattern(/^\d+$/)]],
             rabid: [{ value: '', disabled: true }],
             nid: [''],
             fullNameEN: ['', [Validators.required, Validators.minLength(2)]],
@@ -1216,12 +1233,92 @@ export class EmpBasicInfo implements OnInit {
     }
 
     onLastUnitChange(unit: any): void {
-        console.log(unit);
-
         const location = this.lastUnitOrganizations.find((x) => x.orgId === unit)?.locationEN;
-        console.log(location);
         this.postingForm.patchValue({
             lastMotherUnitLocation: location
+        });
+    }
+
+    openAddLastUnitDialog(): void {
+        const parentOrgId = this.postingForm.get('motherOrganization')?.value;
+        if (!parentOrgId) return;
+        this.newLastUnitNameEN = '';
+        this.newLastUnitNameBN = '';
+        this.newLastUnitLocationEN = '';
+        this.newLastUnitLocationBN = '';
+        this.newLastUnitStatus = true;
+        this.showLastUnitDialog = true;
+    }
+
+    getSelectedMotherOrgName(): string {
+        const orgId = this.postingForm.get('motherOrganization')?.value;
+        const org = this.motherOrganizations.find((o) => o.orgId === orgId);
+        return org?.orgNameEN ?? '';
+    }
+
+    saveNewLastUnit(): void {
+        if (!this.newLastUnitNameEN?.trim() || !this.newLastUnitLocationEN?.trim()) return;
+
+        const parentOrgId = this.postingForm.get('motherOrganization')?.value;
+        if (!parentOrgId) {
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'Warning',
+                detail: 'Please select Mother Organization first'
+            });
+            return;
+        }
+
+        this.isSavingLastUnit = true;
+        const currentUser = this.sharedService.getCurrentUser();
+        const currentDateTime = this.sharedService.getCurrentDateTime();
+
+        const payload = {
+            orgId: 0,
+            orgNameEN: this.newLastUnitNameEN.trim(),
+            orgNameBN: this.newLastUnitNameBN?.trim() || '',
+            locationEN: this.newLastUnitLocationEN.trim(),
+            locationBN: this.newLastUnitLocationBN?.trim() || '',
+            parentOrg: parentOrgId,
+            status: this.newLastUnitStatus,
+            createdBy: currentUser,
+            createdDate: currentDateTime,
+            lastUpdatedBy: currentUser,
+            lastupdate: currentDateTime
+        };
+
+        this.organizationService.post(payload as any).subscribe({
+            next: (res: any) => {
+                this.messageService.add({
+                    severity: 'success',
+                    summary: 'Success',
+                    detail: 'Last Unit of Mother Organization created successfully'
+                });
+                this.showLastUnitDialog = false;
+                this.isSavingLastUnit = false;
+
+                const newOrgId = res?.orgId ?? res?.OrgId;
+                this.commonCodeService.getAllActiveMotherOrgUnits(parentOrgId).subscribe({
+                    next: (units) => {
+                        this.lastUnitOrganizations = units;
+                        if (newOrgId) {
+                            this.postingForm.patchValue({
+                                lastMotherUnit: newOrgId,
+                                lastMotherUnitLocation: this.newLastUnitLocationEN.trim()
+                            });
+                        }
+                    }
+                });
+            },
+            error: (err) => {
+                console.error('Error creating last unit:', err);
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: 'Failed to create Last Unit of Mother Organization'
+                });
+                this.isSavingLastUnit = false;
+            }
         });
     }
 
@@ -1460,6 +1557,9 @@ export class EmpBasicInfo implements OnInit {
         }
 
         if (field?.hasError('minlength')) {
+            if (fieldName === 'serviceId') {
+                return 'Minimum 10 digits required';
+            }
             return `Minimum length is ${field.errors?.['minlength']?.requiredLength} characters`;
         }
 
