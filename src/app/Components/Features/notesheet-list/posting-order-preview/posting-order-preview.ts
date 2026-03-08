@@ -4,14 +4,14 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
-import { EditorModule } from 'primeng/editor';
+import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor';
 import { TextareaModule } from 'primeng/textarea';
 import { InputTextModule } from 'primeng/inputtext';
 import { TooltipModule } from 'primeng/tooltip';
 import { SelectModule } from 'primeng/select';
 import { MessageService } from 'primeng/api';
 import { NotesheetSignatoryComponent } from '@/Components/Common/notesheet-signatory/notesheet-signatory';
-import { NoteSheetStatus, NoteSheetApprovalStep } from '@/models/enums';
+import { NoteSheetCurrentStatus, ApprovalStatus } from '@/models/enums';
 import { environment } from '@/Core/Environments/environment';
 import { PostingService } from '@/services/posting.service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
@@ -27,7 +27,7 @@ import html2canvas from 'html2canvas';
 @Component({
     selector: 'app-posting-order-preview',
     standalone: true,
-    imports: [CommonModule, FormsModule, TableModule, ButtonModule, EditorModule, TextareaModule, InputTextModule, TooltipModule, SelectModule, NotesheetSignatoryComponent],
+    imports: [CommonModule, FormsModule, TableModule, ButtonModule, RichEditorComponent, TextareaModule, InputTextModule, TooltipModule, SelectModule, NotesheetSignatoryComponent],
     templateUrl: './posting-order-preview.html',
     styleUrl: './posting-order-preview.scss'
 })
@@ -49,7 +49,7 @@ export class PostingOrderPreviewComponent implements OnChanges, OnInit {
 
     /** Whether the notesheet is approved (edit disabled) */
     get isApproved(): boolean {
-        return (this.noteSheet?.noteSheetStatusId ?? 0) === NoteSheetStatus.Approved;
+        return this.noteSheet?.finalApprovalStatus === ApprovalStatus.Approve;
     }
 
     /** Edit mode */
@@ -507,20 +507,25 @@ export class PostingOrderPreviewComponent implements OnChanges, OnInit {
 
     /** Whether a signatory's signature should be visible based on approval workflow status. */
     shouldShowSignature(step: string): boolean {
-        const statusId = this.noteSheet?.noteSheetStatusId ?? NoteSheetStatus.Draft;
-        const currentStep = this.noteSheet?.currentApprovalStep ?? NoteSheetApprovalStep.Initiator;
+        const ns = this.noteSheet;
+        if (!ns) return false;
 
         // Prepared by: always show
         if (step === 'Prepared by' || step === 'প্রস্তুতকারী') return true;
 
-        // Initiator: show after initiator approved (step moved past Initiator) or fully approved/declined
-        if (step === 'Initiator') return (statusId === NoteSheetStatus.Pending && currentStep >= NoteSheetApprovalStep.Recommender) || statusId >= NoteSheetStatus.Approved;
+        // Initiator: show once initiator has approved
+        if (step === 'Initiator') return ns.initiatorStatus === ApprovalStatus.Approve;
 
-        // Recommender(s): show individually as each signs (signatureDataUrl gate in template handles per-recommender)
-        if (step.startsWith('Recommender')) return (statusId === NoteSheetStatus.Pending && currentStep >= NoteSheetApprovalStep.Recommender) || statusId >= NoteSheetStatus.Approved;
+        // Recommender(s): show once workflow has moved to recommender stage or beyond
+        if (step.startsWith('Recommender')) {
+            const cs: string = ns.currentStatus ?? '';
+            return cs === NoteSheetCurrentStatus.Recommender
+                || cs === NoteSheetCurrentStatus.FinalApproval
+                || cs === NoteSheetCurrentStatus.Cancel;
+        }
 
-        // Final Approver: show only after fully approved
-        if (step === 'Final Approver') return statusId === NoteSheetStatus.Approved;
+        // Final Approver: show only after final approval
+        if (step === 'Final Approver') return ns.finalApprovalStatus === ApprovalStatus.Approve;
 
         return false;
     }

@@ -2,23 +2,26 @@ import { Component, Input, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '@/Core/Environments/environment';
-import { MessageService } from 'primeng/api';
+import { MessageService, ConfirmationService } from 'primeng/api';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TextareaModule } from 'primeng/textarea';
 import { FormsModule } from '@angular/forms';
 import { ToastModule } from 'primeng/toast';
 import { SharedService } from '@/shared/services/shared-service';
 import { FluidModule } from 'primeng/fluid';
 import { ActivatedRoute, Router } from '@angular/router';
-import { EditorModule } from 'primeng/editor';
+import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { EmpService } from '@/services/emp-service';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
-import { NoteSheetType, NoteSheetStatus, NoteSheetApprovalStep } from '@/models/enums';
+import { NoteSheetType, NoteSheetCurrentStatus, NoteSheetCurrentStatusOptions, ApprovalStatus, NoteSheetRemarkAction, ApprovalLogAction, ApprovalLogActionOptions, NoteSheetOperationType } from '@/models/enums';
+import { ServingMembersService } from '@/services/serving-members.service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { CommonCode } from '@/Components/basic-setup/shared/models/common-code';
+import { CommonCodeService } from '@/services/common-code-service';
 import { TooltipModule } from 'primeng/tooltip';
 import { DatePickerModule } from 'primeng/datepicker';
 import { InputTextModule } from 'primeng/inputtext';
@@ -46,19 +49,28 @@ export interface NoteSheetInfoRow {
   wingBattalionId?: number;
   branchId?: number;
   subject: string;
-  noteSheetStatusId?: number;
+  /** Workflow position: draft | initiator | recommender | final_approval | cancel */
+  currentStatus?: string;
+  initiatorStatus?: string;
+  finalApprovalStatus?: string;
+  finalApprovalApprovedDate?: string;
+  finalApprovalId?: number;
+  lastUpdatedBy?: string;
   /** Type string: General, ExBDLeave, NewPosting, InterPosting; used to route Update and Preview */
   noteSheetType?: string;
-  currentApprovalStep?: number;
-  approvedByEmployeeId?: number;
-  approvedDate?: string;
-  declinedByEmployeeId?: number;
-  declinedDate?: string;
   remark?: string;
   referenceNumber?: string;
   draftPostingMasterId?: number | null;
   /** JSON array of { FileId, fileName } from API */
   filesReferences?: string;
+  /** True when this note sheet is currently in a step it was backed to. */
+  isCurrentlyBacked?: boolean;
+  /** Reason given for the most recent back action. */
+  lastBackRemark?: string;
+  /** Operation type: manual | system_generate */
+  noteSheetOperationType?: string;
+  /** Whether the note sheet is marked as secret */
+  isSecret?: boolean;
 }
 
 /** Full model for single note-sheet (get by id, preview, update). */
@@ -69,9 +81,22 @@ export interface NoteSheetInfoFull extends NoteSheetInfoRow {
   textType?: number; // 0 = English, 1 = Bangla
   unitId?: number;
   employeeId?: number;
+  // ── Initiator ──────────────────────────────────────────
   initiatorId?: number;
+  initiatorStatus?: string;
+  initiatorApproveRemark?: string;
+  initiatorCancelRemark?: string;
+  initiatorApprovedDate?: string;
+  // ── Recommenders ───────────────────────────────────────
+  recommendersJson?: string;
   recommenderIdsJson?: string;
+  // ── Final Approval ─────────────────────────────────────
+  finalApprovalId?: number;
   finalApproverId?: number;
+  finalApprovalRemark?: string;
+  finalApprovalCancelRemark?: string;
+  finalApprovalApprovedDate?: string;
+  // ── Other ──────────────────────────────────────────────
   familyInfoJson?: string;
   filesReferences?: string;
   createdBy?: string;
@@ -92,6 +117,26 @@ export interface NoteSheetInfoFull extends NoteSheetInfoRow {
 
 export type NoteSheetSection = 'draft' | 'pending' | 'approved' | 'declined' | 'all';
 
+export const NOTE_SHEET_SECTIONS = {
+  DRAFT: 'draft' as NoteSheetSection,
+  PENDING: 'pending' as NoteSheetSection,
+  APPROVED: 'approved' as NoteSheetSection,
+  DECLINED: 'declined' as NoteSheetSection,
+  ALL: 'all' as NoteSheetSection,
+};
+
+export interface ApprovalLogEntry {
+  step: string;
+  action: ApprovalLogAction;
+  date: string | null;
+  remark: string | null;
+  employeeId: number | null;
+  /** Resolved at runtime */
+  serviceId?: string;
+  name?: string;
+  rank?: string;
+}
+
 @Component({
   selector: 'app-notesheet-list',
   standalone: true,
@@ -104,16 +149,17 @@ export type NoteSheetSection = 'draft' | 'pending' | 'approved' | 'declined' | '
     TextareaModule,
     ToastModule,
     FluidModule,
-    EditorModule,
+    RichEditorComponent,
     TooltipModule,
     DatePickerModule,
     InputTextModule,
     IconFieldModule,
     InputIconModule,
     PostingOrderPreviewComponent,
-    NotesheetSignatoryComponent
+    NotesheetSignatoryComponent,
+    ConfirmDialogModule
   ],
-  providers: [MessageService],
+  providers: [MessageService, ConfirmationService],
   templateUrl: './notesheet-list.html',
   styleUrl: './notesheet-list.scss'
 })
@@ -127,6 +173,8 @@ export class NotesheetListComponent implements OnInit {
   unitLabelMap: Record<number, string> = {};
   wingLabelMap: Record<number, string> = {};
   branchLabelMap: Record<number, string> = {};
+  purposeLabelMap: Record<number, string> = {};
+  countryLabelMap: Record<number, string> = {};
 
   draftList: NoteSheetInfoRow[] = [];
   pendingList: NoteSheetInfoRow[] = [];
@@ -142,7 +190,7 @@ export class NotesheetListComponent implements OnInit {
   filterDateTo: Date | null = null;
 
   showRemarkDialog = false;
-  remarkAction: 'approve' | 'decline' | 'back' | null = null;
+  remarkAction: NoteSheetRemarkAction | null = null;
   remarkText = '';
   selectedRow: NoteSheetInfoRow | null = null;
   currentUserEmployeeId = 0;
@@ -150,6 +198,12 @@ export class NotesheetListComponent implements OnInit {
   /** Preview dialog */
   showPreviewDialog = false;
   previewNoteSheet: NoteSheetInfoFull | null = null;
+
+  /** Approval log dialog */
+  showApprovalLogDialog = false;
+  approvalLogEntries: ApprovalLogEntry[] = [];
+  approvalLogLoading = false;
+  approvalLogNoteSheetNo = '';
   previewLoading = false;
   /** Initiator details (show on right, below main text). */
   initiatorDetails: { step: string; name: string; rabId: string; rank: string; serviceRank: string; appointment: string; employeeId?: number; signatureDataUrl?: string } | null = null;
@@ -177,21 +231,22 @@ export class NotesheetListComponent implements OnInit {
   employeesList: DraftPostingEmployeeRow[] = [];
   loadingEmployees = false;
 
-  readonly statusLabels: Record<number, string> = {
-    [NoteSheetStatus.Draft]: 'Draft',
-    [NoteSheetStatus.Pending]: 'Pending',
-    [NoteSheetStatus.Approved]: 'Approved',
-    [NoteSheetStatus.Declined]: 'Declined'
+  readonly statusLabels: Record<string, string> = {
+    [NoteSheetCurrentStatus.Draft]:         'Draft',
+    [NoteSheetCurrentStatus.Initiator]:     'Pending with Initiator',
+    [NoteSheetCurrentStatus.Recommender]:   'Pending with Recommender',
+    [NoteSheetCurrentStatus.FinalApproval]: 'Pending with Final Approver',
+    [NoteSheetCurrentStatus.Cancel]:        'Cancelled'
   };
-  readonly stepLabels: Record<number, string> = {
-    [NoteSheetApprovalStep.Initiator]: 'Pending with Initiator',
-    [NoteSheetApprovalStep.Recommender]: 'Pending with Recommender',
-    [NoteSheetApprovalStep.FinalApprover]: 'Pending with Final Approver'
-  };
+
+  readonly NoteSheetCurrentStatus = NoteSheetCurrentStatus;
+  readonly NoteSheetRemarkAction  = NoteSheetRemarkAction;
+  readonly ApprovalLogAction      = ApprovalLogAction;
 
   constructor(
     private http: HttpClient,
     private messageService: MessageService,
+    private confirmationService: ConfirmationService,
     private sharedService: SharedService,
     private router: Router,
     private route: ActivatedRoute,
@@ -199,30 +254,20 @@ export class NotesheetListComponent implements OnInit {
     private empService: EmpService,
     private noteSheetEditCache: NoteSheetEditCacheService,
     private masterBasicSetup: MasterBasicSetupService,
-    private postingService: PostingService
+    private postingService: PostingService,
+    private commonCodeService: CommonCodeService,
+    private servingMembersService: ServingMembersService
   ) {}
 
-  /** Open preview dialog: fetch full note-sheet and show formal layout. Load approval chain for approved note-sheets. */
+  /** Open preview page: navigate to the type-specific preview route */
   openPreview(row: NoteSheetInfoRow): void {
-    this.previewNoteSheet = null;
-    this.initiatorDetails = null;
-    this.approversDetails = [];
-    this.preparedByDetails = null;
-    this.previewEditing = false;
-    this.showPreviewDialog = true;
-    this.previewLoading = true;
-    this.http.get<NoteSheetInfoFull[]>(`${this.api}/GetFilteredByKeysAsyn/${row.noteSheetId}`).subscribe({
-      next: (data) => {
-        const list = Array.isArray(data) ? data : [];
-        this.previewNoteSheet = list[0] ?? null;
-        if (this.previewNoteSheet) this.loadApprovalChain(this.previewNoteSheet);
-        this.previewLoading = false;
-      },
-      error: () => {
-        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load note-sheet.' });
-        this.previewLoading = false;
-      }
-    });
+    let route = '/notesheet-preview/general';
+    if (row.noteSheetType === NoteSheetType.ExBDLeave) {
+      route = '/notesheet-preview/exbd';
+    } else if (row.noteSheetType === NoteSheetType.NewPosting || row.noteSheetType === NoteSheetType.InterPosting) {
+      route = '/notesheet-preview/posting';
+    }
+    this.router.navigate([route], { queryParams: { id: row.noteSheetId } });
   }
 
   /** Load approval chain: Prepared by, Initiator (right), Recommender(s) + Final Approver (left). All dynamic. Also loads signatures. */
@@ -242,8 +287,8 @@ export class NotesheetListComponent implements OnInit {
         }
       }
     } catch { /* ignore */ }
-    const finalApproverEmpId = (ns.approvedByEmployeeId && ns.approvedByEmployeeId > 0)
-      ? ns.approvedByEmployeeId
+    const finalApproverEmpId = (ns.finalApprovalId && ns.finalApprovalId > 0)
+      ? ns.finalApprovalId
       : (ns.finalApproverId && ns.finalApproverId > 0 ? ns.finalApproverId : null);
     if (finalApproverEmpId) approverIds.push({ empId: finalApproverEmpId, step: 'Final Approver' });
 
@@ -321,17 +366,29 @@ export class NotesheetListComponent implements OnInit {
 
   /** Whether the previewed notesheet is a draft (editable). */
   isPreviewDraft(): boolean {
-    return (this.previewNoteSheet?.noteSheetStatusId ?? 0) === NoteSheetStatus.Draft;
+    return this.previewNoteSheet?.currentStatus === NoteSheetCurrentStatus.Draft;
+  }
+
+  /** Whether the previewed notesheet can be edited (draft, or initiator in pending section). */
+  isPreviewEditable(): boolean {
+    if (this.previewNoteSheet?.currentStatus === NoteSheetCurrentStatus.Draft) return true;
+    if (this.section === NOTE_SHEET_SECTIONS.PENDING && this.previewNoteSheet?.currentStatus === NoteSheetCurrentStatus.Initiator) return true;
+    return false;
   }
 
   shouldShowSignature(step: string): boolean {
-    const statusId = this.previewNoteSheet?.noteSheetStatusId ?? NoteSheetStatus.Draft;
-    const currentStep = this.previewNoteSheet?.currentApprovalStep ?? NoteSheetApprovalStep.Initiator;
+    const ns = this.previewNoteSheet;
+    if (!ns) return false;
 
     if (step === 'Prepared by' || step === 'প্রস্তুতকারী') return true;
-    if (step === 'Initiator') return (statusId === NoteSheetStatus.Pending && currentStep >= NoteSheetApprovalStep.Recommender) || statusId >= NoteSheetStatus.Approved;
-    if (step.startsWith('Recommender')) return (statusId === NoteSheetStatus.Pending && currentStep >= NoteSheetApprovalStep.Recommender) || statusId >= NoteSheetStatus.Approved;
-    if (step === 'Final Approver') return statusId === NoteSheetStatus.Approved;
+    if (step === 'Initiator') return ns.initiatorStatus === ApprovalStatus.Approve;
+    if (step.startsWith('Recommender')) {
+      const cs = ns.currentStatus ?? '';
+      return cs === NoteSheetCurrentStatus.Recommender
+          || cs === NoteSheetCurrentStatus.FinalApproval
+          || cs === NoteSheetCurrentStatus.Cancel;
+    }
+    if (step === 'Final Approver') return ns.finalApprovalStatus === ApprovalStatus.Approve;
     return false;
   }
 
@@ -436,6 +493,11 @@ export class NotesheetListComponent implements OnInit {
   /** Sanitized main text for preview (formal doc uses same content). */
   getPreviewMainTextSafe(): SafeHtml {
     const html = this.previewNoteSheet?.mainText ?? '';
+    return this.sanitizer.bypassSecurityTrustHtml(html);
+  }
+
+  getPreviewReferenceNumberSafe(): SafeHtml {
+    const html = this.previewNoteSheet?.referenceNumber ?? '—';
     return this.sanitizer.bypassSecurityTrustHtml(html);
   }
 
@@ -582,7 +644,7 @@ export class NotesheetListComponent implements OnInit {
     return this.stepTranslations[step] ?? step;
   }
 
-  private stripHtml(html: string): string {
+  protected stripHtml(html: string): string {
     const div = document.createElement('div');
     div.innerHTML = html;
     return div.textContent || div.innerText || '';
@@ -810,11 +872,13 @@ export class NotesheetListComponent implements OnInit {
   }
 
   private buildGeneralSignatoriesHtml(): string {
+    const marginCenter = 'margin-left:auto;margin-right:auto';
     const sigImg = (detail: any, align: string) => detail?.signatureDataUrl && this.shouldShowSignature(detail.step)
-      ? `<img src="${detail.signatureDataUrl}" style="width:150px;height:50px;object-fit:contain;display:block;${align === 'right' ? 'margin-left:auto' : ''}" />`
+      ? `<img src="${detail.signatureDataUrl}" style="width:150px;height:50px;object-fit:contain;display:block;${align === 'right' ? 'margin-left:auto' : align === 'center' ? marginCenter : ''}" />`
       : '';
     const sigBlock = (detail: any, align: string) => {
       if (!detail) return '';
+      const lineMargin = align === 'right' ? 'margin-left:auto' : align === 'center' ? marginCenter : '';
       const lines = [
         detail.rabId && detail.rabId !== '-' ? `RAB ID: ${detail.rabId}` : '',
         detail.rank && detail.rank !== '-' ? detail.rank : '',
@@ -822,7 +886,7 @@ export class NotesheetListComponent implements OnInit {
       ].filter(Boolean);
       return `<div style="text-align:${align};margin-top:20px;line-height:1.6">
         ${sigImg(detail, align)}
-        <div style="width:160px;border-bottom:1.5px solid #000;margin-bottom:4px;${align === 'right' ? 'margin-left:auto' : ''}"></div>
+        <div style="width:160px;border-bottom:1.5px solid #000;margin-bottom:4px;${lineMargin}"></div>
         <div style="font-weight:600;font-size:9pt;text-transform:uppercase;color:#000">${this.escapeHtml(this.translateStep(detail.step))}</div>
         <div><strong>${this.escapeHtml(detail.name)}</strong></div>
         ${lines.map((l: string) => `<div style="font-size:10pt">${this.escapeHtml(l)}</div>`).join('')}
@@ -833,15 +897,15 @@ export class NotesheetListComponent implements OnInit {
     if (this.initiatorDetails) {
       rightHtml += sigBlock(this.initiatorDetails, 'right');
     }
-    let leftHtml = '';
+    let centerHtml = '';
     for (const approver of this.approversDetails) {
-      leftHtml += sigBlock(approver, 'left');
+      centerHtml += sigBlock(approver, 'center');
     }
 
-    if (!leftHtml && !rightHtml) return '';
+    if (!centerHtml && !rightHtml) return '';
     return `<div style="margin-top:30px">
       ${rightHtml ? `<div>${rightHtml}</div>` : ''}
-      ${leftHtml ? `<div style="margin-top:24px">${leftHtml}</div>` : ''}
+      ${centerHtml ? `<div style="margin-top:24px">${centerHtml}</div>` : ''}
     </div>`;
   }
 
@@ -857,14 +921,14 @@ export class NotesheetListComponent implements OnInit {
         this.loadSection();
       });
     }
-    const user = this.sharedService.getCurrentUser?.();
-    if (user) {
-      this.http.get<any[]>(`${environment.apis.core}/EmployeeInfo/GetAll`).subscribe({
+    const userId = this.sharedService.getCurrentUserId?.();
+    if (userId) {
+      this.http.get<any[]>(`${environment.apis.core}/IdentityUserMapping/GetMappings`).subscribe({
         next: (list) => {
           const me = (Array.isArray(list) ? list : []).find(
-            (e: any) => (e.fullNameEN || e.FullNameEN || '') === user || (e.rabid || e.Rabid || '') === user
+            (m: any) => m.userId === userId
           );
-          if (me) this.currentUserEmployeeId = me.employeeID ?? me.EmployeeID ?? 0;
+          if (me?.employeeId) this.currentUserEmployeeId = me.employeeId;
         },
         error: () => {}
       });
@@ -888,10 +952,10 @@ export class NotesheetListComponent implements OnInit {
       this.loading = false;
     };
     const statusMap: Record<NoteSheetSection, string> = {
-      draft: `?noteSheetStatusId=${NoteSheetStatus.Draft}`,
-      pending: `?noteSheetStatusId=${NoteSheetStatus.Pending}`,
-      approved: `?noteSheetStatusId=${NoteSheetStatus.Approved}`,
-      declined: `?noteSheetStatusId=${NoteSheetStatus.Declined}`,
+      draft:    '',   // fetch all, filter client-side to show in-progress notesheets
+      pending:  '',   // fetch all, filter client-side to show all in-workflow items
+      approved: `?currentStatus=${NoteSheetCurrentStatus.FinalApproval}`,
+      declined: `?currentStatus=${NoteSheetCurrentStatus.Cancel}`,
       all: ''
     };
     this.http.get<unknown>(`${base}${statusMap[this.section]}`).subscribe({
@@ -952,13 +1016,31 @@ export class NotesheetListComponent implements OnInit {
 
   private setCurrentList(list: NoteSheetInfoRow[]): void {
     switch (this.section) {
-      case 'draft': this.draftList = list; break;
-      case 'pending': this.pendingList = list; break;
-      case 'approved': this.approvedList = list; break;
+      case 'draft':
+        this.draftList = list.filter(r =>
+          r.currentStatus === NoteSheetCurrentStatus.Draft ||
+          r.currentStatus === NoteSheetCurrentStatus.Initiator ||
+          r.currentStatus === NoteSheetCurrentStatus.Recommender
+        );
+        break;
+      case 'pending':
+        this.pendingList = list.filter(r =>
+          r.currentStatus === NoteSheetCurrentStatus.Initiator ||
+          r.currentStatus === NoteSheetCurrentStatus.Recommender ||
+          (r.currentStatus === NoteSheetCurrentStatus.FinalApproval && r.finalApprovalStatus !== ApprovalStatus.Approve)
+        );
+        break;
+      case 'approved':
+        this.approvedList = list.filter(r =>
+          r.currentStatus === NoteSheetCurrentStatus.FinalApproval &&
+          r.finalApprovalStatus === ApprovalStatus.Approve
+        );
+        break;
       case 'declined': this.declinedList = list; break;
       case 'all': this.allList = list; break;
     }
   }
+
 
   readonly noteSheetTypeLabels: Record<string, string> = {
     General: 'General',
@@ -971,15 +1053,24 @@ export class NotesheetListComponent implements OnInit {
     return this.noteSheetTypeLabels[row.noteSheetType ?? ''] ?? row.noteSheetType ?? '-';
   }
 
+  readonly operationTypeLabels: Record<string, string> = {
+    [NoteSheetOperationType.Manual]: 'Manual',
+    [NoteSheetOperationType.SystemGenerate]: 'System Generate'
+  };
+
+  operationTypeLabel(row: NoteSheetInfoRow): string {
+    return this.operationTypeLabels[row.noteSheetOperationType ?? ''] ?? row.noteSheetOperationType ?? '-';
+  }
+
   presentStatus(row: NoteSheetInfoRow): string {
-    if (row.noteSheetStatusId !== NoteSheetStatus.Pending) return '-';
-    const step = row.currentApprovalStep ?? 1;
-    return this.stepLabels[step] ?? `Step ${step}`;
+    return this.statusLabels[row.currentStatus ?? ''] ?? '-';
   }
 
   statusLabel(row: NoteSheetInfoRow): string {
-    const id = row.noteSheetStatusId ?? 0;
-    return this.statusLabels[id] ?? '-';
+    if (row.currentStatus === NoteSheetCurrentStatus.FinalApproval && row.finalApprovalStatus === ApprovalStatus.Approve) {
+      return 'Approved';
+    }
+    return this.statusLabels[row.currentStatus ?? ''] ?? '-';
   }
 
   private loadLookups(): void {
@@ -997,6 +1088,26 @@ export class NotesheetListComponent implements OnInit {
         (list || []).forEach((c: CommonCode) => {
           const id = c.codeId;
           if (id != null) this.branchLabelMap[id] = (c.codeValueEN ?? c.displayCodeValueEN ?? '').trim() || '-';
+        });
+      },
+      error: () => {}
+    });
+    this.commonCodeService.getAllActiveCommonCodesType('VisitType').subscribe({
+      next: (list) => {
+        this.purposeLabelMap = {};
+        (list || []).forEach((c: any) => {
+          const id = c.codeId;
+          if (id != null) this.purposeLabelMap[id] = (c.codeValueEN || c.displayCodeValueEN || c.codeValueBN || '').trim() || '-';
+        });
+      },
+      error: () => {}
+    });
+    this.commonCodeService.getAllActiveCommonCodesType('Country').subscribe({
+      next: (list) => {
+        this.countryLabelMap = {};
+        (list || []).forEach((c: any) => {
+          const id = c.codeId;
+          if (id != null) this.countryLabelMap[id] = (c.codeValueEN || c.displayCodeValueEN || c.codeValueBN || '').trim() || '-';
         });
       },
       error: () => {}
@@ -1025,6 +1136,12 @@ export class NotesheetListComponent implements OnInit {
   getBranchLabel(id: number | null | undefined): string {
     return id != null ? (this.branchLabelMap[id] ?? '-') : '-';
   }
+  getPurposeLabel(id: number | null | undefined): string {
+    return id != null ? (this.purposeLabelMap[id] ?? `${id}`) : '-';
+  }
+  getCountryLabel(id: number | null | undefined): string {
+    return id != null ? (this.countryLabelMap[id] ?? `${id}`) : '-';
+  }
 
   formatDate(d: string | null | undefined): string {
     if (!d) return '-';
@@ -1036,7 +1153,7 @@ export class NotesheetListComponent implements OnInit {
     }
   }
 
-  openRemarkDialog(row: NoteSheetInfoRow, action: 'approve' | 'decline' | 'back'): void {
+  openRemarkDialog(row: NoteSheetInfoRow, action: NoteSheetRemarkAction): void {
     this.selectedRow = row;
     this.remarkAction = action;
     this.remarkText = '';
@@ -1045,12 +1162,20 @@ export class NotesheetListComponent implements OnInit {
 
   submitRemark(): void {
     if (!this.selectedRow || !this.remarkAction) return;
+    if (this.remarkAction === NoteSheetRemarkAction.Decline && !this.remarkText?.trim()) {
+      this.messageService.add({ severity: 'warn', summary: 'Remark Required', detail: 'Please provide a remark before declining.' });
+      return;
+    }
+    if (this.remarkAction === NoteSheetRemarkAction.Back && !this.remarkText?.trim()) {
+      this.messageService.add({ severity: 'warn', summary: 'Remark Required', detail: 'Please provide a remark before sending back.' });
+      return;
+    }
     const url = `${this.api}/${this.remarkAction.charAt(0).toUpperCase() + this.remarkAction.slice(1)}`;
-    // Backend expects ApproveDeclineBackRequest with PascalCase
     const body = {
       NoteSheetId: this.selectedRow.noteSheetId,
       EmployeeId: this.currentUserEmployeeId,
-      Remark: this.remarkText
+      Remark: this.remarkText,
+      LastUpdatedBy: this.sharedService.getCurrentUser?.() ?? 'system'
     };
     this.http.post<{ statusCode?: number; StatusCode?: number; description?: string; Description?: string }>(url, body, { observe: 'response' }).subscribe({
       next: (resp) => {
@@ -1073,13 +1198,25 @@ export class NotesheetListComponent implements OnInit {
   }
 
   submitForApproval(row: NoteSheetInfoRow): void {
-    // Backend expects SubmitForApprovalRequest; send PascalCase for compatibility
-    const req = { NoteSheetId: row.noteSheetId };
-    this.http.post<{ statusCode?: number; StatusCode?: number; description?: string; Description?: string }>(`${this.api}/SubmitForApproval`, req, { observe: 'response' }).subscribe({
+    this.confirmationService.confirm({
+      message: 'Do you want to submit this note-sheet for approval process?',
+      header: 'Submit for Approval',
+      acceptLabel: 'Submit',
+      rejectLabel: 'Cancel',
+      acceptButtonStyleClass: 'p-button-success',
+      accept: () => this.doSubmitForApproval(row)
+    });
+  }
+
+  private doSubmitForApproval(row: NoteSheetInfoRow): void {
+    const req = { NoteSheetId: row.noteSheetId, LastUpdatedBy: this.sharedService.getCurrentUser?.() ?? 'system' };
+    this.http.post<{ statusCode?: number; StatusCode?: number; description?: string; Description?: string }>(
+      `${this.api}/SubmitForApproval`, req, { observe: 'response' }
+    ).subscribe({
       next: (resp) => {
         const resBody = resp.body;
         const code = resBody?.statusCode ?? resBody?.StatusCode;
-        const msg = resBody?.description ?? resBody?.Description;
+        const msg  = resBody?.description ?? resBody?.Description;
         if (resp.status >= 200 && resp.status < 300 && (code == null || code === 200)) {
           this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Submitted for approval.' });
           this.loadAll();
@@ -1092,5 +1229,173 @@ export class NotesheetListComponent implements OnInit {
         this.messageService.add({ severity: 'error', summary: 'Error', detail });
       }
     });
+  }
+
+  // ── Approval Log ────────────────────────────────────────────────────
+
+  openApprovalLog(row: NoteSheetInfoRow): void {
+    this.approvalLogEntries = [];
+    this.approvalLogLoading = true;
+    this.approvalLogNoteSheetNo = row.noteSheetNo || '';
+    this.showApprovalLogDialog = true;
+
+    // Fetch full notesheet + back history in parallel
+    forkJoin({
+      noteSheet: this.http.get<NoteSheetInfoFull[]>(`${this.api}/GetFilteredByKeysAsyn/${row.noteSheetId}`).pipe(
+        map(data => (Array.isArray(data) ? data[0] : null) as NoteSheetInfoFull | null),
+        catchError(() => of(null as NoteSheetInfoFull | null))
+      ),
+      backHistory: this.http.get<{ id: number; backedByEmployeeId: number; backedFromStatus: string; backedToStatus: string; backReason: string | null; backedDate: string; createdBy: string }[]>(
+        `${this.api}/GetBackHistory`, { params: { noteSheetId: row.noteSheetId.toString() } }
+      ).pipe(catchError(() => of([])))
+    }).subscribe({
+      next: ({ noteSheet, backHistory }) => {
+        if (!noteSheet) { this.approvalLogLoading = false; return; }
+        this.buildApprovalLog(noteSheet, backHistory);
+      },
+      error: () => { this.approvalLogLoading = false; }
+    });
+  }
+
+  private buildApprovalLog(
+    ns: NoteSheetInfoFull,
+    backHistory: { backedByEmployeeId: number; backedFromStatus: string; backedToStatus: string; backReason: string | null; backedDate: string }[]
+  ): void {
+    const entries: ApprovalLogEntry[] = [];
+
+    // 0. Prepared By
+    if (ns.preparedByEmployeeId && ns.preparedByEmployeeId > 0) {
+      entries.push({
+        step: 'Prepared By',
+        action: ApprovalLogAction.Approve,
+        date: ns.createdDate ?? null,
+        remark: null,
+        employeeId: ns.preparedByEmployeeId
+      });
+    }
+
+    // 1. Initiator
+    if (ns.initiatorId) {
+      entries.push({
+        step: 'Initiator',
+        action: (ns.initiatorStatus as ApprovalLogAction) ?? ApprovalLogAction.Pending,
+        date: ns.initiatorApprovedDate ?? null,
+        remark: ns.initiatorApproveRemark || ns.initiatorCancelRemark || null,
+        employeeId: ns.initiatorId
+      });
+    }
+
+    // 2. Recommenders
+    try {
+      const json = ns.recommendersJson;
+      if (json && typeof json === 'string') {
+        const arr = JSON.parse(json) as any[];
+        if (Array.isArray(arr)) {
+          arr.forEach((r, i) => {
+            entries.push({
+              step: arr.length > 1 ? `Recommender ${i + 1}` : 'Recommender',
+              action: (r.recomender_status as ApprovalLogAction) ?? ApprovalLogAction.Pending,
+              date: r.recomender_approved_date ?? null,
+              remark: r.recomender_approve_remark || r.recomender_cancel_remark || null,
+              employeeId: r.recomender_id ?? null
+            });
+          });
+        }
+      }
+    } catch { /* ignore */ }
+
+    // 3. Final Approval
+    if (ns.finalApprovalId) {
+      entries.push({
+        step: 'Final Approver',
+        action: (ns.finalApprovalStatus as ApprovalLogAction) ?? ApprovalLogAction.Pending,
+        date: ns.finalApprovalApprovedDate ?? null,
+        remark: ns.finalApprovalRemark || ns.finalApprovalCancelRemark || null,
+        employeeId: ns.finalApprovalId
+      });
+    }
+
+    // 4. Back history entries (interleaved by date, shown separately)
+    for (const bh of backHistory) {
+      entries.push({
+        step: `Back: ${this.getApprovalStatusLabel(bh.backedFromStatus)} → ${this.getApprovalStatusLabel(bh.backedToStatus)}`,
+        action: ApprovalLogAction.Back,
+        date: bh.backedDate,
+        remark: bh.backReason,
+        employeeId: bh.backedByEmployeeId
+      });
+    }
+
+    // Sort: entries with dates first (chronological), then pending at end
+    entries.sort((a, b) => {
+      if (!a.date && !b.date) return 0;
+      if (!a.date) return 1;
+      if (!b.date) return -1;
+      return new Date(a.date).getTime() - new Date(b.date).getTime();
+    });
+
+    this.approvalLogEntries = entries;
+
+    // Resolve employee details
+    const empIds = [...new Set(entries.filter(e => e.employeeId).map(e => e.employeeId!))];
+    if (empIds.length === 0) { this.approvalLogLoading = false; return; }
+
+    forkJoin(
+      empIds.map(id =>
+        this.servingMembersService.getEmployeePersonalServiceOverview(id).pipe(
+          catchError(() => of(null))
+        )
+      )
+    ).subscribe({
+      next: (results) => {
+        const empMap = new Map<number, { serviceId: string; name: string; rank: string }>();
+        results.forEach((emp, idx) => {
+          if (emp) {
+            empMap.set(empIds[idx], {
+              serviceId: emp.serviceId ?? emp.rabId ?? '-',
+              name: emp.nameEnglish ?? '-',
+              rank: emp.armyRank ?? '-'
+            });
+          }
+        });
+        for (const entry of this.approvalLogEntries) {
+          if (entry.employeeId && empMap.has(entry.employeeId)) {
+            const d = empMap.get(entry.employeeId)!;
+            entry.serviceId = d.serviceId;
+            entry.name = d.name;
+            entry.rank = d.rank;
+          }
+        }
+        this.approvalLogLoading = false;
+      },
+      error: () => { this.approvalLogLoading = false; }
+    });
+  }
+
+  getApprovalStatusLabel(status: string): string {
+    return NoteSheetCurrentStatusOptions.find(o => o.value === status)?.label ?? status;
+  }
+
+  getActionSeverity(action: ApprovalLogAction): string {
+    switch (action) {
+      case ApprovalLogAction.Approve: return 'success';
+      case ApprovalLogAction.Cancel:  return 'danger';
+      case ApprovalLogAction.Back:    return 'warn';
+      default:                        return 'info';
+    }
+  }
+
+  getActionLabel(action: ApprovalLogAction): string {
+    return ApprovalLogActionOptions.find(o => o.value === action)?.label ?? action;
+  }
+
+  getActionIcon(action: ApprovalLogAction): string {
+    switch (action) {
+      case ApprovalLogAction.Approve: return 'pi pi-check-circle';
+      case ApprovalLogAction.Cancel:  return 'pi pi-times-circle';
+      case ApprovalLogAction.Back:    return 'pi pi-replay';
+      case ApprovalLogAction.Pending: return 'pi pi-clock';
+      default:                        return 'pi pi-circle';
+    }
   }
 }

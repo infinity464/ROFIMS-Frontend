@@ -1,0 +1,145 @@
+<p-toast></p-toast>
+
+<div class="preview-page">
+
+    <div class="preview-header no-print">
+        <p-button icon="pi pi-arrow-left" label="Back" (onClick)="goBack()" styleClass="p-button-text"></p-button>
+        <div class="preview-actions" *ngIf="noteSheet && !loading && !error">
+            <p-button icon="pi pi-print"     label="Print" (onClick)="printPage()"  styleClass="p-button-outlined"></p-button>
+            <p-button icon="pi pi-file-word" label="Word"  (onClick)="exportWord()" styleClass="p-button-outlined"></p-button>
+            <p-button icon="pi pi-file-pdf"  label="PDF"   (onClick)="exportPdf()"  styleClass="p-button-outlined"></p-button>
+        </div>
+    </div>
+
+    <div class="preview-loading" *ngIf="loading">
+        <i class="pi pi-spin pi-spinner" style="font-size:2rem"></i>
+        <p>Loading...</p>
+    </div>
+
+    <div class="preview-error" *ngIf="error && !loading">
+        <i class="pi pi-exclamation-circle" style="font-size:3rem; color:var(--red-500)"></i>
+        <p>Failed to load note-sheet.</p>
+        <p-button label="Go Back" icon="pi pi-arrow-left" (onClick)="goBack()"></p-button>
+    </div>
+
+    <div class="a4-paper-container" *ngIf="noteSheet && !loading && !error">
+        <div class="a4-paper">
+
+            <div class="ns-page-no" *ngIf="noteSheet.noteSheetNo">{{ noteSheet.noteSheetNo }}</div>
+
+            <div class="ns-title-block">
+                <div class="ns-title-en">NOTE SHEET</div>
+                <div class="ns-title-bn">মন্তব্য পত্র</div>
+            </div>
+
+            <div class="ns-doc-box">
+
+                <div class="ns-main-col">
+
+                    <div class="ns-cell-subject">{{ noteSheet.subject }}</div>
+                    <div class="ns-cell-ref">
+                        <ng-container *ngIf="noteSheet.referenceNumber">
+                            <span class="ns-ref-key">{{ isEnglish() ? 'Reference:' : 'সূত্রঃ' }}</span>
+                            {{ noteSheet.referenceNumber }}
+                        </ng-container>
+                        <ng-container *ngIf="!noteSheet.referenceNumber && noteSheet.noteSheetDate">
+                            <span class="ns-ref-key">{{ isEnglish() ? 'Date:' : 'তারিখঃ' }}</span>
+                            {{ formatDate(noteSheet.noteSheetDate) }}
+                        </ng-container>
+                    </div>
+
+                    <!-- ── Ex-BD Leave: main text + leave details ── -->
+                    <div class="ns-para">
+                        <span class="ns-para-no">{{ serial(1) }}</span>
+                        <div class="ns-para-text" [innerHTML]="getMainTextSafe()"></div>
+                    </div>
+
+                    <div class="ns-exbd-info">
+                        <div class="ns-exbd-row" *ngIf="noteSheet.purposeOfExBdLeaveId != null">
+                            <span class="ns-exbd-label">{{ isEnglish() ? 'Purpose:' : 'উদ্দেশ্য:' }}</span>
+                            <span>{{ getPurposeLabel(noteSheet.purposeOfExBdLeaveId) }}</span>
+                        </div>
+                        <div class="ns-exbd-row" *ngIf="noteSheet.destinationCountryId != null">
+                            <span class="ns-exbd-label">{{ isEnglish() ? 'Destination Country:' : 'গন্তব্য দেশ:' }}</span>
+                            <span>{{ getCountryLabel(noteSheet.destinationCountryId) }}</span>
+                        </div>
+                        <div class="ns-exbd-row" *ngIf="noteSheet.dateOfVisitFrom || noteSheet.dateOfVisitTo">
+                            <span class="ns-exbd-label">{{ isEnglish() ? 'Visit Period:' : 'সফরকাল:' }}</span>
+                            <span>{{ formatDate(noteSheet.dateOfVisitFrom) }} – {{ formatDate(noteSheet.dateOfVisitTo) }}</span>
+                        </div>
+                        <div class="ns-exbd-row" *ngIf="noteSheet.totalDays && noteSheet.totalDays > 0">
+                            <span class="ns-exbd-label">{{ isEnglish() ? 'Total Days:' : 'মোট দিন:' }}</span>
+                            <span>{{ noteSheet.totalDays }}</span>
+                        </div>
+                        <div class="ns-exbd-row" *ngIf="getFamilySummary()">
+                            <span class="ns-exbd-label">{{ isEnglish() ? 'Family Members:' : 'পরিবারের সদস্য:' }}</span>
+                            <span>{{ getFamilySummary() }}</span>
+                        </div>
+                    </div>
+
+                    <div class="ns-note" *ngIf="noteSheet.note">
+                        <strong>{{ isEnglish() ? 'Note:' : 'নোটঃ' }}</strong> {{ noteSheet.note }}
+                    </div>
+
+                    <div class="ns-initiator-area">
+                        <div class="ns-closing-text">
+                            {{ isEnglish() ? 'Presented for your kind approval.' : 'আপনার সদয় অনুমোদনের জন্য উপস্থাপন করা হলো।' }}
+                        </div>
+                        <div class="ns-initiator-sig" *ngIf="initiatorDetails">
+                            <img *ngIf="shouldShowSignature(initiatorDetails.step) && initiatorDetails.signatureDataUrl"
+                                 [src]="initiatorDetails.signatureDataUrl" class="ns-sig-img" alt="Signature" />
+                            <div class="ns-sig-paren">
+                                ({{ isEnglish() ? initiatorDetails.name : (initiatorDetails.nameBN || initiatorDetails.name) }}{{ initiatorDetails.rank && initiatorDetails.rank !== '-' ? ', ' + (isEnglish() ? initiatorDetails.rank : (initiatorDetails.rankBN || initiatorDetails.rank)) : '' }})
+                            </div>
+                            <div class="ns-sig-appoint" *ngIf="initiatorDetails.appointment || initiatorDetails.appointmentBN">
+                                {{ isEnglish() ? initiatorDetails.appointment : (initiatorDetails.appointmentBN || initiatorDetails.appointment) }}
+                            </div>
+                            <div class="ns-sig-date" *ngIf="noteSheet.noteSheetDate">{{ formatDate(noteSheet.noteSheetDate) }}</div>
+                        </div>
+                    </div>
+
+                    <div class="ns-approver-section" *ngFor="let approver of approversDetails; let i = index">
+                        <div class="ns-approver-role">
+                            {{ isEnglish() ? approver.appointment : (approver.appointmentBN || approver.appointment) }}
+                        </div>
+                        <div class="ns-approver-body" [class.ns-approver-body--left]="i >= approversDetails.length - 2">
+                            <div class="ns-approver-left">
+                                <span class="ns-para-no">{{ serial(i + 2) }}</span>
+                                <span class="ns-approver-remark" *ngIf="getApproverRemark(approver.step)">{{ getApproverRemark(approver.step) }}</span>
+                            </div>
+                            <div class="ns-approver-sig-area">
+                                <img *ngIf="shouldShowSignature(approver.step) && approver.signatureDataUrl"
+                                     [src]="approver.signatureDataUrl" class="ns-sig-img" alt="Signature" />
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="ns-sanglagni-col">
+                    <ng-container *ngIf="isEnglish()">Encl.<br>No.</ng-container>
+                    <ng-container *ngIf="!isEnglish()">সংলগ্নী<br>নং</ng-container>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Back History Timeline (not printed) ── -->
+    <div class="ns-back-history no-print" *ngIf="backHistory.length > 0">
+        <h3><i class="pi pi-history"></i> Back History</h3>
+        <div class="ns-back-timeline">
+            <div class="ns-back-entry" *ngFor="let entry of backHistory">
+                <div class="ns-back-entry-header">
+                    <span class="ns-back-from">{{ getStatusLabel(entry.backedFromStatus) }}</span>
+                    <i class="pi pi-arrow-right"></i>
+                    <span class="ns-back-to">{{ getStatusLabel(entry.backedToStatus) }}</span>
+                    <span class="ns-back-date">{{ formatDate(entry.backedDate) }}</span>
+                </div>
+                <div class="ns-back-entry-by" *ngIf="entry.backedByName">Backed by: {{ entry.backedByName }}</div>
+                <div class="ns-back-entry-reason" *ngIf="entry.backReason">Reason: {{ entry.backReason }}</div>
+            </div>
+        </div>
+    </div>
+
+</div>

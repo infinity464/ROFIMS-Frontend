@@ -1,0 +1,194 @@
+<p-toast></p-toast>
+
+<div class="preview-page">
+
+    <div class="preview-header no-print">
+        <div class="preview-actions" *ngIf="noteSheet && !loading && !error">
+            <p-button *ngIf="showEdit && canEdit && !editing" icon="pi pi-pencil" label="Edit" (onClick)="toggleEdit()" styleClass="p-button-outlined p-button-warning"></p-button>
+            <p-button *ngIf="editing" icon="pi pi-times" label="Cancel" (onClick)="cancelEdit()" styleClass="p-button-outlined p-button-secondary"></p-button>
+            <p-button *ngIf="editing" icon="pi pi-check" label="Save" (onClick)="saveChanges()" [loading]="saving" styleClass="p-button-success"></p-button>
+            <p-button *ngIf="showWord && !editing" icon="pi pi-file-word" label="Word"  (onClick)="exportWord()" styleClass="p-button-outlined"></p-button>
+            <p-button *ngIf="showPdf && !editing" icon="pi pi-file-pdf"  label="PDF"   (onClick)="exportPdf()"  styleClass="p-button-outlined"></p-button>
+        </div>
+    </div>
+
+    <div class="preview-loading" *ngIf="loading">
+        <i class="pi pi-spin pi-spinner" style="font-size:2rem"></i>
+        <p>Loading...</p>
+    </div>
+
+    <div class="preview-error" *ngIf="error && !loading">
+        <i class="pi pi-exclamation-circle" style="font-size:3rem; color:var(--red-500)"></i>
+        <p>Failed to load note-sheet.</p>
+        <p-button label="Go Back" icon="pi pi-arrow-left" (onClick)="goBack()"></p-button>
+    </div>
+
+    <div class="a4-paper-container" *ngIf="noteSheet && !loading && !error">
+        <div class="a4-paper">
+
+
+            <div class="ns-title-block">
+                <div class="ns-title-en">NOTE SHEET</div>
+                <div class="ns-title-bn">মন্তব্য পত্র</div>
+            </div>
+
+            <div class="ns-doc-box">
+
+                <div class="ns-main-col">
+
+                    <!-- ── Subject ── -->
+                    <div class="ns-cell-subject" *ngIf="!editing">{{ noteSheet.subject }}</div>
+                    <div class="ns-edit-field" *ngIf="editing">
+                        <label class="ns-edit-label">Subject</label>
+                        <input pInputText [(ngModel)]="editSubject" placeholder="Subject" class="w-full" />
+                    </div>
+
+                    <!-- ── Reference / Date ── -->
+                    <div class="ns-cell-ref" *ngIf="!editing">
+                        <ng-container *ngIf="noteSheet.referenceNumber">
+                            <span class="ns-ref-key">{{ isEnglish() ? 'Reference:' : 'সূত্রঃ' }}</span>
+                            <div class="ns-ref-content" [innerHTML]="getReferenceNumberSafe()"></div>
+                        </ng-container>
+                        <ng-container *ngIf="!noteSheet.referenceNumber && noteSheet.noteSheetDate">
+                            <span class="ns-ref-key">{{ isEnglish() ? 'Date:' : 'তারিখঃ' }}</span>
+                            {{ formatDate(noteSheet.noteSheetDate) }}
+                        </ng-container>
+                    </div>
+                    <div class="ns-edit-field" *ngIf="editing">
+                        <label class="ns-edit-label">Reference Number</label>
+                        <app-rich-editor [(ngModel)]="editReferenceNumber" [hideTable]="true" height="120px"></app-rich-editor>
+                    </div>
+                    <div class="ns-edit-field ns-edit-row" *ngIf="editing">
+                        <div class="ns-edit-col">
+                            <label class="ns-edit-label">Date</label>
+                            <p-datepicker [(ngModel)]="editNoteSheetDate" dateFormat="dd/mm/yy" [showIcon]="true" styleClass="w-full" appendTo="body"></p-datepicker>
+                        </div>
+                        <div class="ns-edit-col">
+                            <label class="ns-edit-label">Text Type</label>
+                            <p-select [(ngModel)]="editTextType" [options]="textTypeOptions" optionLabel="label" optionValue="value"
+                                      styleClass="w-full" appendTo="body"></p-select>
+                        </div>
+                        <div class="ns-edit-col">
+                            <label class="ns-edit-label">Operation Type</label>
+                            <p-select [(ngModel)]="editOperationType" [options]="operationTypeOptions" optionLabel="label" optionValue="value"
+                                      placeholder="Select Operation Type" [showClear]="true" styleClass="w-full" appendTo="body"
+                                      [disabled]="isInitiatorStatus"></p-select>
+                        </div>
+                    </div>
+
+                    <!-- ── Main Text ── -->
+                    <div class="ns-para" *ngIf="!editing">
+                        <span class="ns-para-no">{{ serial(1) }}</span>
+                        <div class="ns-para-text" [innerHTML]="getMainTextSafe()"></div>
+                    </div>
+                    <div class="ns-edit-field" *ngIf="editing">
+                        <label class="ns-edit-label">Main Text</label>
+                        <app-rich-editor [(ngModel)]="editMainText"></app-rich-editor>
+                    </div>
+
+                    <!-- ── Note ── -->
+                    <div class="ns-note" *ngIf="noteSheet.note">
+                        <strong>{{ isEnglish() ? 'Note:' : 'নোটঃ' }}</strong> {{ noteSheet.note }}
+                    </div>
+
+                    <!-- ── Supporting Documents ── -->
+                    <div class="ns-edit-field" *ngIf="editing">
+                        <label class="ns-edit-label">Supporting Documents</label>
+                        <app-file-references-form
+                            #fileReferencesForm
+                            [fileRows]="fileRows"
+                            [isViewMode]="false"
+                            title="Supporting Documents"
+                            (fileRowsChange)="onFileRowsChange($event)"
+                            (onDownloadFile)="onDownloadFile($event)">
+                        </app-file-references-form>
+                    </div>
+
+                    <!-- ── Approval Chain Edit ── -->
+                    <div class="ns-approval-edit" *ngIf="editing">
+                        <h4 class="ns-approval-edit-title">Approval Chain</h4>
+                        <div class="ns-edit-row">
+                            <div class="ns-edit-col">
+                                <label class="ns-edit-label">Initiator</label>
+                                <p-select [(ngModel)]="editInitiatorId" [options]="employeeOptions" optionLabel="label" optionValue="value"
+                                          placeholder="Select Initiator" [filter]="true" filterBy="label" [showClear]="true" styleClass="w-full" appendTo="body"
+                                          [disabled]="isInitiatorStatus"></p-select>
+                            </div>
+                            <div class="ns-edit-col">
+                                <label class="ns-edit-label">Final Approver</label>
+                                <p-select [(ngModel)]="editFinalApproverId" [options]="employeeOptions" optionLabel="label" optionValue="value"
+                                          placeholder="Select Final Approver" [filter]="true" filterBy="label" [showClear]="true" styleClass="w-full" appendTo="body"></p-select>
+                            </div>
+                        </div>
+                        <div class="ns-edit-field">
+                            <label class="ns-edit-label">Recommender(s)</label>
+                            <p-multiselect [(ngModel)]="editRecommenderIds" [options]="employeeOptions" optionLabel="label" optionValue="value"
+                                           placeholder="Select Recommenders" [filter]="true" filterBy="label" [showClear]="true" styleClass="w-full"
+                                           display="chip" appendTo="body"></p-multiselect>
+                        </div>
+                    </div>
+
+                    <!-- ── Initiator Signature (view mode) ── -->
+                    <div class="ns-initiator-area" *ngIf="!editing">
+                        <div class="ns-closing-text">
+                            {{ isEnglish() ? 'Presented for your kind approval.' : 'আপনার সদয় অনুমোদনের জন্য উপস্থাপন করা হলো।' }}
+                        </div>
+                        <div class="ns-initiator-sig" *ngIf="initiatorDetails">
+                            <img *ngIf="shouldShowSignature(initiatorDetails.step) && initiatorDetails.signatureDataUrl"
+                                 [src]="initiatorDetails.signatureDataUrl" class="ns-sig-img" alt="Signature" />
+                            <div class="ns-sig-paren">
+                                ({{ isEnglish() ? initiatorDetails.name : (initiatorDetails.nameBN || initiatorDetails.name) }}{{ initiatorDetails.rank && initiatorDetails.rank !== '-' ? ', ' + (isEnglish() ? initiatorDetails.rank : (initiatorDetails.rankBN || initiatorDetails.rank)) : '' }})
+                            </div>
+                            <div class="ns-sig-appoint" *ngIf="initiatorDetails.appointment || initiatorDetails.appointmentBN">
+                                {{ isEnglish() ? initiatorDetails.appointment : (initiatorDetails.appointmentBN || initiatorDetails.appointment) }}
+                            </div>
+                            <div class="ns-sig-date" *ngIf="noteSheet.noteSheetDate">{{ formatDate(noteSheet.noteSheetDate) }}</div>
+                        </div>
+                    </div>
+
+                    <!-- ── Approver Sections (view mode) ── -->
+                    <div class="ns-approver-section" *ngFor="let approver of approversDetails; let i = index" [hidden]="editing">
+                        <div class="ns-approver-role">
+                            {{ isEnglish() ? approver.appointment : (approver.appointmentBN || approver.appointment) }}
+                        </div>
+                        <div class="ns-approver-body" [class.ns-approver-body--left]="i >= approversDetails.length - 2">
+                            <div class="ns-approver-left">
+                                <span class="ns-para-no">{{ serial(i + 2) }}</span>
+                                <span class="ns-approver-remark" *ngIf="getApproverRemark(approver.step)">{{ getApproverRemark(approver.step) }}</span>
+                            </div>
+                            <div class="ns-approver-sig-area">
+                                <img *ngIf="shouldShowSignature(approver.step) && approver.signatureDataUrl"
+                                     [src]="approver.signatureDataUrl" class="ns-sig-img" alt="Signature" />
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="ns-sanglagni-col">
+                    <ng-container *ngIf="isEnglish()">Encl.<br>No.</ng-container>
+                    <ng-container *ngIf="!isEnglish()">সংলগ্নী<br>নং</ng-container>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Back History Timeline (not printed) ── -->
+    <div class="ns-back-history no-print" *ngIf="backHistory.length > 0">
+        <h3><i class="pi pi-history"></i> Back History</h3>
+        <div class="ns-back-timeline">
+            <div class="ns-back-entry" *ngFor="let entry of backHistory">
+                <div class="ns-back-entry-header">
+                    <span class="ns-back-from">{{ getStatusLabel(entry.backedFromStatus) }}</span>
+                    <i class="pi pi-arrow-right"></i>
+                    <span class="ns-back-to">{{ getStatusLabel(entry.backedToStatus) }}</span>
+                    <span class="ns-back-date">{{ formatDate(entry.backedDate) }}</span>
+                </div>
+                <div class="ns-back-entry-by" *ngIf="entry.backedByName">Backed by: {{ entry.backedByName }}</div>
+                <div class="ns-back-entry-reason" *ngIf="entry.backReason">Reason: {{ entry.backReason }}</div>
+            </div>
+        </div>
+    </div>
+
+</div>

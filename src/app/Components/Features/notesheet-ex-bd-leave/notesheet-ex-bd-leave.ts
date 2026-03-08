@@ -11,7 +11,7 @@ import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { DatePickerModule } from 'primeng/datepicker';
-import { EditorModule } from 'primeng/editor';
+import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import { CommonCode } from '@/Components/basic-setup/shared/models/common-code';
@@ -20,13 +20,14 @@ import { HttpClient } from '@angular/common/http';
 import { forkJoin, of } from 'rxjs';
 import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/file-references-form/file-references-form';
 import { EmpService } from '@/services/emp-service';
+import { CommonCodeService } from '@/services/common-code-service';
 import { FamilyInfoService, FamilyInfoModel } from '@/services/family-info-service';
 import { ActivatedRoute, Router } from '@angular/router';
 import { take, map, catchError } from 'rxjs/operators';
 import { RouterLink } from '@angular/router';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
-import { NoteSheetType, NoteSheetStatus, NoteSheetApprovalStep } from '@/models/enums';
+import { NoteSheetType, NoteSheetCurrentStatus, ApprovalStatus } from '@/models/enums';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { NotesheetSignatoryComponent, SignatoryDetail } from '@/Components/Common/notesheet-signatory/notesheet-signatory';
 import {
@@ -50,7 +51,7 @@ import html2canvas from 'html2canvas';
         SelectModule,
         MultiSelectModule,
         DatePickerModule,
-        EditorModule,
+        RichEditorComponent,
         ToastModule,
         TooltipModule,
         FileReferencesFormComponent,
@@ -69,6 +70,10 @@ export class NotesheetExBdLeaveComponent implements OnInit {
     editId: number | null = null;
     editLoading = false;
     editLoadFailed = false;
+    textTypeOptions = [
+        { label: 'English', value: 'en' },
+        { label: 'Bangla', value: 'bn' }
+    ];
     unitOptions: { label: string; labelBn: string | null; value: number }[] = [];
     wingOptions: { label: string; labelBn: string | null; value: number }[] = [];
     branchOptions: { label: string; labelBn: string | null; value: number }[] = [];
@@ -99,6 +104,11 @@ export class NotesheetExBdLeaveComponent implements OnInit {
     editSubject = '';
     editMainText = '';
     editReferenceNumber = '';
+    editPurposeId: number | null = null;
+    editDestinationCountryId: number | null = null;
+    editDateOfVisitFrom: Date | null = null;
+    editDateOfVisitTo: Date | null = null;
+    editTotalDays = 0;
 
     private readonly stepTranslations: Record<string, string> = {
         'Prepared by': 'প্রস্তুতকারী',
@@ -120,7 +130,8 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         private router: Router,
         private noteSheetEditCache: NoteSheetEditCacheService,
         private sanitizer: DomSanitizer,
-        private identityMappingService: IdentityUserMappingService
+        private identityMappingService: IdentityUserMappingService,
+        private commonCodeService: CommonCodeService
     ) {
         this.form = this.fb.group({
             textType: ['en'],
@@ -185,6 +196,8 @@ export class NotesheetExBdLeaveComponent implements OnInit {
                 if (!isNaN(numId) && numId > 0) {
                     this.viewMode = true;
                     this.title = 'Ex-BD Leave Note Sheet – Preview';
+                    this.loadPurposeOfLeave();
+                    this.loadCountries();
                     this.loadNoteSheetForView(numId);
                     return;
                 }
@@ -429,28 +442,23 @@ export class NotesheetExBdLeaveComponent implements OnInit {
     }
 
     loadPurposeOfLeave(): void {
-        this.masterBasicSetupService.getAllByType('ExBDLeavePurpose').subscribe({
+        this.commonCodeService.getAllActiveCommonCodesType('VisitType').subscribe({
             next: (list) => {
-                this.purposeOfLeaveOptions = (Array.isArray(list) ? list : []).map((c: CommonCode) => ({
-                    label: c.codeValueEN || c.codeValueBN || String(c.codeId),
+                this.purposeOfLeaveOptions = (Array.isArray(list) ? list : []).map((c: any) => ({
+                    label: c.codeValueEN || c.displayCodeValueEN || c.codeValueBN || String(c.codeId),
                     labelBn: c.codeValueBN ?? null,
                     value: c.codeId
                 }));
             },
-            error: () => {
-                this.purposeOfLeaveOptions = [
-                    { label: 'Personal', labelBn: 'ব্যক্তিগত', value: 1 },
-                    { label: 'Official', labelBn: 'দাপ্তরিক', value: 2 }
-                ];
-            }
+            error: () => {}
         });
     }
 
     loadCountries(): void {
-        this.masterBasicSetupService.getAllByType('Country').subscribe({
+        this.commonCodeService.getAllActiveCommonCodesType('Country').subscribe({
             next: (list) => {
-                this.countryOptions = (Array.isArray(list) ? list : []).map((c: CommonCode) => ({
-                    label: c.codeValueEN || c.codeValueBN || String(c.codeId),
+                this.countryOptions = (Array.isArray(list) ? list : []).map((c: any) => ({
+                    label: c.codeValueEN || c.displayCodeValueEN || c.codeValueBN || String(c.codeId),
                     labelBn: c.codeValueBN ?? null,
                     value: c.codeId
                 }));
@@ -860,16 +868,21 @@ export class NotesheetExBdLeaveComponent implements OnInit {
     }
 
     isViewDraft(): boolean {
-        return (this.viewNoteSheet?.noteSheetStatusId ?? 0) === NoteSheetStatus.Draft;
+        return this.viewNoteSheet?.currentStatus === NoteSheetCurrentStatus.Draft;
     }
 
     shouldShowSignature(step: string): boolean {
-        const statusId = this.viewNoteSheet?.noteSheetStatusId ?? NoteSheetStatus.Draft;
-        const currentStep = this.viewNoteSheet?.currentApprovalStep ?? NoteSheetApprovalStep.Initiator;
+        const ns = this.viewNoteSheet;
+        if (!ns) return false;
         if (step === 'Prepared by' || step === 'প্রস্তুতকারী') return true;
-        if (step === 'Initiator') return (statusId === NoteSheetStatus.Pending && currentStep >= NoteSheetApprovalStep.Recommender) || statusId >= NoteSheetStatus.Approved;
-        if (step.startsWith('Recommender')) return (statusId === NoteSheetStatus.Pending && currentStep >= NoteSheetApprovalStep.Recommender) || statusId >= NoteSheetStatus.Approved;
-        if (step === 'Final Approver') return statusId === NoteSheetStatus.Approved;
+        if (step === 'Initiator') return ns.initiatorStatus === ApprovalStatus.Approve;
+        if (step.startsWith('Recommender')) {
+            const cs: string = ns.currentStatus ?? '';
+            return cs === NoteSheetCurrentStatus.Recommender
+                || cs === NoteSheetCurrentStatus.FinalApproval
+                || cs === NoteSheetCurrentStatus.Cancel;
+        }
+        if (step === 'Final Approver') return ns.finalApprovalStatus === ApprovalStatus.Approve;
         return false;
     }
 
@@ -921,14 +934,43 @@ export class NotesheetExBdLeaveComponent implements OnInit {
     // ─── View inline edit ───
 
     toggleViewEdit(): void {
-        this.editSubject = this.viewNoteSheet?.subject ?? '';
-        this.editMainText = this.viewNoteSheet?.mainText ?? '';
-        this.editReferenceNumber = this.viewNoteSheet?.referenceNumber ?? '';
+        const ns = this.viewNoteSheet;
+        this.editSubject = ns?.subject ?? '';
+        this.editMainText = ns?.mainText ?? '';
+        this.editReferenceNumber = ns?.referenceNumber ?? '';
+        this.editPurposeId = ns?.purposeId ?? ns?.purposeOfExBdLeaveId ?? null;
+        this.editDestinationCountryId = ns?.destinationCountryId ?? null;
+        this.editDateOfVisitFrom = this.parseDate(ns?.fromDate ?? ns?.dateOfVisitFrom);
+        this.editDateOfVisitTo = this.parseDate(ns?.toDate ?? ns?.dateOfVisitTo);
+        this.editTotalDays = ns?.totalDays ?? 0;
         this.viewEditing = true;
     }
 
     cancelViewEdit(): void {
         this.viewEditing = false;
+    }
+
+    calculateEditTotalDays(): void {
+        if (this.editDateOfVisitFrom && this.editDateOfVisitTo) {
+            const from = this.editDateOfVisitFrom.getTime();
+            const to = this.editDateOfVisitTo.getTime();
+            this.editTotalDays = Math.max(0, Math.ceil((to - from) / (1000 * 60 * 60 * 24)) + 1);
+        } else {
+            this.editTotalDays = 0;
+        }
+    }
+
+    /** Resolve a codeId to its label from dropdown options */
+    getPurposeLabel(id: number | null | undefined): string {
+        if (id == null) return '—';
+        const o = this.purposeOfLeaveOptions.find((opt) => opt.value === id);
+        return o ? o.label : String(id);
+    }
+
+    getCountryLabel(id: number | null | undefined): string {
+        if (id == null) return '—';
+        const o = this.countryOptions.find((opt) => opt.value === id);
+        return o ? o.label : String(id);
     }
 
     saveViewChanges(): void {
@@ -938,7 +980,13 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             ...this.viewNoteSheet,
             subject: this.editSubject,
             mainText: this.editMainText,
-            referenceNumber: this.editReferenceNumber
+            referenceNumber: this.editReferenceNumber,
+            purposeId: this.editPurposeId,
+            purposeOfExBdLeaveId: this.editPurposeId,
+            destinationCountryId: this.editDestinationCountryId,
+            fromDate: this.formatDate(this.editDateOfVisitFrom),
+            toDate: this.formatDate(this.editDateOfVisitTo),
+            totalDays: this.editTotalDays
         };
         const api = `${environment.apis.core}/NoteSheetInfo`;
         this.http.post<{ statusCode?: number }>(`${api}/UpdateAsyn`, payload).subscribe({
@@ -948,6 +996,12 @@ export class NotesheetExBdLeaveComponent implements OnInit {
                     this.viewNoteSheet.subject = this.editSubject;
                     this.viewNoteSheet.mainText = this.editMainText;
                     this.viewNoteSheet.referenceNumber = this.editReferenceNumber;
+                    this.viewNoteSheet.purposeId = this.editPurposeId;
+                    this.viewNoteSheet.purposeOfExBdLeaveId = this.editPurposeId;
+                    this.viewNoteSheet.destinationCountryId = this.editDestinationCountryId;
+                    this.viewNoteSheet.fromDate = this.formatDate(this.editDateOfVisitFrom);
+                    this.viewNoteSheet.toDate = this.formatDate(this.editDateOfVisitTo);
+                    this.viewNoteSheet.totalDays = this.editTotalDays;
                     this.viewEditing = false;
                     this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Note sheet updated.' });
                 } else {

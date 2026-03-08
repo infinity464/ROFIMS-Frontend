@@ -49,7 +49,7 @@
   <div class="ns-preview-body-section">
     <div class="ns-preview-body-label">{{ isEnglish ? 'Content' : 'বিষয়বস্তু' }}</div>
     @if (editing) {
-      <p-editor [(ngModel)]="editMainText" [style]="{ height: '200px' }" placeholder="{{ isEnglish ? 'Edit content...' : 'বিষয়বস্তু লিখুন...' }}"></p-editor>
+      <app-rich-editor [(ngModel)]="editMainText" height="200px" [placeholder]="isEnglish ? 'Edit content...' : 'বিষয়বস্তু লিখুন...'"></app-rich-editor>
     } @else {
       <div class="notesheet-preview-body" [innerHTML]="noteSheet?.mainText || ''"></div>
     }

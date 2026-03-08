@@ -72,7 +72,7 @@
             }
           </div>
           <div class="form-field">
-            <label class="form-label">Select Initiator</label>
+            <label class="form-label">Select Initiator <span class="form-label-required">*</span></label>
             <p-select
               formControlName="initiatorId"
               [options]="initiatorOptionsDisplay"
@@ -84,6 +84,9 @@
               [showClear]="true"
               styleClass="w-full">
             </p-select>
+            @if (form.get('initiatorId')?.invalid && form.get('initiatorId')?.touched) {
+              <small class="form-error">Initiator is required</small>
+            }
           </div>
         </div>
 
@@ -104,7 +107,7 @@
             </p-multiselect>
           </div>
           <div class="form-field">
-            <label class="form-label">Select Final Approver</label>
+            <label class="form-label">Select Final Approver <span class="form-label-required">*</span></label>
             <p-select
               formControlName="finalApproverId"
               [options]="finalApproverOptionsDisplay"
@@ -116,6 +119,35 @@
               [showClear]="true"
               styleClass="w-full">
             </p-select>
+            @if (form.get('finalApproverId')?.invalid && form.get('finalApproverId')?.touched) {
+              <small class="form-error">Final Approver is required</small>
+            }
+          </div>
+        </div>
+
+        <!-- Row 3b: Operation Type, Is Secret -->
+        <div class="form-row">
+          <div class="form-field">
+            <label class="form-label">Operation Type <span class="form-label-required">*</span></label>
+            <p-select
+              formControlName="noteSheetOperationType"
+              [options]="noteSheetOperationTypeOptions"
+              optionLabel="label"
+              optionValue="value"
+              [showClear]="true"
+              placeholder="Select type"
+              styleClass="w-full">
+            </p-select>
+            @if (form.get('noteSheetOperationType')?.invalid && form.get('noteSheetOperationType')?.touched) {
+              <small class="form-error">Operation Type is required</small>
+            }
+          </div>
+          <div class="form-field">
+            <label class="form-label">Secret</label>
+            <div style="display: flex; align-items: center; gap: 0.5rem; padding-top: 0.5rem;">
+              <p-checkbox formControlName="isSecret" [binary]="true" inputId="isSecret"></p-checkbox>
+              <label for="isSecret">Mark as Secret</label>
+            </div>
           </div>
         </div>
 
@@ -123,7 +155,7 @@
         <div class="form-row">
           <div class="form-field" style="flex-basis: 100%">
             <label class="form-label">Main Text</label>
-            <p-editor formControlName="mainText" [style]="{ height: '220px' }" placeholder="Add content using the text editor..."></p-editor>
+            <app-rich-editor formControlName="mainText" height="220px" placeholder="Add content using the text editor..."></app-rich-editor>
           </div>
         </div>
 

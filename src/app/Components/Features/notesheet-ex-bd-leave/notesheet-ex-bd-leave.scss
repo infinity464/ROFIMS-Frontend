@@ -96,6 +96,11 @@
   line-height: 1.6;
   color: var(--text-color, #334155);
   padding: 0.5rem;
+  overflow: hidden;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .ns-preview-header {
@@ -145,6 +150,8 @@
   padding: 0.5rem;
   background: var(--surface-50, #f8fafc);
   border-radius: 0.375rem;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .ns-preview-subject-edit {
@@ -164,6 +171,43 @@
   font-size: 0.9rem;
 }
 
+// ═══ View Detail Grid (read-only key-value pairs) ═══
+.ns-view-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem 1.5rem;
+  margin-top: 0.5rem;
+}
+
+.ns-view-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.ns-view-detail-full {
+  grid-column: 1 / -1;
+}
+
+.ns-view-detail-label {
+  font-weight: 600;
+  font-size: 0.75rem;
+  color: var(--text-color-secondary, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.ns-view-detail-value {
+  font-size: 0.9rem;
+  color: var(--text-color, #1e293b);
+}
+
+@media (max-width: 768px) {
+  .ns-view-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .ns-preview-body-section {
   margin-bottom: 1rem;
 }
@@ -181,16 +225,34 @@
   min-height: 4rem;
   white-space: pre-wrap;
   word-break: break-word;
+  overflow-wrap: break-word;
   padding: 1rem;
   border: 1px solid var(--surface-border, #dee2e6);
   border-radius: 0.5rem;
   background: var(--surface-card, #fff);
+  overflow: hidden;
+  max-width: 100%;
 
   ::ng-deep p {
     margin: 0 0 0.5rem 0;
   }
   ::ng-deep p:last-child {
     margin-bottom: 0;
+  }
+
+  // Tables must not inherit pre-wrap whitespace handling
+  ::ng-deep table {
+    white-space: normal;
+    border-collapse: collapse;
+    width: 100%;
+    margin: 6px 0;
+  }
+  ::ng-deep table td,
+  ::ng-deep table th {
+    border: 1px solid #bbb !important;
+    padding: 5px 10px;
+    min-width: 60px;
+    white-space: normal;
   }
 }
 

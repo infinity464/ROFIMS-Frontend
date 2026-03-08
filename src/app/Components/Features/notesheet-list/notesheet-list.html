@@ -1,5 +1,6 @@
 <p-fluid>
   <p-toast></p-toast>
+  <p-confirmDialog></p-confirmDialog>
 
   @if (section === 'draft') {
   <div class="form-card">
@@ -7,7 +8,7 @@
       <h3 class="form-card-title">Draft Note-Sheet List</h3>
     </div>
     <p class="text-600 mt-0 mb-3">Submit for approval when ready. You can Update, Preview, Edit main text, then Submit for approval.</p>
-    <p-table #dt [value]="draftList" [loading]="loading" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" [globalFilterFields]="['noteSheetNo', 'subject', 'remark']">
+    <p-table #dt [value]="draftList" [loading]="loading" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" [globalFilterFields]="['noteSheetNo', 'remark']">
       <ng-template pTemplate="caption">
         <div class="ns-filter-bar">
           <div class="ns-filter-group">
@@ -25,7 +26,7 @@
             <label>Search</label>
             <p-iconfield>
               <p-inputicon styleClass="pi pi-search"></p-inputicon>
-              <input pInputText type="text" placeholder="Note-Sheet No, Subject..." (input)="onGlobalFilter(dt, $event)" />
+              <input pInputText type="text" placeholder="Note-Sheet No..." (input)="onGlobalFilter(dt, $event)" />
             </p-iconfield>
           </div>
         </div>
@@ -38,10 +39,9 @@
           <th>Note-Sheet No</th>
           <th>Reference No</th>
           <th>Type</th>
-          <th>Subject</th>
           <th>Back Remark</th>
           <th style="width: 120px">Action</th>
-          <th style="width: 130px">Submit</th>
+          <th style="width: 150px">Status / Submit</th>
         </tr>
       </ng-template>
       <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
@@ -50,27 +50,41 @@
           <td>{{ row.noteSheetId }}</td>
           <td>{{ formatDate(row.noteSheetDate) }}</td>
           <td>{{ row.noteSheetNo || '-' }}</td>
-          <td>{{ row.referenceNumber || '-' }}</td>
+          <td>{{ stripHtml(row.referenceNumber || '') || '-' }}</td>
           <td>{{ noteSheetTypeLabel(row) }}</td>
-          <td>{{ row.subject || '-' }}</td>
           <td><span class="text-sm" [title]="row.remark || ''">{{ row.remark || '—' }}</span></td>
           <td>
             <div class="flex align-items-center gap-1">
-              <p-button type="button" icon="pi pi-pencil" [rounded]="true" [text]="true" size="small" pTooltip="Update" (onClick)="goToUpdate(row)"></p-button>
+              @if (row.currentStatus === NoteSheetCurrentStatus.Draft) {
+                <p-button type="button" icon="pi pi-pencil" [rounded]="true" [text]="true" size="small" pTooltip="Update" (onClick)="goToUpdate(row)"></p-button>
+              }
               <p-button type="button" icon="pi pi-eye" [rounded]="true" [text]="true" size="small" pTooltip="Preview" (onClick)="openPreview(row)"></p-button>
-              <p-button type="button" icon="pi pi-file-edit" [rounded]="true" [text]="true" size="small" pTooltip="Edit main text" (onClick)="openEditMainText(row)"></p-button>
+              @if (row.currentStatus === NoteSheetCurrentStatus.Draft) {
+                <p-button type="button" icon="pi pi-file-edit" [rounded]="true" [text]="true" size="small" pTooltip="Edit main text" (onClick)="openEditMainText(row)"></p-button>
+              }
+              <p-button type="button" icon="pi pi-list" [rounded]="true" [text]="true" size="small" severity="info" pTooltip="Approval Log" (onClick)="openApprovalLog(row)"></p-button>
               @if (row.draftPostingMasterId) {
                 <p-button type="button" icon="pi pi-users" [rounded]="true" [text]="true" size="small" pTooltip="View Employees" (onClick)="openEmployeesDialog(row)"></p-button>
               }
             </div>
           </td>
           <td>
-            <p-button type="button" icon="pi pi-send" label="Submit" size="small" severity="success" [outlined]="true" pTooltip="Submit for approval" (onClick)="submitForApproval(row)"></p-button>
+            @if (row.currentStatus === NoteSheetCurrentStatus.Draft) {
+              <p-button type="button" icon="pi pi-send" label="Submit" size="small" severity="success" [outlined]="true" pTooltip="Submit for approval" (onClick)="submitForApproval(row)"></p-button>
+            } @else if (row.currentStatus === NoteSheetCurrentStatus.Initiator) {
+              <span class="ns-status-badge ns-status-badge--initiator">
+                <i class="pi pi-clock"></i> Pending Initiator
+              </span>
+            } @else if (row.currentStatus === NoteSheetCurrentStatus.Recommender) {
+              <span class="ns-status-badge ns-status-badge--recommender">
+                <i class="pi pi-clock"></i> Pending Recommender
+              </span>
+            }
           </td>
         </tr>
       </ng-template>
       <ng-template pTemplate="emptymessage">
-        <tr><td colspan="10" class="text-center text-500">No draft note-sheets.</td></tr>
+        <tr><td colspan="9" class="text-center text-500">No draft note-sheets.</td></tr>
       </ng-template>
     </p-table>
   </div>
@@ -82,7 +96,7 @@
       <h3 class="form-card-title">Pending for Approval Note-Sheet List</h3>
     </div>
     <p class="text-600 mt-0 mb-3">Approve, Decline, or Back with remark as per workflow.</p>
-    <p-table #dt [value]="pendingList" [loading]="loading" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" [globalFilterFields]="['noteSheetNo', 'subject']">
+    <p-table #dt [value]="pendingList" [loading]="loading" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" [globalFilterFields]="['noteSheetNo']">
       <ng-template pTemplate="caption">
         <div class="ns-filter-bar">
           <div class="ns-filter-group">
@@ -100,7 +114,7 @@
             <label>Search</label>
             <p-iconfield>
               <p-inputicon styleClass="pi pi-search"></p-inputicon>
-              <input pInputText type="text" placeholder="Note-Sheet No, Subject..." (input)="onGlobalFilter(dt, $event)" />
+              <input pInputText type="text" placeholder="Note-Sheet No..." (input)="onGlobalFilter(dt, $event)" />
             </p-iconfield>
           </div>
         </div>
@@ -111,7 +125,6 @@
           <th>Date</th>
           <th>Note-Sheet No</th>
           <th>Type</th>
-          <th>Subject</th>
           <th>Present Status</th>
           <th style="width: 160px">Action</th>
         </tr>
@@ -122,20 +135,27 @@
           <td>{{ formatDate(row.noteSheetDate) }}</td>
           <td>{{ row.noteSheetNo || '-' }}</td>
           <td>{{ noteSheetTypeLabel(row) }}</td>
-          <td>{{ row.subject || '-' }}</td>
-          <td>{{ presentStatus(row) }}</td>
+          <td>
+            {{ presentStatus(row) }}
+            @if (row.isCurrentlyBacked) {
+              <span class="ns-status-badge ns-status-badge--backed" [pTooltip]="row.lastBackRemark || 'No reason provided'" tooltipPosition="top">
+                <i class="pi pi-replay"></i> Back করা হয়েছে
+              </span>
+            }
+          </td>
           <td>
             <div class="flex align-items-center gap-1">
               <p-button type="button" icon="pi pi-eye" [rounded]="true" [text]="true" size="small" pTooltip="Preview" (onClick)="openPreview(row)"></p-button>
-              <p-button type="button" icon="pi pi-check" [rounded]="true" [text]="true" size="small" severity="success" pTooltip="Approve" (onClick)="openRemarkDialog(row, 'approve')"></p-button>
-              <p-button type="button" icon="pi pi-times" [rounded]="true" [text]="true" size="small" severity="danger" pTooltip="Decline" (onClick)="openRemarkDialog(row, 'decline')"></p-button>
-              <p-button type="button" icon="pi pi-replay" [rounded]="true" [text]="true" size="small" severity="secondary" pTooltip="Back" (onClick)="openRemarkDialog(row, 'back')"></p-button>
+              <p-button type="button" icon="pi pi-list" [rounded]="true" [text]="true" size="small" severity="info" pTooltip="Approval Log" (onClick)="openApprovalLog(row)"></p-button>
+              <p-button type="button" icon="pi pi-check" [rounded]="true" [text]="true" size="small" severity="success" pTooltip="Approve" (onClick)="openRemarkDialog(row, NoteSheetRemarkAction.Approve)"></p-button>
+              <p-button type="button" icon="pi pi-times" [rounded]="true" [text]="true" size="small" severity="danger" pTooltip="Decline" (onClick)="openRemarkDialog(row, NoteSheetRemarkAction.Decline)"></p-button>
+              <p-button type="button" icon="pi pi-replay" [rounded]="true" [text]="true" size="small" severity="secondary" pTooltip="Back" (onClick)="openRemarkDialog(row, NoteSheetRemarkAction.Back)"></p-button>
             </div>
           </td>
         </tr>
       </ng-template>
       <ng-template pTemplate="emptymessage">
-        <tr><td colspan="7" class="text-center text-500">No pending note-sheets.</td></tr>
+        <tr><td colspan="6" class="text-center text-500">No pending note-sheets.</td></tr>
       </ng-template>
     </p-table>
   </div>
@@ -147,7 +167,7 @@
       <h3 class="form-card-title">Approved Note-Sheet List</h3>
     </div>
     <p class="text-600 mt-0 mb-3">Note-sheets that have been approved.</p>
-    <p-table #dt [value]="approvedList" [loading]="loading" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" [globalFilterFields]="['noteSheetNo', 'subject']">
+    <p-table #dt [value]="approvedList" [loading]="loading" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" [globalFilterFields]="['noteSheetNo']">
       <ng-template pTemplate="caption">
         <div class="ns-filter-bar">
           <div class="ns-filter-group">
@@ -165,7 +185,7 @@
             <label>Search</label>
             <p-iconfield>
               <p-inputicon styleClass="pi pi-search"></p-inputicon>
-              <input pInputText type="text" placeholder="Note-Sheet No, Subject..." (input)="onGlobalFilter(dt, $event)" />
+              <input pInputText type="text" placeholder="Note-Sheet No..." (input)="onGlobalFilter(dt, $event)" />
             </p-iconfield>
           </div>
         </div>
@@ -176,10 +196,10 @@
           <th>Date</th>
           <th>Note-Sheet No</th>
           <th>Type</th>
-          <th>Subject</th>
-          <th>Approved by</th>
+          <th>Operation Type</th>
+          <th>Secret</th>
           <th>Approved Date</th>
-          <th style="width: 80px">Action</th>
+          <th style="width: 120px">Action</th>
         </tr>
       </ng-template>
       <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
@@ -188,12 +208,13 @@
           <td>{{ formatDate(row.noteSheetDate) }}</td>
           <td>{{ row.noteSheetNo || '-' }}</td>
           <td>{{ noteSheetTypeLabel(row) }}</td>
-          <td>{{ row.subject || '-' }}</td>
-          <td>{{ row.approvedByEmployeeId ?? '-' }}</td>
-          <td>{{ formatDate(row.approvedDate) }}</td>
+          <td>{{ operationTypeLabel(row) }}</td>
+          <td>{{ row.isSecret ? 'Yes' : 'No' }}</td>
+          <td>{{ formatDate(row.finalApprovalApprovedDate) }}</td>
           <td>
             <div class="flex align-items-center gap-1">
               <p-button type="button" icon="pi pi-eye" [rounded]="true" [text]="true" size="small" pTooltip="Preview" (onClick)="openPreview(row)"></p-button>
+              <p-button type="button" icon="pi pi-list" [rounded]="true" [text]="true" size="small" severity="info" pTooltip="Approval Log" (onClick)="openApprovalLog(row)"></p-button>
             </div>
           </td>
         </tr>
@@ -211,7 +232,7 @@
       <h3 class="form-card-title">Declined Note-Sheet List</h3>
     </div>
     <p class="text-600 mt-0 mb-3">Note-sheets that have been declined.</p>
-    <p-table #dt [value]="declinedList" [loading]="loading" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" [globalFilterFields]="['noteSheetNo', 'subject']">
+    <p-table #dt [value]="declinedList" [loading]="loading" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" [globalFilterFields]="['noteSheetNo']">
       <ng-template pTemplate="caption">
         <div class="ns-filter-bar">
           <div class="ns-filter-group">
@@ -229,7 +250,7 @@
             <label>Search</label>
             <p-iconfield>
               <p-inputicon styleClass="pi pi-search"></p-inputicon>
-              <input pInputText type="text" placeholder="Note-Sheet No, Subject..." (input)="onGlobalFilter(dt, $event)" />
+              <input pInputText type="text" placeholder="Note-Sheet No..." (input)="onGlobalFilter(dt, $event)" />
             </p-iconfield>
           </div>
         </div>
@@ -240,9 +261,11 @@
           <th>Date</th>
           <th>Note-Sheet No</th>
           <th>Type</th>
-          <th>Subject</th>
+          <th>Operation Type</th>
+          <th>Secret</th>
           <th>Declined by</th>
           <th>Declined Date</th>
+          <th style="width: 80px">Action</th>
         </tr>
       </ng-template>
       <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
@@ -251,13 +274,20 @@
           <td>{{ formatDate(row.noteSheetDate) }}</td>
           <td>{{ row.noteSheetNo || '-' }}</td>
           <td>{{ noteSheetTypeLabel(row) }}</td>
-          <td>{{ row.subject || '-' }}</td>
+          <td>{{ operationTypeLabel(row) }}</td>
+          <td>{{ row.isSecret ? 'Yes' : 'No' }}</td>
           <td>{{ row.declinedByEmployeeId ?? '-' }}</td>
           <td>{{ formatDate(row.declinedDate) }}</td>
+          <td>
+            <div class="flex align-items-center gap-1">
+              <p-button type="button" icon="pi pi-eye" [rounded]="true" [text]="true" size="small" pTooltip="Preview" (onClick)="openPreview(row)"></p-button>
+              <p-button type="button" icon="pi pi-list" [rounded]="true" [text]="true" size="small" severity="info" pTooltip="Approval Log" (onClick)="openApprovalLog(row)"></p-button>
+            </div>
+          </td>
         </tr>
       </ng-template>
       <ng-template pTemplate="emptymessage">
-        <tr><td colspan="7" class="text-center text-500">No declined note-sheets.</td></tr>
+        <tr><td colspan="9" class="text-center text-500">No declined note-sheets.</td></tr>
       </ng-template>
     </p-table>
   </div>
@@ -269,7 +299,7 @@
       <h3 class="form-card-title">All Note-Sheet</h3>
     </div>
     <p class="text-600 mt-0 mb-3">All note-sheets regardless of status.</p>
-    <p-table #dt [value]="allList" [loading]="loading" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" styleClass="p-datatable-striped p-datatable-gridlines" [globalFilterFields]="['noteSheetNo', 'subject']">
+    <p-table #dt [value]="allList" [loading]="loading" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" styleClass="p-datatable-striped p-datatable-gridlines" [globalFilterFields]="['noteSheetNo']">
       <ng-template pTemplate="caption">
         <div class="ns-filter-bar">
           <div class="ns-filter-group">
@@ -287,7 +317,7 @@
             <label>Search</label>
             <p-iconfield>
               <p-inputicon styleClass="pi pi-search"></p-inputicon>
-              <input pInputText type="text" placeholder="Note-Sheet No, Subject..." (input)="onGlobalFilter(dt, $event)" />
+              <input pInputText type="text" placeholder="Note-Sheet No..." (input)="onGlobalFilter(dt, $event)" />
             </p-iconfield>
           </div>
         </div>
@@ -298,7 +328,8 @@
           <th>Date</th>
           <th>Note-Sheet No</th>
           <th>Type</th>
-          <th>Subject</th>
+          <th>Operation Type</th>
+          <th>Secret</th>
           <th>Status</th>
           <th style="width: 80px">Action</th>
         </tr>
@@ -309,31 +340,42 @@
           <td>{{ formatDate(row.noteSheetDate) }}</td>
           <td>{{ row.noteSheetNo || '-' }}</td>
           <td>{{ noteSheetTypeLabel(row) }}</td>
-          <td>{{ row.subject || '-' }}</td>
+          <td>{{ operationTypeLabel(row) }}</td>
+          <td>{{ row.isSecret ? 'Yes' : 'No' }}</td>
           <td>{{ statusLabel(row) }}</td>
           <td>
             <div class="flex align-items-center gap-1">
               <p-button type="button" icon="pi pi-eye" [rounded]="true" [text]="true" size="small" pTooltip="Preview" (onClick)="openPreview(row)"></p-button>
+              <p-button type="button" icon="pi pi-list" [rounded]="true" [text]="true" size="small" severity="info" pTooltip="Approval Log" (onClick)="openApprovalLog(row)"></p-button>
             </div>
           </td>
         </tr>
       </ng-template>
       <ng-template pTemplate="emptymessage">
-        <tr><td colspan="7" class="text-center text-500">No note-sheets.</td></tr>
+        <tr><td colspan="8" class="text-center text-500">No note-sheets.</td></tr>
       </ng-template>
     </p-table>
   </div>
   }
 
   <!-- Remark dialog for Approve / Decline / Back -->
-  <p-dialog header="{{ remarkAction === 'approve' ? 'Approve' : remarkAction === 'decline' ? 'Decline' : 'Back' }} with Remark" [(visible)]="showRemarkDialog" [modal]="true" [style]="{ width: '28rem' }" [contentStyle]="{ 'border-top': '2px solid var(--primary-color)' }" (onHide)="selectedRow = null; remarkAction = null" [draggable]="false" [resizable]="false">
+  <p-dialog header="{{ remarkAction === NoteSheetRemarkAction.Approve ? 'Approve' : remarkAction === NoteSheetRemarkAction.Decline ? 'Decline' : 'Back' }} with Remark" [(visible)]="showRemarkDialog" [modal]="true" [style]="{ width: '28rem' }" [contentStyle]="{ 'border-top': '2px solid var(--primary-color)' }" (onHide)="selectedRow = null; remarkAction = null" [draggable]="false" [resizable]="false">
     <div class="flex flex-col gap-2">
-      <label class="font-medium">Remark (optional for Approve)</label>
+      <label class="font-medium">
+        Remark
+        @if (remarkAction === NoteSheetRemarkAction.Decline) {
+          <span class="text-red-500"> * required</span>
+        } @else {
+          <span class="text-500"> (optional)</span>
+        }
+      </label>
       <textarea pTextarea [(ngModel)]="remarkText" rows="3" class="w-full"></textarea>
     </div>
     <ng-template pTemplate="footer">
       <p-button type="button" label="Cancel" [text]="true" (onClick)="showRemarkDialog = false"></p-button>
-      <p-button type="button" label="Submit" icon="pi pi-check" (onClick)="submitRemark()"></p-button>
+      <p-button type="button" label="Submit" icon="pi pi-check"
+        [disabled]="remarkAction === NoteSheetRemarkAction.Decline && !remarkText?.trim()"
+        (onClick)="submitRemark()"></p-button>
     </ng-template>
   </p-dialog>
 
@@ -354,7 +396,7 @@
             <p-button type="button" icon="pi pi-file-word" [rounded]="true" [text]="true" size="small" pTooltip="Export Word" (onClick)="exportGeneralWord()"></p-button>
             <p-button type="button" icon="pi pi-file-pdf" [rounded]="true" [text]="true" size="small" pTooltip="Export PDF" (onClick)="exportGeneralPdf()"></p-button>
             <p-button type="button" icon="pi pi-print" [rounded]="true" [text]="true" size="small" pTooltip="Print" (onClick)="printGeneralPreview()"></p-button>
-            @if (isPreviewDraft()) {
+            @if (isPreviewEditable()) {
               <p-button type="button" icon="pi pi-pencil" [rounded]="true" [text]="true" size="small" pTooltip="Edit" (onClick)="togglePreviewEdit()"></p-button>
             }
           </div>
@@ -393,7 +435,7 @@
             @if (previewEditing) {
               <input pInputText type="text" [(ngModel)]="editReferenceNumber" class="ns-inline-input" placeholder="Reference number" />
             } @else {
-              <span>{{ previewNoteSheet.referenceNumber || '—' }}</span>
+              <span [innerHTML]="getPreviewReferenceNumberSafe()"></span>
             }
           </div>
         </div>
@@ -412,10 +454,10 @@
             <strong class="block mb-1">{{ isPreviewEnglish() ? 'Ex-BD Leave Details' : 'এক্স-বিডি ছুটির বিবরণ' }}</strong>
             <div class="flex flex-wrap gap-3 mt-1">
               @if (previewNoteSheet.purposeOfExBdLeaveId != null) {
-                <span>{{ isPreviewEnglish() ? 'Purpose:' : 'উদ্দেশ্য:' }} {{ previewNoteSheet.purposeOfExBdLeaveId }}</span>
+                <span>{{ isPreviewEnglish() ? 'Purpose:' : 'উদ্দেশ্য:' }} {{ getPurposeLabel(previewNoteSheet.purposeOfExBdLeaveId) }}</span>
               }
               @if (previewNoteSheet.destinationCountryId != null) {
-                <span>{{ isPreviewEnglish() ? 'Destination Country:' : 'গন্তব্য দেশ:' }} {{ previewNoteSheet.destinationCountryId }}</span>
+                <span>{{ isPreviewEnglish() ? 'Destination Country:' : 'গন্তব্য দেশ:' }} {{ getCountryLabel(previewNoteSheet.destinationCountryId) }}</span>
               }
               @if (previewNoteSheet.dateOfVisitFrom || previewNoteSheet.dateOfVisitTo) {
                 <span>{{ isPreviewEnglish() ? 'Visit:' : 'সফর:' }} {{ formatDate(previewNoteSheet.dateOfVisitFrom) }} – {{ formatDate(previewNoteSheet.dateOfVisitTo) }}</span>
@@ -433,7 +475,7 @@
         <div class="ns-preview-body-section">
           <div class="ns-preview-body-label">{{ isPreviewEnglish() ? 'Content' : 'বিষয়বস্তু' }}</div>
           @if (previewEditing) {
-            <p-editor [(ngModel)]="editMainText" [style]="{ height: '220px' }" placeholder="Edit content..."></p-editor>
+            <app-rich-editor [(ngModel)]="editMainText" height="220px" placeholder="Edit content..."></app-rich-editor>
           } @else {
             <div class="notesheet-preview-body" [innerHTML]="getPreviewMainTextSafe()"></div>
           }
@@ -504,7 +546,7 @@
     [resizable]="false">
     <div class="flex flex-col gap-2 mt-3">
       <label class="font-semibold block mb-2 text-700">Main Text</label>
-      <p-editor [(ngModel)]="mainTextEditValue" [style]="{ height: '220px' }" placeholder="Edit content..."></p-editor>
+      <app-rich-editor [(ngModel)]="mainTextEditValue" height="220px" placeholder="Edit content..."></app-rich-editor>
     </div>
     <ng-template pTemplate="footer">
       <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="showEditMainTextDialog = false"></p-button>
@@ -564,6 +606,79 @@
           <tr><td colspan="10" class="text-center p-4 text-500">No employees found in this posting list.</td></tr>
         </ng-template>
       </p-table>
+    }
+  </p-dialog>
+
+  <!-- ── Approval Log Dialog ── -->
+  <p-dialog
+    header="Approval Log — {{ approvalLogNoteSheetNo }}"
+    [(visible)]="showApprovalLogDialog"
+    [modal]="true"
+    [style]="{ width: '680px', maxHeight: '85vh' }"
+    [draggable]="false"
+    [resizable]="false"
+    [closable]="true"
+    styleClass="ns-approval-log-dialog">
+
+    @if (approvalLogLoading) {
+      <div class="flex justify-content-center align-items-center py-5">
+        <i class="pi pi-spin pi-spinner" style="font-size:1.5rem"></i>
+        <span class="ml-2">Loading approval log...</span>
+      </div>
+    }
+
+    @if (!approvalLogLoading && approvalLogEntries.length === 0) {
+      <div class="text-center text-500 py-4">No approval log entries found.</div>
+    }
+
+    @if (!approvalLogLoading && approvalLogEntries.length > 0) {
+      <div class="ns-approval-log">
+        @for (entry of approvalLogEntries; track entry; let i = $index) {
+          <div class="ns-log-entry" [class.ns-log-entry--back]="entry.action === ApprovalLogAction.Back">
+            <div class="ns-log-marker">
+              <i [class]="getActionIcon(entry.action)" [ngClass]="{
+                'text-green-500': entry.action === ApprovalLogAction.Approve,
+                'text-red-500': entry.action === ApprovalLogAction.Cancel,
+                'text-orange-500': entry.action === ApprovalLogAction.Back,
+                'text-blue-400': entry.action === ApprovalLogAction.Pending
+              }"></i>
+              @if (i < approvalLogEntries.length - 1) {
+                <div class="ns-log-line"></div>
+              }
+            </div>
+            <div class="ns-log-content">
+              <div class="ns-log-header">
+                <span class="ns-log-step">{{ entry.step }}</span>
+                <span class="ns-log-action" [ngClass]="{
+                  'ns-log-action--approve': entry.action === ApprovalLogAction.Approve,
+                  'ns-log-action--cancel': entry.action === ApprovalLogAction.Cancel,
+                  'ns-log-action--back': entry.action === ApprovalLogAction.Back,
+                  'ns-log-action--pending': entry.action === ApprovalLogAction.Pending
+                }">{{ getActionLabel(entry.action) }}</span>
+              </div>
+              @if (entry.serviceId || entry.name) {
+                <div class="ns-log-user">
+                  @if (entry.serviceId) {
+                    <span class="ns-log-sid">{{ entry.serviceId }}</span>
+                  }
+                  @if (entry.name) {
+                    <span>{{ entry.name }}</span>
+                  }
+                  @if (entry.rank && entry.rank !== '-') {
+                    <span class="text-500">({{ entry.rank }})</span>
+                  }
+                </div>
+              }
+              @if (entry.date) {
+                <div class="ns-log-date"><i class="pi pi-calendar"></i> {{ formatDate(entry.date) }}</div>
+              }
+              @if (entry.remark) {
+                <div class="ns-log-remark">{{ entry.remark }}</div>
+              }
+            </div>
+          </div>
+        }
+      </div>
     }
   </p-dialog>
 </p-fluid>
