@@ -120,6 +120,17 @@ export const NoteSheetCurrentStatusOptions = [
 ];
 
 /**
+ * ApprovalStep – identifies each step/role in the approval chain.
+ * Used as the `step` identifier when loading signatory details.
+ */
+export enum ApprovalStep {
+    PreparedBy    = 'Prepared by',
+    Initiator     = 'Initiator',
+    Recommender   = 'Recommender',
+    FinalApprover = 'Final Approver'
+}
+
+/**
  * ApprovalStatus – individual step approval state.
  * Used by InitiatorStatus, RecomenderStatus, FinalApprovalStatus (NVARCHAR(20)).
  */

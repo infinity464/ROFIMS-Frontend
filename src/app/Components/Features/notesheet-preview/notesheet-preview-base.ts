@@ -6,7 +6,7 @@ import { MessageService } from 'primeng/api';
 import { catchError, of } from 'rxjs';
 import { environment } from '@/Core/Environments/environment';
 import { EmpService } from '@/services/emp-service';
-import { NoteSheetType, NoteSheetCurrentStatus, NoteSheetCurrentStatusOptions, ApprovalStatus } from '@/models/enums';
+import { NoteSheetType, NoteSheetCurrentStatus, NoteSheetCurrentStatusOptions, ApprovalStatus, ApprovalStep } from '@/models/enums';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { SignatoryDetail } from '@/Components/Common/notesheet-signatory/notesheet-signatory';
 import { PostingService } from '@/services/posting.service';
@@ -216,7 +216,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
                         const id = typeof r === 'number'
                             ? r
                             : (r.recomender_id ?? r.recomenderId ?? r.EmployeeId ?? r.employeeId);
-                        if (id && id > 0) approverIds.push({ empId: id, step: `Recommender ${arr.length > 1 ? i + 1 : ''}`.trim() });
+                        if (id && id > 0) approverIds.push({ empId: id, step: `${ApprovalStep.Recommender} ${arr.length > 1 ? i + 1 : ''}`.trim() });
                     });
                 }
             }
@@ -225,11 +225,11 @@ export abstract class NotesheetPreviewBase implements OnInit {
         const finalApproverEmpId = (this.noteSheet.finalApprovalId && this.noteSheet.finalApprovalId > 0)
             ? this.noteSheet.finalApprovalId
             : (this.noteSheet.finalApproverId && this.noteSheet.finalApproverId > 0 ? this.noteSheet.finalApproverId : null);
-        if (finalApproverEmpId) approverIds.push({ empId: finalApproverEmpId, step: 'Final Approver' });
+        if (finalApproverEmpId) approverIds.push({ empId: finalApproverEmpId, step: ApprovalStep.FinalApprover });
 
         const allIds = [
-            ...(preparedByEmpId ? [{ empId: preparedByEmpId, step: 'Prepared by' }] : []),
-            ...(initiatorId     ? [{ empId: initiatorId,     step: 'Initiator'    }] : []),
+            ...(preparedByEmpId ? [{ empId: preparedByEmpId, step: ApprovalStep.PreparedBy }] : []),
+            ...(initiatorId     ? [{ empId: initiatorId,     step: ApprovalStep.Initiator    }] : []),
             ...approverIds
         ];
 
@@ -253,8 +253,8 @@ export abstract class NotesheetPreviewBase implements OnInit {
                             employeeId: empId
                         };
 
-                        if (step === 'Prepared by') this.preparedByDetails = detail;
-                        else if (step === 'Initiator') this.initiatorDetails = detail;
+                        if (step === ApprovalStep.PreparedBy) this.preparedByDetails = detail;
+                        else if (step === ApprovalStep.Initiator) this.initiatorDetails = detail;
                         else this.approversDetails.push(detail);
 
                         this.loadSignature(detail);
@@ -282,6 +282,9 @@ export abstract class NotesheetPreviewBase implements OnInit {
     isEnglish(): boolean { return (this.noteSheet?.textType ?? 0) === 0; }
     isExBdLeave(): boolean { return this.noteSheet?.noteSheetType === NoteSheetType.ExBDLeave; }
     isNewPosting(): boolean { return this.noteSheet?.noteSheetType === NoteSheetType.NewPosting; }
+    isInitiatorApproved(): boolean {
+        return this.noteSheet?.initiatorStatus?.toLowerCase() === ApprovalStatus.Approve;
+    }
     isApproved(): boolean {
         return this.noteSheet?.finalApprovalStatus === ApprovalStatus.Approve;
     }
@@ -290,17 +293,17 @@ export abstract class NotesheetPreviewBase implements OnInit {
 
     getApproverRemark(step: string): string {
         if (!this.noteSheet) return '';
-        if (step === 'Final Approver')
+        if (step === ApprovalStep.FinalApprover)
             return this.noteSheet.finalApprovalRemark ?? this.noteSheet.finalApprovalCancelRemark ?? '';
-        if (step === 'Initiator')
+        if (step === ApprovalStep.Initiator)
             return this.noteSheet.initiatorApproveRemark ?? this.noteSheet.initiatorCancelRemark ?? '';
-        if (step.startsWith('Recommender')) {
+        if (step.startsWith(ApprovalStep.Recommender)) {
             try {
                 const json = this.noteSheet.recommendersJson ?? this.noteSheet.recommenderIdsJson;
                 if (json && typeof json === 'string') {
                     const arr = JSON.parse(json) as any[];
                     if (Array.isArray(arr)) {
-                        const numPart = step.replace('Recommender', '').trim();
+                        const numPart = step.replace(ApprovalStep.Recommender, '').trim();
                         const idx = numPart ? parseInt(numPart, 10) - 1 : 0;
                         const rec = arr[idx];
                         if (rec) return rec.recomender_approve_remark ?? rec.recomender_cancel_remark ?? '';
@@ -313,17 +316,17 @@ export abstract class NotesheetPreviewBase implements OnInit {
 
     getApproverDate(step: string): string {
         if (!this.noteSheet) return '';
-        if (step === 'Final Approver')
+        if (step === ApprovalStep.FinalApprover)
             return this.noteSheet.finalApprovalApprovedDate ? this.formatDate(this.noteSheet.finalApprovalApprovedDate) : '';
-        if (step === 'Initiator')
+        if (step === ApprovalStep.Initiator)
             return this.noteSheet.initiatorApprovedDate ? this.formatDate(this.noteSheet.initiatorApprovedDate) : '';
-        if (step.startsWith('Recommender')) {
+        if (step.startsWith(ApprovalStep.Recommender)) {
             try {
                 const json = this.noteSheet.recommendersJson ?? this.noteSheet.recommenderIdsJson;
                 if (json && typeof json === 'string') {
                     const arr = JSON.parse(json) as any[];
                     if (Array.isArray(arr)) {
-                        const numPart = step.replace('Recommender', '').trim();
+                        const numPart = step.replace(ApprovalStep.Recommender, '').trim();
                         const idx = numPart ? parseInt(numPart, 10) - 1 : 0;
                         const rec = arr[idx];
                         if (rec?.recomender_approved_date) return this.formatDate(rec.recomender_approved_date);
@@ -422,24 +425,24 @@ export abstract class NotesheetPreviewBase implements OnInit {
 
     shouldShowSignature(step: string): boolean {
         const cs = this.noteSheet?.currentStatus;
-        if (step === 'Prepared by' || step === 'প্রস্তুতকারী') return true;
-        if (step === 'Initiator') return true;
-        if (step.startsWith('Recommender'))
+        if (step === ApprovalStep.PreparedBy || step === 'প্রস্তুতকারী') return true;
+        if (step === ApprovalStep.Initiator) return this.noteSheet?.initiatorStatus?.toLowerCase() === ApprovalStatus.Approve;
+        if (step.startsWith(ApprovalStep.Recommender))
             return cs === NoteSheetCurrentStatus.FinalApproval || cs === NoteSheetCurrentStatus.Cancel || this.isApproved();
-        if (step === 'Final Approver') return this.isApproved();
+        if (step === ApprovalStep.FinalApprover) return this.isApproved();
         return false;
     }
 
     translateStep(step: string): string {
         if (this.isEnglish()) return step;
         const t: Record<string, string> = {
-            'Prepared by':    'প্রস্তুতকারী',
-            'Initiator':      'সূচনাকারী',
-            'Recommender':    'সুপারিশকারী',
-            'Final Approver': 'চূড়ান্ত অনুমোদনকারী'
+            [ApprovalStep.PreparedBy]:    'প্রস্তুতকারী',
+            [ApprovalStep.Initiator]:     'সূচনাকারী',
+            [ApprovalStep.Recommender]:   'সুপারিশকারী',
+            [ApprovalStep.FinalApprover]: 'চূড়ান্ত অনুমোদনকারী'
         };
-        if (step.startsWith('Recommender')) {
-            const suffix = step.replace('Recommender', '').trim();
+        if (step.startsWith(ApprovalStep.Recommender)) {
+            const suffix = step.replace(ApprovalStep.Recommender, '').trim();
             return suffix ? `সুপারিশকারী ${suffix}` : 'সুপারিশকারী';
         }
         return t[step] || step;

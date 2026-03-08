@@ -143,11 +143,10 @@
                         </div>
                     </div>
 
-                    <!-- ── Initiator Signature (view mode) ── -->
+                    <!-- ── Initiator area (view mode): name always, signature+date only after approved ── -->
                     <div class="ns-initiator-area" *ngIf="!editing">
-                        <!-- Closing text removed for posting notesheet -->
                         <div class="ns-initiator-sig" *ngIf="initiatorDetails">
-                            <img *ngIf="shouldShowSignature(initiatorDetails.step) && initiatorDetails.signatureDataUrl"
+                            <img *ngIf="isInitiatorApproved() && shouldShowSignature(initiatorDetails.step) && initiatorDetails.signatureDataUrl"
                                  [src]="initiatorDetails.signatureDataUrl" class="ns-sig-img" alt="Signature" />
                             <div class="ns-sig-paren">
                                 ({{ isEnglish() ? initiatorDetails.name : (initiatorDetails.nameBN || initiatorDetails.name) }}{{ initiatorDetails.rank && initiatorDetails.rank !== '-' ? ', ' + (isEnglish() ? initiatorDetails.rank : (initiatorDetails.rankBN || initiatorDetails.rank)) : '' }})
@@ -155,7 +154,7 @@
                             <div class="ns-sig-appoint" *ngIf="initiatorDetails.appointment || initiatorDetails.appointmentBN">
                                 {{ isEnglish() ? initiatorDetails.appointment : (initiatorDetails.appointmentBN || initiatorDetails.appointment) }}
                             </div>
-                            <div class="ns-sig-date" *ngIf="noteSheet.noteSheetDate">{{ formatDate(noteSheet.noteSheetDate) }}</div>
+                            <div class="ns-sig-date" *ngIf="isInitiatorApproved() && noteSheet.noteSheetDate">{{ formatDate(noteSheet.noteSheetDate) }}</div>
                         </div>
                     </div>
 
