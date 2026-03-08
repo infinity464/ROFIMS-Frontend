@@ -135,8 +135,8 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         const p = this.profile;
         const title = p ? `${L['pageTitle.exMember']} - ${this.getFormattedName(p)}` : L['pageTitle.exMember'];
         const sections: ProfileExportSection[] = [];
-        const addSection = (secTitle: string, columns: string[], rows: string[][], noTableHeader?: boolean) =>
-            sections.push({ title: secTitle, columns, rows, noTableHeader });
+        const addSection = (secTitle: string, columns: string[], rows: string[][], noTableHeader?: boolean, addressSection?: boolean, colsPerRow?: 2 | 3) =>
+            sections.push({ title: secTitle, columns, rows, noTableHeader, addressSection, colsPerRow });
         const kv = (label: string, value: string): [string, string] => [label, value];
 
         if (!p) return { title, lang: this.profileLang, sections, showPageNumbers: true };
@@ -172,7 +172,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
             ownAddrRows.push(kv(L['address.division'], this.codeValue(addr.division, addr.divisionBN)));
         });
         if (ownAddrRows.length === 0) ownAddrRows.push([L['empty.noOwnAddress'], '']);
-        addSection(L['section.ownAddress'], [L['table.field'], L['table.value']], ownAddrRows, true);
+        addSection(L['section.ownAddress'], [L['table.field'], L['table.value']], ownAddrRows, true, true);
 
         // Spouse Address
         const spouseAddrRows: string[][] = [];
@@ -186,7 +186,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
             spouseAddrRows.push(kv(L['address.division'], this.codeValue(addr.division, addr.divisionBN)));
         });
         if (spouseAddrRows.length === 0) spouseAddrRows.push([L['empty.noSpouseAddress'], '']);
-        addSection(L['section.spouseAddress'], [L['table.field'], L['table.value']], spouseAddrRows, true);
+        addSection(L['section.spouseAddress'], [L['table.field'], L['table.value']], spouseAddrRows, true, true);
 
         // Other Personal (label-value)
         addSection(L['section.otherPersonal'], [L['table.field'], L['table.value']], [
@@ -210,7 +210,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
             kv(L['field.maritalStatus'], this.codeValue(p.maritalStatus, p.maritalStatusBN)),
             kv(L['field.weight'], this.weightDisplay(p)),
             kv(L['field.identificationMark'], this.val(p.identificationMark)),
-        ], true);
+        ], true, false, 2);
 
         // Family Info (table: Ser, Name, Relation, DOB, Occupation, Mobile)
         const familyRows = this.familyInfoList.map((row, i) => [

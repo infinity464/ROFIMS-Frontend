@@ -30,6 +30,10 @@ export interface ProfileExportSection {
     rows: string[][];
     /** When true, do not render table header row (label-value blocks like Basic Service, Address). */
     noTableHeader?: boolean;
+    /** When true, render Permanent/Present Address as full-width subsection headers. */
+    addressSection?: boolean;
+    /** Columns per row for label-value sections (default 3). Use 2 for 2x2 layout. */
+    colsPerRow?: 2 | 3;
 }
 
 /** Config for full profile export (multiple sections, same style as web view). */
@@ -310,7 +314,7 @@ export class ExportService {
                     const pairItems = pairs
                         .map(
                             (p) =>
-                                `<span style="font-size:${sizeContentPt};"><span style="font-weight:400">${escapeHtml(p.label)}: </span><strong>${escapeHtml(p.value)}</strong></span>`
+                                `<span style="font-size:${sizeContentPt};"><span style="font-weight:400">${escapeHtml(p.label.endsWith(':') ? p.label : p.label + ':')} </span><strong>${escapeHtml(p.value)}</strong></span>`
                         )
                         .join('');
                     return `
@@ -373,26 +377,15 @@ ${sectionBlocks}
     }
 
     async exportProfileWord(config: ProfileExportConfig): Promise<void> {
-        const dateStr = new Date().toLocaleDateString(config.lang === 'bn' ? 'bn-BD' : 'en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-        });
         const font = config.lang === 'bn' ? 'Nirmala UI' : 'Times New Roman';
         const sizePageHeader = 28;
+        const sizeSectionHeader = 28; // 14pt for Basic Service, Own Address, etc.
         const sizeTableHeader = 20;
         const sizeTableContent = config.lang === 'bn' ? 16 : 22;
 
         const children: (Paragraph | Table)[] = [];
 
-        children.push(
-            new Paragraph({
-                children: [new TextRun({ text: config.title, bold: true, size: sizePageHeader, color: '1e3a5f', font })],
-                alignment: AlignmentType.CENTER,
-                spacing: { after: 200 },
-            })
-        );
-
+        // Passport size: 35mm x 45mm ≈ 130x165 px at 96 DPI; right-aligned
         if (config.imageDataUrl) {
             const match = config.imageDataUrl.match(/^data:image\/(\w+);base64,(.+)$/);
             if (match) {
@@ -408,11 +401,11 @@ ${sectionBlocks}
                                 new ImageRun({
                                     type,
                                     data: arr,
-                                    transformation: { width: 100, height: 120 },
+                                    transformation: { width: 130, height: 165 }, // passport size (35mm x 45mm)
                                 }),
                             ],
-                            alignment: AlignmentType.CENTER,
-                            spacing: { after: 200 },
+                            alignment: AlignmentType.RIGHT,
+                            spacing: { after: 400 },
                         })
                     );
                 } catch {
@@ -421,55 +414,139 @@ ${sectionBlocks}
             }
         }
 
-        children.push(
-            new Paragraph({
-                children: [new TextRun({ text: dateStr, size: sizePageHeader, color: '666666', font })],
-                alignment: AlignmentType.CENTER,
-                spacing: { after: 400 },
-            })
-        );
-
-        for (const sec of config.sections) {
+        for (let secIndex = 0; secIndex < config.sections.length; secIndex++) {
+            const sec = config.sections[secIndex];
             const colCount = Math.max(sec.columns.length, 1);
             const isLabelValue = sec.noTableHeader && colCount >= 2;
+            const isBasicService = secIndex === 0 && isLabelValue;
 
             children.push(
                 new Paragraph({
-                    children: [new TextRun({ text: sec.title, bold: true, size: sizeTableHeader, font })],
+                    children: [new TextRun({ text: sec.title, bold: true, size: sizeSectionHeader, font })],
                     spacing: { after: 150 },
                 })
             );
 
             if (isLabelValue) {
-                // Separate table per row of 3 properties so each can be adjusted in Word
                 const pairs = sec.rows.map((row) => {
                     const r = row.slice(0, 2);
                     while (r.length < 2) r.push('');
                     return { label: r[0], value: r[1] };
                 });
-                const colWidth = 3000;
                 const labelValueBorders = { top: { style: BorderStyle.SINGLE, size: 1, color: 'e0e0e0' }, bottom: { style: BorderStyle.SINGLE, size: 1, color: 'e0e0e0' }, left: { style: BorderStyle.SINGLE, size: 1, color: 'e0e0e0' }, right: { style: BorderStyle.SINGLE, size: 1, color: 'e0e0e0' } };
-                for (let i = 0; i < pairs.length; i += 3) {
-                    const cells: TableCell[] = [];
-                    for (let j = 0; j < 3; j++) {
-                        const p = pairs[i + j];
-                        const content = p
-                            ? [new Paragraph({ children: [new TextRun({ text: p.label + ': ', font, size: sizeTableContent }), new TextRun({ text: p.value, font, size: sizeTableContent, bold: true })], spacing: { after: 120 } })]
-                            : [new Paragraph({ children: [new TextRun({ text: ' ', font, size: sizeTableContent })], spacing: { after: 120 } })];
-                        cells.push(
-                            new TableCell({
-                                children: content,
+                const noBorder = { top: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }, bottom: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }, left: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }, right: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' } };
+                const cellContent = (p: { label: string; value: string }) =>
+                    [new Paragraph({ children: [new TextRun({ text: (p.label.endsWith(':') ? p.label : p.label + ':') + ' ', font, size: sizeTableContent }), new TextRun({ text: p.value, font, size: sizeTableContent, bold: true })], spacing: { after: 120 } })];
+
+                // Address section: Permanent/Present as full-width headers
+                const isAddrType = (v: string) => ['Permanent Address', 'Present Address', 'স্থায়ী ঠিকানা', 'বর্তমান ঠিকানা'].includes(v);
+
+                // Nested tables: outer table (1 col) wraps each row; each row is a nested table that resizes independently
+                const makeRowTable = (items: { label: string; value: string }[], cellPct: number) => {
+                    const cells: TableCell[] = items.map((p) =>
+                        new TableCell({ children: cellContent(p), borders: labelValueBorders, width: { size: cellPct, type: WidthType.PERCENTAGE } })
+                    );
+                    return new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [new TableRow({ children: cells })] });
+                };
+
+                const outerRows: TableRow[] = [];
+                if (sec.addressSection && pairs.length > 0) {
+                    const addrOuterRows: TableRow[] = [];
+                    let i = 0;
+                    while (i < pairs.length) {
+                        const p = pairs[i];
+                        if (p && isAddrType(p.value)) {
+                            const headerCell = new TableCell({
+                                children: [new Paragraph({ children: [new TextRun({ text: p.value, bold: true, size: sizeSectionHeader, font })], spacing: { after: 100 } })],
                                 borders: labelValueBorders,
-                                width: { size: colWidth, type: WidthType.DXA },
-                            })
-                        );
+                                width: { size: 100, type: WidthType.PERCENTAGE },
+                            });
+                            addrOuterRows.push(new TableRow({
+                                children: [new TableCell({ children: [new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [new TableRow({ children: [headerCell] })] })], borders: noBorder, margins: { top: 0, bottom: 0, left: 0, right: 0 } })],
+                            }));
+                            i++;
+                            const addrPairs: { label: string; value: string }[] = [];
+                            for (let k = 0; k < 6 && i < pairs.length; k++, i++) {
+                                if (pairs[i] && !isAddrType(pairs[i].value)) addrPairs.push(pairs[i]);
+                                else { i--; break; }
+                            }
+                            for (let j = 0; j < addrPairs.length; j += 3) {
+                                const rowPairs = [addrPairs[j], addrPairs[j + 1], addrPairs[j + 2]].filter(Boolean);
+                                if (rowPairs.length > 0) {
+                                    const pct = 100 / 3;
+                                    const addrCells: TableCell[] = rowPairs.map((pr) => new TableCell({ children: cellContent(pr), borders: labelValueBorders, width: { size: pct, type: WidthType.PERCENTAGE } }));
+                                    while (addrCells.length < 3) addrCells.push(new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: ' ', font, size: sizeTableContent })], spacing: { after: 120 } })], borders: labelValueBorders, width: { size: pct, type: WidthType.PERCENTAGE } }));
+                                    addrOuterRows.push(new TableRow({
+                                        children: [new TableCell({ children: [new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [new TableRow({ children: addrCells })] })], borders: noBorder, margins: { top: 0, bottom: 0, left: 0, right: 0 } })],
+                                    }));
+                                }
+                            }
+                        } else {
+                            i++;
+                        }
                     }
-                    children.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [new TableRow({ children: cells })] }));
+                    if (addrOuterRows.length > 0) {
+                        children.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: addrOuterRows, borders: noBorder }));
+                    } else {
+                        const fallbackRows: TableRow[] = [];
+                        for (let i = 0; i < pairs.length; i += 3) {
+                            const cells: TableCell[] = [];
+                            const pct = 100 / 3;
+                            for (let j = 0; j < 3; j++) {
+                                const p = pairs[i + j];
+                                const content = p ? cellContent(p) : [new Paragraph({ children: [new TextRun({ text: ' ', font, size: sizeTableContent })], spacing: { after: 120 } })];
+                                cells.push(new TableCell({ children: content, borders: labelValueBorders, width: { size: pct, type: WidthType.PERCENTAGE } }));
+                            }
+                            fallbackRows.push(new TableRow({ children: cells }));
+                        }
+                        if (fallbackRows.length > 0) children.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: fallbackRows }));
+                    }
+                } else if (isBasicService && pairs.length >= 3) {
+                    outerRows.push(new TableRow({
+                        children: [new TableCell({ children: [makeRowTable([pairs[0]], 100)], borders: noBorder, margins: { top: 0, bottom: 0, left: 0, right: 0 } })],
+                    }));
+                    outerRows.push(new TableRow({
+                        children: [new TableCell({ children: [makeRowTable([pairs[1], pairs[2]], 50)], borders: noBorder, margins: { top: 0, bottom: 0, left: 0, right: 0 } })],
+                    }));
+                    for (let i = 3; i < pairs.length; i += 2) {
+                        if (pairs[i] || pairs[i + 1]) {
+                            const pct = 50;
+                            const cells: TableCell[] = [];
+                            for (let j = 0; j < 2; j++) {
+                                const p = pairs[i + j];
+                                const content = p ? cellContent(p) : [new Paragraph({ children: [new TextRun({ text: ' ', font, size: sizeTableContent })], spacing: { after: 120 } })];
+                                cells.push(new TableCell({ children: content, borders: labelValueBorders, width: { size: pct, type: WidthType.PERCENTAGE } }));
+                            }
+                            outerRows.push(new TableRow({
+                                children: [new TableCell({ children: [new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [new TableRow({ children: cells })] })], borders: noBorder, margins: { top: 0, bottom: 0, left: 0, right: 0 } })],
+                            }));
+                        }
+                    }
+                } else {
+                    const cols = sec.colsPerRow === 2 ? 2 : 3;
+                    const pct = 100 / cols;
+                    for (let i = 0; i < pairs.length; i += cols) {
+                        const cells: TableCell[] = [];
+                        for (let j = 0; j < cols; j++) {
+                            const p = pairs[i + j];
+                            const content = p ? cellContent(p) : [new Paragraph({ children: [new TextRun({ text: ' ', font, size: sizeTableContent })], spacing: { after: 120 } })];
+                            cells.push(new TableCell({ children: content, borders: labelValueBorders, width: { size: pct, type: WidthType.PERCENTAGE } }));
+                        }
+                        if (cells.length > 0) {
+                            outerRows.push(new TableRow({
+                                children: [new TableCell({ children: [new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [new TableRow({ children: cells })] })], borders: noBorder, margins: { top: 0, bottom: 0, left: 0, right: 0 } })],
+                            }));
+                        }
+                    }
+                }
+                if (outerRows.length > 0) {
+                    children.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: outerRows, borders: noBorder }));
                 }
                 continue;
             }
 
-            const cellWidth = Math.floor(9000 / colCount);
+            const cellWidth = Math.floor(9000 / Math.max(colCount, 1));
+            const tableBorders = { top: { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' }, bottom: { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' }, left: { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' }, right: { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' } };
             const headerRow = new TableRow({
                 tableHeader: true,
                 children: sec.columns.map((col) =>
@@ -481,7 +558,7 @@ ${sectionBlocks}
                                 spacing: { after: 100 },
                             }),
                         ],
-                        borders: { top: { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' }, bottom: { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' }, left: { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' }, right: { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' } },
+                        borders: tableBorders,
                         width: { size: cellWidth, type: WidthType.DXA },
                     })
                 ),
@@ -493,7 +570,7 @@ ${sectionBlocks}
                     children: cells.map((cell) =>
                         new TableCell({
                             children: [new Paragraph({ children: [new TextRun({ text: cell, font, size: sizeTableContent })], spacing: { after: 100 } })],
-                            borders: { top: { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' }, bottom: { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' }, left: { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' }, right: { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' } },
+                            borders: tableBorders,
                             width: { size: cellWidth, type: WidthType.DXA },
                         })
                     ),
