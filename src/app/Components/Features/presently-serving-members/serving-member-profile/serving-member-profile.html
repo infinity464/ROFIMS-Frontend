@@ -3,9 +3,31 @@
 <div class="card serving-member-profile-page text-900">
     <div class="profile-header">
         <div class="profile-header-left">
-            <p-button icon="pi pi-arrow-left" [label]="L['button.back']" [rounded]="true" [text]="true" severity="secondary" (onClick)="goBack()" styleClass="p-button-sm"></p-button>
-            <h1 class="profile-title m-0 text-2xl font-bold text-900">{{ L['pageTitle.servingMember'] }}</h1>
-            <p-button [label]="profileLang === 'en' ? 'বাংলা' : 'English'" [rounded]="true" [text]="true" severity="secondary" (onClick)="toggleProfileLang()" styleClass="p-button-sm ml-2"></p-button>
+            <div class="flex align-items-center gap-2 flex-wrap">
+                <p-button icon="pi pi-arrow-left" [label]="L['button.back']" [rounded]="true" [text]="true" severity="secondary" (onClick)="goBack()" styleClass="p-button-sm"></p-button>
+                <p-button [label]="profileLang === 'en' ? 'বাংলা' : 'English'" [rounded]="true" [text]="true" severity="secondary" (onClick)="toggleProfileLang()" styleClass="p-button-sm"></p-button>
+                @if (profile && !loading) {
+                    <div class="profile-export-wrap">
+                        <button type="button" class="profile-btn-export" (click)="toggleExportDropdown($event)">
+                            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                                <path d="M6.5 1v7M3.5 5.5l3 3 3-3M1.5 10.5h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Export
+                        </button>
+                        @if (exportDropdownOpen) {
+                            <div class="profile-export-dropdown" (click)="$event.stopPropagation()">
+                                <button type="button" class="profile-export-item" (click)="exportAs('pdf')">
+                                    <span class="profile-export-icon">⬇</span> PDF
+                                </button>
+                                <button type="button" class="profile-export-item" (click)="exportAs('word')">
+                                    <span class="profile-export-icon">⬇</span> Word
+                                </button>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+            <h1 class="profile-title m-0 text-2xl font-bold text-900 mt-2">{{ L['pageTitle.servingMember'] }}</h1>
         </div>
         <div class="profile-image-box">
             @if (profileImageUrl) {
