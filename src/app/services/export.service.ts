@@ -282,11 +282,6 @@ export class ExportService {
     }
 
     exportProfilePDF(config: ProfileExportConfig): void {
-        const dateStr = new Date().toLocaleDateString(config.lang === 'bn' ? 'bn-BD' : 'en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-        });
         const fontFamily = config.lang === 'bn' ? "'Nirmala UI', serif" : "'Times New Roman', serif";
         const sizeContentPt = config.lang === 'bn' ? '8pt' : '11pt';
         const pageFooter = config.showPageNumbers
@@ -348,21 +343,13 @@ export class ExportService {
             .join('');
 
         const profileHeader = config.imageDataUrl
-            ? `<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px;">
-                <div style="flex:1;">
-                    <h1 style="font-family: ${fontFamily}; font-size: 14pt; font-weight: bold; margin: 0 0 8px 0;">${escapeHtml(config.title)}</h1>
-                    <div class="date" style="font-family: ${fontFamily}; font-size: 14pt; color: #555;">${escapeHtml(dateStr)}</div>
-                </div>
-                <img src="${config.imageDataUrl}" alt="" style="width:100px;height:120px;object-fit:cover;border:1px solid #ddd;flex-shrink:0;" />
-            </div>`
-            : `<h1 style="font-family: ${fontFamily}; font-size: 14pt; font-weight: bold; text-align: center; margin-bottom: 8px;">${escapeHtml(config.title)}</h1>
-<div class="date" style="font-family: ${fontFamily}; font-size: 14pt; color: #555; text-align: center; margin-bottom: 16px;">${escapeHtml(dateStr)}</div>`;
+            ? `<div style="text-align:right;margin-bottom:16px;"><img src="${config.imageDataUrl}" alt="" style="width:130px;height:165px;object-fit:cover;border:1px solid #ddd;" /></div>`
+            : '';
 
         const html = `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><title>${escapeHtml(config.title)}</title>
 <style>
 body { font-family: ${fontFamily}; font-size: ${sizeContentPt}; margin: 0; padding: 0; }
-.date { margin-bottom: 16px; }
 ${pageFooter}
 </style></head><body>
 ${profileHeader}
@@ -380,6 +367,7 @@ ${sectionBlocks}
         const font = config.lang === 'bn' ? 'Nirmala UI' : 'Times New Roman';
         const sizePageHeader = 28;
         const sizeSectionHeader = 28; // 14pt for Basic Service, Own Address, etc.
+        const sizeAddrSubheader = 24; // 12pt for Permanent/Present Address headings
         const sizeTableHeader = 20;
         const sizeTableContent = config.lang === 'bn' ? 16 : 22;
 
@@ -423,7 +411,7 @@ ${sectionBlocks}
             children.push(
                 new Paragraph({
                     children: [new TextRun({ text: sec.title, bold: true, size: sizeSectionHeader, font })],
-                    spacing: { after: 150 },
+                    spacing: { before: secIndex > 0 ? 200 : 0, after: 150 },
                 })
             );
 
@@ -457,7 +445,7 @@ ${sectionBlocks}
                         const p = pairs[i];
                         if (p && isAddrType(p.value)) {
                             const headerCell = new TableCell({
-                                children: [new Paragraph({ children: [new TextRun({ text: p.value, bold: true, size: sizeSectionHeader, font })], spacing: { after: 100 } })],
+                                children: [new Paragraph({ children: [new TextRun({ text: p.value, bold: true, size: sizeAddrSubheader, font })], spacing: { after: 100 } })],
                                 borders: labelValueBorders,
                                 width: { size: 100, type: WidthType.PERCENTAGE },
                             });
