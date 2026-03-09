@@ -149,6 +149,10 @@ export interface DraftPostingEmployeeRow {
     joiningDateInRAB: string | null;
     rankSortOrder: number | null;
     motherOrgSortOrder: number | null;
+    permanentDistrictName: string | null;
+    permanentDistrictNameBN: string | null;
+    motherOrgLocationName: string | null;
+    motherOrgLocationNameBN: string | null;
     createdBy: string | null;
     createdDate: string | null;
 }
