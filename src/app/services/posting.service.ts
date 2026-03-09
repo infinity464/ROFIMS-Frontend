@@ -11,6 +11,7 @@ import {
     PostingNoteSheetMember,
     PostingMemberRow,
     PendingJoiningItem,
+    PostingReceiveViewDto,
     PostingType,
     PostingNoteSheetStatus
 } from '@/models/posting.model';
@@ -396,5 +397,33 @@ export class PostingService {
                 : p
         );
         this.pendingJoining$.next(list);
+    }
+
+    // ── Posting Receive ─────────────────────────────────────────────
+
+    getApprovedPostingOrders(): Observable<PostingReceiveViewDto[]> {
+        return this.http.get<PostingReceiveViewDto[]>(`${API}/GetApprovedPostingOrders`);
+    }
+
+    getPendingPostingReceive(draftPostingMasterId?: number): Observable<PostingReceiveViewDto[]> {
+        const params: any = {};
+        if (draftPostingMasterId != null) params.draftPostingMasterId = draftPostingMasterId;
+        return this.http.get<PostingReceiveViewDto[]>(`${API}/GetPendingPostingReceive`, { params });
+    }
+
+    getPostingReceiveHistory(draftPostingMasterId?: number): Observable<PostingReceiveViewDto[]> {
+        const params: any = {};
+        if (draftPostingMasterId != null) params.draftPostingMasterId = draftPostingMasterId;
+        return this.http.get<PostingReceiveViewDto[]>(`${API}/GetPostingReceiveHistory`, { params });
+    }
+
+    receivePostingMembers(
+        items: { postingReceiveId: number; joiningDate: string; remarks: string | null }[],
+        receivedBy: string
+    ): Observable<{ statusCode: number; description: string }> {
+        return this.http.post<{ statusCode: number; description: string }>(`${API}/ReceivePostingMembers`, {
+            items,
+            receivedBy
+        });
     }
 }

@@ -1,0 +1,227 @@
+<p-toast></p-toast>
+
+<div class="card">
+    <div class="font-semibold text-xl mb-4">Posting Order Receive</div>
+
+    <p-tabs [value]="activeTabIndex" (valueChange)="onTabChange($event)">
+        <p-tablist>
+            <p-tab [value]="0">Pending Receive</p-tab>
+            <p-tab [value]="1">Receive History</p-tab>
+        </p-tablist>
+
+        <p-tabpanels>
+            <!-- Tab 1: Pending Receive -->
+            <p-tabpanel [value]="0">
+                <!-- Approved Orders Table -->
+                <div class="font-medium text-lg mb-3 mt-3">Approved Posting Orders</div>
+                <p-table
+                    [value]="approvedOrders"
+                    [loading]="loadingOrders"
+                    [paginator]="true"
+                    [rows]="10"
+                    [rowsPerPageOptions]="[10, 25, 50]"
+                    styleClass="p-datatable-sm p-datatable-gridlines mb-4">
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width:50px">#</th>
+                            <th>Posting Order No</th>
+                            <th>Date</th>
+                            <th>NoteSheet No</th>
+                            <th>Approval Date</th>
+                            <th style="width:80px">Total</th>
+                            <th style="width:80px">Pending</th>
+                            <th style="width:80px">Received</th>
+                            <th style="width:100px">Action</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row let-i="rowIndex">
+                        <tr [class.surface-100]="row.draftPostingMasterId === selectedOrderId">
+                            <td>{{ i + 1 }}</td>
+                            <td>{{ row.draftPostingNo }}</td>
+                            <td>{{ formatDisplayDate(row.draftPostingDate) }}</td>
+                            <td>
+                                @if (row.noteSheetId) {
+                                    <a class="cursor-pointer text-primary hover:underline" (click)="openNotesheet(row)">{{ row.noteSheetNo }}</a>
+                                } @else {
+                                    <span>—</span>
+                                }
+                            </td>
+                            <td>{{ formatDisplayDate(row.approvalDate) }}</td>
+                            <td class="text-center">{{ row.totalMembers }}</td>
+                            <td class="text-center">
+                                @if (row.pendingCount > 0) {
+                                    <p-tag [value]="'' + row.pendingCount" severity="warn"></p-tag>
+                                } @else {
+                                    <span>0</span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                @if (row.receivedCount > 0) {
+                                    <p-tag [value]="'' + row.receivedCount" severity="success"></p-tag>
+                                } @else {
+                                    <span>0</span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                <p-button
+                                    label="View List"
+                                    severity="info"
+                                    [text]="true"
+                                    size="small"
+                                    (onClick)="viewMembers(row)">
+                                </p-button>
+                            </td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr><td colspan="9" class="text-center">No approved posting orders found.</td></tr>
+                    </ng-template>
+                </p-table>
+
+                <!-- Pending Members for Selected Order -->
+                @if (selectedOrderId) {
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="font-medium text-lg">Pending Members</div>
+                        <p-select
+                            [options]="transferUnitFilterOptions"
+                            [(ngModel)]="transferUnitFilter"
+                            optionLabel="label"
+                            optionValue="value"
+                            (onChange)="onTransferUnitFilterChange()"
+                            placeholder="Filter by Transfer Unit"
+                            styleClass="w-16rem">
+                        </p-select>
+                    </div>
+                    <p-table
+                        [value]="pendingMembers"
+                        [loading]="loadingPending"
+                        [(selection)]="selectedMembers"
+                        dataKey="postingReceiveId"
+                        [paginator]="true"
+                        [rows]="25"
+                        [rowsPerPageOptions]="[10, 25, 50]"
+                        styleClass="p-datatable-sm p-datatable-gridlines mb-4">
+                        <ng-template pTemplate="header">
+                            <tr>
+                                <th style="width:44px"><p-tableHeaderCheckbox></p-tableHeaderCheckbox></th>
+                                <th style="width:50px">#</th>
+                                <th>Service ID</th>
+                                <th>RAB ID</th>
+                                <th>Rank</th>
+                                <th>Name</th>
+                                <th>Corps</th>
+                                <th>Mother Unit</th>
+                                <th>Transfer Unit</th>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="body" let-row let-i="rowIndex">
+                            <tr>
+                                <td><p-tableCheckbox [value]="row"></p-tableCheckbox></td>
+                                <td>{{ i + 1 }}</td>
+                                <td>{{ row.serviceId || '—' }}</td>
+                                <td>{{ row.rabID || '—' }}</td>
+                                <td>{{ row.rankName || '—' }}</td>
+                                <td>
+                                    <a class="cursor-pointer text-primary hover:underline" (click)="openProfile(row)">{{ row.fullNameEN || '—' }}</a>
+                                </td>
+                                <td>{{ row.corpsName || '—' }}</td>
+                                <td>{{ row.motherUnitName || '—' }}</td>
+                                <td>{{ row.transferRabUnitName || '—' }}</td>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="emptymessage">
+                            <tr><td colspan="9" class="text-center">No pending members found.</td></tr>
+                        </ng-template>
+                    </p-table>
+
+                    <!-- Receive Form -->
+                    @if (selectedMembers.length > 0) {
+                        <div class="receive-form">
+                                <div class="receive-field">
+                                    <label>Joining Date <span class="text-red-500">*</span></label>
+                                    <p-datepicker
+                                        [(ngModel)]="joiningDate"
+                                        dateFormat="dd/mm/yy"
+                                        styleClass="w-full"
+                                        placeholder="Select joining date"
+                                        appendTo="body">
+                                    </p-datepicker>
+                                </div>
+                                <div class="receive-field receive-field-remarks">
+                                    <label>Remarks</label>
+                                    <input pInputText [(ngModel)]="remarks" placeholder="Optional remarks..." class="w-full" />
+                                </div>
+                                <div class="receive-field receive-field-action">
+                                    <p-button
+                                        label="Receive ({{ selectedMembers.length }})"
+                                        icon="pi pi-check"
+                                        severity="success"
+                                        (onClick)="receiveSelected()"
+                                        [loading]="saving"
+                                        [disabled]="saving || !joiningDate">
+                                    </p-button>
+                                </div>
+                        </div>
+                    }
+                }
+            </p-tabpanel>
+
+            <!-- Tab 2: Receive History -->
+            <p-tabpanel [value]="1">
+                <div class="flex items-center gap-3 mb-4 mt-3">
+                    <label class="font-medium">Filter by Order:</label>
+                    <p-select
+                        [options]="historyFilterOptions"
+                        [(ngModel)]="historyFilterId"
+                        optionLabel="label"
+                        optionValue="value"
+                        (onChange)="onHistoryFilterChange()"
+                        styleClass="w-20rem">
+                    </p-select>
+                </div>
+
+                <p-table
+                    [value]="historyRecords"
+                    [loading]="loadingHistory"
+                    [paginator]="true"
+                    [rows]="25"
+                    [rowsPerPageOptions]="[10, 25, 50]"
+                    styleClass="p-datatable-sm p-datatable-gridlines">
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width:50px">#</th>
+                            <th>Service ID</th>
+                            <th>RAB ID</th>
+                            <th>Rank</th>
+                            <th>Name</th>
+                            <th>Posting Order</th>
+                            <th>Transfer Unit</th>
+                            <th>Joining Date</th>
+                            <th>Received By</th>
+                            <th>Received Date</th>
+                            <th>Remarks</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row let-i="rowIndex">
+                        <tr>
+                            <td>{{ i + 1 }}</td>
+                            <td>{{ row.serviceId || '—' }}</td>
+                            <td>{{ row.rabID || '—' }}</td>
+                            <td>{{ row.rankName || '—' }}</td>
+                            <td>{{ row.fullNameEN || '—' }}</td>
+                            <td>{{ row.draftPostingNo }}</td>
+                            <td>{{ row.transferRabUnitName || '—' }}</td>
+                            <td>{{ formatDisplayDate(row.joiningDate) }}</td>
+                            <td>{{ row.receivedBy || '—' }}</td>
+                            <td>{{ formatDisplayDate(row.receivedDate) }}</td>
+                            <td>{{ row.receiveRemarks || '—' }}</td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr><td colspan="11" class="text-center">No receive history found.</td></tr>
+                    </ng-template>
+                </p-table>
+            </p-tabpanel>
+        </p-tabpanels>
+    </p-tabs>
+</div>
