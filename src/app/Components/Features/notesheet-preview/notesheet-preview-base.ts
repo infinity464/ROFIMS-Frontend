@@ -62,6 +62,7 @@ export interface NoteSheetInfoFull {
     isDeleted?: boolean;
     deletedBy?: string;
     // ── Leave (ExBD) ───────────────────────────────────────────────────
+    exBdLeaveSubjectId?: number | null;
     purposeOfExBdLeaveId?: number | null;
     destinationCountryId?: number | null;
     dateOfVisitFrom?: string | null;

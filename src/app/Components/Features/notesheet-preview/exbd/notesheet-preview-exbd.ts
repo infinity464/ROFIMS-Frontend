@@ -60,10 +60,12 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase {
     employeeOptions: { label: string; value: number }[] = [];
     purposeOptions: { label: string; value: number }[] = [];
     countryOptions: { label: string; value: number }[] = [];
+    subjectTypeOptions: { label: string; value: number }[] = [];
     familyMemberEditOptions: { label: string; value: number }[] = [];
 
     // ── Edit model fields ──────────────────────────────────────
     editSubject = '';
+    editExBdLeaveSubjectId: number | null = null;
     editReferenceNumber = '';
     editMainText = '';
     editNote = '';
@@ -105,6 +107,8 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase {
     private loadExbdDetails(): void {
         const ns = this.noteSheet;
         if (!ns) return;
+
+        this.loadSubjectTypeOptions();
 
         if (ns.employeeId && ns.employeeId > 0) {
             this.servingMembersService.getEmployeePersonalServiceOverview(ns.employeeId)
@@ -232,6 +236,7 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase {
         const ns = this.noteSheet;
 
         this.editSubject = ns.subject ?? '';
+        this.editExBdLeaveSubjectId = ns.exBdLeaveSubjectId ?? null;
         this.editReferenceNumber = ns.referenceNumber ?? '';
         this.editMainText = ns.mainText ?? '';
         this.editNote = ns.note ?? '';
@@ -293,6 +298,20 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase {
             });
     }
 
+    private loadSubjectTypeOptions(): void {
+        this.commonCodeService.getAllActiveCommonCodesType('SubjectType')
+            .pipe(catchError(() => of([])))
+            .subscribe(list => {
+                this.subjectTypeOptions = (list ?? []).map((c: any) => ({ label: c.codeValueEN || c.displayCodeValueEN || '', value: c.codeId }));
+            });
+    }
+
+    getSubjectLabel(id: number | null | undefined): string {
+        if (id == null) return '';
+        const o = this.subjectTypeOptions.find(opt => opt.value === id);
+        return o ? o.label : '';
+    }
+
     private loadCountryOptions(): void {
         this.commonCodeService.getAllActiveCommonCodesType('Country')
             .pipe(catchError(() => of([])))
@@ -323,9 +342,11 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase {
             : null;
         const now = new Date().toISOString();
 
+        const resolvedSubject = this.getSubjectLabel(this.editExBdLeaveSubjectId) || this.editSubject;
         const payload: Record<string, unknown> = {
             ...this.noteSheet,
-            subject: this.editSubject,
+            subject: resolvedSubject,
+            exBdLeaveSubjectId: this.editExBdLeaveSubjectId,
             referenceNumber: this.editReferenceNumber,
             mainText: this.editMainText,
             note: this.editNote || null,
@@ -460,7 +481,7 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase {
 
         const model: NotesheetDocumentModel = {
             isBangla: bn,
-            subject: this.noteSheet.subject ?? '',
+            subject: this.getSubjectLabel(this.noteSheet.exBdLeaveSubjectId) || this.noteSheet.subject || '',
             referenceBlocks: refBlocks,
             referenceLabel: bn ? 'সূত্রঃ ' : 'Reference: ',
             dateLabel: bn ? 'তারিখঃ ' : 'Date: ',
