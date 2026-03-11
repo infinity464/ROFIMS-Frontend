@@ -61,6 +61,8 @@ export class DataTable implements OnInit {
     @Input() totalRecords = 0;
     @Input() rows = 10;
     @Input() loading = false;
+    /** When false, table displays data without lazy loading (client-side paging) */
+    @Input() lazy = true;
     @Output() edit = new EventEmitter<any>();
     @Output() delete = new EventEmitter<{ row: any; event: Event }>();
     @Output() lazyLoad = new EventEmitter<any>();

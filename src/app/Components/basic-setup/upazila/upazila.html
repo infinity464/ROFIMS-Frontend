@@ -11,6 +11,6 @@
 </p-fluid>
 
 <app-data-table [config]="tableConfig" [data]="upazilaData" [first]="first" [totalRecords]="totalRecords" [rows]="rows"
-    [loading]="loading" (edit)="update($event)" (delete)="delete($event.row, $event.event)"
-    (lazyLoad)="getUpazilaWithPaging($event)" (search)="onSearch($event)">
+    [loading]="loading" [lazy]="false" (edit)="update($event)" (delete)="delete($event.row, $event.event)"
+    (search)="onSearch($event)">
 </app-data-table>

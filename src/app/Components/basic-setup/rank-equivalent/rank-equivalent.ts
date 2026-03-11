@@ -43,11 +43,12 @@ export class RankEquivalent implements OnInit {
     /** Cached ranks from all orgs in the list, for table display */
     allMotherOrgRanks: CommonCode[] = [];
 
-    equivalentNameOptions: { label: string; value: number }[] = [];
-    motherOrgOptions: { label: string; value: number }[] = [];
-    motherOrgRankOptions: { label: string; value: number }[] = [];
+    equivalentNameOptions: { label: string; value: number | null }[] = [];
+    motherOrgOptions: { label: string; value: number | null }[] = [];
+    motherOrgRankOptions: { label: string; value: number | null }[] = [];
 
-    rankEquivalentData: EquivalentRankModel[] = [];
+    allRankEquivalentData: (EquivalentRankModel & { equivalentNameDisplay?: string; motherOrgDisplay?: string; motherOrgRankDisplay?: string })[] = [];
+    rankEquivalentData: (EquivalentRankModel & { equivalentNameDisplay?: string; motherOrgDisplay?: string; motherOrgRankDisplay?: string })[] = [];
     totalRecords = 0;
     rows = 10;
     first = 0;
@@ -71,10 +72,30 @@ export class RankEquivalent implements OnInit {
 
     ngOnInit(): void {
         this.initForm();
+        this.setupFormFilterListeners();
         this.loadEquivalentName();
         this.loadActiveMotherOrg();
         this.loadRankEquivalentList();
         this.setupMotherOrgChange();
+    }
+
+    private setupFormFilterListeners(): void {
+        this.rankEquivalentForm.get('equivalentNameID')?.valueChanges.subscribe(() => { this.first = 0; this.buildFilteredData(); });
+        this.rankEquivalentForm.get('motherOrgId')?.valueChanges.subscribe(() => { this.first = 0; this.buildFilteredData(); });
+        this.rankEquivalentForm.get('motherOrgRankId')?.valueChanges.subscribe(() => { this.first = 0; this.buildFilteredData(); });
+    }
+
+    private buildFilteredData(): void {
+        let list = [...this.allRankEquivalentData];
+        const eqId = this.rankEquivalentForm?.get('equivalentNameID')?.value;
+        const orgId = this.rankEquivalentForm?.get('motherOrgId')?.value;
+        const rankId = this.rankEquivalentForm?.get('motherOrgRankId')?.value;
+        if (eqId != null) list = list.filter((r) => r.equivalentNameID === eqId);
+        if (orgId != null) list = list.filter((r) => r.motherOrgId === orgId);
+        if (rankId != null) list = list.filter((r) => r.motherOrgRankId === rankId);
+        this.rankEquivalentData = list;
+        this.totalRecords = list.length;
+        this.first = 0;
     }
 
     initForm(): void {
@@ -146,8 +167,8 @@ export class RankEquivalent implements OnInit {
                 const uniqueOrgIds = [...new Set(list.map((r) => r.motherOrgId))];
                 if (uniqueOrgIds.length === 0) {
                     this.allMotherOrgRanks = [];
-                    this.rankEquivalentData = list.map((row) => this.toDisplayRow(row));
-                    this.totalRecords = this.rankEquivalentData.length;
+                    this.allRankEquivalentData = list.map((row) => this.toDisplayRow(row));
+                    this.buildFilteredData();
                     this.loading = false;
                     return;
                 }
@@ -160,8 +181,8 @@ export class RankEquivalent implements OnInit {
                             pending--;
                             if (pending === 0) {
                                 this.allMotherOrgRanks = allRanks;
-                                this.rankEquivalentData = list.map((row) => this.toDisplayRow(row));
-                                this.totalRecords = this.rankEquivalentData.length;
+                                this.allRankEquivalentData = list.map((row) => this.toDisplayRow(row));
+                                this.buildFilteredData();
                                 this.loading = false;
                             }
                         },
@@ -169,8 +190,8 @@ export class RankEquivalent implements OnInit {
                             pending--;
                             if (pending === 0) {
                                 this.allMotherOrgRanks = allRanks;
-                                this.rankEquivalentData = list.map((row) => this.toDisplayRow(row));
-                                this.totalRecords = this.rankEquivalentData.length;
+                                this.allRankEquivalentData = list.map((row) => this.toDisplayRow(row));
+                                this.buildFilteredData();
                                 this.loading = false;
                             }
                         }
@@ -203,13 +224,17 @@ export class RankEquivalent implements OnInit {
     }
 
     onSubmit(): void {
+        const v = this.rankEquivalentForm.value;
+        if (v.equivalentNameID == null || v.motherOrgId == null || v.motherOrgRankId == null) {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Equivalent Name, Mother Organization and Mother Org Rank' });
+            return;
+        }
         if (this.isSubmitting || this.rankEquivalentForm.invalid) {
             this.rankEquivalentForm.markAllAsTouched();
             return;
         }
         const user = this.shareService.getCurrentUser() ?? 'System';
         const now = this.shareService.getCurrentDateTime();
-        const v = this.rankEquivalentForm.value;
         const model: EquivalentRankModel = {
             equivalentNameID: v.equivalentNameID,
             motherOrgRankId: v.motherOrgRankId,
@@ -278,6 +303,7 @@ export class RankEquivalent implements OnInit {
 
     update(row: EquivalentRankModel & { equivalentNameDisplay?: string; motherOrgDisplay?: string; motherOrgRankDisplay?: string }): void {
         this.editingKeys = { equivalentNameID: row.equivalentNameID, motherOrgRankId: row.motherOrgRankId };
+        this.loadMotherOrgRank(row.motherOrgId);
         this.rankEquivalentForm.patchValue({
             equivalentNameID: row.equivalentNameID,
             motherOrgId: row.motherOrgId,
@@ -319,6 +345,6 @@ export class RankEquivalent implements OnInit {
     }
 
     onSearch(_keyword: string): void {
-        this.loadRankEquivalentList();
+        this.buildFilteredData();
     }
 }

@@ -33,6 +33,7 @@
             <p-select [options]="field.options || []" optionLabel="label" optionValue="value"
                 [formControlName]="field.name"
                 [placeholder]="isFieldDisabled(field) ? 'Please select ' + (field.dependsOn || 'parent') + ' first' : 'Select ' + field.label"
+                [showClear]="true"
                 styleClass="w-full" (onChange)="onFieldChange(field.name, form.get(field.name)?.value)">
             </p-select>
             <!-- Validation message for select -->

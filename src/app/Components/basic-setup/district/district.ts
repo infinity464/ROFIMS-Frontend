@@ -21,6 +21,7 @@ export class District {
 
     codeType = "District";
 
+    allData: any[] = [];
     districtData: any[] = [];
     editingId: number | null = null;
     districtForm!: FormGroup;
@@ -39,8 +40,8 @@ export class District {
                 name: 'divisionId',
                 label: 'Division',
                 type: 'select',
-                required: true,
-                options: [] // Will be populated in ngOnInit
+                required: false,
+                options: [] as { label: string; value: any }[]
             },
             {
                 name: 'codeValueEN',
@@ -58,8 +59,8 @@ export class District {
                 name: 'status',
                 label: 'Status',
                 type: 'select',
-                required: true,
-                default: true,
+                required: false,
+                default: null,
                 options: [
                     { label: 'Active', value: true },
                     { label: 'Inactive', value: false }
@@ -70,7 +71,7 @@ export class District {
 
         tableConfig: TableConfig = {
         tableColumns: [
-            // { field: 'divisionName', header: 'Division' },
+            { field: 'divisionNameDisplay', header: 'Division' },
             { field: 'codeValueEN', header: 'District Name (EN)' },
             { field: 'codeValueBN', header: 'District Name (BN)' },
             {
@@ -94,19 +95,21 @@ export class District {
 
     ngOnInit(): void {
         this.initForm();
-        this.loadDivisions(); // Load divisions for dropdown
-        this.getDistrictWithPaging({
-            first: this.first,
-            rows: this.rows
-        });
+        this.setupFormFilterListeners();
+        this.loadDivisions();
+    }
+
+    private setupFormFilterListeners() {
+        this.districtForm.get('divisionId')?.valueChanges.subscribe(() => { this.first = 0; this.buildTableData(); });
+        this.districtForm.get('status')?.valueChanges.subscribe(() => { this.first = 0; this.buildTableData(); });
     }
 
       initForm() {
         this.districtForm = this.fb.group({
-            divisionId: [null, Validators.required],
+            divisionId: [null],
             codeValueEN: ['', Validators.required],
             codeValueBN: ['', Validators.required],
-            status: [true, Validators.required],
+            status: [null],
             orgId: [0],
             codeId: [0],
             codeType: ['District'],
@@ -137,6 +140,7 @@ export class District {
                 if (divisionField) {
                     divisionField.options = divisionOptions;
                 }
+                this.getAllData();
             },
             error: (err) => {
                 console.error('Error loading divisions:', err);
@@ -149,20 +153,12 @@ export class District {
         });
     }
 
-    getDistrictWithPaging(event?: any) {
+    getAllData() {
         this.loading = true;
-        const pageNo = event ? event.first / event.rows + 1 : 1;
-        const pageSize = event?.rows ?? this.rows;
-
-        const apiCall = this.searchValue
-            ? this.masterBasicSetupService.getByKeyordWithPaging('District', this.searchValue, pageNo, pageSize)
-            : this.masterBasicSetupService.getAllWithPaging('District', pageNo, pageSize);
-
-        apiCall.subscribe({
+        this.masterBasicSetupService.getAllByType('District').subscribe({
             next: (res) => {
-                this.districtData = res.datalist;
-                this.totalRecords = res.pages.rows;
-                this.rows = pageSize;
+                this.allData = Array.isArray(res) ? res : [];
+                this.buildTableData();
                 this.loading = false;
             },
             error: (err) => {
@@ -177,7 +173,32 @@ export class District {
         });
     }
 
+    private buildTableData() {
+        const divisionOpts = (this.formConfig.formFields.find(f => f.name === 'divisionId')?.options as { label: string; value: any }[]) || [];
+        const getDivisionName = (id: number) => divisionOpts.find((o: any) => o.value === id)?.label ?? '-';
+        let list = this.allData.map((r: any) => ({ ...r, divisionNameDisplay: getDivisionName(r.parentCodeId) }));
+        const divisionId = this.districtForm?.get('divisionId')?.value;
+        const status = this.districtForm?.get('status')?.value;
+        if (divisionId != null && divisionId !== '') list = list.filter((r: any) => r.parentCodeId === divisionId);
+        if (status != null) list = list.filter((r: any) => r.status === status);
+        const q = (this.searchValue ?? '').toLowerCase().trim();
+        if (q) list = list.filter((r: any) => r.codeValueEN?.toLowerCase().includes(q) || r.codeValueBN?.toLowerCase().includes(q));
+        this.districtData = list;
+        this.totalRecords = list.length;
+        this.first = 0;
+    }
+
     submit(data: any) {
+        const divisionId = this.districtForm.get('divisionId')?.value;
+        const status = this.districtForm.get('status')?.value;
+        if (divisionId == null || divisionId === '') {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Division' });
+            return;
+        }
+        if (status == null) {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Status' });
+            return;
+        }
         if (this.districtForm.invalid) {
             this.districtForm.markAllAsTouched();
             return;
@@ -212,10 +233,7 @@ export class District {
             next: (res) => {
                 console.log('Created:', res);
                 this.resetForm();
-                this.getDistrictWithPaging({
-                    first: this.first,
-                    rows: this.rows
-                });
+                this.getAllData();
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Success',
@@ -251,10 +269,7 @@ export class District {
             next: (res) => {
                 console.log('Updated:', res);
                 this.resetForm();
-                this.getDistrictWithPaging({
-                    first: this.first,
-                    rows: this.rows
-                });
+                this.getAllData();
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Success',
@@ -304,10 +319,7 @@ export class District {
             accept: () => {
                 this.masterBasicSetupService.delete(row.codeId).subscribe({
                     next: () => {
-                        this.getDistrictWithPaging({
-                            first: this.first,
-                            rows: this.rows
-                        });
+                        this.getAllData();
                         this.messageService.add({
                             severity: 'success',
                             summary: 'Success',
@@ -330,12 +342,13 @@ export class District {
     resetForm() {
         this.editingId = null;
         this.isSubmitting = false;
+        this.searchValue = '';
         this.districtForm.reset({
             divisionId: null,
             orgId: 0,
             codeId: 0,
             codeType: 'District',
-            status: true,
+            status: null,
             parentCodeId: null,
             commCode: null,
             displayCodeValueEN: null,
@@ -347,12 +360,13 @@ export class District {
             lastUpdatedBy: '',
             lastupdate: ''
         });
+        this.buildTableData();
     }
 
     onSearch(keyword: string) {
-        this.searchValue = keyword;
+        this.searchValue = keyword ?? '';
         this.first = 0;
-        this.getDistrictWithPaging({ first: 0, rows: this.rows });
+        this.buildTableData();
     }
 
     private getCurrentUser(): string {

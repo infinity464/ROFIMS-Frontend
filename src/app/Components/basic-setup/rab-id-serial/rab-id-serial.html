@@ -17,7 +17,8 @@
                         optionLabel="label"
                         optionValue="value"
                         placeholder="Select Officer Type"
-                        class="w-full">
+                        [showClear]="true"
+                        styleClass="w-full">
                     </p-select>
                     @if (rabIdSerialForm.get('officerTypeId')?.invalid && rabIdSerialForm.get('officerTypeId')?.touched) {
                         <small class="text-red-500 block mt-1">
