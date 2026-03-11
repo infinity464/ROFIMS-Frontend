@@ -21,6 +21,7 @@ export class Trade {
     codeType = 'Trade';
     title = 'Trade';
 
+    allData: any[] = [];
     commonData: any[] = [];
     editingId: number | null = null;
     commonForm!: FormGroup;
@@ -40,15 +41,15 @@ export class Trade {
                 name: 'orgId',
                 label: 'Mother Organization',
                 type: 'select',
-                required: true,
-                options: []
+                required: false,
+                options: [] as { label: string; value: any }[]
             },
             {
                 name: 'corpsId',
                 label: 'Corps',
                 type: 'select',
-                required: true,
-                options: [],
+                required: false,
+                options: [] as { label: string; value: any }[],
                 dependsOn: 'orgId',
                 cascadeLoad: true
             },
@@ -68,8 +69,8 @@ export class Trade {
                 name: 'status',
                 label: 'Status',
                 type: 'select',
-                required: true,
-                default: true,
+                required: false,
+                default: null,
                 options: [
                     { label: 'Active', value: true },
                     { label: 'Inactive', value: false }
@@ -80,6 +81,8 @@ export class Trade {
 
     tableConfig: TableConfig = {
         tableColumns: [
+            { field: 'orgNameDisplay', header: 'Mother Organization' },
+            { field: 'corpsNameDisplay', header: 'Corps' },
             { field: 'codeValueEN', header: 'Trade Name (EN)' },
             { field: 'codeValueBN', header: 'Trade Name (BN)' },
             {
@@ -103,22 +106,25 @@ export class Trade {
 
     ngOnInit(): void {
         this.initForm();
+        this.setupFormValueChanges();
+        this.setupFormFilterListeners();
         this.loadActiveMotherOrgs();
-        this.setupFormValueChanges(); // ADD THIS LINE
-        this.getCommonCodeWithPaging({
-            first: this.first,
-            rows: this.rows
-        });
+    }
+
+    private setupFormFilterListeners() {
+        this.commonForm.get('orgId')?.valueChanges.subscribe(() => { this.first = 0; this.buildTableData(); });
+        this.commonForm.get('corpsId')?.valueChanges.subscribe(() => { this.first = 0; this.buildTableData(); });
+        this.commonForm.get('status')?.valueChanges.subscribe(() => { this.first = 0; this.buildTableData(); });
     }
 
     initForm() {
         this.commonForm = this.fb.group({
-            orgId: ['', Validators.required],
-            corpsId: ['', Validators.required],
+            orgId: [null],
+            corpsId: [null],
             codeValueEN: ['', Validators.required],
             codeValueBN: ['', Validators.required],
             sortOrder: [null],
-            status: [true, Validators.required],
+            status: [null],
             codeId: [0],
             codeType: ['Trade'],
             parentCodeId: [null],
@@ -135,7 +141,6 @@ export class Trade {
 
     setupFormValueChanges() {
         this.commonForm.get('orgId')?.valueChanges.subscribe((orgId) => {
-            console.log('OrgId changed:', orgId);
             if (orgId) {
                 // Reset corpsId when orgId changes
                 this.commonForm.patchValue({ corpsId: '' }, { emitEvent: false });
@@ -173,6 +178,7 @@ export class Trade {
                 if (motherOrgField) {
                     motherOrgField.options = motherOrgOptions;
                 }
+                this.getAllData();
             },
             error: (err) => {
                 console.error('Error loading mother organizations:', err);
@@ -192,17 +198,15 @@ export class Trade {
 
         apiCall.subscribe({
             next: (corps) => {
-                this.corpsOptions = corps.map((d) => ({
-                    label: d.codeValueEN,
-                    value: d.codeId
-                }));
+        this.corpsOptions = corps.map((d) => ({
+            label: d.codeValueEN,
+            value: d.codeId
+        }));
 
-                const corpsField = this.formConfig.formFields.find((f) => f.name === 'corpsId');
-                if (corpsField) {
-                    corpsField.options = this.corpsOptions;
-                }
-
-                console.log('Corps loaded:', this.corpsOptions);
+        const corpsField = this.formConfig.formFields.find((f) => f.name === 'corpsId');
+        if (corpsField) {
+            corpsField.options = this.corpsOptions;
+        }
             },
             error: (err) => {
                 console.error('Error loading corps:', err);
@@ -225,35 +229,57 @@ export class Trade {
         }
     }
 
-    getCommonCodeWithPaging(event?: any) {
+    getAllData() {
         this.loading = true;
-        const pageNo = event ? event.first / event.rows + 1 : 1;
-        const pageSize = event?.rows ?? this.rows;
-
-        const apiCall = this.searchValue
-            ? this.masterBasicSetupService.getByKeyordWithPaging('Trade', this.searchValue, pageNo, pageSize)
-            : this.masterBasicSetupService.getAllWithPaging('Trade', pageNo, pageSize);
-
-        apiCall.subscribe({
+        this.masterBasicSetupService.getAllByType('Trade').subscribe({
             next: (res) => {
-                this.commonData = res.datalist;
-                this.totalRecords = res.pages.rows;
-                this.rows = pageSize;
+                this.allData = Array.isArray(res) ? res : [];
+                this.buildTableData();
                 this.loading = false;
             },
             error: (err) => {
                 console.error('Error fetching data:', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Failed to load data'
-                });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load data' });
                 this.loading = false;
             }
         });
     }
 
+    private buildTableData() {
+        const orgOpts = (this.formConfig.formFields.find(f => f.name === 'orgId')?.options as { label: string; value: any }[]) || [];
+        const corpsOpts = (this.formConfig.formFields.find(f => f.name === 'corpsId')?.options as { label: string; value: any }[]) || [];
+        const getOrgName = (id: number) => orgOpts.find((o: any) => o.value === id)?.label ?? '-';
+        const getCorpsName = (id: number) => corpsOpts.find((o: any) => o.value === id)?.label ?? '-';
+        let list = this.allData.map((r: any) => ({ ...r, orgNameDisplay: getOrgName(r.orgId), corpsNameDisplay: getCorpsName(r.parentCodeId) }));
+        const orgId = this.commonForm?.get('orgId')?.value;
+        const corpsId = this.commonForm?.get('corpsId')?.value;
+        const status = this.commonForm?.get('status')?.value;
+        if (orgId != null && orgId !== '') list = list.filter((r: any) => r.orgId === orgId);
+        if (corpsId != null && corpsId !== '') list = list.filter((r: any) => r.parentCodeId === corpsId);
+        if (status != null) list = list.filter((r: any) => r.status === status);
+        const q = (this.searchValue ?? '').toLowerCase().trim();
+        if (q) list = list.filter((r: any) => r.codeValueEN?.toLowerCase().includes(q) || r.codeValueBN?.toLowerCase().includes(q));
+        this.commonData = list;
+        this.totalRecords = list.length;
+        this.first = 0;
+    }
+
     submit(data: any) {
+        const orgId = this.commonForm.get('orgId')?.value;
+        const corpsId = this.commonForm.get('corpsId')?.value;
+        const status = this.commonForm.get('status')?.value;
+        if (orgId == null || orgId === '') {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Mother Organization' });
+            return;
+        }
+        if (corpsId == null || corpsId === '') {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Corps' });
+            return;
+        }
+        if (status == null) {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Status (Active or Inactive)' });
+            return;
+        }
         if (this.commonForm.invalid) {
             this.commonForm.markAllAsTouched();
             return;
@@ -287,10 +313,7 @@ export class Trade {
             next: (res) => {
                 console.log('Created:', res);
                 this.resetForm();
-                this.getCommonCodeWithPaging({
-                    first: this.first,
-                    rows: this.rows
-                });
+                this.getAllData();
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Success',
@@ -325,10 +348,7 @@ export class Trade {
             next: (res) => {
                 console.log('Updated:', res);
                 this.resetForm();
-                this.getCommonCodeWithPaging({
-                    first: this.first,
-                    rows: this.rows
-                });
+                this.getAllData();
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Success',
@@ -415,10 +435,7 @@ export class Trade {
             accept: () => {
                 this.masterBasicSetupService.delete(row.codeId).subscribe({
                     next: () => {
-                        this.getCommonCodeWithPaging({
-                            first: this.first,
-                            rows: this.rows
-                        });
+                        this.getAllData();
                         this.messageService.add({
                             severity: 'success',
                             summary: 'Success',
@@ -448,12 +465,13 @@ export class Trade {
         }
         this.corpsOptions = [];
 
+        this.searchValue = '';
         this.commonForm.reset({
-            orgId: '',
-            corpsId: '',
+            orgId: null,
+            corpsId: null,
             codeId: 0,
             codeType: 'Trade',
-            status: true,
+            status: null,
             parentCodeId: null,
             commCode: null,
             displayCodeValueEN: null,
@@ -465,12 +483,13 @@ export class Trade {
             lastUpdatedBy: '',
             lastupdate: ''
         });
+        this.buildTableData();
     }
 
     onSearch(keyword: string) {
-        this.searchValue = keyword;
+        this.searchValue = keyword ?? '';
         this.first = 0;
-        this.getCommonCodeWithPaging({ first: 0, rows: this.rows });
+        this.buildTableData();
     }
 
     private getCurrentUser(): string {

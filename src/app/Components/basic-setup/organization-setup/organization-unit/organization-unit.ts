@@ -6,7 +6,6 @@ import { Fluid } from 'primeng/fluid';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
-import { MultiSelectModule } from 'primeng/multiselect';
 import { OrganizationService } from '../services/organization-service';
 import { OrganizationModel } from '../models/organization';
 import { Button, ButtonModule } from "primeng/button";
@@ -18,11 +17,6 @@ import { TableModule } from "primeng/table";
 import { IconField } from "primeng/iconfield";
 import { InputIcon } from "primeng/inputicon";
 import { SharedService } from '@/shared/services/shared-service';
-
-interface TableColumn {
-    field: string;
-    header: string;
-}
 
 interface OrgUnitRow extends OrganizationModel {
     parentName?: string;
@@ -36,7 +30,6 @@ interface OrgUnitRow extends OrganizationModel {
         ReactiveFormsModule,
         InputTextModule,
         SelectModule,
-        MultiSelectModule,
         DatePickerModule,
         InputNumberModule,
         Button,
@@ -64,41 +57,12 @@ export class OrganizationUnit implements OnInit {
     rows = 10;
     totalRecords = 0;
 
-    // Search
     searchValue = '';
-
-    // Filter dropdowns
-    filterParentId: number | null = null;
-    filterStatus: boolean | null = null;
 
     statusOptions = [
         { label: 'Active', value: true },
         { label: 'Inactive', value: false }
     ];
-
-    filterStatusOptions = [
-        { label: 'All', value: null },
-        { label: 'Active', value: true },
-        { label: 'Inactive', value: false }
-    ];
-
-    get filterParentOptions(): { label: string; value: number | null }[] {
-        return [
-            { label: 'All', value: null },
-            ...this.motherOrg.map(o => ({ label: o.orgNameEN, value: o.orgId }))
-        ];
-    }
-
-    // Column visibility - dynamic filter
-    cols: TableColumn[] = [
-        { field: 'parentName', header: 'Parent Name' },
-        { field: 'orgNameEN', header: 'Unit Name (English)' },
-        { field: 'orgNameBN', header: 'Unit Name (Bangla)' },
-        { field: 'locationBN', header: 'Unit Location (Bangla)' },
-        { field: 'locationEN', header: 'Unit Location (English)' },
-        { field: 'status', header: 'Status' }
-    ];
-    selectedColumns: TableColumn[] = [];
 
     constructor(
         private fb: FormBuilder,
@@ -109,20 +73,32 @@ export class OrganizationUnit implements OnInit {
     ) {}
 
     ngOnInit(): void {
-        this.selectedColumns = [...this.cols];
         this.currentUser = this.sharedService.getCurrentUser();
         this.initForm();
+        this.setupFormFilterListeners();
         this.loadMotherOrg(); // loads first, then GetAllOrgUnit so parentName can use both
+    }
+
+    onSearch() {
+        this.first = 0;
+        this.buildTableData();
+    }
+
+    private setupFormFilterListeners() {
+        this.organizationForm.get('parentOrg')?.valueChanges.subscribe(() => {
+            this.first = 0;
+            this.buildTableData();
+        });
+        this.organizationForm.get('status')?.valueChanges.subscribe(() => {
+            this.first = 0;
+            this.buildTableData();
+        });
     }
 
     getParentName(parentOrgId: number | null | undefined): string {
         if (parentOrgId == null) return '-';
         const parent = this.motherOrg.find(o => o.orgId === parentOrgId);
         return parent?.orgNameEN ?? '-';
-    }
-
-    isColumnVisible(field: string): boolean {
-        return this.selectedColumns.some(c => c.field === field);
     }
 
     initForm() {
@@ -137,7 +113,7 @@ export class OrganizationUnit implements OnInit {
             locationBN: [''],
             email: [''],
             sortOrder: [0],
-            status: [true],
+            status: [null],
             remarks: [''],
             parentOrg: [null],
             createdBy: [this.currentUser],
@@ -153,7 +129,7 @@ export class OrganizationUnit implements OnInit {
             next: (res: OrganizationModel[]) => {
                 console.log('Organizations fetched successfully', res);
                 this.organizations = res;
-                this.applyFilters();
+                this.buildTableData();
             },
             error: (err: any) => {
                 console.log('Error fetching organizations');
@@ -189,41 +165,31 @@ export class OrganizationUnit implements OnInit {
         return parent?.orgNameEN ?? '';
     }
 
-    onSearch() {
-        this.searchValue = (this.searchValue ?? '').toLowerCase().trim();
-        this.applyFilters();
-    }
-
-    onFilterChange() {
-        this.first = 0;
-        this.applyFilters();
-    }
-
-    clearFilters() {
-        this.searchValue = '';
-        this.filterParentId = null;
-        this.filterStatus = null;
-        this.first = 0;
-        this.applyFilters();
-    }
-
-    applyFilters() {
+    private buildTableData() {
         let list = this.organizations.map(o => ({
             ...o,
             parentName: this.resolveParentName(o.parentOrg)
         }));
 
-        if (this.searchValue) {
-            const q = this.searchValue;
+        const parentOrg = this.organizationForm?.get('parentOrg')?.value;
+        const status = this.organizationForm?.get('status')?.value;
+
+        if (parentOrg != null && parentOrg !== '') {
+            list = list.filter(org => org.parentOrg === parentOrg);
+        }
+        if (status != null) {
+            list = list.filter(org => org.status === status);
+        }
+
+        const q = (this.searchValue ?? '').toLowerCase().trim();
+        if (q) {
             list = list.filter(org =>
                 org.orgNameEN?.toLowerCase().includes(q) ||
-                org.orgNameBN?.toLowerCase().includes(q));
-        }
-        if (this.filterParentId != null) {
-            list = list.filter(org => org.parentOrg === this.filterParentId);
-        }
-        if (this.filterStatus != null) {
-            list = list.filter(org => org.status === this.filterStatus);
+                org.orgNameBN?.toLowerCase().includes(q) ||
+                org.locationEN?.toLowerCase().includes(q) ||
+                org.locationBN?.toLowerCase().includes(q) ||
+                (org.parentName && org.parentName.toLowerCase().includes(q))
+            );
         }
 
         this.filteredOrganizations = list;
@@ -231,9 +197,18 @@ export class OrganizationUnit implements OnInit {
         this.first = 0;
     }
 
-
     onSubmit() {
         if (this.isSubmitting) return;
+
+        const status = this.organizationForm.get('status')?.value;
+        if (status == null) {
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'Validation',
+                detail: 'Please select Status (Active or Inactive) for the organization'
+            });
+            return;
+        }
 
         if (this.organizationForm.invalid) {
             this.organizationForm.markAllAsTouched();
@@ -356,15 +331,17 @@ export class OrganizationUnit implements OnInit {
 
     onReset() {
         this.editingId = null;
+        this.searchValue = '';
         this.organizationForm.reset({
             orgId: 0,
             parentOrg: null,
-            status: true,
+            status: null,
             createdDate: new Date(),
             lastupdate: new Date(),
             lastUpdatedBy: this.currentUser,
             createdBy: this.currentUser
         });
+        this.buildTableData();
         this.isSubmitting = false;
     }
 }

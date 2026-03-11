@@ -21,6 +21,6 @@
             [loading]="loading"
             (edit)="update($event)"
             (delete)="delete($event.row, $event.event)"
-            (lazyLoad)="getCommonCodeWithPaging($event)"
+            [lazy]="false"
             (search)="onSearch($event)">
         </app-data-table>

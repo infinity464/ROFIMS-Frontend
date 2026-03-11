@@ -22,7 +22,9 @@ export class Decoration {
     codeType = "Decoration";
     title = "Gallantry Awards / Decoration";
 
+    allData: any[] = [];
     commonData: any[] = [];
+    orgOptions: { label: string; value: any }[] = [];
     editingId: number | null = null;
     commonForm!: FormGroup;
 
@@ -40,8 +42,9 @@ export class Decoration {
                 name: 'orgId',
                 label: 'Mother Organization',
                 type: 'select',
-                required: true,
-                options: [] // Will be populated in ngOnInit
+                required: false,
+                default: null,
+                options: []
             },
             {
                 name: 'codeValueEN',
@@ -59,8 +62,8 @@ export class Decoration {
                 name: 'status',
                 label: 'Status',
                 type: 'select',
-                required: true,
-                default: true,
+                required: false,
+                default: null,
                 options: [
                     { label: 'Active', value: true },
                     { label: 'Inactive', value: false }
@@ -71,7 +74,7 @@ export class Decoration {
 
         tableConfig: TableConfig = {
         tableColumns: [
-
+            { field: 'orgNameDisplay', header: 'Mother Organization' },
             { field: 'codeValueEN', header: 'Gallantry Awards Name (EN)' },
             { field: 'codeValueBN', header: 'Gallantry Awards Name (BN)' },
             {
@@ -95,19 +98,21 @@ export class Decoration {
 
     ngOnInit(): void {
         this.initForm();
-        this.loadActiveMotherOrgs(); // Load motherOrgRanks for dropdown
-        this.getCommonCodeWithPaging({
-            first: this.first,
-            rows: this.rows
-        });
+        this.setupFormFilterListeners();
+        this.loadActiveMotherOrgs();
+    }
+
+    private setupFormFilterListeners() {
+        this.commonForm.get('orgId')?.valueChanges.subscribe(() => { this.first = 0; this.buildTableData(); });
+        this.commonForm.get('status')?.valueChanges.subscribe(() => { this.first = 0; this.buildTableData(); });
     }
 
       initForm() {
         this.commonForm = this.fb.group({
+            orgId: [null],
             codeValueEN: ['', Validators.required],
             codeValueBN: ['', Validators.required],
-            status: [true, Validators.required],
-            orgId: ['', Validators.required],
+            status: [null],
             codeId: [0],
             codeType: ['Decoration'],
             parentCodeId: [null], // Will store motherOrgId
@@ -127,16 +132,10 @@ export class Decoration {
     loadActiveMotherOrgs() {
         this.masterBasicSetupService.getAllActiveMotherOrgs().subscribe({
             next: (motherOrgRanks) => {
-                const motherOrgOptions = motherOrgRanks.map(d => ({
-                    label: d.orgNameEN,
-                    value: d.orgId
-                }));
-
-                // Update form config with motherOrg options
+                this.orgOptions = motherOrgRanks.map(d => ({ label: d.orgNameEN, value: d.orgId }));
                 const motherOrgField = this.formConfig.formFields.find(f => f.name === 'orgId');
-                if (motherOrgField) {
-                    motherOrgField.options = motherOrgOptions;
-                }
+                if (motherOrgField) motherOrgField.options = this.orgOptions;
+                this.getAllData();
             },
             error: (err) => {
                 console.error('Error loading decoration:', err);
@@ -149,56 +148,63 @@ export class Decoration {
         });
     }
 
-    getCommonCodeWithPaging(event?: any) {
+    getAllData() {
         this.loading = true;
-        const pageNo = event ? event.first / event.rows + 1 : 1;
-        const pageSize = event?.rows ?? this.rows;
-
-        const apiCall = this.searchValue
-            ? this.masterBasicSetupService.getByKeyordWithPaging('Decoration', this.searchValue, pageNo, pageSize)
-            : this.masterBasicSetupService.getAllWithPaging('Decoration', pageNo, pageSize);
-
-        apiCall.subscribe({
+        this.masterBasicSetupService.getAllByType('Decoration').subscribe({
             next: (res) => {
-                this.commonData = res.datalist;
-                this.totalRecords = res.pages.rows;
-                this.rows = pageSize;
+                this.allData = Array.isArray(res) ? res : [];
+                this.buildTableData();
                 this.loading = false;
             },
             error: (err) => {
                 console.error('Error fetching data:', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Failed to load data'
-                });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load data' });
                 this.loading = false;
             }
         });
     }
 
+    private buildTableData() {
+        const getOrgName = (id: number) => this.orgOptions.find((o: any) => o.value === id)?.label ?? '-';
+        let list = this.allData.map((r: any) => ({ ...r, orgNameDisplay: getOrgName(r.orgId ?? 0) }));
+        const orgId = this.commonForm?.get('orgId')?.value;
+        const status = this.commonForm?.get('status')?.value;
+        if (orgId != null && orgId !== '') list = list.filter((r: any) => r.orgId === orgId);
+        if (status != null) list = list.filter((r: any) => r.status === status);
+        const q = (this.searchValue ?? '').toLowerCase().trim();
+        if (q) list = list.filter((r: any) => r.codeValueEN?.toLowerCase().includes(q) || r.codeValueBN?.toLowerCase().includes(q));
+        this.commonData = list;
+        this.totalRecords = list.length;
+        this.first = 0;
+    }
+
     submit(data: any) {
+        const orgId = this.commonForm.get('orgId')?.value;
+        const status = this.commonForm.get('status')?.value;
+        if (orgId == null || orgId === '') {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Mother Organization' });
+            return;
+        }
+        if (status == null) {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Status' });
+            return;
+        }
         if (this.commonForm.invalid) {
             this.commonForm.markAllAsTouched();
             return;
         }
 
         const currentUser = this.getCurrentUser();
-        const currentDateTime = this.shareService.getCurrentDateTime()
-
-
-        // this.commonForm.patchValue({
-        //     parentCodeId: this.commonForm.value.divisionId
-        // });
+        const currentDateTime = this.shareService.getCurrentDateTime();
 
         if (this.editingId) {
-            this.updateDistrict(currentUser, currentDateTime);
+            this.updateDecoration(currentUser, currentDateTime);
         } else {
-            this.createDistrict(currentUser, currentDateTime);
+            this.createDecoration(currentUser, currentDateTime);
         }
     }
 
-    private createDistrict(currentUser: string, currentDateTime: string) {
+    private createDecoration(currentUser: string, currentDateTime: string) {
         this.isSubmitting = true;
         const createPayload = {
             ...this.commonForm.value,
@@ -212,10 +218,7 @@ export class Decoration {
             next: (res) => {
                 console.log('Created:', res);
                 this.resetForm();
-                this.getCommonCodeWithPaging({
-                    first: this.first,
-                    rows: this.rows
-                });
+                this.getAllData();
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Success',
@@ -236,7 +239,7 @@ export class Decoration {
         });
     }
 
-    private updateDistrict(currentUser: string, currentDateTime: string) {
+    private updateDecoration(currentUser: string, currentDateTime: string) {
         this.isSubmitting = true;
         const updatePayload = {
             ...this.commonForm.value,
@@ -251,10 +254,7 @@ export class Decoration {
             next: (res) => {
                 console.log('Updated:', res);
                 this.resetForm();
-                this.getCommonCodeWithPaging({
-                    first: this.first,
-                    rows: this.rows
-                });
+                this.getAllData();
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Success',
@@ -305,10 +305,7 @@ export class Decoration {
             accept: () => {
                 this.masterBasicSetupService.delete(row.codeId).subscribe({
                     next: () => {
-                        this.getCommonCodeWithPaging({
-                            first: this.first,
-                            rows: this.rows
-                        });
+                this.getAllData();
                         this.messageService.add({
                             severity: 'success',
                             summary: 'Success',
@@ -331,11 +328,12 @@ export class Decoration {
     resetForm() {
         this.editingId = null;
         this.isSubmitting = false;
+        this.searchValue = '';
         this.commonForm.reset({
-            orgId: '',
+            orgId: null,
             codeId: 0,
             codeType: 'Decoration',
-            status: true,
+            status: null,
             parentCodeId: null,
             commCode: null,
             displayCodeValueEN: null,
@@ -347,12 +345,13 @@ export class Decoration {
             lastUpdatedBy: '',
             lastupdate: ''
         });
+        this.buildTableData();
     }
 
     onSearch(keyword: string) {
-        this.searchValue = keyword;
+        this.searchValue = keyword ?? '';
         this.first = 0;
-        this.getCommonCodeWithPaging({ first: 0, rows: this.rows });
+        this.buildTableData();
     }
 
     private getCurrentUser(): string {

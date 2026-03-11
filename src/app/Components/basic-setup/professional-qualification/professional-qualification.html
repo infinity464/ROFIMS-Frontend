@@ -19,8 +19,8 @@
             [totalRecords]="totalRecords"
             [rows]="rows"
             [loading]="loading"
+            [lazy]="false"
             (edit)="update($event)"
             (delete)="delete($event.row, $event.event)"
-            (lazyLoad)="getCommonCodeWithPaging($event)"
             (search)="onSearch($event)">
         </app-data-table>

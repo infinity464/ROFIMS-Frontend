@@ -26,6 +26,7 @@ export class BankBranchComponent implements OnInit {
     bankBranches: BankBranchModel[] = [];
     filteredBankBranches: BankBranchModel[] = [];
     banks: BankModel[] = [];
+    bankOptions: { bankId: number | null; bankNameEN: string }[] = [];
 
     editingId: number | null = null;
     currentUser: string = '';
@@ -44,16 +45,44 @@ export class BankBranchComponent implements OnInit {
     ) {}
 
     ngOnInit(): void {
-        this.getAll();
-        this.loadBanks();
         this.currentUser = this.sharedService.getCurrentUser();
         this.initForm();
+        this.setupFormFilterListeners();
+        this.getAll();
+        this.loadBanks();
+    }
+
+    private setupFormFilterListeners() {
+        this.bankBranchForm.get('bankId')?.valueChanges.subscribe(() => {
+            this.first = 0;
+            this.buildTableData();
+        });
+    }
+
+    private buildTableData() {
+        let list = [...this.bankBranches];
+        const bankId = this.bankBranchForm?.get('bankId')?.value;
+        if (bankId != null) {
+            list = list.filter((b) => b.bankId === bankId);
+        }
+        const q = (this.searchValue ?? '').toLowerCase().trim();
+        if (q) {
+            list = list.filter((b) =>
+                (b.branchNameEN && b.branchNameEN.toLowerCase().includes(q)) ||
+                (b.branchNameBN && b.branchNameBN.toLowerCase().includes(q)) ||
+                (b.location && b.location.toLowerCase().includes(q)) ||
+                this.getBankName(b.bankId).toLowerCase().includes(q)
+            );
+        }
+        this.filteredBankBranches = list;
+        this.totalRecords = list.length;
+        this.first = 0;
     }
 
     initForm() {
         this.bankBranchForm = this.fb.group({
             bankBranchId: [0],
-            bankId: [null, Validators.required],
+            bankId: [null],
             branchNameEN: ['', Validators.required],
             branchNameBN: [''],
             location: [''],
@@ -67,7 +96,8 @@ export class BankBranchComponent implements OnInit {
     loadBanks() {
         this.masterBasicSetupService.getAllBank().subscribe({
             next: (res: BankModel[]) => {
-                this.banks = res;
+                this.banks = res ?? [];
+                this.bankOptions = this.banks;
             },
             error: () => {
                 this.messageService.add({
@@ -82,10 +112,8 @@ export class BankBranchComponent implements OnInit {
     getAll() {
         this.masterBasicSetupService.getAllBankBranch().subscribe({
             next: (res: BankBranchModel[]) => {
-                const list = Array.isArray(res) ? res : [];
-                this.bankBranches = list;
-                this.filteredBankBranches = [...list];
-                this.totalRecords = list.length;
+                this.bankBranches = Array.isArray(res) ? res : [];
+                this.buildTableData();
             },
             error: () => {
                 this.messageService.add({
@@ -99,22 +127,9 @@ export class BankBranchComponent implements OnInit {
 
     onSearch(event: Event) {
         const target = event.target as HTMLInputElement;
-        this.searchValue = target.value.toLowerCase().trim();
-
-        if (this.searchValue) {
-            this.filteredBankBranches = this.bankBranches.filter(
-                (b) =>
-                    (b.branchNameEN && b.branchNameEN.toLowerCase().includes(this.searchValue)) ||
-                    (b.branchNameBN && b.branchNameBN.toLowerCase().includes(this.searchValue)) ||
-                    (b.location && b.location.toLowerCase().includes(this.searchValue)) ||
-                    this.getBankName(b.bankId).toLowerCase().includes(this.searchValue)
-            );
-        } else {
-            this.filteredBankBranches = [...this.bankBranches];
-        }
-
-        this.totalRecords = this.filteredBankBranches.length;
+        this.searchValue = (target?.value ?? '').toLowerCase().trim();
         this.first = 0;
+        this.buildTableData();
     }
 
     getBankName(bankId: number): string {
@@ -241,6 +256,7 @@ export class BankBranchComponent implements OnInit {
 
     onReset() {
         this.editingId = null;
+        this.searchValue = '';
         this.bankBranchForm.reset({
             bankBranchId: 0,
             bankId: null,
@@ -249,6 +265,7 @@ export class BankBranchComponent implements OnInit {
             lastUpdatedBy: this.currentUser,
             lastupdate: new Date()
         });
+        this.buildTableData();
         this.isSubmitting = false;
     }
 }

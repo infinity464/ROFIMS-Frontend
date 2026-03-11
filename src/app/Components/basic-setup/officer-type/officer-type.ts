@@ -22,6 +22,7 @@ export class OfficerType {
     codeType = "OfficerType";
     title = 'Officer Type';
 
+    allData: any[] = [];
     commonCodeData: any[] = [];
     editingId: number | null = null;
     commonCodeForm!: FormGroup;
@@ -40,8 +41,8 @@ export class OfficerType {
                 name: 'employeeTypeId',
                 label: 'Employee Type',
                 type: 'select',
-                required: true,
-                options: [] // Will be populated in ngOnInit
+                required: false,
+                options: [] as { label: string; value: any }[]
             },
             {
                 name: 'codeValueEN',
@@ -59,8 +60,8 @@ export class OfficerType {
                 name: 'status',
                 label: 'Status',
                 type: 'select',
-                required: true,
-                default: true,
+                required: false,
+                default: null,
                 options: [
                     { label: 'Active', value: true },
                     { label: 'Inactive', value: false }
@@ -71,7 +72,8 @@ export class OfficerType {
 
         tableConfig: TableConfig = {
         tableColumns: [
-            { field: 'codeValueEN', header: 'OfficerType Name (EN)' },
+            { field: 'employeeTypeNameDisplay', header: 'Employee Type' },
+            { field: 'codeValueEN', header: 'Officer Type Name (EN)' },
             { field: 'codeValueBN', header: 'OfficerType Name (BN)' },
             {
                 field: 'status',
@@ -94,19 +96,21 @@ export class OfficerType {
 
     ngOnInit(): void {
         this.initForm();
-        this.loadEmployeeType(); // Load employeeTypes for dropdown
-        this.getOfficerTypeWithPaging({
-            first: this.first,
-            rows: this.rows
-        });
+        this.setupFormFilterListeners();
+        this.loadEmployeeType();
+    }
+
+    private setupFormFilterListeners() {
+        this.commonCodeForm.get('employeeTypeId')?.valueChanges.subscribe(() => { this.first = 0; this.buildTableData(); });
+        this.commonCodeForm.get('status')?.valueChanges.subscribe(() => { this.first = 0; this.buildTableData(); });
     }
 
       initForm() {
         this.commonCodeForm = this.fb.group({
-            employeeTypeId: [null, Validators.required],
+            employeeTypeId: [null],
             codeValueEN: ['', Validators.required],
             codeValueBN: ['', Validators.required],
-            status: [true, Validators.required],
+            status: [null],
             orgId: [0],
             codeId: [0],
             codeType: ['OfficerType'],
@@ -135,8 +139,9 @@ export class OfficerType {
                 // Update form config with employeeType options
                 const employeeTypeField = this.formConfig.formFields.find(f => f.name === 'employeeTypeId');
                 if (employeeTypeField) {
-                    employeeTypeField.options = employeeTypeOptions;
+                    employeeTypeField.options = [{ label: 'All', value: null }, ...employeeTypeOptions];
                 }
+                this.getAllData();
             },
             error: (err) => {
                 console.error('Error loading employeeTypes:', err);
@@ -149,35 +154,48 @@ export class OfficerType {
         });
     }
 
-    getOfficerTypeWithPaging(event?: any) {
+    getAllData() {
         this.loading = true;
-        const pageNo = event ? event.first / event.rows + 1 : 1;
-        const pageSize = event?.rows ?? this.rows;
-
-        const apiCall = this.searchValue
-            ? this.masterBasicSetupService.getByKeyordWithPaging('OfficerType', this.searchValue, pageNo, pageSize)
-            : this.masterBasicSetupService.getAllWithPaging('OfficerType', pageNo, pageSize);
-
-        apiCall.subscribe({
+        this.masterBasicSetupService.getAllByType('OfficerType').subscribe({
             next: (res) => {
-                this.commonCodeData = res.datalist;
-                this.totalRecords = res.pages.rows;
-                this.rows = pageSize;
+                this.allData = Array.isArray(res) ? res : [];
+                this.buildTableData();
                 this.loading = false;
             },
             error: (err) => {
                 console.error('Error fetching data:', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Failed to load data'
-                });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load data' });
                 this.loading = false;
             }
         });
     }
 
+    private buildTableData() {
+        const empTypeOpts = (this.formConfig.formFields.find(f => f.name === 'employeeTypeId')?.options as { label: string; value: any }[]) || [];
+        const getEmpTypeName = (id: number) => empTypeOpts.find((o: any) => o.value === id)?.label ?? '-';
+        let list = this.allData.map((r: any) => ({ ...r, employeeTypeNameDisplay: getEmpTypeName(r.parentCodeId) }));
+        const parentId = this.commonCodeForm?.get('employeeTypeId')?.value;
+        const status = this.commonCodeForm?.get('status')?.value;
+        if (parentId != null) list = list.filter((r: any) => r.parentCodeId === parentId);
+        if (status != null) list = list.filter((r: any) => r.status === status);
+        const q = (this.searchValue ?? '').toLowerCase().trim();
+        if (q) list = list.filter((r: any) => r.codeValueEN?.toLowerCase().includes(q) || r.codeValueBN?.toLowerCase().includes(q));
+        this.commonCodeData = list;
+        this.totalRecords = list.length;
+        this.first = 0;
+    }
+
     submit(data: any) {
+        const empTypeId = this.commonCodeForm.get('employeeTypeId')?.value;
+        const status = this.commonCodeForm.get('status')?.value;
+        if (empTypeId == null) {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Employee Type' });
+            return;
+        }
+        if (status == null) {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Status (Active or Inactive)' });
+            return;
+        }
         if (this.commonCodeForm.invalid) {
             this.commonCodeForm.markAllAsTouched();
             return;
@@ -212,10 +230,7 @@ export class OfficerType {
             next: (res) => {
                 console.log('Created:', res);
                 this.resetForm();
-                this.getOfficerTypeWithPaging({
-                    first: this.first,
-                    rows: this.rows
-                });
+                this.getAllData();
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Success',
@@ -251,10 +266,7 @@ export class OfficerType {
             next: (res) => {
                 console.log('Updated:', res);
                 this.resetForm();
-                this.getOfficerTypeWithPaging({
-                    first: this.first,
-                    rows: this.rows
-                });
+                this.getAllData();
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Success',
@@ -304,10 +316,7 @@ export class OfficerType {
             accept: () => {
                 this.masterBasicSetupService.delete(row.codeId).subscribe({
                     next: () => {
-                        this.getOfficerTypeWithPaging({
-                            first: this.first,
-                            rows: this.rows
-                        });
+                        this.getAllData();
                         this.messageService.add({
                             severity: 'success',
                             summary: 'Success',
@@ -329,13 +338,14 @@ export class OfficerType {
 
     resetForm() {
         this.editingId = null;
+        this.searchValue = '';
         this.isSubmitting = false;
         this.commonCodeForm.reset({
             employeeTypeId: null,
             orgId: 0,
             codeId: 0,
             codeType: 'OfficerType',
-            status: true,
+            status: null,
             parentCodeId: null,
             commCode: null,
             displayCodeValueEN: null,
@@ -347,12 +357,13 @@ export class OfficerType {
             lastUpdatedBy: '',
             lastupdate: ''
         });
+        this.buildTableData();
     }
 
     onSearch(keyword: string) {
-        this.searchValue = keyword;
+        this.searchValue = keyword ?? '';
         this.first = 0;
-        this.getOfficerTypeWithPaging({ first: 0, rows: this.rows });
+        this.buildTableData();
     }
 
     private getCurrentUser(): string {

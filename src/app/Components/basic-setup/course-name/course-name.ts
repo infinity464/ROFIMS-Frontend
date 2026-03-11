@@ -10,10 +10,11 @@ import { DataTable } from '../shared/componets/data-table/data-table';
 
 import { Fluid } from 'primeng/fluid';
 import { SharedService } from '@/shared/services/shared-service';
+import { forkJoin } from 'rxjs';
 
 @Component({
     selector: 'app-course-name',
-    imports: [DynamicFormComponent, DataTable,   Fluid],
+    imports: [DynamicFormComponent, DataTable, Fluid],
     templateUrl: './course-name.html',
     providers: [],
     styleUrl: './course-name.scss'
@@ -21,19 +22,22 @@ import { SharedService } from '@/shared/services/shared-service';
 export class CourseName {
     codeType: string = 'CourseName';
     title: string = 'Course Name';
+
+    allData: any[] = [];
     commonCodeData: CommonCode[] = [];
     editingId: number | null = null;
     commonCodeForm!: FormGroup;
 
     isSubmitting = false;
-
     totalRecords = 0;
     rows = 10;
     first = 0;
     loading = false;
-    serchValue: string = '';
+    searchValue: string = '';
 
-    // Form Configuration
+    orgOptions: { label: string; value: any }[] = [];
+    courseTypeOptions: { label: string; value: any }[] = [];
+
     formConfig: FormConfig = {
         formFields: [
             {
@@ -41,14 +45,16 @@ export class CourseName {
                 label: 'Organization (English)',
                 type: 'select',
                 options: [],
-                required: true
+                required: false,
+                default: null
             },
             {
                 name: 'parentCodeId',
                 label: 'Course Type',
                 type: 'select',
                 options: [],
-                required: true
+                required: false,
+                default: null
             },
             {
                 name: 'codeValueEN',
@@ -66,8 +72,8 @@ export class CourseName {
                 name: 'status',
                 label: 'Status',
                 type: 'select',
-                required: true,
-                default: true,
+                required: false,
+                default: null,
                 options: [
                     { label: 'Active', value: true },
                     { label: 'Inactive', value: false }
@@ -76,9 +82,10 @@ export class CourseName {
         ]
     };
 
-    // Table Configuration
     tableConfig: TableConfig = {
         tableColumns: [
+            { field: 'orgNameDisplay', header: 'Organization' },
+            { field: 'courseTypeNameDisplay', header: 'Course Type' },
             { field: 'codeValueEN', header: 'Course Name (EN)' },
             { field: 'codeValueBN', header: 'Course Name (BN)' },
             {
@@ -102,21 +109,40 @@ export class CourseName {
 
     ngOnInit(): void {
         this.initForm();
-        this.loadActiveMotherOrgs();
-        this.loadCourseType();
-        this.getCommonCodeWithPaging({
-            first: this.first,
-            rows: this.rows
+        this.setupFormFilterListeners();
+        forkJoin({
+            orgs: this.masterBasicSetupService.getAllActiveMotherOrgs(),
+            courseTypes: this.masterBasicSetupService.getAllByType('CourseType')
+        }).subscribe({
+            next: ({ orgs, courseTypes }) => {
+                this.orgOptions = orgs.map((d: any) => ({ label: d.orgNameEN, value: d.orgId }));
+                this.courseTypeOptions = courseTypes.map((d: any) => ({ label: d.codeValueEN, value: d.codeId }));
+                const orgField = this.formConfig.formFields.find((f) => f.name === 'orgId');
+                const courseTypeField = this.formConfig.formFields.find((f) => f.name === 'parentCodeId');
+                if (orgField) orgField.options = this.orgOptions;
+                if (courseTypeField) courseTypeField.options = this.courseTypeOptions;
+                this.getAllData();
+            },
+            error: (err) => {
+                console.error('Error loading data:', err);
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load data' });
+            }
         });
+    }
+
+    private setupFormFilterListeners() {
+        this.commonCodeForm.get('orgId')?.valueChanges.subscribe(() => { this.first = 0; this.buildTableData(); });
+        this.commonCodeForm.get('parentCodeId')?.valueChanges.subscribe(() => { this.first = 0; this.buildTableData(); });
+        this.commonCodeForm.get('status')?.valueChanges.subscribe(() => { this.first = 0; this.buildTableData(); });
     }
 
     initForm() {
         this.commonCodeForm = this.fb.group({
-            orgId: [0, Validators.required],
-            parentCodeId: [null, Validators.required],
+            orgId: [null],
+            parentCodeId: [null],
             codeValueEN: ['', Validators.required],
             codeValueBN: ['', Validators.required],
-            status: [true, Validators.required],
+            status: [null],
             codeId: [0],
             codeType: [this.codeType],
             commCode: [null],
@@ -131,92 +157,66 @@ export class CourseName {
         });
     }
 
-    loadActiveMotherOrgs() {
-        this.masterBasicSetupService.getAllActiveMotherOrgs().subscribe({
-            next: (motherOrgRanks) => {
-                const motherOrgOptions = motherOrgRanks.map((d) => ({
-                    label: d.orgNameEN,
-                    value: d.orgId
-                }));
-
-                // Update form config with motherOrg options
-                const motherOrgField = this.formConfig.formFields.find((f) => f.name === 'orgId');
-                if (motherOrgField) {
-                    motherOrgField.options = motherOrgOptions;
-                }
-            },
-            error: (err) => {
-                console.error('Error to loading data', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Failed to load organizations'
-                });
-            }
-        });
-    }
-
-    loadCourseType() {
-        this.masterBasicSetupService.getAllByType('CourseType').subscribe({
-            next: (courseTypes) => {
-                const courseTypeOptions = courseTypes.map((d) => ({
-                    label: d.codeValueEN,
-                    value: d.codeId
-                }));
-
-                // FIXED: Changed from 'courseTypeId' to 'parentCodeId'
-                const courseTypeField = this.formConfig.formFields.find((f) => f.name === 'parentCodeId');
-                if (courseTypeField) {
-                    courseTypeField.options = courseTypeOptions;
-                }
-            },
-            error: (err) => {
-                console.error('Error loading courseTypes:', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Failed to load course types'
-                });
-            }
-        });
-    }
-
-    getCommonCodeWithPaging(event?: any) {
+    getAllData() {
         this.loading = true;
-        const pageNo = event ? event.first / event.rows + 1 : 1;
-        const pageSize = event?.rows ?? this.rows;
-
-        const apiCall = this.serchValue
-            ? this.masterBasicSetupService.getByKeyordWithPaging(this.codeType, this.serchValue, pageNo, pageSize)
-            : this.masterBasicSetupService.getAllWithPaging(this.codeType, pageNo, pageSize);
-
-        apiCall.subscribe({
+        this.masterBasicSetupService.getAllByType(this.codeType).subscribe({
             next: (res) => {
-                this.commonCodeData = res.datalist;
-                this.totalRecords = res.pages.rows;
-                this.rows = pageSize;
+                this.allData = Array.isArray(res) ? res : [];
+                this.buildTableData();
                 this.loading = false;
             },
             error: (err) => {
                 console.error('Error fetching data:', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Failed to load data'
-                });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load data' });
                 this.loading = false;
             }
         });
     }
 
+    private buildTableData() {
+        const getOrgName = (id: number) => this.orgOptions.find((o: any) => o.value === id)?.label ?? '-';
+        const getCourseTypeName = (id: number) => this.courseTypeOptions.find((o: any) => o.value === id)?.label ?? '-';
+        let list = this.allData.map((r: any) => ({
+            ...r,
+            orgNameDisplay: getOrgName(r.orgId ?? 0),
+            courseTypeNameDisplay: getCourseTypeName(r.parentCodeId ?? 0)
+        }));
+        const orgId = this.commonCodeForm?.get('orgId')?.value;
+        const parentCodeId = this.commonCodeForm?.get('parentCodeId')?.value;
+        const status = this.commonCodeForm?.get('status')?.value;
+        if (orgId != null && orgId !== '') list = list.filter((r: any) => r.orgId === orgId);
+        if (parentCodeId != null && parentCodeId !== '') list = list.filter((r: any) => r.parentCodeId === parentCodeId);
+        if (status != null) list = list.filter((r: any) => r.status === status);
+        const q = (this.searchValue ?? '').toLowerCase().trim();
+        if (q) list = list.filter((r: any) => r.codeValueEN?.toLowerCase().includes(q) || r.codeValueBN?.toLowerCase().includes(q));
+        this.commonCodeData = list;
+        this.totalRecords = list.length;
+        this.first = 0;
+    }
+
     submit(data: any) {
+        const orgId = this.commonCodeForm.get('orgId')?.value;
+        const parentCodeId = this.commonCodeForm.get('parentCodeId')?.value;
+        const status = this.commonCodeForm.get('status')?.value;
+        if (orgId == null || orgId === '') {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Organization' });
+            return;
+        }
+        if (parentCodeId == null || parentCodeId === '') {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Course Type' });
+            return;
+        }
+        if (status == null) {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Status' });
+            return;
+        }
         if (this.commonCodeForm.invalid) {
             this.commonCodeForm.markAllAsTouched();
             return;
         }
 
         const currentUser = this.getCurrentUser();
-        const currentDateTime = this.shareService.getCurrentDateTime()
+        const currentDateTime = this.shareService.getCurrentDateTime();
 
         if (this.editingId) {
             this.updateCommonCode(currentUser, currentDateTime);
@@ -236,27 +236,15 @@ export class CourseName {
         };
 
         this.masterBasicSetupService.create(createPayload).subscribe({
-            next: (res) => {
-                console.log('Created:', res);
+            next: () => {
                 this.resetForm();
-                this.getCommonCodeWithPaging({
-                    first: this.first,
-                    rows: this.rows
-                });
-                this.messageService.add({
-                    severity: 'success',
-                    summary: 'Success',
-                    detail: 'Course Name created successfully'
-                });
+                this.getAllData();
+                this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Course Name created successfully' });
                 this.isSubmitting = false;
             },
             error: (err) => {
                 console.error('Error creating:', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Failed to create course name'
-                });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to create course name' });
                 this.isSubmitting = false;
             }
         });
@@ -270,31 +258,19 @@ export class CourseName {
             lastUpdatedBy: currentUser,
             lastupdate: currentDateTime,
             createdDate: currentDateTime,
-             createdBy: currentUser
+            createdBy: currentUser
         };
 
         this.masterBasicSetupService.update(updatePayload).subscribe({
-            next: (res) => {
-                console.log('Updated:', res);
+            next: () => {
                 this.resetForm();
-                this.getCommonCodeWithPaging({
-                    first: this.first,
-                    rows: this.rows
-                });
-                this.messageService.add({
-                    severity: 'success',
-                    summary: 'Success',
-                    detail: 'Course Name updated successfully'
-                });
+                this.getAllData();
+                this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Course Name updated successfully' });
                 this.isSubmitting = false;
             },
             error: (err) => {
                 console.error('Error updating:', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Failed to update course name'
-                });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update course name' });
                 this.isSubmitting = false;
             }
         });
@@ -308,9 +284,7 @@ export class CourseName {
             codeValueEN: row.codeValueEN,
             codeValueBN: row.codeValueBN,
             status: row.status,
-
         });
-        console.log('Edit:', row);
     }
 
     delete(row: any, event: Event) {
@@ -320,35 +294,17 @@ export class CourseName {
             header: 'Delete Confirmation',
             icon: 'pi pi-info-circle',
             rejectLabel: 'Cancel',
-            rejectButtonProps: {
-                label: 'Cancel',
-                severity: 'secondary',
-                outlined: true
-            },
-            acceptButtonProps: {
-                label: 'Delete',
-                severity: 'danger'
-            },
+            rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+            acceptButtonProps: { label: 'Delete', severity: 'danger' },
             accept: () => {
                 this.masterBasicSetupService.delete(row.codeId).subscribe({
                     next: () => {
-                        this.getCommonCodeWithPaging({
-                            first: this.first,
-                            rows: this.rows
-                        });
-                        this.messageService.add({
-                            severity: 'success',
-                            summary: 'Success',
-                            detail: 'Course Name deleted successfully'
-                        });
+                        this.getAllData();
+                        this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Course Name deleted successfully' });
                     },
                     error: (err) => {
                         console.error('Error deleting:', err);
-                        this.messageService.add({
-                            severity: 'error',
-                            summary: 'Error',
-                            detail: 'Failed to delete course name'
-                        });
+                        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete course name' });
                     }
                 });
             }
@@ -358,12 +314,13 @@ export class CourseName {
     resetForm() {
         this.editingId = null;
         this.isSubmitting = false;
+        this.searchValue = '';
         this.commonCodeForm.reset({
-            orgId: 0,
+            orgId: null,
             parentCodeId: null,
             codeId: 0,
             codeType: this.codeType,
-            status: true,
+            status: null,
             commCode: null,
             displayCodeValueEN: null,
             displayCodeValueBN: null,
@@ -374,15 +331,16 @@ export class CourseName {
             lastUpdatedBy: '',
             lastupdate: ''
         });
+        this.buildTableData();
     }
 
     onSearch(keyword: string) {
-        this.serchValue = keyword;
+        this.searchValue = keyword ?? '';
         this.first = 0;
-        this.getCommonCodeWithPaging({ first: 0, rows: this.rows });
+        this.buildTableData();
     }
 
     private getCurrentUser(): string {
-        return this.shareService.getCurrentUser()
+        return this.shareService.getCurrentUser();
     }
 }

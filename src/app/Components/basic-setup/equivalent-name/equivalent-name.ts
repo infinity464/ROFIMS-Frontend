@@ -22,6 +22,7 @@ export class EquivalentName {
     isSubmitting = false;
     codeType: string = 'EquivalentName';
     title: string = 'Equivalent Name';
+    allData: CommonCode[] = [];
     commonCodeData: CommonCode[] = [];
     editingId: number | null = null;
     commonCodeForm!: FormGroup;
@@ -30,7 +31,7 @@ export class EquivalentName {
     rows = 10;
     first = 0;
     loading = false;
-    serchValue: string = '';
+    searchValue: string = '';
 
     // Form Configuration
     formConfig: FormConfig = {
@@ -57,8 +58,8 @@ export class EquivalentName {
                 name: 'status',
                 label: 'Status',
                 type: 'select',
-                required: true,
-                default: true,
+                required: false,
+                default: null,
                 options: [
                     { label: 'Active', value: true },
                     { label: 'Inactive', value: false }
@@ -94,9 +95,14 @@ export class EquivalentName {
 
     ngOnInit(): void {
         this.initForm();
-        this.getCommonCodeWithPaging({
-            first: this.first,
-            rows: this.rows
+        this.setupFormFilterListeners();
+        this.getAllData();
+    }
+
+    private setupFormFilterListeners() {
+        this.commonCodeForm.get('status')?.valueChanges.subscribe(() => {
+            this.first = 0;
+            this.buildTableData();
         });
     }
 
@@ -104,7 +110,7 @@ export class EquivalentName {
         this.commonCodeForm = this.fb.group({
             codeValueEN: ['', Validators.required],
             codeValueBN: ['', Validators.required],
-            status: [true, Validators.required],
+            status: [null],
             orgId: [0],
             codeId: [0],
             codeType: [this.codeType],
@@ -121,34 +127,40 @@ export class EquivalentName {
         });
     }
 
-    getCommonCodeWithPaging(event?: any) {
+    getAllData() {
         this.loading = true;
-        const pageNo = event ? event.first / event.rows + 1 : 1;
-        const pageSize = event?.rows ?? this.rows;
-
-        const apiCall = this.serchValue ? this.masterBasicSetupService.getByKeyordWithPaging(this.codeType, this.serchValue, pageNo, pageSize) : this.masterBasicSetupService.getAllWithPaging(this.codeType, pageNo, pageSize);
-
-        apiCall.subscribe({
+        this.masterBasicSetupService.getAllByType(this.codeType).subscribe({
             next: (res) => {
-                this.commonCodeData = res.datalist;
-                this.totalRecords = res.pages.rows;
-                this.rows = pageSize;
+                this.allData = Array.isArray(res) ? res : [];
+                this.buildTableData();
                 this.loading = false;
             },
             error: (err) => {
                 console.error('Error fetching data:', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Failed to load data'
-                });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load data' });
                 this.loading = false;
             }
         });
     }
 
+    private buildTableData() {
+        let list = [...this.allData];
+        const status = this.commonCodeForm?.get('status')?.value;
+        if (status != null) list = list.filter((r) => r.status === status);
+        const q = (this.searchValue ?? '').toLowerCase().trim();
+        if (q) list = list.filter((r) => r.codeValueEN?.toLowerCase().includes(q) || r.codeValueBN?.toLowerCase().includes(q));
+        this.commonCodeData = list;
+        this.totalRecords = list.length;
+        this.first = 0;
+    }
+
     submit(data: any) {
         if (this.isSubmitting) return;
+        const status = this.commonCodeForm.get('status')?.value;
+        if (status == null) {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Status (Active or Inactive)' });
+            return;
+        }
         if (this.commonCodeForm.invalid) {
             this.commonCodeForm.markAllAsTouched();
             return;
@@ -178,10 +190,7 @@ export class EquivalentName {
             next: (res) => {
                 console.log('Created:', res);
                 this.resetForm();
-                this.getCommonCodeWithPaging({
-                    first: this.first,
-                    rows: this.rows
-                });
+                this.getAllData();
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Success',
@@ -213,10 +222,7 @@ export class EquivalentName {
             next: (res) => {
                 console.log('Updated:', res);
                 this.resetForm();
-                this.getCommonCodeWithPaging({
-                    first: this.first,
-                    rows: this.rows
-                });
+                this.getAllData();
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Success',
@@ -262,10 +268,7 @@ export class EquivalentName {
             accept: () => {
                 this.masterBasicSetupService.delete(row.codeId).subscribe({
                     next: () => {
-                        this.getCommonCodeWithPaging({
-                            first: this.first,
-                            rows: this.rows
-                        });
+                        this.getAllData();
                         this.messageService.add({
                             severity: 'success',
                             summary: 'Success',
@@ -288,11 +291,12 @@ export class EquivalentName {
     resetForm() {
         this.isSubmitting = false;
         this.editingId = null;
+        this.searchValue = '';
         this.commonCodeForm.reset({
             orgId: 0,
             codeId: 0,
             codeType: this.codeType,
-            status: true,
+            status: null,
             commCode: null,
             displayCodeValueEN: null,
             displayCodeValueBN: null,
@@ -304,12 +308,13 @@ export class EquivalentName {
             lastUpdatedBy: '',
             lastupdate: ''
         });
+        this.buildTableData();
     }
 
     onSearch(keyword: string) {
-        this.serchValue = keyword;
+        this.searchValue = keyword ?? '';
         this.first = 0;
-        this.getCommonCodeWithPaging({ first: 0, rows: this.rows });
+        this.buildTableData();
     }
 
     private getCurrentUser(): string {

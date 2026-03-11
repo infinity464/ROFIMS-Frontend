@@ -10,5 +10,5 @@
 
 <app-data-table [config]="tableConfig" [data]="commonData" [first]="first" [totalRecords]="totalRecords" [rows]="rows"
     [loading]="loading" (edit)="update($event)" (delete)="delete($event.row, $event.event)"
-    (lazyLoad)="getCommonCodeWithPaging($event)" (search)="onSearch($event)">
+            [lazy]="false" (search)="onSearch($event)">
 </app-data-table>

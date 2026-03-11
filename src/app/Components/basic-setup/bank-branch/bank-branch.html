@@ -13,10 +13,11 @@
                     <p-select
                         id="bankId"
                         formControlName="bankId"
-                        [options]="banks"
+                        [options]="bankOptions"
                         optionLabel="bankNameEN"
                         optionValue="bankId"
                         placeholder="Select Bank"
+                        [showClear]="true"
                         styleClass="w-full">
                     </p-select>
                     @if (bankBranchForm.get('bankId')?.invalid && bankBranchForm.get('bankId')?.touched) {

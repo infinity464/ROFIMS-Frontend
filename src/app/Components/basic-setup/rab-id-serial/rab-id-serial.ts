@@ -53,10 +53,35 @@ export class RabIdSerial implements OnInit {
         this.getAll();
     }
 
+    private setupFormFilterListeners() {
+        this.rabIdSerialForm.get('officerTypeId')?.valueChanges.subscribe(() => {
+            this.first = 0;
+            this.buildTableData();
+        });
+    }
+
+    private buildTableData() {
+        let list = [...this.rabIdSerials];
+        const officerTypeId = this.rabIdSerialForm?.get('officerTypeId')?.value;
+        if (officerTypeId != null) {
+            list = list.filter((r) => r.officerTypeId === officerTypeId);
+        }
+        const q = (this.searchValue ?? '').toLowerCase().trim();
+        if (q) {
+            list = list.filter((r) => {
+                const officerTypeName = this.getOfficerTypeName(r.officerTypeId).toLowerCase();
+                return officerTypeName.includes(q) || String(r.minId).includes(q) || String(r.maxId).includes(q);
+            });
+        }
+        this.filteredRabIdSerials = list;
+        this.totalRecords = list.length;
+        this.first = 0;
+    }
+
     initForm() {
         this.rabIdSerialForm = this.fb.group({
             rabIdSerialId: [0],
-            officerTypeId: [null, Validators.required],
+            officerTypeId: [null],
             minId: [null, [Validators.required, Validators.min(1)]],
             maxId: [null, [Validators.required, Validators.min(1)]],
             currentId: [null],
@@ -75,6 +100,7 @@ export class RabIdSerial implements OnInit {
                     label: o.codeValueEN,
                     value: o.codeId
                 }));
+                this.setupFormFilterListeners();
             },
             error: () => {
                 this.messageService.add({
@@ -89,9 +115,8 @@ export class RabIdSerial implements OnInit {
     getAll() {
         this.masterBasicSetupService.getAllRabIdSerial().subscribe({
             next: (res: RabIdSerialModel[]) => {
-                this.rabIdSerials = res;
-                this.filteredRabIdSerials = [...res];
-                this.totalRecords = res.length;
+                this.rabIdSerials = res ?? [];
+                this.buildTableData();
             },
             error: () => {
                 this.messageService.add({
@@ -110,24 +135,19 @@ export class RabIdSerial implements OnInit {
 
     onSearch(event: Event) {
         const target = event.target as HTMLInputElement;
-        this.searchValue = target.value.toLowerCase().trim();
-
-        if (this.searchValue) {
-            this.filteredRabIdSerials = this.rabIdSerials.filter((r) => {
-                const officerTypeName = this.getOfficerTypeName(r.officerTypeId).toLowerCase();
-                return officerTypeName.includes(this.searchValue) || r.minId.toString().includes(this.searchValue) || r.maxId.toString().includes(this.searchValue);
-            });
-        } else {
-            this.filteredRabIdSerials = [...this.rabIdSerials];
-        }
-
-        this.totalRecords = this.filteredRabIdSerials.length;
+        this.searchValue = (target?.value ?? '').toLowerCase().trim();
         this.first = 0;
+        this.buildTableData();
     }
 
     onSubmit() {
         if (this.isSubmitting) return;
 
+        const officerTypeId = this.rabIdSerialForm.get('officerTypeId')?.value;
+        if (officerTypeId == null) {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Officer Type' });
+            return;
+        }
         if (this.rabIdSerialForm.invalid) {
             this.rabIdSerialForm.markAllAsTouched();
             return;
@@ -190,6 +210,7 @@ export class RabIdSerial implements OnInit {
     }
 
     onReset() {
+        this.searchValue = '';
         this.rabIdSerialForm.reset({
             rabIdSerialId: 0,
             officerTypeId: null,
@@ -201,6 +222,7 @@ export class RabIdSerial implements OnInit {
             lastUpdatedBy: this.currentUser,
             lastupdate: new Date().toISOString()
         });
+        this.buildTableData();
         this.isSubmitting = false;
     }
 }
