@@ -68,6 +68,8 @@
                                     <th>{{ isEnglish() ? 'Trade' : 'ট্রেড' }}</th>
                                     <th>{{ isEnglish() ? 'Name' : 'নাম' }}</th>
                                     <th>{{ isEnglish() ? 'Mother Unit' : 'মাতৃ ইউনিট' }}</th>
+                                    <th>{{ isEnglish() ? 'Own District' : 'নিজ জেলা' }}</th>
+                                    <th>{{ isEnglish() ? 'Mother Unit Location' : 'মাতৃ ইউনিটের অবস্থান' }}</th>
                                     <th>{{ isEnglish() ? 'Transfer Unit' : 'বদলি ইউনিট' }}</th>
                                     <th>{{ isEnglish() ? 'Remarks' : 'মন্তব্য' }}</th>
                                 </tr>
@@ -80,6 +82,8 @@
                                     <td>{{ isEnglish() ? (emp.tradeName || '-') : (emp.tradeNameBN || emp.tradeName || '-') }}</td>
                                     <td>{{ isEnglish() ? (emp.fullNameEN || '-') : (emp.fullNameBN || emp.fullNameEN || '-') }}</td>
                                     <td>{{ isEnglish() ? (emp.motherUnitName || '-') : (emp.motherUnitNameBN || emp.motherUnitName || '-') }}</td>
+                                    <td>{{ isEnglish() ? (emp.permanentDistrictName || '-') : (emp.permanentDistrictNameBN || emp.permanentDistrictName || '-') }}</td>
+                                    <td>{{ isEnglish() ? (emp.motherOrgLocationName || '-') : (emp.motherOrgLocationNameBN || emp.motherOrgLocationName || '-') }}</td>
                                     <td *ngIf="!editing">{{ isEnglish() ? (emp.transferRabUnitName || '-') : (emp.transferRabUnitId ? unitLabelMapBN[emp.transferRabUnitId] : null) || emp.transferRabUnitName || '-' }}</td>
                                     <td *ngIf="editing">
                                         <p-select [(ngModel)]="emp.transferRabUnitId" [options]="rabUnitOptions" optionLabel="label" optionValue="value"
@@ -94,7 +98,7 @@
                             </tbody>
                             <tfoot *ngIf="!editing && noteSheet.note">
                                 <tr>
-                                    <td colspan="8" class="ns-posting-note">
+                                    <td colspan="10" class="ns-posting-note">
                                         <strong>{{ isEnglish() ? 'Note:' : 'নোটঃ' }}</strong> {{ noteSheet.note }}
                                     </td>
                                 </tr>

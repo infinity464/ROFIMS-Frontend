@@ -62,6 +62,7 @@ export interface NoteSheetInfoFull {
     isDeleted?: boolean;
     deletedBy?: string;
     // ── Leave (ExBD) ───────────────────────────────────────────────────
+    exBdLeaveSubjectId?: number | null;
     purposeOfExBdLeaveId?: number | null;
     destinationCountryId?: number | null;
     dateOfVisitFrom?: string | null;
@@ -676,7 +677,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
 
         // Posting table
         if (this.isNewPosting() && this.postingEmployees.length > 0) {
-            const cols = bn ? ['ক্রমিক','ব্যক্তিগত নম্বর','পদবি','ট্রেড','নাম','মাতৃ ইউনিট','বদলি কর্মস্থল','মন্তব্য'] : ['Ser','Service ID','Rank','Trade','Name','Mother Unit','Transfer Unit','Remarks'];
+            const cols = bn ? ['ক্রমিক','ব্যক্তিগত নম্বর','পদবি','ট্রেড','নাম','মাতৃ ইউনিট','নিজ জেলা','মাতৃ ইউনিটের অবস্থান','বদলি কর্মস্থল','মন্তব্য'] : ['Ser','Service ID','Rank','Trade','Name','Mother Unit','Own District','Mother Unit Location','Transfer Unit','Remarks'];
             const cw = Math.floor(13000 / cols.length);
             const headerRow = new TableRow({ tableHeader: true, children: cols.map(c => new TableCell({
                 children: [new Paragraph({ children: [new TextRun({ text: c, ...runProps, size: 16, bold: true })], alignment: AlignmentType.CENTER })],
@@ -688,6 +689,8 @@ export abstract class NotesheetPreviewBase implements OnInit {
                 bn?(emp.tradeNameBN||emp.tradeName||''):(emp.tradeName??''),
                 bn?(emp.fullNameBN||emp.fullNameEN||''):(emp.fullNameEN??''),
                 bn?(emp.motherUnitNameBN||emp.motherUnitName||''):(emp.motherUnitName??''),
+                bn?(emp.permanentDistrictNameBN||emp.permanentDistrictName||''):(emp.permanentDistrictName??''),
+                bn?(emp.motherOrgLocationNameBN||emp.motherOrgLocationName||''):(emp.motherOrgLocationName??''),
                 emp.transferRabUnitName??'', emp.remarks??''
             ].map(v => new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: v, ...runProps, size: 16 })] })], borders: cellBorders, width: { size: cw, type: WidthType.DXA } })) }));
             children.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [headerRow, ...dataRows] }));
@@ -760,10 +763,10 @@ export abstract class NotesheetPreviewBase implements OnInit {
         }
 
         if (this.isNewPosting() && this.postingEmployees.length > 0) {
-            const cols = bn ? ['ক্রমিক','ব্যক্তিগত নম্বর','পদবি','ট্রেড','নাম','মাতৃ ইউনিট','বদলি কর্মস্থল','মন্তব্য'] : ['Ser','Service ID','Rank','Trade','Name','Mother Unit','Transfer Unit','Remarks'];
+            const cols = bn ? ['ক্রমিক','ব্যক্তিগত নম্বর','পদবি','ট্রেড','নাম','মাতৃ ইউনিট','নিজ জেলা','মাতৃ ইউনিটের অবস্থান','বদলি কর্মস্থল','মন্তব্য'] : ['Ser','Service ID','Rank','Trade','Name','Mother Unit','Own District','Mother Unit Location','Transfer Unit','Remarks'];
             const headerCells = cols.map(c => `<th>${this.escapeHtml(c)}</th>`).join('');
             const bodyRows = this.postingEmployees.map((emp, i) => {
-                const vals = [String(i+1), emp.serviceId??'', bn?(emp.rankNameBN||emp.rankName||''):(emp.rankName??''), bn?(emp.tradeNameBN||emp.tradeName||''):(emp.tradeName??''), bn?(emp.fullNameBN||emp.fullNameEN||''):(emp.fullNameEN??''), bn?(emp.motherUnitNameBN||emp.motherUnitName||''):(emp.motherUnitName??''), emp.transferRabUnitName??'', emp.remarks??''];
+                const vals = [String(i+1), emp.serviceId??'', bn?(emp.rankNameBN||emp.rankName||''):(emp.rankName??''), bn?(emp.tradeNameBN||emp.tradeName||''):(emp.tradeName??''), bn?(emp.fullNameBN||emp.fullNameEN||''):(emp.fullNameEN??''), bn?(emp.motherUnitNameBN||emp.motherUnitName||''):(emp.motherUnitName??''), bn?(emp.permanentDistrictNameBN||emp.permanentDistrictName||''):(emp.permanentDistrictName??''), bn?(emp.motherOrgLocationNameBN||emp.motherOrgLocationName||''):(emp.motherOrgLocationName??''), emp.transferRabUnitName??'', emp.remarks??''];
                 return `<tr>${vals.map(v => `<td>${this.escapeHtml(v)}</td>`).join('')}</tr>`;
             }).join('');
             extraHtml += `<table><thead><tr>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table>`;

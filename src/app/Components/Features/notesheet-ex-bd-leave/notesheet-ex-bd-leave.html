@@ -51,10 +51,20 @@
           @if (viewEditing) {
             <div class="ns-preview-subject-edit">
               <label class="ns-preview-body-label">Subject</label>
-              <input pInputText type="text" [(ngModel)]="editSubject" class="w-full" placeholder="Subject" />
+              <p-select
+                [(ngModel)]="editExBdLeaveSubjectId"
+                [options]="subjectTypeOptions"
+                optionLabel="label"
+                optionValue="value"
+                [filter]="true"
+                filterBy="label"
+                [showClear]="true"
+                placeholder="Select Subject"
+                styleClass="w-full">
+              </p-select>
             </div>
-          } @else if (viewNoteSheet.subject) {
-            <div class="ns-preview-subject">{{ viewNoteSheet.subject }}</div>
+          } @else if (viewNoteSheet.subject || viewNoteSheet.exBdLeaveSubjectId) {
+            <div class="ns-preview-subject">{{ getSubjectLabel(viewNoteSheet.exBdLeaveSubjectId) || viewNoteSheet.subject }}</div>
           }
 
           <!-- Ex-BD Leave Details -->
@@ -276,8 +286,18 @@
 
           <div class="ns-gen-field ns-gen-span-2">
             <label class="ns-gen-label">Subject <span class="ns-gen-req">*</span></label>
-            <input pInputText formControlName="subject" placeholder="Enter subject" class="w-full" />
-            @if (form.get('subject')?.invalid && form.get('subject')?.touched) {
+            <p-select
+              formControlName="exBdLeaveSubjectId"
+              [options]="subjectTypeOptions"
+              optionLabel="label"
+              optionValue="value"
+              [filter]="true"
+              filterBy="label"
+              [showClear]="true"
+              placeholder="Select Subject"
+              styleClass="w-full">
+            </p-select>
+            @if (form.get('exBdLeaveSubjectId')?.invalid && form.get('exBdLeaveSubjectId')?.touched) {
               <small class="ns-gen-error">Subject is required</small>
             }
           </div>

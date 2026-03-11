@@ -32,6 +32,7 @@ import { map, catchError } from 'rxjs/operators';
 import { Table } from 'primeng/table';
 import { PostingService } from '@/services/posting.service';
 import { DraftPostingEmployeeRow } from '@/models/posting.model';
+import { ForeignVisitInfoService } from '@/services/foreign-visit-info.service';
 import { PostingOrderPreviewComponent } from './posting-order-preview/posting-order-preview';
 import { NotesheetSignatoryComponent } from '@/Components/Common/notesheet-signatory/notesheet-signatory';
 import {
@@ -104,6 +105,7 @@ export interface NoteSheetInfoFull extends NoteSheetInfoRow {
   createdDate?: string;
   lastupdate?: string;
   /** Ex-BD Leave specific */
+  exBdLeaveSubjectId?: number | null;
   purposeOfExBdLeaveId?: number | null;
   destinationCountryId?: number | null;
   dateOfVisitFrom?: string | null;
@@ -256,7 +258,8 @@ export class NotesheetListComponent implements OnInit {
     private masterBasicSetup: MasterBasicSetupService,
     private postingService: PostingService,
     private commonCodeService: CommonCodeService,
-    private servingMembersService: ServingMembersService
+    private servingMembersService: ServingMembersService,
+    private foreignVisitService: ForeignVisitInfoService
   ) {}
 
   /** Open preview page: navigate to the type-specific preview route */
@@ -1181,6 +1184,7 @@ export class NotesheetListComponent implements OnInit {
     const isFinalApproval = this.remarkAction === NoteSheetRemarkAction.Approve
         && row.currentStatus === NoteSheetCurrentStatus.FinalApproval;
     const isPostingNoteSheet = row.noteSheetType === NoteSheetType.NewPosting && !!row.draftPostingMasterId;
+    const isExBdLeaveNoteSheet = row.noteSheetType === NoteSheetType.ExBDLeave;
 
     this.http.post<{ statusCode?: number; StatusCode?: number; description?: string; Description?: string }>(url, body, { observe: 'response' }).subscribe({
       next: (resp) => {
@@ -1194,6 +1198,11 @@ export class NotesheetListComponent implements OnInit {
           // After final approval of a posting notesheet: update DraftPostingStatus + EmployeeInfo PostingStatus
           if (isFinalApproval && isPostingNoteSheet) {
             this.onPostingFinalApproval(row);
+          }
+
+          // After final approval of an ExBD Leave notesheet: create ForeignVisitInfo entry
+          if (isFinalApproval && isExBdLeaveNoteSheet) {
+            this.onExBdLeaveFinalApproval(row);
           }
 
           this.loadAll();
@@ -1240,6 +1249,76 @@ export class NotesheetListComponent implements OnInit {
       },
       error: () => this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Failed to load posting employees for status update.' })
     });
+  }
+
+  /** After final approval of an ExBD Leave notesheet, auto-create a ForeignVisitInfo entry (+ family members). */
+  private onExBdLeaveFinalApproval(row: NoteSheetInfoRow): void {
+    this.http.get<NoteSheetInfoFull[]>(`${this.api}/GetFilteredByKeysAsyn/${row.noteSheetId}`).pipe(
+      map(data => (Array.isArray(data) ? data[0] : null) as NoteSheetInfoFull | null),
+      catchError(() => of(null as NoteSheetInfoFull | null))
+    ).subscribe({
+      next: (ns) => {
+        if (!ns || !ns.employeeId) {
+          this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Failed to load notesheet details for foreign visit creation.' });
+          return;
+        }
+
+        const currentUser = this.sharedService.getCurrentUser?.() ?? 'system';
+        const familyIds = this.parseFamilyIds(ns.familyInfoJson);
+        const d = ns as any;
+
+        this.foreignVisitService.saveVisit({
+          employeeId: ns.employeeId,
+          foreignVisitId: 0,
+          subjectId: ns.exBdLeaveSubjectId ?? d.ExBdLeaveSubjectId ?? null,
+          destinationCountryId: ns.destinationCountryId ?? d.DestinationCountryId ?? null,
+          visitId: ns.purposeOfExBdLeaveId ?? d.PurposeId ?? d.purposeId ?? null,
+          fromDate: ns.dateOfVisitFrom ?? d.FromDate ?? d.fromDate ?? null,
+          toDate: ns.dateOfVisitTo ?? d.ToDate ?? d.toDate ?? null,
+          withFamily: familyIds.length > 0,
+          auth: ns.noteSheetNo ?? null,
+          remarks: ns.note ?? null,
+          fileName: null,
+          filesReferences: ns.filesReferences ?? null,
+          createdBy: currentUser,
+          lastUpdatedBy: currentUser
+        }).subscribe({
+          next: (res: any) => {
+            const entity = res?.data ?? res?.Data ?? res;
+            const newVisitId = entity?.foreignVisitId ?? entity?.ForeignVisitId
+              ?? (Array.isArray(entity) ? entity[0]?.foreignVisitId ?? entity[0]?.ForeignVisitId : null);
+
+            if (familyIds.length > 0 && newVisitId != null) {
+              familyIds.forEach(familyId => {
+                this.foreignVisitService.saveFamilyMember({
+                  employeeId: ns.employeeId!,
+                  foreignVisitFamilyId: 0,
+                  foreignVisitId: newVisitId,
+                  familyId,
+                  remarks: null,
+                  createdBy: currentUser,
+                  lastUpdatedBy: currentUser
+                }).subscribe({
+                  next: () => {},
+                  error: () => this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Failed to add family member to foreign visit record.' })
+                });
+              });
+            }
+          },
+          error: () => this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Failed to create foreign visit entry from ExBD Leave notesheet.' })
+        });
+      }
+    });
+  }
+
+  private parseFamilyIds(familyInfoJson?: string | null): number[] {
+    if (!familyInfoJson || typeof familyInfoJson !== 'string') return [];
+    try {
+      const arr = JSON.parse(familyInfoJson) as any[];
+      return Array.isArray(arr)
+        ? arr.map((f: any) => f.familyMemberId ?? f.FamilyMemberId ?? 0).filter((id: number) => id > 0)
+        : [];
+    } catch { return []; }
   }
 
   submitForApproval(row: NoteSheetInfoRow): void {

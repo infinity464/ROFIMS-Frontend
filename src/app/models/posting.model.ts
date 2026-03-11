@@ -149,8 +149,48 @@ export interface DraftPostingEmployeeRow {
     joiningDateInRAB: string | null;
     rankSortOrder: number | null;
     motherOrgSortOrder: number | null;
+    permanentDistrictName: string | null;
+    permanentDistrictNameBN: string | null;
+    motherOrgLocationName: string | null;
+    motherOrgLocationNameBN: string | null;
     createdBy: string | null;
     createdDate: string | null;
+}
+
+/** Posting receive view row (from vw_PostingReceiveWithEmployees). */
+export interface PostingReceiveViewDto {
+    postingReceiveId: number;
+    draftPostingMasterId: number;
+    draftPostingDetailId: number;
+    noteSheetId: number | null;
+    employeeId: number;
+    transferRabUnitId: number | null;
+    transferRabUnitName: string | null;
+    joiningDate: string | null;
+    receiveStatus: string;
+    receivedBy: string | null;
+    receivedDate: string | null;
+    receiveRemarks: string | null;
+    draftPostingNo: string;
+    draftPostingDate: string;
+    noteSheetNo: string | null;
+    noteSheetDate: string | null;
+    approvalDate: string | null;
+    serviceId: string | null;
+    prefixName: string | null;
+    fullNameEN: string | null;
+    fullNameBN: string | null;
+    rabID: string | null;
+    rankName: string | null;
+    rankNameBN: string | null;
+    corpsName: string | null;
+    corpsNameBN: string | null;
+    tradeName: string | null;
+    tradeNameBN: string | null;
+    motherUnitName: string | null;
+    motherUnitNameBN: string | null;
+    joiningDateInRAB: string | null;
+    rankSortOrder: number | null;
 }
 
 /** Pending joining item (approved posting order, not yet joined). */

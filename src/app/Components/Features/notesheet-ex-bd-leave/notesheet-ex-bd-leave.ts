@@ -87,6 +87,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
     finalApproverOptions: { label: string; labelBn: string | null; value: number }[] = [];
     familyMemberOptions: { label: string; labelBn?: string; value: number; fmid: number; employeeId: number; relationLabel?: string }[] = [];
     relationshipOptions: { label: string; labelBn: string | null; value: number }[] = [];
+    subjectTypeOptions: { label: string; value: number }[] = [];
     fileRows: FileRowData[] = [];
     /** Selected employee from RAB dropdown (auto-fill wing, branch, etc.) */
     selectedEmployee: any = null;
@@ -105,6 +106,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
     viewEditing = false;
     savingView = false;
     editSubject = '';
+    editExBdLeaveSubjectId: number | null = null;
     editMainText = '';
     editReferenceNumber = '';
     editPurposeId: number | null = null;
@@ -147,7 +149,8 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             noteSheetOperationType: [null as string | null, Validators.required],
             isSecret: [false],
             rabIdEmployeeId: [null as number | null, Validators.required], // employee ID when RAB ID selected
-            subject: ['', Validators.required],
+            subject: [''],
+            exBdLeaveSubjectId: [null as number | null, Validators.required],
             purposeOfExBdLeaveId: [null as number | null, Validators.required],
             destinationCountryId: [null as number | null, Validators.required],
             dateOfVisitFrom: [null as Date | null, Validators.required],
@@ -203,6 +206,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
                     this.title = 'Ex-BD Leave Note Sheet – Preview';
                     this.loadPurposeOfLeave();
                     this.loadCountries();
+                    this.loadSubjectTypes();
                     this.loadNoteSheetForView(numId);
                     return;
                 }
@@ -213,6 +217,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             this.loadRelationships();
             this.loadPurposeOfLeave();
             this.loadCountries();
+            this.loadSubjectTypes();
             this.loadApproverOptions();
             const user = this.sharedService.getCurrentUser?.() ?? '';
             this.form.get('preparedBy')?.setValue(user);
@@ -309,6 +314,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             isSecret: !!(d.isSecret ?? d.IsSecret ?? false),
             rabIdEmployeeId: this.selectedEmployeeId,
             subject: String(d.subject ?? d.Subject ?? ''),
+            exBdLeaveSubjectId: d.exBdLeaveSubjectId ?? d.ExBdLeaveSubjectId ?? null,
             purposeOfExBdLeaveId: purposeId,
             destinationCountryId: destCountryId,
             dateOfVisitFrom: this.parseDate(fromDate),
@@ -473,6 +479,18 @@ export class NotesheetExBdLeaveComponent implements OnInit {
                 this.countryOptions = (Array.isArray(list) ? list : []).map((c: any) => ({
                     label: c.codeValueEN || c.displayCodeValueEN || c.codeValueBN || String(c.codeId),
                     labelBn: c.codeValueBN ?? null,
+                    value: c.codeId
+                }));
+            },
+            error: () => {}
+        });
+    }
+
+    loadSubjectTypes(): void {
+        this.commonCodeService.getAllActiveCommonCodesType('SubjectType').subscribe({
+            next: (list) => {
+                this.subjectTypeOptions = (Array.isArray(list) ? list : []).map((c: any) => ({
+                    label: c.codeValueEN || c.displayCodeValueEN || String(c.codeId),
                     value: c.codeId
                 }));
             },
@@ -750,6 +768,9 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             })))
             : null;
 
+        // Resolve subject label from SubjectType dropdown
+        const subjectLabel = this.subjectTypeOptions.find(o => o.value === d.exBdLeaveSubjectId)?.label ?? '';
+
         const payload: Record<string, unknown> = {
             noteSheetId: 0,
             noteSheetType: NoteSheetType.ExBDLeave,
@@ -757,7 +778,8 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             noteSheetDate: this.formatDate(d.noteSheetDate),
             noteSheetTemplateId: null,
             referenceNumber: d.referenceNumber != null ? String(d.referenceNumber) : null,
-            subject: d.subject != null ? String(d.subject) : '',
+            subject: subjectLabel,
+            exBdLeaveSubjectId: d.exBdLeaveSubjectId ?? null,
             mainText: d.mainText != null ? String(d.mainText) : '',
             note: null,
             textType: d.textType === 'bn' ? 1 : 0,
@@ -957,6 +979,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
     toggleViewEdit(): void {
         const ns = this.viewNoteSheet;
         this.editSubject = ns?.subject ?? '';
+        this.editExBdLeaveSubjectId = ns?.exBdLeaveSubjectId ?? null;
         this.editMainText = ns?.mainText ?? '';
         this.editReferenceNumber = ns?.referenceNumber ?? '';
         this.editPurposeId = ns?.purposeId ?? ns?.purposeOfExBdLeaveId ?? null;
@@ -994,12 +1017,20 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         return o ? o.label : String(id);
     }
 
+    getSubjectLabel(id: number | null | undefined): string {
+        if (id == null) return '';
+        const o = this.subjectTypeOptions.find((opt) => opt.value === id);
+        return o ? o.label : '';
+    }
+
     saveViewChanges(): void {
         if (!this.viewNoteSheet) return;
         this.savingView = true;
+        const resolvedSubject = this.getSubjectLabel(this.editExBdLeaveSubjectId) || this.editSubject;
         const payload = {
             ...this.viewNoteSheet,
-            subject: this.editSubject,
+            subject: resolvedSubject,
+            exBdLeaveSubjectId: this.editExBdLeaveSubjectId,
             mainText: this.editMainText,
             referenceNumber: this.editReferenceNumber,
             purposeId: this.editPurposeId,
@@ -1014,7 +1045,8 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             next: (res) => {
                 this.savingView = false;
                 if (res?.statusCode === 200) {
-                    this.viewNoteSheet.subject = this.editSubject;
+                    this.viewNoteSheet.subject = resolvedSubject;
+                    this.viewNoteSheet.exBdLeaveSubjectId = this.editExBdLeaveSubjectId;
                     this.viewNoteSheet.mainText = this.editMainText;
                     this.viewNoteSheet.referenceNumber = this.editReferenceNumber;
                     this.viewNoteSheet.purposeId = this.editPurposeId;

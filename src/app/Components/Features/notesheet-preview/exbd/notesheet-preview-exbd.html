@@ -36,10 +36,20 @@
                 <div class="ns-main-col">
 
                     <!-- Subject -->
-                    <div class="ns-cell-subject" *ngIf="!editing">{{ noteSheet.subject }}</div>
+                    <div class="ns-cell-subject" *ngIf="!editing">{{ getSubjectLabel(noteSheet.exBdLeaveSubjectId) || noteSheet.subject }}</div>
                     <div class="ns-edit-field" *ngIf="editing">
                         <label class="ns-edit-label">Subject</label>
-                        <input pInputText [(ngModel)]="editSubject" placeholder="Subject" class="w-full" />
+                        <p-select
+                            [(ngModel)]="editExBdLeaveSubjectId"
+                            [options]="subjectTypeOptions"
+                            optionLabel="label"
+                            optionValue="value"
+                            [filter]="true"
+                            filterBy="label"
+                            [showClear]="true"
+                            placeholder="Select Subject"
+                            styleClass="w-full">
+                        </p-select>
                     </div>
 
                     <!-- Reference / Date -->
