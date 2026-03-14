@@ -1,13 +1,28 @@
 <p-fluid>
     <div class="card">
-        <div class="font-semibold text-xl mb-4">RAB Structure</div>
-        <p class="text-color-secondary mb-4">
-            Unit → Wing → Branch hierarchy. Expand or collapse nodes using the icons.
-        </p>
+        <div class="flex justify-content-between align-items-center mb-4">
+            <div>
+                <div class="font-semibold text-xl">Organizational Hierarchy</div>
+                <p class="text-color-secondary mt-1 mb-0">
+                    Unit → Wing → Branch → Sub-Branch → Section → Sub-Section. Expand/collapse nodes. Use Add Child, Edit, Delete to manage.
+                </p>
+            </div>
+            <p-button
+                label="Add Unit"
+                icon="pi pi-plus"
+                (onClick)="openAddRoot()"
+                [disabled]="loading">
+            </p-button>
+        </div>
+
         @if (loading) {
             <div class="flex align-items-center gap-2 p-4">
                 <i class="pi pi-spin pi-spinner"></i>
                 <span>Loading structure…</span>
+            </div>
+        } @else if (treeNodes.length === 0) {
+            <div class="p-4 text-center text-500">
+                No organizational units. Click <strong>Add Unit</strong> to create the root.
             </div>
         } @else {
             <div class="rab-structure-tree">
@@ -15,8 +30,91 @@
                     [value]="treeNodes"
                     [loading]="loading"
                     styleClass="rab-structure-tree-content">
+                    <ng-template let-node pTemplate="default">
+                        <span class="flex align-items-center gap-2 flex-1">
+                            <span class="node-label">{{ node.label }}</span>
+                            <span class="text-500 text-sm">({{ getNodeLabel(node.data?.codeType || '') }})</span>
+                            <div class="node-actions flex gap-1 ml-2">
+                                @if (canAddChild(node)) {
+                                    <p-button
+                                        icon="pi pi-plus"
+                                        [rounded]="true"
+                                        [text]="true"
+                                        size="small"
+                                        severity="success"
+                                        pTooltip="Add Child"
+                                        (onClick)="openAddChild(node); $event.stopPropagation()">
+                                    </p-button>
+                                }
+                                <p-button
+                                    icon="pi pi-pencil"
+                                    [rounded]="true"
+                                    [text]="true"
+                                    size="small"
+                                    severity="info"
+                                    pTooltip="Edit"
+                                    (onClick)="openEdit(node); $event.stopPropagation()">
+                                </p-button>
+                                <p-button
+                                    icon="pi pi-trash"
+                                    [rounded]="true"
+                                    [text]="true"
+                                    size="small"
+                                    severity="danger"
+                                    pTooltip="Delete"
+                                    (onClick)="confirmDelete(node, $event); $event.stopPropagation()">
+                                </p-button>
+                            </div>
+                        </span>
+                    </ng-template>
                 </p-tree>
             </div>
         }
     </div>
 </p-fluid>
+
+<p-confirmDialog />
+
+<!-- Add / Edit Dialog -->
+<p-dialog
+    [header]="isEditMode ? 'Edit ' + childLabel : 'Add ' + childLabel"
+    [(visible)]="displayDialog"
+    [modal]="true"
+    [style]="{ width: '480px' }"
+    [closable]="true"
+    [contentStyle]="{ 'border-top': '2px solid var(--primary-color)' }"
+    (onHide)="closeDialog()"
+    [draggable]="false"
+    [resizable]="false">
+    <form [formGroup]="orgForm" class="flex flex-column gap-3 mt-2">
+        <div>
+            <label class="block font-semibold mb-2">Name (English) <span class="text-red-500">*</span></label>
+            <input pInputText formControlName="codeValueEN" class="w-full" />
+            @if (orgForm.get('codeValueEN')?.invalid && orgForm.get('codeValueEN')?.touched) {
+                <small class="text-red-500 block mt-1">Required</small>
+            }
+        </div>
+        <div>
+            <label class="block font-semibold mb-2">Name (Bangla)</label>
+            <input pInputText formControlName="codeValueBN" class="w-full" />
+        </div>
+        <div>
+            <label class="block font-semibold mb-2">Status</label>
+            <p-select
+                formControlName="status"
+                [options]="[
+                    { label: 'Active', value: true },
+                    { label: 'Inactive', value: false }
+                ]"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Select"
+                styleClass="w-full">
+            </p-select>
+        </div>
+        <div class="flex justify-content-end gap-2 mt-2">
+            <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="closeDialog()" [disabled]="isSaving"></p-button>
+            <p-button label="Save" icon="pi pi-check" (onClick)="save()" [loading]="isSaving"></p-button>
+        </div>
+    </form>
+</p-dialog>

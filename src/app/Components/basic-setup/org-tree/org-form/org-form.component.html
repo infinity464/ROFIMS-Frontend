@@ -1,0 +1,47 @@
+@if (mode === 'empty') {
+  <div class="org-form-empty">
+    <p class="text-color-secondary">Select a node to edit, or use <strong>+ New Unit</strong> / <strong>+ Add Child</strong> to create.</p>
+  </div>
+} @else {
+  <div class="org-form-panel">
+    @if (!hideTitle) {
+      <h3 class="form-title">{{ formTitle }}</h3>
+    }
+    @if (breadcrumbPath.length) {
+      <nav class="breadcrumb">
+        @for (node of breadcrumbPath; track node.id) {
+          <span class="breadcrumb-sep" *ngIf="!$first"> / </span>
+          <span class="breadcrumb-item">{{ node.nameEN || node.commCode }}</span>
+        }
+      </nav>
+    }
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <div class="form-grid">
+        <div class="field full">
+          <label for="codeValueEN">Name (English) <span class="required">*</span></label>
+          <input pInputText id="codeValueEN" formControlName="codeValueEN" />
+          @if (form.get('codeValueEN')?.invalid && form.get('codeValueEN')?.touched) {
+            <small class="error">Required</small>
+          }
+        </div>
+        <div class="field full">
+          <label for="codeValueBN">Name (Bangla) <span class="required">*</span></label>
+          <input pInputText id="codeValueBN" formControlName="codeValueBN" />
+          @if (form.get('codeValueBN')?.invalid && form.get('codeValueBN')?.touched) {
+            <small class="error">Required</small>
+          }
+        </div>
+        <div class="field full">
+          <label for="status">Status</label>
+          <p-select id="status" formControlName="status"
+            [options]="statusOptions"
+            optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" />
+        </div>
+      </div>
+      <div class="form-actions">
+        <button pButton type="button" [label]="cancelLabel" class="p-button-secondary p-button-outlined" (click)="cancel()" [disabled]="saving"></button>
+        <button pButton type="submit" [label]="submitLabel" icon="pi pi-check" [loading]="saving"></button>
+      </div>
+    </form>
+  </div>
+}

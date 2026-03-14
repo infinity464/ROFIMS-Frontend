@@ -1,0 +1,27 @@
+<div class="tree-node" [style.padding-left.rem]="depth * 1.25">
+  <div class="tree-node-content" (click)="toggleExpand()">
+    <span class="expand-toggle" *ngIf="hasChildrenOrCanExpand">
+      <i class="pi pi-spin pi-spinner" *ngIf="loadingParentId === node.id"></i>
+      <i class="pi" [class.pi-chevron-right]="!node.expanded" [class.pi-chevron-down]="node.expanded" *ngIf="loadingParentId !== node.id"></i>
+    </span>
+    <span class="expand-placeholder" *ngIf="!hasChildrenOrCanExpand"></span>
+    <span class="level-badge" [style.background-color]="badgeColor">{{ node.codeType }}</span>
+    <span class="node-name">{{ node.nameEN || node.commCode }}</span>
+    <span class="node-comm" *ngIf="node.commCode">({{ node.commCode }})</span>
+    <div class="node-actions" (click)="$event.stopPropagation()">
+      <button *ngIf="canAddChild" pButton type="button" icon="pi pi-plus" class="p-button-text p-button-sm p-button-success"
+        pTooltip="Add Child" (click)="onAddChild($event)"></button>
+      <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm p-button-info"
+        pTooltip="Edit" (click)="onEdit($event)"></button>
+      <button pButton type="button" icon="pi pi-trash" class="p-button-text p-button-sm p-button-danger"
+        pTooltip="Delete" (click)="onDelete($event)"></button>
+    </div>
+  </div>
+  <div class="tree-node-children" *ngIf="node.expanded !== false && node.children?.length">
+    <app-tree-node *ngFor="let child of node.children; trackBy: trackById"
+      [node]="child" [depth]="depth + 1" [loadingParentId]="loadingParentId"
+      (addChild)="addChild.emit($event)" (edit)="edit.emit($event)" (delete)="delete.emit($event)"
+      (expandRequest)="expandRequest.emit($event)" (expandToggled)="expandToggled.emit($event)">
+    </app-tree-node>
+  </div>
+</div>

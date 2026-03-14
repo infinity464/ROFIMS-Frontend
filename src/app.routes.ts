@@ -36,6 +36,7 @@ import { AppointmentCategory } from '@/Components/basic-setup/appointment-catego
 import { RabId } from '@/Components/basic-setup/rab-id/rab-id';
 import { RabUnit } from '@/Components/basic-setup/rab-unit/rab-unit';
 import { RabStructureComponent } from '@/Components/basic-setup/rab-structure/rab-structure';
+import { OrgTreeComponent } from '@/Components/basic-setup/org-tree/org-tree.component';
 import { OfficerType } from '@/Components/basic-setup/officer-type/officer-type';
 import { RabWing } from '@/Components/basic-setup/rab-wing/rab-wing';
 import { EducationInstitution } from '@/Components/basic-setup/education-institution/education-institution';
@@ -171,6 +172,7 @@ export const appRoutes: Routes = [
             { path: 'basic-setup/appointment-category', component: AppointmentCategory },
             { path: 'basic-setup/rab-id', component: RabId },
             { path: 'basic-setup/rab-structure', component: RabStructureComponent },
+            { path: 'basic-setup/org-tree', component: OrgTreeComponent },
             { path: 'basic-setup/rab-unit', component: RabUnit },
             { path: 'basic-setup/rab-unit-aor', component: RabUnitAor },
             { path: 'basic-setup/officer-type', component: OfficerType },
