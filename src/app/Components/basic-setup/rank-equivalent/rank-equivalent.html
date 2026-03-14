@@ -39,19 +39,34 @@
                 </div>
                 <div>
                     <label for="motherOrgRank" class="block mb-2">Mother Organization Rank Name <span class="text-red-500">*</span></label>
-                    <p-select
+                    <p-multiSelect
                         id="motherOrgRank"
-                        formControlName="motherOrgRankId"
+                        formControlName="motherOrgRankIds"
                         [options]="motherOrgRankOptions"
                         optionLabel="label"
                         optionValue="value"
-                        placeholder="Select Mother Org Rank"
+                        placeholder="Select Mother Org Rank(s)"
                         styleClass="w-full"
                         [showClear]="true"
-                        [disabled]="!rankEquivalentForm.get('motherOrgId')?.value">
-                    </p-select>
-                    @if (rankEquivalentForm.get('motherOrgRankId')?.invalid && rankEquivalentForm.get('motherOrgRankId')?.touched) {
+                        [disabled]="!rankEquivalentForm.get('motherOrgId')?.value"
+                        display="chip">
+                    </p-multiSelect>
+                    @if (rankEquivalentForm.get('motherOrgRankIds')?.invalid && rankEquivalentForm.get('motherOrgRankIds')?.touched) {
                         <small class="text-red-500 block mt-1">Mother Organization Rank is required</small>
+                    }
+                </div>
+                <div>
+                    <label for="sortOrder" class="block mb-2">Seniority <span class="text-red-500">*</span></label>
+                    <p-inputNumber
+                        id="sortOrder"
+                        formControlName="sortOrder"
+                        placeholder="Enter Seniority"
+                        styleClass="w-full"
+                        [showClear]="true"
+                        [min]="0">
+                    </p-inputNumber>
+                    @if (rankEquivalentForm.get('sortOrder')?.invalid && rankEquivalentForm.get('sortOrder')?.touched) {
+                        <small class="text-red-500 block mt-1">Seniority is required</small>
                     }
                 </div>
             </div>
