@@ -8,12 +8,8 @@ import {
     DestroyRef
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { Fluid } from 'primeng/fluid';
 import { ButtonModule } from 'primeng/button';
-import { IconFieldModule } from 'primeng/iconfield';
-import { InputIconModule } from 'primeng/inputicon';
-import { InputTextModule } from 'primeng/inputtext';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
@@ -22,7 +18,6 @@ import { TreeNodeComponent } from './tree-node/tree-node.component';
 import { OrgFormComponent, FormMode } from './org-form/org-form.component';
 import { OrgService } from './org.service';
 import { OrgNode } from './models/org-node.model';
-import { LEVELS } from './models/org-node.model';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
@@ -31,12 +26,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
     changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [
         CommonModule,
-        FormsModule,
         Fluid,
         ButtonModule,
-        IconFieldModule,
-        InputIconModule,
-        InputTextModule,
         ConfirmDialogModule,
         DialogModule,
         ToastModule,
@@ -53,13 +44,11 @@ export class OrgTreeComponent implements OnInit {
     private confirmationService = inject(ConfirmationService);
     private destroyRef = inject(DestroyRef);
 
-    readonly searchQuery = signal('');
     readonly flatNodes = signal<OrgNode[]>([]);
     readonly selectedNode = signal<OrgNode | null>(null);
     readonly formMode = signal<FormMode>('empty');
     readonly loading = signal(false);
     readonly loadingParentId = signal<number | null>(null);
-    readonly LEVELS = LEVELS;
 
     readonly formVisible = computed(() => this.formMode() !== 'empty');
     readonly formTitle = computed(() => {
@@ -71,26 +60,7 @@ export class OrgTreeComponent implements OnInit {
     });
     readonly formSubmitLabel = computed(() => (this.formMode() === 'edit' ? 'Save' : 'Add'));
 
-    readonly treeNodes = computed(() => {
-        const flat = this.flatNodes();
-        const q = this.searchQuery().toLowerCase().trim();
-        const list = q
-            ? flat.filter(n =>
-                (n.nameEN?.toLowerCase().includes(q)) || (n.commCode?.toLowerCase().includes(q))
-            )
-            : flat;
-        return this.orgService.getTree(list);
-    });
-
-    readonly stats = computed(() => {
-        const flat = this.flatNodes();
-        const counts: Record<string, number> = {};
-        LEVELS.forEach(l => counts[l] = 0);
-        flat.forEach(n => {
-            if (LEVELS.includes(n.codeType as any)) counts[n.codeType]++;
-        });
-        return counts;
-    });
+    readonly treeNodes = computed(() => this.orgService.getTree(this.flatNodes()));
 
     readonly breadcrumbPath = computed(() => {
         const sel = this.selectedNode();
@@ -130,10 +100,6 @@ export class OrgTreeComponent implements OnInit {
                 this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load hierarchy' });
             }
         });
-    }
-
-    onSearch(q: string): void {
-        this.searchQuery.set(q);
     }
 
     openNewUnit(): void {
@@ -230,6 +196,10 @@ export class OrgTreeComponent implements OnInit {
     onFormCancelled(): void {
         this.formMode.set('empty');
         this.selectedNode.set(null);
+    }
+
+    onDialogVisibleChange(visible: boolean): void {
+        if (!visible) this.onFormCancelled();
     }
 
     private buildPath(node: OrgNode): OrgNode[] {

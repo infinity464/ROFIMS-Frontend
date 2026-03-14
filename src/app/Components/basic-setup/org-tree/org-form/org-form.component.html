@@ -8,39 +8,45 @@
       <h3 class="form-title">{{ formTitle }}</h3>
     }
     @if (breadcrumbPath.length) {
-      <nav class="breadcrumb">
+      <nav class="breadcrumb mb-3">
         @for (node of breadcrumbPath; track node.id) {
           <span class="breadcrumb-sep" *ngIf="!$first"> / </span>
           <span class="breadcrumb-item">{{ node.nameEN || node.commCode }}</span>
         }
       </nav>
     }
-    <form [formGroup]="form" (ngSubmit)="submit()">
-      <div class="form-grid">
-        <div class="field full">
-          <label for="codeValueEN">Name (English) <span class="required">*</span></label>
-          <input pInputText id="codeValueEN" formControlName="codeValueEN" />
+    <form [formGroup]="form" (ngSubmit)="submit()" class="mt-3">
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label for="codeValueEN" class="font-semibold block mb-2 text-700">Name (English) <span class="text-red-500">*</span></label>
+          <input pInputText id="codeValueEN" formControlName="codeValueEN" class="w-full" placeholder="Name (English)" />
           @if (form.get('codeValueEN')?.invalid && form.get('codeValueEN')?.touched) {
-            <small class="error">Required</small>
+            <small class="text-red-500">Required</small>
           }
         </div>
-        <div class="field full">
-          <label for="codeValueBN">Name (Bangla) <span class="required">*</span></label>
-          <input pInputText id="codeValueBN" formControlName="codeValueBN" />
+        <div>
+          <label for="codeValueBN" class="font-semibold block mb-2 text-700">Name (Bangla) <span class="text-red-500">*</span></label>
+          <input pInputText id="codeValueBN" formControlName="codeValueBN" class="w-full" placeholder="Name (Bangla)" />
           @if (form.get('codeValueBN')?.invalid && form.get('codeValueBN')?.touched) {
-            <small class="error">Required</small>
+            <small class="text-red-500">Required</small>
           }
         </div>
-        <div class="field full">
-          <label for="status">Status</label>
+        <div>
+          <label for="status" class="font-semibold block mb-2 text-700">Status</label>
           <p-select id="status" formControlName="status"
             [options]="statusOptions"
-            optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" />
+            optionLabel="label" optionValue="value" placeholder="Select status"
+            [showClear]="false" class="w-full" appendTo="body" [filter]="true" />
+        </div>
+        <div>
+          <label for="sortOrder" class="font-semibold block mb-2 text-700">Sort Order</label>
+          <p-inputNumber id="sortOrder" formControlName="sortOrder" [min]="1" [useGrouping]="false"
+            placeholder="Sort order" class="w-full" />
         </div>
       </div>
-      <div class="form-actions">
-        <button pButton type="button" [label]="cancelLabel" class="p-button-secondary p-button-outlined" (click)="cancel()" [disabled]="saving"></button>
-        <button pButton type="submit" [label]="submitLabel" icon="pi pi-check" [loading]="saving"></button>
+      <div class="flex justify-end gap-2 mt-4">
+        <p-button [label]="cancelLabel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="cancel()" [disabled]="saving"></p-button>
+        <p-button [label]="submitLabel" icon="pi pi-check" [loading]="saving" [disabled]="saving" (onClick)="submit()"></p-button>
       </div>
     </form>
   </div>

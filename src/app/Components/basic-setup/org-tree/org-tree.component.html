@@ -1,24 +1,13 @@
 <p-fluid>
-  <p-toast />
+
   <div class="card org-tree-shell">
     <header class="org-tree-header">
       <h2 class="title">Organizational Hierarchy</h2>
       <div class="header-actions">
-        <p-iconField iconPosition="left" styleClass="search-field">
-          <input pInputText type="text" placeholder="Search by name or code..."
-            [ngModel]="searchQuery()" (ngModelChange)="onSearch($event)" />
-          <i class="pi pi-search"></i>
-        </p-iconField>
         <button pButton type="button" label="+ New Unit" icon="pi pi-plus" class="p-button-primary"
-          (onClick)="openNewUnit()" [disabled]="loading()"></button>
+          (click)="openNewUnit()" [disabled]="loading()"></button>
       </div>
     </header>
-
-    <div class="stats-bar">
-      @for (level of LEVELS; track level) {
-        <span class="stat-pill">{{ level }}: {{ stats()[level] }}</span>
-      }
-    </div>
 
     <div class="tree-panel tree-panel-full">
       @if (loading()) {
@@ -47,13 +36,15 @@
 <p-dialog
   [header]="formTitle()"
   [visible]="formVisible()"
+  (visibleChange)="onDialogVisibleChange($event)"
   [modal]="true"
-  [style]="{ width: '480px' }"
+  [style]="{ width: '640px' }"
   [closable]="true"
   [contentStyle]="{ 'border-top': '2px solid var(--primary-color)' }"
   (onHide)="onFormCancelled()"
   [draggable]="false"
-  [resizable]="false">
+  [resizable]="false"
+  appendTo="body">
   <app-org-form
     [mode]="formMode()"
     [parentNode]="formMode() === 'add-child' ? selectedNode() : null"
