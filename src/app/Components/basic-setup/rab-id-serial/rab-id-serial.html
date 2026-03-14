@@ -5,24 +5,48 @@
         <form [formGroup]="rabIdSerialForm" (ngSubmit)="onSubmit()">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
 
-                <!-- Officer Type -->
+                <!-- Employee Type -->
                 <div class="field">
-                    <label for="officerTypeId" class="block mb-2">
-                        Officer Type <span class="text-red-500">*</span>
+                    <label for="employeeTypeId" class="block mb-2">
+                        Employee Type <span class="text-red-500">*</span>
                     </label>
                     <p-select
-                        id="officerTypeId"
-                        formControlName="officerTypeId"
-                        [options]="officerTypeOptions"
+                        id="employeeTypeId"
+                        formControlName="employeeTypeId"
+                        [options]="employeeTypeOptions"
                         optionLabel="label"
                         optionValue="value"
-                        placeholder="Select Officer Type"
+                        placeholder="Select Employee Type"
                         [showClear]="true"
                         styleClass="w-full">
                     </p-select>
-                    @if (rabIdSerialForm.get('officerTypeId')?.invalid && rabIdSerialForm.get('officerTypeId')?.touched) {
+                    @if (rabIdSerialForm.get('employeeTypeId')?.invalid && rabIdSerialForm.get('employeeTypeId')?.touched) {
                         <small class="text-red-500 block mt-1">
-                            Officer Type is required
+                            Employee Type is required
+                        </small>
+                    }
+                </div>
+
+                <!-- Mother Org Name (multi-select) -->
+                <div class="field">
+                    <label for="motherOrgIds" class="block mb-2">
+                        Mother Org Name <span class="text-red-500">*</span>
+                    </label>
+                    <p-multiselect
+                        id="motherOrgIds"
+                        formControlName="motherOrgIds"
+                        [options]="motherOrgOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Select Mother Org(s)"
+                        [showClear]="true"
+                        [filter]="true"
+                        display="chip"
+                        styleClass="w-full">
+                    </p-multiselect>
+                    @if (rabIdSerialForm.get('motherOrgIds')?.invalid && rabIdSerialForm.get('motherOrgIds')?.touched) {
+                        <small class="text-red-500 block mt-1">
+                            Mother Org Name is required
                         </small>
                     }
                 </div>
@@ -118,7 +142,8 @@
         <ng-template pTemplate="header">
             <tr>
                 <th style="width:5%">#</th>
-                <th>Officer Type</th>
+                <th>Employee Type</th>
+                <th>Mother Org Name</th>
                 <th>Start From</th>
                 <th>End To</th>
                 <th>Current ID</th>
@@ -128,7 +153,8 @@
         <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
             <tr>
                 <td>{{ first + rowIndex + 1 }}</td>
-                <td>{{ getOfficerTypeName(row.officerTypeId) }}</td>
+                <td>{{ getEmployeeTypeName(row.employeeTypeId) }}</td>
+                <td>{{ getMotherOrgNames(row.motherOrgIds) }}</td>
                 <td>{{ row.minId }}</td>
                 <td>{{ row.maxId }}</td>
                 <td>{{ row.currentId ?? '-' }}</td>
@@ -137,7 +163,7 @@
 
         <ng-template pTemplate="emptymessage">
             <tr>
-                <td colspan="6" class="text-center">No records found.</td>
+                <td colspan="7" class="text-center">No records found.</td>
             </tr>
         </ng-template>
 
