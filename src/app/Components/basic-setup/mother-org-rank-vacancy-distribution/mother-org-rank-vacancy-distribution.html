@@ -13,27 +13,32 @@
 
             <div class="vd-controls">
                 <div class="vd-field">
-                    <label class="vd-label">Select Vacancy</label>
-                    <span class="vd-label__sub">Mother Org + Rank</span>
+                    <label class="vd-label">Mother Organization</label>
                     <p-select
-                        [options]="vacancyList"
-                        [(ngModel)]="selectedVacancy"
-                        optionLabel="rankName"
-                        [placeholder]="'Select vacancy'"
+                        [options]="orgList"
+                        [(ngModel)]="selectedOrg"
+                        optionLabel="orgNameEN"
+                        [placeholder]="'Select organization'"
                         [filter]="true"
-                        filterBy="orgName,rankName"
-                        (ngModelChange)="onSelectVacancy($event)"
+                        filterBy="orgNameEN"
+                        (ngModelChange)="onOrgChange()"
                         styleClass="vd-select w-full">
-                        <ng-template let-v pTemplate="item">
-                            <span class="vd-select__item">
-                                <span class="vd-select__org">{{ v.orgName }}</span>
-                                <span class="vd-select__arrow">→</span>
-                                <span class="vd-select__rank">{{ v.rankName }}</span>
-                                <span class="vd-select__count">({{ v.totalVacancy }})</span>
-                            </span>
-                        </ng-template>
-                        <ng-template let-v pTemplate="label">
-                            <span>{{ v?.orgName }} → {{ v?.rankName }}</span>
+                    </p-select>
+                </div>
+                <div class="vd-field">
+                    <label class="vd-label">Mother Org Rank</label>
+                    <p-select
+                        [options]="rankOptions"
+                        [(ngModel)]="selectedRank"
+                        optionLabel="label"
+                        [placeholder]="'Select rank'"
+                        [filter]="true"
+                        filterBy="label"
+                        [disabled]="!selectedOrg || rankOptions.length === 0"
+                        (ngModelChange)="onRankChange()"
+                        styleClass="vd-select w-full">
+                        <ng-template let-r pTemplate="label">
+                            <span>{{ r?.label }}</span>
                         </ng-template>
                     </p-select>
                 </div>
@@ -60,25 +65,11 @@
                     </div>
                 </form>
 
-                @if (selectedVacancy) {
+                @if (selectedOrgRank) {
                     <div class="vd-stats">
                         <div class="vd-stat">
-                            <span class="vd-stat__label">Total Vacancy</span>
-                            <span class="vd-stat__value">{{ totalVacancy }}</span>
-                        </div>
-                        <div class="vd-stat__divider"></div>
-                        <div class="vd-stat">
-                            <span class="vd-stat__label">Distributed</span>
-                            <span class="vd-stat__value" [class.vd-stat__value--over]="distributedTotal > totalVacancy">
-                                {{ distributedTotal }}
-                            </span>
-                        </div>
-                        <div class="vd-stat__divider"></div>
-                        <div class="vd-stat">
-                            <span class="vd-stat__label">Remaining</span>
-                            <span class="vd-stat__value" [class.vd-stat__value--over]="distributedTotal > totalVacancy">
-                                {{ totalVacancy - distributedTotal }}
-                            </span>
+                            <span class="vd-stat__label">Distributed Total</span>
+                            <span class="vd-stat__value">{{ distributedTotal }}</span>
                         </div>
                     </div>
                 }
@@ -106,7 +97,7 @@
             </div>
         </div>
 
-        @if (selectedVacancy) {
+        @if (selectedOrgRank) {
             <div class="vd-table-section">
                 <div class="vd-table-header">
                     <span class="vd-table-header__title">Distribution Records</span>

@@ -23,36 +23,38 @@
                     }
                 </div>
                 <div>
-                    <label for="divisionId" class="block mb-2">Division <span class="text-red-500">*</span></label>
-                    <p-select
-                        id="divisionId"
+                    <label for="divisionIds" class="block mb-2">Division <span class="text-red-500">*</span></label>
+                    <p-multiselect
+                        id="divisionIds"
                         [options]="divisionOptions"
                         optionLabel="label"
                         optionValue="value"
                         styleClass="w-full"
-                        placeholder="Select Division"
-                        formControlName="divisionId">
-                    </p-select>
-                    @if (form.get('divisionId')?.invalid && form.get('divisionId')?.touched) {
-                        <small class="text-red-500 block mt-1">Division is required</small>
+                        placeholder="Select one or more divisions"
+                        [filter]="true"
+                        formControlName="divisionIds">
+                    </p-multiselect>
+                    @if (form.get('divisionIds')?.invalid && form.get('divisionIds')?.touched) {
+                        <small class="text-red-500 block mt-1">Select at least one division</small>
                     }
                 </div>
                 <div>
-                    <label for="districtId" class="block mb-2">District <span class="text-red-500">*</span></label>
-                    <p-select
-                        id="districtId"
+                    <label for="districtIds" class="block mb-2">District <span class="text-red-500">*</span></label>
+                    <p-multiselect
+                        id="districtIds"
                         [options]="districtOptions"
                         optionLabel="label"
                         optionValue="value"
                         styleClass="w-full"
-                        placeholder="Select District"
-                        formControlName="districtId">
-                    </p-select>
-                    @if (form.get('districtId')?.invalid && form.get('districtId')?.touched) {
-                        <small class="text-red-500 block mt-1">District is required</small>
+                        placeholder="Select one or more districts"
+                        [filter]="true"
+                        formControlName="districtIds">
+                    </p-multiselect>
+                    @if (form.get('districtIds')?.invalid && form.get('districtIds')?.touched) {
+                        <small class="text-red-500 block mt-1">Select at least one district</small>
                     }
                 </div>
-                <div class="md:col-span-2 lg:col-span-3">
+                <div>
                     <label for="upazilaIds" class="block mb-2">Upazilas <span class="text-red-500">*</span></label>
                     <p-multiselect
                         id="upazilaIds"
@@ -68,9 +70,39 @@
                         <small class="text-red-500 block mt-1">Select at least one upazila</small>
                     }
                 </div>
+                <div>
+                    <label for="locationOfBattalionHQ" class="block mb-2">Location of Battalion HQ</label>
+                    <input
+                        pInputText
+                        id="locationOfBattalionHQ"
+                        type="text"
+                        class="w-full"
+                        placeholder="Text"
+                        formControlName="locationOfBattalionHQ">
+                </div>
+                <div>
+                    <label for="numberOfCamp" class="block mb-2">Number of Camp</label>
+                    <p-inputNumber
+                        id="numberOfCamp"
+                        styleClass="w-full"
+                        placeholder="Number"
+                        formControlName="numberOfCamp"
+                        [useGrouping]="false">
+                    </p-inputNumber>
+                </div>
+                <div>
+                    <label for="nameOfCamps" class="block mb-2">Name of Camps</label>
+                    <input
+                        pInputText
+                        id="nameOfCamps"
+                        type="text"
+                        class="w-full"
+                        placeholder="Text"
+                        formControlName="nameOfCamps">
+                </div>
             </div>
             <div class="flex flex-col sm:flex-row gap-2 justify-end">
-                <p-button type="submit" label="Assign Selected Upazilas" [disabled]="form.invalid || isSubmitting" [fluid]="false"></p-button>
+                <p-button type="submit" label="Save" [disabled]="form.invalid || isSubmitting" [fluid]="false"></p-button>
                 <p-button type="button" label="Reset" severity="secondary" [fluid]="false" (click)="resetForm()"></p-button>
             </div>
         </form>
@@ -78,32 +110,40 @@
 
     <div class="card mt-4">
         <div class="flex justify-between items-center flex-column sm:flex-row">
-            <span class="font-medium">Assigned Upazilas</span>
+            <span class="font-medium">Assigned Area of Responsibility</span>
         </div>
 
         @if (!form.value.rabUnitId) {
-            <div class="text-color-secondary py-4">Select a RAB Unit to see assigned upazilas.</div>
+            <div class="text-color-secondary py-4">Select a RAB Unit to see assigned area of responsibility.</div>
         } @else if (assignedLoading) {
             <div class="py-4">Loading...</div>
         } @else if (assigned.length === 0) {
-            <div class="text-color-secondary py-4">No upazilas assigned.</div>
+            <div class="text-color-secondary py-4">No area assigned. Use the form above to add.</div>
         } @else {
             <p-table [value]="assigned" [loading]="false" styleClass="p-datatable-sm p-datatable-striped">
                 <ng-template pTemplate="header">
                     <tr>
                         <th>#</th>
+                        <th>RAB Unit</th>
                         <th>Division</th>
                         <th>District</th>
                         <th>Upazila</th>
+                        <th>Location of Battalion HQ</th>
+                        <th>Number of Camp</th>
+                        <th>Name of Camps</th>
                         <th>Action</th>
                     </tr>
                 </ng-template>
                 <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                     <tr>
                         <td>{{ rowIndex + 1 }}</td>
-                        <td>{{ row.divisionName }}</td>
-                        <td>{{ row.districtName }}</td>
-                        <td>{{ row.upazilaName }}</td>
+                        <td>{{ row.rabUnitName }}</td>
+                        <td>{{ row.divisionNames }}</td>
+                        <td>{{ row.districtNames }}</td>
+                        <td>{{ row.upazilaNames }}</td>
+                        <td>{{ row.locationOfBattalionHQ ?? '-' }}</td>
+                        <td>{{ row.numberOfCamp ?? '-' }}</td>
+                        <td>{{ row.nameOfCamps ?? '-' }}</td>
                         <td>
                             <button class="mx-2" pButton icon="pi pi-trash" (click)="removeAssignment(row, $event)" class="p-button-danger"></button>
                         </td>

@@ -1,0 +1,40 @@
+.org-tree-shell {
+  display: block;
+  padding: 1rem;
+
+  .org-tree-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1rem;
+
+    .title { margin: 0; font-size: 1.35rem; }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+  }
+
+  .tree-panel {
+    border: 1px solid var(--p-surface-border);
+    border-radius: 8px;
+    padding: 0.75rem;
+    background: var(--p-surface-50);
+    overflow: auto;
+    min-height: 420px;
+
+    &.tree-panel-full {
+      width: 100%;
+    }
+
+    .loading-state, .empty-state {
+      padding: 2rem;
+      text-align: center;
+      color: var(--p-text-muted-color);
+    }
+    .tree-container { padding: 0.25rem 0; }
+  }
+}

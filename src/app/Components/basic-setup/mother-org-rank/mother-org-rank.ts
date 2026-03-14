@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { FormConfig } from '../shared/models/formConfig';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MasterBasicSetupService } from '../shared/services/MasterBasicSetupService';
+import { OrganizationModel } from '../organization-setup/models/organization';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { DynamicFormComponent } from "../shared/componets/dynamic-form-component/dynamic-form";
 
@@ -24,6 +25,7 @@ export class MotherOrgRank {
 
     allData: any[] = [];
     commonData: any[] = [];
+    motherOrgs: OrganizationModel[] = [];
     editingId: number | null = null;
     commonForm!: FormGroup;
 
@@ -139,11 +141,12 @@ export class MotherOrgRank {
         });
     }
 
-    // Load all motherOrgRanks for the dropdown
+    // Load all motherOrgs for the dropdown
     loadActiveMotherOrgs() {
         this.masterBasicSetupService.getAllActiveMotherOrgs().subscribe({
-            next: (motherOrgRanks) => {
-                const motherOrgOptions = motherOrgRanks.map(d => ({
+            next: (motherOrgs) => {
+                this.motherOrgs = motherOrgs ?? [];
+                const motherOrgOptions = this.motherOrgs.map(d => ({
                     label: d.orgNameEN,
                     value: d.orgId
                 }));
@@ -200,6 +203,15 @@ export class MotherOrgRank {
                 r.codeValueEN?.toLowerCase().includes(q) || r.codeValueBN?.toLowerCase().includes(q)
             );
         }
+        // Sort by motherOrg seniority, then rank seniority
+        const getOrgSortOrder = (orgId: number) =>
+            this.motherOrgs.find(o => o.orgId === orgId)?.sortOrder ?? 999;
+        list.sort((a: any, b: any) => {
+            const orgOrderA = getOrgSortOrder(a.orgId);
+            const orgOrderB = getOrgSortOrder(b.orgId);
+            if (orgOrderA !== orgOrderB) return (orgOrderA ?? 999) - (orgOrderB ?? 999);
+            return (a.sortOrder ?? 999) - (b.sortOrder ?? 999);
+        });
         this.commonData = list;
         this.totalRecords = list.length;
         this.first = 0;

@@ -4,26 +4,41 @@
         background: transparent;
     }
 
-    // Style by depth: Unit (0) = green, Wing (1) = black, Branch (2) = blue
+    .node-label {
+        font-weight: 500;
+    }
+
+    .node-actions {
+        opacity: 0.7;
+        transition: opacity 0.15s;
+    }
+
+    :host ::ng-deep .p-treenode-content:hover .node-actions {
+        opacity: 1;
+    }
+
+    // Style by level
     :host ::ng-deep .p-tree .p-tree-container {
-        // Level 0: RAB Unit
-        > .p-treenode .p-treenode-content .p-treenode-label {
+        > .p-treenode .p-treenode-content .node-label {
             color: var(--green-700);
             font-weight: 600;
         }
 
-        // Level 1: RAB Wing
-        > .p-treenode .p-treenode-children > .p-treenode .p-treenode-content .p-treenode-label {
+        > .p-treenode .p-treenode-children > .p-treenode .p-treenode-content .node-label {
             color: var(--text-color);
         }
 
-        // Level 2: RAB Branch
-        > .p-treenode .p-treenode-children .p-treenode-children > .p-treenode .p-treenode-content .p-treenode-label {
+        > .p-treenode .p-treenode-children .p-treenode-children > .p-treenode .p-treenode-content .node-label {
             color: var(--primary-color);
         }
     }
 
+    :host ::ng-deep .p-treenode-content {
+        padding-right: 0.5rem;
+    }
+
     :host ::ng-deep .p-treenode-content .p-treenode-label {
+        flex: 1;
         margin-left: 0.25rem;
     }
 }

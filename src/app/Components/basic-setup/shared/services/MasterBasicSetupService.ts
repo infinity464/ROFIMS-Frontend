@@ -10,10 +10,7 @@ import { BankBranchModel } from '../models/bank-branch';
 import { TrainingInstituteModel } from '../models/training-institution';
 import { RabIdSerialModel } from '../models/rab-id-serial';
 import { EquivalentRankModel } from '../models/equivalent-rank';
-import {
-    MotherOrgRankVacancyModel,
-    MotherOrgRankVacancyDistributionModel
-} from '../models/mother-org-rank-vacancy';
+import { MotherOrgRankVacancyDistributionModel } from '../models/mother-org-rank-vacancy';
 
 import { NoteSheetTemplateModel } from '../models/notesheet-template';
 import { NoteSheetNumberConfigModel } from '../models/notesheet-number-config';
@@ -31,7 +28,6 @@ export class MasterBasicSetupService {
     private apiUrlTraining = `${environment.apis.core}/TrainingInstitute`;
     private apiUrlRabIdSerial = `${environment.apis.core}/RabIdSerial`;
     private apiUrlRankEquivalent = `${environment.apis.core}/RankEquivalent`;
-    private apiUrlMotherOrgRankVacancy = `${environment.apis.core}/MotherOrgRankVacancy`;
     private apiUrlMotherOrgRankVacancyDistribution = `${environment.apis.core}/MotherOrgRankVacancyDistribution`;
     private apiUrlNoteSheetTemplate = `${environment.apis.core}/NoteSheetTemplate`;
     private apiUrlNoteSheetNumberConfig = `${environment.apis.core}/NoteSheetNumberConfig`;
@@ -96,26 +92,6 @@ export class MasterBasicSetupService {
 
     deleteRankEquivalent(equivalentNameID: number, motherOrgRankId: number): Observable<{ statusCode: number; description?: string }> {
         return this.http.delete<{ statusCode: number; description?: string }>(`${this.apiUrlRankEquivalent}/DeleteAsyn/${equivalentNameID}/${motherOrgRankId}`);
-    }
-
-    // MotherOrgRankVacancy
-    getAllMotherOrgRankVacancy(): Observable<MotherOrgRankVacancyModel[]> {
-        return this.http.get<MotherOrgRankVacancyModel[]>(`${this.apiUrlMotherOrgRankVacancy}/GetAll`);
-    }
-    getMotherOrgRankVacancyByOrgId(orgId: number): Observable<MotherOrgRankVacancyModel[]> {
-        return this.http.get<MotherOrgRankVacancyModel[]>(`${this.apiUrlMotherOrgRankVacancy}/GetByOrgId/${orgId}`);
-    }
-    saveMotherOrgRankVacancy(model: MotherOrgRankVacancyModel): Observable<{ statusCode: number; description?: string }> {
-        return this.http.post<{ statusCode: number; description?: string }>(`${this.apiUrlMotherOrgRankVacancy}/Save`, model);
-    }
-    updateMotherOrgRankVacancy(model: MotherOrgRankVacancyModel): Observable<{ statusCode: number; description?: string }> {
-        return this.http.put<{ statusCode: number; description?: string }>(`${this.apiUrlMotherOrgRankVacancy}/Update`, model);
-    }
-    saveUpdateMotherOrgRankVacancy(model: MotherOrgRankVacancyModel): Observable<{ statusCode: number; description?: string }> {
-        return this.http.post<{ statusCode: number; description?: string }>(`${this.apiUrlMotherOrgRankVacancy}/SaveUpdate`, model);
-    }
-    deleteMotherOrgRankVacancy(orgId: number, motherOrgRankId: number): Observable<{ statusCode: number; description?: string }> {
-        return this.http.delete<{ statusCode: number; description?: string }>(`${this.apiUrlMotherOrgRankVacancy}/Delete/${orgId}/${motherOrgRankId}`);
     }
 
     // MotherOrgRankVacancyDistribution

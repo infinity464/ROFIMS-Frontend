@@ -18,13 +18,14 @@ import { DataTable } from '../shared/componets/data-table/data-table';
 import { TableConfig } from '../shared/models/dataTableConfig';
 import { CommonCode } from '../shared/models/common-code';
 import { OrganizationModel } from '../organization-setup/models/organization';
-import {
-    MotherOrgRankVacancyModel,
-    MotherOrgRankVacancyDistributionModel
-} from '../shared/models/mother-org-rank-vacancy';
+import { MotherOrgRankVacancyDistributionModel } from '../shared/models/mother-org-rank-vacancy';
 
-type VacancyOption = MotherOrgRankVacancyModel & { orgName: string; rankName: string };
 type DistributionRow = MotherOrgRankVacancyDistributionModel & { rabName?: string };
+
+interface OrgRankSelection {
+    orgId: number;
+    motherOrgRankId: number;
+}
 
 @Component({
     selector: 'app-mother-org-rank-vacancy-distribution',
@@ -48,8 +49,10 @@ type DistributionRow = MotherOrgRankVacancyDistributionModel & { rabName?: strin
 })
 export class MotherOrgRankVacancyDistributionComponent implements OnInit {
     title = 'Vacancy Distribution (RAB)';
-    vacancyList: VacancyOption[] = [];
-    selectedVacancy: VacancyOption | null = null;
+    orgList: OrganizationModel[] = [];
+    rankOptions: { codeId: number; label: string }[] = [];
+    selectedOrg: OrganizationModel | null = null;
+    selectedRank: { codeId: number; label: string } | null = null;
     distributionForm: FormGroup;
     isSubmitting = false;
 
@@ -73,8 +76,6 @@ export class MotherOrgRankVacancyDistributionComponent implements OnInit {
     first = 0;
     loading = false;
 
-    private orgById: Record<number, OrganizationModel> = {};
-    private rankNameByKey: Record<string, string> = {};
 
     constructor(
         private fb: FormBuilder,
@@ -88,8 +89,11 @@ export class MotherOrgRankVacancyDistributionComponent implements OnInit {
         });
     }
 
-    get totalVacancy(): number {
-        return this.selectedVacancy?.totalVacancy ?? 0;
+    get selectedOrgRank(): OrgRankSelection | null {
+        if (this.selectedOrg && this.selectedRank) {
+            return { orgId: this.selectedOrg.orgId, motherOrgRankId: this.selectedRank.codeId };
+        }
+        return null;
     }
 
     get distributedTotal(): number {
@@ -97,40 +101,38 @@ export class MotherOrgRankVacancyDistributionComponent implements OnInit {
     }
 
     ngOnInit(): void {
-        this.loadVacancyList();
+        this.loadOrgs();
         this.loadRabTree();
     }
 
-    loadVacancyList(): void {
-        forkJoin({
-            vacancies: this.masterBasicSetup.getAllMotherOrgRankVacancy(),
-            orgs: this.masterBasicSetup.getAllActiveMotherOrgs(),
-            ranks: this.masterBasicSetup.getAllByType('MotherOrgRank')
-        }).subscribe({
-            next: ({ vacancies, orgs, ranks }) => {
-                const oList = orgs ?? [];
-                this.orgById = Object.fromEntries(oList.map((o) => [o.orgId, o]));
-                const rList = (ranks ?? []) as CommonCode[];
-                this.rankNameByKey = {};
-                rList.forEach((r) => {
-                    const orgId = r.orgId ?? 0;
-                    this.rankNameByKey[`${orgId}-${r.codeId}`] = r.codeValueEN ?? '';
-                });
-                const items = vacancies ?? [];
-                this.vacancyList = items.map((v) => {
-                    const org = this.orgById[v.orgId];
-                    const rankName = this.rankNameByKey[`${v.orgId}-${v.motherOrgRankId}`] ?? '';
-                    return {
-                        ...v,
-                        orgName: org?.orgNameEN ?? String(v.orgId),
-                        rankName: rankName || String(v.motherOrgRankId)
-                    };
-                });
-            },
+    loadOrgs(): void {
+        this.masterBasicSetup.getAllActiveMotherOrgs().subscribe({
+            next: (list) => { this.orgList = list ?? []; },
             error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load vacancy list' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load organizations' });
             }
         });
+    }
+
+    onOrgChange(): void {
+        this.selectedRank = null;
+        this.rankOptions = [];
+        this.distributionData = [];
+        this.totalRecords = 0;
+        if (!this.selectedOrg) return;
+        this.masterBasicSetup.getAllActiveCommonCodesByOrgIdAndType(this.selectedOrg.orgId, 'MotherOrgRank').subscribe({
+            next: (ranks) => {
+                const rList = (ranks ?? []) as CommonCode[];
+                this.rankOptions = rList.map((r) => ({ codeId: r.codeId, label: r.codeValueEN ?? String(r.codeId) }));
+            },
+            error: () => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load ranks' });
+            }
+        });
+    }
+
+    onRankChange(): void {
+        this.loadDistribution();
     }
 
     loadRabTree(): void {
@@ -208,9 +210,6 @@ export class MotherOrgRankVacancyDistributionComponent implements OnInit {
         });
     }
 
-    onSelectVacancy(_v: VacancyOption | null): void {
-        this.loadDistribution();
-    }
 
     onRabNodeSelect(node: TreeNode): void {
         const data = node?.data as { codeId: number; codeType: string } | undefined;
@@ -222,8 +221,9 @@ export class MotherOrgRankVacancyDistributionComponent implements OnInit {
     }
 
     addDistribution(): void {
-        if (!this.selectedVacancy || this.rabCodeId == null) {
-            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Select a vacancy and a RAB unit, wing, or branch' });
+        const ctx = this.selectedOrgRank;
+        if (!ctx || this.rabCodeId == null) {
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Select organization, rank, and a RAB unit, wing, or branch' });
             return;
         }
         const qty = this.distributionForm.get('quantity')?.value ?? 0;
@@ -234,8 +234,8 @@ export class MotherOrgRankVacancyDistributionComponent implements OnInit {
         const user = this.shareService.getCurrentUser?.() ?? 'System';
         const isUpdate = this.editingDistributionId != null;
         const model: MotherOrgRankVacancyDistributionModel = {
-            orgId: this.selectedVacancy.orgId,
-            motherOrgRankId: this.selectedVacancy.motherOrgRankId,
+            orgId: ctx.orgId,
+            motherOrgRankId: ctx.motherOrgRankId,
             rabCodeId: this.rabCodeId,
             quantity: qty,
             createdBy: user,
@@ -245,7 +245,7 @@ export class MotherOrgRankVacancyDistributionComponent implements OnInit {
             model.id = this.editingDistributionId!;
         } else {
             const existing = this.distributionData.find(
-                (r) => r.orgId === this.selectedVacancy!.orgId && r.motherOrgRankId === this.selectedVacancy!.motherOrgRankId && r.rabCodeId === this.rabCodeId
+                (r) => r.orgId === ctx.orgId && r.motherOrgRankId === ctx.motherOrgRankId && r.rabCodeId === this.rabCodeId
             );
             if (existing?.id) {
                 model.id = existing.id;
@@ -281,14 +281,15 @@ export class MotherOrgRankVacancyDistributionComponent implements OnInit {
     }
 
     loadDistribution(): void {
-        if (!this.selectedVacancy) {
+        const ctx = this.selectedOrgRank;
+        if (!ctx) {
             this.distributionData = [];
             this.totalRecords = 0;
             return;
         }
         this.loading = true;
         this.masterBasicSetup
-            .getMotherOrgRankVacancyDistributionByVacancy(this.selectedVacancy.orgId, this.selectedVacancy.motherOrgRankId)
+            .getMotherOrgRankVacancyDistributionByVacancy(ctx.orgId, ctx.motherOrgRankId)
             .subscribe({
                 next: (list) => {
                     this.distributionData = (list ?? []).map((r: DistributionRow & { RABCodeId?: number }) => {

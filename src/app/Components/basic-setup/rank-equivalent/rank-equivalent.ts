@@ -8,6 +8,8 @@ import { SharedService } from '@/shared/services/shared-service';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { FluidModule } from 'primeng/fluid';
 import { SelectModule } from 'primeng/select';
+import { MultiSelectModule } from 'primeng/multiselect';
+import { InputNumberModule } from 'primeng/inputnumber';
 import { ButtonModule } from 'primeng/button';
 import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
@@ -22,6 +24,8 @@ import { TableConfig } from '../shared/models/dataTableConfig';
         CommonModule,
         FluidModule,
         SelectModule,
+        MultiSelectModule,
+        InputNumberModule,
         ButtonModule,
         ToastModule,
         ConfirmDialogModule,
@@ -58,7 +62,8 @@ export class RankEquivalent implements OnInit {
         tableColumns: [
             { field: 'equivalentNameDisplay', header: 'Equivalent Name' },
             { field: 'motherOrgDisplay', header: 'Mother Organization' },
-            { field: 'motherOrgRankDisplay', header: 'Mother Organization Rank' }
+            { field: 'motherOrgRankDisplay', header: 'Mother Organization Rank' },
+            { field: 'sortOrder', header: 'Seniority' }
         ]
     };
 
@@ -82,17 +87,18 @@ export class RankEquivalent implements OnInit {
     private setupFormFilterListeners(): void {
         this.rankEquivalentForm.get('equivalentNameID')?.valueChanges.subscribe(() => { this.first = 0; this.buildFilteredData(); });
         this.rankEquivalentForm.get('motherOrgId')?.valueChanges.subscribe(() => { this.first = 0; this.buildFilteredData(); });
-        this.rankEquivalentForm.get('motherOrgRankId')?.valueChanges.subscribe(() => { this.first = 0; this.buildFilteredData(); });
+        this.rankEquivalentForm.get('motherOrgRankIds')?.valueChanges.subscribe(() => { this.first = 0; this.buildFilteredData(); });
     }
 
     private buildFilteredData(): void {
         let list = [...this.allRankEquivalentData];
         const eqId = this.rankEquivalentForm?.get('equivalentNameID')?.value;
         const orgId = this.rankEquivalentForm?.get('motherOrgId')?.value;
-        const rankId = this.rankEquivalentForm?.get('motherOrgRankId')?.value;
+        const rankIds: number[] = this.rankEquivalentForm?.get('motherOrgRankIds')?.value ?? [];
         if (eqId != null) list = list.filter((r) => r.equivalentNameID === eqId);
         if (orgId != null) list = list.filter((r) => r.motherOrgId === orgId);
-        if (rankId != null) list = list.filter((r) => r.motherOrgRankId === rankId);
+        if (rankIds != null && rankIds.length > 0) list = list.filter((r) => rankIds.includes(r.motherOrgRankId));
+        list.sort((a, b) => (a.sortOrder ?? 999) - (b.sortOrder ?? 999));
         this.rankEquivalentData = list;
         this.totalRecords = list.length;
         this.first = 0;
@@ -102,7 +108,8 @@ export class RankEquivalent implements OnInit {
         this.rankEquivalentForm = this.fb.group({
             equivalentNameID: [null, Validators.required],
             motherOrgId: [null, Validators.required],
-            motherOrgRankId: [null, Validators.required],
+            motherOrgRankIds: [[], Validators.required],
+            sortOrder: [null, Validators.required],
             createdBy: [''],
             createdDate: [null],
             lastUpdatedBy: [''],
@@ -112,7 +119,7 @@ export class RankEquivalent implements OnInit {
 
     setupMotherOrgChange(): void {
         this.rankEquivalentForm.get('motherOrgId')?.valueChanges.subscribe((orgId: number | null) => {
-            this.rankEquivalentForm.patchValue({ motherOrgRankId: null }, { emitEvent: false });
+            this.rankEquivalentForm.patchValue({ motherOrgRankIds: [] }, { emitEvent: false });
             this.motherOrgRanks = [];
             if (orgId != null) {
                 this.loadMotherOrgRank(orgId);
@@ -225,8 +232,13 @@ export class RankEquivalent implements OnInit {
 
     onSubmit(): void {
         const v = this.rankEquivalentForm.value;
-        if (v.equivalentNameID == null || v.motherOrgId == null || v.motherOrgRankId == null) {
-            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Equivalent Name, Mother Organization and Mother Org Rank' });
+        const rankIds: number[] = v.motherOrgRankIds ?? [];
+        if (v.equivalentNameID == null || v.motherOrgId == null || rankIds.length === 0) {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Equivalent Name, Mother Organization and at least one Mother Org Rank' });
+            return;
+        }
+        if (v.sortOrder == null) {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Seniority is required' });
             return;
         }
         if (this.isSubmitting || this.rankEquivalentForm.invalid) {
@@ -235,17 +247,18 @@ export class RankEquivalent implements OnInit {
         }
         const user = this.shareService.getCurrentUser() ?? 'System';
         const now = this.shareService.getCurrentDateTime();
-        const model: EquivalentRankModel = {
-            equivalentNameID: v.equivalentNameID,
-            motherOrgRankId: v.motherOrgRankId,
-            motherOrgId: v.motherOrgId,
-            createdBy: user,
-            createdDate: now,
-            lastUpdatedBy: user,
-            lastupdate: now
-        };
 
         if (this.editingKeys) {
+            const model: EquivalentRankModel = {
+                equivalentNameID: v.equivalentNameID,
+                motherOrgRankId: rankIds[0],
+                motherOrgId: v.motherOrgId,
+                sortOrder: v.sortOrder,
+                createdBy: user,
+                createdDate: now,
+                lastUpdatedBy: user,
+                lastupdate: now
+            };
             this.isSubmitting = true;
             this.rankEquivalentService.updateRankEquivalent(model).subscribe({
                 next: (res) => {
@@ -265,25 +278,52 @@ export class RankEquivalent implements OnInit {
                 }
             });
         } else {
-            this.isSubmitting = true;
+            this.saveMultipleRankEquivalents(v, rankIds, user, now);
+        }
+    }
+
+    private saveMultipleRankEquivalents(v: any, rankIds: number[], user: string, now: string): void {
+        this.isSubmitting = true;
+        let completed = 0;
+        let hasError = false;
+        const total = rankIds.length;
+        rankIds.forEach((motherOrgRankId) => {
+            const model: EquivalentRankModel = {
+                equivalentNameID: v.equivalentNameID,
+                motherOrgRankId,
+                motherOrgId: v.motherOrgId,
+                sortOrder: v.sortOrder,
+                createdBy: user,
+                createdDate: now,
+                lastUpdatedBy: user,
+                lastupdate: now
+            };
             this.rankEquivalentService.saveRankEquivalent(model).subscribe({
                 next: (res) => {
-                    if (res?.statusCode === 200) {
-                        this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Rank Equivalent saved successfully' });
-                        this.resetForm();
-                        this.loadRankEquivalentList();
-                    } else {
-                        this.messageService.add({ severity: 'warn', summary: 'Warning', detail: res?.description ?? 'Save completed with warnings' });
+                    completed++;
+                    if (res?.statusCode !== 200) {
+                        hasError = true;
                     }
-                    this.isSubmitting = false;
+                    if (completed === total) {
+                        this.isSubmitting = false;
+                        if (!hasError) {
+                            this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Rank Equivalent(s) saved successfully' });
+                            this.resetForm();
+                            this.loadRankEquivalentList();
+                        }
+                    }
                 },
                 error: (err) => {
+                    completed++;
+                    hasError = true;
                     console.error(err);
                     this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.description ?? 'Failed to save Rank Equivalent' });
-                    this.isSubmitting = false;
+                    if (completed === total) {
+                        this.isSubmitting = false;
+                    }
                 }
             });
-        }
+        });
     }
 
     resetForm(): void {
@@ -291,7 +331,8 @@ export class RankEquivalent implements OnInit {
         this.rankEquivalentForm.reset({
             equivalentNameID: null,
             motherOrgId: null,
-            motherOrgRankId: null,
+            motherOrgRankIds: [],
+            sortOrder: null,
             createdBy: '',
             createdDate: null,
             lastUpdatedBy: '',
@@ -307,9 +348,9 @@ export class RankEquivalent implements OnInit {
         this.rankEquivalentForm.patchValue({
             equivalentNameID: row.equivalentNameID,
             motherOrgId: row.motherOrgId,
-            motherOrgRankId: row.motherOrgRankId
+            motherOrgRankIds: [row.motherOrgRankId],
+            sortOrder: row.sortOrder ?? null
         });
-        this.loadMotherOrgRank(row.motherOrgId);
     }
 
     delete(row: EquivalentRankModel & { equivalentNameDisplay?: string; motherOrgDisplay?: string; motherOrgRankDisplay?: string }, event: Event): void {

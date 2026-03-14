@@ -38,6 +38,13 @@ export class OfficerType {
     formConfig: FormConfig = {
         formFields: [
             {
+                name: 'orgId',
+                label: 'Mother Organization',
+                type: 'select',
+                required: true,
+                options: [] as { label: string; value: any }[]
+            },
+            {
                 name: 'employeeTypeId',
                 label: 'Employee Type',
                 type: 'select',
@@ -72,6 +79,7 @@ export class OfficerType {
 
         tableConfig: TableConfig = {
         tableColumns: [
+            { field: 'orgNameDisplay', header: 'Mother Organization' },
             { field: 'employeeTypeNameDisplay', header: 'Employee Type' },
             { field: 'codeValueEN', header: 'Officer Type Name (EN)' },
             { field: 'codeValueBN', header: 'OfficerType Name (BN)' },
@@ -97,21 +105,22 @@ export class OfficerType {
     ngOnInit(): void {
         this.initForm();
         this.setupFormFilterListeners();
-        this.loadEmployeeType();
+        this.loadActiveMotherOrgs();
     }
 
     private setupFormFilterListeners() {
+        this.commonCodeForm.get('orgId')?.valueChanges.subscribe(() => { this.first = 0; this.buildTableData(); });
         this.commonCodeForm.get('employeeTypeId')?.valueChanges.subscribe(() => { this.first = 0; this.buildTableData(); });
         this.commonCodeForm.get('status')?.valueChanges.subscribe(() => { this.first = 0; this.buildTableData(); });
     }
 
       initForm() {
         this.commonCodeForm = this.fb.group({
+            orgId: [null, Validators.required],
             employeeTypeId: [null],
             codeValueEN: ['', Validators.required],
             codeValueBN: ['', Validators.required],
             status: [null],
-            orgId: [0],
             codeId: [0],
             codeType: ['OfficerType'],
             parentCodeId: [null], // Will store employeeTypeId
@@ -124,6 +133,30 @@ export class OfficerType {
             createdDate: [''],
             lastUpdatedBy: [''],
             lastupdate: ['']
+        });
+    }
+
+    loadActiveMotherOrgs() {
+        this.masterBasicSetupService.getAllActiveMotherOrgs().subscribe({
+            next: (motherOrgs) => {
+                const motherOrgOptions = motherOrgs.map(d => ({
+                    label: d.orgNameEN,
+                    value: d.orgId
+                }));
+                const motherOrgField = this.formConfig.formFields.find(f => f.name === 'orgId');
+                if (motherOrgField) {
+                    motherOrgField.options = motherOrgOptions;
+                }
+                this.loadEmployeeType();
+            },
+            error: (err) => {
+                console.error('Error loading Mother orgs:', err);
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: 'Failed to load Mother orgs'
+                });
+            }
         });
     }
 
@@ -171,11 +204,19 @@ export class OfficerType {
     }
 
     private buildTableData() {
+        const orgOpts = (this.formConfig.formFields.find(f => f.name === 'orgId')?.options as { label: string; value: any }[]) || [];
         const empTypeOpts = (this.formConfig.formFields.find(f => f.name === 'employeeTypeId')?.options as { label: string; value: any }[]) || [];
+        const getOrgName = (id: number) => orgOpts.find((o: any) => o.value === id)?.label ?? '-';
         const getEmpTypeName = (id: number) => empTypeOpts.find((o: any) => o.value === id)?.label ?? '-';
-        let list = this.allData.map((r: any) => ({ ...r, employeeTypeNameDisplay: getEmpTypeName(r.parentCodeId) }));
+        let list = this.allData.map((r: any) => ({
+            ...r,
+            orgNameDisplay: getOrgName(r.orgId),
+            employeeTypeNameDisplay: getEmpTypeName(r.parentCodeId)
+        }));
+        const orgId = this.commonCodeForm?.get('orgId')?.value;
         const parentId = this.commonCodeForm?.get('employeeTypeId')?.value;
         const status = this.commonCodeForm?.get('status')?.value;
+        if (orgId != null) list = list.filter((r: any) => r.orgId === orgId);
         if (parentId != null) list = list.filter((r: any) => r.parentCodeId === parentId);
         if (status != null) list = list.filter((r: any) => r.status === status);
         const q = (this.searchValue ?? '').toLowerCase().trim();
@@ -186,8 +227,13 @@ export class OfficerType {
     }
 
     submit(data: any) {
+        const orgId = this.commonCodeForm.get('orgId')?.value;
         const empTypeId = this.commonCodeForm.get('employeeTypeId')?.value;
         const status = this.commonCodeForm.get('status')?.value;
+        if (orgId == null || orgId === '') {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Mother Organization' });
+            return;
+        }
         if (empTypeId == null) {
             this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Employee Type' });
             return;
@@ -289,6 +335,7 @@ export class OfficerType {
     update(row: any) {
         this.editingId = row.codeId;
         this.commonCodeForm.patchValue({
+            orgId: row.orgId,
             employeeTypeId: row.parentCodeId, // parentCodeId contains employeeTypeId
             codeValueEN: row.codeValueEN,
             codeValueBN: row.codeValueBN,
@@ -341,8 +388,8 @@ export class OfficerType {
         this.searchValue = '';
         this.isSubmitting = false;
         this.commonCodeForm.reset({
+            orgId: null,
             employeeTypeId: null,
-            orgId: 0,
             codeId: 0,
             codeType: 'OfficerType',
             status: null,

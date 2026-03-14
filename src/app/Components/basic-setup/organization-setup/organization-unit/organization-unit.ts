@@ -17,6 +17,7 @@ import { TableModule } from "primeng/table";
 import { IconField } from "primeng/iconfield";
 import { InputIcon } from "primeng/inputicon";
 import { SharedService } from '@/shared/services/shared-service';
+import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 
 interface OrgUnitRow extends OrganizationModel {
     parentName?: string;
@@ -48,6 +49,7 @@ export class OrganizationUnit implements OnInit {
     isSubmitting = false;
     motherOrg: OrganizationModel[] = [];
     organizations: OrganizationModel[] = [];
+    districtOptions: { label: string; value: number }[] = [];
     filteredOrganizations: OrgUnitRow[] = [];
     editingId: number | null = null;
     currentUser : string = ""
@@ -69,13 +71,15 @@ export class OrganizationUnit implements OnInit {
         private organizationService: OrganizationService,
         private messageService: MessageService,
         private confirmationService: ConfirmationService,
-        private sharedService: SharedService
+        private sharedService: SharedService,
+        private masterBasicSetupService: MasterBasicSetupService
     ) {}
 
     ngOnInit(): void {
         this.currentUser = this.sharedService.getCurrentUser();
         this.initForm();
         this.setupFormFilterListeners();
+        this.loadDistricts();
         this.loadMotherOrg(); // loads first, then GetAllOrgUnit so parentName can use both
     }
 
@@ -93,6 +97,32 @@ export class OrganizationUnit implements OnInit {
             this.first = 0;
             this.buildTableData();
         });
+        this.organizationForm.get('districtId')?.valueChanges.subscribe(() => {
+            this.first = 0;
+            this.buildTableData();
+        });
+    }
+
+    loadDistricts() {
+        this.masterBasicSetupService.getAllByType('District').subscribe({
+            next: (districts) => {
+                const list = Array.isArray(districts) ? districts : [];
+                this.districtOptions = list.map((d: any) => ({
+                    label: d.codeValueBN ? `${d.codeValueEN} (${d.codeValueBN})` : d.codeValueEN,
+                    value: d.codeId
+                }));
+                this.buildTableData();
+            },
+            error: (err) => {
+                console.error('Error loading districts:', err);
+            }
+        });
+    }
+
+    getDistrictDisplay(id: number | null | undefined): string {
+        if (id == null) return '-';
+        const opt = this.districtOptions.find(o => o.value === id);
+        return opt?.label ?? '-';
     }
 
     getParentName(parentOrgId: number | null | undefined): string {
@@ -109,8 +139,9 @@ export class OrganizationUnit implements OnInit {
             contactName: [''],
             contactNumber: [''],
             locationCode: [''],
-            locationEN: ['', Validators.required],
+            locationEN: [''],
             locationBN: [''],
+            districtId: [null, Validators.required],
             email: [''],
             sortOrder: [0],
             status: [null],
@@ -168,7 +199,8 @@ export class OrganizationUnit implements OnInit {
     private buildTableData() {
         let list = this.organizations.map(o => ({
             ...o,
-            parentName: this.resolveParentName(o.parentOrg)
+            parentName: this.resolveParentName(o.parentOrg),
+            districtDisplay: this.getDistrictDisplay(o.districtId)
         }));
 
         const parentOrg = this.organizationForm?.get('parentOrg')?.value;
@@ -181,6 +213,11 @@ export class OrganizationUnit implements OnInit {
             list = list.filter(org => org.status === status);
         }
 
+        const districtId = this.organizationForm?.get('districtId')?.value;
+        if (districtId != null && districtId !== '') {
+            list = list.filter(org => org.districtId === districtId);
+        }
+
         const q = (this.searchValue ?? '').toLowerCase().trim();
         if (q) {
             list = list.filter(org =>
@@ -188,7 +225,8 @@ export class OrganizationUnit implements OnInit {
                 org.orgNameBN?.toLowerCase().includes(q) ||
                 org.locationEN?.toLowerCase().includes(q) ||
                 org.locationBN?.toLowerCase().includes(q) ||
-                (org.parentName && org.parentName.toLowerCase().includes(q))
+                (org.parentName && org.parentName.toLowerCase().includes(q)) ||
+                this.getDistrictDisplay(org.districtId).toLowerCase().includes(q)
             );
         }
 
@@ -335,6 +373,7 @@ export class OrganizationUnit implements OnInit {
         this.organizationForm.reset({
             orgId: 0,
             parentOrg: null,
+            districtId: null,
             status: null,
             createdDate: new Date(),
             lastupdate: new Date(),

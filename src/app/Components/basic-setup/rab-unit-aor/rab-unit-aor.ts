@@ -8,6 +8,8 @@ import { FluidModule } from 'primeng/fluid';
 import { SelectModule } from 'primeng/select';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { ButtonModule } from 'primeng/button';
+import { InputNumberModule } from 'primeng/inputnumber';
+import { InputTextModule } from 'primeng/inputtext';
 import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TableModule } from 'primeng/table';
@@ -20,12 +22,13 @@ import { RABUnitAORModel } from '../shared/models/rab-unit-aor';
 type Option = { label: string; value: number };
 type AssignedRow = {
     aorId: number;
-    divisionId: number;
-    divisionName: string;
-    districtId: number;
-    districtName: string;
-    upazilaId: number;
-    upazilaName: string;
+    rabUnitName: string;
+    divisionNames: string;
+    districtNames: string;
+    upazilaNames: string;
+    locationOfBattalionHQ?: string | null;
+    numberOfCamp?: number | null;
+    nameOfCamps?: string | null;
 };
 
 @Component({
@@ -38,6 +41,8 @@ type AssignedRow = {
         SelectModule,
         MultiSelectModule,
         ButtonModule,
+        InputNumberModule,
+        InputTextModule,
         ToastModule,
         ConfirmDialogModule,
         TableModule
@@ -69,9 +74,12 @@ export class RabUnitAor implements OnInit {
     ) {
         this.form = this.fb.group({
             rabUnitId: [null, Validators.required],
-            divisionId: [null, Validators.required],
-            districtId: [null, Validators.required],
-            upazilaIds: [[], Validators.required]
+            divisionIds: [[], Validators.required],
+            districtIds: [[], Validators.required],
+            upazilaIds: [[], Validators.required],
+            locationOfBattalionHQ: [null],
+            numberOfCamp: [null],
+            nameOfCamps: [null]
         });
     }
 
@@ -79,17 +87,17 @@ export class RabUnitAor implements OnInit {
         this.loadRabUnits();
         this.loadDivisions();
 
-        this.form.get('divisionId')?.valueChanges.subscribe((divisionId) => {
+        this.form.get('divisionIds')?.valueChanges.subscribe((divisionIds: number[]) => {
             this.districtOptions = [];
             this.upazilaOptions = [];
-            this.form.patchValue({ districtId: null, upazilaIds: [] }, { emitEvent: false });
-            if (divisionId) this.loadDistricts(divisionId);
+            this.form.patchValue({ districtIds: [], upazilaIds: [] }, { emitEvent: false });
+            if (divisionIds?.length) this.loadDistrictsForDivisions(divisionIds);
         });
 
-        this.form.get('districtId')?.valueChanges.subscribe((districtId) => {
+        this.form.get('districtIds')?.valueChanges.subscribe((districtIds: number[]) => {
             this.upazilaOptions = [];
             this.form.patchValue({ upazilaIds: [] }, { emitEvent: false });
-            if (districtId) this.loadUpazilas(districtId);
+            if (districtIds?.length) this.loadUpazilasForDistricts(districtIds);
         });
 
         this.form.get('rabUnitId')?.valueChanges.subscribe((rabUnitId) => {
@@ -120,10 +128,21 @@ export class RabUnitAor implements OnInit {
         });
     }
 
-    private loadDistricts(divisionId: number): void {
-        this.master.getByParentId(divisionId).subscribe({
-            next: (districts) => {
-                this.districtOptions = (districts ?? []).map((d) => ({ label: d.codeValueEN, value: d.codeId }));
+    private loadDistrictsForDivisions(divisionIds: number[]): void {
+        const calls = divisionIds.map((id) => this.master.getByParentId(id));
+        forkJoin(calls).subscribe({
+            next: (districtLists) => {
+                const seen = new Set<number>();
+                const options: Option[] = [];
+                (districtLists ?? []).forEach((list) => {
+                    (list ?? []).forEach((d: CommonCode) => {
+                        if (!seen.has(d.codeId)) {
+                            seen.add(d.codeId);
+                            options.push({ label: d.codeValueEN ?? '', value: d.codeId });
+                        }
+                    });
+                });
+                this.districtOptions = options.sort((a, b) => a.label.localeCompare(b.label));
             },
             error: () => {
                 this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load districts' });
@@ -131,15 +150,31 @@ export class RabUnitAor implements OnInit {
         });
     }
 
-    private loadUpazilas(districtId: number): void {
-        this.master.getByParentId(districtId).subscribe({
-            next: (upazilas) => {
-                this.upazilaOptions = (upazilas ?? []).map((u) => ({ label: u.codeValueEN, value: u.codeId }));
+    private loadUpazilasForDistricts(districtIds: number[]): void {
+        const calls = districtIds.map((id) => this.master.getByParentId(id));
+        forkJoin(calls).subscribe({
+            next: (upazilaLists) => {
+                const seen = new Set<number>();
+                const options: Option[] = [];
+                (upazilaLists ?? []).forEach((list) => {
+                    (list ?? []).forEach((u: CommonCode) => {
+                        if (!seen.has(u.codeId)) {
+                            seen.add(u.codeId);
+                            options.push({ label: u.codeValueEN ?? '', value: u.codeId });
+                        }
+                    });
+                });
+                this.upazilaOptions = options.sort((a, b) => a.label.localeCompare(b.label));
             },
             error: () => {
                 this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load upazilas' });
             }
         });
+    }
+
+    private toCsv(ids: number[]): string | null {
+        if (!ids?.length) return null;
+        return ids.join(',');
     }
 
     assignSelected(): void {
@@ -148,13 +183,14 @@ export class RabUnitAor implements OnInit {
             return;
         }
 
-        const rabUnitId = this.form.value.rabUnitId as number;
-        const divisionId = this.form.value.divisionId as number;
-        const districtId = this.form.value.districtId as number;
-        const upazilaIds = (this.form.value.upazilaIds as number[]) ?? [];
+        const val = this.form.value;
+        const rabUnitId = val.rabUnitId as number;
+        const divisionIds = (val.divisionIds as number[]) ?? [];
+        const districtIds = (val.districtIds as number[]) ?? [];
+        const upazilaIds = (val.upazilaIds as number[]) ?? [];
 
-        if (!upazilaIds.length) {
-            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Select at least one upazila' });
+        if (!divisionIds.length || !districtIds.length || !upazilaIds.length) {
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Select at least one division, district, and upazila' });
             return;
         }
 
@@ -163,32 +199,27 @@ export class RabUnitAor implements OnInit {
 
         this.isSubmitting = true;
 
-        const calls = upazilaIds.map((upazilaId) => {
-            const model: RABUnitAORModel = {
-                rabUnitId,
-                divisionId,
-                districtId,
-                upazilaId,
-                status: true,
-                createdBy: user,
-                createdDate: now,
-                lastUpdatedBy: user,
-                lastupdate: now
-            };
-            return this.master.saveRABUnitAOR(model);
-        });
+        const model: RABUnitAORModel = {
+            rabUnitId,
+            divisionIds: this.toCsv(divisionIds),
+            districtIds: this.toCsv(districtIds),
+            upazilaIds: this.toCsv(upazilaIds),
+            locationOfBattalionHQ: val.locationOfBattalionHQ ?? null,
+            numberOfCamp: val.numberOfCamp ?? null,
+            nameOfCamps: val.nameOfCamps ?? null,
+            status: true,
+            createdBy: user,
+            createdDate: now,
+            lastUpdatedBy: user,
+            lastupdate: now
+        };
 
-        forkJoin(calls).subscribe({
-            next: (results) => {
-                const failed = (results ?? []).filter((r) => (r?.statusCode ?? 500) !== 200);
-                if (failed.length) {
-                    this.messageService.add({
-                        severity: 'warn',
-                        summary: 'Warning',
-                        detail: `${failed.length} assignment(s) may have failed`
-                    });
+        this.master.saveRABUnitAOR(model).subscribe({
+            next: (res) => {
+                if (res?.statusCode === 200) {
+                    this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Saved successfully' });
                 } else {
-                    this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Assigned successfully' });
+                    this.messageService.add({ severity: 'warn', summary: 'Warning', detail: res?.description ?? 'Save failed' });
                 }
                 this.loadAssigned(rabUnitId);
             },
@@ -196,7 +227,7 @@ export class RabUnitAor implements OnInit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: err?.error?.description ?? err?.message ?? 'Failed to assign upazilas'
+                    detail: err?.error?.description ?? err?.message ?? 'Failed to save'
                 });
             },
             complete: () => {
@@ -205,104 +236,129 @@ export class RabUnitAor implements OnInit {
         });
     }
 
+    private csvToIds(csv: string | null | undefined): number[] {
+        if (!csv?.trim()) return [];
+        return csv.split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n));
+    }
+
+    private idsToNames(ids: number[], map: Record<number, string>): string {
+        if (!ids.length) return '-';
+        return ids.map((id) => map[id] ?? String(id)).join(', ');
+    }
+
     private loadAssigned(rabUnitId: number): void {
         this.assignedLoading = true;
         this.master.getRABUnitAORByRabUnit(rabUnitId).subscribe({
             next: (rows) => {
-                const normalized = (rows ?? [])
-                    .map((r: any) => ({
-                        aorId: (r.aorId ?? r.AORId) as number | undefined,
-                        divisionId: (r.divisionId ?? r.DivisionId) as number | undefined,
-                        districtId: (r.districtId ?? r.DistrictId) as number | undefined,
-                        upazilaId: (r.upazilaId ?? r.UpazilaId) as number | undefined
-                    }))
-                    .filter((r) => r.aorId != null && r.divisionId != null && r.districtId != null && r.upazilaId != null) as Array<{
-                    aorId: number;
-                    divisionId: number;
-                    districtId: number;
-                    upazilaId: number;
-                }>;
-
-                if (!normalized.length) {
+                const list = (rows ?? []) as any[];
+                if (!list.length) {
                     this.assigned = [];
                     this.assignedLoading = false;
                     return;
                 }
 
-                const divisionIds = [...new Set(normalized.map((r) => r.divisionId))];
-                const districtIds = [...new Set(normalized.map((r) => r.districtId))];
+                const allDivisionIds = new Set<number>();
+                const allDistrictIds = new Set<number>();
+                const allUpazilaIds = new Set<number>();
+                list.forEach((r) => {
+                    this.csvToIds(r.divisionIds ?? r.DivisionIds).forEach((id) => allDivisionIds.add(id));
+                    this.csvToIds(r.districtIds ?? r.DistrictIds).forEach((id) => allDistrictIds.add(id));
+                    this.csvToIds(r.upazilaIds ?? r.UpazilaIds).forEach((id) => allUpazilaIds.add(id));
+                });
 
                 this.master.getAllByType('Division').subscribe({
                     next: (divs) => {
-                        const divisionMap = Object.fromEntries((divs ?? []).map((d) => [d.codeId, d.codeValueEN ?? '']));
-                        const districtCalls = divisionIds.map((id) => this.master.getByParentId(id));
+                        const divisionMap: Record<number, string> = Object.fromEntries((divs ?? []).map((d) => [d.codeId, d.codeValueEN ?? '']));
+                        const districtCalls = [...allDivisionIds].map((id) => this.master.getByParentId(id));
                         forkJoin(districtCalls).subscribe({
                             next: (districtLists) => {
                                 const districtMap: Record<number, string> = {};
-                                districtLists.forEach((dl) => {
+                                (districtLists ?? []).forEach((dl) => {
                                     (dl ?? []).forEach((d: CommonCode) => {
                                         districtMap[d.codeId] = d.codeValueEN ?? '';
                                     });
                                 });
-
-                                const upazilaCalls = districtIds.map((id) => this.master.getByParentId(id));
+                                const upazilaCalls = [...allDistrictIds].map((id) => this.master.getByParentId(id));
                                 forkJoin(upazilaCalls).subscribe({
                                     next: (upazilaLists) => {
                                         const upazilaMap: Record<number, string> = {};
-                                        upazilaLists.forEach((ul) => {
+                                        (upazilaLists ?? []).forEach((ul) => {
                                             (ul ?? []).forEach((u: CommonCode) => {
                                                 upazilaMap[u.codeId] = u.codeValueEN ?? '';
                                             });
                                         });
-
-                                        this.assigned = normalized.map((r) => ({
-                                            aorId: r.aorId,
-                                            divisionId: r.divisionId,
-                                            divisionName: divisionMap[r.divisionId] ?? String(r.divisionId),
-                                            districtId: r.districtId,
-                                            districtName: districtMap[r.districtId] ?? String(r.districtId),
-                                            upazilaId: r.upazilaId,
-                                            upazilaName: upazilaMap[r.upazilaId] ?? String(r.upazilaId)
-                                        }));
+                                        const rabName = this.rabUnitOptions.find((o) => o.value === rabUnitId)?.label ?? String(rabUnitId);
+                                        this.assigned = list.map((r) => {
+                                            const divIds = this.csvToIds(r.divisionIds ?? r.DivisionIds);
+                                            const distIds = this.csvToIds(r.districtIds ?? r.DistrictIds);
+                                            const upaIds = this.csvToIds(r.upazilaIds ?? r.UpazilaIds);
+                                            return {
+                                                aorId: r.aorId ?? r.AORId,
+                                                rabUnitName: rabName,
+                                                divisionNames: this.idsToNames(divIds, divisionMap),
+                                                districtNames: this.idsToNames(distIds, districtMap),
+                                                upazilaNames: this.idsToNames(upaIds, upazilaMap),
+                                                locationOfBattalionHQ: r.locationOfBattalionHQ ?? r.LocationOfBattalionHQ ?? null,
+                                                numberOfCamp: r.numberOfCamp ?? r.NumberOfCamp ?? null,
+                                                nameOfCamps: r.nameOfCamps ?? r.NameOfCamps ?? null
+                                            };
+                                        });
+                                        // Populate form with first record for editing
+                                        const first = list[0];
+                                        if (first && this.form.value.rabUnitId === rabUnitId) {
+                                            this.form.patchValue({
+                                                divisionIds: this.csvToIds(first.divisionIds ?? first.DivisionIds),
+                                                districtIds: this.csvToIds(first.districtIds ?? first.DistrictIds),
+                                                upazilaIds: this.csvToIds(first.upazilaIds ?? first.UpazilaIds),
+                                                locationOfBattalionHQ: first.locationOfBattalionHQ ?? first.LocationOfBattalionHQ ?? null,
+                                                numberOfCamp: first.numberOfCamp ?? first.NumberOfCamp ?? null,
+                                                nameOfCamps: first.nameOfCamps ?? first.NameOfCamps ?? null
+                                            }, { emitEvent: false });
+                                            this.loadDistrictsForDivisions(this.csvToIds(first.divisionIds ?? first.DivisionIds));
+                                            this.loadUpazilasForDistricts(this.csvToIds(first.districtIds ?? first.DistrictIds));
+                                        }
                                         this.assignedLoading = false;
                                     },
                                     error: () => {
-                                        this.assigned = normalized.map((r) => ({
-                                            aorId: r.aorId,
-                                            divisionId: r.divisionId,
-                                            divisionName: String(r.divisionId),
-                                            districtId: r.districtId,
-                                            districtName: String(r.districtId),
-                                            upazilaId: r.upazilaId,
-                                            upazilaName: String(r.upazilaId)
+                                        this.assigned = list.map((r) => ({
+                                            aorId: r.aorId ?? r.AORId,
+                                            rabUnitName: this.rabUnitOptions.find((o) => o.value === rabUnitId)?.label ?? String(rabUnitId),
+                                            divisionNames: (r.divisionIds ?? r.DivisionIds) ?? '-',
+                                            districtNames: (r.districtIds ?? r.DistrictIds) ?? '-',
+                                            upazilaNames: (r.upazilaIds ?? r.UpazilaIds) ?? '-',
+                                            locationOfBattalionHQ: r.locationOfBattalionHQ ?? r.LocationOfBattalionHQ ?? null,
+                                            numberOfCamp: r.numberOfCamp ?? r.NumberOfCamp ?? null,
+                                            nameOfCamps: r.nameOfCamps ?? r.NameOfCamps ?? null
                                         }));
                                         this.assignedLoading = false;
                                     }
                                 });
                             },
                             error: () => {
-                                this.assigned = normalized.map((r) => ({
-                                    aorId: r.aorId,
-                                    divisionId: r.divisionId,
-                                    divisionName: String(r.divisionId),
-                                    districtId: r.districtId,
-                                    districtName: String(r.districtId),
-                                    upazilaId: r.upazilaId,
-                                    upazilaName: String(r.upazilaId)
+                                this.assigned = list.map((r) => ({
+                                    aorId: r.aorId ?? r.AORId,
+                                    rabUnitName: this.rabUnitOptions.find((o) => o.value === rabUnitId)?.label ?? String(rabUnitId),
+                                    divisionNames: (r.divisionIds ?? r.DivisionIds) ?? '-',
+                                    districtNames: (r.districtIds ?? r.DistrictIds) ?? '-',
+                                    upazilaNames: (r.upazilaIds ?? r.UpazilaIds) ?? '-',
+                                    locationOfBattalionHQ: r.locationOfBattalionHQ ?? r.LocationOfBattalionHQ ?? null,
+                                    numberOfCamp: r.numberOfCamp ?? r.NumberOfCamp ?? null,
+                                    nameOfCamps: r.nameOfCamps ?? r.NameOfCamps ?? null
                                 }));
                                 this.assignedLoading = false;
                             }
                         });
                     },
                     error: () => {
-                        this.assigned = normalized.map((r) => ({
-                            aorId: r.aorId,
-                            divisionId: r.divisionId,
-                            divisionName: String(r.divisionId),
-                            districtId: r.districtId,
-                            districtName: String(r.districtId),
-                            upazilaId: r.upazilaId,
-                            upazilaName: String(r.upazilaId)
+                        this.assigned = list.map((r) => ({
+                            aorId: r.aorId ?? r.AORId,
+                            rabUnitName: this.rabUnitOptions.find((o) => o.value === rabUnitId)?.label ?? String(rabUnitId),
+                            divisionNames: (r.divisionIds ?? r.DivisionIds) ?? '-',
+                            districtNames: (r.districtIds ?? r.DistrictIds) ?? '-',
+                            upazilaNames: (r.upazilaIds ?? r.UpazilaIds) ?? '-',
+                            locationOfBattalionHQ: r.locationOfBattalionHQ ?? r.LocationOfBattalionHQ ?? null,
+                            numberOfCamp: r.numberOfCamp ?? r.NumberOfCamp ?? null,
+                            nameOfCamps: r.nameOfCamps ?? r.NameOfCamps ?? null
                         }));
                         this.assignedLoading = false;
                     }
@@ -318,7 +374,7 @@ export class RabUnitAor implements OnInit {
     removeAssignment(row: AssignedRow, event: Event): void {
         this.confirmationService.confirm({
             target: event.target as EventTarget,
-            message: `Remove ${row.upazilaName} from this RAB Unit?`,
+            message: `Remove this Area of Responsibility from ${row.rabUnitName}?`,
             header: 'Remove Confirmation',
             icon: 'pi pi-info-circle',
             rejectLabel: 'Cancel',
@@ -345,9 +401,12 @@ export class RabUnitAor implements OnInit {
 
     resetForm(): void {
         this.form.patchValue({
-            divisionId: null,
-            districtId: null,
-            upazilaIds: []
+            divisionIds: [],
+            districtIds: [],
+            upazilaIds: [],
+            locationOfBattalionHQ: null,
+            numberOfCamp: null,
+            nameOfCamps: null
         });
         this.districtOptions = [];
         this.upazilaOptions = [];
