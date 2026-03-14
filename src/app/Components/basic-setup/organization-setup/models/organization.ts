@@ -11,6 +11,8 @@ export interface OrganizationModel {
     locationEN?: string;
     locationBN?: string;
 
+    districtId?: number | null;
+
     email?: string;
 
     status?: boolean;

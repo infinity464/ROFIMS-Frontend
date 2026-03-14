@@ -31,17 +31,25 @@
                         class="w-full" />
                 </div>
 
-                <!-- Organization Unit Location: * -->
+                <!-- District -->
                 <div class="field">
-                    <label for="locationEN" class="block mb-2">
-                        Organization Unit Location
+                    <label for="districtId" class="block mb-2">
+                        District
                         <span class="text-red-500">*</span>
                     </label>
+                    <p-select id="districtId" formControlName="districtId" [options]="districtOptions" optionLabel="label"
+                        optionValue="value" placeholder="Select District" [showClear]="true" styleClass="w-full"
+                        [filter]="true" filterPlaceholder="Search District"></p-select>
+                    @if (organizationForm.get('districtId')?.invalid && organizationForm.get('districtId')?.touched) {
+                    <small class="text-red-500 block mt-1">District is required</small>
+                    }
+                </div>
+
+                <!-- Organization Unit Location - optional -->
+                <div class="field">
+                    <label for="locationEN" class="block mb-2">Organization Unit Location</label>
                     <input pInputText id="locationEN" formControlName="locationEN" placeholder="Enter unit location"
                         class="w-full" />
-                    @if (organizationForm.get('locationEN')?.invalid && organizationForm.get('locationEN')?.touched) {
-                    <small class="text-red-500 block mt-1">Organization Unit Location is required</small>
-                    }
                 </div>
 
                 <!-- Unit Location (Bangla) - optional -->
@@ -104,6 +112,9 @@
                 <th pSortableColumn="locationEN">
                     Unit Location (English) <p-sortIcon field="locationEN" />
                 </th>
+                <th pSortableColumn="districtId">
+                    District <p-sortIcon field="districtId" />
+                </th>
                 <th pSortableColumn="status">
                     Status <p-sortIcon field="status" />
                 </th>
@@ -119,6 +130,7 @@
                 <td>{{ row.orgNameBN }}</td>
                 <td>{{ row.locationBN }}</td>
                 <td>{{ row.locationEN }}</td>
+                <td>{{ row.districtDisplay || '-' }}</td>
                 <td>
                         <span [ngClass]="{
                             'text-green-600 font-semibold': row.status,
