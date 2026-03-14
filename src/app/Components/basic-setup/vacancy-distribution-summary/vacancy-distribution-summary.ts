@@ -1,12 +1,17 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { forkJoin } from 'rxjs';
+import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { forkJoin, of } from 'rxjs';
+import { switchMap } from 'rxjs/operators';
 import { FluidModule } from 'primeng/fluid';
 import { SelectModule } from 'primeng/select';
+import { ButtonModule } from 'primeng/button';
+import { InputTextModule } from 'primeng/inputtext';
+import { DialogModule } from 'primeng/dialog';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { MasterBasicSetupService } from '../shared/services/MasterBasicSetupService';
+import { SharedService } from '@/shared/services/shared-service';
 import { CommonCode } from '../shared/models/common-code';
 import { OrganizationModel } from '../organization-setup/models/organization';
 import { MotherOrgRankVacancyDistributionModel } from '../shared/models/mother-org-rank-vacancy';
@@ -20,8 +25,8 @@ export interface RankColumn {
 /** One display row: office label, indent level, quantities per rank, and a row total */
 export interface DisplayRow {
     rabCodeId: number;
-    /** 0 = Unit (bold, no indent), 1 = Wing (one indent), 2 = Branch (two indents) */
-    level: 0 | 1 | 2;
+    /** 0=Unit, 1=Wing, 2=Branch, 3=Sub-Branch, 4=Section, 5=Sub-Section */
+    level: 0 | 1 | 2 | 3 | 4 | 5;
     officeName: string;
     qtyByField: Record<string, number>;
     total: number;
@@ -30,13 +35,13 @@ export interface DisplayRow {
 @Component({
     selector: 'app-vacancy-distribution-summary',
     standalone: true,
-    imports: [CommonModule, FormsModule, FluidModule, SelectModule, ToastModule],
+    imports: [CommonModule, FormsModule, ReactiveFormsModule, FluidModule, SelectModule, ButtonModule, InputTextModule, DialogModule, ToastModule],
     providers: [MessageService],
     templateUrl: './vacancy-distribution-summary.html',
     styleUrl: './vacancy-distribution-summary.scss'
 })
 export class VacancyDistributionSummaryComponent implements OnInit {
-    title = 'Vacancy Distribution Summary';
+    title = 'Man Power Setup';
     orgList: OrganizationModel[] = [];
     selectedOrg: OrganizationModel | null = null;
     loading = false;
@@ -54,18 +59,200 @@ export class VacancyDistributionSummaryComponent implements OnInit {
     rabUnitOptions: { codeId: number; label: string }[] = [];
 
     private rabNameById: Record<number, string> = {};
-    /** ordered list: Unit > Wings under it > Branches; each item has unitCodeId for filtering */
-    private orderedRabIds: { codeId: number; level: 0 | 1 | 2; unitCodeId: number }[] = [];
+    /** ordered list: Unit > Wing > Branch > Sub-Branch > Section > Sub-Section; unitCodeId for filtering */
+    private orderedRabIds: { codeId: number; level: 0 | 1 | 2 | 3 | 4 | 5; unitCodeId: number }[] = [];
     private lastDistributionList: MotherOrgRankVacancyDistributionModel[] = [];
+
+    showDistributionModal = false;
+    distributionForm!: FormGroup;
+    isSubmittingDistribution = false;
+
+    /** Cascading RAB options: Unit → Wing → Branch → Sub-Branch → Section → Sub-Section */
+    unitOptionsModal: { codeId: number; label: string }[] = [];
+    wingOptionsModal: { codeId: number; label: string }[] = [];
+    branchOptionsModal: { codeId: number; label: string }[] = [];
+    subBranchOptionsModal: { codeId: number; label: string }[] = [];
+    sectionOptionsModal: { codeId: number; label: string }[] = [];
+    subSectionOptionsModal: { codeId: number; label: string }[] = [];
 
     constructor(
         private masterBasicSetup: MasterBasicSetupService,
-        private messageService: MessageService
+        private messageService: MessageService,
+        private shareService: SharedService,
+        private fb: FormBuilder
     ) {}
 
+    /** Rank options for modal dropdown */
+    get rankOptionsForModal(): { codeId: number; label: string }[] {
+        return this.dynamicColumns.map((c) => ({ codeId: c.motherOrgRankId, label: c.header }));
+    }
+
     ngOnInit(): void {
+        this.distributionForm = this.fb.group({
+            motherOrgRankId: [null as number | null, Validators.required],
+            unitId: [null as number | null, Validators.required],
+            wingId: [null as number | null],
+            branchId: [null as number | null],
+            subBranchId: [null as number | null],
+            sectionId: [null as number | null],
+            subSectionId: [null as number | null],
+            quantity: [0, [Validators.required, Validators.min(0)]]
+        });
         this.loadOrganizations();
         this.loadRabTree();
+    }
+
+    /** Resolved rabCodeId from cascade: Sub-Section > Section > Sub-Branch > Branch > Wing > Unit */
+    get resolvedRabCodeId(): number | null {
+        const v = this.distributionForm?.value;
+        if (!v) return null;
+        return v.subSectionId ?? v.sectionId ?? v.subBranchId ?? v.branchId ?? v.wingId ?? v.unitId ?? null;
+    }
+
+    openDistributionModal(): void {
+        if (!this.selectedOrg || this.dynamicColumns.length === 0) return;
+        this.unitOptionsModal = this.rabUnitOptions.map((o) => ({ codeId: o.codeId, label: o.label }));
+        this.wingOptionsModal = [];
+        this.branchOptionsModal = [];
+        this.subBranchOptionsModal = [];
+        this.sectionOptionsModal = [];
+        this.subSectionOptionsModal = [];
+        this.distributionForm.reset({
+            motherOrgRankId: null,
+            unitId: null,
+            wingId: null,
+            branchId: null,
+            subBranchId: null,
+            sectionId: null,
+            subSectionId: null,
+            quantity: 0
+        });
+        this.showDistributionModal = true;
+    }
+
+    onModalUnitChange(unitId: number | null): void {
+        this.distributionForm.patchValue({ wingId: null, branchId: null, subBranchId: null, sectionId: null, subSectionId: null }, { emitEvent: false });
+        this.wingOptionsModal = [];
+        this.branchOptionsModal = [];
+        this.subBranchOptionsModal = [];
+        this.sectionOptionsModal = [];
+        this.subSectionOptionsModal = [];
+        if (!unitId) return;
+        this.masterBasicSetup.getByParentId(unitId).subscribe({
+            next: (items) => {
+                const list = (items ?? []) as CommonCode[];
+                this.wingOptionsModal = list.map((c) => ({ codeId: c.codeId, label: c.codeValueEN ?? String(c.codeId) }));
+            }
+        });
+    }
+
+    onModalWingChange(wingId: number | null): void {
+        this.distributionForm.patchValue({ branchId: null, subBranchId: null, sectionId: null, subSectionId: null }, { emitEvent: false });
+        this.branchOptionsModal = [];
+        this.subBranchOptionsModal = [];
+        this.sectionOptionsModal = [];
+        this.subSectionOptionsModal = [];
+        if (!wingId) return;
+        this.masterBasicSetup.getByParentId(wingId).subscribe({
+            next: (items) => {
+                const list = (items ?? []) as CommonCode[];
+                this.branchOptionsModal = list.map((c) => ({ codeId: c.codeId, label: c.codeValueEN ?? String(c.codeId) }));
+            }
+        });
+    }
+
+    onModalBranchChange(branchId: number | null): void {
+        this.distributionForm.patchValue({ subBranchId: null, sectionId: null, subSectionId: null }, { emitEvent: false });
+        this.subBranchOptionsModal = [];
+        this.sectionOptionsModal = [];
+        this.subSectionOptionsModal = [];
+        if (!branchId) return;
+        this.masterBasicSetup.getByParentId(branchId).subscribe({
+            next: (items) => {
+                const list = (items ?? []) as CommonCode[];
+                this.subBranchOptionsModal = list.map((c) => ({ codeId: c.codeId, label: c.codeValueEN ?? String(c.codeId) }));
+            }
+        });
+    }
+
+    onModalSubBranchChange(subBranchId: number | null): void {
+        this.distributionForm.patchValue({ sectionId: null, subSectionId: null }, { emitEvent: false });
+        this.sectionOptionsModal = [];
+        this.subSectionOptionsModal = [];
+        if (!subBranchId) return;
+        this.masterBasicSetup.getByParentId(subBranchId).subscribe({
+            next: (items) => {
+                const list = (items ?? []) as CommonCode[];
+                this.sectionOptionsModal = list.map((c) => ({ codeId: c.codeId, label: c.codeValueEN ?? String(c.codeId) }));
+            }
+        });
+    }
+
+    onModalSectionChange(sectionId: number | null): void {
+        this.distributionForm.patchValue({ subSectionId: null }, { emitEvent: false });
+        this.subSectionOptionsModal = [];
+        if (!sectionId) return;
+        this.masterBasicSetup.getByParentId(sectionId).subscribe({
+            next: (items) => {
+                const list = (items ?? []) as CommonCode[];
+                this.subSectionOptionsModal = list.map((c) => ({ codeId: c.codeId, label: c.codeValueEN ?? String(c.codeId) }));
+            }
+        });
+    }
+
+    closeDistributionModal(): void {
+        this.showDistributionModal = false;
+    }
+
+    saveDistributionModal(): void {
+        if (!this.selectedOrg || this.distributionForm.invalid) return;
+        const rabCodeId = this.resolvedRabCodeId;
+        if (!rabCodeId) {
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Select at least Unit' });
+            return;
+        }
+        const val = this.distributionForm.value;
+        const model: MotherOrgRankVacancyDistributionModel = {
+            orgId: this.selectedOrg.orgId,
+            motherOrgRankId: val.motherOrgRankId,
+            rabCodeId,
+            quantity: val.quantity ?? 0,
+            createdBy: this.shareService.getCurrentUser?.() ?? 'System',
+            lastUpdatedBy: this.shareService.getCurrentUser?.() ?? 'System'
+        };
+        const existing = this.lastDistributionList.find(
+            (d) =>
+                d.orgId === model.orgId &&
+                d.motherOrgRankId === model.motherOrgRankId &&
+                (d.rabCodeId ?? (d as { RABCodeId?: number }).RABCodeId) === model.rabCodeId
+        );
+        if (existing?.id) {
+            model.id = existing.id;
+        }
+        this.isSubmittingDistribution = true;
+        const obs = model.id != null
+            ? this.masterBasicSetup.updateMotherOrgRankVacancyDistribution(model)
+            : this.masterBasicSetup.saveMotherOrgRankVacancyDistribution(model);
+        obs.subscribe({
+            next: (res) => {
+                if (res?.statusCode === 200) {
+                    this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Distribution saved' });
+                    this.closeDistributionModal();
+                    if (this.selectedOrg) this.loadSummaryForOrg(this.selectedOrg.orgId);
+                } else {
+                    this.messageService.add({ severity: 'warn', summary: 'Warning', detail: res?.description ?? 'Save failed' });
+                }
+                this.isSubmittingDistribution = false;
+            },
+            error: (err) => {
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: err?.error?.description ?? err?.message ?? 'Failed to save distribution'
+                });
+                this.isSubmittingDistribution = false;
+            }
+        });
     }
 
     onOrgChange(): void {
@@ -106,46 +293,16 @@ export class VacancyDistributionSummaryComponent implements OnInit {
         });
     }
 
-    /** Load full RAB tree once, build name map, unit options, and ordered id list (Unit → Wing → Branch) */
+    /** Load full RAB tree: Unit → Wing → Branch → Sub-Branch → Section → Sub-Section */
     private loadRabTree(): void {
         this.masterBasicSetup.getAllByType('RabUnit').subscribe({
             next: (units) => {
                 const unitList = (units ?? []) as CommonCode[];
-                if (!unitList.length) { this.rabUnitOptions = []; return; }
+                if (!unitList.length) { this.rabUnitOptions = []; this.orderedRabIds = []; return; }
                 unitList.forEach((u) => { this.rabNameById[u.codeId] = u.codeValueEN ?? ''; });
                 this.rabUnitOptions = unitList.map((u) => ({ codeId: u.codeId, label: u.codeValueEN ?? '' }));
-                const wingsRequests = unitList.map((u) => this.masterBasicSetup.getByParentId(u.codeId));
-                forkJoin(wingsRequests).subscribe({
-                    next: (wingsPerUnit) => {
-                        const allWings = wingsPerUnit.flat() as CommonCode[];
-                        allWings.forEach((w) => { this.rabNameById[w.codeId] = w.codeValueEN ?? ''; });
-                        if (allWings.length === 0) {
-                            this.orderedRabIds = unitList.map((u) => ({ codeId: u.codeId, level: 0 as const, unitCodeId: u.codeId }));
-                            return;
-                        }
-                        const branchesRequests = allWings.map((w) => this.masterBasicSetup.getByParentId(w.codeId));
-                        forkJoin(branchesRequests).subscribe({
-                            next: (branchesPerWing) => {
-                                const ordered: { codeId: number; level: 0 | 1 | 2; unitCodeId: number }[] = [];
-                                let wingIdx = 0;
-                                unitList.forEach((unit) => {
-                                    ordered.push({ codeId: unit.codeId, level: 0, unitCodeId: unit.codeId });
-                                    const wings = (wingsPerUnit[unitList.indexOf(unit)] ?? []) as CommonCode[];
-                                    wings.forEach((wing) => {
-                                        ordered.push({ codeId: wing.codeId, level: 1, unitCodeId: unit.codeId });
-                                        const branches = (branchesPerWing[wingIdx] ?? []) as CommonCode[];
-                                        branches.forEach((b) => {
-                                            this.rabNameById[b.codeId] = b.codeValueEN ?? '';
-                                            ordered.push({ codeId: b.codeId, level: 2, unitCodeId: unit.codeId });
-                                        });
-                                        wingIdx++;
-                                    });
-                                });
-                                this.orderedRabIds = ordered;
-                            },
-                            error: () => {}
-                        });
-                    },
+                this.buildOrderedRabIds(unitList).subscribe({
+                    next: (ordered) => { this.orderedRabIds = ordered; },
                     error: () => {}
                 });
             },
@@ -153,26 +310,138 @@ export class VacancyDistributionSummaryComponent implements OnInit {
         });
     }
 
+    private buildOrderedRabIds(units: CommonCode[]): import('rxjs').Observable<{ codeId: number; level: 0 | 1 | 2 | 3 | 4 | 5; unitCodeId: number }[]> {
+        const wingsReqs = units.map((u) => this.masterBasicSetup.getByParentId(u.codeId));
+        return forkJoin(wingsReqs).pipe(
+            switchMap((wingsPerUnit) => {
+                const allWings = wingsPerUnit.flat() as CommonCode[];
+                allWings.forEach((w) => { this.rabNameById[w.codeId] = w.codeValueEN ?? ''; });
+                if (!allWings.length) {
+                    return of(units.map((u) => ({ codeId: u.codeId, level: 0 as const, unitCodeId: u.codeId })));
+                }
+                const branchReqs = allWings.map((w) => this.masterBasicSetup.getByParentId(w.codeId));
+                return forkJoin(branchReqs).pipe(
+                    switchMap((branchesPerWing) => {
+                        const allBranches = branchesPerWing.flat() as CommonCode[];
+                        allBranches.forEach((b) => { this.rabNameById[b.codeId] = b.codeValueEN ?? ''; });
+                        if (allBranches.length === 0) {
+                            return of(this.flattenToOrdered(units, wingsPerUnit, branchesPerWing));
+                        }
+                        const subBranchReqs = allBranches.map((b) => this.masterBasicSetup.getByParentId(b.codeId));
+                        return forkJoin(subBranchReqs).pipe(
+                            switchMap((subBranchesPerBranch) => {
+                                const allSubBranches = subBranchesPerBranch.flat() as CommonCode[];
+                                allSubBranches.forEach((sb) => { this.rabNameById[sb.codeId] = sb.codeValueEN ?? ''; });
+                                const sectionReqs = allSubBranches.map((sb) => this.masterBasicSetup.getByParentId(sb.codeId));
+                                return forkJoin(sectionReqs).pipe(
+                                    switchMap((sectionsPerSubBranch) => {
+                                        const allSections = sectionsPerSubBranch.flat() as CommonCode[];
+                                        allSections.forEach((s) => { this.rabNameById[s.codeId] = s.codeValueEN ?? ''; });
+                                        const subSectionReqs = allSections.map((s) => this.masterBasicSetup.getByParentId(s.codeId));
+                                        return forkJoin(subSectionReqs).pipe(
+                                            switchMap((subSectionsPerSection) => {
+                                                const allSubSections = subSectionsPerSection.flat() as CommonCode[];
+                                                allSubSections.forEach((ss) => { this.rabNameById[ss.codeId] = ss.codeValueEN ?? ''; });
+                                                const result = this.flattenHierarchy(
+                                                    units, wingsPerUnit, branchesPerWing,
+                                                    subBranchesPerBranch, sectionsPerSubBranch, subSectionsPerSection
+                                                );
+                                                return of(result);
+                                            })
+                                        );
+                                    })
+                                );
+                            })
+                        );
+                    })
+                );
+            })
+        );
+    }
+
+    private flattenHierarchy(
+        units: CommonCode[],
+        wingsPerUnit: CommonCode[][],
+        branchesPerWing: CommonCode[][],
+        subBranchesPerBranch: CommonCode[][],
+        sectionsPerSubBranch: CommonCode[][],
+        subSectionsPerSection: CommonCode[][]
+    ): { codeId: number; level: 0 | 1 | 2 | 3 | 4 | 5; unitCodeId: number }[] {
+        const ordered: { codeId: number; level: 0 | 1 | 2 | 3 | 4 | 5; unitCodeId: number }[] = [];
+        let wingIdx = 0;
+        let branchIdx = 0;
+        let subBranchIdx = 0;
+        let sectionIdx = 0;
+        units.forEach((unit) => {
+            ordered.push({ codeId: unit.codeId, level: 0, unitCodeId: unit.codeId });
+            const wings = wingsPerUnit[units.indexOf(unit)] ?? [];
+            wings.forEach((wing) => {
+                ordered.push({ codeId: wing.codeId, level: 1, unitCodeId: unit.codeId });
+                const branches = branchesPerWing[wingIdx] ?? [];
+                branches.forEach((branch) => {
+                    ordered.push({ codeId: branch.codeId, level: 2, unitCodeId: unit.codeId });
+                    const subBranches = subBranchesPerBranch[branchIdx] ?? [];
+                    subBranches.forEach((sb) => {
+                        ordered.push({ codeId: sb.codeId, level: 3, unitCodeId: unit.codeId });
+                        const sections = sectionsPerSubBranch[subBranchIdx] ?? [];
+                        sections.forEach((sec) => {
+                            ordered.push({ codeId: sec.codeId, level: 4, unitCodeId: unit.codeId });
+                            const subSections = subSectionsPerSection[sectionIdx] ?? [];
+                            subSections.forEach((ss) => {
+                                ordered.push({ codeId: ss.codeId, level: 5, unitCodeId: unit.codeId });
+                            });
+                            sectionIdx++;
+                        });
+                        subBranchIdx++;
+                    });
+                    branchIdx++;
+                });
+                wingIdx++;
+            });
+        });
+        return ordered;
+    }
+
+    private flattenToOrdered(
+        units: CommonCode[],
+        wingsPerUnit: CommonCode[][],
+        branchesPerWing: CommonCode[][]
+    ): { codeId: number; level: 0 | 1 | 2 | 3 | 4 | 5; unitCodeId: number }[] {
+        const ordered: { codeId: number; level: 0 | 1 | 2 | 3 | 4 | 5; unitCodeId: number }[] = [];
+        let wingIdx = 0;
+        units.forEach((unit) => {
+            ordered.push({ codeId: unit.codeId, level: 0, unitCodeId: unit.codeId });
+            const wings = (wingsPerUnit[units.indexOf(unit)] ?? []) as CommonCode[];
+            wings.forEach((wing) => {
+                ordered.push({ codeId: wing.codeId, level: 1, unitCodeId: unit.codeId });
+                const branches = (branchesPerWing[wingIdx] ?? []) as CommonCode[];
+                branches.forEach((b) => {
+                    ordered.push({ codeId: b.codeId, level: 2, unitCodeId: unit.codeId });
+                });
+                wingIdx++;
+            });
+        });
+        return ordered;
+    }
+
     private loadSummaryForOrg(orgId: number): void {
         this.loading = true;
-        this.masterBasicSetup.getMotherOrgRankVacancyByOrgId(orgId).subscribe({
-            next: (vacancies) => {
-                const vacancyList = vacancies ?? [];
-                if (vacancyList.length === 0) { this.loading = false; return; }
-                this.masterBasicSetup.getAllActiveCommonCodesByOrgIdAndType(orgId, 'MotherOrgRank').subscribe({
-                    next: (ranks) => {
-                        const rankNameById: Record<number, string> = {};
-                        (ranks ?? [] as CommonCode[]).forEach((r) => { rankNameById[r.codeId] = r.codeValueEN ?? ''; });
-                        this.dynamicColumns = vacancyList.map((v) => ({
-                            field: `rank_${v.motherOrgRankId}`,
-                            header: rankNameById[v.motherOrgRankId] ?? String(v.motherOrgRankId),
-                            motherOrgRankId: v.motherOrgRankId
-                        }));
-                        forkJoin(
-                            vacancyList.map((v) =>
-                                this.masterBasicSetup.getMotherOrgRankVacancyDistributionByVacancy(orgId, v.motherOrgRankId)
-                            )
-                        ).subscribe({
+        this.masterBasicSetup.getAllActiveCommonCodesByOrgIdAndType(orgId, 'MotherOrgRank').subscribe({
+            next: (ranks) => {
+                const rankList = (ranks ?? []) as CommonCode[];
+                if (rankList.length === 0) { this.loading = false; return; }
+                const rankNameById: Record<number, string> = {};
+                rankList.forEach((r) => { rankNameById[r.codeId] = r.codeValueEN ?? ''; });
+                this.dynamicColumns = rankList.map((r) => ({
+                    field: `rank_${r.codeId}`,
+                    header: rankNameById[r.codeId] ?? String(r.codeId),
+                    motherOrgRankId: r.codeId
+                }));
+                forkJoin(
+                    rankList.map((r) =>
+                        this.masterBasicSetup.getMotherOrgRankVacancyDistributionByVacancy(orgId, r.codeId)
+                    )
+                ).subscribe({
                             next: (distPerRank) => {
                                 const allDist: MotherOrgRankVacancyDistributionModel[] = [];
                                 distPerRank.forEach((list) => allDist.push(...(list ?? [])));
@@ -185,16 +454,10 @@ export class VacancyDistributionSummaryComponent implements OnInit {
                                 this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load distribution data' });
                             }
                         });
-                    },
-                    error: () => {
-                        this.loading = false;
-                        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load ranks' });
-                    }
-                });
             },
             error: () => {
                 this.loading = false;
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load vacancies' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load ranks' });
             }
         });
     }

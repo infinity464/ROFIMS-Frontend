@@ -45,7 +45,6 @@ import { PersonalInfo } from '@/Components/Features/PersonalInfo/personal-info/p
 import { Organization } from '@/Components/basic-setup/organization-setup/organization/organization';
 import { OrganizationUnit } from '@/Components/basic-setup/organization-setup/organization-unit/organization-unit';
 import { MotherOrgRank } from '@/Components/basic-setup/mother-org-rank/mother-org-rank';
-import { MotherOrgRankVacancyComponent } from '@/Components/basic-setup/mother-org-rank-vacancy/mother-org-rank-vacancy';
 import { MotherOrgRankVacancyDistributionComponent } from '@/Components/basic-setup/mother-org-rank-vacancy-distribution/mother-org-rank-vacancy-distribution';
 import { VacancyDistributionSummaryComponent } from '@/Components/basic-setup/vacancy-distribution-summary/vacancy-distribution-summary';
 import { Corps } from '@/Components/basic-setup/corps/corps';
@@ -180,7 +179,6 @@ export const appRoutes: Routes = [
             { path: 'basic-setup/mother-org', component: Organization },
             { path: 'basic-setup/organization-unit', component: OrganizationUnit },
             { path: 'basic-setup/mother-org-rank', component: MotherOrgRank },
-            { path: 'basic-setup/mother-org-rank-vacancy', component: MotherOrgRankVacancyComponent },
             { path: 'basic-setup/mother-org-rank-vacancy-distribution', component: MotherOrgRankVacancyDistributionComponent },
             { path: 'basic-setup/vacancy-distribution-summary', component: VacancyDistributionSummaryComponent },
             { path: 'basic-setup/corps', component: Corps },

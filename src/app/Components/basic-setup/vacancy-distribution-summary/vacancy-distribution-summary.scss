@@ -2,6 +2,32 @@
     display: block;
 }
 
+/* Filter field: label on TOP of dropdown, not beside */
+.dist-filter-field {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+}
+
+.dist-dropdown-label {
+    display: block;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--primary-color, #22c55e);
+    width: 100%;
+}
+
+.dist-filter-field__input {
+    display: block;
+    width: 100%;
+    min-width: 180px;
+}
+
+.dist-filter-field--btn .dist-filter-field__input {
+    min-width: auto;
+}
+
 .dist-summary-wrap {
     overflow-x: auto;
 }
@@ -57,9 +83,12 @@
         font-weight: 700;
     }
 
-    /* Wing and Branch: normal weight */
+    /* Wing, Branch, Sub-Branch, Section, Sub-Section: normal weight */
     .dist-row--wing td,
-    .dist-row--branch td {
+    .dist-row--branch td,
+    .dist-row--subbranch td,
+    .dist-row--section td,
+    .dist-row--subsection td {
         font-weight: 400;
     }
 
@@ -79,6 +108,27 @@
 
     .dist-row__indent2 {
         padding-left: 2rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .dist-row__indent3 {
+        padding-left: 3rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .dist-row__indent4 {
+        padding-left: 4rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .dist-row__indent5 {
+        padding-left: 5rem;
         display: inline-flex;
         align-items: center;
         gap: 0.25rem;

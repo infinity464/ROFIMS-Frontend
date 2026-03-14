@@ -3,10 +3,11 @@
     <div class="card">
         <div class="font-semibold text-xl mb-4">{{ title }}</div>
 
-        <div class="grid align-items-end mb-4">
-            <div class="col-12 md:col-4">
-                <label class="block mb-2 font-medium">Mother Organization</label>
-                <p-select
+        <div class="flex flex-row flex-wrap align-items-end gap-3 mb-4">
+            <div class="dist-filter-field">
+                <label class="dist-dropdown-label">Mother Organization</label>
+                <div class="dist-filter-field__input">
+                    <p-select
                     [options]="orgList"
                     [(ngModel)]="selectedOrg"
                     optionLabel="orgNameEN"
@@ -14,12 +15,13 @@
                     [filter]="true"
                     filterBy="orgNameEN"
                     (ngModelChange)="onOrgChange()"
-                    styleClass="w-full">
+                    [style]="{ minWidth: '240px' }">
                 </p-select>
+                </div>
             </div>
-            @if (selectedOrg && rabUnitOptions.length > 0) {
-                <div class="col-12 md:col-4">
-                    <label class="block mb-2 font-medium">Filter by RAB Unit <span class="text-color-secondary font-normal">(optional)</span></label>
+            <div class="dist-filter-field">
+                <label class="dist-dropdown-label">Filter by RAB Unit</label>
+                <div class="dist-filter-field__input">
                     <p-select
                         [options]="unitFilterOptions"
                         [(ngModel)]="selectedUnitFilter"
@@ -28,11 +30,18 @@
                         [placeholder]="'All'"
                         [filter]="true"
                         filterBy="label"
+                        [disabled]="!selectedOrg"
                         (ngModelChange)="onUnitFilterChange()"
-                        styleClass="w-full">
+                        [style]="{ minWidth: '200px' }">
                     </p-select>
                 </div>
-            }
+            </div>
+            <div class="dist-filter-field dist-filter-field--btn">
+                <span class="dist-dropdown-label">&nbsp;</span>
+                <div class="dist-filter-field__input">
+                    <p-button label="Add Distribution" icon="pi pi-plus" (onClick)="openDistributionModal()" [disabled]="!selectedOrg"></p-button>
+                </div>
+            </div>
         </div>
 
         @if (loading) {
@@ -42,11 +51,11 @@
             </div>
         } @else if (selectedOrg && dynamicColumns.length === 0 && !loading) {
             <div class="p-4 border surface-border border-round text-color-secondary">
-                No vacancy definitions found for this organization.
+                No Mother Org Ranks found for this organization.
             </div>
         } @else if (selectedOrg && dynamicColumns.length > 0 && displayRows.length === 0 && !loading) {
             <div class="p-4 border surface-border border-round text-color-secondary">
-                No distribution data yet. Use Vacancy Distribution (RAB) to assign quantities.
+                No distribution data yet. Use Vacancy Distribution (RAB) to assign quantities to RAB units.
             </div>
         } @else if (selectedOrg && dynamicColumns.length > 0 && displayRows.length > 0) {
             <div class="dist-summary-wrap">
@@ -64,10 +73,16 @@
                         @for (row of displayRows; track row.rabCodeId) {
                             <tr [class.dist-row--unit]="row.level === 0"
                                 [class.dist-row--wing]="row.level === 1"
-                                [class.dist-row--branch]="row.level === 2">
+                                [class.dist-row--branch]="row.level === 2"
+                                [class.dist-row--subbranch]="row.level === 3"
+                                [class.dist-row--section]="row.level === 4"
+                                [class.dist-row--subsection]="row.level === 5">
                                 <td class="dist-table__office">
                                     <span [class.dist-row__indent1]="row.level === 1"
-                                          [class.dist-row__indent2]="row.level === 2">
+                                          [class.dist-row__indent2]="row.level === 2"
+                                          [class.dist-row__indent3]="row.level === 3"
+                                          [class.dist-row__indent4]="row.level === 4"
+                                          [class.dist-row__indent5]="row.level === 5">
                                         @if (row.level > 0) {
                                             <span class="dist-row__arrow">↳</span>
                                         }
@@ -94,4 +109,154 @@
             </div>
         }
     </div>
+
+    <!-- Add Distribution Modal (dropdown view, like Add Family Member) -->
+    <p-dialog
+        header="Add Man Power"
+        [(visible)]="showDistributionModal"
+        [modal]="true"
+        [style]="{ width: '600px' }"
+        [closable]="true"
+        [contentStyle]="{ 'border-top': '2px solid var(--primary-color)' }"
+        (onHide)="closeDistributionModal()"
+        [draggable]="false"
+        [resizable]="false">
+        <form [formGroup]="distributionForm" class="mt-3">
+            <div class="grid grid-cols-2 gap-4">
+                <div class="col-span-1">
+                    <label class="font-semibold block mb-2 text-700">Mother Organization</label>
+                    <input
+                        pInputText
+                        [value]="selectedOrg?.orgNameEN ?? ''"
+                        class="w-full"
+                        readonly
+                        disabled />
+                </div>
+                <div class="col-span-1">
+                    <label class="font-semibold block mb-2 text-700">Mother Org Rank <span class="text-red-500">*</span></label>
+                    <p-select
+                        formControlName="motherOrgRankId"
+                        [options]="rankOptionsForModal"
+                        optionLabel="label"
+                        optionValue="codeId"
+                        placeholder="Select Rank"
+                        [filter]="true"
+                        filterBy="label"
+                        [style]="{ width: '100%' }">
+                    </p-select>
+                    @if (distributionForm.get('motherOrgRankId')?.invalid && distributionForm.get('motherOrgRankId')?.touched) {
+                        <small class="text-red-500">Required</small>
+                    }
+                </div>
+                <div class="col-span-1">
+                    <label class="font-semibold block mb-2 text-700">Unit <span class="text-red-500">*</span></label>
+                    <p-select
+                        formControlName="unitId"
+                        [options]="unitOptionsModal"
+                        optionLabel="label"
+                        optionValue="codeId"
+                        placeholder="Select Unit"
+                        [filter]="true"
+                        filterBy="label"
+                        (onChange)="onModalUnitChange($event.value)"
+                        [style]="{ width: '100%' }">
+                    </p-select>
+                    @if (distributionForm.get('unitId')?.invalid && distributionForm.get('unitId')?.touched) {
+                        <small class="text-red-500">Required</small>
+                    }
+                </div>
+                <div class="col-span-1">
+                    <label class="font-semibold block mb-2 text-700">Wing</label>
+                    <p-select
+                        formControlName="wingId"
+                        [options]="wingOptionsModal"
+                        optionLabel="label"
+                        optionValue="codeId"
+                        placeholder="Select Wing"
+                        [filter]="true"
+                        filterBy="label"
+                        [disabled]="!distributionForm.get('unitId')?.value"
+                        (onChange)="onModalWingChange($event.value)"
+                        [style]="{ width: '100%' }">
+                    </p-select>
+                </div>
+                <div class="col-span-1">
+                    <label class="font-semibold block mb-2 text-700">Branch</label>
+                    <p-select
+                        formControlName="branchId"
+                        [options]="branchOptionsModal"
+                        optionLabel="label"
+                        optionValue="codeId"
+                        placeholder="Select Branch"
+                        [filter]="true"
+                        filterBy="label"
+                        [disabled]="!distributionForm.get('wingId')?.value"
+                        (onChange)="onModalBranchChange($event.value)"
+                        [style]="{ width: '100%' }">
+                    </p-select>
+                </div>
+                <div class="col-span-1">
+                    <label class="font-semibold block mb-2 text-700">Sub-Branch</label>
+                    <p-select
+                        formControlName="subBranchId"
+                        [options]="subBranchOptionsModal"
+                        optionLabel="label"
+                        optionValue="codeId"
+                        placeholder="Select Sub-Branch"
+                        [filter]="true"
+                        filterBy="label"
+                        [disabled]="!distributionForm.get('branchId')?.value"
+                        (onChange)="onModalSubBranchChange($event.value)"
+                        [style]="{ width: '100%' }">
+                    </p-select>
+                </div>
+                <div class="col-span-1">
+                    <label class="font-semibold block mb-2 text-700">Section</label>
+                    <p-select
+                        formControlName="sectionId"
+                        [options]="sectionOptionsModal"
+                        optionLabel="label"
+                        optionValue="codeId"
+                        placeholder="Select Section"
+                        [filter]="true"
+                        filterBy="label"
+                        [disabled]="!distributionForm.get('subBranchId')?.value"
+                        (onChange)="onModalSectionChange($event.value)"
+                        [style]="{ width: '100%' }">
+                    </p-select>
+                </div>
+                <div class="col-span-1">
+                    <label class="font-semibold block mb-2 text-700">Sub-Section</label>
+                    <p-select
+                        formControlName="subSectionId"
+                        [options]="subSectionOptionsModal"
+                        optionLabel="label"
+                        optionValue="codeId"
+                        placeholder="Select Sub-Section"
+                        [filter]="true"
+                        filterBy="label"
+                        [disabled]="!distributionForm.get('sectionId')?.value"
+                        [style]="{ width: '100%' }">
+                    </p-select>
+                </div>
+                <div class="col-span-1">
+                    <label class="font-semibold block mb-2 text-700">Quantity <span class="text-red-500">*</span></label>
+                    <input
+                        pInputText
+                        type="number"
+                        formControlName="quantity"
+                        min="0"
+                        class="w-full"
+                        placeholder="Enter quantity" />
+                    @if (distributionForm.get('quantity')?.invalid && distributionForm.get('quantity')?.touched) {
+                        <small class="text-red-500">Required, min 0</small>
+                    }
+                </div>
+            </div>
+        </form>
+        <ng-template pTemplate="footer">
+            <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="closeDistributionModal()" [disabled]="isSubmittingDistribution"></p-button>
+            <p-button label="Save" icon="pi pi-check" [loading]="isSubmittingDistribution" [disabled]="distributionForm.invalid" (onClick)="saveDistributionModal()"></p-button>
+        </ng-template>
+    </p-dialog>
 </p-fluid>
