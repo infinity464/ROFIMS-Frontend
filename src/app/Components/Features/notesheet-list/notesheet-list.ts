@@ -171,6 +171,8 @@ export class NotesheetListComponent implements OnInit {
   @Input() sectionInput: NoteSheetSection | null = null;
   /** Which section to show (one page per section). */
   section: NoteSheetSection = 'draft';
+  /** Optional filter: only show notesheets of this type (e.g. 'NewPosting'). */
+  noteSheetTypeFilter: string | null = null;
 
   unitLabelMap: Record<number, string> = {};
   wingLabelMap: Record<number, string> = {};
@@ -920,6 +922,7 @@ export class NotesheetListComponent implements OnInit {
     } else {
       this.route.data.subscribe((data) => {
         this.section = (data['section'] as NoteSheetSection) || 'draft';
+        this.noteSheetTypeFilter = data['noteSheetTypeFilter'] || null;
         this.loadLookups();
         this.loadSection();
       });
@@ -1018,6 +1021,9 @@ export class NotesheetListComponent implements OnInit {
   }
 
   private setCurrentList(list: NoteSheetInfoRow[]): void {
+    if (this.noteSheetTypeFilter) {
+      list = list.filter(r => r.noteSheetType === this.noteSheetTypeFilter);
+    }
     switch (this.section) {
       case 'draft':
         this.draftList = list.filter(r =>
