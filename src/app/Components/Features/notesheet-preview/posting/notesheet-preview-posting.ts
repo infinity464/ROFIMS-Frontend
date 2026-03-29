@@ -218,7 +218,9 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
             }));
 
             const noteSheetUpdate$ = this.http.post(`${this.api}/UpdateAsyn`, payload);
-            const postingUpdate$ = this.postingService.updateDraftPostingDetails(postingDetailItems);
+            const postingUpdate$ = this.isInterPosting()
+                ? this.postingService.updateDraftInterPostingDetails(postingDetailItems)
+                : this.postingService.updateDraftPostingDetails(postingDetailItems);
 
             forkJoin([noteSheetUpdate$, postingUpdate$]).subscribe({
                 next: () => {
@@ -569,7 +571,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
         mainContent += '</div></div>';
 
         // Posting employee table (posting-specific)
-        if (this.isNewPosting() && this.postingEmployees.length > 0) {
+        if (this.isPostingType() && this.postingEmployees.length > 0) {
             const bn = model.isBangla;
             const cols = bn ? ['ক্রমিক','ব্যক্তিগত নম্বর','পদবি','ট্রেড','নাম','মাতৃ ইউনিট','নিজ জেলা','মাতৃ ইউনিটের অবস্থান','বদলি ইউনিট','মন্তব্য'] : ['Ser','Service ID','Rank','Trade','Name','Mother Unit','Own District','Mother Unit Location','Transfer Unit','Remarks'];
             const headerCells = cols.map(c => `<th style="border:1px solid #000;padding:5px 8px;font-weight:bold;font-size:9pt">${esc(c)}</th>`).join('');
@@ -586,7 +588,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
             mainContent += `<div style="padding:0 20px 10px 20px"><table style="width:100%;border-collapse:collapse"><thead><tr>${headerCells}</tr></thead><tbody>${bodyRows}</tbody>${tfoot}</table></div>`;
         }
 
-        if (model.note && !(this.isNewPosting() && this.postingEmployees.length > 0)) {
+        if (model.note && !(this.isPostingType() && this.postingEmployees.length > 0)) {
             mainContent += `<div style="padding:5px 16px 5px 20px;font-size:12pt"><strong>${model.isBangla ? 'নোটঃ ' : 'Note: '}</strong>${esc(model.note)}</div>`;
         }
 
@@ -657,7 +659,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
         mainChildren.push(...this.contentBlocksToDocx(model.mainBlocks, font, bn));
 
         // Posting employee table (posting-specific)
-        if (this.isNewPosting() && this.postingEmployees.length > 0) {
+        if (this.isPostingType() && this.postingEmployees.length > 0) {
             const cols = bn ? ['ক্রমিক','ব্যক্তিগত নম্বর','পদবি','ট্রেড','নাম','মাতৃ ইউনিট','নিজ জেলা','মাতৃ ইউনিটের অবস্থান','বদলি ইউনিট','মন্তব্য'] : ['Ser','Service ID','Rank','Trade','Name','Mother Unit','Own District','Mother Unit Location','Transfer Unit','Remarks'];
             const cw = Math.floor(10400 / cols.length);
             const headerRow = new TableRow({ tableHeader: true, children: cols.map(c => new TableCell({
@@ -687,7 +689,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
             mainChildren.push(new Table({ width: { size: 95, type: WidthType.PERCENTAGE }, rows: tableRows, indent: { size: 240, type: WidthType.DXA } }));
         }
 
-        if (model.note && !(this.isNewPosting() && this.postingEmployees.length > 0)) {
+        if (model.note && !(this.isPostingType() && this.postingEmployees.length > 0)) {
             mainChildren.push(new Paragraph({
                 children: [
                     new TextRun({ text: bn ? 'নোটঃ ' : 'Note: ', bold: true, size: 24, sizeComplexScript: csSize, font, language: lang }),

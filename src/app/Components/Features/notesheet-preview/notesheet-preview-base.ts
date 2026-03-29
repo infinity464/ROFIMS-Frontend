@@ -175,6 +175,8 @@ export abstract class NotesheetPreviewBase implements OnInit {
                     this.loadBackHistory();
                     if (this.isNewPosting() && this.noteSheet.draftPostingMasterId) {
                         this.loadPostingEmployees();
+                    } else if (this.isInterPosting() && this.noteSheet.draftPostingMasterId) {
+                        this.loadInterPostingEmployees();
                     }
                 } else {
                     this.error = true;
@@ -194,6 +196,23 @@ export abstract class NotesheetPreviewBase implements OnInit {
         this.loadingEmployees = true;
         this.postingService.getDraftPostingEmployees(this.noteSheet.draftPostingMasterId).subscribe({
             next: (list) => { this.postingEmployees = list ?? []; this.loadingEmployees = false; },
+            error: () => { this.loadingEmployees = false; }
+        });
+    }
+
+    private loadInterPostingEmployees(): void {
+        if (!this.noteSheet?.draftPostingMasterId) return;
+        this.loadingEmployees = true;
+        this.postingService.getDraftInterPostingEmployees(this.noteSheet.draftPostingMasterId).subscribe({
+            next: (list: any[]) => {
+                // Map inter-posting fields to match DraftPostingEmployeeRow shape
+                this.postingEmployees = (list ?? []).map(e => ({
+                    ...e,
+                    draftPostingDetailId: e.draftInterPostingDetailId,
+                    draftPostingMasterId: e.draftInterPostingMasterId,
+                }));
+                this.loadingEmployees = false;
+            },
             error: () => { this.loadingEmployees = false; }
         });
     }
@@ -283,6 +302,8 @@ export abstract class NotesheetPreviewBase implements OnInit {
     isEnglish(): boolean { return (this.noteSheet?.textType ?? 0) === 0; }
     isExBdLeave(): boolean { return this.noteSheet?.noteSheetType === NoteSheetType.ExBDLeave; }
     isNewPosting(): boolean { return this.noteSheet?.noteSheetType === NoteSheetType.NewPosting; }
+    isInterPosting(): boolean { return this.noteSheet?.noteSheetType === NoteSheetType.InterPosting; }
+    isPostingType(): boolean { return this.isNewPosting() || this.isInterPosting(); }
     isInitiatorApproved(): boolean {
         return this.noteSheet?.initiatorStatus?.toLowerCase() === ApprovalStatus.Approve;
     }

@@ -150,10 +150,13 @@
           <td>
             <div class="flex align-items-center gap-1">
               <p-button type="button" icon="pi pi-eye" [rounded]="true" [text]="true" size="small" pTooltip="Preview" (onClick)="openPreview(row)"></p-button>
+              <p-button type="button" icon="pi pi-users" [rounded]="true" [text]="true" size="small" severity="info" pTooltip="View Members" (onClick)="openViewMembers(row)"></p-button>
+              @if (!noteSheetTypeFilter) {
               <p-button type="button" icon="pi pi-list" [rounded]="true" [text]="true" size="small" severity="info" pTooltip="Approval Log" (onClick)="openApprovalLog(row)"></p-button>
               <p-button type="button" icon="pi pi-check" [rounded]="true" [text]="true" size="small" severity="success" pTooltip="Approve" (onClick)="openRemarkDialog(row, NoteSheetRemarkAction.Approve)"></p-button>
               <p-button type="button" icon="pi pi-times" [rounded]="true" [text]="true" size="small" severity="danger" pTooltip="Decline" (onClick)="openRemarkDialog(row, NoteSheetRemarkAction.Decline)"></p-button>
               <p-button type="button" icon="pi pi-replay" [rounded]="true" [text]="true" size="small" severity="secondary" pTooltip="Back" (onClick)="openRemarkDialog(row, NoteSheetRemarkAction.Back)"></p-button>
+              }
             </div>
           </td>
         </tr>
@@ -683,6 +686,61 @@
           </div>
         }
       </div>
+    }
+  </p-dialog>
+
+  <!-- ── View Members Dialog ── -->
+  <p-dialog
+    header="Posting Members — {{ membersNoteSheetNo }}"
+    [(visible)]="showMembersDialog"
+    [modal]="true"
+    [style]="{ width: '95vw', maxHeight: '85vh' }"
+    [draggable]="false"
+    [resizable]="false"
+    [closable]="true">
+
+    @if (membersLoading) {
+      <div class="flex justify-content-center align-items-center py-5">
+        <i class="pi pi-spin pi-spinner" style="font-size:1.5rem"></i>
+        <span class="ml-2">Loading members...</span>
+      </div>
+    }
+
+    @if (!membersLoading && membersList.length === 0) {
+      <div class="text-center text-500 py-4">No members found.</div>
+    }
+
+    @if (!membersLoading && membersList.length > 0) {
+      <p-table [value]="membersList" [tableStyle]="{ 'min-width': '60rem' }" styleClass="p-datatable-striped p-datatable-gridlines p-datatable-sm">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Ser</th>
+            <th>Service ID</th>
+            <th>Rank</th>
+            <th>Trade</th>
+            <th>Name</th>
+            <th>Mother Unit</th>
+            <th>Own District</th>
+            <th>Mother Unit Location</th>
+            <th>Transfer Unit</th>
+            <th>Remarks</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-emp let-i="rowIndex">
+          <tr>
+            <td>{{ i + 1 }}</td>
+            <td>{{ emp.serviceId || '-' }}</td>
+            <td>{{ emp.rankName || '-' }}</td>
+            <td>{{ emp.tradeName || '-' }}</td>
+            <td>{{ emp.fullNameEN || '-' }}</td>
+            <td>{{ emp.motherUnitName || '-' }}</td>
+            <td>{{ emp.permanentDistrictName || '-' }}</td>
+            <td>{{ emp.motherOrgLocationName || '-' }}</td>
+            <td>{{ emp.transferRabUnitName || '-' }}</td>
+            <td>{{ emp.remarks || '-' }}</td>
+          </tr>
+        </ng-template>
+      </p-table>
     }
   </p-dialog>
 </p-fluid>

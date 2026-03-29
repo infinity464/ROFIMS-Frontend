@@ -203,6 +203,12 @@ export class NotesheetListComponent implements OnInit {
   showPreviewDialog = false;
   previewNoteSheet: NoteSheetInfoFull | null = null;
 
+  /** View Members modal */
+  showMembersDialog = false;
+  membersLoading = false;
+  membersList: DraftPostingEmployeeRow[] = [];
+  membersNoteSheetNo = '';
+
   /** Approval log dialog */
   showApprovalLogDialog = false;
   approvalLogEntries: ApprovalLogEntry[] = [];
@@ -273,6 +279,23 @@ export class NotesheetListComponent implements OnInit {
       route = '/notesheet-preview/posting';
     }
     this.router.navigate([route], { queryParams: { id: row.noteSheetId } });
+  }
+
+  openViewMembers(row: NoteSheetInfoRow): void {
+    if (!row.draftPostingMasterId) return;
+    this.membersNoteSheetNo = row.noteSheetNo || '';
+    this.membersLoading = true;
+    this.membersList = [];
+    this.showMembersDialog = true;
+
+    const obs = row.noteSheetType === NoteSheetType.InterPosting
+      ? this.postingService.getDraftInterPostingEmployees(row.draftPostingMasterId)
+      : this.postingService.getDraftPostingEmployees(row.draftPostingMasterId);
+
+    obs.subscribe({
+      next: (list: any[]) => { this.membersList = list ?? []; this.membersLoading = false; },
+      error: () => { this.membersLoading = false; }
+    });
   }
 
   /** Load approval chain: Prepared by, Initiator (right), Recommender(s) + Final Approver (left). All dynamic. Also loads signatures. */

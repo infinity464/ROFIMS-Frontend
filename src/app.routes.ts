@@ -214,7 +214,7 @@ export const appRoutes: Routes = [
             { path: 'notesheet-list/approved', component: NotesheetListComponent, data: { section: 'approved' } },
             { path: 'notesheet-list/declined', component: NotesheetListComponent, data: { section: 'declined' } },
             { path: 'notesheet-list/all', component: NotesheetListComponent, data: { section: 'all' } },
-            { path: 'notesheet-list/pending-new-posting', component: NotesheetListComponent, data: { section: 'pending', noteSheetTypeFilter: 'NewPosting' } },
+            { path: 'notesheet-list/pending-new-posting', component: NotesheetListComponent, data: { section: 'draft', noteSheetTypeFilter: 'NewPosting' } },
             { path: 'notesheet-list/approved-new-posting', component: NotesheetListComponent, data: { section: 'approved', noteSheetTypeFilter: 'NewPosting' } },
             { path: 'notesheet-list/declined-new-posting', component: NotesheetListComponent, data: { section: 'declined', noteSheetTypeFilter: 'NewPosting' } },
             { path: 'notesheet-list/all-new-posting', component: NotesheetListComponent, data: { section: 'all', noteSheetTypeFilter: 'NewPosting' } },
