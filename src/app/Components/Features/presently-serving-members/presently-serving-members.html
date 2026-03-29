@@ -187,7 +187,7 @@
                 Results
                 <span class="report-results-count">{{ searchText ? filteredList.length : totalRecords }} record(s)</span>
             </div>
-            <div class="report-results-actions">
+            <div class="report-results-actions" style="display: flex; align-items: center; gap: 0.75rem;">
                 <div class="report-search-wrap">
                     <span class="report-search-icon">
                         <i class="pi pi-search"></i>
@@ -200,6 +200,14 @@
                         (ngModelChange)="onSearchChange()"
                         class="report-search-input" />
                 </div>
+                <p-button
+                    label="Send Inter Posting"
+                    icon="pi pi-send"
+                    severity="warn"
+                    [loading]="savingInterPosting"
+                    [disabled]="!selectedRows?.length"
+                    (onClick)="sendInterPosting()">
+                </p-button>
             </div>
         </div>
 
@@ -215,12 +223,14 @@
                 [rowsPerPageOptions]="[10, 20, 50]"
                 (onLazyLoad)="onLazyLoad($event)"
                 dataKey="employeeID"
+                [(selection)]="selectedRows"
                 [tableStyle]="{ 'min-width': '60rem' }"
                 styleClass="p-datatable-sm"
                 paginatorDropdownAppendTo="body"
                 [showCurrentPageReport]="false">
                 <ng-template pTemplate="header">
                     <tr>
+                        <th style="width: 44px"><p-tableHeaderCheckbox></p-tableHeaderCheckbox></th>
                         <th>Ser</th>
                         <th>Service ID</th>
                         <th>Rank</th>
@@ -235,6 +245,7 @@
                 </ng-template>
                 <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                     <tr>
+                        <td><p-tableCheckbox [value]="row"></p-tableCheckbox></td>
                         <td><span class="report-ser-num">{{ first + rowIndex + 1 }}</span></td>
                         <td><span class="font-semibold">{{ row.serviceId || '—' }}</span></td>
                         <td>{{ row.armyRank || '—' }}</td>
@@ -265,7 +276,7 @@
                 </ng-template>
                 <ng-template pTemplate="emptymessage">
                     <tr>
-                        <td colspan="10" class="text-center p-4">No records found.</td>
+                        <td colspan="11" class="text-center p-4">No records found.</td>
                     </tr>
                 </ng-template>
             </p-table>

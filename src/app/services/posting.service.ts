@@ -7,6 +7,8 @@ import {
     DraftPostingMasterDto,
     DraftPostingMasterWithDetailsDto,
     DraftPostingEmployeeRow,
+    DraftInterPostingMasterDto,
+    DraftInterPostingMasterWithDetailsDto,
     PostingNoteSheet,
     PostingNoteSheetMember,
     PostingMemberRow,
@@ -397,6 +399,48 @@ export class PostingService {
                 : p
         );
         this.pendingJoining$.next(list);
+    }
+
+    // ── Draft Inter Posting (API) ──────────────────────────────────
+
+    /** Save Draft Inter Posting: creates master + details, sets IsSendingNotesheetStatus to draftInterPosting. */
+    saveDraftInterPosting(draftInterPostingNo: string, draftInterPostingDate: string, employeeIds: number[], createdBy: string): Observable<{ statusCode: number; description: string }> {
+        return this.http.post<{ statusCode: number; description: string }>(`${API}/SaveDraftInterPosting`, {
+            draftInterPostingNo,
+            draftInterPostingDate,
+            employeeIds,
+            createdBy
+        });
+    }
+
+    /** List Draft Inter Posting masters. */
+    getDraftInterPostingMasters(): Observable<DraftInterPostingMasterDto[]> {
+        return this.http.get<DraftInterPostingMasterDto[]>(`${API}/GetDraftInterPostingMasters`);
+    }
+
+    /** Get single Draft Inter Posting by id with details (for Edit). */
+    getDraftInterPostingById(id: number): Observable<DraftInterPostingMasterWithDetailsDto> {
+        return this.http.get<DraftInterPostingMasterWithDetailsDto>(`${API}/GetDraftInterPostingById/${id}`);
+    }
+
+    /** Update Draft Inter Posting master. */
+    updateDraftInterPosting(id: number, draftInterPostingNo: string, draftInterPostingDate: string, draftInterPostingStatus: string): Observable<{ statusCode: number; description: string }> {
+        return this.http.post<{ statusCode: number; description: string }>(`${API}/UpdateDraftInterPosting`, {
+            id,
+            draftInterPostingNo,
+            draftInterPostingDate,
+            draftInterPostingStatus
+        });
+    }
+
+    /** Update TransferRabUnitId and Remarks on DraftInterPostingDetail rows. */
+    updateDraftInterPostingDetails(items: { id: number; transferRabUnitId: number | null; remarks: string | null }[]): Observable<{ statusCode: number; description: string }> {
+        return this.http.post<{ statusCode: number; description: string }>(`${API}/UpdateDraftInterPostingDetails`, { items });
+    }
+
+    /** Get employees in a Draft Inter Posting from vw_DraftInterPostingWithEmployees view. */
+    getDraftInterPostingEmployees(draftInterPostingMasterId: number): Observable<any[]> {
+        return this.http.get<any[]>(`${API}/GetDraftInterPostingEmployees/${draftInterPostingMasterId}`);
     }
 
     // ── Posting Receive ─────────────────────────────────────────────

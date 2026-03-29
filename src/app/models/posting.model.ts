@@ -120,6 +120,48 @@ export interface DraftPostingMasterWithDetailsDto {
 
 export type SaveDraftNewPostingResponse = { statusCode: number; description: string };
 
+// ── Inter Posting DTOs ──────────────────────────────────────────
+
+/** Draft Inter Posting master row. */
+export interface DraftInterPostingMasterDto {
+    id: number;
+    draftInterPostingNo: string;
+    draftInterPostingDate: string;
+    draftInterPostingStatus: string;
+    createdBy: string;
+    createdDate: string;
+    detailCount: number;
+    hasNoteSheet: boolean;
+}
+
+/** Detail row for GetDraftInterPostingById (Edit). */
+export interface DraftInterPostingDetailDto {
+    id: number;
+    employeeId: number;
+    transferRabUnitId: number | null;
+    transferRabUnitName: string | null;
+    remarks: string | null;
+    serviceId: string;
+    rank: string;
+    corps: string;
+    trade: string;
+    name: string;
+    motherUnit: string;
+    rabUnit: string;
+    rabJoingdate: string;
+}
+
+/** Draft Inter Posting by id with details (for Edit). */
+export interface DraftInterPostingMasterWithDetailsDto {
+    id: number;
+    draftInterPostingNo: string;
+    draftInterPostingDate: string;
+    draftInterPostingStatus: string;
+    createdBy: string;
+    createdDate: string;
+    details: DraftInterPostingDetailDto[];
+}
+
 /** Row from vw_DraftPostingWithEmployees view. */
 export interface DraftPostingEmployeeRow {
     draftPostingMasterId: number;

@@ -229,15 +229,6 @@
                     </div>
 
                     <div class="form-field">
-                        <label class="form-label">Marital Status</label>
-                        <p-select [options]="maritalStatusOptions" optionLabel="codeValueEN" optionValue="codeId"
-                            placeholder="Select Marital Status" styleClass="w-full" formControlName="maritalStatus"
-                            (onChange)="onMaritalStatusChange($event.value)"
-                            [filter]="true" filterPlaceholder="Search">
-                        </p-select>
-                    </div>
-
-                    <div class="form-field">
                         <label class="form-label">
                             Select Prefix <span class="form-label-required">*</span>
                         </label>
@@ -255,7 +246,7 @@
                             Service ID <span class="form-label-required">*</span>
                         </label>
                         <div class="p-inputgroup">
-                            <input pInputText class="w-full" [class.surface-100]="isEditMode" placeholder="Only Number (min 10 digits)" formControlName="serviceId"
+                            <input pInputText class="w-full" [class.surface-100]="isEditMode" placeholder="Only Number" formControlName="serviceId"
                                 [readonly]="isEditMode"
                                 (blur)="checkServiceIdDuplicate($event.target.value)" />
                             @if (isCheckingServiceId) {
@@ -279,25 +270,7 @@
                     </div>
                 </div>
 
-                <!-- Row: When Married - Relationship (Spouse, readonly) and Wife Name. Relationship control is enabled so its value is included in form payload. -->
-                @if (isMaritalStatusMarried) {
-                <div class="form-row">
-                    <div class="form-field">
-                        <label class="form-label">Relationship</label>
-                        <p-select [options]="relationOptions" optionLabel="codeValueEN" optionValue="codeId"
-                            styleClass="w-full" formControlName="relationship"
-                            placeholder="Spouse">
-                        </p-select>
-                    </div>
-                    <div class="form-field">
-                        <label class="form-label">Spouse Name</label>
-                        <input pInputText class="w-full" placeholder="Enter spouse name"
-                            formControlName="spouseName" />
-                    </div>
-                </div>
-                }
-
-                <!-- Row 5: Name English, Name Bangla -->
+                <!-- Row 5: Name English, Name Bangla, Marital Status -->
                 <div class="form-row">
                     <div class="form-field">
                         <label class="form-label">
@@ -319,7 +292,34 @@
                         <small class="form-error">{{ getErrorMessage('fullNameBN') }}</small>
                         }
                     </div>
+
+                    <div class="form-field">
+                        <label class="form-label">Marital Status</label>
+                        <p-select [options]="maritalStatusOptions" optionLabel="codeValueEN" optionValue="codeId"
+                            placeholder="Select Marital Status" styleClass="w-full" formControlName="maritalStatus"
+                            (onChange)="onMaritalStatusChange($event.value)"
+                            [filter]="true" filterPlaceholder="Search">
+                        </p-select>
+                    </div>
+
                 </div>
+
+                @if (isMaritalStatusMarried) {
+                <div class="form-row">
+                    <div class="form-field">
+                        <label class="form-label">Relationship</label>
+                        <p-select [options]="relationOptions" optionLabel="codeValueEN" optionValue="codeId"
+                            styleClass="w-full" formControlName="relationship"
+                            placeholder="Spouse" [disabled]="true">
+                        </p-select>
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label">Spouse Name</label>
+                        <input pInputText class="w-full" placeholder="Enter spouse name"
+                            formControlName="spouseName" />
+                    </div>
+                </div>
+                }
             </div>
 
         </form>
@@ -355,6 +355,7 @@
           </app-address-form>
         </div>
 
+        @if (isMaritalStatusMarried) {
         <!-- Spouse Permanent Address Section (Optional) -->
         <div class="form-section">
           <app-address-form
@@ -387,6 +388,7 @@
             (onSameAsPresentRequest)="copySpousePermanentToSpousePresent()">
           </app-address-form>
         </div>
+        }
 
         <!-- File References Section -->
         <div class="form-section file-section-compact">

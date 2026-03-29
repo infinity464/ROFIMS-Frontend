@@ -81,6 +81,7 @@ export enum PostingStatus {
 export enum IsSendingNotesheetStatus {
     Draft = 'draft',
     DraftPosting = 'draftPosting',
+    DraftInterPosting = 'draftInterPosting',
     DraftNotesheet = 'draftNotesheet'
 }
 

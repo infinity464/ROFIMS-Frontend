@@ -17,8 +17,8 @@ import { Checkbox } from 'primeng/checkbox';
 import { Dialog } from 'primeng/dialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { AddressData, AddressFormConfig, AddressFormComponent } from '../../EmployeeInfo/address-form/address-form';
-import { forkJoin, of } from 'rxjs';
-import { catchError, finalize, map, switchMap, tap } from 'rxjs/operators';
+import { forkJoin, of, Subject } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, finalize, map, switchMap, tap } from 'rxjs/operators';
 import { LocationType, PostingStatus } from '@/models/enums';
 import { EmpPresentMemberCheckComponent } from '../emp-present-member-check/emp-present-member-check.component';
 import { FileReferencesFormComponent } from '@components/Common/file-references-form/file-references-form';
@@ -111,10 +111,10 @@ export class EmpBasicInfo implements OnInit {
         }
 
         this.isCheckingServiceId = true;
-        this.empService.searchEmployees({ serviceId: serviceId }).subscribe({
+        this.empService.searchByRabIdOrServiceId(undefined, serviceId).subscribe({
             next: (res) => {
                 // If any employee found with same serviceId, it's a duplicate
-                this.isServiceIdDuplicate = res && res.length > 0;
+                this.isServiceIdDuplicate = res != null;
                 this.isCheckingServiceId = false;
 
                 if (this.isServiceIdDuplicate) {
@@ -790,6 +790,15 @@ export class EmpBasicInfo implements OnInit {
 
     ngOnInit(): void {
         this.initializeForm();
+
+        // Real-time duplicate check as user types
+        this.postingForm.get('serviceId')?.valueChanges.pipe(
+            debounceTime(500),
+            distinctUntilChanged()
+        ).subscribe((value: string) => {
+            this.checkServiceIdDuplicate(value);
+        });
+
         this.loadMotherOrg();
         this.loadMemberType();
         this.loadAppointment();
@@ -1124,7 +1133,7 @@ export class EmpBasicInfo implements OnInit {
             relationship: [null],
             spouseName: [''],
             prefix: [null, Validators.required],
-            serviceId: ['', [Validators.required, Validators.minLength(10), Validators.pattern(/^\d+$/)]],
+            serviceId: ['', [Validators.required]],
             rabid: [{ value: '', disabled: true }],
             nid: [''],
             fullNameEN: ['', [Validators.required, Validators.minLength(2)]],

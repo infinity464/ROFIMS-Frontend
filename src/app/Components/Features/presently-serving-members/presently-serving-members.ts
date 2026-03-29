@@ -9,7 +9,10 @@ import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
 import { MessageService } from 'primeng/api';
 import { Toast } from 'primeng/toast';
+import { CheckboxModule } from 'primeng/checkbox';
 import { ServingMembersService, ServingMemberFilterRequest } from '@/services/serving-members.service';
+import { PostingService } from '@/services/posting.service';
+import { SharedService } from '@/shared/services/shared-service';
 import { EmployeeServiceOverview } from '@/models/employee-service-overview.model';
 
 export interface FilterModel {
@@ -32,7 +35,7 @@ export interface FilterModel {
 @Component({
     selector: 'app-presently-serving-members',
     standalone: true,
-    imports: [CommonModule, FormsModule, RouterModule, TableModule, ButtonModule, InputTextModule, SelectModule, DatePickerModule, Toast],
+    imports: [CommonModule, FormsModule, RouterModule, TableModule, ButtonModule, InputTextModule, SelectModule, DatePickerModule, Toast, CheckboxModule],
     providers: [MessageService],
     templateUrl: './presently-serving-members.html',
     styleUrls: ['./presently-serving-members.scss', '../employee-reports/report-theme.scss'],
@@ -76,8 +79,14 @@ export class PresentlyServingMembers implements OnInit {
     /** Collapsible filter panel open by default. */
     filterOpen = true;
 
+    /** Selected rows for inter posting */
+    selectedRows: EmployeeServiceOverview[] = [];
+    savingInterPosting = false;
+
     constructor(
         private servingMembersService: ServingMembersService,
+        private postingService: PostingService,
+        private sharedService: SharedService,
         private messageService: MessageService
     ) {}
 
@@ -271,5 +280,33 @@ export class PresentlyServingMembers implements OnInit {
         } catch {
             return value;
         }
+    }
+
+    sendInterPosting(): void {
+        if (!this.selectedRows?.length) {
+            this.messageService.add({ severity: 'warn', summary: 'Selection Required', detail: 'Please select at least one member.' });
+            return;
+        }
+        this.savingInterPosting = true;
+        const employeeIds = this.selectedRows.map(r => r.employeeID);
+        const listNo = `IP-${new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14)}`;
+        const dateStr = new Date().toISOString().slice(0, 10);
+        const user = this.sharedService.getCurrentUser();
+        this.postingService.saveDraftInterPosting(listNo, dateStr, employeeIds, user).subscribe({
+            next: (res) => {
+                this.savingInterPosting = false;
+                if (res.statusCode === 200) {
+                    this.messageService.add({ severity: 'success', summary: 'Success', detail: res.description || 'Draft Inter Posting saved.' });
+                    this.selectedRows = [];
+                    this.loadList(1, this.rows);
+                } else {
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: res.description || 'Failed to save.' });
+                }
+            },
+            error: (err) => {
+                this.savingInterPosting = false;
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.description || 'Failed to save draft inter posting.' });
+            }
+        });
     }
 }
