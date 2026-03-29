@@ -13,7 +13,7 @@ import { PostingService } from '@/services/posting.service';
 import { SharedService } from '@/shared/services/shared-service';
 import { EmployeeList } from '@/models/employee-list.model';
 import { DraftInterPostingMasterDto, DraftInterPostingMasterWithDetailsDto, DraftInterPostingDetailDto } from '@/models/posting.model';
-import { DraftPostingStatusOptions, IsSendingNotesheetStatus } from '@/models/enums';
+import { DraftPostingStatusOptions } from '@/models/enums';
 
 @Component({
     selector: 'app-add-draft-inter-posting',
@@ -176,13 +176,13 @@ export class AddDraftInterPostingComponent implements OnInit {
 
     loadData(): void {
         this.loading = true;
-        this.employeeListService.getEmployeesByIsSendingNotesheetStatus(IsSendingNotesheetStatus.DraftInterPosting).subscribe({
+        this.employeeListService.getServingEmployeesAvailableForPosting().subscribe({
             next: (data) => {
                 this.list = data ?? [];
                 this.loading = false;
             },
             error: (err) => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message ?? 'Failed to load draft inter posting list' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message ?? 'Failed to load serving employees' });
                 this.loading = false;
             }
         });

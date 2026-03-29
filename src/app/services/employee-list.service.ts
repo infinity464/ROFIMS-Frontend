@@ -56,6 +56,11 @@ export class EmployeeListService {
         return this.http.get<EmployeeList[]>(`${this.apiUrl}/GetEmployeesByIsSendingNotesheetStatus`, { params: { status } });
     }
 
+    /** Gets serving employees (PostingStatus=Servings) not in any posting process. For Add Draft Inter Posting. */
+    getServingEmployeesAvailableForPosting(): Observable<EmployeeList[]> {
+        return this.http.get<EmployeeList[]>(`${this.apiUrl}/GetServingEmployeesAvailableForPosting`);
+    }
+
     /** Sets IsSendingNotesheetStatus for an employee (e.g. when sending from Supernumerary List to new posting list). */
     setIsSendingNotesheetStatus(employeeId: number, isSendingNotesheetStatus: string): Observable<{ statusCode?: number; description?: string }> {
         return this.http.post<{ statusCode?: number; description?: string }>(`${this.apiUrl}/SetIsSendingNotesheetStatus`, {

@@ -27,7 +27,7 @@
 
         <!-- Add mode: label + Select All button -->
         <div *ngIf="!isEditMode" class="draft-label-bar">
-            <span class="font-semibold text-700">Employees with draft inter posting status (select one or more)</span>
+            <span class="font-semibold text-700">Presently Serving Employees (select one or more)</span>
             <p-button label="Select All" icon="pi pi-check-square" size="small" [outlined]="true" (onClick)="onAddAll()"></p-button>
         </div>
 
@@ -85,7 +85,7 @@
                     <td [attr.colspan]="isEditMode ? 12 : 10" class="text-center p-4">
                         <div class="flex flex-column align-items-center gap-3 py-5">
                             <i class="pi pi-inbox text-5xl text-400"></i>
-                            <span class="text-lg text-500">No employees with draft inter posting status. Use Presently Serving Members and click "Send Inter Posting" to add here.</span>
+                            <span class="text-lg text-500">No serving employees available for inter posting.</span>
                         </div>
                     </td>
                 </tr>
