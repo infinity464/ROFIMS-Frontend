@@ -32,6 +32,8 @@ interface FamilyMember {
     dob: Date | null;
     maritalStatus: number | null;
     occupation: number | null;
+    occupationDetails: string | null;
+    districtId: number | null;
     nid: string | null;
     mobileNo: string | null;
     passportNo: string | null;
@@ -92,6 +94,7 @@ export class EmpFamilyInfo implements OnInit {
     relationOptions: any[] = [];
     maritalStatusOptions: any[] = [];
     occupationOptions: any[] = [];
+    districtOptions: any[] = [];
 
     // Address Dialog (separate dialog for viewing/editing existing addresses)
     displayAddressDialog: boolean = false;
@@ -165,10 +168,19 @@ export class EmpFamilyInfo implements OnInit {
             dob: [null],
             maritalStatus: [null],
             occupation: [null],
+            occupationDetails: [''],
+            districtId: [null],
             nid: [''],
             mobileNo: [''],
             passportNo: [''],
             email: ['', Validators.email]
+        });
+
+        // Clear dependent fields when occupation is cleared
+        this.familyForm.get('occupation')?.valueChanges.subscribe((value) => {
+            if (!value) {
+                this.familyForm.patchValue({ occupationDetails: '', districtId: null });
+            }
         });
     }
 
@@ -197,6 +209,16 @@ export class EmpFamilyInfo implements OnInit {
         this.commonCodeService.getAllActiveCommonCodesType('Occupation').subscribe({
             next: (data) => {
                 this.occupationOptions = data.map((item) => ({
+                    label: item.codeValueEN || item.displayCodeValueEN,
+                    value: item.codeId
+                }));
+            }
+        });
+
+        // Load District dropdown
+        this.commonCodeService.getAllActiveCommonCodesType('District').subscribe({
+            next: (data) => {
+                this.districtOptions = data.map((item) => ({
                     label: item.codeValueEN || item.displayCodeValueEN,
                     value: item.codeId
                 }));
@@ -248,6 +270,8 @@ export class EmpFamilyInfo implements OnInit {
                     dob: item.dob || item.DOB ? new Date(item.dob || item.DOB) : null,
                     maritalStatus: item.maritalStatus || item.MaritalStatus,
                     occupation: item.occupation || item.Occupation,
+                    occupationDetails: item.occupationDetails || item.OccupationDetails,
+                    districtId: item.districtId || item.DistrictId,
                     nid: item.nid || item.NID,
                     mobileNo: item.mobileNo || item.MobileNo,
                     passportNo: item.passportNo || item.PassportNo,
@@ -280,6 +304,12 @@ export class EmpFamilyInfo implements OnInit {
         return option ? option.label : 'N/A';
     }
 
+    getDistrictName(districtId: number | null): string {
+        if (!districtId) return 'N/A';
+        const option = this.districtOptions.find((o) => o.value === districtId);
+        return option ? option.label : 'N/A';
+    }
+
     openAddDialog(): void {
         this.isEditMode = false;
         this.isReadonly = false; // Switch to edit mode when adding new family member
@@ -304,6 +334,8 @@ export class EmpFamilyInfo implements OnInit {
             dob: member.dob,
             maritalStatus: member.maritalStatus,
             occupation: member.occupation,
+            occupationDetails: member.occupationDetails,
+            districtId: member.districtId,
             nid: member.nid,
             mobileNo: member.mobileNo,
             passportNo: member.passportNo,
@@ -370,6 +402,8 @@ export class EmpFamilyInfo implements OnInit {
             DOB: formValue.dob ? this.formatDate(formValue.dob) : null,
             MaritalStatus: formValue.maritalStatus,
             Occupation: formValue.occupation,
+            OccupationDetails: formValue.occupationDetails || null,
+            DistrictId: formValue.districtId || null,
             NID: formValue.nid || null,
             MobileNo: formValue.mobileNo || null,
             PassportNo: formValue.passportNo || null,
@@ -420,6 +454,8 @@ export class EmpFamilyInfo implements OnInit {
                                     dob: formValue.dob,
                                     maritalStatus: formValue.maritalStatus,
                                     occupation: formValue.occupation,
+                                    occupationDetails: formValue.occupationDetails,
+                                    districtId: formValue.districtId,
                                     nid: formValue.nid,
                                     mobileNo: formValue.mobileNo,
                                     passportNo: formValue.passportNo,
@@ -730,6 +766,8 @@ export class EmpFamilyInfo implements OnInit {
             DOB: formValue.dob ? this.formatDate(formValue.dob) : null,
             MaritalStatus: formValue.maritalStatus,
             Occupation: formValue.occupation,
+            OccupationDetails: formValue.occupationDetails || null,
+            DistrictId: formValue.districtId || null,
             NID: formValue.nid || null,
             MobileNo: formValue.mobileNo || null,
             PassportNo: formValue.passportNo || null,

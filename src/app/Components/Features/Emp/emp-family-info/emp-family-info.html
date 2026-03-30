@@ -52,6 +52,8 @@
                             <th>Date of Birth</th>
                             <th>Marital Status</th>
                             <th>Occupation</th>
+                            <th>Occupation Details</th>
+                            <th>District</th>
                             <th>NID</th>
                             <th>Mobile</th>
                             @if (isReadonly) {
@@ -70,6 +72,8 @@
                             <td>{{ member.dob ? (member.dob | date:'dd/MM/yyyy') : 'N/A' }}</td>
                             <td>{{ getMaritalStatusName(member.maritalStatus) }}</td>
                             <td>{{ getOccupationName(member.occupation) }}</td>
+                            <td>{{ member.occupationDetails || 'N/A' }}</td>
+                            <td>{{ getDistrictName(member.districtId) }}</td>
                             <td>{{ member.nid || 'N/A' }}</td>
                             <td>{{ member.mobileNo || 'N/A' }}</td>
                             @if (isReadonly) {
@@ -94,7 +98,7 @@
                     </ng-template>
                     <ng-template pTemplate="emptymessage">
                         <tr>
-                            <td [attr.colspan]="9" class="text-center py-4">
+                            <td [attr.colspan]="11" class="text-center py-4">
                                 <span class="text-500">No family members found.</span>
                             </td>
                         </tr>
@@ -157,8 +161,18 @@
                         </div>
                         <div class="col-span-1">
                             <label class="font-semibold block mb-2 text-700">Occupation</label>
-                            <p-select [options]="occupationOptions" formControlName="occupation" placeholder="Select Occupation" [style]="{'width':'100%'}" [filter]="true"></p-select>
+                            <p-select [options]="occupationOptions" formControlName="occupation" placeholder="Select Occupation" [style]="{'width':'100%'}" [filter]="true" [showClear]="true"></p-select>
                         </div>
+                        @if (familyForm.get('occupation')?.value) {
+                            <div class="col-span-1">
+                                <label class="font-semibold block mb-2 text-700">District</label>
+                                <p-select [options]="districtOptions" formControlName="districtId" placeholder="Select District" [style]="{'width':'100%'}" [filter]="true" [showClear]="true" appendTo="body"></p-select>
+                            </div>
+                            <div class="col-span-1">
+                                <label class="font-semibold block mb-2 text-700">Occupation Details</label>
+                                <input pInputText formControlName="occupationDetails" class="w-full" placeholder="Enter occupation details" />
+                            </div>
+                        }
                         <div class="col-span-1">
                             <label class="font-semibold block mb-2 text-700">NID</label>
                             <input pInputText formControlName="nid" class="w-full" placeholder="Enter NID number" />
