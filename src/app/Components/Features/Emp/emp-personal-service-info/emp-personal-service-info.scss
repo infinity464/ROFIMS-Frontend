@@ -2,36 +2,169 @@
   display: block;
 }
 
-// When emp-personal-info (and similar tab content) is reused inside tab panels,
-// remove extra wrapper margin/padding so it doesn’t double up with the parent card.
-:host ::ng-deep p-tabpanel {
-  app-emp-personal-info,
-  app-emp-address-info,
-  app-emp-family-info,
-  app-emp-nominee-info,
-  app-emp-previous-rab-service,
-  app-emp-service-history,
-  app-emp-promotion-info,
-  app-emp-rank-confirmation,
-  app-emp-education-info,
-  app-emp-course-info,
-  app-emp-discipline-info,
-  app-emp-bank-account,
-  app-emp-foreign-visit,
-  app-emp-leave-info,
-  app-emp-medical-category,
-  app-emp-additional-remarks {
-    display: block;
+.tab-menu-container {
+  width: 100%;
+  margin-bottom: 1rem;
+}
 
-    p-fluid {
-      margin: 0;
-      padding: 0;
-    }
+// Global MegaMenu styling
+::ng-deep .emp-tab-megamenu {
+  background-color: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+}
 
-    .card.mb-5,
-    .mb-5.card {
-      margin: 0;
-      padding: 0;
-    }
+::ng-deep .emp-tab-megamenu .p-megamenu-root-list {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+  list-style: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border-bottom: 2px solid var(--surface-border) !important;
+}
+
+::ng-deep .emp-tab-megamenu .p-megamenu-item {
+  margin: 0 !important;
+  flex: 0 0 auto !important;
+}
+
+::ng-deep .emp-tab-megamenu .p-megamenu-item-link {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.5rem !important;
+  padding: 1rem 1.5rem !important;
+  color: var(--text-color-secondary) !important;
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 3px solid transparent !important;
+  text-decoration: none !important;
+  cursor: pointer !important;
+  transition: all 0.3s ease !important;
+  font-weight: 500 !important;
+  white-space: nowrap !important;
+}
+
+::ng-deep .emp-tab-megamenu .p-megamenu-item-icon {
+  font-size: 1rem !important;
+  margin: 0 !important;
+  color: var(--text-color-secondary) !important;
+}
+
+::ng-deep .emp-tab-megamenu .p-megamenu-item-label {
+  line-height: 1 !important;
+}
+
+::ng-deep .emp-tab-megamenu .p-megamenu-item-link:hover {
+  color: var(--primary-color) !important;
+  background-color: var(--surface-ground) !important;
+}
+
+::ng-deep .emp-tab-megamenu .p-megamenu-item-link:hover .p-megamenu-item-icon {
+  color: var(--primary-color) !important;
+}
+
+// ACTIVE TAB STYLING - CORRECT selectors
+::ng-deep .emp-tab-megamenu .active-tab .p-megamenu-item-link {
+  color: var(--primary-color) !important;
+  border-bottom-color: var(--primary-color) !important;
+  font-weight: 600 !important;
+}
+
+::ng-deep .emp-tab-megamenu .active-tab .p-megamenu-item-icon {
+  color: var(--primary-color) !important;
+}
+
+::ng-deep .emp-tab-megamenu li.active-tab .p-megamenu-item-link {
+  color: var(--primary-color) !important;
+  border-bottom-color: var(--primary-color) !important;
+  font-weight: 600 !important;
+}
+
+::ng-deep .emp-tab-megamenu li.active-tab .p-megamenu-item-icon {
+  color: var(--primary-color) !important;
+}
+
+// Hide submenus
+::ng-deep .emp-tab-megamenu .p-megamenu-panel,
+::ng-deep .emp-tab-megamenu .p-submenu-list {
+  display: none !important;
+}
+
+// Content panel styling
+.tab-content-panel {
+  background-color: var(--surface-card);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--surface-border);
+  padding: 2rem;
+}
+
+// Component content cleanup
+::ng-deep .tab-content-panel app-emp-personal-info,
+::ng-deep .tab-content-panel app-emp-address-info,
+::ng-deep .tab-content-panel app-emp-family-info,
+::ng-deep .tab-content-panel app-emp-nominee-info,
+::ng-deep .tab-content-panel app-emp-previous-rab-service,
+::ng-deep .tab-content-panel app-emp-service-history,
+::ng-deep .tab-content-panel app-emp-promotion-info,
+::ng-deep .tab-content-panel app-emp-rank-confirmation,
+::ng-deep .tab-content-panel app-emp-education-info,
+::ng-deep .tab-content-panel app-emp-course-info,
+::ng-deep .tab-content-panel app-emp-discipline-info,
+::ng-deep .tab-content-panel app-emp-bank-account,
+::ng-deep .tab-content-panel app-emp-foreign-visit,
+::ng-deep .tab-content-panel app-emp-leave-info,
+::ng-deep .tab-content-panel app-emp-medical-category,
+::ng-deep .tab-content-panel app-emp-additional-remarks {
+  display: block;
+}
+
+::ng-deep .tab-content-panel p-fluid {
+  margin: 0;
+  padding: 0;
+}
+
+::ng-deep .tab-content-panel .card.mb-5,
+::ng-deep .tab-content-panel .mb-5.card {
+  margin: 0;
+  padding: 0;
+}
+
+// Responsive
+@media screen and (max-width: 768px) {
+  ::ng-deep .emp-tab-megamenu .p-menuitem-link {
+    padding: 0.875rem 1rem !important;
+    font-size: 0.875rem !important;
+  }
+
+  .tab-content-panel {
+    padding: 1.5rem;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  ::ng-deep .emp-tab-megamenu .p-megamenu-root-list {
+    max-height: 200px !important;
+    overflow-y: auto !important;
+  }
+
+  ::ng-deep .emp-tab-megamenu .p-menuitem-link {
+    padding: 0.75rem 0.875rem !important;
+    font-size: 0.75rem !important;
+  }
+
+  ::ng-deep .emp-tab-megamenu .p-menuitem-text {
+    display: none !important;
+  }
+
+  ::ng-deep .emp-tab-megamenu .p-menuitem-icon {
+    font-size: 1.2rem !important;
+  }
+
+  .tab-content-panel {
+    padding: 1rem;
   }
 }
