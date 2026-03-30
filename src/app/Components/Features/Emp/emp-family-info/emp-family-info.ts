@@ -84,7 +84,8 @@ export class EmpFamilyInfo implements OnInit {
     familyMembers: FamilyMember[] = [];
     isLoading: boolean = false;
 
-    // Dialog
+    // Inline form
+    showInlineForm: boolean = false;
     displayDialog: boolean = false;
     isEditMode: boolean = false;
     familyForm!: FormGroup;
@@ -312,15 +313,15 @@ export class EmpFamilyInfo implements OnInit {
 
     openAddDialog(): void {
         this.isEditMode = false;
-        this.isReadonly = false; // Switch to edit mode when adding new family member
+        this.isReadonly = false;
         this.editingFmid = null;
         this.familyForm.reset();
         this.activeDialogTab = '0';
         this.dialogPermanentAddressData = null;
         this.dialogPresentAddressData = null;
-        this.dialogPermanentAddressId = 0; // Reset for new
-        this.dialogPresentAddressId = 0; // Reset for new
-        this.displayDialog = true;
+        this.dialogPermanentAddressId = 0;
+        this.dialogPresentAddressId = 0;
+        this.showInlineForm = true;
     }
 
     openEditDialog(member: FamilyMember): void {
@@ -344,11 +345,10 @@ export class EmpFamilyInfo implements OnInit {
         this.activeDialogTab = '0';
         this.dialogPermanentAddressData = null;
         this.dialogPresentAddressData = null;
-        this.dialogPermanentAddressId = 0; // Reset, will be set by loadDialogAddresses
-        this.dialogPresentAddressId = 0; // Reset, will be set by loadDialogAddresses
-        // Load existing addresses for edit mode
+        this.dialogPermanentAddressId = 0;
+        this.dialogPresentAddressId = 0;
         this.loadDialogAddresses(member);
-        this.displayDialog = true;
+        this.showInlineForm = true;
     }
 
     loadDialogAddresses(member: FamilyMember): void {
@@ -417,7 +417,7 @@ export class EmpFamilyInfo implements OnInit {
             this.familyInfoService.update(payload).subscribe({
                 next: () => {
                     this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Family member updated successfully' });
-                    this.displayDialog = false;
+                    this.showInlineForm = false;
                     this.loadFamilyMembers();
                 },
                 error: (err) => {
@@ -432,7 +432,7 @@ export class EmpFamilyInfo implements OnInit {
                     const generatedFmid = response?.data?.fmid || response?.data?.FMID || response?.FMID || response?.fmid;
 
                     this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Family member added successfully' });
-                    this.displayDialog = false;
+                    this.showInlineForm = false;
                     this.loadFamilyMembers();
 
                     // If FMID was returned, ask user if they want to add address
@@ -790,7 +790,7 @@ export class EmpFamilyInfo implements OnInit {
                 } else {
                     this.isSaving = false;
                     this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Family member saved successfully' });
-                    this.displayDialog = false;
+                    this.showInlineForm = false;
                     this.loadFamilyMembers();
                     this.resetDialogState();
                 }
@@ -824,7 +824,7 @@ export class EmpFamilyInfo implements OnInit {
                 .then(() => {
                     this.isSaving = false;
                     this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Family member and addresses saved successfully' });
-                    this.displayDialog = false;
+                    this.showInlineForm = false;
                     this.loadFamilyMembers();
                     this.resetDialogState();
                 })
@@ -832,14 +832,14 @@ export class EmpFamilyInfo implements OnInit {
                     console.error('Failed to save addresses', err);
                     this.isSaving = false;
                     this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Family member saved but failed to save addresses' });
-                    this.displayDialog = false;
+                    this.showInlineForm = false;
                     this.loadFamilyMembers();
                     this.resetDialogState();
                 });
         } else {
             this.isSaving = false;
             this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Family member saved successfully' });
-            this.displayDialog = false;
+            this.showInlineForm = false;
             this.loadFamilyMembers();
             this.resetDialogState();
         }
