@@ -56,16 +56,19 @@ export interface EmployeeBasicInfo {
                         <label class="font-semibold block mb-2 text-700">&nbsp;</label>
                         <div class="flex align-items-center gap-3 px-3 shadow-1" style="line-height: 2.25rem; border: 1px solid var(--primary-color); border-radius: 2rem; background: var(--primary-50, rgba(16,185,129,0.05));">
                             <span
-                                ><i class="pi pi-user text-primary mr-1"></i><span class="text-600"> Name : </span> <span class="font-semibold">{{ employeeInfo.fullNameEN || 'N/A' }}</span></span
+                                ><span class="font-semibold"> Name : </span> <span class="font-semibold">{{ employeeInfo.fullNameEN || 'N/A' }}</span></span
                             >
                             <span
-                                ><i class="pi pi-id-card text-primary mr-1"></i><span class="text-600"> Rab Id : </span> <span class="font-semibold">{{ employeeInfo.rabid || 'N/A' }}</span></span
+                                ><span class="font-semibold"> Rank : </span> <span class="font-semibold">{{ employeeInfo.rankDisplay || 'N/A' }}</span></span
                             >
                             <span
-                                ><i class="pi pi-bookmark text-primary mr-1"></i><span class="text-600"> Service Id : </span> <span class="font-semibold">{{ employeeInfo.serviceId || 'N/A' }}</span></span
+                                ><span class="font-semibold"> Corps : </span> <span class="font-semibold">{{ employeeInfo.corpsDisplay || 'N/A' }}</span></span
                             >
                             <span
-                                ><i class="pi pi-building text-primary mr-1"></i><span class="text-600"> Mother Org : </span>
+                                ><span class="font-semibold"> Trade : </span> <span class="font-semibold">{{ employeeInfo.tradeDisplay || 'N/A' }}</span></span
+                            >
+                            <span
+                                ><span class="font-semibold"> Mother Org : </span>
                                 <span class="font-semibold">{{ employeeInfo.motherOrganizationDisplay ?? employeeInfo.motherOrganization ?? 'N/A' }}</span></span
                             >
                         </div>
