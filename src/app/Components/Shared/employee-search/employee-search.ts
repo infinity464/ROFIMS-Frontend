@@ -1,6 +1,7 @@
 import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
 import { MessageService } from 'primeng/api';
@@ -54,23 +55,26 @@ export interface EmployeeBasicInfo {
                 @if (employeeFound && employeeInfo) {
                     <div class="ml-3">
                         <label class="font-semibold block mb-2 text-700">&nbsp;</label>
-                        <div class="flex align-items-center gap-3 px-3 shadow-1" style="line-height: 2.25rem; border: 1px solid var(--primary-color); border-radius: 2rem; background: var(--primary-50, rgba(16,185,129,0.05));">
-                            <span
-                                ><span class="font-semibold"> Name : </span> <span class="font-semibold">{{ employeeInfo.fullNameEN || 'N/A' }}</span></span
-                            >
-                            <span
-                                ><span class="font-semibold"> Rank : </span> <span class="font-semibold">{{ employeeInfo.rankDisplay || 'N/A' }}</span></span
-                            >
-                            <span
-                                ><span class="font-semibold"> Corps : </span> <span class="font-semibold">{{ employeeInfo.corpsDisplay || 'N/A' }}</span></span
-                            >
-                            <span
-                                ><span class="font-semibold"> Trade : </span> <span class="font-semibold">{{ employeeInfo.tradeDisplay || 'N/A' }}</span></span
-                            >
-                            <span
-                                ><span class="font-semibold"> Mother Org : </span>
-                                <span class="font-semibold">{{ employeeInfo.motherOrganizationDisplay ?? employeeInfo.motherOrganization ?? 'N/A' }}</span></span
-                            >
+                        <div class="flex align-items-center gap-3">
+                            <div class="flex align-items-center gap-3 px-3 shadow-1" style="line-height: 2.25rem; border: 1px solid var(--primary-color); border-radius: 2rem; background: var(--primary-50, rgba(16,185,129,0.05));">
+                                <span
+                                    ><span class="font-semibold"> Name : </span> <span class="font-semibold">{{ employeeInfo.fullNameEN || 'N/A' }}</span></span
+                                >
+                                <span
+                                    ><span class="font-semibold"> Rank : </span> <span class="font-semibold">{{ employeeInfo.rankDisplay || 'N/A' }}</span></span
+                                >
+                                <span
+                                    ><span class="font-semibold"> Corps : </span> <span class="font-semibold">{{ employeeInfo.corpsDisplay || 'N/A' }}</span></span
+                                >
+                                <span
+                                    ><span class="font-semibold"> Trade : </span> <span class="font-semibold">{{ employeeInfo.tradeDisplay || 'N/A' }}</span></span
+                                >
+                                <span
+                                    ><span class="font-semibold"> Mother Org : </span>
+                                    <span class="font-semibold">{{ employeeInfo.motherOrganizationDisplay ?? employeeInfo.motherOrganization ?? 'N/A' }}</span></span
+                                >
+                            </div>
+                            <p-button label="View Profile" (onClick)="openEmployeeProfile()"></p-button>
                         </div>
                     </div>
                 }
@@ -93,7 +97,8 @@ export class EmployeeSearchComponent implements OnChanges {
 
     constructor(
         private empService: EmpService,
-        private messageService: MessageService
+        private messageService: MessageService,
+        private router: Router
     ) {}
 
     ngOnChanges(changes: SimpleChanges): void {
@@ -275,5 +280,11 @@ export class EmployeeSearchComponent implements OnChanges {
     // Public method to check if employee is found
     isEmployeeFound(): boolean {
         return this.employeeFound;
+    }
+
+    openEmployeeProfile(): void {
+        if (this.employeeInfo && this.employeeInfo.employeeID) {
+            this.router.navigate(['/presently-serving-members/profile', this.employeeInfo.employeeID]);
+        }
     }
 }
