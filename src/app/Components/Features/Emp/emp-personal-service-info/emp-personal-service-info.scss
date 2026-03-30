@@ -23,7 +23,6 @@
   list-style: none !important;
   padding: 0 !important;
   margin: 0 !important;
-  border-bottom: 2px solid var(--surface-border) !important;
 }
 
 ::ng-deep .emp-tab-megamenu .p-megamenu-item {
@@ -36,7 +35,7 @@
   align-items: center !important;
   justify-content: center !important;
   gap: 0.5rem !important;
-  padding: 1rem 1.5rem !important;
+  padding: 0.5rem 0.75rem !important;
   color: var(--text-color-secondary) !important;
   background: transparent !important;
   border: none !important;
