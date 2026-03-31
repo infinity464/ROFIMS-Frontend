@@ -41,9 +41,7 @@
           <th>Type</th>
           <th>Back Remark</th>
           <th style="width: 120px">Action</th>
-          @if (!noteSheetTypeFilter) {
           <th style="width: 150px">Status / Submit</th>
-          }
         </tr>
       </ng-template>
       <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
@@ -70,7 +68,6 @@
               }
             </div>
           </td>
-          @if (!noteSheetTypeFilter) {
           <td>
             @if (row.currentStatus === NoteSheetCurrentStatus.Draft) {
               <p-button type="button" icon="pi pi-send" label="Submit" size="small" severity="success" [outlined]="true" pTooltip="Submit for approval" (onClick)="submitForApproval(row)"></p-button>
@@ -84,11 +81,10 @@
               </span>
             }
           </td>
-          }
         </tr>
       </ng-template>
       <ng-template pTemplate="emptymessage">
-        <tr><td [attr.colspan]="noteSheetTypeFilter ? 8 : 9" class="text-center text-500">No draft note-sheets.</td></tr>
+        <tr><td colspan="9" class="text-center text-500">No draft note-sheets.</td></tr>
       </ng-template>
     </p-table>
   </div>
@@ -151,12 +147,10 @@
             <div class="flex align-items-center gap-1">
               <p-button type="button" icon="pi pi-eye" [rounded]="true" [text]="true" size="small" pTooltip="Preview" (onClick)="openPreview(row)"></p-button>
               <p-button type="button" icon="pi pi-users" [rounded]="true" [text]="true" size="small" severity="info" pTooltip="View Members" (onClick)="openViewMembers(row)"></p-button>
-              @if (!noteSheetTypeFilter) {
               <p-button type="button" icon="pi pi-list" [rounded]="true" [text]="true" size="small" severity="info" pTooltip="Approval Log" (onClick)="openApprovalLog(row)"></p-button>
               <p-button type="button" icon="pi pi-check" [rounded]="true" [text]="true" size="small" severity="success" pTooltip="Approve" (onClick)="openRemarkDialog(row, NoteSheetRemarkAction.Approve)"></p-button>
               <p-button type="button" icon="pi pi-times" [rounded]="true" [text]="true" size="small" severity="danger" pTooltip="Decline" (onClick)="openRemarkDialog(row, NoteSheetRemarkAction.Decline)"></p-button>
               <p-button type="button" icon="pi pi-replay" [rounded]="true" [text]="true" size="small" severity="secondary" pTooltip="Back" (onClick)="openRemarkDialog(row, NoteSheetRemarkAction.Back)"></p-button>
-              }
             </div>
           </td>
         </tr>

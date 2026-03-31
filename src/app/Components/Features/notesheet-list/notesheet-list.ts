@@ -1046,6 +1046,8 @@ export class NotesheetListComponent implements OnInit {
   private setCurrentList(list: NoteSheetInfoRow[]): void {
     if (this.noteSheetTypeFilter) {
       list = list.filter(r => r.noteSheetType === this.noteSheetTypeFilter);
+    } else {
+      list = list.filter(r => r.noteSheetType !== NoteSheetType.NewPosting && r.noteSheetType !== NoteSheetType.InterPosting);
     }
     switch (this.section) {
       case 'draft':
