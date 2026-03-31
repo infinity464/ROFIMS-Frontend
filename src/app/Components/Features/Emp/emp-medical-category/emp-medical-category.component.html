@@ -28,12 +28,92 @@
             <div class="form-section">
                 <div class="flex align-items-center gap-3 mb-3 flex-wrap">
                     <h3 class="form-subtitle m-0">Medical Records List</h3>
-                    @if (!isReadonly) {
+                    @if (!isReadonly && !showInlineForm) {
                         <div class="ml-auto">
                             <p-button label="Add row" icon="pi pi-plus" (onClick)="openAddDialog()"></p-button>
                         </div>
                     }
                 </div>
+
+                @if (showInlineForm) {
+                    <div class="surface-50 border-round-xl p-4 mb-4" style="border: 1px solid var(--surface-300);">
+                        <h4 class="m-0 text-700">{{ isEditMode ? 'Edit Medical Category' : 'Add Medical Category' }}</h4>
+                        <form [formGroup]="medicalForm" class="medical-record-form mt-3">
+                            <div class="form-rows">
+                                <!-- Row 1: Medical Category Type | From -->
+                                <div class="form-row flex gap-3 mb-3">
+                                    <div class="form-field flex-1">
+                                        <label class="form-label">Medical Category Type <span class="required">*</span></label>
+                                        <p-select
+                                            formControlName="medicalCategoryId"
+                                            [options]="medicalCategoryOptions"
+                                            optionLabel="label"
+                                            optionValue="value"
+                                            placeholder="Select category"
+                                            [filter]="true"
+                                            styleClass="w-full">
+                                        </p-select>
+                                        @if (medicalForm.get('medicalCategoryId')?.invalid && medicalForm.get('medicalCategoryId')?.touched) {
+                                            <small class="form-error">Required</small>
+                                        }
+                                    </div>
+                                    <div class="form-field flex-1">
+                                        <label class="form-label">From <span class="required">*</span></label>
+                                        <p-datepicker formControlName="fromDate" dateFormat="dd-mm-yy" placeholder="From" appendTo="body" styleClass="w-full"></p-datepicker>
+                                        @if (medicalForm.get('fromDate')?.invalid && medicalForm.get('fromDate')?.touched) {
+                                            <small class="form-error">Required</small>
+                                        }
+                                    </div>
+                                </div>
+
+                                <!-- Row 2: To | Reason -->
+                                <div class="form-row flex gap-3 mb-3">
+                                    <div class="form-field flex-1">
+                                        <label class="form-label">To <span class="required">*</span></label>
+                                        <p-datepicker formControlName="toDate" dateFormat="dd-mm-yy" placeholder="To" appendTo="body" styleClass="w-full"></p-datepicker>
+                                        @if (medicalForm.get('toDate')?.invalid && medicalForm.get('toDate')?.touched) {
+                                            <small class="form-error">Required</small>
+                                        }
+                                    </div>
+                                    <div class="form-field flex-1">
+                                        <label class="form-label">Reason</label>
+                                        <input pInputText formControlName="reason" class="w-full" placeholder="Reason" />
+                                    </div>
+                                </div>
+
+                                <!-- Row 3: Remarks | Auth -->
+                                <div class="form-row flex gap-3 mb-3">
+                                    <div class="form-field flex-1">
+                                        <label class="form-label">Remarks</label>
+                                        <input pInputText formControlName="remarks" class="w-full" placeholder="Remarks" />
+                                    </div>
+                                    <div class="form-field flex-1">
+                                        <label class="form-label">Auth</label>
+                                        <input pInputText formControlName="auth" class="w-full" placeholder="Auth" />
+                                    </div>
+                                </div>
+
+                                <!-- Supporting Documents -->
+                                <div class="form-row flex gap-3 mb-0 file-section-compact">
+                                    <div class="form-field flex-1 col-span-full">
+                                        <app-file-references-form
+                                            #fileReferencesForm
+                                            [fileRows]="fileRows"
+                                            [isViewMode]="false"
+                                            title="Supporting Documents"
+                                            (fileRowsChange)="onFileRowsChange($event)"
+                                            (onDownloadFile)="onDownloadFile($event)">
+                                        </app-file-references-form>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                        <div class="flex justify-content-end gap-2 mt-3">
+                            <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="showInlineForm = false" [disabled]="isSaving"></p-button>
+                            <p-button [label]="isEditMode ? 'Update' : 'Save'" icon="pi pi-check" [loading]="isSaving" [disabled]="isSaving" (onClick)="saveMedical()"></p-button>
+                        </div>
+                    </div>
+                }
 
                 <p-table [value]="medicalList" [loading]="isLoading" styleClass="p-datatable-sm" responsiveLayout="scroll" [tableStyle]="{'min-width': '58rem'}">
                         <ng-template pTemplate="header">
@@ -87,94 +167,5 @@
         }
     </div>
 </p-fluid>
-
-<!-- Add/Edit Medical Record Dialog -->
-<p-dialog
-    [header]="isEditMode ? 'Edit Medical Record' : 'Add Medical Record'"
-    [(visible)]="displayDialog"
-    [modal]="true"
-    [style]="{ width: '640px' }"
-    [contentStyle]="{ padding: '1.25rem 1.5rem', 'border-top': '2px solid var(--primary-color)' }"
-    [closable]="true"
-    [draggable]="false"
-    [resizable]="false"
-    styleClass="medical-record-dialog">
-    <form [formGroup]="medicalForm" class="medical-record-form">
-        <div class="form-rows">
-            <!-- Row 1: Medical Category Type | From -->
-            <div class="form-row flex gap-3 mb-3">
-                <div class="form-field flex-1">
-                    <label class="form-label">Medical Category Type <span class="required">*</span></label>
-                    <p-select
-                        formControlName="medicalCategoryId"
-                        [options]="medicalCategoryOptions"
-                        optionLabel="label"
-                        optionValue="value"
-                        placeholder="Select category"
-                        [filter]="true"
-                        styleClass="w-full">
-                    </p-select>
-                    @if (medicalForm.get('medicalCategoryId')?.invalid && medicalForm.get('medicalCategoryId')?.touched) {
-                        <small class="form-error">Required</small>
-                    }
-                </div>
-                <div class="form-field flex-1">
-                    <label class="form-label">From <span class="required">*</span></label>
-                    <p-datepicker formControlName="fromDate" dateFormat="dd-mm-yy" placeholder="From" appendTo="body" styleClass="w-full"></p-datepicker>
-                    @if (medicalForm.get('fromDate')?.invalid && medicalForm.get('fromDate')?.touched) {
-                        <small class="form-error">Required</small>
-                    }
-                </div>
-            </div>
-
-            <!-- Row 2: To | Reason -->
-            <div class="form-row flex gap-3 mb-3">
-                <div class="form-field flex-1">
-                    <label class="form-label">To <span class="required">*</span></label>
-                    <p-datepicker formControlName="toDate" dateFormat="dd-mm-yy" placeholder="To" appendTo="body" styleClass="w-full"></p-datepicker>
-                    @if (medicalForm.get('toDate')?.invalid && medicalForm.get('toDate')?.touched) {
-                        <small class="form-error">Required</small>
-                    }
-                </div>
-                <div class="form-field flex-1">
-                    <label class="form-label">Reason</label>
-                    <input pInputText formControlName="reason" class="w-full" placeholder="Reason" />
-                </div>
-            </div>
-
-            <!-- Row 3: Remarks | Auth -->
-            <div class="form-row flex gap-3 mb-3">
-                <div class="form-field flex-1">
-                    <label class="form-label">Remarks</label>
-                    <input pInputText formControlName="remarks" class="w-full" placeholder="Remarks" />
-                </div>
-                <div class="form-field flex-1">
-                    <label class="form-label">Auth</label>
-                    <input pInputText formControlName="auth" class="w-full" placeholder="Auth" />
-                </div>
-            </div>
-
-            <!-- Supporting Documents -->
-            <div class="form-row flex gap-3 mb-0 file-section-compact">
-                <div class="form-field flex-1 col-span-full">
-                    <app-file-references-form
-                        #fileReferencesForm
-                        [fileRows]="fileRows"
-                        [isViewMode]="false"
-                        title="Supporting Documents"
-                        (fileRowsChange)="onFileRowsChange($event)"
-                        (onDownloadFile)="onDownloadFile($event)">
-                    </app-file-references-form>
-                </div>
-            </div>
-        </div>
-    </form>
-    <ng-template pTemplate="footer">
-        <div class="dialog-footer">
-            <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="displayDialog = false" [disabled]="isSaving"></p-button>
-            <p-button [label]="isEditMode ? 'Update' : 'Save'" icon="pi pi-check" [loading]="isSaving" [disabled]="isSaving" (onClick)="saveMedical()"></p-button>
-        </div>
-    </ng-template>
-</p-dialog>
 
 <p-confirmDialog></p-confirmDialog>

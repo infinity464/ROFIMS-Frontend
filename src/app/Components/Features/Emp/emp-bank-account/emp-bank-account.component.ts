@@ -50,6 +50,7 @@ export class EmpBankAccount implements OnInit {
     isLoading = false;
 
     displayDialog = false;
+    showInlineForm = false;
     isEditMode = false;
     isSaving = false;
     bankAccForm!: FormGroup;
@@ -230,7 +231,7 @@ export class EmpBankAccount implements OnInit {
             remarks: ''
         });
         this.updateBranchOptions();
-        this.displayDialog = true;
+        this.showInlineForm = true;
     }
 
     openEditDialog(row: BankAccInfoModel): void {
@@ -249,7 +250,7 @@ export class EmpBankAccount implements OnInit {
             remarks: row.remarks ?? ''
         });
         this.updateBranchOptions();
-        this.displayDialog = true;
+        this.showInlineForm = true;
     }
 
     saveBankAcc(): void {
@@ -289,7 +290,7 @@ export class EmpBankAccount implements OnInit {
             req.subscribe({
                 next: () => {
                     this.messageService.add({ severity: 'success', summary: 'Success', detail: this.isEditMode ? 'Bank account updated.' : 'Bank account added.' });
-                    this.displayDialog = false;
+                    this.showInlineForm = false;
                     this.loadBankAccList();
                     this.isSaving = false;
                 },

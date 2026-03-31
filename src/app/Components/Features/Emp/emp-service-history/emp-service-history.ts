@@ -90,6 +90,7 @@ export class EmpServiceHistory implements OnInit {
     isLoading = false;
 
     displayDialog = false;
+    showInlineForm = false;
     isEditMode = false;
     isSaving = false;
     serviceForm!: FormGroup;
@@ -340,7 +341,7 @@ export class EmpServiceHistory implements OnInit {
             auth: '',
             remarks: ''
         });
-        this.displayDialog = true;
+        this.showInlineForm = true;
     }
 
     openEditDialog(row: ServiceHistoryListRow): void {
@@ -374,7 +375,7 @@ export class EmpServiceHistory implements OnInit {
         } else {
             this.fileRows = [];
         }
-        this.displayDialog = true;
+        this.showInlineForm = true;
     }
 
     onFileRowsChange(event: FileRowData[]): void {
@@ -443,7 +444,7 @@ export class EmpServiceHistory implements OnInit {
                 this.isSaving = false;
                 if (res != null) {
                     this.messageService.add({ severity: 'success', summary: 'Saved', detail: this.isEditMode ? 'Service history updated.' : 'Service history added.' });
-                    this.displayDialog = false;
+                    this.showInlineForm = false;
                     this.loadServiceList();
                 }
             });

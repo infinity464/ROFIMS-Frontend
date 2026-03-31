@@ -80,6 +80,7 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
     familyMasterList: FamilyInfoModel[] = [];
     isLoading = false;
     displayDialog = false;
+    showInlineForm = false;
     isEditMode = false;
     isSaving = false;
     visitForm!: FormGroup;
@@ -420,7 +421,7 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
             auth: '',
             remarks: ''
         });
-        this.displayDialog = true;
+        this.showInlineForm = true;
         console.log('✅ Dialog opened, isReadonly:', this.isReadonly);
     }
 
@@ -446,7 +447,7 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
             auth: row.auth ?? '',
             remarks: row.remarks ?? ''
         });
-        this.displayDialog = true;
+        this.showInlineForm = true;
     }
 
     saveVisit(): void {
@@ -521,7 +522,7 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
                             detail: this.isEditMode ? 'Foreign visit updated.' : 'Foreign visit added.'
                         });
                     }
-                    this.displayDialog = false;
+                    this.showInlineForm = false;
                     this.loadVisitList();
                     this.isSaving = false;
                 }
@@ -571,7 +572,7 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
                     summary: 'Success',
                     detail: 'Foreign visit and family members added.'
                 });
-                this.displayDialog = false;
+                this.showInlineForm = false;
                 this.loadVisitList();
                 this.isSaving = false;
             }

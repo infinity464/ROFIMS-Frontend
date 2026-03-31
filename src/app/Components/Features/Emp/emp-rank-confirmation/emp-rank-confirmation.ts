@@ -67,6 +67,7 @@ export class EmpRankConfirmationComponent implements OnInit {
     isLoading = false;
 
     displayDialog = false;
+    showInlineForm = false;
     isEditMode = false;
     isSaving = false;
     rankForm!: FormGroup;
@@ -255,7 +256,7 @@ export class EmpRankConfirmationComponent implements OnInit {
             auth: '',
             remarks: ''
         });
-        this.displayDialog = true;
+        this.showInlineForm = true;
     }
 
     openEditDialog(row: RankConfirmationListRow): void {
@@ -270,7 +271,7 @@ export class EmpRankConfirmationComponent implements OnInit {
             auth: row.auth ?? '',
             remarks: row.remarks ?? ''
         });
-        this.displayDialog = true;
+        this.showInlineForm = true;
     }
 
     saveRank(): void {
@@ -315,7 +316,7 @@ export class EmpRankConfirmationComponent implements OnInit {
                 this.isSaving = false;
                 if (res != null) {
                     this.messageService.add({ severity: 'success', summary: 'Saved', detail: this.isEditMode ? 'Rank confirmation updated.' : 'Rank confirmation added.' });
-                    this.displayDialog = false;
+                    this.showInlineForm = false;
                     this.loadRankList();
                 }
             });

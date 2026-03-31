@@ -57,6 +57,7 @@ export class EmpEducationInfoComponent implements OnInit {
     isLoading = false;
 
     displayDialog = false;
+    showInlineForm = false;
     isEditMode = false;
     isSaving = false;
     educationForm!: FormGroup;
@@ -271,7 +272,7 @@ export class EmpEducationInfoComponent implements OnInit {
             grade: null,
             gradePoint: ''
         });
-        this.displayDialog = true;
+        this.showInlineForm = true;
     }
 
     openEditDialog(row: EducationInfoModel): void {
@@ -294,7 +295,7 @@ export class EmpEducationInfoComponent implements OnInit {
             grade: row.grade,
             gradePoint: row.gradePoint ?? ''
         });
-        this.displayDialog = true;
+        this.showInlineForm = true;
     }
 
     saveEducation(): void {
@@ -341,7 +342,7 @@ export class EmpEducationInfoComponent implements OnInit {
             req.subscribe({
                 next: () => {
                     this.messageService.add({ severity: 'success', summary: 'Success', detail: this.isEditMode ? 'Education updated.' : 'Education added.' });
-                    this.displayDialog = false;
+                    this.showInlineForm = false;
                     this.loadEducationList();
                     this.isSaving = false;
                 },
