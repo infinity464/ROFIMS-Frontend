@@ -28,6 +28,8 @@ export interface OrgNode {
     expanded?: boolean;
     /** True after children have been fetched (used to hide arrow when 0 children) */
     childrenLoaded?: boolean;
+    /** Rollup serving count for organogram (optional; from GetServingOrganogramCounts). */
+    servingCount?: number;
 }
 
 export interface CreateOrgDto {

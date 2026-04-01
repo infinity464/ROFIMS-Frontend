@@ -91,6 +91,7 @@ import { EmployeeSignatureUploadComponent } from '@/Components/Features/employee
 import { AddDraftInterPostingComponent } from '@/Components/Features/add-draft-inter-posting/add-draft-inter-posting';
 import { InterPostingNotesheetGenerateComponent } from '@/Components/Features/inter-posting-notesheet-generate/inter-posting-notesheet-generate';
 import { PresentlyServingMembers } from '@/Components/Features/presently-serving-members/presently-serving-members';
+import { OrgTreeServingComponent } from '@/Components/Features/presently-serving-members/org-tree-serving/org-tree-serving';
 import { ServingMemberProfile } from '@/Components/Features/presently-serving-members/serving-member-profile/serving-member-profile';
 import { ExMembers } from '@/Components/Features/ex-members/ex-members';
 import { ExMemberProfile } from '@/Components/Features/ex-members/ex-member-profile/ex-member-profile';
@@ -266,6 +267,7 @@ export const appRoutes: Routes = [
             { path: 'posting/posting-order-receive', component: PostingOrderReceiveComponent },
             { path: 'employee-signature-upload', component: EmployeeSignatureUploadComponent },
             { path: 'presently-serving-members', component: PresentlyServingMembers },
+            { path: 'presently-serving-members/organogram', component: OrgTreeServingComponent },
             { path: 'presently-serving-members/profile/:employeeId', component: ServingMemberProfile },
             { path: 'ex-members', component: ExMembers },
             { path: 'ex-members/profile/:employeeId', component: ExMemberProfile },
