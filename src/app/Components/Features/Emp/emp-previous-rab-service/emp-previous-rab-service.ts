@@ -27,6 +27,11 @@ import { FileReferencesFormComponent, FileRowData } from '@components/Common/fil
 export interface PreviousRABServiceListRow {
     previousRABServiceID: number;
     rabUnitCodeId: number | null;
+    rabWingCodeId: number | null;
+    rabBranchCodeId: number | null;
+    rabSubBranchCodeId: number | null;
+    rabSectionCodeId: number | null;
+    rabSubSectionCodeId: number | null;
     serviceFrom: string | null;
     serviceTo: string | null;
     isCurrentlyActive: boolean;
@@ -34,6 +39,12 @@ export interface PreviousRABServiceListRow {
     postingAuth: string | null;
     remarks: string | null;
     filesReferences?: string | null;
+    rabUnitName?: string | null;
+    rabWingName?: string | null;
+    rabBranchName?: string | null;
+    rabSubBranchName?: string | null;
+    rabSectionName?: string | null;
+    rabSubSectionName?: string | null;
 }
 
 @Component({
@@ -88,6 +99,11 @@ export class EmpPreviousRabService implements OnInit {
     editingServiceId: number | null = null;
 
     rabUnitOptions: { label: string; value: number }[] = [];
+    rabWingOptions: { label: string; value: number }[] = [];
+    rabBranchOptions: { label: string; value: number }[] = [];
+    rabSubBranchOptions: { label: string; value: number }[] = [];
+    rabSectionOptions: { label: string; value: number }[] = [];
+    rabSubSectionOptions: { label: string; value: number }[] = [];
     appointmentOptions: { label: string; value: number }[] = [];
     yearOptions: { label: string; value: string }[] = [];
 
@@ -129,6 +145,11 @@ export class EmpPreviousRabService implements OnInit {
         this.serviceForm = this.fb.group({
             previousRABServiceID: [null],
             rabUnitCodeId: [null, Validators.required],
+            rabWingCodeId: [null],
+            rabBranchCodeId: [null],
+            rabSubBranchCodeId: [null],
+            rabSectionCodeId: [null],
+            rabSubSectionCodeId: [null],
             serviceFrom: [null],
             serviceTo: [null],
             isCurrentlyActive: [false],
@@ -142,6 +163,11 @@ export class EmpPreviousRabService implements OnInit {
                 if (active) toControl.disable(); else toControl.enable();
             }
         });
+        this.serviceForm.get('rabUnitCodeId')?.valueChanges.subscribe(v => this.onBattalionChange(v));
+        this.serviceForm.get('rabWingCodeId')?.valueChanges.subscribe(v => this.onWingChange(v));
+        this.serviceForm.get('rabBranchCodeId')?.valueChanges.subscribe(v => this.onBranchChange(v));
+        this.serviceForm.get('rabSubBranchCodeId')?.valueChanges.subscribe(v => this.onSubBranchChange(v));
+        this.serviceForm.get('rabSectionCodeId')?.valueChanges.subscribe(v => this.onSectionChange(v));
     }
 
     private mapCommonCodeToOption(item: any): { label: string; value: number } {
@@ -212,7 +238,7 @@ export class EmpPreviousRabService implements OnInit {
     loadServiceList(): void {
         if (!this.selectedEmployeeId) return;
         this.isLoading = true;
-        this.previousRABService.getByEmployeeId(this.selectedEmployeeId).subscribe({
+        this.previousRABService.getViewByEmployeeId(this.selectedEmployeeId).subscribe({
             next: (list: any[]) => {
                 const arr = Array.isArray(list) ? list : [];
                 this.serviceList = arr
@@ -222,13 +248,24 @@ export class EmpPreviousRabService implements OnInit {
                         return {
                             previousRABServiceID: item.previousRABServiceID ?? item.PreviousRABServiceID,
                             rabUnitCodeId: item.rabUnitCodeId ?? item.RABUnitCodeId ?? null,
+                            rabWingCodeId: item.rabWingCodeId ?? item.RABWingCodeId ?? null,
+                            rabBranchCodeId: item.rabBranchCodeId ?? item.RABBranchCodeId ?? null,
+                            rabSubBranchCodeId: item.rabSubBranchCodeId ?? item.RABSubBranchCodeId ?? null,
+                            rabSectionCodeId: item.rabSectionCodeId ?? item.RABSectionCodeId ?? null,
+                            rabSubSectionCodeId: item.rabSubSectionCodeId ?? item.RABSubSectionCodeId ?? null,
                             serviceFrom: item.serviceFrom ?? item.ServiceFrom ?? null,
                             serviceTo: item.serviceTo ?? item.ServiceTo ?? null,
                             isCurrentlyActive: isActive === true || isActive === 1,
                             appointment: item.appointment ?? item.Appointment ?? null,
                             postingAuth: item.postingAuth ?? item.PostingAuth ?? null,
                             remarks: item.remarks ?? item.Remarks ?? null,
-                            filesReferences: item.filesReferences ?? item.FilesReferences ?? null
+                            filesReferences: item.filesReferences ?? item.FilesReferences ?? null,
+                            rabUnitName: item.rabUnitName ?? item.RABUnitName ?? null,
+                            rabWingName: item.rabWingName ?? item.RABWingName ?? null,
+                            rabBranchName: item.rabBranchName ?? item.RABBranchName ?? null,
+                            rabSubBranchName: item.rabSubBranchName ?? item.RABSubBranchName ?? null,
+                            rabSectionName: item.rabSectionName ?? item.RABSectionName ?? null,
+                            rabSubSectionName: item.rabSubSectionName ?? item.RABSubSectionName ?? null
                         };
                     });
                 this.isLoading = false;
@@ -260,6 +297,11 @@ export class EmpPreviousRabService implements OnInit {
         this.serviceForm.reset({
             previousRABServiceID: null,
             rabUnitCodeId: null,
+            rabWingCodeId: null,
+            rabBranchCodeId: null,
+            rabSubBranchCodeId: null,
+            rabSectionCodeId: null,
+            rabSubSectionCodeId: null,
             serviceFrom: null,
             serviceTo: null,
             isCurrentlyActive: false,
@@ -267,6 +309,11 @@ export class EmpPreviousRabService implements OnInit {
             postingAuth: '',
             remarks: ''
         });
+        this.rabWingOptions = [];
+        this.rabBranchOptions = [];
+        this.rabSubBranchOptions = [];
+        this.rabSectionOptions = [];
+        this.rabSubSectionOptions = [];
         this.serviceForm.get('serviceTo')?.enable();
         this.displayDialog = true;
     }
@@ -279,13 +326,18 @@ export class EmpPreviousRabService implements OnInit {
         this.serviceForm.patchValue({
             previousRABServiceID: row.previousRABServiceID,
             rabUnitCodeId: row.rabUnitCodeId,
+            rabWingCodeId: row.rabWingCodeId,
+            rabBranchCodeId: row.rabBranchCodeId,
+            rabSubBranchCodeId: row.rabSubBranchCodeId,
+            rabSectionCodeId: row.rabSectionCodeId,
+            rabSubSectionCodeId: row.rabSubSectionCodeId,
             serviceFrom,
             serviceTo,
             isCurrentlyActive: row.isCurrentlyActive ?? false,
             appointment: row.appointment,
             postingAuth: row.postingAuth ?? '',
             remarks: row.remarks ?? ''
-        });
+        }, { emitEvent: false });
         // Load file references (FilesReferences JSON: [{ FileId, fileName }])
         const refsJson = row.filesReferences;
         if (refsJson && typeof refsJson === 'string') {
@@ -298,6 +350,7 @@ export class EmpPreviousRabService implements OnInit {
         } else {
             this.fileRows = [];
         }
+        this.loadCascadeOptionsForEdit(row);
         const toControl = this.serviceForm.get('serviceTo');
         if (row.isCurrentlyActive && toControl) toControl.disable();
         else toControl?.enable();
@@ -327,7 +380,7 @@ export class EmpPreviousRabService implements OnInit {
         }
         if (this.serviceForm.get('rabUnitCodeId')?.invalid) {
             this.serviceForm.get('rabUnitCodeId')?.markAsTouched();
-            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select RAB Wing/Battalion Name.' });
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Battalion Name.' });
             return;
         }
         const v = this.serviceForm.getRawValue();
@@ -344,6 +397,11 @@ export class EmpPreviousRabService implements OnInit {
                 employeeID: employeeId as number,
                 previousRABServiceID: this.isEditMode ? (this.editingServiceId ?? 0) : newId,
                 rabUnitCodeId: v.rabUnitCodeId ?? null,
+                rabWingCodeId: v.rabWingCodeId ?? null,
+                rabBranchCodeId: v.rabBranchCodeId ?? null,
+                rabSubBranchCodeId: v.rabSubBranchCodeId ?? null,
+                rabSectionCodeId: v.rabSectionCodeId ?? null,
+                rabSubSectionCodeId: v.rabSubSectionCodeId ?? null,
                 serviceFrom: this.toDateOnly(v.serviceFrom),
                 serviceTo: this.toDateOnly(v.serviceTo),
                 isCurrentlyActive: v.isCurrentlyActive === true,
@@ -405,6 +463,122 @@ export class EmpPreviousRabService implements OnInit {
 
         const filesReferencesJson = existingRefs.length > 0 ? JSON.stringify(existingRefs) : null;
         doSave(filesReferencesJson);
+    }
+
+    private onBattalionChange(rabUnitCodeId: number | null): void {
+        this.rabWingOptions = [];
+        this.rabBranchOptions = [];
+        this.rabSubBranchOptions = [];
+        this.rabSectionOptions = [];
+        this.rabSubSectionOptions = [];
+        this.serviceForm.patchValue({
+            rabWingCodeId: null,
+            rabBranchCodeId: null,
+            rabSubBranchCodeId: null,
+            rabSectionCodeId: null,
+            rabSubSectionCodeId: null
+        }, { emitEvent: false });
+        if (rabUnitCodeId == null) return;
+        this.commonCodeService.getAllActiveCommonCodesByParentId(rabUnitCodeId).subscribe({
+            next: (list) => this.rabWingOptions = (Array.isArray(list) ? list : []).map((item: any) => this.mapCommonCodeToOption(item)),
+            error: () => { this.rabWingOptions = []; }
+        });
+    }
+
+    private onWingChange(rabWingCodeId: number | null): void {
+        this.rabBranchOptions = [];
+        this.rabSubBranchOptions = [];
+        this.rabSectionOptions = [];
+        this.rabSubSectionOptions = [];
+        this.serviceForm.patchValue({
+            rabBranchCodeId: null,
+            rabSubBranchCodeId: null,
+            rabSectionCodeId: null,
+            rabSubSectionCodeId: null
+        }, { emitEvent: false });
+        if (rabWingCodeId == null) return;
+        this.commonCodeService.getAllActiveCommonCodesByParentId(rabWingCodeId).subscribe({
+            next: (list) => this.rabBranchOptions = (Array.isArray(list) ? list : []).map((item: any) => this.mapCommonCodeToOption(item)),
+            error: () => { this.rabBranchOptions = []; }
+        });
+    }
+
+    private onBranchChange(rabBranchCodeId: number | null): void {
+        this.rabSubBranchOptions = [];
+        this.rabSectionOptions = [];
+        this.rabSubSectionOptions = [];
+        this.serviceForm.patchValue({
+            rabSubBranchCodeId: null,
+            rabSectionCodeId: null,
+            rabSubSectionCodeId: null
+        }, { emitEvent: false });
+        if (rabBranchCodeId == null) return;
+        this.commonCodeService.getAllActiveCommonCodesByParentId(rabBranchCodeId).subscribe({
+            next: (list) => this.rabSubBranchOptions = (Array.isArray(list) ? list : []).map((item: any) => this.mapCommonCodeToOption(item)),
+            error: () => { this.rabSubBranchOptions = []; }
+        });
+    }
+
+    private onSubBranchChange(rabSubBranchCodeId: number | null): void {
+        this.rabSectionOptions = [];
+        this.rabSubSectionOptions = [];
+        this.serviceForm.patchValue({
+            rabSectionCodeId: null,
+            rabSubSectionCodeId: null
+        }, { emitEvent: false });
+        if (rabSubBranchCodeId == null) return;
+        this.commonCodeService.getAllActiveCommonCodesByParentId(rabSubBranchCodeId).subscribe({
+            next: (list) => this.rabSectionOptions = (Array.isArray(list) ? list : []).map((item: any) => this.mapCommonCodeToOption(item)),
+            error: () => { this.rabSectionOptions = []; }
+        });
+    }
+
+    private onSectionChange(rabSectionCodeId: number | null): void {
+        this.rabSubSectionOptions = [];
+        this.serviceForm.patchValue({ rabSubSectionCodeId: null }, { emitEvent: false });
+        if (rabSectionCodeId == null) return;
+        this.commonCodeService.getAllActiveCommonCodesByParentId(rabSectionCodeId).subscribe({
+            next: (list) => this.rabSubSectionOptions = (Array.isArray(list) ? list : []).map((item: any) => this.mapCommonCodeToOption(item)),
+            error: () => { this.rabSubSectionOptions = []; }
+        });
+    }
+
+    private loadCascadeOptionsForEdit(row: PreviousRABServiceListRow): void {
+        if (row.rabUnitCodeId == null) return;
+        this.commonCodeService.getAllActiveCommonCodesByParentId(row.rabUnitCodeId).subscribe({
+            next: (wings) => {
+                this.rabWingOptions = (Array.isArray(wings) ? wings : []).map((item: any) => this.mapCommonCodeToOption(item));
+                if (row.rabWingCodeId == null) return;
+                this.commonCodeService.getAllActiveCommonCodesByParentId(row.rabWingCodeId).subscribe({
+                    next: (branches) => {
+                        this.rabBranchOptions = (Array.isArray(branches) ? branches : []).map((item: any) => this.mapCommonCodeToOption(item));
+                        if (row.rabBranchCodeId == null) return;
+                        this.commonCodeService.getAllActiveCommonCodesByParentId(row.rabBranchCodeId).subscribe({
+                            next: (subBranches) => {
+                                this.rabSubBranchOptions = (Array.isArray(subBranches) ? subBranches : []).map((item: any) => this.mapCommonCodeToOption(item));
+                                if (row.rabSubBranchCodeId == null) return;
+                                this.commonCodeService.getAllActiveCommonCodesByParentId(row.rabSubBranchCodeId).subscribe({
+                                    next: (sections) => {
+                                        this.rabSectionOptions = (Array.isArray(sections) ? sections : []).map((item: any) => this.mapCommonCodeToOption(item));
+                                        if (row.rabSectionCodeId == null) return;
+                                        this.commonCodeService.getAllActiveCommonCodesByParentId(row.rabSectionCodeId).subscribe({
+                                            next: (subSections) => {
+                                                this.rabSubSectionOptions = (Array.isArray(subSections) ? subSections : []).map((item: any) => this.mapCommonCodeToOption(item));
+                                            },
+                                            error: () => { this.rabSubSectionOptions = []; }
+                                        });
+                                    },
+                                    error: () => { this.rabSectionOptions = []; }
+                                });
+                            },
+                            error: () => { this.rabSubBranchOptions = []; }
+                        });
+                    },
+                    error: () => { this.rabBranchOptions = []; }
+                });
+            },
+            error: () => { this.rabWingOptions = []; }
+        });
     }
 
     confirmDelete(row: PreviousRABServiceListRow): void {

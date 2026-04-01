@@ -9,6 +9,11 @@ export interface VwPreviousRABServiceInfoModel {
     employeeID: number;
     previousRABServiceID: number;
     rabUnitCodeId?: number | null;
+    rabWingCodeId?: number | null;
+    rabBranchCodeId?: number | null;
+    rabSubBranchCodeId?: number | null;
+    rabSectionCodeId?: number | null;
+    rabSubSectionCodeId?: number | null;
     serviceFrom?: string | null;
     serviceTo?: string | null;
     appointment?: number | null;
@@ -26,6 +31,16 @@ export interface VwPreviousRABServiceInfoModel {
     employeeFullNameBN?: string | null;
     rabUnitName?: string | null;
     rabUnitNameBN?: string | null;
+    rabWingName?: string | null;
+    rabWingNameBN?: string | null;
+    rabBranchName?: string | null;
+    rabBranchNameBN?: string | null;
+    rabSubBranchName?: string | null;
+    rabSubBranchNameBN?: string | null;
+    rabSectionName?: string | null;
+    rabSectionNameBN?: string | null;
+    rabSubSectionName?: string | null;
+    rabSubSectionNameBN?: string | null;
     appointmentName?: string | null;
     appointmentNameBN?: string | null;
     isCurrentlyActive?: boolean | null;
@@ -35,6 +50,11 @@ export interface PreviousRABServiceInfoModel {
     employeeID: number;
     previousRABServiceID: number;
     rabUnitCodeId?: number | null;
+    rabWingCodeId?: number | null;
+    rabBranchCodeId?: number | null;
+    rabSubBranchCodeId?: number | null;
+    rabSectionCodeId?: number | null;
+    rabSubSectionCodeId?: number | null;
     serviceFrom?: string | null;
     serviceTo?: string | null;
     isCurrentlyActive?: boolean;
@@ -101,6 +121,11 @@ export class PreviousRABServiceService {
             employeeID: payload.employeeID,
             previousRABServiceID: payload.previousRABServiceID ?? 0,
             rabUnitCodeId: payload.rabUnitCodeId ?? null,
+            rabWingCodeId: payload.rabWingCodeId ?? null,
+            rabBranchCodeId: payload.rabBranchCodeId ?? null,
+            rabSubBranchCodeId: payload.rabSubBranchCodeId ?? null,
+            rabSectionCodeId: payload.rabSectionCodeId ?? null,
+            rabSubSectionCodeId: payload.rabSubSectionCodeId ?? null,
             serviceFrom: payload.serviceFrom ?? null,
             serviceTo: payload.serviceTo ?? null,
             isCurrentlyActive: payload.isCurrentlyActive === true,
