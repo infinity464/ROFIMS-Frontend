@@ -4,15 +4,14 @@
         <div class="tree-node-content tree-node-readonly" [class.node-selected]="isSelected">
             <span class="expand-toggle" *ngIf="hasChildrenOrCanExpand" (click)="onExpandAreaClick($event)">
                 <i class="pi pi-spin pi-spinner" *ngIf="loadingParentId === node.id"></i>
-                <i class="pi" [class.pi-chevron-right]="!node.expanded" [class.pi-chevron-down]="node.expanded" *ngIf="loadingParentId !== node.id"></i>
+                <i class="pi pi-chevron-right expand-icon" [class.expanded]="node.expanded" *ngIf="loadingParentId !== node.id"></i>
             </span>
             <span class="expand-placeholder" *ngIf="!hasChildrenOrCanExpand"></span>
             <div class="node-readonly-label" (click)="onReadOnlyLabelClick($event)">
                 <span class="level-badge" [style.background-color]="badgeColor">{{ node.codeType }}</span>
 
-                <span class="node-name"
-                    >{{ node.nameEN || node.commCode }} <span class="serving-count-badge" *ngIf="node.servingCount != null && node.servingCount > 0">{{ node.servingCount }}</span></span
-                >
+                <span class="node-name">{{ node.nameEN || node.commCode }}</span>
+                <span class="serving-count-badge" *ngIf="node.servingCount != null && node.servingCount > 0">{{ node.servingCount }}</span>
 
                 <span class="node-comm" *ngIf="node.commCode">({{ node.commCode }})</span>
             </div>
@@ -24,7 +23,7 @@
         <div class="tree-node-content" (click)="toggleExpand()">
             <span class="expand-toggle" *ngIf="hasChildrenOrCanExpand">
                 <i class="pi pi-spin pi-spinner" *ngIf="loadingParentId === node.id"></i>
-                <i class="pi" [class.pi-chevron-right]="!node.expanded" [class.pi-chevron-down]="node.expanded" *ngIf="loadingParentId !== node.id"></i>
+                <i class="pi pi-chevron-right expand-icon" [class.expanded]="node.expanded" *ngIf="loadingParentId !== node.id"></i>
             </span>
             <span class="expand-placeholder" *ngIf="!hasChildrenOrCanExpand"></span>
             <span class="level-badge" [style.background-color]="badgeColor">{{ node.codeType }}</span>

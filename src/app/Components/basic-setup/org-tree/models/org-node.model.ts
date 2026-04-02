@@ -3,9 +3,9 @@ export const LEVELS = ['Unit', 'Wing', 'Branch', 'Sub-Branch', 'Section', 'Sub-S
 export type LevelType = (typeof LEVELS)[number];
 
 export const LEVEL_COLORS: Record<LevelType, string> = {
-    'Unit': '#185FA5',
-    'Wing': '#3B6D11',
-    'Branch': '#854F0B',
+    'Unit': '#1a6fbf',
+    'Wing': '#1d9e75',
+    'Branch': '#b57a10',
     'Sub-Branch': '#993556',
     'Section': '#534AB7',
     'Sub-Section': '#0F6E56'

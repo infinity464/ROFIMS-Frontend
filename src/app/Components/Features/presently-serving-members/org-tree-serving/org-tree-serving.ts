@@ -9,7 +9,6 @@ import {
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { Fluid } from 'primeng/fluid';
-import { TableModule, TableLazyLoadEvent } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
@@ -21,6 +20,7 @@ import { EmployeeServiceOverview } from '@/models/employee-service-overview.mode
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { forkJoin, of } from 'rxjs';
 import { catchError, map, switchMap } from 'rxjs/operators';
+import { MemberViewComponent } from './member-view/member-view.component';
 
 function countMapFromApi(rows: OrganogramCountItem[] | null | undefined): Map<number, number> {
     const m = new Map<number, number>();
@@ -33,7 +33,7 @@ function countMapFromApi(rows: OrganogramCountItem[] | null | undefined): Map<nu
 @Component({
     selector: 'app-org-tree-serving',
     standalone: true,
-    imports: [CommonModule, RouterModule, Fluid, TableModule, ButtonModule, ToastModule, TreeNodeComponent],
+    imports: [CommonModule, RouterModule, Fluid, ButtonModule, ToastModule, TreeNodeComponent, MemberViewComponent],
     providers: [MessageService],
     templateUrl: './org-tree-serving.html',
     styleUrl: './org-tree-serving.scss'
@@ -49,6 +49,7 @@ export class OrgTreeServingComponent implements OnInit {
     readonly loadingParentId = signal<number | null>(null);
     readonly countsLoading = signal(false);
     readonly selectedNodeId = signal<number | null>(null);
+    readonly sidebarCollapsed = signal(false);
 
     readonly treeNodes = computed(() => this.orgService.getTree(this.flatNodes()));
 
@@ -57,6 +58,8 @@ export class OrgTreeServingComponent implements OnInit {
     totalRecords = 0;
     first = 0;
     rows = 10;
+
+    private currentPageNo = 1;
 
     ngOnInit(): void {
         this.loadTreeAndCounts();
@@ -151,17 +154,33 @@ export class OrgTreeServingComponent implements OnInit {
 
     onNodeSelect(node: OrgNode): void {
         this.selectedNodeId.set(node.id);
+        this.currentPageNo = 1;
         this.first = 0;
         this.loadMembersPage(1, this.rows);
     }
 
-    onLazyLoad(event: TableLazyLoadEvent): void {
-        const pageNo =
-            event.first != null && event.rows != null ? Math.floor(event.first / event.rows) + 1 : 1;
-        const rowPerPage = event.rows ?? this.rows;
-        this.first = event.first ?? 0;
-        this.rows = rowPerPage;
-        this.loadMembersPage(pageNo, rowPerPage);
+    onPageChange(page: number): void {
+        this.currentPageNo = page;
+        this.first = (page - 1) * this.rows;
+        this.loadMembersPage(page, this.rows);
+    }
+
+    onPageSizeChange(newSize: number): void {
+        this.rows = newSize;
+        this.currentPageNo = 1;
+        this.first = 0;
+        this.loadMembersPage(1, newSize);
+    }
+
+    getCurrentPage(): number {
+        return this.currentPageNo;
+    }
+
+    getSelectedNodeName(): string {
+        const nodeId = this.selectedNodeId();
+        if (nodeId == null) return '';
+        const node = this.flatNodes().find(n => n.id === nodeId);
+        return node?.nameEN || node?.commCode || '';
     }
 
     private loadMembersPage(pageNo: number, rowPerPage: number): void {
@@ -199,5 +218,10 @@ export class OrgTreeServingComponent implements OnInit {
         this.selectedNodeId.set(null);
         this.list = [];
         this.totalRecords = 0;
+        this.currentPageNo = 1;
+    }
+
+    toggleSidebar(): void {
+        this.sidebarCollapsed.update(v => !v);
     }
 }
