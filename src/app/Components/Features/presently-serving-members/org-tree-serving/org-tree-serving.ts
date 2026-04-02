@@ -7,6 +7,7 @@ import {
     DestroyRef
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { CardModule } from 'primeng/card';
 import { RouterModule } from '@angular/router';
 import { Fluid } from 'primeng/fluid';
 import { ButtonModule } from 'primeng/button';
@@ -33,7 +34,7 @@ function countMapFromApi(rows: OrganogramCountItem[] | null | undefined): Map<nu
 @Component({
     selector: 'app-org-tree-serving',
     standalone: true,
-    imports: [CommonModule, RouterModule, Fluid, ButtonModule, ToastModule, TreeNodeComponent, MemberViewComponent],
+    imports: [CommonModule, CardModule, RouterModule, Fluid, ButtonModule, ToastModule, TreeNodeComponent, MemberViewComponent],
     providers: [MessageService],
     templateUrl: './org-tree-serving.html',
     styleUrl: './org-tree-serving.scss'

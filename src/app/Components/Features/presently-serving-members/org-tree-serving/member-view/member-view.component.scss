@@ -10,18 +10,19 @@
     align-items: center;
     justify-content: space-between;
     margin-bottom: 0.75rem;
+    flex-shrink: 0;
 }
 
 .view-title {
     font-size: 0.813rem;
-    color: #185FA5;
+    color: var(--p-primary-color);
     font-weight: 500;
 }
 
 .clear-btn {
     background: none;
     border: none;
-    color: #185FA5;
+    color: var(--p-primary-color);
     font-size: 0.75rem;
     cursor: pointer;
     padding: 0.25rem 0.5rem;
@@ -34,7 +35,23 @@
 .members-list {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     min-height: 0;
+    scrollbar-width: thin;
+    scrollbar-color: var(--p-surface-border) transparent;
+
+    &::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: var(--p-surface-border);
+        border-radius: 3px;
+    }
 }
 
 .loading-state {
@@ -42,7 +59,7 @@
     align-items: center;
     justify-content: center;
     padding: 2rem;
-    color: #888780;
+    color: var(--p-text-muted-color);
 }
 
 .empty-state {
@@ -51,7 +68,7 @@
     align-items: center;
     justify-content: center;
     padding: 2rem;
-    color: #888780;
+    color: var(--p-text-muted-color);
 
     .empty-icon {
         font-size: 2rem;
