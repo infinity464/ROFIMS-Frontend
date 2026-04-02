@@ -1,105 +1,91 @@
 <p-toast></p-toast>
 
 <p-fluid>
-  <div class="org-serving-shell">
-    <header class="org-serving-header">
-      <div>
-        <h1 class="page-title">Serving members — organogram</h1>
-        <p class="page-sub">
-          Same RAB hierarchy as <a routerLink="/basic-setup/org-tree">Organization Hierarchy Setup</a>.
-          Counts roll up by placement; click a node label to list members in that subtree.
-        </p>
-      </div>
-      <button
-        pButton
-        type="button"
-        label="Refresh"
-        icon="pi pi-refresh"
-        class="p-button-outlined"
-        [disabled]="loading()"
-        (click)="loadTreeAndCounts()"></button>
-    </header>
+    <div class="org-serving-shell">
+        <header class="org-serving-header">
+            <div>
+                <h1 class="page-title">Serving members —</h1>
+                <p class="page-sub">Same RAB hierarchy as <a routerLink="/basic-setup/org-tree">Organization Hierarchy Setup</a>. Counts roll up by placement; click a node label to list members in that subtree.</p>
+            </div>
+            <button pButton type="button" label="Refresh" icon="pi pi-refresh" class="p-button-outlined" [disabled]="loading()" (click)="loadTreeAndCounts()"></button>
+        </header>
 
-    <div class="org-serving-panels">
-      <div class="tree-card">
-        <h2 class="panel-title">Org tree</h2>
-        @if (loading()) {
-          <div class="panel-loading"><i class="pi pi-spin pi-spinner"></i> Loading tree…</div>
-        } @else if (treeNodes().length === 0) {
-          <div class="panel-empty">No RAB units found.</div>
-        } @else {
-          <div class="tree-wrap">
-            @for (node of treeNodes(); track node.id) {
-              <app-tree-node
-                [node]="node"
-                [depth]="0"
-                [readOnly]="true"
-                [selectedNodeId]="selectedNodeId()"
-                [loadingParentId]="loadingParentId()"
-                (expandRequest)="onExpandRequest($event)"
-                (expandToggled)="onExpandToggled($event)"
-                (nodeSelect)="onNodeSelect($event)" />
-            }
-          </div>
-        }
-        @if (countsLoading()) {
-          <div class="counts-hint"><i class="pi pi-spin pi-spinner"></i> Updating counts…</div>
-        }
-      </div>
+        <div class="org-serving-panels">
+            <div class="tree-card">
+                <h2 class="panel-title">Org tree</h2>
+                @if (loading()) {
+                <div class="panel-loading"><i class="pi pi-spin pi-spinner"></i> Loading tree…</div>
+                } @else if (treeNodes().length === 0) {
+                <div class="panel-empty">No RAB units found.</div>
+                } @else {
+                <div class="tree-wrap">
+                    @for (node of treeNodes(); track node.id) {
+                    <app-tree-node
+                        [node]="node"
+                        [depth]="0"
+                        [readOnly]="true"
+                        [selectedNodeId]="selectedNodeId()"
+                        [loadingParentId]="loadingParentId()"
+                        (expandRequest)="onExpandRequest($event)"
+                        (expandToggled)="onExpandToggled($event)"
+                        (nodeSelect)="onNodeSelect($event)"
+                    />
+                    }
+                </div>
+                } @if (countsLoading()) {
+                <div class="counts-hint"><i class="pi pi-spin pi-spinner"></i> Updating counts…</div>
+                }
+            </div>
 
-      <div class="list-card">
-        <div class="list-card-head">
-          <h2 class="panel-title">Members in subtree</h2>
-          @if (selectedNodeId() != null) {
-            <button
-              pButton
-              type="button"
-              label="Clear selection"
-              class="p-button-text p-button-sm"
-              (click)="clearSelection()"></button>
-          }
+            <div class="list-card">
+                <div class="list-card-head">
+                    <h2 class="panel-title">Members in subtree</h2>
+                    @if (selectedNodeId() != null) {
+                    <button pButton type="button" label="Clear selection" class="p-button-text p-button-sm" (click)="clearSelection()"></button>
+                    }
+                </div>
+                @if (selectedNodeId() == null) {
+                <div class="panel-empty">Select an org node (click the name) to load serving members.</div>
+                } @else {
+                <p-table
+                    [value]="list"
+                    [lazy]="true"
+                    [paginator]="true"
+                    [rows]="rows"
+                    [totalRecords]="totalRecords"
+                    [first]="first"
+                    (onLazyLoad)="onLazyLoad($event)"
+                    [loading]="listLoading"
+                    [rowsPerPageOptions]="[10, 25, 50]"
+                    styleClass="p-datatable-sm"
+                    [tableStyle]="{ 'min-width': '32rem' }"
+                >
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th>RAB ID</th>
+                            <th>Service ID</th>
+                            <th>Name</th>
+                            <th>Rank</th>
+                            <th>RAB unit</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row>
+                        <tr>
+                            <td>{{ row.rabID }}</td>
+                            <td>{{ row.serviceId }}</td>
+                            <td>{{ row.nameEnglish }}</td>
+                            <td>{{ row.armyRank }}</td>
+                            <td>{{ row.rabUnit }}</td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="5" class="text-center">No members in this subtree.</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+                }
+            </div>
         </div>
-        @if (selectedNodeId() == null) {
-          <div class="panel-empty">Select an org node (click the name) to load serving members.</div>
-        } @else {
-          <p-table
-            [value]="list"
-            [lazy]="true"
-            [paginator]="true"
-            [rows]="rows"
-            [totalRecords]="totalRecords"
-            [first]="first"
-            (onLazyLoad)="onLazyLoad($event)"
-            [loading]="listLoading"
-            [rowsPerPageOptions]="[10, 25, 50]"
-            styleClass="p-datatable-sm"
-            [tableStyle]="{ 'min-width': '32rem' }">
-            <ng-template pTemplate="header">
-              <tr>
-                <th>RAB ID</th>
-                <th>Service ID</th>
-                <th>Name</th>
-                <th>Rank</th>
-                <th>RAB unit</th>
-              </tr>
-            </ng-template>
-            <ng-template pTemplate="body" let-row>
-              <tr>
-                <td>{{ row.rabID }}</td>
-                <td>{{ row.serviceId }}</td>
-                <td>{{ row.nameEnglish }}</td>
-                <td>{{ row.armyRank }}</td>
-                <td>{{ row.rabUnit }}</td>
-              </tr>
-            </ng-template>
-            <ng-template pTemplate="emptymessage">
-              <tr>
-                <td colspan="5" class="text-center">No members in this subtree.</td>
-              </tr>
-            </ng-template>
-          </p-table>
-        }
-      </div>
     </div>
-  </div>
 </p-fluid>
