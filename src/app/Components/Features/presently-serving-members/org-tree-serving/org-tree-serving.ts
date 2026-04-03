@@ -18,6 +18,8 @@ import { OrgService } from '@/Components/basic-setup/org-tree/org.service';
 import { OrgNode } from '@/Components/basic-setup/org-tree/models/org-node.model';
 import { OrganogramCountItem, ServingMembersService } from '@/services/serving-members.service';
 import { MasterBasicSetupService, AuthorizedCountItem } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
+import { EmployeeListService } from '@/services/employee-list.service';
+import { EmployeeList } from '@/models/employee-list.model';
 import { EmployeeServiceOverview } from '@/models/employee-service-overview.model';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { forkJoin, of } from 'rxjs';
@@ -53,6 +55,7 @@ export class OrgTreeServingComponent implements OnInit {
     private orgService = inject(OrgService);
     private servingMembersService = inject(ServingMembersService);
     private masterBasicSetupService = inject(MasterBasicSetupService);
+    private employeeListService = inject(EmployeeListService);
     private messageService = inject(MessageService);
     private destroyRef = inject(DestroyRef);
     private layoutService = inject(LayoutService);
@@ -82,8 +85,9 @@ export class OrgTreeServingComponent implements OnInit {
     loadTreeAndCounts(): void {
         this.loading.set(true);
         this.countsLoading.set(true);
+        
         forkJoin({
-            roots: this.orgService.getAll(1),
+            roots: this.orgService.getAll(1).pipe(catchError(() => of([] as OrgNode[]))),
             heldCounts: this.servingMembersService.getServingOrganogramCounts().pipe(catchError(() => of([] as OrganogramCountItem[]))),
             authCounts: this.masterBasicSetupService.getAuthorizedOrganogramCounts().pipe(catchError(() => of([] as AuthorizedCountItem[])))
         })
@@ -91,11 +95,50 @@ export class OrgTreeServingComponent implements OnInit {
                 map(({ roots, heldCounts, authCounts }) => {
                     const cm = countMapFromApi(heldCounts);
                     const acm = authCountMapFromApi(authCounts);
-                    return roots.map((n) => ({
+                    const orgNodes = roots.map((n) => ({
                         ...n,
                         servingCount: cm.get(n.id) ?? 0,
                         authorizedCount: acm.get(n.id) ?? 0
                     }));
+                    
+                    const virtualNodes: OrgNode[] = [
+                        {
+                            id: -1,
+                            parentId: null,
+                            orgId: 0,
+                            nameEN: 'Supernumerary',
+                            commCode: 'SUP',
+                            codeType: 'V',
+                            nameBN: '',
+                            displayNameEN: 'Supernumerary',
+                            displayNameBN: '',
+                            status: 1,
+                            sortOrder: 9998,
+                            level: 0,
+                            children: [],
+                            servingCount: 0,
+                            authorizedCount: 0
+                        },
+                        {
+                            id: -2,
+                            parentId: null,
+                            orgId: 0,
+                            nameEN: 'Pending for Joining',
+                            commCode: 'PND',
+                            codeType: 'V',
+                            nameBN: '',
+                            displayNameEN: 'Pending for Joining',
+                            displayNameBN: '',
+                            status: 1,
+                            sortOrder: 9999,
+                            level: 0,
+                            children: [],
+                            servingCount: 0,
+                            authorizedCount: 0
+                        }
+                    ];
+                    
+                    return [...orgNodes, ...virtualNodes];
                 }),
                 takeUntilDestroyed(this.destroyRef)
             )
@@ -104,8 +147,10 @@ export class OrgTreeServingComponent implements OnInit {
                     this.flatNodes.set(merged);
                     this.loading.set(false);
                     this.countsLoading.set(false);
+                    this.loadVirtualNodeCounts();
                 },
-                error: () => {
+                error: (err) => {
+                    console.error('Error loading organogram:', err);
                     this.loading.set(false);
                     this.countsLoading.set(false);
                     this.messageService.add({
@@ -113,6 +158,29 @@ export class OrgTreeServingComponent implements OnInit {
                         summary: 'Error',
                         detail: 'Failed to load organogram'
                     });
+                }
+            });
+    }
+
+    private loadVirtualNodeCounts(): void {
+        forkJoin({
+            supernumeraryList: this.employeeListService.getSupernumeraryList({}).pipe(catchError(() => of([] as EmployeeList[]))),
+            pendingJoiningList: this.employeeListService.getEmployeesByPostingStatus({ postingStatus: 'PendingForJoining' }).pipe(catchError(() => of([] as EmployeeList[])))
+        })
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({
+                next: ({ supernumeraryList, pendingJoiningList }) => {
+                    this.flatNodes.update(nodes => 
+                        nodes.map(n => {
+                            if (n.id === -1) {
+                                return { ...n, servingCount: supernumeraryList.length };
+                            }
+                            if (n.id === -2) {
+                                return { ...n, servingCount: pendingJoiningList.length };
+                            }
+                            return n;
+                        })
+                    );
                 }
             });
     }
@@ -178,7 +246,14 @@ export class OrgTreeServingComponent implements OnInit {
         this.selectedNodeId.set(node.id);
         this.currentPageNo = 1;
         this.first = 0;
-        this.loadMembersPage(1, this.rows);
+        
+        if (node.id === -1) {
+            this.loadSupernumeraryPage(1, this.rows);
+        } else if (node.id === -2) {
+            this.loadPendingJoiningPage(1, this.rows);
+        } else {
+            this.loadMembersPage(1, this.rows);
+        }
     }
 
     onPageChange(page: number): void {
@@ -241,6 +316,124 @@ export class OrgTreeServingComponent implements OnInit {
         this.list = [];
         this.totalRecords = 0;
         this.currentPageNo = 1;
+    }
+
+    private loadSupernumeraryPage(pageNo: number, rowPerPage: number): void {
+        this.listLoading = true;
+        this.employeeListService
+            .getSupernumeraryListPaginated({
+                pagination: { page_no: pageNo, row_per_page: rowPerPage }
+            })
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({
+                next: (res) => {
+                    const mapped: EmployeeServiceOverview[] = (res.datalist ?? []).map(emp => ({
+                        employeeID: emp.employeeID,
+                        serviceId: emp.serviceId,
+                        rabID: emp.rabID ?? null,
+                        prefixId: null,
+                        prefix: emp.prefixName ?? null,
+                        nameEnglish: emp.fullNameEN ?? null,
+                        appointmentId: null,
+                        appointment: null,
+                        memberTypeId: emp.officerType ?? null,
+                        memberType: null,
+                        motherOrganizationId: null,
+                        motherOrganization: emp.motherUnitName ?? null,
+                        armyRankId: null,
+                        armyRank: emp.rankName ?? null,
+                        corpsId: null,
+                        corps: emp.corpsName ?? null,
+                        tradeId: null,
+                        trade: emp.tradeName ?? null,
+                        tradeRemarks: null,
+                        genderId: null,
+                        gender: null,
+                        dateOfCommission: null,
+                        dateOfJoiningInServiceTraining: null,
+                        motherUnitId: null,
+                        motherUnit: emp.motherUnitName ?? null,
+                        location: null,
+                        rabUnitId: emp.orgId ?? null,
+                        rabUnit: null,
+                        status: null,
+                        joiningDate: emp.joiningDate ?? null,
+                        permanentDistrictType: null,
+                        permanentDistrictTypeName: null
+                    }));
+                    this.list = mapped;
+                    this.totalRecords = res.pages?.rows ?? 0;
+                    this.listLoading = false;
+                },
+                error: (err) => {
+                    this.listLoading = false;
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'Error',
+                        detail: err?.error?.message || 'Failed to load supernumerary list'
+                    });
+                }
+            });
+    }
+
+    private loadPendingJoiningPage(pageNo: number, rowPerPage: number): void {
+        this.listLoading = true;
+        this.employeeListService
+            .getEmployeesByPostingStatus({
+                postingStatus: 'PendingForJoining'
+            })
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({
+                next: (res) => {
+                    const mappedList: EmployeeServiceOverview[] = res.map(emp => ({
+                        employeeID: emp.employeeID,
+                        serviceId: emp.serviceId,
+                        rabID: emp.rabID ?? null,
+                        prefixId: null,
+                        prefix: emp.prefixName ?? null,
+                        nameEnglish: emp.fullNameEN ?? null,
+                        appointmentId: null,
+                        appointment: null,
+                        memberTypeId: emp.officerType ?? null,
+                        memberType: null,
+                        motherOrganizationId: null,
+                        motherOrganization: emp.motherUnitName ?? null,
+                        armyRankId: null,
+                        armyRank: emp.rankName ?? null,
+                        corpsId: null,
+                        corps: emp.corpsName ?? null,
+                        tradeId: null,
+                        trade: emp.tradeName ?? null,
+                        tradeRemarks: null,
+                        genderId: null,
+                        gender: null,
+                        dateOfCommission: null,
+                        dateOfJoiningInServiceTraining: null,
+                        motherUnitId: null,
+                        motherUnit: emp.motherUnitName ?? null,
+                        location: null,
+                        rabUnitId: emp.orgId ?? null,
+                        rabUnit: null,
+                        status: null,
+                        joiningDate: emp.joiningDate ?? null,
+                        permanentDistrictType: null,
+                        permanentDistrictTypeName: null
+                    }));
+                    const start = (pageNo - 1) * rowPerPage;
+                    const end = start + rowPerPage;
+                    this.list = mappedList.slice(start, end);
+                    this.totalRecords = res.length;
+                    this.listLoading = false;
+                },
+                error: (err) => {
+                    this.listLoading = false;
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'Error',
+                        detail: err?.error?.message || 'Failed to load pending joining list'
+                    });
+                }
+            });
     }
 
     toggleSidebar(): void {

@@ -22,6 +22,14 @@ export interface GetSupernumeraryListPaginatedRequest extends GetSupernumeraryLi
     pagination: { page_no: number; row_per_page: number };
 }
 
+export interface GetEmployeesByPostingStatusRequest {
+    postingStatus: string;
+    orgIds?: number[] | null;
+    memberTypeId?: number | null;
+    rankId?: number | null;
+    tradeId?: number | null;
+}
+
 @Injectable({
     providedIn: 'root'
 })
@@ -37,6 +45,10 @@ export class EmployeeListService {
     /** All filters optional. Returns full list for client-side pagination. */
     getSupernumeraryList(request: GetSupernumeraryListRequest): Observable<EmployeeList[]> {
         return this.http.post<EmployeeList[]>(`${this.apiUrl}/GetSupernumeraryList`, request);
+    }
+
+    getEmployeesByPostingStatus(request: GetEmployeesByPostingStatusRequest): Observable<EmployeeList[]> {
+        return this.http.post<EmployeeList[]>(`${this.apiUrl}/GetEmployeesByPostingStatus`, request);
     }
 
     getSupernumeraryListPaginated(request: GetSupernumeraryListPaginatedRequest): Observable<PagedResponse<EmployeeList>> {
