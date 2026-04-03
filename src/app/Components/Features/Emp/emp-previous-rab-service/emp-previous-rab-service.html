@@ -51,7 +51,7 @@
                         <form [formGroup]="serviceForm" class="service-form">
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label class="font-semibold block mb-2 text-700">RAB Wing/Battalion Name&#32;*</label>
+                                    <label class="font-semibold block mb-2 text-700">Battalion Name&#32;*</label>
                                     <p-select
                                         formControlName="rabUnitCodeId"
                                         [options]="rabUnitOptions"
@@ -62,6 +62,66 @@
                                         appendTo="body"
                                         [filter]="true"
                                         [class.p-invalid]="serviceForm.get('rabUnitCodeId')?.invalid && serviceForm.get('rabUnitCodeId')?.touched"></p-select>
+                                </div>
+                                <div>
+                                    <label class="font-semibold block mb-2 text-700">RAB Wing</label>
+                                    <p-select
+                                        formControlName="rabWingCodeId"
+                                        [options]="rabWingOptions"
+                                        optionLabel="label"
+                                        optionValue="value"
+                                        placeholder="Select"
+                                        styleClass="w-full"
+                                        appendTo="body"
+                                        [filter]="true"></p-select>
+                                </div>
+                                <div>
+                                    <label class="font-semibold block mb-2 text-700">Branch</label>
+                                    <p-select
+                                        formControlName="rabBranchCodeId"
+                                        [options]="rabBranchOptions"
+                                        optionLabel="label"
+                                        optionValue="value"
+                                        placeholder="Select"
+                                        styleClass="w-full"
+                                        appendTo="body"
+                                        [filter]="true"></p-select>
+                                </div>
+                                <div>
+                                    <label class="font-semibold block mb-2 text-700">Sub-Branch</label>
+                                    <p-select
+                                        formControlName="rabSubBranchCodeId"
+                                        [options]="rabSubBranchOptions"
+                                        optionLabel="label"
+                                        optionValue="value"
+                                        placeholder="Select"
+                                        styleClass="w-full"
+                                        appendTo="body"
+                                        [filter]="true"></p-select>
+                                </div>
+                                <div>
+                                    <label class="font-semibold block mb-2 text-700">Section</label>
+                                    <p-select
+                                        formControlName="rabSectionCodeId"
+                                        [options]="rabSectionOptions"
+                                        optionLabel="label"
+                                        optionValue="value"
+                                        placeholder="Select"
+                                        styleClass="w-full"
+                                        appendTo="body"
+                                        [filter]="true"></p-select>
+                                </div>
+                                <div>
+                                    <label class="font-semibold block mb-2 text-700">Sub-Section</label>
+                                    <p-select
+                                        formControlName="rabSubSectionCodeId"
+                                        [options]="rabSubSectionOptions"
+                                        optionLabel="label"
+                                        optionValue="value"
+                                        placeholder="Select"
+                                        styleClass="w-full"
+                                        appendTo="body"
+                                        [filter]="true"></p-select>
                                 </div>
                                 <div>
                                     <label class="font-semibold block mb-2 text-700">From</label>
@@ -86,7 +146,7 @@
                                     <label class="font-semibold block mb-2 text-700">Posting Authority</label>
                                     <input pInputText formControlName="postingAuth" class="w-full" placeholder="Posting Authority" />
                                 </div>
-                                <div class="col-span-2">
+                                <div>
                                     <label class="font-semibold block mb-2 text-700">Remarks</label>
                                     <input pInputText formControlName="remarks" class="w-full" placeholder="Remarks" />
                                 </div>
@@ -114,7 +174,12 @@
                         <ng-template pTemplate="header">
                             <tr>
                                 <th style="width: 60px; background: var(--surface-100)">Ser</th>
-                                <th style="min-width: 150px; background: var(--surface-100)">RAB Wing/Battalion Name</th>
+                                <th style="min-width: 150px; background: var(--surface-100)">Battalion Name</th>
+                                <th style="min-width: 120px; background: var(--surface-100)">RAB Wing</th>
+                                <th style="min-width: 120px; background: var(--surface-100)">Branch</th>
+                                <th style="min-width: 120px; background: var(--surface-100)">Sub-Branch</th>
+                                <th style="min-width: 120px; background: var(--surface-100)">Section</th>
+                                <th style="min-width: 120px; background: var(--surface-100)">Sub-Section</th>
                                 <th style="width: 90px; background: var(--surface-100)">From</th>
                                 <th style="width: 90px; background: var(--surface-100)">To</th>
                                 <th style="width: 100px; background: var(--surface-100)">Currently Active</th>
@@ -127,7 +192,12 @@
                         <ng-template pTemplate="body" let-row let-i="rowIndex">
                             <tr>
                                 <td class="text-center font-semibold">{{ i + 1 }}</td>
-                                <td>{{ getOptionLabel(rabUnitOptions, row.rabUnitCodeId) }}</td>
+                                <td>{{ row.rabUnitName || getOptionLabel(rabUnitOptions, row.rabUnitCodeId) }}</td>
+                                <td>{{ row.rabWingName || '—' }}</td>
+                                <td>{{ row.rabBranchName || '—' }}</td>
+                                <td>{{ row.rabSubBranchName || '—' }}</td>
+                                <td>{{ row.rabSectionName || '—' }}</td>
+                                <td>{{ row.rabSubSectionName || '—' }}</td>
                                 <td>{{ formatYearOnly(row.serviceFrom) }}</td>
                                 <td>{{ formatYearOnly(row.serviceTo) }}</td>
                                 <td class="text-center">{{ row.isCurrentlyActive ? 'Yes' : 'No' }}</td>
@@ -146,7 +216,7 @@
                         </ng-template>
                         <ng-template pTemplate="emptymessage">
                             <tr>
-                                <td [attr.colspan]="9" class="text-center py-4 text-500">
+                                <td [attr.colspan]="14" class="text-center py-4 text-500">
                                     No previous RAB service entries. Click "Add row" to add.
                                 </td>
                             </tr>
@@ -184,5 +254,134 @@
     </div>
 </p-fluid>
 
+<!-- Add/Edit Previous RAB Service Modal (education-info style) -->
+<p-dialog
+    [header]="isEditMode ? 'Edit Previous RAB Service' : 'Add Previous RAB Service'"
+    [(visible)]="displayDialog"
+    [modal]="true"
+    [style]="{ width: '640px' }"
+    [closable]="true"
+    [draggable]="false"
+    [resizable]="false"
+    [contentStyle]="{'border-top': '2px solid var(--primary-color)'}">
+    <form [formGroup]="serviceForm" class="service-form mt-3">
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="font-semibold block mb-2 text-700">Battalion Name&#32;*</label>
+                <p-select
+                    formControlName="rabUnitCodeId"
+                    [options]="rabUnitOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Select"
+                    styleClass="w-full"
+                    appendTo="body"
+                    [filter]="true"
+                    [class.p-invalid]="serviceForm.get('rabUnitCodeId')?.invalid && serviceForm.get('rabUnitCodeId')?.touched"></p-select>
+            </div>
+            <div>
+                <label class="font-semibold block mb-2 text-700">RAB Wing</label>
+                <p-select
+                    formControlName="rabWingCodeId"
+                    [options]="rabWingOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Select"
+                    styleClass="w-full"
+                    appendTo="body"
+                    [filter]="true"></p-select>
+            </div>
+            <div>
+                <label class="font-semibold block mb-2 text-700">Branch</label>
+                <p-select
+                    formControlName="rabBranchCodeId"
+                    [options]="rabBranchOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Select"
+                    styleClass="w-full"
+                    appendTo="body"
+                    [filter]="true"></p-select>
+            </div>
+            <div>
+                <label class="font-semibold block mb-2 text-700">Sub-Branch</label>
+                <p-select
+                    formControlName="rabSubBranchCodeId"
+                    [options]="rabSubBranchOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Select"
+                    styleClass="w-full"
+                    appendTo="body"
+                    [filter]="true"></p-select>
+            </div>
+            <div>
+                <label class="font-semibold block mb-2 text-700">Section</label>
+                <p-select
+                    formControlName="rabSectionCodeId"
+                    [options]="rabSectionOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Select"
+                    styleClass="w-full"
+                    appendTo="body"
+                    [filter]="true"></p-select>
+            </div>
+            <div>
+                <label class="font-semibold block mb-2 text-700">Sub-Section</label>
+                <p-select
+                    formControlName="rabSubSectionCodeId"
+                    [options]="rabSubSectionOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Select"
+                    styleClass="w-full"
+                    appendTo="body"
+                    [filter]="true"></p-select>
+            </div>
+            <div>
+                <label class="font-semibold block mb-2 text-700">From</label>
+                <p-select formControlName="serviceFrom" [options]="yearOptions" optionLabel="label" optionValue="value" placeholder="From" styleClass="w-full" [filter]="true" appendTo="body"></p-select>
+            </div>
+            <div>
+                <label class="font-semibold block mb-2 text-700">To</label>
+                <p-select formControlName="serviceTo" [options]="yearOptions" optionLabel="label" optionValue="value" placeholder="To" styleClass="w-full" [filter]="true" appendTo="body" [disabled]="serviceForm.get('isCurrentlyActive')?.value"></p-select>
+            </div>
+            <div>
+                <label class="font-semibold block mb-2 text-700">Currently active</label>
+                <div class="flex align-items-center gap-2" style="min-height: 2.5rem;">
+                    <p-checkbox formControlName="isCurrentlyActive" [binary]="true" inputId="isCurrentlyActive"></p-checkbox>
+                    <label for="isCurrentlyActive" class="text-700 cursor-pointer mb-0">Currently active posting</label>
+                </div>
+            </div>
+            <div>
+                <label class="font-semibold block mb-2 text-700">Appointment</label>
+                <p-select formControlName="appointment" [options]="appointmentOptions" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" [filter]="true" appendTo="body"></p-select>
+            </div>
+            <div>
+                <label class="font-semibold block mb-2 text-700">Posting Authority</label>
+                <input pInputText formControlName="postingAuth" class="w-full" placeholder="Posting Authority" />
+            </div>
+            <div class="col-span-2">
+                <label class="font-semibold block mb-2 text-700">Remarks</label>
+                <input pInputText formControlName="remarks" class="w-full" placeholder="Remarks" />
+            </div>
+            <div class="col-span-2 file-section-compact">
+                <app-file-references-form
+                    #fileReferencesForm
+                    [fileRows]="fileRows"
+                    [isViewMode]="isReadonly"
+                    title="Supporting Documents"
+                    (fileRowsChange)="onFileRowsChange($event)"
+                    (onDownloadFile)="onDownloadFile($event)">
+                </app-file-references-form>
+            </div>
+        </div>
+    </form>
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="displayDialog = false" [disabled]="isSaving"></p-button>
+        <p-button [label]="isEditMode ? 'Update' : 'Save'" icon="pi pi-check" [loading]="isSaving" [disabled]="isSaving" (onClick)="saveService()"></p-button>
+    </ng-template>
+</p-dialog>
 
 <p-confirmDialog></p-confirmDialog>

@@ -23,7 +23,9 @@ export interface EmployeeList {
     tradeName: string | null;
     motherUnitName: string | null;
     sortOrder: number | null;
+    RABID?: string | null;
     rabID?: string | null;
+    rabid?: string | null;
     relieverId?: number | null;
     relieverServiceId?: string | null;
     relieverPrefixName?: string | null;

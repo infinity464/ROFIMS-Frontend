@@ -166,7 +166,7 @@ export class SupernumeraryList implements OnInit {
         return this.list.filter(
             (row) =>
                 (row.serviceId && row.serviceId.toLowerCase().includes(q)) ||
-                (row.rabID && row.rabID.toLowerCase().includes(q))
+                (row.RABID && row.RABID.toLowerCase().includes(q))
         );
     }
 

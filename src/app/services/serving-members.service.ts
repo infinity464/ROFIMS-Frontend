@@ -35,6 +35,14 @@ export interface ServingMemberFilterRequest {
     permanentDistrictType?: number | null;
     spousePermanentDistrictType?: number | null;
     appointmentId?: number | null;
+    /** Subtree filter: placement under this CommonCode org node (inclusive). */
+    organogramNodeCodeId?: number | null;
+}
+
+/** Rollup serving counts per org tree node (API: GetServingOrganogramCounts). */
+export interface OrganogramCountItem {
+    codeId: number;
+    servingCount: number;
 }
 
 export interface ServingMemberPaginatedFilterRequest {
@@ -62,6 +70,11 @@ export class ServingMembersService {
     /** Gets filter dropdown options for presently serving members (RAB units, ranks, corps, trades, districts, appointments). */
     getServingMemberFilterOptions(): Observable<ServingMemberFilterOptions> {
         return this.http.get<ServingMemberFilterOptions>(`${this.apiUrl}/GetServingMemberFilterOptions`);
+    }
+
+    /** Rollup serving member counts per org CommonCode node (same hierarchy as org-tree). */
+    getServingOrganogramCounts(): Observable<OrganogramCountItem[]> {
+        return this.http.get<OrganogramCountItem[]>(`${this.apiUrl}/GetServingOrganogramCounts`);
     }
 
     /** Gets presently serving members with filter and pagination. Home District = Permanent Address District; Spouse Home District = Spouse Permanent Address District. */

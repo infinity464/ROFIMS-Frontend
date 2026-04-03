@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { CommonCode } from '../models/common-code';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { PagedResponse } from '@/Core/Models/Pagination';
 import { OrganizationModel } from '../../organization-setup/models/organization';
 import { BankModel } from '../models/bank';
@@ -15,6 +16,11 @@ import { MotherOrgRankVacancyDistributionModel } from '../models/mother-org-rank
 import { NoteSheetTemplateModel } from '../models/notesheet-template';
 import { NoteSheetNumberConfigModel } from '../models/notesheet-number-config';
 import { RABUnitAORModel, ResultViewModel } from '../models/rab-unit-aor';
+
+export interface AuthorizedCountItem {
+    codeId: number;
+    authorizedCount: number;
+}
 
 
 @Injectable({
@@ -106,6 +112,24 @@ export class MasterBasicSetupService {
     }
     deleteMotherOrgRankVacancyDistribution(id: number): Observable<{ statusCode: number; description?: string }> {
         return this.http.delete<{ statusCode: number; description?: string }>(`${this.apiUrlMotherOrgRankVacancyDistribution}/Delete/${id}`);
+    }
+
+    getAuthorizedOrganogramCounts(): Observable<AuthorizedCountItem[]> {
+        return this.http.get<MotherOrgRankVacancyDistributionModel[]>(`${this.apiUrlMotherOrgRankVacancyDistribution}/GetAll`).pipe(
+            map((distributions) => {
+                const countMap = new Map<number, number>();
+                for (const d of distributions) {
+                    if (d.rabCodeId && d.quantity) {
+                        countMap.set(d.rabCodeId, (countMap.get(d.rabCodeId) || 0) + d.quantity);
+                    }
+                }
+                const result: AuthorizedCountItem[] = [];
+                countMap.forEach((authorizedCount, codeId) => {
+                    result.push({ codeId, authorizedCount });
+                });
+                return result;
+            })
+        );
     }
 
     // Bank

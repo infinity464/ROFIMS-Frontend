@@ -1,0 +1,58 @@
+<p-toast></p-toast>
+
+<p-fluid>
+    <div class="org-serving-shell" [class.dark-mode]="isDarkMode()">
+        <div class="org-serving-panels">
+            <aside class="sidebar" [class.collapsed]="sidebarCollapsed()">
+                <div class="sidebar-header">
+                    <span class="sidebar-title">Org tree</span>
+                    <div class="header-actions">
+                        <button class="toggle-btn" [disabled]="loading()" (click)="loadTreeAndCounts()">
+                            <i class="pi pi-refresh"></i>
+                        </button>
+                        <button class="toggle-btn" (click)="toggleSidebar()">
+                            <i class="pi" [class.pi-chevron-left]="!sidebarCollapsed()" [class.pi-chevron-right]="sidebarCollapsed()"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="sidebar-content">
+                    @if (loading()) {
+                    <div class="panel-loading"><i class="pi pi-spin pi-spinner"></i> Loading tree…</div>
+                    } @else if (treeNodes().length === 0) {
+                    <div class="panel-empty">No RAB units found.</div>
+                    } @else {
+                    <div class="tree-wrap">
+                        @for (node of treeNodes(); track node.id) {
+                        <app-tree-node
+                            [node]="node"
+                            [depth]="0"
+                            [readOnly]="true"
+                            [selectedNodeId]="selectedNodeId()"
+                            [loadingParentId]="loadingParentId()"
+                            (expandRequest)="onExpandRequest($event)"
+                            (expandToggled)="onExpandToggled($event)"
+                            (nodeSelect)="onNodeSelect($event)"
+                        />
+                        }
+                    </div>
+                    }
+                </div>
+            </aside>
+
+            <div class="main-panel">
+                @if (sidebarCollapsed()) {
+                <div class="main-panel-header">
+                    <button class="expand-sidebar-btn" (click)="toggleSidebar()">
+                        <i class="pi pi-chevron-left"></i>
+                    </button>
+                </div>
+                }
+
+                <div class="list-card">
+                    <app-member-view [members]="list" [title]="getSelectedNodeName()" [loading]="listLoading" (cleared)="clearSelection()" />
+                </div>
+            </div>
+        </div>
+    </div>
+</p-fluid>

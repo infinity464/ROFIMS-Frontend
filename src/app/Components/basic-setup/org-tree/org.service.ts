@@ -78,7 +78,8 @@ export class OrgService {
     }
 
     getTree(flat: OrgNode[]): OrgNode[] {
-        return this.buildTree(flat.filter(n => n.parentId == null), flat);
+        const roots = flat.filter(n => n.parentId == null || n.parentId === 0);
+        return this.buildTree(roots, flat);
     }
 
     buildTree(roots: OrgNode[], flat: OrgNode[]): OrgNode[] {

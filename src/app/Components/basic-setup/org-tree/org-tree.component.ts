@@ -19,6 +19,7 @@ import { OrgFormComponent, FormMode } from './org-form/org-form.component';
 import { OrgService } from './org.service';
 import { OrgNode } from './models/org-node.model';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { LayoutService } from '@/layout/service/layout.service';
 
 @Component({
     selector: 'app-org-tree',
@@ -43,12 +44,14 @@ export class OrgTreeComponent implements OnInit {
     private messageService = inject(MessageService);
     private confirmationService = inject(ConfirmationService);
     private destroyRef = inject(DestroyRef);
+    private layoutService = inject(LayoutService);
 
     readonly flatNodes = signal<OrgNode[]>([]);
     readonly selectedNode = signal<OrgNode | null>(null);
     readonly formMode = signal<FormMode>('empty');
     readonly loading = signal(false);
     readonly loadingParentId = signal<number | null>(null);
+    readonly isDarkMode = computed(() => this.layoutService.isDarkTheme());
 
     readonly formVisible = computed(() => this.formMode() !== 'empty');
     readonly formTitle = computed(() => {
@@ -132,7 +135,7 @@ export class OrgTreeComponent implements OnInit {
             next: (children) => {
                 this.flatNodes.update(f => {
                     const updated = [...f, ...children].map(n =>
-                        n.id === node.id ? { ...n, expanded: true, childrenLoaded: true } : n
+                        n.id === node.id ? { ...n, expanded: true, childrenLoaded: true as any } : n
                     );
                     return updated;
                 });

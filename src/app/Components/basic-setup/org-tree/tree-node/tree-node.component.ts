@@ -17,11 +17,16 @@ export class TreeNodeComponent {
     @Input() node!: OrgNode;
     @Input() depth = 0;
     @Input() loadingParentId: number | null = null;
+    /** When true, hide edit actions; expand via chevron only; label click selects the node. */
+    @Input() readOnly = false;
+    /** Highlight selected node (read-only organogram). */
+    @Input() selectedNodeId: number | null = null;
     @Output() addChild = new EventEmitter<OrgNode>();
     @Output() edit = new EventEmitter<OrgNode>();
     @Output() delete = new EventEmitter<OrgNode>();
     @Output() expandRequest = new EventEmitter<OrgNode>();
     @Output() expandToggled = new EventEmitter<{ node: OrgNode; expanded: boolean }>();
+    @Output() nodeSelect = new EventEmitter<OrgNode>();
 
     readonly LEVELS = LEVELS;
     readonly LEVEL_COLORS = LEVEL_COLORS;
@@ -42,11 +47,15 @@ export class TreeNodeComponent {
     }
 
     get hasChildrenLoaded(): boolean {
-        return (this.node.children?.length ?? 0) > 0;
+        return (this.node.children?.length ?? 0) > 0 || this.node.childrenLoaded === true;
     }
 
     get badgeColor(): string {
         return this.LEVEL_COLORS[this.node.codeType as keyof typeof LEVEL_COLORS] ?? '#666';
+    }
+
+    get isSelected(): boolean {
+        return this.readOnly && this.selectedNodeId != null && this.selectedNodeId === this.node.id;
     }
 
     toggleExpand(): void {
@@ -55,6 +64,16 @@ export class TreeNodeComponent {
         if (willExpand && !this.hasChildrenLoaded && this.node.level < this.maxLevel) {
             this.expandRequest.emit(this.node);
         }
+    }
+
+    onExpandAreaClick(e: Event): void {
+        e.stopPropagation();
+        this.toggleExpand();
+    }
+
+    onReadOnlyLabelClick(e: Event): void {
+        e.stopPropagation();
+        this.nodeSelect.emit(this.node);
     }
 
     onAddChild(e: Event): void {
