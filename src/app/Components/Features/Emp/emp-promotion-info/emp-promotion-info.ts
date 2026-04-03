@@ -71,6 +71,7 @@ export class EmpPromotionInfo implements OnInit {
     isLoading = false;
 
     displayDialog = false;
+    showInlineForm = false;
     isEditMode = false;
     isSaving = false;
     promotionForm!: FormGroup;
@@ -274,7 +275,7 @@ export class EmpPromotionInfo implements OnInit {
             auth: '',
             remarks: ''
         });
-        this.displayDialog = true;
+        this.showInlineForm = true;
     }
 
     openEditDialog(row: PromotionListRow): void {
@@ -305,7 +306,7 @@ export class EmpPromotionInfo implements OnInit {
         } else {
             this.fileRows = [];
         }
-        this.displayDialog = true;
+        this.showInlineForm = true;
     }
 
     onFileRowsChange(event: FileRowData[]): void {
@@ -367,7 +368,7 @@ export class EmpPromotionInfo implements OnInit {
                 this.isSaving = false;
                 if (res != null) {
                     this.messageService.add({ severity: 'success', summary: 'Saved', detail: this.isEditMode ? 'Promotion updated.' : 'Promotion added.' });
-                    this.displayDialog = false;
+                    this.showInlineForm = false;
                     this.loadPromotionList();
                 }
             });

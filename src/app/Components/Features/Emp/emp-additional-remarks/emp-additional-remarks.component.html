@@ -23,15 +23,55 @@
                 <div class="form-section">
                     <div class="flex align-items-center gap-3 mb-3 flex-wrap">
                         <h3 class="form-subtitle m-0 white-space-nowrap">Remarks List</h3>
-                        <div class="ml-auto">
-                            <p-button
-                                label="Add New Remark"
-                                icon="pi pi-plus"
-                                (onClick)="openAddDialog()"
-                                [disabled]="isReadonly">
-                            </p-button>
-                        </div>
+                        @if (!showInlineForm) {
+                            <div class="ml-auto">
+                                <p-button
+                                    label="Add New Remark"
+                                    icon="pi pi-plus"
+                                    (onClick)="openAddDialog()"
+                                    [disabled]="isReadonly">
+                                </p-button>
+                            </div>
+                        }
                     </div>
+
+                    @if (showInlineForm) {
+                        <div class="surface-50 border-round-xl p-4 mb-4" style="border: 1px solid var(--surface-300);">
+                            <h4 class="m-0 text-700">{{ isEditMode ? 'Edit Remark' : 'Add Remark' }}</h4>
+                            <form [formGroup]="remarksForm" class="mt-3">
+                                <label class="font-semibold block mb-2 text-700">Additional Remarks <span class="text-red-500">*</span></label>
+                                <textarea
+                                    pTextarea
+                                    formControlName="additionalRemarks"
+                                    [rows]="5"
+                                    placeholder="Enter additional remarks..."
+                                    class="w-full"
+                                    [class.ng-invalid]="remarksForm.get('additionalRemarks')?.invalid && remarksForm.get('additionalRemarks')?.touched"
+                                    style="resize: none;">
+                                </textarea>
+                                @if (remarksForm.get('additionalRemarks')?.invalid && remarksForm.get('additionalRemarks')?.touched) {
+                                    <small class="text-red-500 block mt-2">Remarks is required</small>
+                                }
+                            </form>
+                            <div class="flex justify-content-end gap-2 mt-3">
+                                <p-button
+                                    label="Cancel"
+                                    icon="pi pi-times"
+                                    severity="secondary"
+                                    [outlined]="true"
+                                    (onClick)="showInlineForm = false"
+                                    [disabled]="isSaving">
+                                </p-button>
+                                <p-button
+                                    [label]="isEditMode ? 'Update' : 'Save'"
+                                    icon="pi pi-check"
+                                    (onClick)="saveRemark()"
+                                    [disabled]="isSaving || remarksForm.invalid"
+                                    [loading]="isSaving">
+                                </p-button>
+                            </div>
+                        </div>
+                    }
 
                     <p-table
                         [value]="remarksList"
@@ -112,48 +152,6 @@
             }
         }
     </div>
-
-    <!-- Add/Edit Remark Dialog -->
-    <p-dialog
-        [(visible)]="displayDialog"
-        [header]="isEditMode ? 'Edit Remark' : 'Add New Remark'"
-        [modal]="true"
-        [style]="{width: '500px'}"
-        [closable]="true"
-        [contentStyle]="{'border-top': '2px solid var(--primary-color)'}">
-        <form [formGroup]="remarksForm">
-            <label class="font-semibold block mb-2 text-700">Additional Remarks <span class="text-red-500">*</span></label>
-            <textarea
-                pTextarea
-                formControlName="additionalRemarks"
-                [rows]="5"
-                placeholder="Enter additional remarks..."
-                class="w-full"
-                [class.ng-invalid]="remarksForm.get('additionalRemarks')?.invalid && remarksForm.get('additionalRemarks')?.touched"
-                style="resize: none;">
-            </textarea>
-            @if (remarksForm.get('additionalRemarks')?.invalid && remarksForm.get('additionalRemarks')?.touched) {
-                <small class="text-red-500 block mt-2">Remarks is required</small>
-            }
-        </form>
-        <ng-template pTemplate="footer">
-            <p-button
-                label="Cancel"
-                icon="pi pi-times"
-                severity="secondary"
-                [outlined]="true"
-                (onClick)="closeDialog()"
-                [disabled]="isSaving">
-            </p-button>
-            <p-button
-                [label]="isEditMode ? 'Update' : 'Save'"
-                icon="pi pi-check"
-                (onClick)="saveRemark()"
-                [disabled]="isSaving || remarksForm.invalid"
-                [loading]="isSaving">
-            </p-button>
-        </ng-template>
-    </p-dialog>
 
     <p-confirmDialog></p-confirmDialog>
 </p-fluid>

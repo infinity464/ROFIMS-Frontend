@@ -62,6 +62,7 @@ export class EmpMedicalCategory implements OnInit {
     isLoading = false;
 
     displayDialog = false;
+    showInlineForm = false;
     isEditMode = false;
     isSaving = false;
     medicalForm!: FormGroup;
@@ -229,7 +230,7 @@ export class EmpMedicalCategory implements OnInit {
             auth: '',
             remarks: ''
         });
-        this.displayDialog = true;
+        this.showInlineForm = true;
     }
 
     openEditDialog(row: MedicalInfoModel): void {
@@ -248,7 +249,7 @@ export class EmpMedicalCategory implements OnInit {
             auth: row.auth ?? '',
             remarks: row.remarks ?? ''
         });
-        this.displayDialog = true;
+        this.showInlineForm = true;
     }
 
     saveMedical(): void {
@@ -295,7 +296,7 @@ export class EmpMedicalCategory implements OnInit {
                         summary: 'Success',
                         detail: this.isEditMode ? 'Medical record updated.' : 'Medical record added.'
                     });
-                    this.displayDialog = false;
+                    this.showInlineForm = false;
                     this.loadMedicalList();
                     this.isSaving = false;
                 },

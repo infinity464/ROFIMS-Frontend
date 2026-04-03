@@ -1,6 +1,7 @@
 import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
 import { MessageService } from 'primeng/api';
@@ -35,35 +36,45 @@ export interface EmployeeBasicInfo {
     template: `
         <div class="surface-50 border-round-2xl py-4 mb-4">
             <div class="flex flex-wrap align-items-end gap-3">
-                <div style="min-width: 200px; max-width: 250px;">
+                <div style="min-width: 140px; max-width: 160px;">
                     <label class="font-semibold block mb-2 text-700">RAB ID</label>
-                    <input pInputText class="w-full" placeholder="Enter RAB ID" [(ngModel)]="searchRabId" (keyup.enter)="search()" />
+                    <input pInputText class="w-full" placeholder="RAB ID" [(ngModel)]="searchRabId" (ngModelChange)="onRabIdInput($event)" (keyup.enter)="search()" />
                 </div>
-                <div style="min-width: 200px; max-width: 250px;">
+                <div style="min-width: 140px; max-width: 160px;">
                     <label class="font-semibold block mb-2 text-700">Service ID</label>
-                    <input pInputText class="w-full" placeholder="Enter Service ID" [(ngModel)]="searchServiceId" (keyup.enter)="search()" />
+                    <input pInputText class="w-full" placeholder="Service ID" [(ngModel)]="searchServiceId" (ngModelChange)="onServiceIdInput($event)" (keyup.enter)="search()" />
                 </div>
                 <div>
                     <label class="font-semibold block mb-2 text-700">&nbsp;</label>
                     <p-button label="Search" icon="pi pi-search" [loading]="isSearching" (onClick)="search()"></p-button>
                 </div>
+                <div>
+                    <label class="font-semibold block mb-2 text-700">&nbsp;</label>
+                    <p-button label="Clear" icon="pi pi-times" severity="secondary" (onClick)="reset()"></p-button>
+                </div>
                 @if (employeeFound && employeeInfo) {
                     <div class="ml-3">
                         <label class="font-semibold block mb-2 text-700">&nbsp;</label>
-                        <div class="flex align-items-center gap-3 px-3 shadow-1" style="line-height: 2.25rem; border: 1px solid var(--primary-color); border-radius: 2rem; background: var(--primary-50, rgba(16,185,129,0.05));">
-                            <span
-                                ><i class="pi pi-user text-primary mr-1"></i><span class="text-600"> Name : </span> <span class="font-semibold">{{ employeeInfo.fullNameEN || 'N/A' }}</span></span
-                            >
-                            <span
-                                ><i class="pi pi-id-card text-primary mr-1"></i><span class="text-600"> Rab Id : </span> <span class="font-semibold">{{ employeeInfo.rabid || 'N/A' }}</span></span
-                            >
-                            <span
-                                ><i class="pi pi-bookmark text-primary mr-1"></i><span class="text-600"> Service Id : </span> <span class="font-semibold">{{ employeeInfo.serviceId || 'N/A' }}</span></span
-                            >
-                            <span
-                                ><i class="pi pi-building text-primary mr-1"></i><span class="text-600"> Mother Org : </span>
-                                <span class="font-semibold">{{ employeeInfo.motherOrganizationDisplay ?? employeeInfo.motherOrganization ?? 'N/A' }}</span></span
-                            >
+                        <div class="flex align-items-center gap-3">
+                            <div class="flex align-items-center gap-3 px-3 shadow-1" style="line-height: 2.25rem; border: 1px solid var(--primary-color); border-radius: 2rem; background: var(--primary-50, rgba(16,185,129,0.05));">
+                                <span
+                                    ><span class="font-semibold"> Name : </span> <span class="font-semibold">{{ employeeInfo.fullNameEN || 'N/A' }}</span></span
+                                >
+                                <span
+                                    ><span class="font-semibold"> Rank : </span> <span class="font-semibold">{{ employeeInfo.rankDisplay || 'N/A' }}</span></span
+                                >
+                                <span
+                                    ><span class="font-semibold"> Corps : </span> <span class="font-semibold">{{ employeeInfo.corpsDisplay || 'N/A' }}</span></span
+                                >
+                                <span
+                                    ><span class="font-semibold"> Trade : </span> <span class="font-semibold">{{ employeeInfo.tradeDisplay || 'N/A' }}</span></span
+                                >
+                                <span
+                                    ><span class="font-semibold"> Mother Org : </span>
+                                    <span class="font-semibold">{{ employeeInfo.motherOrganizationDisplay ?? employeeInfo.motherOrganization ?? 'N/A' }}</span></span
+                                >
+                            </div>
+                            <p-button label="View Profile" (onClick)="openEmployeeProfile()"></p-button>
                         </div>
                     </div>
                 }
@@ -86,7 +97,8 @@ export class EmployeeSearchComponent implements OnChanges {
 
     constructor(
         private empService: EmpService,
-        private messageService: MessageService
+        private messageService: MessageService,
+        private router: Router
     ) {}
 
     ngOnChanges(changes: SimpleChanges): void {
@@ -155,6 +167,24 @@ export class EmployeeSearchComponent implements OnChanges {
         });
     }
 
+    onRabIdInput(value: string): void {
+        // Only clear the other field if this one is cleared
+        if (!value || !value.trim()) {
+            this.searchServiceId = '';
+            this.employeeFound = false;
+            this.employeeInfo = null;
+        }
+    }
+
+    onServiceIdInput(value: string): void {
+        // Only clear the other field if this one is cleared
+        if (!value || !value.trim()) {
+            this.searchRabId = '';
+            this.employeeFound = false;
+            this.employeeInfo = null;
+        }
+    }
+
     search(): void {
         if (!this.searchRabId && !this.searchServiceId) {
             this.messageService.add({
@@ -184,6 +214,12 @@ export class EmployeeSearchComponent implements OnChanges {
                         memberType: employee.MemberType ?? employee.memberType,
                         orgId: employee.orgId
                     };
+                    // Auto-fill the other field
+                    if (this.searchRabId && !this.searchServiceId) {
+                        this.searchServiceId = this.employeeInfo.serviceId || '';
+                    } else if (this.searchServiceId && !this.searchRabId) {
+                        this.searchRabId = this.employeeInfo.rabid || '';
+                    }
                     this.employeeFound = true;
                     this.isSearching = false;
                     this.onEmployeeFound.emit(this.employeeInfo);
@@ -244,5 +280,11 @@ export class EmployeeSearchComponent implements OnChanges {
     // Public method to check if employee is found
     isEmployeeFound(): boolean {
         return this.employeeFound;
+    }
+
+    openEmployeeProfile(): void {
+        if (this.employeeInfo && this.employeeInfo.employeeID) {
+            this.router.navigate(['/ex-members/profile', this.employeeInfo.employeeID]);
+        }
     }
 }

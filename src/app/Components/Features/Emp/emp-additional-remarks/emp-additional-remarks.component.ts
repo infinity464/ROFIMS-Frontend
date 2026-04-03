@@ -76,6 +76,7 @@ export class EmpAdditionalRemarks implements OnInit {
 
     remarksList: AdditionalRemarksItem[] = [];
     displayDialog = false;
+    showInlineForm = false;
     isEditMode = false;
     selectedRemark: AdditionalRemarksItem | null = null;
 
@@ -213,7 +214,7 @@ export class EmpAdditionalRemarks implements OnInit {
         this.isEditMode = false;
         this.selectedRemark = null;
         this.remarksForm.reset();
-        this.displayDialog = true;
+        this.showInlineForm = true;
     }
 
     openEditDialog(remark: AdditionalRemarksItem): void {
@@ -222,11 +223,12 @@ export class EmpAdditionalRemarks implements OnInit {
         this.remarksForm.patchValue({
             additionalRemarks: remark.additionalRemarks || remark.AdditionalRemarks || ''
         });
-        this.displayDialog = true;
+        this.showInlineForm = true;
     }
 
     closeDialog(): void {
         this.displayDialog = false;
+        this.showInlineForm = false;
         this.isEditMode = false;
         this.selectedRemark = null;
         this.remarksForm.reset();

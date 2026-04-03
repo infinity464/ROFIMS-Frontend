@@ -48,6 +48,7 @@ export class EmpLeaveInfo implements OnInit {
     isLoading = false;
 
     displayDialog = false;
+    showInlineForm = false;
     isEditMode = false;
     isSaving = false;
     leaveForm!: FormGroup;
@@ -180,7 +181,7 @@ export class EmpLeaveInfo implements OnInit {
             toDate: null,
             remarks: ''
         });
-        this.displayDialog = true;
+        this.showInlineForm = true;
     }
 
     openEditDialog(row: LeaveInfoModel): void {
@@ -194,7 +195,7 @@ export class EmpLeaveInfo implements OnInit {
             toDate: row.toDate ? new Date(row.toDate) : null,
             remarks: row.remarks || ''
         });
-        this.displayDialog = true;
+        this.showInlineForm = true;
     }
 
     saveLeave(): void {
@@ -233,7 +234,7 @@ export class EmpLeaveInfo implements OnInit {
         req.subscribe({
             next: () => {
                 this.messageService.add({ severity: 'success', summary: 'Success', detail: this.isEditMode ? 'Leave record updated.' : 'Leave record added.' });
-                this.displayDialog = false;
+                this.showInlineForm = false;
                 this.loadLeaveList();
                 this.isSaving = false;
             },

@@ -93,6 +93,7 @@ export class EmpPreviousRabService implements OnInit {
     isLoading = false;
 
     displayDialog = false;
+    showInlineForm = false;
     isEditMode = false;
     isSaving = false;
     serviceForm!: FormGroup;
@@ -315,7 +316,7 @@ export class EmpPreviousRabService implements OnInit {
         this.rabSectionOptions = [];
         this.rabSubSectionOptions = [];
         this.serviceForm.get('serviceTo')?.enable();
-        this.displayDialog = true;
+        this.showInlineForm = true;
     }
 
     openEditDialog(row: PreviousRABServiceListRow): void {
@@ -354,7 +355,7 @@ export class EmpPreviousRabService implements OnInit {
         const toControl = this.serviceForm.get('serviceTo');
         if (row.isCurrentlyActive && toControl) toControl.disable();
         else toControl?.enable();
-        this.displayDialog = true;
+        this.showInlineForm = true;
     }
 
     onFileRowsChange(event: FileRowData[]): void {
@@ -433,7 +434,7 @@ export class EmpPreviousRabService implements OnInit {
                 this.isSaving = false;
                 if (res != null) {
                     this.messageService.add({ severity: 'success', summary: 'Saved', detail: this.isEditMode ? 'Previous RAB service updated.' : 'Previous RAB service added.' });
-                    this.displayDialog = false;
+                    this.showInlineForm = false;
                     this.loadServiceList();
                 }
             });

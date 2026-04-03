@@ -4,6 +4,8 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Fluid } from 'primeng/fluid';
 import { TabsModule } from 'primeng/tabs';
 import { ButtonModule } from 'primeng/button';
+import { MegaMenuModule } from 'primeng/megamenu';
+import { MegaMenuItem } from 'primeng/api';
 
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 import { EmpPersonalInfo } from '../emp-personal-info/emp-personal-info';
@@ -31,6 +33,7 @@ import { EmpAdditionalRemarks } from '../emp-additional-remarks/emp-additional-r
         Fluid,
         TabsModule,
         ButtonModule,
+        MegaMenuModule,
         EmployeeSearchComponent,
         EmpPersonalInfo,
         EmpAddressInfo,
@@ -56,6 +59,7 @@ export class EmpPersonalServiceInfoComponent implements OnInit {
     activeTab = 0;
     selectedEmployeeId: number | null = null;
     employeeBasicInfo: EmployeeBasicInfo | null = null;
+    menuItems: MegaMenuItem[] = [];
 
     constructor(private router: Router, private route: ActivatedRoute) {}
 
@@ -65,6 +69,42 @@ export class EmpPersonalServiceInfoComponent implements OnInit {
             this.selectedEmployeeId = id ? parseInt(id, 10) : null;
             if (!id) this.employeeBasicInfo = null;
         });
+
+        this.updateMenuItems();
+    }
+
+    private updateMenuItems(): void {
+        const items: MegaMenuItem[] = [
+            { label: 'Personal Info', icon: 'pi pi-user', command: () => this.setActiveTab(0) },
+            { label: 'Address Info', icon: 'pi pi-map-marker', command: () => this.setActiveTab(1) },
+            { label: 'Family Info', icon: 'pi pi-users', command: () => this.setActiveTab(2) },
+            { label: 'Nominee Info', icon: 'pi pi-user-plus', command: () => this.setActiveTab(3) },
+            { label: 'Previous RAB Service', icon: 'pi pi-history', command: () => this.setActiveTab(4) },
+            { label: 'Service History', icon: 'pi pi-clock', command: () => this.setActiveTab(5) },
+            { label: 'Promotion Info', icon: 'pi pi-arrow-up', command: () => this.setActiveTab(6) },
+            { label: 'Rank Confirmation', icon: 'pi pi-check-circle', command: () => this.setActiveTab(7) },
+            { label: 'Education Info', icon: 'pi pi-book', command: () => this.setActiveTab(8) },
+            { label: 'Course Info', icon: 'pi pi-graduation-cap', command: () => this.setActiveTab(9) },
+            { label: 'Discipline Info', icon: 'pi pi-exclamation-triangle', command: () => this.setActiveTab(10) },
+            { label: 'Bank Account', icon: 'pi pi-wallet', command: () => this.setActiveTab(11) },
+            { label: 'Foreign Visit', icon: 'pi pi-globe', command: () => this.setActiveTab(12) },
+            { label: 'Leave Info', icon: 'pi pi-calendar-minus', command: () => this.setActiveTab(13) },
+            { label: 'Medical Category', icon: 'pi pi-heart', command: () => this.setActiveTab(14) },
+            { label: 'Additional Remarks', icon: 'pi pi-comment', command: () => this.setActiveTab(15) }
+        ];
+
+        // Add active class and styling to the currently selected tab
+        items.forEach((item, index) => {
+            if (index === this.activeTab) {
+                item.styleClass = 'active-tab';
+                (item as any).active = true;
+            } else {
+                item.styleClass = '';
+                (item as any).active = false;
+            }
+        });
+
+        this.menuItems = items;
     }
 
     onEmployeeFound(info: EmployeeBasicInfo): void {
@@ -86,5 +126,10 @@ export class EmpPersonalServiceInfoComponent implements OnInit {
 
     goBack(): void {
         this.router.navigate(['/emp-list']);
+    }
+
+    setActiveTab(tabIndex: number): void {
+        this.activeTab = tabIndex;
+        this.updateMenuItems();
     }
 }

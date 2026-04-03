@@ -62,6 +62,7 @@ export class EmpCourseInfoComponent implements OnInit {
     isLoading = false;
 
     displayDialog = false;
+    showInlineForm = false;
     isEditMode = false;
     isSaving = false;
     courseForm!: FormGroup;
@@ -316,7 +317,7 @@ export class EmpCourseInfoComponent implements OnInit {
             auth: '',
             remarks: ''
         });
-        this.displayDialog = true;
+        this.showInlineForm = true;
     }
 
     openEditDialog(row: CourseInfoModel): void {
@@ -341,7 +342,7 @@ export class EmpCourseInfoComponent implements OnInit {
             auth: row.auth ?? '',
             remarks: row.remarks ?? ''
         });
-        this.displayDialog = true;
+        this.showInlineForm = true;
     }
 
     saveCourse(): void {
@@ -387,7 +388,7 @@ export class EmpCourseInfoComponent implements OnInit {
             req.subscribe({
                 next: () => {
                     this.messageService.add({ severity: 'success', summary: 'Success', detail: this.isEditMode ? 'Course updated.' : 'Course added.' });
-                    this.displayDialog = false;
+                    this.showInlineForm = false;
                     this.loadCourseList();
                     this.isSaving = false;
                 },

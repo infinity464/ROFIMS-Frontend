@@ -32,6 +32,8 @@ interface FamilyMember {
     dob: Date | null;
     maritalStatus: number | null;
     occupation: number | null;
+    occupationDetails: string | null;
+    districtId: number | null;
     nid: string | null;
     mobileNo: string | null;
     passportNo: string | null;
@@ -82,7 +84,8 @@ export class EmpFamilyInfo implements OnInit {
     familyMembers: FamilyMember[] = [];
     isLoading: boolean = false;
 
-    // Dialog
+    // Inline form
+    showInlineForm: boolean = false;
     displayDialog: boolean = false;
     isEditMode: boolean = false;
     familyForm!: FormGroup;
@@ -92,6 +95,7 @@ export class EmpFamilyInfo implements OnInit {
     relationOptions: any[] = [];
     maritalStatusOptions: any[] = [];
     occupationOptions: any[] = [];
+    districtOptions: any[] = [];
 
     // Address Dialog (separate dialog for viewing/editing existing addresses)
     displayAddressDialog: boolean = false;
@@ -165,10 +169,19 @@ export class EmpFamilyInfo implements OnInit {
             dob: [null],
             maritalStatus: [null],
             occupation: [null],
+            occupationDetails: [''],
+            districtId: [null],
             nid: [''],
             mobileNo: [''],
             passportNo: [''],
             email: ['', Validators.email]
+        });
+
+        // Clear dependent fields when occupation is cleared
+        this.familyForm.get('occupation')?.valueChanges.subscribe((value) => {
+            if (!value) {
+                this.familyForm.patchValue({ occupationDetails: '', districtId: null });
+            }
         });
     }
 
@@ -197,6 +210,16 @@ export class EmpFamilyInfo implements OnInit {
         this.commonCodeService.getAllActiveCommonCodesType('Occupation').subscribe({
             next: (data) => {
                 this.occupationOptions = data.map((item) => ({
+                    label: item.codeValueEN || item.displayCodeValueEN,
+                    value: item.codeId
+                }));
+            }
+        });
+
+        // Load District dropdown
+        this.commonCodeService.getAllActiveCommonCodesType('District').subscribe({
+            next: (data) => {
+                this.districtOptions = data.map((item) => ({
                     label: item.codeValueEN || item.displayCodeValueEN,
                     value: item.codeId
                 }));
@@ -248,6 +271,8 @@ export class EmpFamilyInfo implements OnInit {
                     dob: item.dob || item.DOB ? new Date(item.dob || item.DOB) : null,
                     maritalStatus: item.maritalStatus || item.MaritalStatus,
                     occupation: item.occupation || item.Occupation,
+                    occupationDetails: item.occupationDetails || item.OccupationDetails,
+                    districtId: item.districtId || item.DistrictId,
                     nid: item.nid || item.NID,
                     mobileNo: item.mobileNo || item.MobileNo,
                     passportNo: item.passportNo || item.PassportNo,
@@ -280,17 +305,23 @@ export class EmpFamilyInfo implements OnInit {
         return option ? option.label : 'N/A';
     }
 
+    getDistrictName(districtId: number | null): string {
+        if (!districtId) return 'N/A';
+        const option = this.districtOptions.find((o) => o.value === districtId);
+        return option ? option.label : 'N/A';
+    }
+
     openAddDialog(): void {
         this.isEditMode = false;
-        this.isReadonly = false; // Switch to edit mode when adding new family member
+        this.isReadonly = false;
         this.editingFmid = null;
         this.familyForm.reset();
         this.activeDialogTab = '0';
         this.dialogPermanentAddressData = null;
         this.dialogPresentAddressData = null;
-        this.dialogPermanentAddressId = 0; // Reset for new
-        this.dialogPresentAddressId = 0; // Reset for new
-        this.displayDialog = true;
+        this.dialogPermanentAddressId = 0;
+        this.dialogPresentAddressId = 0;
+        this.showInlineForm = true;
     }
 
     openEditDialog(member: FamilyMember): void {
@@ -304,6 +335,8 @@ export class EmpFamilyInfo implements OnInit {
             dob: member.dob,
             maritalStatus: member.maritalStatus,
             occupation: member.occupation,
+            occupationDetails: member.occupationDetails,
+            districtId: member.districtId,
             nid: member.nid,
             mobileNo: member.mobileNo,
             passportNo: member.passportNo,
@@ -312,11 +345,10 @@ export class EmpFamilyInfo implements OnInit {
         this.activeDialogTab = '0';
         this.dialogPermanentAddressData = null;
         this.dialogPresentAddressData = null;
-        this.dialogPermanentAddressId = 0; // Reset, will be set by loadDialogAddresses
-        this.dialogPresentAddressId = 0; // Reset, will be set by loadDialogAddresses
-        // Load existing addresses for edit mode
+        this.dialogPermanentAddressId = 0;
+        this.dialogPresentAddressId = 0;
         this.loadDialogAddresses(member);
-        this.displayDialog = true;
+        this.showInlineForm = true;
     }
 
     loadDialogAddresses(member: FamilyMember): void {
@@ -370,6 +402,8 @@ export class EmpFamilyInfo implements OnInit {
             DOB: formValue.dob ? this.formatDate(formValue.dob) : null,
             MaritalStatus: formValue.maritalStatus,
             Occupation: formValue.occupation,
+            OccupationDetails: formValue.occupationDetails || null,
+            DistrictId: formValue.districtId || null,
             NID: formValue.nid || null,
             MobileNo: formValue.mobileNo || null,
             PassportNo: formValue.passportNo || null,
@@ -383,7 +417,7 @@ export class EmpFamilyInfo implements OnInit {
             this.familyInfoService.update(payload).subscribe({
                 next: () => {
                     this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Family member updated successfully' });
-                    this.displayDialog = false;
+                    this.showInlineForm = false;
                     this.loadFamilyMembers();
                 },
                 error: (err) => {
@@ -398,7 +432,7 @@ export class EmpFamilyInfo implements OnInit {
                     const generatedFmid = response?.data?.fmid || response?.data?.FMID || response?.FMID || response?.fmid;
 
                     this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Family member added successfully' });
-                    this.displayDialog = false;
+                    this.showInlineForm = false;
                     this.loadFamilyMembers();
 
                     // If FMID was returned, ask user if they want to add address
@@ -420,6 +454,8 @@ export class EmpFamilyInfo implements OnInit {
                                     dob: formValue.dob,
                                     maritalStatus: formValue.maritalStatus,
                                     occupation: formValue.occupation,
+                                    occupationDetails: formValue.occupationDetails,
+                                    districtId: formValue.districtId,
                                     nid: formValue.nid,
                                     mobileNo: formValue.mobileNo,
                                     passportNo: formValue.passportNo,
@@ -730,6 +766,8 @@ export class EmpFamilyInfo implements OnInit {
             DOB: formValue.dob ? this.formatDate(formValue.dob) : null,
             MaritalStatus: formValue.maritalStatus,
             Occupation: formValue.occupation,
+            OccupationDetails: formValue.occupationDetails || null,
+            DistrictId: formValue.districtId || null,
             NID: formValue.nid || null,
             MobileNo: formValue.mobileNo || null,
             PassportNo: formValue.passportNo || null,
@@ -752,7 +790,7 @@ export class EmpFamilyInfo implements OnInit {
                 } else {
                     this.isSaving = false;
                     this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Family member saved successfully' });
-                    this.displayDialog = false;
+                    this.showInlineForm = false;
                     this.loadFamilyMembers();
                     this.resetDialogState();
                 }
@@ -786,7 +824,7 @@ export class EmpFamilyInfo implements OnInit {
                 .then(() => {
                     this.isSaving = false;
                     this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Family member and addresses saved successfully' });
-                    this.displayDialog = false;
+                    this.showInlineForm = false;
                     this.loadFamilyMembers();
                     this.resetDialogState();
                 })
@@ -794,14 +832,14 @@ export class EmpFamilyInfo implements OnInit {
                     console.error('Failed to save addresses', err);
                     this.isSaving = false;
                     this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Family member saved but failed to save addresses' });
-                    this.displayDialog = false;
+                    this.showInlineForm = false;
                     this.loadFamilyMembers();
                     this.resetDialogState();
                 });
         } else {
             this.isSaving = false;
             this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Family member saved successfully' });
-            this.displayDialog = false;
+            this.showInlineForm = false;
             this.loadFamilyMembers();
             this.resetDialogState();
         }

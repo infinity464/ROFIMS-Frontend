@@ -29,10 +29,151 @@
             <div class="form-section">
                 <div class="flex align-items-center gap-3 mb-3 flex-wrap">
                     <h3 class="form-subtitle m-0 white-space-nowrap">Foreign Visit Records</h3>
-                    <div class="ml-auto">
-                        <p-button label="Add New" icon="pi pi-plus" (onClick)="openAddDialog()"></p-button>
-                    </div>
+                    @if (!showInlineForm) {
+                        <div class="ml-auto">
+                            <p-button label="Add New" icon="pi pi-plus" (onClick)="openAddDialog()"></p-button>
+                        </div>
+                    }
                 </div>
+
+                @if (showInlineForm) {
+                    <div class="surface-50 border-round-xl p-4 mb-4" style="border: 1px solid var(--surface-300);">
+                        <h4 class="m-0 text-700">{{ isEditMode ? 'Edit Foreign Visit' : 'Add Foreign Visit' }}</h4>
+                        <form [formGroup]="visitForm" class="mt-3">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="font-semibold block mb-2 text-700">Subject <span class="text-red-500">*</span></label>
+                                    <p-select
+                                        formControlName="subjectId"
+                                        [options]="subjectOptions"
+                                        optionLabel="label"
+                                        optionValue="value"
+                                        placeholder="Auto Select / Manual Type"
+                                        styleClass="w-full"
+                                        [filter]="true"></p-select>
+                                </div>
+                                <div>
+                                    <label class="font-semibold block mb-2 text-700">Purpose of Visit <span class="text-red-500">*</span></label>
+                                    <p-select
+                                        formControlName="visitId"
+                                        [options]="purposeOfVisitOptions"
+                                        optionLabel="label"
+                                        optionValue="value"
+                                        placeholder="Select Purpose of Visit"
+                                        styleClass="w-full"
+                                        [filter]="true"></p-select>
+                                </div>
+                                <div>
+                                    <label class="font-semibold block mb-2 text-700">Destination Country <span class="text-red-500">*</span></label>
+                                    <p-select
+                                        formControlName="destinationCountryId"
+                                        [options]="destinationCountryOptions"
+                                        optionLabel="label"
+                                        optionValue="value"
+                                        placeholder="Select Destination Country"
+                                        styleClass="w-full"
+                                        [filter]="true"></p-select>
+                                </div>
+                                <div>
+                                    <label class="font-semibold block mb-2 text-700">Date of Visit -- From <span class="text-red-500">*</span></label>
+                                    <p-datepicker formControlName="fromDate" dateFormat="dd-mm-yy" placeholder="From" appendTo="body" styleClass="w-full"></p-datepicker>
+                                </div>
+                                <div>
+                                    <label class="font-semibold block mb-2 text-700">Date of Visit -- To</label>
+                                    <p-datepicker formControlName="toDate" dateFormat="dd-mm-yy" placeholder="To" appendTo="body" styleClass="w-full"></p-datepicker>
+                                </div>
+                                <div>
+                                    <label class="font-semibold block mb-2 text-700">Total Days</label>
+                                    <input pInputText [value]="totalDays" class="w-full" readonly />
+                                </div>
+                                <div>
+                                    <label class="font-semibold block mb-2 text-700">Auth / Note-Sheet No</label>
+                                    <input pInputText formControlName="auth" placeholder="Auth / Note-Sheet No" class="w-full" />
+                                </div>
+                                <div>
+                                    <label class="font-semibold block mb-2 text-700">Remarks</label>
+                                    <input pInputText formControlName="remarks" placeholder="Enter Remarks" class="w-full" />
+                                </div>
+                                <div class="col-span-2">
+                                    <label class="font-semibold block mb-2 text-700">With Family Member</label>
+                                    <p-select
+                                        formControlName="withFamily"
+                                        [options]="withFamilyYesNo"
+                                        optionLabel="label"
+                                        optionValue="value"
+                                        placeholder="Yes / No"
+                                        styleClass="w-full"
+                                        [filter]="true"></p-select>
+                                </div>
+
+                                @if (visitForm.get('withFamily')?.value) {
+                                    <div class="col-span-2">
+                                        <div class="flex align-items-center justify-content-between mb-3">
+                                            <h5 class="m-0 font-semibold">Family Members for this Visit</h5>
+                                            @if (!isReadonly && familyMasterList.length > 0) {
+                                                <p-button class="ml-2" label="Add Family Member" icon="pi pi-plus" (onClick)="addFamilyMember()" size="small"></p-button>
+                                            }
+                                        </div>
+                                        @if (displayedFamilyList.length > 0) {
+                                            <table class="w-full" style="border-collapse: collapse;">
+                                                <thead>
+                                                    <tr style="border-bottom: 1px solid #dee2e6;">
+                                                        <th class="text-left p-3" style="width: 60%; font-weight: 600;">Family Member</th>
+                                                        <th class="text-left p-3" style="font-weight: 600;">Remarks</th>
+                                                        @if (!isReadonly) {
+                                                            <th class="text-center p-3" style="width: 60px; font-weight: 600;">Action</th>
+                                                        }
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @for (f of displayedFamilyList; track f.familyId) {
+                                                        <tr style="border-bottom: 1px solid #dee2e6;">
+                                                            <td class="p-3">{{ getFamilyName(f.familyId) }}</td>
+                                                            <td class="p-3">
+                                                                @if (!isReadonly) {
+                                                                    <input pInputText
+                                                                        [value]="getFamilyRemarks(f.familyId)"
+                                                                        (input)="setFamilyRemarks(f.familyId, $any($event.target).value)"
+                                                                        placeholder="(optional)"
+                                                                        class="w-full"
+                                                                        style="font-size: 0.875rem;" />
+                                                                } @else {
+                                                                    {{ getFamilyRemarks(f.familyId) || '-' }}
+                                                                }
+                                                            </td>
+                                                            @if (!isReadonly) {
+                                                                <td class="text-center p-3">
+                                                                    <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" size="small" (onClick)="removeDisplayedFamilyMember(f)"></p-button>
+                                                                </td>
+                                                            }
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        } @else {
+                                            <p class="text-500 text-center py-4 m-0">No family members added yet.</p>
+                                        }
+                                    </div>
+                                }
+
+                                <div class="col-span-2 file-section-compact">
+                                    <app-file-references-form
+                                        #fileReferencesForm
+                                        [fileRows]="fileRows"
+                                        [isViewMode]="false"
+                                        title="Supporting Documents"
+                                        (fileRowsChange)="onFileRowsChange($event)"
+                                        (onDownloadFile)="onDownloadFile($event)">
+                                    </app-file-references-form>
+                                </div>
+                            </div>
+                        </form>
+                        <div class="flex justify-content-end gap-2 mt-4">
+                            <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="showInlineForm = false" [disabled]="isSaving"></p-button>
+                            <p-button [label]="isEditMode ? 'Update' : 'Save'" icon="pi pi-check" [loading]="isSaving" [disabled]="isSaving" (onClick)="saveVisit()"></p-button>
+                        </div>
+                    </div>
+                }
 
                 <p-table [value]="visitList" [loading]="isLoading" [tableStyle]="{'min-width': '60rem'}" styleClass="p-datatable-sm">
                     <ng-template pTemplate="header">
@@ -90,149 +231,6 @@
         }
     </div>
 </p-fluid>
-
-<!-- Add/Edit Foreign Visit Dialog -->
-<p-dialog
-    [header]="isEditMode ? 'Edit Foreign Visit' : 'Add Foreign Visit'"
-    [(visible)]="displayDialog"
-    [modal]="true"
-    [style]="{width: '720px'}"
-    [closable]="true"
-    [contentStyle]="{'overflow-y': 'auto', 'border-top': '2px solid var(--primary-color)'}">
-    <form [formGroup]="visitForm" class="mt-3">
-        <div class="grid grid-cols-2 gap-4">
-            <div>
-                <label class="font-semibold block mb-2 text-700">Subject <span class="text-red-500">*</span></label>
-                <p-select
-                    formControlName="subjectId"
-                    [options]="subjectOptions"
-                    optionLabel="label"
-                    optionValue="value"
-                    placeholder="Auto Select / Manual Type"
-                    styleClass="w-full"
-                    [filter]="true"></p-select>
-            </div>
-            <div>
-                <label class="font-semibold block mb-2 text-700">Purpose of Visit <span class="text-red-500">*</span></label>
-                <p-select
-                    formControlName="visitId"
-                    [options]="purposeOfVisitOptions"
-                    optionLabel="label"
-                    optionValue="value"
-                    placeholder="Select Purpose of Visit"
-                    styleClass="w-full"
-                    [filter]="true"></p-select>
-            </div>
-            <div>
-                <label class="font-semibold block mb-2 text-700">Destination Country <span class="text-red-500">*</span></label>
-                <p-select
-                    formControlName="destinationCountryId"
-                    [options]="destinationCountryOptions"
-                    optionLabel="label"
-                    optionValue="value"
-                    placeholder="Select Destination Country"
-                    styleClass="w-full"
-                    [filter]="true"></p-select>
-            </div>
-            <div>
-                <label class="font-semibold block mb-2 text-700">Date of Visit – From <span class="text-red-500">*</span></label>
-                <p-datepicker formControlName="fromDate" dateFormat="dd-mm-yy" placeholder="From" appendTo="body" styleClass="w-full"></p-datepicker>
-            </div>
-            <div>
-                <label class="font-semibold block mb-2 text-700">Date of Visit – To</label>
-                <p-datepicker formControlName="toDate" dateFormat="dd-mm-yy" placeholder="To" appendTo="body" styleClass="w-full"></p-datepicker>
-            </div>
-            <div>
-                <label class="font-semibold block mb-2 text-700">Total Days</label>
-                <input pInputText [value]="totalDays" class="w-full" readonly />
-            </div>
-            <div>
-                <label class="font-semibold block mb-2 text-700">Auth / Note-Sheet No</label>
-                <input pInputText formControlName="auth" placeholder="Auth / Note-Sheet No" class="w-full" />
-            </div>
-            <div>
-                <label class="font-semibold block mb-2 text-700">Remarks</label>
-                <input pInputText formControlName="remarks" placeholder="Enter Remarks" class="w-full" />
-            </div>
-            <div class="col-span-2">
-                <label class="font-semibold block mb-2 text-700">With Family Member</label>
-                <p-select
-                    formControlName="withFamily"
-                    [options]="withFamilyYesNo"
-                    optionLabel="label"
-                    optionValue="value"
-                    placeholder="Yes / No"
-                    styleClass="w-full"
-                    [filter]="true"></p-select>
-            </div>
-
-            @if (visitForm.get('withFamily')?.value) {
-                <div class="col-span-2">
-                    <div class="flex align-items-center justify-content-between mb-3">
-                        <h5 class="m-0 font-semibold">Family Members for this Visit</h5>
-                        @if (!isReadonly && familyMasterList.length > 0) {
-                            <p-button class="ml-2" label="Add Family Member" icon="pi pi-plus" (onClick)="addFamilyMember()" size="small"></p-button>
-                        }
-                    </div>
-                    @if (displayedFamilyList.length > 0) {
-                        <table class="w-full" style="border-collapse: collapse;">
-                            <thead>
-                                <tr style="border-bottom: 1px solid #dee2e6;">
-                                    <th class="text-left p-3" style="width: 60%; font-weight: 600;">Family Member</th>
-                                    <th class="text-left p-3" style="font-weight: 600;">Remarks</th>
-                                    @if (!isReadonly) {
-                                        <th class="text-center p-3" style="width: 60px; font-weight: 600;">Action</th>
-                                    }
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @for (f of displayedFamilyList; track f.familyId) {
-                                    <tr style="border-bottom: 1px solid #dee2e6;">
-                                        <td class="p-3">{{ getFamilyName(f.familyId) }}</td>
-                                        <td class="p-3">
-                                            @if (!isReadonly) {
-                                                <input pInputText
-                                                    [value]="getFamilyRemarks(f.familyId)"
-                                                    (input)="setFamilyRemarks(f.familyId, $any($event.target).value)"
-                                                    placeholder="(optional)"
-                                                    class="w-full"
-                                                    style="font-size: 0.875rem;" />
-                                            } @else {
-                                                {{ getFamilyRemarks(f.familyId) || '-' }}
-                                            }
-                                        </td>
-                                        @if (!isReadonly) {
-                                            <td class="text-center p-3">
-                                                <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" size="small" (onClick)="removeDisplayedFamilyMember(f)"></p-button>
-                                            </td>
-                                        }
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    } @else {
-                        <p class="text-500 text-center py-4 m-0">No family members added yet.</p>
-                    }
-                </div>
-            }
-
-            <div class="col-span-2 file-section-compact">
-                <app-file-references-form
-                    #fileReferencesForm
-                    [fileRows]="fileRows"
-                    [isViewMode]="false"
-                    title="Supporting Documents"
-                    (fileRowsChange)="onFileRowsChange($event)"
-                    (onDownloadFile)="onDownloadFile($event)">
-                </app-file-references-form>
-            </div>
-        </div>
-    </form>
-    <ng-template pTemplate="footer">
-        <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="displayDialog = false" [disabled]="isSaving"></p-button>
-        <p-button [label]="isEditMode ? 'Update' : 'Save'" icon="pi pi-check" [loading]="isSaving" [disabled]="isSaving" (onClick)="saveVisit()"></p-button>
-    </ng-template>
-</p-dialog>
 
 <!-- Family Member Selection Modal -->
 <!-- Family Member Selection Modal (Simple) -->

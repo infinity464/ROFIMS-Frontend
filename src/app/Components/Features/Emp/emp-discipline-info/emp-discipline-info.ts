@@ -75,6 +75,7 @@ export class EmpDisciplineInfoComponent implements OnInit {
     isLoading = false;
 
     displayDialog = false;
+    showInlineForm = false;
     isEditMode = false;
     isSaving = false;
     disciplineForm!: FormGroup;
@@ -292,7 +293,7 @@ export class EmpDisciplineInfoComponent implements OnInit {
             auth: '',
             remarks: ''
         });
-        this.displayDialog = true;
+        this.showInlineForm = true;
     }
 
     openEditDialog(row: DisciplineListRow): void {
@@ -316,7 +317,7 @@ export class EmpDisciplineInfoComponent implements OnInit {
             auth: row.auth ?? '',
             remarks: row.remarks ?? ''
         });
-        this.displayDialog = true;
+        this.showInlineForm = true;
     }
 
     saveDiscipline(): void {
@@ -370,7 +371,7 @@ export class EmpDisciplineInfoComponent implements OnInit {
                 this.isSaving = false;
                 if (res != null) {
                     this.messageService.add({ severity: 'success', summary: 'Saved', detail: this.isEditMode ? 'Discipline record updated.' : 'Discipline record added.' });
-                    this.displayDialog = false;
+                    this.showInlineForm = false;
                     this.loadDisciplineList();
                 }
             });

@@ -28,6 +28,8 @@ export interface FamilyInfoModel {
     DOB: string | null;
     MaritalStatus: number | null;
     Occupation: number | null;
+    OccupationDetails: string | null;
+    DistrictId: number | null;
     NID: string | null;
     MobileNo: string | null;
     PassportNo: string | null;
