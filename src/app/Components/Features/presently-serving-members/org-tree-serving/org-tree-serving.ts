@@ -107,7 +107,7 @@ export class OrgTreeServingComponent implements OnInit {
                             parentId: null,
                             orgId: 0,
                             nameEN: 'Supernumerary',
-                            commCode: 'SUP',
+                            commCode: 'S',
                             codeType: 'V',
                             nameBN: '',
                             displayNameEN: 'Supernumerary',
@@ -124,7 +124,7 @@ export class OrgTreeServingComponent implements OnInit {
                             parentId: null,
                             orgId: 0,
                             nameEN: 'Pending for Joining',
-                            commCode: 'PND',
+                            commCode: 'P',
                             codeType: 'V',
                             nameBN: '',
                             displayNameEN: 'Pending for Joining',
@@ -247,6 +247,8 @@ export class OrgTreeServingComponent implements OnInit {
         this.currentPageNo = 1;
         this.first = 0;
         
+        this.scrollToTop();
+        
         if (node.id === -1) {
             this.loadSupernumeraryPage(1, this.rows);
         } else if (node.id === -2) {
@@ -254,6 +256,16 @@ export class OrgTreeServingComponent implements OnInit {
         } else {
             this.loadMembersPage(1, this.rows);
         }
+    }
+
+    private scrollToTop(): void {
+        setTimeout(() => {
+            const mainPanel = document.querySelector('.main-panel');
+            if (mainPanel) {
+                (mainPanel as HTMLElement).scrollTop = 0;
+            }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }, 100);
     }
 
     onPageChange(page: number): void {
@@ -290,7 +302,7 @@ export class OrgTreeServingComponent implements OnInit {
         this.listLoading = true;
         this.servingMembersService
             .getPresentlyServingMembersPaginatedFiltered({
-                pagination: { page_no: pageNo, row_per_page: rowPerPage },
+                pagination: { page_no: pageNo, row_per_page: 255 },
                 filter: { organogramNodeCodeId: nodeId }
             })
             .pipe(takeUntilDestroyed(this.destroyRef))
