@@ -1,4 +1,4 @@
-<div class="member-card">
+<div class="member-card" [routerLink]="['/ex-members/profile', member.employeeID]">
     <div class="rank-label">{{ member.armyRank }}</div>
     <div class="name-row">
         <span class="name">{{ member.nameEnglish }}</span>
