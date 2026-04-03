@@ -22,6 +22,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { forkJoin, of } from 'rxjs';
 import { catchError, map, switchMap } from 'rxjs/operators';
 import { MemberViewComponent } from './member-view/member-view.component';
+import { LayoutService } from '@/layout/service/layout.service';
 
 function countMapFromApi(rows: OrganogramCountItem[] | null | undefined): Map<number, number> {
     const m = new Map<number, number>();
@@ -44,6 +45,7 @@ export class OrgTreeServingComponent implements OnInit {
     private servingMembersService = inject(ServingMembersService);
     private messageService = inject(MessageService);
     private destroyRef = inject(DestroyRef);
+    private layoutService = inject(LayoutService);
 
     readonly flatNodes = signal<OrgNode[]>([]);
     readonly loading = signal(false);
@@ -51,6 +53,7 @@ export class OrgTreeServingComponent implements OnInit {
     readonly countsLoading = signal(false);
     readonly selectedNodeId = signal<number | null>(null);
     readonly sidebarCollapsed = signal(false);
+    readonly isDarkMode = computed(() => this.layoutService.isDarkTheme());
 
     readonly treeNodes = computed(() => this.orgService.getTree(this.flatNodes()));
 

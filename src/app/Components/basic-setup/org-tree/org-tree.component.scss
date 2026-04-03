@@ -20,11 +20,12 @@
 
   .tree-panel {
     border: 1px solid var(--p-surface-border);
-    border-radius: 8px;
-    padding: 0.75rem;
-    background: var(--p-surface-50);
+    border-radius: 12px;
+    padding: 1rem;
+    background: #ffffff;
     overflow: auto;
     min-height: 420px;
+    transition: background-color 0.2s ease;
 
     &.tree-panel-full {
       width: 100%;
@@ -37,4 +38,9 @@
     }
     .tree-container { padding: 0.25rem 0; }
   }
+}
+
+.dark-mode .tree-panel {
+  background-color: #1e1e1e;
+  border-color: var(--p-surface-700);
 }

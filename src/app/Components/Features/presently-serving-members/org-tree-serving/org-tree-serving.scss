@@ -49,7 +49,7 @@
 
 .sidebar {
     flex: 1;
-    background-color: var(--p-surface-ground, #ffffff);
+    background-color: #ffffff;
     border: 0.5px solid var(--p-surface-border);
     border-radius: 12px;
     display: flex;
@@ -81,6 +81,11 @@
             display: none;
         }
     }
+}
+
+.dark-mode .sidebar {
+    background-color: #1e1e1e;
+    border-color: var(--p-surface-700);
 }
 
 .sidebar-header {
@@ -151,11 +156,16 @@
     flex-direction: column;
     overflow: hidden;
     transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
-    background-color: var(--p-surface-ground, #ffffff);
+    background-color: #ffffff;
     border: 0.5px solid var(--p-surface-border);
     border-radius: 12px;
     padding: 1rem;
     box-sizing: border-box;
+}
+
+.dark-mode .main-panel {
+    background-color: #1e1e1e;
+    border-color: var(--p-surface-700);
 }
 
 .main-panel-header {
