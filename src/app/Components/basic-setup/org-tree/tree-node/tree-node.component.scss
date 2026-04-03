@@ -91,6 +91,22 @@
       justify-content: center;
       flex-shrink: 0;
     }
+    .count-badge {
+      display: flex;
+      gap: 4px;
+      font-size: 0.625rem;
+      font-weight: 500;
+      padding: 0.15rem 0.35rem;
+      border-radius: 4px;
+      background: var(--p-surface-200);
+      flex-shrink: 0;
+      .auth-count {
+        color: #1d9e75;
+      }
+      .held-count {
+        color: #185FA5;
+      }
+    }
   }
 
   .tree-node-children { 

@@ -17,6 +17,7 @@ import { TreeNodeComponent } from '@/Components/basic-setup/org-tree/tree-node/t
 import { OrgService } from '@/Components/basic-setup/org-tree/org.service';
 import { OrgNode } from '@/Components/basic-setup/org-tree/models/org-node.model';
 import { OrganogramCountItem, ServingMembersService } from '@/services/serving-members.service';
+import { MasterBasicSetupService, AuthorizedCountItem } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { EmployeeServiceOverview } from '@/models/employee-service-overview.model';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { forkJoin, of } from 'rxjs';
@@ -32,6 +33,14 @@ function countMapFromApi(rows: OrganogramCountItem[] | null | undefined): Map<nu
     return m;
 }
 
+function authCountMapFromApi(rows: AuthorizedCountItem[] | null | undefined): Map<number, number> {
+    const m = new Map<number, number>();
+    for (const row of rows ?? []) {
+        if (row?.codeId > 0) m.set(row.codeId, row.authorizedCount ?? 0);
+    }
+    return m;
+}
+
 @Component({
     selector: 'app-org-tree-serving',
     standalone: true,
@@ -43,6 +52,7 @@ function countMapFromApi(rows: OrganogramCountItem[] | null | undefined): Map<nu
 export class OrgTreeServingComponent implements OnInit {
     private orgService = inject(OrgService);
     private servingMembersService = inject(ServingMembersService);
+    private masterBasicSetupService = inject(MasterBasicSetupService);
     private messageService = inject(MessageService);
     private destroyRef = inject(DestroyRef);
     private layoutService = inject(LayoutService);
@@ -74,14 +84,17 @@ export class OrgTreeServingComponent implements OnInit {
         this.countsLoading.set(true);
         forkJoin({
             roots: this.orgService.getAll(1),
-            counts: this.servingMembersService.getServingOrganogramCounts().pipe(catchError(() => of([] as OrganogramCountItem[])))
+            heldCounts: this.servingMembersService.getServingOrganogramCounts().pipe(catchError(() => of([] as OrganogramCountItem[]))),
+            authCounts: this.masterBasicSetupService.getAuthorizedOrganogramCounts().pipe(catchError(() => of([] as AuthorizedCountItem[])))
         })
             .pipe(
-                map(({ roots, counts }) => {
-                    const cm = countMapFromApi(counts);
+                map(({ roots, heldCounts, authCounts }) => {
+                    const cm = countMapFromApi(heldCounts);
+                    const acm = authCountMapFromApi(authCounts);
                     return roots.map((n) => ({
                         ...n,
-                        servingCount: cm.get(n.id) ?? 0
+                        servingCount: cm.get(n.id) ?? 0,
+                        authorizedCount: acm.get(n.id) ?? 0
                     }));
                 }),
                 takeUntilDestroyed(this.destroyRef)
@@ -118,29 +131,34 @@ export class OrgTreeServingComponent implements OnInit {
             .loadChildren(node.id)
             .pipe(
                 switchMap((children) =>
-                    this.servingMembersService.getServingOrganogramCounts().pipe(
-                        map((counts) => ({ children, counts }))
+                    forkJoin({
+                        heldCounts: this.servingMembersService.getServingOrganogramCounts().pipe(catchError(() => of([] as OrganogramCountItem[]))),
+                        authCounts: this.masterBasicSetupService.getAuthorizedOrganogramCounts().pipe(catchError(() => of([] as AuthorizedCountItem[])))
+                    }).pipe(
+                        map(({ heldCounts, authCounts }) => ({ children, heldCounts, authCounts }))
                     )
                 ),
                 takeUntilDestroyed(this.destroyRef)
             )
             .subscribe({
-                next: ({ children, counts }) => {
-                    const cm = countMapFromApi(counts);
+                next: ({ children, heldCounts, authCounts }) => {
+                    const cm = countMapFromApi(heldCounts);
+                    const acm = authCountMapFromApi(authCounts);
                     this.flatNodes.update((f) => {
                         const seen = new Set(f.map((n) => n.id));
                         const newOnes = children
                             .filter((c) => !seen.has(c.id))
-                            .map((c) => ({ ...c, servingCount: cm.get(c.id) ?? 0 }));
+                            .map((c) => ({ ...c, servingCount: cm.get(c.id) ?? 0, authorizedCount: acm.get(c.id) ?? 0 }));
                         return [...f, ...newOnes].map((n) =>
                             n.id === node.id
                                 ? {
                                       ...n,
                                       expanded: true,
-                                      childrenLoaded: true,
-                                      servingCount: cm.get(n.id) ?? n.servingCount ?? 0
+                                      childrenLoaded: true as any,
+                                      servingCount: cm.get(n.id) ?? n.servingCount ?? 0,
+                                      authorizedCount: acm.get(n.id) ?? n.authorizedCount ?? 0
                                   }
-                                : { ...n, servingCount: cm.get(n.id) ?? n.servingCount ?? 0 }
+                                : { ...n, servingCount: cm.get(n.id) ?? n.servingCount ?? 0, authorizedCount: acm.get(n.id) ?? n.authorizedCount ?? 0 }
                         );
                     });
                     this.loadingParentId.set(null);

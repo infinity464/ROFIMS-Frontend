@@ -11,7 +11,10 @@
                 <span class="level-badge" [style.background-color]="badgeColor">{{ node.codeType }}</span>
 
                 <span class="node-name">{{ node.nameEN || node.commCode }}</span>
-                <span class="serving-count-badge" *ngIf="node.servingCount != null && node.servingCount > 0">{{ node.servingCount }}</span>
+                <span class="count-badge" *ngIf="(node.authorizedCount != null && node.authorizedCount > 0) || (node.servingCount != null && node.servingCount > 0)">
+                    <span class="auth-count" *ngIf="node.authorizedCount && node.authorizedCount > 0">A: {{ node.authorizedCount }}</span>
+                    <span class="held-count" *ngIf="node.servingCount && node.servingCount > 0">H: {{ node.servingCount }}</span>
+                </span>
 
                 <span class="node-comm" *ngIf="node.commCode">({{ node.commCode }})</span>
             </div>

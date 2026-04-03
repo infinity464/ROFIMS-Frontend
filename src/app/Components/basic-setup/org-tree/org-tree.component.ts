@@ -135,7 +135,7 @@ export class OrgTreeComponent implements OnInit {
             next: (children) => {
                 this.flatNodes.update(f => {
                     const updated = [...f, ...children].map(n =>
-                        n.id === node.id ? { ...n, expanded: true, childrenLoaded: true } : n
+                        n.id === node.id ? { ...n, expanded: true, childrenLoaded: true as any } : n
                     );
                     return updated;
                 });

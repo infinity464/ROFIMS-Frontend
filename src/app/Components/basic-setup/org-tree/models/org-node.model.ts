@@ -30,6 +30,8 @@ export interface OrgNode {
     childrenLoaded?: boolean;
     /** Rollup serving count for organogram (optional; from GetServingOrganogramCounts). */
     servingCount?: number;
+    /** Authorized positions count from vacancy distribution. */
+    authorizedCount?: number;
 }
 
 export interface CreateOrgDto {
