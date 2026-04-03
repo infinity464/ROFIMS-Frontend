@@ -6,6 +6,7 @@ export interface EmployeeServiceOverview {
     employeeID: number;
     serviceId: string | null;
     rabID: string | null;
+    rabId?: string | null;
     prefixId: number | null;
     prefix: string | null;
     nameEnglish: string | null;

@@ -8,7 +8,7 @@
             </span>
             <span class="expand-placeholder" *ngIf="!hasChildrenOrCanExpand"></span>
             <div class="node-readonly-label" (click)="onReadOnlyLabelClick($event)">
-                <span class="level-badge" [style.background-color]="badgeColor">{{ node.id === -1 ? 'S' : (node.id === -2 ? 'P' : node.codeType) }}</span>
+                <span class="level-badge" [style.background-color]="badgeColor">{{ node.id === -1 ? 'S' : (node.id === -2 ? 'P' : (node.codeType === 'MT' ? (node.nameEN ? node.nameEN.charAt(0) : 'M') : node.codeType)) }}</span>
 
                 <span class="node-name">{{ node.nameEN || node.commCode }}</span>
                 <ng-container *ngIf="node.id < 0">

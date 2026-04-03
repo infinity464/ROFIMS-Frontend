@@ -26,6 +26,8 @@ import { forkJoin, of } from 'rxjs';
 import { catchError, map, switchMap } from 'rxjs/operators';
 import { MemberViewComponent } from './member-view/member-view.component';
 import { LayoutService } from '@/layout/service/layout.service';
+import { CommonCodeService } from '@/services/common-code-service';
+import { CommonCode } from '@/Components/basic-setup/shared/models/common-code';
 
 function countMapFromApi(rows: OrganogramCountItem[] | null | undefined): Map<number, number> {
     const m = new Map<number, number>();
@@ -56,6 +58,7 @@ export class OrgTreeServingComponent implements OnInit {
     private servingMembersService = inject(ServingMembersService);
     private masterBasicSetupService = inject(MasterBasicSetupService);
     private employeeListService = inject(EmployeeListService);
+    private commonCodeService = inject(CommonCodeService);
     private messageService = inject(MessageService);
     private destroyRef = inject(DestroyRef);
     private layoutService = inject(LayoutService);
@@ -67,6 +70,8 @@ export class OrgTreeServingComponent implements OnInit {
     readonly selectedNodeId = signal<number | null>(null);
     readonly sidebarCollapsed = signal(false);
     readonly isDarkMode = computed(() => this.layoutService.isDarkTheme());
+
+    memberTypes: CommonCode[] = [];
 
     readonly treeNodes = computed(() => this.orgService.getTree(this.flatNodes()));
 
@@ -163,26 +168,137 @@ export class OrgTreeServingComponent implements OnInit {
     }
 
     private loadVirtualNodeCounts(): void {
-        forkJoin({
-            supernumeraryList: this.employeeListService.getSupernumeraryList({}).pipe(catchError(() => of([] as EmployeeList[]))),
-            pendingJoiningList: this.employeeListService.getEmployeesByPostingStatus({ postingStatus: 'PendingForJoining' }).pipe(catchError(() => of([] as EmployeeList[])))
-        })
-            .pipe(takeUntilDestroyed(this.destroyRef))
-            .subscribe({
-                next: ({ supernumeraryList, pendingJoiningList }) => {
-                    this.flatNodes.update(nodes => 
-                        nodes.map(n => {
-                            if (n.id === -1) {
-                                return { ...n, servingCount: supernumeraryList.length };
-                            }
-                            if (n.id === -2) {
-                                return { ...n, servingCount: pendingJoiningList.length };
-                            }
-                            return n;
-                        })
-                    );
+        this.commonCodeService.getAllActiveCommonCodesType('EmployeeType').pipe(
+            catchError(() => of([] as CommonCode[]))
+        ).subscribe({
+            next: (memberTypes) => {
+                this.memberTypes = memberTypes;
+                
+                if (memberTypes.length === 0) {
+                    this.applyVirtualNodeCounts([], [], memberTypes);
+                    return;
                 }
+
+                const supernumeraryRequests = memberTypes.map(mt => 
+                    this.employeeListService.getSupernumeraryList({ memberTypeId: mt.codeId }).pipe(
+                        map(list => ({ memberTypeId: mt.codeId, count: list.length })),
+                        catchError(() => of({ memberTypeId: mt.codeId, count: 0 }))
+                    )
+                );
+
+                const pendingRequests = memberTypes.map(mt => 
+                    this.employeeListService.getEmployeesByPostingStatus({ 
+                        postingStatus: 'PendingForJoining',
+                        memberTypeId: mt.codeId 
+                    }).pipe(
+                        map(list => ({ memberTypeId: mt.codeId, count: list.length })),
+                        catchError(() => of({ memberTypeId: mt.codeId, count: 0 }))
+                    )
+                );
+
+                forkJoin([...supernumeraryRequests, ...pendingRequests]).subscribe({
+                    next: (results) => {
+                        const superResults = results.slice(0, memberTypes.length);
+                        const pendingResults = results.slice(memberTypes.length);
+                        this.applyVirtualNodeCounts(superResults, pendingResults, memberTypes);
+                    },
+                    error: () => {
+                        this.applyVirtualNodeCounts([], [], memberTypes);
+                    }
+                });
+            },
+            error: () => {
+                this.memberTypes = [];
+            }
+        });
+    }
+
+    private applyVirtualNodeCounts(
+        supernumeraryResults: { memberTypeId: number; count: number }[], 
+        pendingResults: { memberTypeId: number; count: number }[], 
+        memberTypes: CommonCode[]
+    ): void {
+        const supernumeraryCounts = new Map<number, number>();
+        const pendingCounts = new Map<number, number>();
+        let supernumeraryTotal = 0;
+        let pendingTotal = 0;
+
+        for (const r of supernumeraryResults) {
+            if (r.memberTypeId > 0) {
+                supernumeraryCounts.set(r.memberTypeId, r.count);
+                supernumeraryTotal += r.count;
+            }
+        }
+
+        for (const r of pendingResults) {
+            if (r.memberTypeId > 0) {
+                pendingCounts.set(r.memberTypeId, r.count);
+                pendingTotal += r.count;
+            }
+        }
+
+        const supernumeraryChildren: OrgNode[] = [];
+        const pendingChildren: OrgNode[] = [];
+
+        for (let i = 0; i < memberTypes.length; i++) {
+            const mt = memberTypes[i];
+            const superCount = supernumeraryCounts.get(mt.codeId) ?? 0;
+            const superChild: OrgNode = {
+                id: -10 - i,
+                parentId: -1,
+                orgId: 0,
+                nameEN: mt.codeValueEN,
+                commCode: '',
+                codeType: 'MT',
+                nameBN: mt.codeValueBN ?? '',
+                displayNameEN: mt.codeValueEN,
+                displayNameBN: mt.codeValueBN ?? '',
+                status: 1,
+                sortOrder: i,
+                level: 1,
+                children: [],
+                servingCount: superCount,
+                authorizedCount: 0,
+                expanded: false,
+                childrenLoaded: true
+            };
+            supernumeraryChildren.push(superChild);
+
+            const pendingCount = pendingCounts.get(mt.codeId) ?? 0;
+            const pendingChild: OrgNode = {
+                id: -20 - i,
+                parentId: -2,
+                orgId: 0,
+                nameEN: mt.codeValueEN,
+                commCode: '',
+                codeType: 'MT',
+                nameBN: mt.codeValueBN ?? '',
+                displayNameEN: mt.codeValueEN,
+                displayNameBN: mt.codeValueBN ?? '',
+                status: 1,
+                sortOrder: i,
+                level: 1,
+                children: [],
+                servingCount: pendingCount,
+                authorizedCount: 0,
+                expanded: false,
+                childrenLoaded: true
+            };
+            pendingChildren.push(pendingChild);
+        }
+
+        this.flatNodes.update(nodes => {
+            const updatedNodes = nodes.map(n => {
+                if (n.id === -1) {
+                    return { ...n, servingCount: supernumeraryTotal, children: supernumeraryChildren, expanded: false, childrenLoaded: true };
+                }
+                if (n.id === -2) {
+                    return { ...n, servingCount: pendingTotal, children: pendingChildren, expanded: false, childrenLoaded: true };
+                }
+                return n;
             });
+            return [...updatedNodes, ...supernumeraryChildren, ...pendingChildren];
+        });
     }
 
     onExpandToggled(e: { node: OrgNode; expanded: boolean }): void {
@@ -253,6 +369,22 @@ export class OrgTreeServingComponent implements OnInit {
             this.loadSupernumeraryPage(1, this.rows);
         } else if (node.id === -2) {
             this.loadPendingJoiningPage(1, this.rows);
+        } else if (node.id <= -10 && node.id >= -19) {
+            const memberTypeIndex = -(node.id + 10);
+            const memberType = this.memberTypes[memberTypeIndex];
+            if (memberType) {
+                this.loadSupernumeraryByMemberTypePage(1, this.rows, memberType.codeId);
+            } else {
+                this.loadSupernumeraryPage(1, this.rows);
+            }
+        } else if (node.id <= -20 && node.id >= -29) {
+            const memberTypeIndex = -(node.id + 20);
+            const memberType = this.memberTypes[memberTypeIndex];
+            if (memberType) {
+                this.loadPendingJoiningByMemberTypePage(1, this.rows, memberType.codeId);
+            } else {
+                this.loadPendingJoiningPage(1, this.rows);
+            }
         } else {
             this.loadMembersPage(1, this.rows);
         }
@@ -331,10 +463,15 @@ export class OrgTreeServingComponent implements OnInit {
     }
 
     private loadSupernumeraryPage(pageNo: number, rowPerPage: number): void {
+        this.loadSupernumeraryByMemberTypePage(pageNo, rowPerPage, null);
+    }
+
+    private loadSupernumeraryByMemberTypePage(pageNo: number, rowPerPage: number, memberTypeId: number | null): void {
         this.listLoading = true;
         this.employeeListService
             .getSupernumeraryListPaginated({
-                pagination: { page_no: pageNo, row_per_page: rowPerPage }
+                pagination: { page_no: pageNo, row_per_page: rowPerPage },
+                memberTypeId: memberTypeId
             })
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
@@ -342,7 +479,7 @@ export class OrgTreeServingComponent implements OnInit {
                     const mapped: EmployeeServiceOverview[] = (res.datalist ?? []).map(emp => ({
                         employeeID: emp.employeeID,
                         serviceId: emp.serviceId,
-                        rabID: emp.rabID ?? null,
+                        rabID: emp.RABID ?? emp.rabID ?? emp.rabid ?? null,
                         prefixId: null,
                         prefix: emp.prefixName ?? null,
                         nameEnglish: emp.fullNameEN ?? null,
@@ -389,10 +526,15 @@ export class OrgTreeServingComponent implements OnInit {
     }
 
     private loadPendingJoiningPage(pageNo: number, rowPerPage: number): void {
+        this.loadPendingJoiningByMemberTypePage(pageNo, rowPerPage, null);
+    }
+
+    private loadPendingJoiningByMemberTypePage(pageNo: number, rowPerPage: number, memberTypeId: number | null): void {
         this.listLoading = true;
         this.employeeListService
             .getEmployeesByPostingStatus({
-                postingStatus: 'PendingForJoining'
+                postingStatus: 'PendingForJoining',
+                memberTypeId: memberTypeId
             })
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
@@ -400,7 +542,7 @@ export class OrgTreeServingComponent implements OnInit {
                     const mappedList: EmployeeServiceOverview[] = res.map(emp => ({
                         employeeID: emp.employeeID,
                         serviceId: emp.serviceId,
-                        rabID: emp.rabID ?? null,
+                        rabID: emp.RABID ?? emp.rabID ?? emp.rabid ?? null,
                         prefixId: null,
                         prefix: emp.prefixName ?? null,
                         nameEnglish: emp.fullNameEN ?? null,

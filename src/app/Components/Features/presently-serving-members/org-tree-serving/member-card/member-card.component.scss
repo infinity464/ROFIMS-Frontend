@@ -25,10 +25,17 @@
     padding-left: 0.75rem;
     border-left: 2px solid var(--p-yellow-600);
     margin: 0.25rem 0;
+    gap: 0.5rem;
+    flex-wrap: wrap;
 
     .name {
         font-size: 1rem;
         font-weight: 500;
         color: var(--p-primary-color);
+    }
+
+    .ids {
+        font-size: 0.75rem;
+        color: var(--p-text-muted-color);
     }
 }

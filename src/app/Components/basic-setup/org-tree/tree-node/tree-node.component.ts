@@ -47,7 +47,7 @@ export class TreeNodeComponent {
     }
 
     get hasChildrenLoaded(): boolean {
-        return (this.node.children?.length ?? 0) > 0;
+        return (this.node.children?.length ?? 0) > 0 || this.node.childrenLoaded === true;
     }
 
     get badgeColor(): string {
