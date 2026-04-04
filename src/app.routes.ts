@@ -272,6 +272,7 @@ export const appRoutes: Routes = [
             { path: 'presently-serving-members/profile/:employeeId', component: ServingMemberProfile },
             { path: 'ex-members', component: ExMembers },
             { path: 'ex-members/profile/:employeeId', component: ExMemberProfile },
+            { path: 'members/profile/:employeeId', component: ExMemberProfile },
 
             // Employee Reports
             { path: 'employee-reports', component: EmployeeReportsComponent },

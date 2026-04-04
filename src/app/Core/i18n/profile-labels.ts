@@ -9,7 +9,7 @@ export const PROFILE_LABELS = {
   en: {
     // Page title variants (use one per profile type)
     'pageTitle.servingMember': 'Serving Member Profile',
-    'pageTitle.exMember': 'Ex-Member Profile',
+    'pageTitle.exMember': 'Member Profile',
 
     // Buttons
     'button.back': 'Back',
@@ -189,7 +189,7 @@ export const PROFILE_LABELS = {
 
   bn: {
     'pageTitle.servingMember': 'সার্ভিং মেম্বার প্রোফাইল',
-    'pageTitle.exMember': 'সাবেক সদস্য প্রোফাইল',
+    'pageTitle.exMember': 'সদস্য প্রোফাইল',
 
     'button.back': 'পিছনে',
     'button.download': 'ডাউনলোড',

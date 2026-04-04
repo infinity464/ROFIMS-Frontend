@@ -227,7 +227,7 @@ export class PostingOrderReceiveComponent implements OnInit {
 
     openProfile(member: PostingReceiveViewDto): void {
         if (member.employeeId) {
-            window.open(`/presently-serving-members/profile/${member.employeeId}`, '_blank');
+            window.open(`/members/profile/${member.employeeId}`, '_blank');
         }
     }
 

@@ -587,6 +587,42 @@
             }
         </div>
 
+        <!-- RFTS Training -->
+        <div class="content-section text-900 border-top-1 surface-border">
+            <div class="section-heading">RFTS</div>
+            <div class="family-table-wrapper">
+                <p-table
+                    [value]="rftsTrainingList"
+                    [tableStyle]="{ 'min-width': '30rem' }"
+                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
+                >
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 4rem">Ser</th>
+                            <th>Course No</th>
+                            <th>From</th>
+                            <th>To</th>
+                            <th>Remark</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                        <tr>
+                            <td>{{ rowIndex + 1 }}.</td>
+                            <td>{{ row.courseNo || '-' }}</td>
+                            <td>{{ formatDateOnly(row.dateFrom) }}</td>
+                            <td>{{ formatDateOnly(row.dateTo) }}</td>
+                            <td>{{ row.remarks || '-' }}</td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="5" class="text-center text-500 py-3">No RFTS records found.</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
+
         <!-- Investigation Experience -->
         <div class="content-section text-900 border-top-1 surface-border">
             <div class="section-heading">{{ L['section.investigation'] }}</div>
