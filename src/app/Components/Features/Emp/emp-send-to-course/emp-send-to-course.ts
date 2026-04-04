@@ -64,7 +64,6 @@ interface TrainingInstituteOption extends DropdownOption {
 export class EmpSendToCourseComponent implements OnInit {
     activeTab = 0;
     private tab1Loaded = false;
-    private tab2Loaded = false;
 
     /** Tab (a): Create Draft */
     courseNo = '';
@@ -156,8 +155,7 @@ export class EmpSendToCourseComponent implements OnInit {
             this.loadDraftLists();
             this.loadSendCourseDropdowns();
         }
-        if (tabIndex === 2 && !this.tab2Loaded) {
-            this.tab2Loaded = true;
+        if (tabIndex === 2) {
             this.loadRftsCompleted();
         }
     }

@@ -382,8 +382,6 @@
                         <ng-template pTemplate="header">
                             <tr>
                                 <th>Course No</th>
-                                <th>Course Type</th>
-                                <th>Course Name</th>
                                 <th>From</th>
                                 <th>To</th>
                                 <th>Members</th>
@@ -393,8 +391,6 @@
                         <ng-template pTemplate="body" let-row>
                             <tr>
                                 <td>{{ row.courseNo }}</td>
-                                <td>{{ row.courseTypeName || 'N/A' }}</td>
-                                <td>{{ row.courseNameDisplay || 'N/A' }}</td>
                                 <td>{{ row.dateFrom ? (row.dateFrom | date:'dd/MM/yyyy') : '-' }}</td>
                                 <td>{{ row.dateTo ? (row.dateTo | date:'dd/MM/yyyy') : '-' }}</td>
                                 <td>{{ row.memberCount }}</td>
@@ -412,7 +408,7 @@
                         </ng-template>
                         <ng-template pTemplate="emptymessage">
                             <tr>
-                                <td [attr.colspan]="7" class="text-center py-4">No RFTS completed records found.</td>
+                                <td [attr.colspan]="5" class="text-center py-4">No RFTS completed records found.</td>
                             </tr>
                         </ng-template>
                     </p-table>

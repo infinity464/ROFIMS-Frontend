@@ -125,11 +125,11 @@
                                 </div>
                                 <div>
                                     <label class="font-semibold block mb-2 text-700">From</label>
-                                    <p-select formControlName="serviceFrom" [options]="yearOptions" optionLabel="label" optionValue="value" placeholder="From" styleClass="w-full" [filter]="true" appendTo="body"></p-select>
+                                    <p-datepicker formControlName="serviceFrom" dateFormat="dd/mm/yy" [showIcon]="true" placeholder="From" styleClass="w-full" [style]="{'width': '100%'}" appendTo="body"></p-datepicker>
                                 </div>
                                 <div>
                                     <label class="font-semibold block mb-2 text-700">To</label>
-                                    <p-select formControlName="serviceTo" [options]="yearOptions" optionLabel="label" optionValue="value" placeholder="To" styleClass="w-full" [filter]="true" appendTo="body" [disabled]="serviceForm.get('isCurrentlyActive')?.value"></p-select>
+                                    <p-datepicker formControlName="serviceTo" dateFormat="dd/mm/yy" [showIcon]="true" placeholder="To" styleClass="w-full" [style]="{'width': '100%'}" appendTo="body" [disabled]="serviceForm.get('isCurrentlyActive')?.value"></p-datepicker>
                                 </div>
                                 <div>
                                     <label class="font-semibold block mb-2 text-700">Currently active</label>
