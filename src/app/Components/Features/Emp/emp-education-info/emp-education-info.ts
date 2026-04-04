@@ -78,6 +78,40 @@ export class EmpEducationInfoComponent implements OnInit {
     newInstitutionTypeId: number | null = null;
     isSavingInstitution = false;
 
+    // Cascading institution filtering
+    allInstitutionData: any[] = [];
+    filteredInstitutionNameOptions: DropdownOption[] = [];
+
+    // Add Department/Group dialog
+    showDepartmentDialog = false;
+    newDepartmentNameEN = '';
+    newDepartmentNameBN = '';
+    isSavingDepartment = false;
+
+    // Add Subject dialog
+    showSubjectDialog = false;
+    newSubjectNameEN = '';
+    newSubjectNameBN = '';
+    isSavingSubject = false;
+
+    // Add Result/Grade dialog
+    showGradeDialog = false;
+    newGradeNameEN = '';
+    newGradeNameBN = '';
+    isSavingGrade = false;
+
+    // Add Qualification dialog
+    showQualificationDialog = false;
+    newQualificationNameEN = '';
+    newQualificationNameBN = '';
+    isSavingQualification = false;
+
+    // Add Board/University Type dialog
+    showBoardTypeDialog = false;
+    newBoardTypeNameEN = '';
+    newBoardTypeNameBN = '';
+    isSavingBoardType = false;
+
     constructor(
         private empService: EmpService,
         private educationInfoService: EducationInfoService,
@@ -119,7 +153,8 @@ export class EmpEducationInfoComponent implements OnInit {
             dateTo: [null],
             passingYear: [null],
             grade: [null],
-            gradePoint: ['']
+            gradePoint: [''],
+            remarks: ['']
         });
     }
 
@@ -140,7 +175,9 @@ export class EmpEducationInfoComponent implements OnInit {
                             this.institutionTypeOptions = opts;
                             break;
                         case 'EducationInstitution':
+                            this.allInstitutionData = data || [];
                             this.institutionNameOptions = opts;
+                            this.filteredInstitutionNameOptions = opts;
                             break;
                         case 'EducationalDepartment':
                             this.departmentOptions = opts;
@@ -258,6 +295,7 @@ export class EmpEducationInfoComponent implements OnInit {
         this.isEditMode = false;
         this.editingEducationId = null;
         this.fileRows = [];
+        this.filteredInstitutionNameOptions = this.institutionNameOptions;
         this.educationForm.reset({
             employeeId: this.selectedEmployeeId ?? 0,
             educationId: 0,
@@ -270,7 +308,8 @@ export class EmpEducationInfoComponent implements OnInit {
             dateTo: null,
             passingYear: null,
             grade: null,
-            gradePoint: ''
+            gradePoint: '',
+            remarks: ''
         });
         this.showInlineForm = true;
     }
@@ -281,6 +320,8 @@ export class EmpEducationInfoComponent implements OnInit {
         this.fileRows = this.parseFileRowsFromReferences(row.filesReferences);
         const dateFrom = row.dateFrom ? new Date(row.dateFrom) : null;
         const dateTo = row.dateTo ? new Date(row.dateTo) : null;
+        // Trigger institution filtering for edit mode
+        this.onInstitutionTypeChange(row.instituteType);
         this.educationForm.patchValue({
             employeeId: row.employeeId,
             educationId: row.educationId,
@@ -293,7 +334,8 @@ export class EmpEducationInfoComponent implements OnInit {
             dateTo,
             passingYear: row.passingYear,
             grade: row.grade,
-            gradePoint: row.gradePoint ?? ''
+            gradePoint: row.gradePoint ?? '',
+            remarks: row.remarks ?? ''
         });
         this.showInlineForm = true;
     }
@@ -330,7 +372,7 @@ export class EmpEducationInfoComponent implements OnInit {
                 passingYear: formValue.passingYear ?? null,
                 grade: formValue.grade ?? null,
                 gradePoint: formValue.gradePoint && String(formValue.gradePoint).trim() ? String(formValue.gradePoint).trim() : null,
-                remarks: null,
+                remarks: formValue.remarks && String(formValue.remarks).trim() ? String(formValue.remarks).trim() : null,
                 filesReferences: filesReferencesJson ?? undefined,
                 createdBy: 'system',
                 lastUpdatedBy: 'system'
@@ -424,6 +466,259 @@ export class EmpEducationInfoComponent implements OnInit {
         this.router.navigate(['/emp-list']);
     }
 
+    // --- Cascading: filter Institution Name by Institution Type ---
+    onInstitutionTypeChange(selectedTypeId: number | null): void {
+        if (!selectedTypeId) {
+            this.filteredInstitutionNameOptions = this.institutionNameOptions;
+            return;
+        }
+        const filtered = this.allInstitutionData
+            .filter((d: any) => d.parentCodeId === selectedTypeId)
+            .map((d: any) => ({
+                label: d.codeValueEN || d.displayCodeValueEN || String(d.codeId),
+                value: d.codeId
+            }));
+        // Fallback to all if no linked data exists
+        this.filteredInstitutionNameOptions = filtered.length > 0 ? filtered : this.institutionNameOptions;
+        // Clear institution if current value not in filtered list
+        const current = this.educationForm.get('instituteName')?.value;
+        if (current && !this.filteredInstitutionNameOptions.find(o => o.value === current)) {
+            this.educationForm.patchValue({ instituteName: null });
+        }
+    }
+
+    // --- Dynamic label: Group vs Department ---
+    get departmentLabel(): string {
+        const selectedQualification = this.educationForm?.get('examName')?.value;
+        if (!selectedQualification) return 'Department/Group';
+        const qualOption = this.qualificationOptions.find(o => o.value === selectedQualification);
+        const qualName = qualOption?.label?.toLowerCase() || '';
+        const groupLevelKeywords = ['ssc', 'hsc', 'dakhil', 'alim', 'secondary', 'psc', 'jsc', 'jdc'];
+        return groupLevelKeywords.some(kw => qualName.includes(kw)) ? 'Group' : 'Department';
+    }
+
+    get departmentPlaceholder(): string {
+        return this.departmentLabel === 'Group' ? 'Select Group' : 'Select Department';
+    }
+
+    // --- Add Department/Group dialog ---
+    openAddDepartmentDialog(): void {
+        this.newDepartmentNameEN = '';
+        this.newDepartmentNameBN = '';
+        this.showDepartmentDialog = true;
+    }
+
+    saveNewDepartment(): void {
+        if (!this.newDepartmentNameEN?.trim()) return;
+        this.isSavingDepartment = true;
+        const currentUser = this.sharedService.getCurrentUser();
+        const currentDateTime = this.sharedService.getCurrentDateTime();
+        const payload = {
+            codeId: 0, orgId: 0, codeType: 'EducationalDepartment',
+            codeValueEN: this.newDepartmentNameEN.trim(),
+            codeValueBN: this.newDepartmentNameBN?.trim() || '',
+            commCode: null, displayCodeValueEN: null, displayCodeValueBN: null,
+            sortOrder: null, level: null, parentCodeId: null, status: true,
+            createdBy: currentUser, createdDate: currentDateTime,
+            lastUpdatedBy: currentUser, lastupdate: currentDateTime
+        } as any;
+        this.masterBasicSetupService.create(payload).subscribe({
+            next: (res: any) => {
+                this.messageService.add({ severity: 'success', summary: 'Success', detail: `${this.departmentLabel} added successfully` });
+                this.showDepartmentDialog = false;
+                this.isSavingDepartment = false;
+                this.commonCodeService.getAllActiveCommonCodesType('EducationalDepartment').subscribe({
+                    next: (data) => {
+                        this.departmentOptions = (data || []).map((d: any) => ({
+                            label: d.codeValueEN || d.displayCodeValueEN || String(d.codeId), value: d.codeId
+                        }));
+                        const newId = res?.codeId || res?.CodeId;
+                        if (newId) this.educationForm.patchValue({ departmentName: newId });
+                    }
+                });
+            },
+            error: () => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: `Failed to add ${this.departmentLabel}` });
+                this.isSavingDepartment = false;
+            }
+        });
+    }
+
+    // --- Add Subject dialog ---
+    openAddSubjectDialog(): void {
+        this.newSubjectNameEN = '';
+        this.newSubjectNameBN = '';
+        this.showSubjectDialog = true;
+    }
+
+    saveNewSubject(): void {
+        if (!this.newSubjectNameEN?.trim()) return;
+        this.isSavingSubject = true;
+        const currentUser = this.sharedService.getCurrentUser();
+        const currentDateTime = this.sharedService.getCurrentDateTime();
+        const payload = {
+            codeId: 0, orgId: 0, codeType: 'EducationSubject',
+            codeValueEN: this.newSubjectNameEN.trim(),
+            codeValueBN: this.newSubjectNameBN?.trim() || '',
+            commCode: null, displayCodeValueEN: null, displayCodeValueBN: null,
+            sortOrder: null, level: null, parentCodeId: null, status: true,
+            createdBy: currentUser, createdDate: currentDateTime,
+            lastUpdatedBy: currentUser, lastupdate: currentDateTime
+        } as any;
+        this.masterBasicSetupService.create(payload).subscribe({
+            next: (res: any) => {
+                this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Subject added successfully' });
+                this.showSubjectDialog = false;
+                this.isSavingSubject = false;
+                this.commonCodeService.getAllActiveCommonCodesType('EducationSubject').subscribe({
+                    next: (data) => {
+                        this.subjectOptions = (data || []).map((d: any) => ({
+                            label: d.codeValueEN || d.displayCodeValueEN || String(d.codeId), value: d.codeId
+                        }));
+                        const newId = res?.codeId || res?.CodeId;
+                        if (newId) this.educationForm.patchValue({ subjectName: newId });
+                    }
+                });
+            },
+            error: () => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to add Subject' });
+                this.isSavingSubject = false;
+            }
+        });
+    }
+
+    // --- Add Qualification dialog ---
+    openAddQualificationDialog(): void {
+        this.newQualificationNameEN = '';
+        this.newQualificationNameBN = '';
+        this.showQualificationDialog = true;
+    }
+
+    saveNewQualification(): void {
+        if (!this.newQualificationNameEN?.trim()) return;
+        this.isSavingQualification = true;
+        const currentUser = this.sharedService.getCurrentUser();
+        const currentDateTime = this.sharedService.getCurrentDateTime();
+        const payload = {
+            codeId: 0, orgId: 0, codeType: 'EducationQualification',
+            codeValueEN: this.newQualificationNameEN.trim(),
+            codeValueBN: this.newQualificationNameBN?.trim() || '',
+            commCode: null, displayCodeValueEN: null, displayCodeValueBN: null,
+            sortOrder: null, level: null, parentCodeId: null, status: true,
+            createdBy: currentUser, createdDate: currentDateTime,
+            lastUpdatedBy: currentUser, lastupdate: currentDateTime
+        } as any;
+        this.masterBasicSetupService.create(payload).subscribe({
+            next: (res: any) => {
+                this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Qualification added successfully' });
+                this.showQualificationDialog = false;
+                this.isSavingQualification = false;
+                this.commonCodeService.getAllActiveCommonCodesType('EducationQualification').subscribe({
+                    next: (data) => {
+                        this.qualificationOptions = (data || []).map((d: any) => ({
+                            label: d.codeValueEN || d.displayCodeValueEN || String(d.codeId), value: d.codeId
+                        }));
+                        const newId = res?.codeId || res?.CodeId;
+                        if (newId) this.educationForm.patchValue({ examName: newId });
+                    }
+                });
+            },
+            error: () => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to add Qualification' });
+                this.isSavingQualification = false;
+            }
+        });
+    }
+
+    // --- Add Board/University Type dialog ---
+    openAddBoardTypeDialog(): void {
+        this.newBoardTypeNameEN = '';
+        this.newBoardTypeNameBN = '';
+        this.showBoardTypeDialog = true;
+    }
+
+    saveNewBoardType(): void {
+        if (!this.newBoardTypeNameEN?.trim()) return;
+        this.isSavingBoardType = true;
+        const currentUser = this.sharedService.getCurrentUser();
+        const currentDateTime = this.sharedService.getCurrentDateTime();
+        const payload = {
+            codeId: 0, orgId: 0, codeType: 'EducationInstitutionType',
+            codeValueEN: this.newBoardTypeNameEN.trim(),
+            codeValueBN: this.newBoardTypeNameBN?.trim() || '',
+            commCode: null, displayCodeValueEN: null, displayCodeValueBN: null,
+            sortOrder: null, level: null, parentCodeId: null, status: true,
+            createdBy: currentUser, createdDate: currentDateTime,
+            lastUpdatedBy: currentUser, lastupdate: currentDateTime
+        } as any;
+        this.masterBasicSetupService.create(payload).subscribe({
+            next: (res: any) => {
+                this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Board/University Type added successfully' });
+                this.showBoardTypeDialog = false;
+                this.isSavingBoardType = false;
+                this.commonCodeService.getAllActiveCommonCodesType('EducationInstitutionType').subscribe({
+                    next: (data) => {
+                        this.institutionTypeOptions = (data || []).map((d: any) => ({
+                            label: d.codeValueEN || d.displayCodeValueEN || String(d.codeId), value: d.codeId
+                        }));
+                        const newId = res?.codeId || res?.CodeId;
+                        if (newId) {
+                            this.educationForm.patchValue({ instituteType: newId });
+                            this.onInstitutionTypeChange(newId);
+                        }
+                    }
+                });
+            },
+            error: () => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to add Board/University Type' });
+                this.isSavingBoardType = false;
+            }
+        });
+    }
+
+    // --- Add Result/Grade dialog ---
+    openAddGradeDialog(): void {
+        this.newGradeNameEN = '';
+        this.newGradeNameBN = '';
+        this.showGradeDialog = true;
+    }
+
+    saveNewGrade(): void {
+        if (!this.newGradeNameEN?.trim()) return;
+        this.isSavingGrade = true;
+        const currentUser = this.sharedService.getCurrentUser();
+        const currentDateTime = this.sharedService.getCurrentDateTime();
+        const payload = {
+            codeId: 0, orgId: 0, codeType: 'EducationResult',
+            codeValueEN: this.newGradeNameEN.trim(),
+            codeValueBN: this.newGradeNameBN?.trim() || '',
+            commCode: null, displayCodeValueEN: null, displayCodeValueBN: null,
+            sortOrder: null, level: null, parentCodeId: null, status: true,
+            createdBy: currentUser, createdDate: currentDateTime,
+            lastUpdatedBy: currentUser, lastupdate: currentDateTime
+        } as any;
+        this.masterBasicSetupService.create(payload).subscribe({
+            next: (res: any) => {
+                this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Result/Grade added successfully' });
+                this.showGradeDialog = false;
+                this.isSavingGrade = false;
+                this.commonCodeService.getAllActiveCommonCodesType('EducationResult').subscribe({
+                    next: (data) => {
+                        this.gradeOptions = (data || []).map((d: any) => ({
+                            label: d.codeValueEN || d.displayCodeValueEN || String(d.codeId), value: d.codeId
+                        }));
+                        const newId = res?.codeId || res?.CodeId;
+                        if (newId) this.educationForm.patchValue({ grade: newId });
+                    }
+                });
+            },
+            error: () => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to add Result/Grade' });
+                this.isSavingGrade = false;
+            }
+        });
+    }
+
     openAddInstitutionDialog(): void {
         this.newInstitutionNameEN = '';
         this.newInstitutionNameBN = '';
@@ -466,10 +761,14 @@ export class EmpEducationInfoComponent implements OnInit {
                 // Reload institution options and auto-select
                 this.commonCodeService.getAllActiveCommonCodesType('EducationInstitution').subscribe({
                     next: (data) => {
+                        this.allInstitutionData = data || [];
                         this.institutionNameOptions = (data || []).map((d: any) => ({
                             label: d.codeValueEN || d.displayCodeValueEN || String(d.codeId),
                             value: d.codeId
                         }));
+                        // Re-apply filter based on current institution type
+                        const currentType = this.educationForm.get('instituteType')?.value;
+                        this.onInstitutionTypeChange(currentType);
                         const newId = res?.codeId || res?.CodeId;
                         if (newId) {
                             this.educationForm.patchValue({ instituteName: newId });
