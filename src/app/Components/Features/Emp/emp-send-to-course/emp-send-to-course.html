@@ -54,6 +54,41 @@
     </ng-template>
 </p-dialog>
 
+<!-- RFTS Completed - View Members Modal -->
+<p-dialog [header]="'Members - ' + (selectedRftsGroup?.courseNo ?? '')" [(visible)]="showRftsMembersModal" [modal]="true" [style]="{width: '800px'}" [closable]="true">
+    @if (selectedRftsGroup) {
+        <p-table
+            [value]="selectedRftsGroup.members"
+            styleClass="p-datatable-sm p-datatable-striped"
+            [paginator]="selectedRftsGroup.members.length > 10"
+            [rows]="10"
+            [rowsPerPageOptions]="[10, 20, 50]">
+            <ng-template pTemplate="header">
+                <tr>
+                    <th>Name</th>
+                    <th>RAB ID</th>
+                    <th>Service ID</th>
+                    <th>Rank</th>
+                    <th>Corps</th>
+                    <th>Mother Org</th>
+                    <th>Result</th>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-row>
+                <tr>
+                    <td>{{ row.fullNameEN || 'N/A' }}</td>
+                    <td>{{ row.rabId || 'N/A' }}</td>
+                    <td>{{ row.serviceId || 'N/A' }}</td>
+                    <td>{{ row.rankName || 'N/A' }}</td>
+                    <td>{{ row.corpsName || 'N/A' }}</td>
+                    <td>{{ row.motherUnitName || 'N/A' }}</td>
+                    <td>{{ row.result || 'N/A' }}</td>
+                </tr>
+            </ng-template>
+        </p-table>
+    }
+</p-dialog>
+
 <p-fluid>
     <p-card>
         <ng-template pTemplate="header">
@@ -63,7 +98,7 @@
         </ng-template>
        
 
-        <p-tabs [(value)]="activeTab" class="mt-2">
+        <p-tabs [(value)]="activeTab" (valueChange)="onTabChange($event)" class="mt-2">
             <p-tablist>
                 <p-tab [value]="0">Select Employee RFTS</p-tab>
                 <p-tab [value]="1">Final Approval</p-tab>
@@ -338,33 +373,41 @@
                 <!-- Tab 2: RFTS Completed -->
                 <p-tabpanel [value]="2">
                     <p-table
-                        [value]="rftsCompletedList"
+                        [value]="rftsGroupedList"
                         [loading]="isLoadingCompleted"
                         styleClass="p-datatable-sm p-datatable-striped"
                         [paginator]="true"
                         [rows]="10"
-                        [rowsPerPageOptions]="[10, 20, 50]"
-                        [globalFilterFields]="['fullNameEN', 'courseNo', 'rabId', 'serviceId', 'rankName', 'corpsName', 'motherUnitName']">
+                        [rowsPerPageOptions]="[10, 20, 50]">
                         <ng-template pTemplate="header">
                             <tr>
-                                <th>Name</th>
                                 <th>Course No</th>
-                                <th>RAB ID</th>
-                                <th>Service ID</th>
-                                <th>Rank</th>
-                                <th>Corps</th>
-                                <th>Mother Org</th>
+                                <th>Course Type</th>
+                                <th>Course Name</th>
+                                <th>From</th>
+                                <th>To</th>
+                                <th>Members</th>
+                                <th style="width: 80px">Action</th>
                             </tr>
                         </ng-template>
                         <ng-template pTemplate="body" let-row>
                             <tr>
-                                <td>{{ row.fullNameEN || 'N/A' }}</td>
-                                <td>{{ row.courseNo || 'N/A' }}</td>
-                                <td>{{ row.rabId || 'N/A' }}</td>
-                                <td>{{ row.serviceId || 'N/A' }}</td>
-                                <td>{{ row.rankName || 'N/A' }}</td>
-                                <td>{{ row.corpsName || 'N/A' }}</td>
-                                <td>{{ row.motherUnitName || 'N/A' }}</td>
+                                <td>{{ row.courseNo }}</td>
+                                <td>{{ row.courseTypeName || 'N/A' }}</td>
+                                <td>{{ row.courseNameDisplay || 'N/A' }}</td>
+                                <td>{{ row.dateFrom ? (row.dateFrom | date:'dd/MM/yyyy') : '-' }}</td>
+                                <td>{{ row.dateTo ? (row.dateTo | date:'dd/MM/yyyy') : '-' }}</td>
+                                <td>{{ row.memberCount }}</td>
+                                <td>
+                                    <p-button
+                                        icon="pi pi-eye"
+                                        severity="info"
+                                        [text]="true"
+                                        size="small"
+                                        pTooltip="View Members"
+                                        (onClick)="viewRftsMembers(row)">
+                                    </p-button>
+                                </td>
                             </tr>
                         </ng-template>
                         <ng-template pTemplate="emptymessage">

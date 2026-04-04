@@ -63,6 +63,8 @@ interface TrainingInstituteOption extends DropdownOption {
 })
 export class EmpSendToCourseComponent implements OnInit {
     activeTab = 0;
+    private tab1Loaded = false;
+    private tab2Loaded = false;
 
     /** Tab (a): Create Draft */
     courseNo = '';
@@ -104,7 +106,10 @@ export class EmpSendToCourseComponent implements OnInit {
 
     /** Tab (c): RFTS Completed */
     rftsCompletedList: RftsTrainingRow[] = [];
+    rftsGroupedList: { courseNo: string; courseTypeName: string | null; courseNameDisplay: string | null; dateFrom: string | null; dateTo: string | null; memberCount: number; members: RftsTrainingRow[] }[] = [];
     isLoadingCompleted = false;
+    showRftsMembersModal = false;
+    selectedRftsGroup: { courseNo: string; members: RftsTrainingRow[] } | null = null;
 
     /** Send to Course modal */
     showSendCourseModal = false;
@@ -128,12 +133,10 @@ export class EmpSendToCourseComponent implements OnInit {
     }
 
     ngOnInit(): void {
+        // Tab 0 (default) data only
         this.loadCourseOptions();
-        this.loadDraftLists();
-        this.loadSendCourseDropdowns();
         this.loadFilterOptions();
         this.loadEmployeesWithFilters();
-        this.loadRftsCompleted();
         this.courseForm.get('trainingInstitueName')?.valueChanges.subscribe((instituteId) => {
             const inst = this.trainingInstituteOptions.find((o) => o.value === instituteId);
             const countryLabel = inst?.countryId != null ? this.getOptionLabel(this.countryOptions, inst.countryId) : '';
@@ -145,6 +148,18 @@ export class EmpSendToCourseComponent implements OnInit {
                 { emitEvent: false }
             );
         });
+    }
+
+    onTabChange(tabIndex: string | number | undefined): void {
+        if (tabIndex === 1 && !this.tab1Loaded) {
+            this.tab1Loaded = true;
+            this.loadDraftLists();
+            this.loadSendCourseDropdowns();
+        }
+        if (tabIndex === 2 && !this.tab2Loaded) {
+            this.tab2Loaded = true;
+            this.loadRftsCompleted();
+        }
     }
 
     initCourseForm(): void {
@@ -681,13 +696,38 @@ export class EmpSendToCourseComponent implements OnInit {
         this.draftCourseService.getAllRftsTraining().subscribe({
             next: (list) => {
                 this.rftsCompletedList = list ?? [];
+                this.groupRftsCompleted();
                 this.isLoadingCompleted = false;
             },
             error: () => {
                 this.rftsCompletedList = [];
+                this.rftsGroupedList = [];
                 this.isLoadingCompleted = false;
             }
         });
+    }
+
+    private groupRftsCompleted(): void {
+        const map = new Map<string, RftsTrainingRow[]>();
+        for (const row of this.rftsCompletedList) {
+            const key = row.courseNo || 'N/A';
+            if (!map.has(key)) map.set(key, []);
+            map.get(key)!.push(row);
+        }
+        this.rftsGroupedList = Array.from(map.entries()).map(([courseNo, members]) => ({
+            courseNo,
+            courseTypeName: members[0].courseTypeName,
+            courseNameDisplay: members[0].courseNameDisplay,
+            dateFrom: members[0].dateFrom,
+            dateTo: members[0].dateTo,
+            memberCount: members.length,
+            members
+        }));
+    }
+
+    viewRftsMembers(group: { courseNo: string; members: RftsTrainingRow[] }): void {
+        this.selectedRftsGroup = group;
+        this.showRftsMembersModal = true;
     }
 
     private refreshSelectedDraft(): void {
