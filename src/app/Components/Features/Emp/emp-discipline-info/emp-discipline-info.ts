@@ -92,6 +92,13 @@ export class EmpDisciplineInfoComponent implements OnInit {
     newBriefStatementBN = '';
     isSavingBriefStatement = false;
 
+    // Punishment Type dialog
+    showPunishmentTypeDialog = false;
+    newPunishmentTypeEN = '';
+    newPunishmentTypeBN = '';
+    isSavingPunishmentType = false;
+    punishmentTypeTargetField: 'punishmentTypeRAB' | 'punishmentTypeMotherOrg' = 'punishmentTypeRAB';
+
     constructor(
         private fb: FormBuilder,
         private empService: EmpService,
@@ -502,6 +509,59 @@ export class EmpDisciplineInfoComponent implements OnInit {
             error: () => {
                 this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to add Brief Statement' });
                 this.isSavingBriefStatement = false;
+            }
+        });
+    }
+
+    openAddPunishmentTypeDialog(targetField: 'punishmentTypeRAB' | 'punishmentTypeMotherOrg'): void {
+        this.punishmentTypeTargetField = targetField;
+        this.newPunishmentTypeEN = '';
+        this.newPunishmentTypeBN = '';
+        this.showPunishmentTypeDialog = true;
+    }
+
+    saveNewPunishmentType(): void {
+        if (!this.newPunishmentTypeEN?.trim()) return;
+        this.isSavingPunishmentType = true;
+        const currentUser = this.sharedService.getCurrentUser();
+        const currentDateTime = this.sharedService.getCurrentDateTime();
+        const payload = {
+            codeId: 0,
+            orgId: 0,
+            codeType: 'PunishmentType',
+            codeValueEN: this.newPunishmentTypeEN.trim(),
+            codeValueBN: this.newPunishmentTypeBN?.trim() || '',
+            commCode: null,
+            displayCodeValueEN: null,
+            displayCodeValueBN: null,
+            sortOrder: null,
+            level: null,
+            parentCodeId: null,
+            status: true,
+            createdBy: currentUser,
+            createdDate: currentDateTime,
+            lastUpdatedBy: currentUser,
+            lastupdate: currentDateTime
+        } as any;
+
+        this.masterBasicSetupService.create(payload).subscribe({
+            next: (res: any) => {
+                this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Punishment Type added successfully' });
+                this.showPunishmentTypeDialog = false;
+                this.isSavingPunishmentType = false;
+                this.commonCodeService.getAllActiveCommonCodesType('PunishmentType').pipe(catchError(() => of([] as any[]))).subscribe({
+                    next: (list: any[]) => {
+                        this.punishmentTypeOptions = (Array.isArray(list) ? list : []).map((item: any) => this.mapCommonCodeToOption(item));
+                        const newId = res?.codeId ?? res?.CodeId;
+                        if (newId) {
+                            this.disciplineForm.patchValue({ [this.punishmentTypeTargetField]: newId });
+                        }
+                    }
+                });
+            },
+            error: () => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to add Punishment Type' });
+                this.isSavingPunishmentType = false;
             }
         });
     }
