@@ -15,6 +15,7 @@ import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor
 import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/file-references-form/file-references-form';
 import { NotesheetPreviewBase } from '../notesheet-preview-base';
 import { NoteSheetCurrentStatus, NoteSheetOperationTypeOptions, ApprovalStatus } from '@/models/enums';
+import { DraftPostingEmployeeRow } from '@/models/posting.model';
 import { environment } from '@/Core/Environments/environment';
 import { forkJoin } from 'rxjs';
 import {
@@ -348,7 +349,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
                 : "'Times New Roman',serif";
 
             const container = document.createElement('div');
-            container.style.cssText = 'position:absolute;left:-9999px;top:0;width:720px;padding:14mm 10mm;font-size:12pt;line-height:1.6;background:#fff;z-index:-1;overflow:visible;box-sizing:border-box';
+            container.style.cssText = 'position:absolute;left:-9999px;top:0;width:720px;padding:14mm 10mm;font-size:10pt;line-height:1.6;background:#fff;z-index:-1;overflow:visible;box-sizing:border-box';
             container.style.fontFamily = fontFamily;
             container.innerHTML = `
                 <style>
@@ -559,12 +560,19 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
 
         let mainContent = '';
 
-        // Subject removed for posting notesheet
+        // Org header
+        mainContent += `<div style="text-align:center;padding:8px 16px 4px;font-weight:700;line-height:1.5;font-size:10pt">`;
+        mainContent += `<div>${esc(this.getOrgHeaderLine1())}</div>`;
+        mainContent += `<div style="border-bottom:1.5px solid #000;display:inline-block;padding-bottom:2px">${esc(this.getOrgHeaderLine2())}</div>`;
+        mainContent += `</div>`;
 
-        // Reference/Date removed for posting notesheet
+        // Notesheet number
+        if (this.noteSheet?.noteSheetNo) {
+            mainContent += `<div style="padding:4px 16px 2px;font-size:10pt">${esc(this.noteSheet.noteSheetNo)}</div>`;
+        }
 
         // Main text
-        mainContent += '<div style="padding:10px 16px 10px 20px;font-size:12pt;line-height:1.85;display:flex;gap:8px">';
+        mainContent += '<div style="padding:10px 16px 10px 20px;font-size:10pt;line-height:1.85;display:flex;gap:8px">';
         mainContent += `<span style="font-weight:700;min-width:30px;flex-shrink:0">${esc(model.mainSerialText)}</span>`;
         mainContent += '<div style="flex:1;min-width:0">';
         model.mainBlocks.forEach(b => { mainContent += block(b); });
@@ -578,7 +586,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
             const bodyRows = this.postingEmployees.map((emp, i) => {
                 const ser = bn ? this.toBanglaDigits(i + 1) : String(i + 1);
                 const transferUnit = bn ? (this.unitLabelMapBN[emp.transferRabUnitId!] || emp.transferRabUnitName || '') : (emp.transferRabUnitName ?? '');
-                const vals = [ser, emp.serviceId??'', bn?(emp.rankNameBN||emp.rankName||''):(emp.rankName??''), bn?(emp.tradeNameBN||emp.tradeName||''):(emp.tradeName??''), bn?(emp.fullNameBN||emp.fullNameEN||''):(emp.fullNameEN??''), bn?(emp.motherUnitNameBN||emp.motherUnitName||''):(emp.motherUnitName??''), bn?(emp.permanentDistrictNameBN||emp.permanentDistrictName||''):(emp.permanentDistrictName??''), bn?(emp.motherOrgLocationNameBN||emp.motherOrgLocationName||''):(emp.motherOrgLocationName??''), transferUnit, emp.remarks??''];
+                const vals = [ser, this.getServiceIdDisplay(emp), bn?(emp.rankNameBN||emp.rankName||''):(emp.rankName??''), bn?(emp.tradeNameBN||emp.tradeName||''):(emp.tradeName??''), bn?(emp.fullNameBN||emp.fullNameEN||''):(emp.fullNameEN??''), bn?(emp.motherUnitNameBN||emp.motherUnitName||''):(emp.motherUnitName??''), bn?(emp.permanentDistrictNameBN||emp.permanentDistrictName||''):(emp.permanentDistrictName??''), bn?(emp.motherOrgLocationNameBN||emp.motherOrgLocationName||''):(emp.motherOrgLocationName??''), transferUnit, emp.remarks??''];
                 return `<tr>${vals.map(v => `<td style="border:1px solid #000;padding:5px 8px;font-size:9pt">${esc(v)}</td>`).join('')}</tr>`;
             }).join('');
             let tfoot = '';
@@ -589,11 +597,11 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
         }
 
         if (model.note && !(this.isPostingType() && this.postingEmployees.length > 0)) {
-            mainContent += `<div style="padding:5px 16px 5px 20px;font-size:12pt"><strong>${model.isBangla ? 'নোটঃ ' : 'Note: '}</strong>${esc(model.note)}</div>`;
+            mainContent += `<div style="padding:5px 16px 5px 20px;font-size:10pt"><strong>${model.isBangla ? 'নোটঃ ' : 'Note: '}</strong>${esc(model.note)}</div>`;
         }
 
         // Closing text
-        if (model.closingText) mainContent += `<div style="padding:10px 16px 10px 20px;font-size:12pt;text-indent:2em">${esc(model.closingText)}</div>`;
+        if (model.closingText) mainContent += `<div style="padding:10px 16px 10px 20px;font-size:10pt;text-indent:2em">${esc(model.closingText)}</div>`;
 
         // Initiator
         if (model.initiator) {
@@ -612,8 +620,8 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
         // Approvers
         model.approvers.forEach(ap => {
             mainContent += '<div style="padding:6px 16px 10px 20px;min-height:60px;margin-top:12px">';
-            mainContent += `<div style="text-decoration:underline;font-size:12pt;margin-bottom:6px">${esc(ap.role)}</div>`;
-            mainContent += `<div style="font-size:12pt"><strong>${esc(ap.serialText)}</strong>${ap.remark ? `<em> ${esc(ap.remark)}</em>` : ''}</div>`;
+            mainContent += `<div style="text-decoration:underline;font-size:10pt;margin-bottom:6px">${esc(ap.role)}</div>`;
+            mainContent += `<div style="font-size:10pt"><strong>${esc(ap.serialText)}</strong>${ap.remark ? `<em> ${esc(ap.remark)}</em>` : ''}</div>`;
             if (ap.signatureDataUrl) {
                 mainContent += `<img src="${ap.signatureDataUrl}" style="max-width:80px;max-height:32px;display:block;margin:8px auto 0" />`;
             } else {
@@ -625,7 +633,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
 
         return `
 <div style="text-align:center;margin-bottom:8px">
-  <div style="font-size:16pt;font-weight:bold;text-decoration:underline;letter-spacing:2px">NOTE SHEET</div>
+  <div style="font-size:12pt;font-weight:bold;text-decoration:underline;letter-spacing:2px">NOTE SHEET</div>
   <div style="font-size:12pt;text-decoration:underline;margin-top:2px">মন্তব্য পত্র</div>
 </div>
 <div style="border:1.5px solid #000;width:100%">
@@ -640,7 +648,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
         const font = bn
             ? { ascii: 'Nirmala UI', hAnsi: 'Nirmala UI', cs: 'Nirmala UI', hint: 'cs' as const }
             : 'Times New Roman';
-        const csSize = bn ? 24 : undefined;
+        const csSize = bn ? 20 : undefined;
         const lang = bn ? { value: 'bn-BD', bidirectional: 'bn-BD' } : undefined;
         const thickBorder = { style: BorderStyle.SINGLE, size: 3, color: '000000' };
         const thinBorder = { style: BorderStyle.SINGLE, size: 1, color: '000000' };
@@ -648,12 +656,28 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
 
         const mainChildren: (Paragraph | Table)[] = [];
 
-        // Subject removed for posting notesheet
+        // Org header
+        mainChildren.push(new Paragraph({
+            children: [new TextRun({ text: this.getOrgHeaderLine1(), bold: true, size: 20, sizeComplexScript: 20, font, language: lang })],
+            alignment: AlignmentType.CENTER, spacing: { before: 80, after: 0 }
+        }));
+        mainChildren.push(new Paragraph({
+            children: [new TextRun({ text: this.getOrgHeaderLine2(), bold: true, size: 20, sizeComplexScript: 20, font, language: lang, underline: {} })],
+            alignment: AlignmentType.CENTER, spacing: { before: 0, after: 100 }
+        }));
 
-        // Reference/Date removed for posting notesheet
+        // Notesheet number
+        if (this.noteSheet?.noteSheetNo) {
+            mainChildren.push(new Paragraph({
+                children: [
+                    new TextRun({ text: this.noteSheet.noteSheetNo, size: 20, sizeComplexScript: 20, font, language: lang })
+                ],
+                indent: { left: 240 }, spacing: { before: 60, after: 40 }
+            }));
+        }
 
         mainChildren.push(new Paragraph({
-            children: [new TextRun({ text: model.mainSerialText, bold: true, size: 24, sizeComplexScript: csSize, font, language: lang })],
+            children: [new TextRun({ text: model.mainSerialText, bold: true, size: 20, sizeComplexScript: csSize, font, language: lang })],
             indent: { left: 240 }, spacing: { before: 160, after: 40 }
         }));
         mainChildren.push(...this.contentBlocksToDocx(model.mainBlocks, font, bn));
@@ -667,7 +691,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
                 borders: cellBorders, width: { size: cw, type: WidthType.DXA },
             })) });
             const dataRows = this.postingEmployees.map((emp, i) => new TableRow({ children: [
-                bn ? this.toBanglaDigits(i + 1) : String(i + 1), emp.serviceId??'',
+                bn ? this.toBanglaDigits(i + 1) : String(i + 1), this.getServiceIdDisplay(emp),
                 bn?(emp.rankNameBN||emp.rankName||''):(emp.rankName??''),
                 bn?(emp.tradeNameBN||emp.tradeName||''):(emp.tradeName??''),
                 bn?(emp.fullNameBN||emp.fullNameEN||''):(emp.fullNameEN??''),
@@ -692,8 +716,8 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
         if (model.note && !(this.isPostingType() && this.postingEmployees.length > 0)) {
             mainChildren.push(new Paragraph({
                 children: [
-                    new TextRun({ text: bn ? 'নোটঃ ' : 'Note: ', bold: true, size: 24, sizeComplexScript: csSize, font, language: lang }),
-                    new TextRun({ text: model.note, size: 24, sizeComplexScript: csSize, font, language: lang })
+                    new TextRun({ text: bn ? 'নোটঃ ' : 'Note: ', bold: true, size: 20, sizeComplexScript: csSize, font, language: lang }),
+                    new TextRun({ text: model.note, size: 20, sizeComplexScript: csSize, font, language: lang })
                 ],
                 indent: { left: 240 }, spacing: { before: 80, after: 80 }
             }));
@@ -701,7 +725,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
 
         if (model.closingText) {
             mainChildren.push(new Paragraph({
-                children: [new TextRun({ text: model.closingText, size: 24, sizeComplexScript: csSize, font, language: lang })],
+                children: [new TextRun({ text: model.closingText, size: 20, sizeComplexScript: csSize, font, language: lang })],
                 indent: { left: 240, firstLine: 480 }, spacing: { before: 200 }
             }));
         }
@@ -743,11 +767,11 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
         // Approvers
         for (const ap of model.approvers) {
             mainChildren.push(new Paragraph({
-                children: [new TextRun({ text: ap.role, underline: {}, size: 24, sizeComplexScript: csSize, font, language: lang })],
+                children: [new TextRun({ text: ap.role, underline: {}, size: 20, sizeComplexScript: csSize, font, language: lang })],
                 indent: { left: 240 }, spacing: { before: 280 }
             }));
-            const runs: TextRun[] = [new TextRun({ text: ap.serialText, bold: true, size: 24, sizeComplexScript: csSize, font, language: lang })];
-            if (ap.remark) runs.push(new TextRun({ text: ` ${ap.remark}`, italics: true, size: 24, sizeComplexScript: csSize, font, language: lang }));
+            const runs: TextRun[] = [new TextRun({ text: ap.serialText, bold: true, size: 20, sizeComplexScript: csSize, font, language: lang })];
+            if (ap.remark) runs.push(new TextRun({ text: ` ${ap.remark}`, italics: true, size: 20, sizeComplexScript: csSize, font, language: lang }));
             mainChildren.push(new Paragraph({ children: runs, indent: { left: 240 } }));
             if (ap.signatureDataUrl) {
                 try {
@@ -792,7 +816,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
 
         const docChildren: (Paragraph | Table)[] = [];
         docChildren.push(new Paragraph({
-            children: [new TextRun({ text: 'NOTE SHEET', bold: true, underline: {}, size: 32, font: 'Times New Roman' })],
+            children: [new TextRun({ text: 'NOTE SHEET', bold: true, underline: {}, size: 24, font: 'Times New Roman' })],
             alignment: AlignmentType.CENTER, spacing: { after: 40 }, keepNext: true
         }));
         docChildren.push(new Paragraph({
@@ -820,7 +844,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
         const thinBorder = { style: BorderStyle.SINGLE, size: 1, color: '000000' };
         const cellBorders = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
         const lang = bn ? { value: 'bn-BD', bidirectional: 'bn-BD' } : undefined;
-        const csSize = bn ? 24 : undefined;
+        const csSize = bn ? 20 : undefined;
 
         for (const b of blocks) {
             if (b.type === 'table' && b.rows?.length) {
@@ -847,7 +871,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
                 else if (b.alignment === 'justify') align = AlignmentType.JUSTIFIED;
                 const indent = b.indent === 'list' ? { left: 720 } : { left: 480 };
                 const paraOpts: Record<string, unknown> = {
-                    children: [new TextRun({ text: b.text, bold: b.bold, italics: b.italic, size: 24, sizeComplexScript: csSize, font, language: lang })],
+                    children: [new TextRun({ text: b.text, bold: b.bold, italics: b.italic, size: 20, sizeComplexScript: csSize, font, language: lang })],
                     indent,
                     spacing: { after: b.indent === 'list' ? 60 : 80 }
                 };
@@ -892,6 +916,19 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
     private toBanglaDigits(num: number): string {
         const d = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
         return String(num).replace(/\d/g, c => d[+c]);
+    }
+
+    private toBanglaDigitsStr(str: string): string {
+        const d = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+        return str.replace(/\d/g, c => d[+c]);
+    }
+
+    getServiceIdDisplay(emp: DraftPostingEmployeeRow): string {
+        const bn = !this.isEnglish();
+        const sid = emp.serviceId || '';
+        const prefix = bn ? (emp.prefixNameBN || emp.prefixName || '') : (emp.prefixName || '');
+        const displayId = bn && sid ? this.toBanglaDigitsStr(sid) : sid;
+        return prefix ? `${prefix}-${displayId}` : (displayId || '-');
     }
 
     private base64ToBytes(dataUrl: string): Uint8Array {

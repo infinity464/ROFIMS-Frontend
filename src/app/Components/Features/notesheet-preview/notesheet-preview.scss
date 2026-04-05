@@ -46,7 +46,7 @@
     box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
     box-sizing: border-box;
     font-family: 'Times New Roman', Times, serif;
-    font-size: 12pt;
+    font-size: 10pt;
     color: #000;
     line-height: 1.7;
     position: relative;
@@ -60,7 +60,7 @@
     position: absolute;
     top: 10mm;
     right: 10mm;
-    font-size: 12pt;
+    font-size: 10pt;
 }
 
 /* ── Title block (above the box) ─────────────────── */
@@ -69,7 +69,7 @@
     margin-bottom: 8px;
 }
 .ns-title-en {
-    font-size: 16pt;
+    font-size: 12pt;
     font-weight: bold;
     text-decoration: underline;
     letter-spacing: 2px;
@@ -110,7 +110,7 @@
 /* Header rows (subject + reference) */
 .ns-cell-subject {
     padding: 7px 16px 7px 20px;
-    font-size: 12pt;
+    font-size: 10pt;
     font-weight: bold;
     text-decoration: underline;
 }
@@ -146,7 +146,7 @@
 
 .ns-cell-ref {
     padding: 5px 16px 5px 20px;
-    font-size: 12pt;
+    font-size: 10pt;
     display: flex;
     align-items: flex-start;
     flex-wrap: wrap;
@@ -167,7 +167,7 @@
     display: flex;
     gap: 8px;
     padding: 10px 16px 10px 20px;
-    font-size: 12pt;
+    font-size: 10pt;
     line-height: 1.85;
 }
 .ns-para-no {
@@ -230,7 +230,7 @@
 /* ── Ex-BD Leave details ──────────────────────────── */
 .ns-exbd-info {
     padding: 4px 16px 10px 56px;
-    font-size: 12pt;
+    font-size: 10pt;
 }
 .ns-exbd-row {
     display: flex;
@@ -275,7 +275,7 @@
 /* ── Note ─────────────────────────────────────────── */
 .ns-note {
     padding: 6px 16px 6px 20px;
-    font-size: 12pt;
+    font-size: 10pt;
     border-top: 1px dashed #aaa;
 }
 
@@ -287,7 +287,7 @@
     gap: 10px;
 }
 .ns-closing-text {
-    font-size: 12pt;
+    font-size: 10pt;
     text-indent: 2em;
 }
 .ns-initiator-sig {
@@ -310,7 +310,7 @@
     min-height: 90px;
 }
 .ns-approver-role {
-    font-size: 12pt;
+    font-size: 10pt;
     text-decoration: underline;
     margin-bottom: 6px;
 }
@@ -328,12 +328,12 @@
 .ns-approver-left {
     display: flex;
     gap: 6px;
-    font-size: 12pt;
+    font-size: 10pt;
     flex-wrap: wrap;
     align-items: flex-start;
 }
 .ns-approver-remark {
-    font-size: 12pt;
+    font-size: 10pt;
     font-style: italic;
 }
 .ns-approver-sig-area {
@@ -352,14 +352,14 @@
     margin: 0 auto 4px;
 }
 .ns-sig-paren {
-    font-size: 11pt;
+    font-size: 10pt;
     margin-bottom: 2px;
 }
 .ns-sig-appoint {
-    font-size: 11pt;
+    font-size: 10pt;
 }
 .ns-sig-date {
-    font-size: 11pt;
+    font-size: 10pt;
     margin-top: 4px;
 }
 
@@ -378,7 +378,7 @@
     }
 
     input, textarea {
-        font-size: 12pt;
+        font-size: 10pt;
         font-family: 'Times New Roman', Times, serif;
     }
 

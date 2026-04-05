@@ -359,6 +359,14 @@ export abstract class NotesheetPreviewBase implements OnInit {
         return '';
     }
 
+    /** Returns the organizational header lines for the notesheet (inside the bordered box, centered). */
+    getOrgHeaderLine1(): string {
+        return this.isEnglish() ? 'RAB Forces Headquarters' : 'র‍্যাব ফোর্সেস সদর দপ্তর';
+    }
+    getOrgHeaderLine2(): string {
+        return this.isEnglish() ? 'Administration & Finance Wing (Personnel Branch)' : 'প্রশাসন ও অর্থ উইং (পার্সোনেল শাখা)';
+    }
+
     serial(n: number): string {
         if (this.isEnglish()) return `${n}.`;
         const bn = ['০','১','২','৩','৪','৫','৬','৭','৮','৯'];
@@ -566,7 +574,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
         const runProps: IRunPropertiesOptions = {
             font: { ascii: 'Times New Roman', hAnsi: 'Times New Roman', eastAsia: 'Times New Roman', cs: 'Nirmala UI' },
             language: { value: lang, eastAsia: lang, bidirectional: lang },
-            size: 24,  // 12pt = 24 half-points
+            size: 20,  // 10pt = 20 half-points
         };
         const thinBorder = { style: BorderStyle.SINGLE, size: 1, color: '000000' };
         const cellBorders = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
@@ -639,7 +647,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
 
         // Title
         children.push(new Paragraph({
-            children: [new TextRun({ text: 'NOTE SHEET', ...runProps, size: 32, bold: true, underline: {} })],
+            children: [new TextRun({ text: 'NOTE SHEET', ...runProps, size: 24, bold: true, underline: {} })],
             alignment: AlignmentType.CENTER, spacing: { after: 40 },
         }));
         children.push(new Paragraph({
