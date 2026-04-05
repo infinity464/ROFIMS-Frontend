@@ -83,6 +83,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     editFinalApproverId: number | null = null;
     editTextType: string = 'en';
     editOperationType: string | null = null;
+    editParagraphs: string[] = [];
 
     // ── Dropdown options ─────────────────────────────────────
     textTypeOptions = [
@@ -161,6 +162,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
 
         this.editTextType = (this.noteSheet.textType ?? 0) === 1 ? 'bn' : 'en';
         this.editOperationType = this.noteSheet.noteSheetOperationType ?? null;
+        this.editParagraphs = [...this.parsedParagraphs];
 
         this.fileRows = this.parseFileReferences();
 
@@ -186,7 +188,16 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     cancelEdit(): void {
         this.editing = false;
         this.fileRows = [];
+        this.editParagraphs = [];
         this.lastMeasuredHeight = 0; // force pagination recalculation
+    }
+
+    addParagraph(): void {
+        this.editParagraphs.push('');
+    }
+
+    removeParagraph(index: number): void {
+        this.editParagraphs.splice(index, 1);
     }
 
     // ── File references handlers ─────────────────────────────
@@ -245,6 +256,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
                 note: this.editNote || null,
                 textType: this.editTextType === 'bn' ? 1 : 0,
                 noteSheetOperationType: this.editOperationType,
+                paragraphText: this.editParagraphs.some(p => p.trim()) ? JSON.stringify(this.editParagraphs.filter(p => p.trim())) : null,
                 noteSheetDate: this.editNoteSheetDate ? this.formatDateOnly(this.editNoteSheetDate) : this.noteSheet!.noteSheetDate,
                 initiatorId: this.editInitiatorId ?? 0,
                 recommendersJson,
@@ -501,6 +513,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
             };
         }
 
+        const paraOffset = this.parsedParagraphs.length;
         for (let i = 0; i < this.approversDetails.length; i++) {
             const a = this.approversDetails[i];
             const role = bn ? (a.appointmentBN || a.appointment) : a.appointment;
@@ -508,7 +521,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
             const approverDate = this.getApproverDate(a.step);
             model.approvers.push({
                 role,
-                serialText: this.serial(i + 2),
+                serialText: this.serial(i + 2 + paraOffset),
                 remark: remark || undefined,
                 signatureDataUrl: this.shouldShowSignature(a.step) ? a.signatureDataUrl : undefined,
                 nameLine: '',
@@ -648,6 +661,15 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
             mainContent += `<div style="padding:0 20px 10px 20px"><table style="width:100%;border-collapse:collapse"><thead><tr>${headerCells}</tr></thead><tbody>${bodyRows}</tbody>${tfoot}</table></div>`;
         }
 
+        // Paragraphs (after employee table)
+        const paragraphs = this.parsedParagraphs;
+        paragraphs.forEach((para, pi) => {
+            mainContent += `<div style="padding:10px 16px 10px 20px;font-size:10pt;line-height:1.85;display:flex;gap:8px">`;
+            mainContent += `<span style="font-weight:700;min-width:30px;flex-shrink:0">${esc(this.serial(pi + 2))}</span>`;
+            mainContent += `<div style="flex:1;min-width:0">${esc(para)}</div>`;
+            mainContent += `</div>`;
+        });
+
         if (model.note && !(this.isPostingType() && this.postingEmployees.length > 0)) {
             mainContent += `<div style="padding:5px 16px 5px 20px;font-size:10pt"><strong>${model.isBangla ? 'নোটঃ ' : 'Note: '}</strong>${esc(model.note)}</div>`;
         }
@@ -776,6 +798,18 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
             }
             mainChildren.push(new Table({ width: { size: 95, type: WidthType.PERCENTAGE }, rows: tableRows, indent: { size: 240, type: WidthType.DXA } }));
         }
+
+        // Paragraphs (after employee table)
+        const wordParagraphs = this.parsedParagraphs;
+        wordParagraphs.forEach((para, pi) => {
+            mainChildren.push(new Paragraph({
+                children: [
+                    new TextRun({ text: `${this.serial(pi + 2)}  `, bold: true, size: 20, sizeComplexScript: csSize, font, language: lang }),
+                    new TextRun({ text: para, size: 20, sizeComplexScript: csSize, font, language: lang })
+                ],
+                indent: { left: 240 }, spacing: { before: 120, after: 80 }
+            }));
+        });
 
         if (model.note && !(this.isPostingType() && this.postingEmployees.length > 0)) {
             mainChildren.push(new Paragraph({
