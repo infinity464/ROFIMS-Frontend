@@ -53,7 +53,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     private cdr = inject(ChangeDetectorRef);
 
     // ── Pagination ─────────────────────────────────────────────
-    pageIndices: number[] = [0];
+    pageOffsets: number[] = [0];
     pageContentHeightPx = 0;
     private lastMeasuredHeight = 0;
 
@@ -116,16 +116,14 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         if (measured === this.lastMeasuredHeight || measured === 0) return;
         this.lastMeasuredHeight = measured;
 
-        // Calculate usable content height per page in px
-        // Legal paper: 355.6mm, padding: 14mm top + 20mm bottom = 34mm usable = 321.6mm
         if (this.pageContentHeightPx === 0) {
             this.pageContentHeightPx = this.computePageContentHeightPx();
         }
 
-        const numPages = Math.max(1, Math.ceil(measured / this.pageContentHeightPx));
-        const newIndices = Array.from({ length: numPages }, (_, i) => i);
-        if (newIndices.length !== this.pageIndices.length) {
-            this.pageIndices = newIndices;
+        const newOffsets = this.calculatePageOffsets(measured);
+        if (newOffsets.length !== this.pageOffsets.length ||
+            newOffsets.some((v: number, i: number) => v !== this.pageOffsets[i])) {
+            this.pageOffsets = newOffsets;
             this.cdr.detectChanges();
         }
     }
@@ -135,14 +133,63 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     }
 
     private computePageContentHeightPx(): number {
-        // Legal paper = 355.6mm; padding: 14mm top + 20mm bottom → content area = 321.6mm
-        // Measure in real px using a temporary DOM element for DPI accuracy
         const testDiv = document.createElement('div');
         testDiv.style.cssText = 'position:absolute;left:-9999px;width:1mm;height:321.6mm;visibility:hidden';
         document.body.appendChild(testDiv);
         const heightPx = testDiv.getBoundingClientRect().height;
         document.body.removeChild(testDiv);
         return heightPx;
+    }
+
+    /** Build page offsets that avoid splitting keep-together blocks across pages */
+    private calculatePageOffsets(totalHeight: number): number[] {
+        const container = this.contentMeasure?.nativeElement;
+        const pageH = this.pageContentHeightPx;
+        if (!container || pageH <= 0 || totalHeight <= pageH) return [0];
+
+        const containerTop = container.getBoundingClientRect().top;
+
+        // Gather keep-together blocks (initiator area + approver sections)
+        const keepTogether = Array.from(
+            container.querySelectorAll('.ns-initiator-area, .ns-approver-section') as NodeListOf<HTMLElement>
+        ).map(el => {
+            const rect = el.getBoundingClientRect();
+            return { top: rect.top - containerTop, bottom: rect.top - containerTop + rect.height, height: rect.height };
+        }).filter(b => b.height > 0 && b.height < pageH)
+          .sort((a, b) => a.top - b.top);
+
+        const offsets: number[] = [0];
+        let cursor = 0;
+
+        while (cursor + pageH < totalHeight) {
+            let nextBreak = cursor + pageH;
+
+            // Check if any keep-together block straddles this page boundary
+            for (const block of keepTogether) {
+                if (block.top > cursor && block.top < nextBreak && block.bottom > nextBreak) {
+                    // Block starts on this page but overflows — break before it
+                    nextBreak = block.top;
+                    break;
+                }
+            }
+
+            // Safety: ensure we always advance
+            if (nextBreak <= cursor) nextBreak = cursor + pageH;
+
+            cursor = nextBreak;
+            if (cursor < totalHeight) {
+                offsets.push(cursor);
+            }
+        }
+
+        return offsets;
+    }
+
+    /** Height of white cover to hide excess content at bottom of a page that breaks early */
+    getPageCoverHeight(pageIndex: number): number {
+        if (pageIndex >= this.pageOffsets.length - 1) return 0;
+        const usedHeight = this.pageOffsets[pageIndex + 1] - this.pageOffsets[pageIndex];
+        return Math.max(0, this.pageContentHeightPx - usedHeight);
     }
 
     // ── Toggle edit mode ─────────────────────────────────────
@@ -198,6 +245,11 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
 
     removeParagraph(index: number): void {
         this.editParagraphs.splice(index, 1);
+    }
+
+    // ── Print Preview ───────────────────────────────────────
+    printPreview(): void {
+        window.print();
     }
 
     // ── File references handlers ─────────────────────────────
