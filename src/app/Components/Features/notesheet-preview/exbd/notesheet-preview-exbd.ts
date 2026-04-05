@@ -27,9 +27,7 @@ import {
     VerticalAlign, TableLayoutType, HeightRule, PageOrientation
 } from 'docx';
 import { saveAs } from 'file-saver';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
-import type { NotesheetDocumentModel, ContentBlock, SignatoryBlock } from '../notesheet-document-model';
+import type { NotesheetDocumentModel, ContentBlock } from '../notesheet-document-model';
 
 @Component({
     selector: 'app-notesheet-preview-exbd',
@@ -455,8 +453,9 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase {
     override async exportPdf(): Promise<void> {
         if (!this.noteSheet) return;
         try {
-            const pdf = await this.buildPdfDocument();
-            pdf.save(`NoteSheet_${this.noteSheet.noteSheetNo ?? 'export'}.pdf`);
+            const doc = await this.buildWordDocument();
+            const docxBlob = await Packer.toBlob(doc);
+            await this.convertWordToPdf(docxBlob, `NoteSheet_${this.noteSheet.noteSheetNo ?? 'export'}.pdf`);
         } catch {
             this.messageService.add({ severity: 'error', summary: 'Export Error', detail: 'Failed to generate PDF.' });
         }
@@ -563,167 +562,6 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase {
 
     private normalizeTextForWord(s: string): string {
         return s.replace(/\u00A0/g, ' ').replace(/\u200B/g, '');
-    }
-
-    // ── PDF Export ─────────────────────────────────────────────
-    private async buildPdfDocument(): Promise<jsPDF> {
-        const model = this.buildDocumentModel();
-        const html = this.modelToHtml(model);
-        const fontFamily = model.isBangla ? "'Noto Sans Bengali','SolaimanLipi','Kalpurush',sans-serif" : "'Times New Roman',serif";
-
-        const container = document.createElement('div');
-        container.style.cssText = 'position:absolute;left:-9999px;top:0;width:720px;padding:14mm 10mm;font-size:10pt;line-height:1.6;background:#fff;z-index:-1;overflow:visible;box-sizing:border-box';
-        container.style.fontFamily = fontFamily;
-        container.innerHTML = `
-            <style>
-              .ns-pdf-wrap, .ns-pdf-wrap * { word-wrap:break-word!important; overflow-wrap:break-word!important; white-space:normal!important; max-width:100%!important; box-sizing:border-box!important; }
-              .ns-pdf-wrap img { max-width:100%!important; height:auto!important; }
-              .ns-pdf-wrap table, .ns-pdf-wrap th, .ns-pdf-wrap td { border:1px solid #000; padding:4px; white-space:normal!important; }
-            </style>
-            <div class="ns-pdf-wrap" style="font-family:${fontFamily};color:#000;width:100%">${html}</div>`;
-
-        document.body.appendChild(container);
-
-        try {
-            await new Promise(resolve => setTimeout(resolve, 300));
-            const canvas = await html2canvas(container, {
-                scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false,
-                scrollY: -window.scrollY, height: container.scrollHeight, windowHeight: container.scrollHeight
-            });
-            const imgData = canvas.toDataURL('image/jpeg', 0.92);
-            const imgWidth = canvas.width;
-            const imgHeight = canvas.height;
-
-            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'legal' });
-            const margin = 10;
-            const pdfWidth = pdf.internal.pageSize.getWidth() - margin * 2;
-            const pdfPageHeight = pdf.internal.pageSize.getHeight() - margin * 2;
-            const ratio = pdfWidth / imgWidth;
-            const scaledHeight = imgHeight * ratio;
-
-            if (scaledHeight <= pdfPageHeight) {
-                pdf.addImage(imgData, 'JPEG', margin, margin, pdfWidth, scaledHeight);
-            } else {
-                let remainingHeight = imgHeight;
-                let srcY = 0;
-                const sliceHeight = Math.floor(pdfPageHeight / ratio);
-                while (remainingHeight > 0) {
-                    const currentSlice = Math.min(sliceHeight, remainingHeight);
-                    const sliceCanvas = document.createElement('canvas');
-                    sliceCanvas.width = imgWidth;
-                    sliceCanvas.height = currentSlice;
-                    const ctx = sliceCanvas.getContext('2d')!;
-                    ctx.drawImage(canvas, 0, srcY, imgWidth, currentSlice, 0, 0, imgWidth, currentSlice);
-                    const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.92);
-                    const slicePdfH = currentSlice * ratio;
-                    if (srcY > 0) pdf.addPage('legal', 'p');
-                    pdf.addImage(sliceData, 'JPEG', margin, margin, pdfWidth, slicePdfH);
-                    srcY += currentSlice;
-                    remainingHeight -= currentSlice;
-                }
-            }
-            return pdf;
-        } finally {
-            document.body.removeChild(container);
-        }
-    }
-
-    private modelToHtml(model: NotesheetDocumentModel): string {
-        const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-        const block = (b: ContentBlock): string => {
-            if (b.type === 'table' && b.rows?.length) {
-                const th = (r: string[]) => r.map(c => `<th style="border:1px solid #000;padding:5px 8px;font-weight:bold">${esc(c)}</th>`).join('');
-                const td = (r: string[]) => r.map(c => `<td style="border:1px solid #000;padding:5px 8px">${esc(c)}</td>`).join('');
-                const header = b.rows[0] ? `<tr>${th(b.rows[0])}</tr>` : '';
-                const body = b.rows.slice(1).map(r => `<tr>${td(r)}</tr>`).join('');
-                return `<table style="width:100%;border-collapse:collapse;margin:6px 0"><thead>${header}</thead><tbody>${body}</tbody></table>`;
-            }
-            if (!b.text) return '';
-            const tag = b.bold ? 'strong' : b.italic ? 'em' : 'span';
-            const style = [`text-align:${b.alignment ?? 'justify'}`];
-            return `<p style="${style.join(';')};margin:0 0 0.4rem"><${tag}>${esc(b.text)}</${tag}></p>`;
-        };
-
-        let mainContent = '';
-
-        // Org header
-        mainContent += `<div style="text-align:center;padding:8px 16px 4px;font-weight:700;line-height:1.5;font-size:10pt">`;
-        mainContent += `<div>${esc(this.getOrgHeaderLine1())}</div>`;
-        mainContent += `<div style="border-bottom:1.5px solid #000;display:inline-block;padding-bottom:2px">${esc(this.getOrgHeaderLine2())}</div>`;
-        mainContent += `</div>`;
-
-        // Notesheet number
-        if (this.noteSheet?.noteSheetNo) {
-            mainContent += `<div style="padding:4px 16px 2px;font-size:10pt">${esc(this.noteSheet.noteSheetNo)}</div>`;
-        }
-
-        mainContent += `<div style="padding:7px 16px 7px 20px;font-size:10pt;font-weight:bold;text-decoration:underline">${esc(model.subject)}</div>`;
-
-        mainContent += '<div style="padding:5px 16px 5px 20px;font-size:10pt">';
-        if (model.referenceBlocks.length > 0 || this.noteSheet?.referenceNumber) {
-            mainContent += `<span style="font-weight:700">${esc(model.referenceLabel)}</span>`;
-            if (model.referenceBlocks.length > 0) {
-                model.referenceBlocks.forEach(b => { mainContent += block(b); });
-            } else {
-                mainContent += esc(this.stripHtml(this.noteSheet!.referenceNumber ?? ''));
-            }
-        } else if (this.noteSheet?.noteSheetDate) {
-            mainContent += `<span style="font-weight:700">${esc(model.dateLabel)}</span>${esc(model.dateValue)}`;
-        }
-        mainContent += '</div>';
-
-        mainContent += '<div style="padding:10px 16px 10px 20px;font-size:10pt;line-height:1.85;display:flex;gap:8px;text-align:justify">';
-        mainContent += `<span style="font-weight:700;min-width:30px;flex-shrink:0">${esc(model.mainSerialText)}</span>`;
-        mainContent += '<div style="flex:1;min-width:0">';
-        model.mainBlocks.forEach(b => { mainContent += block(b); });
-        mainContent += '</div></div>';
-
-        if (model.note) {
-            mainContent += `<div style="padding:5px 16px 5px 20px;font-size:10pt"><strong>${model.isBangla ? 'নোটঃ ' : 'Note: '}</strong>${esc(model.note)}</div>`;
-        }
-
-        mainContent += `<div style="padding:10px 16px 10px 20px;font-size:10pt;text-indent:2em">${esc(model.closingText)}</div>`;
-
-        if (model.initiator) {
-            mainContent += '<div style="padding:8px 16px 8px 20px;text-align:right;margin-top:24px;min-height:60px">';
-            if (model.initiator.signatureDataUrl) {
-                mainContent += `<img src="${model.initiator.signatureDataUrl}" style="max-width:80px;max-height:32px;display:block;margin-left:auto;margin-bottom:8px" />`;
-            } else {
-                mainContent += '<div style="min-height:48px;margin-bottom:8px"></div>';
-            }
-            mainContent += `<div style="font-size:11pt">${esc(model.initiator.nameLine)}</div>`;
-            if (model.initiator.appointment) mainContent += `<div>${esc(model.initiator.appointment)}</div>`;
-            if (model.initiator.date) mainContent += `<div>${esc(model.initiator.date)}</div>`;
-            mainContent += '</div>';
-        }
-
-        model.approvers.forEach(ap => {
-            mainContent += '<div style="padding:6px 16px 10px 20px;min-height:60px;margin-top:12px">';
-            mainContent += `<div style="text-decoration:underline;font-size:10pt;margin-bottom:6px">${esc(ap.role)}</div>`;
-            mainContent += `<div style="font-size:10pt"><strong>${esc(ap.serialText)}</strong>${ap.remark ? `<em> ${esc(ap.remark)}</em>` : ''}</div>`;
-            if (ap.signatureDataUrl) {
-                mainContent += `<img src="${ap.signatureDataUrl}" style="max-width:80px;max-height:32px;display:block;margin:8px auto 0" />`;
-            } else {
-                mainContent += '<div style="min-height:48px;margin-top:8px"></div>';
-            }
-            if (ap.date) mainContent += `<div style="font-size:10pt;text-align:center">${esc(ap.date)}</div>`;
-            mainContent += '</div>';
-        });
-
-        const sanglagniText = model.isBangla ? 'সংলগ্নী<br>নং' : 'Encl.<br>No.';
-        return `
-<div style="text-align:center;margin-bottom:8px">
-  <div style="font-size:12pt;font-weight:bold;text-decoration:underline;letter-spacing:2px">NOTE SHEET</div>
-  <div style="font-size:12pt;text-decoration:underline;margin-top:2px">মন্তব্য পত্র</div>
-</div>
-<div style="border:1.5px solid #000;display:table;width:100%;table-layout:fixed">
-  <div style="display:table-cell;vertical-align:top;width:auto">
-    ${mainContent}
-  </div>
-  <div style="display:table-cell;vertical-align:top;width:60px;min-width:60px;border-left:1.5px solid #000;font-size:10pt;text-align:center;padding:6px 12px;line-height:1.4">
-    ${sanglagniText}
-  </div>
-</div>`;
     }
 
     // ── Word Export ────────────────────────────────────────────

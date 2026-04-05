@@ -20,12 +20,9 @@ import { environment } from '@/Core/Environments/environment';
 import { forkJoin } from 'rxjs';
 import {
     Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
-    WidthType, BorderStyle, AlignmentType, PageOrientation, ImageRun,
-    TableLayoutType, HeightRule
+    WidthType, BorderStyle, AlignmentType, PageOrientation, ImageRun
 } from 'docx';
 import { saveAs } from 'file-saver';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 
 import type {
     NotesheetDocumentModel,
@@ -602,72 +599,13 @@ body { background: #fff; font-family: 'Times New Roman', Times, serif; font-size
         }));
     }
 
-    /** Export PDF: builds legal-size PDF from shared document model using html2canvas + jsPDF. */
+    /** Export PDF: builds Word document, sends to backend for conversion, downloads PDF. */
     override async exportPdf(): Promise<void> {
         if (!this.noteSheet) return;
         try {
-            const model = this.buildDocumentModel();
-            const html = this.modelToHtml(model);
-            const fontFamily = model.isBangla
-                ? "'Noto Sans Bengali','SolaimanLipi','Kalpurush','Nirmala UI',sans-serif"
-                : "'Times New Roman',serif";
-
-            const container = document.createElement('div');
-            container.style.cssText = 'position:absolute;left:-9999px;top:0;width:720px;padding:14mm 10mm;font-size:10pt;line-height:1.6;background:#fff;z-index:-1;overflow:visible;box-sizing:border-box';
-            container.style.fontFamily = fontFamily;
-            container.innerHTML = `
-                <style>
-                  .ns-pdf-wrap, .ns-pdf-wrap * { word-wrap:break-word!important; overflow-wrap:break-word!important; white-space:normal!important; max-width:100%!important; box-sizing:border-box!important; }
-                  .ns-pdf-wrap img { max-width:100%!important; height:auto!important; }
-                  .ns-pdf-wrap table, .ns-pdf-wrap th, .ns-pdf-wrap td { border:1px solid #000; padding:4px; white-space:normal!important; }
-                  .ns-pdf-wrap th { font-weight:bold; }
-                </style>
-                <div class="ns-pdf-wrap" style="font-family:${fontFamily};color:#000;width:100%">${html}</div>`;
-            document.body.appendChild(container);
-
-            try {
-                await new Promise(resolve => setTimeout(resolve, 300));
-                const canvas = await html2canvas(container, {
-                    scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false,
-                    scrollY: -window.scrollY, height: container.scrollHeight, windowHeight: container.scrollHeight
-                });
-                const imgData = canvas.toDataURL('image/jpeg', 0.92);
-                const imgWidth = canvas.width;
-                const imgHeight = canvas.height;
-
-                // Legal paper: 215.9mm × 355.6mm
-                const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'legal' });
-                const margin = 10;
-                const pdfWidth = pdf.internal.pageSize.getWidth() - margin * 2;
-                const pdfPageHeight = pdf.internal.pageSize.getHeight() - margin * 2;
-                const ratio = pdfWidth / imgWidth;
-                const scaledHeight = imgHeight * ratio;
-
-                if (scaledHeight <= pdfPageHeight) {
-                    pdf.addImage(imgData, 'JPEG', margin, margin, pdfWidth, scaledHeight);
-                } else {
-                    let remainingHeight = imgHeight;
-                    let srcY = 0;
-                    const sliceHeight = Math.floor(pdfPageHeight / ratio);
-                    while (remainingHeight > 0) {
-                        const currentSlice = Math.min(sliceHeight, remainingHeight);
-                        const sliceCanvas = document.createElement('canvas');
-                        sliceCanvas.width = imgWidth;
-                        sliceCanvas.height = currentSlice;
-                        const ctx = sliceCanvas.getContext('2d')!;
-                        ctx.drawImage(canvas, 0, srcY, imgWidth, currentSlice, 0, 0, imgWidth, currentSlice);
-                        const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.92);
-                        const slicePdfH = currentSlice * ratio;
-                        if (srcY > 0) pdf.addPage('legal', 'p');
-                        pdf.addImage(sliceData, 'JPEG', margin, margin, pdfWidth, slicePdfH);
-                        srcY += currentSlice;
-                        remainingHeight -= currentSlice;
-                    }
-                }
-                pdf.save(`NoteSheet_${this.noteSheet!.noteSheetNo ?? 'export'}.pdf`);
-            } finally {
-                document.body.removeChild(container);
-            }
+            const doc = await this.buildWordDocument();
+            const docxBlob = await Packer.toBlob(doc);
+            await this.convertWordToPdf(docxBlob, `NoteSheet_${this.noteSheet.noteSheetNo ?? 'export'}.pdf`);
         } catch {
             this.messageService.add({ severity: 'error', summary: 'Export Error', detail: 'Failed to generate PDF.' });
         }
@@ -806,123 +744,6 @@ body { background: #fff; font-family: 'Times New Roman', Times, serif; font-size
         return undefined;
     }
 
-    /** Convert document model to HTML (layout matches Word: bordered doc-box + sanglagni). */
-    private modelToHtml(model: NotesheetDocumentModel): string {
-        const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-        const block = (b: ContentBlock): string => {
-            if (b.type === 'table' && b.rows?.length) {
-                const th = (r: string[]) => r.map(c => `<th style="border:1px solid #000;padding:5px 8px;font-weight:bold">${esc(c)}</th>`).join('');
-                const td = (r: string[]) => r.map(c => `<td style="border:1px solid #000;padding:5px 8px">${esc(c)}</td>`).join('');
-                const header = b.rows[0] ? `<tr>${th(b.rows[0])}</tr>` : '';
-                const body = b.rows.slice(1).map(r => `<tr>${td(r)}</tr>`).join('');
-                return `<table style="width:100%;border-collapse:collapse;margin:6px 0"><thead>${header}</thead><tbody>${body}</tbody></table>`;
-            }
-            if (!b.text) return '';
-            const tag = b.bold ? 'strong' : b.italic ? 'em' : 'span';
-            const style = [`text-align:${b.alignment ?? 'left'}`];
-            if (b.indent === 'list') style.push('margin-left:1em');
-            return `<p style="${style.join(';')};margin:0 0 0.4rem"><${tag}>${esc(b.text)}</${tag}></p>`;
-        };
-
-        let mainContent = '';
-
-        // Org header
-        mainContent += `<div style="text-align:center;padding:8px 16px 4px;font-weight:700;line-height:1.5;font-size:10pt">`;
-        mainContent += `<div>${esc(this.getOrgHeaderLine1())}</div>`;
-        mainContent += `<div style="border-bottom:1.5px solid #000;display:inline-block;padding-bottom:2px">${esc(this.getOrgHeaderLine2())}</div>`;
-        mainContent += `</div>`;
-
-        // Notesheet number
-        if (this.noteSheet?.noteSheetNo) {
-            mainContent += `<div style="padding:4px 16px 2px;font-size:10pt">${esc(this.noteSheet.noteSheetNo)}</div>`;
-        }
-
-        // Subject
-        if (this.noteSheet?.subject) {
-            const subjectLabel = model.isBangla ? 'বিষয়' : 'Subject';
-            mainContent += `<div style="padding:2px 16px 4px;font-size:10pt"><strong>${esc(subjectLabel)}:</strong> ${esc(this.noteSheet.subject)}</div>`;
-        }
-
-        // Main text
-        mainContent += '<div style="padding:10px 16px 10px 20px;font-size:10pt;line-height:1.85;display:flex;gap:8px">';
-        mainContent += `<span style="font-weight:700;min-width:30px;flex-shrink:0">${esc(model.mainSerialText)}</span>`;
-        mainContent += '<div style="flex:1;min-width:0">';
-        model.mainBlocks.forEach(b => { mainContent += block(b); });
-        mainContent += '</div></div>';
-
-        // Posting employee table (posting-specific)
-        if (this.isPostingType() && this.postingEmployees.length > 0) {
-            const bn = model.isBangla;
-            const cols = bn ? ['ক্রমিক','ব্যক্তিগত নম্বর','পদবি','ট্রেড','নাম','মাতৃ ইউনিট','নিজ জেলা','মাতৃ ইউনিটের অবস্থান','বদলি ইউনিট','মন্তব্য'] : ['Ser','Service ID','Rank','Trade','Name','Mother Unit','Own District','Mother Unit Location','Transfer Unit','Remarks'];
-            const headerCells = cols.map(c => `<th style="border:1px solid #000;padding:5px 8px;font-weight:bold;font-size:9pt">${esc(c)}</th>`).join('');
-            const bodyRows = this.postingEmployees.map((emp, i) => {
-                const ser = bn ? this.toBanglaDigits(i + 1) : String(i + 1);
-                const transferUnit = bn ? (this.unitLabelMapBN[emp.transferRabUnitId!] || emp.transferRabUnitName || '') : (emp.transferRabUnitName ?? '');
-                const vals = [ser, this.getServiceIdDisplay(emp), bn?(emp.rankNameBN||emp.rankName||''):(emp.rankName??''), bn?(emp.tradeNameBN||emp.tradeName||''):(emp.tradeName??''), bn?(emp.fullNameBN||emp.fullNameEN||''):(emp.fullNameEN??''), bn?(emp.motherUnitNameBN||emp.motherUnitName||''):(emp.motherUnitName??''), bn?(emp.permanentDistrictNameBN||emp.permanentDistrictName||''):(emp.permanentDistrictName??''), bn?(emp.motherOrgLocationNameBN||emp.motherOrgLocationName||''):(emp.motherOrgLocationName??''), transferUnit, emp.remarks??''];
-                return `<tr>${vals.map(v => `<td style="border:1px solid #000;padding:5px 8px;font-size:9pt">${esc(v)}</td>`).join('')}</tr>`;
-            }).join('');
-            let tfoot = '';
-            if (model.note) {
-                tfoot = `<tfoot><tr><td colspan="10" style="border:1px solid #000;padding:5px 8px;font-size:9pt"><strong>${bn ? 'নোটঃ ' : 'Note: '}</strong>${esc(model.note)}</td></tr></tfoot>`;
-            }
-            mainContent += `<div style="padding:0 20px 10px 20px"><table style="width:100%;border-collapse:collapse"><thead><tr>${headerCells}</tr></thead><tbody>${bodyRows}</tbody>${tfoot}</table></div>`;
-        }
-
-        // Paragraphs (after employee table)
-        const paragraphs = this.parsedParagraphs;
-        paragraphs.forEach((para, pi) => {
-            mainContent += `<div style="padding:10px 16px 10px 20px;font-size:10pt;line-height:1.85;display:flex;gap:8px">`;
-            mainContent += `<span style="font-weight:700;min-width:30px;flex-shrink:0">${esc(this.serial(pi + 2))}</span>`;
-            mainContent += `<div style="flex:1;min-width:0">${esc(para)}</div>`;
-            mainContent += `</div>`;
-        });
-
-        if (model.note && !(this.isPostingType() && this.postingEmployees.length > 0)) {
-            mainContent += `<div style="padding:5px 16px 5px 20px;font-size:10pt"><strong>${model.isBangla ? 'নোটঃ ' : 'Note: '}</strong>${esc(model.note)}</div>`;
-        }
-
-        // Closing text
-        if (model.closingText) mainContent += `<div style="padding:10px 16px 10px 20px;font-size:10pt;text-indent:2em">${esc(model.closingText)}</div>`;
-
-        // Initiator
-        if (model.initiator) {
-            mainContent += '<div style="padding:8px 16px 8px 20px;text-align:right;margin-top:24px;min-height:60px">';
-            if (model.initiator.signatureDataUrl) {
-                mainContent += `<img src="${model.initiator.signatureDataUrl}" style="max-width:80px;max-height:32px;display:block;margin-left:auto;margin-bottom:8px" />`;
-            } else {
-                mainContent += '<div style="min-height:48px;margin-bottom:8px"></div>';
-            }
-            mainContent += `<div style="font-size:11pt">${esc(model.initiator.nameLine)}</div>`;
-            if (model.initiator.rankLine) mainContent += `<div style="font-size:10pt">${esc(model.initiator.rankLine)}</div>`;
-            if (model.initiator.appointment) mainContent += `<div style="font-size:10pt">${esc(model.initiator.appointment)}</div>`;
-            if (model.initiator.date) mainContent += `<div style="font-size:10pt;margin-top:2em">${esc(model.initiator.date)}</div>`;
-            mainContent += '</div>';
-        }
-
-        // Approvers
-        model.approvers.forEach(ap => {
-            mainContent += '<div style="padding:6px 16px 10px 20px;min-height:60px;margin-top:12px">';
-            mainContent += `<div style="text-decoration:underline;font-size:10pt;margin-bottom:6px">${esc(ap.role)}</div>`;
-            mainContent += `<div style="font-size:10pt"><strong>${esc(ap.serialText)}</strong>${ap.remark ? `<em> ${esc(ap.remark)}</em>` : ''}</div>`;
-            if (ap.signatureDataUrl) {
-                mainContent += `<img src="${ap.signatureDataUrl}" style="max-width:80px;max-height:32px;display:block;margin:8px auto 0" />`;
-            } else {
-                mainContent += '<div style="min-height:48px;margin-top:8px"></div>';
-            }
-            if (ap.date) mainContent += `<div style="font-size:10pt;text-align:center">${esc(ap.date)}</div>`;
-            mainContent += '</div>';
-        });
-
-        return `
-<div style="text-align:center;margin-bottom:8px">
-  <div style="font-size:12pt;font-weight:bold;text-decoration:underline;letter-spacing:2px">NOTE SHEET</div>
-  <div style="font-size:12pt;text-decoration:underline;margin-top:2px">মন্তব্য পত্র</div>
-</div>
-<div style="border:1.5px solid #000;width:100%">
-    ${mainContent}
-</div>`;
-    }
-
     /** Build the Word document from shared document model. */
     private async buildWordDocument(): Promise<Document> {
         const model = this.buildDocumentModel();
@@ -932,7 +753,6 @@ body { background: #fff; font-family: 'Times New Roman', Times, serif; font-size
             : 'Times New Roman';
         const csSize = bn ? 20 : undefined;
         const lang = bn ? { value: 'bn-BD', bidirectional: 'bn-BD' } : undefined;
-        const thickBorder = { style: BorderStyle.SINGLE, size: 3, color: '000000' };
         const thinBorder = { style: BorderStyle.SINGLE, size: 1, color: '000000' };
         const cellBorders = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
 
@@ -1125,24 +945,8 @@ body { background: #fff; font-family: 'Times New Roman', Times, serif; font-size
             }
         }
 
-        // Outer bordered table (no sanglagni for posting)
-        const rowHeight = 17800;
-        const outerTable = new Table({
-            layout: TableLayoutType.FIXED,
-            width: { size: 100, type: WidthType.PERCENTAGE },
-            columnWidths: [11273],
-            rows: [new TableRow({
-                height: { value: rowHeight, rule: HeightRule.ATLEAST },
-                children: [
-                    new TableCell({
-                        width: { size: 11273, type: WidthType.DXA },
-                        borders: { top: thickBorder, bottom: thickBorder, left: thickBorder, right: thickBorder },
-                        margins: { right: 200 },
-                        children: mainChildren.length > 0 ? mainChildren : [new Paragraph({})]
-                    })
-                ]
-            })]
-        });
+        // Use page borders instead of outer table so border fills every page in both Word and LibreOffice
+        const pageBorder = { style: BorderStyle.SINGLE, size: 3, color: '000000', space: 1 };
 
         const docChildren: (Paragraph | Table)[] = [];
         docChildren.push(new Paragraph({
@@ -1153,12 +957,23 @@ body { background: #fff; font-family: 'Times New Roman', Times, serif; font-size
             children: [new TextRun({ text: 'মন্তব্য পত্র', underline: {}, size: 24, font: 'Nirmala UI' })],
             alignment: AlignmentType.CENTER, spacing: { after: 160 }, keepNext: true
         }));
-        docChildren.push(outerTable);
+        docChildren.push(...(mainChildren.length > 0 ? mainChildren : [new Paragraph({})]));
 
         return new Document({
             styles: bn ? { default: { document: { run: { language: { value: 'bn-BD', bidirectional: 'bn-BD' } } } } } : undefined,
             sections: [{
-                properties: { page: { size: { width: 12240, height: 20160, orientation: PageOrientation.PORTRAIT }, margin: { top: 567, right: 400, bottom: 400, left: 567 } } },
+                properties: {
+                    page: {
+                        size: { width: 12240, height: 20160, orientation: PageOrientation.PORTRAIT },
+                        margin: { top: 567, right: 567, bottom: 400, left: 567 },
+                        borders: {
+                            pageBorderTop: pageBorder,
+                            pageBorderBottom: pageBorder,
+                            pageBorderLeft: pageBorder,
+                            pageBorderRight: pageBorder
+                        }
+                    }
+                },
                 children: docChildren
             }]
         });

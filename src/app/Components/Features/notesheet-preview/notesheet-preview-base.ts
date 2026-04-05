@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { MessageService } from 'primeng/api';
-import { catchError, forkJoin, of } from 'rxjs';
+import { catchError, firstValueFrom, forkJoin, of } from 'rxjs';
 import { environment } from '@/Core/Environments/environment';
 import { EmpService } from '@/services/emp-service';
 import { NoteSheetType, NoteSheetCurrentStatus, NoteSheetCurrentStatusOptions, ApprovalStatus, ApprovalStep } from '@/models/enums';
@@ -111,6 +111,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
     noteSheet: NoteSheetInfoFull | null = null;
     loading = false;
     error = false;
+    exportingPdf = false;
 
     // Cached safe-html to avoid re-parsing DOM on every change detection cycle
     private _mainTextCache: { raw: string; safe: SafeHtml } | null = null;
@@ -799,6 +800,21 @@ export abstract class NotesheetPreviewBase implements OnInit {
         });
 
         saveAs(await Packer.toBlob(doc), `NoteSheet_${this.noteSheet.noteSheetNo ?? 'export'}.docx`);
+    }
+
+    /** Send a DOCX blob to backend for conversion, then download the resulting PDF. */
+    protected async convertWordToPdf(docxBlob: Blob, fileName: string): Promise<void> {
+        this.exportingPdf = true;
+        try {
+            const form = new FormData();
+            form.append('file', docxBlob, 'document.docx');
+            const pdfBlob = await firstValueFrom(
+                this.http.post(`${environment.apis.core}/Document/ConvertToPdf`, form, { responseType: 'blob' })
+            );
+            saveAs(pdfBlob, fileName);
+        } finally {
+            this.exportingPdf = false;
+        }
     }
 
     exportPdf(): void {
