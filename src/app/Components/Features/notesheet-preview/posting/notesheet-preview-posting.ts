@@ -20,7 +20,7 @@ import { environment } from '@/Core/Environments/environment';
 import { forkJoin } from 'rxjs';
 import {
     Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
-    WidthType, BorderStyle, AlignmentType, PageOrientation, ImageRun, HeightRule
+    WidthType, BorderStyle, AlignmentType, PageOrientation, ImageRun
 } from 'docx';
 import { saveAs } from 'file-saver';
 
@@ -879,7 +879,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
             }
         }
 
-        // Titles above the border (like HTML preview)
+        // Titles above the bordered content area (like HTML preview)
         const docChildren: (Paragraph | Table)[] = [];
         docChildren.push(new Paragraph({
             children: [new TextRun({ text: 'NOTE SHEET', bold: true, underline: {}, size: 24, font: 'Times New Roman' })],
@@ -887,22 +887,23 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         }));
         docChildren.push(new Paragraph({
             children: [new TextRun({ text: 'মন্তব্য পত্র', underline: {}, size: 24, font: 'Nirmala UI' })],
-            alignment: AlignmentType.CENTER, spacing: { after: 160 }, keepNext: true
+            alignment: AlignmentType.CENTER, spacing: { after: 0 }, keepNext: true
         }));
 
-        // Content inside a bordered single-cell table (like ns-doc-box in preview)
-        const outerBorder = { style: BorderStyle.SINGLE, size: 3, color: '000000' };
-        const contentCell = new TableCell({
-            children: mainChildren.length > 0 ? mainChildren : [new Paragraph({})],
-            borders: { top: outerBorder, bottom: outerBorder, left: outerBorder, right: outerBorder },
-            width: { size: 100, type: WidthType.PERCENTAGE }
-        });
+        // Content in a bordered single-cell table — borders repeat on every page in both Word & LibreOffice
+        const boxBorder = { style: BorderStyle.SINGLE, size: 3, color: '000000' };
+        const noBorder = { style: BorderStyle.NONE, size: 0, color: '000000' };
         const contentTable = new Table({
             rows: [new TableRow({
-                children: [contentCell],
-                height: { value: 17500, rule: HeightRule.ATLEAST }
+                children: [new TableCell({
+                    children: mainChildren.length > 0 ? mainChildren : [new Paragraph({})],
+                    borders: { top: boxBorder, bottom: boxBorder, left: boxBorder, right: boxBorder },
+                    width: { size: 100, type: WidthType.PERCENTAGE },
+                    margins: { top: 80, bottom: 80, left: 120, right: 120 }
+                })]
             })],
-            width: { size: 100, type: WidthType.PERCENTAGE }
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder, insideHorizontal: noBorder, insideVertical: noBorder }
         });
         docChildren.push(contentTable);
 
