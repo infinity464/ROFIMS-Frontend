@@ -419,6 +419,14 @@
     display: block;
     margin: 0 auto 4px;
 }
+.ns-sig-name {
+    font-size: 10pt;
+    margin-bottom: 2px;
+}
+.ns-sig-rank {
+    font-size: 10pt;
+    margin-bottom: 2px;
+}
 .ns-sig-paren {
     font-size: 10pt;
     margin-bottom: 2px;
@@ -428,7 +436,7 @@
 }
 .ns-sig-date {
     font-size: 10pt;
-    margin-top: 4px;
+    margin-top: 2em;
 }
 
 /* ── Edit Mode ────────────────────────────────────── */

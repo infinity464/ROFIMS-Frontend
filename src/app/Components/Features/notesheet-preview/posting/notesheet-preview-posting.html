@@ -272,8 +272,11 @@
                     <div class="ns-initiator-sig" *ngIf="initiatorDetails">
                         <img *ngIf="isInitiatorApproved() && shouldShowSignature(initiatorDetails.step) && initiatorDetails.signatureDataUrl"
                              [src]="initiatorDetails.signatureDataUrl" class="ns-sig-img" alt="Signature" />
-                        <div class="ns-sig-paren">
-                            ({{ isEnglish() ? initiatorDetails.name : (initiatorDetails.nameBN || initiatorDetails.name) }}{{ initiatorDetails.rank && initiatorDetails.rank !== '-' ? ', ' + (isEnglish() ? initiatorDetails.rank : (initiatorDetails.rankBN || initiatorDetails.rank)) : '' }})
+                        <div class="ns-sig-name">
+                            {{ isEnglish() ? initiatorDetails.name : (initiatorDetails.nameBN || initiatorDetails.name) }}
+                        </div>
+                        <div class="ns-sig-rank" *ngIf="initiatorDetails.rank && initiatorDetails.rank !== '-'">
+                            {{ isEnglish() ? initiatorDetails.rank : (initiatorDetails.rankBN || initiatorDetails.rank) }}
                         </div>
                         <div class="ns-sig-appoint" *ngIf="initiatorDetails.appointment || initiatorDetails.appointmentBN">
                             {{ isEnglish() ? initiatorDetails.appointment : (initiatorDetails.appointmentBN || initiatorDetails.appointment) }}
