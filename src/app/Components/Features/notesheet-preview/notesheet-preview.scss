@@ -73,11 +73,24 @@
     overflow: hidden;
     position: relative;
     border: 1.5px solid #000;
+
+    &::before,
+    &::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: 4mm;
+        background: #fff;
+        z-index: 2;
+    }
+    &::before { top: 0; }
+    &::after  { bottom: 0; }
 }
 
 .page-inner {
     position: absolute;
-    top: 0;
+    top: 4mm;
     left: 0;
     width: 100%;
 }

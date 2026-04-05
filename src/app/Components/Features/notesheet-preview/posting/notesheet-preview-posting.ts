@@ -56,6 +56,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     // ── Pagination ─────────────────────────────────────────────
     pageOffsets: number[] = [0];
     pageContentHeightPx = 0;
+    private pageInsetPx = 0;
     private lastMeasuredHeight = 0;
 
     // ── Button visibility (configurable by parent) ───────────
@@ -134,11 +135,20 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     }
 
     private computePageContentHeightPx(): number {
+        // 321.6mm total content area - 4mm top inset - 4mm bottom inset = 313.6mm visible
         const testDiv = document.createElement('div');
-        testDiv.style.cssText = 'position:absolute;left:-9999px;width:1mm;height:321.6mm;visibility:hidden';
+        testDiv.style.cssText = 'position:absolute;left:-9999px;width:1mm;height:313.6mm;visibility:hidden';
         document.body.appendChild(testDiv);
         const heightPx = testDiv.getBoundingClientRect().height;
         document.body.removeChild(testDiv);
+
+        // Compute inset in pixels (4mm)
+        const insetDiv = document.createElement('div');
+        insetDiv.style.cssText = 'position:absolute;left:-9999px;width:1mm;height:4mm;visibility:hidden';
+        document.body.appendChild(insetDiv);
+        this.pageInsetPx = insetDiv.getBoundingClientRect().height;
+        document.body.removeChild(insetDiv);
+
         return heightPx;
     }
 
@@ -190,7 +200,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     getPageCoverHeight(pageIndex: number): number {
         if (pageIndex >= this.pageOffsets.length - 1) return 0;
         const usedHeight = this.pageOffsets[pageIndex + 1] - this.pageOffsets[pageIndex];
-        return Math.max(0, this.pageContentHeightPx - usedHeight);
+        return Math.max(0, this.pageContentHeightPx - usedHeight + this.pageInsetPx);
     }
 
     // ── Toggle edit mode ─────────────────────────────────────
@@ -269,7 +279,10 @@ body { background: #fff; font-family: 'Times New Roman', Times, serif; font-size
 .a4-paper.paginated { height: 355.6mm; min-height: 355.6mm; overflow: hidden; }
 .a4-paper.paginated .ns-doc-box { border: none; }
 .page-viewport { flex: 1; overflow: hidden; position: relative; border: 1.5px solid #000; }
-.page-inner { position: absolute; top: 0; left: 0; width: 100%; }
+.page-viewport::before, .page-viewport::after { content: ''; position: absolute; left: 0; right: 0; height: 4mm; background: #fff; z-index: 2; }
+.page-viewport::before { top: 0; }
+.page-viewport::after { bottom: 0; }
+.page-inner { position: absolute; top: 4mm; left: 0; width: 100%; }
 .page-bottom-cover { position: absolute; bottom: 0; left: 0; right: 0; background: #fff; z-index: 1; }
 .ns-title-block { text-align: center; margin-bottom: 8px; }
 .ns-title-en { font-size: 12pt; font-weight: bold; text-decoration: underline; letter-spacing: 2px; }
