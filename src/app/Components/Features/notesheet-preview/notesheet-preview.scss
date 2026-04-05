@@ -93,6 +93,11 @@
     top: 4mm;
     left: 0;
     width: 100%;
+
+    /* Title is rendered outside viewport on page 1; hide it inside to preserve layout */
+    .ns-title-block {
+        visibility: hidden;
+    }
 }
 
 .page-bottom-cover {

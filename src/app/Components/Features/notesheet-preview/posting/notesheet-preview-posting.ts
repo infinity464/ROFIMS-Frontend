@@ -56,6 +56,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     // ── Pagination ─────────────────────────────────────────────
     pageOffsets: number[] = [0];
     pageContentHeightPx = 0;
+    titleBlockHeightPx = 0;
     private pageInsetPx = 0;
     private lastMeasuredHeight = 0;
 
@@ -152,45 +153,111 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         return heightPx;
     }
 
-    /** Build page offsets that avoid splitting keep-together blocks across pages */
+    /** Build page offsets — avoids splitting text lines and keep-together blocks */
     private calculatePageOffsets(totalHeight: number): number[] {
         const container = this.contentMeasure?.nativeElement;
         const pageH = this.pageContentHeightPx;
-        if (!container || pageH <= 0 || totalHeight <= pageH) return [0];
+        if (!container || pageH <= 0) return [0];
 
         const containerTop = container.getBoundingClientRect().top;
 
-        // Gather keep-together blocks (initiator area + approver sections)
+        // Measure title block height (title is rendered outside viewport on page 1)
+        const titleEl = container.querySelector('.ns-title-block') as HTMLElement;
+        const docBox = container.querySelector('.ns-doc-box') as HTMLElement;
+        this.titleBlockHeightPx = docBox
+            ? docBox.getBoundingClientRect().top - containerTop
+            : titleEl ? titleEl.getBoundingClientRect().height + 8 : 0;
+
+        // First page has less space because title is above the viewport
+        const firstPageH = pageH - this.titleBlockHeightPx;
+        if (totalHeight <= firstPageH + this.titleBlockHeightPx) return [this.titleBlockHeightPx];
+
+        // Keep-together blocks (should not be split across pages)
         const keepTogether = Array.from(
-            container.querySelectorAll('.ns-initiator-area, .ns-approver-section') as NodeListOf<HTMLElement>
+            container.querySelectorAll(
+                '.ns-title-block, .ns-org-header, .ns-note, .ns-initiator-area, .ns-approver-section, .ns-posting-table tr'
+            ) as NodeListOf<HTMLElement>
         ).map(el => {
             const rect = el.getBoundingClientRect();
             return { top: rect.top - containerTop, bottom: rect.top - containerTop + rect.height, height: rect.height };
         }).filter(b => b.height > 0 && b.height < pageH)
           .sort((a, b) => a.top - b.top);
 
-        const offsets: number[] = [0];
-        let cursor = 0;
+        // Collect per-line bottom positions from text blocks using getClientRects
+        const textBlockInfo: { top: number; bottom: number; lineBottoms: number[] }[] = [];
+        const textElements = container.querySelectorAll('.ns-para-text') as NodeListOf<HTMLElement>;
+        for (const el of Array.from(textElements)) {
+            const elRect = el.getBoundingClientRect();
+            const blockTop = elRect.top - containerTop;
+            const blockBottom = elRect.bottom - containerTop;
+            const lbs: number[] = [];
 
-        while (cursor + pageH < totalHeight) {
-            let nextBreak = cursor + pageH;
+            const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+            let textNode: Node | null;
+            while (textNode = walker.nextNode()) {
+                if (!textNode.textContent?.trim()) continue;
+                const range = document.createRange();
+                range.selectNodeContents(textNode);
+                const rects = range.getClientRects();
+                for (let r = 0; r < rects.length; r++) {
+                    if (rects[r].height > 0) {
+                        lbs.push(Math.round(rects[r].bottom - containerTop));
+                    }
+                }
+            }
 
-            // Check if any keep-together block straddles this page boundary
-            for (const block of keepTogether) {
-                if (block.top > cursor && block.top < nextBreak && block.bottom > nextBreak) {
-                    // Block starts on this page but overflows — break before it
-                    nextBreak = block.top;
+            const uniqueLbs = [...new Set(lbs)].sort((a, b) => a - b);
+            if (uniqueLbs.length > 0) {
+                textBlockInfo.push({ top: blockTop, bottom: blockBottom, lineBottoms: uniqueLbs });
+            }
+        }
+
+        // Page 1 starts after the title block (title is rendered outside viewport)
+        const offsets: number[] = [this.titleBlockHeightPx];
+        let cursor = this.titleBlockHeightPx;
+        let isFirstPage = true;
+
+        while (cursor < totalHeight) {
+            const currentPageH = isFirstPage ? firstPageH : pageH;
+            if (cursor + currentPageH >= totalHeight) break; // remaining content fits
+
+            let nextBreak = cursor + currentPageH;
+
+            // Step 1: Keep-together — push break before any block that straddles
+            let adjusted = true;
+            while (adjusted) {
+                adjusted = false;
+                for (const block of keepTogether) {
+                    if (block.top > cursor && block.top < nextBreak && block.bottom > nextBreak) {
+                        nextBreak = block.top;
+                        adjusted = true;
+                        break;
+                    }
+                }
+            }
+
+            // Step 2: Snap to line boundary if break falls inside a text block.
+            // Use line BOTTOMS so we break after the last fully visible line.
+            for (const tb of textBlockInfo) {
+                if (tb.top < nextBreak && tb.bottom > nextBreak) {
+                    for (let i = tb.lineBottoms.length - 1; i >= 0; i--) {
+                        if (tb.lineBottoms[i] <= nextBreak && tb.lineBottoms[i] > cursor) {
+                            nextBreak = tb.lineBottoms[i];
+                            break;
+                        }
+                    }
                     break;
                 }
             }
 
             // Safety: ensure we always advance
-            if (nextBreak <= cursor) nextBreak = cursor + pageH;
+            if (nextBreak <= cursor) nextBreak = cursor + currentPageH;
 
             cursor = nextBreak;
             if (cursor < totalHeight) {
                 offsets.push(cursor);
             }
+            isFirstPage = false;
         }
 
         return offsets;
@@ -200,7 +267,10 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     getPageCoverHeight(pageIndex: number): number {
         if (pageIndex >= this.pageOffsets.length - 1) return 0;
         const usedHeight = this.pageOffsets[pageIndex + 1] - this.pageOffsets[pageIndex];
-        return Math.max(0, this.pageContentHeightPx - usedHeight + this.pageInsetPx);
+        const availHeight = pageIndex === 0
+            ? this.pageContentHeightPx - this.titleBlockHeightPx
+            : this.pageContentHeightPx;
+        return Math.max(0, availHeight - usedHeight + this.pageInsetPx);
     }
 
     // ── Toggle edit mode ─────────────────────────────────────

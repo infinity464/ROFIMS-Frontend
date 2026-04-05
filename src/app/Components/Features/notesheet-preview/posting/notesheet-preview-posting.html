@@ -37,6 +37,11 @@
         <!-- Visible: paginated pages -->
         <div class="a4-paper-container" #pagesContainer>
             <div *ngFor="let offset of pageOffsets; let i = index; trackBy: trackByIndex" class="a4-paper paginated">
+                <!-- Title above border on first page only -->
+                <div class="ns-title-block" *ngIf="i === 0">
+                    <div class="ns-title-en">NOTE SHEET</div>
+                    <div class="ns-title-bn">মন্তব্য পত্র</div>
+                </div>
                 <div class="page-viewport">
                     <div class="page-inner" [style.transform]="'translateY(-' + offset + 'px)'">
                         <ng-container *ngTemplateOutlet="viewContent"></ng-container>
