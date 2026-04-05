@@ -946,7 +946,7 @@ body { background: #fff; font-family: 'Times New Roman', Times, serif; font-size
         }
 
         // Use page borders instead of outer table so border fills every page in both Word and LibreOffice
-        const pageBorder = { style: BorderStyle.SINGLE, size: 3, color: '000000', space: 1 };
+        const pageBorder = { style: BorderStyle.SINGLE, size: 3, color: '000000', space: 15 };
 
         const docChildren: (Paragraph | Table)[] = [];
         docChildren.push(new Paragraph({
