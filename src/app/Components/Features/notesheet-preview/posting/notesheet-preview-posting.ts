@@ -980,7 +980,7 @@ body { background: #fff; font-family: 'Times New Roman', Times, serif; font-size
         if (this.isPostingType() && this.postingEmployees.length > 0) {
             const cols = bn ? ['ক্রমিক','ব্যক্তিগত নম্বর','পদবি','ট্রেড','নাম','মাতৃ ইউনিট','নিজ জেলা','মাতৃ ইউনিটের অবস্থান','বদলি ইউনিট','মন্তব্য'] : ['Ser','Service ID','Rank','Trade','Name','Mother Unit','Own District','Mother Unit Location','Transfer Unit','Remarks'];
             // Custom column widths: Ser, ID, Rank, Trade, Name, MotherUnit, District, Location, TransferUnit, Remarks
-            const colWidths = [500, 950, 750, 850, 1900, 1100, 850, 1150, 1100, 650];
+            const colWidths = [450, 1050, 880, 980, 1650, 1350, 1060, 1370, 1200, 810];
             const headerRow = new TableRow({ tableHeader: true, children: cols.map((c, ci) => new TableCell({
                 children: [new Paragraph({ children: [new TextRun({ text: c, size: 20, sizeComplexScript: bn ? 20 : undefined, bold: true, font, language: lang })], alignment: AlignmentType.CENTER })],
                 borders: cellBorders, width: { size: colWidths[ci], type: WidthType.DXA },
@@ -998,7 +998,7 @@ body { background: #fff; font-family: 'Times New Roman', Times, serif; font-size
             const tableRows = [headerRow, ...dataRows];
             mainChildren.push(new Paragraph({ spacing: { before: 200 }, children: [] }));
             const totalColW = colWidths.reduce((a, b) => a + b, 0);
-            mainChildren.push(new Table({ width: { size: totalColW, type: WidthType.DXA }, rows: tableRows, indent: { size: 240, type: WidthType.DXA }, columnWidths: colWidths }));
+            mainChildren.push(new Table({ width: { size: totalColW, type: WidthType.DXA }, rows: tableRows, columnWidths: colWidths, alignment: AlignmentType.CENTER }));
         }
 
         // Paragraphs (after employee table)
