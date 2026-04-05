@@ -26,10 +26,10 @@
                     }
                 </div>
 
-                <!-- Prefix -->
+                <!-- Prefix (English) -->
                 <div class="field">
                     <label for="prefix" class="block mb-2">
-                        Prefix <span class="text-red-500">*</span>
+                        Prefix (English) <span class="text-red-500">*</span>
                     </label>
                     <input
                         pInputText
@@ -40,6 +40,24 @@
                     @if (configForm.get('prefix')?.invalid && configForm.get('prefix')?.touched) {
                         <small class="text-red-500 block mt-1">
                             Prefix is required
+                        </small>
+                    }
+                </div>
+
+                <!-- Prefix (Bangla) -->
+                <div class="field">
+                    <label for="prefixBN" class="block mb-2">
+                        Prefix (Bangla) <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                        pInputText
+                        id="prefixBN"
+                        formControlName="prefixBN"
+                        placeholder="e.g. মপ, বদলি"
+                        class="w-full" />
+                    @if (configForm.get('prefixBN')?.invalid && configForm.get('prefixBN')?.touched) {
+                        <small class="text-red-500 block mt-1">
+                            Prefix (Bangla) is required
                         </small>
                     }
                 </div>
@@ -120,7 +138,8 @@
             <tr>
                 <th style="width:5%">#</th>
                 <th>NoteSheet Type</th>
-                <th>Prefix</th>
+                <th>Prefix (EN)</th>
+                <th>Prefix (BN)</th>
                 <th>Start Number</th>
                 <th>Current Number</th>
                 <th>Current Year</th>
@@ -135,6 +154,7 @@
                 <td>{{ first + rowIndex + 1 }}</td>
                 <td>{{ row.noteSheetType }}</td>
                 <td>{{ row.prefix }}</td>
+                <td>{{ row.prefixBN || '-' }}</td>
                 <td>{{ row.startNumber }}</td>
                 <td>{{ row.currentNumber }}</td>
                 <td>{{ row.currentYear }}</td>
@@ -158,7 +178,7 @@
 
         <ng-template pTemplate="emptymessage">
             <tr>
-                <td colspan="9" class="text-center">No configurations found.</td>
+                <td colspan="10" class="text-center">No configurations found.</td>
             </tr>
         </ng-template>
 

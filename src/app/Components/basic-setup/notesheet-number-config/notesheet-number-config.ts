@@ -63,6 +63,7 @@ export class NoteSheetNumberConfigComponent implements OnInit {
             configId: [0],
             noteSheetType: [null, Validators.required],
             prefix: [null, Validators.required],
+            prefixBN: [null, Validators.required],
             startNumber: [null, [Validators.required, Validators.min(1)]]
         });
     }
@@ -174,6 +175,7 @@ export class NoteSheetNumberConfigComponent implements OnInit {
         const payload: any = {
             ...existing,
             prefix: formVal.prefix,
+            prefixBN: formVal.prefixBN ?? '',
             lastUpdatedBy: this.currentUser,
             lastupdate: currentDateTime
         };
@@ -207,6 +209,7 @@ export class NoteSheetNumberConfigComponent implements OnInit {
             configId: row.configId,
             noteSheetType: row.noteSheetType,
             prefix: row.prefix,
+            prefixBN: row.prefixBN ?? '',
             startNumber: row.startNumber
         });
         // Disable fields that should not be changed after creation
@@ -243,6 +246,7 @@ export class NoteSheetNumberConfigComponent implements OnInit {
             configId: 0,
             noteSheetType: null,
             prefix: null,
+            prefixBN: null,
             startNumber: null
         });
         // Re-enable fields that were disabled during edit
