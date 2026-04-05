@@ -129,8 +129,12 @@
           </div>
         </div>
 
-        <!-- Row 3b: Operation Type, Is Secret -->
+        <!-- Row 3b: Subject, Operation Type, Is Secret -->
         <div class="form-row">
+          <div class="form-field" style="flex: 2 1 0%">
+            <label class="form-label">Subject</label>
+            <input pInputText formControlName="subject" placeholder="Enter subject" class="w-full" />
+          </div>
           <div class="form-field">
             <label class="form-label">Operation Type <span class="form-label-required">*</span></label>
             <p-select

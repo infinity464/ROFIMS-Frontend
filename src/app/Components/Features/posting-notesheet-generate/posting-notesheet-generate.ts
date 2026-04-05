@@ -97,6 +97,7 @@ export class PostingNotesheetGenerateComponent implements OnInit {
             initiatorId: [null as number | null, Validators.required],
             recommenderIds: [[] as number[]],
             finalApproverId: [null as number | null, Validators.required],
+            subject: [''],
             noteSheetOperationType: [null as string | null, Validators.required],
             isSecret: [false]
         });
@@ -272,6 +273,7 @@ export class PostingNotesheetGenerateComponent implements OnInit {
             noteSheetNo: String(d.noteSheetNo ?? d.NoteSheetNo ?? ''),
             noteSheetDate,
             referenceNumber: String(d.referenceNumber ?? d.ReferenceNumber ?? ''),
+            subject: String(d.subject ?? d.Subject ?? ''),
             mainText: String(d.mainText ?? d.MainText ?? ''),
             note: String(d.note ?? d.Note ?? ''),
             preparedBy: d.createdBy ?? d.CreatedBy ?? d.lastUpdatedBy ?? d.LastUpdatedBy ?? user,
@@ -325,6 +327,7 @@ export class PostingNotesheetGenerateComponent implements OnInit {
             noteSheetNo: '',
             noteSheetDate: null,
             referenceNumber: '',
+            subject: '',
             mainText: '',
             note: '',
             preparedBy: '',
@@ -440,7 +443,7 @@ export class PostingNotesheetGenerateComponent implements OnInit {
         const now = new Date().toISOString();
         const preparedBy = (d.preparedBy && String(d.preparedBy).trim()) || 'system';
         const createdBy = this.editMode && this.originalCreatedBy ? this.originalCreatedBy : preparedBy;
-        const subject = this.editMode ? this.originalSubject : null;
+        const subject = d.subject != null && String(d.subject).trim() !== '' ? String(d.subject) : null;
         const noteSheetNo = 'AUTO';
         const recommenderIds: number[] = Array.isArray(d.recommenderIds) ? d.recommenderIds : [];
         const recommendersJson = recommenderIds.length
