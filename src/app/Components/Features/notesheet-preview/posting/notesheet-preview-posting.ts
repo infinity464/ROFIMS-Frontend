@@ -970,11 +970,26 @@ body { background: #fff; font-family: 'Times New Roman', Times, serif; font-size
             }));
         }
 
-        mainChildren.push(new Paragraph({
-            children: [new TextRun({ text: model.mainSerialText, bold: true, size: 20, sizeComplexScript: csSize, font, language: lang })],
-            indent: { left: 240 }, spacing: { before: 160, after: 40 }
-        }));
-        mainChildren.push(...this.contentBlocksToDocx(model.mainBlocks, font, bn));
+        // Merge serial with first text block so they appear inline (like ২।, ৩। etc.)
+        if (model.mainBlocks.length > 0 && model.mainBlocks[0].type === 'paragraph' && model.mainBlocks[0].text) {
+            const firstBlock = model.mainBlocks[0];
+            mainChildren.push(new Paragraph({
+                children: [
+                    new TextRun({ text: `${model.mainSerialText}  `, bold: true, size: 20, sizeComplexScript: csSize, font, language: lang }),
+                    new TextRun({ text: firstBlock.text, bold: firstBlock.bold, italics: firstBlock.italic, size: 20, sizeComplexScript: csSize, font, language: lang })
+                ],
+                indent: { left: 240 }, spacing: { before: 160, after: 80 }, alignment: AlignmentType.JUSTIFIED
+            }));
+            if (model.mainBlocks.length > 1) {
+                mainChildren.push(...this.contentBlocksToDocx(model.mainBlocks.slice(1), font, bn));
+            }
+        } else {
+            mainChildren.push(new Paragraph({
+                children: [new TextRun({ text: model.mainSerialText, bold: true, size: 20, sizeComplexScript: csSize, font, language: lang })],
+                indent: { left: 240 }, spacing: { before: 160, after: 40 }
+            }));
+            mainChildren.push(...this.contentBlocksToDocx(model.mainBlocks, font, bn));
+        }
 
         // Posting employee table (posting-specific)
         if (this.isPostingType() && this.postingEmployees.length > 0) {
@@ -1009,7 +1024,7 @@ body { background: #fff; font-family: 'Times New Roman', Times, serif; font-size
                     new TextRun({ text: `${this.serial(pi + 2)}  `, bold: true, size: 20, sizeComplexScript: csSize, font, language: lang }),
                     new TextRun({ text: para, size: 20, sizeComplexScript: csSize, font, language: lang })
                 ],
-                indent: { left: 240 }, spacing: { before: 120, after: 80 }
+                indent: { left: 240 }, spacing: { before: 120, after: 80 }, alignment: AlignmentType.JUSTIFIED
             }));
         });
 
@@ -1033,8 +1048,6 @@ body { background: #fff; font-family: 'Times New Roman', Times, serif; font-size
         // Initiator — right-side block with centered text (matches preview)
         // Uses left indent to push text to right side + CENTER alignment
         if (model.initiator) {
-            const sigIndent = { left: 5200 }; // push block to center-right of cell
-
             // Signature image or spacer
             if (model.initiator.signatureDataUrl) {
                 try {
@@ -1043,24 +1056,24 @@ body { background: #fff; font-family: 'Times New Roman', Times, serif; font-size
                             type: 'png', data: this.base64ToBytes(model.initiator.signatureDataUrl),
                             transformation: { width: 100, height: 40 }
                         })],
-                        alignment: AlignmentType.CENTER, indent: sigIndent, spacing: { before: 280, after: 80 }
+                        alignment: AlignmentType.RIGHT, spacing: { before: 280, after: 80 }
                     }));
                 } catch { /* no sig */ }
             } else {
-                mainChildren.push(new Paragraph({ indent: sigIndent, spacing: { before: 280, after: 80 } }));
+                mainChildren.push(new Paragraph({ spacing: { before: 280, after: 80 } }));
             }
 
             // Name
             mainChildren.push(new Paragraph({
                 children: [new TextRun({ text: model.initiator.nameLine, size: 22, sizeComplexScript: csSize, font, language: lang })],
-                alignment: AlignmentType.CENTER, indent: sigIndent
+                alignment: AlignmentType.RIGHT
             }));
 
             // Rank
             if (model.initiator.rankLine) {
                 mainChildren.push(new Paragraph({
                     children: [new TextRun({ text: model.initiator.rankLine, size: 22, sizeComplexScript: csSize, font, language: lang })],
-                    alignment: AlignmentType.CENTER, indent: sigIndent
+                    alignment: AlignmentType.RIGHT
                 }));
             }
 
@@ -1068,7 +1081,7 @@ body { background: #fff; font-family: 'Times New Roman', Times, serif; font-size
             if (model.initiator.appointment) {
                 mainChildren.push(new Paragraph({
                     children: [new TextRun({ text: model.initiator.appointment, size: 22, sizeComplexScript: csSize, font, language: lang })],
-                    alignment: AlignmentType.CENTER, indent: sigIndent
+                    alignment: AlignmentType.RIGHT
                 }));
             }
 
@@ -1076,7 +1089,7 @@ body { background: #fff; font-family: 'Times New Roman', Times, serif; font-size
             if (model.initiator.date) {
                 mainChildren.push(new Paragraph({
                     children: [new TextRun({ text: model.initiator.date, size: 22, sizeComplexScript: csSize, font, language: lang })],
-                    alignment: AlignmentType.CENTER, indent: sigIndent, spacing: { before: 400 }
+                    alignment: AlignmentType.RIGHT, spacing: { before: 400 }
                 }));
             }
         }

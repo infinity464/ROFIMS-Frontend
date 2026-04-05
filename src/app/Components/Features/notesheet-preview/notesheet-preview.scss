@@ -362,9 +362,7 @@
 }
 .ns-initiator-sig {
     align-self: flex-end;
-    text-align: center;
-    min-width: 200px;
-    max-width: 260px;
+    text-align: right;
 }
 .ns-preparedby-sig {
     align-self: flex-start;
@@ -420,6 +418,9 @@
     object-fit: contain;
     display: block;
     margin: 0 auto 4px;
+}
+.ns-initiator-sig .ns-sig-img {
+    margin: 0 0 4px auto;
 }
 .ns-sig-name {
     font-size: 10pt;
