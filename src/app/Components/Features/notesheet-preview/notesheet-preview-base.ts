@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { MessageService } from 'primeng/api';
-import { catchError, of } from 'rxjs';
+import { catchError, forkJoin, of } from 'rxjs';
 import { environment } from '@/Core/Environments/environment';
 import { EmpService } from '@/services/emp-service';
 import { NoteSheetType, NoteSheetCurrentStatus, NoteSheetCurrentStatusOptions, ApprovalStatus, ApprovalStep } from '@/models/enums';
@@ -76,6 +76,7 @@ export interface NoteSheetInfoFull {
     /** @deprecated use recommendersJson */
     recommenderIdsJson?: string;
     remark?: string;
+    paragraphText?: string;
 }
 
 export interface BackHistoryRow {
@@ -195,8 +196,29 @@ export abstract class NotesheetPreviewBase implements OnInit {
         if (!this.noteSheet?.draftPostingMasterId) return;
         this.loadingEmployees = true;
         this.postingService.getDraftPostingEmployees(this.noteSheet.draftPostingMasterId).subscribe({
-            next: (list) => { this.postingEmployees = list ?? []; this.loadingEmployees = false; },
+            next: (list) => {
+                this.postingEmployees = list ?? [];
+                this.enrichEmployeePrefixes();
+                this.loadingEmployees = false;
+            },
             error: () => { this.loadingEmployees = false; }
+        });
+    }
+
+    /** Fetch correct prefix (EN/BN) from employee overview API for each employee. */
+    private enrichEmployeePrefixes(): void {
+        if (!this.postingEmployees.length) return;
+        const api = `${environment.apis.core}/EmployeeInfo`;
+        const calls = this.postingEmployees.map(emp =>
+            this.http.get<any>(`${api}/GetEmployeePersonalServiceOverview/${emp.employeeId}`).pipe(catchError(() => of(null)))
+        );
+        forkJoin(calls).subscribe(results => {
+            results.forEach((res, i) => {
+                if (!res) return;
+                const data = res?.data ?? res;
+                if (data?.prefix) this.postingEmployees[i].prefixName = data.prefix;
+                if (data?.prefixBN) this.postingEmployees[i].prefixNameBN = data.prefixBN;
+            });
         });
     }
 
@@ -371,6 +393,15 @@ export abstract class NotesheetPreviewBase implements OnInit {
         if (this.isEnglish()) return `${n}.`;
         const bn = ['০','১','২','৩','৪','৫','৬','৭','৮','৯'];
         return String(n).replace(/\d/g, d => bn[+d]) + '।';
+    }
+
+    /** Parse paragraphText JSON into string array. */
+    get parsedParagraphs(): string[] {
+        if (!this.noteSheet?.paragraphText) return [];
+        try {
+            const arr = JSON.parse(this.noteSheet.paragraphText);
+            return Array.isArray(arr) ? arr.filter((p: string) => p && p.trim()) : [];
+        } catch { return []; }
     }
 
     formatDate(value: string | null | undefined): string {

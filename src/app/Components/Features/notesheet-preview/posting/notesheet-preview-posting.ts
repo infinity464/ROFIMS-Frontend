@@ -1,4 +1,4 @@
-import { Component, Input, ViewChild } from '@angular/core';
+import { AfterViewChecked, ChangeDetectorRef, Component, ElementRef, Input, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MessageService } from 'primeng/api';
@@ -45,9 +45,17 @@ import type {
     templateUrl: './notesheet-preview-posting.html',
     styleUrl: '../notesheet-preview.scss'
 })
-export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
+export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase implements AfterViewChecked {
 
     @ViewChild('fileReferencesForm') fileReferencesForm!: FileReferencesFormComponent;
+    @ViewChild('contentMeasure') contentMeasure!: ElementRef<HTMLDivElement>;
+
+    private cdr = inject(ChangeDetectorRef);
+
+    // ── Pagination ─────────────────────────────────────────────
+    pageIndices: number[] = [0];
+    pageContentHeightPx = 0;
+    private lastMeasuredHeight = 0;
 
     // ── Button visibility (configurable by parent) ───────────
     @Input() showEdit = true;
@@ -100,6 +108,42 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
         return this.noteSheet?.currentStatus?.toLowerCase() === NoteSheetCurrentStatus.Initiator;
     }
 
+    // ── Pagination logic ──────────────────────────────────────
+    ngAfterViewChecked(): void {
+        if (this.editing || !this.contentMeasure?.nativeElement) return;
+        const measured = this.contentMeasure.nativeElement.scrollHeight;
+        if (measured === this.lastMeasuredHeight || measured === 0) return;
+        this.lastMeasuredHeight = measured;
+
+        // Calculate usable content height per page in px
+        // Legal paper: 355.6mm, padding: 14mm top + 20mm bottom = 34mm usable = 321.6mm
+        if (this.pageContentHeightPx === 0) {
+            this.pageContentHeightPx = this.computePageContentHeightPx();
+        }
+
+        const numPages = Math.max(1, Math.ceil(measured / this.pageContentHeightPx));
+        const newIndices = Array.from({ length: numPages }, (_, i) => i);
+        if (newIndices.length !== this.pageIndices.length) {
+            this.pageIndices = newIndices;
+            this.cdr.detectChanges();
+        }
+    }
+
+    trackByIndex(index: number): number {
+        return index;
+    }
+
+    private computePageContentHeightPx(): number {
+        // Legal paper = 355.6mm; padding: 14mm top + 20mm bottom → content area = 321.6mm
+        // Measure in real px using a temporary DOM element for DPI accuracy
+        const testDiv = document.createElement('div');
+        testDiv.style.cssText = 'position:absolute;left:-9999px;width:1mm;height:321.6mm;visibility:hidden';
+        document.body.appendChild(testDiv);
+        const heightPx = testDiv.getBoundingClientRect().height;
+        document.body.removeChild(testDiv);
+        return heightPx;
+    }
+
     // ── Toggle edit mode ─────────────────────────────────────
     toggleEdit(): void {
         if (!this.noteSheet) return;
@@ -142,6 +186,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
     cancelEdit(): void {
         this.editing = false;
         this.fileRows = [];
+        this.lastMeasuredHeight = 0; // force pagination recalculation
     }
 
     // ── File references handlers ─────────────────────────────
@@ -229,6 +274,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
                     this.editing = false;
                     this.saving = false;
                     this.fileRows = [];
+                    this.lastMeasuredHeight = 0; // force pagination recalculation
                     this.reloadNoteSheet();
                 },
                 error: () => {
@@ -571,6 +617,12 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
             mainContent += `<div style="padding:4px 16px 2px;font-size:10pt">${esc(this.noteSheet.noteSheetNo)}</div>`;
         }
 
+        // Subject
+        if (this.noteSheet?.subject) {
+            const subjectLabel = model.isBangla ? 'বিষয়' : 'Subject';
+            mainContent += `<div style="padding:2px 16px 4px;font-size:10pt"><strong>${esc(subjectLabel)}:</strong> ${esc(this.noteSheet.subject)}</div>`;
+        }
+
         // Main text
         mainContent += '<div style="padding:10px 16px 10px 20px;font-size:10pt;line-height:1.85;display:flex;gap:8px">';
         mainContent += `<span style="font-weight:700;min-width:30px;flex-shrink:0">${esc(model.mainSerialText)}</span>`;
@@ -673,6 +725,18 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase {
                     new TextRun({ text: this.noteSheet.noteSheetNo, size: 20, sizeComplexScript: 20, font, language: lang })
                 ],
                 indent: { left: 240 }, spacing: { before: 60, after: 40 }
+            }));
+        }
+
+        // Subject
+        if (this.noteSheet?.subject) {
+            const subjectLabel = bn ? 'বিষয়' : 'Subject';
+            mainChildren.push(new Paragraph({
+                children: [
+                    new TextRun({ text: `${subjectLabel}: `, bold: true, size: 20, sizeComplexScript: csSize, font, language: lang }),
+                    new TextRun({ text: this.noteSheet.subject, size: 20, sizeComplexScript: csSize, font, language: lang })
+                ],
+                indent: { left: 240 }, spacing: { before: 20, after: 60 }
             }));
         }
 

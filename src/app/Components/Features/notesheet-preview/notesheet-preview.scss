@@ -30,17 +30,19 @@
     color: var(--text-color-secondary);
 }
 
-/* ── A4 Container ─────────────────────────────────── */
+/* ── Legal Paper Container ────────────────────────── */
 .a4-paper-container {
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    align-items: center;
     padding: 2rem;
     min-height: calc(100vh - 60px);
+    gap: 2rem;
 }
 
 .a4-paper {
-    width: 210mm;
-    min-height: 297mm;
+    width: 215.9mm;
+    min-height: 355.6mm;
     padding: 14mm 10mm 20mm;
     background: #fff;
     box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
@@ -53,6 +55,40 @@
     overflow-x: hidden;
     display: flex;
     flex-direction: column;
+}
+
+/* ── Pagination (posting notesheet) ──────────────── */
+.a4-paper.paginated {
+    height: 355.6mm;
+    min-height: 355.6mm;
+    overflow: hidden;
+}
+
+.page-viewport {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+}
+
+.page-inner {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+}
+
+.page-measure {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    width: 215.9mm;
+    padding: 0 10mm;            /* horizontal only – keeps inner width = 195.9mm (same as .a4-paper) */
+    box-sizing: border-box;
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 10pt;
+    line-height: 1.7;
+    visibility: hidden;
+    pointer-events: none;
 }
 
 /* ── Document number – top right ─────────────────── */
@@ -420,12 +456,29 @@
     .a4-paper-container {
         padding: 0;
         min-height: auto;
+        gap: 0;
     }
     .a4-paper {
         width: 100%;
+        height: auto !important;
         min-height: auto;
         padding: 5mm 8mm 5mm;
         box-shadow: none;
+        overflow: visible !important;
+    }
+    .a4-paper.paginated {
+        height: auto !important;
+        overflow: visible !important;
+    }
+    .page-viewport {
+        overflow: visible !important;
+    }
+    .page-inner {
+        position: static !important;
+        transform: none !important;
+    }
+    .page-measure {
+        display: none !important;
     }
     /* Per-page fixed border: same rectangle on every printed page */
     .a4-paper-container::before {
@@ -482,13 +535,26 @@
     .a4-paper {
         width: 100%;
         min-height: auto;
+        height: auto !important;
         padding: 12mm 8mm;
+        overflow: visible !important;
+    }
+    .a4-paper.paginated {
+        height: auto !important;
+        overflow: visible !important;
+    }
+    .page-viewport {
+        overflow: visible !important;
+    }
+    .page-inner {
+        position: static !important;
+        transform: none !important;
     }
 }
 
 /* ── Back History Timeline ─────────────────────────── */
 .ns-back-history {
-    max-width: 210mm;
+    max-width: 215.9mm;
     margin: 1.5rem auto 2rem;
     padding: 1.25rem 1.5rem;
     background: var(--surface-card, #fff);
