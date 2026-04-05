@@ -49,6 +49,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
 
     @ViewChild('fileReferencesForm') fileReferencesForm!: FileReferencesFormComponent;
     @ViewChild('contentMeasure') contentMeasure!: ElementRef<HTMLDivElement>;
+    @ViewChild('pagesContainer') pagesContainer!: ElementRef<HTMLDivElement>;
 
     private cdr = inject(ChangeDetectorRef);
 
@@ -249,7 +250,77 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
 
     // ── Print Preview ───────────────────────────────────────
     printPreview(): void {
-        window.print();
+        const container = this.pagesContainer?.nativeElement;
+        if (!container) return;
+
+        const pagesHtml = container.innerHTML;
+        const printWin = window.open('', '_blank');
+        if (!printWin) return;
+
+        printWin.document.write(`<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Print Preview</title>
+<style>
+@page { size: 215.9mm 355.6mm; margin: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #fff; font-family: 'Times New Roman', Times, serif; font-size: 10pt; color: #000; line-height: 1.7; }
+.a4-paper-container { display: flex; flex-direction: column; align-items: center; padding: 0; gap: 0; }
+.a4-paper { width: 215.9mm; height: 355.6mm; min-height: 355.6mm; padding: 14mm 10mm 20mm; background: #fff; box-sizing: border-box; font-family: 'Times New Roman', Times, serif; font-size: 10pt; color: #000; line-height: 1.7; position: relative; overflow: hidden; display: flex; flex-direction: column; page-break-after: always; break-after: page; }
+.a4-paper:last-child { page-break-after: auto; break-after: auto; }
+.a4-paper.paginated { height: 355.6mm; min-height: 355.6mm; overflow: hidden; }
+.a4-paper.paginated .ns-doc-box { border: none; }
+.page-viewport { flex: 1; overflow: hidden; position: relative; border: 1.5px solid #000; }
+.page-inner { position: absolute; top: 0; left: 0; width: 100%; }
+.page-bottom-cover { position: absolute; bottom: 0; left: 0; right: 0; background: #fff; z-index: 1; }
+.ns-title-block { text-align: center; margin-bottom: 8px; }
+.ns-title-en { font-size: 12pt; font-weight: bold; text-decoration: underline; letter-spacing: 2px; }
+.ns-title-bn { font-size: 12pt; text-decoration: underline; margin-top: 2px; }
+.ns-doc-box { border: 1.5px solid #000; flex: 1; display: flex; align-items: stretch; }
+.ns-main-col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.ns-sanglagni-col { border-left: 1.5px solid #000; width: 60px; min-width: 60px; font-size: 10pt; text-align: center; padding: 6px 12px; line-height: 1.4; }
+.ns-cell-subject { padding: 7px 16px 7px 20px; font-size: 10pt; font-weight: bold; text-decoration: underline; }
+.ns-para { display: flex; gap: 8px; padding: 10px 16px 10px 20px; font-size: 10pt; line-height: 1.85; }
+.ns-para-no { flex-shrink: 0; font-weight: 700; min-width: 30px; }
+.ns-para-text { flex: 1; min-width: 0; text-align: justify; overflow-wrap: break-word; word-break: normal; hyphens: none; }
+.ns-para-text p { margin: 0 0 0.4rem; }
+.ns-para-text p:last-child { margin-bottom: 0; }
+.ns-posting-table { padding: 4px 16px 10px 20px; overflow-x: auto; }
+.ns-posting-table table { width: 100%; border-collapse: collapse; font-size: 10pt; }
+.ns-posting-table th, .ns-posting-table td { border: 1px solid #000; padding: 5px 7px; text-align: left; }
+.ns-posting-table th { font-weight: bold; background: #f0f0f0; font-size: 9pt; text-transform: uppercase; }
+.ns-note { padding: 6px 16px 6px 20px; font-size: 10pt; border-top: 1px dashed #aaa; }
+.ns-initiator-area { padding: 14px 16px 18px 20px; display: flex; flex-direction: column; gap: 10px; }
+.ns-closing-text { font-size: 10pt; text-indent: 2em; }
+.ns-initiator-sig { align-self: flex-end; text-align: center; min-width: 200px; max-width: 260px; }
+.ns-approver-section { padding: 10px 16px 24px 20px; min-height: 90px; }
+.ns-approver-role { font-size: 10pt; text-decoration: underline; margin-bottom: 6px; }
+.ns-approver-body { display: flex; flex-direction: column; align-items: flex-start; min-height: 60px; gap: 0; }
+.ns-approver-body--left { gap: 12px; }
+.ns-approver-left { display: flex; gap: 6px; font-size: 10pt; flex-wrap: wrap; align-items: flex-start; }
+.ns-approver-remark { font-size: 10pt; font-style: italic; }
+.ns-approver-sig-area { width: 100%; text-align: center; margin-top: 10px; min-width: 0; }
+.ns-sig-img { max-width: 100px; max-height: 40px; object-fit: contain; display: block; margin: 0 auto 4px; }
+.ns-sig-paren { font-size: 10pt; margin-bottom: 2px; }
+.ns-sig-appoint { font-size: 10pt; }
+.ns-sig-date { font-size: 10pt; margin-top: 4px; }
+.ns-exbd-info { padding: 4px 16px 10px 56px; font-size: 10pt; }
+.ns-exbd-row { display: flex; gap: 8px; margin-bottom: 4px; }
+.ns-exbd-label { font-weight: 700; min-width: 150px; flex-shrink: 0; }
+.ns-cell-ref { padding: 5px 16px 5px 20px; font-size: 10pt; display: flex; align-items: flex-start; flex-wrap: wrap; gap: 0 4px; }
+.ns-ref-key { font-weight: 700; margin-right: 4px; }
+</style>
+</head><body>${pagesHtml}</body></html>`);
+        printWin.document.close();
+
+        // Wait for images to load, then trigger print
+        printWin.onload = () => {
+            printWin.focus();
+            printWin.print();
+        };
+        // Fallback if onload already fired
+        setTimeout(() => {
+            printWin.focus();
+            printWin.print();
+        }, 500);
     }
 
     // ── File references handlers ─────────────────────────────

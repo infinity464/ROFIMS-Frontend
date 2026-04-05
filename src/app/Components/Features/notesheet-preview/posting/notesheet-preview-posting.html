@@ -35,7 +35,7 @@
         </div>
 
         <!-- Visible: paginated pages -->
-        <div class="a4-paper-container">
+        <div class="a4-paper-container" #pagesContainer>
             <div *ngFor="let offset of pageOffsets; let i = index; trackBy: trackByIndex" class="a4-paper paginated">
                 <div class="page-viewport">
                     <div class="page-inner" [style.transform]="'translateY(-' + offset + 'px)'">
