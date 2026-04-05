@@ -112,6 +112,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
     loading = false;
     error = false;
     exportingPdf = false;
+    printingPreview = false;
 
     // Cached safe-html to avoid re-parsing DOM on every change detection cycle
     private _mainTextCache: { raw: string; safe: SafeHtml } | null = null;
@@ -814,6 +815,22 @@ export abstract class NotesheetPreviewBase implements OnInit {
             saveAs(pdfBlob, fileName);
         } finally {
             this.exportingPdf = false;
+        }
+    }
+
+    /** Send a DOCX blob to backend for conversion, then open the PDF in a new browser tab. */
+    protected async openPdfPreview(docxBlob: Blob): Promise<void> {
+        this.printingPreview = true;
+        try {
+            const form = new FormData();
+            form.append('file', docxBlob, 'document.docx');
+            const pdfBlob = await firstValueFrom(
+                this.http.post(`${environment.apis.core}/Document/ConvertToPdf`, form, { responseType: 'blob' })
+            );
+            const url = URL.createObjectURL(pdfBlob);
+            window.open(url, '_blank');
+        } finally {
+            this.printingPreview = false;
         }
     }
 
