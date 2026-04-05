@@ -1,4 +1,4 @@
-<p-toast></p-toast>
+<p-toast position="top-center"></p-toast>
 
 <div class="preview-page">
 
@@ -116,11 +116,11 @@
                                     <th>{{ isEnglish() ? 'Rank' : 'পদবি' }}</th>
                                     <th>{{ isEnglish() ? 'Trade' : 'ট্রেড' }}</th>
                                     <th>{{ isEnglish() ? 'Name' : 'নাম' }}</th>
-                                    <th>{{ isEnglish() ? 'Mother Unit' : 'মাতৃ ইউনিট' }}</th>
-                                    <th>{{ isEnglish() ? 'Own District' : 'নিজ জেলা' }}</th>
-                                    <th>{{ isEnglish() ? 'Mother Unit Location' : 'মাতৃ ইউনিটের অবস্থান' }}</th>
+                                    <th>{{ isEnglish() ? 'Own District (Responsible Area)' : 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
+                                    <th>{{ isEnglish() ? 'Spouse District (Responsible Area)' : 'স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
+                                    <th>{{ isEnglish() ? 'Previous Workplace (Responsible Area)' : 'পূর্ববতী কর্মস্থল (দায়িত্বপূর্ণ এলাকা)' }}</th>
                                     <th>{{ isEnglish() ? 'Transfer Unit' : 'বদলি ইউনিট' }}</th>
-                                    <th>{{ isEnglish() ? 'Remarks' : 'মন্তব্য' }}</th>
+                                    <th style="min-width:200px">{{ isEnglish() ? 'Remarks' : 'মন্তব্য' }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -130,15 +130,15 @@
                                     <td>{{ isEnglish() ? (emp.rankName || '-') : (emp.rankNameBN || emp.rankName || '-') }}</td>
                                     <td>{{ isEnglish() ? (emp.tradeName || '-') : (emp.tradeNameBN || emp.tradeName || '-') }}</td>
                                     <td>{{ isEnglish() ? (emp.fullNameEN || '-') : (emp.fullNameBN || emp.fullNameEN || '-') }}</td>
-                                    <td>{{ isEnglish() ? (emp.motherUnitName || '-') : (emp.motherUnitNameBN || emp.motherUnitName || '-') }}</td>
-                                    <td>{{ isEnglish() ? (emp.permanentDistrictName || '-') : (emp.permanentDistrictNameBN || emp.permanentDistrictName || '-') }}</td>
+                                    <td>{{ isEnglish() ? (emp.presentDistrictName || '-') : (emp.presentDistrictNameBN || emp.presentDistrictName || '-') }}</td>
+                                    <td>{{ isEnglish() ? (emp.spousePresentDistrictName || '-') : (emp.spousePresentDistrictNameBN || emp.spousePresentDistrictName || '-') }}</td>
                                     <td>{{ isEnglish() ? (emp.motherOrgLocationName || '-') : (emp.motherOrgLocationNameBN || emp.motherOrgLocationName || '-') }}</td>
                                     <td>
                                         <p-select [(ngModel)]="emp.transferRabUnitId" [options]="rabUnitOptions" optionLabel="label" optionValue="value"
                                                   placeholder="Select Unit" [filter]="true" filterBy="label" [showClear]="true"
                                                   styleClass="w-full" appendTo="body" size="small"></p-select>
                                     </td>
-                                    <td>
+                                    <td style="min-width:200px">
                                         <input pInputText [(ngModel)]="emp.remarks" placeholder="{{ isEnglish() ? 'Remarks' : 'মন্তব্য' }}" class="w-full" />
                                     </td>
                                 </tr>
@@ -210,7 +210,7 @@
                 </div>
 
                 <div *ngIf="noteSheet.subject" style="padding:2px 16px 4px; font-size:10pt;">
-                    <strong>{{ isEnglish() ? 'Subject' : 'বিষয়' }}:</strong> {{ noteSheet.subject }}
+                    <strong><u>{{ noteSheet.subject }}</u></strong>
                 </div>
 
                 <!-- ── Main Text ── -->
@@ -229,9 +229,9 @@
                                 <th>{{ isEnglish() ? 'Rank' : 'পদবি' }}</th>
                                 <th>{{ isEnglish() ? 'Trade' : 'ট্রেড' }}</th>
                                 <th>{{ isEnglish() ? 'Name' : 'নাম' }}</th>
-                                <th>{{ isEnglish() ? 'Mother Unit' : 'মাতৃ ইউনিট' }}</th>
-                                <th>{{ isEnglish() ? 'Own District' : 'নিজ জেলা' }}</th>
-                                <th>{{ isEnglish() ? 'Mother Unit Location' : 'মাতৃ ইউনিটের অবস্থান' }}</th>
+                                <th>{{ isEnglish() ? 'Own District (Responsible Area)' : 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
+                                <th>{{ isEnglish() ? 'Spouse District (Responsible Area)' : 'স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
+                                <th>{{ isEnglish() ? 'Previous Workplace (Responsible Area)' : 'পূর্ববতী কর্মস্থল (দায়িত্বপূর্ণ এলাকা)' }}</th>
                                 <th>{{ isEnglish() ? 'Transfer Unit' : 'বদলি ইউনিট' }}</th>
                                 <th>{{ isEnglish() ? 'Remarks' : 'মন্তব্য' }}</th>
                             </tr>
@@ -243,8 +243,8 @@
                                 <td>{{ isEnglish() ? (emp.rankName || '') : (emp.rankNameBN || emp.rankName || '') }}</td>
                                 <td>{{ isEnglish() ? (emp.tradeName || '') : (emp.tradeNameBN || emp.tradeName || '') }}</td>
                                 <td>{{ isEnglish() ? (emp.fullNameEN || '') : (emp.fullNameBN || emp.fullNameEN || '') }}</td>
-                                <td>{{ isEnglish() ? (emp.motherUnitName || '') : (emp.motherUnitNameBN || emp.motherUnitName || '') }}</td>
-                                <td>{{ isEnglish() ? (emp.permanentDistrictName || '') : (emp.permanentDistrictNameBN || emp.permanentDistrictName || '') }}</td>
+                                <td>{{ isEnglish() ? (emp.presentDistrictName || '') : (emp.presentDistrictNameBN || emp.presentDistrictName || '') }}</td>
+                                <td>{{ isEnglish() ? (emp.spousePresentDistrictName || '') : (emp.spousePresentDistrictNameBN || emp.spousePresentDistrictName || '') }}</td>
                                 <td>{{ isEnglish() ? (emp.motherOrgLocationName || '') : (emp.motherOrgLocationNameBN || emp.motherOrgLocationName || '') }}</td>
                                 <td>{{ isEnglish() ? (emp.transferRabUnitName || '') : (emp.transferRabUnitId ? unitLabelMapBN[emp.transferRabUnitId] : null) || emp.transferRabUnitName || '' }}</td>
                                 <td>{{ emp.remarks || '' }}</td>
@@ -281,7 +281,7 @@
                         <div class="ns-sig-appoint" *ngIf="initiatorDetails.appointment || initiatorDetails.appointmentBN">
                             {{ isEnglish() ? initiatorDetails.appointment : (initiatorDetails.appointmentBN || initiatorDetails.appointment) }}
                         </div>
-                        <div class="ns-sig-date" *ngIf="isInitiatorApproved() && noteSheet.noteSheetDate">{{ formatDate(noteSheet.noteSheetDate) }}</div>
+                        <div class="ns-sig-date" *ngIf="isInitiatorApproved() && noteSheet.noteSheetDate">{{ formatMonthYear(noteSheet.noteSheetDate) }}</div>
                     </div>
                 </div>
 

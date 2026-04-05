@@ -586,7 +586,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
                 nameLine: nameStr,
                 rankLine: rankStr,
                 appointment: bn ? (d.appointmentBN || d.appointment) : d.appointment,
-                date: approved && this.noteSheet.noteSheetDate ? this.formatDate(this.noteSheet.noteSheetDate) : undefined,
+                date: approved && this.noteSheet.noteSheetDate ? this.formatMonthYear(this.noteSheet.noteSheetDate) : undefined,
                 align: 'right',
                 signatureDataUrl: approved && this.shouldShowSignature(d.step) ? d.signatureDataUrl : undefined
             };
@@ -714,11 +714,9 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
 
         // Subject
         if (this.noteSheet?.subject) {
-            const subjectLabel = bn ? 'বিষয়' : 'Subject';
             mainChildren.push(new Paragraph({
                 children: [
-                    new TextRun({ text: `${subjectLabel}: `, bold: true, size: 20, sizeComplexScript: csSize, font, language: lang }),
-                    new TextRun({ text: this.noteSheet.subject, size: 20, sizeComplexScript: csSize, font, language: lang })
+                    new TextRun({ text: this.noteSheet.subject, bold: true, underline: {}, size: 20, sizeComplexScript: csSize, font, language: lang })
                 ],
                 indent: { left: 240 }, spacing: { before: 20, after: 60 }
             }));
@@ -747,11 +745,17 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
 
         // Posting employee table (posting-specific)
         if (this.isPostingType() && this.postingEmployees.length > 0) {
-            const cols = bn ? ['ক্রমিক','ব্যক্তিগত নম্বর','পদবি','ট্রেড','নাম','মাতৃ ইউনিট','নিজ জেলা','মাতৃ ইউনিটের অবস্থান','বদলি ইউনিট','মন্তব্য'] : ['Ser','Service ID','Rank','Trade','Name','Mother Unit','Own District','Mother Unit Location','Transfer Unit','Remarks'];
-            // Custom column widths: Ser, ID, Rank, Trade, Name, MotherUnit, District, Location, TransferUnit, Remarks
-            const colWidths = [450, 1050, 880, 980, 1650, 1350, 1060, 1370, 1200, 810];
+            const cols = bn
+                ? ['ক্রমিক','ব্যক্তিগত নম্বর','পদবি','ট্রেড','নাম','নিজ জেলা (দায়িত্বপূর্ণ এলাকা)','স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)','পূর্ববতী কর্মস্থল (দায়িত্বপূর্ণ এলাকা)','বদলি ইউনিট','মন্তব্য']
+                : ['Ser','Service ID','Rank','Trade','Name','Own District (Responsible Area)','Spouse District (Responsible Area)','Previous Workplace (Responsible Area)','Transfer Unit','Remarks'];
+            // Dynamic widths: if remarks exist, give more to Remarks; otherwise give more to Trade
+            const hasRemarks = this.postingEmployees.some(e => !!e.remarks);
+            //                  Ser,  ID,   Rank, Trade, Name, OwnDist, SpDist, Loc,  TrUnit, Remarks
+            const colWidths = hasRemarks
+                ? [600, 1150, 800,  550, 1300, 1150, 1150, 1266, 1000, 1500]
+                : [600, 1150, 800, 1100, 1300, 1150, 1150, 1266, 1000,  950];
             const headerRow = new TableRow({ tableHeader: true, children: cols.map((c, ci) => new TableCell({
-                children: [new Paragraph({ children: [new TextRun({ text: c, size: 20, sizeComplexScript: bn ? 20 : undefined, bold: true, font, language: lang })], alignment: AlignmentType.CENTER })],
+                children: [new Paragraph({ children: [new TextRun({ text: c, size: 20, sizeComplexScript: bn ? 20 : undefined, font, language: lang })], alignment: AlignmentType.CENTER })],
                 borders: cellBorders, width: { size: colWidths[ci], type: WidthType.DXA },
             })) });
             const dataRows = this.postingEmployees.map((emp, i) => new TableRow({ children: [
@@ -759,11 +763,15 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
                 bn?(emp.rankNameBN||emp.rankName||''):(emp.rankName??''),
                 bn?(emp.tradeNameBN||emp.tradeName||''):(emp.tradeName??''),
                 bn?(emp.fullNameBN||emp.fullNameEN||''):(emp.fullNameEN??''),
-                bn?(emp.motherUnitNameBN||emp.motherUnitName||''):(emp.motherUnitName??''),
-                bn?(emp.permanentDistrictNameBN||emp.permanentDistrictName||''):(emp.permanentDistrictName??''),
+                bn?(emp.presentDistrictNameBN||emp.presentDistrictName||''):(emp.presentDistrictName??''),
+                bn?(emp.spousePresentDistrictNameBN||emp.spousePresentDistrictName||''):(emp.spousePresentDistrictName??''),
                 bn?(emp.motherOrgLocationNameBN||emp.motherOrgLocationName||''):(emp.motherOrgLocationName??''),
                 bn ? (this.unitLabelMapBN[emp.transferRabUnitId!] || emp.transferRabUnitName || '') : (emp.transferRabUnitName ?? ''), emp.remarks??''
-            ].map((v, ci) => new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: v, size: 20, sizeComplexScript: bn ? 20 : undefined, font, language: lang })], alignment: AlignmentType.CENTER })], borders: cellBorders, width: { size: colWidths[ci], type: WidthType.DXA } })) }));
+            ].map((v, ci) => {
+                const lines = v.split('\n');
+                const cellParas = lines.map(line => new Paragraph({ children: [new TextRun({ text: line, size: 20, sizeComplexScript: bn ? 20 : undefined, font, language: lang })], alignment: AlignmentType.CENTER }));
+                return new TableCell({ children: cellParas, borders: cellBorders, width: { size: colWidths[ci], type: WidthType.DXA } });
+            }) }));
             const tableRows = [headerRow, ...dataRows];
             mainChildren.push(new Paragraph({ spacing: { before: 200 }, children: [] }));
             const totalColW = colWidths.reduce((a, b) => a + b, 0);
@@ -799,9 +807,9 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
             }));
         }
 
-        // Initiator — right-side block with centered text (matches preview)
-        // Uses left indent to push text to right side + CENTER alignment
+        // Initiator — right-positioned, left-aligned text within block
         if (model.initiator) {
+            const initIndent = { left: 5500 };
             // Signature image or spacer
             if (model.initiator.signatureDataUrl) {
                 try {
@@ -810,7 +818,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
                             type: 'png', data: this.base64ToBytes(model.initiator.signatureDataUrl),
                             transformation: { width: 100, height: 40 }
                         })],
-                        alignment: AlignmentType.RIGHT, spacing: { before: 280, after: 80 }
+                        alignment: AlignmentType.LEFT, indent: initIndent, spacing: { before: 280, after: 80 }
                     }));
                 } catch { /* no sig */ }
             } else {
@@ -820,14 +828,14 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
             // Name
             mainChildren.push(new Paragraph({
                 children: [new TextRun({ text: model.initiator.nameLine, size: 22, sizeComplexScript: csSize, font, language: lang })],
-                alignment: AlignmentType.RIGHT
+                alignment: AlignmentType.LEFT, indent: initIndent
             }));
 
             // Rank
             if (model.initiator.rankLine) {
                 mainChildren.push(new Paragraph({
                     children: [new TextRun({ text: model.initiator.rankLine, size: 22, sizeComplexScript: csSize, font, language: lang })],
-                    alignment: AlignmentType.RIGHT
+                    alignment: AlignmentType.LEFT, indent: initIndent
                 }));
             }
 
@@ -835,7 +843,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
             if (model.initiator.appointment) {
                 mainChildren.push(new Paragraph({
                     children: [new TextRun({ text: model.initiator.appointment, size: 22, sizeComplexScript: csSize, font, language: lang })],
-                    alignment: AlignmentType.RIGHT
+                    alignment: AlignmentType.LEFT, indent: initIndent
                 }));
             }
 
@@ -843,7 +851,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
             if (model.initiator.date) {
                 mainChildren.push(new Paragraph({
                     children: [new TextRun({ text: model.initiator.date, size: 22, sizeComplexScript: csSize, font, language: lang })],
-                    alignment: AlignmentType.RIGHT, spacing: { before: 400 }
+                    alignment: AlignmentType.LEFT, indent: initIndent, spacing: { before: 400 }
                 }));
             }
         }
@@ -855,7 +863,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
                 indent: { left: 240 }, spacing: { before: 280 }
             }));
             const runs: TextRun[] = [new TextRun({ text: ap.serialText, bold: true, size: 20, sizeComplexScript: csSize, font, language: lang })];
-            if (ap.remark) runs.push(new TextRun({ text: ` ${ap.remark}`, italics: true, size: 20, sizeComplexScript: csSize, font, language: lang }));
+            if (ap.remark) runs.push(new TextRun({ text: ` ${ap.remark}`, size: 20, sizeComplexScript: csSize, font, language: lang }));
             mainChildren.push(new Paragraph({ children: runs, indent: { left: 240 } }));
             if (ap.signatureDataUrl) {
                 try {

@@ -122,6 +122,16 @@ export const NoteSheetCurrentStatusOptions = [
 ];
 
 /**
+ * ApproverRoleType – role type for NoteSheet Approver Configuration detail rows.
+ * Matches NoteSheetApproverConfigDetail.RoleType (NVARCHAR(50)).
+ */
+export enum ApproverRoleType {
+    Initiator     = 'Initiator',
+    Recommender   = 'Recommender',
+    FinalApprover = 'FinalApprover'
+}
+
+/**
  * ApprovalStep – identifies each step/role in the approval chain.
  * Used as the `step` identifier when loading signatory details.
  */

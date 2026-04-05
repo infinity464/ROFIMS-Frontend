@@ -1204,6 +1204,42 @@ export class NotesheetListComponent implements OnInit {
       this.messageService.add({ severity: 'warn', summary: 'Remark Required', detail: 'Please provide a remark before sending back.' });
       return;
     }
+
+    // Posting: validate transfer unit before approval
+    const row = this.selectedRow;
+    if (this.remarkAction === NoteSheetRemarkAction.Approve
+        && (row.noteSheetType === NoteSheetType.InterPosting || row.noteSheetType === NoteSheetType.NewPosting)
+        && row.draftPostingMasterId) {
+      const employees$ = row.noteSheetType === NoteSheetType.InterPosting
+          ? this.postingService.getDraftInterPostingEmployees(row.draftPostingMasterId)
+          : this.postingService.getDraftPostingEmployees(row.draftPostingMasterId);
+      employees$.subscribe({
+        next: (employees) => {
+          const missing = (employees ?? []).filter((e: any) => !e.transferRabUnitId);
+          if (missing.length > 0) {
+            const names = missing.map((e: any) => e.fullNameEN || e.FullNameEN || e.employeeName || `ID ${e.employeeId ?? e.EmployeeId}`).join(', ');
+            this.messageService.add({
+              severity: 'warn',
+              summary: 'বদলি ইউনিট সেট করা হয়নি',
+              detail: `অনুমোদনের আগে সকল সদস্যের বদলি ইউনিট (Transfer Unit) সেট করতে হবে। যাদের সেট করা হয়নি: ${names}`,
+              life: 8000
+            });
+            return;
+          }
+          this.doSubmitRemark();
+        },
+        error: () => {
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to validate transfer units. Please try again.' });
+        }
+      });
+      return;
+    }
+
+    this.doSubmitRemark();
+  }
+
+  private doSubmitRemark(): void {
+    if (!this.selectedRow || !this.remarkAction) return;
     const url = `${this.api}/${this.remarkAction.charAt(0).toUpperCase() + this.remarkAction.slice(1)}`;
     const body = {
       NoteSheetId: this.selectedRow.noteSheetId,

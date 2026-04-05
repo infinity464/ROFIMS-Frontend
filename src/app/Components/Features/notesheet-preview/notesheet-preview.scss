@@ -325,6 +325,7 @@
         border: 1px solid #000;
         padding: 5px 7px;
         text-align: left;
+        white-space: pre-line;
     }
     th {
         font-weight: bold;
@@ -362,7 +363,7 @@
 }
 .ns-initiator-sig {
     align-self: flex-end;
-    text-align: right;
+    text-align: left;
 }
 .ns-preparedby-sig {
     align-self: flex-start;
@@ -402,7 +403,6 @@
 }
 .ns-approver-remark {
     font-size: 10pt;
-    font-style: italic;
 }
 .ns-approver-sig-area {
     width: 100%;
@@ -420,7 +420,7 @@
     margin: 0 auto 4px;
 }
 .ns-initiator-sig .ns-sig-img {
-    margin: 0 0 4px auto;
+    margin: 0 auto 4px 0;
 }
 .ns-sig-name {
     font-size: 10pt;

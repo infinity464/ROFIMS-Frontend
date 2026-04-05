@@ -363,9 +363,9 @@ export abstract class NotesheetPreviewBase implements OnInit {
     getApproverDate(step: string): string {
         if (!this.noteSheet) return '';
         if (step === ApprovalStep.FinalApprover)
-            return this.noteSheet.finalApprovalApprovedDate ? this.formatDate(this.noteSheet.finalApprovalApprovedDate) : '';
+            return this.noteSheet.finalApprovalApprovedDate ? this.formatMonthYear(this.noteSheet.finalApprovalApprovedDate) : '';
         if (step === ApprovalStep.Initiator)
-            return this.noteSheet.initiatorApprovedDate ? this.formatDate(this.noteSheet.initiatorApprovedDate) : '';
+            return this.noteSheet.initiatorApprovedDate ? this.formatMonthYear(this.noteSheet.initiatorApprovedDate) : '';
         if (step.startsWith(ApprovalStep.Recommender)) {
             try {
                 const json = this.noteSheet.recommendersJson ?? this.noteSheet.recommenderIdsJson;
@@ -375,7 +375,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
                         const numPart = step.replace(ApprovalStep.Recommender, '').trim();
                         const idx = numPart ? parseInt(numPart, 10) - 1 : 0;
                         const rec = arr[idx];
-                        if (rec?.recomender_approved_date) return this.formatDate(rec.recomender_approved_date);
+                        if (rec?.recomender_approved_date) return this.formatMonthYear(rec.recomender_approved_date);
                     }
                 }
             } catch { /* ignore */ }
@@ -413,6 +413,16 @@ export abstract class NotesheetPreviewBase implements OnInit {
             if (isNaN(d.getTime())) return String(value);
             const locale = this.isEnglish() ? 'en-GB' : 'bn-BD';
             return d.toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' });
+        } catch { return String(value); }
+    }
+
+    formatMonthYear(value: string | null | undefined): string {
+        if (!value) return '—';
+        try {
+            const d = new Date(value);
+            if (isNaN(d.getTime())) return String(value);
+            const locale = this.isEnglish() ? 'en-GB' : 'bn-BD';
+            return d.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
         } catch { return String(value); }
     }
 
@@ -739,7 +749,9 @@ export abstract class NotesheetPreviewBase implements OnInit {
 
         // Posting table
         if (this.isNewPosting() && this.postingEmployees.length > 0) {
-            const cols = bn ? ['ক্রমিক','ব্যক্তিগত নম্বর','পদবি','ট্রেড','নাম','মাতৃ ইউনিট','নিজ জেলা','মাতৃ ইউনিটের অবস্থান','বদলি কর্মস্থল','মন্তব্য'] : ['Ser','Service ID','Rank','Trade','Name','Mother Unit','Own District','Mother Unit Location','Transfer Unit','Remarks'];
+            const cols = bn
+                ? ['ক্রমিক','ব্যক্তিগত নম্বর','পদবি','ট্রেড','নাম','নিজ জেলা (দায়িত্বপূর্ণ এলাকা)','স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)','পূর্ববতী কর্মস্থল (দায়িত্বপূর্ণ এলাকা)','বদলি কর্মস্থল','মন্তব্য']
+                : ['Ser','Service ID','Rank','Trade','Name','Own District (Responsible Area)','Spouse District (Responsible Area)','Previous Workplace (Responsible Area)','Transfer Unit','Remarks'];
             const cw = Math.floor(13000 / cols.length);
             const headerRow = new TableRow({ tableHeader: true, children: cols.map(c => new TableCell({
                 children: [new Paragraph({ children: [new TextRun({ text: c, ...runProps, size: 16, bold: true })], alignment: AlignmentType.CENTER })],
@@ -750,11 +762,15 @@ export abstract class NotesheetPreviewBase implements OnInit {
                 bn?(emp.rankNameBN||emp.rankName||''):(emp.rankName??''),
                 bn?(emp.tradeNameBN||emp.tradeName||''):(emp.tradeName??''),
                 bn?(emp.fullNameBN||emp.fullNameEN||''):(emp.fullNameEN??''),
-                bn?(emp.motherUnitNameBN||emp.motherUnitName||''):(emp.motherUnitName??''),
-                bn?(emp.permanentDistrictNameBN||emp.permanentDistrictName||''):(emp.permanentDistrictName??''),
+                bn?(emp.presentDistrictNameBN||emp.presentDistrictName||''):(emp.presentDistrictName??''),
+                bn?(emp.spousePresentDistrictNameBN||emp.spousePresentDistrictName||''):(emp.spousePresentDistrictName??''),
                 bn?(emp.motherOrgLocationNameBN||emp.motherOrgLocationName||''):(emp.motherOrgLocationName??''),
                 emp.transferRabUnitName??'', emp.remarks??''
-            ].map(v => new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: v, ...runProps, size: 16 })] })], borders: cellBorders, width: { size: cw, type: WidthType.DXA } })) }));
+            ].map(v => {
+                const lines = v.split('\n');
+                const cellParas = lines.map(line => new Paragraph({ children: [new TextRun({ text: line, ...runProps, size: 16 })] }));
+                return new TableCell({ children: cellParas, borders: cellBorders, width: { size: cw, type: WidthType.DXA } });
+            }) }));
             children.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [headerRow, ...dataRows] }));
         }
 
@@ -856,10 +872,12 @@ export abstract class NotesheetPreviewBase implements OnInit {
         }
 
         if (this.isNewPosting() && this.postingEmployees.length > 0) {
-            const cols = bn ? ['ক্রমিক','ব্যক্তিগত নম্বর','পদবি','ট্রেড','নাম','মাতৃ ইউনিট','নিজ জেলা','মাতৃ ইউনিটের অবস্থান','বদলি কর্মস্থল','মন্তব্য'] : ['Ser','Service ID','Rank','Trade','Name','Mother Unit','Own District','Mother Unit Location','Transfer Unit','Remarks'];
+            const cols = bn
+                ? ['ক্রমিক','ব্যক্তিগত নম্বর','পদবি','ট্রেড','নাম','নিজ জেলা (দায়িত্বপূর্ণ এলাকা)','স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)','পূর্ববতী কর্মস্থল (দায়িত্বপূর্ণ এলাকা)','বদলি কর্মস্থল','মন্তব্য']
+                : ['Ser','Service ID','Rank','Trade','Name','Own District (Responsible Area)','Spouse District (Responsible Area)','Previous Workplace (Responsible Area)','Transfer Unit','Remarks'];
             const headerCells = cols.map(c => `<th>${this.escapeHtml(c)}</th>`).join('');
             const bodyRows = this.postingEmployees.map((emp, i) => {
-                const vals = [String(i+1), emp.serviceId??'', bn?(emp.rankNameBN||emp.rankName||''):(emp.rankName??''), bn?(emp.tradeNameBN||emp.tradeName||''):(emp.tradeName??''), bn?(emp.fullNameBN||emp.fullNameEN||''):(emp.fullNameEN??''), bn?(emp.motherUnitNameBN||emp.motherUnitName||''):(emp.motherUnitName??''), bn?(emp.permanentDistrictNameBN||emp.permanentDistrictName||''):(emp.permanentDistrictName??''), bn?(emp.motherOrgLocationNameBN||emp.motherOrgLocationName||''):(emp.motherOrgLocationName??''), emp.transferRabUnitName??'', emp.remarks??''];
+                const vals = [String(i+1), emp.serviceId??'', bn?(emp.rankNameBN||emp.rankName||''):(emp.rankName??''), bn?(emp.tradeNameBN||emp.tradeName||''):(emp.tradeName??''), bn?(emp.fullNameBN||emp.fullNameEN||''):(emp.fullNameEN??''), bn?(emp.presentDistrictNameBN||emp.presentDistrictName||''):(emp.presentDistrictName??''), bn?(emp.spousePresentDistrictNameBN||emp.spousePresentDistrictName||''):(emp.spousePresentDistrictName??''), bn?(emp.motherOrgLocationNameBN||emp.motherOrgLocationName||''):(emp.motherOrgLocationName??''), emp.transferRabUnitName??'', emp.remarks??''];
                 return `<tr>${vals.map(v => `<td>${this.escapeHtml(v)}</td>`).join('')}</tr>`;
             }).join('');
             extraHtml += `<table><thead><tr>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table>`;
@@ -890,7 +908,8 @@ export abstract class NotesheetPreviewBase implements OnInit {
     th { font-weight: bold; background: #f5f5f5; font-size: 8pt; text-transform: uppercase; }
     .note { padding: 6px 12px; font-size: 10pt; border-top: 1px dashed #aaa; }
     .closing { margin-top: 14px; font-size: 11pt; text-indent: 2em; }
-    .initiator-sig { margin-top: 10px; text-align: center; display: flex; flex-direction: column; align-items: flex-end; padding-right: 12px; }
+    .initiator-sig { margin-top: 10px; text-align: left; display: flex; flex-direction: column; align-items: flex-end; padding-right: 12px; }
+    .initiator-sig > * { text-align: left; }
     .sig-img { max-width: 160px; max-height: 60px; object-fit: contain; display: block; margin-bottom: 4px; }
     .approver-section { border-top: 1.5px solid #000; padding: 10px 12px 20px; min-height: 90px; }
     .approver-role { text-decoration: underline; font-size: 11pt; margin-bottom: 6px; }

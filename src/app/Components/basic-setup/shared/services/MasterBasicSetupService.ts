@@ -15,6 +15,7 @@ import { MotherOrgRankVacancyDistributionModel } from '../models/mother-org-rank
 
 import { NoteSheetTemplateModel } from '../models/notesheet-template';
 import { NoteSheetNumberConfigModel } from '../models/notesheet-number-config';
+import { NoteSheetApproverConfigModel } from '../models/notesheet-approver-config';
 import { RABUnitAORModel, ResultViewModel } from '../models/rab-unit-aor';
 
 export interface AuthorizedCountItem {
@@ -37,6 +38,7 @@ export class MasterBasicSetupService {
     private apiUrlMotherOrgRankVacancyDistribution = `${environment.apis.core}/MotherOrgRankVacancyDistribution`;
     private apiUrlNoteSheetTemplate = `${environment.apis.core}/NoteSheetTemplate`;
     private apiUrlNoteSheetNumberConfig = `${environment.apis.core}/NoteSheetNumberConfig`;
+    private apiUrlNoteSheetApproverConfig = `${environment.apis.core}/NoteSheetApproverConfig`;
     private apiUrlRABUnitAOR = `${environment.apis.core}/RABUnitAOR`;
 
 
@@ -261,6 +263,33 @@ export class MasterBasicSetupService {
     deleteNoteSheetNumberConfig(id: number): Observable<any> {
         return this.http.delete(`${this.apiUrlNoteSheetNumberConfig}/DeleteAsyn/${id}`);
     }
+
+    // NoteSheetApproverConfig CRUD
+
+    getAllNoteSheetApproverConfig(): Observable<NoteSheetApproverConfigModel[]> {
+        return this.http.get<NoteSheetApproverConfigModel[]>(`${this.apiUrlNoteSheetApproverConfig}/GetAll`);
+    }
+
+    getNoteSheetApproverConfigById(id: number): Observable<NoteSheetApproverConfigModel> {
+        return this.http.get<NoteSheetApproverConfigModel>(`${this.apiUrlNoteSheetApproverConfig}/GetFilteredByKeysAsyn/${id}`);
+    }
+
+    getNoteSheetApproverConfigByType(noteSheetType: string): Observable<NoteSheetApproverConfigModel[]> {
+        return this.http.get<NoteSheetApproverConfigModel[]>(`${this.apiUrlNoteSheetApproverConfig}/GetByNoteSheetType/${noteSheetType}`);
+    }
+
+    createNoteSheetApproverConfig(model: NoteSheetApproverConfigModel): Observable<any> {
+        return this.http.post(`${this.apiUrlNoteSheetApproverConfig}/SaveAsyn`, model);
+    }
+
+    updateNoteSheetApproverConfig(model: NoteSheetApproverConfigModel): Observable<any> {
+        return this.http.post(`${this.apiUrlNoteSheetApproverConfig}/UpdateAsyn`, model);
+    }
+
+    deleteNoteSheetApproverConfig(id: number): Observable<any> {
+        return this.http.delete(`${this.apiUrlNoteSheetApproverConfig}/DeleteAsyn/${id}`);
+    }
+
     getRABUnitAORByUpazila(upazilaId: number): Observable<RABUnitAORModel[]> {
         return this.http.get<RABUnitAORModel[]>(`${this.apiUrlRABUnitAOR}/GetByUpazila/${upazilaId}`);
     }

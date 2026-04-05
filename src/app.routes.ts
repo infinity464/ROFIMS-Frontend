@@ -106,6 +106,7 @@ import { RabIdSerial } from '@/Components/basic-setup/rab-id-serial/rab-id-seria
 import { AbsentType } from '@/Components/basic-setup/absent-type/absent-type';
 import { NotesheetTemplateComponent } from '@/Components/basic-setup/notesheet-template/notesheet-template';
 import { NoteSheetNumberConfigComponent } from '@/Components/basic-setup/notesheet-number-config/notesheet-number-config';
+import { NoteSheetApproverConfigComponent } from '@/Components/basic-setup/notesheet-approver-config/notesheet-approver-config';
 import { NotesheetGenerateComponent } from '@/Components/Features/notesheet-generate/notesheet-generate';
 import { NotesheetExBdLeaveComponent } from '@/Components/Features/notesheet-ex-bd-leave/notesheet-ex-bd-leave';
 import { NotesheetListComponent } from '@/Components/Features/notesheet-list/notesheet-list';
@@ -207,6 +208,7 @@ export const appRoutes: Routes = [
             { path: 'basic-setup/absent-type', component: AbsentType },
             { path: 'basic-setup/notesheet-template', component: NotesheetTemplateComponent },
             { path: 'basic-setup/notesheet-number-config', component: NoteSheetNumberConfigComponent },
+            { path: 'basic-setup/notesheet-approver-config', component: NoteSheetApproverConfigComponent },
             { path: 'notesheet-generate', component: NotesheetGenerateComponent },
             { path: 'notesheet-ex-bd-leave', component: NotesheetExBdLeaveComponent },
             { path: 'notesheet-list', redirectTo: 'notesheet-list/draft', pathMatch: 'full' },

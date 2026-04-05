@@ -193,6 +193,10 @@ export interface DraftPostingEmployeeRow {
     motherOrgSortOrder: number | null;
     permanentDistrictName: string | null;
     permanentDistrictNameBN: string | null;
+    presentDistrictName: string | null;
+    presentDistrictNameBN: string | null;
+    spousePresentDistrictName: string | null;
+    spousePresentDistrictNameBN: string | null;
     motherOrgLocationName: string | null;
     motherOrgLocationNameBN: string | null;
     createdBy: string | null;

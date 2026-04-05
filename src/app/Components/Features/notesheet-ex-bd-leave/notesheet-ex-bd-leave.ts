@@ -28,7 +28,7 @@ import { take, map, catchError } from 'rxjs/operators';
 import { RouterLink } from '@angular/router';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
-import { NoteSheetType, NoteSheetCurrentStatus, ApprovalStatus, NoteSheetOperationTypeOptions } from '@/models/enums';
+import { NoteSheetType, NoteSheetCurrentStatus, ApprovalStatus, NoteSheetOperationTypeOptions, ApproverRoleType } from '@/models/enums';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { NotesheetSignatoryComponent, SignatoryDetail } from '@/Components/Common/notesheet-signatory/notesheet-signatory';
 import {
@@ -505,7 +505,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         this.http.get<any[]>(`${environment.apis.core}/EmployeeInfo/GetAll`).subscribe({
             next: (list) => {
                 this.allEmployees = Array.isArray(list) ? list : [];
-                const opts = this.allEmployees.map((e: any) => {
+                const allOpts = this.allEmployees.map((e: any) => {
                     const name = e.fullNameEN || e.FullNameEN || '';
                     const rabId = e.rabid || e.Rabid || e.RABID || '';
                     const serviceId = e.serviceId || e.ServiceId || '';
@@ -516,9 +516,28 @@ export class NotesheetExBdLeaveComponent implements OnInit {
                         value: e.employeeID ?? e.EmployeeID
                     };
                 });
-                this.initiatorOptions = opts;
-                this.recommenderOptions = opts;
-                this.finalApproverOptions = opts;
+                this.masterBasicSetupService.getNoteSheetApproverConfigByType(NoteSheetType.ExBDLeave).subscribe({
+                    next: (configs) => {
+                        const cfg = Array.isArray(configs) ? configs[0] : configs;
+                        if (cfg?.details?.length) {
+                            const initIds = cfg.details.filter((d: any) => d.roleType === ApproverRoleType.Initiator).map((d: any) => d.employeeId);
+                            const recIds = cfg.details.filter((d: any) => d.roleType === ApproverRoleType.Recommender).map((d: any) => d.employeeId);
+                            const faIds = cfg.details.filter((d: any) => d.roleType === ApproverRoleType.FinalApprover).map((d: any) => d.employeeId);
+                            this.initiatorOptions = initIds.length > 0 ? allOpts.filter(o => initIds.includes(o.value)) : allOpts;
+                            this.recommenderOptions = recIds.length > 0 ? allOpts.filter(o => recIds.includes(o.value)) : allOpts;
+                            this.finalApproverOptions = faIds.length > 0 ? allOpts.filter(o => faIds.includes(o.value)) : allOpts;
+                        } else {
+                            this.initiatorOptions = allOpts;
+                            this.recommenderOptions = allOpts;
+                            this.finalApproverOptions = allOpts;
+                        }
+                    },
+                    error: () => {
+                        this.initiatorOptions = allOpts;
+                        this.recommenderOptions = allOpts;
+                        this.finalApproverOptions = allOpts;
+                    }
+                });
             },
             error: () => {}
         });
