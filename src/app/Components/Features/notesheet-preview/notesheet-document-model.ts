@@ -21,6 +21,7 @@ export interface SignatoryBlock {
     remark?: string;
     signatureDataUrl?: string;
     nameLine: string;
+    rankLine?: string;
     appointment?: string;
     date?: string;
     align?: 'left' | 'center' | 'right';

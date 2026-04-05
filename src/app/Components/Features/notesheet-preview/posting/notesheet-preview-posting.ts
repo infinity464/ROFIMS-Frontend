@@ -706,12 +706,13 @@ body { background: #fff; font-family: 'Times New Roman', Times, serif; font-size
         if (this.initiatorDetails) {
             const d = this.initiatorDetails;
             const nameStr = bn ? (d.nameBN || d.name) : d.name;
-            const rankStr = (d.rank && d.rank !== '-') ? `, ${bn ? (d.rankBN || d.rank) : d.rank}` : '';
+            const rankStr = (d.rank && d.rank !== '-') ? (bn ? (d.rankBN || d.rank) : d.rank) : undefined;
             const approved = this.isInitiatorApproved();
             model.initiator = {
                 role: '',
                 serialText: '',
-                nameLine: `(${nameStr}${rankStr})`,
+                nameLine: nameStr,
+                rankLine: rankStr,
                 appointment: bn ? (d.appointmentBN || d.appointment) : d.appointment,
                 date: approved && this.noteSheet.noteSheetDate ? this.formatDate(this.noteSheet.noteSheetDate) : undefined,
                 align: 'right',
@@ -892,8 +893,9 @@ body { background: #fff; font-family: 'Times New Roman', Times, serif; font-size
                 mainContent += '<div style="min-height:48px;margin-bottom:8px"></div>';
             }
             mainContent += `<div style="font-size:11pt">${esc(model.initiator.nameLine)}</div>`;
-            if (model.initiator.appointment) mainContent += `<div>${esc(model.initiator.appointment)}</div>`;
-            if (model.initiator.date) mainContent += `<div>${esc(model.initiator.date)}</div>`;
+            if (model.initiator.rankLine) mainContent += `<div style="font-size:10pt">${esc(model.initiator.rankLine)}</div>`;
+            if (model.initiator.appointment) mainContent += `<div style="font-size:10pt">${esc(model.initiator.appointment)}</div>`;
+            if (model.initiator.date) mainContent += `<div style="font-size:10pt;margin-top:2em">${esc(model.initiator.date)}</div>`;
             mainContent += '</div>';
         }
 
@@ -979,7 +981,7 @@ body { background: #fff; font-family: 'Times New Roman', Times, serif; font-size
             const cols = bn ? ['ক্রমিক','ব্যক্তিগত নম্বর','পদবি','ট্রেড','নাম','মাতৃ ইউনিট','নিজ জেলা','মাতৃ ইউনিটের অবস্থান','বদলি ইউনিট','মন্তব্য'] : ['Ser','Service ID','Rank','Trade','Name','Mother Unit','Own District','Mother Unit Location','Transfer Unit','Remarks'];
             const cw = Math.floor(10400 / cols.length);
             const headerRow = new TableRow({ tableHeader: true, children: cols.map(c => new TableCell({
-                children: [new Paragraph({ children: [new TextRun({ text: c, size: 16, sizeComplexScript: bn ? 16 : undefined, bold: true, font, language: lang })], alignment: AlignmentType.CENTER })],
+                children: [new Paragraph({ children: [new TextRun({ text: c, size: 20, sizeComplexScript: bn ? 20 : undefined, bold: true, font, language: lang })], alignment: AlignmentType.CENTER })],
                 borders: cellBorders, width: { size: cw, type: WidthType.DXA },
             })) });
             const dataRows = this.postingEmployees.map((emp, i) => new TableRow({ children: [
@@ -991,17 +993,18 @@ body { background: #fff; font-family: 'Times New Roman', Times, serif; font-size
                 bn?(emp.permanentDistrictNameBN||emp.permanentDistrictName||''):(emp.permanentDistrictName??''),
                 bn?(emp.motherOrgLocationNameBN||emp.motherOrgLocationName||''):(emp.motherOrgLocationName??''),
                 bn ? (this.unitLabelMapBN[emp.transferRabUnitId!] || emp.transferRabUnitName || '') : (emp.transferRabUnitName ?? ''), emp.remarks??''
-            ].map(v => new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: v, size: 16, sizeComplexScript: bn ? 16 : undefined, font, language: lang })] })], borders: cellBorders, width: { size: cw, type: WidthType.DXA } })) }));
+            ].map(v => new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: v, size: 20, sizeComplexScript: bn ? 20 : undefined, font, language: lang })] })], borders: cellBorders, width: { size: cw, type: WidthType.DXA } })) }));
             const tableRows = [headerRow, ...dataRows];
             if (model.note) {
                 tableRows.push(new TableRow({ children: [new TableCell({
                     children: [new Paragraph({ children: [
-                        new TextRun({ text: bn ? 'নোটঃ ' : 'Note: ', bold: true, size: 16, sizeComplexScript: bn ? 16 : undefined, font, language: lang }),
-                        new TextRun({ text: model.note, size: 16, sizeComplexScript: bn ? 16 : undefined, font, language: lang })
+                        new TextRun({ text: bn ? 'নোটঃ ' : 'Note: ', bold: true, size: 20, sizeComplexScript: bn ? 20 : undefined, font, language: lang }),
+                        new TextRun({ text: model.note, size: 20, sizeComplexScript: bn ? 20 : undefined, font, language: lang })
                     ] })],
                     borders: cellBorders, columnSpan: 10, width: { size: 10400, type: WidthType.DXA }
                 })] }));
             }
+            mainChildren.push(new Paragraph({ spacing: { before: 200 }, children: [] }));
             mainChildren.push(new Table({ width: { size: 95, type: WidthType.PERCENTAGE }, rows: tableRows, indent: { size: 240, type: WidthType.DXA } }));
         }
 
@@ -1034,8 +1037,12 @@ body { background: #fff; font-family: 'Times New Roman', Times, serif; font-size
             }));
         }
 
-        // Initiator
+        // Initiator — right-side block with centered text (matches preview)
+        // Uses left indent to push text to right side + CENTER alignment
         if (model.initiator) {
+            const sigIndent = { left: 7200 }; // push block to right ~63% of cell width
+
+            // Signature image or spacer
             if (model.initiator.signatureDataUrl) {
                 try {
                     mainChildren.push(new Paragraph({
@@ -1043,27 +1050,40 @@ body { background: #fff; font-family: 'Times New Roman', Times, serif; font-size
                             type: 'png', data: this.base64ToBytes(model.initiator.signatureDataUrl),
                             transformation: { width: 100, height: 40 }
                         })],
-                        alignment: AlignmentType.RIGHT, spacing: { before: 280, after: 80 }
+                        alignment: AlignmentType.CENTER, indent: sigIndent, spacing: { before: 280, after: 80 }
                     }));
                 } catch { /* no sig */ }
             } else {
-                mainChildren.push(new Paragraph({ alignment: AlignmentType.RIGHT, spacing: { before: 280, after: 80 } }));
+                mainChildren.push(new Paragraph({ indent: sigIndent, spacing: { before: 280, after: 80 } }));
             }
+
+            // Name
             mainChildren.push(new Paragraph({
                 children: [new TextRun({ text: model.initiator.nameLine, size: 22, sizeComplexScript: csSize, font, language: lang })],
-                alignment: AlignmentType.RIGHT,
-                spacing: !model.initiator.signatureDataUrl ? { before: 280 } : { after: 40 }
+                alignment: AlignmentType.CENTER, indent: sigIndent
             }));
+
+            // Rank
+            if (model.initiator.rankLine) {
+                mainChildren.push(new Paragraph({
+                    children: [new TextRun({ text: model.initiator.rankLine, size: 22, sizeComplexScript: csSize, font, language: lang })],
+                    alignment: AlignmentType.CENTER, indent: sigIndent
+                }));
+            }
+
+            // Appointment
             if (model.initiator.appointment) {
                 mainChildren.push(new Paragraph({
                     children: [new TextRun({ text: model.initiator.appointment, size: 22, sizeComplexScript: csSize, font, language: lang })],
-                    alignment: AlignmentType.RIGHT
+                    alignment: AlignmentType.CENTER, indent: sigIndent
                 }));
             }
+
+            // Date (with spacing above for 2-line gap)
             if (model.initiator.date) {
                 mainChildren.push(new Paragraph({
                     children: [new TextRun({ text: model.initiator.date, size: 22, sizeComplexScript: csSize, font, language: lang })],
-                    alignment: AlignmentType.RIGHT
+                    alignment: AlignmentType.CENTER, indent: sigIndent, spacing: { before: 400 }
                 }));
             }
         }
@@ -1169,18 +1189,18 @@ body { background: #fff; font-family: 'Times New Roman', Times, serif; font-size
                 }));
                 result.push(new Table({ width: { size: 90, type: WidthType.PERCENTAGE }, rows, alignment: AlignmentType.CENTER }));
             } else if (b.text) {
-                let align: (typeof AlignmentType)[keyof typeof AlignmentType] | undefined;
+                let align: (typeof AlignmentType)[keyof typeof AlignmentType];
                 if (b.alignment === 'center') align = AlignmentType.CENTER;
                 else if (b.alignment === 'right') align = AlignmentType.RIGHT;
                 else if (b.alignment === 'justify') align = AlignmentType.JUSTIFIED;
+                else align = b.indent === 'list' ? AlignmentType.LEFT : AlignmentType.JUSTIFIED;
                 const indent = b.indent === 'list' ? { left: 720 } : { left: 480 };
-                const paraOpts: Record<string, unknown> = {
+                result.push(new Paragraph({
                     children: [new TextRun({ text: b.text, bold: b.bold, italics: b.italic, size: 20, sizeComplexScript: csSize, font, language: lang })],
                     indent,
-                    spacing: { after: b.indent === 'list' ? 60 : 80 }
-                };
-                if (align) paraOpts['alignment'] = align;
-                result.push(new Paragraph(paraOpts as any));
+                    spacing: { after: b.indent === 'list' ? 60 : 80 },
+                    alignment: align
+                } as any));
             }
         }
         return result;
