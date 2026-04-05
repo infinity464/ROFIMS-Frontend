@@ -240,14 +240,14 @@
                             <tr *ngFor="let emp of postingEmployees; let i = index">
                                 <td>{{ isEnglish() ? (i + 1) : serial(i + 1) }}</td>
                                 <td>{{ getServiceIdDisplay(emp) }}</td>
-                                <td>{{ isEnglish() ? (emp.rankName || '-') : (emp.rankNameBN || emp.rankName || '-') }}</td>
-                                <td>{{ isEnglish() ? (emp.tradeName || '-') : (emp.tradeNameBN || emp.tradeName || '-') }}</td>
-                                <td>{{ isEnglish() ? (emp.fullNameEN || '-') : (emp.fullNameBN || emp.fullNameEN || '-') }}</td>
-                                <td>{{ isEnglish() ? (emp.motherUnitName || '-') : (emp.motherUnitNameBN || emp.motherUnitName || '-') }}</td>
-                                <td>{{ isEnglish() ? (emp.permanentDistrictName || '-') : (emp.permanentDistrictNameBN || emp.permanentDistrictName || '-') }}</td>
-                                <td>{{ isEnglish() ? (emp.motherOrgLocationName || '-') : (emp.motherOrgLocationNameBN || emp.motherOrgLocationName || '-') }}</td>
-                                <td>{{ isEnglish() ? (emp.transferRabUnitName || '-') : (emp.transferRabUnitId ? unitLabelMapBN[emp.transferRabUnitId] : null) || emp.transferRabUnitName || '-' }}</td>
-                                <td>{{ emp.remarks || '-' }}</td>
+                                <td>{{ isEnglish() ? (emp.rankName || '') : (emp.rankNameBN || emp.rankName || '') }}</td>
+                                <td>{{ isEnglish() ? (emp.tradeName || '') : (emp.tradeNameBN || emp.tradeName || '') }}</td>
+                                <td>{{ isEnglish() ? (emp.fullNameEN || '') : (emp.fullNameBN || emp.fullNameEN || '') }}</td>
+                                <td>{{ isEnglish() ? (emp.motherUnitName || '') : (emp.motherUnitNameBN || emp.motherUnitName || '') }}</td>
+                                <td>{{ isEnglish() ? (emp.permanentDistrictName || '') : (emp.permanentDistrictNameBN || emp.permanentDistrictName || '') }}</td>
+                                <td>{{ isEnglish() ? (emp.motherOrgLocationName || '') : (emp.motherOrgLocationNameBN || emp.motherOrgLocationName || '') }}</td>
+                                <td>{{ isEnglish() ? (emp.transferRabUnitName || '') : (emp.transferRabUnitId ? unitLabelMapBN[emp.transferRabUnitId] : null) || emp.transferRabUnitName || '' }}</td>
+                                <td>{{ emp.remarks || '' }}</td>
                             </tr>
                         </tbody>
                         <!-- tfoot note hidden for now -->

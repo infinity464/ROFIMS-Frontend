@@ -332,6 +332,8 @@
         font-size: 9pt;
         text-transform: uppercase;
     }
+    // Make Name column (5th) wider
+    th:nth-child(5), td:nth-child(5) { min-width: 120px; }
     tr:nth-child(even) { background: #fafafa; }
 
     .ns-posting-note {

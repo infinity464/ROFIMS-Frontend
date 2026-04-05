@@ -979,10 +979,11 @@ body { background: #fff; font-family: 'Times New Roman', Times, serif; font-size
         // Posting employee table (posting-specific)
         if (this.isPostingType() && this.postingEmployees.length > 0) {
             const cols = bn ? ['ক্রমিক','ব্যক্তিগত নম্বর','পদবি','ট্রেড','নাম','মাতৃ ইউনিট','নিজ জেলা','মাতৃ ইউনিটের অবস্থান','বদলি ইউনিট','মন্তব্য'] : ['Ser','Service ID','Rank','Trade','Name','Mother Unit','Own District','Mother Unit Location','Transfer Unit','Remarks'];
-            const cw = Math.floor(10400 / cols.length);
-            const headerRow = new TableRow({ tableHeader: true, children: cols.map(c => new TableCell({
+            // Custom column widths: Ser, ID, Rank, Trade, Name, MotherUnit, District, Location, TransferUnit, Remarks
+            const colWidths = [500, 950, 750, 850, 1900, 1100, 850, 1150, 1100, 650];
+            const headerRow = new TableRow({ tableHeader: true, children: cols.map((c, ci) => new TableCell({
                 children: [new Paragraph({ children: [new TextRun({ text: c, size: 20, sizeComplexScript: bn ? 20 : undefined, bold: true, font, language: lang })], alignment: AlignmentType.CENTER })],
-                borders: cellBorders, width: { size: cw, type: WidthType.DXA },
+                borders: cellBorders, width: { size: colWidths[ci], type: WidthType.DXA },
             })) });
             const dataRows = this.postingEmployees.map((emp, i) => new TableRow({ children: [
                 bn ? this.toBanglaDigits(i + 1) : String(i + 1), this.getServiceIdDisplay(emp),
@@ -993,19 +994,11 @@ body { background: #fff; font-family: 'Times New Roman', Times, serif; font-size
                 bn?(emp.permanentDistrictNameBN||emp.permanentDistrictName||''):(emp.permanentDistrictName??''),
                 bn?(emp.motherOrgLocationNameBN||emp.motherOrgLocationName||''):(emp.motherOrgLocationName??''),
                 bn ? (this.unitLabelMapBN[emp.transferRabUnitId!] || emp.transferRabUnitName || '') : (emp.transferRabUnitName ?? ''), emp.remarks??''
-            ].map(v => new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: v, size: 20, sizeComplexScript: bn ? 20 : undefined, font, language: lang })] })], borders: cellBorders, width: { size: cw, type: WidthType.DXA } })) }));
+            ].map((v, ci) => new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: v, size: 20, sizeComplexScript: bn ? 20 : undefined, font, language: lang })], alignment: AlignmentType.CENTER })], borders: cellBorders, width: { size: colWidths[ci], type: WidthType.DXA } })) }));
             const tableRows = [headerRow, ...dataRows];
-            if (model.note) {
-                tableRows.push(new TableRow({ children: [new TableCell({
-                    children: [new Paragraph({ children: [
-                        new TextRun({ text: bn ? 'নোটঃ ' : 'Note: ', bold: true, size: 20, sizeComplexScript: bn ? 20 : undefined, font, language: lang }),
-                        new TextRun({ text: model.note, size: 20, sizeComplexScript: bn ? 20 : undefined, font, language: lang })
-                    ] })],
-                    borders: cellBorders, columnSpan: 10, width: { size: 10400, type: WidthType.DXA }
-                })] }));
-            }
             mainChildren.push(new Paragraph({ spacing: { before: 200 }, children: [] }));
-            mainChildren.push(new Table({ width: { size: 95, type: WidthType.PERCENTAGE }, rows: tableRows, indent: { size: 240, type: WidthType.DXA } }));
+            const totalColW = colWidths.reduce((a, b) => a + b, 0);
+            mainChildren.push(new Table({ width: { size: totalColW, type: WidthType.DXA }, rows: tableRows, indent: { size: 240, type: WidthType.DXA }, columnWidths: colWidths }));
         }
 
         // Paragraphs (after employee table)
@@ -1040,7 +1033,7 @@ body { background: #fff; font-family: 'Times New Roman', Times, serif; font-size
         // Initiator — right-side block with centered text (matches preview)
         // Uses left indent to push text to right side + CENTER alignment
         if (model.initiator) {
-            const sigIndent = { left: 7200 }; // push block to right ~63% of cell width
+            const sigIndent = { left: 5200 }; // push block to center-right of cell
 
             // Signature image or spacer
             if (model.initiator.signatureDataUrl) {
