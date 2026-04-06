@@ -1,0 +1,198 @@
+:host {
+    display: block;
+    padding: 1.5rem;
+}
+
+/* ── Results card ────────────────────────────────────────────────────── */
+.chart-results-card {
+    background: var(--surface-card, #fff);
+    border: 1px solid var(--surface-border, #e2e8f0);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────── */
+.chart-results-header {
+    display: flex;
+    flex-direction: column;
+    padding: 0.75rem 1.25rem 1rem;
+    border-bottom: 1px solid var(--surface-border, #e2e8f0);
+    background: var(--surface-section, #f8fafc);
+    gap: 0.5rem;
+}
+
+/* Row 1: toolbar */
+.chart-toolbar-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.75rem;
+}
+
+/* Toggles */
+.chart-toggles {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--text-color, #1e293b);
+    cursor: pointer;
+    user-select: none;
+
+    input[type="checkbox"] {
+        width: 15px;
+        height: 15px;
+        cursor: pointer;
+        accent-color: var(--primary-color, #4f46e5);
+    }
+}
+
+.toggle-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.auth-dot { background: #4f46e5; }
+.held-dot { background: #10b981; }
+
+/* Print button */
+.chart-btn-print {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 14px;
+    border-radius: 7px;
+    border: 0.5px solid var(--surface-border, #e2e8f0);
+    background: var(--surface-card, #fff);
+    color: var(--text-color, #1e293b);
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+
+    &:hover:not(:disabled) {
+        border-color: var(--primary-color, #4f46e5);
+        background: var(--surface-hover, #f1f5f9);
+    }
+
+    &:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+    }
+}
+
+/* Row 2: centered title */
+.chart-header-title-block {
+    width: 100%;
+    text-align: center;
+}
+
+.chart-main-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-color, #1e293b);
+    letter-spacing: 0.03em;
+    line-height: 1.4;
+}
+
+.chart-date-line {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-color-secondary, #475569);
+    margin-top: 0.15rem;
+    line-height: 1.4;
+}
+
+/* ── Skeleton ────────────────────────────────────────────────────────── */
+.skeleton-wrapper { padding: 1.5rem; }
+
+.skeleton-charts-row {
+    display: flex;
+    gap: 1.5rem;
+}
+
+.skeleton-chart {
+    flex: 1;
+    height: 320px;
+    background: var(--surface-border, #e2e8f0);
+    border-radius: 8px;
+    animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.4; }
+}
+
+/* ── Chart body ──────────────────────────────────────────────────────── */
+.chart-body {
+    padding: 1.5rem;
+}
+
+/* ── Charts row ──────────────────────────────────────────────────────── */
+.charts-row {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+/* ── Chart panel ─────────────────────────────────────────────────────── */
+.chart-panel {
+    flex: 1 1 300px;
+    max-width: 480px;
+    background: var(--surface-ground, #f8fafc);
+    border: 1px solid var(--surface-border, #e2e8f0);
+    border-radius: 8px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.chart-panel-title {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-color, #1e293b);
+    margin-bottom: 1rem;
+    align-self: flex-start;
+}
+
+.panel-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.chart-canvas-wrap {
+    width: 100%;
+    max-width: 380px;
+}
+
+/* ── Empty state ─────────────────────────────────────────────────────── */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
+    color: var(--text-color-secondary, #64748b);
+
+    i { font-size: 3rem; margin-bottom: 0.75rem; }
+    p { margin: 0; font-size: 0.9rem; text-align: center; }
+}

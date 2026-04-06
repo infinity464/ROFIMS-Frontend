@@ -85,7 +85,7 @@ export class ExportService {
         const headerCells = columns
             .map(
                 (c) =>
-                    `<th style="padding:8px 10px;font-weight:700;font-size:10pt;text-align:left;white-space:nowrap;word-break:keep-all">${escapeHtml(c)}</th>`
+                    `<th style="padding:8px 10px;font-weight:700;font-size:10pt;text-align:left;white-space:nowrap;word-break:keep-all;border:1px solid #ccc">${escapeHtml(c)}</th>`
             )
             .join('');
         const dataRows = rows
@@ -94,7 +94,7 @@ export class ExportService {
                     const cells = row
                         .map(
                             (cell) =>
-                                `<td style="padding:6px 10px;white-space:nowrap;word-break:keep-all;font-size:${sizeContentPt}">${escapeHtml(cell)}</td>`
+                                `<td style="padding:6px 10px;white-space:nowrap;word-break:keep-all;font-size:${sizeContentPt};border:1px solid #ccc">${escapeHtml(cell)}</td>`
                         )
                         .join('');
                     return `<tr style="page-break-inside:avoid">${cells}</tr>`;
