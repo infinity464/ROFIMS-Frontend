@@ -30,6 +30,30 @@ export interface ManpowerSummaryResponse {
     totals: ManpowerSummaryTotals;
 }
 
+export interface RankWiseRankRow {
+    rankId: number;
+    rankName: string;
+    rankNameBN: string;
+    auth: number;
+    held: number;
+    def: number;
+    sur: number;
+    defPct: number;
+}
+
+export interface RankWiseOrgBlock {
+    orgId: number;
+    orgName: string;
+    orgNameBN: string;
+    rows: RankWiseRankRow[];
+    subtotal: RankWiseRankRow;
+}
+
+export interface RankWiseManpowerResponse {
+    orgs: RankWiseOrgBlock[];
+    grandTotal: RankWiseRankRow;
+}
+
 @Injectable({ providedIn: 'root' })
 export class StatisticsService {
     private readonly apiUrl = `${environment.apis.core}/Statistics`;
@@ -38,5 +62,9 @@ export class StatisticsService {
 
     getManpowerSummary(): Observable<ManpowerSummaryResponse> {
         return this.http.get<ManpowerSummaryResponse>(`${this.apiUrl}/GetManpowerSummary`);
+    }
+
+    getRankWiseManpower(): Observable<RankWiseManpowerResponse> {
+        return this.http.get<RankWiseManpowerResponse>(`${this.apiUrl}/GetRankWiseManpower`);
     }
 }

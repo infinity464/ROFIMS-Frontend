@@ -88,7 +88,8 @@ export class ManpowerSummaryComponent implements OnInit {
             lang: this.lang,
             columns,
             rows,
-            showPageNumbers: true
+            showPageNumbers: true,
+            filename: 'manpower-summary'
         };
         if (type === 'pdf') {
             this.exportService.exportPDF(config);

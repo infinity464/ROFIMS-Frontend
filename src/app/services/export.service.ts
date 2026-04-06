@@ -21,6 +21,8 @@ export interface ReportConfig {
     columns: string[];
     rows: string[][];
     showPageNumbers: boolean;
+    /** Optional base filename (without extension). Falls back to 'report_en/bn'. */
+    filename?: string;
 }
 
 /** One section in a profile export: heading + table (same as web view). */
@@ -106,7 +108,7 @@ export class ExportService {
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>${escapeHtml(title)}</title>
+    <title>${escapeHtml(config.filename ? `${config.filename}_${config.lang}` : title)}</title>
     <style>
         body { font-family: ${fontFamily}; font-size: ${sizeContentPt}; margin: 0; padding: 0; }
         h1 { font-family: ${fontFamily}; font-size: 14pt; font-weight: bold; text-align: center; margin-bottom: 8px; }
@@ -245,7 +247,8 @@ export class ExportService {
         });
 
         const blob = await Packer.toBlob(doc);
-        const filename = config.lang === 'bn' ? 'report_bn.docx' : 'report_en.docx';
+        const base = config.filename ?? 'report';
+        const filename = `${base}_${config.lang}.docx`;
         saveAs(blob, filename);
     }
 
@@ -277,7 +280,8 @@ export class ExportService {
         const sheetName = config.lang === 'bn' ? 'প্রতিবেদন' : 'Report';
         XLSX.utils.book_append_sheet(wb, ws, sheetName);
 
-        const filename = config.lang === 'bn' ? 'report_bn.xlsx' : 'report_en.xlsx';
+        const base = config.filename ?? 'report';
+        const filename = `${base}_${config.lang}.xlsx`;
         XLSX.writeFile(wb, filename);
     }
 
