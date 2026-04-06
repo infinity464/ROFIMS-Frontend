@@ -1,4 +1,4 @@
-<p-toast></p-toast>
+<p-toast position="top-center"></p-toast>
 <p-fluid>
     <div class="form-card">
         @if (!hideTitle) {
@@ -43,14 +43,26 @@
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
                                     <label class="font-semibold block mb-2 text-700">Subject <span class="text-red-500">*</span></label>
-                                    <p-select
-                                        formControlName="subjectId"
-                                        [options]="subjectOptions"
-                                        optionLabel="label"
-                                        optionValue="value"
-                                        placeholder="Auto Select / Manual Type"
-                                        styleClass="w-full"
-                                        [filter]="true"></p-select>
+                                    <div style="display: flex; align-items: center; gap: 0.35rem;">
+                                        <div style="flex: 1; min-width: 0;">
+                                            <p-select
+                                                formControlName="subjectId"
+                                                [options]="subjectOptions"
+                                                optionLabel="label"
+                                                optionValue="value"
+                                                placeholder="Auto Select / Manual Type"
+                                                styleClass="w-full"
+                                                [filter]="true"
+                                                filterPlaceholder="Search Subject"
+                                                appendTo="body"></p-select>
+                                        </div>
+                                        <button type="button" pButton icon="pi pi-plus"
+                                            class="p-button-sm p-button-outlined p-button-success"
+                                            style="flex-shrink: 0; width: 2rem; height: 2rem; padding: 0;"
+                                            pTooltip="Add New Subject" tooltipPosition="top"
+                                            (click)="openAddSubjectDialog()">
+                                        </button>
+                                    </div>
                                 </div>
                                 <div>
                                     <label class="font-semibold block mb-2 text-700">Purpose of Visit <span class="text-red-500">*</span></label>
@@ -282,4 +294,22 @@
     </p-button>
   </ng-template>
 </p-dialog>
+<!-- Add New Subject Dialog -->
+<p-dialog header="Add New Subject" [(visible)]="showSubjectDialog" [modal]="true" [style]="{width: '500px'}" [closable]="true" [contentStyle]="{'border-top': '2px solid var(--primary-color)'}" appendTo="body">
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <div>
+            <label class="font-semibold block mb-2 text-700">Subject (English) <span class="text-red-500">*</span></label>
+            <input pInputText style="width: 100%;" [(ngModel)]="newSubjectEN" placeholder="Enter subject in English" />
+        </div>
+        <div>
+            <label class="font-semibold block mb-2 text-700">Subject (Bangla)</label>
+            <input pInputText style="width: 100%;" [(ngModel)]="newSubjectBN" placeholder="Enter subject in Bangla" />
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="showSubjectDialog = false"></p-button>
+        <p-button label="Save" icon="pi pi-check" [loading]="isSavingSubject" [disabled]="!newSubjectEN?.trim()" (onClick)="saveNewSubject()"></p-button>
+    </ng-template>
+</p-dialog>
+
 <p-confirmDialog></p-confirmDialog>

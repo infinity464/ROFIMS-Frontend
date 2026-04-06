@@ -2,39 +2,39 @@ import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Fluid } from 'primeng/fluid';
 import { ButtonModule } from 'primeng/button';
-import { NoteSheetNumberConfigModel } from '../shared/models/notesheet-number-config';
-import { MessageService, ConfirmationService } from 'primeng/api';
+import { NoteSheetApproverConfigModel } from '../shared/models/notesheet-approver-config';
+import { MessageService } from 'primeng/api';
 import { SharedService } from '@/shared/services/shared-service';
 import { MasterBasicSetupService } from '../shared/services/MasterBasicSetupService';
 import { InputText } from 'primeng/inputtext';
-import { InputNumber } from 'primeng/inputnumber';
 import { IconField } from 'primeng/iconfield';
 import { InputIcon } from 'primeng/inputicon';
 import { TableModule } from 'primeng/table';
 import { Select } from 'primeng/select';
+import { MultiSelectModule } from 'primeng/multiselect';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '@/Core/Environments/environment';
+import { ApproverRoleType, NoteSheetTypeOptions } from '@/models/enums';
 
 @Component({
-    selector: 'app-notesheet-number-config',
-    imports: [ReactiveFormsModule, TableModule, InputText, InputNumber, Fluid, ButtonModule, IconField, InputIcon, Select],
-    templateUrl: './notesheet-number-config.html',
-    styleUrl: './notesheet-number-config.scss'
+    selector: 'app-notesheet-approver-config',
+    imports: [ReactiveFormsModule, TableModule, InputText, Fluid, ButtonModule, IconField, InputIcon, Select, MultiSelectModule],
+    templateUrl: './notesheet-approver-config.html',
+    styleUrl: './notesheet-approver-config.scss'
 })
-export class NoteSheetNumberConfigComponent implements OnInit {
+export class NoteSheetApproverConfigComponent implements OnInit {
     isSubmitting = false;
     isEditMode = false;
     editingConfigId = 0;
     configForm!: FormGroup;
 
-    configs: NoteSheetNumberConfigModel[] = [];
-    filteredConfigs: NoteSheetNumberConfigModel[] = [];
+    configs: NoteSheetApproverConfigModel[] = [];
+    filteredConfigs: NoteSheetApproverConfigModel[] = [];
 
-    noteSheetTypeOptions = [
-        { label: 'General', value: 'General' },
-        { label: 'Ex-BD Leave', value: 'ExBDLeave' },
-        { label: 'New Posting', value: 'NewPosting' },
-        { label: 'Inter Posting', value: 'InterPosting' }
-    ];
+    readonly ApproverRoleType = ApproverRoleType;
+    noteSheetTypeOptions = NoteSheetTypeOptions;
 
+    employeeOptions: { label: string; value: number }[] = [];
     currentUser: string = '';
 
     // Pagination
@@ -49,28 +49,47 @@ export class NoteSheetNumberConfigComponent implements OnInit {
         private fb: FormBuilder,
         private masterBasicSetupService: MasterBasicSetupService,
         private messageService: MessageService,
-        private sharedService: SharedService
+        private sharedService: SharedService,
+        private http: HttpClient
     ) {}
 
     ngOnInit(): void {
         this.currentUser = this.sharedService.getCurrentUser();
         this.initForm();
         this.getAll();
+        this.loadEmployees();
     }
 
     initForm() {
         this.configForm = this.fb.group({
             configId: [0],
             noteSheetType: [null, Validators.required],
-            prefix: [null, Validators.required],
-            prefixBN: [null, Validators.required],
-            startNumber: [null, [Validators.required, Validators.min(1)]]
+            initiatorIds: [[] as number[]],
+            recommenderIds: [[] as number[]],
+            finalApproverIds: [[] as number[]]
+        });
+    }
+
+    loadEmployees() {
+        this.http.get<any[]>(`${environment.apis.core}/EmployeeInfo/GetAll`).subscribe({
+            next: (list) => {
+                this.employeeOptions = (Array.isArray(list) ? list : []).map((e: any) => {
+                    const name = e.fullNameEN || e.FullNameEN || '';
+                    const rabId = e.rabid || e.Rabid || e.RABID || '';
+                    const serviceId = e.serviceId || e.ServiceId || '';
+                    const parts = [name, rabId ? `RAB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : ''].filter(Boolean);
+                    return {
+                        label: parts.join(' | ') || `ID ${e.employeeID ?? e.EmployeeID}`,
+                        value: e.employeeID ?? e.EmployeeID
+                    };
+                });
+            }
         });
     }
 
     getAll() {
-        this.masterBasicSetupService.getAllNoteSheetNumberConfig().subscribe({
-            next: (res: NoteSheetNumberConfigModel[]) => {
+        this.masterBasicSetupService.getAllNoteSheetApproverConfig().subscribe({
+            next: (res: NoteSheetApproverConfigModel[]) => {
                 this.configs = res;
                 this.filteredConfigs = [...res];
                 this.totalRecords = res.length;
@@ -79,19 +98,15 @@ export class NoteSheetNumberConfigComponent implements OnInit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to fetch NoteSheet Number Config data'
+                    detail: 'Failed to fetch NoteSheet Approver Config data'
                 });
             }
         });
     }
 
-    getPreview(): string {
-        const prefix = this.configForm.get('prefix')?.value || 'PREFIX';
-        const startNumber = this.configForm.get('startNumber')?.value || '10001';
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        return `${prefix}-${year}-${month}-${startNumber}`;
+    getDetailCountByRole(row: NoteSheetApproverConfigModel, roleType: string): number {
+        if (!row.details) return 0;
+        return row.details.filter(d => d.roleType === roleType).length;
     }
 
     onSearch(event: Event) {
@@ -100,8 +115,7 @@ export class NoteSheetNumberConfigComponent implements OnInit {
 
         if (this.searchValue) {
             this.filteredConfigs = this.configs.filter((c) => {
-                return c.noteSheetType.toLowerCase().includes(this.searchValue)
-                    || c.prefix.toLowerCase().includes(this.searchValue);
+                return c.noteSheetType.toLowerCase().includes(this.searchValue);
             });
         } else {
             this.filteredConfigs = [...this.configs];
@@ -126,29 +140,42 @@ export class NoteSheetNumberConfigComponent implements OnInit {
         }
     }
 
+    private buildDetails(formVal: any): any[] {
+        const details: any[] = [];
+        for (const id of (formVal.initiatorIds ?? [])) {
+            details.push({ detailId: 0, configId: 0, roleType: ApproverRoleType.Initiator, employeeId: id });
+        }
+        for (const id of (formVal.recommenderIds ?? [])) {
+            details.push({ detailId: 0, configId: 0, roleType: ApproverRoleType.Recommender, employeeId: id });
+        }
+        for (const id of (formVal.finalApproverIds ?? [])) {
+            details.push({ detailId: 0, configId: 0, roleType: ApproverRoleType.FinalApprover, employeeId: id });
+        }
+        return details;
+    }
+
     create() {
         this.isSubmitting = true;
         const currentDateTime = this.sharedService.getCurrentDateTime();
+        const formVal = this.configForm.getRawValue();
 
         const payload: any = {
-            ...this.configForm.value,
             configId: 0,
-            currentNumber: 0,
-            currentYear: 0,
-            currentMonth: 0,
+            noteSheetType: formVal.noteSheetType,
             status: true,
+            details: this.buildDetails(formVal),
             createdBy: this.currentUser,
             createdDate: currentDateTime,
             lastUpdatedBy: this.currentUser,
             lastupdate: currentDateTime
         };
 
-        this.masterBasicSetupService.createNoteSheetNumberConfig(payload).subscribe({
+        this.masterBasicSetupService.createNoteSheetApproverConfig(payload).subscribe({
             next: () => {
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Success',
-                    detail: 'NoteSheet Number Config created successfully'
+                    detail: 'NoteSheet Approver Config created successfully'
                 });
                 this.onReset();
                 this.getAll();
@@ -158,7 +185,7 @@ export class NoteSheetNumberConfigComponent implements OnInit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create NoteSheet Number Config'
+                    detail: 'Failed to create NoteSheet Approver Config'
                 });
                 this.isSubmitting = false;
             }
@@ -168,24 +195,22 @@ export class NoteSheetNumberConfigComponent implements OnInit {
     update() {
         this.isSubmitting = true;
         const currentDateTime = this.sharedService.getCurrentDateTime();
-
         const existing = this.configs.find(c => c.configId === this.editingConfigId);
-
         const formVal = this.configForm.getRawValue();
+
         const payload: any = {
             ...existing,
-            prefix: formVal.prefix,
-            prefixBN: formVal.prefixBN ?? '',
+            details: this.buildDetails(formVal),
             lastUpdatedBy: this.currentUser,
             lastupdate: currentDateTime
         };
 
-        this.masterBasicSetupService.updateNoteSheetNumberConfig(payload).subscribe({
+        this.masterBasicSetupService.updateNoteSheetApproverConfig(payload).subscribe({
             next: () => {
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Success',
-                    detail: 'NoteSheet Number Config updated successfully'
+                    detail: 'NoteSheet Approver Config updated successfully'
                 });
                 this.onReset();
                 this.getAll();
@@ -195,39 +220,38 @@ export class NoteSheetNumberConfigComponent implements OnInit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update NoteSheet Number Config'
+                    detail: 'Failed to update NoteSheet Approver Config'
                 });
                 this.isSubmitting = false;
             }
         });
     }
 
-    onEdit(row: NoteSheetNumberConfigModel) {
+    onEdit(row: NoteSheetApproverConfigModel) {
         this.isEditMode = true;
         this.editingConfigId = row.configId;
+        const details = row.details ?? [];
         this.configForm.patchValue({
             configId: row.configId,
             noteSheetType: row.noteSheetType,
-            prefix: row.prefix,
-            prefixBN: row.prefixBN ?? '',
-            startNumber: row.startNumber
+            initiatorIds: details.filter(d => d.roleType === ApproverRoleType.Initiator).map(d => d.employeeId),
+            recommenderIds: details.filter(d => d.roleType === ApproverRoleType.Recommender).map(d => d.employeeId),
+            finalApproverIds: details.filter(d => d.roleType === ApproverRoleType.FinalApprover).map(d => d.employeeId)
         });
-        // Disable fields that should not be changed after creation
         this.configForm.get('noteSheetType')?.disable();
-        this.configForm.get('startNumber')?.disable();
     }
 
-    onDelete(row: NoteSheetNumberConfigModel) {
+    onDelete(row: NoteSheetApproverConfigModel) {
         if (!confirm(`Are you sure you want to delete the config for "${row.noteSheetType}"?`)) {
             return;
         }
 
-        this.masterBasicSetupService.deleteNoteSheetNumberConfig(row.configId).subscribe({
+        this.masterBasicSetupService.deleteNoteSheetApproverConfig(row.configId).subscribe({
             next: () => {
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Success',
-                    detail: 'NoteSheet Number Config deleted successfully'
+                    detail: 'NoteSheet Approver Config deleted successfully'
                 });
                 this.getAll();
             },
@@ -235,7 +259,7 @@ export class NoteSheetNumberConfigComponent implements OnInit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to delete NoteSheet Number Config'
+                    detail: 'Failed to delete NoteSheet Approver Config'
                 });
             }
         });
@@ -245,13 +269,11 @@ export class NoteSheetNumberConfigComponent implements OnInit {
         this.configForm.reset({
             configId: 0,
             noteSheetType: null,
-            prefix: null,
-            prefixBN: null,
-            startNumber: null
+            initiatorIds: [],
+            recommenderIds: [],
+            finalApproverIds: []
         });
-        // Re-enable fields that were disabled during edit
         this.configForm.get('noteSheetType')?.enable();
-        this.configForm.get('startNumber')?.enable();
         this.isEditMode = false;
         this.editingConfigId = 0;
         this.isSubmitting = false;

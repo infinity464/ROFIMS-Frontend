@@ -1,4 +1,4 @@
-<p-toast></p-toast>
+<p-toast position="top-center"></p-toast>
 
 <div class="employee-reports-page">
     <!-- Title + filter in same card (like Supernumerary List) -->
@@ -268,7 +268,7 @@
                         <td>{{ formatDate(row.joiningDate) }}</td>
                         <td>{{ row.permanentDistrictTypeName || '—' }}</td>
                         <td>
-                            <a [routerLink]="['/presently-serving-members/profile', row.employeeID]" class="report-link-profile">
+                            <a [routerLink]="['/members/profile', row.employeeID]" class="report-link-profile">
                                 <i class="pi pi-user"></i> Profile
                             </a>
                         </td>

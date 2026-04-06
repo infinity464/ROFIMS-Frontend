@@ -24,6 +24,8 @@ import { EmpService } from '@/services/emp-service';
 import { ForeignVisitInfoService, ForeignVisitInfoModel, ForeignVisitFamilyInfoModel } from '@/services/foreign-visit-info.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { FamilyInfoService, FamilyInfoModel } from '@/services/family-info-service';
+import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
+import { SharedService } from '@/shared/services/shared-service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 import { FileReferencesFormComponent, FileRowData } from '@components/Common/file-references-form/file-references-form';
 import { CodeType } from '@/models/enums';
@@ -104,11 +106,19 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
 
     withFamilyYesNo = [{ label: 'Yes', value: true }, { label: 'No', value: false }];
 
+    // Add Subject dialog state
+    showSubjectDialog = false;
+    newSubjectEN = '';
+    newSubjectBN = '';
+    isSavingSubject = false;
+
     constructor(
         private empService: EmpService,
         private foreignVisitService: ForeignVisitInfoService,
         private commonCodeService: CommonCodeService,
         private familyInfoService: FamilyInfoService,
+        private masterBasicSetupService: MasterBasicSetupService,
+        private sharedService: SharedService,
         private messageService: MessageService,
         private confirmationService: ConfirmationService,
         private route: ActivatedRoute,
@@ -771,6 +781,62 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
         }
     }
 
+
+    openAddSubjectDialog(): void {
+        this.newSubjectEN = '';
+        this.newSubjectBN = '';
+        this.showSubjectDialog = true;
+    }
+
+    saveNewSubject(): void {
+        if (!this.newSubjectEN?.trim()) return;
+        this.isSavingSubject = true;
+        const currentUser = this.sharedService.getCurrentUser();
+        const currentDateTime = this.sharedService.getCurrentDateTime();
+        const payload = {
+            codeId: 0,
+            orgId: 0,
+            codeType: 'SubjectType',
+            codeValueEN: this.newSubjectEN.trim(),
+            codeValueBN: this.newSubjectBN?.trim() || '',
+            commCode: null,
+            displayCodeValueEN: null,
+            displayCodeValueBN: null,
+            sortOrder: null,
+            level: null,
+            parentCodeId: null,
+            status: true,
+            createdBy: currentUser,
+            createdDate: currentDateTime,
+            lastUpdatedBy: currentUser,
+            lastupdate: currentDateTime
+        } as any;
+
+        this.masterBasicSetupService.create(payload).subscribe({
+            next: (res: any) => {
+                this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Subject added successfully' });
+                this.showSubjectDialog = false;
+                this.isSavingSubject = false;
+                // Reload dropdown and auto-select new entry
+                this.commonCodeService.getAllActiveCommonCodesType(CodeType.SubjectType).pipe(catchError(() => of([] as any[]))).subscribe({
+                    next: (list: any[]) => {
+                        this.subjectOptions = (Array.isArray(list) ? list : []).map((d: any) => ({
+                            label: d.codeValueEN || d.displayCodeValueEN || String(d.codeId),
+                            value: d.codeId
+                        }));
+                        const newId = res?.codeId ?? res?.CodeId;
+                        if (newId) {
+                            this.visitForm.patchValue({ subjectId: newId });
+                        }
+                    }
+                });
+            },
+            error: () => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to add Subject' });
+                this.isSavingSubject = false;
+            }
+        });
+    }
 
     onEmployeeSearchFound(employee: EmployeeBasicInfo): void {
         this.employeeFound = true;

@@ -284,7 +284,7 @@ export class EmployeeSearchComponent implements OnChanges {
 
     openEmployeeProfile(): void {
         if (this.employeeInfo && this.employeeInfo.employeeID) {
-            this.router.navigate(['/ex-members/profile', this.employeeInfo.employeeID]);
+            this.router.navigate(['/members/profile', this.employeeInfo.employeeID]);
         }
     }
 }

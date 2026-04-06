@@ -1,4 +1,4 @@
-<p-toast></p-toast>
+<p-toast position="top-center"></p-toast>
 
 <div class="preview-page">
 
@@ -8,7 +8,7 @@
             <p-button *ngIf="editing" icon="pi pi-times" label="Cancel" (onClick)="cancelEdit()" styleClass="p-button-outlined p-button-secondary"></p-button>
             <p-button *ngIf="editing" icon="pi pi-check" label="Save" (onClick)="saveChanges()" [loading]="saving" styleClass="p-button-success"></p-button>
             <p-button *ngIf="!editing" icon="pi pi-file-word" label="Word"  (onClick)="exportWord()" styleClass="p-button-outlined"></p-button>
-            <p-button *ngIf="!editing" icon="pi pi-file-pdf"  label="PDF"   (onClick)="exportPdf()"  styleClass="p-button-outlined"></p-button>
+            <p-button *ngIf="!editing" icon="pi pi-file-pdf"  label="PDF"   (onClick)="exportPdf()" [loading]="exportingPdf" styleClass="p-button-outlined"></p-button>
         </div>
     </div>
 
@@ -34,6 +34,15 @@
             <div class="ns-doc-box">
 
                 <div class="ns-main-col">
+
+                    <div class="ns-org-header" style="text-align:center; padding:8px 16px 4px; font-weight:700; font-size:10pt; line-height:1.5;">
+                        <div>{{ getOrgHeaderLine1() }}</div>
+                        <div style="border-bottom:1.5px solid #000; display:inline-block; padding-bottom:2px;">{{ getOrgHeaderLine2() }}</div>
+                    </div>
+
+                    <div class="ns-notesheet-no" *ngIf="!editing && noteSheet.noteSheetNo" style="padding:4px 16px 2px; font-size:10pt;">
+                        {{ noteSheet.noteSheetNo }}
+                    </div>
 
                     <!-- Subject -->
                     <div class="ns-cell-subject" *ngIf="!editing">{{ getSubjectLabel(noteSheet.exBdLeaveSubjectId) || noteSheet.subject }}</div>

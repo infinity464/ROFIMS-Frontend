@@ -70,11 +70,11 @@
                                 <div class="form-row flex gap-3 mb-4">
                                     <div class="form-field flex-1">
                                         <label class="font-semibold block mb-2 text-700">From</label>
-                                        <p-select formControlName="serviceFrom" [options]="yearOptions" optionLabel="label" optionValue="value" placeholder="From" styleClass="w-full" [filter]="true" appendTo="body"></p-select>
+                                        <p-datepicker formControlName="serviceFrom" dateFormat="dd/mm/yy" [showIcon]="true" placeholder="From" styleClass="w-full" [style]="{'width': '100%'}" appendTo="body"></p-datepicker>
                                     </div>
                                     <div class="form-field flex-1">
                                         <label class="font-semibold block mb-2 text-700">To</label>
-                                        <p-select formControlName="serviceTo" [options]="yearOptions" optionLabel="label" optionValue="value" placeholder="To" styleClass="w-full" [filter]="true" appendTo="body"></p-select>
+                                        <p-datepicker formControlName="serviceTo" dateFormat="dd/mm/yy" [showIcon]="true" placeholder="To" styleClass="w-full" [style]="{'width': '100%'}" appendTo="body"></p-datepicker>
                                     </div>
                                 </div>
                                 <div class="form-row flex gap-3 mb-4">

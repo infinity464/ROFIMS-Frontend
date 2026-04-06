@@ -77,10 +77,6 @@
                                     }
                                 </div>
                                 <div>
-                                    <label class="font-semibold block mb-2 text-700">Probationary Period</label>
-                                    <input pInputText formControlName="probationaryPeriod" class="w-full" placeholder="Probationary Period" />
-                                </div>
-                                <div class="col-span-2">
                                     <label class="font-semibold block mb-2 text-700">Auth</label>
                                     <input pInputText formControlName="auth" class="w-full" placeholder="Auth" />
                                 </div>
@@ -117,7 +113,6 @@
                                 <th style="min-width: 135px; background: var(--surface-100)">Date of Promotion</th>
                                 <th style="min-width: 135px; background: var(--surface-100)">Prob. From</th>
                                 <th style="min-width: 135px; background: var(--surface-100)">Prob. To</th>
-                                <th style="min-width: 140px; background: var(--surface-100)">Probationary Period</th>
                                 <th style="min-width: 140px; background: var(--surface-100)">Auth</th>
                                 <th style="min-width: 160px; background: var(--surface-100)">Remarks</th>
                                 <th style="width: 120px; background: var(--surface-100)">Actions</th>
@@ -131,7 +126,6 @@
                                 <td>{{ formatDate(row.promotedDate) }}</td>
                                 <td>{{ formatDate(row.fromDate) }}</td>
                                 <td>{{ formatDate(row.toDate) }}</td>
-                                <td>{{ row.probationaryPeriod || '—' }}</td>
                                 <td>{{ row.auth || '—' }}</td>
                                 <td>{{ row.remarks || '—' }}</td>
                                 <td>
@@ -146,7 +140,7 @@
                         </ng-template>
                         <ng-template pTemplate="emptymessage">
                             <tr>
-                                <td [attr.colspan]="10" class="text-center py-4 text-500">No promotion entries. Click "Add row" to add.</td>
+                                <td [attr.colspan]="9" class="text-center py-4 text-500">No promotion entries. Click "Add row" to add.</td>
                             </tr>
                         </ng-template>
                     </p-table>

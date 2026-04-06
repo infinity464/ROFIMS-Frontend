@@ -2,6 +2,7 @@ export interface NoteSheetNumberConfigModel {
     configId: number;
     noteSheetType: string;
     prefix: string;
+    prefixBN: string;
     startNumber: number;
     currentNumber: number;
     currentYear: number;

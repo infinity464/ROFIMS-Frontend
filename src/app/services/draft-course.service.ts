@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '@/Core/Environments/environment';
-import { DraftCourseList, DraftCourseMemberRow, SendToCourseDetails } from '@/models/draft-course.model';
+import { DraftCourseList, DraftCourseMemberRow, RftsTrainingRow, SendToCourseDetails } from '@/models/draft-course.model';
 
 const API = `${environment.apis.core}/DraftCourse`;
 
@@ -18,8 +18,10 @@ export class DraftCourseService {
                     id: l.id ?? l.Id,
                     listNo: l.listNo ?? l.ListNo ?? '',
                     listDate: l.listDate ?? l.ListDate ?? '',
-                    courseNameId: l.courseNameId ?? l.CourseNameId ?? 0,
-                    courseName: l.courseName ?? l.CourseName ?? '',
+                    courseNameId: l.courseNameId ?? l.CourseNameId ?? null,
+                    courseName: l.courseName ?? l.CourseName ?? null,
+                    dateFrom: l.dateFrom ?? l.DateFrom ?? null,
+                    dateTo: l.dateTo ?? l.DateTo ?? null,
                     members: (l.members ?? []).map((m: any) => ({
                         employeeId: m.employeeId ?? m.EmployeeId,
                         serviceId: m.serviceId ?? m.ServiceId ?? null,
@@ -45,8 +47,10 @@ export class DraftCourseService {
                     id: l.id ?? l.Id,
                     listNo: l.listNo ?? l.ListNo ?? '',
                     listDate: l.listDate ?? l.ListDate ?? '',
-                    courseNameId: l.courseNameId ?? l.CourseNameId ?? 0,
-                    courseName: l.courseName ?? l.CourseName ?? '',
+                    courseNameId: l.courseNameId ?? l.CourseNameId ?? null,
+                    courseName: l.courseName ?? l.CourseName ?? null,
+                    dateFrom: l.dateFrom ?? l.DateFrom ?? null,
+                    dateTo: l.dateTo ?? l.DateTo ?? null,
                     members: (l.members ?? []).map((m: any) => ({
                         employeeId: m.employeeId ?? m.EmployeeId,
                         serviceId: m.serviceId ?? m.ServiceId ?? null,
@@ -66,11 +70,13 @@ export class DraftCourseService {
 
     addToDraftCourseList(
         courseNo: string,
-        courseNameId: number,
+        courseNameId: number | null,
         members: DraftCourseMemberRow[],
-        createdBy: string
+        createdBy: string,
+        dateFrom?: string | null,
+        dateTo?: string | null
     ): Observable<{ statusCode: number; description?: string; id: number; listNo: string }> {
-        const body = {
+        const body: Record<string, unknown> = {
             courseNo: courseNo?.trim() || '',
             courseNameId,
             members: members.map((m) => ({
@@ -85,6 +91,8 @@ export class DraftCourseService {
             })),
             createdBy
         };
+        if (dateFrom) body['dateFrom'] = dateFrom;
+        if (dateTo) body['dateTo'] = dateTo;
         return this.http.post<any>(`${API}/AddToDraftCourseList`, body).pipe(
             map((r) => ({
                 statusCode: r?.statusCode ?? 200,
@@ -98,7 +106,8 @@ export class DraftCourseService {
     sendFromDraftToCourse(
         draftListId: number,
         createdBy: string,
-        details?: SendToCourseDetails
+        details?: SendToCourseDetails,
+        memberRemarks?: { employeeId: number; remarks: string }[]
     ): Observable<{ statusCode: number; description: string; recordsCreated: number }> {
         const body: Record<string, unknown> = {
             draftListId,
@@ -107,6 +116,7 @@ export class DraftCourseService {
         if (details) {
             if (details['courseNo'] != null && details['courseNo'] !== '') body['courseNo'] = details['courseNo'];
             if (details['courseType'] != null) body['courseType'] = details['courseType'];
+            if (details['courseName'] != null) body['courseName'] = details['courseName'];
             if (details['trainingInstituteId'] != null) body['trainingInstituteId'] = details['trainingInstituteId'];
             if (details['dateFrom'] != null && details['dateFrom'] !== '') body['dateFrom'] = details['dateFrom'];
             if (details['dateTo'] != null && details['dateTo'] !== '') body['dateTo'] = details['dateTo'];
@@ -114,6 +124,7 @@ export class DraftCourseService {
             if (details['auth'] != null && details['auth'] !== '') body['auth'] = details['auth'];
             if (details['remarks'] != null && details['remarks'] !== '') body['remarks'] = details['remarks'];
         }
+        if (memberRemarks?.length) body['memberRemarks'] = memberRemarks;
         return this.http
             .post<{ statusCode: number; description: string; recordsCreated: number }>(`${API}/SendFromDraftToCourse`, body)
             .pipe(
@@ -135,6 +146,60 @@ export class DraftCourseService {
         return this.http
             .post<{ statusCode: number; description: string }>(`${API}/DeleteDraft`, { draftListId })
             .pipe(map((r) => ({ statusCode: r?.statusCode ?? 500, description: r?.description ?? 'Unknown error' })));
+    }
+
+    getAllRftsTraining(): Observable<RftsTrainingRow[]> {
+        return this.http.get<any[]>(`${API}/GetAllRftsTraining`).pipe(
+            map((list) =>
+                (list ?? []).map((r) => ({
+                    id: r.id ?? r.Id,
+                    employeeId: r.employeeId ?? r.EmployeeId,
+                    fullNameEN: r.fullNameEN ?? r.FullNameEN ?? null,
+                    rabId: r.rabId ?? r.RabId ?? null,
+                    serviceId: r.serviceId ?? r.ServiceId ?? null,
+                    rankName: r.rankName ?? r.RankName ?? null,
+                    corpsName: r.corpsName ?? r.CorpsName ?? null,
+                    motherUnitName: r.motherUnitName ?? r.MotherUnitName ?? null,
+                    courseTypeName: r.courseTypeName ?? r.CourseTypeName ?? null,
+                    courseNameDisplay: r.courseNameDisplay ?? r.CourseNameDisplay ?? null,
+                    courseNo: r.courseNo ?? r.CourseNo ?? null,
+                    dateFrom: r.dateFrom ?? r.DateFrom ?? null,
+                    dateTo: r.dateTo ?? r.DateTo ?? null,
+                    result: r.result ?? r.Result ?? null,
+                    auth: r.auth ?? r.Auth ?? null,
+                    remarks: r.remarks ?? r.Remarks ?? null,
+                    createdBy: r.createdBy ?? r.CreatedBy ?? null,
+                    createdDate: r.createdDate ?? r.CreatedDate ?? null
+                }))
+            )
+        );
+    }
+
+    getRftsTrainingByEmployeeId(employeeId: number): Observable<RftsTrainingRow[]> {
+        return this.http.get<any[]>(`${API}/GetRftsTrainingByEmployeeId/${employeeId}`).pipe(
+            map((list) =>
+                (list ?? []).map((r) => ({
+                    id: r.id ?? r.Id,
+                    employeeId: r.employeeId ?? r.EmployeeId,
+                    fullNameEN: r.fullNameEN ?? r.FullNameEN ?? null,
+                    rabId: r.rabId ?? r.RabId ?? null,
+                    serviceId: r.serviceId ?? r.ServiceId ?? null,
+                    rankName: r.rankName ?? r.RankName ?? null,
+                    corpsName: r.corpsName ?? r.CorpsName ?? null,
+                    motherUnitName: r.motherUnitName ?? r.MotherUnitName ?? null,
+                    courseTypeName: r.courseTypeName ?? r.CourseTypeName ?? null,
+                    courseNameDisplay: r.courseNameDisplay ?? r.CourseNameDisplay ?? null,
+                    courseNo: r.courseNo ?? r.CourseNo ?? null,
+                    dateFrom: r.dateFrom ?? r.DateFrom ?? null,
+                    dateTo: r.dateTo ?? r.DateTo ?? null,
+                    result: r.result ?? r.Result ?? null,
+                    auth: r.auth ?? r.Auth ?? null,
+                    remarks: r.remarks ?? r.Remarks ?? null,
+                    createdBy: r.createdBy ?? r.CreatedBy ?? null,
+                    createdDate: r.createdDate ?? r.CreatedDate ?? null
+                }))
+            )
+        );
     }
 
     addMembersToDraft(draftListId: number, members: DraftCourseMemberRow[]): Observable<{ statusCode: number; description: string }> {

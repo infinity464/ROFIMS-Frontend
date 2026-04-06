@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { MessageService } from 'primeng/api';
-import { catchError, of } from 'rxjs';
+import { catchError, firstValueFrom, forkJoin, of } from 'rxjs';
 import { environment } from '@/Core/Environments/environment';
 import { EmpService } from '@/services/emp-service';
 import { NoteSheetType, NoteSheetCurrentStatus, NoteSheetCurrentStatusOptions, ApprovalStatus, ApprovalStep } from '@/models/enums';
@@ -76,6 +76,7 @@ export interface NoteSheetInfoFull {
     /** @deprecated use recommendersJson */
     recommenderIdsJson?: string;
     remark?: string;
+    paragraphText?: string;
 }
 
 export interface BackHistoryRow {
@@ -110,6 +111,8 @@ export abstract class NotesheetPreviewBase implements OnInit {
     noteSheet: NoteSheetInfoFull | null = null;
     loading = false;
     error = false;
+    exportingPdf = false;
+    printingPreview = false;
 
     // Cached safe-html to avoid re-parsing DOM on every change detection cycle
     private _mainTextCache: { raw: string; safe: SafeHtml } | null = null;
@@ -195,8 +198,29 @@ export abstract class NotesheetPreviewBase implements OnInit {
         if (!this.noteSheet?.draftPostingMasterId) return;
         this.loadingEmployees = true;
         this.postingService.getDraftPostingEmployees(this.noteSheet.draftPostingMasterId).subscribe({
-            next: (list) => { this.postingEmployees = list ?? []; this.loadingEmployees = false; },
+            next: (list) => {
+                this.postingEmployees = list ?? [];
+                this.enrichEmployeePrefixes();
+                this.loadingEmployees = false;
+            },
             error: () => { this.loadingEmployees = false; }
+        });
+    }
+
+    /** Fetch correct prefix (EN/BN) from employee overview API for each employee. */
+    private enrichEmployeePrefixes(): void {
+        if (!this.postingEmployees.length) return;
+        const api = `${environment.apis.core}/EmployeeInfo`;
+        const calls = this.postingEmployees.map(emp =>
+            this.http.get<any>(`${api}/GetEmployeePersonalServiceOverview/${emp.employeeId}`).pipe(catchError(() => of(null)))
+        );
+        forkJoin(calls).subscribe(results => {
+            results.forEach((res, i) => {
+                if (!res) return;
+                const data = res?.data ?? res;
+                if (data?.prefix) this.postingEmployees[i].prefixName = data.prefix;
+                if (data?.prefixBN) this.postingEmployees[i].prefixNameBN = data.prefixBN;
+            });
         });
     }
 
@@ -339,9 +363,9 @@ export abstract class NotesheetPreviewBase implements OnInit {
     getApproverDate(step: string): string {
         if (!this.noteSheet) return '';
         if (step === ApprovalStep.FinalApprover)
-            return this.noteSheet.finalApprovalApprovedDate ? this.formatDate(this.noteSheet.finalApprovalApprovedDate) : '';
+            return this.noteSheet.finalApprovalApprovedDate ? this.formatMonthYear(this.noteSheet.finalApprovalApprovedDate) : '';
         if (step === ApprovalStep.Initiator)
-            return this.noteSheet.initiatorApprovedDate ? this.formatDate(this.noteSheet.initiatorApprovedDate) : '';
+            return this.noteSheet.initiatorApprovedDate ? this.formatMonthYear(this.noteSheet.initiatorApprovedDate) : '';
         if (step.startsWith(ApprovalStep.Recommender)) {
             try {
                 const json = this.noteSheet.recommendersJson ?? this.noteSheet.recommenderIdsJson;
@@ -351,7 +375,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
                         const numPart = step.replace(ApprovalStep.Recommender, '').trim();
                         const idx = numPart ? parseInt(numPart, 10) - 1 : 0;
                         const rec = arr[idx];
-                        if (rec?.recomender_approved_date) return this.formatDate(rec.recomender_approved_date);
+                        if (rec?.recomender_approved_date) return this.formatMonthYear(rec.recomender_approved_date);
                     }
                 }
             } catch { /* ignore */ }
@@ -359,10 +383,27 @@ export abstract class NotesheetPreviewBase implements OnInit {
         return '';
     }
 
+    /** Returns the organizational header lines for the notesheet (inside the bordered box, centered). */
+    getOrgHeaderLine1(): string {
+        return this.isEnglish() ? 'RAB Forces Headquarters' : 'র‍্যাব ফোর্সেস সদর দপ্তর';
+    }
+    getOrgHeaderLine2(): string {
+        return this.isEnglish() ? 'Administration & Finance Wing (Personnel Branch)' : 'প্রশাসন ও অর্থ উইং (পার্সোনেল শাখা)';
+    }
+
     serial(n: number): string {
         if (this.isEnglish()) return `${n}.`;
         const bn = ['০','১','২','৩','৪','৫','৬','৭','৮','৯'];
         return String(n).replace(/\d/g, d => bn[+d]) + '।';
+    }
+
+    /** Parse paragraphText JSON into string array. */
+    get parsedParagraphs(): string[] {
+        if (!this.noteSheet?.paragraphText) return [];
+        try {
+            const arr = JSON.parse(this.noteSheet.paragraphText);
+            return Array.isArray(arr) ? arr.filter((p: string) => p && p.trim()) : [];
+        } catch { return []; }
     }
 
     formatDate(value: string | null | undefined): string {
@@ -372,6 +413,16 @@ export abstract class NotesheetPreviewBase implements OnInit {
             if (isNaN(d.getTime())) return String(value);
             const locale = this.isEnglish() ? 'en-GB' : 'bn-BD';
             return d.toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' });
+        } catch { return String(value); }
+    }
+
+    formatMonthYear(value: string | null | undefined): string {
+        if (!value) return '—';
+        try {
+            const d = new Date(value);
+            if (isNaN(d.getTime())) return String(value);
+            const locale = this.isEnglish() ? 'en-GB' : 'bn-BD';
+            return d.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
         } catch { return String(value); }
     }
 
@@ -566,7 +617,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
         const runProps: IRunPropertiesOptions = {
             font: { ascii: 'Times New Roman', hAnsi: 'Times New Roman', eastAsia: 'Times New Roman', cs: 'Nirmala UI' },
             language: { value: lang, eastAsia: lang, bidirectional: lang },
-            size: 24,  // 12pt = 24 half-points
+            size: 20,  // 10pt = 20 half-points
         };
         const thinBorder = { style: BorderStyle.SINGLE, size: 1, color: '000000' };
         const cellBorders = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
@@ -639,7 +690,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
 
         // Title
         children.push(new Paragraph({
-            children: [new TextRun({ text: 'NOTE SHEET', ...runProps, size: 32, bold: true, underline: {} })],
+            children: [new TextRun({ text: 'NOTE SHEET', ...runProps, size: 24, bold: true, underline: {} })],
             alignment: AlignmentType.CENTER, spacing: { after: 40 },
         }));
         children.push(new Paragraph({
@@ -698,7 +749,9 @@ export abstract class NotesheetPreviewBase implements OnInit {
 
         // Posting table
         if (this.isNewPosting() && this.postingEmployees.length > 0) {
-            const cols = bn ? ['ক্রমিক','ব্যক্তিগত নম্বর','পদবি','ট্রেড','নাম','মাতৃ ইউনিট','নিজ জেলা','মাতৃ ইউনিটের অবস্থান','বদলি কর্মস্থল','মন্তব্য'] : ['Ser','Service ID','Rank','Trade','Name','Mother Unit','Own District','Mother Unit Location','Transfer Unit','Remarks'];
+            const cols = bn
+                ? ['ক্রমিক','ব্যক্তিগত নম্বর','পদবি','ট্রেড','নাম','নিজ জেলা (দায়িত্বপূর্ণ এলাকা)','স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)','পূর্ববতী কর্মস্থল (দায়িত্বপূর্ণ এলাকা)','বদলি কর্মস্থল','মন্তব্য']
+                : ['Ser','Service ID','Rank','Trade','Name','Own District (Responsible Area)','Spouse District (Responsible Area)','Previous Workplace (Responsible Area)','Transfer Unit','Remarks'];
             const cw = Math.floor(13000 / cols.length);
             const headerRow = new TableRow({ tableHeader: true, children: cols.map(c => new TableCell({
                 children: [new Paragraph({ children: [new TextRun({ text: c, ...runProps, size: 16, bold: true })], alignment: AlignmentType.CENTER })],
@@ -709,11 +762,15 @@ export abstract class NotesheetPreviewBase implements OnInit {
                 bn?(emp.rankNameBN||emp.rankName||''):(emp.rankName??''),
                 bn?(emp.tradeNameBN||emp.tradeName||''):(emp.tradeName??''),
                 bn?(emp.fullNameBN||emp.fullNameEN||''):(emp.fullNameEN??''),
-                bn?(emp.motherUnitNameBN||emp.motherUnitName||''):(emp.motherUnitName??''),
-                bn?(emp.permanentDistrictNameBN||emp.permanentDistrictName||''):(emp.permanentDistrictName??''),
+                bn?(emp.presentDistrictNameBN||emp.presentDistrictName||''):(emp.presentDistrictName??''),
+                bn?(emp.spousePresentDistrictNameBN||emp.spousePresentDistrictName||''):(emp.spousePresentDistrictName??''),
                 bn?(emp.motherOrgLocationNameBN||emp.motherOrgLocationName||''):(emp.motherOrgLocationName??''),
                 emp.transferRabUnitName??'', emp.remarks??''
-            ].map(v => new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: v, ...runProps, size: 16 })] })], borders: cellBorders, width: { size: cw, type: WidthType.DXA } })) }));
+            ].map(v => {
+                const lines = v.split('\n');
+                const cellParas = lines.map(line => new Paragraph({ children: [new TextRun({ text: line, ...runProps, size: 16 })] }));
+                return new TableCell({ children: cellParas, borders: cellBorders, width: { size: cw, type: WidthType.DXA } });
+            }) }));
             children.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [headerRow, ...dataRows] }));
         }
 
@@ -762,6 +819,37 @@ export abstract class NotesheetPreviewBase implements OnInit {
         saveAs(await Packer.toBlob(doc), `NoteSheet_${this.noteSheet.noteSheetNo ?? 'export'}.docx`);
     }
 
+    /** Send a DOCX blob to backend for conversion, then download the resulting PDF. */
+    protected async convertWordToPdf(docxBlob: Blob, fileName: string): Promise<void> {
+        this.exportingPdf = true;
+        try {
+            const form = new FormData();
+            form.append('file', docxBlob, 'document.docx');
+            const pdfBlob = await firstValueFrom(
+                this.http.post(`${environment.apis.core}/Document/ConvertToPdf`, form, { responseType: 'blob' })
+            );
+            saveAs(pdfBlob, fileName);
+        } finally {
+            this.exportingPdf = false;
+        }
+    }
+
+    /** Send a DOCX blob to backend for conversion, then open the PDF in a new browser tab. */
+    protected async openPdfPreview(docxBlob: Blob): Promise<void> {
+        this.printingPreview = true;
+        try {
+            const form = new FormData();
+            form.append('file', docxBlob, 'document.docx');
+            const pdfBlob = await firstValueFrom(
+                this.http.post(`${environment.apis.core}/Document/ConvertToPdf`, form, { responseType: 'blob' })
+            );
+            const url = URL.createObjectURL(pdfBlob);
+            window.open(url, '_blank');
+        } finally {
+            this.printingPreview = false;
+        }
+    }
+
     exportPdf(): void {
         if (!this.noteSheet) return;
         const bn = !this.isEnglish();
@@ -784,10 +872,12 @@ export abstract class NotesheetPreviewBase implements OnInit {
         }
 
         if (this.isNewPosting() && this.postingEmployees.length > 0) {
-            const cols = bn ? ['ক্রমিক','ব্যক্তিগত নম্বর','পদবি','ট্রেড','নাম','মাতৃ ইউনিট','নিজ জেলা','মাতৃ ইউনিটের অবস্থান','বদলি কর্মস্থল','মন্তব্য'] : ['Ser','Service ID','Rank','Trade','Name','Mother Unit','Own District','Mother Unit Location','Transfer Unit','Remarks'];
+            const cols = bn
+                ? ['ক্রমিক','ব্যক্তিগত নম্বর','পদবি','ট্রেড','নাম','নিজ জেলা (দায়িত্বপূর্ণ এলাকা)','স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)','পূর্ববতী কর্মস্থল (দায়িত্বপূর্ণ এলাকা)','বদলি কর্মস্থল','মন্তব্য']
+                : ['Ser','Service ID','Rank','Trade','Name','Own District (Responsible Area)','Spouse District (Responsible Area)','Previous Workplace (Responsible Area)','Transfer Unit','Remarks'];
             const headerCells = cols.map(c => `<th>${this.escapeHtml(c)}</th>`).join('');
             const bodyRows = this.postingEmployees.map((emp, i) => {
-                const vals = [String(i+1), emp.serviceId??'', bn?(emp.rankNameBN||emp.rankName||''):(emp.rankName??''), bn?(emp.tradeNameBN||emp.tradeName||''):(emp.tradeName??''), bn?(emp.fullNameBN||emp.fullNameEN||''):(emp.fullNameEN??''), bn?(emp.motherUnitNameBN||emp.motherUnitName||''):(emp.motherUnitName??''), bn?(emp.permanentDistrictNameBN||emp.permanentDistrictName||''):(emp.permanentDistrictName??''), bn?(emp.motherOrgLocationNameBN||emp.motherOrgLocationName||''):(emp.motherOrgLocationName??''), emp.transferRabUnitName??'', emp.remarks??''];
+                const vals = [String(i+1), emp.serviceId??'', bn?(emp.rankNameBN||emp.rankName||''):(emp.rankName??''), bn?(emp.tradeNameBN||emp.tradeName||''):(emp.tradeName??''), bn?(emp.fullNameBN||emp.fullNameEN||''):(emp.fullNameEN??''), bn?(emp.presentDistrictNameBN||emp.presentDistrictName||''):(emp.presentDistrictName??''), bn?(emp.spousePresentDistrictNameBN||emp.spousePresentDistrictName||''):(emp.spousePresentDistrictName??''), bn?(emp.motherOrgLocationNameBN||emp.motherOrgLocationName||''):(emp.motherOrgLocationName??''), emp.transferRabUnitName??'', emp.remarks??''];
                 return `<tr>${vals.map(v => `<td>${this.escapeHtml(v)}</td>`).join('')}</tr>`;
             }).join('');
             extraHtml += `<table><thead><tr>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table>`;
@@ -818,7 +908,8 @@ export abstract class NotesheetPreviewBase implements OnInit {
     th { font-weight: bold; background: #f5f5f5; font-size: 8pt; text-transform: uppercase; }
     .note { padding: 6px 12px; font-size: 10pt; border-top: 1px dashed #aaa; }
     .closing { margin-top: 14px; font-size: 11pt; text-indent: 2em; }
-    .initiator-sig { margin-top: 10px; text-align: center; display: flex; flex-direction: column; align-items: flex-end; padding-right: 12px; }
+    .initiator-sig { margin-top: 10px; text-align: left; display: flex; flex-direction: column; align-items: flex-end; padding-right: 12px; }
+    .initiator-sig > * { text-align: left; }
     .sig-img { max-width: 160px; max-height: 60px; object-fit: contain; display: block; margin-bottom: 4px; }
     .approver-section { border-top: 1.5px solid #000; padding: 10px 12px 20px; min-height: 90px; }
     .approver-role { text-decoration: underline; font-size: 11pt; margin-bottom: 6px; }

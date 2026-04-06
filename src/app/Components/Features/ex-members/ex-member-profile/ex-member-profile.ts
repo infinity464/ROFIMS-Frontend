@@ -1,5 +1,5 @@
 import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
@@ -20,6 +20,8 @@ import { AddressInfoService, AddressInfoByEmployeeView } from '@/services/addres
 import { MOServHistoryService, MOServHistoryByEmployeeView } from '@/services/mo-serv-history.service';
 import { DisciplineInfoService, DisciplineInfoByEmployeeView } from '@/services/discipline-info.service';
 import { CourseInfoService, CourseInfoByEmployeeView } from '@/services/course-info-service';
+import { DraftCourseService } from '@/services/draft-course.service';
+import { RftsTrainingRow } from '@/models/draft-course.model';
 import { PromotionInfoService, PromotionInfoByEmployeeView } from '@/services/promotion-info.service';
 import { EmployeePersonalServiceOverview } from '@/models/employee-personal-service-overview.model';
 import { LocationType } from '@/models/enums';
@@ -86,6 +88,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
     moServHistoryList: MOServHistoryByEmployeeView[] = [];
     disciplineList: DisciplineInfoByEmployeeView[] = [];
     courseList: CourseInfoByEmployeeView[] = [];
+    rftsTrainingList: RftsTrainingRow[] = [];
     promotionList: PromotionInfoByEmployeeView[] = [];
     documentList: EmployeeDocumentReferenceItem[] = [];
     previousYearSummary: LeaveInfoSummaryItem[] = [];
@@ -102,6 +105,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
     constructor(
         private route: ActivatedRoute,
         private router: Router,
+        private location: Location,
         private servingMembersService: ServingMembersService,
         private familyInfoService: FamilyInfoService,
         private previousRabService: PreviousRABServiceService,
@@ -115,6 +119,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         private disciplineInfoService: DisciplineInfoService,
         private courseInfoService: CourseInfoService,
         private promotionInfoService: PromotionInfoService,
+        private draftCourseService: DraftCourseService,
         private messageService: MessageService,
         private empService: EmpService,
         private exportService: ExportService
@@ -556,9 +561,10 @@ export class ExMemberProfile implements OnInit, OnDestroy {
             discipline: this.disciplineInfoService.getViewByEmployeeId(id),
             course: this.courseInfoService.getViewByEmployeeId(id),
             promotion: this.promotionInfoService.getViewByEmployeeId(id),
-            documents: this.empService.getEmployeeDocumentReferences(id).pipe(catchError(() => of([])))
+            documents: this.empService.getEmployeeDocumentReferences(id).pipe(catchError(() => of([]))),
+            rftsTraining: this.draftCourseService.getRftsTrainingByEmployeeId(id).pipe(catchError(() => of([])))
         }).subscribe({
-            next: ({ profile, family, previousRab, bankAcc, education, foreignVisit, leaveCurrentYear, additionalRemarks, address, moServHistory, discipline, course, promotion, documents }) => {
+            next: ({ profile, family, previousRab, bankAcc, education, foreignVisit, leaveCurrentYear, additionalRemarks, address, moServHistory, discipline, course, promotion, documents, rftsTraining }) => {
                 this.profile = profile;
                 this.familyList = family ?? [];
                 this.loadProfileImage(profile);
@@ -574,6 +580,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
                 this.courseList = course ?? [];
                 this.promotionList = promotion ?? [];
                 this.documentList = documents ?? [];
+                this.rftsTrainingList = rftsTraining ?? [];
                 this.loading = false;
                 onComplete?.();
             },
@@ -591,7 +598,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
     }
 
     goBack(): void {
-        this.router.navigate(['/ex-members']);
+        this.location.back();
     }
 
     setEditingSection(section: string | null): void {

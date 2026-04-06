@@ -16,6 +16,7 @@ import { FileUploadModule } from 'primeng/fileupload';
 import { DialogModule } from 'primeng/dialog';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { CheckboxModule } from 'primeng/checkbox';
+import { DatePickerModule } from 'primeng/datepicker';
 
 import { EmpService } from '@/services/emp-service';
 import { PreviousRABServiceService } from '@/services/previous-rab-service.service';
@@ -63,6 +64,7 @@ export interface PreviousRABServiceListRow {
         DialogModule,
         ConfirmDialogModule,
         CheckboxModule,
+        DatePickerModule,
         EmployeeSearchComponent,
         FileReferencesFormComponent
     ],
@@ -322,8 +324,8 @@ export class EmpPreviousRabService implements OnInit {
     openEditDialog(row: PreviousRABServiceListRow): void {
         this.isEditMode = true;
         this.editingServiceId = row.previousRABServiceID;
-        const serviceFrom = this.toDateOnly(row.serviceFrom ?? null);
-        const serviceTo = this.toDateOnly(row.serviceTo ?? null);
+        const serviceFrom = row.serviceFrom ? new Date(row.serviceFrom) : null;
+        const serviceTo = row.serviceTo ? new Date(row.serviceTo) : null;
         this.serviceForm.patchValue({
             previousRABServiceID: row.previousRABServiceID,
             rabUnitCodeId: row.rabUnitCodeId,

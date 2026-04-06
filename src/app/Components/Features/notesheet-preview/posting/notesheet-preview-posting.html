@@ -1,4 +1,4 @@
-<p-toast></p-toast>
+<p-toast position="top-center"></p-toast>
 
 <div class="preview-page">
 
@@ -8,7 +8,8 @@
             <p-button *ngIf="editing" icon="pi pi-times" label="Cancel" (onClick)="cancelEdit()" styleClass="p-button-outlined p-button-secondary"></p-button>
             <p-button *ngIf="editing" icon="pi pi-check" label="Save" (onClick)="saveChanges()" [loading]="saving" styleClass="p-button-success"></p-button>
             <p-button *ngIf="showWord && !editing" icon="pi pi-file-word" label="Word"  (onClick)="exportWord()" styleClass="p-button-outlined"></p-button>
-            <p-button *ngIf="showPdf && !editing" icon="pi pi-file-pdf"  label="PDF"   (onClick)="exportPdf()"  styleClass="p-button-outlined"></p-button>
+            <p-button *ngIf="showPdf && !editing" icon="pi pi-file-pdf"  label="PDF"   (onClick)="exportPdf()" [loading]="exportingPdf" styleClass="p-button-outlined"></p-button>
+            <p-button *ngIf="!editing" icon="pi pi-print" label="Print Preview" (onClick)="printPreview()" [loading]="printingPreview" styleClass="p-button-outlined"></p-button>
         </div>
     </div>
 
@@ -23,7 +24,41 @@
         <p-button label="Go Back" icon="pi pi-arrow-left" (onClick)="goBack()"></p-button>
     </div>
 
-    <div class="a4-paper-container" *ngIf="noteSheet && !loading && !error">
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- VIEW MODE: paginated legal pages                          -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <ng-container *ngIf="noteSheet && !loading && !error && !editing">
+
+        <!-- Hidden: measure full content height -->
+        <div class="page-measure" #contentMeasure>
+            <ng-container *ngTemplateOutlet="viewContent"></ng-container>
+        </div>
+
+        <!-- Visible: paginated pages -->
+        <div class="a4-paper-container" #pagesContainer>
+            <div *ngFor="let offset of pageOffsets; let i = index; trackBy: trackByIndex" class="a4-paper paginated">
+                <!-- Title above border on first page only -->
+                <div class="ns-title-block" *ngIf="i === 0">
+                    <div class="ns-title-en">NOTE SHEET</div>
+                    <div class="ns-title-bn">মন্তব্য পত্র</div>
+                </div>
+                <div class="page-viewport">
+                    <div class="page-inner" [style.transform]="'translateY(-' + offset + 'px)'">
+                        <ng-container *ngTemplateOutlet="viewContent"></ng-container>
+                    </div>
+                    <div class="page-bottom-cover"
+                         *ngIf="getPageCoverHeight(i) > 0"
+                         [style.height.px]="getPageCoverHeight(i)">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </ng-container>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- EDIT MODE: single page, no pagination                     -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <div class="a4-paper-container" *ngIf="noteSheet && !loading && !error && editing">
         <div class="a4-paper">
 
             <div class="ns-title-block">
@@ -32,32 +67,46 @@
             </div>
 
             <div class="ns-doc-box">
-
                 <div class="ns-main-col">
 
-                    <!-- Subject/Reference/Date/Operation Type removed for posting notesheet -->
-                    <div class="ns-edit-field" *ngIf="editing">
+                    <div class="ns-org-header" style="text-align:center; padding:8px 16px 4px; font-weight:700; font-size:10pt; line-height:1.5;">
+                        <div>{{ getOrgHeaderLine1() }}</div>
+                        <div style="border-bottom:1.5px solid #000; display:inline-block; padding-bottom:2px;">{{ getOrgHeaderLine2() }}</div>
+                    </div>
+
+                    <div class="ns-edit-field">
                         <label class="ns-edit-label">Text Type</label>
                         <p-select [(ngModel)]="editTextType" [options]="textTypeOptions" optionLabel="label" optionValue="value"
                                   styleClass="w-full" appendTo="body"></p-select>
                     </div>
 
-                    <!-- ── Main Text ── -->
-                    <div class="ns-para" *ngIf="!editing">
-                        <span class="ns-para-no">{{ serial(1) }}</span>
-                        <div class="ns-para-text" [innerHTML]="getMainTextSafe()"></div>
+                    <div class="ns-edit-field">
+                        <label class="ns-edit-label">{{ isEnglish() ? 'Subject' : 'বিষয়' }}</label>
+                        <input pInputText [(ngModel)]="editSubject" class="w-full" placeholder="{{ isEnglish() ? 'Subject' : 'বিষয়' }}" />
                     </div>
-                    <div class="ns-edit-field" *ngIf="editing">
+
+                    <div class="ns-edit-field">
                         <label class="ns-edit-label">Main Text</label>
                         <app-rich-editor [(ngModel)]="editMainText"></app-rich-editor>
                     </div>
 
-                    <div class="ns-edit-field" *ngIf="editing">
+                    <div class="ns-edit-field">
                         <label class="ns-edit-label">{{ isEnglish() ? 'Note' : 'নোট' }}</label>
                         <textarea pInputTextarea [(ngModel)]="editNote" rows="3" class="w-full" placeholder="{{ isEnglish() ? 'Note' : 'নোট' }}"></textarea>
                     </div>
 
-                    <!-- ── Posting: employee table ── -->
+                    <!-- ── Paragraphs (editable) ── -->
+                    <div class="ns-edit-field">
+                        <label class="ns-edit-label">{{ isEnglish() ? 'Paragraphs' : 'অনুচ্ছেদসমূহ' }}</label>
+                        <div *ngFor="let p of editParagraphs; let pi = index; trackBy: trackByIndex" style="display:flex; gap:8px; align-items:start; margin-bottom:8px;">
+                            <span style="font-weight:700; min-width:28px; padding-top:8px;">{{ serial(pi + 2) }}</span>
+                            <textarea pInputTextarea [(ngModel)]="editParagraphs[pi]" rows="2" class="w-full" placeholder="{{ isEnglish() ? 'Paragraph ' + (pi + 1) : 'অনুচ্ছেদ ' + (pi + 1) }}"></textarea>
+                            <p-button icon="pi pi-trash" (onClick)="removeParagraph(pi)" styleClass="p-button-danger p-button-text p-button-sm" [style]="{'margin-top': '4px'}"></p-button>
+                        </div>
+                        <p-button icon="pi pi-plus" [label]="isEnglish() ? 'Add Paragraph' : 'অনুচ্ছেদ যোগ করুন'" (onClick)="addParagraph()" styleClass="p-button-outlined p-button-sm"></p-button>
+                    </div>
+
+                    <!-- ── Posting: employee table (edit) ── -->
                     <div class="ns-posting-table" *ngIf="postingEmployees.length > 0">
                         <table>
                             <thead>
@@ -67,52 +116,38 @@
                                     <th>{{ isEnglish() ? 'Rank' : 'পদবি' }}</th>
                                     <th>{{ isEnglish() ? 'Trade' : 'ট্রেড' }}</th>
                                     <th>{{ isEnglish() ? 'Name' : 'নাম' }}</th>
-                                    <th>{{ isEnglish() ? 'Mother Unit' : 'মাতৃ ইউনিট' }}</th>
-                                    <th>{{ isEnglish() ? 'Own District' : 'নিজ জেলা' }}</th>
-                                    <th>{{ isEnglish() ? 'Mother Unit Location' : 'মাতৃ ইউনিটের অবস্থান' }}</th>
+                                    <th>{{ isEnglish() ? 'Own District (Responsible Area)' : 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
+                                    <th>{{ isEnglish() ? 'Spouse District (Responsible Area)' : 'স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
+                                    <th>{{ isEnglish() ? 'Previous Workplace (Responsible Area)' : 'পূর্ববতী কর্মস্থল (দায়িত্বপূর্ণ এলাকা)' }}</th>
                                     <th>{{ isEnglish() ? 'Transfer Unit' : 'বদলি ইউনিট' }}</th>
-                                    <th>{{ isEnglish() ? 'Remarks' : 'মন্তব্য' }}</th>
+                                    <th style="min-width:200px">{{ isEnglish() ? 'Remarks' : 'মন্তব্য' }}</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr *ngFor="let emp of postingEmployees; let i = index">
                                     <td>{{ isEnglish() ? (i + 1) : serial(i + 1) }}</td>
-                                    <td>{{ emp.serviceId || '-' }}</td>
+                                    <td>{{ getServiceIdDisplay(emp) }}</td>
                                     <td>{{ isEnglish() ? (emp.rankName || '-') : (emp.rankNameBN || emp.rankName || '-') }}</td>
                                     <td>{{ isEnglish() ? (emp.tradeName || '-') : (emp.tradeNameBN || emp.tradeName || '-') }}</td>
                                     <td>{{ isEnglish() ? (emp.fullNameEN || '-') : (emp.fullNameBN || emp.fullNameEN || '-') }}</td>
-                                    <td>{{ isEnglish() ? (emp.motherUnitName || '-') : (emp.motherUnitNameBN || emp.motherUnitName || '-') }}</td>
-                                    <td>{{ isEnglish() ? (emp.permanentDistrictName || '-') : (emp.permanentDistrictNameBN || emp.permanentDistrictName || '-') }}</td>
+                                    <td>{{ isEnglish() ? (emp.presentDistrictName || '-') : (emp.presentDistrictNameBN || emp.presentDistrictName || '-') }}</td>
+                                    <td>{{ isEnglish() ? (emp.spousePresentDistrictName || '-') : (emp.spousePresentDistrictNameBN || emp.spousePresentDistrictName || '-') }}</td>
                                     <td>{{ isEnglish() ? (emp.motherOrgLocationName || '-') : (emp.motherOrgLocationNameBN || emp.motherOrgLocationName || '-') }}</td>
-                                    <td *ngIf="!editing">{{ isEnglish() ? (emp.transferRabUnitName || '-') : (emp.transferRabUnitId ? unitLabelMapBN[emp.transferRabUnitId] : null) || emp.transferRabUnitName || '-' }}</td>
-                                    <td *ngIf="editing">
+                                    <td>
                                         <p-select [(ngModel)]="emp.transferRabUnitId" [options]="rabUnitOptions" optionLabel="label" optionValue="value"
                                                   placeholder="Select Unit" [filter]="true" filterBy="label" [showClear]="true"
                                                   styleClass="w-full" appendTo="body" size="small"></p-select>
                                     </td>
-                                    <td *ngIf="!editing">{{ emp.remarks || '-' }}</td>
-                                    <td *ngIf="editing">
+                                    <td style="min-width:200px">
                                         <input pInputText [(ngModel)]="emp.remarks" placeholder="{{ isEnglish() ? 'Remarks' : 'মন্তব্য' }}" class="w-full" />
                                     </td>
                                 </tr>
                             </tbody>
-                            <tfoot *ngIf="!editing && noteSheet.note">
-                                <tr>
-                                    <td colspan="10" class="ns-posting-note">
-                                        <strong>{{ isEnglish() ? 'Note:' : 'নোটঃ' }}</strong> {{ noteSheet.note }}
-                                    </td>
-                                </tr>
-                            </tfoot>
                         </table>
                     </div>
 
-                    <!-- ── Note (when no posting table) ── -->
-                    <div class="ns-note" *ngIf="!editing && noteSheet.note && postingEmployees.length === 0">
-                        <strong>{{ isEnglish() ? 'Note:' : 'নোটঃ' }}</strong> {{ noteSheet.note }}
-                    </div>
-
                     <!-- ── Supporting Documents ── -->
-                    <div class="ns-edit-field" *ngIf="editing">
+                    <div class="ns-edit-field">
                         <app-file-references-form
                             #fileReferencesForm
                             [fileRows]="fileRows"
@@ -124,7 +159,7 @@
                     </div>
 
                     <!-- ── Approval Chain Edit ── -->
-                    <div class="ns-approval-edit" *ngIf="editing">
+                    <div class="ns-approval-edit">
                         <h4 class="ns-approval-edit-title">Approval Chain</h4>
                         <div class="ns-edit-row">
                             <div class="ns-edit-col">
@@ -147,46 +182,131 @@
                         </div>
                     </div>
 
-                    <!-- ── Initiator area (view mode): name always, signature+date only after approved ── -->
-                    <div class="ns-initiator-area" *ngIf="!editing">
-                        <div class="ns-initiator-sig" *ngIf="initiatorDetails">
-                            <img *ngIf="isInitiatorApproved() && shouldShowSignature(initiatorDetails.step) && initiatorDetails.signatureDataUrl"
-                                 [src]="initiatorDetails.signatureDataUrl" class="ns-sig-img" alt="Signature" />
-                            <div class="ns-sig-paren">
-                                ({{ isEnglish() ? initiatorDetails.name : (initiatorDetails.nameBN || initiatorDetails.name) }}{{ initiatorDetails.rank && initiatorDetails.rank !== '-' ? ', ' + (isEnglish() ? initiatorDetails.rank : (initiatorDetails.rankBN || initiatorDetails.rank)) : '' }})
-                            </div>
-                            <div class="ns-sig-appoint" *ngIf="initiatorDetails.appointment || initiatorDetails.appointmentBN">
-                                {{ isEnglish() ? initiatorDetails.appointment : (initiatorDetails.appointmentBN || initiatorDetails.appointment) }}
-                            </div>
-                            <div class="ns-sig-date" *ngIf="isInitiatorApproved() && noteSheet.noteSheetDate">{{ formatDate(noteSheet.noteSheetDate) }}</div>
-                        </div>
-                    </div>
-
-                    <!-- ── Approver Sections (view mode) ── -->
-                    <div class="ns-approver-section" *ngFor="let approver of approversDetails; let i = index" [hidden]="editing">
-                        <div class="ns-approver-role">
-                            {{ isEnglish() ? approver.appointment : (approver.appointmentBN || approver.appointment) }}
-                        </div>
-                        <div class="ns-approver-body" [class.ns-approver-body--left]="i >= approversDetails.length - 2">
-                            <div class="ns-approver-left">
-                                <span class="ns-para-no">{{ serial(i + 2) }}</span>
-                                <span class="ns-approver-remark" *ngIf="getApproverRemark(approver.step)">{{ getApproverRemark(approver.step) }}</span>
-                            </div>
-                            <div class="ns-approver-sig-area">
-                                <img *ngIf="shouldShowSignature(approver.step) && approver.signatureDataUrl"
-                                     [src]="approver.signatureDataUrl" class="ns-sig-img" alt="Signature" />
-                                <div class="ns-sig-date" *ngIf="getApproverDate(approver.step)">{{ getApproverDate(approver.step) }}</div>
-                            </div>
-                        </div>
-                    </div>
-
                 </div>
-
-                <!-- সংলগ্নী/Encl. column removed for posting notesheet -->
-
             </div>
         </div>
     </div>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- Shared view-mode content template (used by pagination)    -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <ng-template #viewContent>
+      <ng-container *ngIf="noteSheet">
+        <div class="ns-title-block">
+            <div class="ns-title-en">NOTE SHEET</div>
+            <div class="ns-title-bn">মন্তব্য পত্র</div>
+        </div>
+
+        <div class="ns-doc-box">
+            <div class="ns-main-col">
+
+                <div class="ns-org-header" style="text-align:center; padding:8px 16px 4px; font-weight:700; font-size:10pt; line-height:1.5;">
+                    <div>{{ getOrgHeaderLine1() }}</div>
+                    <div style="border-bottom:1.5px solid #000; display:inline-block; padding-bottom:2px;">{{ getOrgHeaderLine2() }}</div>
+                </div>
+
+                <div class="ns-notesheet-no" *ngIf="noteSheet.noteSheetNo" style="padding:4px 16px 2px; font-size:10pt;">
+                    {{ noteSheet.noteSheetNo }}
+                </div>
+
+                <div *ngIf="noteSheet.subject" style="padding:2px 16px 4px; font-size:10pt;">
+                    <strong><u>{{ noteSheet.subject }}</u></strong>
+                </div>
+
+                <!-- ── Main Text ── -->
+                <div class="ns-para">
+                    <span class="ns-para-no">{{ serial(1) }}</span>
+                    <div class="ns-para-text" [innerHTML]="getMainTextSafe()"></div>
+                </div>
+
+                <!-- ── Posting: employee table ── -->
+                <div class="ns-posting-table" *ngIf="postingEmployees.length > 0">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>{{ isEnglish() ? 'Ser' : 'ক্রমিক' }}</th>
+                                <th>{{ isEnglish() ? 'Service ID' : 'ব্যক্তিগত নম্বর' }}</th>
+                                <th>{{ isEnglish() ? 'Rank' : 'পদবি' }}</th>
+                                <th>{{ isEnglish() ? 'Trade' : 'ট্রেড' }}</th>
+                                <th>{{ isEnglish() ? 'Name' : 'নাম' }}</th>
+                                <th>{{ isEnglish() ? 'Own District (Responsible Area)' : 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
+                                <th>{{ isEnglish() ? 'Spouse District (Responsible Area)' : 'স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
+                                <th>{{ isEnglish() ? 'Previous Workplace (Responsible Area)' : 'পূর্ববতী কর্মস্থল (দায়িত্বপূর্ণ এলাকা)' }}</th>
+                                <th>{{ isEnglish() ? 'Transfer Unit' : 'বদলি ইউনিট' }}</th>
+                                <th>{{ isEnglish() ? 'Remarks' : 'মন্তব্য' }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let emp of postingEmployees; let i = index">
+                                <td>{{ isEnglish() ? (i + 1) : serial(i + 1) }}</td>
+                                <td>{{ getServiceIdDisplay(emp) }}</td>
+                                <td>{{ isEnglish() ? (emp.rankName || '') : (emp.rankNameBN || emp.rankName || '') }}</td>
+                                <td>{{ isEnglish() ? (emp.tradeName || '') : (emp.tradeNameBN || emp.tradeName || '') }}</td>
+                                <td>{{ isEnglish() ? (emp.fullNameEN || '') : (emp.fullNameBN || emp.fullNameEN || '') }}</td>
+                                <td>{{ isEnglish() ? (emp.presentDistrictName || '') : (emp.presentDistrictNameBN || emp.presentDistrictName || '') }}</td>
+                                <td>{{ isEnglish() ? (emp.spousePresentDistrictName || '') : (emp.spousePresentDistrictNameBN || emp.spousePresentDistrictName || '') }}</td>
+                                <td>{{ isEnglish() ? (emp.motherOrgLocationName || '') : (emp.motherOrgLocationNameBN || emp.motherOrgLocationName || '') }}</td>
+                                <td>{{ isEnglish() ? (emp.transferRabUnitName || '') : (emp.transferRabUnitId ? unitLabelMapBN[emp.transferRabUnitId] : null) || emp.transferRabUnitName || '' }}</td>
+                                <td>{{ emp.remarks || '' }}</td>
+                            </tr>
+                        </tbody>
+                        <!-- tfoot note hidden for now -->
+                    </table>
+                </div>
+
+                <!-- ── Paragraphs (after employee table) ── -->
+                <ng-container *ngIf="parsedParagraphs.length > 0">
+                    <div class="ns-para" *ngFor="let para of parsedParagraphs; let pi = index">
+                        <span class="ns-para-no">{{ serial(pi + 2) }}</span>
+                        <div class="ns-para-text">{{ para }}</div>
+                    </div>
+                </ng-container>
+
+                <!-- ── Note (when no posting table) ── -->
+                <div class="ns-note" *ngIf="noteSheet.note && postingEmployees.length === 0">
+                    <strong>{{ isEnglish() ? 'Note:' : 'নোটঃ' }}</strong> {{ noteSheet.note }}
+                </div>
+
+                <!-- ── Initiator area ── -->
+                <div class="ns-initiator-area">
+                    <div class="ns-initiator-sig" *ngIf="initiatorDetails">
+                        <img *ngIf="isInitiatorApproved() && shouldShowSignature(initiatorDetails.step) && initiatorDetails.signatureDataUrl"
+                             [src]="initiatorDetails.signatureDataUrl" class="ns-sig-img" alt="Signature" />
+                        <div class="ns-sig-name">
+                            {{ isEnglish() ? initiatorDetails.name : (initiatorDetails.nameBN || initiatorDetails.name) }}
+                        </div>
+                        <div class="ns-sig-rank" *ngIf="initiatorDetails.rank && initiatorDetails.rank !== '-'">
+                            {{ isEnglish() ? initiatorDetails.rank : (initiatorDetails.rankBN || initiatorDetails.rank) }}
+                        </div>
+                        <div class="ns-sig-appoint" *ngIf="initiatorDetails.appointment || initiatorDetails.appointmentBN">
+                            {{ isEnglish() ? initiatorDetails.appointment : (initiatorDetails.appointmentBN || initiatorDetails.appointment) }}
+                        </div>
+                        <div class="ns-sig-date" *ngIf="isInitiatorApproved() && noteSheet.noteSheetDate">{{ formatMonthYear(noteSheet.noteSheetDate) }}</div>
+                    </div>
+                </div>
+
+                <!-- ── Approver Sections ── -->
+                <div class="ns-approver-section" *ngFor="let approver of approversDetails; let i = index">
+                    <div class="ns-approver-role">
+                        {{ isEnglish() ? approver.appointment : (approver.appointmentBN || approver.appointment) }}
+                    </div>
+                    <div class="ns-approver-body" [class.ns-approver-body--left]="i >= approversDetails.length - 2">
+                        <div class="ns-approver-left">
+                            <span class="ns-para-no">{{ serial(i + 2 + parsedParagraphs.length) }}</span>
+                            <span class="ns-approver-remark" *ngIf="getApproverRemark(approver.step)">{{ getApproverRemark(approver.step) }}</span>
+                        </div>
+                        <div class="ns-approver-sig-area">
+                            <img *ngIf="shouldShowSignature(approver.step) && approver.signatureDataUrl"
+                                 [src]="approver.signatureDataUrl" class="ns-sig-img" alt="Signature" />
+                            <div class="ns-sig-date" *ngIf="getApproverDate(approver.step)">{{ getApproverDate(approver.step) }}</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+      </ng-container>
+    </ng-template>
 
     <!-- ── Back History Timeline (not printed) ── -->
     <div class="ns-back-history no-print" *ngIf="backHistory.length > 0">

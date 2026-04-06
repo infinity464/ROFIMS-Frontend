@@ -23,7 +23,7 @@ import { DraftCourseService } from '@/services/draft-course.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { EmployeeSearchInfoModel } from '@/models/EmpModel';
-import { DraftCourseList, DraftCourseMemberRow } from '@/models/draft-course.model';
+import { DraftCourseList, DraftCourseMemberRow, RftsTrainingRow } from '@/models/draft-course.model';
 
 interface DropdownOption {
     label: string;
@@ -63,11 +63,13 @@ interface TrainingInstituteOption extends DropdownOption {
 })
 export class EmpSendToCourseComponent implements OnInit {
     activeTab = 0;
+    private tab1Loaded = false;
 
     /** Tab (a): Create Draft */
     courseNo = '';
+    draftDateFrom: Date | null = null;
+    draftDateTo: Date | null = null;
     courseOptions: DropdownOption[] = [];
-    selectedCourseId: number | null = null;
     employeeList: EmployeeSearchInfoModel[] = [];
     selectedRows: EmployeeSearchInfoModel[] = [];
     isLoadingEmployees = false;
@@ -91,6 +93,7 @@ export class EmpSendToCourseComponent implements OnInit {
     draftLists: DraftCourseList[] = [];
     selectedDraft: DraftCourseList | null = null;
     selectedDraftMembers: DraftCourseMemberRow[] = [];
+    memberRemarksMap: Map<number, string> = new Map();
     isLoadingDrafts = false;
     isSending = false;
     isRemovingFromDraft = false;
@@ -99,6 +102,13 @@ export class EmpSendToCourseComponent implements OnInit {
     addToDraftEmployeeList: EmployeeSearchInfoModel[] = [];
     addToDraftSelectedRows: EmployeeSearchInfoModel[] = [];
     isLoadingAddToDraftEmployees = false;
+
+    /** Tab (c): RFTS Completed */
+    rftsCompletedList: RftsTrainingRow[] = [];
+    rftsGroupedList: { courseNo: string; courseTypeName: string | null; courseNameDisplay: string | null; dateFrom: string | null; dateTo: string | null; memberCount: number; members: RftsTrainingRow[] }[] = [];
+    isLoadingCompleted = false;
+    showRftsMembersModal = false;
+    selectedRftsGroup: { courseNo: string; members: RftsTrainingRow[] } | null = null;
 
     /** Send to Course modal */
     showSendCourseModal = false;
@@ -122,10 +132,10 @@ export class EmpSendToCourseComponent implements OnInit {
     }
 
     ngOnInit(): void {
+        // Tab 0 (default) data only
         this.loadCourseOptions();
-        this.loadDraftLists();
-        this.loadSendCourseDropdowns();
         this.loadFilterOptions();
+        this.loadEmployeesWithFilters();
         this.courseForm.get('trainingInstitueName')?.valueChanges.subscribe((instituteId) => {
             const inst = this.trainingInstituteOptions.find((o) => o.value === instituteId);
             const countryLabel = inst?.countryId != null ? this.getOptionLabel(this.countryOptions, inst.countryId) : '';
@@ -139,10 +149,21 @@ export class EmpSendToCourseComponent implements OnInit {
         });
     }
 
+    onTabChange(tabIndex: string | number | undefined): void {
+        if (tabIndex === 1 && !this.tab1Loaded) {
+            this.tab1Loaded = true;
+            this.loadDraftLists();
+            this.loadSendCourseDropdowns();
+        }
+        if (tabIndex === 2) {
+            this.loadRftsCompleted();
+        }
+    }
+
     initCourseForm(): void {
         this.courseForm = this.fb.group({
             courseType: [null],
-            courseNameDisplay: [''], // read-only from draft
+            courseName: [null],
             trainingInstitueName: [null],
             countryDisplay: [''],
             locationDisplay: [''],
@@ -215,21 +236,10 @@ export class EmpSendToCourseComponent implements OnInit {
         });
     }
 
-    onCourseSelect(): void {
-        this.selectedRows = [];
-        this.resetFilters();
-        if (this.selectedCourseId == null || this.selectedCourseId === 0) {
-            this.employeeList = [];
-            return;
-        }
-        this.loadEmployeesWithFilters();
-    }
-
     loadEmployeesWithFilters(): void {
-        if (!this.selectedCourseId) return;
         this.isLoadingEmployees = true;
         const filter = this.buildFilterParams();
-        this.courseInfoService.getEmployeesNotCompletedByCourseName(this.selectedCourseId, filter).subscribe({
+        this.courseInfoService.getEmployeesNotCompletedByCourseName(0, filter).subscribe({
             next: (data) => {
                 this.employeeList = Array.isArray(data) ? data : [];
                 this.isLoadingEmployees = false;
@@ -347,17 +357,20 @@ export class EmpSendToCourseComponent implements OnInit {
             this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'CourseNo is required.' });
             return;
         }
-        if (!this.selectedCourseId || this.selectedCourseId === 0) {
-            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Please select a course.' });
-            return;
-        }
         if (!this.selectedRows || this.selectedRows.length === 0) {
             this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Please select at least one employee.' });
             return;
         }
         this.isAddingToDraft = true;
         const members = this.selectedRows.map((r) => this.toMemberRow(r));
-        this.draftCourseService.addToDraftCourseList(this.courseNo.trim(), this.selectedCourseId, members, 'User').subscribe({
+        const toDateStr = (d: Date | null): string | null => {
+            if (!d) return null;
+            const x = new Date(d);
+            return isNaN(x.getTime()) ? null : x.toISOString().slice(0, 10);
+        };
+        const dateFrom = toDateStr(this.draftDateFrom);
+        const dateTo = toDateStr(this.draftDateTo);
+        this.draftCourseService.addToDraftCourseList(this.courseNo.trim(), null, members, 'User', dateFrom, dateTo).subscribe({
             next: (res) => {
                 if (res.statusCode === 200 && res.id) {
                     this.messageService.add({
@@ -368,6 +381,8 @@ export class EmpSendToCourseComponent implements OnInit {
                     this.selectedRows = [];
                     this.loadDraftLists();
                     this.courseNo = '';
+                    this.draftDateFrom = null;
+                    this.draftDateTo = null;
                 } else {
                     this.messageService.add({
                         severity: 'error',
@@ -406,7 +421,7 @@ export class EmpSendToCourseComponent implements OnInit {
         }
         this.courseForm.patchValue({
             courseType: null,
-            courseNameDisplay: this.selectedDraft.courseName,
+            courseName: null,
             trainingInstitueName: null,
             countryDisplay: '',
             locationDisplay: '',
@@ -417,19 +432,61 @@ export class EmpSendToCourseComponent implements OnInit {
             remarks: ''
         });
         this.showSendCourseModal = true;
-        this.loadCourseTypeForDraft();
     }
 
-    private loadCourseTypeForDraft(): void {
-        if (!this.selectedDraft?.courseNameId) return;
-        this.commonCodeService.getAllActiveCommonCodesType('CourseName').subscribe({
-            next: (codes) => {
-                const id = this.selectedDraft?.courseNameId;
-                const courseName = (codes ?? []).find((c) => c.codeId === id);
-                const parentId = courseName?.parentCodeId ?? null;
-                if (parentId != null) {
-                    this.courseForm.patchValue({ courseType: parentId }, { emitEvent: false });
+    toggleDraftMembers(row: DraftCourseList): void {
+        if (this.selectedDraft?.id === row.id) {
+            this.selectedDraft = null;
+            this.selectedDraftMembers = [];
+            this.memberRemarksMap.clear();
+            this.showAddToDraftPanel = false;
+        } else {
+            this.selectedDraft = row;
+            this.selectedDraftMembers = [];
+            this.memberRemarksMap.clear();
+            this.showAddToDraftPanel = false;
+        }
+    }
+
+    getMemberRemark(employeeId: number): string {
+        return this.memberRemarksMap.get(employeeId) ?? '';
+    }
+
+    setMemberRemark(employeeId: number, value: string): void {
+        this.memberRemarksMap.set(employeeId, value);
+    }
+
+    approveAndSave(): void {
+        if (!this.selectedDraft) {
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Please select a draft.' });
+            return;
+        }
+        this.isSending = true;
+        const details = { courseNo: this.selectedDraft.listNo ?? null };
+        const memberRemarks: { employeeId: number; remarks: string }[] = [];
+        this.memberRemarksMap.forEach((remarks, employeeId) => {
+            if (remarks?.trim()) memberRemarks.push({ employeeId, remarks: remarks.trim() });
+        });
+        this.draftCourseService.sendFromDraftToCourse(this.selectedDraft.id, 'User', details, memberRemarks).subscribe({
+            next: (res) => {
+                if (res.statusCode === 200) {
+                    this.messageService.add({
+                        severity: 'success',
+                        summary: 'Success',
+                        detail: res.description ?? `${res.recordsCreated} employee(s) approved.`
+                    });
+                    this.selectedDraft = null;
+                    this.memberRemarksMap.clear();
+                    this.loadDraftLists();
+                    this.loadEmployeesWithFilters();
+                } else {
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: res.description ?? 'Failed to approve.' });
                 }
+                this.isSending = false;
+            },
+            error: () => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to approve.' });
+                this.isSending = false;
             }
         });
     }
@@ -447,6 +504,7 @@ export class EmpSendToCourseComponent implements OnInit {
         const details = {
             courseNo: this.selectedDraft?.listNo ?? null,
             courseType: v.courseType ?? null,
+            courseName: v.courseName ?? null,
             trainingInstituteId: v.trainingInstitueName ?? null,
             dateFrom: toDateStr(v.dateFrom),
             dateTo: toDateStr(v.dateTo),
@@ -585,12 +643,12 @@ export class EmpSendToCourseComponent implements OnInit {
     }
 
     loadEmployeesForAddToDraft(): void {
-        if (!this.selectedDraft?.courseNameId) return;
+        if (!this.selectedDraft) return;
         this.isLoadingAddToDraftEmployees = true;
         this.addToDraftEmployeeList = [];
         this.addToDraftSelectedRows = [];
         const filter = this.buildFilterParams();
-        this.courseInfoService.getEmployeesNotCompletedByCourseName(this.selectedDraft.courseNameId, filter).subscribe({
+        this.courseInfoService.getEmployeesNotCompletedByCourseName(0, filter).subscribe({
             next: (data) => {
                 const list = Array.isArray(data) ? data : [];
                 const existingIds = new Set((this.selectedDraft?.members ?? []).map((m) => m.employeeId));
@@ -629,6 +687,45 @@ export class EmpSendToCourseComponent implements OnInit {
                 this.isAddingToDraft = false;
             }
         });
+    }
+
+    loadRftsCompleted(): void {
+        this.isLoadingCompleted = true;
+        this.draftCourseService.getAllRftsTraining().subscribe({
+            next: (list) => {
+                this.rftsCompletedList = list ?? [];
+                this.groupRftsCompleted();
+                this.isLoadingCompleted = false;
+            },
+            error: () => {
+                this.rftsCompletedList = [];
+                this.rftsGroupedList = [];
+                this.isLoadingCompleted = false;
+            }
+        });
+    }
+
+    private groupRftsCompleted(): void {
+        const map = new Map<string, RftsTrainingRow[]>();
+        for (const row of this.rftsCompletedList) {
+            const key = row.courseNo || 'N/A';
+            if (!map.has(key)) map.set(key, []);
+            map.get(key)!.push(row);
+        }
+        this.rftsGroupedList = Array.from(map.entries()).map(([courseNo, members]) => ({
+            courseNo,
+            courseTypeName: members[0].courseTypeName,
+            courseNameDisplay: members[0].courseNameDisplay,
+            dateFrom: members[0].dateFrom,
+            dateTo: members[0].dateTo,
+            memberCount: members.length,
+            members
+        }));
+    }
+
+    viewRftsMembers(group: { courseNo: string; members: RftsTrainingRow[] }): void {
+        this.selectedRftsGroup = group;
+        this.showRftsMembersModal = true;
     }
 
     private refreshSelectedDraft(): void {

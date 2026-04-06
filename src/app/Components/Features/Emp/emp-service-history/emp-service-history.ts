@@ -15,6 +15,7 @@ import { TableModule } from 'primeng/table';
 import { SelectModule } from 'primeng/select';
 import { DialogModule } from 'primeng/dialog';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { DatePickerModule } from 'primeng/datepicker';
 
 import { EmpService } from '@/services/emp-service';
 import { MOServHistoryService } from '@/services/mo-serv-history.service';
@@ -59,6 +60,7 @@ export interface ServiceHistoryListRow {
         SelectModule,
         DialogModule,
         ConfirmDialogModule,
+        DatePickerModule,
         EmployeeSearchComponent,
         FileReferencesFormComponent
     ],
@@ -347,8 +349,8 @@ export class EmpServiceHistory implements OnInit {
     openEditDialog(row: ServiceHistoryListRow): void {
         this.isEditMode = true;
         this.editingServHisId = row.servHisID;
-        const serviceFrom = this.toDateOnly(row.serviceFrom ?? null);
-        const serviceTo = this.toDateOnly(row.serviceTo ?? null);
+        const serviceFrom = row.serviceFrom ? new Date(row.serviceFrom) : null;
+        const serviceTo = row.serviceTo ? new Date(row.serviceTo) : null;
         this.serviceForm.patchValue({
             servHisID: row.servHisID,
             orgUnitId: row.orgUnitId,

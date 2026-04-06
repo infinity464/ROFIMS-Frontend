@@ -24,7 +24,9 @@ import { EmpService } from '@/services/emp-service';
 import { PostingService } from '@/services/posting.service';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
-import { NoteSheetType, NoteSheetOperationTypeOptions, ApprovalStatus } from '@/models/enums';
+import { NoteSheetType, NoteSheetOperationTypeOptions, ApprovalStatus, ApproverRoleType } from '@/models/enums';
+import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
+import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 
 @Component({
     selector: 'app-posting-notesheet-generate',
@@ -69,6 +71,11 @@ export class PostingNotesheetGenerateComponent implements OnInit {
     finalApproverOptions: { label: string; value: number }[] = [];
     fileRows: FileRowData[] = [];
     readonly noteSheetOperationTypeOptions = NoteSheetOperationTypeOptions;
+    /** Prefix config for notesheet number language swap */
+    private noteSheetPrefixEN = '';
+    private noteSheetPrefixBN = '';
+    /** Dynamic paragraphs */
+    paragraphs: string[] = [''];
 
     @ViewChild('fileReferencesForm') fileReferencesForm!: FileReferencesFormComponent;
 
@@ -82,7 +89,8 @@ export class PostingNotesheetGenerateComponent implements OnInit {
         private identityMappingService: IdentityUserMappingService,
         private route: ActivatedRoute,
         private router: Router,
-        private noteSheetEditCache: NoteSheetEditCacheService
+        private noteSheetEditCache: NoteSheetEditCacheService,
+        private masterBasicSetupService: MasterBasicSetupService
     ) {
         this.form = this.fb.group({
             draftPostingMasterId: [null as number | null, Validators.required],
@@ -97,6 +105,7 @@ export class PostingNotesheetGenerateComponent implements OnInit {
             initiatorId: [null as number | null, Validators.required],
             recommenderIds: [[] as number[]],
             finalApproverId: [null as number | null, Validators.required],
+            subject: [''],
             noteSheetOperationType: [null as string | null, Validators.required],
             isSecret: [false]
         });
@@ -106,6 +115,7 @@ export class PostingNotesheetGenerateComponent implements OnInit {
         this.loadDraftPostingMasters();
         this.loadApproverOptions();
         this.resolvePreparedByMapping();
+        this.loadNoteSheetNumberConfig();
 
         this.route.queryParams.pipe(take(1)).subscribe((params) => {
             const id = params['id'];
@@ -117,6 +127,13 @@ export class PostingNotesheetGenerateComponent implements OnInit {
                     this.title = 'Update New Posting Note-Sheet';
                     this.loadNoteSheetForEdit(numId);
                 }
+            }
+        });
+
+        // In edit mode, swap noteSheetNo prefix/digits when textType changes
+        this.form.get('textType')?.valueChanges.subscribe((newType: string) => {
+            if (this.editMode) {
+                this.transformNoteSheetNo(newType);
             }
         });
     }
@@ -168,7 +185,7 @@ export class PostingNotesheetGenerateComponent implements OnInit {
         const api = `${environment.apis.core}/EmployeeInfo`;
         this.http.get<any[]>(`${api}/GetAll`).subscribe({
             next: (list) => {
-                const opts = (Array.isArray(list) ? list : []).map((e: any) => {
+                const allOpts = (Array.isArray(list) ? list : []).map((e: any) => {
                     const name = e.fullNameEN || e.FullNameEN || '';
                     const rabId = e.rabid || e.Rabid || e.RABID || '';
                     const serviceId = e.serviceId || e.ServiceId || '';
@@ -179,9 +196,28 @@ export class PostingNotesheetGenerateComponent implements OnInit {
                         value: e.employeeID ?? e.EmployeeID
                     };
                 });
-                this.initiatorOptions = opts;
-                this.recommenderOptions = opts;
-                this.finalApproverOptions = opts;
+                this.masterBasicSetupService.getNoteSheetApproverConfigByType(NoteSheetType.NewPosting).subscribe({
+                    next: (configs) => {
+                        const cfg = Array.isArray(configs) ? configs[0] : configs;
+                        if (cfg?.details?.length) {
+                            const initIds = cfg.details.filter((d: any) => d.roleType === ApproverRoleType.Initiator).map((d: any) => d.employeeId);
+                            const recIds = cfg.details.filter((d: any) => d.roleType === ApproverRoleType.Recommender).map((d: any) => d.employeeId);
+                            const faIds = cfg.details.filter((d: any) => d.roleType === ApproverRoleType.FinalApprover).map((d: any) => d.employeeId);
+                            this.initiatorOptions = initIds.length > 0 ? allOpts.filter(o => initIds.includes(o.value)) : allOpts;
+                            this.recommenderOptions = recIds.length > 0 ? allOpts.filter(o => recIds.includes(o.value)) : allOpts;
+                            this.finalApproverOptions = faIds.length > 0 ? allOpts.filter(o => faIds.includes(o.value)) : allOpts;
+                        } else {
+                            this.initiatorOptions = allOpts;
+                            this.recommenderOptions = allOpts;
+                            this.finalApproverOptions = allOpts;
+                        }
+                    },
+                    error: () => {
+                        this.initiatorOptions = allOpts;
+                        this.recommenderOptions = allOpts;
+                        this.finalApproverOptions = allOpts;
+                    }
+                });
             },
             error: () => {}
         });
@@ -272,6 +308,7 @@ export class PostingNotesheetGenerateComponent implements OnInit {
             noteSheetNo: String(d.noteSheetNo ?? d.NoteSheetNo ?? ''),
             noteSheetDate,
             referenceNumber: String(d.referenceNumber ?? d.ReferenceNumber ?? ''),
+            subject: String(d.subject ?? d.Subject ?? ''),
             mainText: String(d.mainText ?? d.MainText ?? ''),
             note: String(d.note ?? d.Note ?? ''),
             preparedBy: d.createdBy ?? d.CreatedBy ?? d.lastUpdatedBy ?? d.LastUpdatedBy ?? user,
@@ -282,6 +319,17 @@ export class PostingNotesheetGenerateComponent implements OnInit {
             noteSheetOperationType: d.noteSheetOperationType ?? d.NoteSheetOperationType ?? null,
             isSecret: !!(d.isSecret ?? d.IsSecret ?? false)
         });
+
+        // Load paragraphs
+        const paragraphText = d.paragraphText ?? d.ParagraphText;
+        if (paragraphText && typeof paragraphText === 'string') {
+            try {
+                const arr = JSON.parse(paragraphText);
+                if (Array.isArray(arr) && arr.length > 0) {
+                    this.paragraphs = arr.map((p: any) => String(p ?? ''));
+                }
+            } catch {}
+        }
 
         const filesReferences = d.filesReferences ?? d.FilesReferences;
         if (filesReferences && typeof filesReferences === 'string') {
@@ -325,6 +373,7 @@ export class PostingNotesheetGenerateComponent implements OnInit {
             noteSheetNo: '',
             noteSheetDate: null,
             referenceNumber: '',
+            subject: '',
             mainText: '',
             note: '',
             preparedBy: '',
@@ -336,7 +385,74 @@ export class PostingNotesheetGenerateComponent implements OnInit {
             isSecret: false
         });
         this.fileRows = [];
+        this.paragraphs = [''];
         this.resolvePreparedByMapping();
+    }
+
+    /** Fetch NoteSheetNumberConfig for NewPosting to get EN/BN prefixes */
+    private loadNoteSheetNumberConfig(): void {
+        const api = `${environment.apis.core}/NoteSheetNumberConfig`;
+        this.http.get<any[]>(`${api}/GetAll`).subscribe({
+            next: (configs) => {
+                const config = (configs ?? []).find(
+                    (c: any) => (c.noteSheetType ?? c.NoteSheetType) === 'NewPosting'
+                );
+                if (config) {
+                    this.noteSheetPrefixEN = config.prefix ?? config.Prefix ?? '';
+                    this.noteSheetPrefixBN = config.prefixBN ?? config.PrefixBN ?? '';
+                }
+            }
+        });
+    }
+
+    /** Convert Bangla digits back to Western digits */
+    private toEnglishDigits(str: string): string {
+        return str.replace(/[\u09E6-\u09EF]/g, (c) => String(c.charCodeAt(0) - 0x09E6));
+    }
+
+    /** Transform noteSheetNo when textType changes in edit mode */
+    private transformNoteSheetNo(newTextType: string): void {
+        const currentNo: string = this.form.get('noteSheetNo')?.value ?? '';
+        if (!currentNo || (!this.noteSheetPrefixEN && !this.noteSheetPrefixBN)) return;
+
+        let transformed: string;
+
+        if (newTextType === 'bn') {
+            // EN → BN: replace English prefix, convert digits to Bangla
+            if (this.noteSheetPrefixEN && currentNo.startsWith(this.noteSheetPrefixEN + '-')) {
+                const rest = currentNo.substring(this.noteSheetPrefixEN.length);
+                const bnPrefix = this.noteSheetPrefixBN || this.noteSheetPrefixEN;
+                transformed = bnPrefix + BanglaNumerals.toBangla(rest);
+            } else {
+                // Prefix doesn't match — just convert digits
+                transformed = BanglaNumerals.toBangla(currentNo);
+            }
+        } else {
+            // BN → EN: replace Bangla prefix, convert digits to English
+            if (this.noteSheetPrefixBN && currentNo.startsWith(this.noteSheetPrefixBN + '-')) {
+                const rest = currentNo.substring(this.noteSheetPrefixBN.length);
+                transformed = this.noteSheetPrefixEN + this.toEnglishDigits(rest);
+            } else {
+                // Prefix doesn't match — just convert digits
+                transformed = this.toEnglishDigits(currentNo);
+            }
+        }
+
+        this.form.get('noteSheetNo')?.setValue(transformed, { emitEvent: false });
+    }
+
+    addParagraph(): void {
+        this.paragraphs.push('');
+    }
+
+    removeParagraph(index: number): void {
+        if (this.paragraphs.length > 1) {
+            this.paragraphs.splice(index, 1);
+        }
+    }
+
+    trackByIndex(index: number): number {
+        return index;
     }
 
     submit(): void {
@@ -440,8 +556,8 @@ export class PostingNotesheetGenerateComponent implements OnInit {
         const now = new Date().toISOString();
         const preparedBy = (d.preparedBy && String(d.preparedBy).trim()) || 'system';
         const createdBy = this.editMode && this.originalCreatedBy ? this.originalCreatedBy : preparedBy;
-        const subject = this.editMode ? this.originalSubject : null;
-        const noteSheetNo = 'AUTO';
+        const subject = d.subject != null && String(d.subject).trim() !== '' ? String(d.subject) : null;
+        const noteSheetNo = this.editMode ? (d.noteSheetNo || 'AUTO') : 'AUTO';
         const recommenderIds: number[] = Array.isArray(d.recommenderIds) ? d.recommenderIds : [];
         const recommendersJson = recommenderIds.length
             ? JSON.stringify(recommenderIds.map((id: number, idx: number) => ({
@@ -480,7 +596,8 @@ export class PostingNotesheetGenerateComponent implements OnInit {
             lastUpdatedBy: preparedBy,
             createdDate: now,
             lastupdate: now,
-            draftPostingMasterId: d.draftPostingMasterId ?? null
+            draftPostingMasterId: d.draftPostingMasterId ?? null,
+            paragraphText: this.paragraphs.some(p => p.trim()) ? JSON.stringify(this.paragraphs.filter(p => p.trim())) : null
         };
         if (filesReferencesJson != null && filesReferencesJson !== '') {
             payload['filesReferences'] = filesReferencesJson;

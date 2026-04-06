@@ -77,7 +77,17 @@
                                 </div>
                                 <div>
                                     <label class="font-semibold block mb-2 text-700">Action/Punishment by RAB</label>
-                                    <p-select formControlName="punishmentTypeRAB" [options]="punishmentTypeOptions" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" [filter]="true" appendTo="body"></p-select>
+                                    <div style="display: flex; align-items: center; gap: 0.35rem;">
+                                        <div style="flex: 1; min-width: 0;">
+                                            <p-select formControlName="punishmentTypeRAB" [options]="punishmentTypeOptions" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" [filter]="true" appendTo="body"></p-select>
+                                        </div>
+                                        <button type="button" pButton icon="pi pi-plus"
+                                            class="p-button-sm p-button-outlined p-button-success"
+                                            style="flex-shrink: 0; width: 2rem; height: 2rem; padding: 0;"
+                                            pTooltip="Add New Punishment Type" tooltipPosition="top"
+                                            (click)="openAddPunishmentTypeDialog('punishmentTypeRAB')">
+                                        </button>
+                                    </div>
                                 </div>
                                 <div>
                                     <label class="font-semibold block mb-2 text-700">Date of Punishment (RAB)</label>
@@ -85,7 +95,17 @@
                                 </div>
                                 <div>
                                     <label class="font-semibold block mb-2 text-700">Action/Punishment by Mother Org</label>
-                                    <p-select formControlName="punishmentTypeMotherOrg" [options]="punishmentTypeOptions" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" [filter]="true" appendTo="body"></p-select>
+                                    <div style="display: flex; align-items: center; gap: 0.35rem;">
+                                        <div style="flex: 1; min-width: 0;">
+                                            <p-select formControlName="punishmentTypeMotherOrg" [options]="punishmentTypeOptions" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" [filter]="true" appendTo="body"></p-select>
+                                        </div>
+                                        <button type="button" pButton icon="pi pi-plus"
+                                            class="p-button-sm p-button-outlined p-button-success"
+                                            style="flex-shrink: 0; width: 2rem; height: 2rem; padding: 0;"
+                                            pTooltip="Add New Punishment Type" tooltipPosition="top"
+                                            (click)="openAddPunishmentTypeDialog('punishmentTypeMotherOrg')">
+                                        </button>
+                                    </div>
                                 </div>
                                 <div>
                                     <label class="font-semibold block mb-2 text-700">Date of Punishment (MO)</label>
@@ -199,6 +219,24 @@
     <ng-template pTemplate="footer">
         <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="showBriefStatementDialog = false"></p-button>
         <p-button label="Save" icon="pi pi-check" [loading]="isSavingBriefStatement" [disabled]="!newBriefStatementEN?.trim()" (onClick)="saveNewBriefStatement()"></p-button>
+    </ng-template>
+</p-dialog>
+
+<!-- Add New Punishment Type Dialog -->
+<p-dialog header="Add New Punishment Type" [(visible)]="showPunishmentTypeDialog" [modal]="true" [style]="{width: '500px'}" [closable]="true" [contentStyle]="{'border-top': '2px solid var(--primary-color)'}" appendTo="body">
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <div>
+            <label class="font-semibold block mb-2 text-700">Punishment Type (English) <span class="text-red-500">*</span></label>
+            <input pInputText style="width: 100%;" [(ngModel)]="newPunishmentTypeEN" placeholder="Enter punishment type in English" />
+        </div>
+        <div>
+            <label class="font-semibold block mb-2 text-700">Punishment Type (Bangla)</label>
+            <input pInputText style="width: 100%;" [(ngModel)]="newPunishmentTypeBN" placeholder="Enter punishment type in Bangla" />
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="showPunishmentTypeDialog = false"></p-button>
+        <p-button label="Save" icon="pi pi-check" [loading]="isSavingPunishmentType" [disabled]="!newPunishmentTypeEN?.trim()" (onClick)="saveNewPunishmentType()"></p-button>
     </ng-template>
 </p-dialog>
 

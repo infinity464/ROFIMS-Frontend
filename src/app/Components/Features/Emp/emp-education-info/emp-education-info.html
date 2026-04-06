@@ -44,25 +44,47 @@
                         <h4 class="m-0 text-700">{{ isEditMode ? 'Edit Education' : 'Add Education' }}</h4>
                         <form [formGroup]="educationForm" class="mt-3">
                             <div class="grid grid-cols-2 gap-4">
+                                <!-- Row 1: Qualification & Board/University Type -->
                                 <div>
                                     <label class="font-semibold block mb-2 text-700">Education Qualification <span class="text-red-500">*</span></label>
-                                    <p-select formControlName="examName" [options]="qualificationOptions" optionLabel="label" optionValue="value" placeholder="Select Qualification" styleClass="w-full" [filter]="true"></p-select>
+                                    <div style="display: flex; align-items: center; gap: 0.35rem;">
+                                        <div style="flex: 1; min-width: 0;">
+                                            <p-select formControlName="examName" [options]="qualificationOptions" optionLabel="label" optionValue="value" placeholder="Select Qualification" styleClass="w-full" [filter]="true" [showClear]="true" appendTo="body"></p-select>
+                                        </div>
+                                        <button type="button" pButton icon="pi pi-plus"
+                                            class="p-button-sm p-button-outlined p-button-success"
+                                            style="flex-shrink: 0; width: 2rem; height: 2rem; padding: 0;"
+                                            pTooltip="Add New Qualification" tooltipPosition="top"
+                                            (click)="openAddQualificationDialog()">
+                                        </button>
+                                    </div>
                                     @if (educationForm.get('examName')?.invalid && educationForm.get('examName')?.touched) {
                                         <small class="text-red-500">Education Qualification is required</small>
                                     }
                                 </div>
                                 <div>
-                                    <label class="font-semibold block mb-2 text-700">Educational Board/University Type <span class="text-red-500">*</span></label>
-                                    <p-select formControlName="instituteType" [options]="institutionTypeOptions" optionLabel="label" optionValue="value" placeholder="Select Type" styleClass="w-full" [filter]="true"></p-select>
-                                    @if (educationForm.get('instituteType')?.invalid && educationForm.get('instituteType')?.touched) {
-                                        <small class="text-red-500">Educational Board/University Type is required</small>
-                                    }
-                                </div>
-                                <div>
-                                    <label class="font-semibold block mb-2 text-700">Educational Institution Name <span class="text-red-500">*</span></label>
+                                    <label class="font-semibold block mb-2 text-700">Board/University Type <span class="text-red-500">*</span></label>
                                     <div style="display: flex; align-items: center; gap: 0.35rem;">
                                         <div style="flex: 1; min-width: 0;">
-                                            <p-select formControlName="instituteName" [options]="institutionNameOptions" optionLabel="label" optionValue="value" placeholder="Select Institution" styleClass="w-full" [filter]="true" filterPlaceholder="Search Institution" appendTo="body"></p-select>
+                                            <p-select formControlName="instituteType" [options]="institutionTypeOptions" optionLabel="label" optionValue="value" placeholder="Select Type" styleClass="w-full" [filter]="true" [showClear]="true" appendTo="body" (onChange)="onInstitutionTypeChange($event.value)"></p-select>
+                                        </div>
+                                        <button type="button" pButton icon="pi pi-plus"
+                                            class="p-button-sm p-button-outlined p-button-success"
+                                            style="flex-shrink: 0; width: 2rem; height: 2rem; padding: 0;"
+                                            pTooltip="Add New Board/University Type" tooltipPosition="top"
+                                            (click)="openAddBoardTypeDialog()">
+                                        </button>
+                                    </div>
+                                    @if (educationForm.get('instituteType')?.invalid && educationForm.get('instituteType')?.touched) {
+                                        <small class="text-red-500">Board/University Type is required</small>
+                                    }
+                                </div>
+                                <!-- Row 2: Institution Name & Department/Group -->
+                                <div>
+                                    <label class="font-semibold block mb-2 text-700">Institution Name <span class="text-red-500">*</span></label>
+                                    <div style="display: flex; align-items: center; gap: 0.35rem;">
+                                        <div style="flex: 1; min-width: 0;">
+                                            <p-select formControlName="instituteName" [options]="filteredInstitutionNameOptions" optionLabel="label" optionValue="value" placeholder="Select Institution" styleClass="w-full" [filter]="true" [showClear]="true" filterPlaceholder="Search Institution" appendTo="body"></p-select>
                                         </div>
                                         <button type="button" pButton icon="pi pi-plus"
                                             class="p-button-sm p-button-outlined p-button-success"
@@ -72,33 +94,76 @@
                                         </button>
                                     </div>
                                     @if (educationForm.get('instituteName')?.invalid && educationForm.get('instituteName')?.touched) {
-                                        <small class="text-red-500">Educational Institution Name is required</small>
+                                        <small class="text-red-500">Institution Name is required</small>
                                     }
                                 </div>
                                 <div>
-                                    <label class="font-semibold block mb-2 text-700">Educational Department</label>
-                                    <p-select formControlName="departmentName" [options]="departmentOptions" optionLabel="label" optionValue="value" placeholder="Select Department" styleClass="w-full" [filter]="true"></p-select>
+                                    <label class="font-semibold block mb-2 text-700">{{ departmentLabel }}</label>
+                                    <div style="display: flex; align-items: center; gap: 0.35rem;">
+                                        <div style="flex: 1; min-width: 0;">
+                                            <p-select formControlName="departmentName" [options]="departmentOptions" optionLabel="label" optionValue="value" [placeholder]="departmentPlaceholder" styleClass="w-full" [filter]="true" [showClear]="true" appendTo="body"></p-select>
+                                        </div>
+                                        <button type="button" pButton icon="pi pi-plus"
+                                            class="p-button-sm p-button-outlined p-button-success"
+                                            style="flex-shrink: 0; width: 2rem; height: 2rem; padding: 0;"
+                                            [pTooltip]="'Add New ' + departmentLabel" tooltipPosition="top"
+                                            (click)="openAddDepartmentDialog()">
+                                        </button>
+                                    </div>
+                                </div>
+                                <!-- Row 3: Subject & Passing Year -->
+                                <div>
+                                    <label class="font-semibold block mb-2 text-700">Subject</label>
+                                    <div style="display: flex; align-items: center; gap: 0.35rem;">
+                                        <div style="flex: 1; min-width: 0;">
+                                            <p-select formControlName="subjectName" [options]="subjectOptions" optionLabel="label" optionValue="value" placeholder="Select Subject" styleClass="w-full" [filter]="true" [showClear]="true" appendTo="body"></p-select>
+                                        </div>
+                                        <button type="button" pButton icon="pi pi-plus"
+                                            class="p-button-sm p-button-outlined p-button-success"
+                                            style="flex-shrink: 0; width: 2rem; height: 2rem; padding: 0;"
+                                            pTooltip="Add New Subject" tooltipPosition="top"
+                                            (click)="openAddSubjectDialog()">
+                                        </button>
+                                    </div>
                                 </div>
                                 <div>
-                                    <label class="font-semibold block mb-2 text-700">Education Subject</label>
-                                    <p-select formControlName="subjectName" [options]="subjectOptions" optionLabel="label" optionValue="value" placeholder="Select Subject" styleClass="w-full" [filter]="true"></p-select>
+                                    <label class="font-semibold block mb-2 text-700">Passing Year</label>
+                                    <input pInputText formControlName="passingYear" class="w-full" placeholder="e.g. 2020" type="number" />
                                 </div>
+                                <!-- Row 4: Date From & Date To -->
                                 <div class="w-full">
                                     <label class="font-semibold block mb-2 text-700">Date From</label>
-                                    <p-datepicker formControlName="dateFrom" dateFormat="dd/mm/yy" [showIcon]="true" styleClass="w-full" [style]="{'width': '100%'}" placeholder="From"></p-datepicker>
+                                    <p-datepicker formControlName="dateFrom" dateFormat="dd/mm/yy" [showIcon]="true" styleClass="w-full" [style]="{'width': '100%'}" placeholder="From" appendTo="body"></p-datepicker>
                                 </div>
                                 <div class="w-full">
                                     <label class="font-semibold block mb-2 text-700">Date To</label>
-                                    <p-datepicker formControlName="dateTo" dateFormat="dd/mm/yy" [showIcon]="true" styleClass="w-full" [style]="{'width': '100%'}" placeholder="To"></p-datepicker>
+                                    <p-datepicker formControlName="dateTo" dateFormat="dd/mm/yy" [showIcon]="true" styleClass="w-full" [style]="{'width': '100%'}" placeholder="To" appendTo="body"></p-datepicker>
+                                </div>
+                                <!-- Row 5: Grade & Grade Point -->
+                                <div>
+                                    <label class="font-semibold block mb-2 text-700">Result/Grade</label>
+                                    <div style="display: flex; align-items: center; gap: 0.35rem;">
+                                        <div style="flex: 1; min-width: 0;">
+                                            <p-select formControlName="grade" [options]="gradeOptions" optionLabel="label" optionValue="value" placeholder="Select Result" styleClass="w-full" [filter]="true" [showClear]="true" appendTo="body"></p-select>
+                                        </div>
+                                        <button type="button" pButton icon="pi pi-plus"
+                                            class="p-button-sm p-button-outlined p-button-success"
+                                            style="flex-shrink: 0; width: 2rem; height: 2rem; padding: 0;"
+                                            pTooltip="Add New Result/Grade" tooltipPosition="top"
+                                            (click)="openAddGradeDialog()">
+                                        </button>
+                                    </div>
                                 </div>
                                 <div>
-                                    <label class="font-semibold block mb-2 text-700">Grade</label>
-                                    <p-select formControlName="grade" [options]="gradeOptions" optionLabel="label" optionValue="value" placeholder="Select Level (Education Result)" styleClass="w-full" [filter]="true"></p-select>
+                                    <label class="font-semibold block mb-2 text-700">GPA/CGPA</label>
+                                    <input pInputText formControlName="gradePoint" class="w-full" placeholder="e.g. 5.00 / 3.75" />
                                 </div>
-                                <div>
-                                    <label class="font-semibold block mb-2 text-700">Grade Point</label>
-                                    <input pInputText formControlName="gradePoint" class="w-full" placeholder="Grade Point" />
+                                <!-- Row 6: Remarks (full width) -->
+                                <div class="col-span-2">
+                                    <label class="font-semibold block mb-2 text-700">Remarks</label>
+                                    <input pInputText formControlName="remarks" class="w-full" placeholder="Remarks" />
                                 </div>
+                                <!-- Row 7: Supporting Documents (full width) -->
                                 <div class="col-span-full file-section-compact">
                                     <app-file-references-form
                                         #fileReferencesForm
@@ -156,10 +221,8 @@
                     </ng-template>
                     <ng-template pTemplate="emptymessage">
                         <tr>
-                            <td [attr.colspan]="11" class="text-center py-4">
-                                <div class="flex flex-column align-items-center gap-3">
-                                    <span class="text-500">No education records found.</span>
-                                </div>
+                            <td [attr.colspan]="10" class="text-center py-4">
+                                <span class="text-500">No education records found.</span>
                             </td>
                         </tr>
                     </ng-template>
@@ -200,6 +263,96 @@
     <ng-template pTemplate="footer">
         <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="showInstitutionDialog = false"></p-button>
         <p-button label="Save" icon="pi pi-check" [loading]="isSavingInstitution" [disabled]="!newInstitutionNameEN?.trim() || !newInstitutionTypeId" (onClick)="saveNewInstitution()"></p-button>
+    </ng-template>
+</p-dialog>
+
+<!-- Add New Department/Group Dialog -->
+<p-dialog [header]="'Add New ' + departmentLabel" [(visible)]="showDepartmentDialog" [modal]="true" [style]="{width: '500px'}" [closable]="true" [contentStyle]="{'border-top': '2px solid var(--primary-color)'}" appendTo="body">
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <div>
+            <label class="font-semibold block mb-2 text-700">{{ departmentLabel }} Name (English) <span class="text-red-500">*</span></label>
+            <input pInputText style="width: 100%;" [(ngModel)]="newDepartmentNameEN" [placeholder]="'Enter ' + departmentLabel.toLowerCase() + ' name in English'" />
+        </div>
+        <div>
+            <label class="font-semibold block mb-2 text-700">{{ departmentLabel }} Name (Bangla)</label>
+            <input pInputText style="width: 100%;" [(ngModel)]="newDepartmentNameBN" [placeholder]="'Enter ' + departmentLabel.toLowerCase() + ' name in Bangla'" />
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="showDepartmentDialog = false"></p-button>
+        <p-button label="Save" icon="pi pi-check" [loading]="isSavingDepartment" [disabled]="!newDepartmentNameEN?.trim()" (onClick)="saveNewDepartment()"></p-button>
+    </ng-template>
+</p-dialog>
+
+<!-- Add New Subject Dialog -->
+<p-dialog header="Add New Subject" [(visible)]="showSubjectDialog" [modal]="true" [style]="{width: '500px'}" [closable]="true" [contentStyle]="{'border-top': '2px solid var(--primary-color)'}" appendTo="body">
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <div>
+            <label class="font-semibold block mb-2 text-700">Subject Name (English) <span class="text-red-500">*</span></label>
+            <input pInputText style="width: 100%;" [(ngModel)]="newSubjectNameEN" placeholder="Enter subject name in English" />
+        </div>
+        <div>
+            <label class="font-semibold block mb-2 text-700">Subject Name (Bangla)</label>
+            <input pInputText style="width: 100%;" [(ngModel)]="newSubjectNameBN" placeholder="Enter subject name in Bangla" />
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="showSubjectDialog = false"></p-button>
+        <p-button label="Save" icon="pi pi-check" [loading]="isSavingSubject" [disabled]="!newSubjectNameEN?.trim()" (onClick)="saveNewSubject()"></p-button>
+    </ng-template>
+</p-dialog>
+
+<!-- Add New Qualification Dialog -->
+<p-dialog header="Add New Qualification" [(visible)]="showQualificationDialog" [modal]="true" [style]="{width: '500px'}" [closable]="true" [contentStyle]="{'border-top': '2px solid var(--primary-color)'}" appendTo="body">
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <div>
+            <label class="font-semibold block mb-2 text-700">Qualification (English) <span class="text-red-500">*</span></label>
+            <input pInputText style="width: 100%;" [(ngModel)]="newQualificationNameEN" placeholder="Enter qualification in English" />
+        </div>
+        <div>
+            <label class="font-semibold block mb-2 text-700">Qualification (Bangla)</label>
+            <input pInputText style="width: 100%;" [(ngModel)]="newQualificationNameBN" placeholder="Enter qualification in Bangla" />
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="showQualificationDialog = false"></p-button>
+        <p-button label="Save" icon="pi pi-check" [loading]="isSavingQualification" [disabled]="!newQualificationNameEN?.trim()" (onClick)="saveNewQualification()"></p-button>
+    </ng-template>
+</p-dialog>
+
+<!-- Add New Board/University Type Dialog -->
+<p-dialog header="Add New Board/University Type" [(visible)]="showBoardTypeDialog" [modal]="true" [style]="{width: '500px'}" [closable]="true" [contentStyle]="{'border-top': '2px solid var(--primary-color)'}" appendTo="body">
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <div>
+            <label class="font-semibold block mb-2 text-700">Board/University Type (English) <span class="text-red-500">*</span></label>
+            <input pInputText style="width: 100%;" [(ngModel)]="newBoardTypeNameEN" placeholder="Enter board/university type in English" />
+        </div>
+        <div>
+            <label class="font-semibold block mb-2 text-700">Board/University Type (Bangla)</label>
+            <input pInputText style="width: 100%;" [(ngModel)]="newBoardTypeNameBN" placeholder="Enter board/university type in Bangla" />
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="showBoardTypeDialog = false"></p-button>
+        <p-button label="Save" icon="pi pi-check" [loading]="isSavingBoardType" [disabled]="!newBoardTypeNameEN?.trim()" (onClick)="saveNewBoardType()"></p-button>
+    </ng-template>
+</p-dialog>
+
+<!-- Add New Result/Grade Dialog -->
+<p-dialog header="Add New Result/Grade" [(visible)]="showGradeDialog" [modal]="true" [style]="{width: '500px'}" [closable]="true" [contentStyle]="{'border-top': '2px solid var(--primary-color)'}" appendTo="body">
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <div>
+            <label class="font-semibold block mb-2 text-700">Result/Grade (English) <span class="text-red-500">*</span></label>
+            <input pInputText style="width: 100%;" [(ngModel)]="newGradeNameEN" placeholder="Enter result/grade in English" />
+        </div>
+        <div>
+            <label class="font-semibold block mb-2 text-700">Result/Grade (Bangla)</label>
+            <input pInputText style="width: 100%;" [(ngModel)]="newGradeNameBN" placeholder="Enter result/grade in Bangla" />
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="showGradeDialog = false"></p-button>
+        <p-button label="Save" icon="pi pi-check" [loading]="isSavingGrade" [disabled]="!newGradeNameEN?.trim()" (onClick)="saveNewGrade()"></p-button>
     </ng-template>
 </p-dialog>
 

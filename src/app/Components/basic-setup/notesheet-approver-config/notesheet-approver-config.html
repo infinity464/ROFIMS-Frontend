@@ -1,9 +1,9 @@
 <p-fluid>
     <div class="card">
-        <div class="font-semibold text-xl mb-5">NoteSheet Number Configuration</div>
+        <div class="font-semibold text-xl mb-5">NoteSheet Approver Configuration</div>
 
         <form [formGroup]="configForm" (ngSubmit)="onSubmit()">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
 
                 <!-- NoteSheet Type -->
                 <div class="field">
@@ -26,70 +26,64 @@
                     }
                 </div>
 
-                <!-- Prefix (English) -->
+                <!-- Initiator Employees -->
                 <div class="field">
-                    <label for="prefix" class="block mb-2">
-                        Prefix (English) <span class="text-red-500">*</span>
+                    <label for="initiatorIds" class="block mb-2">
+                        Initiator Employees
                     </label>
-                    <input
-                        pInputText
-                        id="prefix"
-                        formControlName="prefix"
-                        placeholder="e.g. NS, POST"
-                        class="w-full" />
-                    @if (configForm.get('prefix')?.invalid && configForm.get('prefix')?.touched) {
-                        <small class="text-red-500 block mt-1">
-                            Prefix is required
-                        </small>
-                    }
-                </div>
-
-                <!-- Prefix (Bangla) -->
-                <div class="field">
-                    <label for="prefixBN" class="block mb-2">
-                        Prefix (Bangla) <span class="text-red-500">*</span>
-                    </label>
-                    <input
-                        pInputText
-                        id="prefixBN"
-                        formControlName="prefixBN"
-                        placeholder="e.g. মপ, বদলি"
-                        class="w-full" />
-                    @if (configForm.get('prefixBN')?.invalid && configForm.get('prefixBN')?.touched) {
-                        <small class="text-red-500 block mt-1">
-                            Prefix (Bangla) is required
-                        </small>
-                    }
-                </div>
-
-                <!-- Start Number -->
-                <div class="field">
-                    <label for="startNumber" class="block mb-2">
-                        Start Number <span class="text-red-500">*</span>
-                    </label>
-                    <p-inputnumber
-                        id="startNumber"
-                        formControlName="startNumber"
-                        placeholder="e.g. 10001"
-                        [useGrouping]="false"
+                    <p-multiselect
+                        id="initiatorIds"
+                        formControlName="initiatorIds"
+                        [options]="employeeOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Select Initiator(s)"
+                        [filter]="true"
+                        filterPlaceHolder="Search employees..."
+                        [maxSelectedLabels]="3"
                         class="w-full">
-                    </p-inputnumber>
-                    @if (configForm.get('startNumber')?.invalid && configForm.get('startNumber')?.touched) {
-                        <small class="text-red-500 block mt-1">
-                            Start Number is required and must be greater than 0
-                        </small>
-                    }
+                    </p-multiselect>
+                </div>
+
+                <!-- Recommender Employees -->
+                <div class="field">
+                    <label for="recommenderIds" class="block mb-2">
+                        Recommender Employees
+                    </label>
+                    <p-multiselect
+                        id="recommenderIds"
+                        formControlName="recommenderIds"
+                        [options]="employeeOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Select Recommender(s)"
+                        [filter]="true"
+                        filterPlaceHolder="Search employees..."
+                        [maxSelectedLabels]="3"
+                        class="w-full">
+                    </p-multiselect>
+                </div>
+
+                <!-- Final Approver Employees -->
+                <div class="field">
+                    <label for="finalApproverIds" class="block mb-2">
+                        Final Approver Employees
+                    </label>
+                    <p-multiselect
+                        id="finalApproverIds"
+                        formControlName="finalApproverIds"
+                        [options]="employeeOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Select Final Approver(s)"
+                        [filter]="true"
+                        filterPlaceHolder="Search employees..."
+                        [maxSelectedLabels]="3"
+                        class="w-full">
+                    </p-multiselect>
                 </div>
 
             </div>
-
-            <!-- Preview -->
-            @if (configForm.get('prefix')?.value && configForm.get('startNumber')?.value) {
-                <div class="mb-4 p-3 surface-100 border-round">
-                    <span class="font-medium">Preview: </span>
-                    <span class="text-primary font-bold">{{ getPreview() }}</span>
-                </div>
-            }
 
             <!-- Buttons -->
             <div class="flex justify-end gap-2">
@@ -138,14 +132,11 @@
             <tr>
                 <th style="width:5%">#</th>
                 <th>NoteSheet Type</th>
-                <th>Prefix (EN)</th>
-                <th>Prefix (BN)</th>
-                <th>Start Number</th>
-                <th>Current Number</th>
-                <th>Current Year</th>
-                <th>Current Month</th>
+                <th>Initiators</th>
+                <th>Recommenders</th>
+                <th>Final Approvers</th>
                 <th>Status</th>
-                <th style="width:10%">Actions</th>
+                <th style="width:12%">Actions</th>
             </tr>
         </ng-template>
 
@@ -153,12 +144,9 @@
             <tr>
                 <td>{{ first + rowIndex + 1 }}</td>
                 <td>{{ row.noteSheetType }}</td>
-                <td>{{ row.prefix }}</td>
-                <td>{{ row.prefixBN || '-' }}</td>
-                <td>{{ row.startNumber }}</td>
-                <td>{{ row.currentNumber }}</td>
-                <td>{{ row.currentYear }}</td>
-                <td>{{ row.currentMonth }}</td>
+                <td>{{ getDetailCountByRole(row, ApproverRoleType.Initiator) }} employee(s)</td>
+                <td>{{ getDetailCountByRole(row, ApproverRoleType.Recommender) }} employee(s)</td>
+                <td>{{ getDetailCountByRole(row, ApproverRoleType.FinalApprover) }} employee(s)</td>
                 <td>
                     <span [class]="row.status ? 'text-green-500' : 'text-red-500'">
                         {{ row.status ? 'Active' : 'Inactive' }}
@@ -172,13 +160,20 @@
                         [rounded]="true"
                         (onClick)="onEdit(row)">
                     </p-button>
+                    <p-button
+                        icon="pi pi-trash"
+                        severity="danger"
+                        [text]="true"
+                        [rounded]="true"
+                        (onClick)="onDelete(row)">
+                    </p-button>
                 </td>
             </tr>
         </ng-template>
 
         <ng-template pTemplate="emptymessage">
             <tr>
-                <td colspan="10" class="text-center">No configurations found.</td>
+                <td colspan="7" class="text-center">No configurations found.</td>
             </tr>
         </ng-template>
 

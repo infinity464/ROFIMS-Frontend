@@ -23,7 +23,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { take } from 'rxjs/operators';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
-import { NoteSheetType, NoteSheetOperationTypeOptions, ApprovalStatus } from '@/models/enums';
+import { NoteSheetType, NoteSheetOperationTypeOptions, ApprovalStatus, ApproverRoleType } from '@/models/enums';
 import { TooltipModule } from 'primeng/tooltip';
 import { ToastModule } from 'primeng/toast';
 import { CheckboxModule } from 'primeng/checkbox';
@@ -321,7 +321,7 @@ export class NotesheetGenerateComponent implements OnInit {
         const api = `${environment.apis.core}/EmployeeInfo`;
         this.http.get<any[]>(`${api}/GetAll`).subscribe({
             next: (list) => {
-                const opts = (Array.isArray(list) ? list : []).map((e: any) => {
+                const allOpts = (Array.isArray(list) ? list : []).map((e: any) => {
                     const name = e.fullNameEN || e.FullNameEN || '';
                     const rabId = e.rabid || e.Rabid || e.RABID || '';
                     const serviceId = e.serviceId || e.ServiceId || '';
@@ -332,9 +332,28 @@ export class NotesheetGenerateComponent implements OnInit {
                         value: e.employeeID ?? e.EmployeeID
                     };
                 });
-                this.initiatorOptions = opts;
-                this.recommenderOptions = opts;
-                this.finalApproverOptions = opts;
+                this.masterBasicSetupService.getNoteSheetApproverConfigByType(NoteSheetType.General).subscribe({
+                    next: (configs) => {
+                        const cfg = Array.isArray(configs) ? configs[0] : configs;
+                        if (cfg?.details?.length) {
+                            const initIds = cfg.details.filter((d: any) => d.roleType === ApproverRoleType.Initiator).map((d: any) => d.employeeId);
+                            const recIds = cfg.details.filter((d: any) => d.roleType === ApproverRoleType.Recommender).map((d: any) => d.employeeId);
+                            const faIds = cfg.details.filter((d: any) => d.roleType === ApproverRoleType.FinalApprover).map((d: any) => d.employeeId);
+                            this.initiatorOptions = initIds.length > 0 ? allOpts.filter(o => initIds.includes(o.value)) : allOpts;
+                            this.recommenderOptions = recIds.length > 0 ? allOpts.filter(o => recIds.includes(o.value)) : allOpts;
+                            this.finalApproverOptions = faIds.length > 0 ? allOpts.filter(o => faIds.includes(o.value)) : allOpts;
+                        } else {
+                            this.initiatorOptions = allOpts;
+                            this.recommenderOptions = allOpts;
+                            this.finalApproverOptions = allOpts;
+                        }
+                    },
+                    error: () => {
+                        this.initiatorOptions = allOpts;
+                        this.recommenderOptions = allOpts;
+                        this.finalApproverOptions = allOpts;
+                    }
+                });
             },
             error: () => {}
         });
