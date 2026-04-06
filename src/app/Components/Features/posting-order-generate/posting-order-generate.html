@@ -1,0 +1,96 @@
+<p-toast position="top-center"></p-toast>
+
+<div class="posting-order-generate">
+    <div class="form-card">
+        <div class="form-card-header">
+            <h3 class="form-card-title">Generate Posting Order</h3>
+        </div>
+
+        <!-- Filters: Posting Type + NoteSheet -->
+        <div class="draft-master-section mb-4 p-4 surface-50 border-round">
+            <div class="flex flex-wrap gap-4 align-items-end">
+                <!-- Posting Type Dropdown -->
+                <div class="field min-w-200px">
+                    <label class="font-semibold block mb-2 text-700">Posting Type <span class="text-red-500">*</span></label>
+                    <p-select
+                        [options]="postingTypeOptions"
+                        [(ngModel)]="selectedPostingType"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Select Posting Type"
+                        styleClass="w-full"
+                        (onChange)="onPostingTypeChange()"
+                    ></p-select>
+                </div>
+
+                <!-- NoteSheet Dropdown (loaded after type selected) -->
+                <div class="field flex-1 min-w-300px">
+                    <label class="font-semibold block mb-2 text-700">Approved NoteSheet <span class="text-red-500">*</span></label>
+                    <p-select
+                        [options]="noteSheetDropdownOptions"
+                        [(ngModel)]="selectedNoteSheetId"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="{{ loadingNoteSheets ? 'Loading...' : 'Select NoteSheet' }}"
+                        [disabled]="!selectedPostingType || loadingNoteSheets"
+                        [filter]="true"
+                        filterPlaceholder="Search notesheet..."
+                        styleClass="w-full"
+                        (onChange)="onNoteSheetChange()"
+                    ></p-select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Employee List Table -->
+        <div *ngIf="selectedNoteSheetId">
+            <span class="font-semibold text-700 block mb-3">NoteSheet Employees</span>
+
+            <p-table
+                [value]="employees"
+                [loading]="loadingEmployees"
+                dataKey="employeeId"
+                [tableStyle]="{ 'min-width': '60rem' }"
+                styleClass="p-datatable-striped p-datatable-gridlines"
+                [paginator]="true"
+                [rows]="10"
+                [rowsPerPageOptions]="[10, 25, 50]"
+            >
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th style="width: 50px">Ser</th>
+                        <th style="min-width: 120px">Service ID</th>
+                        <th style="min-width: 100px">Rank</th>
+                        <th style="min-width: 100px">Corps</th>
+                        <th style="min-width: 100px">Trade</th>
+                        <th style="min-width: 180px">Name</th>
+                        <th style="min-width: 140px">Mother Unit</th>
+                        <th style="min-width: 130px">Date of Join in RAB</th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                    <tr>
+                        <td>{{ rowIndex + 1 }}</td>
+                        <td><span class="font-semibold">{{ row.serviceId || '-' }}</span></td>
+                        <td>{{ row.rankName || '-' }}</td>
+                        <td>{{ row.corpsName || '-' }}</td>
+                        <td>{{ row.tradeName || '-' }}</td>
+                        <td>{{ row.fullNameEN || '-' }}</td>
+                        <td>{{ row.motherUnitName || '-' }}</td>
+                        <td>{{ formatDate(row.joiningDateInRAB) }}</td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="8" class="text-center p-4">
+                            <div class="flex flex-column align-items-center gap-3 py-5">
+                                <i class="pi pi-inbox text-5xl text-400"></i>
+                                <span class="text-lg text-500">No employees found for this notesheet.</span>
+                            </div>
+                        </td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </div>
+    </div>
+</div>

@@ -87,6 +87,7 @@ import { SupernumeraryProfile } from '@/Components/Features/supernumerary-profil
 import { AddDraftNewPostingComponent } from '@/Components/Features/add-draft-new-posting/add-draft-new-posting';
 import { PostingNotesheetGenerateComponent } from '@/Components/Features/posting-notesheet-generate/posting-notesheet-generate';
 import { PostingOrderReceiveComponent } from '@/Components/Features/posting-order-receive/posting-order-receive';
+import { PostingOrderGenerateComponent } from '@/Components/Features/posting-order-generate/posting-order-generate';
 import { EmployeeSignatureUploadComponent } from '@/Components/Features/employee-signature-upload/employee-signature-upload';
 import { AddDraftInterPostingComponent } from '@/Components/Features/add-draft-inter-posting/add-draft-inter-posting';
 import { InterPostingNotesheetGenerateComponent } from '@/Components/Features/inter-posting-notesheet-generate/inter-posting-notesheet-generate';
@@ -269,6 +270,7 @@ export const appRoutes: Routes = [
             { path: 'posting/notesheet-generate', component: PostingNotesheetGenerateComponent },
             { path: 'posting/add-draft-inter-posting', component: AddDraftInterPostingComponent },
             { path: 'posting/inter-posting-notesheet-generate', component: InterPostingNotesheetGenerateComponent },
+            { path: 'posting/posting-order-generate', component: PostingOrderGenerateComponent },
             { path: 'posting/posting-order-receive', component: PostingOrderReceiveComponent },
             { path: 'employee-signature-upload', component: EmployeeSignatureUploadComponent },
             { path: 'presently-serving-members', component: PresentlyServingMembers },

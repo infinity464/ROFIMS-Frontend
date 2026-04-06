@@ -14,6 +14,9 @@ import {
     PostingMemberRow,
     PendingJoiningItem,
     PostingReceiveViewDto,
+    PostingOrderMasterDto,
+    PostingOrderMasterWithDetailsDto,
+    ApprovedNoteSheetItem,
     PostingType,
     PostingNoteSheetStatus
 } from '@/models/posting.model';
@@ -469,5 +472,85 @@ export class PostingService {
             items,
             receivedBy
         });
+    }
+
+    // ── Posting Order ─────────────────────────────────────────────
+
+    private readonly NOTESHEET_API = `${environment.apis.core}/NoteSheetInfo`;
+
+    /** Get approved notesheets filtered by type (NewPosting / InterPosting). */
+    getApprovedNoteSheetsByType(noteSheetType: string): Observable<ApprovedNoteSheetItem[]> {
+        return this.http.get<any[]>(`${this.NOTESHEET_API}/GetNoteSheetInfoByStatus/final_approval`).pipe(
+            map((list) =>
+                (list ?? [])
+                    .filter((n: any) => n.noteSheetType === noteSheetType)
+                    .map((n: any) => ({
+                        noteSheetId: n.noteSheetId,
+                        noteSheetNo: n.noteSheetNo,
+                        noteSheetDate: n.noteSheetDate,
+                        subject: n.subject,
+                        noteSheetType: n.noteSheetType
+                    }))
+            )
+        );
+    }
+
+    /** Get notesheet employees (from DraftPostingDetail via DraftPostingMasterId). */
+    getNoteSheetEmployees(noteSheetId: number): Observable<PostingOrderMasterWithDetailsDto | null> {
+        return this.http.get<any>(`${this.NOTESHEET_API}/GetFilteredByKeysAsyn/${noteSheetId}`).pipe(
+            map((data) => {
+                const ns = Array.isArray(data) ? data[0] : data;
+                return ns ?? null;
+            })
+        );
+    }
+
+    /** List all posting orders. */
+    getPostingOrderMasters(): Observable<PostingOrderMasterDto[]> {
+        return this.http.get<PostingOrderMasterDto[]>(`${API}/GetPostingOrderMasters`);
+    }
+
+    /** Get single posting order by id with details. */
+    getPostingOrderById(id: number): Observable<PostingOrderMasterWithDetailsDto> {
+        return this.http.get<PostingOrderMasterWithDetailsDto>(`${API}/GetPostingOrderById/${id}`);
+    }
+
+    /** Create a new posting order. */
+    createPostingOrder(body: {
+        postingOrderNo: string;
+        postingOrderDate: string;
+        postingType: string;
+        noteSheetId: number;
+        refPostingOrderMasterId?: number | null;
+        referenceNumber?: string | null;
+        subject?: string | null;
+        mainText?: string | null;
+        textType?: string | null;
+        filesReferences?: string | null;
+        remarks?: string | null;
+        employeeIds: number[];
+        createdBy: string;
+    }): Observable<{ statusCode: number; description: string; data?: any }> {
+        return this.http.post<{ statusCode: number; description: string; data?: any }>(`${API}/CreatePostingOrder`, body);
+    }
+
+    /** Update an existing posting order. */
+    updatePostingOrder(body: {
+        id: number;
+        postingOrderNo: string;
+        postingOrderDate: string;
+        postingType: string;
+        refPostingOrderMasterId?: number | null;
+        referenceNumber?: string | null;
+        subject?: string | null;
+        mainText?: string | null;
+        textType?: string | null;
+        filesReferences?: string | null;
+        status?: string | null;
+        remarks?: string | null;
+        employeeIds: number[];
+        updatedBy: string;
+    }): Observable<{ statusCode: number; description: string }> {
+        return this.http.post<{ statusCode: number; description: string }>(`${API}/UpdatePostingOrder`, body);
     }
 }

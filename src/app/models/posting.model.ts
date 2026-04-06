@@ -239,6 +239,72 @@ export interface PostingReceiveViewDto {
     rankSortOrder: number | null;
 }
 
+// ── Posting Order DTOs ────────────────────────────────────────
+
+/** Posting Order master row for list. */
+export interface PostingOrderMasterDto {
+    id: number;
+    postingOrderNo: string;
+    postingOrderDate: string;
+    postingType: string;
+    noteSheetId: number;
+    noteSheetNo: string | null;
+    refPostingOrderMasterId: number | null;
+    referenceNumber: string | null;
+    subject: string | null;
+    textType: string | null;
+    status: string;
+    remarks: string | null;
+    createdBy: string;
+    createdDate: string;
+    detailCount: number;
+}
+
+/** Posting Order detail row (employee). */
+export interface PostingOrderDetailDto {
+    id: number;
+    employeeId: number;
+    remarks: string | null;
+    serviceId: string | null;
+    rank: string | null;
+    corps: string | null;
+    trade: string | null;
+    name: string | null;
+    motherUnit: string | null;
+    rabUnit: string | null;
+    rabJoingdate: string | null;
+}
+
+/** Posting Order by id with details. */
+export interface PostingOrderMasterWithDetailsDto {
+    id: number;
+    postingOrderNo: string;
+    postingOrderDate: string;
+    postingType: string;
+    noteSheetId: number;
+    noteSheetNo: string | null;
+    refPostingOrderMasterId: number | null;
+    referenceNumber: string | null;
+    subject: string | null;
+    mainText: string | null;
+    textType: string | null;
+    filesReferences: string | null;
+    status: string;
+    remarks: string | null;
+    createdBy: string;
+    createdDate: string;
+    details: PostingOrderDetailDto[];
+}
+
+/** Approved NoteSheet row for dropdown. */
+export interface ApprovedNoteSheetItem {
+    noteSheetId: number;
+    noteSheetNo: string;
+    noteSheetDate: string;
+    subject: string;
+    noteSheetType: string;
+}
+
 /** Pending joining item (approved posting order, not yet joined). */
 export interface PendingJoiningItem {
     id: string;
