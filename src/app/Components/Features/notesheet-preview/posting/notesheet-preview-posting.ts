@@ -909,7 +909,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
                     children: mainChildren.length > 0 ? mainChildren : [new Paragraph({})],
                     borders: { top: frameBorder, bottom: frameBorder, left: frameBorder, right: frameBorder },
                     width: { size: contentWidth, type: WidthType.DXA },
-                    margins: { top: 80, bottom: 10000, left: 120, right: 120 },
+                    margins: { top: 80, bottom: 10200, left: 120, right: 120 },
                 })]
             })],
         });
