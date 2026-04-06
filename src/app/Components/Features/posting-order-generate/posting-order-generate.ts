@@ -15,12 +15,25 @@ import { NoteSheetType } from '@/models/enums';
 interface NoteSheetEmployee {
     employeeId: number;
     serviceId: string | null;
+    prefixName: string | null;
     fullNameEN: string | null;
+    fullNameBN: string | null;
     rankName: string | null;
+    rankNameBN: string | null;
     corpsName: string | null;
+    corpsNameBN: string | null;
     tradeName: string | null;
+    tradeNameBN: string | null;
     motherUnitName: string | null;
-    rabUnit: string | null;
+    motherUnitNameBN: string | null;
+    permanentDistrictName: string | null;
+    permanentDistrictNameBN: string | null;
+    spousePresentDistrictName: string | null;
+    spousePresentDistrictNameBN: string | null;
+    motherOrgLocationName: string | null;
+    motherOrgLocationNameBN: string | null;
+    transferRabUnitName: string | null;
+    remarks: string | null;
     joiningDateInRAB: string | null;
 }
 
@@ -53,6 +66,12 @@ export class PostingOrderGenerateComponent implements OnInit {
     employees: NoteSheetEmployee[] = [];
     loadingNoteSheets = false;
     loadingEmployees = false;
+
+    /** NoteSheet info displayed above employee table. */
+    selectedNoteSheetNo: string | null = null;
+    selectedNoteSheetApprovedDate: string | null = null;
+    /** true = Bangla, false = English */
+    isBangla = false;
 
     constructor(
         private postingService: PostingService,
@@ -89,7 +108,7 @@ export class PostingOrderGenerateComponent implements OnInit {
     /** Dropdown options for notesheet select. */
     get noteSheetDropdownOptions() {
         return this.approvedNoteSheets.map(ns => ({
-            label: `${ns.noteSheetNo} - ${ns.subject ?? ''}`,
+            label: ns.noteSheetNo,
             value: ns.noteSheetId
         }));
     }
@@ -97,6 +116,9 @@ export class PostingOrderGenerateComponent implements OnInit {
     /** When a notesheet is selected, load its employees. */
     onNoteSheetChange(): void {
         this.employees = [];
+        this.selectedNoteSheetNo = null;
+        this.selectedNoteSheetApprovedDate = null;
+        this.isBangla = false;
         if (!this.selectedNoteSheetId) return;
 
         this.loadingEmployees = true;
@@ -110,6 +132,12 @@ export class PostingOrderGenerateComponent implements OnInit {
                     return;
                 }
 
+                // Store notesheet info
+                this.selectedNoteSheetNo = ns.noteSheetNo;
+                this.selectedNoteSheetApprovedDate = ns.finalApprovalApprovedDate ?? ns.lastupdate;
+                // TextType: 1 = Bangla, else English (int field)
+                this.isBangla = ns.textType === 1 || ns.textType === '1';
+
                 const draftPostingMasterId = ns.draftPostingMasterId;
                 if (draftPostingMasterId) {
                     // Load employees from draft posting
@@ -118,12 +146,25 @@ export class PostingOrderGenerateComponent implements OnInit {
                             this.employees = (emps ?? []).map(e => ({
                                 employeeId: e.employeeId,
                                 serviceId: e.serviceId,
+                                prefixName: e.prefixName,
                                 fullNameEN: e.fullNameEN,
+                                fullNameBN: e.fullNameBN,
                                 rankName: e.rankName,
+                                rankNameBN: e.rankNameBN,
                                 corpsName: e.corpsName,
+                                corpsNameBN: e.corpsNameBN,
                                 tradeName: e.tradeName,
+                                tradeNameBN: e.tradeNameBN,
                                 motherUnitName: e.motherUnitName,
-                                rabUnit: e.motherUnitName,
+                                motherUnitNameBN: e.motherUnitNameBN,
+                                permanentDistrictName: e.permanentDistrictName,
+                                permanentDistrictNameBN: e.permanentDistrictNameBN,
+                                spousePresentDistrictName: e.spousePresentDistrictName,
+                                spousePresentDistrictNameBN: e.spousePresentDistrictNameBN,
+                                motherOrgLocationName: e.motherOrgLocationName,
+                                motherOrgLocationNameBN: e.motherOrgLocationNameBN,
+                                transferRabUnitName: e.transferRabUnitName,
+                                remarks: e.remarks,
                                 joiningDateInRAB: e.joiningDateInRAB
                             }));
                             this.loadingEmployees = false;
@@ -143,6 +184,12 @@ export class PostingOrderGenerateComponent implements OnInit {
                 this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load notesheet details.' });
             }
         });
+    }
+
+    /** Remove employee from list. */
+    removeEmployee(index: number): void {
+        this.employees.splice(index, 1);
+        this.employees = [...this.employees];
     }
 
     formatDate(value: string | null | undefined): string {

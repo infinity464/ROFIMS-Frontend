@@ -18,6 +18,7 @@
                         optionLabel="label"
                         optionValue="value"
                         placeholder="Select Posting Type"
+                        [showClear]="true"
                         styleClass="w-full"
                         (onChange)="onPostingTypeChange()"
                     ></p-select>
@@ -33,6 +34,7 @@
                         optionValue="value"
                         placeholder="{{ loadingNoteSheets ? 'Loading...' : 'Select NoteSheet' }}"
                         [disabled]="!selectedPostingType || loadingNoteSheets"
+                        [showClear]="true"
                         [filter]="true"
                         filterPlaceholder="Search notesheet..."
                         styleClass="w-full"
@@ -44,7 +46,12 @@
 
         <!-- Employee List Table -->
         <div *ngIf="selectedNoteSheetId">
-            <span class="font-semibold text-700 block mb-3">NoteSheet Employees</span>
+            <!-- NoteSheet Info Bar -->
+            <div class="flex flex-wrap gap-4 align-items-center mb-3">
+                <span class="font-semibold text-700">NoteSheet Employees</span>
+                <span *ngIf="selectedNoteSheetNo" class="text-600">| NoteSheet No: <strong>{{ selectedNoteSheetNo }}</strong></span>
+                <span *ngIf="selectedNoteSheetApprovedDate" class="text-600">| Approved: <strong>{{ formatDate(selectedNoteSheetApprovedDate) }}</strong></span>
+            </div>
 
             <p-table
                 [value]="employees"
@@ -58,31 +65,39 @@
             >
                 <ng-template pTemplate="header">
                     <tr>
-                        <th style="width: 50px">Ser</th>
-                        <th style="min-width: 120px">Service ID</th>
-                        <th style="min-width: 100px">Rank</th>
-                        <th style="min-width: 100px">Corps</th>
-                        <th style="min-width: 100px">Trade</th>
-                        <th style="min-width: 180px">Name</th>
-                        <th style="min-width: 140px">Mother Unit</th>
-                        <th style="min-width: 130px">Date of Join in RAB</th>
+                        <th style="width: 50px">{{ isBangla ? 'ক্রমিক' : 'Ser' }}</th>
+                        <th style="min-width: 120px">{{ isBangla ? 'ব্যক্তিগত নম্বর' : 'Service ID' }}</th>
+                        <th style="min-width: 80px">{{ isBangla ? 'পদবি' : 'Rank' }}</th>
+                        <th style="min-width: 100px">{{ isBangla ? 'ট্রেড' : 'Trade' }}</th>
+                        <th style="min-width: 140px">{{ isBangla ? 'নাম' : 'Name' }}</th>
+                        <th style="min-width: 130px">{{ isBangla ? 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)' : 'Own District (Permanent)' }}</th>
+                        <th style="min-width: 130px">{{ isBangla ? 'স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)' : 'Spouse District' }}</th>
+                        <th style="min-width: 130px">{{ isBangla ? 'পূর্ববর্তী কর্মস্থল (দায়িত্বপূর্ণ এলাকা)' : 'Previous Workplace' }}</th>
+                        <th style="min-width: 100px">{{ isBangla ? 'বদলি ইউনিট' : 'Transfer Unit' }}</th>
+                        <th style="min-width: 100px">{{ isBangla ? 'মন্তব্য' : 'Remarks' }}</th>
+                        <th style="width: 70px">Action</th>
                     </tr>
                 </ng-template>
                 <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                     <tr>
                         <td>{{ rowIndex + 1 }}</td>
-                        <td><span class="font-semibold">{{ row.serviceId || '-' }}</span></td>
-                        <td>{{ row.rankName || '-' }}</td>
-                        <td>{{ row.corpsName || '-' }}</td>
-                        <td>{{ row.tradeName || '-' }}</td>
-                        <td>{{ row.fullNameEN || '-' }}</td>
-                        <td>{{ row.motherUnitName || '-' }}</td>
-                        <td>{{ formatDate(row.joiningDateInRAB) }}</td>
+                        <td><span class="font-semibold">{{ row.prefixName ? row.prefixName + ' - ' : '' }}{{ row.serviceId || '-' }}</span></td>
+                        <td>{{ (isBangla ? row.rankNameBN : row.rankName) || row.rankName || '-' }}</td>
+                        <td>{{ (isBangla ? row.tradeNameBN : row.tradeName) || row.tradeName || '-' }}</td>
+                        <td>{{ (isBangla ? row.fullNameBN : row.fullNameEN) || row.fullNameEN || '-' }}</td>
+                        <td>{{ (isBangla ? row.permanentDistrictNameBN : row.permanentDistrictName) || row.permanentDistrictName || '-' }}</td>
+                        <td>{{ (isBangla ? row.spousePresentDistrictNameBN : row.spousePresentDistrictName) || row.spousePresentDistrictName || '-' }}</td>
+                        <td>{{ (isBangla ? row.motherOrgLocationNameBN : row.motherOrgLocationName) || row.motherOrgLocationName || '-' }}</td>
+                        <td>{{ row.transferRabUnitName || '-' }}</td>
+                        <td>{{ row.remarks || '-' }}</td>
+                        <td>
+                            <p-button icon="pi pi-trash" severity="danger" [text]="true" size="small" (onClick)="removeEmployee(rowIndex)"></p-button>
+                        </td>
                     </tr>
                 </ng-template>
                 <ng-template pTemplate="emptymessage">
                     <tr>
-                        <td colspan="8" class="text-center p-4">
+                        <td colspan="11" class="text-center p-4">
                             <div class="flex flex-column align-items-center gap-3 py-5">
                                 <i class="pi pi-inbox text-5xl text-400"></i>
                                 <span class="text-lg text-500">No employees found for this notesheet.</span>

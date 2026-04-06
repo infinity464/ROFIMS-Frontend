@@ -480,7 +480,7 @@ export class PostingService {
 
     /** Get approved notesheets filtered by type (NewPosting / InterPosting). */
     getApprovedNoteSheetsByType(noteSheetType: string): Observable<ApprovedNoteSheetItem[]> {
-        return this.http.get<any[]>(`${this.NOTESHEET_API}/GetNoteSheetInfoByStatus/final_approval`).pipe(
+        return this.http.get<any[]>(`${this.NOTESHEET_API}/GetByStatus`, { params: { currentStatus: 'final_approval' } }).pipe(
             map((list) =>
                 (list ?? [])
                     .filter((n: any) => n.noteSheetType === noteSheetType)
