@@ -887,33 +887,34 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
             }
         }
 
-        // Titles above the bordered content area (like HTML preview)
-        const docChildren: (Paragraph | Table)[] = [];
-        docChildren.push(new Paragraph({
-            children: [new TextRun({ text: 'NOTE SHEET', bold: true, underline: {}, size: 24, font: 'Times New Roman' })],
-            alignment: AlignmentType.CENTER, spacing: { after: 40 }, keepNext: true
-        }));
-        docChildren.push(new Paragraph({
-            children: [new TextRun({ text: 'মন্তব্য পত্র', underline: {}, size: 24, font: 'Nirmala UI' })],
-            alignment: AlignmentType.CENTER, spacing: { after: 0 }, keepNext: true
-        }));
+        // Title paragraphs — sit ABOVE the bordered table
+        const titleChildren: (Paragraph | Table)[] = [
+            new Paragraph({
+                children: [new TextRun({ text: 'NOTE SHEET', bold: true, underline: {}, size: 24, font: 'Times New Roman' })],
+                alignment: AlignmentType.CENTER, spacing: { after: 40 }
+            }),
+            new Paragraph({
+                children: [new TextRun({ text: 'মন্তব্য পত্র', underline: {}, size: 24, font: 'Nirmala UI' })],
+                alignment: AlignmentType.CENTER, spacing: { after: 100 }
+            }),
+        ];
 
-        // Content in a bordered single-cell table — borders repeat on every page in both Word & LibreOffice
-        const boxBorder = { style: BorderStyle.SINGLE, size: 3, color: '000000' };
-        const noBorder = { style: BorderStyle.NONE, size: 0, color: '000000' };
-        const contentTable = new Table({
+        // Wrap all content in a single bordered table cell so borders continue across page breaks
+        const frameBorder = { style: BorderStyle.SINGLE, size: 6, color: '000000' };
+        const contentWidth = 12240 - 567 - 567; // page width minus margins
+        const borderedTable = new Table({
+            width: { size: contentWidth, type: WidthType.DXA },
             rows: [new TableRow({
                 children: [new TableCell({
                     children: mainChildren.length > 0 ? mainChildren : [new Paragraph({})],
-                    borders: { top: boxBorder, bottom: boxBorder, left: boxBorder, right: boxBorder },
-                    width: { size: 100, type: WidthType.PERCENTAGE },
-                    margins: { top: 80, bottom: 80, left: 120, right: 120 }
+                    borders: { top: frameBorder, bottom: frameBorder, left: frameBorder, right: frameBorder },
+                    width: { size: contentWidth, type: WidthType.DXA },
+                    margins: { top: 80, bottom: 4000, left: 120, right: 120 },
                 })]
             })],
-            width: { size: 100, type: WidthType.PERCENTAGE },
-            borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder, insideHorizontal: noBorder, insideVertical: noBorder }
         });
-        docChildren.push(contentTable);
+
+        const docChildren: (Paragraph | Table)[] = [...titleChildren, borderedTable];
 
         return new Document({
             styles: bn ? { default: { document: { run: { language: { value: 'bn-BD', bidirectional: 'bn-BD' } } } } } : undefined,
@@ -921,7 +922,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
                 properties: {
                     page: {
                         size: { width: 12240, height: 20160, orientation: PageOrientation.PORTRAIT },
-                        margin: { top: 567, right: 567, bottom: 400, left: 567 }
+                        margin: { top: 567, right: 567, bottom: 200, left: 567 },
                     }
                 },
                 children: docChildren
