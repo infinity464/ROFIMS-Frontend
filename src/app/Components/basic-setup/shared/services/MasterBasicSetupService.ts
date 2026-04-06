@@ -17,6 +17,7 @@ import { NoteSheetTemplateModel } from '../models/notesheet-template';
 import { NoteSheetNumberConfigModel } from '../models/notesheet-number-config';
 import { NoteSheetApproverConfigModel } from '../models/notesheet-approver-config';
 import { RABUnitAORModel, ResultViewModel } from '../models/rab-unit-aor';
+import { PostingOrderNumberConfigModel } from '../models/posting-order-number-config';
 
 export interface AuthorizedCountItem {
     codeId: number;
@@ -40,6 +41,7 @@ export class MasterBasicSetupService {
     private apiUrlNoteSheetNumberConfig = `${environment.apis.core}/NoteSheetNumberConfig`;
     private apiUrlNoteSheetApproverConfig = `${environment.apis.core}/NoteSheetApproverConfig`;
     private apiUrlRABUnitAOR = `${environment.apis.core}/RABUnitAOR`;
+    private apiUrlPostingOrderNumberConfig = `${environment.apis.core}/PostingOrderNumberConfig`;
 
 
     getAllByType(codeType: string): Observable<CommonCode[]> {
@@ -308,5 +310,27 @@ export class MasterBasicSetupService {
 
     deleteRABUnitAOR(aorId: number): Observable<ResultViewModel> {
         return this.http.delete<ResultViewModel>(`${this.apiUrlRABUnitAOR}/DeleteAsyn/${aorId}`);
+    }
+
+    // PostingOrderNumberConfig CRUD
+
+    getAllPostingOrderNumberConfig(): Observable<PostingOrderNumberConfigModel[]> {
+        return this.http.get<PostingOrderNumberConfigModel[]>(`${this.apiUrlPostingOrderNumberConfig}/GetAll`);
+    }
+
+    getPostingOrderNumberConfigById(id: number): Observable<PostingOrderNumberConfigModel> {
+        return this.http.get<PostingOrderNumberConfigModel>(`${this.apiUrlPostingOrderNumberConfig}/GetFilteredByKeysAsyn/${id}`);
+    }
+
+    createPostingOrderNumberConfig(model: PostingOrderNumberConfigModel): Observable<any> {
+        return this.http.post(`${this.apiUrlPostingOrderNumberConfig}/SaveAsyn`, model);
+    }
+
+    updatePostingOrderNumberConfig(model: PostingOrderNumberConfigModel): Observable<any> {
+        return this.http.post(`${this.apiUrlPostingOrderNumberConfig}/UpdateAsyn`, model);
+    }
+
+    deletePostingOrderNumberConfig(id: number): Observable<any> {
+        return this.http.delete(`${this.apiUrlPostingOrderNumberConfig}/DeleteAsyn/${id}`);
     }
 }
