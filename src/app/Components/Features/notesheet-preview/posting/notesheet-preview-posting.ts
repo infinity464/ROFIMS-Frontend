@@ -72,6 +72,10 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     // ── RAB Unit dropdown options ─────────────────────────────
     rabUnitOptions: { label: string; value: number }[] = [];
 
+    // ── District → ID map & AOR cache for transfer-unit warning ──
+    private districtNameToId: Record<string, number> = {};
+    private aorCache: Record<number, number[]> = {};
+
     // ── Edit model fields ────────────────────────────────────
     editSubject = '';
     editReferenceNumber = '';
@@ -297,6 +301,9 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         if (this.rabUnitOptions.length === 0) {
             this.loadRabUnitOptions();
         }
+        if (!Object.keys(this.districtNameToId).length) {
+            this.loadDistrictMap();
+        }
     }
 
     private loadRabUnitOptions(): void {
@@ -306,6 +313,58 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
                     label: c.codeValueEN ?? c.codeValueBN ?? `ID ${c.codeId}`,
                     value: c.codeId
                 }));
+            }
+        });
+    }
+
+    private loadDistrictMap(): void {
+        this.masterBasicSetup.getAllByType('District').subscribe({
+            next: (list) => {
+                (list ?? []).forEach(d => {
+                    if (d.codeValueEN) this.districtNameToId[d.codeValueEN.trim().toLowerCase()] = d.codeId;
+                    if (d.codeValueBN) this.districtNameToId[d.codeValueBN.trim().toLowerCase()] = d.codeId;
+                });
+            }
+        });
+    }
+
+    onTransferUnitChange(emp: DraftPostingEmployeeRow): void {
+        if (!emp.transferRabUnitId) return;
+        const unitId = emp.transferRabUnitId;
+        const empDistrictName = (emp.presentDistrictName || emp.presentDistrictNameBN || '').split('\n')[0].trim().toLowerCase();
+        if (!empDistrictName) return;
+        const empDistrictId = this.districtNameToId[empDistrictName];
+        if (!empDistrictId) return;
+
+        const checkAor = (districtIds: number[]) => {
+            if (districtIds.includes(empDistrictId)) {
+                const unitName = this.rabUnitOptions.find(o => o.value === unitId)?.label ?? '';
+                const name = emp.fullNameBN || emp.fullNameEN || '';
+                this.messageService.add({
+                    severity: 'warn', summary: 'সতর্কতা / Warning',
+                    detail: `${name} এর নিজ জেলার অধীনে ${unitName} ইউনিট নির্বাচন করা হয়েছে।`,
+                    life: 6000
+                });
+            }
+        };
+
+        if (this.aorCache[unitId]) {
+            checkAor(this.aorCache[unitId]);
+            return;
+        }
+
+        this.masterBasicSetup.getRABUnitAORByRabUnit(unitId).subscribe({
+            next: (rows) => {
+                const ids: number[] = [];
+                (rows ?? []).forEach((r: any) => {
+                    const csv = r.districtIds ?? r.DistrictIds ?? '';
+                    if (csv) csv.split(',').forEach((s: string) => {
+                        const n = parseInt(s.trim(), 10);
+                        if (!isNaN(n)) ids.push(n);
+                    });
+                });
+                this.aorCache[unitId] = ids;
+                checkAor(ids);
             }
         });
     }

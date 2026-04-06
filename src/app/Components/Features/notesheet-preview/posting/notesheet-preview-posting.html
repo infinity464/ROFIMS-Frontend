@@ -136,7 +136,7 @@
                                     <td>
                                         <p-select [(ngModel)]="emp.transferRabUnitId" [options]="rabUnitOptions" optionLabel="label" optionValue="value"
                                                   placeholder="Select Unit" [filter]="true" filterBy="label" [showClear]="true"
-                                                  styleClass="w-full" appendTo="body" size="small"></p-select>
+                                                  styleClass="w-full" appendTo="body" size="small" (onChange)="onTransferUnitChange(emp)"></p-select>
                                     </td>
                                     <td style="min-width:200px">
                                         <input pInputText [(ngModel)]="emp.remarks" placeholder="{{ isEnglish() ? 'Remarks' : 'মন্তব্য' }}" class="w-full" />
