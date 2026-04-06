@@ -1,0 +1,171 @@
+<p-toast position="top-center"></p-toast>
+
+<div class="posting-order-list">
+    <div class="form-card">
+        <div class="form-card-header">
+            <h3 class="form-card-title">Posting Order / Force Order List</h3>
+        </div>
+        <p class="text-600 mt-0 mb-3">All generated posting orders and force orders.</p>
+
+        <p-table
+            #dt
+            [value]="orders"
+            [loading]="loading"
+            dataKey="id"
+            [tableStyle]="{ 'min-width': '60rem' }"
+            styleClass="p-datatable-striped p-datatable-gridlines"
+            [paginator]="true"
+            [rows]="10"
+            [rowsPerPageOptions]="[10, 25, 50]"
+            [globalFilterFields]="['postingOrderNo', 'noteSheetNo', 'postingType', 'status']"
+        >
+            <ng-template pTemplate="caption">
+                <div class="flex justify-content-end">
+                    <p-iconfield>
+                        <p-inputicon styleClass="pi pi-search"></p-inputicon>
+                        <input pInputText type="text" placeholder="Search..." (input)="onGlobalFilter(dt, $event)" />
+                    </p-iconfield>
+                </div>
+            </ng-template>
+            <ng-template pTemplate="header">
+                <tr>
+                    <th style="width: 50px">Ser</th>
+                    <th style="min-width: 160px">Posting Order No</th>
+                    <th style="min-width: 110px">Date</th>
+                    <th style="min-width: 120px">Posting Type</th>
+                    <th style="min-width: 140px">NoteSheet No</th>
+                    <th style="width: 80px">Employees</th>
+                    <th style="min-width: 90px">Status</th>
+                    <th style="min-width: 100px">Created By</th>
+                    <th style="min-width: 110px">Created Date</th>
+                    <th style="width: 80px">Action</th>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                <tr>
+                    <td>{{ rowIndex + 1 }}</td>
+                    <td><span class="font-semibold">{{ row.postingOrderNo || '-' }}</span></td>
+                    <td>{{ formatDate(row.postingOrderDate) }}</td>
+                    <td>{{ postingTypeLabel(row.postingType) }}</td>
+                    <td>{{ row.noteSheetNo || '-' }}</td>
+                    <td class="text-center">{{ row.detailCount }}</td>
+                    <td>
+                        <p-tag [value]="row.status" [severity]="getStatusSeverity(row.status)"></p-tag>
+                    </td>
+                    <td>{{ row.createdBy || '-' }}</td>
+                    <td>{{ formatDate(row.createdDate) }}</td>
+                    <td>
+                        <p-button icon="pi pi-eye" [rounded]="true" [text]="true" size="small" pTooltip="View Details" (onClick)="viewDetails(row)"></p-button>
+                    </td>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td colspan="10" class="text-center p-4">
+                        <div class="flex flex-column align-items-center gap-3 py-5">
+                            <i class="pi pi-inbox text-5xl text-400"></i>
+                            <span class="text-lg text-500">No posting orders found.</span>
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+    </div>
+</div>
+
+<!-- Detail Dialog -->
+<p-dialog
+    header="Posting Order Details"
+    [(visible)]="showDetailDialog"
+    [modal]="true"
+    [style]="{ width: '72rem', maxWidth: '95vw' }"
+    [contentStyle]="{ overflow: 'auto', 'border-top': '2px solid var(--primary-color)' }"
+    (onHide)="selectedOrder = null"
+    [draggable]="false"
+    [resizable]="true"
+>
+    @if (detailLoading) {
+        <div class="flex align-items-center justify-content-center p-4">
+            <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
+        </div>
+    } @else if (selectedOrder) {
+        <!-- Order Info -->
+        <div class="grid mt-2 mb-3">
+            <div class="col-6 md:col-3">
+                <label class="font-semibold text-600 block mb-1">Posting Order No</label>
+                <span>{{ selectedOrder.postingOrderNo || '-' }}</span>
+            </div>
+            <div class="col-6 md:col-3">
+                <label class="font-semibold text-600 block mb-1">Date</label>
+                <span>{{ formatDate(selectedOrder.postingOrderDate) }}</span>
+            </div>
+            <div class="col-6 md:col-3">
+                <label class="font-semibold text-600 block mb-1">Posting Type</label>
+                <span>{{ postingTypeLabel(selectedOrder.postingType) }}</span>
+            </div>
+            <div class="col-6 md:col-3">
+                <label class="font-semibold text-600 block mb-1">Status</label>
+                <p-tag [value]="selectedOrder.status" [severity]="getStatusSeverity(selectedOrder.status)"></p-tag>
+            </div>
+            <div class="col-6 md:col-3 mt-2">
+                <label class="font-semibold text-600 block mb-1">NoteSheet No</label>
+                <span>{{ selectedOrder.noteSheetNo || '-' }}</span>
+            </div>
+            <div class="col-6 md:col-3 mt-2">
+                <label class="font-semibold text-600 block mb-1">Created By</label>
+                <span>{{ selectedOrder.createdBy || '-' }}</span>
+            </div>
+            <div class="col-6 md:col-3 mt-2">
+                <label class="font-semibold text-600 block mb-1">Created Date</label>
+                <span>{{ formatDate(selectedOrder.createdDate) }}</span>
+            </div>
+            @if (selectedOrder.remarks) {
+                <div class="col-6 md:col-3 mt-2">
+                    <label class="font-semibold text-600 block mb-1">Remarks</label>
+                    <span>{{ selectedOrder.remarks }}</span>
+                </div>
+            }
+        </div>
+
+        <!-- Employee Details Table -->
+        <h4 class="mt-3 mb-2 text-700">Employees ({{ selectedOrder.details?.length || 0 }})</h4>
+        <p-table
+            [value]="selectedOrder.details || []"
+            [tableStyle]="{ 'min-width': '50rem' }"
+            styleClass="p-datatable-striped p-datatable-gridlines p-datatable-sm"
+            [paginator]="(selectedOrder.details?.length || 0) > 10"
+            [rows]="10"
+            [rowsPerPageOptions]="[10, 25, 50]"
+        >
+            <ng-template pTemplate="header">
+                <tr>
+                    <th style="width: 50px">Ser</th>
+                    <th style="min-width: 120px">Service ID</th>
+                    <th style="min-width: 80px">Rank</th>
+                    <th style="min-width: 100px">Trade</th>
+                    <th style="min-width: 140px">Name</th>
+                    <th style="min-width: 120px">Mother Unit</th>
+                    <th style="min-width: 120px">RAB Unit</th>
+                    <th style="min-width: 110px">RAB Joining</th>
+                    <th style="min-width: 100px">Remarks</th>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-d let-rowIndex="rowIndex">
+                <tr>
+                    <td>{{ rowIndex + 1 }}</td>
+                    <td><span class="font-semibold">{{ d.serviceId || '-' }}</span></td>
+                    <td>{{ d.rank || '-' }}</td>
+                    <td>{{ d.trade || '-' }}</td>
+                    <td>{{ d.name || '-' }}</td>
+                    <td>{{ d.motherUnit || '-' }}</td>
+                    <td>{{ d.rabUnit || '-' }}</td>
+                    <td>{{ formatDate(d.rabJoingdate) }}</td>
+                    <td>{{ d.remarks || '-' }}</td>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+                <tr><td colspan="9" class="text-center p-4 text-500">No employees in this posting order.</td></tr>
+            </ng-template>
+        </p-table>
+    }
+</p-dialog>
