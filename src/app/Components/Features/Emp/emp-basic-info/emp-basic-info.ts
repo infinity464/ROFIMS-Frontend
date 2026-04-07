@@ -945,7 +945,7 @@ export class EmpBasicInfo implements OnInit {
                     this.loadMotherOrgPrefix(employee.orgId);
                 }
                 if (employee.memberType) {
-                    this.loadOfficerType(employee.memberType);
+                    this.loadOfficerType(employee.memberType, employee.orgId);
                 }
                 if (employee.branch) {
                     this.loadTrade(employee.branch);
@@ -1239,6 +1239,14 @@ export class EmpBasicInfo implements OnInit {
         this.loadMotherOrgRank(orgId);
         this.loadMotherOrgCorps(orgId);
         this.loadMotherOrgPrefix(orgId);
+
+        const memberType = this.postingForm.get('memberType')?.value;
+        this.postingForm.patchValue({ officerType: null });
+        if (memberType) {
+            this.loadOfficerType(memberType, orgId);
+        } else {
+            this.officerTypes = [];
+        }
     }
 
     onLastUnitChange(unit: any): void {
@@ -1406,10 +1414,14 @@ export class EmpBasicInfo implements OnInit {
         return this.maritalStatusOptions.some((m) => m.codeId === maritalStatusId && (m.codeValueEN || '').toLowerCase() === 'married');
     }
 
-    loadOfficerType(codeId: number) {
+    loadOfficerType(codeId: number, orgId?: number | null) {
         this.commonCodeService.getAllActiveCommonCodesByParentId(codeId).subscribe({
             next: (res) => {
-                this.officerTypes = res;
+                if (orgId == null) {
+                    this.officerTypes = res;
+                    return;
+                }
+                this.officerTypes = res.filter((item) => item.orgId === orgId || item.orgId === 0);
             },
             error: (err) => {
                 console.error(err);
@@ -1465,7 +1477,9 @@ export class EmpBasicInfo implements OnInit {
     }
 
     onMemberTypeChange(codeId: number) {
-        this.loadOfficerType(codeId);
+        const motherOrgId = this.postingForm.get('motherOrganization')?.value;
+        this.postingForm.patchValue({ officerType: null });
+        this.loadOfficerType(codeId, motherOrgId);
     }
 
     onSubmit(): void {
