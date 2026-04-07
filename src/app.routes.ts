@@ -129,6 +129,9 @@ import { MenuManagement } from '@/Components/Features/menu-management/menu-manag
 import { RoleMenuPermission } from '@/Components/Features/role-menu-permission/role-menu-permission';
 import { EmployeeReportsComponent } from '@/Components/Features/employee-reports/employee-reports.component';
 import { RabUnitAor } from '@/Components/basic-setup/rab-unit-aor/rab-unit-aor';
+import { ManpowerSummaryComponent } from '@/Components/Features/statistics/manpower-summary/manpower-summary';
+import { ManpowerChartComponent } from '@/Components/Features/statistics/manpower-chart/manpower-chart';
+import { RankWiseManpowerComponent } from '@/Components/Features/statistics/rank-wise-manpower/rank-wise-manpower';
 
 export const appRoutes: Routes = [
     // Public routes
@@ -284,6 +287,11 @@ export const appRoutes: Routes = [
 
             // Employee Reports
             { path: 'employee-reports', component: EmployeeReportsComponent },
+
+            // Statistics
+            { path: 'statistics/manpower-summary', component: ManpowerSummaryComponent },
+            { path: 'statistics/manpower-chart', component: ManpowerChartComponent },
+            { path: 'statistics/rank-wise-manpower', component: RankWiseManpowerComponent },
 
             // Menu Management
             { path: 'menu-management', component: MenuManagement },
