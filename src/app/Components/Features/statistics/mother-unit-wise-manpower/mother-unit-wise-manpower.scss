@@ -1,0 +1,243 @@
+:host {
+    display: block;
+    padding: 1.5rem;
+}
+
+/* ── Card ────────────────────────────────────────────────────────────── */
+.report-results-card {
+    background: var(--surface-card, #fff);
+    border: 1px solid var(--surface-border, #e2e8f0);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────── */
+.report-results-header {
+    display: flex;
+    flex-direction: column;
+    padding: 0.75rem 1.25rem 1rem;
+    border-bottom: 1px solid var(--surface-border, #e2e8f0);
+    background: var(--surface-section, #f8fafc);
+    gap: 0.5rem;
+}
+
+/* Row 1: filter + buttons */
+.report-toolbar-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+/* Org filter dropdown */
+.org-filter-wrap {
+    flex: 1;
+    min-width: 220px;
+    max-width: 400px;
+}
+
+::ng-deep .org-filter-select {
+    width: 100%;
+    font-size: 0.82rem;
+}
+
+.report-results-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+/* Lang toggle */
+.report-lang-toggle {
+    height: 32px;
+    padding: 0 12px;
+    border-radius: 7px;
+    border: 0.5px solid var(--surface-border, #e2e8f0);
+    background: var(--surface-card, #fff);
+    color: var(--text-color, #1e293b);
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+
+    &:hover { border-color: var(--primary-color, #4f46e5); background: var(--surface-hover, #f1f5f9); }
+}
+
+/* Export button */
+.report-btn-export {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 14px;
+    border-radius: 7px;
+    border: 0.5px solid var(--surface-border, #e2e8f0);
+    background: var(--surface-card, #fff);
+    color: var(--text-color, #1e293b);
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+
+    &:hover:not(:disabled) { border-color: var(--primary-color, #4f46e5); background: var(--surface-hover, #f1f5f9); }
+    &:disabled { opacity: 0.45; cursor: not-allowed; }
+}
+
+/* Export dropdown */
+.report-export-wrap { position: relative; }
+
+.report-export-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 6px;
+    min-width: 140px;
+    background: var(--surface-card, #fff);
+    border: 1px solid var(--surface-border, #e2e8f0);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+    z-index: 100;
+    overflow: hidden;
+}
+
+.report-export-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 14px;
+    background: none;
+    border: none;
+    font-size: 0.85rem;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.12s;
+
+    &:hover { background: var(--surface-hover, #f7fafc); }
+}
+
+.report-export-icon { font-size: 0.75rem; }
+.report-export-pdf   { color: #e74c3c; }
+.report-export-word  { color: #2980b9; }
+.report-export-excel { color: #27ae60; }
+
+/* Row 2: centered title */
+.report-header-title-block { width: 100%; text-align: center; }
+
+.report-main-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-color, #1e293b);
+    letter-spacing: 0.03em;
+    line-height: 1.4;
+}
+
+.report-date-line {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-color-secondary, #475569);
+    margin-top: 0.15rem;
+    line-height: 1.4;
+}
+
+/* ── Skeleton ────────────────────────────────────────────────────────── */
+.skeleton-wrapper { padding: 1.25rem; }
+
+.skeleton-row {
+    height: 2.5rem;
+    background: var(--surface-border, #e2e8f0);
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+    animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.4; }
+}
+
+/* ── Report body ─────────────────────────────────────────────────────── */
+.report-body { padding: 0; }
+
+/* ── Table wrapper ───────────────────────────────────────────────────── */
+.report-table-wrap {
+    overflow-x: auto;
+    width: 100%;
+}
+
+/* ── Table ───────────────────────────────────────────────────────────── */
+.report-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    color: var(--text-color, #1e293b);
+
+    thead tr {
+        background-color: var(--surface-section, #e8edf4);
+        position: sticky;
+        top: 0;
+        z-index: 2;
+    }
+
+    th {
+        padding: 0.5rem 0.6rem;
+        text-align: center;
+        font-weight: 600;
+        white-space: nowrap;
+        border: 1px solid var(--surface-border, #d1d5db);
+        color: var(--text-color, #1e293b);
+        font-size: 0.78rem;
+    }
+
+    td {
+        padding: 0.4rem 0.6rem;
+        border: 1px solid var(--surface-border, #e2e8f0);
+        vertical-align: middle;
+    }
+
+    tbody tr:nth-child(even) { background-color: var(--surface-ground, #f8fafc); }
+    tbody tr:hover            { background-color: var(--surface-hover, #f1f5f9); }
+}
+
+/* ── Column sizing ──────────────────────────────────────────────────── */
+.col-ser   { width: 50px; }
+.col-unit  { min-width: 140px; text-align: left; }
+.col-total { font-weight: 700; }
+
+/* ── Cell types ──────────────────────────────────────────────────────── */
+.num-cell       { text-align: center; font-variant-numeric: tabular-nums; }
+.unit-name      { text-align: left; white-space: nowrap; }
+.totals-label   { text-align: right; font-weight: 700; }
+.col-total-cell { font-weight: 600; }
+
+.cell-zero { color: var(--text-color-secondary, #94a3b8); }
+
+/* ── Grand total row ─────────────────────────────────────────────────── */
+.grand-total-row {
+    background-color: var(--primary-color, #4f46e5) !important;
+    font-weight: 700;
+
+    td {
+        color: #fff !important;
+        border: 1px solid rgba(255,255,255,0.2);
+        font-size: 0.85rem;
+    }
+
+    .totals-label { color: #fff !important; }
+    .num-cell     { color: #fff !important; }
+}
+
+/* ── Empty state ─────────────────────────────────────────────────────── */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
+    color: var(--text-color-secondary, #64748b);
+
+    i { font-size: 3rem; margin-bottom: 0.75rem; }
+    p { margin: 0; font-size: 0.9rem; }
+}

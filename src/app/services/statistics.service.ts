@@ -54,6 +54,36 @@ export interface RankWiseManpowerResponse {
     grandTotal: RankWiseRankRow;
 }
 
+export interface MotherUnitOrgOption {
+    orgId: number;
+    orgName: string;
+    orgNameBN: string;
+}
+
+export interface MotherUnitRankColumn {
+    rankId: number;
+    rankName: string;
+    rankNameBN: string;
+}
+
+export interface MotherUnitRow {
+    unitId: number;
+    unitName: string;
+    unitNameBN: string;
+    rankCounts: Record<number, number>;
+    total: number;
+}
+
+export interface MotherUnitWiseManpowerResponse {
+    orgId: number;
+    orgName: string;
+    orgNameBN: string;
+    ranks: MotherUnitRankColumn[];
+    units: MotherUnitRow[];
+    totals: Record<number, number>;
+    grandTotal: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class StatisticsService {
     private readonly apiUrl = `${environment.apis.core}/Statistics`;
@@ -66,5 +96,15 @@ export class StatisticsService {
 
     getRankWiseManpower(): Observable<RankWiseManpowerResponse> {
         return this.http.get<RankWiseManpowerResponse>(`${this.apiUrl}/GetRankWiseManpower`);
+    }
+
+    getMotherOrgOptions(): Observable<MotherUnitOrgOption[]> {
+        return this.http.get<MotherUnitOrgOption[]>(`${this.apiUrl}/GetMotherOrgOptions`);
+    }
+
+    getMotherUnitWiseManpower(orgId: number): Observable<MotherUnitWiseManpowerResponse> {
+        return this.http.get<MotherUnitWiseManpowerResponse>(
+            `${this.apiUrl}/GetMotherUnitWiseManpower`, { params: { orgId } }
+        );
     }
 }
