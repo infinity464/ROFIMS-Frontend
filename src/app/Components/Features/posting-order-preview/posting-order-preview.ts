@@ -278,11 +278,11 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     }
 
     empDistrict(emp: PostingOrderEmployeeRow): string {
-        return (this.isBangla ? (emp.permanentDistrictNameBN || emp.permanentDistrictName) : emp.permanentDistrictName) || '-';
+        return (this.isBangla ? (emp.presentDistrictNameBN || emp.presentDistrictName) : emp.presentDistrictName) || '';
     }
 
     empPrevWorkplace(emp: PostingOrderEmployeeRow): string {
-        return (this.isBangla ? (emp.motherOrgLocationNameBN || emp.motherOrgLocationName) : emp.motherOrgLocationName) || '-';
+        return (this.isBangla ? (emp.motherOrgLocationNameBN || emp.motherOrgLocationName) : emp.motherOrgLocationName) || '';
     }
 
     empTransferUnit(emp: PostingOrderEmployeeRow): string {
@@ -394,8 +394,8 @@ export class PostingOrderPreviewPageComponent implements OnInit {
 
         // ── Employee Table (header 8.5pt, data 9pt) ──
         const cols = bn
-            ? ['ক্রমিক', 'ব্যক্তিগত নম্বর', 'পদবি', 'ট্রেড', 'নাম', 'নিজ জেলা', 'পূর্ববর্তী কর্মস্থল', 'বদলিকৃত কর্মস্থল', 'র‌্যাব আইডি', 'মন্তব্য']
-            : ['Ser', 'Service ID', 'Rank', 'Trade', 'Name', 'Own District', 'Previous Workplace', 'Transfer Unit', 'RAB ID', 'Remarks'];
+            ? ['ক্রমিক', 'ব্যক্তিগত নম্বর', 'পদবি', 'ট্রেড', 'নাম', 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)', 'পূর্ববতী কর্মস্থল (দায়িত্বপূর্ণ এলাকা)', 'বদলিকৃত কর্মস্থল', 'র‌্যাব আইডি', 'মন্তব্য']
+            : ['Ser', 'Service ID', 'Rank', 'Trade', 'Name', 'Own District (Responsible Area)', 'Previous Workplace (Responsible Area)', 'Transfer Unit', 'RAB ID', 'Remarks'];
         // Column widths in DXA – must sum to full content width (page 12240 - margins 567*2 = 11106)
         //         Ser  SvcID  Rank  Trade  Name   OwnDist PrevWk TrUnit RabID Remarks
         const colW = [630, 1200, 860, 974, 1374, 1260, 1374, 1374, 1030, 1030];
