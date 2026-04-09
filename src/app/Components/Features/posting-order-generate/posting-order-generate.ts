@@ -5,8 +5,12 @@ import { HttpClient } from '@angular/common/http';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
+import { DatePickerModule } from 'primeng/datepicker';
+import { InputTextModule } from 'primeng/inputtext';
+import { TextareaModule } from 'primeng/textarea';
 import { Toast } from 'primeng/toast';
-import { MessageService } from 'primeng/api';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { MessageService, ConfirmationService } from 'primeng/api';
 import { environment } from '@/Core/Environments/environment';
 import { PostingService } from '@/services/posting.service';
 import { ApprovedNoteSheetItem } from '@/models/posting.model';
@@ -46,9 +50,13 @@ interface NoteSheetEmployee {
         TableModule,
         ButtonModule,
         SelectModule,
-        Toast
+        DatePickerModule,
+        InputTextModule,
+        TextareaModule,
+        Toast,
+        ConfirmDialogModule
     ],
-    providers: [MessageService],
+    providers: [MessageService, ConfirmationService],
     templateUrl: './posting-order-generate.html',
     styleUrl: './posting-order-generate.scss'
 })
@@ -71,16 +79,28 @@ export class PostingOrderGenerateComponent implements OnInit {
     /** NoteSheet info displayed above employee table. */
     selectedNoteSheetNo: string | null = null;
     selectedNoteSheetApprovedDate: string | null = null;
+
+    // ─── New form fields ──────────────────────────────────
+    postingOrderDate: Date | null = null;
+    remarks = '';
+    selectedTextType = 'en';
+    footerParagraphs: string[] = [];
+
     /** true = Bangla, false = English */
-    isBangla = false;
+    get isBangla(): boolean {
+        return this.selectedTextType === 'bn';
+    }
 
     constructor(
         private postingService: PostingService,
         private http: HttpClient,
-        private messageService: MessageService
+        private messageService: MessageService,
+        private confirmationService: ConfirmationService
     ) {}
 
-    ngOnInit(): void {}
+    ngOnInit(): void {
+        this.postingOrderDate = new Date();
+    }
 
     /** When posting type dropdown changes, load approved notesheets of that type. */
     onPostingTypeChange(): void {
@@ -114,17 +134,15 @@ export class PostingOrderGenerateComponent implements OnInit {
         }));
     }
 
-    /** When a notesheet is selected, load its employees. */
+    /** When a notesheet is selected, load its employees and set textType from notesheet. */
     onNoteSheetChange(): void {
         this.employees = [];
         this.selectedNoteSheetNo = null;
         this.selectedNoteSheetApprovedDate = null;
-        this.isBangla = false;
         if (!this.selectedNoteSheetId) return;
 
         this.loadingEmployees = true;
 
-        // Load notesheet details to get employee list via DraftPostingMasterId
         this.http.get<any[]>(`${this.noteSheetApi}/GetFilteredByKeysAsyn/${this.selectedNoteSheetId}`).subscribe({
             next: (data) => {
                 const ns = Array.isArray(data) ? data[0] : data;
@@ -133,15 +151,13 @@ export class PostingOrderGenerateComponent implements OnInit {
                     return;
                 }
 
-                // Store notesheet info
                 this.selectedNoteSheetNo = ns.noteSheetNo;
                 this.selectedNoteSheetApprovedDate = ns.finalApprovalApprovedDate ?? ns.lastupdate;
-                // TextType: 1 = Bangla, else English (int field)
-                this.isBangla = ns.textType === 1 || ns.textType === '1';
+                // Set textType from notesheet (TextType: 1 = Bangla, else English)
+                this.selectedTextType = (ns.textType === 1 || ns.textType === '1') ? 'bn' : 'en';
 
                 const draftPostingMasterId = ns.draftPostingMasterId;
                 if (draftPostingMasterId) {
-                    // Load employees from draft posting
                     this.postingService.getDraftPostingEmployees(draftPostingMasterId).subscribe({
                         next: (emps) => {
                             this.employees = (emps ?? []).map(e => ({
@@ -187,13 +203,46 @@ export class PostingOrderGenerateComponent implements OnInit {
         });
     }
 
-    /** Remove employee from list. */
-    removeEmployee(index: number): void {
-        this.employees.splice(index, 1);
-        this.employees = [...this.employees];
+    /** Remove employee from the list after confirmation. */
+    removeEmployee(emp: NoteSheetEmployee): void {
+        const name = (this.isBangla ? emp.fullNameBN : emp.fullNameEN) || emp.fullNameEN || emp.serviceId || '';
+        this.confirmationService.confirm({
+            message: `"${name}" কে তালিকা থেকে সরাতে চান?`,
+            header: 'নিশ্চিত করুন',
+            icon: 'pi pi-exclamation-triangle',
+            acceptLabel: 'হ্যাঁ',
+            rejectLabel: 'না',
+            accept: () => {
+                this.employees = this.employees.filter(e => e.employeeId !== emp.employeeId);
+            }
+        });
     }
 
-    /** Generate Posting Order — calls CreatePostingOrder API. PostingOrderNo auto-generated by backend. */
+    // ─── Footer paragraphs ────────────────────────────────
+
+    addFooterParagraph(): void {
+        this.footerParagraphs.push('');
+    }
+
+    removeFooterParagraph(index: number): void {
+        this.footerParagraphs.splice(index, 1);
+    }
+
+    trackByIndex(index: number): number {
+        return index;
+    }
+
+    // ─── Generate ─────────────────────────────────────────
+
+    private formatDateToString(value: Date | null): string {
+        if (!value) {
+            const today = new Date();
+            return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        }
+        const y = value.getFullYear(), m = value.getMonth() + 1, d = value.getDate();
+        return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    }
+
     onGeneratePostingOrder(): void {
         if (!this.selectedPostingType || !this.selectedNoteSheetId || this.employees.length === 0) {
             this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Select posting type, notesheet and ensure employees exist.' });
@@ -201,13 +250,19 @@ export class PostingOrderGenerateComponent implements OnInit {
         }
 
         this.saving = true;
-        const today = new Date().toISOString().slice(0, 10);
+
+        // Build footerText JSON from non-empty paragraphs
+        const nonEmptyParagraphs = this.footerParagraphs.filter(p => p.trim().length > 0);
+        const footerText = nonEmptyParagraphs.length > 0 ? JSON.stringify(nonEmptyParagraphs) : null;
 
         this.postingService.createPostingOrder({
-            postingOrderNo: '',  // auto-generated by backend from PostingOrderNumberConfig
-            postingOrderDate: today,
+            postingOrderNo: '',  // auto-generated by backend
+            postingOrderDate: this.formatDateToString(this.postingOrderDate),
             postingType: this.selectedPostingType!,
             noteSheetId: this.selectedNoteSheetId,
+            textType: this.selectedTextType === 'bn' ? 'bn' : 'en',
+            remarks: this.remarks || null,
+            footerText: footerText,
             employeeIds: this.employees.map(e => e.employeeId),
             createdBy: 'system'
         }).subscribe({
@@ -220,6 +275,9 @@ export class PostingOrderGenerateComponent implements OnInit {
                     this.selectedNoteSheetId = null;
                     this.selectedNoteSheetNo = null;
                     this.selectedNoteSheetApprovedDate = null;
+                    this.remarks = '';
+                    this.footerParagraphs = [];
+                    this.postingOrderDate = new Date();
                 } else {
                     this.messageService.add({ severity: 'error', summary: 'Error', detail: res.description ?? 'Failed to generate posting order.' });
                 }

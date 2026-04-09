@@ -89,6 +89,7 @@ import { PostingNotesheetGenerateComponent } from '@/Components/Features/posting
 import { PostingOrderReceiveComponent } from '@/Components/Features/posting-order-receive/posting-order-receive';
 import { PostingOrderGenerateComponent } from '@/Components/Features/posting-order-generate/posting-order-generate';
 import { PostingOrderListComponent } from '@/Components/Features/posting-order-list/posting-order-list';
+import { PostingOrderPreviewPageComponent } from '@/Components/Features/posting-order-preview/posting-order-preview';
 import { EmployeeSignatureUploadComponent } from '@/Components/Features/employee-signature-upload/employee-signature-upload';
 import { AddDraftInterPostingComponent } from '@/Components/Features/add-draft-inter-posting/add-draft-inter-posting';
 import { InterPostingNotesheetGenerateComponent } from '@/Components/Features/inter-posting-notesheet-generate/inter-posting-notesheet-generate';
@@ -277,6 +278,7 @@ export const appRoutes: Routes = [
             { path: 'posting/posting-order-generate', component: PostingOrderGenerateComponent },
             { path: 'posting/posting-order-receive', component: PostingOrderReceiveComponent },
             { path: 'posting/posting-order-list', component: PostingOrderListComponent },
+            { path: 'posting/posting-order-preview', component: PostingOrderPreviewPageComponent },
             { path: 'employee-signature-upload', component: EmployeeSignatureUploadComponent },
             { path: 'presently-serving-members', component: PresentlyServingMembers },
             { path: 'presently-serving-members/organogram', component: OrgTreeServingComponent },

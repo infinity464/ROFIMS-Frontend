@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { Toast } from 'primeng/toast';
@@ -10,16 +10,14 @@ import { TagModule } from 'primeng/tag';
 import { InputTextModule } from 'primeng/inputtext';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
-import { DialogModule } from 'primeng/dialog';
 import { PostingService } from '@/services/posting.service';
-import { PostingOrderMasterDto, PostingOrderMasterWithDetailsDto } from '@/models/posting.model';
+import { PostingOrderMasterDto } from '@/models/posting.model';
 
 @Component({
     selector: 'app-posting-order-list',
     standalone: true,
     imports: [
         CommonModule,
-        FormsModule,
         TableModule,
         ButtonModule,
         Toast,
@@ -27,8 +25,7 @@ import { PostingOrderMasterDto, PostingOrderMasterWithDetailsDto } from '@/model
         TagModule,
         InputTextModule,
         IconFieldModule,
-        InputIconModule,
-        DialogModule
+        InputIconModule
     ],
     providers: [MessageService],
     templateUrl: './posting-order-list.html',
@@ -38,13 +35,9 @@ export class PostingOrderListComponent implements OnInit {
     orders: PostingOrderMasterDto[] = [];
     loading = false;
 
-    /** Detail dialog */
-    showDetailDialog = false;
-    detailLoading = false;
-    selectedOrder: PostingOrderMasterWithDetailsDto | null = null;
-
     constructor(
         private postingService: PostingService,
+        private router: Router,
         private messageService: MessageService
     ) {}
 
@@ -66,21 +59,8 @@ export class PostingOrderListComponent implements OnInit {
         });
     }
 
-    viewDetails(order: PostingOrderMasterDto): void {
-        this.showDetailDialog = true;
-        this.detailLoading = true;
-        this.selectedOrder = null;
-
-        this.postingService.getPostingOrderById(order.id).subscribe({
-            next: (data) => {
-                this.selectedOrder = data;
-                this.detailLoading = false;
-            },
-            error: () => {
-                this.detailLoading = false;
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load posting order details.' });
-            }
-        });
+    viewPreview(order: PostingOrderMasterDto): void {
+        this.router.navigate(['/posting/posting-order-preview'], { queryParams: { id: order.id } });
     }
 
     getStatusSeverity(status: string): "success" | "info" | "warn" | "danger" | "secondary" | "contrast" {
