@@ -94,10 +94,10 @@
                         <td>{{ empPrevWorkplace(emp) }}</td>
                         <td>{{ empTransferUnit(emp) }}</td>
                         <td>{{ empRabId(emp) }}</td>
-                        <td>{{ emp.noteSheetRemarks || '' }}</td>
+                        <td style="text-align: left;">{{ emp.noteSheetRemarks || '' }}</td>
                     </tr>
                     <tr *ngIf="masterRemarks">
-                        <td colspan="10" style="border-top: 1px solid #000; font-style: italic; padding: 6px;">
+                        <td colspan="10" style="border-top: 1px solid #000; font-style: italic; padding: 6px; text-align: left;">
                             {{ masterRemarks }}
                         </td>
                     </tr>
@@ -116,7 +116,7 @@
 
             <!-- Copy Distribution -->
             <div class="po-doc-copy">
-                <div class="po-doc-copy-title">{{ isBangla ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নহে)ঃ' : 'Copy (not in order of seniority):' }}</div>
+                <div class="po-doc-copy-title">{{ isBangla ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নহে)' : 'Copy (not in order of seniority):' }}</div>
             </div>
 
             <!-- Footer Paragraphs -->

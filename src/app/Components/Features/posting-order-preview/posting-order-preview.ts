@@ -114,10 +114,18 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                     this.referenceNumber = first.referenceNumber ?? '';
                     this.isBangla = first.nsTextType === 1 || this.textType === 'bn' || this.textType === '1' || this.textType === 'Bangla';
 
-                    // Parse footer paragraphs from JSON
-                    try {
-                        this.footerParagraphs = first.footerText ? JSON.parse(first.footerText) : [];
-                    } catch { this.footerParagraphs = []; }
+                    // Parse footer paragraphs – handle JSON array, JSON string, or plain text
+                    if (first.footerText) {
+                        try {
+                            const parsed = JSON.parse(first.footerText);
+                            this.footerParagraphs = Array.isArray(parsed) ? parsed : [String(parsed)];
+                        } catch {
+                            // Not valid JSON – treat as plain text, split by newlines
+                            this.footerParagraphs = first.footerText.split('\n').filter((l: string) => l.trim());
+                        }
+                    } else {
+                        this.footerParagraphs = [];
+                    }
 
                     // Load final approver info from notesheet
                     if (first.noteSheetId) {
@@ -282,7 +290,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     }
 
     empRabId(emp: PostingOrderEmployeeRow): string {
-        return emp.rabID || '-';
+        return emp.rabID || '';
     }
 
     // ─── Export Word ──────────────────────────────────────
@@ -407,47 +415,70 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                 this.empDistrict(emp), this.empPrevWorkplace(emp), this.empTransferUnit(emp),
                 this.empRabId(emp), emp.noteSheetRemarks ?? ''
             ].map((val, ci) => new TableCell({
-                children: [new Paragraph({ children: [new TextRun({ text: val, size: 18, sizeComplexScript: bn ? 18 : undefined, font, language: lang })], spacing: { after: 20 } })],
+                children: [new Paragraph({ children: [new TextRun({ text: val, size: 18, sizeComplexScript: bn ? 18 : undefined, font, language: lang })], alignment: ci === 9 ? AlignmentType.LEFT : AlignmentType.CENTER, spacing: { after: 20 } })],
                 borders: cellBorders, width: { size: colW[ci], type: WidthType.DXA }
             }))
         }));
+
+        // Master remarks row (spans all columns, left-aligned, italic)
+        const allRows = [headerRow, ...dataRows];
+        if (this.masterRemarks) {
+            allRows.push(new TableRow({
+                children: [new TableCell({
+                    columnSpan: 10,
+                    borders: cellBorders,
+                    width: { size: 11106, type: WidthType.DXA },
+                    children: [new Paragraph({
+                        children: [new TextRun({ text: this.masterRemarks, italics: true, size: 18, sizeComplexScript: bn ? 18 : undefined, font, language: lang })],
+                        alignment: AlignmentType.LEFT,
+                        spacing: { before: 40, after: 40 }
+                    })]
+                })]
+            }));
+        }
 
         const empTable = new Table({
             width: { size: 11106, type: WidthType.DXA },
             layout: TableLayoutType.FIXED,
             indent: { size: 0, type: WidthType.DXA },
-            rows: [headerRow, ...dataRows],
+            rows: allRows,
             columnWidths: colW
         });
 
-        // ── Signature Block (10pt, right-aligned) ──
+        // ── Signature Block (right-aligned block using borderless table) ──
         const approverNameText = (bn ? this.approverNameBN : this.approverName) || this.approverName || '...................................';
         const approverRankText = (bn ? this.approverRankBN : this.approverRank) || this.approverRank || '............................';
         const approverApptText = (bn ? this.approverAppointmentBN : this.approverAppointment) || this.approverAppointment || '............................';
         const approverPhoneText = this.approverPhone || '...............';
-        const sigParas: Paragraph[] = [
-            new Paragraph({ spacing: { before: 600 } }),
-        ];
+        const noBorder = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+        const noBorders = { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder };
+
+        const sigCellChildren: Paragraph[] = [];
         if (this.approverSignatureUrl) {
-            sigParas.push(new Paragraph({
-                tabStops: [{ type: TabStopType.RIGHT, position: TabStopPosition.MAX }],
-                children: [
-                    new TextRun({ text: '\t', font }),
-                    new ImageRun({ type: 'png', data: this.dataUrlToUint8Array(this.approverSignatureUrl), transformation: { width: 150, height: 50 } })
-                ]
+            sigCellChildren.push(new Paragraph({
+                children: [new ImageRun({ type: 'png', data: this.dataUrlToUint8Array(this.approverSignatureUrl), transformation: { width: 150, height: 50 } })],
+                spacing: { before: 200 }
             }));
         }
-        sigParas.push(
-            new Paragraph({ children: [new TextRun({ text: approverNameText, size: 20, sizeComplexScript: csSize, font, language: lang })], alignment: AlignmentType.RIGHT }),
-            new Paragraph({ children: [new TextRun({ text: approverRankText, size: 20, sizeComplexScript: csSize, font, language: lang })], alignment: AlignmentType.RIGHT }),
-            new Paragraph({ children: [new TextRun({ text: approverApptText, size: 20, sizeComplexScript: csSize, font, language: lang })], alignment: AlignmentType.RIGHT }),
-            new Paragraph({ children: [new TextRun({ text: `${bn ? 'টেলিঃ' : 'Tel:'} ${approverPhoneText}`, size: 20, sizeComplexScript: csSize, font, language: lang })], alignment: AlignmentType.RIGHT }),
-            new Paragraph({ children: [new TextRun({ text: bn ? `তারিখঃ ${this.previewDate}` : `Date: ${this.previewDate}`, size: 20, sizeComplexScript: csSize, font, language: lang })], alignment: AlignmentType.RIGHT, spacing: { before: 100 } })
+        sigCellChildren.push(
+            new Paragraph({ children: [new TextRun({ text: approverNameText, size: 20, sizeComplexScript: csSize, font, language: lang })] }),
+            new Paragraph({ children: [new TextRun({ text: approverRankText, size: 20, sizeComplexScript: csSize, font, language: lang })] }),
+            new Paragraph({ children: [new TextRun({ text: approverApptText, size: 20, sizeComplexScript: csSize, font, language: lang })] }),
+            new Paragraph({ children: [new TextRun({ text: `${bn ? 'টেলিঃ' : 'Tel:'} ${approverPhoneText}`, size: 20, sizeComplexScript: csSize, font, language: lang })] }),
+            new Paragraph({ children: [new TextRun({ text: bn ? `তারিখঃ ${this.previewDate}` : `Date: ${this.previewDate}`, size: 20, sizeComplexScript: csSize, font, language: lang })], spacing: { before: 100 } })
         );
+
+        const sigTable = new Table({
+            alignment: AlignmentType.RIGHT,
+            width: { size: 3500, type: WidthType.DXA },
+            borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder, insideHorizontal: noBorder, insideVertical: noBorder },
+            rows: [new TableRow({ children: [new TableCell({ borders: noBorders, width: { size: 3500, type: WidthType.DXA }, children: sigCellChildren })] })]
+        });
+        const sigParas = [new Paragraph({ spacing: { before: 600 } }), sigTable] as any[];
 
         // ── Copy Distribution (10pt, bold) ──
         const copyPara = new Paragraph({
-            children: [new TextRun({ text: bn ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নহে)ঃ' : 'Copy (not in order of seniority):', bold: true, size: 20, sizeComplexScript: csSize, font, language: lang })],
+            children: [new TextRun({ text: bn ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নহে)' : 'Copy (not in order of seniority):', bold: true, size: 20, sizeComplexScript: csSize, font, language: lang })],
             spacing: { before: 300 }
         });
 
