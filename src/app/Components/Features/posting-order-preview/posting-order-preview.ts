@@ -414,10 +414,18 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                 this.empServiceId(emp), this.empRank(emp), this.empTrade(emp), this.empName(emp),
                 this.empDistrict(emp), this.empPrevWorkplace(emp), this.empTransferUnit(emp),
                 this.empRabId(emp), emp.noteSheetRemarks ?? ''
-            ].map((val, ci) => new TableCell({
-                children: [new Paragraph({ children: [new TextRun({ text: val, size: 18, sizeComplexScript: bn ? 18 : undefined, font, language: lang })], alignment: ci === 9 ? AlignmentType.LEFT : AlignmentType.CENTER, spacing: { after: 20 } })],
-                borders: cellBorders, width: { size: colW[ci], type: WidthType.DXA }
-            }))
+            ].map((val, ci) => {
+                const lines = val.split('\n');
+                const cellParas = lines.map(line => new Paragraph({
+                    children: [new TextRun({ text: line, size: 18, sizeComplexScript: bn ? 18 : undefined, font, language: lang })],
+                    alignment: ci === 9 ? AlignmentType.LEFT : AlignmentType.CENTER,
+                    spacing: { after: 20 }
+                }));
+                return new TableCell({
+                    children: cellParas,
+                    borders: cellBorders, width: { size: colW[ci], type: WidthType.DXA }
+                });
+            })
         }));
 
         // Master remarks row (spans all columns, left-aligned, italic)
