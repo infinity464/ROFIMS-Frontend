@@ -1,0 +1,275 @@
+:host {
+    display: block;
+    min-height: 100vh;
+    background: #d8d8d8;
+}
+
+/* ── Toolbar ──────────────────────────────────────── */
+.preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 1.5rem;
+    background: #fff;
+    border-bottom: 1px solid var(--surface-border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.preview-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* ── Loading / Error ──────────────────────────────── */
+.preview-loading,
+.preview-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    gap: 1rem;
+    color: var(--text-color-secondary);
+}
+
+/* ── Legal Paper Container ────────────────────────── */
+.legal-paper-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem;
+    min-height: calc(100vh - 60px);
+    gap: 2rem;
+}
+
+.legal-paper {
+    /* Legal size portrait: 215.9mm x 355.6mm (same as general notesheet) */
+    width: 215.9mm;
+    min-height: 355.6mm;
+    padding: 14mm 10mm 20mm;
+    background: #fff;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+    box-sizing: border-box;
+    font-family: 'Times New Roman', 'Noto Sans Bengali', 'SolaimanLipi', Times, serif;
+    font-size: 10pt;
+    color: #000;
+    line-height: 1.7;
+    position: relative;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── Document Box (border around content, same as ns-doc-box) ── */
+.po-doc-box {
+    border: 1.5px solid #000;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 10px 16px 18px 20px;
+}
+
+/* ── Document Styles ──────────────────────────────── */
+.po-doc-header {
+    text-align: center;
+    margin-bottom: 4px;
+}
+
+.po-doc-header-line {
+    font-weight: 700;
+    font-size: 11pt;
+    line-height: 1.5;
+}
+
+.po-doc-title {
+    text-align: center;
+    font-size: 14pt;
+    font-weight: 700;
+    text-decoration: underline;
+    margin: 12px 0;
+}
+
+.po-doc-meta {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    font-size: 10pt;
+}
+
+.po-doc-body {
+    margin-bottom: 10px;
+    line-height: 1.8;
+    text-align: justify;
+    font-size: 10pt;
+}
+
+/* ── Employee Table ───────────────────────────────── */
+.po-doc-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 8px;
+    font-size: 9pt;
+
+    th,
+    td {
+        border: 1px solid #000;
+        padding: 4px 6px;
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    th {
+        font-weight: 700;
+        background: #f0f0f0;
+        text-align: center;
+        font-size: 8.5pt;
+    }
+
+    tr:nth-child(even) {
+        background: #fafafa;
+    }
+}
+
+/* ── Note ─────────────────────────────────────────── */
+.po-doc-note {
+    margin: 8px 0;
+    font-style: italic;
+    color: #555;
+    font-size: 10pt;
+}
+
+/* ── Footer Paragraphs ───────────────────────────── */
+.po-doc-footer-text {
+    margin: 12px 0;
+    font-size: 10pt;
+    line-height: 1.7;
+    white-space: pre-wrap;
+
+    p {
+        margin: 6px 0;
+    }
+}
+
+/* ── Signature Block ──────────────────────────────── */
+.po-doc-signature {
+    margin-top: 30px;
+    margin-left: auto;
+    width: fit-content;
+    line-height: 1.8;
+    font-size: 10pt;
+
+    .approver-signature-img {
+        max-height: 60px;
+        max-width: 180px;
+        object-fit: contain;
+        display: block;
+    }
+}
+
+/* ── Memo + Initiator Section ─────────────────────── */
+.po-doc-memo-block {
+    margin-top: 24px;
+    padding-top: 10px;
+    border-top: 1px solid #aaa;
+}
+
+.po-doc-memo {
+    font-size: 10pt;
+}
+
+.po-doc-initiator {
+    text-align: left;
+    margin-top: 16px;
+    line-height: 1.8;
+    font-size: 10pt;
+
+    .approver-signature-img {
+        max-height: 60px;
+        max-width: 180px;
+        object-fit: contain;
+    }
+}
+
+/* ── Copy Distribution ────────────────────────────── */
+.po-doc-copy {
+    margin-top: 16px;
+}
+
+.po-doc-copy-title {
+    font-weight: 600;
+    margin-bottom: 6px;
+    font-size: 10pt;
+}
+
+.po-doc-copy-body {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.po-doc-copy-list {
+    line-height: 2;
+    font-size: 10pt;
+}
+
+.po-doc-copy-sig {
+    text-align: right;
+    line-height: 1.8;
+    font-size: 10pt;
+}
+
+/* ── Print ────────────────────────────────────────── */
+@page {
+    size: 215.9mm 355.6mm;
+    margin: 0;
+}
+
+@media print {
+    .no-print {
+        display: none !important;
+    }
+
+    :host {
+        background: #fff !important;
+        min-height: auto !important;
+    }
+
+    .legal-paper-container {
+        padding: 0 !important;
+        min-height: auto !important;
+    }
+
+    .legal-paper {
+        width: 215.9mm !important;
+        box-shadow: none !important;
+        margin: 0 !important;
+        page-break-after: always;
+        break-after: page;
+    }
+
+    .legal-paper:last-child {
+        page-break-after: auto;
+        break-after: auto;
+    }
+
+    .po-doc-table th {
+        background: #f0f0f0 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}
+
+/* ── Responsive ───────────────────────────────────── */
+@media screen and (max-width: 1200px) {
+    .legal-paper-container {
+        padding: 1rem;
+    }
+
+    .legal-paper {
+        width: 100%;
+        min-height: auto;
+        padding: 12mm 8mm;
+    }
+}

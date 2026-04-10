@@ -1,0 +1,131 @@
+<p-toast position="top-center"></p-toast>
+
+<div class="preview-page">
+
+    <div class="preview-header no-print">
+        <div class="preview-actions" *ngIf="!loading && employees.length > 0">
+            <p-button icon="pi pi-file-word" label="Word" (onClick)="exportWord()" styleClass="p-button-outlined"></p-button>
+            <p-button icon="pi pi-file-pdf" label="PDF" (onClick)="exportPdf()" [loading]="exportingPdf" styleClass="p-button-outlined"></p-button>
+            <p-button icon="pi pi-print" label="Print Preview" (onClick)="printPreview()" [loading]="printingPreview" styleClass="p-button-outlined"></p-button>
+        </div>
+    </div>
+
+    <div class="preview-loading" *ngIf="loading">
+        <i class="pi pi-spin pi-spinner" style="font-size:2rem"></i>
+        <p>Loading posting order...</p>
+    </div>
+
+    <div class="preview-error" *ngIf="error && !loading">
+        <i class="pi pi-exclamation-circle" style="font-size:3rem; color:var(--red-500)"></i>
+        <p>Failed to load posting order.</p>
+        <p-button label="Go Back" icon="pi pi-arrow-left" (onClick)="goBack()"></p-button>
+    </div>
+
+    <div class="legal-paper-container" *ngIf="!loading && !error && employees.length > 0">
+        <div class="legal-paper">
+          <div class="po-doc-box">
+
+            <!-- Government Header -->
+            <div class="po-doc-header">
+                <ng-container *ngIf="isBangla">
+                    <div class="po-doc-header-line">গণপ্রজাতন্ত্রী বাংলাদেশ সরকার</div>
+                    <div class="po-doc-header-line">বাংলাদেশ পুলিশ</div>
+                    <div class="po-doc-header-line">র‌্যাব ফোর্সেস সদর দপ্তর</div>
+                    <div class="po-doc-header-line">কুর্মিটোলা, ঢাকা</div>
+                </ng-container>
+                <ng-container *ngIf="!isBangla">
+                    <div class="po-doc-header-line">Government of the People's Republic of Bangladesh</div>
+                    <div class="po-doc-header-line">Bangladesh Police</div>
+                    <div class="po-doc-header-line">RAB Forces Headquarters</div>
+                    <div class="po-doc-header-line">Kurmitola, Dhaka</div>
+                </ng-container>
+            </div>
+
+            <!-- Title -->
+            <div class="po-doc-title">{{ isBangla ? 'প্রজ্ঞাপন' : 'NOTIFICATION' }}</div>
+
+            <!-- Order No & Date -->
+            <div class="po-doc-meta">
+                <span>{{ isBangla ? 'ফোর্স অর্ডার নং' : 'Force Order No' }}: {{ postingOrderNo || '.............' }}</span>
+                <span>{{ isBangla ? 'তারিখ' : 'Date' }}: {{ previewDate }}</span>
+            </div>
+
+            <!-- Body Text (dynamic with mother org names) -->
+            <div class="po-doc-body">{{ bodyText }}</div>
+
+            <!-- Employee Table -->
+            <table class="po-doc-table">
+                <thead>
+                    <tr>
+                        <ng-container *ngIf="isBangla">
+                            <th>ক্রমিক</th>
+                            <th>ব্যক্তিগত নম্বর</th>
+                            <th>পদবি</th>
+                            <th>ট্রেড</th>
+                            <th>নাম</th>
+                            <th>নিজ জেলা (দায়িত্বপূর্ণ এলাকা)</th>
+                            <th>পূর্ববতী কর্মস্থল (দায়িত্বপূর্ণ এলাকা)</th>
+                            <th>বদলিকৃত কর্মস্থল</th>
+                            <th>র‌্যাব আইডি</th>
+                            <th>মন্তব্য</th>
+                        </ng-container>
+                        <ng-container *ngIf="!isBangla">
+                            <th>Ser</th>
+                            <th>Service ID</th>
+                            <th>Rank</th>
+                            <th>Trade</th>
+                            <th>Name</th>
+                            <th>Own District (Responsible Area)</th>
+                            <th>Previous Workplace (Responsible Area)</th>
+                            <th>Transfer Unit</th>
+                            <th>RAB ID</th>
+                            <th>Remarks</th>
+                        </ng-container>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let emp of employees; let i = index">
+                        <td class="text-center">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}</td>
+                        <td class="font-semibold">{{ empServiceId(emp) }}</td>
+                        <td>{{ empRank(emp) }}</td>
+                        <td>{{ empTrade(emp) }}</td>
+                        <td>{{ empName(emp) }}</td>
+                        <td style="white-space: pre-line;">{{ empDistrict(emp) }}</td>
+                        <td style="white-space: pre-line;">{{ empPrevWorkplace(emp) }}</td>
+                        <td>{{ empTransferUnit(emp) }}</td>
+                        <td>{{ empRabId(emp) }}</td>
+                        <td style="text-align: left;">{{ emp.noteSheetRemarks || '' }}</td>
+                    </tr>
+                    <tr *ngIf="masterRemarks">
+                        <td colspan="10" style="border-top: 1px solid #000; font-style: italic; padding: 6px; text-align: left;">
+                            {{ masterRemarks }}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- Signature Block -->
+            <div class="po-doc-signature">
+                <div *ngIf="approverSignatureUrl"><img [src]="approverSignatureUrl" alt="Signature" class="approver-signature-img" /></div>
+                <div>{{ (isBangla ? approverNameBN : approverName) || approverName || '...................................' }}</div>
+                <div>{{ (isBangla ? approverRankBN : approverRank) || approverRank || '............................' }}</div>
+                <div>{{ (isBangla ? approverAppointmentBN : approverAppointment) || approverAppointment || '............................' }}</div>
+                <div>{{ isBangla ? 'টেলিঃ' : 'Tel:' }} {{ approverPhone || '...............' }}</div>
+                <div>{{ isBangla ? 'তারিখঃ' : 'Date:' }} {{ previewDate }}</div>
+            </div>
+
+            <!-- Copy Distribution -->
+            <div class="po-doc-copy">
+                <div class="po-doc-copy-title">{{ isBangla ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নহে)' : 'Copy (not in order of seniority):' }}</div>
+            </div>
+
+            <!-- Footer Paragraphs -->
+            <div class="po-doc-footer-text" *ngIf="footerParagraphs.length > 0">
+                <p *ngFor="let para of footerParagraphs; let i = index">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}। {{ para }}</p>
+            </div>
+
+          </div><!-- /po-doc-box -->
+        </div>
+    </div>
+
+</div>

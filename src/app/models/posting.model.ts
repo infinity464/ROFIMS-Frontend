@@ -296,6 +296,61 @@ export interface PostingOrderMasterWithDetailsDto {
     details: PostingOrderDetailDto[];
 }
 
+/** Posting order employee row from vw_PostingOrderWithEmployees. */
+export interface PostingOrderEmployeeRow {
+    postingOrderMasterId: number;
+    postingOrderNo: string;
+    postingOrderDate: string;
+    postingType: string;
+    noteSheetId: number;
+    refPostingOrderMasterId: number | null;
+    referenceNumber: string | null;
+    subject: string | null;
+    mainText: string | null;
+    textType: string | null;
+    filesReferences: string | null;
+    noteSheetNo: string | null;
+    nsTextType: number | null;
+    draftPostingMasterId: number | null;
+    status: string;
+    masterRemarks: string | null;
+    footerText: string | null;
+    createdBy: string;
+    createdDate: string;
+    postingOrderDetailId: number;
+    employeeId: number;
+    detailRemarks: string | null;
+    noteSheetRemarks: string | null;
+    transferRabUnitId: number | null;
+    transferRabUnitName: string | null;
+    transferRabUnitNameBN: string | null;
+    serviceId: string | null;
+    prefixName: string | null;
+    prefixNameBN: string | null;
+    fullNameEN: string | null;
+    fullNameBN: string | null;
+    rabID: string | null;
+    rankName: string | null;
+    rankNameBN: string | null;
+    corpsName: string | null;
+    corpsNameBN: string | null;
+    tradeName: string | null;
+    tradeNameBN: string | null;
+    motherUnitName: string | null;
+    motherUnitNameBN: string | null;
+    joiningDateInRAB: string | null;
+    rankSortOrder: number | null;
+    motherOrgSortOrder: number | null;
+    permanentDistrictName: string | null;
+    permanentDistrictNameBN: string | null;
+    presentDistrictName: string | null;
+    presentDistrictNameBN: string | null;
+    spousePresentDistrictName: string | null;
+    spousePresentDistrictNameBN: string | null;
+    motherOrgLocationName: string | null;
+    motherOrgLocationNameBN: string | null;
+}
+
 /** Approved NoteSheet row for dropdown. */
 export interface ApprovedNoteSheetItem {
     noteSheetId: number;

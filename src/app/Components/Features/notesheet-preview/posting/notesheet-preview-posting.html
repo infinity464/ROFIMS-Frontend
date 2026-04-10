@@ -130,9 +130,9 @@
                                     <td>{{ isEnglish() ? (emp.rankName || '-') : (emp.rankNameBN || emp.rankName || '-') }}</td>
                                     <td>{{ isEnglish() ? (emp.tradeName || '-') : (emp.tradeNameBN || emp.tradeName || '-') }}</td>
                                     <td>{{ isEnglish() ? (emp.fullNameEN || '-') : (emp.fullNameBN || emp.fullNameEN || '-') }}</td>
-                                    <td>{{ isEnglish() ? (emp.presentDistrictName || '-') : (emp.presentDistrictNameBN || emp.presentDistrictName || '-') }}</td>
-                                    <td>{{ isEnglish() ? (emp.spousePresentDistrictName || '-') : (emp.spousePresentDistrictNameBN || emp.spousePresentDistrictName || '-') }}</td>
-                                    <td>{{ isEnglish() ? (emp.motherOrgLocationName || '-') : (emp.motherOrgLocationNameBN || emp.motherOrgLocationName || '-') }}</td>
+                                    <td style="white-space: pre-line;">{{ isEnglish() ? (emp.presentDistrictName || '-') : (emp.presentDistrictNameBN || emp.presentDistrictName || '-') }}</td>
+                                    <td style="white-space: pre-line;">{{ isEnglish() ? (emp.spousePresentDistrictName || '-') : (emp.spousePresentDistrictNameBN || emp.spousePresentDistrictName || '-') }}</td>
+                                    <td style="white-space: pre-line;">{{ isEnglish() ? (emp.motherOrgLocationName || '-') : (emp.motherOrgLocationNameBN || emp.motherOrgLocationName || '-') }}</td>
                                     <td>
                                         <p-select [(ngModel)]="emp.transferRabUnitId" [options]="rabUnitOptions" optionLabel="label" optionValue="value"
                                                   placeholder="Select Unit" [filter]="true" filterBy="label" [showClear]="true"
@@ -243,9 +243,9 @@
                                 <td>{{ isEnglish() ? (emp.rankName || '') : (emp.rankNameBN || emp.rankName || '') }}</td>
                                 <td>{{ isEnglish() ? (emp.tradeName || '') : (emp.tradeNameBN || emp.tradeName || '') }}</td>
                                 <td>{{ isEnglish() ? (emp.fullNameEN || '') : (emp.fullNameBN || emp.fullNameEN || '') }}</td>
-                                <td>{{ isEnglish() ? (emp.presentDistrictName || '') : (emp.presentDistrictNameBN || emp.presentDistrictName || '') }}</td>
-                                <td>{{ isEnglish() ? (emp.spousePresentDistrictName || '') : (emp.spousePresentDistrictNameBN || emp.spousePresentDistrictName || '') }}</td>
-                                <td>{{ isEnglish() ? (emp.motherOrgLocationName || '') : (emp.motherOrgLocationNameBN || emp.motherOrgLocationName || '') }}</td>
+                                <td style="white-space: pre-line;">{{ isEnglish() ? (emp.presentDistrictName || '') : (emp.presentDistrictNameBN || emp.presentDistrictName || '') }}</td>
+                                <td style="white-space: pre-line;">{{ isEnglish() ? (emp.spousePresentDistrictName || '') : (emp.spousePresentDistrictNameBN || emp.spousePresentDistrictName || '') }}</td>
+                                <td style="white-space: pre-line;">{{ isEnglish() ? (emp.motherOrgLocationName || '') : (emp.motherOrgLocationNameBN || emp.motherOrgLocationName || '') }}</td>
                                 <td>{{ isEnglish() ? (emp.transferRabUnitName || '') : (emp.transferRabUnitId ? unitLabelMapBN[emp.transferRabUnitId] : null) || emp.transferRabUnitName || '' }}</td>
                                 <td>{{ emp.remarks || '' }}</td>
                             </tr>

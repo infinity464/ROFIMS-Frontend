@@ -811,8 +811,8 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
             const hasRemarks = this.postingEmployees.some(e => !!e.remarks);
             //                  Ser,  ID,   Rank, Trade, Name, OwnDist, SpDist, Loc,  TrUnit, Remarks
             const colWidths = hasRemarks
-                ? [600, 1150, 800,  550, 1300, 1150, 1150, 1266, 1000, 1500]
-                : [600, 1150, 800, 1100, 1300, 1150, 1150, 1266, 1000,  950];
+                ? [490, 1220, 850, 1030, 1380, 1220, 1220, 1340, 1060, 1296]
+                : [490, 1220, 850, 1516, 1380, 1220, 1220, 1340, 1060,  810];
             const headerRow = new TableRow({ tableHeader: true, children: cols.map((c, ci) => new TableCell({
                 children: [new Paragraph({ children: [new TextRun({ text: c, size: 20, sizeComplexScript: bn ? 20 : undefined, font, language: lang })], alignment: AlignmentType.CENTER })],
                 borders: cellBorders, width: { size: colWidths[ci], type: WidthType.DXA },
@@ -866,7 +866,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
             }));
         }
 
-        // Initiator — right-positioned, left-aligned text within block
+        // Initiator — right-positioned, keep entire block together
         if (model.initiator) {
             const initIndent = { left: 5500 };
             // Signature image or spacer
@@ -877,24 +877,25 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
                             type: 'png', data: this.base64ToBytes(model.initiator.signatureDataUrl),
                             transformation: { width: 100, height: 40 }
                         })],
-                        alignment: AlignmentType.LEFT, indent: initIndent, spacing: { before: 280, after: 80 }
+                        alignment: AlignmentType.LEFT, indent: initIndent, spacing: { before: 280, after: 80 },
+                        keepNext: true, keepLines: true
                     }));
                 } catch { /* no sig */ }
             } else {
-                mainChildren.push(new Paragraph({ spacing: { before: 280, after: 80 } }));
+                mainChildren.push(new Paragraph({ spacing: { before: 280, after: 80 }, keepNext: true }));
             }
 
             // Name
             mainChildren.push(new Paragraph({
                 children: [new TextRun({ text: model.initiator.nameLine, size: 22, sizeComplexScript: csSize, font, language: lang })],
-                alignment: AlignmentType.LEFT, indent: initIndent
+                alignment: AlignmentType.LEFT, indent: initIndent, keepNext: true
             }));
 
             // Rank
             if (model.initiator.rankLine) {
                 mainChildren.push(new Paragraph({
                     children: [new TextRun({ text: model.initiator.rankLine, size: 22, sizeComplexScript: csSize, font, language: lang })],
-                    alignment: AlignmentType.LEFT, indent: initIndent
+                    alignment: AlignmentType.LEFT, indent: initIndent, keepNext: true
                 }));
             }
 
@@ -902,11 +903,11 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
             if (model.initiator.appointment) {
                 mainChildren.push(new Paragraph({
                     children: [new TextRun({ text: model.initiator.appointment, size: 22, sizeComplexScript: csSize, font, language: lang })],
-                    alignment: AlignmentType.LEFT, indent: initIndent
+                    alignment: AlignmentType.LEFT, indent: initIndent, keepNext: true
                 }));
             }
 
-            // Date (with spacing above for 2-line gap)
+            // Date (last item — no keepNext needed)
             if (model.initiator.date) {
                 mainChildren.push(new Paragraph({
                     children: [new TextRun({ text: model.initiator.date, size: 22, sizeComplexScript: csSize, font, language: lang })],
@@ -915,15 +916,15 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
             }
         }
 
-        // Approvers
+        // Approvers — keep each approver block together
         for (const ap of model.approvers) {
             mainChildren.push(new Paragraph({
                 children: [new TextRun({ text: ap.role, underline: {}, size: 20, sizeComplexScript: csSize, font, language: lang })],
-                indent: { left: 240 }, spacing: { before: 280 }
+                indent: { left: 240 }, spacing: { before: 280 }, keepNext: true, keepLines: true
             }));
             const runs: TextRun[] = [new TextRun({ text: ap.serialText, bold: true, size: 20, sizeComplexScript: csSize, font, language: lang })];
             if (ap.remark) runs.push(new TextRun({ text: ` ${ap.remark}`, size: 20, sizeComplexScript: csSize, font, language: lang }));
-            mainChildren.push(new Paragraph({ children: runs, indent: { left: 240 } }));
+            mainChildren.push(new Paragraph({ children: runs, indent: { left: 240 }, keepNext: true }));
             if (ap.signatureDataUrl) {
                 try {
                     mainChildren.push(new Paragraph({
@@ -932,11 +933,12 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
                             transformation: { width: 100, height: 40 }
                         })],
                         alignment: AlignmentType.CENTER,
-                        spacing: { before: 100, after: 40 }
+                        spacing: { before: 100, after: 40 },
+                        keepNext: true
                     }));
                 } catch { /* no sig */ }
             } else {
-                mainChildren.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 100, after: 40 } }));
+                mainChildren.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 100, after: 40 }, keepNext: true }));
             }
             if (ap.date) {
                 mainChildren.push(new Paragraph({
@@ -946,11 +948,11 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
             }
         }
 
-        // Title paragraphs — sit ABOVE the bordered table
+        // Title paragraphs — inside the page border at the top
         const titleChildren: (Paragraph | Table)[] = [
             new Paragraph({
                 children: [new TextRun({ text: 'NOTE SHEET', bold: true, underline: {}, size: 24, font: 'Times New Roman' })],
-                alignment: AlignmentType.CENTER, spacing: { after: 40 }
+                alignment: AlignmentType.CENTER, spacing: { before: 80, after: 40 }
             }),
             new Paragraph({
                 children: [new TextRun({ text: 'মন্তব্য পত্র', underline: {}, size: 24, font: 'Nirmala UI' })],
@@ -958,22 +960,10 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
             }),
         ];
 
-        // Wrap all content in a single bordered table cell so borders continue across page breaks
-        const frameBorder = { style: BorderStyle.SINGLE, size: 6, color: '000000' };
-        const contentWidth = 12240 - 567 - 567; // page width minus margins
-        const borderedTable = new Table({
-            width: { size: contentWidth, type: WidthType.DXA },
-            rows: [new TableRow({
-                children: [new TableCell({
-                    children: mainChildren.length > 0 ? mainChildren : [new Paragraph({})],
-                    borders: { top: frameBorder, bottom: frameBorder, left: frameBorder, right: frameBorder },
-                    width: { size: contentWidth, type: WidthType.DXA },
-                    margins: { top: 80, bottom: 10200, left: 120, right: 120 },
-                })]
-            })],
-        });
+        const docChildren: (Paragraph | Table)[] = [...titleChildren, ...mainChildren];
 
-        const docChildren: (Paragraph | Table)[] = [...titleChildren, borderedTable];
+        // Use page borders so every page renders the same border consistently
+        const pageBorder = { style: BorderStyle.SINGLE, size: 6, color: '000000', space: 10 };
 
         return new Document({
             styles: bn ? { default: { document: { run: { language: { value: 'bn-BD', bidirectional: 'bn-BD' } } } } } : undefined,
@@ -981,7 +971,13 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
                 properties: {
                     page: {
                         size: { width: 12240, height: 20160, orientation: PageOrientation.PORTRAIT },
-                        margin: { top: 567, right: 567, bottom: 200, left: 567 },
+                        margin: { top: 567, right: 567, bottom: 567, left: 567 },
+                        borders: {
+                            pageBorderTop: pageBorder,
+                            pageBorderBottom: pageBorder,
+                            pageBorderLeft: pageBorder,
+                            pageBorderRight: pageBorder,
+                        },
                     }
                 },
                 children: docChildren

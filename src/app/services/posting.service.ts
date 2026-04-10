@@ -16,6 +16,7 @@ import {
     PostingReceiveViewDto,
     PostingOrderMasterDto,
     PostingOrderMasterWithDetailsDto,
+    PostingOrderEmployeeRow,
     ApprovedNoteSheetItem,
     PostingType,
     PostingNoteSheetStatus
@@ -515,6 +516,11 @@ export class PostingService {
         return this.http.get<PostingOrderMasterWithDetailsDto>(`${API}/GetPostingOrderById/${id}`);
     }
 
+    /** Get posting order employees with full details from vw_PostingOrderWithEmployees. */
+    getPostingOrderEmployees(id: number): Observable<PostingOrderEmployeeRow[]> {
+        return this.http.get<PostingOrderEmployeeRow[]>(`${API}/GetPostingOrderEmployees/${id}`);
+    }
+
     /** Create a new posting order. */
     createPostingOrder(body: {
         postingOrderNo: string;
@@ -528,6 +534,7 @@ export class PostingService {
         textType?: string | null;
         filesReferences?: string | null;
         remarks?: string | null;
+        footerText?: string | null;
         employeeIds: number[];
         createdBy: string;
     }): Observable<{ statusCode: number; description: string; data?: any }> {
@@ -548,6 +555,7 @@ export class PostingService {
         filesReferences?: string | null;
         status?: string | null;
         remarks?: string | null;
+        footerText?: string | null;
         employeeIds: number[];
         updatedBy: string;
     }): Observable<{ statusCode: number; description: string }> {
