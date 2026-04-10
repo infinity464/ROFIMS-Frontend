@@ -23,6 +23,8 @@ export interface ReportConfig {
     showPageNumbers: boolean;
     /** Optional base filename (without extension). Falls back to 'report_en/bn'. */
     filename?: string;
+    /** Optional applied filter lines shown below the date (e.g. "Rank: Major"). */
+    filterLines?: string[];
 }
 
 /** One section in a profile export: heading + table (same as web view). */
@@ -112,7 +114,9 @@ export class ExportService {
     <style>
         body { font-family: ${fontFamily}; font-size: ${sizeContentPt}; margin: 0; padding: 0; }
         h1 { font-family: ${fontFamily}; font-size: 14pt; font-weight: bold; text-align: center; margin-bottom: 8px; }
-        .date { font-family: ${fontFamily}; font-size: 14pt; color: #555; text-align: center; margin-bottom: 16px; }
+        .date { font-family: ${fontFamily}; font-size: 14pt; color: #555; text-align: center; margin-bottom: 4px; }
+        .filters { font-family: ${fontFamily}; font-size: 10pt; color: #333; text-align: center; margin-bottom: 16px; }
+        .filters span { display: inline-block; margin: 2px 6px; }
         table { width: 100%; border-collapse: collapse; font-family: ${fontFamily}; }
         thead th { font-family: ${fontFamily}; }
         tbody td { font-family: ${fontFamily}; }
@@ -122,6 +126,7 @@ export class ExportService {
 <body>
     <h1>${escapeHtml(title)}</h1>
     <div class="date">${escapeHtml(dateText)}</div>
+    ${(config.filterLines?.length) ? `<div class="filters">${config.filterLines.map(l => `<span>${escapeHtml(l)}</span>`).join(' | ')}</div>` : ''}
     <table>
         <thead>
             <tr>${headerCells}</tr>
@@ -238,8 +243,18 @@ export class ExportService {
                                 }),
                             ],
                             alignment: AlignmentType.CENTER,
-                            spacing: { after: 300 },
+                            spacing: { after: (config.filterLines?.length) ? 150 : 300 },
                         }),
+                        ...(config.filterLines?.length ? [new Paragraph({
+                            children: config.filterLines.map((line, i) => new TextRun({
+                                text: (i > 0 ? '  |  ' : '') + line,
+                                size: 20,
+                                color: '333333',
+                                font,
+                            })),
+                            alignment: AlignmentType.CENTER,
+                            spacing: { after: 300 },
+                        })] : []),
                         table,
                     ],
                 },
@@ -259,9 +274,11 @@ export class ExportService {
             day: 'numeric',
         });
 
+        const filterLine = config.filterLines?.length ? config.filterLines.join('  |  ') : '';
         const data: unknown[][] = [
             [config.title],
             [dateStr],
+            ...(filterLine ? [[filterLine]] : []),
             [],
             config.columns,
             ...config.rows,
@@ -271,10 +288,14 @@ export class ExportService {
         ws['!cols'] = config.columns.map(() => ({ wch: 22 }));
 
         const colCount = config.columns.length;
-        ws['!merges'] = [
+        const merges = [
             { s: { r: 0, c: 0 }, e: { r: 0, c: colCount - 1 } },
             { s: { r: 1, c: 0 }, e: { r: 1, c: colCount - 1 } },
         ];
+        if (filterLine) {
+            merges.push({ s: { r: 2, c: 0 }, e: { r: 2, c: colCount - 1 } });
+        }
+        ws['!merges'] = merges;
 
         const wb = XLSX.utils.book_new();
         const sheetName = config.lang === 'bn' ? 'প্রতিবেদন' : 'Report';

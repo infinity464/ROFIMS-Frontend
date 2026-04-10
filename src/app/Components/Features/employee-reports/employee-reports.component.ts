@@ -59,18 +59,18 @@ export class EmployeeReportsComponent implements OnInit {
     readonly L = REPORT_LABELS;
 
     reportType: ReportType = 'memberAppointment';
-    reportTypes: { label: string; value: ReportType }[] = [
-        { label: 'Appointment', value: 'memberAppointment' },
-        { label: 'Course', value: 'batchCourse' },
-        { label: 'Education', value: 'education' },
-        { label: 'Mother Org', value: 'motherOrg' },
-        { label: 'Officer Type', value: 'officerType' },
-        { label: 'RAB UNIT', value: 'rabUnit' },
-        { label: 'Wings', value: 'wings' },
+    reportTypes: { label: string; labelBn: string; value: ReportType }[] = [
+        { label: 'Appointment', labelBn: 'নিয়োগ', value: 'memberAppointment' },
+        { label: 'Course', labelBn: 'কোর্স', value: 'batchCourse' },
+        { label: 'Education', labelBn: 'শিক্ষা', value: 'education' },
+        { label: 'Mother Org', labelBn: 'মাতৃ সংস্থা', value: 'motherOrg' },
+        { label: 'Officer Type', labelBn: 'অফিসার ধরণ', value: 'officerType' },
+        { label: 'RAB UNIT', labelBn: 'র‍্যাব ইউনিট', value: 'rabUnit' },
+        { label: 'Wings', labelBn: 'উইং', value: 'wings' },
     ];
 
     /** Common code options for the selected report type. When user selects one, filter fires. */
-    commonCodeOptions: { label: string; value: number }[] = [];
+    commonCodeOptions: { label: string; labelBn: string; value: number }[] = [];
     selectedCommonCodeId: number | null = null;
 
     constructor(private commonCodeService: CommonCodeService) {}
@@ -90,6 +90,7 @@ export class EmployeeReportsComponent implements OnInit {
                 next: (list: MotherOrganizationModel[]) => {
                     this.commonCodeOptions = (list || []).map((c) => ({
                         label: c.orgNameEN || String(c.orgId),
+                        labelBn: c.orgNameBN || c.orgNameEN || String(c.orgId),
                         value: c.orgId,
                     }));
                 },
@@ -104,6 +105,7 @@ export class EmployeeReportsComponent implements OnInit {
             next: (list: CommonCodeModel[]) => {
                 this.commonCodeOptions = (list || []).map((c) => ({
                     label: c.codeValueEN || String(c.codeId),
+                    labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId),
                     value: c.codeId,
                 }));
             },
@@ -124,6 +126,21 @@ export class EmployeeReportsComponent implements OnInit {
         return this.reportType === 'motherOrg'
             ? this.L['en']['report.placeholderMotherOrg']
             : this.L['en']['report.placeholderCommonCode'];
+    }
+
+    /** Label of the currently selected common code (language-aware, for child report titles). */
+    get selectedCommonCodeLabel(): string {
+        if (this.selectedCommonCodeId == null) return '';
+        const opt = this.commonCodeOptions.find((o) => o.value === this.selectedCommonCodeId);
+        if (!opt) return '';
+        return this.reportLang === 'bn' ? opt.labelBn : opt.label;
+    }
+
+    /** The report type label for the currently selected report type (language-aware). */
+    get selectedReportTypeLabel(): string {
+        const opt = this.reportTypes.find((o) => o.value === this.reportType);
+        if (!opt) return '';
+        return this.reportLang === 'bn' ? opt.labelBn : opt.label;
     }
 
     /** When common code is selected, child report components receive it and run load (filter fires). */

@@ -108,35 +108,50 @@
 
 <div class="report-results-card">
     <div class="report-results-header">
-        <div class="report-results-title">
-            {{ L['en']['report.results.title'] }}
-            <span class="report-results-count">{{ displayNum(totalRecords) }} {{ L['en']['report.results.records'] }}</span>
-        </div>
-        <div class="report-results-actions">
-            <button type="button" class="report-lang-toggle" (click)="langToggle.emit()">
-                {{ lang === 'en' ? 'বাংলা' : 'English' }}
-            </button>
-            <div class="report-export-wrap">
-                <button type="button" class="report-btn-export" (click)="toggleExportDropdown($event)">
-                    <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                        <path d="M6.5 1v7M3.5 5.5l3 3 3-3M1.5 10.5h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    {{ L['en']['report.search.export'] }}
+        <!-- Row 1: actions right-aligned -->
+        <div class="report-toolbar-row">
+            <div class="report-results-actions">
+                <button type="button" class="report-lang-toggle" (click)="langToggle.emit()">
+                    {{ lang === 'en' ? 'বাংলা' : 'English' }}
                 </button>
-                @if (exportDropdownOpen) {
-                <div class="report-export-dropdown" (click)="$event.stopPropagation()">
-                    <button type="button" class="report-export-item report-export-pdf" (click)="exportAs('pdf')">
-                        <span class="report-export-icon">⬇</span> PDF
+                <div class="report-export-wrap">
+                    <button type="button" class="report-btn-export" (click)="toggleExportDropdown($event)">
+                        <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                            <path d="M6.5 1v7M3.5 5.5l3 3 3-3M1.5 10.5h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        {{ L['en']['report.search.export'] }}
                     </button>
-                    <button type="button" class="report-export-item report-export-word" (click)="exportAs('word')">
-                        <span class="report-export-icon">⬇</span> Word
-                    </button>
-                    <button type="button" class="report-export-item report-export-excel" (click)="exportAs('excel')">
-                        <span class="report-export-icon">⬇</span> Excel
-                    </button>
+                    @if (exportDropdownOpen) {
+                    <div class="report-export-dropdown" (click)="$event.stopPropagation()">
+                        <button type="button" class="report-export-item report-export-print" (click)="exportAs('print')">
+                            <i class="pi pi-print" style="font-size:0.75rem"></i> Print
+                        </button>
+                        <button type="button" class="report-export-item report-export-pdf" (click)="exportAs('pdf')">
+                            <span class="report-export-icon">⬇</span> PDF
+                        </button>
+                        <button type="button" class="report-export-item report-export-word" (click)="exportAs('word')">
+                            <span class="report-export-icon">⬇</span> Word
+                        </button>
+                        <button type="button" class="report-export-item report-export-excel" (click)="exportAs('excel')">
+                            <span class="report-export-icon">⬇</span> Excel
+                        </button>
+                    </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Row 2: centered two-line title -->
+        <div class="report-header-title-block">
+            <div class="report-main-title">{{ reportTitle }}</div>
+            <div class="report-date-line">{{ dateLine }}</div>
+            @if (appliedFilterLines.length > 0) {
+                <div class="report-filter-summary">
+                    @for (line of appliedFilterLines; track line) {
+                        <span class="report-filter-tag">{{ line }}</span>
+                    }
                 </div>
             }
-            </div>
         </div>
     </div>
 

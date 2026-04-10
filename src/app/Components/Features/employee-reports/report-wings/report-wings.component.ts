@@ -27,12 +27,14 @@ export class ReportWingsComponent implements OnInit, OnChanges {
     L = REPORT_LABELS;
     @Input() lang: ReportLang = 'en';
     @Input() commonCodeId: number | null = null;
+    @Input() reportTypeLabel = '';
+    @Input() commonCodeLabel = '';
     @Output() langToggle = new EventEmitter<void>();
 
     orgOptions: MotherOrganizationModel[] = [];
     selectedOrgId: number | null = null;
-    rankOptions: { label: string; value: number }[] = [];
-    tradeOptions: { label: string; value: number }[] = [];
+    rankOptions: { label: string; labelBn: string; value: number }[] = [];
+    tradeOptions: { label: string; labelBn: string; value: number }[] = [];
     selectedRankId: number | null = null;
     selectedTradeId: number | null = null;
 
@@ -43,6 +45,7 @@ export class ReportWingsComponent implements OnInit, OnChanges {
     totalRecords = 0;
 
     exportDropdownOpen = false;
+    appliedFilterLines: string[] = [];
 
     constructor(
         private reportService: ReportService,
@@ -57,7 +60,40 @@ export class ReportWingsComponent implements OnInit, OnChanges {
     }
 
     get reportTitle(): string {
+        if (this.reportTypeLabel && this.commonCodeLabel) {
+            const suffix = this.lang === 'bn' ? 'প্রতিবেদন' : 'Report';
+            return `${this.reportTypeLabel}: ${this.commonCodeLabel} ${suffix}`;
+        }
         return this.L[this.lang]['report.title.wings'];
+    }
+
+    get dateLine(): string {
+        const now = new Date();
+        if (this.lang === 'en') {
+            return now.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' });
+        }
+        return now.toLocaleDateString('bn-BD', { day: 'numeric', month: 'long', year: 'numeric' });
+    }
+
+    buildFilterLines(): string[] {
+        const L = this.L[this.lang];
+        const lines: string[] = [];
+        if (this.selectedOrgId != null) {
+            const org = this.orgOptions.find((o) => o.orgId === this.selectedOrgId);
+            const val = this.lang === 'bn' ? (org?.orgNameBN || org?.orgNameEN) : org?.orgNameEN;
+            if (val) lines.push(`${L['report.search.motherOrg']}: ${val}`);
+        }
+        if (this.selectedRankId != null) {
+            const rank = this.rankOptions.find((o) => o.value === this.selectedRankId);
+            const val = this.lang === 'bn' ? rank?.labelBn : rank?.label;
+            if (val) lines.push(`${L['report.search.rank']}: ${val}`);
+        }
+        if (this.selectedTradeId != null) {
+            const trade = this.tradeOptions.find((o) => o.value === this.selectedTradeId);
+            const val = this.lang === 'bn' ? trade?.labelBn : trade?.label;
+            if (val) lines.push(`${L['report.search.trade']}: ${val}`);
+        }
+        return lines;
     }
 
     getExportData(): { columns: string[]; rows: string[][] } {
@@ -92,7 +128,7 @@ export class ReportWingsComponent implements OnInit, OnChanges {
         this.exportDropdownOpen = !this.exportDropdownOpen;
     }
 
-    async exportAs(type: 'pdf' | 'word' | 'excel'): Promise<void> {
+    async exportAs(type: 'print' | 'pdf' | 'word' | 'excel'): Promise<void> {
         const { columns, rows } = this.getExportData();
         const config = {
             title: this.reportTitle,
@@ -100,8 +136,9 @@ export class ReportWingsComponent implements OnInit, OnChanges {
             columns,
             rows,
             showPageNumbers: true,
+            filterLines: this.appliedFilterLines,
         };
-        if (type === 'pdf') {
+        if (type === 'print' || type === 'pdf') {
             this.exportService.exportPDF(config);
         } else if (type === 'word') {
             await this.exportService.exportWord(config);
@@ -142,11 +179,11 @@ export class ReportWingsComponent implements OnInit, OnChanges {
         if (orgId != null) {
             this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'MotherOrgRank').subscribe({
                 next: (codes: CommonCodeModel[]) =>
-                    (this.rankOptions = codes.map((c) => ({ label: c.codeValueEN || String(c.codeId), value: c.codeId }))),
+                    (this.rankOptions = codes.map((c) => ({ label: c.codeValueEN || String(c.codeId), labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId), value: c.codeId }))),
             });
             this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'Trade').subscribe({
                 next: (codes: CommonCodeModel[]) =>
-                    (this.tradeOptions = codes.map((c) => ({ label: c.codeValueEN || String(c.codeId), value: c.codeId }))),
+                    (this.tradeOptions = codes.map((c) => ({ label: c.codeValueEN || String(c.codeId), labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId), value: c.codeId }))),
             });
         }
     }
@@ -191,6 +228,7 @@ export class ReportWingsComponent implements OnInit, OnChanges {
 
     load(): void {
         this.loading = true;
+        this.appliedFilterLines = this.buildFilterLines();
         const page_no = Math.floor(this.first / this.rows) + 1;
         this.reportService
             .getWingsReport({
