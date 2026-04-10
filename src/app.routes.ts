@@ -288,7 +288,7 @@ export const appRoutes: Routes = [
             { path: 'employee-signature-upload', component: EmployeeSignatureUploadComponent },
             { path: 'presently-serving-members', component: PresentlyServingMembers },
             { path: 'presently-serving-members/organogram', component: OrgTreeServingComponent },
-            { path: 'presently-serving-members/rab-organogram', component: RabOrganogramComponent },
+            { path: 'organogram', component: RabOrganogramComponent },
             { path: 'presently-serving-members/rab-organogram-members', component: RabOrganogramMembersComponent },
             { path: 'presently-serving-members/profile/:employeeId', component: ServingMemberProfile },
             { path: 'ex-members', component: ExMembers },
