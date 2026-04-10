@@ -17,9 +17,15 @@ export interface GetSupernumeraryListRequest {
     joiningDateInRABTo?: string | null;
 }
 
-/** Request body for GetSupernumeraryListPaginated API. Extends filter request with pagination. */
+/** Request body for GetSupernumeraryListPaginated API. Extends filter request with pagination + text/dropdown filters. */
 export interface GetSupernumeraryListPaginatedRequest extends GetSupernumeraryListRequest {
     pagination: { page_no: number; row_per_page: number };
+    serviceId?: string | null;
+    rabId?: string | null;
+    nameEnglish?: string | null;
+    corpsId?: number | null;
+    permanentDistrictType?: number | null;
+    wifePermanentDistrictType?: number | null;
 }
 
 export interface GetEmployeesByPostingStatusRequest {
@@ -28,6 +34,21 @@ export interface GetEmployeesByPostingStatusRequest {
     memberTypeId?: number | null;
     rankId?: number | null;
     tradeId?: number | null;
+}
+
+export interface GetEmployeesByPostingStatusPaginatedRequest {
+    postingStatus: string;
+    pagination: { page_no: number; row_per_page: number };
+    orgIds?: number[] | null;
+    memberTypeId?: number | null;
+    rankId?: number | null;
+    tradeId?: number | null;
+    serviceId?: string | null;
+    rabId?: string | null;
+    nameEnglish?: string | null;
+    corpsId?: number | null;
+    permanentDistrictType?: number | null;
+    wifePermanentDistrictType?: number | null;
 }
 
 @Injectable({
@@ -53,6 +74,10 @@ export class EmployeeListService {
 
     getSupernumeraryListPaginated(request: GetSupernumeraryListPaginatedRequest): Observable<PagedResponse<EmployeeList>> {
         return this.http.post<PagedResponse<EmployeeList>>(`${this.apiUrl}/GetSupernumeraryListPaginated`, request);
+    }
+
+    getEmployeesByPostingStatusPaginated(request: GetEmployeesByPostingStatusPaginatedRequest): Observable<PagedResponse<EmployeeList>> {
+        return this.http.post<PagedResponse<EmployeeList>>(`${this.apiUrl}/GetEmployeesByPostingStatusPaginated`, request);
     }
 
     allocateRabId(request: AllocateRabIdRequest): Observable<AllocateRabIdResultItem[]> {

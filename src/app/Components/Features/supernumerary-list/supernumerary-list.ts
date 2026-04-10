@@ -155,8 +155,9 @@ export class SupernumeraryList implements OnInit {
         this.loadData();
     }
 
-    onPage(event: { first: number }): void {
+    onPage(event: { first: number; rows?: number }): void {
         this.first = event.first;
+        if (event.rows != null) this.rows = event.rows;
     }
 
     /** List filtered by searchText (Service ID / RAB ID). Used for table value. */

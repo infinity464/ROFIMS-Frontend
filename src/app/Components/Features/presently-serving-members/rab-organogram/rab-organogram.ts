@@ -372,4 +372,43 @@ export class RabOrganogramComponent implements OnInit {
                 }
             });
     }
+
+    onNodeSelect(node: OrgNode): void {
+        let type = 'org';
+        let nodeId = node.id;
+
+        if (node.id === -1) {
+            type = 'supernumerary';
+            nodeId = 0;
+        } else if (node.id === -2) {
+            type = 'pending';
+            nodeId = 0;
+        } else if (node.id <= -10 && node.id >= -19) {
+            type = 'supernumerary';
+            const idx = -(node.id + 10);
+            nodeId = this.memberTypes[idx]?.codeId ?? 0;
+        } else if (node.id <= -20 && node.id >= -29) {
+            type = 'pending';
+            const idx = -(node.id + 20);
+            nodeId = this.memberTypes[idx]?.codeId ?? 0;
+        }
+
+        const path = this.buildBreadcrumb(node);
+        const name = encodeURIComponent(path);
+        window.open(`/presently-serving-members/rab-organogram-members?nodeId=${nodeId}&type=${type}&name=${name}`, '_blank');
+    }
+
+    private buildBreadcrumb(node: OrgNode): string {
+        const flat = this.flatNodes();
+        const parts: string[] = [];
+        let current: OrgNode | undefined = node;
+
+        while (current) {
+            parts.unshift(current.nameEN || current.commCode || '');
+            if (current.parentId == null) break;
+            current = flat.find(n => n.id === current!.parentId);
+        }
+
+        return parts.join(' → ');
+    }
 }

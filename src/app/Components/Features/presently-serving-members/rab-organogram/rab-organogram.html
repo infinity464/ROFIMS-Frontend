@@ -75,6 +75,7 @@
                                 [loadingParentId]="loadingParentId()"
                                 (expandRequest)="onExpandRequest($event)"
                                 (expandToggled)="onExpandToggled($event)"
+                                (nodeSelect)="onNodeSelect($event)"
                             />
                             }
                         </div>
@@ -112,6 +113,7 @@
                             [loadingParentId]="loadingParentId()"
                             (expandRequest)="onExpandRequest($event)"
                             (expandToggled)="onExpandToggled($event)"
+                            (nodeSelect)="onNodeSelect($event)"
                         />
                         }
                     </div>
@@ -143,6 +145,7 @@
                                 [readOnly]="true"
                                 [selectedNodeId]="null"
                                 [loadingParentId]="null"
+                                (nodeSelect)="onNodeSelect($event)"
                             />
                             }
                         </div>
@@ -179,6 +182,7 @@
                                 [readOnly]="true"
                                 [selectedNodeId]="null"
                                 [loadingParentId]="null"
+                                (nodeSelect)="onNodeSelect($event)"
                             />
                             }
                         </div>
