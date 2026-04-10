@@ -2,7 +2,7 @@ import { environment } from '@/Core/Environments/environment';
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { CommonCode } from '../models/common-code';
-import { Observable } from 'rxjs';
+import { Observable, forkJoin } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { PagedResponse } from '@/Core/Models/Pagination';
 import { OrganizationModel } from '../../organization-setup/models/organization';
@@ -119,16 +119,48 @@ export class MasterBasicSetupService {
     }
 
     getAuthorizedOrganogramCounts(): Observable<AuthorizedCountItem[]> {
-        return this.http.get<MotherOrgRankVacancyDistributionModel[]>(`${this.apiUrlMotherOrgRankVacancyDistribution}/GetAll`).pipe(
-            map((distributions) => {
-                const countMap = new Map<number, number>();
-                for (const d of distributions) {
-                    if (d.rabCodeId && d.quantity) {
-                        countMap.set(d.rabCodeId, (countMap.get(d.rabCodeId) || 0) + d.quantity);
+        const rabOrgTypes = new Set([
+            'RabUnit', 'RABUNIT', 'RabWing', 'RABWING',
+            'RabBranch', 'RABBRANCH', 'RabSubBranch', 'RABSUBBRANCH',
+            'RabSection', 'RABSECTION', 'RabSubSection', 'RABSUBSECTION'
+        ]);
+
+        return forkJoin({
+            distributions: this.http.get<MotherOrgRankVacancyDistributionModel[]>(`${this.apiUrlMotherOrgRankVacancyDistribution}/GetAll`),
+            allCodes: this.http.get<CommonCode[]>(`${this.apiUrl}/GetAll`)
+        }).pipe(
+            map(({ distributions, allCodes }) => {
+                // Build parent lookup from full org hierarchy
+                const parentByCodeId = new Map<number, number | null>();
+                for (const n of allCodes) {
+                    if (rabOrgTypes.has(n.codeType)) {
+                        parentByCodeId.set(n.codeId, n.parentCodeId ?? null);
                     }
                 }
+
+                // Direct counts per leaf node
+                const directCounts = new Map<number, number>();
+                for (const d of distributions) {
+                    if (d.rabCodeId && d.quantity) {
+                        directCounts.set(d.rabCodeId, (directCounts.get(d.rabCodeId) || 0) + d.quantity);
+                    }
+                }
+
+                // Rollup: walk up parent chain for each direct count
+                const rollup = new Map<number, number>();
+                directCounts.forEach((cnt, codeId) => {
+                    let cur: number | null | undefined = codeId;
+                    let guard = 0;
+                    while (cur != null && guard++ < 500) {
+                        rollup.set(cur, (rollup.get(cur) || 0) + cnt);
+                        const parent = parentByCodeId.get(cur);
+                        if (parent === undefined) break;
+                        cur = parent;
+                    }
+                });
+
                 const result: AuthorizedCountItem[] = [];
-                countMap.forEach((authorizedCount, codeId) => {
+                rollup.forEach((authorizedCount, codeId) => {
                     result.push({ codeId, authorizedCount });
                 });
                 return result;

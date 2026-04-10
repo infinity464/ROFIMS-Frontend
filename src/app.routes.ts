@@ -95,6 +95,7 @@ import { InterPostingNotesheetGenerateComponent } from '@/Components/Features/in
 import { PresentlyServingMembers } from '@/Components/Features/presently-serving-members/presently-serving-members';
 import { OrgTreeServingComponent } from '@/Components/Features/presently-serving-members/org-tree-serving/org-tree-serving';
 import { ServingMemberProfile } from '@/Components/Features/presently-serving-members/serving-member-profile/serving-member-profile';
+import { RabOrganogramComponent } from '@/Components/Features/presently-serving-members/rab-organogram/rab-organogram';
 import { ExMembers } from '@/Components/Features/ex-members/ex-members';
 import { ExMemberProfile } from '@/Components/Features/ex-members/ex-member-profile/ex-member-profile';
 import { Prefix } from '@/Components/basic-setup/prefix/prefix';
@@ -284,6 +285,7 @@ export const appRoutes: Routes = [
             { path: 'employee-signature-upload', component: EmployeeSignatureUploadComponent },
             { path: 'presently-serving-members', component: PresentlyServingMembers },
             { path: 'presently-serving-members/organogram', component: OrgTreeServingComponent },
+            { path: 'presently-serving-members/rab-organogram', component: RabOrganogramComponent },
             { path: 'presently-serving-members/profile/:employeeId', component: ServingMemberProfile },
             { path: 'ex-members', component: ExMembers },
             { path: 'ex-members/profile/:employeeId', component: ExMemberProfile },

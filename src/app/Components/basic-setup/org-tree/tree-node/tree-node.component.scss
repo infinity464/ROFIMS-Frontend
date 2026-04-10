@@ -98,13 +98,15 @@
       font-weight: 500;
       padding: 0.15rem 0.35rem;
       border-radius: 4px;
-      background: var(--p-surface-200);
+      background: var(--p-primary-100);
+      border: 0.5px solid var(--p-primary-color);
+      color: var(--p-primary-color);
       flex-shrink: 0;
       .auth-count {
-        color: #1d9e75;
+        color: var(--p-primary-color);
       }
       .held-count {
-        color: #185FA5;
+        color: var(--p-primary-color);
       }
     }
   }
