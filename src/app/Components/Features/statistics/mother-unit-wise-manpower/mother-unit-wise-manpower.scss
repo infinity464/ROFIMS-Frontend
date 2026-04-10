@@ -118,7 +118,8 @@
     &:hover { background: var(--surface-hover, #f7fafc); }
 }
 
-.report-export-icon { font-size: 0.75rem; }
+.report-export-icon  { font-size: 0.75rem; }
+.report-export-print { color: #555; }
 .report-export-pdf   { color: #e74c3c; }
 .report-export-word  { color: #2980b9; }
 .report-export-excel { color: #27ae60; }

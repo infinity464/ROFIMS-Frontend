@@ -11,6 +11,8 @@ import {
     type MotherUnitRow,
     type MotherUnitWiseManpowerResponse
 } from '@/services/statistics.service';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 type Lang = 'en' | 'bn';
 
@@ -25,6 +27,7 @@ export class MotherUnitWiseManpowerComponent implements OnInit {
     lang: Lang = 'en';
     loading = false;
     loadingOrgs = false;
+    exporting = false;
     exportDropdownOpen = false;
 
     orgOptions: MotherUnitOrgOption[] = [];
@@ -95,10 +98,15 @@ export class MotherUnitWiseManpowerComponent implements OnInit {
         this.exportDropdownOpen = !this.exportDropdownOpen;
     }
 
-    async exportAs(type: 'pdf' | 'word' | 'excel'): Promise<void> {
+    async exportAs(type: 'pdf' | 'print' | 'word' | 'excel'): Promise<void> {
         this.exportDropdownOpen = false;
         if (type === 'pdf') {
-            this.exportPdfPopup();
+            this.exporting = true;
+            try { await this.exportPdfPopup(); } finally { this.exporting = false; }
+            return;
+        }
+        if (type === 'print') {
+            this.exportPrintPopup();
             return;
         }
         const { columns, rows } = this.getFlatExportData();
@@ -211,17 +219,184 @@ export class MotherUnitWiseManpowerComponent implements OnInit {
         return { columns: cols, rows: dataRows };
     }
 
-    // ── Custom PDF popup ─────────────────────────────────────────────────
+    // ── PDF export (html2canvas + jsPDF → opens in browser PDF viewer) ──
 
-    private exportPdfPopup(): void {
-        const fontFamily = this.lang === 'bn' ? "'Nirmala UI', serif" : "'Times New Roman', serif";
+    private async exportPdfPopup(): Promise<void> {
+        const fontFamily = this.lang === 'bn'
+            ? "'Noto Sans Bengali', 'Nirmala UI', sans-serif"
+            : "'Times New Roman', serif";
         const now = new Date();
         const dateStr = now.toLocaleDateString(this.lang === 'bn' ? 'bn-BD' : 'en-US', {
             year: 'numeric', month: 'long', day: 'numeric'
         });
 
-        // Scale font size down when many rank columns to fit on one page
-        const colCount = this.ranks.length + 3; // ser + unit + ranks + total
+        // Scale font size based on column count
+        const colCount = this.ranks.length + 3;
+        let baseFontPt = 8;
+        let headFontPt = 8;
+        let titleFontPt = 13;
+        let cellPad = '4px 6px';
+        if (colCount > 12) { baseFontPt = 7; headFontPt = 7; titleFontPt = 11; cellPad = '3px 4px'; }
+        if (colCount > 16) { baseFontPt = 5; headFontPt = 5; titleFontPt = 10; cellPad = '2px 2px'; }
+        if (colCount > 20) { baseFontPt = 4.5; headFontPt = 4.5; titleFontPt = 9; cellPad = '1px 2px'; }
+
+        const esc = (s: string) => s
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+        const rankHeaders = this.ranks
+            .map(r => `<th>${esc(this.rankLabel(r))}</th>`).join('');
+
+        const bodyRows = this.units.map((unit, i) => {
+            const cells = this.ranks
+                .map(r => `<td class="num">${esc(this.fmt(this.cellValue(unit, r.rankId)))}</td>`)
+                .join('');
+            return `<tr>
+                <td class="num">${esc(this.fmt(i + 1))}</td>
+                <td class="name">${esc(this.unitNameLabel(unit))}</td>
+                ${cells}
+                <td class="num total-col">${esc(this.fmt(unit.total))}</td>
+            </tr>`;
+        }).join('');
+
+        const totalCells = this.ranks
+            .map(r => `<td class="num">${esc(this.fmt(this.columnTotal(r.rankId)))}</td>`)
+            .join('');
+
+        // Offscreen container rendered at landscape A4 width (~1045px at 96dpi)
+        const container = document.createElement('div');
+        container.style.cssText = 'position:absolute;left:-9999px;top:0;width:1045px;padding:30px;background:#fff;z-index:-1;overflow:visible;box-sizing:border-box';
+        container.innerHTML = `
+            <div style="font-family:${fontFamily};font-size:${baseFontPt}pt;color:#000;line-height:1.4;width:100%">
+                <h1 style="font-size:${titleFontPt}pt;font-weight:700;text-align:center;margin:0 0 3px 0">${esc(this.titleLabel)}</h1>
+                <div style="font-size:${baseFontPt}pt;text-align:center;margin-bottom:14px">${esc(dateStr)}</div>
+                <table style="width:100%;border-collapse:collapse;font-family:${fontFamily}">
+                    <thead><tr>${`<th>${esc(this.serLabel)}</th><th>${esc(this.unitLabel)}</th>${rankHeaders}<th>${esc(this.totalLabel)}</th>`}</tr></thead>
+                    <tbody>${bodyRows}</tbody>
+                    <tfoot><tr class="total-row">
+                        <td></td>
+                        <td class="name" style="font-weight:700;text-align:right">${esc(this.grandTotalLabel)}</td>
+                        ${totalCells}
+                        <td class="num" style="font-weight:700">${esc(this.fmt(this.grandTotal))}</td>
+                    </tr></tfoot>
+                </table>
+            </div>`;
+        container.querySelectorAll('th').forEach((el: any) => {
+            el.style.cssText = `padding:${cellPad};text-align:center;font-size:${headFontPt}pt;font-weight:700;border:1px solid #000;white-space:nowrap;background:#fff;color:#000`;
+        });
+        container.querySelectorAll('td').forEach((el: any) => {
+            el.style.cssText += `;padding:${cellPad};border:1px solid #000;font-size:${baseFontPt}pt;color:#000`;
+        });
+        container.querySelectorAll('td.num').forEach((el: any) => { el.style.textAlign = 'center'; });
+        container.querySelectorAll('td.name').forEach((el: any) => { el.style.textAlign = 'left'; el.style.whiteSpace = 'nowrap'; });
+        container.querySelectorAll('.total-row td').forEach((el: any) => { el.style.fontWeight = '700'; el.style.borderTop = '2px solid #000'; });
+        document.body.appendChild(container);
+
+        try {
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            const scale = 2;
+            const canvas = await html2canvas(container, {
+                scale, useCORS: true, backgroundColor: '#ffffff',
+                logging: false, scrollY: -window.scrollY,
+                height: container.scrollHeight, windowHeight: container.scrollHeight
+            });
+            const imgWidth = canvas.width;
+
+            const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+            const pdfWidth = pdf.internal.pageSize.getWidth() - 16;
+            const pdfPageHeight = pdf.internal.pageSize.getHeight() - 16;
+            const ratio = pdfWidth / imgWidth;
+
+            // Capture thead region separately for repeating on each page
+            const tableEl = container.querySelector('table')!;
+            const theadEl = tableEl.querySelector('thead')!;
+            const containerTop = container.getBoundingClientRect().top;
+            const theadBottom = Math.round((theadEl.getBoundingClientRect().bottom - containerTop) * scale);
+
+            // Extract header strip from canvas
+            const headerCanvas = document.createElement('canvas');
+            headerCanvas.width = imgWidth;
+            headerCanvas.height = theadBottom;
+            headerCanvas.getContext('2d')!.drawImage(canvas, 0, 0, imgWidth, theadBottom, 0, 0, imgWidth, theadBottom);
+            const headerImgData = headerCanvas.toDataURL('image/jpeg', 0.92);
+            const headerPdfH = theadBottom * ratio;
+
+            // Collect body row bottom positions (in canvas pixels)
+            const allRows = tableEl.querySelectorAll('tbody tr, tfoot tr');
+            const rowBottoms: number[] = [];
+            allRows.forEach((tr: Element) => {
+                const rect = tr.getBoundingClientRect();
+                rowBottoms.push(Math.round((rect.bottom - containerTop) * scale));
+            });
+
+            // Page 1: render full content from top
+            const maxSlicePx = Math.floor(pdfPageHeight / ratio);
+            let srcY = 0;
+            let page = 0;
+
+            while (srcY < canvas.height) {
+                const isFirstPage = page === 0;
+                const availableSlicePx = isFirstPage
+                    ? maxSlicePx
+                    : Math.floor((pdfPageHeight - headerPdfH) / ratio);
+
+                // Find the last row that fits within this page
+                let cutY = Math.min(srcY + availableSlicePx, canvas.height);
+                if (cutY < canvas.height) {
+                    let bestCut = srcY;
+                    for (const rb of rowBottoms) {
+                        if (rb <= cutY && rb > srcY) bestCut = rb;
+                    }
+                    if (bestCut > srcY) cutY = bestCut;
+                }
+
+                const sliceH = cutY - srcY;
+                if (sliceH <= 0) break;
+
+                if (page > 0) pdf.addPage();
+
+                let yOffset = 8;
+
+                // Add repeated header on pages after the first
+                if (!isFirstPage) {
+                    pdf.addImage(headerImgData, 'JPEG', 8, yOffset, pdfWidth, headerPdfH);
+                    yOffset += headerPdfH;
+                }
+
+                const sliceCanvas = document.createElement('canvas');
+                sliceCanvas.width = imgWidth;
+                sliceCanvas.height = sliceH;
+                const ctx = sliceCanvas.getContext('2d')!;
+                ctx.drawImage(canvas, 0, srcY, imgWidth, sliceH, 0, 0, imgWidth, sliceH);
+                const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.92);
+                pdf.addImage(sliceData, 'JPEG', 8, yOffset, pdfWidth, sliceH * ratio);
+
+                srcY = cutY;
+                page++;
+            }
+
+            // Open in browser PDF viewer (shows toolbar with download/print)
+            const pdfBlob = pdf.output('blob');
+            const pdfUrl = URL.createObjectURL(pdfBlob);
+            window.open(pdfUrl, '_blank');
+        } finally {
+            document.body.removeChild(container);
+        }
+    }
+
+    // ── Print popup (window.open + window.print) ─────────────────────────
+
+    private exportPrintPopup(): void {
+        const fontFamily = this.lang === 'bn'
+            ? "'Noto Sans Bengali', 'Nirmala UI', sans-serif"
+            : "'Times New Roman', serif";
+        const now = new Date();
+        const dateStr = now.toLocaleDateString(this.lang === 'bn' ? 'bn-BD' : 'en-US', {
+            year: 'numeric', month: 'long', day: 'numeric'
+        });
+
+        const colCount = this.ranks.length + 3;
         let baseFontPt = 8;
         let headFontPt = 8;
         let titleFontPt = 13;
@@ -254,64 +429,54 @@ export class MotherUnitWiseManpowerComponent implements OnInit {
             .join('');
 
         const html = `<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>mother-unit-wise-manpower_${this.lang}</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: ${fontFamily}; font-size: ${baseFontPt}pt; color: #000; background: #fff; padding: 10mm; }
-        h1 { font-size: ${titleFontPt}pt; font-weight: 700; text-align: center; margin-bottom: 3px; }
-        .date { font-size: ${baseFontPt}pt; text-align: center; margin-bottom: 14px; }
-        table { width: 100%; border-collapse: collapse; font-family: ${fontFamily}; table-layout: auto; }
-        th { padding: ${cellPad}; text-align: center; font-size: ${headFontPt}pt; font-weight: 700;
-             border: 1px solid #000; white-space: nowrap; background: #fff; color: #000; }
-        td { padding: ${cellPad}; border: 1px solid #000; font-size: ${baseFontPt}pt;
-             background: #fff; color: #000; }
-        td.num { text-align: center; }
-        td.name { text-align: left; white-space: nowrap; }
-        td.total-col { font-weight: 600; }
-        .total-row td { font-weight: 700; border-top: 2px solid #000; }
-        @page { size: landscape; margin: 8mm; }
-        @media print {
-            body { padding: 0; }
-            table { page-break-inside: auto; }
-            tr { page-break-inside: avoid; }
-        }
-    </style>
-</head>
-<body>
+<html><head><meta charset="UTF-8"><title>${esc(this.titleLabel)}</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: ${fontFamily}; font-size: ${baseFontPt}pt; color: #000; background: #fff; padding: 16px; }
+    h1 { font-size: ${titleFontPt}pt; font-weight: 700; text-align: center; margin-bottom: 3px; }
+    .date { font-size: ${baseFontPt}pt; text-align: center; margin-bottom: 14px; }
+    table { width: 100%; border-collapse: collapse; font-family: ${fontFamily}; table-layout: auto; }
+    th { padding: ${cellPad}; text-align: center; font-size: ${headFontPt}pt; font-weight: 700;
+         border: 1px solid #000; white-space: nowrap; background: #fff; color: #000; }
+    td { padding: ${cellPad}; border: 1px solid #000; font-size: ${baseFontPt}pt;
+         background: #fff; color: #000; }
+    td.num { text-align: center; }
+    td.name { text-align: left; white-space: nowrap; }
+    td.total-col { font-weight: 600; }
+    .total-row td { font-weight: 700; border-top: 2px solid #000; }
+    @page { size: landscape; margin: 8mm 8mm 14mm 8mm;
+        @bottom-center { content: "Page " counter(page) " of " counter(pages); font-family: ${fontFamily}; font-size: 7pt; color: #555; }
+    }
+    @media print {
+        body { padding: 0; }
+        table { page-break-inside: auto; }
+        tr { page-break-inside: avoid; }
+        thead { display: table-header-group; }
+    }
+</style></head><body>
     <h1>${esc(this.titleLabel)}</h1>
     <div class="date">${esc(dateStr)}</div>
     <table>
-        <thead>
-            <tr>
-                <th>${esc(this.serLabel)}</th>
-                <th>${esc(this.unitLabel)}</th>
-                ${rankHeaders}
-                <th>${esc(this.totalLabel)}</th>
-            </tr>
-        </thead>
-        <tbody>
-            ${bodyRows}
-        </tbody>
-        <tfoot>
-            <tr class="total-row">
-                <td></td>
-                <td class="name" style="font-weight:700;text-align:right;">${esc(this.grandTotalLabel)}</td>
-                ${totalCells}
-                <td class="num" style="font-weight:700;">${esc(this.fmt(this.grandTotal))}</td>
-            </tr>
-        </tfoot>
+        <thead><tr>
+            <th>${esc(this.serLabel)}</th>
+            <th>${esc(this.unitLabel)}</th>
+            ${rankHeaders}
+            <th>${esc(this.totalLabel)}</th>
+        </tr></thead>
+        <tbody>${bodyRows}</tbody>
+        <tfoot><tr class="total-row">
+            <td></td>
+            <td class="name" style="font-weight:700;text-align:right">${esc(this.grandTotalLabel)}</td>
+            ${totalCells}
+            <td class="num" style="font-weight:700">${esc(this.fmt(this.grandTotal))}</td>
+        </tr></tfoot>
     </table>
-</body>
-</html>`;
+</body></html>`;
 
-        const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const win = window.open(url, '_blank');
-        if (!win) { URL.revokeObjectURL(url); return; }
-        win.addEventListener('afterprint', () => URL.revokeObjectURL(url));
-        win.onload = () => { win.print(); };
+        const win = window.open('', '_blank', 'width=1100,height=700');
+        if (!win) return;
+        win.document.write(html);
+        win.document.close();
+        setTimeout(() => { win.print(); }, 600);
     }
 }

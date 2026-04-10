@@ -8,6 +8,8 @@ import {
     type ManpowerSummaryTotals,
     type ManpowerSummaryResponse
 } from '@/services/statistics.service';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 type Lang = 'en' | 'bn';
 
@@ -39,6 +41,7 @@ const COLUMNS: ColDef[] = [
 export class ManpowerSummaryComponent implements OnInit {
     lang: Lang = 'en';
     loading = false;
+    exporting = false;
     exportDropdownOpen = false;
 
     rows: ManpowerSummaryRow[] = [];
@@ -81,7 +84,17 @@ export class ManpowerSummaryComponent implements OnInit {
         this.exportDropdownOpen = !this.exportDropdownOpen;
     }
 
-    async exportAs(type: 'pdf' | 'word' | 'excel'): Promise<void> {
+    async exportAs(type: 'pdf' | 'print' | 'word' | 'excel'): Promise<void> {
+        this.exportDropdownOpen = false;
+        if (type === 'pdf') {
+            this.exporting = true;
+            try { await this.exportPdfDirect(); } finally { this.exporting = false; }
+            return;
+        }
+        if (type === 'print') {
+            this.exportPrintPopup();
+            return;
+        }
         const { columns, rows } = this.getExportData();
         const config = {
             title: this.titleLabel,
@@ -91,14 +104,11 @@ export class ManpowerSummaryComponent implements OnInit {
             showPageNumbers: true,
             filename: 'manpower-summary'
         };
-        if (type === 'pdf') {
-            this.exportService.exportPDF(config);
-        } else if (type === 'word') {
+        if (type === 'word') {
             await this.exportService.exportWord(config);
         } else {
             this.exportService.exportExcel(config);
         }
-        this.exportDropdownOpen = false;
     }
 
     getExportData(): { columns: string[]; rows: string[][] } {
@@ -173,5 +183,209 @@ export class ManpowerSummaryComponent implements OnInit {
     fmt(n: number | undefined | null): string {
         const s = String(n ?? 0);
         return this.lang === 'bn' ? BanglaNumerals.toBangla(s) : s;
+    }
+
+    // ── PDF export (html2canvas + jsPDF → opens in browser PDF viewer) ──
+
+    private async exportPdfDirect(): Promise<void> {
+        const fontFamily = this.lang === 'bn'
+            ? "'Noto Sans Bengali', 'Nirmala UI', sans-serif"
+            : "'Times New Roman', serif";
+        const now = new Date();
+        const dateStr = now.toLocaleDateString(this.lang === 'bn' ? 'bn-BD' : 'en-US', {
+            year: 'numeric', month: 'long', day: 'numeric'
+        });
+
+        const esc = (s: string) => s
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+        const headerCells = COLUMNS.map(c => `<th>${esc(this.colLabel(c))}</th>`).join('');
+
+        const bodyRows = this.rows.map((row, i) => `<tr>
+            <td class="num">${esc(this.fmt(i + 1))}</td>
+            <td class="name">${esc(this.orgLabel(row))}</td>
+            <td class="num">${esc(this.fmt(row.auth))}</td>
+            <td class="num">${esc(this.fmt(row.held))}</td>
+            <td class="num def">${esc(this.fmt(row.def))}</td>
+            <td class="num sur">${esc(this.fmt(row.sur))}</td>
+            <td class="num">${esc(this.fmt(row.postingIn))}</td>
+            <td class="num">${esc(this.fmt(row.postingOut))}</td>
+            <td>${esc(row.remark ?? '')}</td>
+        </tr>`).join('');
+
+        const totalRow = `<tr class="total-row">
+            <td></td>
+            <td class="name" style="font-weight:700;text-align:right">${esc(this.totalLabel)}</td>
+            <td class="num">${esc(this.fmt(this.totals.auth))}</td>
+            <td class="num">${esc(this.fmt(this.totals.held))}</td>
+            <td class="num">${esc(this.fmt(this.totals.def))}</td>
+            <td class="num">${esc(this.fmt(this.totals.sur))}</td>
+            <td class="num">${esc(this.fmt(this.totals.postingIn))}</td>
+            <td class="num">${esc(this.fmt(this.totals.postingOut))}</td>
+            <td></td>
+        </tr>`;
+
+        const container = document.createElement('div');
+        container.style.cssText = 'position:absolute;left:-9999px;top:0;width:760px;padding:30px;background:#fff;z-index:-1;overflow:visible;box-sizing:border-box';
+        container.innerHTML = `
+            <div style="font-family:${fontFamily};font-size:9pt;color:#000;line-height:1.4;width:100%">
+                <h1 style="font-size:14pt;font-weight:700;text-align:center;margin:0 0 3px 0">${esc(this.titleLabel)}</h1>
+                <div style="font-size:9pt;text-align:center;margin-bottom:14px">${esc(dateStr)}</div>
+                <table style="width:100%;border-collapse:collapse;font-family:${fontFamily}">
+                    <thead><tr>${headerCells}</tr></thead>
+                    <tbody>${bodyRows}</tbody>
+                    <tfoot>${totalRow}</tfoot>
+                </table>
+            </div>`;
+        container.querySelectorAll('th').forEach((el: any) => {
+            el.style.cssText = 'padding:4px 8px;text-align:center;font-size:9pt;font-weight:700;border:1px solid #000;white-space:nowrap;background:#fff;color:#000';
+        });
+        container.querySelectorAll('td').forEach((el: any) => {
+            el.style.cssText += ';padding:4px 8px;border:1px solid #000;font-size:9pt;color:#000';
+        });
+        container.querySelectorAll('td.num').forEach((el: any) => { el.style.textAlign = 'center'; });
+        container.querySelectorAll('td.name').forEach((el: any) => { el.style.textAlign = 'left'; });
+        container.querySelectorAll('.total-row td').forEach((el: any) => { el.style.fontWeight = '700'; el.style.borderTop = '2px solid #000'; });
+        document.body.appendChild(container);
+
+        try {
+            await new Promise(resolve => setTimeout(resolve, 300));
+            const scale = 2;
+            const canvas = await html2canvas(container, {
+                scale, useCORS: true, backgroundColor: '#ffffff',
+                logging: false, scrollY: -window.scrollY,
+                height: container.scrollHeight, windowHeight: container.scrollHeight
+            });
+            const imgWidth = canvas.width;
+
+            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const pdfWidth = pdf.internal.pageSize.getWidth() - 20;
+            const pdfPageHeight = pdf.internal.pageSize.getHeight() - 20;
+            const ratio = pdfWidth / imgWidth;
+
+            // Row-aware page splitting
+            const tableEl = container.querySelector('table')!;
+            const containerTop = container.getBoundingClientRect().top;
+            const allRows = tableEl.querySelectorAll('tr');
+            const rowBottoms: number[] = [];
+            allRows.forEach((tr: Element) => {
+                rowBottoms.push(Math.round((tr.getBoundingClientRect().bottom - containerTop) * scale));
+            });
+
+            const maxSlicePx = Math.floor(pdfPageHeight / ratio);
+            let srcY = 0;
+            let page = 0;
+
+            while (srcY < canvas.height) {
+                let cutY = Math.min(srcY + maxSlicePx, canvas.height);
+                if (cutY < canvas.height) {
+                    let bestCut = srcY;
+                    for (const rb of rowBottoms) {
+                        if (rb <= cutY && rb > srcY) bestCut = rb;
+                    }
+                    if (bestCut > srcY) cutY = bestCut;
+                }
+                const sliceH = cutY - srcY;
+                if (sliceH <= 0) break;
+
+                if (page > 0) pdf.addPage();
+                const sliceCanvas = document.createElement('canvas');
+                sliceCanvas.width = imgWidth;
+                sliceCanvas.height = sliceH;
+                const ctx = sliceCanvas.getContext('2d')!;
+                ctx.drawImage(canvas, 0, srcY, imgWidth, sliceH, 0, 0, imgWidth, sliceH);
+                pdf.addImage(sliceCanvas.toDataURL('image/jpeg', 0.92), 'JPEG', 10, 10, pdfWidth, sliceH * ratio);
+                srcY = cutY;
+                page++;
+            }
+
+            const pdfBlob = pdf.output('blob');
+            const pdfUrl = URL.createObjectURL(pdfBlob);
+            window.open(pdfUrl, '_blank');
+        } finally {
+            document.body.removeChild(container);
+        }
+    }
+
+    // ── Print popup (window.open + window.print) ─────────────────────────
+
+    private exportPrintPopup(): void {
+        const fontFamily = this.lang === 'bn'
+            ? "'Noto Sans Bengali', 'Nirmala UI', sans-serif"
+            : "'Times New Roman', serif";
+        const now = new Date();
+        const dateStr = now.toLocaleDateString(this.lang === 'bn' ? 'bn-BD' : 'en-US', {
+            year: 'numeric', month: 'long', day: 'numeric'
+        });
+
+        const esc = (s: string) => s
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+        const headerCells = COLUMNS.map(c => `<th>${esc(this.colLabel(c))}</th>`).join('');
+
+        const bodyRows = this.rows.map((row, i) => `<tr>
+            <td class="num">${esc(this.fmt(i + 1))}</td>
+            <td class="name">${esc(this.orgLabel(row))}</td>
+            <td class="num">${esc(this.fmt(row.auth))}</td>
+            <td class="num">${esc(this.fmt(row.held))}</td>
+            <td class="num">${esc(this.fmt(row.def))}</td>
+            <td class="num">${esc(this.fmt(row.sur))}</td>
+            <td class="num">${esc(this.fmt(row.postingIn))}</td>
+            <td class="num">${esc(this.fmt(row.postingOut))}</td>
+            <td>${esc(row.remark ?? '')}</td>
+        </tr>`).join('');
+
+        const totalRow = `<tr class="total-row">
+            <td></td>
+            <td class="name" style="font-weight:700;text-align:right">${esc(this.totalLabel)}</td>
+            <td class="num">${esc(this.fmt(this.totals.auth))}</td>
+            <td class="num">${esc(this.fmt(this.totals.held))}</td>
+            <td class="num">${esc(this.fmt(this.totals.def))}</td>
+            <td class="num">${esc(this.fmt(this.totals.sur))}</td>
+            <td class="num">${esc(this.fmt(this.totals.postingIn))}</td>
+            <td class="num">${esc(this.fmt(this.totals.postingOut))}</td>
+            <td></td>
+        </tr>`;
+
+        const html = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>${esc(this.titleLabel)}</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: ${fontFamily}; font-size: 9pt; color: #000; background: #fff; padding: 16px; }
+    h1 { font-size: 14pt; font-weight: 700; text-align: center; margin-bottom: 3px; }
+    .date { font-size: 9pt; text-align: center; margin-bottom: 14px; }
+    table { width: 100%; border-collapse: collapse; font-family: ${fontFamily}; }
+    th { padding: 5px 8px; text-align: center; font-size: 9pt; font-weight: 700;
+         border: 1px solid #000; white-space: nowrap; background: #fff; color: #000; }
+    td { padding: 4px 8px; border: 1px solid #000; font-size: 9pt; background: #fff; color: #000; }
+    td.num { text-align: center; }
+    td.name { text-align: left; }
+    .total-row td { font-weight: 700; border-top: 2px solid #000; }
+    @page { size: A4; margin: 15mm 15mm 18mm 15mm;
+        @bottom-center { content: "Page " counter(page) " of " counter(pages); font-family: ${fontFamily}; font-size: 8pt; color: #555; }
+    }
+    @media print {
+        body { padding: 0; }
+        table { page-break-inside: auto; }
+        tr { page-break-inside: avoid; }
+        thead { display: table-header-group; }
+    }
+</style></head><body>
+    <h1>${esc(this.titleLabel)}</h1>
+    <div class="date">${esc(dateStr)}</div>
+    <table>
+        <thead><tr>${headerCells}</tr></thead>
+        <tbody>${bodyRows}</tbody>
+        <tfoot>${totalRow}</tfoot>
+    </table>
+</body></html>`;
+
+        const win = window.open('', '_blank', 'width=900,height=700');
+        if (!win) return;
+        win.document.write(html);
+        win.document.close();
+        setTimeout(() => { win.print(); }, 600);
     }
 }
