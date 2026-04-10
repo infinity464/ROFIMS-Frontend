@@ -34,6 +34,7 @@ export class Trade {
     isSubmitting = false;
 
     corpsOptions: { label: string; value: any }[] = [];
+    allCorpsMap: Map<number, string> = new Map();
 
     formConfig: FormConfig = {
         formFields: [
@@ -229,12 +230,24 @@ export class Trade {
         }
     }
 
+    loadAllCorpsForDisplay() {
+        this.masterBasicSetupService.getAllByType('Corps').subscribe({
+            next: (corps) => {
+                this.allCorpsMap = new Map(corps.map((d: any) => [d.codeId, d.codeValueEN]));
+                this.buildTableData();
+            },
+            error: (err) => {
+                console.error('Error loading all corps for display:', err);
+            }
+        });
+    }
+
     getAllData() {
         this.loading = true;
         this.masterBasicSetupService.getAllByType('Trade').subscribe({
             next: (res) => {
                 this.allData = Array.isArray(res) ? res : [];
-                this.buildTableData();
+                this.loadAllCorpsForDisplay();
                 this.loading = false;
             },
             error: (err) => {
@@ -247,9 +260,8 @@ export class Trade {
 
     private buildTableData() {
         const orgOpts = (this.formConfig.formFields.find(f => f.name === 'orgId')?.options as { label: string; value: any }[]) || [];
-        const corpsOpts = (this.formConfig.formFields.find(f => f.name === 'corpsId')?.options as { label: string; value: any }[]) || [];
         const getOrgName = (id: number) => orgOpts.find((o: any) => o.value === id)?.label ?? '-';
-        const getCorpsName = (id: number) => corpsOpts.find((o: any) => o.value === id)?.label ?? '-';
+        const getCorpsName = (id: number) => this.allCorpsMap.get(id) ?? '-';
         let list = this.allData.map((r: any) => ({ ...r, orgNameDisplay: getOrgName(r.orgId), corpsNameDisplay: getCorpsName(r.parentCodeId) }));
         const orgId = this.commonForm?.get('orgId')?.value;
         const corpsId = this.commonForm?.get('corpsId')?.value;
