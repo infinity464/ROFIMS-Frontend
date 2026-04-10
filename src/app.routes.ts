@@ -133,6 +133,7 @@ import { ManpowerSummaryComponent } from '@/Components/Features/statistics/manpo
 import { ManpowerChartComponent } from '@/Components/Features/statistics/manpower-chart/manpower-chart';
 import { RankWiseManpowerComponent } from '@/Components/Features/statistics/rank-wise-manpower/rank-wise-manpower';
 import { MotherUnitWiseManpowerComponent } from '@/Components/Features/statistics/mother-unit-wise-manpower/mother-unit-wise-manpower';
+import { CorpsWiseManpowerComponent } from '@/Components/Features/statistics/corps-wise-manpower/corps-wise-manpower';
 
 export const appRoutes: Routes = [
     // Public routes
@@ -294,6 +295,7 @@ export const appRoutes: Routes = [
             { path: 'statistics/manpower-chart', component: ManpowerChartComponent },
             { path: 'statistics/rank-wise-manpower', component: RankWiseManpowerComponent },
             { path: 'statistics/mother-unit-wise-manpower', component: MotherUnitWiseManpowerComponent },
+            { path: 'statistics/corps-wise-manpower', component: CorpsWiseManpowerComponent },
 
             // Menu Management
             { path: 'menu-management', component: MenuManagement },

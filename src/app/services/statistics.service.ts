@@ -84,6 +84,24 @@ export interface MotherUnitWiseManpowerResponse {
     grandTotal: number;
 }
 
+export interface CorpsRow {
+    corpsId: number;
+    corpsName: string;
+    corpsNameBN: string;
+    rankCounts: Record<number, number>;
+    total: number;
+}
+
+export interface CorpsWiseManpowerResponse {
+    orgId: number;
+    orgName: string;
+    orgNameBN: string;
+    ranks: MotherUnitRankColumn[];
+    corps: CorpsRow[];
+    totals: Record<number, number>;
+    grandTotal: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class StatisticsService {
     private readonly apiUrl = `${environment.apis.core}/Statistics`;
@@ -105,6 +123,12 @@ export class StatisticsService {
     getMotherUnitWiseManpower(orgId: number): Observable<MotherUnitWiseManpowerResponse> {
         return this.http.get<MotherUnitWiseManpowerResponse>(
             `${this.apiUrl}/GetMotherUnitWiseManpower`, { params: { orgId } }
+        );
+    }
+
+    getCorpsWiseManpower(orgId: number): Observable<CorpsWiseManpowerResponse> {
+        return this.http.get<CorpsWiseManpowerResponse>(
+            `${this.apiUrl}/GetCorpsWiseManpower`, { params: { orgId } }
         );
     }
 }
