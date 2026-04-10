@@ -116,6 +116,25 @@ export interface TradeWiseManpowerResponse {
     grandTotal: number;
 }
 
+export interface MemberTypeOption {
+    memberTypeId: number;
+    memberTypeName: string;
+    memberTypeNameBN: string;
+}
+
+export interface UnitBarItem {
+    unitId: number;
+    unitName: string;
+    unitNameBN: string;
+    count: number;
+}
+
+export interface UnitWiseBarChartResponse {
+    memberTypes: MemberTypeOption[];
+    units: UnitBarItem[];
+    total: number;
+}
+
 export interface CorpsWiseManpowerResponse {
     orgId: number;
     orgName: string;
@@ -167,6 +186,14 @@ export class StatisticsService {
         if (corpsId != null) params.corpsId = corpsId;
         return this.http.get<TradeWiseManpowerResponse>(
             `${this.apiUrl}/GetTradeWiseManpower`, { params }
+        );
+    }
+
+    getUnitWiseBarChart(memberTypeId?: number): Observable<UnitWiseBarChartResponse> {
+        const params: any = {};
+        if (memberTypeId != null) params.memberTypeId = memberTypeId;
+        return this.http.get<UnitWiseBarChartResponse>(
+            `${this.apiUrl}/GetUnitWiseBarChart`, { params }
         );
     }
 }
