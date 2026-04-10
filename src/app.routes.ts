@@ -96,6 +96,8 @@ import { InterPostingNotesheetGenerateComponent } from '@/Components/Features/in
 import { PresentlyServingMembers } from '@/Components/Features/presently-serving-members/presently-serving-members';
 import { OrgTreeServingComponent } from '@/Components/Features/presently-serving-members/org-tree-serving/org-tree-serving';
 import { ServingMemberProfile } from '@/Components/Features/presently-serving-members/serving-member-profile/serving-member-profile';
+import { RabOrganogramComponent } from '@/Components/Features/presently-serving-members/rab-organogram/rab-organogram';
+import { RabOrganogramMembersComponent } from '@/Components/Features/presently-serving-members/rab-organogram/rab-organogram-members/rab-organogram-members';
 import { ExMembers } from '@/Components/Features/ex-members/ex-members';
 import { ExMemberProfile } from '@/Components/Features/ex-members/ex-member-profile/ex-member-profile';
 import { Prefix } from '@/Components/basic-setup/prefix/prefix';
@@ -133,6 +135,10 @@ import { RabUnitAor } from '@/Components/basic-setup/rab-unit-aor/rab-unit-aor';
 import { ManpowerSummaryComponent } from '@/Components/Features/statistics/manpower-summary/manpower-summary';
 import { ManpowerChartComponent } from '@/Components/Features/statistics/manpower-chart/manpower-chart';
 import { RankWiseManpowerComponent } from '@/Components/Features/statistics/rank-wise-manpower/rank-wise-manpower';
+import { MotherUnitWiseManpowerComponent } from '@/Components/Features/statistics/mother-unit-wise-manpower/mother-unit-wise-manpower';
+import { CorpsWiseManpowerComponent } from '@/Components/Features/statistics/corps-wise-manpower/corps-wise-manpower';
+import { TradeWiseManpowerComponent } from '@/Components/Features/statistics/trade-wise-manpower/trade-wise-manpower';
+import { UnitWiseBarChartComponent } from '@/Components/Features/statistics/unit-wise-bar-chart/unit-wise-bar-chart';
 
 export const appRoutes: Routes = [
     // Public routes
@@ -282,6 +288,8 @@ export const appRoutes: Routes = [
             { path: 'employee-signature-upload', component: EmployeeSignatureUploadComponent },
             { path: 'presently-serving-members', component: PresentlyServingMembers },
             { path: 'presently-serving-members/organogram', component: OrgTreeServingComponent },
+            { path: 'organogram', component: RabOrganogramComponent },
+            { path: 'presently-serving-members/rab-organogram-members', component: RabOrganogramMembersComponent },
             { path: 'presently-serving-members/profile/:employeeId', component: ServingMemberProfile },
             { path: 'ex-members', component: ExMembers },
             { path: 'ex-members/profile/:employeeId', component: ExMemberProfile },
@@ -294,6 +302,10 @@ export const appRoutes: Routes = [
             { path: 'statistics/manpower-summary', component: ManpowerSummaryComponent },
             { path: 'statistics/manpower-chart', component: ManpowerChartComponent },
             { path: 'statistics/rank-wise-manpower', component: RankWiseManpowerComponent },
+            { path: 'statistics/mother-unit-wise-manpower', component: MotherUnitWiseManpowerComponent },
+            { path: 'statistics/corps-wise-manpower', component: CorpsWiseManpowerComponent },
+            { path: 'statistics/trade-wise-manpower', component: TradeWiseManpowerComponent },
+            { path: 'statistics/unit-wise-bar-chart', component: UnitWiseBarChartComponent },
 
             // Menu Management
             { path: 'menu-management', component: MenuManagement },

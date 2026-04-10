@@ -13,7 +13,7 @@
                 <span class="node-name">{{ node.nameEN || node.commCode }}</span>
                 <ng-container *ngIf="node.id < 0">
                     <span class="count-badge virtual-node" *ngIf="node.servingCount != null && node.servingCount > 0">
-                        ({{ node.servingCount }})
+                        {{ node.servingCount }}
                     </span>
                 </ng-container>
                 <ng-container *ngIf="node.id >= 0">

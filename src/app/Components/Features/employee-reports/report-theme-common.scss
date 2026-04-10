@@ -479,6 +479,12 @@
     padding: 14px 20px;
     border-bottom: 1.5px solid var(--border-light);
 }
+/* When header uses toolbar-row + title-block layout, stack vertically */
+.report-results-header:has(.report-toolbar-row) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+}
 .report-results-title {
     font-size: 0.88rem;
     font-weight: 600;
@@ -576,6 +582,9 @@
 .report-export-icon {
     font-size: 0.75rem;
 }
+.report-export-print {
+    color: #555;
+}
 .report-export-pdf {
     color: #e74c3c;
 }
@@ -584,6 +593,57 @@
 }
 .report-export-excel {
     color: #27ae60;
+}
+
+/* ----- Centered report title block (manpower-summary style) ----- */
+.report-toolbar-row {
+    display: flex;
+    justify-content: flex-end;
+}
+.report-header-title-block {
+    width: 100%;
+    text-align: center;
+}
+.report-main-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--navy);
+    letter-spacing: 0.03em;
+    line-height: 1.4;
+}
+.report-date-line {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--muted);
+    margin-top: 0.15rem;
+    line-height: 1.4;
+}
+.app-dark .employee-reports-page .report-main-title,
+:host-context(.app-dark) .report-main-title {
+    color: var(--text-color) !important;
+}
+.app-dark .employee-reports-page .report-date-line,
+:host-context(.app-dark) .report-date-line {
+    color: var(--text-color-secondary) !important;
+}
+
+/* Filter summary tags under title */
+.report-filter-summary {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 0.5rem;
+}
+.report-filter-tag {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    background: var(--report-accent-bg);
+    color: var(--primary-color);
+    border: 1px solid color-mix(in srgb, var(--primary-color) 25%, transparent);
 }
 
 /* Table cell badges (used inside p-table) */

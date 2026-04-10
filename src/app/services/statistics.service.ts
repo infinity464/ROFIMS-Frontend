@@ -54,6 +54,97 @@ export interface RankWiseManpowerResponse {
     grandTotal: RankWiseRankRow;
 }
 
+export interface MotherUnitOrgOption {
+    orgId: number;
+    orgName: string;
+    orgNameBN: string;
+}
+
+export interface MotherUnitRankColumn {
+    rankId: number;
+    rankName: string;
+    rankNameBN: string;
+}
+
+export interface MotherUnitRow {
+    unitId: number;
+    unitName: string;
+    unitNameBN: string;
+    rankCounts: Record<number, number>;
+    total: number;
+}
+
+export interface MotherUnitWiseManpowerResponse {
+    orgId: number;
+    orgName: string;
+    orgNameBN: string;
+    ranks: MotherUnitRankColumn[];
+    units: MotherUnitRow[];
+    totals: Record<number, number>;
+    grandTotal: number;
+}
+
+export interface CorpsRow {
+    corpsId: number;
+    corpsName: string;
+    corpsNameBN: string;
+    rankCounts: Record<number, number>;
+    total: number;
+}
+
+export interface CorpsOption {
+    corpsId: number;
+    corpsName: string;
+    corpsNameBN: string;
+}
+
+export interface TradeRow {
+    tradeId: number;
+    tradeName: string;
+    tradeNameBN: string;
+    rankCounts: Record<number, number>;
+    total: number;
+}
+
+export interface TradeWiseManpowerResponse {
+    orgId: number;
+    orgName: string;
+    orgNameBN: string;
+    ranks: MotherUnitRankColumn[];
+    trades: TradeRow[];
+    totals: Record<number, number>;
+    grandTotal: number;
+}
+
+export interface MemberTypeOption {
+    memberTypeId: number;
+    memberTypeName: string;
+    memberTypeNameBN: string;
+}
+
+export interface UnitBarItem {
+    unitId: number;
+    unitName: string;
+    unitNameBN: string;
+    count: number;
+}
+
+export interface UnitWiseBarChartResponse {
+    memberTypes: MemberTypeOption[];
+    units: UnitBarItem[];
+    total: number;
+}
+
+export interface CorpsWiseManpowerResponse {
+    orgId: number;
+    orgName: string;
+    orgNameBN: string;
+    ranks: MotherUnitRankColumn[];
+    corps: CorpsRow[];
+    totals: Record<number, number>;
+    grandTotal: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class StatisticsService {
     private readonly apiUrl = `${environment.apis.core}/Statistics`;
@@ -66,5 +157,43 @@ export class StatisticsService {
 
     getRankWiseManpower(): Observable<RankWiseManpowerResponse> {
         return this.http.get<RankWiseManpowerResponse>(`${this.apiUrl}/GetRankWiseManpower`);
+    }
+
+    getMotherOrgOptions(): Observable<MotherUnitOrgOption[]> {
+        return this.http.get<MotherUnitOrgOption[]>(`${this.apiUrl}/GetMotherOrgOptions`);
+    }
+
+    getMotherUnitWiseManpower(orgId: number): Observable<MotherUnitWiseManpowerResponse> {
+        return this.http.get<MotherUnitWiseManpowerResponse>(
+            `${this.apiUrl}/GetMotherUnitWiseManpower`, { params: { orgId } }
+        );
+    }
+
+    getCorpsWiseManpower(orgId: number): Observable<CorpsWiseManpowerResponse> {
+        return this.http.get<CorpsWiseManpowerResponse>(
+            `${this.apiUrl}/GetCorpsWiseManpower`, { params: { orgId } }
+        );
+    }
+
+    getCorpsOptions(orgId: number): Observable<CorpsOption[]> {
+        return this.http.get<CorpsOption[]>(
+            `${this.apiUrl}/GetCorpsOptions`, { params: { orgId } }
+        );
+    }
+
+    getTradeWiseManpower(orgId: number, corpsId?: number): Observable<TradeWiseManpowerResponse> {
+        const params: any = { orgId };
+        if (corpsId != null) params.corpsId = corpsId;
+        return this.http.get<TradeWiseManpowerResponse>(
+            `${this.apiUrl}/GetTradeWiseManpower`, { params }
+        );
+    }
+
+    getUnitWiseBarChart(memberTypeId?: number): Observable<UnitWiseBarChartResponse> {
+        const params: any = {};
+        if (memberTypeId != null) params.memberTypeId = memberTypeId;
+        return this.http.get<UnitWiseBarChartResponse>(
+            `${this.apiUrl}/GetUnitWiseBarChart`, { params }
+        );
     }
 }

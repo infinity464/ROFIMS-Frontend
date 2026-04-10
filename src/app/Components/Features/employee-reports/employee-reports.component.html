@@ -40,25 +40,25 @@
         <div>
             @switch (reportType) {
                 @case ('memberAppointment') {
-                    <app-report-member-appointment [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" (langToggle)="toggleReportLang()" />
+                    <app-report-member-appointment [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" [reportTypeLabel]="selectedReportTypeLabel" [commonCodeLabel]="selectedCommonCodeLabel" (langToggle)="toggleReportLang()" />
                 }
                 @case ('batchCourse') {
-                    <app-report-batch-course [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" (langToggle)="toggleReportLang()" />
+                    <app-report-batch-course [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" [reportTypeLabel]="selectedReportTypeLabel" [commonCodeLabel]="selectedCommonCodeLabel" (langToggle)="toggleReportLang()" />
                 }
                 @case ('education') {
-                    <app-report-education [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" (langToggle)="toggleReportLang()" />
+                    <app-report-education [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" [reportTypeLabel]="selectedReportTypeLabel" [commonCodeLabel]="selectedCommonCodeLabel" (langToggle)="toggleReportLang()" />
                 }
                 @case ('motherOrg') {
-                    <app-report-mother-org [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" (langToggle)="toggleReportLang()" />
+                    <app-report-mother-org [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" [reportTypeLabel]="selectedReportTypeLabel" [commonCodeLabel]="selectedCommonCodeLabel" (langToggle)="toggleReportLang()" />
                 }
                 @case ('officerType') {
-                    <app-report-officer-type [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" (langToggle)="toggleReportLang()" />
+                    <app-report-officer-type [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" [reportTypeLabel]="selectedReportTypeLabel" [commonCodeLabel]="selectedCommonCodeLabel" (langToggle)="toggleReportLang()" />
                 }
                 @case ('rabUnit') {
-                    <app-report-rab-unit [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" (langToggle)="toggleReportLang()" />
+                    <app-report-rab-unit [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" [reportTypeLabel]="selectedReportTypeLabel" [commonCodeLabel]="selectedCommonCodeLabel" (langToggle)="toggleReportLang()" />
                 }
                 @case ('wings') {
-                    <app-report-wings [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" (langToggle)="toggleReportLang()" />
+                    <app-report-wings [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" [reportTypeLabel]="selectedReportTypeLabel" [commonCodeLabel]="selectedCommonCodeLabel" (langToggle)="toggleReportLang()" />
                 }
             }
         </div>

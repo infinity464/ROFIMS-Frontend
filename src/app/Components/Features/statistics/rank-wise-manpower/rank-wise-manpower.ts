@@ -86,10 +86,10 @@ export class RankWiseManpowerComponent implements OnInit {
         this.exportDropdownOpen = !this.exportDropdownOpen;
     }
 
-    async exportAs(type: 'pdf' | 'word' | 'excel'): Promise<void> {
+    async exportAs(type: 'pdf' | 'print' | 'word' | 'excel'): Promise<void> {
         this.exportDropdownOpen = false;
-        if (type === 'pdf') {
-            this.exportPdfPopup();
+        if (type === 'pdf' || type === 'print') {
+            this.exportPrintPopup();
             return;
         }
         const { columns, rows } = this.getFlatExportData();
@@ -227,7 +227,7 @@ export class RankWiseManpowerComponent implements OnInit {
 
     // ── Custom PDF popup (multi-table layout) ─────────────────────────────────
 
-    private exportPdfPopup(): void {
+    private exportPrintPopup(): void {
         const fontFamily = this.lang === 'bn' ? "'Nirmala UI', serif" : "'Times New Roman', serif";
         const now = new Date();
         const dateStr = now.toLocaleDateString(this.lang === 'bn' ? 'bn-BD' : 'en-US', {
@@ -318,9 +318,14 @@ export class RankWiseManpowerComponent implements OnInit {
         .subtotal-row td { font-weight: 700; border-top: 2px solid #000; }
         .grand-total-block { margin-top: 8px; }
         .grand-row td { font-weight: 700; border: 2px solid #000; font-size: 10pt; }
-        @page { size: A4; margin: 15mm; }
-        @page { @bottom-center { content: "Page " counter(page) " of " counter(pages);
-                font-family: ${fontFamily}; font-size: 8pt; } }
+        @page { size: A4; margin: 15mm 15mm 18mm 15mm;
+            @bottom-center { content: "Page " counter(page) " of " counter(pages);
+                font-family: ${fontFamily}; font-size: 8pt; color: #555; }
+        }
+        @media print {
+            body { padding: 0; }
+            .org-block { page-break-inside: avoid; }
+        }
     </style>
 </head>
 <body>
@@ -335,6 +340,6 @@ export class RankWiseManpowerComponent implements OnInit {
         if (!win) return;
         win.document.write(html);
         win.document.close();
-        setTimeout(() => { win.print(); win.close(); }, 800);
+        setTimeout(() => { win.print(); }, 600);
     }
 }
