@@ -274,6 +274,15 @@ export class VacancyDistributionSummaryComponent implements OnInit {
         return [{ codeId: null, label: 'All' }, ...this.rabUnitOptions];
     }
 
+    /** Track which cell is being edited: "rabCodeId_field" */
+    editingCellKey: string | null = null;
+    editingCellValue: number = 0;
+    savingCellKey: string | null = null;
+
+    cellKey(row: DisplayRow, field: string): string {
+        return `${row.rabCodeId}_${field}`;
+    }
+
     cellDisplay(row: DisplayRow, field: string): string {
         const v = row.qtyByField[field] ?? 0;
         return v > 0 ? String(v) : '—';
@@ -282,6 +291,99 @@ export class VacancyDistributionSummaryComponent implements OnInit {
     colTotalDisplay(field: string): string {
         const v = this.columnTotals[field] ?? 0;
         return v > 0 ? String(v) : '—';
+    }
+
+    startEdit(row: DisplayRow, col: RankColumn, event: Event): void {
+        if (!this.selectedOrg) return;
+        this.editingCellKey = this.cellKey(row, col.field);
+        this.editingCellValue = row.qtyByField[col.field] ?? 0;
+        // Focus the input after render
+        setTimeout(() => {
+            const el = (event.target as HTMLElement)?.closest('td')?.querySelector('input');
+            el?.focus();
+            el?.select();
+        });
+    }
+
+    onCellKeydown(event: KeyboardEvent, row: DisplayRow, col: RankColumn): void {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            this.saveCell(row, col);
+        } else if (event.key === 'Escape') {
+            this.editingCellKey = null;
+        }
+    }
+
+    onCellBlur(row: DisplayRow, col: RankColumn): void {
+        if (this.editingCellKey === this.cellKey(row, col.field)) {
+            this.saveCell(row, col);
+        }
+    }
+
+    private saveCell(row: DisplayRow, col: RankColumn): void {
+        if (!this.selectedOrg) { this.editingCellKey = null; return; }
+        const oldValue = row.qtyByField[col.field] ?? 0;
+        const newValue = this.editingCellValue ?? 0;
+
+        // No change — just close
+        if (newValue === oldValue) {
+            this.editingCellKey = null;
+            return;
+        }
+
+        const key = this.cellKey(row, col.field);
+        this.savingCellKey = key;
+        this.editingCellKey = null;
+
+        const existing = this.lastDistributionList.find(
+            (d) => d.orgId === this.selectedOrg!.orgId
+                && d.motherOrgRankId === col.motherOrgRankId
+                && (d.rabCodeId ?? (d as any).RABCodeId) === row.rabCodeId
+        );
+
+        const model: MotherOrgRankVacancyDistributionModel = {
+            orgId: this.selectedOrg.orgId,
+            motherOrgRankId: col.motherOrgRankId,
+            rabCodeId: row.rabCodeId,
+            quantity: newValue,
+            createdBy: this.shareService.getCurrentUser?.() ?? 'System',
+            lastUpdatedBy: this.shareService.getCurrentUser?.() ?? 'System'
+        };
+        if (existing?.id) model.id = existing.id;
+
+        const obs = model.id != null
+            ? this.masterBasicSetup.updateMotherOrgRankVacancyDistribution(model)
+            : this.masterBasicSetup.saveMotherOrgRankVacancyDistribution(model);
+
+        obs.subscribe({
+            next: (res) => {
+                this.savingCellKey = null;
+                if (res?.statusCode === 200) {
+                    // Update local data immediately
+                    const diff = newValue - oldValue;
+                    row.qtyByField[col.field] = newValue;
+                    row.total += diff;
+                    this.columnTotals[col.field] = (this.columnTotals[col.field] ?? 0) + diff;
+                    this.grandTotal += diff;
+
+                    // Update distribution list cache
+                    if (existing) {
+                        existing.quantity = newValue;
+                    } else {
+                        this.lastDistributionList.push({ ...model });
+                    }
+                } else {
+                    this.messageService.add({ severity: 'warn', summary: 'Warning', detail: res?.description ?? 'Save failed' });
+                }
+            },
+            error: (err) => {
+                this.savingCellKey = null;
+                this.messageService.add({
+                    severity: 'error', summary: 'Error',
+                    detail: err?.error?.description ?? 'Failed to save'
+                });
+            }
+        });
     }
 
     private loadOrganizations(): void {
