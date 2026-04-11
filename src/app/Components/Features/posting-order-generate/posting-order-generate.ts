@@ -24,6 +24,7 @@ interface NoteSheetEmployee {
     serviceId: string | null;
     rabID: string | null;
     prefixName: string | null;
+    prefixNameBN: string | null;
     fullNameEN: string | null;
     fullNameBN: string | null;
     rankName: string | null;
@@ -118,7 +119,7 @@ export class PostingOrderGenerateComponent implements OnInit {
     }
 
     /** Convert ASCII digits in a string to Bangla digits. */
-    private toBanglaDigits(s: string): string {
+    toBanglaDigits(s: string): string {
         return s.replace(/\d/g, d => String.fromCharCode(0x09E6 + Number(d)));
     }
 
@@ -214,13 +215,19 @@ export class PostingOrderGenerateComponent implements OnInit {
 
                 const draftPostingMasterId = ns.draftPostingMasterId;
                 if (draftPostingMasterId) {
-                    this.postingService.getDraftPostingEmployees(draftPostingMasterId).subscribe({
+                    const isInterPosting = this.selectedPostingType === NoteSheetType.InterPosting;
+                    const empObs = isInterPosting
+                        ? this.postingService.getDraftInterPostingEmployees(draftPostingMasterId)
+                        : this.postingService.getDraftPostingEmployees(draftPostingMasterId);
+
+                    empObs.subscribe({
                         next: (emps) => {
                             this.employees = (emps ?? []).map(e => ({
                                 employeeId: e.employeeId,
                                 serviceId: e.serviceId,
                                 rabID: e.rabID,
                                 prefixName: e.prefixName,
+                                prefixNameBN: e.prefixNameBN,
                                 fullNameEN: e.fullNameEN,
                                 fullNameBN: e.fullNameBN,
                                 rankName: e.rankName,
