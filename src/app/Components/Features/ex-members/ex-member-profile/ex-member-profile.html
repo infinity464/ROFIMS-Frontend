@@ -1,40 +1,31 @@
 <p-toast position="top-center"></p-toast>
 
 <div class="card ex-member-profile-page text-900">
-    <div class="profile-header">
-        <div class="profile-header-left">
-            <div class="flex align-items-center gap-2 flex-wrap">
-                <p-button icon="pi pi-arrow-left" label="Back" [rounded]="true" [text]="true" severity="secondary" (onClick)="goBack()" styleClass="p-button-sm"></p-button>
-                <p-button [label]="profileLang === 'en' ? 'বাংলা' : 'English'" [rounded]="true" [text]="true" severity="secondary" (onClick)="toggleProfileLang()" styleClass="p-button-sm"></p-button>
-                @if (profile && !loading) {
-                    <div class="profile-export-wrap">
-                        <button type="button" class="profile-btn-export" (click)="toggleExportDropdown($event)">
-                            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                                <path d="M6.5 1v7M3.5 5.5l3 3 3-3M1.5 10.5h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            Export
-                        </button>
-                        @if (exportDropdownOpen) {
-                            <div class="profile-export-dropdown" (click)="$event.stopPropagation()">
-                                <button type="button" class="profile-export-item" (click)="exportAs('pdf')">
-                                    <span class="profile-export-icon">⬇</span> PDF
-                                </button>
-                                <button type="button" class="profile-export-item" (click)="exportAs('word')">
-                                    <span class="profile-export-icon">⬇</span> Word
-                                </button>
-                            </div>
-                        }
-                    </div>
-                }
-            </div>
-            <h1 class="profile-title m-0 text-2xl font-bold text-900 mt-2">{{ L['pageTitle.exMember'] }}</h1>
-        </div>
-        <div class="profile-image-box">
-            @if (profileImageUrl) {
-                <img [src]="profileImageUrl" alt="Profile" class="profile-image" />
-            } @else {
-                <div class="profile-image-placeholder" aria-hidden="true">
-                    <i class="pi pi-user"></i>
+    <!-- Action bar -->
+    <div class="sp-action-bar">
+        <h1 class="sp-page-title">{{ L['pageTitle.exMember'] }}</h1>
+        <div class="sp-action-right">
+            <button type="button" class="sp-btn" (click)="goBack()">
+                <i class="pi pi-chevron-left"></i> Back
+            </button>
+            <button type="button" class="sp-btn" (click)="toggleProfileLang()">
+                {{ profileLang === 'en' ? 'বাংলা' : 'English' }}
+            </button>
+            @if (profile && !loading) {
+                <div class="profile-export-wrap">
+                    <button type="button" class="sp-btn sp-btn-export" (click)="toggleExportDropdown($event)">
+                        <i class="pi pi-download"></i> Export
+                    </button>
+                    @if (exportDropdownOpen) {
+                        <div class="profile-export-dropdown" (click)="$event.stopPropagation()">
+                            <button type="button" class="profile-export-item" (click)="exportAs('pdf')">
+                                <i class="pi pi-file-pdf"></i> PDF
+                            </button>
+                            <button type="button" class="profile-export-item" (click)="exportAs('word')">
+                                <i class="pi pi-file-word"></i> Word
+                            </button>
+                        </div>
+                    }
                 </div>
             }
         </div>
@@ -45,172 +36,230 @@
             <i class="pi pi-spin pi-spinner text-4xl text-500"></i>
         </div>
     } @else if (profile) {
-        <!-- Basic Service Information -->
-        <div class="content-section text-900">
-            <div class="section-heading">{{ L['section.basicService'] }}</div>
-            <div class="core-details">
-                <div class="core-row">
-                    <span class="detail-item"><span class="detail-label">{{ L['field.serviceId'] }}  </span> <span class="detail-value">{{ valDisplay(profile.serviceId) }}</span></span>
-                    <span class="detail-item"><span class="detail-label">{{ L['field.rabId'] }}  </span> <span class="detail-value">{{ valDisplay(profile.rabId) }}</span></span>
+        <!-- Hero: Photo + Name + IDs -->
+        <div class="sp-hero">
+            <div class="sp-photo-box">
+                @if (profileImageUrl) {
+                    <img [src]="profileImageUrl" alt="Profile" class="sp-photo-img" />
+                } @else {
+                    <div class="sp-photo-placeholder">
+                        <i class="pi pi-user"></i>
+                    </div>
+                }
+            </div>
+            <div style="flex: 1; min-width: 0;">
+                <div class="sp-hero-name">{{ getFormattedName(profile) }}</div>
+                @if (activePresentStatus) {
+                    <div style="font-size: 0.95rem; font-weight: 500; margin-top: 0.25rem; color: var(--text-color-secondary);">{{ L['field.presentStatus'] }}: {{ translatedPresentStatus }}</div>
+                }
+            </div>
+            <div class="sp-hero-ids">
+                <div class="sp-id-block">
+                    <span class="sp-id-label">{{ L['field.serviceId'] }}</span>
+                    <span class="sp-id-value">{{ valDisplay(profile.serviceId) }}</span>
                 </div>
-                <div class="core-row core-row-full">
-                    <span class="detail-item"><span class="detail-label">{{ isBn ? L['field.nameBangla'] : L['field.nameEnglish'] }} </span> <span class="detail-value">{{ getFormattedName(profile) }}</span></span>
-                </div>
-                <div class="core-row core-row-four">
-                    <span class="detail-item"><span class="detail-label">{{ L['field.appointment'] }} </span> <span class="detail-value">{{ codeValue(profile.appointment, profile.appointmentBN) }}</span></span>
-                    <span class="detail-item"><span class="detail-label">{{ L['field.memberType'] }} </span> <span class="detail-value">{{ codeValue(profile.memberType, profile.memberTypeBN) }}</span></span>
-                    <span class="detail-item"><span class="detail-label">{{ L['field.motherOrganization'] }} </span> <span class="detail-value">{{ codeValue(profile.motherOrganization, profile.motherOrganizationBN) }}</span></span>
-                    <span class="detail-item"><span class="detail-label">{{ L['field.rank'] }} </span> <span class="detail-value">{{ codeValue(profile.armyRank, profile.armyRankBN) }}</span></span>
-                </div>
-                <div class="core-row core-row-four">
-                    <span class="detail-item"><span class="detail-label">{{ L['field.corps'] }} </span> <span class="detail-value">{{ codeValue(profile.corps, profile.corpsBN) }}</span></span>
-                    <span class="detail-item"><span class="detail-label">{{ L['field.trade'] }} </span> <span class="detail-value">{{ tradeDisplay(profile) }}</span></span>
-                    <span class="detail-item"><span class="detail-label">{{ L['field.dateOfCommission'] }} </span> <span class="detail-value">{{ formatDateDisplay(profile.dateOfCommission) }}</span></span>
-                </div>
-                <div class="core-row core-row-three">
-                    <span class="detail-item"><span class="detail-label">{{ L['field.dateOfJoiningInServiceTraining'] }} </span> <span class="detail-value">{{ formatDateDisplay(profile.dateOfJoiningInServiceTraining) }}</span></span>
-                    <span class="detail-item"><span class="detail-label">{{ L['field.motherUnit'] }} </span> <span class="detail-value">{{ codeValue(profile.motherUnit, profile.motherUnitBN) }}</span></span>
-                    <span class="detail-item"><span class="detail-label">{{ L['field.location'] }} </span> <span class="detail-value">{{ codeValue(profile.location, profile.locationBN) }}</span></span>
-                </div>
-                <div class="core-row">
-                    <span class="detail-item"><span class="detail-label">{{ L['field.rabUnitLastPosting'] }} </span> <span class="detail-value">{{ displayRabUnit }}</span></span>
-                    <span class="detail-item"><span class="detail-label">{{ L['field.joiningDate'] }} </span> <span class="detail-value">{{ formatDateDisplay(profile.joiningDate) }}</span></span>
+                <div class="sp-id-block">
+                    <span class="sp-id-label">{{ L['field.rabId'] }}</span>
+                    <span class="sp-id-value">{{ valDisplay(profile.rabId) }}</span>
                 </div>
             </div>
         </div>
 
-                <!-- Own Address Information (Permanent & Present; multiple allowed) -->
-                <div class="content-section text-900 border-top-1 surface-border">
-                    <div class="section-heading flex align-items-center justify-content-between gap-2">
-                        <span>{{ L['section.ownAddress'] }}</span>
-                        @if (editingSection !== 'ownAddress') {
-                            <p-button [icon]="'pi pi-pencil'" label="Edit" [rounded]="true" [text]="true" severity="secondary" size="small" (onClick)="setEditingSection('ownAddress')" pTooltip="Edit"></p-button>
-                        } @else {
-                            <p-button [icon]="'pi pi-times'" label="Cancel" [rounded]="true" [text]="true" severity="secondary" size="small" (onClick)="closeSectionAndRefresh()" pTooltip="Cancel"></p-button>
-                        }
+        <!-- Service Details -->
+        <div class="sp-section">
+            <div class="sp-grid">
+                <div class="sp-field-list">
+                    <div class="sp-field">
+                        <span class="sp-field-label">{{ L['field.appointment'] }}</span>
+                        <span class="sp-field-value">{{ codeValue(profile.appointment, profile.appointmentBN) }}</span>
                     </div>
-                    @if (editingSection !== 'ownAddress') {
-                        @if (ownAddressList.length === 0) {
-                            <div class="address-empty text-500 py-2">{{ L['empty.noOwnAddress'] }}</div>
-                        } @else {
-                            <div class="core-details">
-                                @for (addr of ownAddressList; track addr.ser) {
-                                    <div class="address-block">
-                                        <div class="address-block-type">{{ getAddressTypeLabel(addr) }}</div>
-                                        <div class="address-fields">
-                                            <div class="address-row">
-                                                <span class="address-field"><span class="address-label">{{ L['address.houseArea'] }}</span> {{ val(addr.houseRoad) }}</span>
-                                                <span class="address-field"><span class="address-label">{{ L['address.village'] }}</span> {{ val(addr.addressAreaEN) }}</span>
-                                                <span class="address-field"><span class="address-label">{{ L['address.postOffice'] }}</span> {{ codeValue(addr.postOffice, addr.postOfficeBN) }}</span>
-                                            </div>
-                                            <div class="address-row">
-                                                <span class="address-field"><span class="address-label">{{ L['address.thana'] }}</span> {{ codeValue(addr.thana, addr.thanaBN) }}</span>
-                                                <span class="address-field"><span class="address-label">{{ L['address.district'] }}</span> {{ codeValue(addr.district, addr.districtBN) }}</span>
-                                                <span class="address-field"><span class="address-label">{{ L['address.division'] }}</span> {{ codeValue(addr.division, addr.divisionBN) }}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                }
+                    <div class="sp-field">
+                        <span class="sp-field-label">{{ L['field.memberType'] }}</span>
+                        <span class="sp-field-value">{{ codeValue(profile.memberType, profile.memberTypeBN) }}</span>
+                    </div>
+                    <div class="sp-field">
+                        <span class="sp-field-label">{{ L['field.motherOrganization'] }}</span>
+                        <span class="sp-field-value">{{ codeValue(profile.motherOrganization, profile.motherOrganizationBN) }}</span>
+                    </div>
+                    <div class="sp-field">
+                        <span class="sp-field-label">{{ L['field.rank'] }}</span>
+                        <span class="sp-field-value">{{ codeValue(profile.armyRank, profile.armyRankBN) }}</span>
+                    </div>
+                    <div class="sp-field">
+                        <span class="sp-field-label">{{ L['field.corps'] }}</span>
+                        <span class="sp-field-value">{{ codeValue(profile.corps, profile.corpsBN) }}</span>
+                    </div>
+                    <div class="sp-field">
+                        <span class="sp-field-label">{{ L['field.trade'] }}</span>
+                        <span class="sp-field-value">{{ tradeDisplay(profile) }}</span>
+                    </div>
+                </div>
+                <div class="sp-field-list">
+                    <div class="sp-field">
+                        <span class="sp-field-label">{{ L['field.dateOfCommission'] }}</span>
+                        <span class="sp-field-value">{{ formatDateDisplay(profile.dateOfCommission) }}</span>
+                    </div>
+                    <div class="sp-field">
+                        <span class="sp-field-label">{{ L['field.dateOfJoiningInServiceTraining'] }}</span>
+                        <span class="sp-field-value">{{ formatDateDisplay(profile.dateOfJoiningInServiceTraining) }}</span>
+                    </div>
+                    <div class="sp-field">
+                        <span class="sp-field-label">{{ L['field.motherUnit'] }}</span>
+                        <span class="sp-field-value">{{ codeValue(profile.motherUnit, profile.motherUnitBN) }}</span>
+                    </div>
+                    <div class="sp-field">
+                        <span class="sp-field-label">{{ L['field.location'] }}</span>
+                        <span class="sp-field-value">{{ codeValue(profile.location, profile.locationBN) }}</span>
+                    </div>
+                    <div class="sp-field">
+                        <span class="sp-field-label">{{ L['field.rabUnitLastPosting'] }}</span>
+                        <span class="sp-field-value">{{ displayRabUnit }}</span>
+                    </div>
+                    <div class="sp-field">
+                        <span class="sp-field-label">{{ L['field.joiningDate'] }}</span>
+                        <span class="sp-field-value">{{ formatDateDisplay(profile.joiningDate) }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Own Address Information -->
+        <div class="sp-section">
+            <div class="sp-section-header">
+                <span class="sp-section-heading">{{ L['section.ownAddress'] }}</span>
+                @if (editingSection !== 'ownAddress') {
+                    <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('ownAddress')"><i class="pi pi-pencil"></i> Edit</button>
+                } @else {
+                    <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
+                }
+            </div>
+            @if (editingSection !== 'ownAddress') {
+                @if (ownAddressList.length === 0) {
+                    <div class="text-500 py-2" style="font-style: italic">{{ L['empty.noOwnAddress'] }}</div>
+                } @else {
+                    <div class="sp-grid">
+                        @for (addr of ownAddressList; track addr.ser) {
+                            <div class="sp-field-list">
+                                <div class="sp-addr-type">{{ getAddressTypeLabel(addr) }}</div>
+                                <div class="sp-field">
+                                    <span class="sp-field-label">{{ L['address.houseArea'] }}</span>
+                                    <span class="sp-field-value">{{ val(addr.houseRoad) }}</span>
+                                </div>
+                                <div class="sp-field">
+                                    <span class="sp-field-label">{{ L['address.village'] }}</span>
+                                    <span class="sp-field-value">{{ val(addr.addressAreaEN) }}</span>
+                                </div>
+                                <div class="sp-field">
+                                    <span class="sp-field-label">{{ L['address.postOffice'] }}</span>
+                                    <span class="sp-field-value">{{ codeValue(addr.postOffice, addr.postOfficeBN) }}</span>
+                                </div>
+                                <div class="sp-field">
+                                    <span class="sp-field-label">{{ L['address.thana'] }}</span>
+                                    <span class="sp-field-value">{{ codeValue(addr.thana, addr.thanaBN) }}</span>
+                                </div>
+                                <div class="sp-field">
+                                    <span class="sp-field-label">{{ L['address.district'] }}</span>
+                                    <span class="sp-field-value">{{ codeValue(addr.district, addr.districtBN) }}</span>
+                                </div>
+                                <div class="sp-field">
+                                    <span class="sp-field-label">{{ L['address.division'] }}</span>
+                                    <span class="sp-field-value">{{ codeValue(addr.division, addr.divisionBN) }}</span>
+                                </div>
                             </div>
                         }
-                    }
-                    @if (editingSection === 'ownAddress' && employeeId != null) {
-                        <app-emp-address-info [externalEmployeeId]="employeeId" [embedMode]="true" [hideTitle]="true" [addressScope]="'own'" (saved)="onSectionSaved('ownAddress')" (cancelled)="closeSectionAndRefresh()"></app-emp-address-info>
-                    }
-                </div>
-        
-                <!-- Spouse Address Information (SpousePermanent & SpousePresent; multiple allowed) -->
-                <div class="content-section text-900 border-top-1 surface-border">
-                    <div class="section-heading flex align-items-center justify-content-between gap-2">
-                        <span>{{ L['section.spouseAddress'] }}</span>
-                        @if (editingSection !== 'spouseAddress') {
-                            <p-button [icon]="'pi pi-pencil'" label="Edit" [rounded]="true" [text]="true" severity="secondary" size="small" (onClick)="setEditingSection('wifeAddress')" pTooltip="Edit"></p-button>
-                        } @else {
-                            <p-button [icon]="'pi pi-times'" label="Cancel" [rounded]="true" [text]="true" severity="secondary" size="small" (onClick)="closeSectionAndRefresh()" pTooltip="Cancel"></p-button>
-                        }
                     </div>
-                    @if (editingSection !== 'spouseAddress') {
-                        @if (spouseAddressList.length === 0) {
-                            <div class="address-empty text-500 py-2">{{ L['empty.noSpouseAddress'] }}</div>
-                        } @else {
-                            <div class="core-details">
-                                @for (addr of spouseAddressList; track addr.ser) {
-                                    <div class="address-block">
-                                        <div class="address-block-type">{{ getAddressTypeLabel(addr) }}</div>
-                                        <div class="address-fields">
-                                            <div class="address-row">
-                                                <span class="address-field"><span class="address-label">{{ L['address.houseArea'] }}</span> {{ val(addr.houseRoad) }}</span>
-                                                <span class="address-field"><span class="address-label">{{ L['address.village'] }}</span> {{ val(addr.addressAreaEN) }}</span>
-                                                <span class="address-field"><span class="address-label">{{ L['address.postOffice'] }}</span> {{ codeValue(addr.postOffice, addr.postOfficeBN) }}</span>
-                                            </div>
-                                            <div class="address-row">
-                                                <span class="address-field"><span class="address-label">{{ L['address.thana'] }}</span> {{ codeValue(addr.thana, addr.thanaBN) }}</span>
-                                                <span class="address-field"><span class="address-label">{{ L['address.district'] }}</span> {{ codeValue(addr.district, addr.districtBN) }}</span>
-                                                <span class="address-field"><span class="address-label">{{ L['address.division'] }}</span> {{ codeValue(addr.division, addr.divisionBN) }}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                }
+                }
+            }
+            @if (editingSection === 'ownAddress' && employeeId != null) {
+                <app-emp-address-info [externalEmployeeId]="employeeId" [embedMode]="true" [hideTitle]="true" [addressScope]="'own'" (saved)="onSectionSaved('ownAddress')" (cancelled)="closeSectionAndRefresh()"></app-emp-address-info>
+            }
+        </div>
+
+        <!-- Spouse Address Information -->
+        <div class="sp-section">
+            <div class="sp-section-header">
+                <span class="sp-section-heading">{{ L['section.spouseAddress'] }}</span>
+                @if (editingSection !== 'spouseAddress') {
+                    <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('spouseAddress')"><i class="pi pi-pencil"></i> Edit</button>
+                } @else {
+                    <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
+                }
+            </div>
+            @if (editingSection !== 'spouseAddress') {
+                @if (spouseAddressList.length === 0) {
+                    <div class="text-500 py-2" style="font-style: italic">{{ L['empty.noSpouseAddress'] }}</div>
+                } @else {
+                    <div class="sp-grid">
+                        @for (addr of spouseAddressList; track addr.ser) {
+                            <div class="sp-field-list">
+                                <div class="sp-addr-type">{{ getAddressTypeLabel(addr) }}</div>
+                                <div class="sp-field">
+                                    <span class="sp-field-label">{{ L['address.houseArea'] }}</span>
+                                    <span class="sp-field-value">{{ val(addr.houseRoad) }}</span>
+                                </div>
+                                <div class="sp-field">
+                                    <span class="sp-field-label">{{ L['address.village'] }}</span>
+                                    <span class="sp-field-value">{{ val(addr.addressAreaEN) }}</span>
+                                </div>
+                                <div class="sp-field">
+                                    <span class="sp-field-label">{{ L['address.postOffice'] }}</span>
+                                    <span class="sp-field-value">{{ codeValue(addr.postOffice, addr.postOfficeBN) }}</span>
+                                </div>
+                                <div class="sp-field">
+                                    <span class="sp-field-label">{{ L['address.thana'] }}</span>
+                                    <span class="sp-field-value">{{ codeValue(addr.thana, addr.thanaBN) }}</span>
+                                </div>
+                                <div class="sp-field">
+                                    <span class="sp-field-label">{{ L['address.district'] }}</span>
+                                    <span class="sp-field-value">{{ codeValue(addr.district, addr.districtBN) }}</span>
+                                </div>
+                                <div class="sp-field">
+                                    <span class="sp-field-label">{{ L['address.division'] }}</span>
+                                    <span class="sp-field-value">{{ codeValue(addr.division, addr.divisionBN) }}</span>
+                                </div>
                             </div>
                         }
-                    }
-                    @if (editingSection === 'spouseAddress' && employeeId != null) {
-                        <app-emp-address-info [externalEmployeeId]="employeeId" [embedMode]="true" [hideTitle]="true" [addressScope]="'spouse'" (saved)="onSectionSaved('spouseAddress')" (cancelled)="closeSectionAndRefresh()"></app-emp-address-info>
-                    }
-                </div>
+                    </div>
+                }
+            }
+            @if (editingSection === 'spouseAddress' && employeeId != null) {
+                <app-emp-address-info [externalEmployeeId]="employeeId" [embedMode]="true" [hideTitle]="true" [addressScope]="'spouse'" (saved)="onSectionSaved('spouseAddress')" (cancelled)="closeSectionAndRefresh()"></app-emp-address-info>
+            }
+        </div>
 
         <!-- Other Personal Information -->
-        <div class="content-section text-900 border-top-1 surface-border">
-            <div class="section-heading flex align-items-center justify-content-between gap-2">
-                <span>{{ L['section.otherPersonal'] }}</span>
+        <div class="sp-section">
+            <div class="sp-section-header">
+                <span class="sp-section-heading">{{ L['section.otherPersonal'] }}</span>
                 @if (editingSection !== 'otherPersonal') {
-                    <p-button
-                        [icon]="'pi pi-pencil'"
-                        label="Edit"
-                        [rounded]="true"
-                        [text]="true"
-                        severity="secondary"
-                        size="small"
-                        (onClick)="setEditingSection('otherPersonal')"
-                        pTooltip="Edit"
-                    ></p-button>
+                    <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('otherPersonal')"><i class="pi pi-pencil"></i> Edit</button>
                 } @else {
-                    <p-button [icon]="'pi pi-times'" label="Cancel" [rounded]="true" [text]="true" severity="secondary" size="small" (onClick)="closeSectionAndRefresh()" pTooltip="Cancel"></p-button>
+                    <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
                 }
             </div>
             @if (editingSection !== 'otherPersonal') {
-                <div class="core-details">
-                    <div class="core-row core-row-four">
-                        <span class="detail-item"><span class="detail-label">{{ L['field.courseBatch'] }} </span> <span class="detail-value">{{ codeValue(profile.batch, profile.batchBN) }}</span></span>
-                        <span class="detail-item"><span class="detail-label">{{ L['field.dateOfJoinInService'] }} </span> <span class="detail-value">{{ formatDateDisplay(profile.dateOfJoiningInServiceTraining) }}</span></span>
-                        <span class="detail-item"><span class="detail-label">{{ L['field.dateOfCommission'] }} </span> <span class="detail-value">{{ formatDateDisplay(profile.dateOfCommission) }}</span></span>
-                        <span class="detail-item"><span class="detail-label">{{ L['field.educationQualification'] }} </span> <span class="detail-value">{{ codeValue(profile.educationQualification, profile.educationQualificationBN) }}</span></span>
+                <div class="sp-grid">
+                    <div class="sp-field-list">
+                        <div class="sp-field"><span class="sp-field-label">{{ L['field.courseBatch'] }}</span> <span class="sp-field-value">{{ codeValue(profile.batch, profile.batchBN) }}</span></div>
+                        <div class="sp-field"><span class="sp-field-label">{{ L['field.educationQualification'] }}</span> <span class="sp-field-value">{{ codeValue(profile.educationQualification, profile.educationQualificationBN) }}</span></div>
+                        <div class="sp-field"><span class="sp-field-label">{{ L['field.professionalQualification'] }}</span> <span class="sp-field-value">{{ codeValue(profile.professionalQualification, profile.professionalQualificationBN) }}</span></div>
+                        <div class="sp-field"><span class="sp-field-label">{{ L['field.personalQualification'] }}</span> <span class="sp-field-value">{{ codeValue(profile.personalQualification, profile.personalQualificationBN) }}</span></div>
+                        <div class="sp-field"><span class="sp-field-label">{{ L['field.gallantryAwards'] }}</span> <span class="sp-field-value">{{ codeValue(profile.gallantryAwardsDecoration, profile.gallantryAwardsDecorationBN) }}</span></div>
+                        <div class="sp-field"><span class="sp-field-label">{{ L['field.bloodGroup'] }}</span> <span class="sp-field-value">{{ val(profile.bloodGroup) }}</span></div>
+                        <div class="sp-field"><span class="sp-field-label">{{ L['field.nid'] }}</span> <span class="sp-field-value">{{ valDisplay(profile.nid) }}</span></div>
+                        <div class="sp-field"><span class="sp-field-label">{{ L['field.passportNo'] }}</span> <span class="sp-field-value">{{ valDisplay(profile.passportNo) }}</span></div>
+                        <div class="sp-field"><span class="sp-field-label">{{ L['field.identificationMark'] }}</span> <span class="sp-field-value">{{ val(profile.identificationMark) }}</span></div>
                     </div>
-                    <div class="core-row core-row-four">
-                        <span class="detail-item"><span class="detail-label">{{ L['field.professionalQualification'] }} </span> <span class="detail-value">{{ codeValue(profile.professionalQualification, profile.professionalQualificationBN) }}</span></span>
-                        <span class="detail-item"><span class="detail-label">{{ L['field.personalQualification'] }} </span> <span class="detail-value">{{ codeValue(profile.personalQualification, profile.personalQualificationBN) }}</span></span>
-                        <span class="detail-item"><span class="detail-label">{{ L['field.gallantryAwards'] }} </span> <span class="detail-value">{{ codeValue(profile.gallantryAwardsDecoration, profile.gallantryAwardsDecorationBN) }}</span></span>
-                        <span class="detail-item"><span class="detail-label">{{ L['field.bloodGroup'] }} </span> <span class="detail-value">{{ val(profile.bloodGroup) }}</span></span>
-                    </div>
-                    <div class="core-row core-row-four">
-                        <span class="detail-item"><span class="detail-label">{{ L['field.nid'] }} </span> <span class="detail-value">{{ valDisplay(profile.nid) }}</span></span>
-                        <span class="detail-item"><span class="detail-label">{{ L['field.emailAddress'] }} </span> <span class="detail-value">{{ val(profile.emailAddress) }}</span></span>
-                        <span class="detail-item"><span class="detail-label">{{ L['field.dateOfBirth'] }} </span> <span class="detail-value">{{ formatDateDisplay(profile.dateOfBirth) }}</span></span>
-                        <span class="detail-item"><span class="detail-label">{{ L['field.passportNo'] }} </span> <span class="detail-value">{{ valDisplay(profile.passportNo) }}</span></span>
-                    </div>
-                    <div class="core-row core-row-four">
-                        <span class="detail-item"><span class="detail-label">{{ L['field.height'] }} </span> <span class="detail-value">{{ heightDisplay(profile) }}</span></span>
-                        <span class="detail-item"><span class="detail-label">{{ L['field.medicalCategory'] }} </span> <span class="detail-value">{{ codeValue(profile.medicalCategory, profile.medicalCategoryBN) }}</span></span>
-                        <span class="detail-item"><span class="detail-label">{{ L['field.mobileNo'] }} </span> <span class="detail-value">{{ valDisplay(profile.mobileNo) }}</span></span>
-                        <span class="detail-item"><span class="detail-label">{{ L['field.emergencyContactNo'] }} </span> <span class="detail-value">{{ valDisplay(profile.emergencyContactNo) }}</span></span>
-                    </div>
-                    <div class="core-row core-row-four">
-                        <span class="detail-item"><span class="detail-label">{{ L['field.religion'] }} </span> <span class="detail-value">{{ codeValue(profile.religion, profile.religionBN) }}</span></span>
-                        <span class="detail-item"><span class="detail-label">{{ L['field.maritalStatus'] }} </span> <span class="detail-value">{{ codeValue(profile.maritalStatus, profile.maritalStatusBN) }}</span></span>
-                        <span class="detail-item"><span class="detail-label">{{ L['field.weight'] }} </span> <span class="detail-value">{{ weightDisplay(profile) }}</span></span>
-                    </div>
-                    <div class="core-row core-row-full">
-                        <span class="detail-item"><span class="detail-label">{{ L['field.identificationMark'] }} </span> <span class="detail-value">{{ val(profile.identificationMark) }}</span></span>
+                    <div class="sp-field-list">
+                        <div class="sp-field"><span class="sp-field-label">{{ L['field.dateOfBirth'] }}</span> <span class="sp-field-value">{{ formatDateDisplay(profile.dateOfBirth) }}</span></div>
+                        <div class="sp-field"><span class="sp-field-label">{{ L['field.religion'] }}</span> <span class="sp-field-value">{{ codeValue(profile.religion, profile.religionBN) }}</span></div>
+                        <div class="sp-field"><span class="sp-field-label">{{ L['field.maritalStatus'] }}</span> <span class="sp-field-value">{{ codeValue(profile.maritalStatus, profile.maritalStatusBN) }}</span></div>
+                        <div class="sp-field"><span class="sp-field-label">{{ L['field.height'] }}</span> <span class="sp-field-value">{{ heightDisplay(profile) }}</span></div>
+                        <div class="sp-field"><span class="sp-field-label">{{ L['field.weight'] }}</span> <span class="sp-field-value">{{ weightDisplay(profile) }}</span></div>
+                        <div class="sp-field"><span class="sp-field-label">{{ L['field.medicalCategory'] }}</span> <span class="sp-field-value">{{ codeValue(profile.medicalCategory, profile.medicalCategoryBN) }}</span></div>
+                        <div class="sp-field"><span class="sp-field-label">{{ L['field.emailAddress'] }}</span> <span class="sp-field-value">{{ val(profile.emailAddress) }}</span></div>
+                        <div class="sp-field"><span class="sp-field-label">{{ L['field.mobileNo'] }}</span> <span class="sp-field-value">{{ valDisplay(profile.mobileNo) }}</span></div>
+                        <div class="sp-field"><span class="sp-field-label">{{ L['field.emergencyContactNo'] }}</span> <span class="sp-field-value">{{ valDisplay(profile.emergencyContactNo) }}</span></div>
                     </div>
                 </div>
             }
@@ -226,17 +275,17 @@
         </div>
 
         <!-- Family Info (excludes in-law relations) -->
-        <div class="content-section text-900 border-top-1 surface-border">
-            <div class="section-heading flex align-items-center justify-content-between gap-2">
-                <span>{{ L['section.familyInfo'] }}</span>
+        <div class="sp-section">
+            <div class="sp-section-header">
+                <span class="sp-section-heading">{{ L['section.familyInfo'] }}</span>
                 @if (editingSection !== 'familyInfo') {
-                    <p-button [icon]="'pi pi-pencil'" label="Edit" [rounded]="true" [text]="true" severity="secondary" size="small" (onClick)="setEditingSection('familyInfo')" pTooltip="Edit"></p-button>
+                    <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('familyInfo')"><i class="pi pi-pencil"></i> Edit</button>
                 } @else {
-                    <p-button [icon]="'pi pi-times'" label="Cancel" [rounded]="true" [text]="true" severity="secondary" size="small" (onClick)="closeSectionAndRefresh()" pTooltip="Cancel"></p-button>
+                    <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
                 }
             </div>
             @if (editingSection !== 'familyInfo') {
-                <div class="family-table-wrapper">
+                <div class="sp-table-wrap">
                     <p-table [value]="familyInfoList" [tableStyle]="{ 'min-width': '40rem' }" styleClass="p-datatable-sm p-datatable-gridlines family-info-table">
                         <ng-template pTemplate="header">
                             <tr>
@@ -270,17 +319,17 @@
         </div>
 
         <!-- Wife Family Info (relation contains "in-law") - same form as Family Info -->
-        <div class="content-section text-900 border-top-1 surface-border">
-            <div class="section-heading flex align-items-center justify-content-between gap-2">
-                <span>{{ L['section.spouseFamilyInfo'] }}</span>
+        <div class="sp-section">
+            <div class="sp-section-header">
+                <span class="sp-section-heading">{{ L['section.spouseFamilyInfo'] }}</span>
                 @if (editingSection !== 'familyInfo') {
-                    <p-button [icon]="'pi pi-pencil'" label="Edit" [rounded]="true" [text]="true" severity="secondary" size="small" (onClick)="setEditingSection('familyInfo')" pTooltip="Edit"></p-button>
+                    <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('familyInfo')"><i class="pi pi-pencil"></i> Edit</button>
                 } @else {
-                    <p-button [icon]="'pi pi-times'" label="Cancel" [rounded]="true" [text]="true" severity="secondary" size="small" (onClick)="closeSectionAndRefresh()" pTooltip="Cancel"></p-button>
+                    <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
                 }
             </div>
             @if (editingSection !== 'familyInfo') {
-                <div class="family-table-wrapper">
+                <div class="sp-table-wrap">
                     <p-table [value]="spouseFamilyInfoList" [tableStyle]="{ 'min-width': '40rem' }" styleClass="p-datatable-sm p-datatable-gridlines family-info-table">
                         <ng-template pTemplate="header">
                             <tr>
@@ -311,17 +360,17 @@
         </div>
 
         <!-- Previous RAB Service Information (ex-member: all postings are previous; Present RAB section is hidden) -->
-        <div class="content-section text-900 border-top-1 surface-border">
-            <div class="section-heading flex align-items-center justify-content-between gap-2">
-                <span>{{ L['section.previousRabService'] }}</span>
+        <div class="sp-section">
+            <div class="sp-section-header">
+                <span class="sp-section-heading">{{ L['section.previousRabService'] }}</span>
                 @if (editingSection !== 'previousRabService') {
-                    <p-button [icon]="'pi pi-pencil'" label="Edit" [rounded]="true" [text]="true" severity="secondary" size="small" (onClick)="setEditingSection('previousRabService')" pTooltip="Edit"></p-button>
+                    <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('previousRabService')"><i class="pi pi-pencil"></i> Edit</button>
                 } @else {
-                    <p-button [icon]="'pi pi-times'" label="Cancel" [rounded]="true" [text]="true" severity="secondary" size="small" (onClick)="closeSectionAndRefresh()" pTooltip="Cancel"></p-button>
+                    <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
                 }
             </div>
             @if (editingSection !== 'previousRabService') {
-            <div class="family-table-wrapper">
+            <div class="sp-table-wrap">
                 <p-table
                     [value]="previousOnlyRabList"
                     [tableStyle]="{ 'min-width': '50rem' }"
@@ -363,17 +412,17 @@
         </div>
 
          <!-- Service History (Mother Organization) -->
-         <div class="content-section text-900 border-top-1 surface-border">
-            <div class="section-heading flex align-items-center justify-content-between gap-2">
-                <span>{{ L['section.serviceHistoryMo'] }}</span>
+         <div class="sp-section">
+            <div class="sp-section-header">
+                <span class="sp-section-heading">{{ L['section.serviceHistoryMo'] }}</span>
                 @if (editingSection !== 'serviceHistoryMo') {
-                    <p-button [icon]="'pi pi-pencil'" label="Edit" [rounded]="true" [text]="true" severity="secondary" size="small" (onClick)="setEditingSection('serviceHistoryMo')" pTooltip="Edit"></p-button>
+                    <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('serviceHistoryMo')"><i class="pi pi-pencil"></i> Edit</button>
                 } @else {
-                    <p-button [icon]="'pi pi-times'" label="Cancel" [rounded]="true" [text]="true" severity="secondary" size="small" (onClick)="closeSectionAndRefresh()" pTooltip="Cancel"></p-button>
+                    <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
                 }
             </div>
             @if (editingSection !== 'serviceHistoryMo') {
-            <div class="family-table-wrapper">
+            <div class="sp-table-wrap">
                 <p-table
                     [value]="moServHistoryList"
                     [tableStyle]="{ 'min-width': '48rem' }"
@@ -417,17 +466,17 @@
         </div>
         
         <!-- Promotion Information -->
-        <div class="content-section text-900 border-top-1 surface-border">
-            <div class="section-heading flex align-items-center justify-content-between gap-2">
-                <span>{{ L['section.promotion'] }}</span>
+        <div class="sp-section">
+            <div class="sp-section-header">
+                <span class="sp-section-heading">{{ L['section.promotion'] }}</span>
                 @if (editingSection !== 'promotion') {
-                    <p-button [icon]="'pi pi-pencil'" label="Edit" [rounded]="true" [text]="true" severity="secondary" size="small" (onClick)="setEditingSection('promotion')" pTooltip="Edit"></p-button>
+                    <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('promotion')"><i class="pi pi-pencil"></i> Edit</button>
                 } @else {
-                    <p-button [icon]="'pi pi-times'" label="Cancel" [rounded]="true" [text]="true" severity="secondary" size="small" (onClick)="closeSectionAndRefresh()" pTooltip="Cancel"></p-button>
+                    <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
                 }
             </div>
             @if (editingSection !== 'promotion') {
-            <div class="family-table-wrapper">
+            <div class="sp-table-wrap">
                 <p-table
                     [value]="promotionList"
                     [tableStyle]="{ 'min-width': '52rem' }"
@@ -473,17 +522,17 @@
         </div>
 
          <!-- Education Information -->
-         <div class="content-section text-900 border-top-1 surface-border">
-            <div class="section-heading flex align-items-center justify-content-between gap-2">
-                <span>{{ L['section.education'] }}</span>
+         <div class="sp-section">
+            <div class="sp-section-header">
+                <span class="sp-section-heading">{{ L['section.education'] }}</span>
                 @if (editingSection !== 'education') {
-                    <p-button [icon]="'pi pi-pencil'" label="Edit" [rounded]="true" [text]="true" severity="secondary" size="small" (onClick)="setEditingSection('education')" pTooltip="Edit"></p-button>
+                    <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('education')"><i class="pi pi-pencil"></i> Edit</button>
                 } @else {
-                    <p-button [icon]="'pi pi-times'" label="Cancel" [rounded]="true" [text]="true" severity="secondary" size="small" (onClick)="closeSectionAndRefresh()" pTooltip="Cancel"></p-button>
+                    <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
                 }
             </div>
             @if (editingSection !== 'education') {
-            <div class="family-table-wrapper">
+            <div class="sp-table-wrap">
                 <p-table
                     [value]="educationList"
                     [tableStyle]="{ 'min-width': '56rem' }"
@@ -532,17 +581,17 @@
         </div>
 
           <!-- Course Information -->
-          <div class="content-section text-900 border-top-1 surface-border">
-            <div class="section-heading flex align-items-center justify-content-between gap-2">
-                <span>{{ L['section.course'] }}</span>
+          <div class="sp-section">
+            <div class="sp-section-header">
+                <span class="sp-section-heading">{{ L['section.course'] }}</span>
                 @if (editingSection !== 'course') {
-                    <p-button [icon]="'pi pi-pencil'" label="Edit" [rounded]="true" [text]="true" severity="secondary" size="small" (onClick)="setEditingSection('course')" pTooltip="Edit"></p-button>
+                    <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('course')"><i class="pi pi-pencil"></i> Edit</button>
                 } @else {
-                    <p-button [icon]="'pi pi-times'" label="Cancel" [rounded]="true" [text]="true" severity="secondary" size="small" (onClick)="closeSectionAndRefresh()" pTooltip="Cancel"></p-button>
+                    <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
                 }
             </div>
             @if (editingSection !== 'course') {
-            <div class="family-table-wrapper">
+            <div class="sp-table-wrap">
                 <p-table
                     [value]="courseList"
                     [tableStyle]="{ 'min-width': '44rem' }"
@@ -588,9 +637,9 @@
         </div>
 
         <!-- RFTS Training -->
-        <div class="content-section text-900 border-top-1 surface-border">
-            <div class="section-heading">RFTS</div>
-            <div class="family-table-wrapper">
+        <div class="sp-section">
+            <div class="sp-section-header"><span class="sp-section-heading">RFTS</span></div>
+            <div class="sp-table-wrap">
                 <p-table
                     [value]="rftsTrainingList"
                     [tableStyle]="{ 'min-width': '30rem' }"
@@ -624,34 +673,33 @@
         </div>
 
         <!-- Investigation Experience -->
-        <div class="content-section text-900 border-top-1 surface-border">
-            <div class="section-heading">{{ L['section.investigation'] }}</div>
-            <div class="core-details">
-                @if (profile?.hasInvestigationExp === true) {
-                    <div class="core-row core-row-full">
-                        <span class="detail-item"><span class="detail-label">{{ L['field.details'] }} </span> <span class="detail-value">{{ val(profile.investigationExpDetails) }}</span></span>
-                    </div>
-                } @else {
-                    <div class="address-empty text-500 py-2">{{ L['empty.noInvestigationRecorded'] }}</div>
-                }
-            </div>
+        <div class="sp-section">
+            <div class="sp-section-header"><span class="sp-section-heading">{{ L['section.investigation'] }}</span></div>
+            @if (profile?.hasInvestigationExp === true) {
+                <div class="sp-field">
+                    <span class="sp-field-label">{{ L['field.details'] }}</span>
+                    <span class="sp-field-value">{{ val(profile.investigationExpDetails) }}</span>
+                </div>
+            } @else {
+                <div class="text-500 py-1" style="font-style: italic">{{ L['empty.noInvestigationRecorded'] }}</div>
+            }
         </div>
 
         <!-- Foreign Visit Information -->
-        <div class="content-section text-900 border-top-1 surface-border">
-            <div class="section-heading flex align-items-center justify-content-between gap-2">
-                <span>{{ L['section.foreignVisit'] }}</span>
+        <div class="sp-section">
+            <div class="sp-section-header">
+                <span class="sp-section-heading">{{ L['section.foreignVisit'] }}</span>
                 @if (editingSection !== 'foreignVisit') {
-                    <p-button [icon]="'pi pi-pencil'" label="Edit" [rounded]="true" [text]="true" severity="secondary" size="small" (onClick)="setEditingSection('foreignVisit')" pTooltip="Edit"></p-button>
+                    <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('foreignVisit')"><i class="pi pi-pencil"></i> Edit</button>
                 } @else {
-                    <p-button [icon]="'pi pi-times'" label="Cancel" [rounded]="true" [text]="true" severity="secondary" size="small" (onClick)="closeSectionAndRefresh()" pTooltip="Cancel"></p-button>
+                    <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
                 }
             </div>
             @if (editingSection !== 'foreignVisit') {
             <!-- Official Foreign Visit -->
-            <div class="foreign-visit-subsection">
-                <div class="subsection-heading">{{ L['section.officialForeignVisit'] }}</div>
-                <div class="family-table-wrapper">
+            <div style="margin-top: 1.25rem">
+                <div class="sp-addr-type">{{ L['section.officialForeignVisit'] }}</div>
+                <div class="sp-table-wrap">
                     <p-table
                         [value]="officialForeignVisitList"
                         [tableStyle]="{ 'min-width': '44rem' }"
@@ -687,9 +735,9 @@
             </div>
 
             <!-- Unofficial Foreign Visit -->
-            <div class="foreign-visit-subsection">
-                <div class="subsection-heading">{{ L['section.unofficialForeignVisit'] }}</div>
-                <div class="family-table-wrapper">
+            <div style="margin-top: 1.25rem">
+                <div class="sp-addr-type">{{ L['section.unofficialForeignVisit'] }}</div>
+                <div class="sp-table-wrap">
                     <p-table
                         [value]="unofficialForeignVisitList"
                         [tableStyle]="{ 'min-width': '44rem' }"
@@ -730,9 +778,9 @@
         </div>
 
         <!-- Leave (Current Year) -->
-        <div class="content-section text-900 border-top-1 surface-border">
-            <div class="section-heading flex align-items-center justify-content-between gap-2">
-                <span>{{ L['section.leave'] }} ({{ currentYearDisplay }})</span>
+        <div class="sp-section">
+            <div class="sp-section-header">
+                <span class="sp-section-heading">{{ L['section.leave'] }} ({{ currentYearDisplay }})</span>
                 <i
                     class="pi pi-info-circle cursor-pointer text-primary"
                     [pTooltip]="L['tooltip.viewPreviousYearLeaveSummary']"
@@ -740,13 +788,13 @@
                     [attr.aria-label]="L['tooltip.viewPreviousYearLeaveSummary']"
                 ></i>
                 @if (editingSection !== 'leave') {
-                    <p-button [icon]="'pi pi-pencil'" label="Edit" [rounded]="true" [text]="true" severity="secondary" size="small" (onClick)="setEditingSection('leave')" pTooltip="Edit"></p-button>
+                    <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('leave')"><i class="pi pi-pencil"></i> Edit</button>
                 } @else {
-                    <p-button [icon]="'pi pi-times'" label="Cancel" [rounded]="true" [text]="true" severity="secondary" size="small" (onClick)="closeSectionAndRefresh()" pTooltip="Cancel"></p-button>
+                    <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
                 }
             </div>
             @if (editingSection !== 'leave') {
-            <div class="family-table-wrapper">
+            <div class="sp-table-wrap">
                 <p-table
                     [value]="leaveList"
                     [tableStyle]="{ 'min-width': '36rem' }"
@@ -782,17 +830,17 @@
         </div>
 
         <!-- Discipline Information -->
-        <div class="content-section text-900 border-top-1 surface-border">
-            <div class="section-heading flex align-items-center justify-content-between gap-2">
-                <span>{{ L['section.discipline'] }}</span>
+        <div class="sp-section">
+            <div class="sp-section-header">
+                <span class="sp-section-heading">{{ L['section.discipline'] }}</span>
                 @if (editingSection !== 'discipline') {
-                    <p-button [icon]="'pi pi-pencil'" label="Edit" [rounded]="true" [text]="true" severity="secondary" size="small" (onClick)="setEditingSection('discipline')" pTooltip="Edit"></p-button>
+                    <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('discipline')"><i class="pi pi-pencil"></i> Edit</button>
                 } @else {
-                    <p-button [icon]="'pi pi-times'" label="Cancel" [rounded]="true" [text]="true" severity="secondary" size="small" (onClick)="closeSectionAndRefresh()" pTooltip="Cancel"></p-button>
+                    <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
                 }
             </div>
             @if (editingSection !== 'discipline') {
-            <div class="family-table-wrapper">
+            <div class="sp-table-wrap">
                 <p-table
                     [value]="disciplineList"
                     [tableStyle]="{ 'min-width': '56rem' }"
@@ -842,17 +890,17 @@
         </div>
 
           <!-- Bank Account Information -->
-          <div class="content-section text-900 border-top-1 surface-border">
-            <div class="section-heading flex align-items-center justify-content-between gap-2">
-                <span>{{ L['section.bankAccount'] }}</span>
+          <div class="sp-section">
+            <div class="sp-section-header">
+                <span class="sp-section-heading">{{ L['section.bankAccount'] }}</span>
                 @if (editingSection !== 'bankAccount') {
-                    <p-button [icon]="'pi pi-pencil'" label="Edit" [rounded]="true" [text]="true" severity="secondary" size="small" (onClick)="setEditingSection('bankAccount')" pTooltip="Edit"></p-button>
+                    <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('bankAccount')"><i class="pi pi-pencil"></i> Edit</button>
                 } @else {
-                    <p-button [icon]="'pi pi-times'" label="Cancel" [rounded]="true" [text]="true" severity="secondary" size="small" (onClick)="closeSectionAndRefresh()" pTooltip="Cancel"></p-button>
+                    <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
                 }
             </div>
             @if (editingSection !== 'bankAccount') {
-            <div class="family-table-wrapper">
+            <div class="sp-table-wrap">
                 <p-table
                     [value]="bankAccList"
                     [tableStyle]="{ 'min-width': '40rem' }"
@@ -893,17 +941,17 @@
 
 
         <!-- Additional Remarks -->
-        <div class="content-section text-900 border-top-1 surface-border">
-            <div class="section-heading flex align-items-center justify-content-between gap-2">
-                <span>{{ L['section.additionalRemarks'] }}</span>
+        <div class="sp-section">
+            <div class="sp-section-header">
+                <span class="sp-section-heading">{{ L['section.additionalRemarks'] }}</span>
                 @if (editingSection !== 'additionalRemarks') {
-                    <p-button [icon]="'pi pi-pencil'" label="Edit" [rounded]="true" [text]="true" severity="secondary" size="small" (onClick)="setEditingSection('additionalRemarks')" pTooltip="Edit"></p-button>
+                    <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('additionalRemarks')"><i class="pi pi-pencil"></i> Edit</button>
                 } @else {
-                    <p-button [icon]="'pi pi-times'" label="Cancel" [rounded]="true" [text]="true" severity="secondary" size="small" (onClick)="closeSectionAndRefresh()" pTooltip="Cancel"></p-button>
+                    <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
                 }
             </div>
             @if (editingSection !== 'additionalRemarks') {
-            <div class="family-table-wrapper">
+            <div class="sp-table-wrap">
                 <p-table
                     [value]="additionalRemarksList"
                     [tableStyle]="{ 'min-width': '40rem' }"
@@ -935,8 +983,8 @@
         </div>
 
         <!-- Documents (files from PersonalInfo, EmployeeInfo, PreviousRABServiceInfo, etc.) -->
-        <div class="content-section text-900 border-top-1 surface-border">
-            <div class="section-heading">{{ L['section.documents'] }}</div>
+        <div class="sp-section">
+            <div class="sp-section-header"><span class="sp-section-heading">{{ L['section.documents'] }}</span></div>
             @if (documentList.length === 0) {
                 <div class="text-500 py-2">{{ L['empty.noDocuments'] }}</div>
             } @else {

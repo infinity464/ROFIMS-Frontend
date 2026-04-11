@@ -83,7 +83,7 @@ export class SupernumeraryProfile implements OnInit, OnDestroy {
             kv('Trade', val(p.trade) === '-' ? 'N/A' : val(p.trade)),
             kv('Mother Organization', val(p.motherOrganization)),
             kv('Last Unit', val(p.lastUnit)),
-            kv('Location', val(p.location)),
+            kv('Last Unit District', val(p.location)),
             kv('Appointment', val(p.appointment)),
             kv('Date of Joining in RAB', this.formatDateOfJoining(this.serviceOverview?.joiningDate ?? this.getDateOfJoiningInRAB(p))),
         ], true);
@@ -416,6 +416,14 @@ export class SupernumeraryProfile implements OnInit, OnDestroy {
 
     addrVal(addr: AddressBlock | null | undefined, key: keyof AddressBlock): string {
         return this.getAddrField(addr, key);
+    }
+
+    /** Get initials from name for avatar fallback. */
+    getInitials(name: string | null | undefined): string {
+        if (!name) return '?';
+        const parts = name.trim().split(/\s+/);
+        if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+        return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
     }
 
     /** Build combined rows for reliever table: RelievedBy (if any) + Relievers. */

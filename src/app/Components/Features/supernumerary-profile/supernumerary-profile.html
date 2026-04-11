@@ -1,39 +1,30 @@
 <p-toast position="top-center"></p-toast>
 
 <div class="card supernumerary-profile-page text-900">
-    <div class="profile-header">
-        <div class="profile-header-left">
-            <div class="flex align-items-center gap-2 flex-wrap">
-                <p-button icon="pi pi-arrow-left" label="Back" [rounded]="true" [text]="true" severity="secondary" (onClick)="goBack()" styleClass="p-button-sm"></p-button>
-                @if (profile && !loading) {
-                    <div class="profile-export-wrap">
-                        <button type="button" class="profile-btn-export" (click)="toggleExportDropdown($event)">
-                            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                                <path d="M6.5 1v7M3.5 5.5l3 3 3-3M1.5 10.5h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            Export
-                        </button>
-                        @if (exportDropdownOpen) {
-                            <div class="profile-export-dropdown" (click)="$event.stopPropagation()">
-                                <button type="button" class="profile-export-item" (click)="exportAs('pdf')">
-                                    <span class="profile-export-icon">⬇</span> PDF
-                                </button>
-                                <button type="button" class="profile-export-item" (click)="exportAs('word')">
-                                    <span class="profile-export-icon">⬇</span> Word
-                                </button>
-                            </div>
-                        }
-                    </div>
-                }
-            </div>
-            <h1 class="profile-title m-0 text-2xl font-bold text-900 mt-2">Supernumerary Profile</h1>
-        </div>
-        <div class="profile-image-box">
-            @if (profileImageUrl) {
-                <img [src]="profileImageUrl" alt="Profile" class="profile-image" />
-            } @else {
-                <div class="profile-image-placeholder" aria-hidden="true">
-                    <i class="pi pi-user"></i>
+    <!-- Action bar: title left, buttons right -->
+    <div class="profile-action-bar">
+        <h1 class="profile-page-title">Supernumerary Profile</h1>
+        <div class="profile-action-buttons">
+            <button type="button" class="profile-btn-back" (click)="goBack()">
+                <i class="pi pi-arrow-left"></i>
+                Back
+            </button>
+            @if (profile && !loading) {
+                <div class="profile-export-wrap">
+                    <button type="button" class="profile-btn-export" (click)="toggleExportDropdown($event)">
+                        <i class="pi pi-download"></i>
+                        Export
+                    </button>
+                    @if (exportDropdownOpen) {
+                        <div class="profile-export-dropdown" (click)="$event.stopPropagation()">
+                            <button type="button" class="profile-export-item" (click)="exportAs('pdf')">
+                                <i class="pi pi-file-pdf"></i> PDF
+                            </button>
+                            <button type="button" class="profile-export-item" (click)="exportAs('word')">
+                                <i class="pi pi-file-word"></i> Word
+                            </button>
+                        </div>
+                    }
                 </div>
             }
         </div>
@@ -44,104 +35,207 @@
             <i class="pi pi-spin pi-spinner text-4xl text-500"></i>
         </div>
     } @else if (profile) {
-        <!-- Core details:  label (normal) + value (bold), paired on same lines -->
-        <div class="core-details text-900">
-            <div class="core-row">
-                <span class="detail-item"><span class="detail-label">Service ID:  </span> <span class="detail-value">{{ profile.serviceId || '-' }}</span></span>
-                <span class="detail-item"><span class="detail-label">RAB ID:  </span> <span class="detail-value">{{ profile.rabId || '-' }}</span></span>
+        <!-- Hero: Avatar + Name/badges + IDs -->
+        <div class="profile-hero">
+            <div class="profile-avatar-box">
+                @if (profileImageUrl) {
+                    <img [src]="profileImageUrl" alt="Profile" class="profile-avatar-img" />
+                } @else {
+                    <div class="profile-avatar-initials">{{ getInitials(profile.name) }}</div>
+                }
             </div>
-            <div class="core-row core-row-full">
-                <span class="detail-item"><span class="detail-label">Name: </span> <span class="detail-value">{{ profile.name || '-' }}{{ profile.corpsName ? ', + ' + profile.corpsName :  '' }}</span></span>
+            <div class="profile-hero-info">
+                <div class="profile-hero-name">{{ profile.name || '-' }}{{ profile.corpsName && profile.corpsName !== 'N/A' ? ', + ' + profile.corpsName : '' }}</div>
+                <div class="profile-hero-subtitle">{{ profile.appointment || '' }}{{ profile.appointment && profile.rank ? ' \u00B7 ' : '' }}{{ profile.rank || '' }}</div>
+                <div class="profile-hero-badges">
+                    @if (profile.typeOfMember) {
+                        <span class="profile-badge">{{ profile.typeOfMember }}</span>
+                    }
+                    @if (profile.motherOrganization) {
+                        <span class="profile-badge">{{ profile.motherOrganization }}</span>
+                    }
+                    <span class="profile-badge">Supernumerary</span>
+                </div>
             </div>
-            <div class="core-row core-row-four">
-                <span class="detail-item"><span class="detail-label">Type of Member: </span> <span class="detail-value">{{ profile.typeOfMember || '-' }}</span></span>
-                <span class="detail-item"><span class="detail-label">Rank: </span> <span class="detail-value">{{ profile.rank || '-' }}</span></span>
-                <span class="detail-item"><span class="detail-label">Corps: </span> <span class="detail-value">{{ profile.corpsName || profile.corps || '-' }}</span></span>
-                <span class="detail-item"><span class="detail-label">Trade: </span> <span class="detail-value">{{ profile.trade || 'N/A' }}</span></span>
-            </div>
-            <div class="core-row core-row-three">
-                <span class="detail-item"><span class="detail-label">Mother Organization: </span> <span class="detail-value">{{ profile.motherOrganization || '-' }}</span></span>
-                <span class="detail-item"><span class="detail-label">Last Unit: </span> <span class="detail-value">{{ profile.lastUnit || '-' }}</span></span>
-                <span class="detail-item"><span class="detail-label">Location: </span> <span class="detail-value">{{ profile.location || '-' }}</span></span>
-            </div>
-            <div class="core-row">
-                <span class="detail-item"><span class="detail-label">Appointment: </span> <span class="detail-value">{{ profile.appointment || '-' }}</span></span>
-                <span class="detail-item"><span class="detail-label">Date of Joining in RAB: </span> <span class="detail-value">{{ formatDateOfJoining(serviceOverview?.joiningDate ?? getDateOfJoiningInRAB(profile)) }}</span></span>
+            <div class="profile-hero-ids">
+                <div class="profile-id-block">
+                    <span class="profile-id-label">SERVICE ID</span>
+                    <span class="profile-id-value">{{ profile.serviceId || '-' }}</span>
+                </div>
+                <div class="profile-id-block">
+                    <span class="profile-id-label">RAB ID</span>
+                    <span class="profile-id-value">{{ profile.rabId || '-' }}</span>
+                </div>
             </div>
         </div>
 
-        <!-- Address blocks: only show if address has data -->
-        @if (hasAddress(profile.ownPermanentAddress)) {
+        <!-- Service Details: one heading, two balanced columns -->
+        <div class="profile-section">
+            <div class="profile-section-heading">SERVICE DETAILS</div>
+            <div class="profile-two-col">
+                <div class="profile-field-list">
+                    <div class="profile-field-row">
+                        <span class="profile-field-label">Type of member</span>
+                        <span class="profile-field-value">{{ profile.typeOfMember || '-' }}</span>
+                    </div>
+                    <div class="profile-field-row">
+                        <span class="profile-field-label">Rank</span>
+                        <span class="profile-field-value">{{ profile.rank || '-' }}</span>
+                    </div>
+                    <div class="profile-field-row">
+                        <span class="profile-field-label">Corps</span>
+                        <span class="profile-field-value">{{ profile.corpsName || profile.corps || '-' }}</span>
+                    </div>
+                    <div class="profile-field-row">
+                        <span class="profile-field-label">Trade</span>
+                        <span class="profile-field-value">{{ profile.trade || 'N/A' }}</span>
+                    </div>
+                    <div class="profile-field-row">
+                        <span class="profile-field-label">Mother org.</span>
+                        <span class="profile-field-value">{{ profile.motherOrganization || '-' }}</span>
+                    </div>
+                </div>
+                <div class="profile-field-list">
+                    <div class="profile-field-row">
+                        <span class="profile-field-label">Appointment</span>
+                        <span class="profile-field-value">{{ profile.appointment || '-' }}</span>
+                    </div>
+                    <div class="profile-field-row">
+                        <span class="profile-field-label">Last unit</span>
+                        <span class="profile-field-value">{{ profile.lastUnit || '-' }}</span>
+                    </div>
+                    <div class="profile-field-row">
+                        <span class="profile-field-label">Last unit district</span>
+                        <span class="profile-field-value">{{ profile.location || '-' }}</span>
+                    </div>
+                    <div class="profile-field-row">
+                        <span class="profile-field-label">Date of joining RAB</span>
+                        <span class="profile-field-value">{{ formatDateOfJoining(serviceOverview?.joiningDate ?? getDateOfJoiningInRAB(profile)) }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-            <div class="address-section text-900">
-                <div class="address-heading">Own Permanent Address: </div>
-                <div class="address-grid">
-                    <div class="address-col">
-                        <div class="addr-row"><span class="addr-label">Village/Area: </span> <span class="addr-value">{{ addrVal(profile.ownPermanentAddress, 'villageArea') }}</span></div>
-                        <div class="addr-row"><span class="addr-label">District: </span> <span class="addr-value">{{ addrVal(profile.ownPermanentAddress, 'district') }}</span></div>
+        <!-- Own addresses: Permanent + Present side-by-side -->
+        @if (hasAddress(profile.ownPermanentAddress) || hasAddress(profile.ownPresentAddress)) {
+            <div class="profile-section">
+                <div class="profile-two-col">
+                    <div class="profile-field-list">
+                        @if (hasAddress(profile.ownPermanentAddress)) {
+                            <div class="profile-col-heading">PERMANENT ADDRESS</div>
+                            <div class="profile-field-row">
+                                <span class="profile-field-label">Village / Area</span>
+                                <span class="profile-field-value">{{ addrVal(profile.ownPermanentAddress, 'villageArea') }}</span>
+                            </div>
+                            <div class="profile-field-row">
+                                <span class="profile-field-label">Post office</span>
+                                <span class="profile-field-value">{{ addrVal(profile.ownPermanentAddress, 'postOffice') }}</span>
+                            </div>
+                            <div class="profile-field-row">
+                                <span class="profile-field-label">Upazila / Thana</span>
+                                <span class="profile-field-value">{{ addrVal(profile.ownPermanentAddress, 'upazilaThana') }}</span>
+                            </div>
+                            <div class="profile-field-row">
+                                <span class="profile-field-label">District</span>
+                                <span class="profile-field-value">{{ addrVal(profile.ownPermanentAddress, 'district') }}</span>
+                            </div>
+                            <div class="profile-field-row">
+                                <span class="profile-field-label">Division</span>
+                                <span class="profile-field-value">{{ addrVal(profile.ownPermanentAddress, 'division') }}</span>
+                            </div>
+                        }
                     </div>
-                    <div class="address-col">
-                        <div class="addr-row"><span class="addr-label">Post Office: </span> <span class="addr-value">{{ addrVal(profile.ownPermanentAddress, 'postOffice') }}</span></div>
-                        <div class="addr-row"><span class="addr-label">Division: </span> <span class="addr-value">{{ addrVal(profile.ownPermanentAddress, 'division') }}</span></div>
-                        <div class="addr-row"><span class="addr-label">Upazila/Thana: </span> <span class="addr-value">{{ addrVal(profile.ownPermanentAddress, 'upazilaThana') }}</span></div>
-                    </div>
-                </div>
-            </div>
-        
-        }
-        @if (hasAddress(profile.ownPresentAddress)) {
-            <div class="address-section text-900">
-                <div class="address-heading">Own Present Address: </div>
-                <div class="address-grid">
-                    <div class="address-col">
-                        <div class="addr-row"><span class="addr-label">Village/Area: </span> <span class="addr-value">{{ addrVal(profile.ownPresentAddress, 'villageArea') }}</span></div>
-                        <div class="addr-row"><span class="addr-label">District: </span> <span class="addr-value">{{ addrVal(profile.ownPresentAddress, 'district') }}</span></div>
-                    </div>
-                    <div class="address-col">
-                        <div class="addr-row"><span class="addr-label">Post Office: </span> <span class="addr-value">{{ addrVal(profile.ownPresentAddress, 'postOffice') }}</span></div>
-                        <div class="addr-row"><span class="addr-label">Division: </span> <span class="addr-value">{{ addrVal(profile.ownPresentAddress, 'division') }}</span></div>
-                        <div class="addr-row"><span class="addr-label">Upazila/Thana: </span> <span class="addr-value">{{ addrVal(profile.ownPresentAddress, 'upazilaThana') }}</span></div>
-                    </div>
-                </div>
-            </div>
-        }
-        @if (hasAddress(profile.spousePresentAddress)) {
-            <div class="address-section text-900">
-                <div class="address-heading">Spouse Present Address: </div>
-                <div class="address-grid">
-                    <div class="address-col">
-                        <div class="addr-row"><span class="addr-label">Village/Area: </span> <span class="addr-value">{{ addrVal(profile.spousePresentAddress, 'villageArea') }}</span></div>
-                        <div class="addr-row"><span class="addr-label">District: </span> <span class="addr-value">{{ addrVal(profile.spousePresentAddress, 'district') }}</span></div>
-                    </div>
-                    <div class="address-col">
-                        <div class="addr-row"><span class="addr-label">Post Office: </span> <span class="addr-value">{{ addrVal(profile.spousePresentAddress, 'postOffice') }}</span></div>
-                        <div class="addr-row"><span class="addr-label">Division: </span> <span class="addr-value">{{ addrVal(profile.spousePresentAddress, 'division') }}</span></div>
-                        <div class="addr-row"><span class="addr-label">Upazila/Thana: </span> <span class="addr-value">{{ addrVal(profile.spousePresentAddress, 'upazilaThana') }}</span></div>
-                    </div>
-                </div>
-            </div>
-        }
-        @if (hasAddress(profile.spousePermanentAddress)) {
-            <div class="address-section text-900">
-                <div class="address-heading">Spouse Permanent Address: </div>
-                <div class="address-grid">
-                    <div class="address-col">
-                        <div class="addr-row"><span class="addr-label">Village/Area: </span> <span class="addr-value">{{ addrVal(profile.spousePermanentAddress, 'villageArea') }}</span></div>
-                        <div class="addr-row"><span class="addr-label">District: </span> <span class="addr-value">{{ addrVal(profile.spousePermanentAddress, 'district') }}</span></div>
-                    </div>
-                    <div class="address-col">
-                        <div class="addr-row"><span class="addr-label">Post Office: </span> <span class="addr-value">{{ addrVal(profile.spousePermanentAddress, 'postOffice') }}</span></div>
-                        <div class="addr-row"><span class="addr-label">Division: </span> <span class="addr-value">{{ addrVal(profile.spousePermanentAddress, 'division') }}</span></div>
-                        <div class="addr-row"><span class="addr-label">Upazila/Thana: </span> <span class="addr-value">{{ addrVal(profile.spousePermanentAddress, 'upazilaThana') }}</span></div>
+                    <div class="profile-field-list">
+                        @if (hasAddress(profile.ownPresentAddress)) {
+                            <div class="profile-col-heading">PRESENT ADDRESS</div>
+                            <div class="profile-field-row">
+                                <span class="profile-field-label">Village / Area</span>
+                                <span class="profile-field-value">{{ addrVal(profile.ownPresentAddress, 'villageArea') }}</span>
+                            </div>
+                            <div class="profile-field-row">
+                                <span class="profile-field-label">Post office</span>
+                                <span class="profile-field-value">{{ addrVal(profile.ownPresentAddress, 'postOffice') }}</span>
+                            </div>
+                            <div class="profile-field-row">
+                                <span class="profile-field-label">Upazila / Thana</span>
+                                <span class="profile-field-value">{{ addrVal(profile.ownPresentAddress, 'upazilaThana') }}</span>
+                            </div>
+                            <div class="profile-field-row">
+                                <span class="profile-field-label">District</span>
+                                <span class="profile-field-value">{{ addrVal(profile.ownPresentAddress, 'district') }}</span>
+                            </div>
+                            <div class="profile-field-row">
+                                <span class="profile-field-label">Division</span>
+                                <span class="profile-field-value">{{ addrVal(profile.ownPresentAddress, 'division') }}</span>
+                            </div>
+                        }
                     </div>
                 </div>
             </div>
         }
 
-        <!-- Reliever table: only show when this employee has a reliever (relievedBy). e.g. MR A (RelieverId=MR B) sees MR B; MR B (RelieverId null) does not see this section. -->
+        <!-- Spouse addresses -->
+        @if (hasAddress(profile.spousePermanentAddress) || hasAddress(profile.spousePresentAddress)) {
+            <div class="profile-section">
+                <div class="profile-two-col">
+                    <div class="profile-field-list">
+                        @if (hasAddress(profile.spousePermanentAddress)) {
+                            <div class="profile-col-heading">SPOUSE PERMANENT ADDRESS</div>
+                            <div class="profile-field-row">
+                                <span class="profile-field-label">Village / Area</span>
+                                <span class="profile-field-value">{{ addrVal(profile.spousePermanentAddress, 'villageArea') }}</span>
+                            </div>
+                            <div class="profile-field-row">
+                                <span class="profile-field-label">Post office</span>
+                                <span class="profile-field-value">{{ addrVal(profile.spousePermanentAddress, 'postOffice') }}</span>
+                            </div>
+                            <div class="profile-field-row">
+                                <span class="profile-field-label">Upazila / Thana</span>
+                                <span class="profile-field-value">{{ addrVal(profile.spousePermanentAddress, 'upazilaThana') }}</span>
+                            </div>
+                            <div class="profile-field-row">
+                                <span class="profile-field-label">District</span>
+                                <span class="profile-field-value">{{ addrVal(profile.spousePermanentAddress, 'district') }}</span>
+                            </div>
+                            <div class="profile-field-row">
+                                <span class="profile-field-label">Division</span>
+                                <span class="profile-field-value">{{ addrVal(profile.spousePermanentAddress, 'division') }}</span>
+                            </div>
+                        }
+                    </div>
+                    <div class="profile-field-list">
+                        @if (hasAddress(profile.spousePresentAddress)) {
+                            <div class="profile-col-heading">SPOUSE PRESENT ADDRESS</div>
+                            <div class="profile-field-row">
+                                <span class="profile-field-label">Village / Area</span>
+                                <span class="profile-field-value">{{ addrVal(profile.spousePresentAddress, 'villageArea') }}</span>
+                            </div>
+                            <div class="profile-field-row">
+                                <span class="profile-field-label">Post office</span>
+                                <span class="profile-field-value">{{ addrVal(profile.spousePresentAddress, 'postOffice') }}</span>
+                            </div>
+                            <div class="profile-field-row">
+                                <span class="profile-field-label">Upazila / Thana</span>
+                                <span class="profile-field-value">{{ addrVal(profile.spousePresentAddress, 'upazilaThana') }}</span>
+                            </div>
+                            <div class="profile-field-row">
+                                <span class="profile-field-label">District</span>
+                                <span class="profile-field-value">{{ addrVal(profile.spousePresentAddress, 'district') }}</span>
+                            </div>
+                            <div class="profile-field-row">
+                                <span class="profile-field-label">Division</span>
+                                <span class="profile-field-value">{{ addrVal(profile.spousePresentAddress, 'division') }}</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Reliever table -->
         @if (profile.relievedBy && relieverTableRows.length > 0) {
-            <div class="reliever-section border-top-1 surface-border text-900">
-                <div class="reliever-heading">Reliever Information</div>
+            <div class="profile-section">
+                <div class="profile-section-heading">RELIEVER INFORMATION</div>
                 <div class="reliever-table">
                     <p-table [value]="relieverTableRows" [tableStyle]="{ 'min-width': '40rem' }" styleClass="p-datatable-sm p-datatable-gridlines">
                         <ng-template pTemplate="header">
@@ -177,9 +271,9 @@
             </div>
         }
 
-        <!-- Files / Documents (like ex-member profile) -->
-        <div class="address-section border-top-1 surface-border text-900">
-            <div class="address-heading">Files</div>
+        <!-- Files / Documents -->
+        <div class="profile-section">
+            <div class="profile-section-heading">FILES</div>
             @if (documentList.length === 0) {
                 <div class="text-500 py-2">No documents available.</div>
             } @else {
@@ -228,7 +322,7 @@
     }
 </div>
 
-<!-- Reliever profile modal (same UI as profile page) -->
+<!-- Reliever profile modal -->
 <p-dialog header="Reliever Profile" [(visible)]="relieverDialogVisible" [modal]="true" [style]="{ width: '42rem' }" [draggable]="false" [resizable]="false" (onHide)="closeRelieverDialog()" [closable]="true" styleClass="text-900">
     @if (relieverProfileLoading) {
         <div class="flex align-items-center justify-content-center p-5">
@@ -236,90 +330,75 @@
         </div>
     } @else if (relieverProfile) {
         <div class="profile-dialog-content text-900">
-            <div class="core-details">
-                <div class="core-row">
-                    <span class="detail-item"><span class="detail-label">Service ID: </span> <span class="detail-value">{{ relieverProfile.serviceId || '-' }}</span></span>
-                    <span class="detail-item"><span class="detail-label">RAB ID: </span> <span class="detail-value">{{ relieverProfile.rabId || '-' }}</span></span>
-                </div>
-                <div class="core-row core-row-full">
-                    <span class="detail-item"><span class="detail-label">Name: </span> <span class="detail-value">{{ relieverProfile.name || '-' }}{{ relieverProfile.corpsName ? ', + ' + relieverProfile.corpsName : '' }}</span></span>
-                </div>
-                <div class="core-row core-row-four">
-                    <span class="detail-item"><span class="detail-label">Type of Member: </span> <span class="detail-value">{{ relieverProfile.typeOfMember || '-' }}</span></span>
-                    <span class="detail-item"><span class="detail-label">Rank: </span> <span class="detail-value">{{ relieverProfile.rank || '-' }}</span></span>
-                    <span class="detail-item"><span class="detail-label">Corps: </span> <span class="detail-value">{{ relieverProfile.corpsName || relieverProfile.corps || '-' }}</span></span>
-                    <span class="detail-item"><span class="detail-label">Trade: </span> <span class="detail-value">{{ relieverProfile.trade || 'N/A' }}</span></span>
-                </div>
-                <div class="core-row core-row-three">
-                    <span class="detail-item"><span class="detail-label">Mother Organization: </span> <span class="detail-value">{{ relieverProfile.motherOrganization || '-' }}</span></span>
-                    <span class="detail-item"><span class="detail-label">Last Unit: </span> <span class="detail-value">{{ relieverProfile.lastUnit || '-' }}</span></span>
-                    <span class="detail-item"><span class="detail-label">Location: </span> <span class="detail-value">{{ relieverProfile.location || '-' }}</span></span>
-                </div>
-                <div class="core-row">
-                    <span class="detail-item"><span class="detail-label">Appointment: </span> <span class="detail-value">{{ relieverProfile.appointment || '-' }}</span></span>
-                    <span class="detail-item"><span class="detail-label">Date of Joining in RAB: </span> <span class="detail-value">{{ formatDateOfJoining(getDateOfJoiningInRAB(relieverProfile)) }}</span></span>
+            <div class="profile-section dialog-section">
+                <div class="profile-section-heading">SERVICE DETAILS</div>
+                <div class="profile-two-col">
+                    <div class="profile-field-list">
+                        <div class="profile-field-row"><span class="profile-field-label">Service ID</span> <span class="profile-field-value">{{ relieverProfile.serviceId || '-' }}</span></div>
+                        <div class="profile-field-row"><span class="profile-field-label">RAB ID</span> <span class="profile-field-value">{{ relieverProfile.rabId || '-' }}</span></div>
+                        <div class="profile-field-row"><span class="profile-field-label">Name</span> <span class="profile-field-value">{{ relieverProfile.name || '-' }}{{ relieverProfile.corpsName && relieverProfile.corpsName !== 'N/A' ? ', + ' + relieverProfile.corpsName : '' }}</span></div>
+                        <div class="profile-field-row"><span class="profile-field-label">Type of Member</span> <span class="profile-field-value">{{ relieverProfile.typeOfMember || '-' }}</span></div>
+                        <div class="profile-field-row"><span class="profile-field-label">Rank</span> <span class="profile-field-value">{{ relieverProfile.rank || '-' }}</span></div>
+                        <div class="profile-field-row"><span class="profile-field-label">Corps</span> <span class="profile-field-value">{{ relieverProfile.corpsName || relieverProfile.corps || '-' }}</span></div>
+                        <div class="profile-field-row"><span class="profile-field-label">Trade</span> <span class="profile-field-value">{{ relieverProfile.trade || 'N/A' }}</span></div>
+                    </div>
+                    <div class="profile-field-list">
+                        <div class="profile-field-row"><span class="profile-field-label">Mother Organization</span> <span class="profile-field-value">{{ relieverProfile.motherOrganization || '-' }}</span></div>
+                        <div class="profile-field-row"><span class="profile-field-label">Last Unit</span> <span class="profile-field-value">{{ relieverProfile.lastUnit || '-' }}</span></div>
+                        <div class="profile-field-row"><span class="profile-field-label">Last Unit District</span> <span class="profile-field-value">{{ relieverProfile.location || '-' }}</span></div>
+                        <div class="profile-field-row"><span class="profile-field-label">Appointment</span> <span class="profile-field-value">{{ relieverProfile.appointment || '-' }}</span></div>
+                        <div class="profile-field-row"><span class="profile-field-label">Date of Joining in RAB</span> <span class="profile-field-value">{{ formatDateOfJoining(getDateOfJoiningInRAB(relieverProfile)) }}</span></div>
+                    </div>
                 </div>
             </div>
-            @if (hasAddress(relieverProfile.ownPermanentAddress)) {
-                <div class="address-section">
-                    <div class="address-heading">Own Permanent Address: </div>
-                    <div class="address-grid">
-                        <div class="address-col">
-                            <div class="addr-row"><span class="addr-label">Village/Area: </span> <span class="addr-value">{{ addrVal(relieverProfile.ownPermanentAddress, 'villageArea') }}</span></div>
-                            <div class="addr-row"><span class="addr-label">District: </span> <span class="addr-value">{{ addrVal(relieverProfile.ownPermanentAddress, 'district') }}</span></div>
+            @if (hasAddress(relieverProfile.ownPermanentAddress) || hasAddress(relieverProfile.ownPresentAddress)) {
+                <div class="profile-section dialog-section">
+                    <div class="profile-two-col">
+                        <div class="profile-field-list">
+                            @if (hasAddress(relieverProfile.ownPermanentAddress)) {
+                                <div class="profile-col-heading">PERMANENT ADDRESS</div>
+                                <div class="profile-field-row"><span class="profile-field-label">Village / Area</span> <span class="profile-field-value">{{ addrVal(relieverProfile.ownPermanentAddress, 'villageArea') }}</span></div>
+                                <div class="profile-field-row"><span class="profile-field-label">Post office</span> <span class="profile-field-value">{{ addrVal(relieverProfile.ownPermanentAddress, 'postOffice') }}</span></div>
+                                <div class="profile-field-row"><span class="profile-field-label">Upazila / Thana</span> <span class="profile-field-value">{{ addrVal(relieverProfile.ownPermanentAddress, 'upazilaThana') }}</span></div>
+                                <div class="profile-field-row"><span class="profile-field-label">District</span> <span class="profile-field-value">{{ addrVal(relieverProfile.ownPermanentAddress, 'district') }}</span></div>
+                                <div class="profile-field-row"><span class="profile-field-label">Division</span> <span class="profile-field-value">{{ addrVal(relieverProfile.ownPermanentAddress, 'division') }}</span></div>
+                            }
                         </div>
-                        <div class="address-col">
-                            <div class="addr-row"><span class="addr-label">Post Office: </span> <span class="addr-value">{{ addrVal(relieverProfile.ownPermanentAddress, 'postOffice') }}</span></div>
-                            <div class="addr-row"><span class="addr-label">Division: </span> <span class="addr-value">{{ addrVal(relieverProfile.ownPermanentAddress, 'division') }}</span></div>
-                            <div class="addr-row"><span class="addr-label">Upazila/Thana: </span> <span class="addr-value">{{ addrVal(relieverProfile.ownPermanentAddress, 'upazilaThana') }}</span></div>
-                        </div>
-                    </div>
-                </div>
-            }
-            @if (hasAddress(relieverProfile.ownPresentAddress)) {
-                <div class="address-section">
-                    <div class="address-heading">Own Present Address: </div>
-                    <div class="address-grid">
-                        <div class="address-col">
-                            <div class="addr-row"><span class="addr-label">Village/Area: </span> <span class="addr-value">{{ addrVal(relieverProfile.ownPresentAddress, 'villageArea') }}</span></div>
-                            <div class="addr-row"><span class="addr-label">District: </span> <span class="addr-value">{{ addrVal(relieverProfile.ownPresentAddress, 'district') }}</span></div>
-                        </div>
-                        <div class="address-col">
-                            <div class="addr-row"><span class="addr-label">Post Office: </span> <span class="addr-value">{{ addrVal(relieverProfile.ownPresentAddress, 'postOffice') }}</span></div>
-                            <div class="addr-row"><span class="addr-label">Division: </span> <span class="addr-value">{{ addrVal(relieverProfile.ownPresentAddress, 'division') }}</span></div>
-                            <div class="addr-row"><span class="addr-label">Upazila/Thana: </span> <span class="addr-value">{{ addrVal(relieverProfile.ownPresentAddress, 'upazilaThana') }}</span></div>
+                        <div class="profile-field-list">
+                            @if (hasAddress(relieverProfile.ownPresentAddress)) {
+                                <div class="profile-col-heading">PRESENT ADDRESS</div>
+                                <div class="profile-field-row"><span class="profile-field-label">Village / Area</span> <span class="profile-field-value">{{ addrVal(relieverProfile.ownPresentAddress, 'villageArea') }}</span></div>
+                                <div class="profile-field-row"><span class="profile-field-label">Post office</span> <span class="profile-field-value">{{ addrVal(relieverProfile.ownPresentAddress, 'postOffice') }}</span></div>
+                                <div class="profile-field-row"><span class="profile-field-label">Upazila / Thana</span> <span class="profile-field-value">{{ addrVal(relieverProfile.ownPresentAddress, 'upazilaThana') }}</span></div>
+                                <div class="profile-field-row"><span class="profile-field-label">District</span> <span class="profile-field-value">{{ addrVal(relieverProfile.ownPresentAddress, 'district') }}</span></div>
+                                <div class="profile-field-row"><span class="profile-field-label">Division</span> <span class="profile-field-value">{{ addrVal(relieverProfile.ownPresentAddress, 'division') }}</span></div>
+                            }
                         </div>
                     </div>
                 </div>
             }
-            @if (hasAddress(relieverProfile.spousePermanentAddress)) {
-                <div class="address-section">
-                    <div class="address-heading">Spouse Permanent Address: </div>
-                    <div class="address-grid">
-                        <div class="address-col">
-                            <div class="addr-row"><span class="addr-label">Village/Area: </span> <span class="addr-value">{{ addrVal(relieverProfile.spousePermanentAddress, 'villageArea') }}</span></div>
-                            <div class="addr-row"><span class="addr-label">District: </span> <span class="addr-value">{{ addrVal(relieverProfile.spousePermanentAddress, 'district') }}</span></div>
+            @if (hasAddress(relieverProfile.spousePermanentAddress) || hasAddress(relieverProfile.spousePresentAddress)) {
+                <div class="profile-section dialog-section">
+                    <div class="profile-two-col">
+                        <div class="profile-field-list">
+                            @if (hasAddress(relieverProfile.spousePermanentAddress)) {
+                                <div class="profile-col-heading">SPOUSE PERMANENT ADDRESS</div>
+                                <div class="profile-field-row"><span class="profile-field-label">Village / Area</span> <span class="profile-field-value">{{ addrVal(relieverProfile.spousePermanentAddress, 'villageArea') }}</span></div>
+                                <div class="profile-field-row"><span class="profile-field-label">Post office</span> <span class="profile-field-value">{{ addrVal(relieverProfile.spousePermanentAddress, 'postOffice') }}</span></div>
+                                <div class="profile-field-row"><span class="profile-field-label">Upazila / Thana</span> <span class="profile-field-value">{{ addrVal(relieverProfile.spousePermanentAddress, 'upazilaThana') }}</span></div>
+                                <div class="profile-field-row"><span class="profile-field-label">District</span> <span class="profile-field-value">{{ addrVal(relieverProfile.spousePermanentAddress, 'district') }}</span></div>
+                                <div class="profile-field-row"><span class="profile-field-label">Division</span> <span class="profile-field-value">{{ addrVal(relieverProfile.spousePermanentAddress, 'division') }}</span></div>
+                            }
                         </div>
-                        <div class="address-col">
-                            <div class="addr-row"><span class="addr-label">Post Office: </span> <span class="addr-value">{{ addrVal(relieverProfile.spousePermanentAddress, 'postOffice') }}</span></div>
-                            <div class="addr-row"><span class="addr-label">Division: </span> <span class="addr-value">{{ addrVal(relieverProfile.spousePermanentAddress, 'division') }}</span></div>
-                            <div class="addr-row"><span class="addr-label">Upazila/Thana: </span> <span class="addr-value">{{ addrVal(relieverProfile.spousePermanentAddress, 'upazilaThana') }}</span></div>
-                        </div>
-                    </div>
-                </div>
-            }
-            @if (hasAddress(relieverProfile.spousePresentAddress)) {
-                <div class="address-section">
-                    <div class="address-heading">Spouse Present Address: </div>
-                    <div class="address-grid">
-                        <div class="address-col">
-                            <div class="addr-row"><span class="addr-label">Village/Area: </span> <span class="addr-value">{{ addrVal(relieverProfile.spousePresentAddress, 'villageArea') }}</span></div>
-                            <div class="addr-row"><span class="addr-label">District: </span> <span class="addr-value">{{ addrVal(relieverProfile.spousePresentAddress, 'district') }}</span></div>
-                        </div>
-                        <div class="address-col">
-                            <div class="addr-row"><span class="addr-label">Post Office: </span> <span class="addr-value">{{ addrVal(relieverProfile.spousePresentAddress, 'postOffice') }}</span></div>
-                            <div class="addr-row"><span class="addr-label">Division: </span> <span class="addr-value">{{ addrVal(relieverProfile.spousePresentAddress, 'division') }}</span></div>
-                            <div class="addr-row"><span class="addr-label">Upazila/Thana: </span> <span class="addr-value">{{ addrVal(relieverProfile.spousePresentAddress, 'upazilaThana') }}</span></div>
+                        <div class="profile-field-list">
+                            @if (hasAddress(relieverProfile.spousePresentAddress)) {
+                                <div class="profile-col-heading">SPOUSE PRESENT ADDRESS</div>
+                                <div class="profile-field-row"><span class="profile-field-label">Village / Area</span> <span class="profile-field-value">{{ addrVal(relieverProfile.spousePresentAddress, 'villageArea') }}</span></div>
+                                <div class="profile-field-row"><span class="profile-field-label">Post office</span> <span class="profile-field-value">{{ addrVal(relieverProfile.spousePresentAddress, 'postOffice') }}</span></div>
+                                <div class="profile-field-row"><span class="profile-field-label">Upazila / Thana</span> <span class="profile-field-value">{{ addrVal(relieverProfile.spousePresentAddress, 'upazilaThana') }}</span></div>
+                                <div class="profile-field-row"><span class="profile-field-label">District</span> <span class="profile-field-value">{{ addrVal(relieverProfile.spousePresentAddress, 'district') }}</span></div>
+                                <div class="profile-field-row"><span class="profile-field-label">Division</span> <span class="profile-field-value">{{ addrVal(relieverProfile.spousePresentAddress, 'division') }}</span></div>
+                            }
                         </div>
                     </div>
                 </div>

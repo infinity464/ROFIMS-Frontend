@@ -44,8 +44,8 @@ export const PROFILE_LABELS = {
     'section.documents': 'Documents',
 
     // Field labels (detail-label)
-    'field.serviceId': 'Service ID:',
-    'field.rabId': 'RAB ID:',
+    'field.serviceId': 'Service ID',
+    'field.rabId': 'RAB ID',
     'field.nameEnglish': 'Name English:',
     'field.nameBangla': 'Name Bangla:',
     'field.appointment': 'Appointment:',
@@ -57,7 +57,7 @@ export const PROFILE_LABELS = {
     'field.dateOfCommission': 'Date of Commission:',
     'field.dateOfJoiningInServiceTraining': 'Date of Joining in Service/Training:',
     'field.motherUnit': 'Mother Unit:',
-    'field.location': 'Location:',
+    'field.location': 'Last Unit District:',
     'field.rabUnit': 'RAB Unit:',
     'field.rabUnitLastPosting': 'RAB Unit (Last Posting):',
     'field.joiningDate': 'Joining Date:',
@@ -185,6 +185,15 @@ export const PROFILE_LABELS = {
     'tooltip.previousYearLeaveSummary': 'Previous Year Leave Summary',
     'tooltip.downloadFile': 'Download file',
     'tooltip.viewPreviousYearLeaveSummary': 'View previous year leave summary',
+
+    // Present Status
+    'field.presentStatus': 'Present Status',
+    'presentStatus.OnDuty': 'On Duty',
+    'presentStatus.RegularPostingOut': 'Regular Posting Out',
+    'presentStatus.RTUOnDisciplineIssue': 'RTU on Discipline Issue',
+    'presentStatus.Deceased': 'Deceased',
+    'presentStatus.Absent': 'Absent',
+    'presentStatus.Arrested': 'Arrested',
   } as const,
 
   bn: {
@@ -221,8 +230,8 @@ export const PROFILE_LABELS = {
     'section.additionalRemarks': 'অতিরিক্ত মন্তব্য:',
     'section.documents': 'নথিপত্র',
 
-    'field.serviceId': 'সার্ভিস আইডি:',
-    'field.rabId': 'র‌্যাব আইডি:',
+    'field.serviceId': 'সার্ভিস আইডি',
+    'field.rabId': 'র‌্যাব আইডি',
     'field.nameEnglish': 'নাম (ইংরেজি):',
     'field.nameBangla': 'নাম (বাংলা):',
     'field.appointment': 'নিয়োগ:',
@@ -234,7 +243,7 @@ export const PROFILE_LABELS = {
     'field.dateOfCommission': 'কমিশনের তারিখ:',
     'field.dateOfJoiningInServiceTraining': 'সেবা/প্রশিক্ষণে যোগদানের তারিখ:',
     'field.motherUnit': 'মাতৃ ইউনিট:',
-    'field.location': 'অবস্থান:',
+    'field.location': 'সর্বশেষ ইউনিট জেলা:',
     'field.rabUnit': 'র‌্যাব ইউনিট:',
     'field.rabUnitLastPosting': 'র‌্যাব ইউনিট (সর্বশেষ পোস্টিং):',
     'field.joiningDate': 'যোগদানের তারিখ:',
@@ -356,6 +365,15 @@ export const PROFILE_LABELS = {
     'tooltip.previousYearLeaveSummary': 'গত বছরের ছুটির সারাংশ',
     'tooltip.downloadFile': 'ফাইল ডাউনলোড',
     'tooltip.viewPreviousYearLeaveSummary': 'গত বছরের ছুটির সারাংশ দেখুন',
+
+    // Present Status
+    'field.presentStatus': 'বর্তমান অবস্থা',
+    'presentStatus.OnDuty': 'কর্মরত',
+    'presentStatus.RegularPostingOut': 'নিয়মিত পোস্টিং আউট',
+    'presentStatus.RTUOnDisciplineIssue': 'শৃঙ্খলা সমস্যায় আরটিইউ',
+    'presentStatus.Deceased': 'মৃত',
+    'presentStatus.Absent': 'অনুপস্থিত',
+    'presentStatus.Arrested': 'গ্রেফতার',
   } as const,
 } as const;
 
