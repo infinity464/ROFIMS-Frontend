@@ -14,6 +14,7 @@ import {
     PostingMemberRow,
     PendingJoiningItem,
     PostingReceiveViewDto,
+    PendingPostingJoiningDto,
     PostingOrderMasterDto,
     PostingOrderMasterWithDetailsDto,
     PostingOrderEmployeeRow,
@@ -465,6 +466,13 @@ export class PostingService {
         if (draftPostingMasterId != null) params.draftPostingMasterId = draftPostingMasterId;
         if (postingOrderMasterId != null) params.postingOrderMasterId = postingOrderMasterId;
         return this.http.get<PostingReceiveViewDto[]>(`${API}/GetPostingReceiveHistory`, { params });
+    }
+
+    /** "Pending List for Joining — New Posting": employees whose posting order is generated but who haven't joined yet. */
+    getPendingPostingJoining(postingType?: string): Observable<PendingPostingJoiningDto[]> {
+        const params: Record<string, string> = {};
+        if (postingType) params['postingType'] = postingType;
+        return this.http.get<PendingPostingJoiningDto[]>(`${API}/GetPendingPostingJoining`, { params });
     }
 
     receivePostingMembers(

@@ -242,6 +242,28 @@ export interface PostingReceiveViewDto {
     rankSortOrder: number | null;
 }
 
+/** Pending joining row (from vw_PendingPostingJoining). */
+export interface PendingPostingJoiningDto {
+    postingReceiveId: number;
+    employeeId: number;
+
+    postingOrderMasterId: number;
+    postingOrderNo: string;
+    postingOrderDate: string;
+    postingType: string;
+
+    noteSheetNo: string | null;
+
+    transferRabUnitId: number | null;
+    transferRabUnitName: string | null;
+
+    serviceId: string | null;
+    fullNameEN: string | null;
+    rabID: string | null;
+    rankName: string | null;
+    motherUnitName: string | null;
+}
+
 // ── Posting Order DTOs ────────────────────────────────────────
 
 /** Posting Order master row for list. */

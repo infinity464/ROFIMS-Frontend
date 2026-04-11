@@ -1,0 +1,207 @@
+<p-toast position="top-center"></p-toast>
+
+<div class="pending-posting-joining">
+    <div class="form-card">
+        <div class="form-card-header flex justify-content-between align-items-center">
+            <div>
+                <h3 class="form-card-title">Pending List for Joining — New Posting</h3>
+                <p class="text-600 mt-1 mb-0">
+                    Employees whose posting order has been generated but who have not yet joined their new unit.
+                    Once the employee is received via <b>Posting Order Receive</b>, they drop off this list.
+                </p>
+            </div>
+            <p-button
+                icon="pi pi-check-circle"
+                label="Go to Posting Order Receive"
+                (onClick)="goToReceive()"
+            ></p-button>
+        </div>
+
+        <!-- Filters -->
+        <div class="filter-bar">
+            <div class="filter-row">
+                <div class="filter-item">
+                    <label class="filter-label">NoteSheet</label>
+                    <p-select
+                        [options]="noteSheetOptions"
+                        [(ngModel)]="noteSheetFilter"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="All NoteSheets"
+                        [showClear]="true"
+                        [filter]="true"
+                        filterPlaceholder="Search..."
+                        (onChange)="applyFilters()"
+                        styleClass="w-full"
+                    ></p-select>
+                </div>
+                <div class="filter-item">
+                    <label class="filter-label">Mother Organization</label>
+                    <p-select
+                        [options]="motherOrgOptions"
+                        [(ngModel)]="motherOrgFilter"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="All Mother Organizations"
+                        [showClear]="true"
+                        [filter]="true"
+                        filterPlaceholder="Search..."
+                        (onChange)="applyFilters()"
+                        styleClass="w-full"
+                    ></p-select>
+                </div>
+                <div class="filter-item">
+                    <label class="filter-label">Posting Order No</label>
+                    <p-select
+                        [options]="postingOrderOptions"
+                        [(ngModel)]="postingOrderFilter"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="All Posting Orders"
+                        [showClear]="true"
+                        [filter]="true"
+                        filterPlaceholder="Search..."
+                        (onChange)="applyFilters()"
+                        styleClass="w-full"
+                    ></p-select>
+                </div>
+                <div class="filter-item">
+                    <label class="filter-label">Transfer Unit</label>
+                    <p-select
+                        [options]="transferUnitOptions"
+                        [(ngModel)]="transferUnitFilter"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="All Transfer Units"
+                        [showClear]="true"
+                        [filter]="true"
+                        filterPlaceholder="Search..."
+                        (onChange)="applyFilters()"
+                        styleClass="w-full"
+                    ></p-select>
+                </div>
+                <div class="filter-item filter-action">
+                    <p-button
+                        icon="pi pi-filter-slash"
+                        label="Clear"
+                        severity="secondary"
+                        [text]="true"
+                        size="small"
+                        (onClick)="clearFilters()"
+                    ></p-button>
+                </div>
+            </div>
+        </div>
+
+        <p-table
+            #dt
+            [value]="rows"
+            [loading]="loading"
+            dataKey="postingReceiveId"
+            [tableStyle]="{ 'min-width': '80rem' }"
+            styleClass="p-datatable-striped p-datatable-gridlines"
+            [paginator]="true"
+            [rows]="15"
+            [rowsPerPageOptions]="[15, 25, 50, 100]"
+            [globalFilterFields]="[
+                'postingOrderNo',
+                'noteSheetNo',
+                'serviceId',
+                'fullNameEN',
+                'rankName',
+                'motherUnitName',
+                'transferRabUnitName'
+            ]"
+        >
+            <ng-template pTemplate="caption">
+                <div class="flex justify-content-between align-items-center">
+                    <span class="text-600">
+                        Total pending: <b>{{ rows.length }}</b>
+                        <span *ngIf="rows.length !== allRows.length">
+                            (filtered from {{ allRows.length }})
+                        </span>
+                    </span>
+                    <p-iconfield>
+                        <p-inputicon styleClass="pi pi-search"></p-inputicon>
+                        <input
+                            pInputText
+                            type="text"
+                            placeholder="Search..."
+                            (input)="onGlobalFilter(dt, $event)"
+                        />
+                    </p-iconfield>
+                </div>
+            </ng-template>
+            <ng-template pTemplate="header">
+                <tr>
+                    <th style="width: 50px">Ser</th>
+                    <th style="min-width: 160px">Posting Order No</th>
+                    <th style="min-width: 110px">Order Date</th>
+                    <th style="min-width: 110px">Posting Type</th>
+                    <th style="min-width: 140px">NoteSheet No</th>
+                    <th style="min-width: 120px">Service ID</th>
+                    <th style="min-width: 110px">RAB ID</th>
+                    <th style="min-width: 110px">Rank</th>
+                    <th style="min-width: 180px">Full Name</th>
+                    <th style="min-width: 150px">Mother Organization</th>
+                    <th style="min-width: 150px">Transfer To</th>
+                    <th style="width: 120px">Action</th>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                <tr>
+                    <td>{{ rowIndex + 1 }}</td>
+                    <td>
+                        <span class="font-semibold">{{ row.postingOrderNo || '-' }}</span>
+                    </td>
+                    <td>{{ formatDate(row.postingOrderDate) }}</td>
+                    <td>
+                        <p-tag
+                            [value]="postingTypeLabel(row.postingType)"
+                            [severity]="postingTypeSeverity(row.postingType)"
+                        ></p-tag>
+                    </td>
+                    <td>{{ row.noteSheetNo || '-' }}</td>
+                    <td>{{ row.serviceId || '-' }}</td>
+                    <td>{{ row.rabID || '-' }}</td>
+                    <td>{{ row.rankName || '-' }}</td>
+                    <td>{{ row.fullNameEN || '-' }}</td>
+                    <td>{{ row.motherUnitName || '-' }}</td>
+                    <td>{{ row.transferRabUnitName || '-' }}</td>
+                    <td>
+                        <div class="flex gap-1">
+                            <p-button
+                                icon="pi pi-user"
+                                [rounded]="true"
+                                [text]="true"
+                                size="small"
+                                pTooltip="View Profile"
+                                (onClick)="openProfile(row)"
+                            ></p-button>
+                            <p-button
+                                icon="pi pi-eye"
+                                [rounded]="true"
+                                [text]="true"
+                                size="small"
+                                pTooltip="View Posting Order"
+                                (onClick)="openPostingOrder(row)"
+                            ></p-button>
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td colspan="12" class="text-center p-4">
+                        <div class="flex flex-column align-items-center gap-3 py-5">
+                            <i class="pi pi-check-circle text-5xl text-400"></i>
+                            <span class="text-lg text-500">
+                                No pending joinings. All employees have been received.
+                            </span>
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+    </div>
+</div>
