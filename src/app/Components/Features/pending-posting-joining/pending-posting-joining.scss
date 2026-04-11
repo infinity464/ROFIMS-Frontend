@@ -1,0 +1,52 @@
+.pending-posting-joining {
+    .form-card {
+        background: var(--surface-card);
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .form-card-header {
+        margin-bottom: 1rem;
+        gap: 1rem;
+    }
+
+    .form-card-title {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--text-color);
+    }
+
+    .filter-bar {
+        margin-bottom: 1rem;
+        padding: 1rem;
+        background: var(--surface-ground);
+        border-radius: 8px;
+    }
+
+    .filter-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: flex-end;
+    }
+
+    .filter-item {
+        flex: 1 1 200px;
+        min-width: 180px;
+    }
+
+    .filter-action {
+        flex: 0 0 auto;
+        min-width: auto;
+    }
+
+    .filter-label {
+        display: block;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--text-color-secondary);
+        margin-bottom: 0.35rem;
+    }
+}

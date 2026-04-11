@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { Router } from '@angular/router';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
@@ -10,15 +11,18 @@ import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { Toast } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { TagModule } from 'primeng/tag';
+import { TooltipModule } from 'primeng/tooltip';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { environment } from '@/Core/Environments/environment';
 import { PostingService } from '@/services/posting.service';
-import { ApprovedNoteSheetItem } from '@/models/posting.model';
+import { ApprovedNoteSheetItem, PostingOrderMasterDto } from '@/models/posting.model';
 import { NoteSheetType } from '@/models/enums';
 
 interface NoteSheetEmployee {
     employeeId: number;
     serviceId: string | null;
+    rabID: string | null;
     prefixName: string | null;
     fullNameEN: string | null;
     fullNameBN: string | null;
@@ -36,9 +40,22 @@ interface NoteSheetEmployee {
     spousePresentDistrictNameBN: string | null;
     motherOrgLocationName: string | null;
     motherOrgLocationNameBN: string | null;
+    transferRabUnitId: number | null;
     transferRabUnitName: string | null;
     remarks: string | null;
     joiningDateInRAB: string | null;
+}
+
+/** A footer paragraph linked to a specific transfer (RAB) unit. */
+interface FooterParagraph {
+    text: string;
+    transferRabUnitId: number | null;
+    transferRabUnitName: string | null;
+}
+
+interface TransferUnitOption {
+    id: number;
+    name: string;
 }
 
 @Component({
@@ -54,7 +71,9 @@ interface NoteSheetEmployee {
         InputTextModule,
         TextareaModule,
         Toast,
-        ConfirmDialogModule
+        ConfirmDialogModule,
+        TagModule,
+        TooltipModule
     ],
     providers: [MessageService, ConfirmationService],
     templateUrl: './posting-order-generate.html',
@@ -76,6 +95,11 @@ export class PostingOrderGenerateComponent implements OnInit {
     loadingEmployees = false;
     saving = false;
 
+    // ─── Generated Posting Orders list (toggleable) ──────
+    showGeneratedList = false;
+    generatedOrders: PostingOrderMasterDto[] = [];
+    loadingGeneratedOrders = false;
+
     /** NoteSheet info displayed above employee table. */
     selectedNoteSheetNo: string | null = null;
     selectedNoteSheetApprovedDate: string | null = null;
@@ -84,16 +108,47 @@ export class PostingOrderGenerateComponent implements OnInit {
     postingOrderDate: Date | null = null;
     remarks = '';
     selectedTextType = 'en';
-    footerParagraphs: string[] = [];
+    /** Single plain-text paragraph that appears below the employee table and above the Onulipi section. */
+    postingText = '';
+    footerParagraphs: FooterParagraph[] = [];
 
     /** true = Bangla, false = English */
     get isBangla(): boolean {
         return this.selectedTextType === 'bn';
     }
 
+    /** Convert ASCII digits in a string to Bangla digits. */
+    private toBanglaDigits(s: string): string {
+        return s.replace(/\d/g, d => String.fromCharCode(0x09E6 + Number(d)));
+    }
+
+    /** RAB ID — Bangla digits when text type is Bangla, else as-is. */
+    empRabId(row: NoteSheetEmployee): string {
+        const id = row.rabID || '';
+        if (!id) return '-';
+        return this.isBangla ? this.toBanglaDigits(id) : id;
+    }
+
+    /** Unique transfer (RAB) units derived from currently loaded employees. */
+    get availableTransferUnits(): TransferUnitOption[] {
+        const map = new Map<number, string>();
+        for (const e of this.employees) {
+            if (e.transferRabUnitId != null && !map.has(e.transferRabUnitId)) {
+                map.set(e.transferRabUnitId, e.transferRabUnitName ?? '');
+            }
+        }
+        return Array.from(map, ([id, name]) => ({ id, name }));
+    }
+
+    /** True when more than one unique transfer unit exists across employees. */
+    get hasMultipleTransferUnits(): boolean {
+        return this.availableTransferUnits.length > 1;
+    }
+
     constructor(
         private postingService: PostingService,
         private http: HttpClient,
+        private router: Router,
         private messageService: MessageService,
         private confirmationService: ConfirmationService
     ) {}
@@ -102,7 +157,8 @@ export class PostingOrderGenerateComponent implements OnInit {
         this.postingOrderDate = new Date();
     }
 
-    /** When posting type dropdown changes, load approved notesheets of that type. */
+    /** When posting type dropdown changes, load approved notesheets of that type
+     *  (backend already excludes notesheets with a generated Posting Order). */
     onPostingTypeChange(): void {
         this.approvedNoteSheets = [];
         this.selectedNoteSheetId = null;
@@ -112,8 +168,8 @@ export class PostingOrderGenerateComponent implements OnInit {
 
         this.loadingNoteSheets = true;
         this.postingService.getApprovedNoteSheetsByType(this.selectedPostingType).subscribe({
-            next: (data) => {
-                this.approvedNoteSheets = data ?? [];
+            next: (notesheets) => {
+                this.approvedNoteSheets = notesheets ?? [];
                 this.loadingNoteSheets = false;
                 if (this.approvedNoteSheets.length === 0) {
                     this.messageService.add({ severity: 'info', summary: 'Info', detail: 'No approved notesheets found for this type.' });
@@ -163,6 +219,7 @@ export class PostingOrderGenerateComponent implements OnInit {
                             this.employees = (emps ?? []).map(e => ({
                                 employeeId: e.employeeId,
                                 serviceId: e.serviceId,
+                                rabID: e.rabID,
                                 prefixName: e.prefixName,
                                 fullNameEN: e.fullNameEN,
                                 fullNameBN: e.fullNameBN,
@@ -180,11 +237,15 @@ export class PostingOrderGenerateComponent implements OnInit {
                                 spousePresentDistrictNameBN: e.spousePresentDistrictNameBN,
                                 motherOrgLocationName: e.motherOrgLocationName,
                                 motherOrgLocationNameBN: e.motherOrgLocationNameBN,
+                                transferRabUnitId: e.transferRabUnitId,
                                 transferRabUnitName: e.transferRabUnitName,
                                 remarks: e.remarks,
                                 joiningDateInRAB: e.joiningDateInRAB
                             }));
                             this.loadingEmployees = false;
+                            // Reset footer paragraphs + posting text when a new notesheet is loaded
+                            this.footerParagraphs = [];
+                            this.postingText = '';
                         },
                         error: () => {
                             this.loadingEmployees = false;
@@ -220,12 +281,27 @@ export class PostingOrderGenerateComponent implements OnInit {
 
     // ─── Footer paragraphs ────────────────────────────────
 
+    /** Add a new footer paragraph. If only one transfer unit exists, auto-link it. */
     addFooterParagraph(): void {
-        this.footerParagraphs.push('');
+        const units = this.availableTransferUnits;
+        const onlyUnit = units.length === 1 ? units[0] : null;
+        this.footerParagraphs.push({
+            text: '',
+            transferRabUnitId: onlyUnit ? onlyUnit.id : null,
+            transferRabUnitName: onlyUnit ? onlyUnit.name : null
+        });
     }
 
     removeFooterParagraph(index: number): void {
         this.footerParagraphs.splice(index, 1);
+    }
+
+    /** Keep transferRabUnitName in sync when the user picks a unit from the dropdown. */
+    onFooterUnitChange(index: number): void {
+        const para = this.footerParagraphs[index];
+        if (!para) return;
+        const match = this.availableTransferUnits.find(u => u.id === para.transferRabUnitId);
+        para.transferRabUnitName = match ? match.name : null;
     }
 
     trackByIndex(index: number): number {
@@ -251,9 +327,19 @@ export class PostingOrderGenerateComponent implements OnInit {
 
         this.saving = true;
 
-        // Build footerText JSON from non-empty paragraphs
-        const nonEmptyParagraphs = this.footerParagraphs.filter(p => p.trim().length > 0);
+        // Build footerText JSON from non-empty paragraphs (each linked to a transfer unit).
+        const nonEmptyParagraphs = this.footerParagraphs
+            .filter(p => p.text.trim().length > 0)
+            .map(p => ({
+                text: p.text.trim(),
+                transferRabUnitId: p.transferRabUnitId,
+                transferRabUnitName: p.transferRabUnitName
+            }));
         const footerText = nonEmptyParagraphs.length > 0 ? JSON.stringify(nonEmptyParagraphs) : null;
+
+        // Single posting-text paragraph stored as plain string.
+        const trimmedPostingText = this.postingText.trim();
+        const mainText = trimmedPostingText.length > 0 ? trimmedPostingText : null;
 
         this.postingService.createPostingOrder({
             postingOrderNo: '',  // auto-generated by backend
@@ -261,6 +347,7 @@ export class PostingOrderGenerateComponent implements OnInit {
             postingType: this.selectedPostingType!,
             noteSheetId: this.selectedNoteSheetId,
             textType: this.selectedTextType === 'bn' ? 'bn' : 'en',
+            mainText: mainText,
             remarks: this.remarks || null,
             footerText: footerText,
             employeeIds: this.employees.map(e => e.employeeId),
@@ -277,7 +364,17 @@ export class PostingOrderGenerateComponent implements OnInit {
                     this.selectedNoteSheetApprovedDate = null;
                     this.remarks = '';
                     this.footerParagraphs = [];
+                    this.postingText = '';
                     this.postingOrderDate = new Date();
+                    // Refresh the generated list if it's currently visible
+                    if (this.showGeneratedList) {
+                        this.loadGeneratedOrders();
+                    }
+                    // Navigate to the preview page for the newly created posting order
+                    const newId = (res as any)?.data;
+                    if (newId != null) {
+                        this.router.navigate(['/posting/posting-order-preview'], { queryParams: { id: newId } });
+                    }
                 } else {
                     this.messageService.add({ severity: 'error', summary: 'Error', detail: res.description ?? 'Failed to generate posting order.' });
                 }
@@ -296,6 +393,56 @@ export class PostingOrderGenerateComponent implements OnInit {
             return isNaN(d.getTime()) ? String(value) : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
         } catch {
             return String(value);
+        }
+    }
+
+    // ─── Generated Posting Orders list ───────────────────
+
+    /** Toggle the generated posting orders list. Loads on first open. */
+    toggleGeneratedList(): void {
+        this.showGeneratedList = !this.showGeneratedList;
+        if (this.showGeneratedList && this.generatedOrders.length === 0) {
+            this.loadGeneratedOrders();
+        }
+    }
+
+    loadGeneratedOrders(): void {
+        this.loadingGeneratedOrders = true;
+        this.postingService.getPostingOrderMasters().subscribe({
+            next: (data) => {
+                this.generatedOrders = (data ?? []).slice().sort((a, b) => {
+                    const ad = a.createdDate ? new Date(a.createdDate).getTime() : 0;
+                    const bd = b.createdDate ? new Date(b.createdDate).getTime() : 0;
+                    return bd - ad;
+                });
+                this.loadingGeneratedOrders = false;
+            },
+            error: () => {
+                this.loadingGeneratedOrders = false;
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load generated posting orders.' });
+            }
+        });
+    }
+
+    viewGeneratedOrder(order: PostingOrderMasterDto): void {
+        this.router.navigate(['/posting/posting-order-preview'], { queryParams: { id: order.id } });
+    }
+
+    postingTypeLabel(type: string): string {
+        switch (type) {
+            case 'NewPosting': return 'New Posting';
+            case 'InterPosting': return 'Inter Posting';
+            default: return type || '-';
+        }
+    }
+
+    statusSeverity(status: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' {
+        switch ((status ?? '').toLowerCase()) {
+            case 'approved':
+            case 'published': return 'success';
+            case 'draft': return 'warn';
+            case 'cancelled': return 'danger';
+            default: return 'info';
         }
     }
 }

@@ -17,6 +17,21 @@
     z-index: 100;
 }
 .preview-actions { display: flex; gap: 0.5rem; }
+.preview-status-actions { display: flex; gap: 0.5rem; align-items: center; margin-left: auto; }
+
+.ns-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    line-height: 1;
+    background: var(--surface-200);
+    color: var(--text-color);
+}
+.ns-status-badge--pending { background: #fff3cd; color: #664d03; }
 
 /* ── Loading / Error ──────────────────────────────── */
 .preview-loading,

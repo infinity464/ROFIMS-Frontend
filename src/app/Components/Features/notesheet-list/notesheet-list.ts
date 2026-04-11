@@ -17,7 +17,7 @@ import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { EmpService } from '@/services/emp-service';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
-import { NoteSheetType, NoteSheetCurrentStatus, NoteSheetCurrentStatusOptions, ApprovalStatus, NoteSheetRemarkAction, ApprovalLogAction, ApprovalLogActionOptions, NoteSheetOperationType, DraftPostingStatus, PostingStatus } from '@/models/enums';
+import { NoteSheetType, NoteSheetCurrentStatus, NoteSheetCurrentStatusOptions, ApprovalStatus, NoteSheetRemarkAction, ApprovalLogAction, ApprovalLogActionOptions, NoteSheetOperationType, DraftPostingStatus, PostingStatus, NoteSheetPreviewFrom } from '@/models/enums';
 import { ServingMembersService } from '@/services/serving-members.service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { CommonCode } from '@/Components/basic-setup/shared/models/common-code';
@@ -278,7 +278,13 @@ export class NotesheetListComponent implements OnInit {
     } else if (row.noteSheetType === NoteSheetType.NewPosting || row.noteSheetType === NoteSheetType.InterPosting) {
       route = '/notesheet-preview/posting';
     }
-    this.router.navigate([route], { queryParams: { id: row.noteSheetId } });
+    const queryParams: Record<string, string | number> = { id: row.noteSheetId };
+    // When previewing from the Pending section, pass a marker so preview can
+    // show inline approval actions (Approve/Decline/Back/View Members/Log).
+    if (this.section === NOTE_SHEET_SECTIONS.PENDING) {
+      queryParams['from'] = NoteSheetPreviewFrom.Pending;
+    }
+    this.router.navigate([route], { queryParams });
   }
 
   openViewMembers(row: NoteSheetInfoRow): void {

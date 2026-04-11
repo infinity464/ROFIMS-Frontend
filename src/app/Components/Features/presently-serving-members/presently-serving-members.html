@@ -240,12 +240,19 @@
                         <th>RAB Unit</th>
                         <th>Joining Date in RAB</th>
                         <th>Home District (Permanent)</th>
+                        <th>Status</th>
                         <th>Action</th>
                     </tr>
                 </ng-template>
                 <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                     <tr>
-                        <td><p-tableCheckbox [value]="row"></p-tableCheckbox></td>
+                        <td>
+                            @if (isInPostingProcess(row)) {
+                                <p-tableCheckbox [value]="row" [disabled]="true"></p-tableCheckbox>
+                            } @else {
+                                <p-tableCheckbox [value]="row"></p-tableCheckbox>
+                            }
+                        </td>
                         <td><span class="report-ser-num">{{ first + rowIndex + 1 }}</span></td>
                         <td><span class="font-semibold">{{ row.serviceId || '—' }}</span></td>
                         <td>{{ row.armyRank || '—' }}</td>
@@ -268,6 +275,13 @@
                         <td>{{ formatDate(row.joiningDate) }}</td>
                         <td>{{ row.permanentDistrictTypeName || '—' }}</td>
                         <td>
+                            @if (row.isSendingNotesheetStatus) {
+                                <p-tag [value]="getStatusLabel(row.isSendingNotesheetStatus)" severity="warn"></p-tag>
+                            } @else {
+                                <span class="report-dash">—</span>
+                            }
+                        </td>
+                        <td>
                             <a [routerLink]="['/members/profile', row.employeeID]" class="report-link-profile">
                                 <i class="pi pi-user"></i> Profile
                             </a>
@@ -276,7 +290,7 @@
                 </ng-template>
                 <ng-template pTemplate="emptymessage">
                     <tr>
-                        <td colspan="11" class="text-center p-4">No records found.</td>
+                        <td colspan="12" class="text-center p-4">No records found.</td>
                     </tr>
                 </ng-template>
             </p-table>

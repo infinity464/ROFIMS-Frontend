@@ -88,6 +88,7 @@
                     <tr>
                         <th style="width: 50px">{{ isBangla ? 'ক্রমিক' : 'Ser' }}</th>
                         <th style="min-width: 120px">{{ isBangla ? 'ব্যক্তিগত নম্বর' : 'Service ID' }}</th>
+                        <th style="min-width: 100px">{{ isBangla ? 'র‌্যাব আইডি' : 'RAB ID' }}</th>
                         <th style="min-width: 80px">{{ isBangla ? 'পদবি' : 'Rank' }}</th>
                         <th style="min-width: 100px">{{ isBangla ? 'ট্রেড' : 'Trade' }}</th>
                         <th style="min-width: 140px">{{ isBangla ? 'নাম' : 'Name' }}</th>
@@ -103,6 +104,7 @@
                     <tr>
                         <td>{{ rowIndex + 1 }}</td>
                         <td><span class="font-semibold">{{ row.prefixName ? row.prefixName + ' - ' : '' }}{{ row.serviceId || '-' }}</span></td>
+                        <td>{{ empRabId(row) }}</td>
                         <td>{{ (isBangla ? row.rankNameBN : row.rankName) || row.rankName || '-' }}</td>
                         <td>{{ (isBangla ? row.tradeNameBN : row.tradeName) || row.tradeName || '-' }}</td>
                         <td>{{ (isBangla ? row.fullNameBN : row.fullNameEN) || row.fullNameEN || '-' }}</td>
@@ -118,7 +120,7 @@
                 </ng-template>
                 <ng-template pTemplate="emptymessage">
                     <tr>
-                        <td colspan="11" class="text-center p-4">
+                        <td colspan="12" class="text-center p-4">
                             <div class="flex flex-column align-items-center gap-3 py-5">
                                 <i class="pi pi-inbox text-5xl text-400"></i>
                                 <span class="text-lg text-500">No employees found for this notesheet.</span>
@@ -128,10 +130,25 @@
                 </ng-template>
             </p-table>
 
-            <!-- Footer Text (dynamic paragraphs) -->
+            <!-- Posting Text (single paragraph shown above Onulipi) -->
+            <div class="posting-text-section mt-4 p-4 surface-50 border-round">
+                <div class="flex align-items-center gap-2 mb-2">
+                    <span class="font-semibold text-700">{{ isBangla ? 'পোস্টিং টেক্সট' : 'Posting Text' }}</span>
+                </div>
+                <textarea
+                    pTextarea
+                    [(ngModel)]="postingText"
+                    rows="3"
+                    class="w-full"
+                    placeholder="{{ isBangla ? 'পোস্টিং টেক্সট লিখুন...' : 'Enter posting text...' }}"
+                    [autoResize]="true"
+                ></textarea>
+            </div>
+
+            <!-- Footer Text (dynamic paragraphs, each linked to a transfer unit) -->
             <div class="footer-section mt-4 p-4 surface-50 border-round">
                 <div class="flex align-items-center gap-2 mb-3">
-                    <span class="font-semibold text-700">{{ isBangla ? 'ফুটার টেক্সট' : 'Footer Text' }}</span>
+                    <span class="font-semibold text-700">{{ isBangla ? 'অনুলিপি' : 'Onulipi' }}</span>
                     <p-button
                         icon="pi pi-plus"
                         [rounded]="true"
@@ -140,6 +157,12 @@
                         pTooltip="Add paragraph"
                         (onClick)="addFooterParagraph()"
                     ></p-button>
+                    <span *ngIf="hasMultipleTransferUnits" class="text-500 text-sm ml-2">
+                        {{ isBangla ? '(প্রতিটি অনুচ্ছেদের জন্য বদলি ইউনিট নির্বাচন করুন)' : '(Select a transfer unit for each paragraph)' }}
+                    </span>
+                    <span *ngIf="!hasMultipleTransferUnits && availableTransferUnits.length === 1" class="text-500 text-sm ml-2">
+                        {{ isBangla ? '(স্বয়ংক্রিয়ভাবে লিঙ্ক:' : '(Auto-linked to:' }} <strong>{{ availableTransferUnits[0].name }}</strong>)
+                    </span>
                 </div>
 
                 @for (para of footerParagraphs; track trackByIndex($index); let i = $index) {
@@ -147,12 +170,24 @@
                         <span class="para-number font-semibold text-600 mt-2">{{ i + 1 }}.</span>
                         <textarea
                             pTextarea
-                            [(ngModel)]="footerParagraphs[i]"
+                            [(ngModel)]="footerParagraphs[i].text"
                             rows="3"
                             class="flex-1"
                             placeholder="{{ isBangla ? 'অনুচ্ছেদ লিখুন...' : 'Enter paragraph text...' }}"
                             [autoResize]="true"
                         ></textarea>
+                        <p-select
+                            *ngIf="hasMultipleTransferUnits"
+                            [options]="availableTransferUnits"
+                            [(ngModel)]="footerParagraphs[i].transferRabUnitId"
+                            optionLabel="name"
+                            optionValue="id"
+                            placeholder="{{ isBangla ? 'ইউনিট নির্বাচন' : 'Select Unit' }}"
+                            [showClear]="false"
+                            styleClass="footer-unit-select"
+                            [style]="{ 'min-width': '160px' }"
+                            (onChange)="onFooterUnitChange(i)"
+                        ></p-select>
                         <p-button
                             icon="pi pi-times"
                             severity="danger"
@@ -182,6 +217,82 @@
                     (onClick)="onGeneratePostingOrder()"
                 ></p-button>
             </div>
+        </div>
+
+        <!-- ─── Generated Posting Orders (toggleable list) ─── -->
+        <div class="generated-list-section mt-5 pt-4 border-top-1 surface-border">
+            <div class="flex align-items-center justify-content-between mb-3">
+                <h4 class="m-0 text-700">Generated Posting Orders</h4>
+                <p-button
+                    [label]="showGeneratedList ? 'Hide List' : 'Show List'"
+                    [icon]="showGeneratedList ? 'pi pi-chevron-up' : 'pi pi-list'"
+                    severity="secondary"
+                    [outlined]="true"
+                    (onClick)="toggleGeneratedList()"
+                ></p-button>
+            </div>
+
+            @if (showGeneratedList) {
+                <p-table
+                    [value]="generatedOrders"
+                    [loading]="loadingGeneratedOrders"
+                    dataKey="id"
+                    [tableStyle]="{ 'min-width': '60rem' }"
+                    styleClass="p-datatable-striped p-datatable-gridlines p-datatable-sm"
+                    [paginator]="true"
+                    [rows]="10"
+                    [rowsPerPageOptions]="[10, 25, 50]"
+                >
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 60px">#</th>
+                            <th style="min-width: 180px">Posting Order No</th>
+                            <th style="min-width: 130px">Order Date</th>
+                            <th style="min-width: 130px">Posting Type</th>
+                            <th style="min-width: 180px">NoteSheet No</th>
+                            <th style="min-width: 110px">Members</th>
+                            <th style="min-width: 110px">Status</th>
+                            <th style="min-width: 150px">Created</th>
+                            <th style="width: 80px" class="text-center">Action</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                        <tr>
+                            <td>{{ rowIndex + 1 }}</td>
+                            <td><span class="font-semibold">{{ row.postingOrderNo || '-' }}</span></td>
+                            <td>{{ formatDate(row.postingOrderDate) }}</td>
+                            <td>{{ postingTypeLabel(row.postingType) }}</td>
+                            <td>{{ row.noteSheetNo || '-' }}</td>
+                            <td class="text-center">{{ row.detailCount }}</td>
+                            <td>
+                                <p-tag [value]="row.status || '-'" [severity]="statusSeverity(row.status)"></p-tag>
+                            </td>
+                            <td>{{ formatDate(row.createdDate) }}</td>
+                            <td class="text-center">
+                                <p-button
+                                    icon="pi pi-eye"
+                                    severity="info"
+                                    [rounded]="true"
+                                    [text]="true"
+                                    size="small"
+                                    pTooltip="Preview"
+                                    (onClick)="viewGeneratedOrder(row)"
+                                ></p-button>
+                            </td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="9" class="text-center p-4">
+                                <div class="flex flex-column align-items-center gap-2 py-4">
+                                    <i class="pi pi-inbox text-4xl text-400"></i>
+                                    <span class="text-500">No posting orders generated yet.</span>
+                                </div>
+                            </td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            }
         </div>
     </div>
 </div>

@@ -14,6 +14,7 @@ import {
     PostingMemberRow,
     PendingJoiningItem,
     PostingReceiveViewDto,
+    PendingPostingJoiningDto,
     PostingOrderMasterDto,
     PostingOrderMasterWithDetailsDto,
     PostingOrderEmployeeRow,
@@ -453,16 +454,25 @@ export class PostingService {
         return this.http.get<PostingReceiveViewDto[]>(`${API}/GetApprovedPostingOrders`);
     }
 
-    getPendingPostingReceive(draftPostingMasterId?: number): Observable<PostingReceiveViewDto[]> {
+    getPendingPostingReceive(draftPostingMasterId?: number, postingOrderMasterId?: number): Observable<PostingReceiveViewDto[]> {
         const params: any = {};
         if (draftPostingMasterId != null) params.draftPostingMasterId = draftPostingMasterId;
+        if (postingOrderMasterId != null) params.postingOrderMasterId = postingOrderMasterId;
         return this.http.get<PostingReceiveViewDto[]>(`${API}/GetPendingPostingReceive`, { params });
     }
 
-    getPostingReceiveHistory(draftPostingMasterId?: number): Observable<PostingReceiveViewDto[]> {
+    getPostingReceiveHistory(draftPostingMasterId?: number, postingOrderMasterId?: number): Observable<PostingReceiveViewDto[]> {
         const params: any = {};
         if (draftPostingMasterId != null) params.draftPostingMasterId = draftPostingMasterId;
+        if (postingOrderMasterId != null) params.postingOrderMasterId = postingOrderMasterId;
         return this.http.get<PostingReceiveViewDto[]>(`${API}/GetPostingReceiveHistory`, { params });
+    }
+
+    /** "Pending List for Joining — New Posting": employees whose posting order is generated but who haven't joined yet. */
+    getPendingPostingJoining(postingType?: string): Observable<PendingPostingJoiningDto[]> {
+        const params: Record<string, string> = {};
+        if (postingType) params['postingType'] = postingType;
+        return this.http.get<PendingPostingJoiningDto[]>(`${API}/GetPendingPostingJoining`, { params });
     }
 
     receivePostingMembers(
@@ -479,20 +489,12 @@ export class PostingService {
 
     private readonly NOTESHEET_API = `${environment.apis.core}/NoteSheetInfo`;
 
-    /** Get approved notesheets filtered by type (NewPosting / InterPosting). */
+    /** Get approved notesheets filtered by type (NewPosting / InterPosting),
+     *  excluding those that already have a generated Posting Order. */
     getApprovedNoteSheetsByType(noteSheetType: string): Observable<ApprovedNoteSheetItem[]> {
-        return this.http.get<any[]>(`${this.NOTESHEET_API}/GetByStatus`, { params: { currentStatus: 'final_approval' } }).pipe(
-            map((list) =>
-                (list ?? [])
-                    .filter((n: any) => n.noteSheetType === noteSheetType)
-                    .map((n: any) => ({
-                        noteSheetId: n.noteSheetId,
-                        noteSheetNo: n.noteSheetNo,
-                        noteSheetDate: n.noteSheetDate,
-                        subject: n.subject,
-                        noteSheetType: n.noteSheetType
-                    }))
-            )
+        return this.http.get<ApprovedNoteSheetItem[]>(
+            `${API}/GetApprovedNoteSheetsForPostingOrder`,
+            { params: { noteSheetType } }
         );
     }
 

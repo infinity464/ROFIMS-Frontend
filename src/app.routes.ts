@@ -87,6 +87,7 @@ import { SupernumeraryProfile } from '@/Components/Features/supernumerary-profil
 import { AddDraftNewPostingComponent } from '@/Components/Features/add-draft-new-posting/add-draft-new-posting';
 import { PostingNotesheetGenerateComponent } from '@/Components/Features/posting-notesheet-generate/posting-notesheet-generate';
 import { PostingOrderReceiveComponent } from '@/Components/Features/posting-order-receive/posting-order-receive';
+import { PendingPostingJoiningComponent } from '@/Components/Features/pending-posting-joining/pending-posting-joining';
 import { PostingOrderGenerateComponent } from '@/Components/Features/posting-order-generate/posting-order-generate';
 import { PostingOrderListComponent } from '@/Components/Features/posting-order-list/posting-order-list';
 import { PostingOrderPreviewPageComponent } from '@/Components/Features/posting-order-preview/posting-order-preview';
@@ -283,6 +284,7 @@ export const appRoutes: Routes = [
             { path: 'posting/inter-posting-notesheet-generate', component: InterPostingNotesheetGenerateComponent },
             { path: 'posting/posting-order-generate', component: PostingOrderGenerateComponent },
             { path: 'posting/posting-order-receive', component: PostingOrderReceiveComponent },
+            { path: 'posting/pending-posting-joining', component: PendingPostingJoiningComponent },
             { path: 'posting/posting-order-list', component: PostingOrderListComponent },
             { path: 'posting/posting-order-preview', component: PostingOrderPreviewPageComponent },
             { path: 'employee-signature-upload', component: EmployeeSignatureUploadComponent },

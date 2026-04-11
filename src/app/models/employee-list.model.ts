@@ -31,6 +31,8 @@ export interface EmployeeList {
     relieverPrefixName?: string | null;
     /** draft | draftPosting | draftNotesheet – used for action button label and disabled state. */
     isSendingNotesheetStatus?: string | null;
+    /** RAB Unit (Battalion Name) from PreviousRABServiceInfo where IsCurrentlyActive = 1. */
+    rabUnit?: string | null;
 }
 
 /** Request for AllocateRabId API. */

@@ -222,6 +222,9 @@ export interface PostingReceiveViewDto {
     noteSheetNo: string | null;
     noteSheetDate: string | null;
     approvalDate: string | null;
+    postingOrderMasterId: number | null;
+    postingOrderNo: string | null;
+    postingOrderDate: string | null;
     serviceId: string | null;
     prefixName: string | null;
     fullNameEN: string | null;
@@ -237,6 +240,29 @@ export interface PostingReceiveViewDto {
     motherUnitNameBN: string | null;
     joiningDateInRAB: string | null;
     rankSortOrder: number | null;
+}
+
+/** Pending joining row (from vw_PendingPostingJoining). */
+export interface PendingPostingJoiningDto {
+    postingReceiveId: number;
+    employeeId: number;
+
+    postingOrderMasterId: number;
+    postingOrderNo: string;
+    postingOrderDate: string;
+    postingType: string;
+
+    noteSheetNo: string | null;
+
+    transferRabUnitId: number | null;
+    transferRabUnitName: string | null;
+
+    serviceId: string | null;
+    fullNameEN: string | null;
+    rabID: string | null;
+    rankName: string | null;
+    motherOrganization: string | null;
+    motherUnitName: string | null;
 }
 
 // ── Posting Order DTOs ────────────────────────────────────────

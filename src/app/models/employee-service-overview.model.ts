@@ -33,6 +33,8 @@ export interface EmployeeServiceOverview {
     rabUnitId: number | null;
     rabUnit: string | null;
     status: boolean | null;
+    postingStatus: string | null;
+    isSendingNotesheetStatus: string | null;
     joiningDate: string | null;
     permanentDistrictType: number | null;
     permanentDistrictTypeName: string | null;

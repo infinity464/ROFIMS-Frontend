@@ -1,9 +1,12 @@
 import { AfterViewChecked, ChangeDetectorRef, Component, ElementRef, Input, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { MessageService } from 'primeng/api';
+import { ConfirmationService, MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { ToastModule } from 'primeng/toast';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { DialogModule } from 'primeng/dialog';
+import { TableModule } from 'primeng/table';
 import { TooltipModule } from 'primeng/tooltip';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
@@ -14,10 +17,12 @@ import { NotesheetSignatoryComponent } from '@/Components/Common/notesheet-signa
 import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor';
 import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/file-references-form/file-references-form';
 import { NotesheetPreviewBase } from '../notesheet-preview-base';
-import { NoteSheetCurrentStatus, NoteSheetOperationTypeOptions, ApprovalStatus } from '@/models/enums';
+import { NoteSheetCurrentStatus, NoteSheetCurrentStatusOptions, NoteSheetOperationTypeOptions, ApprovalStatus, NoteSheetRemarkAction, NoteSheetType, ApprovalLogAction, ApprovalLogActionOptions, DraftPostingStatus, PostingStatus, NoteSheetPreviewFrom } from '@/models/enums';
+import { SharedService } from '@/shared/services/shared-service';
 import { DraftPostingEmployeeRow } from '@/models/posting.model';
 import { environment } from '@/Core/Environments/environment';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
 import {
     Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
     WidthType, BorderStyle, AlignmentType, PageOrientation, ImageRun
@@ -30,15 +35,26 @@ import type {
     TextAlignment
 } from '../notesheet-document-model';
 
+interface ApprovalLogEntry {
+    step: string;
+    action: ApprovalLogAction;
+    date: string | null;
+    remark: string | null;
+    employeeId: number | null;
+    serviceId?: string;
+    name?: string;
+    rank?: string;
+}
+
 @Component({
     selector: 'app-notesheet-preview-posting',
     standalone: true,
     imports: [
-        CommonModule, FormsModule, ButtonModule, ToastModule, TooltipModule,
+        CommonModule, FormsModule, ButtonModule, ToastModule, ConfirmDialogModule, DialogModule, TableModule, TooltipModule,
         InputTextModule, TextareaModule, SelectModule, MultiSelectModule, DatePickerModule,
         NotesheetSignatoryComponent, RichEditorComponent, FileReferencesFormComponent
     ],
-    providers: [MessageService],
+    providers: [MessageService, ConfirmationService],
     templateUrl: './notesheet-preview-posting.html',
     styleUrl: '../notesheet-preview.scss'
 })
@@ -49,6 +65,37 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     @ViewChild('pagesContainer') pagesContainer!: ElementRef<HTMLDivElement>;
 
     private cdr = inject(ChangeDetectorRef);
+    private confirmationService = inject(ConfirmationService);
+    private sharedService = inject(SharedService);
+
+    // ── Submit for approval state ─────────────────────────────
+    submitting = false;
+    readonly NoteSheetCurrentStatus = NoteSheetCurrentStatus;
+
+    // ── Pending-list inline actions (only when opened from pending list) ─
+    /** True when this preview was opened from /notesheet-list/pending-new-posting (or any pending list). */
+    fromPending = false;
+    currentUserEmployeeId = 0;
+
+    // Remark dialog (Approve / Decline / Back)
+    showRemarkDialog = false;
+    remarkAction: NoteSheetRemarkAction | null = null;
+    remarkText = '';
+    actionSubmitting = false;
+    readonly NoteSheetRemarkAction = NoteSheetRemarkAction;
+
+    // View Members dialog
+    showMembersDialog = false;
+    membersLoading = false;
+    membersList: DraftPostingEmployeeRow[] = [];
+    membersNoteSheetNo = '';
+
+    // Approval Log dialog
+    showApprovalLogDialog = false;
+    approvalLogEntries: ApprovalLogEntry[] = [];
+    approvalLogLoading = false;
+    approvalLogNoteSheetNo = '';
+    readonly ApprovalLogAction = ApprovalLogAction;
 
     // ── Pagination ─────────────────────────────────────────────
     pageOffsets: number[] = [0];
@@ -111,6 +158,423 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
 
     get isInitiatorStatus(): boolean {
         return this.noteSheet?.currentStatus?.toLowerCase() === NoteSheetCurrentStatus.Initiator;
+    }
+
+    /** Human-readable label for current status, used by the top-right status chip in preview */
+    get currentStatusLabel(): string {
+        const status = this.noteSheet?.currentStatus?.toLowerCase() ?? '';
+        if (!status) return '';
+        return NoteSheetCurrentStatusOptions.find(o => o.value === status)?.label ?? status;
+    }
+
+    /**
+     * Dynamic label for the current approval step — used on the inline
+     * Approve / Decline / Back buttons so they read e.g.
+     *   "Approve as Initiator"
+     *   "Approve as Recommender 1"  (if there are multiple recommenders)
+     *   "Approve as Recommender"    (if only one)
+     *   "Approve as Final Approver"
+     * based on `noteSheet.currentStatus` and the pending recommender index.
+     */
+    get currentApproverLabel(): string {
+        const status = this.noteSheet?.currentStatus?.toLowerCase() ?? '';
+        if (!status || !this.noteSheet) return '';
+        if (status === NoteSheetCurrentStatus.Initiator) return 'Initiator';
+        if (status === NoteSheetCurrentStatus.FinalApproval) return 'Final Approver';
+        if (status === NoteSheetCurrentStatus.Recommender) {
+            try {
+                const json = this.noteSheet.recommendersJson ?? this.noteSheet.recommenderIdsJson;
+                if (json && typeof json === 'string') {
+                    const arr = JSON.parse(json) as any[];
+                    if (Array.isArray(arr) && arr.length > 0) {
+                        // First recommender whose status is still pending (or blank) is the current step
+                        const pendingIdx = arr.findIndex(r => {
+                            const s = (r?.recomender_status ?? '').toString().toLowerCase();
+                            return !s || s === 'pending';
+                        });
+                        const idx = pendingIdx >= 0 ? pendingIdx : 0;
+                        return arr.length > 1 ? `Recommender ${idx + 1}` : 'Recommender';
+                    }
+                }
+            } catch { /* ignore */ }
+            return 'Recommender';
+        }
+        return '';
+    }
+
+    // ── Submit for approval (from preview top-right) ─────────
+    submitForApproval(): void {
+        if (!this.noteSheet || this.submitting) return;
+        this.confirmationService.confirm({
+            message: 'Do you want to submit this note-sheet for approval process?',
+            header: 'Submit for Approval',
+            acceptLabel: 'Submit',
+            rejectLabel: 'Cancel',
+            acceptButtonStyleClass: 'p-button-success',
+            accept: () => this.doSubmitForApproval()
+        });
+    }
+
+    private doSubmitForApproval(): void {
+        if (!this.noteSheet) return;
+        this.submitting = true;
+        const req = {
+            NoteSheetId: this.noteSheet.noteSheetId,
+            LastUpdatedBy: this.sharedService.getCurrentUser?.() ?? 'system'
+        };
+        this.http.post<{ statusCode?: number; StatusCode?: number; description?: string; Description?: string }>(
+            `${this.api}/SubmitForApproval`, req, { observe: 'response' }
+        ).subscribe({
+            next: (resp) => {
+                this.submitting = false;
+                const body = resp.body;
+                const code = body?.statusCode ?? body?.StatusCode;
+                const msg = body?.description ?? body?.Description;
+                if (resp.status >= 200 && resp.status < 300 && (code == null || code === 200)) {
+                    this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Submitted for approval.' });
+                    this.reloadNoteSheet();
+                } else {
+                    this.messageService.add({ severity: 'warn', summary: 'Submit for approval', detail: msg || 'Submit failed.' });
+                }
+            },
+            error: (err) => {
+                this.submitting = false;
+                const detail = err?.error?.description ?? err?.error?.Description ?? err?.error?.message ?? err?.message ?? 'Submit failed.';
+                this.messageService.add({ severity: 'error', summary: 'Error', detail });
+            }
+        });
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  Pending-list inline actions (only active when fromPending === true)
+    //  Mirrors the Approve / Decline / Back / View Members / Approval Log
+    //  behaviour from notesheet-list so the same actions are available
+    //  without leaving the preview page.
+    // ══════════════════════════════════════════════════════════════════
+
+    override ngOnInit(): void {
+        super.ngOnInit();
+        // Detect `from=pending` query param to enable inline approval actions
+        this.route.queryParams.subscribe(params => {
+            this.fromPending = (params['from'] ?? '').toString().toLowerCase() === NoteSheetPreviewFrom.Pending;
+        });
+        // Resolve current user's employee id (needed for Approve/Decline/Back APIs)
+        const userId = this.sharedService.getCurrentUserId?.();
+        if (userId) {
+            this.http.get<any[]>(`${environment.apis.core}/IdentityUserMapping/GetMappings`).subscribe({
+                next: (list) => {
+                    const me = (Array.isArray(list) ? list : []).find((m: any) => m.userId === userId);
+                    if (me?.employeeId) this.currentUserEmployeeId = me.employeeId;
+                },
+                error: () => {}
+            });
+        }
+    }
+
+    // ── Approve / Decline / Back: remark dialog ─────────────────────
+    openRemarkDialog(action: NoteSheetRemarkAction): void {
+        if (!this.noteSheet) return;
+        this.remarkAction = action;
+        this.remarkText = '';
+        this.showRemarkDialog = true;
+    }
+
+    submitRemark(): void {
+        if (!this.noteSheet || !this.remarkAction) return;
+        if (this.remarkAction === NoteSheetRemarkAction.Decline && !this.remarkText?.trim()) {
+            this.messageService.add({ severity: 'warn', summary: 'Remark Required', detail: 'Please provide a remark before declining.' });
+            return;
+        }
+        if (this.remarkAction === NoteSheetRemarkAction.Back && !this.remarkText?.trim()) {
+            this.messageService.add({ severity: 'warn', summary: 'Remark Required', detail: 'Please provide a remark before sending back.' });
+            return;
+        }
+
+        // Before Approve on a posting notesheet: validate all members have a transfer unit
+        if (this.remarkAction === NoteSheetRemarkAction.Approve
+            && (this.noteSheet.noteSheetType === NoteSheetType.InterPosting || this.noteSheet.noteSheetType === NoteSheetType.NewPosting)
+            && this.noteSheet.draftPostingMasterId) {
+            const employees$ = this.noteSheet.noteSheetType === NoteSheetType.InterPosting
+                ? this.postingService.getDraftInterPostingEmployees(this.noteSheet.draftPostingMasterId)
+                : this.postingService.getDraftPostingEmployees(this.noteSheet.draftPostingMasterId);
+            employees$.subscribe({
+                next: (employees) => {
+                    const missing = (employees ?? []).filter((e: any) => !e.transferRabUnitId);
+                    if (missing.length > 0) {
+                        const names = missing.map((e: any) => e.fullNameEN || e.FullNameEN || e.employeeName || `ID ${e.employeeId ?? e.EmployeeId}`).join(', ');
+                        this.messageService.add({
+                            severity: 'warn',
+                            summary: 'বদলি ইউনিট সেট করা হয়নি',
+                            detail: `অনুমোদনের আগে সকল সদস্যের বদলি ইউনিট (Transfer Unit) সেট করতে হবে। যাদের সেট করা হয়নি: ${names}`,
+                            life: 8000
+                        });
+                        return;
+                    }
+                    this.doSubmitRemark();
+                },
+                error: () => {
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to validate transfer units. Please try again.' });
+                }
+            });
+            return;
+        }
+
+        this.doSubmitRemark();
+    }
+
+    private doSubmitRemark(): void {
+        if (!this.noteSheet || !this.remarkAction) return;
+        const url = `${this.api}/${this.remarkAction.charAt(0).toUpperCase() + this.remarkAction.slice(1)}`;
+        const body = {
+            NoteSheetId: this.noteSheet.noteSheetId,
+            EmployeeId: this.currentUserEmployeeId,
+            Remark: this.remarkText,
+            LastUpdatedBy: this.sharedService.getCurrentUser?.() ?? 'system'
+        };
+        const ns = this.noteSheet;
+        const isFinalApproval = this.remarkAction === NoteSheetRemarkAction.Approve
+            && ns.currentStatus === NoteSheetCurrentStatus.FinalApproval;
+        const isPostingNoteSheet = ns.noteSheetType === NoteSheetType.NewPosting && !!ns.draftPostingMasterId;
+        this.actionSubmitting = true;
+
+        this.http.post<{ statusCode?: number; StatusCode?: number; description?: string; Description?: string }>(url, body, { observe: 'response' }).subscribe({
+            next: (resp) => {
+                this.actionSubmitting = false;
+                const res = resp.body;
+                const code = res?.statusCode ?? res?.StatusCode;
+                const msg = res?.description ?? res?.Description;
+                if (code === 200) {
+                    this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Action completed.' });
+                    this.showRemarkDialog = false;
+
+                    // After final approval of a posting notesheet: update DraftPostingStatus + EmployeeInfo PostingStatus
+                    if (isFinalApproval && isPostingNoteSheet) {
+                        this.onPostingFinalApproval(ns.draftPostingMasterId!);
+                    }
+
+                    // Acted upon — the note-sheet is no longer pending for this user.
+                    // Go back to the pending list so the user sees the updated list.
+                    this.router.navigate(['/notesheet-list/pending-new-posting']);
+                } else {
+                    this.messageService.add({ severity: 'warn', summary: 'Notice', detail: msg || 'Action failed.' });
+                }
+            },
+            error: (err) => {
+                this.actionSubmitting = false;
+                const detail = err?.error?.description ?? err?.error?.Description ?? err?.error?.message ?? err?.message ?? 'Request failed.';
+                this.messageService.add({ severity: 'error', summary: 'Error', detail });
+            }
+        });
+    }
+
+    /** After final approval of a New Posting notesheet, update DraftPostingMaster status and employees PostingStatus. */
+    private onPostingFinalApproval(masterId: number): void {
+        this.postingService.getDraftPostingEmployees(masterId).subscribe({
+            next: (employees) => {
+                const first = employees?.[0];
+                if (first) {
+                    this.postingService.updateDraftNewPosting(
+                        masterId,
+                        first.draftPostingNo,
+                        first.draftPostingDate,
+                        DraftPostingStatus.Approved
+                    ).subscribe({
+                        next: () => {},
+                        error: () => this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Failed to update Draft Posting status.' })
+                    });
+                }
+
+                const empIds = (employees ?? []).map(e => e.employeeId).filter(id => id > 0);
+                if (empIds.length > 0) {
+                    this.postingService.updateEmployeesPostingStatus(empIds, PostingStatus.PendingForJoining).subscribe({
+                        next: () => {},
+                        error: () => this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Failed to update employee posting status.' })
+                    });
+                }
+            },
+            error: () => this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Failed to load posting employees for status update.' })
+        });
+    }
+
+    // ── View Members dialog ─────────────────────────────────────────
+    openViewMembers(): void {
+        if (!this.noteSheet?.draftPostingMasterId) return;
+        this.membersNoteSheetNo = this.noteSheet.noteSheetNo || '';
+        this.membersLoading = true;
+        this.membersList = [];
+        this.showMembersDialog = true;
+
+        const obs = this.noteSheet.noteSheetType === NoteSheetType.InterPosting
+            ? this.postingService.getDraftInterPostingEmployees(this.noteSheet.draftPostingMasterId)
+            : this.postingService.getDraftPostingEmployees(this.noteSheet.draftPostingMasterId);
+
+        obs.subscribe({
+            next: (list: any[]) => { this.membersList = list ?? []; this.membersLoading = false; },
+            error: () => { this.membersLoading = false; }
+        });
+    }
+
+    // ── Approval Log dialog ─────────────────────────────────────────
+    openApprovalLog(): void {
+        if (!this.noteSheet) return;
+        this.approvalLogEntries = [];
+        this.approvalLogLoading = true;
+        this.approvalLogNoteSheetNo = this.noteSheet.noteSheetNo || '';
+        this.showApprovalLogDialog = true;
+
+        forkJoin({
+            noteSheet: this.http.get<any[]>(`${this.api}/GetFilteredByKeysAsyn/${this.noteSheet.noteSheetId}`).pipe(
+                map(data => (Array.isArray(data) ? data[0] : null) as any | null),
+                catchError(() => of(null as any | null))
+            ),
+            backHistory: this.http.get<{ id: number; backedByEmployeeId: number; backedFromStatus: string; backedToStatus: string; backReason: string | null; backedDate: string; createdBy: string }[]>(
+                `${this.api}/GetBackHistory`, { params: { noteSheetId: this.noteSheet.noteSheetId.toString() } }
+            ).pipe(catchError(() => of([])))
+        }).subscribe({
+            next: ({ noteSheet, backHistory }) => {
+                if (!noteSheet) { this.approvalLogLoading = false; return; }
+                this.buildApprovalLog(noteSheet, backHistory);
+            },
+            error: () => { this.approvalLogLoading = false; }
+        });
+    }
+
+    private buildApprovalLog(
+        ns: any,
+        backHistory: { backedByEmployeeId: number; backedFromStatus: string; backedToStatus: string; backReason: string | null; backedDate: string }[]
+    ): void {
+        const entries: ApprovalLogEntry[] = [];
+
+        if (ns.preparedByEmployeeId && ns.preparedByEmployeeId > 0) {
+            entries.push({
+                step: 'Prepared By',
+                action: ApprovalLogAction.Approve,
+                date: ns.createdDate ?? null,
+                remark: null,
+                employeeId: ns.preparedByEmployeeId
+            });
+        }
+
+        if (ns.initiatorId) {
+            entries.push({
+                step: 'Initiator',
+                action: (ns.initiatorStatus as ApprovalLogAction) ?? ApprovalLogAction.Pending,
+                date: ns.initiatorApprovedDate ?? null,
+                remark: ns.initiatorApproveRemark || ns.initiatorCancelRemark || null,
+                employeeId: ns.initiatorId
+            });
+        }
+
+        try {
+            const json = ns.recommendersJson;
+            if (json && typeof json === 'string') {
+                const arr = JSON.parse(json) as any[];
+                if (Array.isArray(arr)) {
+                    arr.forEach((r, i) => {
+                        entries.push({
+                            step: arr.length > 1 ? `Recommender ${i + 1}` : 'Recommender',
+                            action: (r.recomender_status as ApprovalLogAction) ?? ApprovalLogAction.Pending,
+                            date: r.recomender_approved_date ?? null,
+                            remark: r.recomender_approve_remark || r.recomender_cancel_remark || null,
+                            employeeId: r.recomender_id ?? null
+                        });
+                    });
+                }
+            }
+        } catch { /* ignore */ }
+
+        if (ns.finalApprovalId) {
+            entries.push({
+                step: 'Final Approver',
+                action: (ns.finalApprovalStatus as ApprovalLogAction) ?? ApprovalLogAction.Pending,
+                date: ns.finalApprovalApprovedDate ?? null,
+                remark: ns.finalApprovalRemark || ns.finalApprovalCancelRemark || null,
+                employeeId: ns.finalApprovalId
+            });
+        }
+
+        for (const bh of backHistory) {
+            entries.push({
+                step: `Back: ${this.getApprovalStatusLabel(bh.backedFromStatus)} → ${this.getApprovalStatusLabel(bh.backedToStatus)}`,
+                action: ApprovalLogAction.Back,
+                date: bh.backedDate,
+                remark: bh.backReason,
+                employeeId: bh.backedByEmployeeId
+            });
+        }
+
+        entries.sort((a, b) => {
+            if (!a.date && !b.date) return 0;
+            if (!a.date) return 1;
+            if (!b.date) return -1;
+            return new Date(a.date).getTime() - new Date(b.date).getTime();
+        });
+
+        this.approvalLogEntries = entries;
+
+        const empIds = [...new Set(entries.filter(e => e.employeeId).map(e => e.employeeId!))];
+        if (empIds.length === 0) { this.approvalLogLoading = false; return; }
+
+        forkJoin(
+            empIds.map(id =>
+                this.servingMembersService.getEmployeePersonalServiceOverview(id).pipe(catchError(() => of(null)))
+            )
+        ).subscribe({
+            next: (results) => {
+                const empMap = new Map<number, { serviceId: string; name: string; rank: string }>();
+                results.forEach((emp: any, idx: number) => {
+                    if (emp) {
+                        empMap.set(empIds[idx], {
+                            serviceId: emp.serviceId ?? emp.rabId ?? '-',
+                            name: emp.nameEnglish ?? '-',
+                            rank: emp.armyRank ?? '-'
+                        });
+                    }
+                });
+                for (const entry of this.approvalLogEntries) {
+                    if (entry.employeeId && empMap.has(entry.employeeId)) {
+                        const d = empMap.get(entry.employeeId)!;
+                        entry.serviceId = d.serviceId;
+                        entry.name = d.name;
+                        entry.rank = d.rank;
+                    }
+                }
+                this.approvalLogLoading = false;
+            },
+            error: () => { this.approvalLogLoading = false; }
+        });
+    }
+
+    getApprovalStatusLabel(status: string): string {
+        return NoteSheetCurrentStatusOptions.find(o => o.value === status)?.label ?? status;
+    }
+
+    getActionLabel(action: ApprovalLogAction): string {
+        return ApprovalLogActionOptions.find(o => o.value === action)?.label ?? action;
+    }
+
+    getActionIcon(action: ApprovalLogAction): string {
+        switch (action) {
+            case ApprovalLogAction.Approve: return 'pi pi-check-circle';
+            case ApprovalLogAction.Cancel:  return 'pi pi-times-circle';
+            case ApprovalLogAction.Back:    return 'pi pi-replay';
+            case ApprovalLogAction.Pending: return 'pi pi-clock';
+            default:                        return 'pi pi-circle';
+        }
+    }
+
+    formatDateShort(d: string | null | undefined): string {
+        if (!d) return '-';
+        try {
+            const dt = new Date(d);
+            return isNaN(dt.getTime()) ? d : dt.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        } catch {
+            return d;
+        }
+    }
+
+    formatEmployeeDate(d: string | null | undefined): string {
+        return this.formatDateShort(d);
     }
 
     // ── Pagination logic ──────────────────────────────────────

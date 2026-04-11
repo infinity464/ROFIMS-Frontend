@@ -165,6 +165,15 @@ export enum NoteSheetRemarkAction {
     Back    = 'back'
 }
 
+/**
+ * NoteSheetPreviewFrom – value of the `from` query parameter on the notesheet
+ * preview routes. Tells the preview page which list the user came from so it
+ * can show the right inline actions (e.g. Approve/Decline/Back for `Pending`).
+ */
+export enum NoteSheetPreviewFrom {
+    Pending = 'pending'
+}
+
 /** ApprovalLogAction – action type for approval log timeline entries. */
 export enum ApprovalLogAction {
     Pending = 'pending',

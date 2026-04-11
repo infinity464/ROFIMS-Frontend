@@ -508,7 +508,9 @@ export class OrgTreeServingComponent implements OnInit {
                         status: null,
                         joiningDate: emp.joiningDate ?? null,
                         permanentDistrictType: null,
-                        permanentDistrictTypeName: null
+                        permanentDistrictTypeName: null,
+                        postingStatus: null,
+                        isSendingNotesheetStatus: emp.isSendingNotesheetStatus ?? null
                     }));
                     this.list = mapped;
                     this.totalRecords = res.pages?.rows ?? 0;
@@ -571,7 +573,9 @@ export class OrgTreeServingComponent implements OnInit {
                         status: null,
                         joiningDate: emp.joiningDate ?? null,
                         permanentDistrictType: null,
-                        permanentDistrictTypeName: null
+                        permanentDistrictTypeName: null,
+                        postingStatus: null,
+                        isSendingNotesheetStatus: emp.isSendingNotesheetStatus ?? null
                     }));
                     const start = (pageNo - 1) * rowPerPage;
                     const end = start + rowPerPage;

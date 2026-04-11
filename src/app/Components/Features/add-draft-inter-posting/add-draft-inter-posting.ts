@@ -176,13 +176,13 @@ export class AddDraftInterPostingComponent implements OnInit {
 
     loadData(): void {
         this.loading = true;
-        this.employeeListService.getServingEmployeesAvailableForPosting().subscribe({
+        this.employeeListService.getEmployeesMarkedForInterPosting().subscribe({
             next: (data) => {
                 this.list = data ?? [];
                 this.loading = false;
             },
             error: (err) => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message ?? 'Failed to load serving employees' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message ?? 'Failed to load marked employees' });
                 this.loading = false;
             }
         });
