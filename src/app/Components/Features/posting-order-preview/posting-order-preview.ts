@@ -1,10 +1,17 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { Toast } from 'primeng/toast';
-import { MessageService } from 'primeng/api';
+import { MessageService, ConfirmationService } from 'primeng/api';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TooltipModule } from 'primeng/tooltip';
+import { SelectModule } from 'primeng/select';
+import { DatePickerModule } from 'primeng/datepicker';
+import { InputTextModule } from 'primeng/inputtext';
+import { TextareaModule } from 'primeng/textarea';
+import { TableModule } from 'primeng/table';
 import { PostingService } from '@/services/posting.service';
 import { ServingMembersService } from '@/services/serving-members.service';
 import { EmpService } from '@/services/emp-service';
@@ -18,11 +25,35 @@ import {
 } from 'docx';
 import { saveAs } from 'file-saver';
 
+/** A footer paragraph linked to a specific transfer (RAB) unit. */
+interface FooterParagraph {
+    text: string;
+    transferRabUnitId: number | null;
+    transferRabUnitName: string | null;
+}
+
+interface TransferUnitOption {
+    id: number;
+    name: string;
+}
+
 @Component({
     selector: 'app-posting-order-preview',
     standalone: true,
-    imports: [CommonModule, ButtonModule, Toast, TooltipModule],
-    providers: [MessageService],
+    imports: [
+        CommonModule,
+        FormsModule,
+        ButtonModule,
+        Toast,
+        ConfirmDialogModule,
+        TooltipModule,
+        SelectModule,
+        DatePickerModule,
+        InputTextModule,
+        TextareaModule,
+        TableModule
+    ],
+    providers: [MessageService, ConfirmationService],
     templateUrl: './posting-order-preview.html',
     styleUrl: './posting-order-preview.scss'
 })
@@ -47,6 +78,20 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     noteSheetNo = '';
     referenceNumber = '';
     footerParagraphs: string[] = [];
+    postingText = '';
+
+    // Raw master data kept for edit-mode re-parsing.
+    private currentOrderId: number | null = null;
+    private rawFooterText: string | null = null;
+
+    // ─── Edit mode state ──────────────────────────────────
+    editing = false;
+    saving = false;
+    editPostingOrderDate: Date | null = null;
+    editRemarks = '';
+    editPostingText = '';
+    editFooterParagraphs: FooterParagraph[] = [];
+    editEmployees: PostingOrderEmployeeRow[] = [];
 
     // Final approver info
     approverName = '';
@@ -75,13 +120,15 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         private servingMembersService: ServingMembersService,
         private empService: EmpService,
         private http: HttpClient,
-        private messageService: MessageService
+        private messageService: MessageService,
+        private confirmationService: ConfirmationService
     ) {}
 
     ngOnInit(): void {
         this.route.queryParams.subscribe(params => {
             const id = params['id'];
             if (id) {
+                this.currentOrderId = +id;
                 this.loadOrder(+id);
             } else {
                 this.error = true;
@@ -114,11 +161,49 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                     this.referenceNumber = first.referenceNumber ?? '';
                     this.isBangla = first.nsTextType === 1 || this.textType === 'bn' || this.textType === '1' || this.textType === 'Bangla';
 
-                    // Parse footer paragraphs – handle JSON array, JSON string, or plain text
+                    // Posting text (mainText) – plain single-paragraph string.
+                    // Legacy records may contain a JSON array; join them into one block.
+                    if (first.mainText) {
+                        const raw = first.mainText;
+                        try {
+                            const parsedMain = JSON.parse(raw);
+                            if (Array.isArray(parsedMain)) {
+                                this.postingText = parsedMain
+                                    .map((item: any) =>
+                                        typeof item === 'string'
+                                            ? item
+                                            : (item && typeof item.text === 'string' ? item.text : String(item ?? ''))
+                                    )
+                                    .filter((s: string) => s.trim().length > 0)
+                                    .join('\n\n');
+                            } else {
+                                this.postingText = String(parsedMain);
+                            }
+                        } catch {
+                            this.postingText = raw;
+                        }
+                    } else {
+                        this.postingText = '';
+                    }
+
+                    this.rawFooterText = first.footerText ?? null;
+
+                    // Parse footer paragraphs – supports:
+                    //  • legacy JSON string array  ["para1", "para2"]
+                    //  • new JSON object array     [{ text, transferRabUnitId, transferRabUnitName }, ...]
+                    //  • plain newline-separated text
                     if (first.footerText) {
                         try {
                             const parsed = JSON.parse(first.footerText);
-                            this.footerParagraphs = Array.isArray(parsed) ? parsed : [String(parsed)];
+                            if (Array.isArray(parsed)) {
+                                this.footerParagraphs = parsed.map((item: any) =>
+                                    typeof item === 'string'
+                                        ? item
+                                        : (item && typeof item.text === 'string' ? item.text : String(item ?? ''))
+                                );
+                            } else {
+                                this.footerParagraphs = [String(parsed)];
+                            }
                         } catch {
                             // Not valid JSON – treat as plain text, split by newlines
                             this.footerParagraphs = first.footerText.split('\n').filter((l: string) => l.trim());
@@ -293,6 +378,189 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         return emp.rabID || '';
     }
 
+    // ─── Edit mode ────────────────────────────────────────
+
+    /** Can edit if status is Draft (or empty/unknown). */
+    get canEdit(): boolean {
+        const s = (this.status ?? '').toLowerCase();
+        return s === '' || s === 'draft';
+    }
+
+    /** Unique transfer (RAB) units from currently-loaded edit employees. */
+    get editAvailableTransferUnits(): TransferUnitOption[] {
+        const map = new Map<number, string>();
+        for (const e of this.editEmployees) {
+            if (e.transferRabUnitId != null && !map.has(e.transferRabUnitId)) {
+                const name = this.isBangla
+                    ? (e.transferRabUnitNameBN || e.transferRabUnitName || '')
+                    : (e.transferRabUnitName || '');
+                map.set(e.transferRabUnitId, name);
+            }
+        }
+        return Array.from(map, ([id, name]) => ({ id, name }));
+    }
+
+    get editHasMultipleTransferUnits(): boolean {
+        return this.editAvailableTransferUnits.length > 1;
+    }
+
+    /** Enter edit mode. Populates edit fields from the currently-loaded order. */
+    toggleEdit(): void {
+        if (!this.canEdit) return;
+
+        this.editPostingOrderDate = this.postingOrderDate ? new Date(this.postingOrderDate) : null;
+        this.editRemarks = this.masterRemarks || '';
+        this.editPostingText = this.postingText || '';
+        this.editEmployees = [...this.employees];
+
+        // Re-parse the raw footerText into full FooterParagraph objects (with unit linkage).
+        this.editFooterParagraphs = this.parseFooterParagraphs(this.rawFooterText);
+
+        this.editing = true;
+    }
+
+    cancelEdit(): void {
+        this.editing = false;
+        this.editPostingOrderDate = null;
+        this.editRemarks = '';
+        this.editPostingText = '';
+        this.editFooterParagraphs = [];
+        this.editEmployees = [];
+    }
+
+    /** Parse footerText JSON into full FooterParagraph objects for edit mode. */
+    private parseFooterParagraphs(raw: string | null): FooterParagraph[] {
+        if (!raw) return [];
+        try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+                return parsed.map((item: any) => {
+                    if (typeof item === 'string') {
+                        return { text: item, transferRabUnitId: null, transferRabUnitName: null };
+                    }
+                    return {
+                        text: item?.text ?? '',
+                        transferRabUnitId: item?.transferRabUnitId ?? null,
+                        transferRabUnitName: item?.transferRabUnitName ?? null
+                    };
+                });
+            }
+        } catch {
+            /* fallthrough */
+        }
+        return raw.split('\n').filter(l => l.trim()).map(t => ({
+            text: t,
+            transferRabUnitId: null,
+            transferRabUnitName: null
+        }));
+    }
+
+    addEditFooterParagraph(): void {
+        const units = this.editAvailableTransferUnits;
+        const onlyUnit = units.length === 1 ? units[0] : null;
+        this.editFooterParagraphs.push({
+            text: '',
+            transferRabUnitId: onlyUnit ? onlyUnit.id : null,
+            transferRabUnitName: onlyUnit ? onlyUnit.name : null
+        });
+    }
+
+    removeEditFooterParagraph(index: number): void {
+        this.editFooterParagraphs.splice(index, 1);
+    }
+
+    onEditFooterUnitChange(index: number): void {
+        const para = this.editFooterParagraphs[index];
+        if (!para) return;
+        const match = this.editAvailableTransferUnits.find(u => u.id === para.transferRabUnitId);
+        para.transferRabUnitName = match ? match.name : null;
+    }
+
+    removeEditEmployee(emp: PostingOrderEmployeeRow): void {
+        const name = this.empName(emp);
+        this.confirmationService.confirm({
+            message: `"${name}" কে তালিকা থেকে সরাতে চান?`,
+            header: 'নিশ্চিত করুন',
+            icon: 'pi pi-exclamation-triangle',
+            acceptLabel: 'হ্যাঁ',
+            rejectLabel: 'না',
+            accept: () => {
+                this.editEmployees = this.editEmployees.filter(e => e.employeeId !== emp.employeeId);
+            }
+        });
+    }
+
+    trackByIndex(index: number): number {
+        return index;
+    }
+
+    private formatDateToString(value: Date | null): string {
+        if (!value) {
+            const t = new Date();
+            return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+        }
+        const y = value.getFullYear(), m = value.getMonth() + 1, d = value.getDate();
+        return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    }
+
+    saveChanges(): void {
+        if (this.saving || !this.currentOrderId) return;
+
+        if (this.editEmployees.length === 0) {
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'At least one employee is required.' });
+            return;
+        }
+
+        this.saving = true;
+
+        const nonEmptyFooter = this.editFooterParagraphs
+            .filter(p => p.text.trim().length > 0)
+            .map(p => ({
+                text: p.text.trim(),
+                transferRabUnitId: p.transferRabUnitId,
+                transferRabUnitName: p.transferRabUnitName
+            }));
+        const footerText = nonEmptyFooter.length > 0 ? JSON.stringify(nonEmptyFooter) : null;
+
+        const trimmedPostingText = this.editPostingText.trim();
+        const mainText = trimmedPostingText.length > 0 ? trimmedPostingText : null;
+
+        const postingOrderDateStr = this.editPostingOrderDate
+            ? this.formatDateToString(this.editPostingOrderDate)
+            : (this.postingOrderDate || this.formatDateToString(new Date()));
+
+        this.postingService.updatePostingOrder({
+            id: this.currentOrderId,
+            postingOrderNo: this.postingOrderNo,
+            postingOrderDate: postingOrderDateStr,
+            postingType: this.postingType,
+            referenceNumber: this.referenceNumber || null,
+            subject: this.subject || null,
+            mainText: mainText,
+            textType: this.textType || (this.isBangla ? 'bn' : 'en'),
+            status: this.status || null,
+            remarks: this.editRemarks || null,
+            footerText: footerText,
+            employeeIds: this.editEmployees.map(e => e.employeeId),
+            updatedBy: 'system'
+        }).subscribe({
+            next: (res) => {
+                this.saving = false;
+                if (res.statusCode === 200) {
+                    this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Posting order updated successfully.' });
+                    this.editing = false;
+                    if (this.currentOrderId) this.loadOrder(this.currentOrderId);
+                } else {
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: res.description ?? 'Failed to update.' });
+                }
+            },
+            error: (err) => {
+                this.saving = false;
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.description ?? 'Failed to update posting order.' });
+            }
+        });
+    }
+
     // ─── Export Word ──────────────────────────────────────
 
     async exportWord(): Promise<void> {
@@ -453,6 +721,15 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             columnWidths: colW
         });
 
+        // ── Posting Text (10pt, justified) – single paragraph (split on blank lines) ──
+        const postingTextParas = this.postingText
+            ? this.postingText.split(/\n{2,}/).filter(t => t.trim().length > 0).map(t => new Paragraph({
+                children: [new TextRun({ text: t, size: 20, sizeComplexScript: csSize, font, language: lang })],
+                alignment: AlignmentType.JUSTIFIED,
+                spacing: { before: 100, after: 100 }
+            }))
+            : [];
+
         // ── Signature Block (right-aligned block using borderless table) ──
         const approverNameText = (bn ? this.approverNameBN : this.approverName) || this.approverName || '...................................';
         const approverRankText = (bn ? this.approverRankBN : this.approverRank) || this.approverRank || '............................';
@@ -514,7 +791,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                         },
                     }
                 },
-                children: [...headerParas, titlePara, orderLine, bodyPara, empTable, ...sigParas, copyPara, ...footerParas]
+                children: [...headerParas, titlePara, orderLine, bodyPara, empTable, ...postingTextParas, ...sigParas, copyPara, ...footerParas]
             }]
         });
     }
