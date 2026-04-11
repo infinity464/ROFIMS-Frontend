@@ -141,10 +141,6 @@ export class PendingInterPostingJoiningComponent implements OnInit {
         this.applyFilters();
     }
 
-    goToReceive(): void {
-        this.router.navigate(['/posting/posting-order-receive']);
-    }
-
     /** Open the receive dialog to mark selected rows as received. */
     openReceiveDialog(): void {
         if (!this.selectedRows.length) {

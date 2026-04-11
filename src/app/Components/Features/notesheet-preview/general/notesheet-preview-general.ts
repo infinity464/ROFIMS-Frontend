@@ -926,21 +926,47 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
             }));
         }
 
-        // Reference / Date (general-specific)
-        if (model.referenceBlocks.length > 0 || this.noteSheet?.referenceNumber) {
-            mainChildren.push(new Paragraph({
-                children: [new TextRun({ text: model.referenceLabel, bold: true, size: 20, sizeComplexScript: csSize, font, language: lang })],
-                indent: { left: 240 }, spacing: { after: model.referenceBlocks.length > 0 ? 40 : 80 }
-            }));
-            if (model.referenceBlocks.length > 0) {
-                mainChildren.push(...this.contentBlocksToDocx(model.referenceBlocks, font, bn));
-            } else {
-                const plain = this.stripHtml(this.noteSheet!.referenceNumber ?? '');
-                if (plain) mainChildren.push(new Paragraph({
-                    children: [new TextRun({ text: plain, size: 20, sizeComplexScript: csSize, font, language: lang })],
-                    indent: { left: 480 }, spacing: { after: 80 }
+        // Reference / Date (general-specific) — label + first content block merged inline
+        if (model.referenceBlocks.length > 0) {
+            const labelRun = new TextRun({ text: `${model.referenceLabel} `, bold: true, size: 20, sizeComplexScript: csSize, font, language: lang });
+            const firstRefBlock = model.referenceBlocks[0];
+            if (firstRefBlock.type === 'paragraph' && (firstRefBlock.text || (firstRefBlock.runs && firstRefBlock.runs.length > 0))) {
+                const contentRuns = (firstRefBlock.runs && firstRefBlock.runs.length > 0)
+                    ? firstRefBlock.runs.map(r => new TextRun({
+                        text: r.text,
+                        bold: r.bold,
+                        italics: r.italic,
+                        underline: r.underline ? {} : undefined,
+                        size: 20,
+                        sizeComplexScript: csSize,
+                        font,
+                        language: lang
+                    }))
+                    : [new TextRun({ text: firstRefBlock.text!, bold: firstRefBlock.bold, italics: firstRefBlock.italic, size: 20, sizeComplexScript: csSize, font, language: lang })];
+                mainChildren.push(new Paragraph({
+                    children: [labelRun, ...contentRuns],
+                    indent: { left: 240 }, spacing: { after: 80 }, alignment: AlignmentType.JUSTIFIED
                 }));
+                if (model.referenceBlocks.length > 1) {
+                    mainChildren.push(...this.contentBlocksToDocx(model.referenceBlocks.slice(1), font, bn));
+                }
+            } else {
+                // First block is not a simple paragraph (e.g. list/table) — render label alone then all blocks
+                mainChildren.push(new Paragraph({
+                    children: [labelRun],
+                    indent: { left: 240 }, spacing: { after: 40 }
+                }));
+                mainChildren.push(...this.contentBlocksToDocx(model.referenceBlocks, font, bn));
             }
+        } else if (this.noteSheet?.referenceNumber) {
+            const plain = this.stripHtml(this.noteSheet.referenceNumber ?? '');
+            mainChildren.push(new Paragraph({
+                children: [
+                    new TextRun({ text: `${model.referenceLabel} `, bold: true, size: 20, sizeComplexScript: csSize, font, language: lang }),
+                    new TextRun({ text: plain, size: 20, sizeComplexScript: csSize, font, language: lang })
+                ],
+                indent: { left: 240 }, spacing: { after: 80 }, alignment: AlignmentType.JUSTIFIED
+            }));
         } else if (this.noteSheet?.noteSheetDate) {
             mainChildren.push(new Paragraph({
                 children: [
@@ -1157,7 +1183,8 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
                 else if (b.alignment === 'right') align = AlignmentType.RIGHT;
                 else if (b.alignment === 'justify') align = AlignmentType.JUSTIFIED;
                 else align = b.indent === 'list' ? AlignmentType.LEFT : AlignmentType.JUSTIFIED;
-                const indent = b.indent === 'list' ? { left: 720 } : { left: 480 };
+                // Align body paragraphs with the first "১।" paragraph's left indent (240 twips)
+                const indent = b.indent === 'list' ? { left: 480 } : { left: 240 };
                 const children = (b.runs && b.runs.length > 0)
                     ? b.runs.map(r => new TextRun({
                         text: r.text,

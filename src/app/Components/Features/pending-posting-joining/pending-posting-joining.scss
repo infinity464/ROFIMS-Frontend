@@ -50,3 +50,71 @@
         margin-bottom: 0.35rem;
     }
 }
+
+// Receive Posting Order dialog – clean, simple, professional
+:host ::ng-deep .receive-dialog {
+    .p-dialog-content {
+        padding: 1.5rem;
+    }
+
+    .receive-form {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+    }
+
+    .receive-info {
+        margin: 0;
+        padding: 0.85rem 1rem;
+        background: var(--surface-100, #f3f4f6);
+        border-left: 3px solid var(--primary-color);
+        border-radius: 4px;
+        font-size: 0.9rem;
+        color: var(--text-color);
+    }
+
+    .receive-field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+
+        label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-color);
+
+            .required {
+                color: #ef4444;
+            }
+        }
+
+        // Datepicker input
+        p-datepicker {
+            width: 100%;
+            display: block;
+        }
+
+        .p-datepicker,
+        .p-inputwrapper {
+            width: 100%;
+        }
+
+        .p-datepicker input.p-inputtext,
+        input.p-inputtext {
+            width: 100%;
+            height: 2.75rem;
+            font-size: 0.95rem;
+            padding: 0.65rem 0.85rem;
+        }
+
+        // Textarea
+        textarea {
+            width: 100%;
+            font-size: 0.95rem;
+            padding: 0.65rem 0.85rem;
+            line-height: 1.5;
+            min-height: 6rem;
+            resize: vertical;
+        }
+    }
+}

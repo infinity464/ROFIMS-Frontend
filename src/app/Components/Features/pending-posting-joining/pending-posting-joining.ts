@@ -141,11 +141,6 @@ export class PendingPostingJoiningComponent implements OnInit {
         this.applyFilters();
     }
 
-    /** Navigate to posting-order-receive so the user can mark the employee as received. */
-    goToReceive(): void {
-        this.router.navigate(['/posting/posting-order-receive']);
-    }
-
     /** Open the receive dialog to mark selected rows as received. */
     openReceiveDialog(): void {
         if (!this.selectedRows.length) {
