@@ -356,7 +356,9 @@ export class RabOrganogramMembersComponent implements OnInit {
             status: null,
             joiningDate: emp.joiningDate ?? null,
             permanentDistrictType: null,
-            permanentDistrictTypeName: null
+            permanentDistrictTypeName: null,
+            postingStatus: null,
+            isSendingNotesheetStatus: emp.isSendingNotesheetStatus ?? null
         };
     }
 

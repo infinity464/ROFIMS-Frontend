@@ -11,9 +11,9 @@ import { MessageService } from 'primeng/api';
 import { Toast } from 'primeng/toast';
 import { CheckboxModule } from 'primeng/checkbox';
 import { ServingMembersService, ServingMemberFilterRequest } from '@/services/serving-members.service';
-import { PostingService } from '@/services/posting.service';
-import { SharedService } from '@/shared/services/shared-service';
+import { EmployeeListService } from '@/services/employee-list.service';
 import { EmployeeServiceOverview } from '@/models/employee-service-overview.model';
+import { TagModule } from 'primeng/tag';
 
 export interface FilterModel {
     rabId: string;
@@ -35,7 +35,7 @@ export interface FilterModel {
 @Component({
     selector: 'app-presently-serving-members',
     standalone: true,
-    imports: [CommonModule, FormsModule, RouterModule, TableModule, ButtonModule, InputTextModule, SelectModule, DatePickerModule, Toast, CheckboxModule],
+    imports: [CommonModule, FormsModule, RouterModule, TableModule, ButtonModule, InputTextModule, SelectModule, DatePickerModule, Toast, CheckboxModule, TagModule],
     providers: [MessageService],
     templateUrl: './presently-serving-members.html',
     styleUrls: ['./presently-serving-members.scss', '../employee-reports/report-theme.scss'],
@@ -85,8 +85,7 @@ export class PresentlyServingMembers implements OnInit {
 
     constructor(
         private servingMembersService: ServingMembersService,
-        private postingService: PostingService,
-        private sharedService: SharedService,
+        private employeeListService: EmployeeListService,
         private messageService: MessageService
     ) {}
 
@@ -282,6 +281,23 @@ export class PresentlyServingMembers implements OnInit {
         }
     }
 
+    /** Whether an employee is already in a posting process (cannot be re-selected). */
+    isInPostingProcess(row: EmployeeServiceOverview): boolean {
+        return !!row.isSendingNotesheetStatus;
+    }
+
+    /** Maps IsSendingNotesheetStatus to a display label. */
+    getStatusLabel(status: string | null): string {
+        if (!status) return '';
+        switch (status) {
+            case 'draft': return 'New Posting (Draft)';
+            case 'draftPosting': return 'New Posting in Process';
+            case 'draftNotesheet': return 'Notesheet in Process';
+            case 'draftInterPosting': return 'Inter Posting in Process';
+            default: return status;
+        }
+    }
+
     sendInterPosting(): void {
         if (!this.selectedRows?.length) {
             this.messageService.add({ severity: 'warn', summary: 'Selection Required', detail: 'Please select at least one member.' });
@@ -289,23 +305,20 @@ export class PresentlyServingMembers implements OnInit {
         }
         this.savingInterPosting = true;
         const employeeIds = this.selectedRows.map(r => r.employeeID);
-        const listNo = `IP-${new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14)}`;
-        const dateStr = new Date().toISOString().slice(0, 10);
-        const user = this.sharedService.getCurrentUser();
-        this.postingService.saveDraftInterPosting(listNo, dateStr, employeeIds, user).subscribe({
+        this.employeeListService.setBulkIsSendingNotesheetStatus(employeeIds, 'draftInterPosting').subscribe({
             next: (res) => {
                 this.savingInterPosting = false;
                 if (res.statusCode === 200) {
-                    this.messageService.add({ severity: 'success', summary: 'Success', detail: res.description || 'Draft Inter Posting saved.' });
+                    this.messageService.add({ severity: 'success', summary: 'Success', detail: res.description || 'Employees marked for inter posting.' });
                     this.selectedRows = [];
                     this.loadList(1, this.rows);
                 } else {
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: res.description || 'Failed to save.' });
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: res.description || 'Failed to update status.' });
                 }
             },
             error: (err) => {
                 this.savingInterPosting = false;
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.description || 'Failed to save draft inter posting.' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.description || 'Failed to mark for inter posting.' });
             }
         });
     }
