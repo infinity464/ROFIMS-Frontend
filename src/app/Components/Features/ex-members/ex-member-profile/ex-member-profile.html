@@ -47,7 +47,12 @@
                     </div>
                 }
             </div>
-            <div class="sp-hero-name">{{ getFormattedName(profile) }}</div>
+            <div style="flex: 1; min-width: 0;">
+                <div class="sp-hero-name">{{ getFormattedName(profile) }}</div>
+                @if (activePresentStatus) {
+                    <div style="font-size: 0.95rem; font-weight: 500; margin-top: 0.25rem; color: var(--text-color-secondary);">Present Status: {{ activePresentStatus }}</div>
+                }
+            </div>
             <div class="sp-hero-ids">
                 <div class="sp-id-block">
                     <span class="sp-id-label">{{ L['field.serviceId'] }}</span>

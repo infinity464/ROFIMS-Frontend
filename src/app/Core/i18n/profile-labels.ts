@@ -44,8 +44,8 @@ export const PROFILE_LABELS = {
     'section.documents': 'Documents',
 
     // Field labels (detail-label)
-    'field.serviceId': 'Service ID:',
-    'field.rabId': 'RAB ID:',
+    'field.serviceId': 'Service ID',
+    'field.rabId': 'RAB ID',
     'field.nameEnglish': 'Name English:',
     'field.nameBangla': 'Name Bangla:',
     'field.appointment': 'Appointment:',
@@ -221,8 +221,8 @@ export const PROFILE_LABELS = {
     'section.additionalRemarks': 'অতিরিক্ত মন্তব্য:',
     'section.documents': 'নথিপত্র',
 
-    'field.serviceId': 'সার্ভিস আইডি:',
-    'field.rabId': 'র‌্যাব আইডি:',
+    'field.serviceId': 'সার্ভিস আইডি',
+    'field.rabId': 'র‌্যাব আইডি',
     'field.nameEnglish': 'নাম (ইংরেজি):',
     'field.nameBangla': 'নাম (বাংলা):',
     'field.appointment': 'নিয়োগ:',
