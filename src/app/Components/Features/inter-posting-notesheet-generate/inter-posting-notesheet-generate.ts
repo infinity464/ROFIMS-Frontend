@@ -69,6 +69,8 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
     finalApproverOptions: { label: string; value: number }[] = [];
     fileRows: FileRowData[] = [];
     readonly noteSheetOperationTypeOptions = NoteSheetOperationTypeOptions;
+    /** Dynamic paragraphs */
+    paragraphs: string[] = [''];
 
     @ViewChild('fileReferencesForm') fileReferencesForm!: FileReferencesFormComponent;
 
@@ -91,6 +93,7 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
             noteSheetDate: [null as Date | null, Validators.required],
             referenceNumber: [''],
             noteSheetNo: [''],
+            subject: [''],
             mainText: [''],
             note: [''],
             preparedBy: [''],
@@ -279,6 +282,7 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
             noteSheetNo: String(d.noteSheetNo ?? d.NoteSheetNo ?? ''),
             noteSheetDate,
             referenceNumber: String(d.referenceNumber ?? d.ReferenceNumber ?? ''),
+            subject: String(d.subject ?? d.Subject ?? ''),
             mainText: String(d.mainText ?? d.MainText ?? ''),
             note: String(d.note ?? d.Note ?? ''),
             preparedBy: d.createdBy ?? d.CreatedBy ?? d.lastUpdatedBy ?? d.LastUpdatedBy ?? user,
@@ -297,6 +301,17 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
                 this.fileRows = Array.isArray(refs)
                     ? refs.map((r) => ({ displayName: r.fileName ?? r.FileName ?? '', file: null, fileId: r.FileId ?? r.fileId }))
                     : [];
+            } catch {}
+        }
+
+        // Load paragraphs
+        const paragraphText = d.paragraphText ?? d.ParagraphText;
+        if (paragraphText && typeof paragraphText === 'string') {
+            try {
+                const arr = JSON.parse(paragraphText);
+                if (Array.isArray(arr) && arr.length > 0) {
+                    this.paragraphs = arr.map((p: any) => String(p ?? ''));
+                }
             } catch {}
         }
     }
@@ -326,6 +341,7 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
             noteSheetNo: '',
             noteSheetDate: null,
             referenceNumber: '',
+            subject: '',
             mainText: '',
             note: '',
             preparedBy: '',
@@ -337,7 +353,22 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
             isSecret: false
         });
         this.fileRows = [];
+        this.paragraphs = [''];
         this.resolvePreparedByMapping();
+    }
+
+    addParagraph(): void {
+        this.paragraphs.push('');
+    }
+
+    removeParagraph(index: number): void {
+        if (this.paragraphs.length > 1) {
+            this.paragraphs.splice(index, 1);
+        }
+    }
+
+    trackByIndex(index: number): number {
+        return index;
     }
 
     submit(): void {
@@ -435,7 +466,7 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
         const now = new Date().toISOString();
         const preparedBy = (d.preparedBy && String(d.preparedBy).trim()) || 'system';
         const createdBy = this.editMode && this.originalCreatedBy ? this.originalCreatedBy : preparedBy;
-        const subject = this.editMode ? this.originalSubject : null;
+        const subject = (d.subject && String(d.subject).trim()) || this.originalSubject || null;
         const noteSheetNo = 'AUTO';
         const recommenderIds: number[] = Array.isArray(d.recommenderIds) ? d.recommenderIds : [];
         const recommendersJson = recommenderIds.length
@@ -475,7 +506,8 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
             lastUpdatedBy: preparedBy,
             createdDate: now,
             lastupdate: now,
-            draftPostingMasterId: d.draftPostingMasterId ?? null
+            draftPostingMasterId: d.draftPostingMasterId ?? null,
+            paragraphText: this.paragraphs.some(p => p.trim()) ? JSON.stringify(this.paragraphs.filter(p => p.trim())) : null
         };
         if (filesReferencesJson != null && filesReferencesJson !== '') {
             payload['filesReferences'] = filesReferencesJson;
