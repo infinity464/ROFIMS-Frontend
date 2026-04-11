@@ -36,13 +36,13 @@
                     ></p-select>
                 </div>
                 <div class="filter-item">
-                    <label class="filter-label">Mother Organization</label>
+                    <label class="filter-label">Posting Order No</label>
                     <p-select
-                        [options]="motherOrgOptions"
-                        [(ngModel)]="motherOrgFilter"
+                        [options]="postingOrderOptions"
+                        [(ngModel)]="postingOrderFilter"
                         optionLabel="label"
                         optionValue="value"
-                        placeholder="All Mother Organizations"
+                        placeholder="All Posting Orders"
                         [showClear]="true"
                         [filter]="true"
                         filterPlaceholder="Search..."
@@ -51,13 +51,13 @@
                     ></p-select>
                 </div>
                 <div class="filter-item">
-                    <label class="filter-label">Posting Order No</label>
+                    <label class="filter-label">Mother Organization</label>
                     <p-select
-                        [options]="postingOrderOptions"
-                        [(ngModel)]="postingOrderFilter"
+                        [options]="motherOrgOptions"
+                        [(ngModel)]="motherOrgFilter"
                         optionLabel="label"
                         optionValue="value"
-                        placeholder="All Posting Orders"
+                        placeholder="All Mother Organizations"
                         [showClear]="true"
                         [filter]="true"
                         filterPlaceholder="Search..."
@@ -98,7 +98,7 @@
             [value]="rows"
             [loading]="loading"
             dataKey="postingReceiveId"
-            [tableStyle]="{ 'min-width': '80rem' }"
+            [tableStyle]="{ 'min-width': '85rem' }"
             styleClass="p-datatable-striped p-datatable-gridlines"
             [paginator]="true"
             [rows]="15"
@@ -109,13 +109,14 @@
                 'serviceId',
                 'fullNameEN',
                 'rankName',
+                'motherOrganization',
                 'motherUnitName',
                 'transferRabUnitName'
             ]"
         >
             <ng-template pTemplate="caption">
-                <div class="flex justify-content-between align-items-center">
-                    <span class="text-600">
+                <div class="flex justify-content-between align-items-center flex-wrap gap-3">
+                    <span class="text-600 white-space-nowrap">
                         Total pending: <b>{{ rows.length }}</b>
                         <span *ngIf="rows.length !== allRows.length">
                             (filtered from {{ allRows.length }})
@@ -137,13 +138,13 @@
                     <th style="width: 50px">Ser</th>
                     <th style="min-width: 160px">Posting Order No</th>
                     <th style="min-width: 110px">Order Date</th>
-                    <th style="min-width: 110px">Posting Type</th>
                     <th style="min-width: 140px">NoteSheet No</th>
                     <th style="min-width: 120px">Service ID</th>
                     <th style="min-width: 110px">RAB ID</th>
                     <th style="min-width: 110px">Rank</th>
                     <th style="min-width: 180px">Full Name</th>
                     <th style="min-width: 150px">Mother Organization</th>
+                    <th style="min-width: 150px">Mother Unit</th>
                     <th style="min-width: 150px">Transfer To</th>
                     <th style="width: 120px">Action</th>
                 </tr>
@@ -155,17 +156,12 @@
                         <span class="font-semibold">{{ row.postingOrderNo || '-' }}</span>
                     </td>
                     <td>{{ formatDate(row.postingOrderDate) }}</td>
-                    <td>
-                        <p-tag
-                            [value]="postingTypeLabel(row.postingType)"
-                            [severity]="postingTypeSeverity(row.postingType)"
-                        ></p-tag>
-                    </td>
                     <td>{{ row.noteSheetNo || '-' }}</td>
                     <td>{{ row.serviceId || '-' }}</td>
                     <td>{{ row.rabID || '-' }}</td>
                     <td>{{ row.rankName || '-' }}</td>
                     <td>{{ row.fullNameEN || '-' }}</td>
+                    <td>{{ row.motherOrganization || '-' }}</td>
                     <td>{{ row.motherUnitName || '-' }}</td>
                     <td>{{ row.transferRabUnitName || '-' }}</td>
                     <td>

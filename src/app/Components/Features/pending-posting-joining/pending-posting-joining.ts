@@ -4,7 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Table, TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
-import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
 import { InputTextModule } from 'primeng/inputtext';
 import { IconFieldModule } from 'primeng/iconfield';
@@ -23,7 +22,6 @@ import { PendingPostingJoiningDto } from '@/models/posting.model';
         FormsModule,
         TableModule,
         ButtonModule,
-        TagModule,
         TooltipModule,
         InputTextModule,
         IconFieldModule,
@@ -92,7 +90,7 @@ export class PendingPostingJoiningComponent implements OnInit {
         ];
         this.motherOrgOptions = [
             { label: 'All Mother Organizations', value: null },
-            ...unique(this.allRows.map(r => r.motherUnitName)).map(v => ({ label: v, value: v }))
+            ...unique(this.allRows.map(r => r.motherOrganization)).map(v => ({ label: v, value: v }))
         ];
         this.postingOrderOptions = [
             { label: 'All Posting Orders', value: null },
@@ -107,7 +105,7 @@ export class PendingPostingJoiningComponent implements OnInit {
     applyFilters(): void {
         this.rows = this.allRows.filter(r => {
             if (this.noteSheetFilter && r.noteSheetNo !== this.noteSheetFilter) return false;
-            if (this.motherOrgFilter && r.motherUnitName !== this.motherOrgFilter) return false;
+            if (this.motherOrgFilter && r.motherOrganization !== this.motherOrgFilter) return false;
             if (this.postingOrderFilter && r.postingOrderNo !== this.postingOrderFilter) return false;
             if (this.transferUnitFilter && r.transferRabUnitName !== this.transferUnitFilter) return false;
             return true;
@@ -141,18 +139,6 @@ export class PendingPostingJoiningComponent implements OnInit {
         if (row.employeeId) {
             window.open(`/members/profile/${row.employeeId}`, '_blank');
         }
-    }
-
-    postingTypeLabel(type: string | null): string {
-        switch (type) {
-            case 'New': return 'New Posting';
-            case 'Inter': return 'Inter Posting';
-            default: return type || '-';
-        }
-    }
-
-    postingTypeSeverity(type: string | null): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' {
-        return type === 'Inter' ? 'warn' : 'info';
     }
 
     formatDate(value: string | null | undefined): string {

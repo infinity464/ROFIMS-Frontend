@@ -261,6 +261,7 @@ export interface PendingPostingJoiningDto {
     fullNameEN: string | null;
     rabID: string | null;
     rankName: string | null;
+    motherOrganization: string | null;
     motherUnitName: string | null;
 }
 
