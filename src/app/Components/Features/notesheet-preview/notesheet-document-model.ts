@@ -4,11 +4,20 @@
  */
 export type TextAlignment = 'left' | 'center' | 'right' | 'justify';
 
+export interface InlineRun {
+    text: string;
+    bold?: boolean;
+    italic?: boolean;
+    underline?: boolean;
+}
+
 export interface ContentBlock {
     type: 'paragraph' | 'list' | 'table';
     text?: string;
     bold?: boolean;
     italic?: boolean;
+    /** Inline runs preserving per-segment formatting (bold/italic/underline). When present, takes precedence over text/bold/italic. */
+    runs?: InlineRun[];
     listPrefix?: string;
     indent?: 'normal' | 'list';
     alignment?: TextAlignment;

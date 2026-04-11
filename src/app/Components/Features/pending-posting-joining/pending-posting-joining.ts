@@ -11,7 +11,11 @@ import { InputIconModule } from 'primeng/inputicon';
 import { SelectModule } from 'primeng/select';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
+import { DialogModule } from 'primeng/dialog';
+import { DatePickerModule } from 'primeng/datepicker';
+import { TextareaModule } from 'primeng/textarea';
 import { PostingService } from '@/services/posting.service';
+import { SharedService } from '@/shared/services/shared-service';
 import { PendingPostingJoiningDto } from '@/models/posting.model';
 
 @Component({
@@ -27,7 +31,10 @@ import { PendingPostingJoiningDto } from '@/models/posting.model';
         IconFieldModule,
         InputIconModule,
         SelectModule,
-        Toast
+        Toast,
+        DialogModule,
+        DatePickerModule,
+        TextareaModule
     ],
     providers: [MessageService],
     templateUrl: './pending-posting-joining.html',
@@ -50,18 +57,29 @@ export class PendingPostingJoiningComponent implements OnInit {
     postingOrderFilter: string | null = null;
     transferUnitFilter: string | null = null;
 
+    // Selection + receive dialog
+    selectedRows: PendingPostingJoiningDto[] = [];
+    showReceiveDialog = false;
+    joiningDate: Date | null = null;
+    remarks = '';
+    saving = false;
+    currentUser = '';
+
     constructor(
         private postingService: PostingService,
         private router: Router,
-        private messageService: MessageService
+        private messageService: MessageService,
+        private sharedService: SharedService
     ) {}
 
     ngOnInit(): void {
+        this.currentUser = this.sharedService.getCurrentUser();
         this.loadPending();
     }
 
     loadPending(): void {
         this.loading = true;
+        this.selectedRows = [];
         this.postingService.getPendingPostingJoining('NewPosting').subscribe({
             next: (data) => {
                 this.allRows = data ?? [];
@@ -110,6 +128,9 @@ export class PendingPostingJoiningComponent implements OnInit {
             if (this.transferUnitFilter && r.transferRabUnitName !== this.transferUnitFilter) return false;
             return true;
         });
+        // Drop selections that are no longer visible after filter change.
+        const visibleIds = new Set(this.rows.map(r => r.postingReceiveId));
+        this.selectedRows = this.selectedRows.filter(r => visibleIds.has(r.postingReceiveId));
     }
 
     clearFilters(): void {
@@ -123,6 +144,81 @@ export class PendingPostingJoiningComponent implements OnInit {
     /** Navigate to posting-order-receive so the user can mark the employee as received. */
     goToReceive(): void {
         this.router.navigate(['/posting/posting-order-receive']);
+    }
+
+    /** Open the receive dialog to mark selected rows as received. */
+    openReceiveDialog(): void {
+        if (!this.selectedRows.length) {
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'No selection',
+                detail: 'Please select at least one row to receive.'
+            });
+            return;
+        }
+        this.joiningDate = new Date();
+        this.remarks = '';
+        this.showReceiveDialog = true;
+    }
+
+    closeReceiveDialog(): void {
+        this.showReceiveDialog = false;
+    }
+
+    confirmReceive(): void {
+        if (!this.selectedRows.length) return;
+        if (!this.joiningDate) {
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'Missing date',
+                detail: 'Please select a joining date.'
+            });
+            return;
+        }
+
+        this.saving = true;
+        const joiningDateStr = this.formatDateForApi(this.joiningDate);
+        const items = this.selectedRows.map(r => ({
+            postingReceiveId: r.postingReceiveId,
+            joiningDate: joiningDateStr,
+            remarks: this.remarks || null
+        }));
+
+        this.postingService.receivePostingMembers(items, this.currentUser).subscribe({
+            next: (res) => {
+                this.saving = false;
+                if (res.statusCode === 200) {
+                    this.messageService.add({
+                        severity: 'success',
+                        summary: 'Success',
+                        detail: res.description
+                    });
+                    this.showReceiveDialog = false;
+                    this.loadPending();
+                } else {
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'Error',
+                        detail: res.description
+                    });
+                }
+            },
+            error: () => {
+                this.saving = false;
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: 'Failed to receive members.'
+                });
+            }
+        });
+    }
+
+    private formatDateForApi(date: Date): string {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
     }
 
     /** Open the preview of the posting order the row belongs to. */

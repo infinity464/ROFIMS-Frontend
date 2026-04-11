@@ -146,10 +146,15 @@
     font-size: 10pt;
 }
 
-/* ── Title block (inside the box) ────────────────── */
+/* ── Title block (posting – rendered above the box) ────── */
 .ns-title-block {
     text-align: center;
     padding: 8px 16px;
+}
+/* ── Title area (general – rendered INSIDE the box, above org header) ── */
+.ns-title-area {
+    text-align: center;
+    padding: 8px 16px 4px;
 }
 .ns-title-en {
     font-size: 12pt;
@@ -159,6 +164,22 @@
 .ns-title-bn {
     font-size: 12pt;
     margin-top: 2px;
+}
+
+/* ── Full-height sanglagni vertical divider (general paginated, every page) ── */
+.ns-general-page .ns-page-sanglagni-line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 60px;
+    width: 1.5px;
+    background: #000;
+    z-index: 3;
+    pointer-events: none;
+}
+/* Avoid double line – hide the content-flow border-left in general paginated mode */
+.ns-general-page .ns-sanglagni-col {
+    border-left: none;
 }
 
 /* ── Outer document box ───────────────────────────── */

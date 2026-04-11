@@ -23,13 +23,13 @@ import { forkJoin, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import {
     Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
-    WidthType, BorderStyle, AlignmentType, PageOrientation, ImageRun,
-    VerticalAlign, TableLayoutType, HeightRule
+    WidthType, BorderStyle, AlignmentType, PageOrientation, ImageRun
 } from 'docx';
 import { saveAs } from 'file-saver';
 import type {
     NotesheetDocumentModel,
     ContentBlock,
+    InlineRun,
     SignatoryBlock,
     TextAlignment
 } from '../notesheet-document-model';
@@ -727,15 +727,17 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         if (this.initiatorDetails) {
             const d = this.initiatorDetails;
             const nameStr = bn ? (d.nameBN || d.name) : d.name;
-            const rankStr = (d.rank && d.rank !== '-') ? `, ${bn ? (d.rankBN || d.rank) : d.rank}` : '';
+            const rankStr = (d.rank && d.rank !== '-') ? (bn ? (d.rankBN || d.rank) : d.rank) : undefined;
+            const approved = this.isInitiatorApproved();
             model.initiator = {
                 role: '',
                 serialText: '',
-                nameLine: `(${nameStr}${rankStr})`,
+                nameLine: nameStr,
+                rankLine: rankStr,
                 appointment: bn ? (d.appointmentBN || d.appointment) : d.appointment,
-                date: this.noteSheet.noteSheetDate ? this.formatDate(this.noteSheet.noteSheetDate) : undefined,
+                date: approved && this.noteSheet.noteSheetDate ? this.formatMonthYear(this.noteSheet.noteSheetDate) : undefined,
                 align: 'right',
-                signatureDataUrl: this.shouldShowSignature(d.step) ? d.signatureDataUrl : undefined
+                signatureDataUrl: approved && this.shouldShowSignature(d.step) ? d.signatureDataUrl : undefined
             };
         }
 
@@ -767,7 +769,7 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         for (const node of Array.from(div.childNodes)) {
             if (node.nodeType === Node.TEXT_NODE) {
                 const text = this.normalizeTextForWord((node.textContent || '').trim());
-                if (text) blocks.push({ type: 'paragraph', text, indent: 'normal' });
+                if (text) blocks.push({ type: 'paragraph', text, runs: [{ text }], indent: 'normal' });
             } else if (node.nodeType === Node.ELEMENT_NODE) {
                 const el = node as HTMLElement;
                 const tag = el.tagName.toLowerCase();
@@ -786,30 +788,89 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
                 } else if (tag === 'ol' || tag === 'ul') {
                     let listCounter = 0;
                     el.querySelectorAll(':scope > li').forEach(li => {
-                        const text = this.normalizeTextForWord((li.textContent || '').trim());
-                        if (!text) return;
+                        const liEl = li as HTMLElement;
+                        const runs = this.extractInlineRuns(liEl);
+                        const plainText = runs.map(r => r.text).join('').trim();
+                        if (!plainText) return;
                         listCounter++;
-                        const listType = li.getAttribute('data-list') || (tag === 'ol' ? 'ordered' : 'bullet');
+                        const listType = liEl.getAttribute('data-list') || (tag === 'ol' ? 'ordered' : 'bullet');
                         const prefix = this.getListPrefix(listType, listCounter);
+                        // Prepend the prefix as a non-formatted run so it doesn't inherit formatting
+                        const prefixedRuns: InlineRun[] = [{ text: prefix }, ...runs];
                         blocks.push({
                             type: 'list',
-                            text: `${prefix}${text}`,
+                            text: `${prefix}${plainText}`,
+                            runs: prefixedRuns,
                             indent: 'list',
                             alignment
                         });
                     });
                 } else {
-                    const text = this.normalizeTextForWord((el.textContent || '').trim());
-                    if (text) {
-                        const bold = ['strong', 'b', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tag)
-                            || el.style.fontWeight === 'bold' || !!el.querySelector('strong, b');
-                        const italic = tag === 'em' || tag === 'i' || el.style.fontStyle === 'italic';
-                        blocks.push({ type: 'paragraph', text, bold, italic, indent: 'normal', alignment });
+                    // Extract inline runs to preserve per-segment bold/italic/underline
+                    const headingBold = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tag);
+                    const baseBold = headingBold || ['strong', 'b'].includes(tag);
+                    const baseItalic = ['em', 'i'].includes(tag);
+                    const runs = this.extractInlineRuns(el, baseBold, baseItalic);
+                    const plainText = runs.map(r => r.text).join('').trim();
+                    if (plainText) {
+                        blocks.push({ type: 'paragraph', text: plainText, runs, indent: 'normal', alignment });
                     }
                 }
             }
         }
         return blocks;
+    }
+
+    /** Walk DOM node recursively and emit inline runs preserving per-segment bold/italic/underline. */
+    private extractInlineRuns(root: Node, inheritedBold = false, inheritedItalic = false, inheritedUnderline = false): InlineRun[] {
+        const collected: InlineRun[] = [];
+
+        const walk = (node: Node, bold: boolean, italic: boolean, underline: boolean): void => {
+            if (node.nodeType === Node.TEXT_NODE) {
+                const text = this.normalizeTextForWord(node.textContent || '');
+                if (text) collected.push({ text, bold, italic, underline });
+                return;
+            }
+            if (node.nodeType !== Node.ELEMENT_NODE) return;
+            const element = node as HTMLElement;
+            const tag = element.tagName.toLowerCase();
+            if (tag === 'br') { collected.push({ text: ' ', bold, italic, underline }); return; }
+
+            const fw = (element.style?.fontWeight || '').toLowerCase();
+            const fs = (element.style?.fontStyle || '').toLowerCase();
+            const td = (element.style?.textDecoration || '').toLowerCase();
+            const isBold = bold
+                || ['strong', 'b', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tag)
+                || fw === 'bold' || fw === 'bolder' || fw === '600' || fw === '700' || fw === '800' || fw === '900';
+            const isItalic = italic || ['em', 'i'].includes(tag) || fs === 'italic' || fs === 'oblique';
+            const isUnderline = underline || tag === 'u' || td.includes('underline');
+
+            for (const child of Array.from(element.childNodes)) {
+                walk(child, isBold, isItalic, isUnderline);
+            }
+        };
+
+        walk(root, inheritedBold, inheritedItalic, inheritedUnderline);
+
+        // Merge consecutive runs sharing identical formatting
+        const merged: InlineRun[] = [];
+        for (const r of collected) {
+            const last = merged[merged.length - 1];
+            if (last && !!last.bold === !!r.bold && !!last.italic === !!r.italic && !!last.underline === !!r.underline) {
+                last.text += r.text;
+            } else {
+                merged.push({ ...r });
+            }
+        }
+
+        // Trim leading/trailing whitespace-only runs and inner edges
+        while (merged.length && !merged[0].text.replace(/\s/g, '')) merged.shift();
+        while (merged.length && !merged[merged.length - 1].text.replace(/\s/g, '')) merged.pop();
+        if (merged.length) {
+            merged[0].text = merged[0].text.replace(/^\s+/, '');
+            merged[merged.length - 1].text = merged[merged.length - 1].text.replace(/\s+$/, '');
+        }
+        return merged;
     }
 
     private getAlignmentAsText(el: HTMLElement): TextAlignment | undefined {
@@ -833,8 +894,6 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
             : 'Times New Roman';
         const csSize = bn ? 20 : undefined;
         const lang = bn ? { value: 'bn-BD', bidirectional: 'bn-BD' } : undefined;
-        const thickBorder = { style: BorderStyle.SINGLE, size: 3, color: '000000' };
-        const noBorder = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
 
         const mainChildren: (Paragraph | Table)[] = [];
 
@@ -858,12 +917,16 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
             }));
         }
 
-        mainChildren.push(new Paragraph({
-            children: [new TextRun({ text: model.subject, bold: true, underline: {}, size: 20, sizeComplexScript: csSize, font, language: lang })],
-            spacing: { before: 140, after: 80 },
-            indent: { left: 240 }
-        }));
+        // Subject
+        if (model.subject) {
+            mainChildren.push(new Paragraph({
+                children: [new TextRun({ text: model.subject, bold: true, underline: {}, size: 20, sizeComplexScript: csSize, font, language: lang })],
+                spacing: { before: 20, after: 60 },
+                indent: { left: 240 }
+            }));
+        }
 
+        // Reference / Date (general-specific)
         if (model.referenceBlocks.length > 0 || this.noteSheet?.referenceNumber) {
             mainChildren.push(new Paragraph({
                 children: [new TextRun({ text: model.referenceLabel, bold: true, size: 20, sizeComplexScript: csSize, font, language: lang })],
@@ -888,12 +951,38 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
             }));
         }
 
-        mainChildren.push(new Paragraph({
-            children: [new TextRun({ text: model.mainSerialText, bold: true, size: 20, sizeComplexScript: csSize, font, language: lang })],
-            indent: { left: 240 }, spacing: { before: 160, after: 40 }
-        }));
-        mainChildren.push(...this.contentBlocksToDocx(model.mainBlocks, font, bn));
+        // Merge serial (১।) with first text block so they appear inline (matches posting style)
+        if (model.mainBlocks.length > 0 && model.mainBlocks[0].type === 'paragraph' && model.mainBlocks[0].text) {
+            const firstBlock = model.mainBlocks[0];
+            const serialRun = new TextRun({ text: `${model.mainSerialText}  `, bold: true, size: 20, sizeComplexScript: csSize, font, language: lang });
+            const contentRuns = (firstBlock.runs && firstBlock.runs.length > 0)
+                ? firstBlock.runs.map(r => new TextRun({
+                    text: r.text,
+                    bold: r.bold,
+                    italics: r.italic,
+                    underline: r.underline ? {} : undefined,
+                    size: 20,
+                    sizeComplexScript: csSize,
+                    font,
+                    language: lang
+                }))
+                : [new TextRun({ text: firstBlock.text!, bold: firstBlock.bold, italics: firstBlock.italic, size: 20, sizeComplexScript: csSize, font, language: lang })];
+            mainChildren.push(new Paragraph({
+                children: [serialRun, ...contentRuns],
+                indent: { left: 240 }, spacing: { before: 160, after: 80 }, alignment: AlignmentType.JUSTIFIED
+            }));
+            if (model.mainBlocks.length > 1) {
+                mainChildren.push(...this.contentBlocksToDocx(model.mainBlocks.slice(1), font, bn));
+            }
+        } else {
+            mainChildren.push(new Paragraph({
+                children: [new TextRun({ text: model.mainSerialText, bold: true, size: 20, sizeComplexScript: csSize, font, language: lang })],
+                indent: { left: 240 }, spacing: { before: 160, after: 40 }
+            }));
+            mainChildren.push(...this.contentBlocksToDocx(model.mainBlocks, font, bn));
+        }
 
+        // Note
         if (model.note) {
             mainChildren.push(new Paragraph({
                 children: [
@@ -904,13 +993,18 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
             }));
         }
 
-        mainChildren.push(new Paragraph({
-            children: [new TextRun({ text: model.closingText, size: 20, sizeComplexScript: csSize, font, language: lang })],
-            indent: { left: 240, firstLine: 480 }, spacing: { before: 200 }
-        }));
+        // Closing text
+        if (model.closingText) {
+            mainChildren.push(new Paragraph({
+                children: [new TextRun({ text: model.closingText, size: 20, sizeComplexScript: csSize, font, language: lang })],
+                indent: { left: 240, firstLine: 480 }, spacing: { before: 200 }
+            }));
+        }
 
-        // Initiator – minimum gap for signature (before: 280 twips)
+        // Initiator — right-positioned (via left indent), keep entire block together
         if (model.initiator) {
+            const initIndent = { left: 5500 };
+            // Signature image or spacer
             if (model.initiator.signatureDataUrl) {
                 try {
                     mainChildren.push(new Paragraph({
@@ -918,40 +1012,54 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
                             type: 'png', data: this.base64ToBytes(model.initiator.signatureDataUrl),
                             transformation: { width: 100, height: 40 }
                         })],
-                        alignment: AlignmentType.RIGHT, spacing: { before: 280, after: 80 }
+                        alignment: AlignmentType.LEFT, indent: initIndent, spacing: { before: 280, after: 80 },
+                        keepNext: true, keepLines: true
                     }));
                 } catch { /* no sig */ }
             } else {
-                mainChildren.push(new Paragraph({ alignment: AlignmentType.RIGHT, spacing: { before: 280, after: 80 } }));
+                mainChildren.push(new Paragraph({ spacing: { before: 280, after: 80 }, keepNext: true }));
             }
+
+            // Name
             mainChildren.push(new Paragraph({
                 children: [new TextRun({ text: model.initiator.nameLine, size: 22, sizeComplexScript: csSize, font, language: lang })],
-                alignment: AlignmentType.RIGHT,
-                spacing: !model.initiator.signatureDataUrl ? { before: 280 } : { after: 40 }
+                alignment: AlignmentType.LEFT, indent: initIndent, keepNext: true
             }));
+
+            // Rank
+            if (model.initiator.rankLine) {
+                mainChildren.push(new Paragraph({
+                    children: [new TextRun({ text: model.initiator.rankLine, size: 22, sizeComplexScript: csSize, font, language: lang })],
+                    alignment: AlignmentType.LEFT, indent: initIndent, keepNext: true
+                }));
+            }
+
+            // Appointment
             if (model.initiator.appointment) {
                 mainChildren.push(new Paragraph({
                     children: [new TextRun({ text: model.initiator.appointment, size: 22, sizeComplexScript: csSize, font, language: lang })],
-                    alignment: AlignmentType.RIGHT
+                    alignment: AlignmentType.LEFT, indent: initIndent, keepNext: true
                 }));
             }
+
+            // Date (last item — no keepNext needed)
             if (model.initiator.date) {
                 mainChildren.push(new Paragraph({
                     children: [new TextRun({ text: model.initiator.date, size: 22, sizeComplexScript: csSize, font, language: lang })],
-                    alignment: AlignmentType.RIGHT
+                    alignment: AlignmentType.LEFT, indent: initIndent, spacing: { before: 400 }
                 }));
             }
         }
 
-        // Approvers – minimum gap for signature
+        // Approvers — keep each approver block together
         for (const ap of model.approvers) {
             mainChildren.push(new Paragraph({
                 children: [new TextRun({ text: ap.role, underline: {}, size: 20, sizeComplexScript: csSize, font, language: lang })],
-                indent: { left: 240 }, spacing: { before: 280 }
+                indent: { left: 240 }, spacing: { before: 280 }, keepNext: true, keepLines: true
             }));
             const runs: TextRun[] = [new TextRun({ text: ap.serialText, bold: true, size: 20, sizeComplexScript: csSize, font, language: lang })];
-            if (ap.remark) runs.push(new TextRun({ text: ` ${ap.remark}`, italics: true, size: 20, sizeComplexScript: csSize, font, language: lang }));
-            mainChildren.push(new Paragraph({ children: runs, indent: { left: 240 } }));
+            if (ap.remark) runs.push(new TextRun({ text: ` ${ap.remark}`, size: 20, sizeComplexScript: csSize, font, language: lang }));
+            mainChildren.push(new Paragraph({ children: runs, indent: { left: 240 }, keepNext: true }));
             if (ap.signatureDataUrl) {
                 try {
                     mainChildren.push(new Paragraph({
@@ -960,11 +1068,12 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
                             transformation: { width: 100, height: 40 }
                         })],
                         alignment: AlignmentType.CENTER,
-                        spacing: { before: 100, after: 40 }
+                        spacing: { before: 100, after: 40 },
+                        keepNext: true
                     }));
                 } catch { /* no sig */ }
             } else {
-                mainChildren.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 100, after: 40 } }));
+                mainChildren.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 100, after: 40 }, keepNext: true }));
             }
             if (ap.date) {
                 mainChildren.push(new Paragraph({
@@ -974,51 +1083,38 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
             }
         }
 
-        // ── Outer bordered table (main + sanglagni) ──
-        // Legal page (8.5"×14"): 12240×20160 twips; margins top 567, bottom/left/right 400
-        const rowHeight = 17800;
-        const outerTable = new Table({
-            layout: TableLayoutType.FIXED,
-            width: { size: 100, type: WidthType.PERCENTAGE },
-            columnWidths: [10473, 800],
-            rows: [new TableRow({
-                height: { value: rowHeight, rule: HeightRule.ATLEAST },
-                children: [
-                    new TableCell({
-                        width: { size: 10473, type: WidthType.DXA },
-                        borders: { top: thickBorder, bottom: thickBorder, left: thickBorder, right: noBorder },
-                        margins: { right: 200 },
-                        children: mainChildren.length > 0 ? mainChildren : [new Paragraph({})]
-                    }),
-                    new TableCell({
-                        width: { size: 800, type: WidthType.DXA },
-                        borders: { top: thickBorder, bottom: thickBorder, left: thickBorder, right: thickBorder },
-                        verticalAlign: VerticalAlign.TOP,
-                        children: [
-                            new Paragraph({ children: [new TextRun({ text: bn ? 'সংলগ্নী' : 'Encl.', size: 20, font: bn ? 'Nirmala UI' : 'Times New Roman' })], alignment: AlignmentType.CENTER }),
-                            new Paragraph({ children: [new TextRun({ text: bn ? 'নং' : 'No.', size: 20, font: bn ? 'Nirmala UI' : 'Times New Roman' })], alignment: AlignmentType.CENTER })
-                        ]
-                    })
-                ]
-            })]
-        });
+        // Title paragraphs — inside the page border at the top
+        const titleChildren: (Paragraph | Table)[] = [
+            new Paragraph({
+                children: [new TextRun({ text: 'NOTE SHEET', bold: true, underline: {}, size: 24, font: 'Times New Roman' })],
+                alignment: AlignmentType.CENTER, spacing: { before: 80, after: 40 }
+            }),
+            new Paragraph({
+                children: [new TextRun({ text: 'মন্তব্য পত্র', underline: {}, size: 24, font: 'Nirmala UI' })],
+                alignment: AlignmentType.CENTER, spacing: { after: 100 }
+            }),
+        ];
 
-        // ── Build document ──
-        const docChildren: (Paragraph | Table)[] = [];
-        docChildren.push(new Paragraph({
-            children: [new TextRun({ text: 'NOTE SHEET', bold: true, size: 24, font: 'Times New Roman' })],
-            alignment: AlignmentType.CENTER, spacing: { after: 40 }, keepNext: true
-        }));
-        docChildren.push(new Paragraph({
-            children: [new TextRun({ text: 'মন্তব্য পত্র', size: 24, font: 'Nirmala UI' })],
-            alignment: AlignmentType.CENTER, spacing: { after: 160 }, keepNext: true
-        }));
-        docChildren.push(outerTable);
+        const docChildren: (Paragraph | Table)[] = [...titleChildren, ...mainChildren];
+
+        // Use page borders so every page renders the same border consistently
+        const pageBorder = { style: BorderStyle.SINGLE, size: 6, color: '000000', space: 10 };
 
         return new Document({
             styles: bn ? { default: { document: { run: { language: { value: 'bn-BD', bidirectional: 'bn-BD' } } } } } : undefined,
             sections: [{
-                properties: { page: { size: { width: 12240, height: 20160, orientation: PageOrientation.PORTRAIT }, margin: { top: 567, right: 400, bottom: 400, left: 567 } } }, // Legal 8.5"×14"
+                properties: {
+                    page: {
+                        size: { width: 12240, height: 20160, orientation: PageOrientation.PORTRAIT },
+                        margin: { top: 567, right: 567, bottom: 567, left: 567 },
+                        borders: {
+                            pageBorderTop: pageBorder,
+                            pageBorderBottom: pageBorder,
+                            pageBorderLeft: pageBorder,
+                            pageBorderRight: pageBorder,
+                        },
+                    }
+                },
                 children: docChildren
             }]
         });
@@ -1056,18 +1152,30 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
                 }));
                 result.push(new Table({ width: { size: 90, type: WidthType.PERCENTAGE }, rows, alignment: AlignmentType.CENTER }));
             } else if (b.text) {
-                let align: (typeof AlignmentType)[keyof typeof AlignmentType] | undefined;
+                let align: (typeof AlignmentType)[keyof typeof AlignmentType];
                 if (b.alignment === 'center') align = AlignmentType.CENTER;
                 else if (b.alignment === 'right') align = AlignmentType.RIGHT;
                 else if (b.alignment === 'justify') align = AlignmentType.JUSTIFIED;
+                else align = b.indent === 'list' ? AlignmentType.LEFT : AlignmentType.JUSTIFIED;
                 const indent = b.indent === 'list' ? { left: 720 } : { left: 480 };
-                const paraOpts: Record<string, unknown> = {
-                    children: [new TextRun({ text: b.text, bold: b.bold, italics: b.italic, size: 20, sizeComplexScript: csSize, font, language: lang })],
+                const children = (b.runs && b.runs.length > 0)
+                    ? b.runs.map(r => new TextRun({
+                        text: r.text,
+                        bold: r.bold,
+                        italics: r.italic,
+                        underline: r.underline ? {} : undefined,
+                        size: 20,
+                        sizeComplexScript: csSize,
+                        font,
+                        language: lang
+                    }))
+                    : [new TextRun({ text: b.text, bold: b.bold, italics: b.italic, size: 20, sizeComplexScript: csSize, font, language: lang })];
+                result.push(new Paragraph({
+                    children,
                     indent,
-                    spacing: { after: b.indent === 'list' ? 60 : 80 }
-                };
-                if (align) paraOpts['alignment'] = align;
-                result.push(new Paragraph(paraOpts as any));
+                    spacing: { after: b.indent === 'list' ? 60 : 80 },
+                    alignment: align
+                } as any));
             }
         }
         return result;
@@ -1176,7 +1284,7 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
 
         const keepTogether = Array.from(
             container.querySelectorAll(
-                '.ns-title-block, .ns-org-header, .ns-note, .ns-initiator-area, .ns-approver-section'
+                '.ns-title-block, .ns-title-area, .ns-org-header, .ns-note, .ns-initiator-area, .ns-approver-section'
             ) as NodeListOf<HTMLElement>
         ).map(el => {
             const rect = el.getBoundingClientRect();

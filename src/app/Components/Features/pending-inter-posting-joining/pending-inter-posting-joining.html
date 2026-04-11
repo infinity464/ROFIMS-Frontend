@@ -7,14 +7,25 @@
                 <h3 class="form-card-title">Pending List for Joining — Inter Posting</h3>
                 <p class="text-600 mt-1 mb-0">
                     Employees whose inter-posting order has been generated but who have not yet joined their new unit.
-                    Once the employee is received via <b>Posting Order Receive</b>, they drop off this list.
+                    Select rows and click <b>Receive Posting Order</b> to mark them as joined.
                 </p>
             </div>
-            <p-button
-                icon="pi pi-check-circle"
-                label="Go to Posting Order Receive"
-                (onClick)="goToReceive()"
-            ></p-button>
+            <div class="flex gap-2">
+                <p-button
+                    icon="pi pi-check-square"
+                    label="Receive Posting Order ({{ selectedRows.length }})"
+                    severity="success"
+                    [disabled]="!selectedRows.length"
+                    (onClick)="openReceiveDialog()"
+                ></p-button>
+                <p-button
+                    icon="pi pi-external-link"
+                    label="Full Receive Page"
+                    severity="secondary"
+                    [outlined]="true"
+                    (onClick)="goToReceive()"
+                ></p-button>
+            </div>
         </div>
 
         <!-- Filters -->
@@ -103,6 +114,7 @@
             [paginator]="true"
             [rows]="15"
             [rowsPerPageOptions]="[15, 25, 50, 100]"
+            [(selection)]="selectedRows"
             [globalFilterFields]="[
                 'postingOrderNo',
                 'noteSheetNo',
@@ -135,6 +147,9 @@
             </ng-template>
             <ng-template pTemplate="header">
                 <tr>
+                    <th style="width: 3rem">
+                        <p-tableHeaderCheckbox></p-tableHeaderCheckbox>
+                    </th>
                     <th style="width: 50px">Ser</th>
                     <th style="min-width: 160px">Posting Order No</th>
                     <th style="min-width: 110px">Order Date</th>
@@ -151,6 +166,9 @@
             </ng-template>
             <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                 <tr>
+                    <td>
+                        <p-tableCheckbox [value]="row"></p-tableCheckbox>
+                    </td>
                     <td>{{ rowIndex + 1 }}</td>
                     <td>
                         <span class="font-semibold">{{ row.postingOrderNo || '-' }}</span>
@@ -188,7 +206,7 @@
             </ng-template>
             <ng-template pTemplate="emptymessage">
                 <tr>
-                    <td colspan="12" class="text-center p-4">
+                    <td colspan="13" class="text-center p-4">
                         <div class="flex flex-column align-items-center gap-3 py-5">
                             <i class="pi pi-check-circle text-5xl text-400"></i>
                             <span class="text-lg text-500">
@@ -201,3 +219,60 @@
         </p-table>
     </div>
 </div>
+
+<!-- Receive Posting Order Dialog -->
+<p-dialog
+    header="Receive Inter Posting Order"
+    [(visible)]="showReceiveDialog"
+    [modal]="true"
+    [style]="{ width: '48rem' }"
+    [breakpoints]="{ '960px': '90vw', '640px': '95vw' }"
+    [draggable]="false"
+    [resizable]="false"
+    [closable]="!saving"
+    [dismissableMask]="!saving"
+>
+    <div class="flex flex-column gap-3">
+        <div class="text-600">
+            You are about to receive <b>{{ selectedRows.length }}</b> employee(s) as joined.
+        </div>
+        <div class="flex flex-column gap-1">
+            <label class="font-medium">Joining Date <span class="text-red-500">*</span></label>
+            <p-datepicker
+                [(ngModel)]="joiningDate"
+                dateFormat="dd M yy"
+                [showIcon]="true"
+                appendTo="body"
+                placeholder="Select joining date"
+                styleClass="w-full"
+            ></p-datepicker>
+        </div>
+        <div class="flex flex-column gap-1">
+            <label class="font-medium">Remarks</label>
+            <textarea
+                pTextarea
+                [(ngModel)]="remarks"
+                rows="3"
+                placeholder="Optional remarks"
+                class="w-full"
+            ></textarea>
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button
+            label="Cancel"
+            icon="pi pi-times"
+            severity="secondary"
+            [outlined]="true"
+            [disabled]="saving"
+            (onClick)="closeReceiveDialog()"
+        ></p-button>
+        <p-button
+            label="Confirm Receive"
+            icon="pi pi-check"
+            severity="success"
+            [loading]="saving"
+            (onClick)="confirmReceive()"
+        ></p-button>
+    </ng-template>
+</p-dialog>

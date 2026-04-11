@@ -71,12 +71,7 @@
         <!-- Visible: paginated pages -->
         <div class="a4-paper-container" #pagesContainer>
             <div *ngFor="let offset of pageOffsets; let i = index; trackBy: trackByIndex" class="a4-paper paginated">
-                <!-- Title above border on first page only -->
-                <div class="ns-title-block" *ngIf="i === 0">
-                    <div class="ns-title-en">NOTE SHEET</div>
-                    <div class="ns-title-bn">মন্তব্য পত্র</div>
-                </div>
-                <div class="page-viewport">
+                <div class="page-viewport ns-general-page">
                     <div class="page-inner" [style.transform]="'translateY(-' + offset + 'px)'">
                         <ng-container *ngTemplateOutlet="viewContent"></ng-container>
                     </div>
@@ -84,6 +79,8 @@
                          *ngIf="getPageCoverHeight(i) > 0"
                          [style.height.px]="getPageCoverHeight(i)">
                     </div>
+                    <!-- Full-height sanglagni vertical divider -->
+                    <div class="ns-page-sanglagni-line"></div>
                 </div>
             </div>
         </div>
@@ -95,13 +92,14 @@
     <div class="a4-paper-container" *ngIf="noteSheet && !loading && !error && editing">
         <div class="a4-paper">
 
-            <div class="ns-title-block">
-                <div class="ns-title-en">NOTE SHEET</div>
-                <div class="ns-title-bn">মন্তব্য পত্র</div>
-            </div>
-
             <div class="ns-doc-box">
                 <div class="ns-main-col">
+
+                    <!-- Title INSIDE the border -->
+                    <div class="ns-title-area">
+                        <div class="ns-title-en">NOTE SHEET</div>
+                        <div class="ns-title-bn">মন্তব্য পত্র</div>
+                    </div>
 
                     <div class="ns-org-header" style="text-align:center; padding:8px 16px 4px; font-weight:700; font-size:10pt; line-height:1.5;">
                         <div>{{ getOrgHeaderLine1() }}</div>
@@ -191,13 +189,14 @@
     <!-- ══════════════════════════════════════════════════════════ -->
     <ng-template #viewContent>
       <ng-container *ngIf="noteSheet">
-        <div class="ns-title-block">
-            <div class="ns-title-en">NOTE SHEET</div>
-            <div class="ns-title-bn">মন্তব্য পত্র</div>
-        </div>
-
         <div class="ns-doc-box">
             <div class="ns-main-col">
+
+                <!-- Title INSIDE the border -->
+                <div class="ns-title-area">
+                    <div class="ns-title-en">NOTE SHEET</div>
+                    <div class="ns-title-bn">মন্তব্য পত্র</div>
+                </div>
 
                 <div class="ns-org-header" style="text-align:center; padding:8px 16px 4px; font-weight:700; font-size:10pt; line-height:1.5;">
                     <div>{{ getOrgHeaderLine1() }}</div>
