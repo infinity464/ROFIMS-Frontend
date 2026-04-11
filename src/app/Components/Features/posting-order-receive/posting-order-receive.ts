@@ -16,6 +16,9 @@ import { SharedService } from '@/shared/services/shared-service';
 import { PostingReceiveViewDto } from '@/models/posting.model';
 
 interface PostingOrderGroup {
+    postingOrderMasterId: number;
+    postingOrderNo: string;
+    postingOrderDate: string | null;
     draftPostingMasterId: number;
     draftPostingNo: string;
     draftPostingDate: string;
@@ -90,11 +93,15 @@ export class PostingOrderReceiveComponent implements OnInit {
         this.loadingOrders = true;
         this.postingService.getApprovedPostingOrders().subscribe({
             next: (data) => {
-                // Group by DraftPostingMasterId
+                // Group by PostingOrderMasterId (one row per generated posting order)
                 const map = new Map<number, PostingOrderGroup>();
                 for (const row of data) {
-                    if (!map.has(row.draftPostingMasterId)) {
-                        map.set(row.draftPostingMasterId, {
+                    if (row.postingOrderMasterId == null) continue;
+                    if (!map.has(row.postingOrderMasterId)) {
+                        map.set(row.postingOrderMasterId, {
+                            postingOrderMasterId: row.postingOrderMasterId,
+                            postingOrderNo: row.postingOrderNo ?? '',
+                            postingOrderDate: row.postingOrderDate,
                             draftPostingMasterId: row.draftPostingMasterId,
                             draftPostingNo: row.draftPostingNo,
                             draftPostingDate: row.draftPostingDate,
@@ -106,7 +113,7 @@ export class PostingOrderReceiveComponent implements OnInit {
                             receivedCount: 0
                         });
                     }
-                    const group = map.get(row.draftPostingMasterId)!;
+                    const group = map.get(row.postingOrderMasterId)!;
                     group.totalMembers++;
                     if (row.receiveStatus === 'Pending') group.pendingCount++;
                     else if (row.receiveStatus === 'Received') group.receivedCount++;
@@ -114,7 +121,7 @@ export class PostingOrderReceiveComponent implements OnInit {
                 this.approvedOrders = Array.from(map.values());
                 this.historyFilterOptions = [
                     { label: 'All Orders', value: null },
-                    ...this.approvedOrders.map(o => ({ label: o.draftPostingNo, value: o.draftPostingMasterId }))
+                    ...this.approvedOrders.map(o => ({ label: o.postingOrderNo || o.draftPostingNo, value: o.postingOrderMasterId }))
                 ];
                 this.loadingOrders = false;
             },
@@ -126,11 +133,11 @@ export class PostingOrderReceiveComponent implements OnInit {
     }
 
     viewMembers(order: PostingOrderGroup): void {
-        this.selectedOrderId = order.draftPostingMasterId;
+        this.selectedOrderId = order.postingOrderMasterId;
         this.selectedMembers = [];
         this.transferUnitFilter = null;
         this.loadingPending = true;
-        this.postingService.getPendingPostingReceive(order.draftPostingMasterId).subscribe({
+        this.postingService.getPendingPostingReceive(undefined, order.postingOrderMasterId).subscribe({
             next: (data) => {
                 this.allPendingMembers = data;
                 this.pendingMembers = data;
@@ -175,7 +182,7 @@ export class PostingOrderReceiveComponent implements OnInit {
                     this.selectedMembers = [];
                     this.loadApprovedOrders();
                     if (this.selectedOrderId) {
-                        this.viewMembers({ draftPostingMasterId: this.selectedOrderId } as PostingOrderGroup);
+                        this.viewMembers({ postingOrderMasterId: this.selectedOrderId } as PostingOrderGroup);
                     }
                 } else {
                     this.messageService.add({ severity: 'error', summary: 'Error', detail: res.description });
@@ -191,7 +198,7 @@ export class PostingOrderReceiveComponent implements OnInit {
 
     loadHistory(): void {
         this.loadingHistory = true;
-        this.postingService.getPostingReceiveHistory(this.historyFilterId ?? undefined).subscribe({
+        this.postingService.getPostingReceiveHistory(undefined, this.historyFilterId ?? undefined).subscribe({
             next: (data) => {
                 this.historyRecords = data;
                 this.loadingHistory = false;

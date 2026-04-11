@@ -222,6 +222,9 @@ export interface PostingReceiveViewDto {
     noteSheetNo: string | null;
     noteSheetDate: string | null;
     approvalDate: string | null;
+    postingOrderMasterId: number | null;
+    postingOrderNo: string | null;
+    postingOrderDate: string | null;
     serviceId: string | null;
     prefixName: string | null;
     fullNameEN: string | null;

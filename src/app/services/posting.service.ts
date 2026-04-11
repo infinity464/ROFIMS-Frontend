@@ -453,15 +453,17 @@ export class PostingService {
         return this.http.get<PostingReceiveViewDto[]>(`${API}/GetApprovedPostingOrders`);
     }
 
-    getPendingPostingReceive(draftPostingMasterId?: number): Observable<PostingReceiveViewDto[]> {
+    getPendingPostingReceive(draftPostingMasterId?: number, postingOrderMasterId?: number): Observable<PostingReceiveViewDto[]> {
         const params: any = {};
         if (draftPostingMasterId != null) params.draftPostingMasterId = draftPostingMasterId;
+        if (postingOrderMasterId != null) params.postingOrderMasterId = postingOrderMasterId;
         return this.http.get<PostingReceiveViewDto[]>(`${API}/GetPendingPostingReceive`, { params });
     }
 
-    getPostingReceiveHistory(draftPostingMasterId?: number): Observable<PostingReceiveViewDto[]> {
+    getPostingReceiveHistory(draftPostingMasterId?: number, postingOrderMasterId?: number): Observable<PostingReceiveViewDto[]> {
         const params: any = {};
         if (draftPostingMasterId != null) params.draftPostingMasterId = draftPostingMasterId;
+        if (postingOrderMasterId != null) params.postingOrderMasterId = postingOrderMasterId;
         return this.http.get<PostingReceiveViewDto[]>(`${API}/GetPostingReceiveHistory`, { params });
     }
 
