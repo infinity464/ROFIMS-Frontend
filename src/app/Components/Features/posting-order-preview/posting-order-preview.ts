@@ -103,6 +103,12 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     approverPhone = '';
     approverSignatureUrl = '';
 
+    // Body text copied verbatim from the linked NoteSheet's Main Text (HTML stripped)
+    noteSheetMainText = '';
+
+    // NoteSheet final-approval date (for the "Reference / সূত্র" line)
+    noteSheetApprovalDate: string | null = null;
+
     // Initiator info
     initiatorName = '';
     initiatorNameBN = '';
@@ -232,6 +238,11 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         this.http.get<any[]>(`${nsApi}/GetFilteredByKeysAsyn/${noteSheetId}`).subscribe({
             next: (data) => {
                 const ns = Array.isArray(data) ? data[0] : data;
+                // Copy body text verbatim from the notesheet's Main Text (HTML → plain text)
+                this.noteSheetMainText = this.htmlToPlainText(ns?.mainText ?? '');
+                // NoteSheet no + final approval date for the Reference / সূত্র line
+                if (ns?.noteSheetNo) this.noteSheetNo = ns.noteSheetNo;
+                this.noteSheetApprovalDate = ns?.finalApprovalApprovedDate ?? null;
                 // Load initiator info
                 if (ns?.initiatorId) {
                     this.servingMembersService.getEmployeePersonalServiceOverview(ns.initiatorId).subscribe({
@@ -289,27 +300,25 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         });
     }
 
-    // ─── Dynamic body text with mother org names ────────
+    // ─── Body text (verbatim from the linked NoteSheet's Main Text) ──
 
     get bodyText(): string {
-        if (this.employees.length === 0) return '';
-        const bn = this.isBangla;
+        return this.noteSheetMainText;
+    }
 
-        // Collect distinct mother org names
-        const orgSet = new Set<string>();
-        for (const emp of this.employees) {
-            const org = bn ? (emp.motherUnitNameBN || emp.motherUnitName) : emp.motherUnitName;
-            if (org) orgSet.add(org);
-        }
-        const orgNames = Array.from(orgSet);
-
-        if (bn) {
-            const orgText = orgNames.length > 0 ? orgNames.join(', ') : 'সেনাবাহিনী';
-            return `র‌্যাপিড এ্যাকশন ব্যাটালিয়নের প্রেষণে কর্মরত বাংলাদেশ ${orgText}'র নিম্নবর্ণিত সদস্যদেরকে তাদের নামের পার্শ্বে উল্লিখিত স্থানে জনস্বার্থে বদলি করা হলোঃ`;
-        } else {
-            const orgText = orgNames.length > 0 ? orgNames.join(', ') : 'Army';
-            return `The following members of Bangladesh ${orgText} serving in the Rapid Action Battalion are hereby transferred to the places mentioned against their names in the public interest:`;
-        }
+    /**
+     * Convert the NoteSheet `mainText` HTML to a plain text paragraph,
+     * preserving line breaks at `<br>`, `</p>`, `</div>` and heading tags.
+     */
+    private htmlToPlainText(html: string): string {
+        if (!html) return '';
+        const withBreaks = html
+            .replace(/<br\s*\/?>/gi, '\n')
+            .replace(/<\/(p|div|h[1-6]|li)>/gi, '\n');
+        const doc = new DOMParser().parseFromString(withBreaks, 'text/html');
+        return (doc.body.textContent ?? '')
+            .replace(/\n{3,}/g, '\n\n')
+            .trim();
     }
 
     // ─── Display helpers ──────────────────────────────────
@@ -319,6 +328,23 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         return this.isBangla
             ? this.formatDateBangla(this.postingOrderDate)
             : this.formatDate(this.postingOrderDate);
+    }
+
+    /** "নোট-শিট নং: NS-2026-01 তারিখ: ১১ এপ্রিল ২০২৬" / "Note-Sheet No: ... Date: ..." */
+    get referenceLine(): string {
+        const no = (this.noteSheetNo ?? '').trim();
+        if (!no) return '';
+        const dateStr = this.noteSheetApprovalDate
+            ? (this.isBangla ? this.formatDateBangla(this.noteSheetApprovalDate) : this.formatDate(this.noteSheetApprovalDate))
+            : '';
+        if (this.isBangla) {
+            return dateStr
+                ? `নোট-শিট নং: ${no}, ${dateStr}`
+                : `নোট-শিট নং: ${no}`;
+        }
+        return dateStr
+            ? `Note-Sheet No: ${no}, ${dateStr}`
+            : `Note-Sheet No: ${no}`;
     }
 
     formatDate(value: string | null | undefined): string {
@@ -646,24 +672,42 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         const orderLine = new Paragraph({
             tabStops: [{ type: TabStopType.RIGHT, position: TabStopPosition.MAX }],
             children: [
-                new TextRun({ text: bn ? `ফোর্স অর্ডার নং: ${this.postingOrderNo}` : `Force Order No: ${this.postingOrderNo}`, size: 20, sizeComplexScript: csSize, font, language: lang }),
+                new TextRun({ text: bn ? 'ফোর্স অর্ডার নং: ' : 'Force Order No: ', bold: true, size: 20, sizeComplexScript: csSize, font, language: lang }),
+                new TextRun({ text: this.postingOrderNo, size: 20, sizeComplexScript: csSize, font, language: lang }),
                 new TextRun({ text: '\t', font }),
-                new TextRun({ text: bn ? `তারিখ: ${this.previewDate}` : `Date: ${this.previewDate}`, size: 20, sizeComplexScript: csSize, font, language: lang })
+                new TextRun({ text: bn ? 'তারিখ: ' : 'Date: ', bold: true, size: 20, sizeComplexScript: csSize, font, language: lang }),
+                new TextRun({ text: this.previewDate, size: 20, sizeComplexScript: csSize, font, language: lang })
             ],
-            spacing: { after: 160 }
+            spacing: { after: 80 }
         });
 
-        // ── Body Text (10pt, justified) ──
-        const bodyPara = new Paragraph({
-            children: [new TextRun({ text: this.bodyText, size: 20, sizeComplexScript: csSize, font, language: lang })],
-            alignment: AlignmentType.JUSTIFIED,
+        // ── Reference / সূত্র : linked Note-Sheet No + final approval date ──
+        const referenceParas: Paragraph[] = this.referenceLine ? [new Paragraph({
+            children: [
+                new TextRun({ text: bn ? 'সূত্রঃ ' : 'Reference: ', bold: true, size: 20, sizeComplexScript: csSize, font, language: lang }),
+                new TextRun({ text: this.referenceLine, size: 20, sizeComplexScript: csSize, font, language: lang })
+            ],
             spacing: { after: 160 }
-        });
+        })] : [];
+
+        // ── Body Text (10pt, justified) – split on blank lines into paragraphs ──
+        const bodyParas = (this.bodyText || '')
+            .split(/\n{2,}/)
+            .map(block => block.trim())
+            .filter(t => t.length > 0)
+            .map(block => new Paragraph({
+                children: block.split('\n').flatMap((line, idx) => {
+                    const run = new TextRun({ text: line, size: 20, sizeComplexScript: csSize, font, language: lang });
+                    return idx === 0 ? [run] : [new TextRun({ text: '', break: 1, font }), run];
+                }),
+                alignment: AlignmentType.JUSTIFIED,
+                spacing: { after: 160 }
+            }));
 
         // ── Employee Table (header 8.5pt, data 9pt) ──
         const cols = bn
-            ? ['ক্রমিক', 'ব্যক্তিগত নম্বর', 'পদবি', 'ট্রেড', 'নাম', 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)', 'পূর্ববতী কর্মস্থল (দায়িত্বপূর্ণ এলাকা)', 'বদলিকৃত কর্মস্থল', 'র‌্যাব আইডি', 'মন্তব্য']
-            : ['Ser', 'Service ID', 'Rank', 'Trade', 'Name', 'Own District (Responsible Area)', 'Previous Workplace (Responsible Area)', 'Transfer Unit', 'RAB ID', 'Remarks'];
+            ? ['ক্রমিক', 'ব্যক্তিগত নম্বর', 'পদবি', 'ট্রেড', 'নাম', 'নিজ জেলা', 'পূর্ববতী কর্মস্থল', 'বদলিকৃত কর্মস্থল', 'র‌্যাব আইডি', 'মন্তব্য']
+            : ['Ser', 'Service ID', 'Rank', 'Trade', 'Name', 'Own District', 'Previous Workplace', 'Transfer Unit', 'RAB ID', 'Remarks'];
         // Column widths in DXA – must sum to full content width (page 12240 - margins 567*2 = 11106)
         //         Ser  SvcID  Rank  Trade  Name   OwnDist PrevWk TrUnit RabID Remarks
         const colW = [630, 1200, 860, 974, 1374, 1260, 1374, 1374, 1030, 1030];
@@ -696,7 +740,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             })
         }));
 
-        // Master remarks row (spans all columns, left-aligned, italic)
+        // Master remarks row (spans all columns, left-aligned)
         const allRows = [headerRow, ...dataRows];
         if (this.masterRemarks) {
             allRows.push(new TableRow({
@@ -705,7 +749,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                     borders: cellBorders,
                     width: { size: 11106, type: WidthType.DXA },
                     children: [new Paragraph({
-                        children: [new TextRun({ text: this.masterRemarks, italics: true, size: 18, sizeComplexScript: bn ? 18 : undefined, font, language: lang })],
+                        children: [new TextRun({ text: this.masterRemarks, size: 18, sizeComplexScript: bn ? 18 : undefined, font, language: lang })],
                         alignment: AlignmentType.LEFT,
                         spacing: { before: 40, after: 40 }
                     })]
@@ -773,25 +817,17 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             spacing: { after: 100 }
         }));
 
-        // ── Page borders (same as notesheet-preview-posting) ──
-        const pageBorder = { style: BorderStyle.SINGLE, size: 6, color: '000000', space: 10 };
-
         return new Document({
             styles: bn ? { default: { document: { run: { language: { value: 'bn-BD', bidirectional: 'bn-BD' } } } } } : undefined,
             sections: [{
                 properties: {
                     page: {
-                        size: { orientation: PageOrientation.PORTRAIT, width: 12240, height: 20160 },
+                        // A4 portrait: 11906 × 16838 DXA (210mm × 297mm)
+                        size: { orientation: PageOrientation.PORTRAIT, width: 11906, height: 16838 },
                         margin: { top: 567, right: 567, bottom: 567, left: 567 },
-                        borders: {
-                            pageBorderTop: pageBorder,
-                            pageBorderBottom: pageBorder,
-                            pageBorderLeft: pageBorder,
-                            pageBorderRight: pageBorder,
-                        },
                     }
                 },
-                children: [...headerParas, titlePara, orderLine, bodyPara, empTable, ...postingTextParas, ...sigParas, copyPara, ...footerParas]
+                children: [...headerParas, titlePara, orderLine, ...referenceParas, ...bodyParas, empTable, ...postingTextParas, ...sigParas, copyPara, ...footerParas]
             }]
         });
     }

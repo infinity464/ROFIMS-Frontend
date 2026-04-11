@@ -212,12 +212,18 @@
 
             <!-- Order No & Date -->
             <div class="po-doc-meta">
-                <span>{{ isBangla ? 'ফোর্স অর্ডার নং' : 'Force Order No' }}: {{ postingOrderNo || '.............' }}</span>
-                <span>{{ isBangla ? 'তারিখ' : 'Date' }}: {{ previewDate }}</span>
+                <span><strong>{{ isBangla ? 'ফোর্স অর্ডার নং' : 'Force Order No' }}:</strong> {{ postingOrderNo || '.............' }}</span>
+                <span><strong>{{ isBangla ? 'তারিখ' : 'Date' }}:</strong> {{ previewDate }}</span>
             </div>
 
-            <!-- Body Text (dynamic with mother org names) -->
-            <div class="po-doc-body">{{ bodyText }}</div>
+            <!-- Reference / সূত্র : linked Note-Sheet No + final approval date -->
+            <div class="po-doc-reference" *ngIf="referenceLine">
+                <span class="po-doc-reference-label">{{ isBangla ? 'সূত্র' : 'Reference' }}:</span>
+                <span class="po-doc-reference-value">{{ referenceLine }}</span>
+            </div>
+
+            <!-- Body Text (verbatim from linked notesheet's Main Text) -->
+            <div class="po-doc-body" style="white-space: pre-line;">{{ bodyText }}</div>
 
             <!-- Employee Table -->
             <table class="po-doc-table">
@@ -229,8 +235,8 @@
                             <th>পদবি</th>
                             <th>ট্রেড</th>
                             <th>নাম</th>
-                            <th>নিজ জেলা (দায়িত্বপূর্ণ এলাকা)</th>
-                            <th>পূর্ববতী কর্মস্থল (দায়িত্বপূর্ণ এলাকা)</th>
+                            <th>নিজ জেলা</th>
+                            <th>পূর্ববতী কর্মস্থল</th>
                             <th>বদলিকৃত কর্মস্থল</th>
                             <th>র‌্যাব আইডি</th>
                             <th>মন্তব্য</th>
@@ -241,8 +247,8 @@
                             <th>Rank</th>
                             <th>Trade</th>
                             <th>Name</th>
-                            <th>Own District (Responsible Area)</th>
-                            <th>Previous Workplace (Responsible Area)</th>
+                            <th>Own District</th>
+                            <th>Previous Workplace</th>
                             <th>Transfer Unit</th>
                             <th>RAB ID</th>
                             <th>Remarks</th>
@@ -263,7 +269,7 @@
                         <td style="text-align: left;">{{ emp.noteSheetRemarks || '' }}</td>
                     </tr>
                     <tr *ngIf="masterRemarks">
-                        <td colspan="10" style="border-top: 1px solid #000; font-style: italic; padding: 6px; text-align: left;">
+                        <td colspan="10" style="border-top: 1px solid #000; padding: 6px; text-align: left;">
                             {{ masterRemarks }}
                         </td>
                     </tr>

@@ -45,9 +45,9 @@
 }
 
 .legal-paper {
-    /* Legal size portrait: 215.9mm x 355.6mm (same as general notesheet) */
-    width: 215.9mm;
-    min-height: 355.6mm;
+    /* A4 portrait: 210mm x 297mm */
+    width: 210mm;
+    min-height: 297mm;
     padding: 14mm 10mm 20mm;
     background: #fff;
     box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
@@ -62,9 +62,8 @@
     flex-direction: column;
 }
 
-/* ── Document Box (border around content, same as ns-doc-box) ── */
+/* ── Document Box (no border — matches A4 export with no page border) ── */
 .po-doc-box {
-    border: 1.5px solid #000;
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -94,8 +93,18 @@
 .po-doc-meta {
     display: flex;
     justify-content: space-between;
+    margin-bottom: 6px;
+    font-size: 10pt;
+}
+
+.po-doc-reference {
     margin-bottom: 10px;
     font-size: 10pt;
+
+    .po-doc-reference-label {
+        font-weight: 700;
+        margin-right: 4px;
+    }
 }
 
 .po-doc-body {
