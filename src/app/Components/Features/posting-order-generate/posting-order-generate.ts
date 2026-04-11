@@ -102,7 +102,8 @@ export class PostingOrderGenerateComponent implements OnInit {
         this.postingOrderDate = new Date();
     }
 
-    /** When posting type dropdown changes, load approved notesheets of that type. */
+    /** When posting type dropdown changes, load approved notesheets of that type
+     *  (backend already excludes notesheets with a generated Posting Order). */
     onPostingTypeChange(): void {
         this.approvedNoteSheets = [];
         this.selectedNoteSheetId = null;
@@ -112,8 +113,8 @@ export class PostingOrderGenerateComponent implements OnInit {
 
         this.loadingNoteSheets = true;
         this.postingService.getApprovedNoteSheetsByType(this.selectedPostingType).subscribe({
-            next: (data) => {
-                this.approvedNoteSheets = data ?? [];
+            next: (notesheets) => {
+                this.approvedNoteSheets = notesheets ?? [];
                 this.loadingNoteSheets = false;
                 if (this.approvedNoteSheets.length === 0) {
                     this.messageService.add({ severity: 'info', summary: 'Info', detail: 'No approved notesheets found for this type.' });

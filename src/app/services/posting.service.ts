@@ -481,20 +481,12 @@ export class PostingService {
 
     private readonly NOTESHEET_API = `${environment.apis.core}/NoteSheetInfo`;
 
-    /** Get approved notesheets filtered by type (NewPosting / InterPosting). */
+    /** Get approved notesheets filtered by type (NewPosting / InterPosting),
+     *  excluding those that already have a generated Posting Order. */
     getApprovedNoteSheetsByType(noteSheetType: string): Observable<ApprovedNoteSheetItem[]> {
-        return this.http.get<any[]>(`${this.NOTESHEET_API}/GetByStatus`, { params: { currentStatus: 'final_approval' } }).pipe(
-            map((list) =>
-                (list ?? [])
-                    .filter((n: any) => n.noteSheetType === noteSheetType)
-                    .map((n: any) => ({
-                        noteSheetId: n.noteSheetId,
-                        noteSheetNo: n.noteSheetNo,
-                        noteSheetDate: n.noteSheetDate,
-                        subject: n.subject,
-                        noteSheetType: n.noteSheetType
-                    }))
-            )
+        return this.http.get<ApprovedNoteSheetItem[]>(
+            `${API}/GetApprovedNoteSheetsForPostingOrder`,
+            { params: { noteSheetType } }
         );
     }
 
