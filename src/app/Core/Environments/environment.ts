@@ -3,7 +3,15 @@ export const environment = {
     apis: {
         core: 'https://localhost:7187/rab/api',
         //core: 'http://114.134.95.234:31999/rab/api',
-        auth: 'https://localhost:7187',
+        auth: 'https://localhost:7187'
         //auth: 'http://114.134.95.234:31999'
     }
 };
+
+// export const environment = {
+//     production: true,
+//     apis: {
+//         core: 'http://114.134.95.238:9900/rab/api',
+//         auth: 'http://114.134.95.238:9900'
+//     }
+// };

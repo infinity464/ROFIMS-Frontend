@@ -95,7 +95,8 @@
                         }
                     </div>
 
-                    <div class="form-field">
+                    <!-- Last Mother Unit Location (hidden) -->
+                    <!-- <div class="form-field">
                         <label class="form-label">
                             Last Mother Unit Location <span class="form-label-required">*</span>
                         </label>
@@ -104,6 +105,16 @@
                         @if (isFieldInvalid('lastMotherUnitLocation')) {
                         <small class="form-error">{{ getErrorMessage('lastMotherUnitLocation') }}</small>
                         }
+                    </div> -->
+
+                    <div class="form-field">
+                        <label class="form-label">
+                            Last Mother Unit District
+                        </label>
+                        <p-select [options]="districtOptions" formControlName="lastMotherUnitDistrictId"
+                            optionLabel="label" optionValue="value" placeholder="Select District"
+                            styleClass="w-full" [filter]="true" filterPlaceholder="Search">
+                        </p-select>
                     </div>
 
                 </div>
@@ -504,7 +515,7 @@
     header="Add Last Unit of Mother Organization setup"
     [(visible)]="showLastUnitDialog"
     [modal]="true"
-    [style]="{ width: '560px' }"
+    [style]="{ width: '672px', minHeight: '432px' }"
     [closable]="true"
     [contentStyle]="{'border-top': '2px solid var(--primary-color)'}"
     appendTo="body">
@@ -524,7 +535,14 @@
         </div>
         <!-- Row 2 -->
         <div>
-            <label class="font-semibold block mb-2 text-700">Location (English) <span class="text-red-500">*</span></label>
+            <label class="font-semibold block mb-2 text-700">District <span class="text-red-500">*</span></label>
+            <p-select [(ngModel)]="newLastUnitDistrictId" [options]="districtOptions" optionLabel="label"
+                optionValue="value" placeholder="Select District" styleClass="w-full"
+                [filter]="true" filterPlaceholder="Search District" appendTo="body">
+            </p-select>
+        </div>
+        <div>
+            <label class="font-semibold block mb-2 text-700">Location (English)</label>
             <input pInputText class="w-full" [(ngModel)]="newLastUnitLocationEN" placeholder="Enter location in English" />
         </div>
         <div>
@@ -540,7 +558,7 @@
     </div>
     <ng-template pTemplate="footer">
         <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="showLastUnitDialog = false"></p-button>
-        <p-button label="Save" icon="pi pi-check" [loading]="isSavingLastUnit" [disabled]="!newLastUnitNameEN?.trim() || !newLastUnitLocationEN?.trim()" (onClick)="saveNewLastUnit()"></p-button>
+        <p-button label="Save" icon="pi pi-check" [loading]="isSavingLastUnit" [disabled]="!newLastUnitNameEN?.trim() || !newLastUnitDistrictId" (onClick)="saveNewLastUnit()"></p-button>
     </ng-template>
 </p-dialog>
 

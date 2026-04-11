@@ -23,6 +23,7 @@ import { LocationType, PostingStatus } from '@/models/enums';
 import { EmpPresentMemberCheckComponent } from '../emp-present-member-check/emp-present-member-check.component';
 import { FileReferencesFormComponent } from '@components/Common/file-references-form/file-references-form';
 import { OrganizationService } from '@/Components/basic-setup/organization-setup/services/organization-service';
+import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { SharedService } from '@/shared/services/shared-service';
 
 @Component({
@@ -762,6 +763,7 @@ export class EmpBasicInfo implements OnInit {
     /** When editing, FMID of existing spouse row in FamilyInfo (for update). */
     spouseFmid: number | null = null;
     prefixes: CommonCodeModel[] = [];
+    districtOptions: { label: string; value: number }[] = [];
 
     // Add Last Unit of Mother Organization dialog (same pattern as Post Office setup)
     showLastUnitDialog: boolean = false;
@@ -769,6 +771,7 @@ export class EmpBasicInfo implements OnInit {
     newLastUnitNameBN: string = '';
     newLastUnitLocationEN: string = '';
     newLastUnitLocationBN: string = '';
+    newLastUnitDistrictId: number | null = null;
     newLastUnitStatus: boolean = true;
     lastUnitStatusOptions = [
         { label: 'Active', value: true },
@@ -785,6 +788,7 @@ export class EmpBasicInfo implements OnInit {
         private route: ActivatedRoute,
         private router: Router,
         private organizationService: OrganizationService,
+        private masterBasicSetupService: MasterBasicSetupService,
         private sharedService: SharedService
     ) {}
 
@@ -800,6 +804,7 @@ export class EmpBasicInfo implements OnInit {
         });
 
         this.loadMotherOrg();
+        this.loadDistricts();
         this.loadMemberType();
         this.loadAppointment();
         this.loadGender();
@@ -875,6 +880,7 @@ export class EmpBasicInfo implements OnInit {
                     status: employee.status,
                     officerType: employee.officerType,
                     orgId: employee.orgId,
+                    lastMotherUnitDistrictId: employee.lastMotherUnitDistrictId ?? null,
                     spouseName: employee.spouseName ?? employee.wifeName ?? ''
                 });
                 this.spouseFmid = null;
@@ -1146,6 +1152,7 @@ export class EmpBasicInfo implements OnInit {
             lastupdate: [new Date()],
             statusDate: [new Date()],
             lastMotherUnitLocation: [''],
+            lastMotherUnitDistrictId: [null],
             motherOrganization: [''],
             officerType: [''],
             orgId: [null]
@@ -1231,6 +1238,21 @@ export class EmpBasicInfo implements OnInit {
         });
     }
 
+    loadDistricts(): void {
+        this.masterBasicSetupService.getAllByType('District').subscribe({
+            next: (districts) => {
+                const list = Array.isArray(districts) ? districts : [];
+                this.districtOptions = list.map((d: any) => ({
+                    label: d.codeValueBN ? `${d.codeValueEN} (${d.codeValueBN})` : d.codeValueEN,
+                    value: d.codeId
+                }));
+            },
+            error: (err) => {
+                console.error('Error loading districts:', err);
+            }
+        });
+    }
+
     onMotherOrgChange(orgId: number): void {
         // Set orgId in form
         this.postingForm.patchValue({ orgId: orgId });
@@ -1250,9 +1272,10 @@ export class EmpBasicInfo implements OnInit {
     }
 
     onLastUnitChange(unit: any): void {
-        const location = this.lastUnitOrganizations.find((x) => x.orgId === unit)?.locationEN;
+        const selectedUnit = this.lastUnitOrganizations.find((x) => x.orgId === unit);
         this.postingForm.patchValue({
-            lastMotherUnitLocation: location
+            lastMotherUnitLocation: selectedUnit?.locationEN,
+            lastMotherUnitDistrictId: selectedUnit?.districtId ?? null
         });
     }
 
@@ -1263,6 +1286,7 @@ export class EmpBasicInfo implements OnInit {
         this.newLastUnitNameBN = '';
         this.newLastUnitLocationEN = '';
         this.newLastUnitLocationBN = '';
+        this.newLastUnitDistrictId = null;
         this.newLastUnitStatus = true;
         this.showLastUnitDialog = true;
     }
@@ -1274,7 +1298,7 @@ export class EmpBasicInfo implements OnInit {
     }
 
     saveNewLastUnit(): void {
-        if (!this.newLastUnitNameEN?.trim() || !this.newLastUnitLocationEN?.trim()) return;
+        if (!this.newLastUnitNameEN?.trim() || !this.newLastUnitDistrictId) return;
 
         const parentOrgId = this.postingForm.get('motherOrganization')?.value;
         if (!parentOrgId) {
@@ -1294,8 +1318,9 @@ export class EmpBasicInfo implements OnInit {
             orgId: 0,
             orgNameEN: this.newLastUnitNameEN.trim(),
             orgNameBN: this.newLastUnitNameBN?.trim() || '',
-            locationEN: this.newLastUnitLocationEN.trim(),
+            locationEN: this.newLastUnitLocationEN?.trim() || '',
             locationBN: this.newLastUnitLocationBN?.trim() || '',
+            districtId: this.newLastUnitDistrictId,
             parentOrg: parentOrgId,
             status: this.newLastUnitStatus,
             createdBy: currentUser,
@@ -1321,7 +1346,8 @@ export class EmpBasicInfo implements OnInit {
                         if (newOrgId) {
                             this.postingForm.patchValue({
                                 lastMotherUnit: newOrgId,
-                                lastMotherUnitLocation: this.newLastUnitLocationEN.trim()
+                                lastMotherUnitLocation: this.newLastUnitLocationEN?.trim() || '',
+                                lastMotherUnitDistrictId: this.newLastUnitDistrictId
                             });
                         }
                     }
