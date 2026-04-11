@@ -636,11 +636,11 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase {
         // ── Build document ──
         const docChildren: (Paragraph | Table)[] = [];
         docChildren.push(new Paragraph({
-            children: [new TextRun({ text: 'NOTE SHEET', bold: true, underline: {}, size: 24, font: 'Times New Roman' })],
+            children: [new TextRun({ text: 'NOTE SHEET', bold: true, size: 24, font: 'Times New Roman' })],
             alignment: AlignmentType.CENTER, spacing: { after: 40 }, keepNext: true
         }));
         docChildren.push(new Paragraph({
-            children: [new TextRun({ text: 'মন্তব্য পত্র', underline: {}, size: 24, font: 'Nirmala UI' })],
+            children: [new TextRun({ text: 'মন্তব্য পত্র', size: 24, font: 'Nirmala UI' })],
             alignment: AlignmentType.CENTER, spacing: { after: 160 }, keepNext: true
         }));
         docChildren.push(outerTable);
