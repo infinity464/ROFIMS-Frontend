@@ -418,6 +418,14 @@ export class SupernumeraryProfile implements OnInit, OnDestroy {
         return this.getAddrField(addr, key);
     }
 
+    /** Get initials from name for avatar fallback. */
+    getInitials(name: string | null | undefined): string {
+        if (!name) return '?';
+        const parts = name.trim().split(/\s+/);
+        if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+        return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+    }
+
     /** Build combined rows for reliever table: RelievedBy (if any) + Relievers. */
     private buildRelieverTableRows(profile: SupernumeraryEmpProfile | null): Array<{ employeeID: number; serviceId: string | null; rank: string | null; corps: string | null; trade: string | null; name: string | null; wingBattalion: string | null; appointment: string | null }> {
         const p = profile;
