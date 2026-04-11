@@ -172,6 +172,7 @@ export interface DraftPostingEmployeeRow {
     employeeId: number;
     transferRabUnitId: number | null;
     transferRabUnitName: string | null;
+    transferRabUnitNameBN?: string | null;
     remarks: string | null;
     isSendingNotesheetStatus: string | null;
     serviceId: string | null;
@@ -378,6 +379,8 @@ export interface PostingOrderEmployeeRow {
     spousePresentDistrictNameBN: string | null;
     motherOrgLocationName: string | null;
     motherOrgLocationNameBN: string | null;
+    previousRabUnits: string | null;
+    previousRabUnitsBN: string | null;
 }
 
 /** Approved NoteSheet row for dropdown. */

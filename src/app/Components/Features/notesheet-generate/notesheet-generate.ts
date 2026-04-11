@@ -24,6 +24,7 @@ import { take } from 'rxjs/operators';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
 import { NoteSheetType, NoteSheetOperationTypeOptions, ApprovalStatus, ApproverRoleType } from '@/models/enums';
+import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import { TooltipModule } from 'primeng/tooltip';
 import { ToastModule } from 'primeng/toast';
 import { CheckboxModule } from 'primeng/checkbox';
@@ -73,8 +74,13 @@ export class NotesheetGenerateComponent implements OnInit {
     initiatorOptions: { label: string; labelBn: string | null; value: number }[] = [];
     recommenderOptions: { label: string; labelBn: string | null; value: number }[] = [];
     finalApproverOptions: { label: string; labelBn: string | null; value: number }[] = [];
+    /** Reference employees – stored in NoteSheetReferenceEmployee table (multi-select). */
+    referenceEmployeeOptions: { label: string; labelBn: string | null; value: number }[] = [];
     /** Supporting documents – stored in NoteSheetInfo.FilesReferences (JSON array of { FileId, fileName }). */
     fileRows: FileRowData[] = [];
+    /** Prefix config for notesheet number language swap */
+    private noteSheetPrefixEN = '';
+    private noteSheetPrefixBN = '';
 
     @ViewChild('fileReferencesForm') fileReferencesForm!: FileReferencesFormComponent;
 
@@ -108,7 +114,8 @@ export class NotesheetGenerateComponent implements OnInit {
             recommenderIds: [[] as number[]],
             finalApproverId: [null as number | null, Validators.required],
             isSecret: [false],
-            noteSheetOperationType: [null as string | null, Validators.required]
+            noteSheetOperationType: [null as string | null, Validators.required],
+            referenceEmployeeIds: [[] as number[]]
         });
     }
 
@@ -116,6 +123,8 @@ export class NotesheetGenerateComponent implements OnInit {
         this.loadUnits();
         this.loadBranches();
         this.loadApproverOptions();
+        this.loadReferenceEmployeeOptions();
+        this.loadNoteSheetNumberConfig();
         const user = this.sharedService.getCurrentUser?.() ?? '';
         this.form.get('preparedBy')?.setValue(user);
         this.resolvePreparedByMapping();
@@ -129,6 +138,13 @@ export class NotesheetGenerateComponent implements OnInit {
                     this.title = 'Update Draft Note-Sheet';
                     this.loadNoteSheetForEdit(numId);
                 }
+            }
+        });
+
+        // In edit mode, swap noteSheetNo prefix/digits when textType changes
+        this.form.get('textType')?.valueChanges.subscribe((newType: string) => {
+            if (this.editMode) {
+                this.transformNoteSheetNo(newType);
             }
         });
     }
@@ -232,6 +248,18 @@ export class NotesheetGenerateComponent implements OnInit {
                       }))
                     : [];
             } catch {}
+        }
+        // Load existing reference employees in edit mode
+        const noteSheetId = d.noteSheetId ?? d.NoteSheetId;
+        if (noteSheetId) {
+            const refApi = `${environment.apis.core}/NoteSheetReferenceEmployee`;
+            this.http.get<any[]>(`${refApi}/GetByNoteSheetId/${noteSheetId}`).subscribe({
+                next: (list) => {
+                    const ids = (Array.isArray(list) ? list : []).map((r: any) => r.employeeId ?? r.EmployeeId).filter(Boolean);
+                    this.form.patchValue({ referenceEmployeeIds: ids });
+                },
+                error: () => {}
+            });
         }
     }
 
@@ -359,6 +387,75 @@ export class NotesheetGenerateComponent implements OnInit {
         });
     }
 
+    /** Load presently serving employees for the Reference Employee multi-select. */
+    loadReferenceEmployeeOptions(): void {
+        const api = `${environment.apis.core}/EmployeeInfo`;
+        this.http.get<any[]>(`${api}/GetBasicServiceInformationOfServingMember`).subscribe({
+            next: (list) => {
+                this.referenceEmployeeOptions = (Array.isArray(list) ? list : []).map((e: any) => {
+                    const name = e.nameEnglish || e.NameEnglish || '';
+                    const rabId = e.rabId || e.RabId || '';
+                    const serviceId = e.serviceId || e.ServiceId || '';
+                    const parts = [name, rabId ? `RAB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : ''].filter(Boolean);
+                    return {
+                        label: parts.join(' | ') || `ID ${e.employeeID ?? e.EmployeeID}`,
+                        labelBn: e.nameBN || e.NameBN || null,
+                        value: e.employeeID ?? e.EmployeeID
+                    };
+                });
+            },
+            error: () => {}
+        });
+    }
+
+    /** Load NoteSheetNumberConfig for General type (prefix EN/BN for number generation). */
+    private loadNoteSheetNumberConfig(): void {
+        const api = `${environment.apis.core}/NoteSheetNumberConfig`;
+        this.http.get<any[]>(`${api}/GetAll`).subscribe({
+            next: (configs) => {
+                const config = (configs ?? []).find(
+                    (c: any) => (c.noteSheetType ?? c.NoteSheetType) === 'General'
+                );
+                if (config) {
+                    this.noteSheetPrefixEN = config.prefix ?? config.Prefix ?? '';
+                    this.noteSheetPrefixBN = config.prefixBN ?? config.PrefixBN ?? '';
+                }
+            }
+        });
+    }
+
+    /** Convert Bangla digits back to Western digits */
+    private toEnglishDigits(str: string): string {
+        return str.replace(/[\u09E6-\u09EF]/g, (c) => String(c.charCodeAt(0) - 0x09E6));
+    }
+
+    /** Transform noteSheetNo when textType changes in edit mode (swap prefix + digits EN↔BN). */
+    private transformNoteSheetNo(newTextType: string): void {
+        const currentNo: string = this.form.get('noteSheetNo')?.value ?? '';
+        if (!currentNo || (!this.noteSheetPrefixEN && !this.noteSheetPrefixBN)) return;
+
+        let transformed: string;
+
+        if (newTextType === 'bn') {
+            if (this.noteSheetPrefixEN && currentNo.startsWith(this.noteSheetPrefixEN + '-')) {
+                const rest = currentNo.substring(this.noteSheetPrefixEN.length);
+                const bnPrefix = this.noteSheetPrefixBN || this.noteSheetPrefixEN;
+                transformed = bnPrefix + BanglaNumerals.toBangla(rest);
+            } else {
+                transformed = BanglaNumerals.toBangla(currentNo);
+            }
+        } else {
+            if (this.noteSheetPrefixBN && currentNo.startsWith(this.noteSheetPrefixBN + '-')) {
+                const rest = currentNo.substring(this.noteSheetPrefixBN.length);
+                transformed = this.noteSheetPrefixEN + this.toEnglishDigits(rest);
+            } else {
+                transformed = this.toEnglishDigits(currentNo);
+            }
+        }
+
+        this.form.get('noteSheetNo')?.setValue(transformed, { emitEvent: false });
+    }
+
     /** Whether Note-Sheet Text Type is Bangla (show all labels/options in Bangla). */
     get isBangla(): boolean {
         return this.form?.get('textType')?.value === 'bn';
@@ -381,6 +478,9 @@ export class NotesheetGenerateComponent implements OnInit {
     }
     get finalApproverOptionsDisplay(): { label: string; value: number }[] {
         return this.finalApproverOptions.map((o) => ({ label: o.label, value: o.value }));
+    }
+    get referenceEmployeeOptionsDisplay(): { label: string; value: number }[] {
+        return this.referenceEmployeeOptions.map((o) => ({ label: o.label, value: o.value }));
     }
 
     onTextTypeChange(): void {
@@ -446,7 +546,8 @@ export class NotesheetGenerateComponent implements OnInit {
             recommenderIds: [],
             finalApproverId: null,
             isSecret: false,
-            noteSheetOperationType: null
+            noteSheetOperationType: null,
+            referenceEmployeeIds: []
         });
         this.fileRows = [];
         this.resolvePreparedByMapping();
@@ -475,8 +576,30 @@ export class NotesheetGenerateComponent implements OnInit {
                     return;
                 }
                 const endpoint = this.editMode && this.editId != null ? '/UpdateAsyn' : '/SaveAsyn';
-                this.http.post(api + endpoint, payload).subscribe({
-                    next: () => {
+                this.http.post<any>(api + endpoint, payload).subscribe({
+                    next: (res) => {
+                        // Sync reference employees after notesheet is saved
+                        const refEmpIds: number[] = this.form.get('referenceEmployeeIds')?.value ?? [];
+                        const noteSheetId = this.editMode && this.editId != null
+                            ? this.editId
+                            : (res?.data?.noteSheetId ?? res?.data?.NoteSheetId ?? res?.Data?.NoteSheetId ?? null);
+
+                        if (noteSheetId && refEmpIds.length > 0) {
+                            const refApi = `${environment.apis.core}/NoteSheetReferenceEmployee`;
+                            const syncPayload = {
+                                noteSheetId,
+                                employeeIds: refEmpIds,
+                                updatedBy: payload.createdBy ?? payload.lastUpdatedBy ?? 'system'
+                            };
+                            this.http.post(refApi + '/Sync', syncPayload).subscribe({
+                                error: () => this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Note Sheet saved but failed to sync reference employees.' })
+                            });
+                        } else if (noteSheetId && refEmpIds.length === 0 && this.editMode) {
+                            // Clear all reference employees on edit if none selected
+                            const refApi = `${environment.apis.core}/NoteSheetReferenceEmployee`;
+                            this.http.post(refApi + '/Sync', { noteSheetId, employeeIds: [], updatedBy: payload.lastUpdatedBy ?? 'system' }).subscribe();
+                        }
+
                         this.messageService.add({
                             severity: 'success',
                             summary: 'Note Sheet',
@@ -583,7 +706,7 @@ export class NotesheetGenerateComponent implements OnInit {
         const payload: Record<string, unknown> = {
             noteSheetId: 0,
             noteSheetType: NoteSheetType.General,
-            noteSheetNo: d.noteSheetNo || '',
+            noteSheetNo: this.editMode ? (d.noteSheetNo || 'AUTO') : 'AUTO',
             noteSheetDate: dateStr,
             noteSheetTemplateId: d.noteSheetTemplateId ?? null,
             referenceNumber: d.referenceNumber != null ? String(d.referenceNumber) : null,

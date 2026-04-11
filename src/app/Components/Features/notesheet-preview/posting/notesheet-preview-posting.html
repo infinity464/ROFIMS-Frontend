@@ -148,18 +148,37 @@
                     <div class="ns-posting-table" *ngIf="postingEmployees.length > 0">
                         <table>
                             <thead>
-                                <tr>
-                                    <th>{{ isEnglish() ? 'Ser' : 'ক্রমিক' }}</th>
-                                    <th>{{ isEnglish() ? 'Service ID' : 'ব্যক্তিগত নম্বর' }}</th>
-                                    <th>{{ isEnglish() ? 'Rank' : 'পদবি' }}</th>
-                                    <th>{{ isEnglish() ? 'Trade' : 'ট্রেড' }}</th>
-                                    <th>{{ isEnglish() ? 'Name' : 'নাম' }}</th>
-                                    <th>{{ isEnglish() ? 'Own District (Responsible Area)' : 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
-                                    <th>{{ isEnglish() ? 'Spouse District (Responsible Area)' : 'স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
-                                    <th>{{ isEnglish() ? 'Previous Workplace' : 'পূর্ববতী কর্মস্থল' }}</th>
-                                    <th>{{ isEnglish() ? 'Transfer Unit' : 'বদলি ইউনিট' }}</th>
-                                    <th style="min-width:200px">{{ isEnglish() ? 'Remarks' : 'মন্তব্য' }}</th>
-                                </tr>
+                                <ng-container *ngIf="isInterPosting()">
+                                    <tr>
+                                        <th rowspan="2">{{ isEnglish() ? 'Ser' : 'ক্রমিক' }}</th>
+                                        <th rowspan="2">{{ isEnglish() ? 'Service ID' : 'ব্যক্তিগত নম্বর' }}</th>
+                                        <th rowspan="2">{{ isEnglish() ? 'Rank' : 'পদবি' }}</th>
+                                        <th rowspan="2">{{ isEnglish() ? 'Trade' : 'ট্রেড' }}</th>
+                                        <th rowspan="2">{{ isEnglish() ? 'Name' : 'নাম' }}</th>
+                                        <th rowspan="2">{{ isEnglish() ? 'Own District (Responsible Area)' : 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
+                                        <th rowspan="2">{{ isEnglish() ? 'Spouse District (Responsible Area)' : 'স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
+                                        <th colspan="2">{{ isEnglish() ? 'Transfer Station' : 'বদলিকৃত কর্মস্থল' }}</th>
+                                        <th rowspan="2" style="min-width:200px">{{ isEnglish() ? 'Remarks' : 'মন্তব্য' }}</th>
+                                    </tr>
+                                    <tr>
+                                        <th>{{ isEnglish() ? 'From' : 'হইতে' }}</th>
+                                        <th>{{ isEnglish() ? 'To' : 'প্রতি' }}</th>
+                                    </tr>
+                                </ng-container>
+                                <ng-container *ngIf="!isInterPosting()">
+                                    <tr>
+                                        <th>{{ isEnglish() ? 'Ser' : 'ক্রমিক' }}</th>
+                                        <th>{{ isEnglish() ? 'Service ID' : 'ব্যক্তিগত নম্বর' }}</th>
+                                        <th>{{ isEnglish() ? 'Rank' : 'পদবি' }}</th>
+                                        <th>{{ isEnglish() ? 'Trade' : 'ট্রেড' }}</th>
+                                        <th>{{ isEnglish() ? 'Name' : 'নাম' }}</th>
+                                        <th>{{ isEnglish() ? 'Own District (Responsible Area)' : 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
+                                        <th>{{ isEnglish() ? 'Spouse District (Responsible Area)' : 'স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
+                                        <th>{{ isEnglish() ? 'Previous Workplace' : 'পূর্ববতী কর্মস্থল' }}</th>
+                                        <th>{{ isEnglish() ? 'Transfer Unit' : 'বদলি ইউনিট' }}</th>
+                                        <th style="min-width:200px">{{ isEnglish() ? 'Remarks' : 'মন্তব্য' }}</th>
+                                    </tr>
+                                </ng-container>
                             </thead>
                             <tbody>
                                 <tr *ngFor="let emp of postingEmployees; let i = index">
@@ -261,18 +280,37 @@
                 <div class="ns-posting-table" *ngIf="postingEmployees.length > 0">
                     <table>
                         <thead>
-                            <tr>
-                                <th>{{ isEnglish() ? 'Ser' : 'ক্রমিক' }}</th>
-                                <th>{{ isEnglish() ? 'Service ID' : 'ব্যক্তিগত নম্বর' }}</th>
-                                <th>{{ isEnglish() ? 'Rank' : 'পদবি' }}</th>
-                                <th>{{ isEnglish() ? 'Trade' : 'ট্রেড' }}</th>
-                                <th>{{ isEnglish() ? 'Name' : 'নাম' }}</th>
-                                <th>{{ isEnglish() ? 'Own District (Responsible Area)' : 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
-                                <th>{{ isEnglish() ? 'Spouse District (Responsible Area)' : 'স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
-                                <th>{{ isEnglish() ? 'Previous Workplace' : 'পূর্ববতী কর্মস্থল' }}</th>
-                                <th>{{ isEnglish() ? 'Transfer Unit' : 'বদলি ইউনিট' }}</th>
-                                <th>{{ isEnglish() ? 'Remarks' : 'মন্তব্য' }}</th>
-                            </tr>
+                            <ng-container *ngIf="isInterPosting()">
+                                <tr>
+                                    <th rowspan="2">{{ isEnglish() ? 'Ser' : 'ক্রমিক' }}</th>
+                                    <th rowspan="2">{{ isEnglish() ? 'Service ID' : 'ব্যক্তিগত নম্বর' }}</th>
+                                    <th rowspan="2">{{ isEnglish() ? 'Rank' : 'পদবি' }}</th>
+                                    <th rowspan="2">{{ isEnglish() ? 'Trade' : 'ট্রেড' }}</th>
+                                    <th rowspan="2">{{ isEnglish() ? 'Name' : 'নাম' }}</th>
+                                    <th rowspan="2">{{ isEnglish() ? 'Own District (Responsible Area)' : 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
+                                    <th rowspan="2">{{ isEnglish() ? 'Spouse District (Responsible Area)' : 'স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
+                                    <th colspan="2">{{ isEnglish() ? 'Transfer Station' : 'বদলিকৃত কর্মস্থল' }}</th>
+                                    <th rowspan="2">{{ isEnglish() ? 'Remarks' : 'মন্তব্য' }}</th>
+                                </tr>
+                                <tr>
+                                    <th>{{ isEnglish() ? 'From' : 'হইতে' }}</th>
+                                    <th>{{ isEnglish() ? 'To' : 'প্রতি' }}</th>
+                                </tr>
+                            </ng-container>
+                            <ng-container *ngIf="!isInterPosting()">
+                                <tr>
+                                    <th>{{ isEnglish() ? 'Ser' : 'ক্রমিক' }}</th>
+                                    <th>{{ isEnglish() ? 'Service ID' : 'ব্যক্তিগত নম্বর' }}</th>
+                                    <th>{{ isEnglish() ? 'Rank' : 'পদবি' }}</th>
+                                    <th>{{ isEnglish() ? 'Trade' : 'ট্রেড' }}</th>
+                                    <th>{{ isEnglish() ? 'Name' : 'নাম' }}</th>
+                                    <th>{{ isEnglish() ? 'Own District (Responsible Area)' : 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
+                                    <th>{{ isEnglish() ? 'Spouse District (Responsible Area)' : 'স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
+                                    <th>{{ isEnglish() ? 'Previous Workplace' : 'পূর্ববতী কর্মস্থল' }}</th>
+                                    <th>{{ isEnglish() ? 'Transfer Unit' : 'বদলি ইউনিট' }}</th>
+                                    <th>{{ isEnglish() ? 'Remarks' : 'মন্তব্য' }}</th>
+                                </tr>
+                            </ng-container>
                         </thead>
                         <tbody>
                             <tr *ngFor="let emp of postingEmployees; let i = index">

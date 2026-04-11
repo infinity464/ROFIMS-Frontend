@@ -25,7 +25,7 @@ import { forkJoin, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import {
     Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
-    WidthType, BorderStyle, AlignmentType, PageOrientation, ImageRun
+    WidthType, BorderStyle, AlignmentType, PageOrientation, ImageRun, VerticalMergeType
 } from 'docx';
 import { saveAs } from 'file-saver';
 
@@ -1293,10 +1293,32 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
             const colWidths = hasRemarks
                 ? [490, 1220, 850, 1030, 1380, 1220, 1220, 1340, 1060, 1296]
                 : [490, 1220, 850, 1516, 1380, 1220, 1220, 1340, 1060,  810];
-            const headerRow = new TableRow({ tableHeader: true, children: cols.map((c, ci) => new TableCell({
-                children: [new Paragraph({ children: [new TextRun({ text: c, size: 20, sizeComplexScript: bn ? 20 : undefined, font, language: lang })], alignment: AlignmentType.CENTER })],
-                borders: cellBorders, width: { size: colWidths[ci], type: WidthType.DXA },
-            })) });
+            const hdrPara = (text: string) => new Paragraph({ children: [new TextRun({ text, size: 20, sizeComplexScript: bn ? 20 : undefined, font, language: lang })], alignment: AlignmentType.CENTER });
+            const hdrCell = (text: string, ci: number, extra?: any) => new TableCell({
+                children: [hdrPara(text)], borders: cellBorders, width: { size: colWidths[ci], type: WidthType.DXA }, ...extra
+            });
+
+            let headerRows: TableRow[];
+            if (this.isInterPosting()) {
+                headerRows = [
+                    new TableRow({ tableHeader: true, children: [
+                        ...cols.slice(0, 7).map((c, ci) => hdrCell(c, ci, { verticalMerge: VerticalMergeType.RESTART })),
+                        new TableCell({
+                            children: [hdrPara(bn ? 'বদলিকৃত কর্মস্থল' : 'Transfer Station')],
+                            columnSpan: 2, borders: cellBorders, width: { size: colWidths[7] + colWidths[8], type: WidthType.DXA }
+                        }),
+                        hdrCell(cols[9], 9, { verticalMerge: VerticalMergeType.RESTART })
+                    ]}),
+                    new TableRow({ tableHeader: true, children: [
+                        ...[0,1,2,3,4,5,6].map(ci => new TableCell({ children: [new Paragraph({})], verticalMerge: VerticalMergeType.CONTINUE, borders: cellBorders, width: { size: colWidths[ci], type: WidthType.DXA } })),
+                        hdrCell(bn ? 'হইতে' : 'From', 7),
+                        hdrCell(bn ? 'প্রতি' : 'To', 8),
+                        new TableCell({ children: [new Paragraph({})], verticalMerge: VerticalMergeType.CONTINUE, borders: cellBorders, width: { size: colWidths[9], type: WidthType.DXA } })
+                    ]})
+                ];
+            } else {
+                headerRows = [new TableRow({ tableHeader: true, children: cols.map((c, ci) => hdrCell(c, ci)) })];
+            }
             const dataRows = this.postingEmployees.map((emp, i) => new TableRow({ children: [
                 bn ? this.toBanglaDigits(i + 1) : String(i + 1), this.getServiceIdDisplay(emp),
                 bn?(emp.rankNameBN||emp.rankName||''):(emp.rankName??''),
@@ -1313,7 +1335,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
                 const cellParas = lines.map(line => new Paragraph({ children: [new TextRun({ text: line, size: 20, sizeComplexScript: bn ? 20 : undefined, font, language: lang })], alignment: AlignmentType.CENTER }));
                 return new TableCell({ children: cellParas, borders: cellBorders, width: { size: colWidths[ci], type: WidthType.DXA } });
             }) }));
-            const tableRows = [headerRow, ...dataRows];
+            const tableRows = [...headerRows, ...dataRows];
             mainChildren.push(new Paragraph({ spacing: { before: 200 }, children: [] }));
             const totalColW = colWidths.reduce((a, b) => a + b, 0);
             mainChildren.push(new Table({ width: { size: totalColW, type: WidthType.DXA }, rows: tableRows, columnWidths: colWidths, alignment: AlignmentType.CENTER }));

@@ -75,7 +75,7 @@
                         <th style="width: 50px">{{ isBangla ? 'ক্রমিক' : 'Ser' }}</th>
                         <th style="min-width: 120px">{{ isBangla ? 'ব্যক্তিগত নম্বর' : 'Service ID' }}</th>
                         <th style="min-width: 80px">{{ isBangla ? 'পদবি' : 'Rank' }}</th>
-                        <th style="min-width: 140px">{{ isBangla ? 'নাম' : 'Name' }}</th>
+                        <th style="min-width: 170px">{{ isBangla ? 'নাম' : 'Name' }}</th>
                         <th style="min-width: 130px">{{ isBangla ? 'নিজ জেলা' : 'Own District' }}</th>
                         <th style="min-width: 130px">{{ isBangla ? 'পূর্ববর্তী কর্মস্থল' : 'Previous Workplace' }}</th>
                         <th style="min-width: 100px">{{ isBangla ? 'বদলি ইউনিট' : 'Transfer Unit' }}</th>
@@ -246,32 +246,53 @@
             <!-- Employee Table -->
             <table class="po-doc-table">
                 <thead>
-                    <tr>
-                        <ng-container *ngIf="isBangla">
-                            <th>ক্রমিক</th>
-                            <th>ব্যক্তিগত নম্বর</th>
-                            <th>পদবি</th>
-                            <th>ট্রেড</th>
-                            <th>নাম</th>
-                            <th>নিজ জেলা</th>
-                            <th>পূর্ববতী কর্মস্থল</th>
-                            <th>বদলিকৃত কর্মস্থল</th>
-                            <th>র‌্যাব আইডি</th>
-                            <th>মন্তব্য</th>
-                        </ng-container>
-                        <ng-container *ngIf="!isBangla">
-                            <th>Ser</th>
-                            <th>Service ID</th>
-                            <th>Rank</th>
-                            <th>Trade</th>
-                            <th>Name</th>
-                            <th>Own District</th>
-                            <th>Previous Workplace</th>
-                            <th>Transfer Unit</th>
-                            <th>RAB ID</th>
-                            <th>Remarks</th>
-                        </ng-container>
-                    </tr>
+                    <!-- Inter-posting: two-row header with merged বদলিকৃত কর্মস্থল -->
+                    <ng-container *ngIf="isInterPosting">
+                        <tr>
+                            <th rowspan="2" style="width:5%">{{ isBangla ? 'ক্রমিক' : 'Ser' }}</th>
+                            <th rowspan="2" style="width:10%">{{ isBangla ? 'ব্যক্তিগত নম্বর' : 'Service ID' }}</th>
+                            <th rowspan="2" style="width:8%">{{ isBangla ? 'পদবি' : 'Rank' }}</th>
+                            <th rowspan="2" style="width:8%">{{ isBangla ? 'ট্রেড' : 'Trade' }}</th>
+                            <th rowspan="2" style="width:20%">{{ isBangla ? 'নাম' : 'Name' }}</th>
+                            <th rowspan="2" style="width:10%">{{ isBangla ? 'নিজ জেলা' : 'Own District' }}</th>
+                            <th colspan="2" style="width:22%">{{ isBangla ? 'বদলিকৃত কর্মস্থল' : 'Transfer Station' }}</th>
+                            <th rowspan="2" style="width:9%">{{ isBangla ? 'র‌্যাব আইডি' : 'RAB ID' }}</th>
+                            <th rowspan="2" style="width:8%">{{ isBangla ? 'মন্তব্য' : 'Remarks' }}</th>
+                        </tr>
+                        <tr>
+                            <th>{{ isBangla ? 'হইতে' : 'From' }}</th>
+                            <th>{{ isBangla ? 'প্রতি' : 'To' }}</th>
+                        </tr>
+                    </ng-container>
+                    <!-- Non-inter-posting: single header row -->
+                    <ng-container *ngIf="!isInterPosting">
+                        <tr>
+                            <ng-container *ngIf="isBangla">
+                                <th style="width:5%">ক্রমিক</th>
+                                <th style="width:10%">ব্যক্তিগত নম্বর</th>
+                                <th style="width:8%">পদবি</th>
+                                <th style="width:8%">ট্রেড</th>
+                                <th style="width:20%">নাম</th>
+                                <th style="width:10%">নিজ জেলা</th>
+                                <th style="width:11%">পূর্ববতী কর্মস্থল</th>
+                                <th style="width:11%">বদলিকৃত কর্মস্থল</th>
+                                <th style="width:9%">র‌্যাব আইডি</th>
+                                <th style="width:8%">মন্তব্য</th>
+                            </ng-container>
+                            <ng-container *ngIf="!isBangla">
+                                <th style="width:5%">Ser</th>
+                                <th style="width:10%">Service ID</th>
+                                <th style="width:8%">Rank</th>
+                                <th style="width:8%">Trade</th>
+                                <th style="width:20%">Name</th>
+                                <th style="width:10%">Own District</th>
+                                <th style="width:11%">Previous Workplace</th>
+                                <th style="width:11%">Transfer Unit</th>
+                                <th style="width:9%">RAB ID</th>
+                                <th style="width:8%">Remarks</th>
+                            </ng-container>
+                        </tr>
+                    </ng-container>
                 </thead>
                 <tbody>
                     <tr *ngFor="let emp of filteredEmployees; let i = index">
@@ -301,7 +322,7 @@
 
             <!-- Signature Block -->
             <div class="po-doc-signature">
-                <div *ngIf="approverSignatureUrl"><img [src]="approverSignatureUrl" alt="Signature" class="approver-signature-img" /></div>
+                <div>স্বাক্ষরিত/-</div>
                 <div>{{ (isBangla ? approverNameBN : approverName) || approverName || '...................................' }}</div>
                 <div>{{ (isBangla ? approverRankBN : approverRank) || approverRank || '............................' }}</div>
                 <div>{{ (isBangla ? approverAppointmentBN : approverAppointment) || approverAppointment || '............................' }}</div>

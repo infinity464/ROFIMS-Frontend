@@ -94,7 +94,7 @@
                         <th style="min-width: 140px">{{ isBangla ? 'নাম' : 'Name' }}</th>
                         <th style="min-width: 130px">{{ isBangla ? 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)' : 'Own District (Permanent)' }}</th>
                         <th style="min-width: 130px">{{ isBangla ? 'স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)' : 'Spouse District' }}</th>
-                        <th style="min-width: 130px">{{ isBangla ? 'পূর্ববর্তী কর্মস্থল (দায়িত্বপূর্ণ এলাকা)' : 'Previous Workplace' }}</th>
+                        <th style="min-width: 130px">{{ isBangla ? 'পূর্ববর্তী কর্মস্থল' : 'Previous Workplace' }}</th>
                         <th style="min-width: 100px">{{ isBangla ? 'বদলি ইউনিট' : 'Transfer Unit' }}</th>
                         <th style="min-width: 100px">{{ isBangla ? 'মন্তব্য' : 'Remarks' }}</th>
                         <th style="width: 50px"></th>
@@ -110,8 +110,8 @@
                         <td>{{ (isBangla ? row.fullNameBN : row.fullNameEN) || row.fullNameEN || '-' }}</td>
                         <td>{{ (isBangla ? row.permanentDistrictNameBN : row.permanentDistrictName) || row.permanentDistrictName || '-' }}</td>
                         <td>{{ (isBangla ? row.spousePresentDistrictNameBN : row.spousePresentDistrictName) || row.spousePresentDistrictName || '-' }}</td>
-                        <td>{{ (isBangla ? row.motherOrgLocationNameBN : row.motherOrgLocationName) || row.motherOrgLocationName || '-' }}</td>
-                        <td>{{ row.transferRabUnitName || '-' }}</td>
+                        <td>{{ selectedPostingType === 'InterPosting' ? ((isBangla ? row.previousRabUnitsBN || row.previousRabUnits : row.previousRabUnits) || '-') : ((isBangla ? row.motherOrgLocationNameBN : row.motherOrgLocationName) || row.motherOrgLocationName || '-') }}</td>
+                        <td>{{ (isBangla ? row.transferRabUnitNameBN || row.transferRabUnitName : row.transferRabUnitName) || '-' }}</td>
                         <td>{{ row.remarks || '-' }}</td>
                         <td class="text-center">
                             <p-button icon="pi pi-trash" severity="danger" [rounded]="true" [text]="true" size="small" (onClick)="removeEmployee(row)"></p-button>

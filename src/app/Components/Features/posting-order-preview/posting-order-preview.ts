@@ -16,12 +16,13 @@ import { PostingService } from '@/services/posting.service';
 import { ServingMembersService } from '@/services/serving-members.service';
 import { EmpService } from '@/services/emp-service';
 import { PostingOrderEmployeeRow } from '@/models/posting.model';
+import { NoteSheetType } from '@/models/enums';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '@/Core/Environments/environment';
 import { firstValueFrom } from 'rxjs';
 import {
     Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
-    WidthType, BorderStyle, AlignmentType, PageOrientation, TabStopType, TabStopPosition, TableLayoutType, ImageRun
+    WidthType, BorderStyle, AlignmentType, PageOrientation, TabStopType, TabStopPosition, TableLayoutType, VerticalMergeType
 } from 'docx';
 import { saveAs } from 'file-saver';
 
@@ -69,6 +70,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     postingOrderNo = '';
     postingOrderDate = '';
     postingType = '';
+    get isInterPosting(): boolean { return this.postingType === NoteSheetType.InterPosting; }
     subject = '';
     mainText = '';
     textType = '';
@@ -379,6 +381,9 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     }
 
     empPrevWorkplace(emp: PostingOrderEmployeeRow): string {
+        if (this.postingType === NoteSheetType.InterPosting) {
+            return (this.isBangla ? (emp.previousRabUnitsBN || emp.previousRabUnits) : emp.previousRabUnits) || '';
+        }
         return (this.isBangla ? (emp.motherOrgLocationNameBN || emp.motherOrgLocationName) : emp.motherOrgLocationName) || '';
     }
 
@@ -743,15 +748,34 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             : ['Ser', 'Service ID', 'Rank', 'Trade', 'Name', 'Own District', 'Previous Workplace', 'Transfer Unit', 'RAB ID', 'Remarks'];
         // Column widths in DXA – must sum to full content width (page 12240 - margins 567*2 = 11106)
         //         Ser  SvcID  Rank  Trade  Name   OwnDist PrevWk TrUnit RabID Remarks
-        const colW = [630, 1200, 860, 974, 1374, 1260, 1374, 1374, 1030, 1030];
+        const colW = [580, 1100, 860, 924, 2174, 1060, 1174, 1174, 1030, 1030];
 
-        const headerRow = new TableRow({
-            tableHeader: true,
-            children: cols.map((col, ci) => new TableCell({
-                children: [new Paragraph({ children: [new TextRun({ text: col, bold: true, size: 17, sizeComplexScript: bn ? 17 : undefined, font, language: lang })], alignment: AlignmentType.CENTER })],
-                borders: cellBorders, width: { size: colW[ci], type: WidthType.DXA }
-            }))
+        const hdrPara = (text: string) => new Paragraph({ children: [new TextRun({ text, bold: true, size: 17, sizeComplexScript: bn ? 17 : undefined, font, language: lang })], alignment: AlignmentType.CENTER });
+        const hdrCell = (text: string, ci: number, extra?: Partial<ConstructorParameters<typeof TableCell>[0]>) => new TableCell({
+            children: [hdrPara(text)], borders: cellBorders, width: { size: colW[ci], type: WidthType.DXA }, ...extra
         });
+
+        let headerRows: TableRow[];
+        if (this.isInterPosting) {
+            headerRows = [
+                new TableRow({ tableHeader: true, children: [
+                    ...cols.slice(0, 6).map((c, ci) => hdrCell(c, ci, { verticalMerge: VerticalMergeType.RESTART })),
+                    new TableCell({
+                        children: [hdrPara(bn ? 'বদলিকৃত কর্মস্থল' : 'Transfer Station')],
+                        columnSpan: 2, borders: cellBorders, width: { size: colW[6] + colW[7], type: WidthType.DXA }
+                    }),
+                    ...cols.slice(8).map((c, ci) => hdrCell(c, ci + 8, { verticalMerge: VerticalMergeType.RESTART }))
+                ]}),
+                new TableRow({ tableHeader: true, children: [
+                    ...[0,1,2,3,4,5].map(ci => new TableCell({ children: [new Paragraph({})], verticalMerge: VerticalMergeType.CONTINUE, borders: cellBorders, width: { size: colW[ci], type: WidthType.DXA } })),
+                    hdrCell(bn ? 'হইতে' : 'From', 6),
+                    hdrCell(bn ? 'প্রতি' : 'To', 7),
+                    ...[8,9].map(ci => new TableCell({ children: [new Paragraph({})], verticalMerge: VerticalMergeType.CONTINUE, borders: cellBorders, width: { size: colW[ci], type: WidthType.DXA } }))
+                ]})
+            ];
+        } else {
+            headerRows = [new TableRow({ tableHeader: true, children: cols.map((col, ci) => hdrCell(col, ci)) })];
+        }
 
         const dataRows = this.filteredEmployees.map((emp, i) => new TableRow({
             children: [
@@ -774,7 +798,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         }));
 
         // Master remarks row (spans all columns, left-aligned)
-        const allRows = [headerRow, ...dataRows];
+        const allRows = [...headerRows, ...dataRows];
         if (this.masterRemarks) {
             allRows.push(new TableRow({
                 children: [new TableCell({
@@ -816,12 +840,10 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         const noBorders = { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder };
 
         const sigCellChildren: Paragraph[] = [];
-        if (this.approverSignatureUrl) {
-            sigCellChildren.push(new Paragraph({
-                children: [new ImageRun({ type: 'png', data: this.dataUrlToUint8Array(this.approverSignatureUrl), transformation: { width: 150, height: 50 } })],
-                spacing: { before: 200 }
-            }));
-        }
+        sigCellChildren.push(new Paragraph({
+            children: [new TextRun({ text: 'স্বাক্ষরিত/-', size: 20, sizeComplexScript: csSize, font, language: lang })],
+            spacing: { before: 200 }
+        }));
         sigCellChildren.push(
             new Paragraph({ children: [new TextRun({ text: approverNameText, size: 20, sizeComplexScript: csSize, font, language: lang })] }),
             new Paragraph({ children: [new TextRun({ text: approverRankText, size: 20, sizeComplexScript: csSize, font, language: lang })] }),
@@ -865,13 +887,4 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         });
     }
 
-    private dataUrlToUint8Array(dataUrl: string): Uint8Array {
-        const base64 = dataUrl.split(',')[1];
-        const binary = atob(base64);
-        const array = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) {
-            array[i] = binary.charCodeAt(i);
-        }
-        return array;
-    }
 }

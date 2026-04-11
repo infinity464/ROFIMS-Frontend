@@ -208,6 +208,22 @@
           }
         </div>
 
+        <!-- Reference Employee(s) (full row) -->
+        <div class="ns-gen-field ns-gen-full">
+          <label class="ns-gen-label">Reference Employee(s)</label>
+          <p-multiselect
+            formControlName="referenceEmployeeIds"
+            [options]="referenceEmployeeOptionsDisplay"
+            optionLabel="label"
+            optionValue="value"
+            [filter]="true"
+            filterBy="label"
+            [showClear]="true"
+            placeholder="Select Reference Employee(s)"
+            styleClass="w-full">
+          </p-multiselect>
+        </div>
+
         <!-- Supporting Documents (full row) -->
         <div class="ns-gen-field ns-gen-full">
           <label class="ns-gen-label">Supporting Documents</label>
