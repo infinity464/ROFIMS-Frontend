@@ -1,6 +1,262 @@
 $section-margin: 1rem;
 
 .ex-member-profile-page {
+    padding: 1.5rem 1.75rem;
+}
+
+/* ═══ Action bar ═══ */
+.sp-action-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.sp-page-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin: 0;
+    line-height: 1.3;
+}
+
+.sp-action-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto;
+}
+
+.sp-btn {
+    height: 34px;
+    padding: 0 14px;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--surface-border);
+    background: var(--surface-card);
+    color: var(--text-color);
+    transition: border-color 0.18s, box-shadow 0.18s;
+
+    i { font-size: 0.8rem; }
+
+    &:hover {
+        border-color: var(--text-color-secondary);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+}
+
+.sp-btn-sm {
+    height: 28px;
+    padding: 0 10px;
+    font-size: 0.75rem;
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+    i { font-size: 0.7rem; }
+
+    &:hover {
+        background: var(--primary-color);
+        color: var(--primary-color-text, #fff);
+        border-color: var(--primary-color);
+    }
+}
+
+.sp-btn-export { font-weight: 600; }
+
+/* ═══ Hero ═══ */
+.sp-hero {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding-bottom: 1.5rem;
+}
+
+.sp-photo-box {
+    flex-shrink: 0;
+    width: 96px;
+    height: 108px;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--surface-border);
+    background: var(--surface-card);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sp-photo-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 20%;
+}
+
+.sp-photo-placeholder {
+    color: var(--text-color-secondary);
+    font-size: 3.5rem;
+    line-height: 1;
+}
+
+.sp-hero-name {
+    flex: 1;
+    font-size: 1.35rem;
+    font-weight: 700;
+    line-height: 1.3;
+    min-width: 0;
+}
+
+.sp-hero-ids {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    flex-shrink: 0;
+    align-items: flex-end;
+}
+
+.sp-id-block {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.sp-id-label {
+    font-size: 0.66rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--text-color-secondary);
+    text-transform: uppercase;
+    margin-bottom: 0.1rem;
+}
+
+.sp-id-value {
+    font-size: 1.3rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+/* ═══ Sections ═══ */
+.sp-section {
+    padding: 1.25rem 0;
+    border-top: 1px solid var(--surface-border);
+}
+
+.sp-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.85rem;
+}
+
+.sp-section-heading {
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--text-color-secondary);
+    text-transform: uppercase;
+}
+
+/* ═══ Two-column grid ═══ */
+.sp-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    align-items: start;
+
+    > *:first-child {
+        padding-right: 1.5rem;
+        border-right: 1px solid var(--surface-border);
+    }
+
+    > *:last-child {
+        padding-left: 1.5rem;
+    }
+}
+
+/* ═══ Field rows ═══ */
+.sp-field-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.sp-field {
+    display: grid;
+    grid-template-columns: 170px 1fr;
+    gap: 1rem;
+    align-items: baseline;
+    padding: 0.45rem 0;
+    border-bottom: 1px solid var(--surface-100, rgba(128, 128, 128, 0.08));
+
+    &:last-child {
+        border-bottom: none;
+    }
+}
+
+.sp-field-label {
+    font-weight: 400;
+    color: var(--text-color-secondary);
+    font-size: 0.85rem;
+}
+
+.sp-field-value {
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--text-color);
+}
+
+/* ═══ Address type heading ═══ */
+.sp-addr-type {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    color: var(--text-color-secondary);
+    text-transform: uppercase;
+    padding-bottom: 0.35rem;
+    margin-bottom: 0.1rem;
+    border-bottom: 1px solid var(--surface-100, rgba(128, 128, 128, 0.08));
+}
+
+/* ═══ Responsive ═══ */
+@media (max-width: 768px) {
+    .ex-member-profile-page {
+        padding: 1rem;
+    }
+
+    .sp-hero {
+        flex-wrap: wrap;
+    }
+
+    .sp-hero-ids {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .sp-id-block {
+        align-items: flex-start;
+    }
+
+    .sp-grid {
+        grid-template-columns: 1fr;
+        gap: 1.25rem 0;
+
+        > *:first-child {
+            padding-right: 0;
+            border-right: none;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--surface-border);
+        }
+
+        > *:last-child {
+            padding-left: 0;
+        }
+    }
+
+    .sp-field {
+        grid-template-columns: 140px 1fr;
+    }
 }
 
 .profile-header {
@@ -125,7 +381,8 @@ $section-margin: 1rem;
     min-width: 0;
 }
 
-.family-table-wrapper {
+.family-table-wrapper,
+.sp-table-wrap {
     overflow-x: auto;
 }
 

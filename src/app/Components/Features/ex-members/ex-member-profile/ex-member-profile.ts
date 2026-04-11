@@ -25,9 +25,10 @@ import { RftsTrainingRow } from '@/models/draft-course.model';
 import { PromotionInfoService, PromotionInfoByEmployeeView } from '@/services/promotion-info.service';
 import { EmployeePersonalServiceOverview } from '@/models/employee-personal-service-overview.model';
 import { LocationType } from '@/models/enums';
+import { PresentStatusInfoService } from '@/services/present-status-info.service';
 import { DialogModule } from 'primeng/dialog';
 import { TooltipModule } from 'primeng/tooltip';
-import { PROFILE_LABELS, type ProfileLang } from '@/Core/i18n/profile-labels';
+import { PROFILE_LABELS, type ProfileLabelKey, type ProfileLang } from '@/Core/i18n/profile-labels';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import { EmpPersonalInfo } from '@/Components/Features/Emp/emp-personal-info/emp-personal-info';
 import { EmpAddressInfo } from '@/Components/Features/Emp/emp-address-info/emp-address-info';
@@ -95,6 +96,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
     previousYearSummaryDialogVisible = false;
     previousYearSummaryLoading = false;
     loading = false;
+    activePresentStatus: string | null = null;
 
     /** Which section is in edit mode; null = all view. Only one section at a time. */
     editingSection: string | null = null;
@@ -122,7 +124,8 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         private draftCourseService: DraftCourseService,
         private messageService: MessageService,
         private empService: EmpService,
-        private exportService: ExportService
+        private exportService: ExportService,
+        private presentStatusInfoService: PresentStatusInfoService
     ) {}
 
     @HostListener('document:click')
@@ -425,6 +428,12 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         return this.profileLang === 'bn';
     }
 
+    get translatedPresentStatus(): string | null {
+        if (!this.activePresentStatus) return null;
+        const key = `presentStatus.${this.activePresentStatus}` as ProfileLabelKey;
+        return this.L[key] ?? this.activePresentStatus;
+    }
+
     toggleProfileLang(): void {
         this.profileLang = this.profileLang === 'en' ? 'bn' : 'en';
     }
@@ -562,9 +571,10 @@ export class ExMemberProfile implements OnInit, OnDestroy {
             course: this.courseInfoService.getViewByEmployeeId(id),
             promotion: this.promotionInfoService.getViewByEmployeeId(id),
             documents: this.empService.getEmployeeDocumentReferences(id).pipe(catchError(() => of([]))),
-            rftsTraining: this.draftCourseService.getRftsTrainingByEmployeeId(id).pipe(catchError(() => of([])))
+            rftsTraining: this.draftCourseService.getRftsTrainingByEmployeeId(id).pipe(catchError(() => of([]))),
+            presentStatus: this.presentStatusInfoService.getAllByEmployeeId(id).pipe(catchError(() => of([])))
         }).subscribe({
-            next: ({ profile, family, previousRab, bankAcc, education, foreignVisit, leaveCurrentYear, additionalRemarks, address, moServHistory, discipline, course, promotion, documents, rftsTraining }) => {
+            next: ({ profile, family, previousRab, bankAcc, education, foreignVisit, leaveCurrentYear, additionalRemarks, address, moServHistory, discipline, course, promotion, documents, rftsTraining, presentStatus }) => {
                 this.profile = profile;
                 this.familyList = family ?? [];
                 this.loadProfileImage(profile);
@@ -581,6 +591,13 @@ export class ExMemberProfile implements OnInit, OnDestroy {
                 this.promotionList = promotion ?? [];
                 this.documentList = documents ?? [];
                 this.rftsTrainingList = rftsTraining ?? [];
+                const activeRecord = (presentStatus ?? []).find((r: any) => (r.IsActive ?? r.isActive));
+                if (activeRecord) {
+                    const statusValue = activeRecord.PresentStatusType ?? activeRecord.presentStatusType;
+                    this.activePresentStatus = statusValue || null;
+                } else {
+                    this.activePresentStatus = null;
+                }
                 this.loading = false;
                 onComplete?.();
             },
@@ -747,13 +764,20 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         this.previousYearSummaryDialogVisible = false;
     }
 
+    getInitials(name: string | null | undefined): string {
+        if (!name) return '?';
+        const parts = name.trim().split(/\s+/);
+        if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+        return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+    }
+
     getFormattedName(profile: EmployeePersonalServiceOverview | null): string {
         if (!profile) return '-';
         const namePart = this.isBn ? (profile.nameBN ?? profile.nameEnglish) : profile.nameEnglish;
         const deco = this.isBn ? (profile.gallantryAwardsDecorationBN ?? profile.gallantryAwardsDecoration) : profile.gallantryAwardsDecoration;
         const prof = this.isBn ? (profile.professionalQualificationBN ?? profile.professionalQualification) : profile.professionalQualification;
         const crps = this.isBn ? (profile.corpsBN ?? profile.corps) : profile.corps;
-        return [namePart, deco, prof, crps].filter((value) => value && String(value).trim() !== '').join(', ');
+        return [namePart, deco, prof, crps].filter((value) => value && String(value).trim() !== '' && String(value).trim() !== 'N/A').join(', ');
     }
 
     getDocumentSourceLabel(row: { sourceTable?: string; SourceTable?: string }): string {
