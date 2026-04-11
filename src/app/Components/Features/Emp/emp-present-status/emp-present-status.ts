@@ -242,7 +242,7 @@ export class EmpPresentStatus implements OnInit {
     loadDropdownData(): void {
         // Load Absent Types
         this.commonCodeService.getAllActiveCommonCodesType('AbsentType').subscribe({
-            next: (data) => (this.absentTypes = data.map((d) => ({ label: d.codeValueEN, value: d.codeValueEN }))),
+            next: (data) => (this.absentTypes = data.map((d) => ({ label: d.codeValueEN, value: d.codeId }))),
             error: (err) => console.error('Failed to load absent types', err)
         });
 
