@@ -23,7 +23,8 @@ import { forkJoin, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import {
     Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
-    WidthType, BorderStyle, AlignmentType, PageOrientation, ImageRun
+    WidthType, BorderStyle, AlignmentType, PageOrientation, ImageRun,
+    VerticalAlign, TableLayoutType, HeightRule
 } from 'docx';
 import { saveAs } from 'file-saver';
 import type {
@@ -1109,22 +1110,76 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
             }
         }
 
-        // Title paragraphs — inside the page border at the top
-        const titleChildren: (Paragraph | Table)[] = [
+        // Title paragraphs — placed at top of the left (main) cell, INSIDE the outer border
+        const titleChildren: Paragraph[] = [
             new Paragraph({
                 children: [new TextRun({ text: 'NOTE SHEET', bold: true, underline: {}, size: 24, font: 'Times New Roman' })],
-                alignment: AlignmentType.CENTER, spacing: { before: 80, after: 40 }
+                alignment: AlignmentType.CENTER, spacing: { before: 80, after: 40 }, keepNext: true
             }),
             new Paragraph({
                 children: [new TextRun({ text: 'মন্তব্য পত্র', underline: {}, size: 24, font: 'Nirmala UI' })],
-                alignment: AlignmentType.CENTER, spacing: { after: 100 }
+                alignment: AlignmentType.CENTER, spacing: { after: 100 }, keepNext: true
             }),
         ];
 
-        const docChildren: (Paragraph | Table)[] = [...titleChildren, ...mainChildren];
+        // Sanglagni (right narrow column) header content
+        const sanglagniChildren: Paragraph[] = bn
+            ? [
+                new Paragraph({
+                    children: [new TextRun({ text: 'সংলগ্নী', size: 20, sizeComplexScript: csSize, font, language: lang })],
+                    alignment: AlignmentType.CENTER, spacing: { before: 120, after: 0 }
+                }),
+                new Paragraph({
+                    children: [new TextRun({ text: 'নং', size: 20, sizeComplexScript: csSize, font, language: lang })],
+                    alignment: AlignmentType.CENTER, spacing: { before: 0, after: 0 }
+                })
+            ]
+            : [
+                new Paragraph({
+                    children: [new TextRun({ text: 'Encl.', size: 20, font: 'Times New Roman' })],
+                    alignment: AlignmentType.CENTER, spacing: { before: 120, after: 0 }
+                }),
+                new Paragraph({
+                    children: [new TextRun({ text: 'No.', size: 20, font: 'Times New Roman' })],
+                    alignment: AlignmentType.CENTER, spacing: { before: 0, after: 0 }
+                })
+            ];
 
-        // Use page borders so every page renders the same border consistently
-        const pageBorder = { style: BorderStyle.SINGLE, size: 6, color: '000000', space: 10 };
+        // Outer bordered table: main cell (wide) | sanglagni cell (narrow)
+        // Legal page 12240w − margins 400×2 = 11440 usable → split ~10640 + 800
+        // HeightRule.ATLEAST makes the row tall enough so the outer borders span the full page
+        // When content exceeds the row, Word splits the row across pages and re-draws the
+        // table borders (top/bottom/left/right) on every page piece.
+        const noBorder = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' } as const;
+        const thickBorder = { style: BorderStyle.SINGLE, size: 12, color: '000000' } as const;
+        const rowHeight = 19200; // ≈ full legal page content height (20160 − top/bottom margins)
+
+        const outerTable = new Table({
+            layout: TableLayoutType.FIXED,
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            columnWidths: [10640, 800],
+            rows: [new TableRow({
+                cantSplit: false,
+                height: { value: rowHeight, rule: HeightRule.ATLEAST },
+                children: [
+                    new TableCell({
+                        width: { size: 10640, type: WidthType.DXA },
+                        borders: { top: thickBorder, bottom: thickBorder, left: thickBorder, right: noBorder },
+                        margins: { top: 60, bottom: 60, left: 120, right: 120 },
+                        verticalAlign: VerticalAlign.TOP,
+                        children: [...titleChildren, ...mainChildren]
+                    }),
+                    new TableCell({
+                        width: { size: 800, type: WidthType.DXA },
+                        borders: { top: thickBorder, bottom: thickBorder, left: thickBorder, right: thickBorder },
+                        verticalAlign: VerticalAlign.TOP,
+                        children: sanglagniChildren
+                    })
+                ]
+            })]
+        });
+
+        const docChildren: (Paragraph | Table)[] = [outerTable];
 
         return new Document({
             styles: bn ? { default: { document: { run: { language: { value: 'bn-BD', bidirectional: 'bn-BD' } } } } } : undefined,
@@ -1132,13 +1187,7 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
                 properties: {
                     page: {
                         size: { width: 12240, height: 20160, orientation: PageOrientation.PORTRAIT },
-                        margin: { top: 567, right: 567, bottom: 567, left: 567 },
-                        borders: {
-                            pageBorderTop: pageBorder,
-                            pageBorderBottom: pageBorder,
-                            pageBorderLeft: pageBorder,
-                            pageBorderRight: pageBorder,
-                        },
+                        margin: { top: 400, right: 400, bottom: 400, left: 400 }
                     }
                 },
                 children: docChildren
