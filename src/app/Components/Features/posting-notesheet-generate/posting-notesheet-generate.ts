@@ -473,15 +473,20 @@ export class PostingNotesheetGenerateComponent implements OnInit {
                 }
                 const api = `${environment.apis.core}/NoteSheetInfo`;
                 const endpoint = this.editMode && this.editId != null ? '/UpdateAsyn' : '/SaveAsyn';
-                this.http.post(api + endpoint, payload).subscribe({
-                    next: () => {
+                this.http.post<{ statusCode?: number; description?: string; data?: any }>(api + endpoint, payload).subscribe({
+                    next: (resp) => {
                         this.messageService.add({
                             severity: 'success',
                             summary: 'Note Sheet',
                             detail: this.editMode ? 'Note Sheet updated successfully.' : 'Note Sheet generated successfully.'
                         });
                         this.isSubmitting = false;
-                        if (this.editMode) {
+                        const savedId = this.editMode && this.editId != null
+                            ? this.editId
+                            : (resp?.data?.noteSheetId ?? resp?.data?.NoteSheetId ?? null);
+                        if (savedId != null && savedId > 0) {
+                            this.router.navigate(['/notesheet-preview/posting'], { queryParams: { id: savedId } });
+                        } else if (this.editMode) {
                             this.router.navigate(['/notesheet-list/draft']);
                         } else {
                             this.resetForm();

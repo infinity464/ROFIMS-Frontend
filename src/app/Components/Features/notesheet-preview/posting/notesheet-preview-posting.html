@@ -1,4 +1,5 @@
 <p-toast position="top-center"></p-toast>
+<p-confirmDialog></p-confirmDialog>
 
 <div class="preview-page">
 
@@ -10,6 +11,16 @@
             <p-button *ngIf="showWord && !editing" icon="pi pi-file-word" label="Word"  (onClick)="exportWord()" styleClass="p-button-outlined"></p-button>
             <p-button *ngIf="showPdf && !editing" icon="pi pi-file-pdf"  label="PDF"   (onClick)="exportPdf()" [loading]="exportingPdf" styleClass="p-button-outlined"></p-button>
             <p-button *ngIf="!editing" icon="pi pi-print" label="Print Preview" (onClick)="printPreview()" [loading]="printingPreview" styleClass="p-button-outlined"></p-button>
+        </div>
+        <div class="preview-status-actions" *ngIf="noteSheet && !loading && !error && !editing">
+            @if (isDraftStatus) {
+                <p-button icon="pi pi-send" label="Submit" severity="success" [outlined]="true" [loading]="submitting"
+                          pTooltip="Submit for approval" (onClick)="submitForApproval()"></p-button>
+            } @else {
+                <span class="ns-status-badge ns-status-badge--pending">
+                    <i class="pi pi-clock"></i> {{ currentStatusLabel }}
+                </span>
+            }
         </div>
     </div>
 

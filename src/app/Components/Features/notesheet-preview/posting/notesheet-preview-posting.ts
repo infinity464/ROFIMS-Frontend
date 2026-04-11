@@ -1,9 +1,10 @@
 import { AfterViewChecked, ChangeDetectorRef, Component, ElementRef, Input, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { MessageService } from 'primeng/api';
+import { ConfirmationService, MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { ToastModule } from 'primeng/toast';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
@@ -14,7 +15,8 @@ import { NotesheetSignatoryComponent } from '@/Components/Common/notesheet-signa
 import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor';
 import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/file-references-form/file-references-form';
 import { NotesheetPreviewBase } from '../notesheet-preview-base';
-import { NoteSheetCurrentStatus, NoteSheetOperationTypeOptions, ApprovalStatus } from '@/models/enums';
+import { NoteSheetCurrentStatus, NoteSheetCurrentStatusOptions, NoteSheetOperationTypeOptions, ApprovalStatus } from '@/models/enums';
+import { SharedService } from '@/shared/services/shared-service';
 import { DraftPostingEmployeeRow } from '@/models/posting.model';
 import { environment } from '@/Core/Environments/environment';
 import { forkJoin } from 'rxjs';
@@ -34,11 +36,11 @@ import type {
     selector: 'app-notesheet-preview-posting',
     standalone: true,
     imports: [
-        CommonModule, FormsModule, ButtonModule, ToastModule, TooltipModule,
+        CommonModule, FormsModule, ButtonModule, ToastModule, ConfirmDialogModule, TooltipModule,
         InputTextModule, TextareaModule, SelectModule, MultiSelectModule, DatePickerModule,
         NotesheetSignatoryComponent, RichEditorComponent, FileReferencesFormComponent
     ],
-    providers: [MessageService],
+    providers: [MessageService, ConfirmationService],
     templateUrl: './notesheet-preview-posting.html',
     styleUrl: '../notesheet-preview.scss'
 })
@@ -49,6 +51,12 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     @ViewChild('pagesContainer') pagesContainer!: ElementRef<HTMLDivElement>;
 
     private cdr = inject(ChangeDetectorRef);
+    private confirmationService = inject(ConfirmationService);
+    private sharedService = inject(SharedService);
+
+    // ── Submit for approval state ─────────────────────────────
+    submitting = false;
+    readonly NoteSheetCurrentStatus = NoteSheetCurrentStatus;
 
     // ── Pagination ─────────────────────────────────────────────
     pageOffsets: number[] = [0];
@@ -111,6 +119,56 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
 
     get isInitiatorStatus(): boolean {
         return this.noteSheet?.currentStatus?.toLowerCase() === NoteSheetCurrentStatus.Initiator;
+    }
+
+    /** Human-readable label for current status, used by the top-right status chip in preview */
+    get currentStatusLabel(): string {
+        const status = this.noteSheet?.currentStatus?.toLowerCase() ?? '';
+        if (!status) return '';
+        return NoteSheetCurrentStatusOptions.find(o => o.value === status)?.label ?? status;
+    }
+
+    // ── Submit for approval (from preview top-right) ─────────
+    submitForApproval(): void {
+        if (!this.noteSheet || this.submitting) return;
+        this.confirmationService.confirm({
+            message: 'Do you want to submit this note-sheet for approval process?',
+            header: 'Submit for Approval',
+            acceptLabel: 'Submit',
+            rejectLabel: 'Cancel',
+            acceptButtonStyleClass: 'p-button-success',
+            accept: () => this.doSubmitForApproval()
+        });
+    }
+
+    private doSubmitForApproval(): void {
+        if (!this.noteSheet) return;
+        this.submitting = true;
+        const req = {
+            NoteSheetId: this.noteSheet.noteSheetId,
+            LastUpdatedBy: this.sharedService.getCurrentUser?.() ?? 'system'
+        };
+        this.http.post<{ statusCode?: number; StatusCode?: number; description?: string; Description?: string }>(
+            `${this.api}/SubmitForApproval`, req, { observe: 'response' }
+        ).subscribe({
+            next: (resp) => {
+                this.submitting = false;
+                const body = resp.body;
+                const code = body?.statusCode ?? body?.StatusCode;
+                const msg = body?.description ?? body?.Description;
+                if (resp.status >= 200 && resp.status < 300 && (code == null || code === 200)) {
+                    this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Submitted for approval.' });
+                    this.reloadNoteSheet();
+                } else {
+                    this.messageService.add({ severity: 'warn', summary: 'Submit for approval', detail: msg || 'Submit failed.' });
+                }
+            },
+            error: (err) => {
+                this.submitting = false;
+                const detail = err?.error?.description ?? err?.error?.Description ?? err?.error?.message ?? err?.message ?? 'Submit failed.';
+                this.messageService.add({ severity: 'error', summary: 'Error', detail });
+            }
+        });
     }
 
     // ── Pagination logic ──────────────────────────────────────
