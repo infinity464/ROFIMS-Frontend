@@ -62,7 +62,7 @@ export class PendingPostingJoiningComponent implements OnInit {
 
     loadPending(): void {
         this.loading = true;
-        this.postingService.getPendingPostingJoining().subscribe({
+        this.postingService.getPendingPostingJoining('NewPosting').subscribe({
             next: (data) => {
                 this.allRows = data ?? [];
                 this.buildFilterOptions();
