@@ -9,7 +9,7 @@
                 <p-button icon="pi pi-file-word" label="Word" (onClick)="exportWord()" styleClass="p-button-outlined"></p-button>
                 <p-button icon="pi pi-file-pdf" label="PDF" (onClick)="exportPdf()" [loading]="exportingPdf" styleClass="p-button-outlined"></p-button>
                 <p-button icon="pi pi-print" label="Print Preview" (onClick)="printPreview()" [loading]="printingPreview" styleClass="p-button-outlined"></p-button>
-                <p-button *ngIf="canEdit" icon="pi pi-pencil" label="Edit" severity="warn" [outlined]="true" (onClick)="toggleEdit()"></p-button>
+                <p-button *ngIf="canEdit" icon="pi pi-pencil" label="Edit" [outlined]="true" (onClick)="toggleEdit()"></p-button>
             </ng-container>
             <ng-container *ngIf="editing">
                 <p-button icon="pi pi-times" label="Cancel" severity="secondary" [outlined]="true" (onClick)="cancelEdit()"></p-button>
@@ -187,6 +187,24 @@
         </div>
     </div>
 
+    <!-- Per-unit filter chips (shown only when the order has employees in more than one transfer unit) -->
+    <div class="unit-filter-bar no-print" *ngIf="!editing && !loading && !error && hasMultipleTransferUnits">
+        <span class="unit-filter-label">{{ isBangla ? 'বদলিকৃত কর্মস্থল ফিল্টার:' : 'Transfer Unit:' }}</span>
+        <p-button
+            [label]="isBangla ? 'সব' : 'All'"
+            size="small"
+            [outlined]="selectedFilterUnitId !== null"
+            (onClick)="selectFilterUnit(null)"
+        ></p-button>
+        <p-button
+            *ngFor="let u of availableTransferUnits"
+            [label]="u.name"
+            size="small"
+            [outlined]="selectedFilterUnitId !== u.id"
+            (onClick)="selectFilterUnit(u.id)"
+        ></p-button>
+    </div>
+
     <div class="legal-paper-container" *ngIf="!editing && !loading && !error && employees.length > 0">
         <div class="legal-paper">
           <div class="po-doc-box">
@@ -256,7 +274,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr *ngFor="let emp of employees; let i = index">
+                    <tr *ngFor="let emp of filteredEmployees; let i = index">
                         <td class="text-center">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}</td>
                         <td class="font-semibold">{{ empServiceId(emp) }}</td>
                         <td>{{ empRank(emp) }}</td>
@@ -297,8 +315,8 @@
             </div>
 
             <!-- Footer Paragraphs -->
-            <div class="po-doc-footer-text" *ngIf="footerParagraphs.length > 0">
-                <p *ngFor="let para of footerParagraphs; let i = index">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}। {{ para }}</p>
+            <div class="po-doc-footer-text" *ngIf="filteredFooterParagraphs.length > 0">
+                <p *ngFor="let para of filteredFooterParagraphs; let i = index">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}। {{ para.text }}</p>
             </div>
 
           </div><!-- /po-doc-box -->

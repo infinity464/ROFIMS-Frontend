@@ -77,8 +77,17 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     masterRemarks = '';
     noteSheetNo = '';
     referenceNumber = '';
-    footerParagraphs: string[] = [];
+    footerParagraphs: FooterParagraph[] = [];
     postingText = '';
+
+    /** Per-unit filter: null = "All units" (default), otherwise the transferRabUnitId to show. */
+    selectedFilterUnitId: number | null = null;
+
+    // Memoized derivations of `employees` / `footerParagraphs` / `selectedFilterUnitId`.
+    // Kept as plain fields (not getters) so template bindings don't allocate per CD tick.
+    availableTransferUnits: TransferUnitOption[] = [];
+    filteredEmployees: PostingOrderEmployeeRow[] = [];
+    filteredFooterParagraphs: FooterParagraph[] = [];
 
     // Raw master data kept for edit-mode re-parsing.
     private currentOrderId: number | null = null;
@@ -194,29 +203,13 @@ export class PostingOrderPreviewPageComponent implements OnInit {
 
                     this.rawFooterText = first.footerText ?? null;
 
-                    // Parse footer paragraphs – supports:
-                    //  • legacy JSON string array  ["para1", "para2"]
-                    //  • new JSON object array     [{ text, transferRabUnitId, transferRabUnitName }, ...]
-                    //  • plain newline-separated text
-                    if (first.footerText) {
-                        try {
-                            const parsed = JSON.parse(first.footerText);
-                            if (Array.isArray(parsed)) {
-                                this.footerParagraphs = parsed.map((item: any) =>
-                                    typeof item === 'string'
-                                        ? item
-                                        : (item && typeof item.text === 'string' ? item.text : String(item ?? ''))
-                                );
-                            } else {
-                                this.footerParagraphs = [String(parsed)];
-                            }
-                        } catch {
-                            // Not valid JSON – treat as plain text, split by newlines
-                            this.footerParagraphs = first.footerText.split('\n').filter((l: string) => l.trim());
-                        }
-                    } else {
-                        this.footerParagraphs = [];
-                    }
+                    // Parse footer paragraphs into FooterParagraph objects (keeps unit linkage for per-unit filtering).
+                    this.footerParagraphs = this.parseFooterParagraphs(this.rawFooterText);
+
+                    // Reset per-unit filter whenever a new order is loaded, then prime the memoized caches.
+                    this.selectedFilterUnitId = null;
+                    this.availableTransferUnits = this.computeTransferUnits(this.employees);
+                    this.applyFilter();
 
                     // Load final approver info from notesheet
                     if (first.noteSheetId) {
@@ -330,21 +323,14 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             : this.formatDate(this.postingOrderDate);
     }
 
-    /** "নোট-শিট নং: NS-2026-01 তারিখ: ১১ এপ্রিল ২০২৬" / "Note-Sheet No: ... Date: ..." */
+    /** NoteSheet number + final approval date, shown after the bold "সূত্রঃ / Reference:" label. */
     get referenceLine(): string {
         const no = (this.noteSheetNo ?? '').trim();
         if (!no) return '';
         const dateStr = this.noteSheetApprovalDate
             ? (this.isBangla ? this.formatDateBangla(this.noteSheetApprovalDate) : this.formatDate(this.noteSheetApprovalDate))
             : '';
-        if (this.isBangla) {
-            return dateStr
-                ? `নোট-শিট নং: ${no}, ${dateStr}`
-                : `নোট-শিট নং: ${no}`;
-        }
-        return dateStr
-            ? `Note-Sheet No: ${no}, ${dateStr}`
-            : `Note-Sheet No: ${no}`;
+        return dateStr ? `${no}, ${dateStr}` : no;
     }
 
     formatDate(value: string | null | undefined): string {
@@ -404,6 +390,61 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         return emp.rabID || '';
     }
 
+    // ─── Per-unit filter (preview & export) ──────────────
+
+    /** Shared helper: collect unique transfer (RAB) units from a list of employees. */
+    private computeTransferUnits(rows: PostingOrderEmployeeRow[]): TransferUnitOption[] {
+        const map = new Map<number, string>();
+        for (const e of rows) {
+            if (e.transferRabUnitId != null && !map.has(e.transferRabUnitId)) {
+                const name = this.isBangla
+                    ? (e.transferRabUnitNameBN || e.transferRabUnitName || '')
+                    : (e.transferRabUnitName || '');
+                map.set(e.transferRabUnitId, name);
+            }
+        }
+        return Array.from(map, ([id, name]) => ({ id, name }));
+    }
+
+    get hasMultipleTransferUnits(): boolean {
+        return this.availableTransferUnits.length > 1;
+    }
+
+    /** Recompute `filteredEmployees` and `filteredFooterParagraphs` from the current filter. */
+    private applyFilter(): void {
+        if (this.selectedFilterUnitId == null) {
+            this.filteredEmployees = this.employees;
+            this.filteredFooterParagraphs = this.footerParagraphs;
+            return;
+        }
+        const unitId = this.selectedFilterUnitId;
+        this.filteredEmployees = this.employees.filter(e => e.transferRabUnitId === unitId);
+        // Paragraphs without a linked unit (`transferRabUnitId` null) are always shown.
+        this.filteredFooterParagraphs = this.footerParagraphs.filter(p =>
+            p.transferRabUnitId == null || p.transferRabUnitId === unitId
+        );
+    }
+
+    selectFilterUnit(unitId: number | null): void {
+        this.selectedFilterUnitId = unitId;
+        this.applyFilter();
+    }
+
+    /** Label of the currently selected unit, used in filenames and the chip bar. */
+    get selectedFilterUnitName(): string {
+        if (this.selectedFilterUnitId == null) return '';
+        const match = this.availableTransferUnits.find(u => u.id === this.selectedFilterUnitId);
+        return match?.name ?? '';
+    }
+
+    /** Slug-ified version of the selected unit name for export filenames. */
+    private get exportFileSuffix(): string {
+        const name = this.selectedFilterUnitName;
+        if (!name) return '';
+        // Keep it safe for filenames – strip anything that isn't a letter, digit, dash or underscore.
+        return '_' + name.replace(/[^\p{L}\p{N}_-]+/gu, '_');
+    }
+
     // ─── Edit mode ────────────────────────────────────────
 
     /** Can edit if status is Draft (or empty/unknown). */
@@ -414,16 +455,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
 
     /** Unique transfer (RAB) units from currently-loaded edit employees. */
     get editAvailableTransferUnits(): TransferUnitOption[] {
-        const map = new Map<number, string>();
-        for (const e of this.editEmployees) {
-            if (e.transferRabUnitId != null && !map.has(e.transferRabUnitId)) {
-                const name = this.isBangla
-                    ? (e.transferRabUnitNameBN || e.transferRabUnitName || '')
-                    : (e.transferRabUnitName || '');
-                map.set(e.transferRabUnitId, name);
-            }
-        }
-        return Array.from(map, ([id, name]) => ({ id, name }));
+        return this.computeTransferUnits(this.editEmployees);
     }
 
     get editHasMultipleTransferUnits(): boolean {
@@ -590,15 +622,15 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     // ─── Export Word ──────────────────────────────────────
 
     async exportWord(): Promise<void> {
-        if (this.employees.length === 0) return;
+        if (this.filteredEmployees.length === 0) return;
         const doc = this.buildWordDocument();
-        saveAs(await Packer.toBlob(doc), `PostingOrder_${this.postingOrderNo || 'export'}.docx`);
+        saveAs(await Packer.toBlob(doc), `PostingOrder_${this.postingOrderNo || 'export'}${this.exportFileSuffix}.docx`);
     }
 
     // ─── Export PDF (backend Word-to-PDF conversion) ──────
 
     async exportPdf(): Promise<void> {
-        if (this.employees.length === 0) return;
+        if (this.filteredEmployees.length === 0) return;
         this.exportingPdf = true;
         try {
             const doc = this.buildWordDocument();
@@ -608,7 +640,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             const pdfBlob = await firstValueFrom(
                 this.http.post(`${environment.apis.core}/Document/ConvertToPdf`, form, { responseType: 'blob' })
             );
-            saveAs(pdfBlob, `PostingOrder_${this.postingOrderNo || 'export'}.pdf`);
+            saveAs(pdfBlob, `PostingOrder_${this.postingOrderNo || 'export'}${this.exportFileSuffix}.pdf`);
         } catch {
             this.messageService.add({ severity: 'error', summary: 'Export Error', detail: 'Failed to generate PDF.' });
         } finally {
@@ -619,7 +651,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     // ─── Print Preview (backend Word-to-PDF, open in new tab) ──
 
     async printPreview(): Promise<void> {
-        if (this.employees.length === 0) return;
+        if (this.filteredEmployees.length === 0) return;
         this.printingPreview = true;
         try {
             const doc = this.buildWordDocument();
@@ -720,7 +752,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             }))
         });
 
-        const dataRows = this.employees.map((emp, i) => new TableRow({
+        const dataRows = this.filteredEmployees.map((emp, i) => new TableRow({
             children: [
                 bn ? this.toBanglaDigits(String(i + 1)) : String(i + 1),
                 this.empServiceId(emp), this.empRank(emp), this.empTrade(emp), this.empName(emp),
@@ -811,9 +843,9 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             spacing: { before: 300 }
         });
 
-        // ── Footer paragraphs (10pt) ──
-        const footerParas = this.footerParagraphs.map((p, i) => new Paragraph({
-            children: [new TextRun({ text: `${bn ? this.toBanglaDigits(String(i + 1)) : (i + 1)}। ${p}`, size: 20, sizeComplexScript: csSize, font, language: lang })],
+        // ── Footer paragraphs (10pt) – only those linked to the selected unit (or all if no filter) ──
+        const footerParas = this.filteredFooterParagraphs.map((p, i) => new Paragraph({
+            children: [new TextRun({ text: `${bn ? this.toBanglaDigits(String(i + 1)) : (i + 1)}। ${p.text}`, size: 20, sizeComplexScript: csSize, font, language: lang })],
             spacing: { after: 100 }
         }));
 
