@@ -53,7 +53,15 @@ $section-margin: 1rem;
     height: 28px;
     padding: 0 10px;
     font-size: 0.75rem;
+    color: var(--primary-color);
+    border-color: var(--primary-color);
     i { font-size: 0.7rem; }
+
+    &:hover {
+        background: var(--primary-color);
+        color: var(--primary-color-text, #fff);
+        border-color: var(--primary-color);
+    }
 }
 
 .sp-btn-export { font-weight: 600; }
@@ -102,9 +110,10 @@ $section-margin: 1rem;
 
 .sp-hero-ids {
     display: flex;
-    gap: 1.75rem;
+    flex-direction: column;
+    gap: 0.35rem;
     flex-shrink: 0;
-    align-items: flex-start;
+    align-items: flex-end;
 }
 
 .sp-id-block {
@@ -114,7 +123,7 @@ $section-margin: 1rem;
 }
 
 .sp-id-label {
-    font-size: 0.65rem;
+    font-size: 0.66rem;
     font-weight: 600;
     letter-spacing: 0.08em;
     color: var(--text-color-secondary);
@@ -123,7 +132,7 @@ $section-margin: 1rem;
 }
 
 .sp-id-value {
-    font-size: 1.5rem;
+    font-size: 1.3rem;
     font-weight: 700;
     line-height: 1.2;
 }
@@ -142,9 +151,9 @@ $section-margin: 1rem;
 }
 
 .sp-section-heading {
-    font-size: 0.72rem;
+    font-size: 0.9rem;
     font-weight: 700;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
     color: var(--text-color-secondary);
     text-transform: uppercase;
 }

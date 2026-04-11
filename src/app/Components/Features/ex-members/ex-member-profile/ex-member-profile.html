@@ -3,11 +3,11 @@
 <div class="card ex-member-profile-page text-900">
     <!-- Action bar -->
     <div class="sp-action-bar">
-        <button type="button" class="sp-btn" (click)="goBack()">
-            <i class="pi pi-chevron-left"></i> Back
-        </button>
         <h1 class="sp-page-title">{{ L['pageTitle.exMember'] }}</h1>
         <div class="sp-action-right">
+            <button type="button" class="sp-btn" (click)="goBack()">
+                <i class="pi pi-chevron-left"></i> Back
+            </button>
             <button type="button" class="sp-btn" (click)="toggleProfileLang()">
                 {{ profileLang === 'en' ? 'বাংলা' : 'English' }}
             </button>
@@ -175,7 +175,7 @@
             <div class="sp-section-header">
                 <span class="sp-section-heading">{{ L['section.spouseAddress'] }}</span>
                 @if (editingSection !== 'spouseAddress') {
-                    <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('wifeAddress')"><i class="pi pi-pencil"></i> Edit</button>
+                    <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('spouseAddress')"><i class="pi pi-pencil"></i> Edit</button>
                 } @else {
                     <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
                 }
@@ -227,16 +227,7 @@
             <div class="sp-section-header">
                 <span class="sp-section-heading">{{ L['section.otherPersonal'] }}</span>
                 @if (editingSection !== 'otherPersonal') {
-                    <p-button
-                        [icon]="'pi pi-pencil'"
-                        label="Edit"
-                        [rounded]="true"
-                        [text]="true"
-                        severity="secondary"
-                        size="small"
-                        (onClick)="setEditingSection('otherPersonal')"
-                        pTooltip="Edit"
-                    ></p-button>
+                    <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('otherPersonal')"><i class="pi pi-pencil"></i> Edit</button>
                 } @else {
                     <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
                 }

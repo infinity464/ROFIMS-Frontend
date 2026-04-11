@@ -760,7 +760,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         const deco = this.isBn ? (profile.gallantryAwardsDecorationBN ?? profile.gallantryAwardsDecoration) : profile.gallantryAwardsDecoration;
         const prof = this.isBn ? (profile.professionalQualificationBN ?? profile.professionalQualification) : profile.professionalQualification;
         const crps = this.isBn ? (profile.corpsBN ?? profile.corps) : profile.corps;
-        return [namePart, deco, prof, crps].filter((value) => value && String(value).trim() !== '').join(', ');
+        return [namePart, deco, prof, crps].filter((value) => value && String(value).trim() !== '' && String(value).trim() !== 'N/A').join(', ');
     }
 
     getDocumentSourceLabel(row: { sourceTable?: string; SourceTable?: string }): string {
