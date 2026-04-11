@@ -24,11 +24,11 @@ import { DraftCourseService } from '@/services/draft-course.service';
 import { RftsTrainingRow } from '@/models/draft-course.model';
 import { PromotionInfoService, PromotionInfoByEmployeeView } from '@/services/promotion-info.service';
 import { EmployeePersonalServiceOverview } from '@/models/employee-personal-service-overview.model';
-import { LocationType, PresentStatusTypeOptions } from '@/models/enums';
+import { LocationType } from '@/models/enums';
 import { PresentStatusInfoService } from '@/services/present-status-info.service';
 import { DialogModule } from 'primeng/dialog';
 import { TooltipModule } from 'primeng/tooltip';
-import { PROFILE_LABELS, type ProfileLang } from '@/Core/i18n/profile-labels';
+import { PROFILE_LABELS, type ProfileLabelKey, type ProfileLang } from '@/Core/i18n/profile-labels';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import { EmpPersonalInfo } from '@/Components/Features/Emp/emp-personal-info/emp-personal-info';
 import { EmpAddressInfo } from '@/Components/Features/Emp/emp-address-info/emp-address-info';
@@ -428,6 +428,12 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         return this.profileLang === 'bn';
     }
 
+    get translatedPresentStatus(): string | null {
+        if (!this.activePresentStatus) return null;
+        const key = `presentStatus.${this.activePresentStatus}` as ProfileLabelKey;
+        return this.L[key] ?? this.activePresentStatus;
+    }
+
     toggleProfileLang(): void {
         this.profileLang = this.profileLang === 'en' ? 'bn' : 'en';
     }
@@ -588,8 +594,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
                 const activeRecord = (presentStatus ?? []).find((r: any) => (r.IsActive ?? r.isActive));
                 if (activeRecord) {
                     const statusValue = activeRecord.PresentStatusType ?? activeRecord.presentStatusType;
-                    const option = PresentStatusTypeOptions.find((o) => o.value === statusValue);
-                    this.activePresentStatus = option ? option.label : statusValue || null;
+                    this.activePresentStatus = statusValue || null;
                 } else {
                     this.activePresentStatus = null;
                 }

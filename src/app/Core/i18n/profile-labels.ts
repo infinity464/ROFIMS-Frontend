@@ -185,6 +185,15 @@ export const PROFILE_LABELS = {
     'tooltip.previousYearLeaveSummary': 'Previous Year Leave Summary',
     'tooltip.downloadFile': 'Download file',
     'tooltip.viewPreviousYearLeaveSummary': 'View previous year leave summary',
+
+    // Present Status
+    'field.presentStatus': 'Present Status',
+    'presentStatus.OnDuty': 'On Duty',
+    'presentStatus.RegularPostingOut': 'Regular Posting Out',
+    'presentStatus.RTUOnDisciplineIssue': 'RTU on Discipline Issue',
+    'presentStatus.Deceased': 'Deceased',
+    'presentStatus.Absent': 'Absent',
+    'presentStatus.Arrested': 'Arrested',
   } as const,
 
   bn: {
@@ -356,6 +365,15 @@ export const PROFILE_LABELS = {
     'tooltip.previousYearLeaveSummary': 'গত বছরের ছুটির সারাংশ',
     'tooltip.downloadFile': 'ফাইল ডাউনলোড',
     'tooltip.viewPreviousYearLeaveSummary': 'গত বছরের ছুটির সারাংশ দেখুন',
+
+    // Present Status
+    'field.presentStatus': 'বর্তমান অবস্থা',
+    'presentStatus.OnDuty': 'কর্মরত',
+    'presentStatus.RegularPostingOut': 'নিয়মিত পোস্টিং আউট',
+    'presentStatus.RTUOnDisciplineIssue': 'শৃঙ্খলা সমস্যায় আরটিইউ',
+    'presentStatus.Deceased': 'মৃত',
+    'presentStatus.Absent': 'অনুপস্থিত',
+    'presentStatus.Arrested': 'গ্রেফতার',
   } as const,
 } as const;
 
