@@ -334,7 +334,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         const ns = this.noteSheet;
         const isFinalApproval = this.remarkAction === NoteSheetRemarkAction.Approve
             && ns.currentStatus === NoteSheetCurrentStatus.FinalApproval;
-        const isPostingNoteSheet = ns.noteSheetType === NoteSheetType.NewPosting && !!ns.draftPostingMasterId;
+        const isPostingNoteSheet = (ns.noteSheetType === NoteSheetType.NewPosting || ns.noteSheetType === NoteSheetType.InterPosting) && !!ns.draftPostingMasterId;
         this.actionSubmitting = true;
 
         this.http.post<{ statusCode?: number; StatusCode?: number; description?: string; Description?: string }>(url, body, { observe: 'response' }).subscribe({
@@ -354,7 +354,10 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
 
                     // Acted upon — the note-sheet is no longer pending for this user.
                     // Go back to the pending list so the user sees the updated list.
-                    this.router.navigate(['/notesheet-list/pending-new-posting']);
+                    const pendingRoute = ns.noteSheetType === NoteSheetType.InterPosting
+                        ? '/notesheet-list/pending-inter-posting'
+                        : '/notesheet-list/pending-new-posting';
+                    this.router.navigate([pendingRoute]);
                 } else {
                     this.messageService.add({ severity: 'warn', summary: 'Notice', detail: msg || 'Action failed.' });
                 }
@@ -367,24 +370,37 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         });
     }
 
-    /** After final approval of a New Posting notesheet, update DraftPostingMaster status and employees PostingStatus. */
+    /** After final approval of a posting notesheet, update DraftPostingMaster status and employees PostingStatus. */
     private onPostingFinalApproval(masterId: number): void {
-        this.postingService.getDraftPostingEmployees(masterId).subscribe({
-            next: (employees) => {
+        const isInterPosting = this.noteSheet?.noteSheetType === NoteSheetType.InterPosting;
+        const empObs = isInterPosting
+            ? this.postingService.getDraftInterPostingEmployees(masterId)
+            : this.postingService.getDraftPostingEmployees(masterId);
+
+        empObs.subscribe({
+            next: (employees: any[]) => {
                 const first = employees?.[0];
                 if (first) {
-                    this.postingService.updateDraftNewPosting(
-                        masterId,
-                        first.draftPostingNo,
-                        first.draftPostingDate,
-                        DraftPostingStatus.Approved
-                    ).subscribe({
+                    const updateObs = isInterPosting
+                        ? this.postingService.updateDraftInterPosting(
+                            masterId,
+                            first.draftInterPostingNo ?? first.draftPostingNo,
+                            first.draftInterPostingDate ?? first.draftPostingDate,
+                            DraftPostingStatus.Approved
+                        )
+                        : this.postingService.updateDraftNewPosting(
+                            masterId,
+                            first.draftPostingNo,
+                            first.draftPostingDate,
+                            DraftPostingStatus.Approved
+                        );
+                    updateObs.subscribe({
                         next: () => {},
                         error: () => this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Failed to update Draft Posting status.' })
                     });
                 }
 
-                const empIds = (employees ?? []).map(e => e.employeeId).filter(id => id > 0);
+                const empIds = (employees ?? []).map((e: any) => e.employeeId).filter((id: number) => id > 0);
                 if (empIds.length > 0) {
                     this.postingService.updateEmployeesPostingStatus(empIds, PostingStatus.PendingForJoining).subscribe({
                         next: () => {},
@@ -1269,8 +1285,8 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         // Posting employee table (posting-specific)
         if (this.isPostingType() && this.postingEmployees.length > 0) {
             const cols = bn
-                ? ['ক্রমিক','ব্যক্তিগত নম্বর','পদবি','ট্রেড','নাম','নিজ জেলা (দায়িত্বপূর্ণ এলাকা)','স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)','পূর্ববতী কর্মস্থল (দায়িত্বপূর্ণ এলাকা)','বদলি ইউনিট','মন্তব্য']
-                : ['Ser','Service ID','Rank','Trade','Name','Own District (Responsible Area)','Spouse District (Responsible Area)','Previous Workplace (Responsible Area)','Transfer Unit','Remarks'];
+                ? ['ক্রমিক','ব্যক্তিগত নম্বর','পদবি','ট্রেড','নাম','নিজ জেলা (দায়িত্বপূর্ণ এলাকা)','স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)','পূর্ববতী কর্মস্থল','বদলি ইউনিট','মন্তব্য']
+                : ['Ser','Service ID','Rank','Trade','Name','Own District (Responsible Area)','Spouse District (Responsible Area)','Previous Workplace','Transfer Unit','Remarks'];
             // Dynamic widths: if remarks exist, give more to Remarks; otherwise give more to Trade
             const hasRemarks = this.postingEmployees.some(e => !!e.remarks);
             //                  Ser,  ID,   Rank, Trade, Name, OwnDist, SpDist, Loc,  TrUnit, Remarks
@@ -1288,7 +1304,9 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
                 bn?(emp.fullNameBN||emp.fullNameEN||''):(emp.fullNameEN??''),
                 bn?(emp.presentDistrictNameBN||emp.presentDistrictName||''):(emp.presentDistrictName??''),
                 bn?(emp.spousePresentDistrictNameBN||emp.spousePresentDistrictName||''):(emp.spousePresentDistrictName??''),
-                bn?(emp.motherOrgLocationNameBN||emp.motherOrgLocationName||''):(emp.motherOrgLocationName??''),
+                this.isInterPosting()
+                    ? (bn?(emp.previousRabUnitsBN||emp.previousRabUnits||''):(emp.previousRabUnits??''))
+                    : (bn?(emp.motherOrgLocationNameBN||emp.motherOrgLocationName||''):(emp.motherOrgLocationName??'')),
                 bn ? (this.unitLabelMapBN[emp.transferRabUnitId!] || emp.transferRabUnitName || '') : (emp.transferRabUnitName ?? ''), emp.remarks??''
             ].map((v, ci) => {
                 const lines = v.split('\n');

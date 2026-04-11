@@ -156,7 +156,7 @@
                                     <th>{{ isEnglish() ? 'Name' : 'নাম' }}</th>
                                     <th>{{ isEnglish() ? 'Own District (Responsible Area)' : 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
                                     <th>{{ isEnglish() ? 'Spouse District (Responsible Area)' : 'স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
-                                    <th>{{ isEnglish() ? 'Previous Workplace (Responsible Area)' : 'পূর্ববতী কর্মস্থল (দায়িত্বপূর্ণ এলাকা)' }}</th>
+                                    <th>{{ isEnglish() ? 'Previous Workplace' : 'পূর্ববতী কর্মস্থল' }}</th>
                                     <th>{{ isEnglish() ? 'Transfer Unit' : 'বদলি ইউনিট' }}</th>
                                     <th style="min-width:200px">{{ isEnglish() ? 'Remarks' : 'মন্তব্য' }}</th>
                                 </tr>
@@ -170,7 +170,7 @@
                                     <td>{{ isEnglish() ? (emp.fullNameEN || '-') : (emp.fullNameBN || emp.fullNameEN || '-') }}</td>
                                     <td style="white-space: pre-line;">{{ isEnglish() ? (emp.presentDistrictName || '-') : (emp.presentDistrictNameBN || emp.presentDistrictName || '-') }}</td>
                                     <td style="white-space: pre-line;">{{ isEnglish() ? (emp.spousePresentDistrictName || '-') : (emp.spousePresentDistrictNameBN || emp.spousePresentDistrictName || '-') }}</td>
-                                    <td style="white-space: pre-line;">{{ isEnglish() ? (emp.motherOrgLocationName || '-') : (emp.motherOrgLocationNameBN || emp.motherOrgLocationName || '-') }}</td>
+                                    <td style="white-space: pre-line;">{{ isInterPosting() ? (isEnglish() ? (emp.previousRabUnits || '-') : (emp.previousRabUnitsBN || emp.previousRabUnits || '-')) : (isEnglish() ? (emp.motherOrgLocationName || '-') : (emp.motherOrgLocationNameBN || emp.motherOrgLocationName || '-')) }}</td>
                                     <td>
                                         <p-select [(ngModel)]="emp.transferRabUnitId" [options]="rabUnitOptions" optionLabel="label" optionValue="value"
                                                   placeholder="Select Unit" [filter]="true" filterBy="label" [showClear]="true"
@@ -269,7 +269,7 @@
                                 <th>{{ isEnglish() ? 'Name' : 'নাম' }}</th>
                                 <th>{{ isEnglish() ? 'Own District (Responsible Area)' : 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
                                 <th>{{ isEnglish() ? 'Spouse District (Responsible Area)' : 'স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
-                                <th>{{ isEnglish() ? 'Previous Workplace (Responsible Area)' : 'পূর্ববতী কর্মস্থল (দায়িত্বপূর্ণ এলাকা)' }}</th>
+                                <th>{{ isEnglish() ? 'Previous Workplace' : 'পূর্ববতী কর্মস্থল' }}</th>
                                 <th>{{ isEnglish() ? 'Transfer Unit' : 'বদলি ইউনিট' }}</th>
                                 <th>{{ isEnglish() ? 'Remarks' : 'মন্তব্য' }}</th>
                             </tr>
@@ -283,7 +283,7 @@
                                 <td>{{ isEnglish() ? (emp.fullNameEN || '') : (emp.fullNameBN || emp.fullNameEN || '') }}</td>
                                 <td style="white-space: pre-line;">{{ isEnglish() ? (emp.presentDistrictName || '') : (emp.presentDistrictNameBN || emp.presentDistrictName || '') }}</td>
                                 <td style="white-space: pre-line;">{{ isEnglish() ? (emp.spousePresentDistrictName || '') : (emp.spousePresentDistrictNameBN || emp.spousePresentDistrictName || '') }}</td>
-                                <td style="white-space: pre-line;">{{ isEnglish() ? (emp.motherOrgLocationName || '') : (emp.motherOrgLocationNameBN || emp.motherOrgLocationName || '') }}</td>
+                                <td style="white-space: pre-line;">{{ isInterPosting() ? (isEnglish() ? (emp.previousRabUnits || '') : (emp.previousRabUnitsBN || emp.previousRabUnits || '')) : (isEnglish() ? (emp.motherOrgLocationName || '') : (emp.motherOrgLocationNameBN || emp.motherOrgLocationName || '')) }}</td>
                                 <td>{{ isEnglish() ? (emp.transferRabUnitName || '') : (emp.transferRabUnitId ? unitLabelMapBN[emp.transferRabUnitId] : null) || emp.transferRabUnitName || '' }}</td>
                                 <td>{{ emp.remarks || '' }}</td>
                             </tr>
