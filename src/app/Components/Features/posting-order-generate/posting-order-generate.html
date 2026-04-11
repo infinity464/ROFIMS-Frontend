@@ -104,7 +104,7 @@
                     <tr>
                         <td>{{ rowIndex + 1 }}</td>
                         <td><span class="font-semibold">{{ row.prefixName ? row.prefixName + ' - ' : '' }}{{ row.serviceId || '-' }}</span></td>
-                        <td>{{ row.rabID || '-' }}</td>
+                        <td>{{ empRabId(row) }}</td>
                         <td>{{ (isBangla ? row.rankNameBN : row.rankName) || row.rankName || '-' }}</td>
                         <td>{{ (isBangla ? row.tradeNameBN : row.tradeName) || row.tradeName || '-' }}</td>
                         <td>{{ (isBangla ? row.fullNameBN : row.fullNameEN) || row.fullNameEN || '-' }}</td>

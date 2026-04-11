@@ -117,6 +117,18 @@ export class PostingOrderGenerateComponent implements OnInit {
         return this.selectedTextType === 'bn';
     }
 
+    /** Convert ASCII digits in a string to Bangla digits. */
+    private toBanglaDigits(s: string): string {
+        return s.replace(/\d/g, d => String.fromCharCode(0x09E6 + Number(d)));
+    }
+
+    /** RAB ID — Bangla digits when text type is Bangla, else as-is. */
+    empRabId(row: NoteSheetEmployee): string {
+        const id = row.rabID || '';
+        if (!id) return '-';
+        return this.isBangla ? this.toBanglaDigits(id) : id;
+    }
+
     /** Unique transfer (RAB) units derived from currently loaded employees. */
     get availableTransferUnits(): TransferUnitOption[] {
         const map = new Map<number, string>();

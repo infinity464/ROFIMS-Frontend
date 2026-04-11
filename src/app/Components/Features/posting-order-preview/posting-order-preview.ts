@@ -387,7 +387,8 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     }
 
     empRabId(emp: PostingOrderEmployeeRow): string {
-        return emp.rabID || '';
+        const id = emp.rabID || '';
+        return this.isBangla && id ? this.toBanglaDigits(id) : id;
     }
 
     // ─── Per-unit filter (preview & export) ──────────────
