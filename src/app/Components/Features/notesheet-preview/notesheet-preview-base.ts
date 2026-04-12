@@ -129,7 +129,9 @@ export abstract class NotesheetPreviewBase implements OnInit {
     loadingEmployees = false;
 
     purposeLabelMap: Record<number, string> = {};
+    purposeLabelMapBN: Record<number, string> = {};
     countryLabelMap: Record<number, string> = {};
+    countryLabelMapBN: Record<number, string> = {};
     unitLabelMap: Record<number, string> = {};
     unitLabelMapBN: Record<number, string> = {};
 
@@ -151,11 +153,13 @@ export abstract class NotesheetPreviewBase implements OnInit {
         this.masterBasicSetup.getAllByType('PurposeOfExBDLeave').subscribe({
             next: (list) => {
                 this.purposeLabelMap = (list ?? []).reduce((acc, c) => { acc[c.codeId] = c.codeValueEN; return acc; }, {} as Record<number, string>);
+                this.purposeLabelMapBN = (list ?? []).reduce((acc, c) => { acc[c.codeId] = c.codeValueBN || c.codeValueEN; return acc; }, {} as Record<number, string>);
             }
         });
         this.masterBasicSetup.getAllByType('Country').subscribe({
             next: (list) => {
                 this.countryLabelMap = (list ?? []).reduce((acc, c) => { acc[c.codeId] = c.codeValueEN; return acc; }, {} as Record<number, string>);
+                this.countryLabelMapBN = (list ?? []).reduce((acc, c) => { acc[c.codeId] = c.codeValueBN || c.codeValueEN; return acc; }, {} as Record<number, string>);
             }
         });
         this.masterBasicSetup.getAllByType('RabUnit').subscribe({
@@ -426,6 +430,13 @@ export abstract class NotesheetPreviewBase implements OnInit {
         } catch { return String(value); }
     }
 
+    /** Convert English digits (0-9) in a string to Bangla digits (০-৯). */
+    toBanglaDigits(input: string | number | null | undefined): string {
+        if (input == null) return '';
+        const map: Record<string, string> = { '0': '০', '1': '১', '2': '২', '3': '৩', '4': '৪', '5': '৫', '6': '৬', '7': '৭', '8': '৮', '9': '৯' };
+        return String(input).replace(/[0-9]/g, (d) => map[d] ?? d);
+    }
+
     getMainTextSafe(): SafeHtml {
         const raw = this.noteSheet?.mainText ?? '';
         if (this._mainTextCache?.raw === raw) return this._mainTextCache.safe;
@@ -478,11 +489,13 @@ export abstract class NotesheetPreviewBase implements OnInit {
 
     getPurposeLabel(id: number | null | undefined): string {
         if (id == null) return '';
+        if (!this.isEnglish()) return this.purposeLabelMapBN[id] || this.purposeLabelMap[id] || '';
         return this.purposeLabelMap[id] ?? '';
     }
 
     getCountryLabel(id: number | null | undefined): string {
         if (id == null) return '';
+        if (!this.isEnglish()) return this.countryLabelMapBN[id] || this.countryLabelMap[id] || '';
         return this.countryLabelMap[id] ?? '';
     }
 

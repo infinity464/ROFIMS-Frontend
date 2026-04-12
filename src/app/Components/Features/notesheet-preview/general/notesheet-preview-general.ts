@@ -1289,11 +1289,6 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         return result;
     }
 
-    private toBanglaDigits(num: number): string {
-        const d = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
-        return String(num).replace(/\d/g, c => d[+c]);
-    }
-
     // ── Convert data URL to Uint8Array for ImageRun ───────────
     private base64ToBytes(dataUrl: string): Uint8Array {
         const base64 = dataUrl.split(',')[1];

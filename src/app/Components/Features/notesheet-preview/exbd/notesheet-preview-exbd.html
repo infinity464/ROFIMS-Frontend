@@ -270,9 +270,6 @@
 
                 <!-- ── Initiator area ── -->
                 <div class="ns-initiator-area">
-                    <div class="ns-closing-text">
-                        {{ isEnglish() ? 'Presented for your kind approval.' : 'আপনার সদয় অনুমোদনের জন্য উপস্থাপন করা হলো।' }}
-                    </div>
                     <div class="ns-initiator-sig" *ngIf="initiatorDetails">
                         <img *ngIf="isInitiatorApproved() && shouldShowSignature(initiatorDetails.step) && initiatorDetails.signatureDataUrl"
                              [src]="initiatorDetails.signatureDataUrl" class="ns-sig-img" alt="Signature" />

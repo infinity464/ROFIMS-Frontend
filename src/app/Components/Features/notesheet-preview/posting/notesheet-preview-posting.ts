@@ -1568,21 +1568,11 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         return result;
     }
 
-    private toBanglaDigits(num: number): string {
-        const d = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
-        return String(num).replace(/\d/g, c => d[+c]);
-    }
-
-    private toBanglaDigitsStr(str: string): string {
-        const d = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
-        return str.replace(/\d/g, c => d[+c]);
-    }
-
     getServiceIdDisplay(emp: DraftPostingEmployeeRow): string {
         const bn = !this.isEnglish();
         const sid = emp.serviceId || '';
         const prefix = bn ? (emp.prefixNameBN || emp.prefixName || '') : (emp.prefixName || '');
-        const displayId = bn && sid ? this.toBanglaDigitsStr(sid) : sid;
+        const displayId = bn && sid ? this.toBanglaDigits(sid) : sid;
         return prefix ? `${prefix}-${displayId}` : (displayId || '-');
     }
 
