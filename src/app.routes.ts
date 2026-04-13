@@ -133,6 +133,8 @@ import { RoleListComponent } from '@/Components/Features/identity/role-list/role
 import { IdentityUserEmployeeMappingComponent } from '@/Components/Features/identity/identity-user-employee-mapping/identity-user-employee-mapping.component';
 import { MenuManagement } from '@/Components/Features/menu-management/menu-management';
 import { RoleMenuPermission } from '@/Components/Features/role-menu-permission/role-menu-permission';
+import { LoginAuditComponent } from '@/Components/Features/login-audit/login-audit.component';
+import { MyLoginAuditComponent } from '@/Components/Features/my-login-audit/my-login-audit.component';
 import { EmployeeReportsComponent } from '@/Components/Features/employee-reports/employee-reports.component';
 import { RabUnitAor } from '@/Components/basic-setup/rab-unit-aor/rab-unit-aor';
 import { ManpowerSummaryComponent } from '@/Components/Features/statistics/manpower-summary/manpower-summary';
@@ -317,6 +319,10 @@ export const appRoutes: Routes = [
 
             // Role Menu Permissions
             { path: 'identity/role-menu-permission', component: RoleMenuPermission },
+
+            // Login Audit
+            { path: 'identity/login-audit', component: LoginAuditComponent },
+            { path: 'identity/my-login-audit', component: MyLoginAuditComponent },
 
             // Change Password
             { path: 'change-password', component: ChangePassword },
