@@ -6,6 +6,7 @@ import { Landing } from './app/pages/landing/landing';
 import { Notfound } from './app/pages/notfound/notfound';
 // import { Login } from '@/pages/auth/login';
 import { Login } from '@/Components/Features/Authentication/Login/login';
+import { ChangePassword } from '@/Components/Features/Authentication/change-password/change-password';
 import { AuthGuard } from '@/Core/Guard/auth.guard';
 // import { MotherOrg } from '@/Components/basic-setup/mother-org/mother-org';
 import { Employeeinfo } from '@/Components/Features/EmployeeInfo/employeeinfo/employeeinfo';
@@ -316,6 +317,9 @@ export const appRoutes: Routes = [
 
             // Role Menu Permissions
             { path: 'identity/role-menu-permission', component: RoleMenuPermission },
+
+            // Change Password
+            { path: 'change-password', component: ChangePassword },
 
             { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
             { path: 'documentation', component: Documentation },
