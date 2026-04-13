@@ -144,6 +144,7 @@ import { MotherUnitWiseManpowerComponent } from '@/Components/Features/statistic
 import { CorpsWiseManpowerComponent } from '@/Components/Features/statistics/corps-wise-manpower/corps-wise-manpower';
 import { TradeWiseManpowerComponent } from '@/Components/Features/statistics/trade-wise-manpower/trade-wise-manpower';
 import { UnitWiseBarChartComponent } from '@/Components/Features/statistics/unit-wise-bar-chart/unit-wise-bar-chart';
+import { SystemMonitoringComponent } from '@/Components/Features/system-monitoring/system-monitoring';
 
 export const appRoutes: Routes = [
     // Public routes
@@ -313,6 +314,9 @@ export const appRoutes: Routes = [
             { path: 'statistics/corps-wise-manpower', component: CorpsWiseManpowerComponent },
             { path: 'statistics/trade-wise-manpower', component: TradeWiseManpowerComponent },
             { path: 'statistics/unit-wise-bar-chart', component: UnitWiseBarChartComponent },
+
+            // System Monitoring
+            { path: 'system-monitoring', component: SystemMonitoringComponent },
 
             // Menu Management
             { path: 'menu-management', component: MenuManagement },

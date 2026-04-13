@@ -1,0 +1,300 @@
+.system-monitoring {
+    padding: 0;
+}
+
+/* ─── Header ─────────────────────────────────────────── */
+.monitoring-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    text-align: left;
+    margin-bottom: 1.5rem;
+}
+
+.header-text {
+    h2 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin: 0;
+    }
+}
+
+.header-subtitle {
+    margin: 0.25rem 0 0;
+    font-size: 0.85rem;
+    color: var(--text-color-secondary);
+}
+
+/* ─── Connection Badge with pulsing dot ──────────────── */
+.connection-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 0.85rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    border: 1px solid;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.state-live {
+    color: #16a34a;
+    border-color: #bbf7d0;
+    background: #f0fdf4;
+
+    .status-dot {
+        background: #22c55e;
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.6);
+        animation: pulse-dot 1.5s infinite;
+    }
+}
+
+.state-reconnecting {
+    color: #d97706;
+    border-color: #fde68a;
+    background: #fffbeb;
+
+    .status-dot {
+        background: #f59e0b;
+        animation: pulse-dot 1s infinite;
+    }
+}
+
+.state-polling {
+    color: #2563eb;
+    border-color: #bfdbfe;
+    background: #eff6ff;
+
+    .status-dot {
+        background: #3b82f6;
+    }
+}
+
+.state-disconnected {
+    color: #dc2626;
+    border-color: #fecaca;
+    background: #fef2f2;
+
+    .status-dot {
+        background: #ef4444;
+    }
+}
+
+@keyframes pulse-dot {
+    0% {
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.6);
+    }
+    70% {
+        box-shadow: 0 0 0 6px rgba(34, 197, 94, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+    }
+}
+
+/* ─── Gauges Row — equal-height cards ────────────────── */
+.gauges-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1.75rem;
+
+    @media (max-width: 992px) {
+        grid-template-columns: 1fr 1fr;
+    }
+    @media (max-width: 576px) {
+        grid-template-columns: 1fr;
+    }
+}
+
+.metric-card {
+    background: var(--surface-card);
+    border: 1px solid var(--surface-border);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    h3 {
+        font-size: 1rem;
+        font-weight: 600;
+        margin: 0 0 1rem 0;
+        color: var(--text-color);
+    }
+}
+
+/* Force all 3 gauge cards to the same height */
+.gauges-row .metric-card {
+    min-height: 260px;
+    justify-content: flex-start;
+}
+
+/* ─── Circular Gauge ─────────────────────────────────── */
+.gauge-wrapper {
+    position: relative;
+    width: 140px;
+    height: 140px;
+    margin: 0 auto;
+    flex-shrink: 0;
+}
+
+.gauge-svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.gauge-arc {
+    transition: stroke-dashoffset 0.5s ease, stroke 0.3s ease;
+}
+
+.gauge-label {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+
+.gauge-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    transition: color 0.3s ease;
+}
+
+.metric-detail {
+    margin-top: 0.75rem;
+    font-size: 0.875rem;
+    color: var(--text-color-secondary);
+}
+
+/* ─── Drives Breakdown Card ──────────────────────────── */
+.drives-card {
+    margin-bottom: 1.75rem;
+    text-align: left;
+    align-items: stretch;
+
+    h3 {
+        text-align: left;
+    }
+}
+
+.drives-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    width: 100%;
+}
+
+.drive-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.drive-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+
+.drive-name {
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.drive-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.drive-warning {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+
+    &.critical {
+        color: #fff;
+        background: #ef4444;
+    }
+
+    &.warning {
+        color: #92400e;
+        background: #fef3c7;
+    }
+}
+
+.drive-info {
+    font-size: 0.8rem;
+    color: var(--text-color-secondary);
+}
+
+.drive-bar-wrapper {
+    width: 100%;
+    height: 10px;
+    background: var(--surface-ground);
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.drive-bar {
+    height: 100%;
+    border-radius: 5px;
+    transition: width 0.5s ease, background-color 0.3s ease;
+}
+
+.drive-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.drive-free {
+    font-size: 0.8rem;
+    color: var(--text-color-secondary);
+}
+
+.drive-percent {
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: color 0.3s ease;
+}
+
+/* ─── History Chart ──────────────────────────────────── */
+.history-card {
+    text-align: left;
+    align-items: stretch;
+
+    h3 {
+        text-align: left;
+    }
+}
+
+.chart-container {
+    height: 300px;
+    position: relative;
+}
+
+/* ─── Loading ────────────────────────────────────────── */
+.loading-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--text-color-secondary);
+    font-size: 1rem;
+}
