@@ -15,8 +15,8 @@
 }
 
 .profile-photo-container {
-    width: 110px;
-    height: 135px;
+    width: 80px;
+    height: 100px;
     margin: 0 auto;
     border-radius: 8px;
     overflow: hidden;
@@ -34,13 +34,13 @@
 .profile-photo {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
     display: block;
 }
 
 .profile-photo-placeholder {
-    width: 110px;
-    height: 135px;
+    width: 80px;
+    height: 100px;
     margin: 0 auto;
     border-radius: 8px;
     border: 2px dashed var(--surface-border, #dee2e6);

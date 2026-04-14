@@ -40,8 +40,9 @@
                             }
                         } @else {
                             <div style="position: relative; display: inline-block;">
-                                <img [src]="imagePreview" alt="Preview" (click)="showImagePreviewModal = true" pTooltip="Click to enlarge"
-                                    style="width: 120px; height: 100px; object-fit: cover; border-radius: 6px; border: 2px solid var(--surface-border, #dee2e6); cursor: pointer; display: block;" />
+                                <div class="profile-photo-container" (click)="showImagePreviewModal = true" pTooltip="Click to enlarge">
+                                    <img [src]="imagePreview" alt="Preview" class="profile-photo" />
+                                </div>
                                 @if (!isViewMode) {
                                     <p-button icon="pi pi-times" [rounded]="true" severity="danger" size="small" pTooltip="Remove"
                                         (onClick)="removeImage()"
