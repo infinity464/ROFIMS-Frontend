@@ -152,6 +152,8 @@ export class AuthenticationService {
   }
 
   logout(): void {
-    localStorage.clear();
+    localStorage.removeItem('auth');
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
   }
 }
