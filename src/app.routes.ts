@@ -8,6 +8,7 @@ import { Notfound } from './app/pages/notfound/notfound';
 import { Login } from '@/Components/Features/Authentication/Login/login';
 import { ChangePassword } from '@/Components/Features/Authentication/change-password/change-password';
 import { AuthGuard } from '@/Core/Guard/auth.guard';
+import { DynamicSearchComponent } from '@/Components/Shared/dynamic-search/dynamic-search';
 // import { MotherOrg } from '@/Components/basic-setup/mother-org/mother-org';
 import { Employeeinfo } from '@/Components/Features/EmployeeInfo/employeeinfo/employeeinfo';
 import { Division } from '@/Components/basic-setup/division/division';
@@ -314,6 +315,9 @@ export const appRoutes: Routes = [
             { path: 'statistics/corps-wise-manpower', component: CorpsWiseManpowerComponent },
             { path: 'statistics/trade-wise-manpower', component: TradeWiseManpowerComponent },
             { path: 'statistics/unit-wise-bar-chart', component: UnitWiseBarChartComponent },
+
+            // Dynamic Search
+            { path: 'dynamic-search', component: DynamicSearchComponent },
 
             // System Monitoring
             { path: 'system-monitoring', component: SystemMonitoringComponent },
