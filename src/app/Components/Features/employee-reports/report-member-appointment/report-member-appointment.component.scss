@@ -4,3 +4,14 @@
 .filter-field {
     min-width: 160px;
 }
+
+/* Force datepicker to fill the same width as p-select dropdowns */
+:host ::ng-deep .report-fields-row .report-filter-field p-datepicker,
+:host ::ng-deep .report-fields-row .report-filter-field .p-datepicker {
+    display: block;
+    width: 100%;
+}
+
+:host ::ng-deep .report-fields-row .report-filter-field .p-datepicker .p-inputtext {
+    width: 100%;
+}
