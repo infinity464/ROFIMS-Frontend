@@ -1,0 +1,85 @@
+<p-toast></p-toast>
+
+<div class="card">
+    <h5>Login Audit Log</h5>
+
+    <!-- Filters -->
+    <div class="flex flex-wrap gap-4 mb-4 items-end">
+        <div class="flex flex-col gap-1">
+            <label class="text-sm font-medium">Search</label>
+            <p-iconfield iconPosition="left">
+                <p-inputicon><i class="pi pi-search"></i></p-inputicon>
+                <input pInputText type="text" placeholder="UserId or IP" [ngModel]="searchKeyword" (input)="onSearch($event.target.value)" />
+            </p-iconfield>
+        </div>
+
+        <div class="flex flex-col gap-1">
+            <label class="text-sm font-medium">Status</label>
+            <p-select [options]="statusOptions" [(ngModel)]="selectedStatus" optionLabel="label" optionValue="value"
+                      placeholder="All" (onChange)="onStatusChange()" [style]="{ 'min-width': '150px' }"></p-select>
+        </div>
+
+        <div class="flex flex-col gap-1">
+            <label class="text-sm font-medium">From Date</label>
+            <p-datepicker [(ngModel)]="fromDate" [showTime]="false" dateFormat="yy-mm-dd"
+                          placeholder="From date" (onSelect)="onDateFilter()" [showIcon]="true"></p-datepicker>
+        </div>
+
+        <div class="flex flex-col gap-1">
+            <label class="text-sm font-medium">To Date</label>
+            <p-datepicker [(ngModel)]="toDate" [showTime]="false" dateFormat="yy-mm-dd"
+                          placeholder="To date" (onSelect)="onDateFilter()" [showIcon]="true"></p-datepicker>
+        </div>
+
+        <div class="flex flex-col gap-1">
+            <label class="text-sm font-medium">&nbsp;</label>
+            <p-button label="Clear" icon="pi pi-filter-slash" severity="secondary" (onClick)="onClearFilters()"></p-button>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <p-table [value]="audits"
+             [lazy]="true"
+             [paginator]="true"
+             [first]="first"
+             [rows]="rows"
+             [totalRecords]="totalRecords"
+             [rowsPerPageOptions]="[10, 25, 50]"
+             [loading]="loading"
+             (onLazyLoad)="onPageChange($event)"
+             [tableStyle]="{ 'min-width': '70rem' }">
+
+        <ng-template pTemplate="header">
+            <tr>
+                <th>#</th>
+                <th>User ID</th>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Status</th>
+                <th>Failure Reason</th>
+                <th>IP Address</th>
+            </tr>
+        </ng-template>
+
+        <ng-template pTemplate="body" let-audit let-rowIndex="rowIndex">
+            <tr>
+                <td>{{ first + rowIndex + 1 }}</td>
+                <td>{{ audit.attemptedEmail }}</td>
+                <td>{{ toBdDate(audit.attemptedAt) }}</td>
+                <td>{{ toBdTime(audit.attemptedAt) }}</td>
+                <td>
+                    <p-tag [value]="audit.isSuccess ? 'Success' : 'Failed'"
+                           [severity]="getStatusSeverity(audit.isSuccess)"></p-tag>
+                </td>
+                <td>{{ getFailureLabel(audit.failureReason) }}</td>
+                <td>{{ audit.ipAddress || '-' }}</td>
+            </tr>
+        </ng-template>
+
+        <ng-template pTemplate="emptymessage">
+            <tr>
+                <td colspan="7" class="text-center p-4">No login audit records found.</td>
+            </tr>
+        </ng-template>
+    </p-table>
+</div>

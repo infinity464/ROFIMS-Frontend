@@ -6,7 +6,9 @@ import { Landing } from './app/pages/landing/landing';
 import { Notfound } from './app/pages/notfound/notfound';
 // import { Login } from '@/pages/auth/login';
 import { Login } from '@/Components/Features/Authentication/Login/login';
+import { ChangePassword } from '@/Components/Features/Authentication/change-password/change-password';
 import { AuthGuard } from '@/Core/Guard/auth.guard';
+import { DynamicSearchComponent } from '@/Components/Shared/dynamic-search/dynamic-search';
 // import { MotherOrg } from '@/Components/basic-setup/mother-org/mother-org';
 import { Employeeinfo } from '@/Components/Features/EmployeeInfo/employeeinfo/employeeinfo';
 import { Division } from '@/Components/basic-setup/division/division';
@@ -132,6 +134,8 @@ import { RoleListComponent } from '@/Components/Features/identity/role-list/role
 import { IdentityUserEmployeeMappingComponent } from '@/Components/Features/identity/identity-user-employee-mapping/identity-user-employee-mapping.component';
 import { MenuManagement } from '@/Components/Features/menu-management/menu-management';
 import { RoleMenuPermission } from '@/Components/Features/role-menu-permission/role-menu-permission';
+import { LoginAuditComponent } from '@/Components/Features/login-audit/login-audit.component';
+import { MyLoginAuditComponent } from '@/Components/Features/my-login-audit/my-login-audit.component';
 import { EmployeeReportsComponent } from '@/Components/Features/employee-reports/employee-reports.component';
 import { RabUnitAor } from '@/Components/basic-setup/rab-unit-aor/rab-unit-aor';
 import { ManpowerSummaryComponent } from '@/Components/Features/statistics/manpower-summary/manpower-summary';
@@ -141,6 +145,7 @@ import { MotherUnitWiseManpowerComponent } from '@/Components/Features/statistic
 import { CorpsWiseManpowerComponent } from '@/Components/Features/statistics/corps-wise-manpower/corps-wise-manpower';
 import { TradeWiseManpowerComponent } from '@/Components/Features/statistics/trade-wise-manpower/trade-wise-manpower';
 import { UnitWiseBarChartComponent } from '@/Components/Features/statistics/unit-wise-bar-chart/unit-wise-bar-chart';
+import { SystemMonitoringComponent } from '@/Components/Features/system-monitoring/system-monitoring';
 
 export const appRoutes: Routes = [
     // Public routes
@@ -311,11 +316,24 @@ export const appRoutes: Routes = [
             { path: 'statistics/trade-wise-manpower', component: TradeWiseManpowerComponent },
             { path: 'statistics/unit-wise-bar-chart', component: UnitWiseBarChartComponent },
 
+            // Dynamic Search
+            { path: 'dynamic-search', component: DynamicSearchComponent },
+
+            // System Monitoring
+            { path: 'system-monitoring', component: SystemMonitoringComponent },
+
             // Menu Management
             { path: 'menu-management', component: MenuManagement },
 
             // Role Menu Permissions
             { path: 'identity/role-menu-permission', component: RoleMenuPermission },
+
+            // Login Audit
+            { path: 'identity/login-audit', component: LoginAuditComponent },
+            { path: 'identity/my-login-audit', component: MyLoginAuditComponent },
+
+            // Change Password
+            { path: 'change-password', component: ChangePassword },
 
             { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
             { path: 'documentation', component: Documentation },

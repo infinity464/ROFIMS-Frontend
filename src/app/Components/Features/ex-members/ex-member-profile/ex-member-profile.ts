@@ -484,13 +484,15 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         return this.codeValue(nameEn ?? this.profile?.rabUnit ?? null, nameBn ?? this.profile?.rabUnitBN ?? null);
     }
 
+    /** Own addresses: one active Permanent and one active Present. */
     get ownAddressList(): AddressInfoByEmployeeView[] {
         if (!this.addressList?.length) return [];
-        const own = [LocationType.Permanent, LocationType.Present];
-        return this.addressList.filter((a) => {
-            const t = (a.locationType ?? '').trim();
-            return own.some((type) => t === type);
-        });
+        const result: AddressInfoByEmployeeView[] = [];
+        const permanent = this.addressList.find((a) => (a.locationType ?? '').trim() === LocationType.Permanent);
+        const present = this.addressList.find((a) => (a.locationType ?? '').trim() === LocationType.Present);
+        if (permanent) result.push(permanent);
+        if (present) result.push(present);
+        return result;
     }
 
     get spouseAddressList(): AddressInfoByEmployeeView[] {

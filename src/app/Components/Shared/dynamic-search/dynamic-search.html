@@ -1,0 +1,319 @@
+<p-toast position="top-center"></p-toast>
+
+<div class="employee-reports-page">
+    <!-- Title + Category + Filter -->
+    <div class="report-filter-card">
+        <div class="report-filter-card-title">
+            <h1 class="report-page-title">Dynamic Search</h1>
+        </div>
+
+        <!-- Category Selector + Member Status -->
+        <div class="ds-category-bar">
+            <div class="ds-category-tabs">
+                @for (opt of categoryOptions; track opt.value) {
+                    <button
+                        type="button"
+                        class="ds-tab"
+                        [class.ds-tab--active]="selectedCategory === opt.value"
+                        (click)="selectedCategory = opt.value; onCategoryChange()">
+                        @if (opt.value === 'Employee') {
+                            <i class="pi pi-users"></i>
+                        } @else {
+                            <i class="pi pi-building"></i>
+                        }
+                        {{ opt.label }}
+                    </button>
+                }
+            </div>
+
+        </div>
+
+        <!-- Filter Panel -->
+        <div class="report-filter-header" [class.open]="filterOpen" (click)="toggleFilter()" role="button" tabindex="0" (keydown.enter)="toggleFilter()" (keydown.space)="toggleFilter()">
+            <div class="report-filter-header-left">
+                <div class="report-filter-icon">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M2 4h12M4 8h8M6 12h4" stroke="var(--primary-color)" stroke-width="1.8" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <div>
+                    <div class="report-filter-title">Search &amp; filter</div>
+                    <div class="report-filter-subtitle">Select fields to search on</div>
+                </div>
+            </div>
+            <div class="report-filter-header-right">
+                <div class="report-chevron">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                        <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <div class="report-filter-body" [class.open]="filterOpen">
+            <div class="report-filter-body-inner">
+                <!-- Field MultiSelect + Member Status side by side -->
+                <div class="ds-top-row">
+                    <div class="ds-field-selector">
+                        <div class="ds-field-selector-header">
+                            <label class="ds-label">Search Fields</label>
+                            @if (selectedFields.length > 0) {
+                                <span class="ds-field-count">{{ selectedFields.length }} selected</span>
+                            }
+                        </div>
+                        <p-multiselect
+                            [options]="availableFields"
+                            [(ngModel)]="selectedFields"
+                            optionLabel="displayLabel"
+                            placeholder="Choose which fields to search..."
+                            styleClass="w-full"
+                            appendTo="body"
+                            [showToggleAll]="true"
+                            (ngModelChange)="onFieldsChange()">
+                        </p-multiselect>
+                    </div>
+
+                    @if (isEmployee) {
+                        <div class="ds-member-status-field">
+                            <label class="ds-label">Member Status</label>
+                            <p-select
+                                [(ngModel)]="selectedMemberStatus"
+                                [options]="memberStatusOptions"
+                                optionLabel="label"
+                                optionValue="value"
+                                styleClass="w-full"
+                                appendTo="body">
+                            </p-select>
+                        </div>
+                    }
+                </div>
+
+                <!-- Dynamic Criteria Inputs — grouped -->
+                @if (selectedFields.length > 0) {
+                    <div class="ds-criteria-section">
+                        @for (group of groupedFields; track group.label) {
+                            <div class="ds-field-group">
+                                @if (group.label) {
+                                    <div class="ds-group-divider">
+                                        <span class="ds-group-label">{{ group.label }}</span>
+                                        <span class="ds-group-line"></span>
+                                    </div>
+                                }
+                                <div class="ds-criteria-grid">
+                                    @for (field of group.fields; track field.fieldKey) {
+                                        <div class="ds-field">
+                                            <label class="ds-field-label">{{ field.displayLabel }}</label>
+
+                                            @switch (field.fieldType) {
+                                                @case ('Text') {
+                                                    <input
+                                                        pInputText
+                                                        type="text"
+                                                        [(ngModel)]="getCriterionValue(field.fieldKey).textValue"
+                                                        [placeholder]="'Enter ' + field.displayLabel"
+                                                        class="w-full ds-input" />
+                                                }
+                                                @case ('ExactId') {
+                                                    @if (field.isStringId) {
+                                                        <p-select
+                                                            [(ngModel)]="getCriterionValue(field.fieldKey).stringIdValue"
+                                                            [options]="getFieldOptions(field)"
+                                                            optionLabel="label"
+                                                            optionValue="value"
+                                                            [placeholder]="'Select ' + field.displayLabel"
+                                                            [showClear]="true"
+                                                            [filter]="true"
+                                                            filterBy="label"
+                                                            styleClass="w-full ds-select"
+                                                            appendTo="body">
+                                                        </p-select>
+                                                    } @else {
+                                                        <p-select
+                                                            [(ngModel)]="getCriterionValue(field.fieldKey).idValue"
+                                                            [options]="getFieldOptions(field)"
+                                                            optionLabel="label"
+                                                            optionValue="value"
+                                                            [placeholder]="'Select ' + field.displayLabel"
+                                                            [showClear]="true"
+                                                            [filter]="true"
+                                                            filterBy="label"
+                                                            styleClass="w-full ds-select"
+                                                            appendTo="body">
+                                                        </p-select>
+                                                    }
+                                                }
+                                                @case ('DateRange') {
+                                                    <div class="ds-date-range">
+                                                        <p-datepicker
+                                                            [(ngModel)]="getCriterionValue(field.fieldKey).dateFrom"
+                                                            placeholder="From"
+                                                            dateFormat="dd/mm/yy"
+                                                            styleClass="w-full">
+                                                        </p-datepicker>
+                                                        <span class="ds-date-separator">to</span>
+                                                        <p-datepicker
+                                                            [(ngModel)]="getCriterionValue(field.fieldKey).dateTo"
+                                                            placeholder="To"
+                                                            dateFormat="dd/mm/yy"
+                                                            styleClass="w-full">
+                                                        </p-datepicker>
+                                                    </div>
+                                                }
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+
+                <!-- Action Buttons -->
+                <div class="ds-actions">
+                    <button type="button" class="ds-btn-clear" (click)="clearFilter()">
+                        <i class="pi pi-times"></i>
+                        Clear All
+                    </button>
+                    <button type="button" class="ds-btn-search" (click)="search()" [disabled]="loading || selectedFields.length === 0">
+                        <i class="pi pi-search"></i>
+                        Search
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Card -->
+    <div class="report-results-card">
+        <div class="report-results-header">
+            <div class="report-results-title">
+                Results
+                <span class="report-results-count">{{ totalRecords }} record(s)</span>
+            </div>
+        </div>
+
+        <div class="report-table-wrap">
+            <!-- Employee Results -->
+            @if (isEmployee) {
+                <p-table
+                    [value]="results"
+                    [lazy]="true"
+                    [loading]="loading"
+                    [paginator]="true"
+                    [first]="first"
+                    [rows]="rows"
+                    [totalRecords]="totalRecords"
+                    [rowsPerPageOptions]="[10, 20, 50]"
+                    (onLazyLoad)="onLazyLoad($event)"
+                    [tableStyle]="{ 'min-width': '60rem' }"
+                    styleClass="p-datatable-sm"
+                    paginatorDropdownAppendTo="body">
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th>Ser</th>
+                            <th>Service ID</th>
+                            <th>RAB ID</th>
+                            <th>Name</th>
+                            <th>Rank</th>
+                            <th>Corps</th>
+                            <th>Trade</th>
+                            <th>RAB Unit</th>
+                            <th>Action</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                        <tr>
+                            <td><span class="report-ser-num">{{ first + rowIndex + 1 }}</span></td>
+                            <td><span class="font-semibold">{{ row.serviceId || '—' }}</span></td>
+                            <td>{{ row.rabid || '—' }}</td>
+                            <td>{{ row.nameEnglish || '—' }}</td>
+                            <td>{{ row.armyRank || '—' }}</td>
+                            <td>
+                                @if (row.corps) {
+                                    <span class="report-badge-corps">{{ row.corps }}</span>
+                                } @else {
+                                    <span class="report-dash">—</span>
+                                }
+                            </td>
+                            <td>{{ row.trade || '—' }}</td>
+                            <td>
+                                @if (row.rabUnit) {
+                                    <span class="report-badge-unit">{{ row.rabUnit }}</span>
+                                } @else {
+                                    <span class="report-dash">—</span>
+                                }
+                            </td>
+                            <td>
+                                <a [routerLink]="['/members/profile', row.employeeID]" class="report-link-profile">
+                                    <i class="pi pi-user"></i> Profile
+                                </a>
+                            </td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="9" class="text-center p-4">No records found. Select fields and search.</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            }
+
+            <!-- Office Management Results -->
+            @if (isOffice) {
+                <p-table
+                    [value]="results"
+                    [lazy]="true"
+                    [loading]="loading"
+                    [paginator]="true"
+                    [first]="first"
+                    [rows]="rows"
+                    [totalRecords]="totalRecords"
+                    [rowsPerPageOptions]="[10, 20, 50]"
+                    (onLazyLoad)="onLazyLoad($event)"
+                    [tableStyle]="{ 'min-width': '60rem' }"
+                    styleClass="p-datatable-sm"
+                    paginatorDropdownAppendTo="body">
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th>Ser</th>
+                            <th>Record Type</th>
+                            <th>Reference No</th>
+                            <th>Date</th>
+                            <th>Sub Type</th>
+                            <th>Subject</th>
+                            <th>Employee</th>
+                            <th>Unit</th>
+                            <th>Status</th>
+                            <th>Created By</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                        <tr>
+                            <td><span class="report-ser-num">{{ first + rowIndex + 1 }}</span></td>
+                            <td><span class="report-badge-corps">{{ row.recordType }}</span></td>
+                            <td><span class="font-semibold">{{ row.referenceNo || '—' }}</span></td>
+                            <td>{{ formatDate(row.recordDate) }}</td>
+                            <td>{{ row.recordSubType || '—' }}</td>
+                            <td class="text-truncate" style="max-width: 200px;">{{ row.subject || '—' }}</td>
+                            <td>{{ row.employeeName || '—' }}</td>
+                            <td>
+                                @if (row.unitName) {
+                                    <span class="report-badge-unit">{{ row.unitName }}</span>
+                                } @else {
+                                    <span class="report-dash">—</span>
+                                }
+                            </td>
+                            <td>{{ row.status || '—' }}</td>
+                            <td>{{ row.createdByName || '—' }}</td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="10" class="text-center p-4">No records found. Select fields and search.</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            }
+        </div>
+    </div>
+</div>

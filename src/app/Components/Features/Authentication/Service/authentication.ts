@@ -12,6 +12,7 @@ export class AuthenticationService {
   private readonly refreshUrl = `${environment.apis.auth}/Identity/GetRefreshToken`;
   private readonly getForgotTokenUrl = `${environment.apis.auth}/Identity/GetForgotToken`;
   private readonly forgotPasswordUrl = `${environment.apis.auth}/Identity/ForgotPassword`;
+  private readonly changePasswordUrl = `${environment.apis.auth}/Identity/ChangePassword`;
 
   constructor(private http: HttpClient) {}
 
@@ -49,6 +50,29 @@ export class AuthenticationService {
               : err?.status === 0
                 ? 'Network error. Please check your connection.'
                 : err?.error?.message ?? 'Password reset failed. Please check the token and try again.';
+          return throwError(() => ({ status: err?.status, message: msg }));
+        })
+      );
+  }
+
+  /** Change password for currently authenticated user. */
+  changePassword(model: { currentPassword: string; newPassword: string }): Observable<{ isSuccess: boolean; message: string }> {
+    return this.http
+      .post<{ isSuccess: boolean; message: string; returnCode?: string }>(this.changePasswordUrl, {
+        oldPassword: model.currentPassword,
+        newPassword: model.newPassword
+      })
+      .pipe(
+        map((r) => ({ isSuccess: r?.isSuccess === true, message: r?.message ?? (r?.isSuccess ? 'Password changed successfully.' : 'Change password failed.') })),
+        catchError((err) => {
+          const msg =
+            err?.status === 400
+              ? err?.error?.message ?? 'Current password is incorrect.'
+              : err?.status >= 500
+                ? 'Server error. Please try again later.'
+                : err?.status === 0
+                  ? 'Network error. Please check your connection.'
+                  : err?.error?.message ?? 'Failed to change password. Please try again.';
           return throwError(() => ({ status: err?.status, message: msg }));
         })
       );
@@ -128,6 +152,8 @@ export class AuthenticationService {
   }
 
   logout(): void {
-    localStorage.clear();
+    localStorage.removeItem('auth');
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
   }
 }
