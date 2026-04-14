@@ -39,6 +39,9 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
     @Input() commonCodeId: number | null = null;
     @Input() reportTypeLabel = '';
     @Input() commonCodeLabel = '';
+    @Input() postingStatus: string = 'Servings';
+    @Input() statusLabel = '';
+    @Input() statusLabelBn = '';
     @Output() langToggle = new EventEmitter<void>();
 
     orgOptions: MotherOrganizationModel[] = [];
@@ -72,11 +75,13 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
     }
 
     get reportTitle(): string {
+        const sLabel = this.lang === 'bn' ? this.statusLabelBn : this.statusLabel;
+        const statusSuffix = sLabel ? ` (${sLabel})` : '';
         if (this.reportTypeLabel && this.commonCodeLabel) {
             const suffix = this.lang === 'bn' ? 'প্রতিবেদন' : 'Report';
-            return `${this.reportTypeLabel}: ${this.commonCodeLabel} ${suffix}`;
+            return `${this.reportTypeLabel}: ${this.commonCodeLabel} ${suffix}${statusSuffix}`;
         }
-        return this.L[this.lang]['report.title.memberAppointment'];
+        return this.L[this.lang]['report.title.memberAppointment'] + statusSuffix;
     }
 
     get dateLine(): string {
@@ -177,6 +182,12 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
         if (changes['commonCodeId'] && !changes['commonCodeId'].firstChange) {
             this.first = 0;
             this.load();
+        } else if (changes['postingStatus'] && !changes['postingStatus'].firstChange) {
+            this.first = 0;
+            this.load();
+        }
+        if (changes['lang']) {
+            this.appliedFilterLines = this.buildFilterLines();
         }
     }
 
@@ -266,6 +277,7 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
                 tradeId: this.selectedTradeId ?? undefined,
                 joiningDateFrom: this.toDateStr(this.joiningDateFrom),
                 joiningDateTo: this.toDateStr(this.joiningDateTo),
+                postingStatus: this.postingStatus || undefined,
                 pagination: { page_no, row_per_page: this.rows },
             })
             .subscribe({

@@ -55,6 +55,7 @@ export interface MemberAppointmentReportParams {
   tradeId?: number | null;
   joiningDateFrom?: string | null;
   joiningDateTo?: string | null;
+  postingStatus?: string | null;
   pagination: ReportPagination;
 }
 
@@ -64,6 +65,7 @@ export interface BatchCourseReportParams {
   rankId?: number | null;
   tradeId?: number | null;
   courseBatchId?: number | null;
+  postingStatus?: string | null;
   pagination: ReportPagination;
 }
 
@@ -74,6 +76,7 @@ export interface EducationReportParams {
   tradeId?: number | null;
   qualificationId?: number | null;
   subjectId?: number | null;
+  postingStatus?: string | null;
   pagination: ReportPagination;
 }
 
@@ -89,6 +92,7 @@ export interface GenericReportParams {
   tradeId?: number | null;
   commonCodeId?: number | null;
   motherUnitId?: number | null;
+  postingStatus?: string | null;
   pagination: ReportPagination;
 }
 

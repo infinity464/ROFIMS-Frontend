@@ -73,6 +73,15 @@ export class EmployeeReportsComponent implements OnInit {
     commonCodeOptions: { label: string; labelBn: string; value: number }[] = [];
     selectedCommonCodeId: number | null = null;
 
+    /** Status (PostingStatus) dropdown options and selection. Default: Presently Serving. */
+    statusOptions: { label: string; labelBn: string; value: string }[] = [
+        { label: 'Presently Serving', labelBn: 'কর্মরত', value: 'Servings' },
+        { label: 'Ex Member', labelBn: 'সাবেক সদস্য', value: 'ExMember' },
+        { label: 'Supernumerary', labelBn: 'সুপারনিউমারারি', value: 'Supernumerary' },
+        { label: 'Pending for Joining', labelBn: 'যোগদানের অপেক্ষায়', value: 'Pending' },
+    ];
+    selectedPostingStatus: string = 'Servings';
+
     constructor(private commonCodeService: CommonCodeService) {}
 
     ngOnInit(): void {
@@ -115,6 +124,10 @@ export class EmployeeReportsComponent implements OnInit {
         });
     }
 
+    onStatusChange(): void {
+        // Child components receive [postingStatus] binding and react on input change
+    }
+
     /** Top section (report type card) stays in English only. */
     get commonCodeDropdownLabelEn(): string {
         return this.reportType === 'motherOrg'
@@ -141,6 +154,18 @@ export class EmployeeReportsComponent implements OnInit {
         const opt = this.reportTypes.find((o) => o.value === this.reportType);
         if (!opt) return '';
         return this.reportLang === 'bn' ? opt.labelBn : opt.label;
+    }
+
+    /** Selected status label (English). */
+    get selectedStatusLabel(): string {
+        const opt = this.statusOptions.find((o) => o.value === this.selectedPostingStatus);
+        return opt?.label ?? '';
+    }
+
+    /** Selected status label (Bangla). */
+    get selectedStatusLabelBn(): string {
+        const opt = this.statusOptions.find((o) => o.value === this.selectedPostingStatus);
+        return opt?.labelBn ?? '';
     }
 
     /** When common code is selected, child report components receive it and run load (filter fires). */
