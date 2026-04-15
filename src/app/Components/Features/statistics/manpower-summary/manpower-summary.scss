@@ -207,6 +207,48 @@
 }
 .totals-label { text-align: right; font-weight: 700; }
 
+/* ── Dark mode overrides ─────────────────────────────────────────────── */
+:host-context(.app-dark) {
+    .report-results-card {
+        background: var(--surface-card) !important;
+        border-color: var(--surface-border);
+    }
+
+    .report-results-header {
+        background: var(--surface-card) !important;
+        border-bottom-color: var(--surface-border);
+    }
+
+    .report-main-title {
+        color: var(--text-color) !important;
+    }
+
+    .report-date-line {
+        color: var(--text-color-secondary) !important;
+    }
+
+    .report-lang-toggle,
+    .report-btn-export {
+        background: var(--surface-ground) !important;
+        border-color: var(--surface-border);
+        color: var(--text-color);
+    }
+
+    .report-export-dropdown {
+        background: var(--surface-card);
+        border-color: var(--surface-border);
+    }
+
+    .report-export-item:hover {
+        background: var(--surface-hover);
+    }
+
+    .totals-row {
+        background-color: var(--surface-ground) !important;
+        td { border-top-color: var(--surface-border); }
+    }
+}
+
 /* ── Empty state ─────────────────────────────────────────────────────── */
 .empty-state {
     display: flex;
