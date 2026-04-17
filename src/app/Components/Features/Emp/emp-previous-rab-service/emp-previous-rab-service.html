@@ -180,11 +180,8 @@
                                 <th style="min-width: 120px; background: var(--surface-100)">Sub-Branch</th>
                                 <th style="min-width: 120px; background: var(--surface-100)">Section</th>
                                 <th style="min-width: 120px; background: var(--surface-100)">Sub-Section</th>
-                                <th style="width: 90px; background: var(--surface-100)">From</th>
-                                <th style="width: 90px; background: var(--surface-100)">To</th>
-                                <th style="width: 100px; background: var(--surface-100)">Currently Active</th>
-                                <th style="width: 95px; background: var(--surface-100)">Appointment</th>
-                                <th style="min-width: 160px; background: var(--surface-100)">Posting Authority</th>
+                                <th style="min-width: 120px; white-space: nowrap; background: var(--surface-100)">From</th>
+                                <th style="min-width: 120px; white-space: nowrap; background: var(--surface-100)">To</th>
                                 <th style="min-width: 150px; background: var(--surface-100)">Remarks</th>
                                 <th style="width: 120px; background: var(--surface-100)">Actions</th>
                             </tr>
@@ -198,11 +195,8 @@
                                 <td>{{ row.rabSubBranchName || '—' }}</td>
                                 <td>{{ row.rabSectionName || '—' }}</td>
                                 <td>{{ row.rabSubSectionName || '—' }}</td>
-                                <td>{{ formatYearOnly(row.serviceFrom) }}</td>
-                                <td>{{ formatYearOnly(row.serviceTo) }}</td>
-                                <td class="text-center">{{ row.isCurrentlyActive ? 'Yes' : 'No' }}</td>
-                                <td>{{ getOptionLabel(appointmentOptions, row.appointment) }}</td>
-                                <td>{{ row.postingAuth || '—' }}</td>
+                                <td style="white-space: nowrap;">{{ row.serviceFrom ? (row.serviceFrom | date: 'MMM d, y') : '—' }}</td>
+                                <td style="white-space: nowrap;">{{ row.serviceTo ? (row.serviceTo | date: 'MMM d, y') : '—' }}</td>
                                 <td>{{ row.remarks || '—' }}</td>
                                 <td>
                                     <div class="flex gap-1">
@@ -216,7 +210,7 @@
                         </ng-template>
                         <ng-template pTemplate="emptymessage">
                             <tr>
-                                <td [attr.colspan]="14" class="text-center py-4 text-500">
+                                <td [attr.colspan]="11" class="text-center py-4 text-500">
                                     No previous RAB service entries. Click "Add row" to add.
                                 </td>
                             </tr>

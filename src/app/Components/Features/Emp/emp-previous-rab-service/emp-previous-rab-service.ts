@@ -163,7 +163,12 @@ export class EmpPreviousRabService implements OnInit {
         this.serviceForm.get('isCurrentlyActive')?.valueChanges.subscribe(active => {
             const toControl = this.serviceForm.get('serviceTo');
             if (toControl) {
-                if (active) toControl.disable(); else toControl.enable();
+                if (active) {
+                    toControl.setValue(null);
+                    toControl.disable();
+                } else {
+                    toControl.enable();
+                }
             }
         });
         this.serviceForm.get('rabUnitCodeId')?.valueChanges.subscribe(v => this.onBattalionChange(v));
@@ -406,7 +411,7 @@ export class EmpPreviousRabService implements OnInit {
                 rabSectionCodeId: v.rabSectionCodeId ?? null,
                 rabSubSectionCodeId: v.rabSubSectionCodeId ?? null,
                 serviceFrom: this.toDateOnly(v.serviceFrom),
-                serviceTo: this.toDateOnly(v.serviceTo),
+                serviceTo: v.isCurrentlyActive === true ? null : this.toDateOnly(v.serviceTo),
                 isCurrentlyActive: v.isCurrentlyActive === true,
                 appointment: v.appointment ?? null,
                 postingAuth: v.postingAuth || null,
