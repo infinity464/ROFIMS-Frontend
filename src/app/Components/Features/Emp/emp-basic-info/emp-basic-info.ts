@@ -602,21 +602,27 @@ export class EmpBasicInfo implements OnInit {
         });
     }
 
-    /** When Marital Status is Married and Spouse Name is set, save or update spouse row in FamilyInfo. Returns Observable that emits the FMID to use for spouse addresses (from API on insert, or existing spouseFmid on update). */
+    /** When Marital Status is not Unmarried, save or update spouse row in FamilyInfo. Returns Observable that emits the FMID to use for spouse addresses (from API on insert, or existing spouseFmid on update). */
     private saveSpouseIfMarried(employeeId: number): import('rxjs').Observable<number | null> {
         const formValue = this.postingForm.getRawValue();
         const maritalId = formValue.maritalStatus;
         const spouseName = (formValue.spouseName || '').trim();
-        const isMarried = this.maritalStatusOptions.some((m) => m.codeId === maritalId && (m.codeValueEN || (m as any).codeValueEn || '').toLowerCase().trim() === 'married');
+        const isNotUnmarried = this.isMaritalStatusNotUnmarried;
+        const hasSpouseAddress = this.spousePermanentAddressForm?.hasData() || this.spousePresentAddressForm?.hasData();
         const relationCodeId = formValue.relationship;
-        const shouldSave = relationCodeId != null && (isMarried || spouseName.length > 0 || this.spouseFmid != null);
+        const shouldSave = relationCodeId != null && (isNotUnmarried || spouseName.length > 0 || this.spouseFmid != null);
         if (!shouldSave) return of(null);
+
+        // If spouse name is empty but spouse address exists, use a default placeholder name
+        const resolvedSpouseName = spouseName.length > 0
+            ? spouseName
+            : (hasSpouseAddress || isNotUnmarried ? 'Wife (Name not set in Joining Page)' : null);
 
         const nowIso = new Date().toISOString();
         const payload: Record<string, unknown> = {
             EmployeeId: employeeId,
             Relation: relationCodeId,
-            NameEN: spouseName || null,
+            NameEN: resolvedSpouseName,
             NameBN: null,
             DOB: null,
             MaritalStatus: null,
@@ -1410,12 +1416,10 @@ export class EmpBasicInfo implements OnInit {
         });
     }
 
-    /** Sets relationship form control to Spouse codeId when Marital Status is Married and relationship is not set (so spouse info and addresses save). */
+    /** Sets relationship form control to Spouse codeId when Marital Status is not Unmarried and relationship is not set (so spouse info and addresses save). */
     private setRelationshipToSpouseIfMarried(): void {
         if (this.relationOptions.length === 0) return;
-        const maritalStatusId = this.postingForm.get('maritalStatus')?.value;
-        const isMarried = maritalStatusId != null && this.maritalStatusOptions.some((m) => m.codeId === maritalStatusId && (m.codeValueEN || (m as any).codeValueEn || '').toLowerCase().trim() === 'married');
-        if (!isMarried) return;
+        if (!this.isMaritalStatusNotUnmarried) return;
         const currentRel = this.postingForm.get('relationship')?.value;
         if (currentRel != null) return;
         const spouseCodeId = this.relationOptions.find((r) => (r.codeValueEN || (r as any).codeValueEn || '').toLowerCase().trim() === 'spouse')?.codeId;
@@ -1424,11 +1428,11 @@ export class EmpBasicInfo implements OnInit {
     }
 
     onMaritalStatusChange(value: number | null): void {
-        const isMarried = value != null && this.maritalStatusOptions.some((m) => m.codeId === value && (m.codeValueEN || (m as any).codeValueEn || '').toLowerCase().trim() === 'married');
-        if (!isMarried) {
+        const isUnmarried = value != null && this.maritalStatusOptions.some((m) => m.codeId === value && (m.codeValueEN || (m as any).codeValueEn || '').toLowerCase().trim() === 'unmarried');
+        if (value == null || isUnmarried) {
             this.postingForm.patchValue({ relationship: null, spouseName: '' });
         } else {
-            // When user selects Married, set Relationship to Spouse so spouse info and addresses save (codeId is set)
+            // When user selects any non-Unmarried status, set Relationship to Spouse so spouse info and addresses save
             this.setRelationshipToSpouseIfMarried();
         }
     }
@@ -1438,6 +1442,15 @@ export class EmpBasicInfo implements OnInit {
         const maritalStatusId = this.postingForm.get('maritalStatus')?.value;
         if (maritalStatusId == null) return false;
         return this.maritalStatusOptions.some((m) => m.codeId === maritalStatusId && (m.codeValueEN || '').toLowerCase() === 'married');
+    }
+
+    /** True when a Marital Status is selected and it is NOT Unmarried. */
+    get isMaritalStatusNotUnmarried(): boolean {
+        const maritalStatusId = this.postingForm.get('maritalStatus')?.value;
+        if (maritalStatusId == null) return false;
+        const selected = this.maritalStatusOptions.find((m) => m.codeId === maritalStatusId);
+        if (!selected) return false;
+        return (selected.codeValueEN || '').toLowerCase() !== 'unmarried';
     }
 
     loadOfficerType(codeId: number, orgId?: number | null) {

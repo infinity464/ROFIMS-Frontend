@@ -316,7 +316,7 @@
 
                 </div>
 
-                @if (isMaritalStatusMarried) {
+                @if (isMaritalStatusNotUnmarried) {
                 <div class="form-row">
                     <div class="form-field">
                         <label class="form-label">Relationship</label>
@@ -367,7 +367,7 @@
           </app-address-form>
         </div>
 
-        @if (isMaritalStatusMarried) {
+        @if (isMaritalStatusNotUnmarried) {
         <!-- Spouse Permanent Address Section (Optional) -->
         <div class="form-section">
           <app-address-form
