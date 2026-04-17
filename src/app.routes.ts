@@ -126,6 +126,7 @@ import { NotesheetPreviewPostingComponent } from '@/Components/Features/noteshee
 import { NotesheetPreviewExbdComponent } from '@/Components/Features/notesheet-preview/exbd/notesheet-preview-exbd';
 import { LeaveApplicationApplyComponent } from '@/Components/Features/leave-application/leave-application-apply/leave-application-apply.component';
 import { LeaveApplicationListComponent } from '@/Components/Features/leave-application/leave-application-list/leave-application-list.component';
+import { LeaveCardComponent } from '@/Components/Features/leave-application/leave-card/leave-card.component';
 import { CalendarComponent } from '@/Components/Features/calendar/calendar.component';
 import { TaskEventListComponent } from '@/Components/Features/calendar/task-event-list.component';
 import { ChatContainerComponent } from '@/Components/Features/chat/chat-container.component';
@@ -258,6 +259,7 @@ export const appRoutes: Routes = [
             // Leave Application (apply and approve/reject - standalone from notesheet)
             { path: 'leave-application/apply', component: LeaveApplicationApplyComponent },
             { path: 'leave-application/list', component: LeaveApplicationListComponent },
+            { path: 'leave-application/card', component: LeaveCardComponent },
 
             // EMP
             { path: 'emp-list', component: EmpList },

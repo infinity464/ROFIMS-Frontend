@@ -73,6 +73,7 @@ export class LeaveApplicationListComponent implements OnInit {
     previewRow: LeaveApplicationModel | null = null;
     previewRemarkText = '';
 
+
     employeeNameMap: Record<number, string> = {};
     employeeRabIdMap: Record<number, string> = {};
     employeeServiceIdMap: Record<number, string> = {};

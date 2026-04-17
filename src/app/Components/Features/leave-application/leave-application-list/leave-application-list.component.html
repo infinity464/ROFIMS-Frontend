@@ -192,13 +192,14 @@
                                         <td>{{ formatDate(row.toDate) }}</td>
                                         <td>{{ getApplicantName(row.approvedByEmployeeId) }}</td>
                                         <td>{{ formatDate(row.approvedDate) }}</td>
-                                        <td>
+                                        <td class="flex gap-1">
                                             <button type="button" class="report-btn-secondary" (click)="openPreview(row)"><i class="pi pi-eye mr-1"></i>Preview</button>
+                                            <button type="button" class="report-btn-secondary" [routerLink]="['/leave-application/card']" [queryParams]="{ id: row.leaveApplicationId }" title="Leave Card"><i class="pi pi-id-card"></i></button>
                                         </td>
                                     </tr>
                                 </ng-template>
                                 <ng-template pTemplate="emptymessage">
-                                    <tr><td colspan="10" class="text-center p-4">No approved applications.</td></tr>
+                                    <tr><td colspan="9" class="text-center p-4">No approved applications.</td></tr>
                                 </ng-template>
                             </p-table>
                             @if (totalRecords > pageSize) {

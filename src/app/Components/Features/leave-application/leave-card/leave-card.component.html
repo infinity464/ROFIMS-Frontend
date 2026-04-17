@@ -1,0 +1,117 @@
+<div class="leave-card-page employee-reports-page">
+    <div class="leave-card-toolbar">
+        <button type="button" class="report-btn-back" (click)="goBack()">
+            <i class="pi pi-arrow-left" style="font-size:0.75rem"></i> Back
+        </button>
+        <div class="leave-card-toolbar-right">
+            <button type="button" class="report-lang-toggle" (click)="toggleLang()">
+                {{ lang === 'bn' ? 'English' : 'বাংলা' }}
+            </button>
+            @if (row) {
+                <div class="report-export-wrap">
+                    <button type="button" class="report-btn-export" (click)="toggleExportDropdown($event)" [disabled]="exporting">
+                        @if (exporting) {
+                            <i class="pi pi-spin pi-spinner" style="font-size:13px"></i>
+                            Generating...
+                        } @else {
+                            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                                <path d="M6.5 1v7M3.5 5.5l3 3 3-3M1.5 10.5h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Export
+                        }
+                    </button>
+                    @if (exportDropdownOpen) {
+                        <div class="report-export-dropdown" (click)="$event.stopPropagation()">
+                            <button type="button" class="report-export-item report-export-print" (click)="exportAs('print')">
+                                <i class="pi pi-print" style="font-size:0.75rem"></i> Print
+                            </button>
+                            <button type="button" class="report-export-item report-export-pdf" (click)="exportAs('pdf')">
+                                <span class="report-export-icon">⬇</span> PDF
+                            </button>
+                            <button type="button" class="report-export-item report-export-word" (click)="exportAs('word')">
+                                <span class="report-export-icon">⬇</span> Word
+                            </button>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    @if (loading) {
+        <div class="leave-card-loading">
+            <i class="pi pi-spin pi-spinner"></i> Loading...
+        </div>
+    } @else if (!row) {
+        <div class="leave-card-empty">Application not found.</div>
+    } @else {
+        <div class="leave-card" id="leave-card-print">
+            @if (lang === 'bn') {
+                <!-- Bangla Version -->
+                <div class="leave-card-header">ছুটির সনদপত্র</div>
+                <div class="leave-card-body">
+                    <p class="leave-card-text">
+                        প্রত্যয়ন করা যাচ্ছে নং {{ getPrefix(row.applicantEmployeeId) }}-{{ getServiceId(row.applicantEmployeeId) }}
+                        পদবী/পেশাঃ {{ getRank(row.applicantEmployeeId) }} নামঃ {{ getName(row.applicantEmployeeId) }}
+                        তাহাকে আগামী {{ formatDate(row.fromDate) }} তারিখ হতে {{ formatDate(row.toDate) }}
+                        তারিখ পর্যন্ত মোট {{ getTotalDays() }} দিনের
+                        {{ getLeaveType(row.leaveTypeId) }}  মঞ্জুর করা হলো।
+                    </p>
+                    @if (row.addressDuringLeave) {
+                        <div class="leave-card-address">
+                            <span class="leave-card-address-label">ছুটি থাকাকালীন তাহার ঠিকানা নিম্নরূপঃ</span>
+                            <p class="leave-card-address-text">{{ row.addressDuringLeave }}</p>
+                        </div>
+                    }
+                </div>
+                <div class="leave-card-footer">
+                    <div class="leave-card-footer-left">
+                        <p>স্থানঃ প্রশাসন ও অর্থ, র‌্যাব সদর দপ্তর</p>
+                        <p>তারিখঃ {{ formatDate(row.approvedDate) }}</p>
+                    </div>
+                    <div class="leave-card-footer-right">
+                        <div class="leave-card-signature">
+                            <div class="leave-card-approver-name">{{ getName(getApproverId()) }}</div>
+                            <div class="leave-card-approver-rank">{{ getRank(getApproverId()) }}</div>
+                            <div class="leave-card-approver-appointment">{{ getAppointment(getApproverId()) }}</div>
+                            <div class="leave-card-approver-office">র‌্যাব সদর দপ্তর</div>
+                        </div>
+                    </div>
+                </div>
+            } @else {
+                <!-- English Version -->
+                <div class="leave-card-header">Leave Certificate</div>
+                <div class="leave-card-body">
+                    <p class="leave-card-text">
+                        It is certified that No. {{ getPrefix(row.applicantEmployeeId) }}-{{ getServiceId(row.applicantEmployeeId) }},
+                        Rank/Designation: {{ getRank(row.applicantEmployeeId) }},
+                        Name: {{ getName(row.applicantEmployeeId) }},
+                        has been granted {{ getLeaveType(row.leaveTypeId) }} leave
+                        for a total of {{ getTotalDays() }} day(s)
+                        from {{ formatDate(row.fromDate) }} to {{ formatDate(row.toDate) }}.
+                    </p>
+                    @if (row.addressDuringLeave) {
+                        <div class="leave-card-address">
+                            <span class="leave-card-address-label">Address during leave:</span>
+                            <p class="leave-card-address-text">{{ row.addressDuringLeave }}</p>
+                        </div>
+                    }
+                </div>
+                <div class="leave-card-footer">
+                    <div class="leave-card-footer-left">
+                        <p>Place: Administration & Finance, RAB HQ</p>
+                        <p>Date: {{ formatDate(row.approvedDate) }}</p>
+                    </div>
+                    <div class="leave-card-footer-right">
+                        <div class="leave-card-signature">
+                            <div class="leave-card-approver-name">{{ getName(getApproverId()) }}</div>
+                            <div class="leave-card-approver-rank">{{ getRank(getApproverId()) }}</div>
+                            <div class="leave-card-approver-appointment">{{ getAppointment(getApproverId()) }}</div>
+                            <div class="leave-card-approver-office">RAB HQ</div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>

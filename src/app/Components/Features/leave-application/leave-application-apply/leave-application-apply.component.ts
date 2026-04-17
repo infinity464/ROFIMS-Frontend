@@ -53,8 +53,17 @@ export class LeaveApplicationApplyComponent implements OnInit {
     applicantEmployeeId: number | null = null;
     leaveTypeOptions: { label: string; value: number }[] = [];
     approverOptions: { label: string; value: number }[] = [];
+    processTypeOptions = [
+        { label: 'Automatic', value: 'automatic' },
+        { label: 'Manual', value: 'manual' }
+    ];
+    manualDecisionOptions = [
+        { label: 'Approved', value: 'approved' },
+        { label: 'Rejected', value: 'rejected' }
+    ];
     hasReliever = false;
     relieverInfo: EmployeeBasicInfo | null = null;
+    totalDays: number | null = null;
     isSaving = false;
     editId: number | null = null;
     editMode = false;
@@ -99,6 +108,8 @@ export class LeaveApplicationApplyComponent implements OnInit {
             applicantEmployeeId: [null as number | null, Validators.required],
             appliedByEmployeeId: [null as number | null],
             leaveTypeId: [null as number | null, Validators.required],
+            processType: ['automatic' as string],
+            manualDecision: [null as string | null],
             fromDate: [null as Date | null, Validators.required],
             toDate: [null as Date | null, Validators.required],
             relieverEmployeeId: [null as number | null],
@@ -106,6 +117,31 @@ export class LeaveApplicationApplyComponent implements OnInit {
             remarks: [''],
             finalApproverId: [null as number | null]
         });
+        this.form.get('fromDate')!.valueChanges.subscribe(() => this.calculateTotalDays());
+        this.form.get('toDate')!.valueChanges.subscribe(() => this.calculateTotalDays());
+        this.form.get('processType')!.valueChanges.subscribe((val) => {
+            if (val === 'manual') {
+                this.form.get('manualDecision')!.setValidators(Validators.required);
+                this.form.get('finalApproverId')!.clearValidators();
+            } else {
+                this.form.get('manualDecision')!.clearValidators();
+                this.form.get('manualDecision')!.setValue(null);
+                this.form.get('finalApproverId')!.setValidators(Validators.required);
+            }
+            this.form.get('manualDecision')!.updateValueAndValidity();
+            this.form.get('finalApproverId')!.updateValueAndValidity();
+        });
+    }
+
+    private calculateTotalDays(): void {
+        const from = this.form.get('fromDate')?.value as Date | null;
+        const to = this.form.get('toDate')?.value as Date | null;
+        if (from && to && to >= from) {
+            const diffMs = to.getTime() - from.getTime();
+            this.totalDays = Math.round(diffMs / (1000 * 60 * 60 * 24)) + 1;
+        } else {
+            this.totalDays = null;
+        }
     }
 
     loadLeaveTypes(): void {
@@ -219,15 +255,27 @@ export class LeaveApplicationApplyComponent implements OnInit {
     loadForEdit(id: number): void {
         this.leaveAppService.getById(id).subscribe({
             next: (d) => {
-                if (!d || (d.leaveApplicationStatusId !== 1 && d.leaveApplicationStatusId !== 0)) {
-                    this.messageService.add({ severity: 'warn', summary: 'Cannot edit', detail: 'Only draft can be edited.' });
+                if (!d) {
+                    this.messageService.add({ severity: 'warn', summary: 'Cannot edit', detail: 'Application not found.' });
+                    return;
+                }
+                const editableStatuses = [0, 1, 3, 4]; // Draft, Draft, Approved(manual), Declined(manual)
+                if (!editableStatuses.includes(d.leaveApplicationStatusId)) {
+                    this.messageService.add({ severity: 'warn', summary: 'Cannot edit', detail: 'Only draft or manually processed applications can be edited.' });
                     return;
                 }
                 const from = d.fromDate ? new Date(d.fromDate) : null;
                 const to = d.toDate ? new Date(d.toDate) : null;
+                // Determine processType from saved status
+                const savedStatus = d.leaveApplicationStatusId;
+                const isManual = savedStatus === 3 || savedStatus === 4;
+                const manualDecision = savedStatus === 3 ? 'approved' : savedStatus === 4 ? 'rejected' : null;
+
                 this.form.patchValue({
                     applicantEmployeeId: d.applicantEmployeeId ?? (d as any).ApplicantEmployeeId,
                     leaveTypeId: d.leaveTypeId ?? (d as any).LeaveTypeId,
+                    processType: isManual ? 'manual' : 'automatic',
+                    manualDecision: manualDecision,
                     fromDate: from,
                     toDate: to,
                     relieverEmployeeId: d.relieverEmployeeId ?? (d as any).RelieverEmployeeId ?? null,
@@ -298,15 +346,62 @@ export class LeaveApplicationApplyComponent implements OnInit {
                     this.messageService.add({ severity: 'warn', summary: 'Save failed', detail: msg || 'Save failed.' });
                 }
             },
-            error: () => {
+            error: (err: any) => {
                 this.isSaving = false;
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to save draft' });
+                const detail = err?.error?.description ?? err?.error?.Description ?? err?.message ?? 'Failed to save draft';
+                this.messageService.add({ severity: 'error', summary: 'Error', detail });
             }
         });
     }
 
     submitForApproval(): void {
         if (!this.buildAndValidate()) return;
+        const processType = this.form.get('processType')?.value;
+
+        if (processType === 'manual') {
+            this.submitManual();
+        } else {
+            this.submitAutomatic();
+        }
+    }
+
+    private submitManual(): void {
+        const decision = this.form.get('manualDecision')?.value;
+        if (!decision) {
+            this.messageService.add({ severity: 'warn', summary: 'Required', detail: 'Please select Approved or Rejected.' });
+            return;
+        }
+        // Manual: status 3=Approved, 4=Declined — no notification
+        const statusId = decision === 'approved' ? 3 : 4;
+        const payload = this.buildPayload(statusId);
+        this.isSaving = true;
+
+        const obs = this.editId
+            ? this.leaveAppService.update({ ...payload, leaveApplicationId: this.editId })
+            : this.leaveAppService.save(payload);
+
+        obs.subscribe({
+            next: (res) => {
+                this.isSaving = false;
+                const code = res.statusCode ?? res.StatusCode ?? 0;
+                const msg = res.description ?? res.Description ?? '';
+                if (code === 200) {
+                    const label = statusId === 3 ? 'Approved' : 'Rejected';
+                    this.messageService.add({ severity: 'success', summary: label, detail: `Leave application saved as ${label}.` });
+                    this.router.navigate(['/leave-application/list'], { queryParams: { section: statusId === 3 ? 'approved' : 'declined' } });
+                } else {
+                    this.messageService.add({ severity: 'warn', summary: 'Save failed', detail: msg || 'Save failed.' });
+                }
+            },
+            error: (err: any) => {
+                this.isSaving = false;
+                const detail = err?.error?.description ?? err?.error?.Description ?? err?.message ?? 'Failed to save';
+                this.messageService.add({ severity: 'error', summary: 'Error', detail });
+            }
+        });
+    }
+
+    private submitAutomatic(): void {
         const finalApproverId = this.form.get('finalApproverId')?.value;
         if (!finalApproverId) {
             this.messageService.add({ severity: 'warn', summary: 'Required', detail: 'Please select Final Approver before submitting.' });
@@ -327,9 +422,10 @@ export class LeaveApplicationApplyComponent implements OnInit {
                         this.messageService.add({ severity: 'warn', summary: 'Submit failed', detail: msg || 'Submit failed.' });
                     }
                 },
-                error: () => {
+                error: (err: any) => {
                     this.isSaving = false;
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to submit' });
+                    const detail = err?.error?.description ?? err?.error?.Description ?? err?.message ?? 'Failed to submit';
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail });
                 }
             });
         };
@@ -344,9 +440,10 @@ export class LeaveApplicationApplyComponent implements OnInit {
                         this.messageService.add({ severity: 'warn', summary: 'Save failed', detail: res.description ?? res.Description ?? '' });
                     }
                 },
-                error: () => {
+                error: (err: any) => {
                     this.isSaving = false;
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to save' });
+                    const detail = err?.error?.description ?? err?.error?.Description ?? err?.message ?? 'Failed to save';
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail });
                 }
             });
         } else {
@@ -362,18 +459,23 @@ export class LeaveApplicationApplyComponent implements OnInit {
                         this.messageService.add({ severity: 'warn', summary: 'Submit failed', detail: res.description ?? res.Description ?? '' });
                     }
                 },
-                error: () => {
+                error: (err: any) => {
                     this.isSaving = false;
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to submit' });
+                    const detail = err?.error?.description ?? err?.error?.Description ?? err?.message ?? 'Failed to submit';
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail });
                 }
             });
         }
     }
 
     private buildAndValidate(): boolean {
-        const applicantId = this.form.get('applicantEmployeeId')?.value ?? this.applicantEmployeeId;
-        if (!applicantId) {
-            this.messageService.add({ severity: 'warn', summary: 'Required', detail: 'Select applicant (yourself or search by RAB ID/Service ID).' });
+        const applicantId = this.form.get('applicantEmployeeId')?.value
+            ?? this.applicantEmployeeId
+            ?? this.applicantInfo?.employeeID
+            ?? null;
+        if (applicantId != null && applicantId > 0) {
+            this.form.patchValue({ applicantEmployeeId: applicantId });
+        } else {
             return false;
         }
         const user = this.sharedService.getCurrentUser?.();
@@ -401,6 +503,8 @@ export class LeaveApplicationApplyComponent implements OnInit {
         const applicantId = this.form.get('applicantEmployeeId')?.value ?? this.applicantEmployeeId;
         const user = this.sharedService.getCurrentUser?.() ?? '';
         const appliedBy = this.currentUserEmployeeId ?? applicantId ?? this.form.get('appliedByEmployeeId')?.value;
+        const isManualApproval = statusId === 3 || statusId === 4;
+        const now = new Date().toISOString();
         return {
             applicantEmployeeId: applicantId,
             appliedByEmployeeId: appliedBy ?? applicantId,
@@ -412,6 +516,10 @@ export class LeaveApplicationApplyComponent implements OnInit {
             remarks: this.form.get('remarks')?.value ?? '',
             finalApproverId: this.form.get('finalApproverId')?.value ?? null,
             leaveApplicationStatusId: statusId,
+            approvedByEmployeeId: isManualApproval && statusId === 3 ? (this.currentUserEmployeeId ?? appliedBy) : null,
+            approvedDate: isManualApproval && statusId === 3 ? now : null,
+            declinedByEmployeeId: isManualApproval && statusId === 4 ? (this.currentUserEmployeeId ?? appliedBy) : null,
+            declinedDate: isManualApproval && statusId === 4 ? now : null,
             createdBy: user,
             lastUpdatedBy: user
         };
