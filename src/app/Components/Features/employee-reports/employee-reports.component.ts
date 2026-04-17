@@ -73,12 +73,16 @@ export class EmployeeReportsComponent implements OnInit {
     commonCodeOptions: { label: string; labelBn: string; value: number }[] = [];
     selectedCommonCodeId: number | null = null;
 
-    /** Status (PostingStatus) dropdown options and selection. Default: Presently Serving. */
+    /**
+     * Status (PostingStatus) dropdown options and selection. Default: Presently Serving.
+     * "Supernumerary" includes Pending and PendingForJoining statuses.
+     * "All" sends empty/null to backend (no filter).
+     */
     statusOptions: { label: string; labelBn: string; value: string }[] = [
+        { label: 'All', labelBn: 'সকল', value: '' },
         { label: 'Presently Serving', labelBn: 'কর্মরত', value: 'Servings' },
         { label: 'Ex Member', labelBn: 'সাবেক সদস্য', value: 'ExMember' },
         { label: 'Supernumerary', labelBn: 'সুপারনিউমারারি', value: 'Supernumerary' },
-        { label: 'Pending for Joining', labelBn: 'যোগদানের অপেক্ষায়', value: 'Pending' },
     ];
     selectedPostingStatus: string = 'Servings';
 

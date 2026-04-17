@@ -1,0 +1,10 @@
+:host {
+    display: block;
+}
+
+/* Ensure text inputs match p-select dropdown height exactly */
+.report-filter-body-inner .report-filter-field input[pInputText] {
+    box-sizing: border-box;
+    height: 38px;
+    padding: 0 12px;
+}

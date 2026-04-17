@@ -96,6 +96,72 @@ export interface GenericReportParams {
   pagination: ReportPagination;
 }
 
+/** Report: Family Member Occupation – family member details. */
+export interface FamilyOccupationReportRow {
+  ser?: number;
+  familyMemberName?: string | null;
+  familyMemberNameBN?: string | null;
+  occupation?: string | null;
+  occupationBN?: string | null;
+  occupationDetails?: string | null;
+  name?: string | null;
+  nameBN?: string | null;
+  rabid?: string | null;
+  serviceId?: string | null;
+  rank?: string | null;
+  rankBN?: string | null;
+  orgName?: string | null;
+  orgNameBN?: string | null;
+}
+
+/** Request for Family Member Occupation report. */
+export interface FamilyOccupationReportParams {
+  relationId?: number | null;
+  occupationId?: number | null;
+  postingStatus?: string | null;
+  rabId?: string | null;
+  serviceId?: string | null;
+  nid?: string | null;
+  pagination: ReportPagination;
+}
+
+/** Report H: Address Location – Division, District, Upazila, Post Office, Address details, RAB Unit. */
+export interface AddressLocationReportRow extends ReportRowBase {
+  rabid?: string | null;
+  rabUnit?: string | null;
+  rabUnitBN?: string | null;
+  locationType?: string | null;
+  addressOwner?: string | null;
+  addressOwnerBN?: string | null;
+  division?: string | null;
+  divisionBN?: string | null;
+  district?: string | null;
+  districtBN?: string | null;
+  upazila?: string | null;
+  upazilaBN?: string | null;
+  postOffice?: string | null;
+  postOfficeBN?: string | null;
+  address?: string | null;
+  addressBN?: string | null;
+  rmks?: string | null;
+}
+
+/** Request for Address Location report (filters + pagination). */
+export interface AddressLocationReportParams {
+  divisionId?: number | null;
+  districtId?: number | null;
+  upazilaId?: number | null;
+  postOfficeId?: number | null;
+  postingStatus?: string | null;
+  rabId?: string | null;
+  serviceId?: string | null;
+  nid?: string | null;
+  activeOnly?: boolean | null;
+  locationType?: string | null;
+  addressOwner?: string | null;
+  pagination: ReportPagination;
+}
+
 /** Backend paged response (may use Rows/TotalPages). */
 export interface ReportPagedResponse<T> {
   datalist: T[];

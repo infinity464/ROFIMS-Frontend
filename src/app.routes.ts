@@ -137,6 +137,8 @@ import { RoleMenuPermission } from '@/Components/Features/role-menu-permission/r
 import { LoginAuditComponent } from '@/Components/Features/login-audit/login-audit.component';
 import { MyLoginAuditComponent } from '@/Components/Features/my-login-audit/my-login-audit.component';
 import { EmployeeReportsComponent } from '@/Components/Features/employee-reports/employee-reports.component';
+import { ReportFamilyOccupationComponent } from '@/Components/Features/employee-reports/report-family-occupation/report-family-occupation.component';
+import { ReportAddressLocationComponent } from '@/Components/Features/employee-reports/report-address-location/report-address-location.component';
 import { RabUnitAor } from '@/Components/basic-setup/rab-unit-aor/rab-unit-aor';
 import { ManpowerSummaryComponent } from '@/Components/Features/statistics/manpower-summary/manpower-summary';
 import { ManpowerChartComponent } from '@/Components/Features/statistics/manpower-chart/manpower-chart';
@@ -306,6 +308,8 @@ export const appRoutes: Routes = [
 
             // Employee Reports
             { path: 'employee-reports', component: EmployeeReportsComponent },
+            { path: 'report-family-occupation', component: ReportFamilyOccupationComponent },
+            { path: 'report-address-location', component: ReportAddressLocationComponent },
 
             // Statistics
             { path: 'statistics/manpower-summary', component: ManpowerSummaryComponent },
