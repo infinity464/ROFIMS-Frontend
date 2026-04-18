@@ -31,13 +31,15 @@
             <small class="text-red-500">Required</small>
           }
         </div>
-        <div>
-          <label for="status" class="font-semibold block mb-2 text-700">Status</label>
-          <p-select id="status" formControlName="status"
-            [options]="statusOptions"
-            optionLabel="label" optionValue="value" placeholder="Select status"
-            [showClear]="false" class="w-full" appendTo="body" [filter]="true" />
-        </div>
+        @if (mode === 'edit') {
+          <div>
+            <label for="status" class="font-semibold block mb-2 text-700">Status</label>
+            <p-select id="status" formControlName="status"
+              [options]="statusOptions"
+              optionLabel="label" optionValue="value" placeholder="Select status"
+              [showClear]="false" class="w-full" appendTo="body" [filter]="true" />
+          </div>
+        }
         <div>
           <label for="sortOrder" class="font-semibold block mb-2 text-700">Sort Order</label>
           <p-inputNumber id="sortOrder" formControlName="sortOrder" [min]="1" [useGrouping]="false"

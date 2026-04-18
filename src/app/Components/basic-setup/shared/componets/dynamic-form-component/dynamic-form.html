@@ -1,6 +1,7 @@
 <form [formGroup]="form" (ngSubmit)="onSave()">
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
         @for (field of config.formFields; track field.name) {
+        @if (field.name !== 'status' || editingId) {
         <div>
             <label [for]="field.name" class="block mb-2">
                 {{ field.label }}
@@ -44,6 +45,7 @@
             }
             }
         </div>
+        }
         }
     </div>
     <div class="flex flex-col sm:flex-row gap-2 justify-end">

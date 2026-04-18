@@ -144,7 +144,7 @@ export class OrganizationUnit implements OnInit {
             districtId: [null, Validators.required],
             email: [''],
             sortOrder: [0],
-            status: [null],
+            status: [true],
             remarks: [''],
             parentOrg: [null],
             createdBy: [this.currentUser],
@@ -238,16 +238,6 @@ export class OrganizationUnit implements OnInit {
     onSubmit() {
         if (this.isSubmitting) return;
 
-        const status = this.organizationForm.get('status')?.value;
-        if (status == null) {
-            this.messageService.add({
-                severity: 'warn',
-                summary: 'Validation',
-                detail: 'Please select Status (Active or Inactive) for the organization'
-            });
-            return;
-        }
-
         if (this.organizationForm.invalid) {
             this.organizationForm.markAllAsTouched();
             return;
@@ -256,6 +246,7 @@ export class OrganizationUnit implements OnInit {
         if (this.editingId) {
             this.update();
         } else {
+            this.organizationForm.patchValue({ status: true });
             this.create();
         }
     }
@@ -374,7 +365,7 @@ export class OrganizationUnit implements OnInit {
             orgId: 0,
             parentOrg: null,
             districtId: null,
-            status: null,
+            status: true,
             createdDate: new Date(),
             lastupdate: new Date(),
             lastUpdatedBy: this.currentUser,

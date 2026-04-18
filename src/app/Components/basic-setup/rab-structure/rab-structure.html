@@ -98,20 +98,22 @@
             <label class="block font-semibold mb-2">Name (Bangla)</label>
             <input pInputText formControlName="codeValueBN" class="w-full" />
         </div>
-        <div>
-            <label class="block font-semibold mb-2">Status</label>
-            <p-select
-                formControlName="status"
-                [options]="[
-                    { label: 'Active', value: true },
-                    { label: 'Inactive', value: false }
-                ]"
-                optionLabel="label"
-                optionValue="value"
-                placeholder="Select"
-                styleClass="w-full">
-            </p-select>
-        </div>
+        @if (isEditMode) {
+            <div>
+                <label class="block font-semibold mb-2">Status</label>
+                <p-select
+                    formControlName="status"
+                    [options]="[
+                        { label: 'Active', value: true },
+                        { label: 'Inactive', value: false }
+                    ]"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Select"
+                    styleClass="w-full">
+                </p-select>
+            </div>
+        }
         <div class="flex justify-content-end gap-2 mt-2">
             <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="closeDialog()" [disabled]="isSaving"></p-button>
             <p-button label="Save" icon="pi pi-check" (onClick)="save()" [loading]="isSaving"></p-button>

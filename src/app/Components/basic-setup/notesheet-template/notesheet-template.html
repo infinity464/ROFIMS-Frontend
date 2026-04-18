@@ -10,10 +10,12 @@
             <small class="text-red-500 block mt-1">Name is required</small>
           }
         </div>
-        <div>
-          <label for="status" class="block mb-2">Status</label>
-          <p-selectButton formControlName="status" [options]="[{ label: 'Active', value: true }, { label: 'Inactive', value: false }]" optionLabel="label" optionValue="value" />
-        </div>
+        @if (editingId) {
+          <div>
+            <label for="status" class="block mb-2">Status</label>
+            <p-selectButton formControlName="status" [options]="[{ label: 'Active', value: true }, { label: 'Inactive', value: false }]" optionLabel="label" optionValue="value" />
+          </div>
+        }
         <div class="flex items-end">
           <div class="flex align-items-center gap-2">
             <p-checkbox formControlName="isRelatedToEmployee" [binary]="true" inputId="isRel" />

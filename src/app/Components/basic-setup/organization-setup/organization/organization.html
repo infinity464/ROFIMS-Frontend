@@ -41,14 +41,16 @@
                 </div>
 
                 <!-- Status -->
-                <div class="field">
-                    <label for="status" class="block mb-2">
-                        Status
-                        <span class="text-red-500">*</span>
-                    </label>
-                    <p-select id="status" formControlName="status" [options]="statusOptions" optionLabel="label"
-                        optionValue="value" placeholder="Select status" styleClass="w-full"></p-select>
-                </div>
+                @if (editingId) {
+                    <div class="field">
+                        <label for="status" class="block mb-2">
+                            Status
+                            <span class="text-red-500">*</span>
+                        </label>
+                        <p-select id="status" formControlName="status" [options]="statusOptions" optionLabel="label"
+                            optionValue="value" placeholder="Select status" styleClass="w-full"></p-select>
+                    </div>
+                }
             </div>
 
             <!-- Buttons -->

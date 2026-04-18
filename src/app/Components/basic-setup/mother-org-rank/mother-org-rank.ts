@@ -219,13 +219,8 @@ export class MotherOrgRank {
 
     submit(data: any) {
         const orgId = this.commonForm.get('orgId')?.value;
-        const status = this.commonForm.get('status')?.value;
         if (orgId == null || orgId === '') {
             this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Mother Organization' });
-            return;
-        }
-        if (status == null) {
-            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Status (Active or Inactive)' });
             return;
         }
         if (this.commonForm.invalid) {
