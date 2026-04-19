@@ -6,6 +6,7 @@ export interface ApplicationUser {
   email: string;
   phoneNumber?: string | null;
   roleName?: string;
+  lockoutEnd?: string | null;
 }
 
 export interface ApplicationRole {
@@ -16,10 +17,21 @@ export interface ApplicationRole {
 
 export interface UserModel {
   email: string;
+  userName?: string;
   phoneNumber?: string;
   password: string;
   roleName: string;
   confirmUrl: string;
+}
+
+export interface AdminResetPasswordModel {
+  email: string;
+  newPassword: string;
+}
+
+export interface SetUserActiveModel {
+  email: string;
+  isActive: boolean;
 }
 
 export interface UpdateRoleModel {

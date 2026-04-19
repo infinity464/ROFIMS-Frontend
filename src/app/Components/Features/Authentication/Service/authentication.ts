@@ -100,17 +100,21 @@ export class AuthenticationService {
       catchError((err) => {
         // Never expose password or sensitive server details; use safe user-facing messages
         const status = err?.status;
+        const serverMsg = typeof err?.error?.message === 'string' ? err.error.message : '';
+        const reason = typeof err?.error?.reason === 'string' ? err.error.reason : '';
         const msg =
           status === 401
-            ? 'Invalid email or password.'
+            ? (reason && reason !== 'InvalidCredentials' && serverMsg
+                ? serverMsg
+                : 'Invalid email or password.')
             : status >= 500
               ? 'Server error. Please try again later.'
               : status === 0 || err?.message === 'Http failure response'
                 ? 'Network error. Please check your connection and try again.'
-                : err?.error?.message && typeof err.error.message === 'string' && !/password|credential/i.test(err.error.message)
-                  ? err.error.message
+                : serverMsg && !/password|credential/i.test(serverMsg)
+                  ? serverMsg
                   : 'Login failed. Please check your email and password.';
-        return throwError(() => ({ status, message: msg }));
+        return throwError(() => ({ status, message: msg, reason }));
       })
     );
   }

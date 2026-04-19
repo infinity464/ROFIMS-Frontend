@@ -22,7 +22,23 @@
           }
         </div>
         <div class="field">
-          <label for="phoneNumber" class="block mb-2">Phone Number</label>
+          <label for="userName" class="block mb-2">User Name <span class="text-red-500">*</span></label>
+          <input
+            pInputText
+            id="userName"
+            formControlName="userName"
+            placeholder="Username"
+            class="w-full"
+          />
+          @if (form.get('userName')?.invalid && form.get('userName')?.touched) {
+            <small class="text-red-500 block mt-1">
+              @if (form.get('userName')?.errors?.['required']) { User name is required }
+              @if (form.get('userName')?.errors?.['minlength']) { At least 3 characters }
+            </small>
+          }
+        </div>
+        <div class="field">
+          <label for="phoneNumber" class="block mb-2">Phone Number <span class="text-red-500">*</span></label>
           <input
             pInputText
             id="phoneNumber"
@@ -30,23 +46,28 @@
             placeholder="Phone"
             class="w-full"
           />
-        </div>
-        <div class="field">
-          <label for="password" class="block mb-2">Password @if (!editingUser) { <span class="text-red-500">*</span> }</label>
-          <input
-            pInputText
-            id="password"
-            type="password"
-            formControlName="password"
-            [placeholder]="editingUser ? 'Leave blank to keep current' : 'Password'"
-            class="w-full"
-          />
-          @if (form.get('password')?.invalid && form.get('password')?.touched) {
-            <small class="text-red-500 block mt-1">
-              At least 6 characters, 1 upper, 1 lower, 1 number and 1 symbol
-            </small>
+          @if (form.get('phoneNumber')?.invalid && form.get('phoneNumber')?.touched) {
+            <small class="text-red-500 block mt-1">Phone number is required</small>
           }
         </div>
+        @if (!editingUser) {
+          <div class="field">
+            <label for="password" class="block mb-2">Password <span class="text-red-500">*</span></label>
+            <input
+              pInputText
+              id="password"
+              type="password"
+              formControlName="password"
+              placeholder="Password"
+              class="w-full"
+            />
+            @if (form.get('password')?.invalid && form.get('password')?.touched) {
+              <small class="text-red-500 block mt-1">
+                At least 6 characters, 1 upper, 1 lower, 1 number and 1 symbol
+              </small>
+            }
+          </div>
+        }
         <div class="field">
           <label for="roleName" class="block mb-2">Role <span class="text-red-500">*</span></label>
           <p-select
@@ -60,6 +81,29 @@
           />
           @if (form.get('roleName')?.invalid && form.get('roleName')?.touched) {
             <small class="text-red-500 block mt-1">Role is required</small>
+          }
+        </div>
+        <div class="field md:col-span-2">
+          <label for="employeeId" class="block mb-2">
+            Employee @if (!editingUser) { <span class="text-red-500">*</span> }
+          </label>
+          <p-select
+            id="employeeId"
+            formControlName="employeeId"
+            [options]="employees"
+            optionLabel="displayLabel"
+            optionValue="employeeID"
+            [placeholder]="editingUser ? 'Mapping cannot be changed' : 'Select employee'"
+            [filter]="true"
+            [showClear]="!editingUser"
+            appendTo="body"
+            styleClass="w-full"
+          />
+          @if (editingUser) {
+            <small class="text-color-secondary block mt-1">Employee mapping cannot be changed after create.</small>
+          }
+          @if (form.get('employeeId')?.invalid && form.get('employeeId')?.touched) {
+            <small class="text-red-500 block mt-1">Employee is required</small>
           }
         </div>
       </div>
@@ -85,7 +129,9 @@
           <th>User Name</th>
           <th>Phone</th>
           <th>Role</th>
-          <th style="width: 10%">Action</th>
+          <th>Mapped Employee</th>
+          <th style="width: 8%">Status</th>
+          <th style="width: 18%">Action</th>
         </tr>
       </ng-template>
       <ng-template pTemplate="body" let-user let-rowIndex="rowIndex">
@@ -95,16 +141,89 @@
           <td>{{ user.userName ?? '-' }}</td>
           <td>{{ user.phoneNumber ?? '-' }}</td>
           <td>{{ user.roleName ?? '-' }}</td>
+          <td>{{ user.employeeDisplay ?? '-' }}</td>
           <td>
-            <button pButton icon="pi pi-pencil" (click)="onEdit(user)" pTooltip="Edit"></button>
+            @if (user.isActive) {
+              <span class="text-green-600 font-medium">Active</span>
+            } @else {
+              <span class="text-red-600 font-medium">Disabled</span>
+            }
+          </td>
+          <td>
+            <div class="flex gap-2">
+              <button pButton icon="pi pi-pencil" (click)="onEdit(user)" pTooltip="Edit"></button>
+              <button
+                pButton
+                icon="pi pi-key"
+                severity="warn"
+                (click)="openResetPassword(user)"
+                pTooltip="Reset Password"
+              ></button>
+              <button
+                pButton
+                [icon]="user.isActive ? 'pi pi-ban' : 'pi pi-check-circle'"
+                [severity]="user.isActive ? 'danger' : 'success'"
+                (click)="toggleUserActive(user)"
+                [loading]="togglingUserId === user.id"
+                [disabled]="togglingUserId !== null && togglingUserId !== user.id"
+                [pTooltip]="user.isActive ? 'Disable User' : 'Enable User'"
+              ></button>
+            </div>
           </td>
         </tr>
       </ng-template>
       <ng-template pTemplate="emptymessage">
         <tr>
-          <td colspan="6">No users found.</td>
+          <td colspan="8">No users found.</td>
         </tr>
       </ng-template>
     </p-table>
   </div>
+
+  <p-dialog
+    header="Reset Password"
+    [(visible)]="resetDialogVisible"
+    [modal]="true"
+    [closable]="!resetSubmitting"
+    [style]="{ width: '28rem' }"
+    (onHide)="closeResetPassword()"
+  >
+    <div class="flex flex-col gap-3">
+      <div>
+        <label class="block mb-1 text-sm">User</label>
+        <div class="font-medium">{{ resetTargetUser?.email }}</div>
+      </div>
+      <div>
+        <label for="resetNewPassword" class="block mb-1 text-sm">New Password <span class="text-red-500">*</span></label>
+        <input
+          pInputText
+          id="resetNewPassword"
+          type="password"
+          [(ngModel)]="resetNewPassword"
+          placeholder="New password"
+          class="w-full"
+          autocomplete="new-password"
+        />
+        <small class="text-color-secondary block mt-1">
+          At least 6 characters, 1 upper, 1 lower, 1 number and 1 symbol.
+        </small>
+      </div>
+      <div>
+        <label for="resetConfirmPassword" class="block mb-1 text-sm">Confirm Password <span class="text-red-500">*</span></label>
+        <input
+          pInputText
+          id="resetConfirmPassword"
+          type="password"
+          [(ngModel)]="resetConfirmPassword"
+          placeholder="Confirm password"
+          class="w-full"
+          autocomplete="new-password"
+        />
+      </div>
+    </div>
+    <ng-template pTemplate="footer">
+      <p-button label="Cancel" severity="secondary" (onClick)="closeResetPassword()" [disabled]="resetSubmitting" />
+      <p-button label="Reset" icon="pi pi-key" (onClick)="submitResetPassword()" [loading]="resetSubmitting" />
+    </ng-template>
+  </p-dialog>
 </p-fluid>

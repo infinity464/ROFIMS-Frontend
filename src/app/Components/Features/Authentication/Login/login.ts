@@ -114,7 +114,7 @@ export class Login implements OnInit {
           }
         });
       },
-      error: (err: { status?: number; message?: string }) => {
+      error: (err: { status?: number; message?: string; reason?: string }) => {
         this.isLoading = false;
         const detail =
           err?.message ||
@@ -123,9 +123,10 @@ export class Login implements OnInit {
             : err?.status && err.status >= 500
               ? 'Server error. Please try again later.'
               : 'Network error. Please check your connection and try again.');
+        const summary = err?.reason === 'UserDisabled' ? 'Account Disabled' : 'Login Failed';
         this.messageService.add({
           severity: 'error',
-          summary: 'Login Failed',
+          summary,
           detail,
           life: 5000
         });

@@ -7,7 +7,9 @@ import type {
   ApplicationRole,
   UserModel,
   UpdateRoleModel,
-  Responses
+  Responses,
+  AdminResetPasswordModel,
+  SetUserActiveModel
 } from '@/models/identity.model';
 
 const BASE = `${environment.apis.auth}/Identity`;
@@ -38,5 +40,13 @@ export class IdentityService {
 
   updateRole(role: UpdateRoleModel): Observable<Responses> {
     return this.http.post<Responses>(`${BASE}/UpdateRole`, role);
+  }
+
+  adminResetPassword(model: AdminResetPasswordModel): Observable<Responses> {
+    return this.http.post<Responses>(`${BASE}/AdminResetPassword`, model);
+  }
+
+  setUserActive(model: SetUserActiveModel): Observable<Responses> {
+    return this.http.post<Responses>(`${BASE}/SetUserActive`, model);
   }
 }

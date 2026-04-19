@@ -132,7 +132,6 @@ import { TaskEventListComponent } from '@/Components/Features/calendar/task-even
 import { ChatContainerComponent } from '@/Components/Features/chat/chat-container.component';
 import { IdentityUserCreateComponent } from '@/Components/Features/identity/identity-user-create/identity-user-create.component';
 import { RoleListComponent } from '@/Components/Features/identity/role-list/role-list.component';
-import { IdentityUserEmployeeMappingComponent } from '@/Components/Features/identity/identity-user-employee-mapping/identity-user-employee-mapping.component';
 import { MenuManagement } from '@/Components/Features/menu-management/menu-management';
 import { RoleMenuPermission } from '@/Components/Features/role-menu-permission/role-menu-permission';
 import { LoginAuditComponent } from '@/Components/Features/login-audit/login-audit.component';
@@ -168,7 +167,6 @@ export const appRoutes: Routes = [
             { path: 'chat', component: ChatContainerComponent },
             { path: 'identity/user-create', component: IdentityUserCreateComponent },
             { path: 'identity/roles', component: RoleListComponent },
-            { path: 'identity/user-employee-mapping', component: IdentityUserEmployeeMappingComponent },
             { path: 'employee-info', component: Employeeinfo },
             { path: 'basic-setup/division', component: Division },
             { path: 'basic-setup/district', component: District },
