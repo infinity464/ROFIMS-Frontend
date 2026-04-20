@@ -1,3 +1,16 @@
 :host {
   display: block;
 }
+
+:host ::ng-deep .user-list-table {
+  .p-datatable-tbody > tr > td,
+  .p-datatable-thead > tr > th {
+    padding-top: 0.4rem;
+    padding-bottom: 0.4rem;
+  }
+
+  .p-tag {
+    font-size: 0.7rem;
+    padding: 0.1rem 0.4rem;
+  }
+}

@@ -2,179 +2,348 @@
 <p-fluid>
   <div class="card">
     <div class="font-semibold text-xl mb-4">{{ editingUser ? 'Edit User' : 'Create Identity User' }}</div>
+
     <form [formGroup]="form" (ngSubmit)="onSubmit()">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        <div class="field">
-          <label for="email" class="block mb-2">Email <span class="text-red-500">*</span></label>
-          <input
-            pInputText
-            id="email"
-            type="email"
-            formControlName="email"
-            placeholder="user@example.com"
-            class="w-full"
-          />
-          @if (form.get('email')?.invalid && form.get('email')?.touched) {
-            <small class="text-red-500 block mt-1">
-              @if (form.get('email')?.errors?.['required']) { Email is required }
-              @if (form.get('email')?.errors?.['email']) { Enter a valid email }
-            </small>
-          }
+
+      <!-- Section: Account -->
+      <div class="mb-6">
+        <div class="flex items-center gap-2 mb-3 pb-2 border-b border-surface">
+          <i class="pi pi-id-card text-primary"></i>
+          <h3 class="font-semibold text-base m-0">Account</h3>
         </div>
-        <div class="field">
-          <label for="userName" class="block mb-2">User Name <span class="text-red-500">*</span></label>
-          <input
-            pInputText
-            id="userName"
-            formControlName="userName"
-            placeholder="Username"
-            class="w-full"
-          />
-          @if (form.get('userName')?.invalid && form.get('userName')?.touched) {
-            <small class="text-red-500 block mt-1">
-              @if (form.get('userName')?.errors?.['required']) { User name is required }
-              @if (form.get('userName')?.errors?.['minlength']) { At least 3 characters }
-            </small>
-          }
-        </div>
-        <div class="field">
-          <label for="phoneNumber" class="block mb-2">Phone Number <span class="text-red-500">*</span></label>
-          <input
-            pInputText
-            id="phoneNumber"
-            formControlName="phoneNumber"
-            placeholder="Phone"
-            class="w-full"
-          />
-          @if (form.get('phoneNumber')?.invalid && form.get('phoneNumber')?.touched) {
-            <small class="text-red-500 block mt-1">Phone number is required</small>
-          }
-        </div>
-        @if (!editingUser) {
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="field">
-            <label for="password" class="block mb-2">Password <span class="text-red-500">*</span></label>
+            <label for="email" class="block mb-2 font-medium">Email <span class="text-red-500">*</span></label>
             <input
               pInputText
-              id="password"
-              type="password"
-              formControlName="password"
-              placeholder="Password"
+              id="email"
+              type="email"
+              formControlName="email"
+              placeholder="user@example.com"
+              autocomplete="email"
               class="w-full"
             />
-            @if (form.get('password')?.invalid && form.get('password')?.touched) {
+            @if (form.get('email')?.invalid && form.get('email')?.touched) {
               <small class="text-red-500 block mt-1">
-                At least 6 characters, 1 upper, 1 lower, 1 number and 1 symbol
+                @if (form.get('email')?.errors?.['required']) { Email is required }
+                @if (form.get('email')?.errors?.['email']) { Enter a valid email }
               </small>
             }
           </div>
-        }
-        <div class="field">
-          <label for="roleName" class="block mb-2">Role <span class="text-red-500">*</span></label>
-          <p-select
-            id="roleName"
-            formControlName="roleName"
-            [options]="roles"
-            optionLabel="name"
-            optionValue="name"
-            placeholder="Select role"
-            styleClass="w-full"
-          />
-          @if (form.get('roleName')?.invalid && form.get('roleName')?.touched) {
-            <small class="text-red-500 block mt-1">Role is required</small>
-          }
-        </div>
-        <div class="field md:col-span-2">
-          <label for="employeeId" class="block mb-2">
-            Employee @if (!editingUser) { <span class="text-red-500">*</span> }
-          </label>
-          <p-select
-            id="employeeId"
-            formControlName="employeeId"
-            [options]="employees"
-            optionLabel="displayLabel"
-            optionValue="employeeID"
-            [placeholder]="editingUser ? 'Mapping cannot be changed' : 'Select employee'"
-            [filter]="true"
-            [showClear]="!editingUser"
-            appendTo="body"
-            styleClass="w-full"
-          />
-          @if (editingUser) {
-            <small class="text-color-secondary block mt-1">Employee mapping cannot be changed after create.</small>
-          }
-          @if (form.get('employeeId')?.invalid && form.get('employeeId')?.touched) {
-            <small class="text-red-500 block mt-1">Employee is required</small>
+          <div class="field">
+            <label for="userName" class="block mb-2 font-medium">Username / Login ID <span class="text-red-500">*</span></label>
+            <input
+              pInputText
+              id="userName"
+              formControlName="userName"
+              placeholder="e.g. user123"
+              autocomplete="username"
+              class="w-full"
+            />
+            @if (!(form.get('userName')?.invalid && form.get('userName')?.touched)) {
+              <small class="text-color-secondary block mt-1">Letters, numbers, dots and underscores. No spaces or other symbols.</small>
+            }
+            @if (form.get('userName')?.invalid && form.get('userName')?.touched) {
+              <small class="text-red-500 block mt-1">
+                @if (form.get('userName')?.errors?.['required']) { Username is required }
+                @else if (form.get('userName')?.errors?.['minlength']) { At least 3 characters }
+                @else if (form.get('userName')?.errors?.['pattern']) { Only letters, numbers, dots and underscores — no spaces or other symbols }
+              </small>
+            }
+          </div>
+          <div class="field" [class.md:col-span-2]="editingUser">
+            <label for="phoneNumber" class="block mb-2 font-medium">Phone Number <span class="text-red-500">*</span></label>
+            <input
+              pInputText
+              id="phoneNumber"
+              type="tel"
+              formControlName="phoneNumber"
+              placeholder="e.g. +8801234567890"
+              autocomplete="tel"
+              class="w-full"
+            />
+            @if (!(form.get('phoneNumber')?.invalid && form.get('phoneNumber')?.touched)) {
+              <small class="text-color-secondary block mt-1">Include country code with a leading +.</small>
+            }
+            @if (form.get('phoneNumber')?.invalid && form.get('phoneNumber')?.touched) {
+              <small class="text-red-500 block mt-1">Phone number is required</small>
+            }
+          </div>
+          @if (!editingUser) {
+            <div class="field">
+              <label for="password" class="block mb-2 font-medium">Password <span class="text-red-500">*</span></label>
+              <p-password
+                inputId="password"
+                formControlName="password"
+                placeholder="Password"
+                [toggleMask]="true"
+                [feedback]="true"
+                promptLabel="Enter a password"
+                weakLabel="Too weak"
+                mediumLabel="Could be stronger"
+                strongLabel="Strong password"
+                styleClass="w-full"
+                [inputStyleClass]="'w-full'"
+              />
+              <small class="text-color-secondary block mt-1">
+                6–20 chars, incl. 1 uppercase, 1 lowercase, 1 number &amp; 1 symbol.
+              </small>
+              @if (form.get('password')?.invalid && form.get('password')?.touched) {
+                <small class="text-red-500 block mt-1">
+                  Password doesn't meet the requirements above.
+                </small>
+              }
+            </div>
           }
         </div>
       </div>
-      <div class="flex justify-end gap-2">
+
+      <!-- Section: Access & Assignment -->
+      <div class="mb-6">
+        <div class="flex items-center gap-2 mb-3 pb-2 border-b border-surface">
+          <i class="pi pi-shield text-primary"></i>
+          <h3 class="font-semibold text-base m-0">Access &amp; Assignment</h3>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="field">
+            <label for="roleName" class="block mb-2 font-medium">Role <span class="text-red-500">*</span></label>
+            <p-select
+              id="roleName"
+              formControlName="roleName"
+              [options]="roles"
+              optionLabel="name"
+              optionValue="name"
+              placeholder="Select role"
+              appendTo="body"
+              styleClass="w-full"
+            />
+            @if (form.get('roleName')?.invalid && form.get('roleName')?.touched) {
+              <small class="text-red-500 block mt-1">Role is required</small>
+            }
+          </div>
+          <div class="field">
+            <label for="employeeId" class="block mb-2 font-medium">
+              Employee @if (!editingUser) { <span class="text-red-500">*</span> }
+            </label>
+            <p-select
+              id="employeeId"
+              formControlName="employeeId"
+              [options]="employees"
+              optionLabel="displayLabel"
+              optionValue="employeeID"
+              [placeholder]="editingUser ? 'Mapping cannot be changed' : 'Select employee'"
+              [filter]="true"
+              [showClear]="!editingUser"
+              appendTo="body"
+              styleClass="w-full"
+            />
+            @if (editingUser) {
+              <small class="text-color-secondary block mt-1">Employee mapping cannot be changed after create.</small>
+            }
+            @if (form.get('employeeId')?.invalid && form.get('employeeId')?.touched) {
+              <small class="text-red-500 block mt-1">Employee is required</small>
+            }
+          </div>
+          <div class="field md:col-span-2">
+            <label class="block mb-2 font-medium">Accessible Member Types</label>
+            <p class="text-sm text-color-secondary mb-2">
+              Pick the member types whose data this user is allowed to see across the system.
+              <strong>An empty selection means the user has no access to any member-type data</strong> — not full access.
+            </p>
+            @if (memberTypes.length === 0) {
+              <div class="p-3 border border-surface rounded text-sm text-color-secondary">
+                No member types available yet. Add them from
+                <span class="font-medium">Basic Setup &rarr; Employee Type</span>, then come back here.
+              </div>
+            } @else {
+              <div class="border border-surface rounded">
+                <div class="flex items-center gap-2 p-3 border-b border-surface bg-surface-50 dark:bg-surface-800">
+                  <p-checkbox
+                    inputId="memberTypeSelectAll"
+                    [binary]="true"
+                    [ngModel]="allMemberTypesSelected"
+                    [ngModelOptions]="{ standalone: true }"
+                    (onChange)="toggleAllMemberTypes($event.checked)"
+                  />
+                  <label for="memberTypeSelectAll" class="cursor-pointer font-medium">
+                    Select all
+                    <span class="text-color-secondary font-normal">
+                      ({{ (form.get('memberTypeIds')?.value?.length ?? 0) }} / {{ memberTypes.length }})
+                    </span>
+                  </label>
+                </div>
+                <div class="flex flex-wrap gap-x-6 gap-y-3 p-3">
+                  @for (mt of memberTypes; track mt.value) {
+                    <div class="flex items-center gap-2">
+                      <p-checkbox
+                        [inputId]="'memberType_' + mt.value"
+                        [value]="mt.value"
+                        formControlName="memberTypeIds"
+                      />
+                      <label [for]="'memberType_' + mt.value" class="cursor-pointer">{{ mt.label }}</label>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-end items-center gap-4 pt-2 border-t border-surface">
+        <button
+          type="button"
+          class="text-color-secondary hover:text-primary underline-offset-2 hover:underline text-sm"
+          (click)="onReset()"
+          [disabled]="isSubmitting"
+        >
+          {{ editingUser ? 'Cancel' : 'Reset form' }}
+        </button>
         <p-button
           [label]="editingUser ? 'Update User' : 'Create User'"
           type="submit"
           [loading]="isSubmitting"
           [disabled]="form.invalid || isSubmitting"
         />
-        <p-button label="{{ editingUser ? 'Cancel' : 'Reset' }}" icon="pi pi-refresh" severity="secondary" type="button" (onClick)="onReset()" [disabled]="isSubmitting" />
       </div>
     </form>
   </div>
 
   <div class="card mt-4">
     <div class="font-semibold text-lg mb-4">User List</div>
-    <p-table [value]="users" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]">
+    <p-table
+      #dt
+      [value]="users"
+      [paginator]="true"
+      [rows]="10"
+      [rowsPerPageOptions]="[10, 25, 50]"
+      size="small"
+      styleClass="user-list-table"
+      [globalFilterFields]="['email','userName','phoneNumber','roleName','employeeName','employeeMeta','memberTypeNamesJoined']"
+    >
+      <ng-template pTemplate="caption">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <p-iconField iconPosition="left">
+            <p-inputIcon styleClass="pi pi-search" />
+            <input
+              #searchInput
+              pInputText
+              type="text"
+              placeholder="Search users…"
+              (input)="dt.filterGlobal($any($event.target).value, 'contains')"
+            />
+          </p-iconField>
+          <p-button
+            icon="pi pi-filter-slash"
+            label="Clear"
+            [text]="true"
+            size="small"
+            severity="secondary"
+            (onClick)="dt.clear(); searchInput.value = ''"
+            pTooltip="Clear all filters and sort"
+          />
+        </div>
+      </ng-template>
+
       <ng-template pTemplate="header">
         <tr>
-          <th style="width: 5%">#</th>
           <th>Email</th>
           <th>User Name</th>
           <th>Phone</th>
           <th>Role</th>
           <th>Mapped Employee</th>
-          <th style="width: 8%">Status</th>
-          <th style="width: 18%">Action</th>
+          <th>Member Type Access</th>
+          <th style="width: 8rem">Status</th>
+          <th style="width: 9rem">Action</th>
         </tr>
       </ng-template>
-      <ng-template pTemplate="body" let-user let-rowIndex="rowIndex">
+      <ng-template pTemplate="body" let-user>
         <tr>
-          <td>{{ rowIndex + 1 }}</td>
           <td>{{ user.email }}</td>
           <td>{{ user.userName ?? '-' }}</td>
           <td>{{ user.phoneNumber ?? '-' }}</td>
           <td>{{ user.roleName ?? '-' }}</td>
-          <td>{{ user.employeeDisplay ?? '-' }}</td>
           <td>
-            @if (user.isActive) {
-              <span class="text-green-600 font-medium">Active</span>
+            @if (user.employeeName) {
+              <div class="font-medium leading-tight">{{ user.employeeName }}</div>
+              @if (user.employeeMeta) {
+                <div class="text-xs text-color-secondary leading-tight">{{ user.employeeMeta }}</div>
+              }
             } @else {
-              <span class="text-red-600 font-medium">Disabled</span>
+              <span class="text-color-secondary">-</span>
             }
           </td>
           <td>
-            <div class="flex gap-2">
-              <button pButton icon="pi pi-pencil" (click)="onEdit(user)" pTooltip="Edit"></button>
-              <button
-                pButton
+            @if (!user.memberTypeNames?.length) {
+              <span class="text-color-secondary">-</span>
+            } @else if (memberTypes.length > 0 && user.memberTypeNames.length === memberTypes.length) {
+              <p-tag
+                severity="success"
+                [value]="'All (' + user.memberTypeNames.length + ')'"
+                [pTooltip]="user.memberTypeNames.join(', ')"
+                tooltipPosition="top"
+              />
+            } @else {
+              <div class="flex flex-wrap gap-1">
+                @for (name of user.memberTypeNames; track name) {
+                  <p-tag [value]="name" severity="info" />
+                }
+              </div>
+            }
+          </td>
+          <td>
+            <span
+              class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium"
+              [class]="user.isActive ? 'bg-green-500/10 text-green-700 dark:text-green-400' : 'bg-red-500/10 text-red-700 dark:text-red-400'"
+            >
+              <span
+                class="w-1.5 h-1.5 rounded-full"
+                [class]="user.isActive ? 'bg-green-500' : 'bg-red-500'"
+              ></span>
+              {{ user.isActive ? 'Active' : 'Disabled' }}
+            </span>
+          </td>
+          <td>
+            <div class="flex gap-1">
+              <p-button
+                icon="pi pi-pencil"
+                [text]="true"
+                [rounded]="true"
+                size="small"
+                severity="secondary"
+                (onClick)="onEdit(user)"
+                pTooltip="Edit"
+                tooltipPosition="top"
+              />
+              <p-button
                 icon="pi pi-key"
+                [text]="true"
+                [rounded]="true"
+                size="small"
                 severity="warn"
-                (click)="openResetPassword(user)"
+                (onClick)="openResetPassword(user)"
                 pTooltip="Reset Password"
-              ></button>
-              <button
-                pButton
+                tooltipPosition="top"
+              />
+              <p-button
                 [icon]="user.isActive ? 'pi pi-ban' : 'pi pi-check-circle'"
+                [text]="true"
+                [rounded]="true"
+                size="small"
                 [severity]="user.isActive ? 'danger' : 'success'"
-                (click)="toggleUserActive(user)"
+                (onClick)="toggleUserActive(user)"
                 [loading]="togglingUserId === user.id"
                 [disabled]="togglingUserId !== null && togglingUserId !== user.id"
                 [pTooltip]="user.isActive ? 'Disable User' : 'Enable User'"
-              ></button>
+                tooltipPosition="top"
+              />
             </div>
           </td>
         </tr>
       </ng-template>
       <ng-template pTemplate="emptymessage">
         <tr>
-          <td colspan="8">No users found.</td>
+          <td colspan="8" class="text-center text-color-secondary">No users found.</td>
         </tr>
       </ng-template>
     </p-table>

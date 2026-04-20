@@ -1,15 +1,26 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  FormBuilder,
+  FormGroup,
+  FormsModule,
+  ReactiveFormsModule,
+  Validators
+} from '@angular/forms';
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
+import { CheckboxModule } from 'primeng/checkbox';
+import { PasswordModule } from 'primeng/password';
+import { IconFieldModule } from 'primeng/iconfield';
+import { InputIconModule } from 'primeng/inputicon';
 import { Fluid } from 'primeng/fluid';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { TableModule } from 'primeng/table';
 import { TooltipModule } from 'primeng/tooltip';
 import { DialogModule } from 'primeng/dialog';
+import { TagModule } from 'primeng/tag';
 import { forkJoin } from 'rxjs';
 import { IdentityService } from '@/services/identity.service';
 import {
@@ -17,13 +28,30 @@ import {
   IdentityUserMappingDto,
   EmployeeDropdownDto
 } from '@/services/identity-user-mapping.service';
+import {
+  IdentityUserMemberTypeAccessService,
+  UserMemberTypeAccessDto
+} from '@/services/identity-user-member-type-access.service';
+import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import type { ApplicationRole, ApplicationUser } from '@/models/identity.model';
 
 interface UserRow extends ApplicationUser {
   employeeId?: number | null;
   employeeDisplay?: string;
+  employeeName?: string | null;
+  employeeMeta?: string | null;
   isActive?: boolean;
+  memberTypeNames?: string[];
+  /** flattened form used by p-table global + column filtering */
+  memberTypeNamesJoined?: string;
 }
+
+interface MemberTypeOption {
+  label: string;
+  value: number;
+}
+
+const USERNAME_PATTERN = /^[A-Za-z0-9._@-]+$/;
 
 @Component({
   selector: 'app-identity-user-create',
@@ -35,9 +63,14 @@ interface UserRow extends ApplicationUser {
     InputTextModule,
     ButtonModule,
     SelectModule,
+    CheckboxModule,
+    PasswordModule,
+    IconFieldModule,
+    InputIconModule,
     TableModule,
     TooltipModule,
     DialogModule,
+    TagModule,
     Fluid,
     Toast
   ],
@@ -49,13 +82,17 @@ export class IdentityUserCreateComponent implements OnInit {
   private fb = inject(FormBuilder);
   private identityService = inject(IdentityService);
   private mappingService = inject(IdentityUserMappingService);
+  private accessService = inject(IdentityUserMemberTypeAccessService);
+  private masterBasicSetupService = inject(MasterBasicSetupService);
   private messageService = inject(MessageService);
 
   form!: FormGroup;
   roles: ApplicationRole[] = [];
   users: UserRow[] = [];
   employees: EmployeeDropdownDto[] = [];
+  memberTypes: MemberTypeOption[] = [];
   private mappings: IdentityUserMappingDto[] = [];
+  private memberTypeAccesses: UserMemberTypeAccessDto[] = [];
   editingUser: UserRow | null = null;
   isSubmitting = false;
 
@@ -71,16 +108,33 @@ export class IdentityUserCreateComponent implements OnInit {
     this.initForm();
     this.loadRoles();
     this.loadEmployees();
+    this.loadMemberTypes();
     this.loadUsersAndMappings();
+  }
+
+  loadMemberTypes(): void {
+    this.masterBasicSetupService.getAllByType('EmployeeType').subscribe({
+      next: (list) => {
+        const arr = Array.isArray(list) ? list : [];
+        this.memberTypes = arr
+          .filter((m) => m.status !== false && m.codeId > 0)
+          .map((m) => ({ label: m.codeValueEN ?? '', value: m.codeId }));
+      },
+      error: () => {
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load member types' });
+      }
+    });
   }
 
   loadUsersAndMappings(): void {
     forkJoin({
       users: this.identityService.getAllUsers(),
-      mappings: this.mappingService.getMappings()
+      mappings: this.mappingService.getMappings(),
+      accesses: this.accessService.getAllByUser()
     }).subscribe({
-      next: ({ users, mappings }) => {
+      next: ({ users, mappings, accesses }) => {
         this.mappings = Array.isArray(mappings) ? this.normMappings(mappings) : [];
+        this.memberTypeAccesses = Array.isArray(accesses) ? accesses : [];
         const arr = Array.isArray(users) ? users : [];
         this.users = arr.map((u) => this.buildUserRow(u));
       },
@@ -118,7 +172,24 @@ export class IdentityUserCreateComponent implements OnInit {
     const display = mapping?.employeeName
       ? this.buildEmployeeLabel(mapping.employeeName, mapping.rabID ?? null, mapping.serviceId ?? null)
       : '-';
-    return { ...base, employeeId: mapping?.employeeId ?? null, employeeDisplay: display, isActive };
+    const access = this.memberTypeAccesses.find((a) => a.userId === base.id);
+    return {
+      ...base,
+      employeeId: mapping?.employeeId ?? null,
+      employeeDisplay: display,
+      employeeName: mapping?.employeeName ?? null,
+      employeeMeta: this.buildEmployeeMeta(mapping?.rabID ?? null, mapping?.serviceId ?? null),
+      isActive,
+      memberTypeNames: access?.memberTypeNames ?? [],
+      memberTypeNamesJoined: (access?.memberTypeNames ?? []).join(' | ')
+    };
+  }
+
+  private buildEmployeeMeta(rabID: string | null, serviceId: string | null): string | null {
+    const parts: string[] = [];
+    if (rabID) parts.push(`RAB: ${rabID}`);
+    if (serviceId) parts.push(`Service: ${serviceId}`);
+    return parts.length ? parts.join(' · ') : null;
   }
 
   private buildEmployeeLabel(name: string, rabID: string | null, serviceId: string | null): string {
@@ -158,7 +229,7 @@ export class IdentityUserCreateComponent implements OnInit {
         : '';
     this.form = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
-      userName: ['', [Validators.required, Validators.minLength(3)]],
+      userName: ['', [Validators.required, Validators.minLength(3), Validators.pattern(USERNAME_PATTERN)]],
       phoneNumber: ['', Validators.required],
       password: [
         '',
@@ -170,6 +241,7 @@ export class IdentityUserCreateComponent implements OnInit {
       ],
       roleName: ['', Validators.required],
       employeeId: [null as number | null, Validators.required],
+      memberTypeIds: [[] as number[]],
       confirmUrl: [confirmUrl, Validators.required]
     });
   }
@@ -198,6 +270,8 @@ export class IdentityUserCreateComponent implements OnInit {
     this.isSubmitting = true;
 
     if (this.editingUser) {
+      const editingUserId = this.editingUser.id;
+      const memberTypeIds: number[] = Array.isArray(value.memberTypeIds) ? value.memberTypeIds : [];
       this.identityService
         .updateUser({
           email: value.email,
@@ -208,14 +282,37 @@ export class IdentityUserCreateComponent implements OnInit {
         })
         .subscribe({
           next: (res) => {
-            this.isSubmitting = false;
-            if (res.isSuccess) {
-              this.messageService.add({ severity: 'success', summary: 'Success', detail: res.message ?? 'User updated.' });
-              this.onReset();
-              this.loadUsersAndMappings();
-            } else {
+            if (!res.isSuccess) {
+              this.isSubmitting = false;
               this.messageService.add({ severity: 'error', summary: 'Error', detail: res.message ?? 'Update failed' });
+              return;
             }
+            this.accessService.setAccesses({ userId: editingUserId, memberTypeIds }).subscribe({
+              next: (accessRes) => {
+                this.isSubmitting = false;
+                if (accessRes.statusCode === 200) {
+                  this.messageService.add({ severity: 'success', summary: 'Success', detail: res.message ?? 'User updated.' });
+                } else {
+                  this.messageService.add({
+                    severity: 'warn',
+                    summary: 'Partial Update',
+                    detail: accessRes.description ?? 'User updated but member-type access save failed.'
+                  });
+                }
+                this.onReset();
+                this.loadUsersAndMappings();
+              },
+              error: () => {
+                this.isSubmitting = false;
+                this.messageService.add({
+                  severity: 'warn',
+                  summary: 'Partial Update',
+                  detail: 'User updated but member-type access save failed.'
+                });
+                this.onReset();
+                this.loadUsersAndMappings();
+              }
+            });
           },
           error: (err) => {
             this.isSubmitting = false;
@@ -227,6 +324,7 @@ export class IdentityUserCreateComponent implements OnInit {
     }
 
     const employeeId: number = value.employeeId;
+    const memberTypeIds: number[] = Array.isArray(value.memberTypeIds) ? value.memberTypeIds : [];
     const createdEmail: string = value.email;
 
     this.identityService
@@ -249,7 +347,7 @@ export class IdentityUserCreateComponent implements OnInit {
             });
             return;
           }
-          this.mapNewUser(createdEmail, employeeId, res.message, value.confirmUrl);
+          this.mapNewUser(createdEmail, employeeId, memberTypeIds, res.message, value.confirmUrl);
         },
         error: (err) => {
           this.isSubmitting = false;
@@ -261,7 +359,13 @@ export class IdentityUserCreateComponent implements OnInit {
       });
   }
 
-  private mapNewUser(email: string, employeeId: number, createMsg: string | undefined, confirmUrl: string): void {
+  private mapNewUser(
+    email: string,
+    employeeId: number,
+    memberTypeIds: number[],
+    createMsg: string | undefined,
+    confirmUrl: string
+  ): void {
     forkJoin({
       users: this.identityService.getAllUsers(),
       mappings: this.mappingService.getMappings()
@@ -281,24 +385,43 @@ export class IdentityUserCreateComponent implements OnInit {
           this.resetFormAfterCreate(confirmUrl);
           return;
         }
-        this.mappingService.setMapping({ userId: created.id, employeeId }).subscribe({
+        const newUserId = created.id;
+        this.mappingService.setMapping({ userId: newUserId, employeeId }).subscribe({
           next: (mapRes) => {
-            this.isSubmitting = false;
-            if (mapRes.statusCode === 200) {
-              this.messageService.add({
-                severity: 'success',
-                summary: 'Success',
-                detail: createMsg ?? 'User created and mapped.'
-              });
-            } else {
-              this.messageService.add({
-                severity: 'warn',
-                summary: 'Mapping Failed',
-                detail: mapRes.description ?? 'User created but mapping failed.'
-              });
-            }
-            this.resetFormAfterCreate(confirmUrl);
-            this.loadUsersAndMappings();
+            const mappingOk = mapRes.statusCode === 200;
+            this.accessService.setAccesses({ userId: newUserId, memberTypeIds }).subscribe({
+              next: (accessRes) => {
+                this.isSubmitting = false;
+                const accessOk = accessRes.statusCode === 200;
+                if (mappingOk && accessOk) {
+                  this.messageService.add({
+                    severity: 'success',
+                    summary: 'Success',
+                    detail: createMsg ?? 'User created.'
+                  });
+                } else {
+                  this.messageService.add({
+                    severity: 'warn',
+                    summary: 'Partial Success',
+                    detail: !mappingOk
+                      ? (mapRes.description ?? 'User created but employee mapping failed.')
+                      : (accessRes.description ?? 'User created but member-type access save failed.')
+                  });
+                }
+                this.resetFormAfterCreate(confirmUrl);
+                this.loadUsersAndMappings();
+              },
+              error: () => {
+                this.isSubmitting = false;
+                this.messageService.add({
+                  severity: 'warn',
+                  summary: 'Partial Success',
+                  detail: 'User created but member-type access save failed.'
+                });
+                this.resetFormAfterCreate(confirmUrl);
+                this.loadUsersAndMappings();
+              }
+            });
           },
           error: () => {
             this.isSubmitting = false;
@@ -332,6 +455,7 @@ export class IdentityUserCreateComponent implements OnInit {
       password: '',
       roleName: '',
       employeeId: null,
+      memberTypeIds: [],
       confirmUrl
     });
   }
@@ -344,7 +468,8 @@ export class IdentityUserCreateComponent implements OnInit {
       phoneNumber: user.phoneNumber ?? '',
       roleName: user.roleName ?? '',
       password: '',
-      employeeId: user.employeeId ?? null
+      employeeId: user.employeeId ?? null,
+      memberTypeIds: []
     });
     this.form.get('userName')?.disable();
     this.form.get('password')?.clearValidators();
@@ -352,6 +477,22 @@ export class IdentityUserCreateComponent implements OnInit {
     this.form.get('employeeId')?.disable();
     this.form.get('employeeId')?.clearValidators();
     this.form.get('employeeId')?.updateValueAndValidity();
+
+    if (user.id) {
+      this.accessService.getByUserId(user.id).subscribe({
+        next: (ids) => {
+          this.form.patchValue({ memberTypeIds: Array.isArray(ids) ? ids : [] });
+        },
+        error: () => {
+          this.messageService.add({
+            severity: 'warn',
+            summary: 'Warning',
+            detail: "Couldn't load member-type access for this user."
+          });
+        }
+      });
+    }
+
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -375,6 +516,7 @@ export class IdentityUserCreateComponent implements OnInit {
       password: '',
       roleName: '',
       employeeId: null,
+      memberTypeIds: [],
       confirmUrl: confirmUrl ?? ''
     });
   }
@@ -478,5 +620,21 @@ export class IdentityUserCreateComponent implements OnInit {
           this.messageService.add({ severity: 'error', summary: 'Error', detail: msg });
         }
       });
+  }
+
+  get allMemberTypesSelected(): boolean {
+    const ids: number[] = this.form?.get('memberTypeIds')?.value ?? [];
+    return this.memberTypes.length > 0 && ids.length === this.memberTypes.length;
+  }
+
+  get someMemberTypesSelected(): boolean {
+    const ids: number[] = this.form?.get('memberTypeIds')?.value ?? [];
+    return ids.length > 0 && ids.length < this.memberTypes.length;
+  }
+
+  toggleAllMemberTypes(checked: boolean): void {
+    const ids = checked ? this.memberTypes.map((m) => m.value) : [];
+    this.form.get('memberTypeIds')?.setValue(ids);
+    this.form.get('memberTypeIds')?.markAsDirty();
   }
 }
