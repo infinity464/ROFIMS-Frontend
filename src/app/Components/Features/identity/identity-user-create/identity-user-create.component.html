@@ -190,15 +190,16 @@
         </div>
       </div>
 
-      <div class="flex justify-end items-center gap-4 pt-2 border-t border-surface">
-        <button
+      <div class="flex justify-end items-center gap-2 pt-2 border-t border-surface">
+        <p-button
+          [label]="editingUser ? 'Cancel' : 'Reset form'"
+          icon="pi pi-refresh"
+          severity="secondary"
+          [outlined]="true"
           type="button"
-          class="text-color-secondary hover:text-primary underline-offset-2 hover:underline text-sm"
-          (click)="onReset()"
+          (onClick)="onReset()"
           [disabled]="isSubmitting"
-        >
-          {{ editingUser ? 'Cancel' : 'Reset form' }}
-        </button>
+        />
         <p-button
           [label]="editingUser ? 'Update User' : 'Create User'"
           type="submit"

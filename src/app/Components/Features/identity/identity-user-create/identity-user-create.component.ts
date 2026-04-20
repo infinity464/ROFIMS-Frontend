@@ -261,12 +261,77 @@ export class IdentityUserCreateComponent implements OnInit {
     });
   }
 
+  private findDuplicate(value: {
+    email: string;
+    userName: string;
+    phoneNumber: string;
+    employeeId: number | null;
+  }): string | null {
+    const editingId = this.editingUser?.id ?? null;
+    const email = (value.email ?? '').toString().trim().toLowerCase();
+    const userName = (value.userName ?? '').toString().trim().toLowerCase();
+    const phone = this.normalizePhone(value.phoneNumber);
+
+    if (email) {
+      const dupe = this.users.find(
+        (u) => u.id !== editingId && (u.email ?? '').toString().trim().toLowerCase() === email
+      );
+      if (dupe) {
+        return `Email "${value.email}" is already used by ${dupe.userName ?? dupe.email}.`;
+      }
+    }
+
+    if (!this.editingUser && userName) {
+      const dupe = this.users.find(
+        (u) => (u.userName ?? '').toString().trim().toLowerCase() === userName
+      );
+      if (dupe) {
+        return `Username "${value.userName}" is already taken.`;
+      }
+    }
+
+    if (phone) {
+      const dupe = this.users.find(
+        (u) => u.id !== editingId && this.normalizePhone(u.phoneNumber) === phone
+      );
+      if (dupe) {
+        return `Phone number "${value.phoneNumber}" is already registered to ${dupe.userName ?? dupe.email}.`;
+      }
+    }
+
+    if (!this.editingUser && value.employeeId) {
+      const mapped = this.mappings.find((m) => m.employeeId === value.employeeId);
+      if (mapped) {
+        const label = mapped.employeeName ?? `employee #${value.employeeId}`;
+        return `${label} is already linked to another user account (${mapped.userName ?? mapped.email}). One employee can only have one user.`;
+      }
+    }
+
+    return null;
+  }
+
+  private normalizePhone(value: string | null | undefined): string {
+    return (value ?? '').toString().replace(/[\s\-()+]/g, '').trim();
+  }
+
   onSubmit(): void {
     if (this.isSubmitting || this.form.invalid) {
       this.form.markAllAsTouched();
       return;
     }
     const value = this.form.getRawValue();
+
+    const duplicate = this.findDuplicate(value);
+    if (duplicate) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Duplicate',
+        detail: duplicate,
+        life: 6000
+      });
+      return;
+    }
+
     this.isSubmitting = true;
 
     if (this.editingUser) {
