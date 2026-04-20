@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, tap, map, throwError, catchError } from 'rxjs';
 import { environment } from '../../../../Core/Environments/environment';
 import { LoginResponse } from '../Model/login-response.model';
+import { MEMBER_TYPE_ACCESS_CACHE_KEY } from '@/services/identity-user-member-type-access.service';
 
 const REMEMBER_ME_EMAIL_KEY = 'remember_me_email';
 
@@ -159,5 +160,6 @@ export class AuthenticationService {
     localStorage.removeItem('auth');
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
+    localStorage.removeItem(MEMBER_TYPE_ACCESS_CACHE_KEY);
   }
 }
