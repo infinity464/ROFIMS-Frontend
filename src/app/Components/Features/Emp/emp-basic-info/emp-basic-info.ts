@@ -25,6 +25,7 @@ import { FileReferencesFormComponent } from '@components/Common/file-references-
 import { OrganizationService } from '@/Components/basic-setup/organization-setup/services/organization-service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { SharedService } from '@/shared/services/shared-service';
+import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
 
 @Component({
     selector: 'app-emp-basic-info',
@@ -795,11 +796,16 @@ export class EmpBasicInfo implements OnInit {
         private router: Router,
         private organizationService: OrganizationService,
         private masterBasicSetupService: MasterBasicSetupService,
-        private sharedService: SharedService
+        private sharedService: SharedService,
+        private memberTypeAccess: IdentityUserMemberTypeAccessService
     ) {}
+
+    /** CodeIds of Member Types the current user is allowed to use. `null` means "not yet loaded" (fail-open). */
+    private allowedMemberTypeIds: number[] | null = null;
 
     ngOnInit(): void {
         this.initializeForm();
+        this.loadCurrentUserMemberTypePermissions();
 
         // Real-time duplicate check as user types
         this.postingForm.get('serviceId')?.valueChanges.pipe(
@@ -1516,9 +1522,43 @@ export class EmpBasicInfo implements OnInit {
     }
 
     onMemberTypeChange(codeId: number) {
+        if (codeId != null && this.allowedMemberTypeIds !== null && !this.allowedMemberTypeIds.includes(codeId)) {
+            const typeName =
+                this.memberTypes?.find((m: CommonCodeModel) => m.codeId === codeId)?.codeValueEN ?? 'this member type';
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'No Permission',
+                detail: `You do not have permission to use ${typeName}.`,
+                life: 6000
+            });
+            this.postingForm.patchValue({ memberType: null, officerType: null });
+            return;
+        }
+
         const motherOrgId = this.postingForm.get('motherOrganization')?.value;
         this.postingForm.patchValue({ officerType: null });
         this.loadOfficerType(codeId, motherOrgId);
+    }
+
+    private loadCurrentUserMemberTypePermissions(): void {
+        const userId = this.sharedService.getCurrentUserId?.() ?? null;
+        if (!userId) {
+            this.allowedMemberTypeIds = null;
+            return;
+        }
+        const cached = this.memberTypeAccess.getCachedMemberTypeIds(userId);
+        if (cached !== null) {
+            this.allowedMemberTypeIds = cached;
+            return;
+        }
+        this.memberTypeAccess.cacheForUser(userId).subscribe({
+            next: (ids) => {
+                this.allowedMemberTypeIds = Array.isArray(ids) ? ids : [];
+            },
+            error: () => {
+                this.allowedMemberTypeIds = null;
+            }
+        });
     }
 
     onSubmit(): void {
