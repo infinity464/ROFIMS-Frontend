@@ -7,6 +7,8 @@ import { ButtonModule } from 'primeng/button';
 import { MessageService } from 'primeng/api';
 
 import { EmpService } from '@/services/emp-service';
+import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
+import { SharedService } from '@/shared/services/shared-service';
 
 export interface EmployeeBasicInfo {
     employeeID: number;
@@ -98,8 +100,76 @@ export class EmployeeSearchComponent implements OnChanges {
     constructor(
         private empService: EmpService,
         private messageService: MessageService,
-        private router: Router
+        private router: Router,
+        private memberTypeAccess: IdentityUserMemberTypeAccessService,
+        private sharedService: SharedService
     ) {}
+
+    /** Central permission check. Returns true when the user is allowed to view this memberType. */
+    private isMemberTypeAllowed(memberTypeId: number | null | undefined): boolean {
+        if (memberTypeId == null) return true;
+        const userId = this.sharedService.getCurrentUserId?.() ?? null;
+        if (!userId) return true;
+        const allowed = this.memberTypeAccess.getCachedMemberTypeIds(userId);
+        if (allowed === null) return true;
+        return allowed.includes(memberTypeId as number);
+    }
+
+    /**
+     * Enriches the loaded basic info with display names + reliable memberTypeId from
+     * vw_EmployeeSearchInfo, then either emits onEmployeeFound (allowed) or shows a
+     * permission-denied toast and emits onSearchReset (denied).
+     */
+    private finalizeAndEmit(employeeID: number): void {
+        this.empService.getEmployeeSearchInfo(employeeID).subscribe({
+            next: (searchInfo) => {
+                if (searchInfo && this.employeeInfo && this.employeeInfo.employeeID === employeeID) {
+                    const reliableMemberTypeId =
+                        (searchInfo as { memberTypeId?: number; MemberTypeId?: number }).memberTypeId ??
+                        (searchInfo as { memberTypeId?: number; MemberTypeId?: number }).MemberTypeId ??
+                        this.employeeInfo.memberType;
+                    this.employeeInfo = {
+                        ...this.employeeInfo,
+                        rankDisplay: searchInfo.rank ?? searchInfo.Rank,
+                        corpsDisplay: searchInfo.corps ?? searchInfo.Corps,
+                        tradeDisplay: searchInfo.trade ?? searchInfo.Trade,
+                        motherOrganizationDisplay: searchInfo.motherOrganization ?? searchInfo.MotherOrganization,
+                        memberTypeDisplay: searchInfo.memberType ?? searchInfo.MemberType,
+                        memberType: reliableMemberTypeId as number | undefined
+                    };
+                }
+
+                const memberTypeId = this.employeeInfo?.memberType ?? null;
+                if (!this.isMemberTypeAllowed(memberTypeId)) {
+                    const typeName = this.employeeInfo?.memberTypeDisplay ?? null;
+                    this.employeeFound = false;
+                    this.employeeInfo = null;
+                    this.searchRabId = '';
+                    this.searchServiceId = '';
+                    this.messageService.add({
+                        severity: 'warn',
+                        summary: 'No Permission',
+                        detail: typeName
+                            ? `You do not have permission to view ${typeName}.`
+                            : 'You do not have permission to view this member type.',
+                        life: 6000
+                    });
+                    this.onSearchReset.emit();
+                    return;
+                }
+
+                if (this.employeeInfo) {
+                    this.onEmployeeFound.emit(this.employeeInfo);
+                }
+            },
+            error: () => {
+                // Fail-open if enrichment/view fails: emit with what we have rather than block.
+                if (this.employeeInfo) {
+                    this.onEmployeeFound.emit(this.employeeInfo);
+                }
+            }
+        });
+    }
 
     ngOnChanges(changes: SimpleChanges): void {
         const idChange = changes['initialEmployeeId'];
@@ -138,21 +208,7 @@ export class EmployeeSearchComponent implements OnChanges {
                     this.searchRabId = this.employeeInfo.rabid || '';
                     this.searchServiceId = this.employeeInfo.serviceId || '';
                     this.employeeFound = true;
-                    this.onEmployeeFound.emit(this.employeeInfo);
-                    this.empService.getEmployeeSearchInfo(employeeID).subscribe({
-                        next: (searchInfo) => {
-                            if (searchInfo && this.employeeInfo && this.employeeInfo.employeeID === employeeID) {
-                                this.employeeInfo = {
-                                    ...this.employeeInfo,
-                                    rankDisplay: searchInfo.rank ?? searchInfo.Rank,
-                                    corpsDisplay: searchInfo.corps ?? searchInfo.Corps,
-                                    tradeDisplay: searchInfo.trade ?? searchInfo.Trade,
-                                    motherOrganizationDisplay: searchInfo.motherOrganization ?? searchInfo.MotherOrganization,
-                                    memberTypeDisplay: searchInfo.memberType ?? searchInfo.MemberType
-                                };
-                            }
-                        }
-                    });
+                    this.finalizeAndEmit(employeeID);
                 } else {
                     this.employeeFound = false;
                     this.employeeInfo = null;
@@ -222,22 +278,7 @@ export class EmployeeSearchComponent implements OnChanges {
                     }
                     this.employeeFound = true;
                     this.isSearching = false;
-                    this.onEmployeeFound.emit(this.employeeInfo);
-                    // Fetch display names from vw_EmployeeSearchInfo and merge into employeeInfo
-                    this.empService.getEmployeeSearchInfo(employeeID).subscribe({
-                        next: (searchInfo) => {
-                            if (searchInfo && this.employeeInfo && this.employeeInfo.employeeID === employeeID) {
-                                this.employeeInfo = {
-                                    ...this.employeeInfo,
-                                    rankDisplay: searchInfo.rank ?? searchInfo.Rank,
-                                    corpsDisplay: searchInfo.corps ?? searchInfo.Corps,
-                                    tradeDisplay: searchInfo.trade ?? searchInfo.Trade,
-                                    motherOrganizationDisplay: searchInfo.motherOrganization ?? searchInfo.MotherOrganization,
-                                    memberTypeDisplay: searchInfo.memberType ?? searchInfo.MemberType
-                                };
-                            }
-                        }
-                    });
+                    this.finalizeAndEmit(employeeID);
                 } else {
                     this.employeeFound = false;
                     this.employeeInfo = null;

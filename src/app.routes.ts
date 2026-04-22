@@ -8,6 +8,7 @@ import { Notfound } from './app/pages/notfound/notfound';
 import { Login } from '@/Components/Features/Authentication/Login/login';
 import { ChangePassword } from '@/Components/Features/Authentication/change-password/change-password';
 import { AuthGuard } from '@/Core/Guard/auth.guard';
+import { MemberTypePermissionGuard } from '@/Core/Guard/member-type-permission.guard';
 import { DynamicSearchComponent } from '@/Components/Shared/dynamic-search/dynamic-search';
 // import { MotherOrg } from '@/Components/basic-setup/mother-org/mother-org';
 import { Employeeinfo } from '@/Components/Features/EmployeeInfo/employeeinfo/employeeinfo';
@@ -261,28 +262,28 @@ export const appRoutes: Routes = [
 
             // EMP
             { path: 'emp-list', component: EmpList },
-            { path: 'emp-basic-info', component: EmpBasicInfo },
-            { path: 'emp-personal-service-info', component: EmpPersonalServiceInfoComponent },
-            { path: 'emp-personal-info', component: EmpPersonalInfo },
-            { path: 'emp-address-info', component: EmpAddressInfo },
-            { path: 'emp-family-info', component: EmpFamilyInfo },
-            { path: 'emp-nominee-info', component: EmpNomineeInfo },
-            { path: 'emp-previous-rab-service', component: EmpPreviousRabService },
-            { path: 'emp-service-history', component: EmpServiceHistory },
-            { path: 'emp-promotion-info', component: EmpPromotionInfo },
-            { path: 'emp-rank-confirmation', component: EmpRankConfirmationComponent },
-            { path: 'emp-education-info', component: EmpEducationInfoComponent },
-            { path: 'emp-course-info', component: EmpCourseInfoComponent },
-            { path: 'emp-send-to-course', component: EmpSendToCourseComponent },
-            { path: 'emp-discipline-info', component: EmpDisciplineInfoComponent },
-            { path: 'emp-bank-account', component: EmpBankAccount },
-            { path: 'emp-foreign-visit', component: EmpForeignVisit },
-            { path: 'emp-leave-info', component: EmpLeaveInfo },
-            { path: 'emp-medical-category', component: EmpMedicalCategory },
-            { path: 'emp-additional-remarks', component: EmpAdditionalRemarks },
-            { path: 'emp-perm-posting-mother-org', component: EmpPermPostingMotherOrg },
-            { path: 'emp-present-status', component: EmpPresentStatus },
-            { path: 'emp-present-member-check', component: EmpPresentMemberCheckComponent },
+            { path: 'emp-basic-info', component: EmpBasicInfo, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-personal-service-info', component: EmpPersonalServiceInfoComponent, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-personal-info', component: EmpPersonalInfo, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-address-info', component: EmpAddressInfo, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-family-info', component: EmpFamilyInfo, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-nominee-info', component: EmpNomineeInfo, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-previous-rab-service', component: EmpPreviousRabService, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-service-history', component: EmpServiceHistory, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-promotion-info', component: EmpPromotionInfo, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-rank-confirmation', component: EmpRankConfirmationComponent, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-education-info', component: EmpEducationInfoComponent, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-course-info', component: EmpCourseInfoComponent, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-send-to-course', component: EmpSendToCourseComponent, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-discipline-info', component: EmpDisciplineInfoComponent, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-bank-account', component: EmpBankAccount, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-foreign-visit', component: EmpForeignVisit, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-leave-info', component: EmpLeaveInfo, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-medical-category', component: EmpMedicalCategory, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-additional-remarks', component: EmpAdditionalRemarks, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-perm-posting-mother-org', component: EmpPermPostingMotherOrg, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-present-status', component: EmpPresentStatus, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-present-member-check', component: EmpPresentMemberCheckComponent, canActivate: [MemberTypePermissionGuard] },
             { path: 'rab-id-allocation', component: RabIdAllocation },
             { path: 'supernumerary-list', component: SupernumeraryList },
             { path: 'supernumerary-profile/:id', component: SupernumeraryProfile },

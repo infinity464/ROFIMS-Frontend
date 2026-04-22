@@ -8,6 +8,10 @@ import { MegaMenuModule } from 'primeng/megamenu';
 import { MegaMenuItem } from 'primeng/api';
 
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
+import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
+import { SharedService } from '@/shared/services/shared-service';
+import { MessageService } from 'primeng/api';
+import { ToastModule } from 'primeng/toast';
 import { EmpPersonalInfo } from '../emp-personal-info/emp-personal-info';
 import { EmpAddressInfo } from '../emp-address-info/emp-address-info';
 import { EmpFamilyInfo } from '../emp-family-info/emp-family-info';
@@ -34,6 +38,7 @@ import { EmpAdditionalRemarks } from '../emp-additional-remarks/emp-additional-r
         TabsModule,
         ButtonModule,
         MegaMenuModule,
+        ToastModule,
         EmployeeSearchComponent,
         EmpPersonalInfo,
         EmpAddressInfo,
@@ -52,6 +57,7 @@ import { EmpAdditionalRemarks } from '../emp-additional-remarks/emp-additional-r
         EmpMedicalCategory,
         EmpAdditionalRemarks
     ],
+    providers: [MessageService],
     templateUrl: './emp-personal-service-info.html',
     styleUrl: './emp-personal-service-info.scss'
 })
@@ -60,8 +66,16 @@ export class EmpPersonalServiceInfoComponent implements OnInit {
     selectedEmployeeId: number | null = null;
     employeeBasicInfo: EmployeeBasicInfo | null = null;
     menuItems: MegaMenuItem[] = [];
+    permissionDenied = false;
+    permissionDeniedTypeName: string | null = null;
 
-    constructor(private router: Router, private route: ActivatedRoute) {}
+    constructor(
+        private router: Router,
+        private route: ActivatedRoute,
+        private memberTypeAccess: IdentityUserMemberTypeAccessService,
+        private sharedService: SharedService,
+        private messageService: MessageService
+    ) {}
 
     ngOnInit(): void {
         this.route.queryParams.subscribe((params) => {
@@ -108,6 +122,25 @@ export class EmpPersonalServiceInfoComponent implements OnInit {
     }
 
     onEmployeeFound(info: EmployeeBasicInfo): void {
+        if (!this.isMemberTypeAllowed(info.memberType ?? null)) {
+            this.permissionDenied = true;
+            this.permissionDeniedTypeName = info.memberTypeDisplay ?? null;
+            this.employeeBasicInfo = null;
+            this.selectedEmployeeId = null;
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'No Permission',
+                detail: info.memberTypeDisplay
+                    ? `You do not have permission to view ${info.memberTypeDisplay}.`
+                    : 'You do not have permission to view this member type.',
+                life: 6000
+            });
+            this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true });
+            return;
+        }
+
+        this.permissionDenied = false;
+        this.permissionDeniedTypeName = null;
         this.employeeBasicInfo = info;
         this.selectedEmployeeId = info.employeeID;
         this.router.navigate([], {
@@ -121,7 +154,18 @@ export class EmpPersonalServiceInfoComponent implements OnInit {
     onSearchReset(): void {
         this.employeeBasicInfo = null;
         this.selectedEmployeeId = null;
+        this.permissionDenied = false;
+        this.permissionDeniedTypeName = null;
         this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true });
+    }
+
+    private isMemberTypeAllowed(memberTypeId: number | null): boolean {
+        if (memberTypeId == null) return true;
+        const userId = this.sharedService.getCurrentUserId?.() ?? null;
+        if (!userId) return true;
+        const allowed = this.memberTypeAccess.getCachedMemberTypeIds(userId);
+        if (allowed === null) return true;
+        return allowed.includes(memberTypeId);
     }
 
     goBack(): void {

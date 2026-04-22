@@ -1,3 +1,4 @@
+<p-toast position="top-center" />
 <p-fluid>
     <div class="mb-5 card">
         <div class="flex align-items-center gap-3 mb-4">
@@ -12,6 +13,22 @@
             (onEmployeeFound)="onEmployeeFound($event)"
             (onSearchReset)="onSearchReset()">
         </app-employee-search>
+
+        @if (permissionDenied) {
+            <div class="flex items-start gap-3 p-3 mt-4 rounded border border-red-200 bg-red-50 text-red-700">
+                <i class="pi pi-lock mt-1"></i>
+                <div>
+                    <div class="font-semibold">No Permission</div>
+                    <div class="text-sm">
+                        @if (permissionDeniedTypeName) {
+                            You do not have permission to view {{ permissionDeniedTypeName }} data.
+                        } @else {
+                            You do not have permission to view this member type's data.
+                        }
+                    </div>
+                </div>
+            </div>
+        }
 
         @if (employeeBasicInfo && selectedEmployeeId) {
             <!-- <div class="surface-50 border-round-2xl p-4 mb-4">
