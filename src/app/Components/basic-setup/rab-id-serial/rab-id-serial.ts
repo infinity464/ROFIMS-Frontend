@@ -90,8 +90,7 @@ export class RabIdSerial implements OnInit {
                 return (
                     employeeTypeName.includes(q) ||
                     motherOrgNames.includes(q) ||
-                    String(r.minId).includes(q) ||
-                    String(r.maxId).includes(q)
+                    String(r.minId).includes(q)
                 );
             });
         }
@@ -125,7 +124,6 @@ export class RabIdSerial implements OnInit {
                 [(c: AbstractControl) => (Array.isArray(c?.value) && c.value.length > 0 ? null : { required: true })]
             ],
             minId: [null, [Validators.required, Validators.min(1)]],
-            maxId: [null, [Validators.required, Validators.min(1)]],
             currentId: [null],
             createdBy: [this.currentUser],
             createdDate: [new Date().toISOString()],
@@ -223,18 +221,6 @@ export class RabIdSerial implements OnInit {
             return;
         }
 
-        // Validate min <= max
-        const minId = this.rabIdSerialForm.value.minId;
-        const maxId = this.rabIdSerialForm.value.maxId;
-        if (minId > maxId) {
-            this.messageService.add({
-                severity: 'error',
-                summary: 'Validation Error',
-                detail: 'Min ID cannot be greater than Max ID'
-            });
-            return;
-        }
-
         this.create();
     }
 
@@ -278,12 +264,6 @@ export class RabIdSerial implements OnInit {
         });
     }
 
-    isMaxLessThanMin(): boolean {
-        const minId = this.rabIdSerialForm.get('minId')?.value;
-        const maxId = this.rabIdSerialForm.get('maxId')?.value;
-        return minId && maxId && maxId < minId;
-    }
-
     onReset() {
         this.searchValue = '';
         this.rabIdSerialForm.reset({
@@ -291,7 +271,6 @@ export class RabIdSerial implements OnInit {
             employeeTypeId: null,
             motherOrgIds: [],
             minId: null,
-            maxId: null,
             currentId: null,
             createdBy: this.currentUser,
             createdDate: new Date().toISOString(),

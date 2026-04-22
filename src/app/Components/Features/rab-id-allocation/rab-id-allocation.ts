@@ -24,6 +24,7 @@ import { CommonCodeModel } from '@/models/common-code-model';
 })
 export class RabIdAllocation implements OnInit {
     list: EmployeeList[] = [];
+    selectedRows: EmployeeList[] = [];
     loading = false;
     generatingId = false;
 
@@ -107,6 +108,7 @@ export class RabIdAllocation implements OnInit {
         this.employeeListService.getEmployeeList(request).subscribe({
             next: (data) => {
                 this.list = data ?? [];
+                this.selectedRows = [];
                 this.loading = false;
                 if (!skipLoadMessage) {
                     this.messageService.add({
@@ -137,8 +139,20 @@ export class RabIdAllocation implements OnInit {
             });
             return;
         }
-        // List is already ordered by JoiningDate then SortOrder (from API); preserve order for allocation priority.
-        const employeeIds = this.list.map((row) => row.employeeID).filter((id) => id != null);
+        if (!this.selectedRows?.length) {
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'Validation',
+                detail: 'Select at least one employee to generate RAB ID.'
+            });
+            return;
+        }
+        // Walk the original list (already sorted by JoiningDate, RankSortOrder) and keep only selected ids,
+        // so allocation priority is preserved even if the user checked rows out of order.
+        const selectedIds = new Set(this.selectedRows.map((r) => r.employeeID));
+        const employeeIds = this.list
+            .map((row) => row.employeeID)
+            .filter((id) => id != null && selectedIds.has(id));
         if (employeeIds.length === 0) {
             this.messageService.add({
                 severity: 'warn',
@@ -149,7 +163,7 @@ export class RabIdAllocation implements OnInit {
         }
         const count = employeeIds.length;
         this.confirmationService.confirm({
-            message: `Generate RAB ID for all ${count} employee(s) in the list?`,
+            message: `Generate RAB ID for ${count} selected employee(s)?`,
             header: 'Confirm Generate RAB ID',
             icon: 'pi pi-id-card',
             accept: () => this.doGenerateId(employeeIds)
@@ -181,6 +195,7 @@ export class RabIdAllocation implements OnInit {
         this.employeeListService.allocateRabId({ employeeIds }).subscribe({
             next: (results) => {
                 this.generatingId = false;
+                this.selectedRows = [];
                 this.loadList(true);
                 if (!results || !Array.isArray(results)) {
                     this.showGenerationCompleteMessage(0);
