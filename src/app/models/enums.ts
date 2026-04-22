@@ -304,6 +304,7 @@ export enum CodeType {
     RabWing = 'RabWing',
     Relationship = 'Relationship',
     Religion = 'Religion',
+    SpecialQualification = 'SpecialQualification',
     SubjectType = 'SubjectType',
     Trade = 'Trade',
     Upazila = 'Upazila',

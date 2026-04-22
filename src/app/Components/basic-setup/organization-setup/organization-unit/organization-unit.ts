@@ -139,14 +139,12 @@ export class OrganizationUnit implements OnInit {
             contactName: [''],
             contactNumber: [''],
             locationCode: [''],
-            locationEN: [''],
-            locationBN: [''],
-            districtId: [null, Validators.required],
+            districtId: [null],
             email: [''],
             sortOrder: [0],
             status: [true],
             remarks: [''],
-            parentOrg: [null],
+            parentOrg: [null, Validators.required],
             createdBy: [this.currentUser],
             createdDate: [new Date() ],
             lastUpdatedBy: [this.currentUser],
@@ -223,8 +221,6 @@ export class OrganizationUnit implements OnInit {
             list = list.filter(org =>
                 org.orgNameEN?.toLowerCase().includes(q) ||
                 org.orgNameBN?.toLowerCase().includes(q) ||
-                org.locationEN?.toLowerCase().includes(q) ||
-                org.locationBN?.toLowerCase().includes(q) ||
                 (org.parentName && org.parentName.toLowerCase().includes(q)) ||
                 this.getDistrictDisplay(org.districtId).toLowerCase().includes(q)
             );
@@ -254,6 +250,8 @@ export class OrganizationUnit implements OnInit {
     create() {
         this.isSubmitting = true;
 
+        const preservedParentOrg = this.organizationForm.get('parentOrg')?.value;
+
         this.organizationService.post(this.organizationForm.value).subscribe({
             next: (res: any) => {
                 console.log('Organization created successfully', res);
@@ -263,6 +261,7 @@ export class OrganizationUnit implements OnInit {
                     detail: 'Organization created successfully'
                 });
                 this.onReset();
+                this.organizationForm.patchValue({ parentOrg: preservedParentOrg });
                 this.GetAllOrgUnit();
                 this.isSubmitting = false;
             },
@@ -281,6 +280,8 @@ export class OrganizationUnit implements OnInit {
     update() {
         this.isSubmitting = true;
 
+        const preservedParentOrg = this.organizationForm.get('parentOrg')?.value;
+
         const updatePayload = {
             ...this.organizationForm.value,
             orgId: this.editingId
@@ -295,6 +296,7 @@ export class OrganizationUnit implements OnInit {
                     detail: 'Organization updated successfully'
                 });
                 this.onReset();
+                this.organizationForm.patchValue({ parentOrg: preservedParentOrg });
                 this.GetAllOrgUnit();
                 this.isSubmitting = false;
             },

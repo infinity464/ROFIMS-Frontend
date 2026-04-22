@@ -12,19 +12,18 @@ import { Fluid } from 'primeng/fluid';
 import { SharedService } from '@/shared/services/shared-service';
 
 @Component({
-    selector: 'app-employee-type',
-    imports: [DynamicFormComponent, DataTable,   Fluid],
-    templateUrl: './employee-type.html',
+    selector: 'app-special-qualification',
+    imports: [DynamicFormComponent, DataTable, Fluid],
+    templateUrl: './special-qualification.html',
     providers: [],
-    styleUrl: './employee-type.scss'
+    styleUrl: './special-qualification.scss'
 })
-export class EmployeeType {
-    codeType: string = 'EmployeeType';
-    title: string = 'Member Type';
+export class SpecialQualification {
+    codeType: string = 'SpecialQualification';
+    title: string = 'Special Qualification';
     commonCodeData: CommonCode[] = [];
     editingId: number | null = null;
     commonCodeForm!: FormGroup;
-    isSubmitting = false;
 
     totalRecords = 0;
     rows = 10;
@@ -32,18 +31,19 @@ export class EmployeeType {
     loading = false;
     serchValue: string = '';
 
-    // Form Configuration
+    isSubmitting = false;
+
     formConfig: FormConfig = {
         formFields: [
             {
                 name: 'codeValueEN',
-                label: 'Member Type Name (English)',
+                label: 'Special Qualification (English)',
                 type: 'text',
                 required: true
             },
             {
                 name: 'codeValueBN',
-                label: 'Member Type Name (Bangla)',
+                label: 'Special Qualification (Bangla)',
                 type: 'text',
                 required: true
             },
@@ -61,11 +61,10 @@ export class EmployeeType {
         ]
     };
 
-    // Table Configuration
     tableConfig: TableConfig = {
         tableColumns: [
-            { field: 'codeValueEN', header: 'Employee  Type Name (EN)' },
-            { field: 'codeValueBN', header: 'Employee  Type Name (BN)' },
+            { field: 'codeValueEN', header: 'Special Qualification (EN)' },
+            { field: 'codeValueBN', header: 'Special Qualification (BN)' },
             {
                 field: 'status',
                 header: 'Status',
@@ -119,7 +118,9 @@ export class EmployeeType {
         const pageNo = event ? event.first / event.rows + 1 : 1;
         const pageSize = event?.rows ?? this.rows;
 
-        const apiCall = this.serchValue ? this.masterBasicSetupService.getByKeyordWithPaging(this.codeType, this.serchValue, pageNo, pageSize) : this.masterBasicSetupService.getAllWithPaging(this.codeType, pageNo, pageSize);
+        const apiCall = this.serchValue
+            ? this.masterBasicSetupService.getByKeyordWithPaging(this.codeType, this.serchValue, pageNo, pageSize)
+            : this.masterBasicSetupService.getAllWithPaging(this.codeType, pageNo, pageSize);
 
         apiCall.subscribe({
             next: (res) => {
@@ -147,7 +148,7 @@ export class EmployeeType {
         }
 
         const currentUser = this.getCurrentUser();
-        const currentDateTime = this.shareService.getCurrentDateTime()
+        const currentDateTime = this.shareService.getCurrentDateTime();
 
         if (this.editingId) {
             this.updateCommonCode(currentUser, currentDateTime);
@@ -177,7 +178,7 @@ export class EmployeeType {
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Success',
-                    detail: 'Employee  Type created successfully'
+                    detail: 'Special Qualification created successfully'
                 });
                 this.isSubmitting = false;
             },
@@ -186,7 +187,7 @@ export class EmployeeType {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create employee-type'
+                    detail: 'Failed to create special-qualification'
                 });
                 this.isSubmitting = false;
             }
@@ -213,7 +214,7 @@ export class EmployeeType {
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Success',
-                    detail: 'Employee  Type updated successfully'
+                    detail: 'Special Qualification updated successfully'
                 });
                 this.isSubmitting = false;
             },
@@ -222,7 +223,7 @@ export class EmployeeType {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update employee-type'
+                    detail: 'Failed to update special-qualification'
                 });
                 this.isSubmitting = false;
             }
@@ -232,7 +233,6 @@ export class EmployeeType {
     update(row: any) {
         this.editingId = row.codeId;
         this.commonCodeForm.patchValue(row);
-        console.log('Edit:', row);
     }
 
     delete(row: any, event: Event) {
@@ -261,7 +261,7 @@ export class EmployeeType {
                         this.messageService.add({
                             severity: 'success',
                             summary: 'Success',
-                            detail: 'Employee StatusType deleted successfully'
+                            detail: 'Special Qualification deleted successfully'
                         });
                     },
                     error: (err) => {
@@ -269,7 +269,7 @@ export class EmployeeType {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete employee-type'
+                            detail: 'Failed to delete special-qualification'
                         });
                     }
                 });
@@ -305,6 +305,6 @@ export class EmployeeType {
     }
 
     private getCurrentUser(): string {
-        return this.shareService.getCurrentUser()
+        return this.shareService.getCurrentUser();
     }
 }
