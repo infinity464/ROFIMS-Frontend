@@ -5,7 +5,6 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
-import { MessageService } from 'primeng/api';
 import { DialogModule } from 'primeng/dialog';
 import { Fluid } from 'primeng/fluid';
 
@@ -13,8 +12,10 @@ import { EmpService } from '@/services/emp-service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { MotherOrganizationModel } from '@/models/mother-org-model';
 import { EmpModel } from '@/models/EmpModel';
+import { PostingStatus } from '@/models/enums';
 import { PreviousRABServiceService, VwPreviousRABServiceInfoModel } from '@/services/previous-rab-service.service';
 import { TableModule } from 'primeng/table';
+import { forkJoin, of } from 'rxjs';
 
 @Component({
     selector: 'app-emp-present-member-check',
@@ -32,8 +33,20 @@ export class EmpPresentMemberCheckComponent implements OnInit, AfterViewInit {
 
     motherOrganizations: MotherOrganizationModel[] = [];
     isSearching = false;
-    showAlreadyExistDialog = false;
-    foundEmployee: EmpModel | null = null;
+
+    showInfoDialog = false;
+    infoDialogHeader = '';
+    infoDialogMessage = '';
+    infoDialogIcon: 'info' | 'warn' | 'error' | 'success' = 'info';
+    private onInfoDialogClose: (() => void) | null = null;
+
+    private readonly statusListLabel: Record<string, string> = {
+        [PostingStatus.Supernumerary]: 'Supernumerary',
+        [PostingStatus.Servings]: 'Serving',
+        [PostingStatus.ExMember]: 'Ex-Member',
+        [PostingStatus.PendingForJoining]: 'Pending for Joining',
+        [PostingStatus.Pending]: 'Pending'
+    };
 
     exMemberEmployee: EmpModel | null = null;
     exMemberViewList: VwPreviousRABServiceInfoModel[] = [];
@@ -49,9 +62,70 @@ export class EmpPresentMemberCheckComponent implements OnInit, AfterViewInit {
     constructor(
         private empService: EmpService,
         private commonCodeService: CommonCodeService,
-        private messageService: MessageService,
         private previousRABService: PreviousRABServiceService
     ) {}
+
+    private showInfo(
+        header: string,
+        message: string,
+        icon: 'info' | 'warn' | 'error' | 'success' = 'info',
+        onClose?: () => void
+    ): void {
+        this.infoDialogHeader = header;
+        this.infoDialogMessage = message;
+        this.infoDialogIcon = icon;
+        this.onInfoDialogClose = onClose ?? null;
+        this.showInfoDialog = true;
+    }
+
+    closeInfoDialog(): void {
+        this.showInfoDialog = false;
+        const cb = this.onInfoDialogClose;
+        this.onInfoDialogClose = null;
+        cb?.();
+    }
+
+    private formatMemberDetails(employee: EmpModel, rankName: string, prefixLabel: string): string {
+        const emp = employee as any;
+        const serviceId = emp.ServiceId ?? emp.serviceId ?? '';
+        const fullName = emp.FullNameEN ?? emp.fullNameEN ?? '';
+        const parts: string[] = [];
+        if (prefixLabel && serviceId) parts.push(`${prefixLabel}-${serviceId}`);
+        else if (prefixLabel) parts.push(prefixLabel);
+        else if (serviceId) parts.push(serviceId);
+        if (rankName) parts.push(rankName);
+        if (fullName) parts.push(fullName);
+        return parts.join(' ');
+    }
+
+    private showMemberFoundDialog(employee: EmpModel): void {
+        const emp = employee as any;
+        const status: string = emp.PostingStatus ?? emp.postingStatus ?? '';
+        const listLabel = this.statusListLabel[status] ?? status ?? 'Unknown';
+        const header = `Member Found in ${listLabel} List.`;
+        const empId = emp.EmployeeID ?? emp.employeeID;
+        const orgId = emp.orgId ?? emp.OrgId;
+        const prefixId = Number(emp.Prefix ?? emp.prefix);
+
+        const rankInfo$ = empId != null && !Number.isNaN(Number(empId))
+            ? this.empService.getEmployeeSearchInfo(Number(empId))
+            : of(null);
+
+        const prefixes$ = orgId != null && !Number.isNaN(Number(orgId))
+            ? this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(Number(orgId), 'Prefix')
+            : of([] as any[]);
+
+        forkJoin({ info: rankInfo$, prefixes: prefixes$ }).subscribe({
+            next: ({ info, prefixes }) => {
+                const rankName = (info as any)?.rank ?? (info as any)?.Rank ?? '';
+                const prefixLabel = (prefixes as any[])?.find((p: any) => p?.codeId === prefixId)?.codeValueEN ?? '';
+                this.showInfo(header, this.formatMemberDetails(employee, rankName, prefixLabel), 'info');
+            },
+            error: () => {
+                this.showInfo(header, this.formatMemberDetails(employee, '', ''), 'info');
+            }
+        });
+    }
 
     ngOnInit(): void {
         this.loadMotherOrgs();
@@ -71,11 +145,7 @@ export class EmpPresentMemberCheckComponent implements OnInit, AfterViewInit {
                 this.motherOrganizations = res;
             },
             error: () => {
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Failed to load Mother Organizations'
-                });
+                this.showInfo('Error', 'Failed to load Mother Organizations', 'error');
             }
         });
     }
@@ -85,17 +155,11 @@ export class EmpPresentMemberCheckComponent implements OnInit, AfterViewInit {
         const serviceIdStr = this.serviceId != null ? String(this.serviceId).trim() : '';
 
         if (!nidStr && !serviceIdStr) {
-            this.messageService.add({
-                severity: 'warn',
-                summary: 'Required',
-                detail: 'Please enter NID or Service ID (at least one)'
-            });
+            this.showInfo('Required', 'Please enter NID or Service ID (at least one)', 'warn');
             return;
         }
 
         this.isSearching = true;
-        this.showAlreadyExistDialog = false;
-        this.foundEmployee = null;
         this.exMemberEmployee = null;
         this.exMemberViewList = [];
 
@@ -104,9 +168,8 @@ export class EmpPresentMemberCheckComponent implements OnInit, AfterViewInit {
             next: (employee: EmpModel | null) => {
                 if (employee) {
                     this.isSearching = false;
-                    this.foundEmployee = employee;
-                    this.showAlreadyExistDialog = true;
                     this.employeeFound.emit();
+                    this.showMemberFoundDialog(employee);
                     return;
                 }
                 this.checkExMemberAndLoadView(serviceIdStr, nidStr, motherOrgId);
@@ -114,11 +177,7 @@ export class EmpPresentMemberCheckComponent implements OnInit, AfterViewInit {
             error: (err) => {
                 this.isSearching = false;
                 console.error('Search failed', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: err?.error?.message ?? 'Failed to search employee.'
-                });
+                this.showInfo('Error', err?.error?.message ?? 'Failed to search employee.', 'error');
             }
         });
     }
@@ -128,36 +187,22 @@ export class EmpPresentMemberCheckComponent implements OnInit, AfterViewInit {
             next: (employee: EmpModel | null) => {
                 this.isSearching = false;
                 if (!employee) {
-                    this.messageService.add({
-                        severity: 'info',
-                        summary: 'Not Found',
-                        detail: 'No employee found with the given NID/Service ID.'
-                    });
-                    this.employeeNotFound.emit();
+                    this.showInfo('Member Not Found', 'No Member found with the given NID/Service ID.', 'info', () => this.employeeNotFound.emit());
                     return;
                 }
                 this.employeeFound.emit();
                 const postingStatus = (employee as any).PostingStatus ?? (employee as any).postingStatus ?? '';
-                if (postingStatus === 'ExMember') {
+                if (postingStatus === PostingStatus.ExMember) {
                     this.exMemberEmployee = employee;
                     const empId = (employee as any).EmployeeID ?? (employee as any).employeeID;
                     this.loadExMemberViewData(empId);
-                } else {
-                    this.messageService.add({
-                        severity: 'info',
-                        summary: postingStatus,
-                        detail: 'Employee found but posting status is not ExMember. (Status: ' + postingStatus + ')'
-                    });
                 }
+                this.showMemberFoundDialog(employee);
             },
             error: (err) => {
                 this.isSearching = false;
                 console.error('Search failed', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: err?.error?.message ?? 'Failed to search employee.'
-                });
+                this.showInfo('Error', err?.error?.message ?? 'Failed to search employee.', 'error');
             }
         });
     }
@@ -166,7 +211,7 @@ export class EmpPresentMemberCheckComponent implements OnInit, AfterViewInit {
         const id = employeeId ?? (this.exMemberEmployee as any)?.employeeID ?? (this.exMemberEmployee as any)?.EmployeeID;
         if (id == null || id === undefined || Number.isNaN(Number(id))) {
             this.isLoadingExMemberData = false;
-            this.messageService.add({ severity: 'warn', summary: 'Error', detail: 'Employee ID is missing.' });
+            this.showInfo('Error', 'Employee ID is missing.', 'warn');
             return;
         }
         this.isLoadingExMemberData = true;
@@ -178,18 +223,9 @@ export class EmpPresentMemberCheckComponent implements OnInit, AfterViewInit {
             error: (err) => {
                 this.isLoadingExMemberData = false;
                 console.error('Failed to load previous RAB service view', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Failed to load previous service data.'
-                });
+                this.showInfo('Error', 'Failed to load previous service data.', 'error');
             }
         });
-    }
-
-    closeAlreadyExistDialog(): void {
-        this.showAlreadyExistDialog = false;
-        this.foundEmployee = null;
     }
 
     clearExMemberSection(): void {
