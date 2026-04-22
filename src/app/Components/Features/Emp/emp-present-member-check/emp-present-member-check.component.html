@@ -18,6 +18,15 @@
                     </p-select>
                 </div>
                 <div style="min-width: 180px;">
+                    <label class="font-semibold block mb-2 text-700">NID</label>
+                    <input
+                        pInputText
+                        [(ngModel)]="nid"
+                        placeholder="NID"
+                        class="w-full"
+                        (keyup.enter)="search()" />
+                </div>
+                <div style="min-width: 180px;">
                     <label class="font-semibold block mb-2 text-700">Service ID</label>
                     <p-inputNumber
                         [(ngModel)]="serviceId"
@@ -27,15 +36,6 @@
                         inputStyleClass="w-full"
                         (keyup.enter)="search()">
                     </p-inputNumber>
-                </div>
-                <div style="min-width: 180px;">
-                    <label class="font-semibold block mb-2 text-700">NID</label>
-                    <input
-                        pInputText
-                        [(ngModel)]="nid"
-                        placeholder="NID"
-                        class="w-full"
-                        (keyup.enter)="search()" />
                 </div>
                 <div>
                     <label class="font-semibold block mb-2 text-700">&nbsp;</label>
