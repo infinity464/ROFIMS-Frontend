@@ -64,6 +64,9 @@ export class EmpPromotionInfo implements OnInit {
     selectedEmployeeId: number | null = null;
     employeeBasicInfo: any = null;
     selectedOrgId: number | null = null;
+    selectedMemberTypeId: number | null = null;
+    /** Raw ranks for the selected mother org (before member-type filter). */
+    private allRanksForOrg: any[] = [];
     mode: 'search' | 'view' | 'edit' = 'search';
     isReadonly = false;
 
@@ -153,9 +156,21 @@ export class EmpPromotionInfo implements OnInit {
         this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'MotherOrgRank').pipe(catchError(() => of([] as any[]))).subscribe({
             next: (list: any[]) => {
                 const arr = Array.isArray(list) ? list : [];
-                if (arr.length > 0) this.rankOptions = arr.map((item: any) => this.mapCommonCodeToOption(item));
+                if (arr.length > 0) {
+                    this.allRanksForOrg = arr;
+                    this.applyRankMemberTypeFilter();
+                }
             }
         });
+    }
+
+    /** Filter the org-scoped ranks by selectedMemberTypeId (rank.parentCodeId === memberType). */
+    private applyRankMemberTypeFilter(): void {
+        const mt = this.selectedMemberTypeId;
+        const filtered = mt == null
+            ? this.allRanksForOrg
+            : this.allRanksForOrg.filter((r: any) => (r?.parentCodeId ?? r?.ParentCodeId ?? null) === mt);
+        this.rankOptions = filtered.map((item: any) => this.mapCommonCodeToOption(item));
     }
 
     toDateOnly(d: Date | string | null): string | null {
@@ -201,6 +216,7 @@ export class EmpPromotionInfo implements OnInit {
                     this.selectedEmployeeId = employee.employeeID || employee.EmployeeID;
                     this.employeeBasicInfo = employee;
                     this.selectedOrgId = employee.orgId ?? employee.OrgId ?? employee.lastMotherUnit ?? employee.LastMotherUnit ?? null;
+                    this.selectedMemberTypeId = employee.memberType ?? employee.MemberType ?? null;
                     this.loadRankOptionsByOrg(this.selectedOrgId);
                     this.loadPromotionList();
                 }
@@ -426,6 +442,7 @@ export class EmpPromotionInfo implements OnInit {
         this.selectedEmployeeId = employee.employeeID;
         this.employeeBasicInfo = employee;
         this.selectedOrgId = employee.motherOrganization ?? (employee as any).orgId ?? (employee as any).OrgId ?? null;
+        this.selectedMemberTypeId = (employee as any).memberType ?? (employee as any).MemberType ?? null;
         this.isReadonly = false;
         this.loadRankOptionsByOrg(this.selectedOrgId);
         if (this.selectedOrgId != null) {
@@ -435,6 +452,7 @@ export class EmpPromotionInfo implements OnInit {
                 next: (full) => {
                     this.employeeBasicInfo = full;
                     this.selectedOrgId = (full as any).orgId ?? (full as any).OrgId ?? (full as any).lastMotherUnit ?? (full as any).LastMotherUnit ?? null;
+                    this.selectedMemberTypeId = (full as any).memberType ?? (full as any).MemberType ?? this.selectedMemberTypeId;
                     this.loadRankOptionsByOrg(this.selectedOrgId);
                     this.loadPromotionList();
                 },
