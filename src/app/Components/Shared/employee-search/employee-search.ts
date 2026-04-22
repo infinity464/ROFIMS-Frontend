@@ -119,6 +119,9 @@ export class EmployeeSearchComponent implements OnChanges {
      * Enriches the loaded basic info with display names + reliable memberTypeId from
      * vw_EmployeeSearchInfo, then either emits onEmployeeFound (allowed) or shows a
      * permission-denied toast and emits onSearchReset (denied).
+     *
+     * The banner is kept hidden (`employeeFound = false`) until the permission check
+     * passes, so denied users never see a flash of the employee's name/rank.
      */
     private finalizeAndEmit(employeeID: number): void {
         this.empService.getEmployeeSearchInfo(employeeID).subscribe({
@@ -146,6 +149,7 @@ export class EmployeeSearchComponent implements OnChanges {
                     this.employeeInfo = null;
                     this.searchRabId = '';
                     this.searchServiceId = '';
+                    this.isSearching = false;
                     this.messageService.add({
                         severity: 'warn',
                         summary: 'No Permission',
@@ -158,12 +162,16 @@ export class EmployeeSearchComponent implements OnChanges {
                     return;
                 }
 
+                this.employeeFound = true;
+                this.isSearching = false;
                 if (this.employeeInfo) {
                     this.onEmployeeFound.emit(this.employeeInfo);
                 }
             },
             error: () => {
                 // Fail-open if enrichment/view fails: emit with what we have rather than block.
+                this.employeeFound = true;
+                this.isSearching = false;
                 if (this.employeeInfo) {
                     this.onEmployeeFound.emit(this.employeeInfo);
                 }
@@ -207,13 +215,12 @@ export class EmployeeSearchComponent implements OnChanges {
                     };
                     this.searchRabId = this.employeeInfo.rabid || '';
                     this.searchServiceId = this.employeeInfo.serviceId || '';
-                    this.employeeFound = true;
                     this.finalizeAndEmit(employeeID);
                 } else {
                     this.employeeFound = false;
                     this.employeeInfo = null;
+                    this.isSearching = false;
                 }
-                this.isSearching = false;
             },
             error: () => {
                 this.isSearching = false;
@@ -276,8 +283,6 @@ export class EmployeeSearchComponent implements OnChanges {
                     } else if (this.searchServiceId && !this.searchRabId) {
                         this.searchRabId = this.employeeInfo.rabid || '';
                     }
-                    this.employeeFound = true;
-                    this.isSearching = false;
                     this.finalizeAndEmit(employeeID);
                 } else {
                     this.employeeFound = false;
