@@ -803,6 +803,9 @@ export class EmpBasicInfo implements OnInit {
     /** CodeIds of Member Types the current user is allowed to use. `null` means "not yet loaded" (fail-open). */
     private allowedMemberTypeIds: number[] | null = null;
 
+    /** Raw ranks for the currently selected mother org (before member-type filter). */
+    private allRanksForOrg: CommonCodeModel[] = [];
+
     ngOnInit(): void {
         this.initializeForm();
         this.loadCurrentUserMemberTypePermissions();
@@ -1487,9 +1490,20 @@ export class EmpBasicInfo implements OnInit {
     loadMotherOrgRank(orgId: number) {
         this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'MotherOrgRank').subscribe({
             next: (res) => {
-                this.ranks = res;
+                this.allRanksForOrg = res ?? [];
+                this.applyRankMemberTypeFilter();
             }
         });
+    }
+
+    /** Filter the org-scoped ranks further by the currently selected Member Type (rank.parentCodeId === memberType). */
+    private applyRankMemberTypeFilter() {
+        const memberType = this.postingForm?.get('memberType')?.value;
+        if (memberType == null) {
+            this.ranks = this.allRanksForOrg;
+            return;
+        }
+        this.ranks = this.allRanksForOrg.filter((r) => r.parentCodeId === memberType);
     }
     loadMotherOrgPrefix(orgId: number) {
         this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'Prefix').subscribe({
@@ -1531,13 +1545,15 @@ export class EmpBasicInfo implements OnInit {
                 detail: `You do not have permission to use ${typeName}.`,
                 life: 6000
             });
-            this.postingForm.patchValue({ memberType: null, officerType: null });
+            this.postingForm.patchValue({ memberType: null, officerType: null, rank: null });
+            this.applyRankMemberTypeFilter();
             return;
         }
 
         const motherOrgId = this.postingForm.get('motherOrganization')?.value;
-        this.postingForm.patchValue({ officerType: null });
+        this.postingForm.patchValue({ officerType: null, rank: null });
         this.loadOfficerType(codeId, motherOrgId);
+        this.applyRankMemberTypeFilter();
     }
 
     private loadCurrentUserMemberTypePermissions(): void {
