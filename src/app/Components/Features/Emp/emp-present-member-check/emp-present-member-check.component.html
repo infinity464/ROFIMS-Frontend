@@ -29,9 +29,11 @@
                 <div style="min-width: 180px;">
                     <label class="font-semibold block mb-2 text-700">Service ID</label>
                     <p-inputNumber
+                        #serviceIdInput
                         [(ngModel)]="serviceId"
                         placeholder="Service ID"
                         [useGrouping]="false"
+                        [autofocus]="true"
                         styleClass="w-full"
                         inputStyleClass="w-full"
                         (keyup.enter)="search()">

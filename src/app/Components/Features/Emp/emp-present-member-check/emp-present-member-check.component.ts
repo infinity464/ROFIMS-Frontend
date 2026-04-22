@@ -1,4 +1,4 @@
-import { Component, OnInit, Output, EventEmitter } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnInit, Output, EventEmitter, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { InputNumberModule } from 'primeng/inputnumber';
@@ -23,7 +23,9 @@ import { TableModule } from 'primeng/table';
     templateUrl: './emp-present-member-check.component.html',
     styleUrl: './emp-present-member-check.component.scss'
 })
-export class EmpPresentMemberCheckComponent implements OnInit {
+export class EmpPresentMemberCheckComponent implements OnInit, AfterViewInit {
+    @ViewChild('serviceIdInput', { read: ElementRef }) serviceIdInput?: ElementRef<HTMLElement>;
+
     motherOrgId: number | null = null;
     serviceId: number | null = null;
     nid: string = '';
@@ -53,6 +55,14 @@ export class EmpPresentMemberCheckComponent implements OnInit {
 
     ngOnInit(): void {
         this.loadMotherOrgs();
+    }
+
+    ngAfterViewInit(): void {
+        setTimeout(() => {
+            const host = this.serviceIdInput?.nativeElement;
+            const input = host?.querySelector('input') as HTMLInputElement | null;
+            input?.focus();
+        });
     }
 
     loadMotherOrgs(): void {
