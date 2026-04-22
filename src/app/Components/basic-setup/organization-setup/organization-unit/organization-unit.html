@@ -4,11 +4,17 @@
         <div class="font-semibold text-xl mb-5">Organization Unit</div>
         <form [formGroup]="organizationForm" (ngSubmit)="onSubmit()">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-                <!-- Parent Organization -->
+                <!-- Mother Organization -->
                 <div class="field">
-                    <label for="parentOrg" class="block mb-2">Parent Organization</label>
+                    <label for="parentOrg" class="block mb-2">
+                        Mother Organization
+                        <span class="text-red-500">*</span>
+                    </label>
                     <p-select id="parentOrg" formControlName="parentOrg" [options]="motherOrg" optionLabel="orgNameEN"
-                        optionValue="orgId" placeholder="Select parent" [showClear]="true" styleClass="w-full"></p-select>
+                        optionValue="orgId" placeholder="Select Mother Organization" [showClear]="true" styleClass="w-full"></p-select>
+                    @if (organizationForm.get('parentOrg')?.invalid && organizationForm.get('parentOrg')?.touched) {
+                    <small class="text-red-500 block mt-1">Mother Organization is required</small>
+                    }
                 </div>
 
                 <!-- Organization Unit Name: * -->
@@ -33,38 +39,20 @@
 
                 <!-- District -->
                 <div class="field">
-                    <label for="districtId" class="block mb-2">
-                        District
-                        <span class="text-red-500">*</span>
-                    </label>
+                    <label for="districtId" class="block mb-2">District</label>
                     <p-select id="districtId" formControlName="districtId" [options]="districtOptions" optionLabel="label"
                         optionValue="value" placeholder="Select District" [showClear]="true" styleClass="w-full"
                         [filter]="true" filterPlaceholder="Search District"></p-select>
-                    @if (organizationForm.get('districtId')?.invalid && organizationForm.get('districtId')?.touched) {
-                    <small class="text-red-500 block mt-1">District is required</small>
-                    }
-                </div>
-
-                <!-- Organization Unit Location - optional -->
-                <div class="field">
-                    <label for="locationEN" class="block mb-2">Organization Unit Location</label>
-                    <input pInputText id="locationEN" formControlName="locationEN" placeholder="Enter unit location"
-                        class="w-full" />
-                </div>
-
-                <!-- Unit Location (Bangla) - optional -->
-                <div class="field">
-                    <label for="locationBN" class="block mb-2">Unit Location (Bangla)</label>
-                    <input pInputText id="locationBN" formControlName="locationBN" placeholder="Enter unit location (Bangla)"
-                        class="w-full" />
                 </div>
 
                 <!-- Status -->
-                <div class="field">
-                    <label for="status" class="block mb-2">Status</label>
-                    <p-select id="status" formControlName="status" [options]="statusOptions" optionLabel="label"
-                        optionValue="value" placeholder="Select status" [showClear]="true" styleClass="w-full"></p-select>
-                </div>
+                @if (editingId) {
+                    <div class="field">
+                        <label for="status" class="block mb-2">Status</label>
+                        <p-select id="status" formControlName="status" [options]="statusOptions" optionLabel="label"
+                            optionValue="value" placeholder="Select status" [showClear]="true" styleClass="w-full"></p-select>
+                    </div>
+                }
             </div>
 
             <!-- Buttons -->
@@ -98,19 +86,13 @@
             <tr>
                 <th style="width: 5%">#</th>
                 <th pSortableColumn="parentName">
-                    Parent Organization <p-sortIcon field="parentName" />
+                    Mother Organization <p-sortIcon field="parentName" />
                 </th>
                 <th pSortableColumn="orgNameEN">
                     Unit Name (English) <p-sortIcon field="orgNameEN" />
                 </th>
                 <th pSortableColumn="orgNameBN">
                     Unit Name (Bangla) <p-sortIcon field="orgNameBN" />
-                </th>
-                <th pSortableColumn="locationBN">
-                    Unit Location (Bangla) <p-sortIcon field="locationBN" />
-                </th>
-                <th pSortableColumn="locationEN">
-                    Unit Location (English) <p-sortIcon field="locationEN" />
                 </th>
                 <th pSortableColumn="districtId">
                     District <p-sortIcon field="districtId" />
@@ -128,8 +110,6 @@
                 <td>{{ row.parentName || '-' }}</td>
                 <td>{{ row.orgNameEN }}</td>
                 <td>{{ row.orgNameBN }}</td>
-                <td>{{ row.locationBN }}</td>
-                <td>{{ row.locationEN }}</td>
                 <td>{{ row.districtDisplay || '-' }}</td>
                 <td>
                         <span [ngClass]="{

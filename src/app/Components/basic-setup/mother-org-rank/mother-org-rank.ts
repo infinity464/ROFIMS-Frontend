@@ -3,6 +3,7 @@ import { FormConfig } from '../shared/models/formConfig';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MasterBasicSetupService } from '../shared/services/MasterBasicSetupService';
 import { OrganizationModel } from '../organization-setup/models/organization';
+import { CommonCode } from '../shared/models/common-code';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { DynamicFormComponent } from "../shared/componets/dynamic-form-component/dynamic-form";
 
@@ -26,6 +27,7 @@ export class MotherOrgRank {
     allData: any[] = [];
     commonData: any[] = [];
     motherOrgs: OrganizationModel[] = [];
+    memberTypes: CommonCode[] = [];
     editingId: number | null = null;
     commonForm!: FormGroup;
 
@@ -44,6 +46,13 @@ export class MotherOrgRank {
                 label: 'Mother Organization',
                 type: 'select',
                 required: false,
+                options: [] as { label: string; value: any }[]
+            },
+            {
+                name: 'parentCodeId',
+                label: 'Member Type',
+                type: 'select',
+                required: true,
                 options: [] as { label: string; value: any }[]
             },
             {
@@ -81,6 +90,7 @@ export class MotherOrgRank {
         tableConfig: TableConfig = {
         tableColumns: [
             { field: 'orgNameDisplay', header: 'Mother Organization' },
+            { field: 'memberTypeDisplay', header: 'Member Type' },
             { field: 'codeValueEN', header: 'Rank Name (EN)' },
             { field: 'codeValueBN', header: 'Rank Name (BN)' },
             { field: 'sortOrder', header: 'Seniority' },
@@ -107,10 +117,15 @@ export class MotherOrgRank {
         this.initForm();
         this.setupFormFilterListeners();
         this.loadActiveMotherOrgs();
+        this.loadMemberTypes();
     }
 
     private setupFormFilterListeners() {
         this.commonForm.get('orgId')?.valueChanges.subscribe(() => {
+            this.first = 0;
+            this.buildTableData();
+        });
+        this.commonForm.get('parentCodeId')?.valueChanges.subscribe(() => {
             this.first = 0;
             this.buildTableData();
         });
@@ -128,7 +143,7 @@ export class MotherOrgRank {
             orgId: [null],
             codeId: [0],
             codeType: ['MotherOrgRank'],
-            parentCodeId: [null], // Will store motherOrgId
+            parentCodeId: [null, Validators.required],
             commCode: [null],
             displayCodeValueEN: [null],
             displayCodeValueBN: [null],
@@ -138,6 +153,32 @@ export class MotherOrgRank {
             createdDate: [''],
             lastUpdatedBy: [''],
             lastupdate: ['']
+        });
+    }
+
+    // Load member types (EmployeeType common codes) for the dropdown
+    loadMemberTypes() {
+        this.masterBasicSetupService.getAllByType('EmployeeType').subscribe({
+            next: (res) => {
+                this.memberTypes = (res ?? []).filter(m => m.status);
+                const memberTypeOptions = this.memberTypes.map(m => ({
+                    label: m.codeValueEN,
+                    value: m.codeId
+                }));
+                const memberTypeField = this.formConfig.formFields.find(f => f.name === 'parentCodeId');
+                if (memberTypeField) {
+                    memberTypeField.options = memberTypeOptions;
+                }
+                this.buildTableData();
+            },
+            error: (err) => {
+                console.error('Error loading Member Types:', err);
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: 'Failed to load Member Types'
+                });
+            }
         });
     }
 
@@ -188,11 +229,22 @@ export class MotherOrgRank {
     private buildTableData() {
         const orgOpts = (this.formConfig.formFields.find(f => f.name === 'orgId')?.options as { label: string; value: any }[]) || [];
         const getOrgName = (id: number) => orgOpts.find((o: any) => o.value === id)?.label ?? '-';
-        let list = this.allData.map((r: any) => ({ ...r, orgNameDisplay: getOrgName(r.orgId) }));
+        const memberTypeOpts = (this.formConfig.formFields.find(f => f.name === 'parentCodeId')?.options as { label: string; value: any }[]) || [];
+        const getMemberTypeName = (id: number | null) =>
+            id == null ? '-' : (memberTypeOpts.find((o: any) => o.value === id)?.label ?? '-');
+        let list = this.allData.map((r: any) => ({
+            ...r,
+            orgNameDisplay: getOrgName(r.orgId),
+            memberTypeDisplay: getMemberTypeName(r.parentCodeId)
+        }));
         const orgId = this.commonForm?.get('orgId')?.value;
+        const parentCodeId = this.commonForm?.get('parentCodeId')?.value;
         const status = this.commonForm?.get('status')?.value;
         if (orgId != null && orgId !== '') {
             list = list.filter((r: any) => r.orgId === orgId);
+        }
+        if (parentCodeId != null && parentCodeId !== '') {
+            list = list.filter((r: any) => r.parentCodeId === parentCodeId);
         }
         if (status != null) {
             list = list.filter((r: any) => r.status === status);
@@ -219,13 +271,13 @@ export class MotherOrgRank {
 
     submit(data: any) {
         const orgId = this.commonForm.get('orgId')?.value;
-        const status = this.commonForm.get('status')?.value;
         if (orgId == null || orgId === '') {
             this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Mother Organization' });
             return;
         }
-        if (status == null) {
-            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Status (Active or Inactive)' });
+        const memberTypeId = this.commonForm.get('parentCodeId')?.value;
+        if (memberTypeId == null || memberTypeId === '') {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Member Type' });
             return;
         }
         if (this.commonForm.invalid) {
@@ -321,7 +373,8 @@ export class MotherOrgRank {
     update(row: any) {
         this.editingId = row.codeId;
         this.commonForm.patchValue({
-            orgId: row.orgId, // parentCodeId contains divisionId
+            orgId: row.orgId,
+            parentCodeId: row.parentCodeId,
             codeValueEN: row.codeValueEN,
             codeValueBN: row.codeValueBN,
             status: row.status,

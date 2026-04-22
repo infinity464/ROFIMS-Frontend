@@ -3,7 +3,6 @@ export interface RabIdSerialModel {
     employeeTypeId: number;
     motherOrgIds?: string | null; // comma-separated OrgIds e.g. "1,2,3"
     minId: number;
-    maxId: number;
     currentId: number | null;
 
     createdBy: string;

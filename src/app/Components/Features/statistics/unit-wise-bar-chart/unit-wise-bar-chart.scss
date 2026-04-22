@@ -162,6 +162,48 @@
     height: 480px;
 }
 
+/* ── Dark mode overrides ─────────────────────────────────────────────── */
+:host-context(.app-dark) {
+    .chart-results-card {
+        background: var(--surface-card) !important;
+        border-color: var(--surface-border);
+    }
+
+    .chart-results-header {
+        background: var(--surface-card) !important;
+        border-bottom-color: var(--surface-border);
+    }
+
+    .chart-main-title {
+        color: var(--text-color) !important;
+    }
+
+    .chart-date-line {
+        color: var(--text-color-secondary) !important;
+    }
+
+    .chart-lang-toggle,
+    .chart-btn-print {
+        background: var(--surface-ground) !important;
+        border-color: var(--surface-border);
+        color: var(--text-color);
+    }
+
+    .chart-export-dropdown {
+        background: var(--surface-card);
+        border-color: var(--surface-border);
+    }
+
+    .chart-export-item {
+        color: var(--text-color);
+        &:hover { background: var(--surface-hover); }
+    }
+
+    .chart-total {
+        color: var(--text-color);
+    }
+}
+
 /* Empty state */
 .empty-state {
     display: flex;

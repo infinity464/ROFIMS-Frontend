@@ -139,14 +139,12 @@ export class OrganizationUnit implements OnInit {
             contactName: [''],
             contactNumber: [''],
             locationCode: [''],
-            locationEN: [''],
-            locationBN: [''],
-            districtId: [null, Validators.required],
+            districtId: [null],
             email: [''],
             sortOrder: [0],
-            status: [null],
+            status: [true],
             remarks: [''],
-            parentOrg: [null],
+            parentOrg: [null, Validators.required],
             createdBy: [this.currentUser],
             createdDate: [new Date() ],
             lastUpdatedBy: [this.currentUser],
@@ -223,8 +221,6 @@ export class OrganizationUnit implements OnInit {
             list = list.filter(org =>
                 org.orgNameEN?.toLowerCase().includes(q) ||
                 org.orgNameBN?.toLowerCase().includes(q) ||
-                org.locationEN?.toLowerCase().includes(q) ||
-                org.locationBN?.toLowerCase().includes(q) ||
                 (org.parentName && org.parentName.toLowerCase().includes(q)) ||
                 this.getDistrictDisplay(org.districtId).toLowerCase().includes(q)
             );
@@ -238,16 +234,6 @@ export class OrganizationUnit implements OnInit {
     onSubmit() {
         if (this.isSubmitting) return;
 
-        const status = this.organizationForm.get('status')?.value;
-        if (status == null) {
-            this.messageService.add({
-                severity: 'warn',
-                summary: 'Validation',
-                detail: 'Please select Status (Active or Inactive) for the organization'
-            });
-            return;
-        }
-
         if (this.organizationForm.invalid) {
             this.organizationForm.markAllAsTouched();
             return;
@@ -256,12 +242,15 @@ export class OrganizationUnit implements OnInit {
         if (this.editingId) {
             this.update();
         } else {
+            this.organizationForm.patchValue({ status: true });
             this.create();
         }
     }
 
     create() {
         this.isSubmitting = true;
+
+        const preservedParentOrg = this.organizationForm.get('parentOrg')?.value;
 
         this.organizationService.post(this.organizationForm.value).subscribe({
             next: (res: any) => {
@@ -272,6 +261,7 @@ export class OrganizationUnit implements OnInit {
                     detail: 'Organization created successfully'
                 });
                 this.onReset();
+                this.organizationForm.patchValue({ parentOrg: preservedParentOrg });
                 this.GetAllOrgUnit();
                 this.isSubmitting = false;
             },
@@ -290,6 +280,8 @@ export class OrganizationUnit implements OnInit {
     update() {
         this.isSubmitting = true;
 
+        const preservedParentOrg = this.organizationForm.get('parentOrg')?.value;
+
         const updatePayload = {
             ...this.organizationForm.value,
             orgId: this.editingId
@@ -304,6 +296,7 @@ export class OrganizationUnit implements OnInit {
                     detail: 'Organization updated successfully'
                 });
                 this.onReset();
+                this.organizationForm.patchValue({ parentOrg: preservedParentOrg });
                 this.GetAllOrgUnit();
                 this.isSubmitting = false;
             },
@@ -374,7 +367,7 @@ export class OrganizationUnit implements OnInit {
             orgId: 0,
             parentOrg: null,
             districtId: null,
-            status: null,
+            status: true,
             createdDate: new Date(),
             lastupdate: new Date(),
             lastUpdatedBy: this.currentUser,

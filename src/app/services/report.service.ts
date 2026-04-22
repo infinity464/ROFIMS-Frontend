@@ -12,6 +12,10 @@ import type {
   EducationReportRow,
   GenericReportParams,
   GenericReportRow,
+  FamilyOccupationReportParams,
+  FamilyOccupationReportRow,
+  AddressLocationReportParams,
+  AddressLocationReportRow,
   ReportPagedResponse,
 } from '@/models/report.model';
 import type { PagedResponse } from '@/Core/Models/Pagination';
@@ -105,6 +109,28 @@ export class ReportService {
     return this.http
       .post<ReportPagedResponse<GenericReportRow>>(
         `${this.apiUrl}/GetWingsReport`,
+        params
+      )
+      .pipe(map(normalizePages));
+  }
+
+  getFamilyOccupationReport(
+    params: FamilyOccupationReportParams
+  ): Observable<PagedResponse<FamilyOccupationReportRow>> {
+    return this.http
+      .post<ReportPagedResponse<FamilyOccupationReportRow>>(
+        `${this.apiUrl}/GetFamilyOccupationReport`,
+        params
+      )
+      .pipe(map(normalizePages));
+  }
+
+  getAddressLocationReport(
+    params: AddressLocationReportParams
+  ): Observable<PagedResponse<AddressLocationReportRow>> {
+    return this.http
+      .post<ReportPagedResponse<AddressLocationReportRow>>(
+        `${this.apiUrl}/GetAddressLocationReport`,
         params
       )
       .pipe(map(normalizePages));

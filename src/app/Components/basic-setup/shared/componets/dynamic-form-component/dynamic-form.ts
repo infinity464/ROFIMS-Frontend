@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges } from '@angular/core';
 import { FluidModule } from 'primeng/fluid';
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
@@ -52,7 +52,7 @@ import { FormConfig, FormField } from '../../models/formConfig';
 })
 
 
-export class DynamicFormComponent implements OnInit {
+export class DynamicFormComponent implements OnInit, OnChanges {
     @Input() isSubmitting: boolean = false;
     @Input() config!: FormConfig;
     @Input() form!: FormGroup;
@@ -63,6 +63,21 @@ export class DynamicFormComponent implements OnInit {
 
     ngOnInit() {
         this.setupCascadingDropdowns();
+        this.applyCreateStatusDefault();
+    }
+
+    ngOnChanges(changes: SimpleChanges): void {
+        if (changes['editingId']) {
+            this.applyCreateStatusDefault();
+        }
+    }
+
+    private applyCreateStatusDefault(): void {
+        if (!this.form || this.editingId) return;
+        const statusCtrl = this.form.get('status');
+        if (statusCtrl && statusCtrl.value !== true) {
+            statusCtrl.setValue(true, { emitEvent: false });
+        }
     }
 
     setupCascadingDropdowns() {
@@ -112,6 +127,9 @@ export class DynamicFormComponent implements OnInit {
     }
 
     onSave() {
+        if (!this.editingId && this.form.contains('status')) {
+            this.form.get('status')?.setValue(true, { emitEvent: false });
+        }
         if (this.form.invalid) return;
         this.save.emit(this.form.value);
     }
@@ -119,5 +137,6 @@ export class DynamicFormComponent implements OnInit {
     onReset() {
         if (this.isSubmitting) return;
         this.reset.emit();
+        queueMicrotask(() => this.applyCreateStatusDefault());
     }
 }

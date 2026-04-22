@@ -30,7 +30,6 @@
         }
       } @else {
         <div class="mb-4">
-          <label class="font-medium block mb-2">RAB ID / Service ID (applicant)</label>
           <app-employee-search
             [initialEmployeeId]="applicantEmployeeId ?? null"
             (onEmployeeFound)="onApplicantSelected($event)"
@@ -40,7 +39,7 @@
         </div>
       }
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         <div>
           <label class="font-medium block mb-2">Leave Type</label>
           <p-select
@@ -52,15 +51,45 @@
             styleClass="w-full">
           </p-select>
         </div>
-        <div class="flex gap-2 md:gap-4">
-          <div class="flex-1">
-            <label class="font-medium block mb-2">From Date</label>
-            <p-datepicker formControlName="fromDate" dateFormat="dd/mm/yy" styleClass="w-full" placeholder="From"></p-datepicker>
+        <div>
+          <label class="font-medium block mb-2">Process Type</label>
+          <p-select
+            formControlName="processType"
+            [options]="processTypeOptions"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Select Process Type"
+            styleClass="w-full">
+          </p-select>
+        </div>
+        @if (form.get('processType')?.value === 'manual') {
+          <div>
+            <label class="font-medium block mb-2">Decision</label>
+            <p-select
+              formControlName="manualDecision"
+              [options]="manualDecisionOptions"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Select Decision"
+              styleClass="w-full">
+            </p-select>
           </div>
-          <div class="flex-1">
-            <label class="font-medium block mb-2">To Date</label>
-            <p-datepicker formControlName="toDate" dateFormat="dd/mm/yy" styleClass="w-full" placeholder="To"></p-datepicker>
-          </div>
+        }
+      </div>
+
+      <div class="grid grid-cols-[1fr_1fr_auto] gap-4 mb-4 items-end">
+        <div>
+          <label class="font-medium block mb-2">From Date</label>
+          <p-datepicker formControlName="fromDate" dateFormat="dd/mm/yy" styleClass="w-full" placeholder="From"></p-datepicker>
+        </div>
+        <div>
+          <label class="font-medium block mb-2">To Date</label>
+          <p-datepicker formControlName="toDate" dateFormat="dd/mm/yy" styleClass="w-full" placeholder="To"></p-datepicker>
+        </div>
+        <div class="flex items-center pb-1" style="min-width: 70px;">
+          @if (totalDays !== null) {
+            <span class="font-semibold text-primary whitespace-nowrap">{{ totalDays }} Day{{ totalDays > 1 ? 's' : '' }}</span>
+          }
         </div>
       </div>
 
@@ -96,7 +125,12 @@
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div>
-          <label class="font-medium block mb-2">Final Approver</label>
+          <label class="font-medium block mb-2">
+            Final Approver
+            @if (form.get('processType')?.value === 'manual') {
+              <span class="text-sm text-500 font-normal">(Optional)</span>
+            }
+          </label>
           <p-select
             formControlName="finalApproverId"
             [options]="approverOptions"

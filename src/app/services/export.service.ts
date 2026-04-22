@@ -14,6 +14,8 @@ import {
 } from 'docx';
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 export interface ReportConfig {
     title: string;
@@ -25,6 +27,10 @@ export interface ReportConfig {
     filename?: string;
     /** Optional applied filter lines shown below the date (e.g. "Rank: Major"). */
     filterLines?: string[];
+    /** Use landscape orientation (default false = portrait). */
+    landscape?: boolean;
+    /** Page margin in mm (default 20). */
+    marginMm?: number;
 }
 
 /** One section in a profile export: heading + table (same as web view). */
@@ -66,11 +72,13 @@ export class ExportService {
         const fontFamily = config.lang === 'bn' ? "'Nirmala UI', serif" : "'Times New Roman', serif";
         // Same sizes as Word: page header 14pt, table header 10pt, content 8pt (bn) / 11pt (en)
         const sizeContentPt = config.lang === 'bn' ? '8pt' : '11pt';
+        const pageSize = config.landscape ? 'A4 landscape' : 'A4';
+        const margin = `${config.marginMm ?? 20}mm`;
         const pageFooter = config.showPageNumbers
             ? `
             @page {
-                size: A4;
-                margin: 20mm;
+                size: ${pageSize};
+                margin: ${margin};
                 @bottom-center {
                     content: "Page " counter(page) " of " counter(pages);
                     font-family: ${fontFamily};
@@ -81,15 +89,15 @@ export class ExportService {
         `
             : `
             @page {
-                size: A4;
-                margin: 20mm;
+                size: ${pageSize};
+                margin: ${margin};
             }
         `;
 
         const headerCells = columns
             .map(
                 (c) =>
-                    `<th style="padding:8px 10px;font-weight:700;font-size:10pt;text-align:left;white-space:nowrap;word-break:keep-all;border:1px solid #ccc">${escapeHtml(c)}</th>`
+                    `<th style="padding:4px 6px;font-weight:700;font-size:10pt;text-align:left;word-break:break-word;border:1px solid #ccc">${escapeHtml(c)}</th>`
             )
             .join('');
         const dataRows = rows
@@ -98,7 +106,7 @@ export class ExportService {
                     const cells = row
                         .map(
                             (cell) =>
-                                `<td style="padding:6px 10px;white-space:nowrap;word-break:keep-all;font-size:${sizeContentPt};border:1px solid #ccc">${escapeHtml(cell)}</td>`
+                                `<td style="padding:3px 6px;word-break:break-word;font-size:${sizeContentPt};border:1px solid #ccc">${escapeHtml(cell)}</td>`
                         )
                         .join('');
                     return `<tr style="page-break-inside:avoid">${cells}</tr>`;
@@ -117,7 +125,7 @@ export class ExportService {
         .date { font-family: ${fontFamily}; font-size: 14pt; color: #555; text-align: center; margin-bottom: 4px; }
         .filters { font-family: ${fontFamily}; font-size: 10pt; color: #333; text-align: center; margin-bottom: 16px; }
         .filters span { display: inline-block; margin: 2px 6px; }
-        table { width: 100%; border-collapse: collapse; font-family: ${fontFamily}; }
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; font-family: ${fontFamily}; }
         thead th { font-family: ${fontFamily}; }
         tbody td { font-family: ${fontFamily}; }
         ${pageFooter}
@@ -598,6 +606,109 @@ ${sectionBlocks}
         });
         const blob = await Packer.toBlob(doc);
         saveAs(blob, config.lang === 'bn' ? 'profile_bn.docx' : 'profile_en.docx');
+    }
+
+    /** Generate a real PDF (html2canvas + jsPDF) and open it in a new browser tab. */
+    async generatePDF(config: ReportConfig): Promise<void> {
+        const fontFamily = config.lang === 'bn'
+            ? "'Noto Sans Bengali', 'Nirmala UI', sans-serif"
+            : "'Times New Roman', serif";
+        const sizeContentPt = config.lang === 'bn' ? '8pt' : '9pt';
+        const orientation = config.landscape ? 'landscape' : 'portrait';
+        const dateStr = new Date().toLocaleDateString(config.lang === 'bn' ? 'bn-BD' : 'en-US', {
+            year: 'numeric', month: 'long', day: 'numeric',
+        });
+
+        const esc = escapeHtml;
+        const headerCells = config.columns
+            .map(c => `<th style="padding:4px 6px;font-weight:700;font-size:9pt;text-align:center;border:1px solid #000;white-space:nowrap;background:#fff;color:#000">${esc(c)}</th>`)
+            .join('');
+        const dataRows = config.rows
+            .map(row => {
+                const cells = row
+                    .map(cell => `<td style="padding:3px 6px;font-size:${sizeContentPt};border:1px solid #000;color:#000">${esc(cell)}</td>`)
+                    .join('');
+                return `<tr>${cells}</tr>`;
+            })
+            .join('');
+
+        const filterHtml = config.filterLines?.length
+            ? `<div style="font-size:9pt;text-align:center;margin-bottom:10px;color:#333">${config.filterLines.map(l => esc(l)).join(' | ')}</div>`
+            : '';
+
+        const containerWidth = config.landscape ? 1050 : 760;
+        const container = document.createElement('div');
+        container.style.cssText = `position:absolute;left:-9999px;top:0;width:${containerWidth}px;padding:30px;background:#fff;z-index:-1;overflow:visible;box-sizing:border-box`;
+        container.innerHTML = `
+            <div style="font-family:${fontFamily};font-size:${sizeContentPt};color:#000;line-height:1.4;width:100%">
+                <h1 style="font-size:14pt;font-weight:700;text-align:center;margin:0 0 3px 0">${esc(config.title)}</h1>
+                <div style="font-size:9pt;text-align:center;margin-bottom:6px">${esc(dateStr)}</div>
+                ${filterHtml}
+                <table style="width:100%;border-collapse:collapse;font-family:${fontFamily}">
+                    <thead><tr>${headerCells}</tr></thead>
+                    <tbody>${dataRows}</tbody>
+                </table>
+            </div>`;
+        document.body.appendChild(container);
+
+        try {
+            await new Promise(resolve => setTimeout(resolve, 300));
+            const scale = 2;
+            const canvas = await html2canvas(container, {
+                scale, useCORS: true, backgroundColor: '#ffffff',
+                logging: false, scrollY: -window.scrollY,
+                height: container.scrollHeight, windowHeight: container.scrollHeight,
+            });
+            const imgWidth = canvas.width;
+
+            const pdf = new jsPDF({ orientation, unit: 'mm', format: 'a4' });
+            const marginMm = config.marginMm ?? 10;
+            const pdfWidth = pdf.internal.pageSize.getWidth() - marginMm * 2;
+            const pdfPageHeight = pdf.internal.pageSize.getHeight() - marginMm * 2;
+            const ratio = pdfWidth / imgWidth;
+
+            // Row-aware page splitting
+            const tableEl = container.querySelector('table')!;
+            const containerTop = container.getBoundingClientRect().top;
+            const allRows = tableEl.querySelectorAll('tr');
+            const rowBottoms: number[] = [];
+            allRows.forEach((tr: Element) => {
+                rowBottoms.push(Math.round((tr.getBoundingClientRect().bottom - containerTop) * scale));
+            });
+
+            const maxSlicePx = Math.floor(pdfPageHeight / ratio);
+            let srcY = 0;
+            let page = 0;
+
+            while (srcY < canvas.height) {
+                let cutY = Math.min(srcY + maxSlicePx, canvas.height);
+                if (cutY < canvas.height) {
+                    let bestCut = srcY;
+                    for (const rb of rowBottoms) {
+                        if (rb <= cutY && rb > srcY) bestCut = rb;
+                    }
+                    if (bestCut > srcY) cutY = bestCut;
+                }
+                const sliceH = cutY - srcY;
+                if (sliceH <= 0) break;
+
+                if (page > 0) pdf.addPage();
+                const sliceCanvas = document.createElement('canvas');
+                sliceCanvas.width = imgWidth;
+                sliceCanvas.height = sliceH;
+                const ctx = sliceCanvas.getContext('2d')!;
+                ctx.drawImage(canvas, 0, srcY, imgWidth, sliceH, 0, 0, imgWidth, sliceH);
+                pdf.addImage(sliceCanvas.toDataURL('image/jpeg', 0.92), 'JPEG', marginMm, marginMm, pdfWidth, sliceH * ratio);
+                srcY = cutY;
+                page++;
+            }
+
+            const pdfBlob = pdf.output('blob');
+            const pdfUrl = URL.createObjectURL(pdfBlob);
+            window.open(pdfUrl, '_blank');
+        } finally {
+            document.body.removeChild(container);
+        }
     }
 
     exportProfileExcel(config: ProfileExportConfig): void {

@@ -20,7 +20,7 @@ import { SharedService } from '@/shared/services/shared-service';
 })
 export class EmployeeType {
     codeType: string = 'EmployeeType';
-    title: string = 'Employee  Type';
+    title: string = 'Member Type';
     commonCodeData: CommonCode[] = [];
     editingId: number | null = null;
     commonCodeForm!: FormGroup;
@@ -37,13 +37,13 @@ export class EmployeeType {
         formFields: [
             {
                 name: 'codeValueEN',
-                label: 'Employee StatusType Name (English)',
+                label: 'Member Type Name (English)',
                 type: 'text',
                 required: true
             },
             {
                 name: 'codeValueBN',
-                label: 'Employee StatusType Name (Bangla)',
+                label: 'Member Type Name (Bangla)',
                 type: 'text',
                 required: true
             },

@@ -48,6 +48,7 @@ export class ReportEducationComponent implements OnInit, OnChanges {
     totalRecords = 0;
 
     exportDropdownOpen = false;
+    exporting = false;
     appliedFilterLines: string[] = [];
 
     constructor(
@@ -136,6 +137,7 @@ export class ReportEducationComponent implements OnInit, OnChanges {
     }
 
     async exportAs(type: 'print' | 'pdf' | 'word' | 'excel'): Promise<void> {
+        this.exportDropdownOpen = false;
         const { columns, rows } = this.getExportData();
         const config = {
             title: this.reportTitle,
@@ -145,14 +147,16 @@ export class ReportEducationComponent implements OnInit, OnChanges {
             showPageNumbers: true,
             filterLines: this.appliedFilterLines,
         };
-        if (type === 'print' || type === 'pdf') {
+        if (type === 'pdf') {
+            this.exporting = true;
+            try { await this.exportService.generatePDF(config); } finally { this.exporting = false; }
+        } else if (type === 'print') {
             this.exportService.exportPDF(config);
         } else if (type === 'word') {
             await this.exportService.exportWord(config);
         } else {
             this.exportService.exportExcel(config);
         }
-        this.exportDropdownOpen = false;
     }
 
     ngOnInit(): void {

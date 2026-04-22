@@ -246,6 +246,51 @@
     .num-cell     { color: #fff !important; }
 }
 
+/* ── Dark mode overrides ─────────────────────────────────────────────── */
+:host-context(.app-dark) {
+    .report-results-card {
+        background: var(--surface-card) !important;
+        border-color: var(--surface-border);
+    }
+
+    .report-results-header {
+        background: var(--surface-card) !important;
+        border-bottom-color: var(--surface-border);
+    }
+
+    .report-main-title {
+        color: var(--text-color) !important;
+    }
+
+    .report-date-line {
+        color: var(--text-color-secondary) !important;
+    }
+
+    .report-lang-toggle,
+    .report-btn-export {
+        background: var(--surface-ground) !important;
+        border-color: var(--surface-border);
+        color: var(--text-color);
+    }
+
+    .report-export-dropdown {
+        background: var(--surface-card);
+        border-color: var(--surface-border);
+    }
+
+    .report-export-item:hover {
+        background: var(--surface-hover);
+    }
+
+    .report-table thead tr {
+        background-color: var(--surface-ground) !important;
+    }
+
+    .report-table th {
+        color: var(--text-color);
+    }
+}
+
 /* ── Empty state ─────────────────────────────────────────────────────── */
 .empty-state {
     display: flex;

@@ -70,30 +70,6 @@
                     }
                 </div>
 
-                <!-- Max ID -->
-                <div class="field">
-                    <label for="maxId" class="block mb-2">
-                        End To <span class="text-red-500">*</span>
-                    </label>
-                    <p-inputnumber
-                        id="maxId"
-                        formControlName="maxId"
-                        placeholder="Enter End To"
-                        [useGrouping]="false"
-                        class="w-full">
-                    </p-inputnumber>
-                    @if (rabIdSerialForm.get('maxId')?.invalid && rabIdSerialForm.get('maxId')?.touched) {
-                        <small class="text-red-500 block mt-1">
-                            End To is required and must be greater than 0
-                        </small>
-                    }
-                    @if (rabIdSerialForm.get('maxId')?.value && rabIdSerialForm.get('minId')?.value && rabIdSerialForm.get('maxId')?.value < rabIdSerialForm.get('minId')?.value) {
-                        <small class="text-red-500 block mt-1">
-                            End To cannot be less than Start From
-                        </small>
-                    }
-                </div>
-
             </div>
 
             <!-- Buttons -->
@@ -101,7 +77,7 @@
                 <p-button
                     label="Save"
                     type="submit"
-                    [disabled]="rabIdSerialForm.invalid || isSubmitting || isMaxLessThanMin()">
+                    [disabled]="rabIdSerialForm.invalid || isSubmitting">
                 </p-button>
 
                 <p-button
@@ -145,7 +121,6 @@
                 <th>Employee Type</th>
                 <th>Mother Org Name</th>
                 <th>Start From</th>
-                <th>End To</th>
                 <th>Current ID</th>
             </tr>
         </ng-template>
@@ -156,14 +131,13 @@
                 <td>{{ getEmployeeTypeName(row.employeeTypeId) }}</td>
                 <td>{{ getMotherOrgNames(row.motherOrgIds) }}</td>
                 <td>{{ row.minId }}</td>
-                <td>{{ row.maxId }}</td>
                 <td>{{ row.currentId ?? '-' }}</td>
             </tr>
         </ng-template>
 
         <ng-template pTemplate="emptymessage">
             <tr>
-                <td colspan="7" class="text-center">No records found.</td>
+                <td colspan="5" class="text-center">No records found.</td>
             </tr>
         </ng-template>
 

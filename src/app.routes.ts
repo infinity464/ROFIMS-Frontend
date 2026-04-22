@@ -8,6 +8,7 @@ import { Notfound } from './app/pages/notfound/notfound';
 import { Login } from '@/Components/Features/Authentication/Login/login';
 import { ChangePassword } from '@/Components/Features/Authentication/change-password/change-password';
 import { AuthGuard } from '@/Core/Guard/auth.guard';
+import { MemberTypePermissionGuard } from '@/Core/Guard/member-type-permission.guard';
 import { DynamicSearchComponent } from '@/Components/Shared/dynamic-search/dynamic-search';
 // import { MotherOrg } from '@/Components/basic-setup/mother-org/mother-org';
 import { Employeeinfo } from '@/Components/Features/EmployeeInfo/employeeinfo/employeeinfo';
@@ -23,6 +24,7 @@ import { EducationInstitutionType } from '@/Components/basic-setup/education-ins
 import { CourseType } from '@/Components/basic-setup/course-type/course-type';
 import { CourseGrade } from '@/Components/basic-setup/course-grade/course-grade';
 import { PersonalQualification } from '@/Components/basic-setup/personal-qualification/personal-qualification';
+import { SpecialQualification } from '@/Components/basic-setup/special-qualification/special-qualification';
 import { VisitType } from '@/Components/basic-setup/visit-type/visit-type';
 import { PunishmentType } from '@/Components/basic-setup/punishment-type/punishment-type';
 import { OffenceType } from '@/Components/basic-setup/offence-type/offence-type';
@@ -126,17 +128,19 @@ import { NotesheetPreviewPostingComponent } from '@/Components/Features/noteshee
 import { NotesheetPreviewExbdComponent } from '@/Components/Features/notesheet-preview/exbd/notesheet-preview-exbd';
 import { LeaveApplicationApplyComponent } from '@/Components/Features/leave-application/leave-application-apply/leave-application-apply.component';
 import { LeaveApplicationListComponent } from '@/Components/Features/leave-application/leave-application-list/leave-application-list.component';
+import { LeaveCardComponent } from '@/Components/Features/leave-application/leave-card/leave-card.component';
 import { CalendarComponent } from '@/Components/Features/calendar/calendar.component';
 import { TaskEventListComponent } from '@/Components/Features/calendar/task-event-list.component';
 import { ChatContainerComponent } from '@/Components/Features/chat/chat-container.component';
 import { IdentityUserCreateComponent } from '@/Components/Features/identity/identity-user-create/identity-user-create.component';
 import { RoleListComponent } from '@/Components/Features/identity/role-list/role-list.component';
-import { IdentityUserEmployeeMappingComponent } from '@/Components/Features/identity/identity-user-employee-mapping/identity-user-employee-mapping.component';
 import { MenuManagement } from '@/Components/Features/menu-management/menu-management';
 import { RoleMenuPermission } from '@/Components/Features/role-menu-permission/role-menu-permission';
 import { LoginAuditComponent } from '@/Components/Features/login-audit/login-audit.component';
 import { MyLoginAuditComponent } from '@/Components/Features/my-login-audit/my-login-audit.component';
 import { EmployeeReportsComponent } from '@/Components/Features/employee-reports/employee-reports.component';
+import { ReportFamilyOccupationComponent } from '@/Components/Features/employee-reports/report-family-occupation/report-family-occupation.component';
+import { ReportAddressLocationComponent } from '@/Components/Features/employee-reports/report-address-location/report-address-location.component';
 import { RabUnitAor } from '@/Components/basic-setup/rab-unit-aor/rab-unit-aor';
 import { ManpowerSummaryComponent } from '@/Components/Features/statistics/manpower-summary/manpower-summary';
 import { ManpowerChartComponent } from '@/Components/Features/statistics/manpower-chart/manpower-chart';
@@ -165,7 +169,6 @@ export const appRoutes: Routes = [
             { path: 'chat', component: ChatContainerComponent },
             { path: 'identity/user-create', component: IdentityUserCreateComponent },
             { path: 'identity/roles', component: RoleListComponent },
-            { path: 'identity/user-employee-mapping', component: IdentityUserEmployeeMappingComponent },
             { path: 'employee-info', component: Employeeinfo },
             { path: 'basic-setup/division', component: Division },
             { path: 'basic-setup/district', component: District },
@@ -181,6 +184,7 @@ export const appRoutes: Routes = [
             { path: 'basic-setup/course-type', component: CourseType },
             { path: 'basic-setup/course-grade', component: CourseGrade },
             { path: 'basic-setup/personal-qualification', component: PersonalQualification },
+            { path: 'basic-setup/special-qualification', component: SpecialQualification },
             { path: 'basic-setup/visit-type', component: VisitType },
             { path: 'basic-setup/punishment-type', component: PunishmentType },
             { path: 'basic-setup/offence-type', component: OffenceType },
@@ -256,31 +260,32 @@ export const appRoutes: Routes = [
             // Leave Application (apply and approve/reject - standalone from notesheet)
             { path: 'leave-application/apply', component: LeaveApplicationApplyComponent },
             { path: 'leave-application/list', component: LeaveApplicationListComponent },
+            { path: 'leave-application/card', component: LeaveCardComponent },
 
             // EMP
             { path: 'emp-list', component: EmpList },
-            { path: 'emp-basic-info', component: EmpBasicInfo },
-            { path: 'emp-personal-service-info', component: EmpPersonalServiceInfoComponent },
-            { path: 'emp-personal-info', component: EmpPersonalInfo },
-            { path: 'emp-address-info', component: EmpAddressInfo },
-            { path: 'emp-family-info', component: EmpFamilyInfo },
-            { path: 'emp-nominee-info', component: EmpNomineeInfo },
-            { path: 'emp-previous-rab-service', component: EmpPreviousRabService },
-            { path: 'emp-service-history', component: EmpServiceHistory },
-            { path: 'emp-promotion-info', component: EmpPromotionInfo },
-            { path: 'emp-rank-confirmation', component: EmpRankConfirmationComponent },
-            { path: 'emp-education-info', component: EmpEducationInfoComponent },
-            { path: 'emp-course-info', component: EmpCourseInfoComponent },
-            { path: 'emp-send-to-course', component: EmpSendToCourseComponent },
-            { path: 'emp-discipline-info', component: EmpDisciplineInfoComponent },
-            { path: 'emp-bank-account', component: EmpBankAccount },
-            { path: 'emp-foreign-visit', component: EmpForeignVisit },
-            { path: 'emp-leave-info', component: EmpLeaveInfo },
-            { path: 'emp-medical-category', component: EmpMedicalCategory },
-            { path: 'emp-additional-remarks', component: EmpAdditionalRemarks },
-            { path: 'emp-perm-posting-mother-org', component: EmpPermPostingMotherOrg },
-            { path: 'emp-present-status', component: EmpPresentStatus },
-            { path: 'emp-present-member-check', component: EmpPresentMemberCheckComponent },
+            { path: 'emp-basic-info', component: EmpBasicInfo, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-personal-service-info', component: EmpPersonalServiceInfoComponent, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-personal-info', component: EmpPersonalInfo, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-address-info', component: EmpAddressInfo, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-family-info', component: EmpFamilyInfo, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-nominee-info', component: EmpNomineeInfo, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-previous-rab-service', component: EmpPreviousRabService, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-service-history', component: EmpServiceHistory, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-promotion-info', component: EmpPromotionInfo, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-rank-confirmation', component: EmpRankConfirmationComponent, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-education-info', component: EmpEducationInfoComponent, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-course-info', component: EmpCourseInfoComponent, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-send-to-course', component: EmpSendToCourseComponent, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-discipline-info', component: EmpDisciplineInfoComponent, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-bank-account', component: EmpBankAccount, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-foreign-visit', component: EmpForeignVisit, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-leave-info', component: EmpLeaveInfo, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-medical-category', component: EmpMedicalCategory, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-additional-remarks', component: EmpAdditionalRemarks, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-perm-posting-mother-org', component: EmpPermPostingMotherOrg, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-present-status', component: EmpPresentStatus, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-present-member-check', component: EmpPresentMemberCheckComponent, canActivate: [MemberTypePermissionGuard] },
             { path: 'rab-id-allocation', component: RabIdAllocation },
             { path: 'supernumerary-list', component: SupernumeraryList },
             { path: 'supernumerary-profile/:id', component: SupernumeraryProfile },
@@ -306,6 +311,8 @@ export const appRoutes: Routes = [
 
             // Employee Reports
             { path: 'employee-reports', component: EmployeeReportsComponent },
+            { path: 'report-family-occupation', component: ReportFamilyOccupationComponent },
+            { path: 'report-address-location', component: ReportAddressLocationComponent },
 
             // Statistics
             { path: 'statistics/manpower-summary', component: ManpowerSummaryComponent },

@@ -25,6 +25,7 @@ import { FileReferencesFormComponent } from '@components/Common/file-references-
 import { OrganizationService } from '@/Components/basic-setup/organization-setup/services/organization-service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { SharedService } from '@/shared/services/shared-service';
+import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
 
 @Component({
     selector: 'app-emp-basic-info',
@@ -602,21 +603,27 @@ export class EmpBasicInfo implements OnInit {
         });
     }
 
-    /** When Marital Status is Married and Spouse Name is set, save or update spouse row in FamilyInfo. Returns Observable that emits the FMID to use for spouse addresses (from API on insert, or existing spouseFmid on update). */
+    /** When Marital Status is not Unmarried, save or update spouse row in FamilyInfo. Returns Observable that emits the FMID to use for spouse addresses (from API on insert, or existing spouseFmid on update). */
     private saveSpouseIfMarried(employeeId: number): import('rxjs').Observable<number | null> {
         const formValue = this.postingForm.getRawValue();
         const maritalId = formValue.maritalStatus;
         const spouseName = (formValue.spouseName || '').trim();
-        const isMarried = this.maritalStatusOptions.some((m) => m.codeId === maritalId && (m.codeValueEN || (m as any).codeValueEn || '').toLowerCase().trim() === 'married');
+        const isNotUnmarried = this.isMaritalStatusNotUnmarried;
+        const hasSpouseAddress = this.spousePermanentAddressForm?.hasData() || this.spousePresentAddressForm?.hasData();
         const relationCodeId = formValue.relationship;
-        const shouldSave = relationCodeId != null && (isMarried || spouseName.length > 0 || this.spouseFmid != null);
+        const shouldSave = relationCodeId != null && (isNotUnmarried || spouseName.length > 0 || this.spouseFmid != null);
         if (!shouldSave) return of(null);
+
+        // If spouse name is empty but spouse address exists, use a default placeholder name
+        const resolvedSpouseName = spouseName.length > 0
+            ? spouseName
+            : (hasSpouseAddress || isNotUnmarried ? 'Wife (Name not set in Joining Page)' : null);
 
         const nowIso = new Date().toISOString();
         const payload: Record<string, unknown> = {
             EmployeeId: employeeId,
             Relation: relationCodeId,
-            NameEN: spouseName || null,
+            NameEN: resolvedSpouseName,
             NameBN: null,
             DOB: null,
             MaritalStatus: null,
@@ -789,11 +796,19 @@ export class EmpBasicInfo implements OnInit {
         private router: Router,
         private organizationService: OrganizationService,
         private masterBasicSetupService: MasterBasicSetupService,
-        private sharedService: SharedService
+        private sharedService: SharedService,
+        private memberTypeAccess: IdentityUserMemberTypeAccessService
     ) {}
+
+    /** CodeIds of Member Types the current user is allowed to use. `null` means "not yet loaded" (fail-open). */
+    private allowedMemberTypeIds: number[] | null = null;
+
+    /** Raw ranks for the currently selected mother org (before member-type filter). */
+    private allRanksForOrg: CommonCodeModel[] = [];
 
     ngOnInit(): void {
         this.initializeForm();
+        this.loadCurrentUserMemberTypePermissions();
 
         // Real-time duplicate check as user types
         this.postingForm.get('serviceId')?.valueChanges.pipe(
@@ -1410,12 +1425,10 @@ export class EmpBasicInfo implements OnInit {
         });
     }
 
-    /** Sets relationship form control to Spouse codeId when Marital Status is Married and relationship is not set (so spouse info and addresses save). */
+    /** Sets relationship form control to Spouse codeId when Marital Status is not Unmarried and relationship is not set (so spouse info and addresses save). */
     private setRelationshipToSpouseIfMarried(): void {
         if (this.relationOptions.length === 0) return;
-        const maritalStatusId = this.postingForm.get('maritalStatus')?.value;
-        const isMarried = maritalStatusId != null && this.maritalStatusOptions.some((m) => m.codeId === maritalStatusId && (m.codeValueEN || (m as any).codeValueEn || '').toLowerCase().trim() === 'married');
-        if (!isMarried) return;
+        if (!this.isMaritalStatusNotUnmarried) return;
         const currentRel = this.postingForm.get('relationship')?.value;
         if (currentRel != null) return;
         const spouseCodeId = this.relationOptions.find((r) => (r.codeValueEN || (r as any).codeValueEn || '').toLowerCase().trim() === 'spouse')?.codeId;
@@ -1424,11 +1437,11 @@ export class EmpBasicInfo implements OnInit {
     }
 
     onMaritalStatusChange(value: number | null): void {
-        const isMarried = value != null && this.maritalStatusOptions.some((m) => m.codeId === value && (m.codeValueEN || (m as any).codeValueEn || '').toLowerCase().trim() === 'married');
-        if (!isMarried) {
+        const isUnmarried = value != null && this.maritalStatusOptions.some((m) => m.codeId === value && (m.codeValueEN || (m as any).codeValueEn || '').toLowerCase().trim() === 'unmarried');
+        if (value == null || isUnmarried) {
             this.postingForm.patchValue({ relationship: null, spouseName: '' });
         } else {
-            // When user selects Married, set Relationship to Spouse so spouse info and addresses save (codeId is set)
+            // When user selects any non-Unmarried status, set Relationship to Spouse so spouse info and addresses save
             this.setRelationshipToSpouseIfMarried();
         }
     }
@@ -1438,6 +1451,15 @@ export class EmpBasicInfo implements OnInit {
         const maritalStatusId = this.postingForm.get('maritalStatus')?.value;
         if (maritalStatusId == null) return false;
         return this.maritalStatusOptions.some((m) => m.codeId === maritalStatusId && (m.codeValueEN || '').toLowerCase() === 'married');
+    }
+
+    /** True when a Marital Status is selected and it is NOT Unmarried. */
+    get isMaritalStatusNotUnmarried(): boolean {
+        const maritalStatusId = this.postingForm.get('maritalStatus')?.value;
+        if (maritalStatusId == null) return false;
+        const selected = this.maritalStatusOptions.find((m) => m.codeId === maritalStatusId);
+        if (!selected) return false;
+        return (selected.codeValueEN || '').toLowerCase() !== 'unmarried';
     }
 
     loadOfficerType(codeId: number, orgId?: number | null) {
@@ -1468,9 +1490,20 @@ export class EmpBasicInfo implements OnInit {
     loadMotherOrgRank(orgId: number) {
         this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'MotherOrgRank').subscribe({
             next: (res) => {
-                this.ranks = res;
+                this.allRanksForOrg = res ?? [];
+                this.applyRankMemberTypeFilter();
             }
         });
+    }
+
+    /** Filter the org-scoped ranks further by the currently selected Member Type (rank.parentCodeId === memberType). */
+    private applyRankMemberTypeFilter() {
+        const memberType = this.postingForm?.get('memberType')?.value;
+        if (memberType == null) {
+            this.ranks = this.allRanksForOrg;
+            return;
+        }
+        this.ranks = this.allRanksForOrg.filter((r) => r.parentCodeId === memberType);
     }
     loadMotherOrgPrefix(orgId: number) {
         this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'Prefix').subscribe({
@@ -1503,9 +1536,45 @@ export class EmpBasicInfo implements OnInit {
     }
 
     onMemberTypeChange(codeId: number) {
+        if (codeId != null && this.allowedMemberTypeIds !== null && !this.allowedMemberTypeIds.includes(codeId)) {
+            const typeName =
+                this.memberTypes?.find((m: CommonCodeModel) => m.codeId === codeId)?.codeValueEN ?? 'this member type';
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'No Permission',
+                detail: `You do not have permission to use ${typeName}.`,
+                life: 6000
+            });
+            this.postingForm.patchValue({ memberType: null, officerType: null, rank: null });
+            this.applyRankMemberTypeFilter();
+            return;
+        }
+
         const motherOrgId = this.postingForm.get('motherOrganization')?.value;
-        this.postingForm.patchValue({ officerType: null });
+        this.postingForm.patchValue({ officerType: null, rank: null });
         this.loadOfficerType(codeId, motherOrgId);
+        this.applyRankMemberTypeFilter();
+    }
+
+    private loadCurrentUserMemberTypePermissions(): void {
+        const userId = this.sharedService.getCurrentUserId?.() ?? null;
+        if (!userId) {
+            this.allowedMemberTypeIds = null;
+            return;
+        }
+        const cached = this.memberTypeAccess.getCachedMemberTypeIds(userId);
+        if (cached !== null) {
+            this.allowedMemberTypeIds = cached;
+            return;
+        }
+        this.memberTypeAccess.cacheForUser(userId).subscribe({
+            next: (ids) => {
+                this.allowedMemberTypeIds = Array.isArray(ids) ? ids : [];
+            },
+            error: () => {
+                this.allowedMemberTypeIds = null;
+            }
+        });
     }
 
     onSubmit(): void {
