@@ -16,6 +16,7 @@ import { PostingStatus } from '@/models/enums';
 import { PreviousRABServiceService, VwPreviousRABServiceInfoModel } from '@/services/previous-rab-service.service';
 import { TableModule } from 'primeng/table';
 import { forkJoin, of } from 'rxjs';
+import { map } from 'rxjs/operators';
 
 @Component({
     selector: 'app-emp-present-member-check',
@@ -39,6 +40,22 @@ export class EmpPresentMemberCheckComponent implements OnInit, AfterViewInit {
     infoDialogMessage = '';
     infoDialogIcon: 'info' | 'warn' | 'error' | 'success' = 'info';
     private onInfoDialogClose: (() => void) | null = null;
+
+    showPickerDialog = false;
+    pickerRows: {
+        employee: EmpModel;
+        prefixServiceId: string;
+        fullName: string;
+        orgName: string;
+        postingStatus: string;
+        sortKey: string;
+    }[] = [];
+
+    showConfirmDialog = false;
+    confirmDialogHeader = '';
+    confirmDialogMessage = '';
+    private onConfirmYes: (() => void) | null = null;
+    private onConfirmNo: (() => void) | null = null;
 
     private readonly statusListLabel: Record<string, string> = {
         [PostingStatus.Supernumerary]: 'Supernumerary',
@@ -85,6 +102,30 @@ export class EmpPresentMemberCheckComponent implements OnInit, AfterViewInit {
         cb?.();
     }
 
+    private showConfirm(header: string, message: string, onYes: () => void, onNo?: () => void): void {
+        this.confirmDialogHeader = header;
+        this.confirmDialogMessage = message;
+        this.onConfirmYes = onYes;
+        this.onConfirmNo = onNo ?? null;
+        this.showConfirmDialog = true;
+    }
+
+    onConfirmYesClick(): void {
+        this.showConfirmDialog = false;
+        const cb = this.onConfirmYes;
+        this.onConfirmYes = null;
+        this.onConfirmNo = null;
+        cb?.();
+    }
+
+    onConfirmNoClick(): void {
+        this.showConfirmDialog = false;
+        const cb = this.onConfirmNo;
+        this.onConfirmYes = null;
+        this.onConfirmNo = null;
+        cb?.();
+    }
+
     private formatMemberDetails(employee: EmpModel, rankName: string, prefixLabel: string): string {
         const emp = employee as any;
         const serviceId = emp.ServiceId ?? emp.serviceId ?? '';
@@ -98,6 +139,110 @@ export class EmpPresentMemberCheckComponent implements OnInit, AfterViewInit {
         return parts.join(' ');
     }
 
+    private handleFoundEmployee(employee: EmpModel): void {
+        this.employeeFound.emit();
+        const postingStatus = (employee as any).PostingStatus ?? (employee as any).postingStatus ?? '';
+        if (postingStatus === PostingStatus.ExMember) {
+            this.exMemberEmployee = employee;
+            const empId = (employee as any).EmployeeID ?? (employee as any).employeeID;
+            this.loadExMemberViewData(empId);
+        }
+        this.showMemberFoundDialog(employee);
+    }
+
+    private openPickerOrHandleSingle(employees: EmpModel[]): void {
+        if (employees.length === 1) {
+            this.handleFoundEmployee(employees[0]);
+        } else {
+            this.buildPickerRows(employees);
+        }
+    }
+
+    private buildPickerRows(employees: EmpModel[]): void {
+        const distinctOrgIds = Array.from(new Set(
+            employees
+                .map((e) => (e as any).orgId ?? (e as any).OrgId)
+                .filter((id) => id != null && !Number.isNaN(Number(id)))
+                .map((id) => Number(id))
+        ));
+
+        const prefix$ = distinctOrgIds.length > 0
+            ? forkJoin(
+                distinctOrgIds.map((orgId) =>
+                    this.commonCodeService
+                        .getAllActiveCommonCodesByOrgIdAndType(orgId, 'Prefix')
+                        .pipe(map((list) => ({ orgId, list })))
+                )
+            )
+            : of([] as { orgId: number; list: any[] }[]);
+
+        prefix$.subscribe({
+            next: (results) => {
+                const prefixMap = new Map<string, string>();
+                for (const { orgId, list } of results) {
+                    for (const p of (list as any[])) {
+                        prefixMap.set(`${orgId}:${p?.codeId}`, p?.codeValueEN ?? '');
+                    }
+                }
+
+                const rows = employees.map((e) => {
+                    const emp = e as any;
+                    const orgId = emp.orgId ?? emp.OrgId;
+                    const prefixId = Number(emp.Prefix ?? emp.prefix);
+                    const prefixLabel = orgId != null ? (prefixMap.get(`${orgId}:${prefixId}`) ?? '') : '';
+                    const serviceId = emp.ServiceId ?? emp.serviceId ?? '';
+                    const orgName = this.motherOrganizations.find((o) => o.orgId === orgId)?.orgNameEN ?? '';
+                    const status = emp.PostingStatus ?? emp.postingStatus ?? '';
+                    return {
+                        employee: e,
+                        prefixServiceId: prefixLabel && serviceId ? `${prefixLabel}-${serviceId}` : String(serviceId),
+                        fullName: emp.FullNameEN ?? emp.fullNameEN ?? '',
+                        orgName,
+                        postingStatus: this.statusListLabel[status] ?? status,
+                        sortKey: `${orgName.toLowerCase()}|${prefixLabel.toLowerCase()}|${String(serviceId).padStart(10, '0')}`
+                    };
+                });
+
+                rows.sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+
+                this.pickerRows = rows;
+                this.showPickerDialog = true;
+            },
+            error: () => {
+                const rows = employees.map((e) => {
+                    const emp = e as any;
+                    const serviceId = emp.ServiceId ?? emp.serviceId ?? '';
+                    return {
+                        employee: e,
+                        prefixServiceId: String(serviceId),
+                        fullName: emp.FullNameEN ?? emp.fullNameEN ?? '',
+                        orgName: '',
+                        postingStatus: emp.PostingStatus ?? emp.postingStatus ?? '',
+                        sortKey: String(serviceId).padStart(10, '0')
+                    };
+                });
+                this.pickerRows = rows;
+                this.showPickerDialog = true;
+            }
+        });
+    }
+
+    selectPickerRow(row: { employee: EmpModel }): void {
+        this.showPickerDialog = false;
+        this.pickerRows = [];
+        this.handleFoundEmployee(row.employee);
+    }
+
+    closePickerDialog(): void {
+        this.showPickerDialog = false;
+        this.pickerRows = [];
+        this.showConfirm(
+            'Add New Member',
+            'Do you want to Add New Member?',
+            () => this.employeeNotFound.emit()
+        );
+    }
+
     private showMemberFoundDialog(employee: EmpModel): void {
         const emp = employee as any;
         const status: string = emp.PostingStatus ?? emp.postingStatus ?? '';
@@ -106,6 +251,7 @@ export class EmpPresentMemberCheckComponent implements OnInit, AfterViewInit {
         const empId = emp.EmployeeID ?? emp.employeeID;
         const orgId = emp.orgId ?? emp.OrgId;
         const prefixId = Number(emp.Prefix ?? emp.prefix);
+        const onYes = () => this.employeeNotFound.emit();
 
         const rankInfo$ = empId != null && !Number.isNaN(Number(empId))
             ? this.empService.getEmployeeSearchInfo(Number(empId))
@@ -119,10 +265,10 @@ export class EmpPresentMemberCheckComponent implements OnInit, AfterViewInit {
             next: ({ info, prefixes }) => {
                 const rankName = (info as any)?.rank ?? (info as any)?.Rank ?? '';
                 const prefixLabel = (prefixes as any[])?.find((p: any) => p?.codeId === prefixId)?.codeValueEN ?? '';
-                this.showInfo(header, this.formatMemberDetails(employee, rankName, prefixLabel), 'info');
+                this.showConfirm(header, `${this.formatMemberDetails(employee, rankName, prefixLabel)}\n\n\nDo you want to Add New Member?`, onYes);
             },
             error: () => {
-                this.showInfo(header, this.formatMemberDetails(employee, '', ''), 'info');
+                this.showConfirm(header, `${this.formatMemberDetails(employee, '', '')}\n\n\nDo you want to Add New Member?`, onYes);
             }
         });
     }
@@ -164,12 +310,11 @@ export class EmpPresentMemberCheckComponent implements OnInit, AfterViewInit {
         this.exMemberViewList = [];
 
         const motherOrgId = this.motherOrgId != null && this.motherOrgId > 0 ? this.motherOrgId : undefined;
-        this.empService.searchByRabIdOrServiceId(undefined, serviceIdStr, true, motherOrgId, nidStr || undefined).subscribe({
-            next: (employee: EmpModel | null) => {
-                if (employee) {
+        this.empService.searchListByRabIdOrServiceId(undefined, serviceIdStr, true, motherOrgId, nidStr || undefined).subscribe({
+            next: (employees: EmpModel[]) => {
+                if (employees && employees.length > 0) {
                     this.isSearching = false;
-                    this.employeeFound.emit();
-                    this.showMemberFoundDialog(employee);
+                    this.openPickerOrHandleSingle(employees);
                     return;
                 }
                 this.checkExMemberAndLoadView(serviceIdStr, nidStr, motherOrgId);
@@ -183,21 +328,19 @@ export class EmpPresentMemberCheckComponent implements OnInit, AfterViewInit {
     }
 
     private checkExMemberAndLoadView(serviceIdStr: string, nidStr: string, motherOrgId: number | undefined): void {
-        this.empService.searchByRabIdOrServiceId(undefined, serviceIdStr, false, motherOrgId, nidStr || undefined).subscribe({
-            next: (employee: EmpModel | null) => {
+        this.empService.searchListByRabIdOrServiceId(undefined, serviceIdStr, false, motherOrgId, nidStr || undefined).subscribe({
+            next: (employees: EmpModel[]) => {
                 this.isSearching = false;
-                if (!employee) {
-                    this.showInfo('Member Not Found', 'No Member found with the given NID/Service ID.', 'info', () => this.employeeNotFound.emit());
+                if (!employees || employees.length === 0) {
+                    this.showInfo(
+                        'Member Not Found',
+                        'No Member found with the given NID/Service ID.',
+                        'info',
+                        () => this.employeeNotFound.emit()
+                    );
                     return;
                 }
-                this.employeeFound.emit();
-                const postingStatus = (employee as any).PostingStatus ?? (employee as any).postingStatus ?? '';
-                if (postingStatus === PostingStatus.ExMember) {
-                    this.exMemberEmployee = employee;
-                    const empId = (employee as any).EmployeeID ?? (employee as any).employeeID;
-                    this.loadExMemberViewData(empId);
-                }
-                this.showMemberFoundDialog(employee);
+                this.openPickerOrHandleSingle(employees);
             },
             error: (err) => {
                 this.isSearching = false;

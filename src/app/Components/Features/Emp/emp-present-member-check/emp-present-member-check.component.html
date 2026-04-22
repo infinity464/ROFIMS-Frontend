@@ -121,3 +121,75 @@
             </p-button>
         </ng-template>
     </p-dialog>
+
+    <p-dialog
+        [(visible)]="showConfirmDialog"
+        [header]="confirmDialogHeader"
+        [modal]="true"
+        [closable]="false"
+        [style]="{ width: '460px' }"
+        [draggable]="false"
+        [resizable]="false"
+        [contentStyle]="{'border-top': '2px solid var(--primary-color)'}">
+        <div class="flex align-items-start gap-3 mt-4">
+            <i class="pi pi-info-circle" style="font-size: 1.5rem; line-height: 1; color: var(--blue-500);"></i>
+            <p class="m-0" style="line-height: 1.5; white-space: pre-line;">{{ confirmDialogMessage }}</p>
+        </div>
+        <ng-template pTemplate="footer">
+            <p-button
+                label="No"
+                severity="secondary"
+                [outlined]="true"
+                (onClick)="onConfirmNoClick()">
+            </p-button>
+            <p-button
+                label="Yes"
+                (onClick)="onConfirmYesClick()">
+            </p-button>
+        </ng-template>
+    </p-dialog>
+
+    <p-dialog
+        [(visible)]="showPickerDialog"
+        header="Multiple Members Found — Please Select"
+        [modal]="true"
+        [closable]="false"
+        [style]="{ width: '760px' }"
+        [draggable]="false"
+        [resizable]="false"
+        [contentStyle]="{'border-top': '2px solid var(--primary-color)'}">
+        <p class="m-0 mt-3 mb-3 text-600">
+            The search matched more than one member. Pick the correct one to continue.
+        </p>
+        <p-table [value]="pickerRows" styleClass="p-datatable-sm">
+            <ng-template pTemplate="header">
+                <tr>
+                    <th style="width: 5%;">#</th>
+                    <th>Prefix-Service ID</th>
+                    <th>Name</th>
+                    <th>Mother Organization</th>
+                    <th>Status</th>
+                    <th style="width: 100px;">Action</th>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-row let-i="rowIndex">
+                <tr>
+                    <td>{{ i + 1 }}</td>
+                    <td class="font-semibold">{{ row.prefixServiceId || '-' }}</td>
+                    <td>{{ row.fullName || '-' }}</td>
+                    <td>{{ row.orgName || '-' }}</td>
+                    <td>{{ row.postingStatus || '-' }}</td>
+                    <td>
+                        <p-button label="Select" size="small" (onClick)="selectPickerRow(row)"></p-button>
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+        <ng-template pTemplate="footer">
+            <p-button
+                label="Cancel"
+                severity="secondary"
+                (onClick)="closePickerDialog()">
+            </p-button>
+        </ng-template>
+    </p-dialog>
