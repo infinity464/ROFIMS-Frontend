@@ -25,6 +25,7 @@ import { MasterBasicSetupService } from '@/Components/basic-setup/shared/service
 import { SharedService } from '@/shared/services/shared-service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 import { FileReferencesFormComponent, FileRowData } from '@components/Common/file-references-form/file-references-form';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 
 export interface DisciplineListRow extends DisciplineInfoModel {
     employeeId: number;
@@ -49,7 +50,8 @@ export interface DisciplineListRow extends DisciplineInfoModel {
         DatePickerModule,
         TextareaModule,
         EmployeeSearchComponent,
-        FileReferencesFormComponent
+        FileReferencesFormComponent,
+        FlexibleDateDirective
     ],
     providers: [ConfirmationService],
     templateUrl: './emp-discipline-info.html',

@@ -21,6 +21,7 @@ import { EmpService } from '@/services/emp-service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 import { FileReferencesFormComponent, FileRowData } from '@components/Common/file-references-form/file-references-form';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 
 @Component({
     selector: 'app-emp-personal-info',
@@ -40,7 +41,8 @@ import { FileReferencesFormComponent, FileRowData } from '@components/Common/fil
         RadioButtonModule,
         TooltipModule,
         EmployeeSearchComponent,
-        FileReferencesFormComponent
+        FileReferencesFormComponent,
+        FlexibleDateDirective
     ],
     templateUrl: './emp-personal-info.html',
     styleUrl: './emp-personal-info.scss'

@@ -22,6 +22,7 @@ import { MasterBasicSetupService } from '@/Components/basic-setup/shared/service
 import { CodeType } from '@/models/enums';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 import { FileReferencesFormComponent, FileRowData } from '@components/Common/file-references-form/file-references-form';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 
 @Component({
     selector: 'app-emp-medical-category',
@@ -41,7 +42,8 @@ import { FileReferencesFormComponent, FileRowData } from '@components/Common/fil
         DatePickerModule,
         TextareaModule,
         EmployeeSearchComponent,
-        FileReferencesFormComponent
+        FileReferencesFormComponent,
+        FlexibleDateDirective
     ],
     providers: [ConfirmationService],
     templateUrl: './emp-medical-category.component.html',

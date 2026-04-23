@@ -23,6 +23,7 @@ import { PreviousRABServiceService } from '@/services/previous-rab-service.servi
 import { CommonCodeService } from '@/services/common-code-service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 import { FileReferencesFormComponent, FileRowData } from '@components/Common/file-references-form/file-references-form';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 
 /** List row for display in table */
 export interface PreviousRABServiceListRow {
@@ -66,7 +67,8 @@ export interface PreviousRABServiceListRow {
         CheckboxModule,
         DatePickerModule,
         EmployeeSearchComponent,
-        FileReferencesFormComponent
+        FileReferencesFormComponent,
+        FlexibleDateDirective
     ],
     providers: [ConfirmationService],
     templateUrl: './emp-previous-rab-service.html',

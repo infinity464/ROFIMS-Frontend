@@ -22,6 +22,7 @@ import { FamilyInfoService } from '@/services/family-info-service';
 import { AddressFormComponent, AddressData, AddressFormConfig } from '@/Components/Features/EmployeeInfo/address-form/address-form';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 import { LocationType } from '@/models/enums';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 
 interface FamilyMember {
     employeeId: number;
@@ -59,7 +60,8 @@ interface FamilyMember {
         TabsModule,
         DividerModule,
         AddressFormComponent,
-        EmployeeSearchComponent
+        EmployeeSearchComponent,
+        FlexibleDateDirective
     ],
     providers: [ConfirmationService],
     templateUrl: './emp-family-info.html',

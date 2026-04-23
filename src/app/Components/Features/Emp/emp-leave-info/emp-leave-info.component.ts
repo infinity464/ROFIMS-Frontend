@@ -21,11 +21,12 @@ import { CommonCodeService } from '@/services/common-code-service';
 import { CommonCodeModel } from '@/models/common-code-model';
 import { CodeType } from '@/models/enums';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 
 @Component({
     selector: 'app-emp-leave-info',
     standalone: true,
-    imports: [CommonModule, FormsModule, ReactiveFormsModule, InputTextModule, ButtonModule, Fluid, TooltipModule, TableModule, SelectModule, DialogModule, ConfirmDialogModule, DatePickerModule, TextareaModule, EmployeeSearchComponent],
+    imports: [CommonModule, FormsModule, ReactiveFormsModule, InputTextModule, ButtonModule, Fluid, TooltipModule, TableModule, SelectModule, DialogModule, ConfirmDialogModule, DatePickerModule, TextareaModule, EmployeeSearchComponent, FlexibleDateDirective],
     providers: [ConfirmationService],
     templateUrl: './emp-leave-info.component.html',
     styleUrl: './emp-leave-info.component.scss'

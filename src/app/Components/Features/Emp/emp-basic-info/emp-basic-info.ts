@@ -27,10 +27,11 @@ import { OrganizationService } from '@/Components/basic-setup/organization-setup
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { SharedService } from '@/shared/services/shared-service';
 import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 
 @Component({
     selector: 'app-emp-basic-info',
-    imports: [FileUpload, Fluid, Button, ButtonModule, Select, MultiSelectModule, DatePicker, ReactiveFormsModule, FormsModule, InputTextModule, AddressFormComponent, Checkbox, Dialog, TooltipModule, EmpPresentMemberCheckComponent, FileReferencesFormComponent],
+    imports: [FileUpload, Fluid, Button, ButtonModule, Select, MultiSelectModule, DatePicker, ReactiveFormsModule, FormsModule, InputTextModule, AddressFormComponent, Checkbox, Dialog, TooltipModule, EmpPresentMemberCheckComponent, FileReferencesFormComponent, FlexibleDateDirective],
     templateUrl: './emp-basic-info.html',
     styleUrl: './emp-basic-info.scss',
     standalone: true
@@ -1672,6 +1673,7 @@ export class EmpBasicInfo implements OnInit {
 
         return `${year}-${month}-${day}`;
     }
+
 
     onReset(): void {
         const now = new Date();

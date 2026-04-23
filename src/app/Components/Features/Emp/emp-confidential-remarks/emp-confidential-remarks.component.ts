@@ -19,13 +19,15 @@ import { EmpService } from '@/services/emp-service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 import { EmployeeSearchInfoModel } from '@/models/EmpModel';
 
-interface AdditionalRemarksItem {
+interface ConfidentialRemarksItem {
     additionalRemarksId?: number;
     AdditionalRemarksId?: number;
     employeeID?: number;
     EmployeeID?: number;
     additionalRemarks?: string;
     AdditionalRemarks?: string;
+    isConfidential?: boolean;
+    IsConfidential?: boolean;
     createdBy?: string;
     CreatedBy?: string;
     createdDate?: string;
@@ -37,7 +39,7 @@ interface AdditionalRemarksItem {
 }
 
 @Component({
-    selector: 'app-emp-additional-remarks',
+    selector: 'app-emp-confidential-remarks',
     standalone: true,
     imports: [
         CommonModule,
@@ -54,10 +56,10 @@ interface AdditionalRemarksItem {
         EmployeeSearchComponent
     ],
     providers: [ConfirmationService],
-    templateUrl: './emp-additional-remarks.component.html',
-    styleUrl: './emp-additional-remarks.component.scss'
+    templateUrl: './emp-confidential-remarks.component.html',
+    styleUrl: './emp-confidential-remarks.component.scss'
 })
-export class EmpAdditionalRemarks implements OnInit {
+export class EmpConfidentialRemarks implements OnInit {
     @Input() hideTitle = false;
 
     @Input() embedMode = false;
@@ -74,11 +76,11 @@ export class EmpAdditionalRemarks implements OnInit {
     isSaving = false;
     isLoading = false;
 
-    remarksList: AdditionalRemarksItem[] = [];
+    remarksList: ConfidentialRemarksItem[] = [];
     displayDialog = false;
     showInlineForm = false;
     isEditMode = false;
-    selectedRemark: AdditionalRemarksItem | null = null;
+    selectedRemark: ConfidentialRemarksItem | null = null;
 
     remarksForm!: FormGroup;
 
@@ -129,7 +131,7 @@ export class EmpAdditionalRemarks implements OnInit {
             searchInfo: this.empService.getEmployeeSearchInfo(employeeId).pipe(
                 catchError(() => of(null))
             ),
-            remarks: this.empService.getAdditionalRemarksByEmployeeId(employeeId).pipe(
+            remarks: this.empService.getConfidentialRemarksByEmployeeId(employeeId).pipe(
                 catchError(() => of([]))
             )
         }).subscribe({
@@ -190,21 +192,18 @@ export class EmpAdditionalRemarks implements OnInit {
         if (!this.selectedEmployeeId) return;
 
         this.isLoading = true;
-        this.empService.getAdditionalRemarksByEmployeeId(this.selectedEmployeeId).subscribe({
+        this.empService.getConfidentialRemarksByEmployeeId(this.selectedEmployeeId).subscribe({
             next: (data) => {
                 this.isLoading = false;
-                console.log('Remarks data received:', data); // Debug log
                 this.remarksList = Array.isArray(data) ? data : [];
-                console.log('Remarks list after processing:', this.remarksList); // Debug log
             },
             error: (error) => {
                 this.isLoading = false;
                 this.remarksList = [];
-                console.error('Error loading remarks:', error); // Debug log
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: error?.error?.message || 'Failed to load remarks'
+                    detail: error?.error?.message || 'Failed to load confidential remarks'
                 });
             }
         });
@@ -217,7 +216,7 @@ export class EmpAdditionalRemarks implements OnInit {
         this.showInlineForm = true;
     }
 
-    openEditDialog(remark: AdditionalRemarksItem): void {
+    openEditDialog(remark: ConfidentialRemarksItem): void {
         this.isEditMode = true;
         this.selectedRemark = remark;
         this.remarksForm.patchValue({
@@ -259,7 +258,7 @@ export class EmpAdditionalRemarks implements OnInit {
         const payload: any = {
             employeeID: this.selectedEmployeeId,
             additionalRemarks: formValue.additionalRemarks || '',
-            isConfidential: false,
+            isConfidential: true,
             createdBy: 'System', // TODO: Get from auth service
             lastUpdatedBy: 'System', // TODO: Get from auth service
             createdDate: new Date().toISOString(),
@@ -282,7 +281,7 @@ export class EmpAdditionalRemarks implements OnInit {
                     this.messageService.add({
                         severity: 'success',
                         summary: 'Success',
-                        detail: this.isEditMode ? 'Remarks updated successfully' : 'Remarks added successfully'
+                        detail: this.isEditMode ? 'Confidential remark updated successfully' : 'Confidential remark added successfully'
                     });
                     this.closeDialog();
                     this.loadRemarksList();
@@ -293,7 +292,7 @@ export class EmpAdditionalRemarks implements OnInit {
                     this.messageService.add({
                         severity: 'error',
                         summary: 'Error',
-                        detail: response.message || 'Failed to save remarks'
+                        detail: response.message || 'Failed to save confidential remark'
                     });
                 }
             },
@@ -302,15 +301,15 @@ export class EmpAdditionalRemarks implements OnInit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: error?.error?.message || 'Failed to save remarks'
+                    detail: error?.error?.message || 'Failed to save confidential remark'
                 });
             }
         });
     }
 
-    confirmDeleteRemark(remark: AdditionalRemarksItem): void {
+    confirmDeleteRemark(remark: ConfidentialRemarksItem): void {
         this.confirmationService.confirm({
-            message: 'Delete this remark?',
+            message: 'Delete this confidential remark?',
             header: 'Delete Confirmation',
             icon: 'pi pi-exclamation-triangle',
             rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
@@ -319,7 +318,7 @@ export class EmpAdditionalRemarks implements OnInit {
         });
     }
 
-    deleteRemark(remark: AdditionalRemarksItem): void {
+    deleteRemark(remark: ConfidentialRemarksItem): void {
         const remarkId = remark.additionalRemarksId || remark.AdditionalRemarksId;
         if (!remarkId) {
             this.messageService.add({
@@ -336,7 +335,7 @@ export class EmpAdditionalRemarks implements OnInit {
                     this.messageService.add({
                         severity: 'success',
                         summary: 'Success',
-                        detail: 'Remarks deleted successfully'
+                        detail: 'Confidential remark deleted successfully'
                     });
                     this.loadRemarksList();
                     if (this.embedMode) {
@@ -346,7 +345,7 @@ export class EmpAdditionalRemarks implements OnInit {
                     this.messageService.add({
                         severity: 'error',
                         summary: 'Error',
-                        detail: response.message || 'Failed to delete remarks'
+                        detail: response.message || 'Failed to delete confidential remark'
                     });
                 }
             },
@@ -354,7 +353,7 @@ export class EmpAdditionalRemarks implements OnInit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: error?.error?.message || 'Failed to delete remarks'
+                    detail: error?.error?.message || 'Failed to delete confidential remark'
                 });
             }
         });

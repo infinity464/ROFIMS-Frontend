@@ -272,6 +272,29 @@ export class EmpService {
         return this.http.delete(`${this.empApi}/AdditionalRemarksInfo/DeleteAsyn/${additionalRemarksId}`);
     }
 
+    // Confidential Remarks API methods (same table, IsConfidential = true)
+    getConfidentialRemarksByEmployeeId(employeeId: number): Observable<any[]> {
+        return this.http.get<any>(`${this.empApi}/AdditionalRemarksInfo/GetConfidentialByEmployeeId/${employeeId}`).pipe(
+            map((data) => {
+                if (Array.isArray(data)) return data;
+                if (data && typeof data === 'object') {
+                    if (Array.isArray(data.value)) return data.value;
+                    if (Array.isArray(data.data)) return data.data;
+                    if (Array.isArray(data.items)) return data.items;
+                    if (data.additionalRemarksId || data.AdditionalRemarksId) return [data];
+                    for (const value of Object.values(data)) {
+                        if (Array.isArray(value)) return value;
+                    }
+                }
+                return [];
+            }),
+            catchError((error) => {
+                console.error('Error fetching confidential remarks:', error);
+                return of([]);
+            })
+        );
+    }
+
     /** Upload a file for employee references. File is stored on server (path from appsettings) and a FileInformation record is created. Returns { fileId, fileName } for FilesReferences JSON. */
     uploadEmployeeFile(file: File, displayName?: string): Observable<{ fileId: number; fileName: string }> {
         const form = new FormData();

@@ -40,7 +40,7 @@
           </div>
           <div class="form-field">
             <label class="form-label">Select Date <span class="form-label-required">*</span></label>
-            <p-datepicker formControlName="noteSheetDate" dateFormat="dd/mm/yy" styleClass="w-full" placeholder="Select Date" appendTo="body"></p-datepicker>
+            <p-datepicker formControlName="noteSheetDate" dateFormat="dd-mm-yy" styleClass="w-full" placeholder="Select Date" appendTo="body"></p-datepicker>
             @if (form.get('noteSheetDate')?.invalid && form.get('noteSheetDate')?.touched) {
               <small class="form-error">Date is required</small>
             }
