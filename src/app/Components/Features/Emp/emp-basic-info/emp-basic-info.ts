@@ -38,6 +38,7 @@ import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directi
 })
 export class EmpBasicInfo implements OnInit {
     @ViewChild('fileUpload') fileUpload!: FileUpload;
+    @ViewChild(EmpPresentMemberCheckComponent) presentMemberCheck?: EmpPresentMemberCheckComponent;
     @ViewChild('fileReferencesForm') fileReferencesForm!: any; // FileReferencesFormComponent
     @ViewChild('permanentAddressForm') permanentAddressForm!: AddressFormComponent;
     @ViewChild('presentAddressForm') presentAddressForm!: AddressFormComponent;
@@ -750,6 +751,10 @@ export class EmpBasicInfo implements OnInit {
                     summary: 'Success',
                     detail: this.isEditMode ? 'Employee and addresses updated successfully!' : 'Employee and addresses saved successfully!'
                 });
+
+                if (!this.isEditMode) {
+                    this.resetForNewEntry();
+                }
             },
             error: (err: any) => {
                 console.error('Error saving/updating addresses', err);
@@ -1694,6 +1699,39 @@ export class EmpBasicInfo implements OnInit {
         if (this.fileUpload) {
             this.fileUpload.clear();
         }
+    }
+
+    /** Reset all state so the form is ready for a brand-new employee entry, then focus Service ID. Clears IDs that would otherwise cause the next save to update the previous record. */
+    private resetForNewEntry(): void {
+        this.onReset();
+
+        this.generatedEmployeeId = null;
+        this.permanentAddressId = undefined;
+        this.presentAddressId = undefined;
+        this.spousePermanentAddressId = undefined;
+        this.spousePresentAddressId = undefined;
+        this.spouseFmid = null;
+        this.profileImageRef = null;
+        this.fileRows = [];
+        this.permanentAddress = undefined;
+        this.presentAddress = undefined;
+        this.spousePermanentAddress = undefined;
+        this.spousePresentAddress = undefined;
+        this.isDuplicateCombo = false;
+
+        this.presentAddressConfig.employeeId = 0;
+        this.permanentAddressConfig.employeeId = 0;
+        this.spousePermanentAddressConfig.employeeId = 0;
+        this.spousePresentAddressConfig.employeeId = 0;
+
+        this.permanentAddressForm?.reset();
+        this.presentAddressForm?.reset();
+        this.spousePermanentAddressForm?.reset();
+        this.spousePresentAddressForm?.reset();
+
+        // Hide the form so the search section is the active surface; focus the search Service ID input.
+        this.showEntryForm = false;
+        this.presentMemberCheck?.resetForNewSearch();
     }
 
     /**

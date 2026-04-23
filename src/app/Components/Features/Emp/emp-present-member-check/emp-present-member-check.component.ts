@@ -314,11 +314,27 @@ export class EmpPresentMemberCheckComponent implements OnInit, AfterViewInit {
     }
 
     ngAfterViewInit(): void {
+        this.focusServiceId();
+    }
+
+    /** Focus the Service ID input in the search bar. Deferred via setTimeout so it works right after view updates. */
+    focusServiceId(): void {
         setTimeout(() => {
             const host = this.serviceIdInput?.nativeElement;
             const input = host?.querySelector('input') as HTMLInputElement | null;
             input?.focus();
         });
+    }
+
+    /** Clear search inputs and ex-member results, then focus the Service ID input — use after save completes to start the next entry. */
+    resetForNewSearch(): void {
+        this.motherOrgId = null;
+        this.serviceId = null;
+        this.nid = '';
+        this.exMemberEmployee = null;
+        this.exMemberViewList = [];
+        this.exMemberDetailsText = '';
+        this.focusServiceId();
     }
 
     loadMotherOrgs(): void {

@@ -432,6 +432,25 @@ export class AddressFormComponent implements OnInit, OnChanges {
         return division !== null && division !== undefined;
     }
 
+    /** Clear all fields and cascading dropdown options. Re-enables fields in case they were disabled by "same as" mode. */
+    reset(): void {
+        this.enableAddressFields();
+        this.addressForm.reset({
+            sameAsPresent: false,
+            division: null,
+            district: null,
+            upazila: null,
+            postOffice: null,
+            postCode: '',
+            villageEnglish: '',
+            villageBangla: '',
+            houseRoad: ''
+        });
+        this.districts = [];
+        this.upazilas = [];
+        this.postOffices = [];
+    }
+
     // --- Add Post Office dialog ---
 
     openAddPostOfficeDialog(): void {
