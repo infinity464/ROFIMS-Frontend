@@ -259,9 +259,8 @@
                         </label>
                         <div class="p-inputgroup">
                             <input pInputText class="w-full" [class.surface-100]="isEditMode" placeholder="Only Number" formControlName="serviceId"
-                                [readonly]="isEditMode"
-                                (blur)="checkServiceIdDuplicate($event.target.value)" />
-                            @if (isCheckingServiceId) {
+                                [readonly]="isEditMode" />
+                            @if (isCheckingCombo) {
                                 <span class="p-inputgroup-addon">
                                     <i class="pi pi-spin pi-spinner"></i>
                                 </span>
@@ -270,8 +269,8 @@
                         @if (isFieldInvalid('serviceId')) {
                         <small class="form-error">{{ getErrorMessage('serviceId') }}</small>
                         }
-                        @if (isServiceIdDuplicate) {
-                        <small class="form-error">This Service ID already exists in the system</small>
+                        @if (isDuplicateCombo) {
+                        <small class="form-error">A member with the same Mother Organization + Prefix + Service ID already exists</small>
                         }
                     </div>
 
@@ -502,7 +501,7 @@
                     [label]="isEditMode ? 'Update All Information' : 'Save All Information'"
                     icon="pi pi-check-circle"
                     styleClass="form-btn-primary"
-                    [disabled]="isServiceIdDuplicate || isCheckingServiceId"
+                    [disabled]="isDuplicateCombo || isCheckingCombo"
                     (onClick)="saveAll()">
                 </p-button>
             </div>

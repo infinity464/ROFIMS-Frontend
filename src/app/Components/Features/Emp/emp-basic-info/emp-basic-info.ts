@@ -102,36 +102,47 @@ export class EmpBasicInfo implements OnInit {
         employeeId: this.employeeId
     };
 
-    // Service ID validation
-    isServiceIdDuplicate: boolean = false;
-    isCheckingServiceId: boolean = false;
+    // Duplicate check on (Mother Organization + Prefix + Service ID)
+    isDuplicateCombo: boolean = false;
+    isCheckingCombo: boolean = false;
 
-    checkServiceIdDuplicate(serviceId: string): void {
-        if (!serviceId || serviceId.trim() === '') {
-            this.isServiceIdDuplicate = false;
+    checkDuplicateCombo(): void {
+        const motherOrg = this.postingForm?.get('motherOrganization')?.value;
+        const prefix = this.postingForm?.get('prefix')?.value;
+        const serviceId = this.postingForm?.get('serviceId')?.value;
+
+        const motherOrgNum = Number(motherOrg);
+        const prefixNum = Number(prefix);
+        const serviceIdStr = serviceId != null ? String(serviceId).trim() : '';
+
+        if (!motherOrgNum || !prefixNum || !serviceIdStr) {
+            this.isDuplicateCombo = false;
+            this.isCheckingCombo = false;
             return;
         }
 
-        this.isCheckingServiceId = true;
-        this.empService.searchByRabIdOrServiceId(undefined, serviceId).subscribe({
-            next: (res) => {
-                // If any employee found with same serviceId, it's a duplicate
-                this.isServiceIdDuplicate = res != null;
-                this.isCheckingServiceId = false;
+        this.isCheckingCombo = true;
+        const selfId = this.generatedEmployeeId != null ? Number(this.generatedEmployeeId) : null;
+        this.empService
+            .searchListByRabIdOrServiceId(undefined, serviceIdStr, undefined, motherOrgNum, undefined, prefixNum, selfId)
+            .subscribe({
+                next: (employees) => {
+                    this.isDuplicateCombo = (employees ?? []).length > 0;
+                    this.isCheckingCombo = false;
 
-                if (this.isServiceIdDuplicate) {
-                    this.messageService.add({
-                        severity: 'warn',
-                        summary: 'Duplicate Service ID',
-                        detail: 'This Service ID already exists in the system'
-                    });
+                    if (this.isDuplicateCombo) {
+                        this.messageService.add({
+                            severity: 'warn',
+                            summary: 'Duplicate Entry',
+                            detail: 'A member with the same Mother Organization + Prefix + Service ID already exists'
+                        });
+                    }
+                },
+                error: (err) => {
+                    console.error('Error checking duplicate combination', err);
+                    this.isCheckingCombo = false;
                 }
-            },
-            error: (err) => {
-                console.error('Error checking service ID', err);
-                this.isCheckingServiceId = false;
-            }
-        });
+            });
     }
 
     // Reliever section
@@ -438,12 +449,12 @@ export class EmpBasicInfo implements OnInit {
             return;
         }
 
-        // Check for duplicate service ID
-        if (this.isServiceIdDuplicate) {
+        // Check for duplicate (Mother Org + Prefix + Service ID)
+        if (this.isDuplicateCombo) {
             this.messageService.add({
                 severity: 'warn',
-                summary: 'Duplicate Service ID',
-                detail: 'Please use a unique Service ID'
+                summary: 'Duplicate Entry',
+                detail: 'A member with the same Mother Organization + Prefix + Service ID already exists'
             });
             return;
         }
@@ -810,12 +821,12 @@ export class EmpBasicInfo implements OnInit {
         this.initializeForm();
         this.loadCurrentUserMemberTypePermissions();
 
-        // Real-time duplicate check as user types
-        this.postingForm.get('serviceId')?.valueChanges.pipe(
-            debounceTime(500),
-            distinctUntilChanged()
-        ).subscribe((value: string) => {
-            this.checkServiceIdDuplicate(value);
+        // Real-time duplicate check on (Mother Org + Prefix + Service ID) as user fills any of the three
+        ['motherOrganization', 'prefix', 'serviceId'].forEach((field) => {
+            this.postingForm.get(field)?.valueChanges.pipe(
+                debounceTime(500),
+                distinctUntilChanged()
+            ).subscribe(() => this.checkDuplicateCombo());
         });
 
         this.loadMotherOrg();
@@ -1642,7 +1653,16 @@ export class EmpBasicInfo implements OnInit {
     }
 
     onReset(): void {
-        this.postingForm.reset();
+        const now = new Date();
+        this.postingForm.reset({
+            employeeID: 0,
+            status: true,
+            createdBy: 'system',
+            createdDate: now,
+            lastUpdatedBy: 'system',
+            lastupdate: now,
+            statusDate: now
+        });
         this.imagePreview = null;
         this.selectedFile = null;
         this.selectedFileName = '';

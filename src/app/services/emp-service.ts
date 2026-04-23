@@ -70,6 +70,29 @@ export class EmpService {
         return this.http.get<EmpModel[]>(`${this.empApi}/EmployeeInfo/SearchByIdAsyn`, { params }).pipe(map((data) => (data && data.length > 0 ? data[0] : null)));
     }
 
+    // Same as searchByRabIdOrServiceId but returns the full matching list (e.g. when ServiceId repeats across Mother Org + Prefix combinations).
+    // Optional prefix filters by Prefix code id (used for composite uniqueness check); excludeEmployeeId drops one record from the result (useful in edit-mode duplicate checks so the record doesn't match itself).
+    searchListByRabIdOrServiceId(
+        rabId?: string,
+        serviceId?: string,
+        presentMemberOnly?: boolean,
+        motherOrganization?: number | null,
+        nid?: string,
+        prefix?: number | null,
+        excludeEmployeeId?: number | null
+    ): Observable<EmpModel[]> {
+        const params: any = {};
+        if (rabId) params.rabId = rabId;
+        if (serviceId) params.serviceId = serviceId;
+        if (nid) params.nid = nid;
+        if (presentMemberOnly === true) params.presentMemberOnly = 'true';
+        if (motherOrganization != null && motherOrganization > 0) params.motherOrganization = String(motherOrganization);
+        if (prefix != null && prefix > 0) params.prefix = String(prefix);
+        if (excludeEmployeeId != null && excludeEmployeeId > 0) params.excludeEmployeeId = String(excludeEmployeeId);
+
+        return this.http.get<EmpModel[]>(`${this.empApi}/EmployeeInfo/SearchByIdAsyn`, { params }).pipe(map((data) => data ?? []));
+    }
+
     /** Gets display info from vw_EmployeeSearchInfo (Rank, Corps, Trade, MotherOrganization, MemberType). Call after search when employee is found. */
     getEmployeeSearchInfo(employeeId: number): Observable<EmployeeSearchInfoModel | null> {
         return this.http.get<EmployeeSearchInfoModel>(`${this.empApi}/EmployeeInfo/GetEmployeeSearchInfo/${employeeId}`).pipe(
