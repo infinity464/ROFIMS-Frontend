@@ -44,6 +44,8 @@ import { EmpDisciplineInfoComponent } from '@/Components/Features/Emp/emp-discip
 import { EmpBankAccount } from '@/Components/Features/Emp/emp-bank-account/emp-bank-account.component';
 import { EmpAdditionalRemarks } from '@/Components/Features/Emp/emp-additional-remarks/emp-additional-remarks.component';
 import { ExportService, type ProfileExportConfig, type ProfileExportSection } from '@/services/export.service';
+import { PartialDatePipe } from '@/shared/pipes/partial-date.pipe';
+import { formatPartialDate } from '@/shared/utils/partial-date.util';
 
 @Component({
     selector: 'app-ex-member-profile',
@@ -68,7 +70,8 @@ import { ExportService, type ProfileExportConfig, type ProfileExportSection } fr
         EmpLeaveInfo,
         EmpDisciplineInfoComponent,
         EmpBankAccount,
-        EmpAdditionalRemarks
+        EmpAdditionalRemarks,
+        PartialDatePipe
     ],
     providers: [MessageService],
     templateUrl: './ex-member-profile.html',
@@ -249,8 +252,8 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         const prevRabRows = this.previousOnlyRabList.map((row, i) => [
             this.rowNum(i) + '.',
             this.codeValue(row.rabUnitName, row.rabUnitNameBN),
-            this.formatDateOnly(row.serviceFrom),
-            this.formatDateOnly(row.serviceTo),
+            formatPartialDate(row.serviceFrom, row.serviceFromPrecision),
+            formatPartialDate(row.serviceTo, row.serviceToPrecision),
             this.codeValue(row.appointmentName, row.appointmentNameBN),
             this.val(row.postingAuth),
             this.val(row.remarks),

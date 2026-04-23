@@ -17,11 +17,12 @@ import { PreviousRABServiceService, VwPreviousRABServiceInfoModel } from '@/serv
 import { TableModule } from 'primeng/table';
 import { forkJoin, of } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { PartialDatePipe } from '@/shared/pipes/partial-date.pipe';
 
 @Component({
     selector: 'app-emp-present-member-check',
     standalone: true,
-    imports: [CommonModule, FormsModule, InputNumberModule, InputTextModule, ButtonModule, SelectModule, DialogModule, Fluid, TableModule],
+    imports: [CommonModule, FormsModule, InputNumberModule, InputTextModule, ButtonModule, SelectModule, DialogModule, Fluid, TableModule, PartialDatePipe],
     templateUrl: './emp-present-member-check.component.html',
     styleUrl: './emp-present-member-check.component.scss'
 })

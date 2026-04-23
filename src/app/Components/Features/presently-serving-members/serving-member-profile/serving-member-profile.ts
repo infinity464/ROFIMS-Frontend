@@ -28,11 +28,13 @@ import { TooltipModule } from 'primeng/tooltip';
 import { PROFILE_LABELS, type ProfileLang } from '@/Core/i18n/profile-labels';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import { ExportService, type ProfileExportConfig, type ProfileExportSection } from '@/services/export.service';
+import { PartialDatePipe } from '@/shared/pipes/partial-date.pipe';
+import { formatPartialDate } from '@/shared/utils/partial-date.util';
 
 @Component({
     selector: 'app-serving-member-profile',
     standalone: true,
-    imports: [CommonModule, RouterModule, ButtonModule, TableModule, Toast, DialogModule, TooltipModule],
+    imports: [CommonModule, RouterModule, ButtonModule, TableModule, Toast, DialogModule, TooltipModule, PartialDatePipe],
     providers: [MessageService],
     templateUrl: './serving-member-profile.html',
     styleUrl: './serving-member-profile.scss'
@@ -207,8 +209,8 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
         const presentRabRows = this.presentRabList.map((row, i) => [
             this.rowNum(i) + '.',
             this.codeValue(row.rabUnitName, row.rabUnitNameBN),
-            this.formatDateOnly(row.serviceFrom),
-            this.formatDateOnly(row.serviceTo),
+            formatPartialDate(row.serviceFrom, row.serviceFromPrecision),
+            formatPartialDate(row.serviceTo, row.serviceToPrecision),
             this.codeValue(row.appointmentName, row.appointmentNameBN),
             this.val(row.postingAuth),
             this.val(row.remarks),
@@ -220,8 +222,8 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
         const prevRabRows = this.previousOnlyRabList.map((row, i) => [
             this.rowNum(i) + '.',
             this.codeValue(row.rabUnitName, row.rabUnitNameBN),
-            this.formatDateOnly(row.serviceFrom),
-            this.formatDateOnly(row.serviceTo),
+            formatPartialDate(row.serviceFrom, row.serviceFromPrecision),
+            formatPartialDate(row.serviceTo, row.serviceToPrecision),
             this.codeValue(row.appointmentName, row.appointmentNameBN),
             this.val(row.postingAuth),
             this.val(row.remarks),

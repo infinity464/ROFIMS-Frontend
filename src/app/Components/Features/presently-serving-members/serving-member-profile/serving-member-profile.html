@@ -275,8 +275,8 @@
                         <tr>
                             <td>{{ rowNum(rowIndex) }}.</td>
                             <td>{{ codeValue(row.rabUnitName, row.rabUnitNameBN) }}</td>
-                            <td>{{ formatDateOnly(row.serviceFrom) }}</td>
-                            <td>{{ formatDateOnly(row.serviceTo) }}</td>
+                            <td>{{ row.serviceFrom | partialDate: row.serviceFromPrecision }}</td>
+                            <td>{{ row.serviceTo | partialDate: row.serviceToPrecision }}</td>
                             <td>{{ codeValue(row.appointmentName, row.appointmentNameBN) }}</td>
                             <td>{{ val(row.postingAuth) }}</td>
                             <td>{{ val(row.remarks) }}</td>
@@ -315,8 +315,8 @@
                         <tr>
                             <td>{{ rowNum(rowIndex) }}.</td>
                             <td>{{ codeValue(row.rabUnitName, row.rabUnitNameBN) }}</td>
-                            <td>{{ formatDateOnly(row.serviceFrom) }}</td>
-                            <td>{{ formatDateOnly(row.serviceTo) }}</td>
+                            <td>{{ row.serviceFrom | partialDate: row.serviceFromPrecision }}</td>
+                            <td>{{ row.serviceTo | partialDate: row.serviceToPrecision }}</td>
                             <td>{{ codeValue(row.appointmentName, row.appointmentNameBN) }}</td>
                             <td>{{ val(row.postingAuth) }}</td>
                             <td>{{ val(row.remarks) }}</td>

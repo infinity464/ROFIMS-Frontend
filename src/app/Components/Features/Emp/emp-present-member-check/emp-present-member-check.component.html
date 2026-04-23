@@ -50,8 +50,8 @@
             <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                 <tr>
                     <td>{{ rowIndex + 1 }}</td>
-                    <td>{{ (row.serviceFrom || row.ServiceFrom | date: 'dd-MM-yyyy') || 'N/A' }}</td>
-                    <td>{{ (row.serviceTo || row.ServiceTo | date: 'dd-MM-yyyy') || 'N/A' }}</td>
+                    <td>{{ ((row.serviceFrom || row.ServiceFrom) | partialDate: (row.serviceFromPrecision || row.ServiceFromPrecision)) || 'N/A' }}</td>
+                    <td>{{ ((row.serviceTo || row.ServiceTo) | partialDate: (row.serviceToPrecision || row.ServiceToPrecision)) || 'N/A' }}</td>
                     <td>{{ row.rabUnitName || row.RABUnitName || 'N/A' }}</td>
                     <td>{{ row.appointmentName || row.AppointmentName || 'N/A' }}</td>
                     <td>{{ row.postingAuth || row.PostingAuth || 'N/A' }}</td>
