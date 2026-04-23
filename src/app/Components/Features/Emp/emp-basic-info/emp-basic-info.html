@@ -120,7 +120,7 @@
 
                 </div>
 
-                <!-- Row 2: 4 Fields -->
+                <!-- Row 2: 5 Fields -->
                 <div class="form-row">
                     <div class="form-field">
                         <label class="form-label">
@@ -134,6 +134,14 @@
                         @if (isFieldInvalid('memberType')) {
                         <small class="form-error">{{ getErrorMessage('memberType') }}</small>
                         }
+                    </div>
+
+                    <div class="form-field">
+                        <label class="form-label">Batch</label>
+                        <p-select [options]="batches" optionLabel="codeValueEN" optionValue="codeId"
+                            placeholder="Select Batch" styleClass="w-full" formControlName="batch"
+                            [filter]="true" filterPlaceholder="Search" [showClear]="true">
+                        </p-select>
                     </div>
 
                     <div class="form-field">
@@ -216,6 +224,14 @@
                         @if (isFieldInvalid('trade')) {
                         <small class="form-error">{{ getErrorMessage('trade') }}</small>
                         }
+                    </div>
+
+                    <div class="form-field">
+                        <label class="form-label">Special Qualifications</label>
+                        <p-multiSelect [options]="specialQualificationOptions" optionLabel="codeValueEN" optionValue="codeId"
+                            placeholder="Select Special Qualifications" styleClass="w-full" formControlName="specialQualifications"
+                            [filter]="true" filterPlaceholder="Search" display="chip">
+                        </p-multiSelect>
                     </div>
 
                     <div class="form-field">

@@ -5,6 +5,7 @@ import { FileUpload } from 'primeng/fileupload';
 import { Select } from 'primeng/select';
 import { DatePicker } from 'primeng/datepicker';
 import { InputTextModule } from 'primeng/inputtext';
+import { MultiSelectModule } from 'primeng/multiselect';
 import { Button, ButtonModule } from 'primeng/button';
 import { CommonCodeModel } from '@/models/common-code-model';
 import { EmpService } from '@/services/emp-service';
@@ -29,7 +30,7 @@ import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-me
 
 @Component({
     selector: 'app-emp-basic-info',
-    imports: [FileUpload, Fluid, Button, ButtonModule, Select, DatePicker, ReactiveFormsModule, FormsModule, InputTextModule, AddressFormComponent, Checkbox, Dialog, TooltipModule, EmpPresentMemberCheckComponent, FileReferencesFormComponent],
+    imports: [FileUpload, Fluid, Button, ButtonModule, Select, MultiSelectModule, DatePicker, ReactiveFormsModule, FormsModule, InputTextModule, AddressFormComponent, Checkbox, Dialog, TooltipModule, EmpPresentMemberCheckComponent, FileReferencesFormComponent],
     templateUrl: './emp-basic-info.html',
     styleUrl: './emp-basic-info.scss',
     standalone: true
@@ -528,6 +529,8 @@ export class EmpBasicInfo implements OnInit {
 
     private formattedDataForEmployee(): any {
         const formValue = this.postingForm.getRawValue();
+        const specialQualsArr = Array.isArray(formValue.specialQualifications) ? formValue.specialQualifications : [];
+        const specialQualsCsv = specialQualsArr.length > 0 ? specialQualsArr.join(',') : null;
         return {
             ...formValue,
             employeeID: this.generatedEmployeeId || 0,
@@ -535,7 +538,9 @@ export class EmpBasicInfo implements OnInit {
             postingStatus: formValue.postingStatus || PostingStatus.Supernumerary,
             isReliever: this.isReliever,
             relieverId: this.isReliever && this.selectedRelieverEmployeeId ? this.selectedRelieverEmployeeId : null,
-            maritalStatus: formValue.maritalStatus ?? null
+            maritalStatus: formValue.maritalStatus ?? null,
+            batch: formValue.batch ?? null,
+            specialQualifications: specialQualsCsv
         };
     }
 
@@ -770,6 +775,8 @@ export class EmpBasicInfo implements OnInit {
     motherOrganizations: MotherOrganizationModel[] = [];
     lastUnitOrganizations: MotherOrganizationModel[] = [];
     memberTypes: CommonCodeModel[] = [];
+    batches: CommonCodeModel[] = [];
+    specialQualificationOptions: CommonCodeModel[] = [];
     officerTypes: CommonCodeModel[] = [];
     appointments: CommonCodeModel[] = [];
     ranks: CommonCodeModel[] = [];
@@ -824,6 +831,7 @@ export class EmpBasicInfo implements OnInit {
         this.loadMotherOrg();
         this.loadDistricts();
         this.loadMemberType();
+        this.loadSpecialQualifications();
         this.loadAppointment();
         this.loadGender();
         this.loadMaritalStatus();
@@ -875,16 +883,23 @@ export class EmpBasicInfo implements OnInit {
         this.empService.getEmployeeById(employeeId).subscribe({
             next: (employee: any) => {
                 // Populate form with employee data
+                const specialQualsRaw = employee.specialQualifications ?? employee.SpecialQualifications ?? '';
+                const specialQualIds = typeof specialQualsRaw === 'string' && specialQualsRaw.trim().length > 0
+                    ? specialQualsRaw.split(',').map((s: string) => Number(s.trim())).filter((n: number) => !Number.isNaN(n))
+                    : [];
+
                 this.postingForm.patchValue({
                     employeeID: employee.employeeID,
                     motherOrganization: employee.orgId,
                     lastMotherUnit: employee.lastMotherUnit,
                     memberType: employee.memberType,
+                    batch: employee.batch ?? employee.Batch ?? null,
                     appointment: employee.appointment,
                     joiningDate: employee.joiningDate ? new Date(employee.joiningDate) : null,
                     rank: employee.rank,
                     branch: employee.branch,
                     trade: employee.trade,
+                    specialQualifications: specialQualIds,
                     tradeMark: employee.tradeMark,
                     gender: employee.gender,
                     maritalStatus: employee.maritalStatus ?? employee.MaritalStatus ?? null,
@@ -967,6 +982,7 @@ export class EmpBasicInfo implements OnInit {
                     this.loadMotherOrgRank(employee.orgId);
                     this.loadMotherOrgCorps(employee.orgId);
                     this.loadMotherOrgPrefix(employee.orgId);
+                    this.loadMotherOrgBatch(employee.orgId);
                 }
                 if (employee.memberType) {
                     this.loadOfficerType(employee.memberType, employee.orgId);
@@ -1146,11 +1162,13 @@ export class EmpBasicInfo implements OnInit {
             picture: [null],
             lastMotherUnit: [null, Validators.required],
             memberType: [null, Validators.required],
+            batch: [null],
             appointment: [null, Validators.required],
             joiningDate: [null, Validators.required],
             rank: [null, Validators.required],
             branch: [null, Validators.required],
             trade: [null, Validators.required],
+            specialQualifications: [[] as number[]],
             tradeMark: [''],
             gender: [null, Validators.required],
             maritalStatus: [null],
@@ -1273,12 +1291,13 @@ export class EmpBasicInfo implements OnInit {
 
     onMotherOrgChange(orgId: number): void {
         // Set orgId in form
-        this.postingForm.patchValue({ orgId: orgId });
+        this.postingForm.patchValue({ orgId: orgId, batch: null });
 
         this.loadMotherOrgUnits(orgId);
         this.loadMotherOrgRank(orgId);
         this.loadMotherOrgCorps(orgId);
         this.loadMotherOrgPrefix(orgId);
+        this.loadMotherOrgBatch(orgId);
 
         const memberType = this.postingForm.get('memberType')?.value;
         this.postingForm.patchValue({ officerType: null });
@@ -1387,6 +1406,20 @@ export class EmpBasicInfo implements OnInit {
             error: (err) => {
                 console.log(err);
             }
+        });
+    }
+
+    loadMotherOrgBatch(orgId: number): void {
+        this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'Batch').subscribe({
+            next: (res) => (this.batches = res ?? []),
+            error: (err) => console.log(err)
+        });
+    }
+
+    loadSpecialQualifications(): void {
+        this.commonCodeService.getAllActiveCommonCodesType('SpecialQualification').subscribe({
+            next: (res) => (this.specialQualificationOptions = res ?? []),
+            error: (err) => console.log(err)
         });
     }
     loadGender() {
@@ -1645,6 +1678,7 @@ export class EmpBasicInfo implements OnInit {
         this.postingForm.reset({
             employeeID: 0,
             status: true,
+            specialQualifications: [],
             createdBy: 'system',
             createdDate: now,
             lastUpdatedBy: 'system',

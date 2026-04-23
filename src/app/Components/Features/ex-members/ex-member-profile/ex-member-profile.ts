@@ -160,12 +160,14 @@ export class ExMemberProfile implements OnInit, OnDestroy {
             kv(L['field.rank'], this.codeValue(p.armyRank, p.armyRankBN)),
             kv(L['field.corps'], this.codeValue(p.corps, p.corpsBN)),
             kv(L['field.trade'], this.tradeDisplay(p)),
+            kv(L['field.specialQualification'], this.codeValue(p.specialQualifications, p.specialQualificationsBN)),
             kv(L['field.dateOfCommission'], this.formatDateDisplay(p.dateOfCommission)),
             kv(L['field.dateOfJoiningInServiceTraining'], this.formatDateDisplay(p.dateOfJoiningInServiceTraining)),
             kv(L['field.motherUnit'], this.codeValue(p.motherUnit, p.motherUnitBN)),
             kv(L['field.location'], this.codeValue(p.location, p.locationBN)),
             kv(L['field.rabUnitLastPosting'], this.displayRabUnit),
             kv(L['field.joiningDate'], this.formatDateDisplay(p.joiningDate)),
+            kv(L['field.maritalStatus'], this.codeValue(p.maritalStatus, p.maritalStatusBN)),
         ], true);
 
         // Own Address (label-value; one block per address)
@@ -215,7 +217,6 @@ export class ExMemberProfile implements OnInit, OnDestroy {
             kv(L['field.mobileNo'], this.valDisplay(p.mobileNo)),
             kv(L['field.emergencyContactNo'], this.valDisplay(p.emergencyContactNo)),
             kv(L['field.religion'], this.codeValue(p.religion, p.religionBN)),
-            kv(L['field.maritalStatus'], this.codeValue(p.maritalStatus, p.maritalStatusBN)),
             kv(L['field.weight'], this.weightDisplay(p)),
             kv(L['field.identificationMark'], this.val(p.identificationMark)),
         ], true, false, 2);

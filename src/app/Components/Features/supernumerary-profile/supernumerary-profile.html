@@ -94,6 +94,10 @@
                         <span class="profile-field-label">Mother org.</span>
                         <span class="profile-field-value">{{ profile.motherOrganization || '-' }}</span>
                     </div>
+                    <div class="profile-field-row">
+                        <span class="profile-field-label">Special Qualifications</span>
+                        <span class="profile-field-value">{{ serviceOverview?.specialQualifications || '-' }}</span>
+                    </div>
                 </div>
                 <div class="profile-field-list">
                     <div class="profile-field-row">
@@ -111,6 +115,10 @@
                     <div class="profile-field-row">
                         <span class="profile-field-label">Date of joining RAB</span>
                         <span class="profile-field-value">{{ formatDateOfJoining(serviceOverview?.joiningDate ?? getDateOfJoiningInRAB(profile)) }}</span>
+                    </div>
+                    <div class="profile-field-row">
+                        <span class="profile-field-label">Marital Status</span>
+                        <span class="profile-field-value">{{ serviceOverview?.maritalStatus || '-' }}</span>
                     </div>
                 </div>
             </div>

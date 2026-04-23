@@ -93,6 +93,10 @@
                         <span class="sp-field-label">{{ L['field.trade'] }}</span>
                         <span class="sp-field-value">{{ tradeDisplay(profile) }}</span>
                     </div>
+                    <div class="sp-field">
+                        <span class="sp-field-label">{{ L['field.specialQualification'] }}</span>
+                        <span class="sp-field-value">{{ codeValue(profile.specialQualifications, profile.specialQualificationsBN) }}</span>
+                    </div>
                 </div>
                 <div class="sp-field-list">
                     <div class="sp-field">
@@ -118,6 +122,10 @@
                     <div class="sp-field">
                         <span class="sp-field-label">{{ L['field.joiningDate'] }}</span>
                         <span class="sp-field-value">{{ formatDateDisplay(profile.joiningDate) }}</span>
+                    </div>
+                    <div class="sp-field">
+                        <span class="sp-field-label">{{ L['field.maritalStatus'] }}</span>
+                        <span class="sp-field-value">{{ codeValue(profile.maritalStatus, profile.maritalStatusBN) }}</span>
                     </div>
                 </div>
             </div>
@@ -253,7 +261,6 @@
                     <div class="sp-field-list">
                         <div class="sp-field"><span class="sp-field-label">{{ L['field.dateOfBirth'] }}</span> <span class="sp-field-value">{{ formatDateDisplay(profile.dateOfBirth) }}</span></div>
                         <div class="sp-field"><span class="sp-field-label">{{ L['field.religion'] }}</span> <span class="sp-field-value">{{ codeValue(profile.religion, profile.religionBN) }}</span></div>
-                        <div class="sp-field"><span class="sp-field-label">{{ L['field.maritalStatus'] }}</span> <span class="sp-field-value">{{ codeValue(profile.maritalStatus, profile.maritalStatusBN) }}</span></div>
                         <div class="sp-field"><span class="sp-field-label">{{ L['field.height'] }}</span> <span class="sp-field-value">{{ heightDisplay(profile) }}</span></div>
                         <div class="sp-field"><span class="sp-field-label">{{ L['field.weight'] }}</span> <span class="sp-field-value">{{ weightDisplay(profile) }}</span></div>
                         <div class="sp-field"><span class="sp-field-label">{{ L['field.medicalCategory'] }}</span> <span class="sp-field-value">{{ codeValue(profile.medicalCategory, profile.medicalCategoryBN) }}</span></div>
