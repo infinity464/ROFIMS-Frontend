@@ -787,14 +787,6 @@ export class EmpBasicInfo implements OnInit {
     showLastUnitDialog: boolean = false;
     newLastUnitNameEN: string = '';
     newLastUnitNameBN: string = '';
-    newLastUnitLocationEN: string = '';
-    newLastUnitLocationBN: string = '';
-    newLastUnitDistrictId: number | null = null;
-    newLastUnitStatus: boolean = true;
-    lastUnitStatusOptions = [
-        { label: 'Active', value: true },
-        { label: 'Inactive', value: false }
-    ];
     isSavingLastUnit: boolean = false;
 
     constructor(
@@ -1310,10 +1302,6 @@ export class EmpBasicInfo implements OnInit {
         if (!parentOrgId) return;
         this.newLastUnitNameEN = '';
         this.newLastUnitNameBN = '';
-        this.newLastUnitLocationEN = '';
-        this.newLastUnitLocationBN = '';
-        this.newLastUnitDistrictId = null;
-        this.newLastUnitStatus = true;
         this.showLastUnitDialog = true;
     }
 
@@ -1324,7 +1312,7 @@ export class EmpBasicInfo implements OnInit {
     }
 
     saveNewLastUnit(): void {
-        if (!this.newLastUnitNameEN?.trim() || !this.newLastUnitDistrictId) return;
+        if (!this.newLastUnitNameEN?.trim()) return;
 
         const parentOrgId = this.postingForm.get('motherOrganization')?.value;
         if (!parentOrgId) {
@@ -1344,11 +1332,11 @@ export class EmpBasicInfo implements OnInit {
             orgId: 0,
             orgNameEN: this.newLastUnitNameEN.trim(),
             orgNameBN: this.newLastUnitNameBN?.trim() || '',
-            locationEN: this.newLastUnitLocationEN?.trim() || '',
-            locationBN: this.newLastUnitLocationBN?.trim() || '',
-            districtId: this.newLastUnitDistrictId,
+            locationEN: '',
+            locationBN: '',
+            districtId: null,
             parentOrg: parentOrgId,
-            status: this.newLastUnitStatus,
+            status: true,
             createdBy: currentUser,
             createdDate: currentDateTime,
             lastUpdatedBy: currentUser,
@@ -1372,8 +1360,8 @@ export class EmpBasicInfo implements OnInit {
                         if (newOrgId) {
                             this.postingForm.patchValue({
                                 lastMotherUnit: newOrgId,
-                                lastMotherUnitLocation: this.newLastUnitLocationEN?.trim() || '',
-                                lastMotherUnitDistrictId: this.newLastUnitDistrictId
+                                lastMotherUnitLocation: '',
+                                lastMotherUnitDistrictId: null
                             });
                         }
                     }
