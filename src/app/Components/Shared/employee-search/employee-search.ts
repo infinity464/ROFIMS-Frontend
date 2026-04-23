@@ -4,11 +4,18 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
+import { DialogModule } from 'primeng/dialog';
+import { TableModule } from 'primeng/table';
 import { MessageService } from 'primeng/api';
+import { forkJoin, of } from 'rxjs';
+import { map } from 'rxjs/operators';
 
 import { EmpService } from '@/services/emp-service';
+import { CommonCodeService } from '@/services/common-code-service';
 import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
 import { SharedService } from '@/shared/services/shared-service';
+import { MotherOrganizationModel } from '@/models/mother-org-model';
+import { PostingStatus } from '@/models/enums';
 
 export interface EmployeeBasicInfo {
     employeeID: number;
@@ -34,7 +41,7 @@ export interface EmployeeBasicInfo {
 @Component({
     selector: 'app-employee-search',
     standalone: true,
-    imports: [CommonModule, FormsModule, InputTextModule, ButtonModule],
+    imports: [CommonModule, FormsModule, InputTextModule, ButtonModule, DialogModule, TableModule],
     template: `
         <div class="surface-50 border-round-2xl py-4 mb-4">
             <div class="flex flex-wrap align-items-end gap-3">
@@ -82,6 +89,43 @@ export interface EmployeeBasicInfo {
                 }
             </div>
         </div>
+
+        <p-dialog
+            [(visible)]="showPickerDialog"
+            header="Multiple Members Found — Please Select"
+            [modal]="true"
+            [closable]="false"
+            [style]="{ width: '820px' }"
+            [draggable]="false"
+            [resizable]="false"
+            [contentStyle]="{ 'border-top': '2px solid var(--primary-color)' }">
+            <p class="m-0 mt-3 mb-3 text-600">The search matched more than one member. Pick the correct one to continue.</p>
+            <p-table [value]="pickerRows" styleClass="p-datatable-sm">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th style="width: 5%">#</th>
+                        <th>Name</th>
+                        <th>Mother Organization</th>
+                        <th>Status</th>
+                        <th style="width: 110px">Action</th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-row let-i="rowIndex">
+                    <tr>
+                        <td>{{ i + 1 }}</td>
+                        <td class="font-semibold">{{ row.displayName || '-' }}</td>
+                        <td>{{ row.orgName || '-' }}</td>
+                        <td>{{ row.postingStatus || '-' }}</td>
+                        <td>
+                            <p-button label="Select" size="small" (onClick)="selectPickerRow(row)"></p-button>
+                        </td>
+                    </tr>
+                </ng-template>
+            </p-table>
+            <ng-template pTemplate="footer">
+                <p-button label="Cancel" severity="secondary" [outlined]="true" (onClick)="closePickerDialog()"></p-button>
+            </ng-template>
+        </p-dialog>
     `
 })
 export class EmployeeSearchComponent implements OnChanges {
@@ -97,13 +141,38 @@ export class EmployeeSearchComponent implements OnChanges {
     employeeFound: boolean = false;
     employeeInfo: EmployeeBasicInfo | null = null;
 
+    showPickerDialog: boolean = false;
+    pickerRows: Array<{
+        employee: any;
+        displayName: string;
+        orgName: string;
+        postingStatus: string;
+        sortKey: string;
+    }> = [];
+
+    private motherOrganizations: MotherOrganizationModel[] = [];
+
+    private readonly statusListLabel: Record<string, string> = {
+        [PostingStatus.Supernumerary]: 'Supernumerary',
+        [PostingStatus.Servings]: 'Serving',
+        [PostingStatus.ExMember]: 'Ex-Member',
+        [PostingStatus.PendingForJoining]: 'Pending for Joining',
+        [PostingStatus.Pending]: 'Pending'
+    };
+
     constructor(
         private empService: EmpService,
+        private commonCodeService: CommonCodeService,
         private messageService: MessageService,
         private router: Router,
         private memberTypeAccess: IdentityUserMemberTypeAccessService,
         private sharedService: SharedService
-    ) {}
+    ) {
+        this.commonCodeService.getAllActiveMotherOrgs().subscribe({
+            next: (res) => (this.motherOrganizations = res ?? []),
+            error: () => {}
+        });
+    }
 
     /** Central permission check. Returns true when the user is allowed to view this memberType. */
     private isMemberTypeAllowed(memberTypeId: number | null | undefined): boolean {
@@ -258,33 +327,18 @@ export class EmployeeSearchComponent implements OnChanges {
             return;
         }
 
+        // Clear any previous selection/picker state so the fresh search always starts clean.
+        this.employeeFound = false;
+        this.employeeInfo = null;
+        this.showPickerDialog = false;
+        this.pickerRows = [];
+        this.onSearchReset.emit();
+
         this.isSearching = true;
-        this.empService.searchByRabIdOrServiceId(this.searchRabId || undefined, this.searchServiceId || undefined).subscribe({
-            next: (employee: any) => {
-                if (employee) {
-                    const employeeID = employee.EmployeeID ?? employee.employeeID;
-                    this.employeeInfo = {
-                        employeeID,
-                        fullNameEN: employee.FullNameEN || employee.fullNameEN || '',
-                        fullNameBN: employee.FullNameBN || employee.fullNameBN,
-                        rabid: employee.RABID || employee.Rabid || employee.rabid || '',
-                        serviceId: employee.ServiceId || employee.serviceId || '',
-                        motherOrganization: employee.LastMotherUnit ?? employee.MotherOrganization ?? employee.motherOrganization,
-                        rank: employee.Rank ?? employee.rank,
-                        unit: employee.Unit ?? employee.unit,
-                        branch: employee.Branch ?? employee.branch,
-                        trade: employee.Trade ?? employee.trade,
-                        memberType: employee.MemberType ?? employee.memberType,
-                        orgId: employee.orgId
-                    };
-                    // Auto-fill the other field
-                    if (this.searchRabId && !this.searchServiceId) {
-                        this.searchServiceId = this.employeeInfo.serviceId || '';
-                    } else if (this.searchServiceId && !this.searchRabId) {
-                        this.searchRabId = this.employeeInfo.rabid || '';
-                    }
-                    this.finalizeAndEmit(employeeID);
-                } else {
+        this.empService.searchListByRabIdOrServiceId(this.searchRabId || undefined, this.searchServiceId || undefined).subscribe({
+            next: (employees: any[]) => {
+                if (!employees || employees.length === 0) {
+                    this.isSearching = false;
                     this.employeeFound = false;
                     this.employeeInfo = null;
                     this.onSearchReset.emit();
@@ -293,8 +347,15 @@ export class EmployeeSearchComponent implements OnChanges {
                         summary: 'Not Found',
                         detail: 'No employee found with the given ID'
                     });
+                    return;
                 }
-                this.isSearching = false;
+
+                if (employees.length === 1) {
+                    this.loadSelectedEmployee(employees[0]);
+                    return;
+                }
+
+                this.buildPickerRows(employees);
             },
             error: (err) => {
                 console.error('Search failed', err);
@@ -308,6 +369,133 @@ export class EmployeeSearchComponent implements OnChanges {
                 });
             }
         });
+    }
+
+    private loadSelectedEmployee(employee: any): void {
+        const employeeID = employee.EmployeeID ?? employee.employeeID;
+        this.employeeInfo = {
+            employeeID,
+            fullNameEN: employee.FullNameEN || employee.fullNameEN || '',
+            fullNameBN: employee.FullNameBN || employee.fullNameBN,
+            rabid: employee.RABID || employee.Rabid || employee.rabid || '',
+            serviceId: employee.ServiceId || employee.serviceId || '',
+            motherOrganization: employee.LastMotherUnit ?? employee.MotherOrganization ?? employee.motherOrganization,
+            rank: employee.Rank ?? employee.rank,
+            unit: employee.Unit ?? employee.unit,
+            branch: employee.Branch ?? employee.branch,
+            trade: employee.Trade ?? employee.trade,
+            memberType: employee.MemberType ?? employee.memberType,
+            orgId: employee.orgId
+        };
+        if (this.searchRabId && !this.searchServiceId) {
+            this.searchServiceId = this.employeeInfo.serviceId || '';
+        } else if (this.searchServiceId && !this.searchRabId) {
+            this.searchRabId = this.employeeInfo.rabid || '';
+        }
+        this.finalizeAndEmit(employeeID);
+    }
+
+    private buildPickerRows(employees: any[]): void {
+        const distinctOrgIds = Array.from(new Set(
+            employees
+                .map((e) => e.orgId ?? e.OrgId)
+                .filter((id) => id != null && !Number.isNaN(Number(id)))
+                .map((id) => Number(id))
+        ));
+
+        const prefix$ = distinctOrgIds.length > 0
+            ? forkJoin(
+                distinctOrgIds.map((orgId) =>
+                    this.commonCodeService
+                        .getAllActiveCommonCodesByOrgIdAndType(orgId, 'Prefix')
+                        .pipe(map((list) => ({ orgId, list })))
+                )
+            )
+            : of([] as { orgId: number; list: any[] }[]);
+
+        const rankInfo$ = forkJoin(
+            employees.map((e) => {
+                const empId = e.EmployeeID ?? e.employeeID;
+                return empId != null && !Number.isNaN(Number(empId))
+                    ? this.empService.getEmployeeSearchInfo(Number(empId)).pipe(
+                        map((info) => ({ empId: Number(empId), rankName: (info as any)?.rank ?? (info as any)?.Rank ?? '' }))
+                    )
+                    : of({ empId: Number(empId) || 0, rankName: '' });
+            })
+        );
+
+        forkJoin({ prefixes: prefix$, ranks: rankInfo$ }).subscribe({
+            next: ({ prefixes, ranks }) => {
+                const prefixMap = new Map<string, string>();
+                for (const { orgId, list } of prefixes) {
+                    for (const p of (list as any[])) {
+                        prefixMap.set(`${orgId}:${p?.codeId}`, p?.codeValueEN ?? '');
+                    }
+                }
+                const rankMap = new Map<number, string>();
+                for (const { empId, rankName } of ranks) {
+                    rankMap.set(empId, rankName);
+                }
+                this.pickerRows = this.makePickerRows(employees, prefixMap, rankMap);
+                this.showPickerDialog = true;
+                this.isSearching = false;
+            },
+            error: () => {
+                this.pickerRows = this.makePickerRows(employees, new Map(), new Map());
+                this.showPickerDialog = true;
+                this.isSearching = false;
+            }
+        });
+    }
+
+    private makePickerRows(
+        employees: any[],
+        prefixMap: Map<string, string>,
+        rankMap: Map<number, string>
+    ): typeof this.pickerRows {
+        const rows = employees.map((e) => {
+            const orgId = e.orgId ?? e.OrgId;
+            const prefixId = Number(e.Prefix ?? e.prefix);
+            const prefixLabel = orgId != null ? (prefixMap.get(`${orgId}:${prefixId}`) ?? '') : '';
+            const serviceId = e.ServiceId ?? e.serviceId ?? '';
+            const fullName = e.FullNameEN ?? e.fullNameEN ?? '';
+            const empId = Number(e.EmployeeID ?? e.employeeID);
+            const rankName = rankMap.get(empId) ?? '';
+            const orgName = this.motherOrganizations.find((o) => o.orgId === orgId)?.orgNameEN ?? '';
+            const status = e.PostingStatus ?? e.postingStatus ?? '';
+
+            const parts: string[] = [];
+            if (prefixLabel && serviceId) parts.push(`${prefixLabel}-${serviceId}`);
+            else if (prefixLabel) parts.push(prefixLabel);
+            else if (serviceId) parts.push(String(serviceId));
+            if (rankName) parts.push(rankName);
+            if (fullName) parts.push(fullName);
+            const displayName = parts.join(' ');
+
+            return {
+                employee: e,
+                displayName,
+                orgName,
+                postingStatus: this.statusListLabel[status] ?? status,
+                sortKey: `${orgName.toLowerCase()}|${prefixLabel.toLowerCase()}|${String(serviceId).padStart(10, '0')}`
+            };
+        });
+        rows.sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+        return rows;
+    }
+
+    selectPickerRow(row: { employee: any }): void {
+        this.showPickerDialog = false;
+        this.pickerRows = [];
+        this.loadSelectedEmployee(row.employee);
+    }
+
+    closePickerDialog(): void {
+        this.showPickerDialog = false;
+        this.pickerRows = [];
+        this.employeeFound = false;
+        this.employeeInfo = null;
+        this.onSearchReset.emit();
     }
 
     reset(): void {
