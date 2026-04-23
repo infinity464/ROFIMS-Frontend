@@ -123,13 +123,45 @@
                                         appendTo="body"
                                         [filter]="true"></p-select>
                                 </div>
+                                <div class="col-span-2">
+                                    <label class="font-semibold block mb-2 text-700">Date precision</label>
+                                    <p-selectButton
+                                        formControlName="precision"
+                                        [options]="precisionOptions"
+                                        optionLabel="label"
+                                        optionValue="value"
+                                        [allowEmpty]="false"></p-selectButton>
+                                </div>
                                 <div>
-                                    <label class="font-semibold block mb-2 text-700">From</label>
-                                    <p-datepicker formControlName="serviceFrom" dateFormat="dd-mm-yy" [showIcon]="true" placeholder="From" styleClass="w-full" [style]="{'width': '100%'}" appendTo="body"></p-datepicker>
+                                    <label class="font-semibold block mb-2 text-700">From&#32;*</label>
+                                    @switch (serviceForm.get('precision')?.value) {
+                                        @case ('year') {
+                                            <p-datepicker formControlName="serviceFrom" view="year" dateFormat="yy" [showIcon]="true" placeholder="YYYY" styleClass="w-full" [style]="{'width': '100%'}" appendTo="body"></p-datepicker>
+                                        }
+                                        @case ('month-year') {
+                                            <p-datepicker formControlName="serviceFrom" view="month" dateFormat="mm-yy" [showIcon]="true" placeholder="MM-YYYY" styleClass="w-full" [style]="{'width': '100%'}" appendTo="body"></p-datepicker>
+                                        }
+                                        @default {
+                                            <p-datepicker formControlName="serviceFrom" dateFormat="dd-mm-yy" [showIcon]="true" placeholder="DD-MM-YYYY" styleClass="w-full" [style]="{'width': '100%'}" appendTo="body"></p-datepicker>
+                                        }
+                                    }
                                 </div>
                                 <div>
                                     <label class="font-semibold block mb-2 text-700">To</label>
-                                    <p-datepicker formControlName="serviceTo" dateFormat="dd-mm-yy" [showIcon]="true" placeholder="To" styleClass="w-full" [style]="{'width': '100%'}" appendTo="body" [disabled]="serviceForm.get('isCurrentlyActive')?.value"></p-datepicker>
+                                    @switch (serviceForm.get('precision')?.value) {
+                                        @case ('year') {
+                                            <p-datepicker formControlName="serviceTo" view="year" dateFormat="yy" [showIcon]="true" placeholder="YYYY" styleClass="w-full" [style]="{'width': '100%'}" appendTo="body" [disabled]="serviceForm.get('isCurrentlyActive')?.value"></p-datepicker>
+                                        }
+                                        @case ('month-year') {
+                                            <p-datepicker formControlName="serviceTo" view="month" dateFormat="mm-yy" [showIcon]="true" placeholder="MM-YYYY" styleClass="w-full" [style]="{'width': '100%'}" appendTo="body" [disabled]="serviceForm.get('isCurrentlyActive')?.value"></p-datepicker>
+                                        }
+                                        @default {
+                                            <p-datepicker formControlName="serviceTo" dateFormat="dd-mm-yy" [showIcon]="true" placeholder="DD-MM-YYYY" styleClass="w-full" [style]="{'width': '100%'}" appendTo="body" [disabled]="serviceForm.get('isCurrentlyActive')?.value"></p-datepicker>
+                                        }
+                                    }
+                                    @if (toRangeInvalid) {
+                                        <small class="block mt-1" style="color: var(--red-500);">To date must be on or after From date.</small>
+                                    }
                                 </div>
                                 <div>
                                     <label class="font-semibold block mb-2 text-700">Currently active</label>
@@ -195,8 +227,8 @@
                                 <td>{{ row.rabSubBranchName || '—' }}</td>
                                 <td>{{ row.rabSectionName || '—' }}</td>
                                 <td>{{ row.rabSubSectionName || '—' }}</td>
-                                <td style="white-space: nowrap;">{{ row.serviceFrom ? (row.serviceFrom | date: 'MMM d, y') : '—' }}</td>
-                                <td style="white-space: nowrap;">{{ row.serviceTo ? (row.serviceTo | date: 'MMM d, y') : '—' }}</td>
+                                <td style="white-space: nowrap;">{{ row.serviceFrom | partialDate: row.servicePrecision }}</td>
+                                <td style="white-space: nowrap;">{{ row.isCurrentlyActive ? 'Present' : (row.serviceTo | partialDate: row.servicePrecision) }}</td>
                                 <td>{{ row.remarks || '—' }}</td>
                                 <td>
                                     <div class="flex gap-1">

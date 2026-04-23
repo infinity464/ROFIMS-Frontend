@@ -17,6 +17,7 @@ import { DialogModule } from 'primeng/dialog';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { CheckboxModule } from 'primeng/checkbox';
 import { DatePickerModule } from 'primeng/datepicker';
+import { SelectButtonModule } from 'primeng/selectbutton';
 
 import { EmpService } from '@/services/emp-service';
 import { PreviousRABServiceService } from '@/services/previous-rab-service.service';
@@ -24,6 +25,14 @@ import { CommonCodeService } from '@/services/common-code-service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 import { FileReferencesFormComponent, FileRowData } from '@components/Common/file-references-form/file-references-form';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
+import { PartialDatePipe } from '@/shared/pipes/partial-date.pipe';
+import { DatePrecision, toDateOnlyWithPrecision } from '@/shared/utils/partial-date.util';
+
+/** UI-level precision for the shared From/To selector. Maps to DB's 'D'|'M'|'Y' at the save boundary. */
+type ServicePrecision = 'full' | 'month-year' | 'year';
+
+const UI_TO_DB_PRECISION: Record<ServicePrecision, DatePrecision> = { 'full': 'D', 'month-year': 'M', 'year': 'Y' };
+const DB_TO_UI_PRECISION: Record<DatePrecision, ServicePrecision> = { 'D': 'full', 'M': 'month-year', 'Y': 'year' };
 
 /** List row for display in table */
 export interface PreviousRABServiceListRow {
@@ -36,6 +45,8 @@ export interface PreviousRABServiceListRow {
     rabSubSectionCodeId: number | null;
     serviceFrom: string | null;
     serviceTo: string | null;
+    /** Shared precision for both From and To ('D' | 'M' | 'Y'). Legacy rows: read From's precision. */
+    servicePrecision: DatePrecision | null;
     isCurrentlyActive: boolean;
     appointment: number | null;
     postingAuth: string | null;
@@ -66,9 +77,11 @@ export interface PreviousRABServiceListRow {
         ConfirmDialogModule,
         CheckboxModule,
         DatePickerModule,
+        SelectButtonModule,
         EmployeeSearchComponent,
         FileReferencesFormComponent,
-        FlexibleDateDirective
+        FlexibleDateDirective,
+        PartialDatePipe
     ],
     providers: [ConfirmationService],
     templateUrl: './emp-previous-rab-service.html',
@@ -102,6 +115,12 @@ export class EmpPreviousRabService implements OnInit {
     isSaving = false;
     serviceForm!: FormGroup;
     editingServiceId: number | null = null;
+
+    precisionOptions: { label: string; value: ServicePrecision }[] = [
+        { label: 'Full date', value: 'full' },
+        { label: 'Month & year', value: 'month-year' },
+        { label: 'Year only', value: 'year' }
+    ];
 
     rabUnitOptions: { label: string; value: number }[] = [];
     rabWingOptions: { label: string; value: number }[] = [];
@@ -155,8 +174,9 @@ export class EmpPreviousRabService implements OnInit {
             rabSubBranchCodeId: [null],
             rabSectionCodeId: [null],
             rabSubSectionCodeId: [null],
-            serviceFrom: [null],
+            serviceFrom: [null, Validators.required],
             serviceTo: [null],
+            precision: ['full' as ServicePrecision],
             isCurrentlyActive: [false],
             appointment: [null],
             postingAuth: [''],
@@ -265,6 +285,7 @@ export class EmpPreviousRabService implements OnInit {
                             rabSubSectionCodeId: item.rabSubSectionCodeId ?? item.RABSubSectionCodeId ?? null,
                             serviceFrom: item.serviceFrom ?? item.ServiceFrom ?? null,
                             serviceTo: item.serviceTo ?? item.ServiceTo ?? null,
+                            servicePrecision: ((item.serviceFromPrecision ?? item.ServiceFromPrecision ?? item.serviceToPrecision ?? item.ServiceToPrecision) ?? null) as DatePrecision | null,
                             isCurrentlyActive: isActive === true || isActive === 1,
                             appointment: item.appointment ?? item.Appointment ?? null,
                             postingAuth: item.postingAuth ?? item.PostingAuth ?? null,
@@ -285,6 +306,28 @@ export class EmpPreviousRabService implements OnInit {
                 this.isLoading = false;
             }
         });
+    }
+
+    /** True when To < From at the current precision (so the inline error should render). */
+    get toRangeInvalid(): boolean {
+        const from = this.serviceForm?.get('serviceFrom')?.value;
+        const to = this.serviceForm?.get('serviceTo')?.value;
+        const active = this.serviceForm?.get('isCurrentlyActive')?.value === true;
+        if (!from || !to || active) return false;
+        const precision = (this.serviceForm?.get('precision')?.value ?? 'full') as ServicePrecision;
+        const fromKey = this.precisionCompareKey(from, precision);
+        const toKey = this.precisionCompareKey(to, precision);
+        if (fromKey == null || toKey == null) return false;
+        return toKey < fromKey;
+    }
+
+    private precisionCompareKey(value: Date | string, precision: ServicePrecision): number | null {
+        const d = value instanceof Date ? value : new Date(value);
+        if (isNaN(d.getTime())) return null;
+        const y = d.getFullYear();
+        const m = precision === 'year' ? 0 : d.getMonth();
+        const day = precision === 'full' ? d.getDate() : 1;
+        return y * 10000 + m * 100 + day;
     }
 
     getOptionLabel(options: { label: string; value: number }[], value: number | null): string {
@@ -314,6 +357,7 @@ export class EmpPreviousRabService implements OnInit {
             rabSubSectionCodeId: null,
             serviceFrom: null,
             serviceTo: null,
+            precision: 'full',
             isCurrentlyActive: false,
             appointment: null,
             postingAuth: '',
@@ -343,6 +387,7 @@ export class EmpPreviousRabService implements OnInit {
             rabSubSectionCodeId: row.rabSubSectionCodeId,
             serviceFrom,
             serviceTo,
+            precision: DB_TO_UI_PRECISION[row.servicePrecision ?? 'D'],
             isCurrentlyActive: row.isCurrentlyActive ?? false,
             appointment: row.appointment,
             postingAuth: row.postingAuth ?? '',
@@ -393,6 +438,16 @@ export class EmpPreviousRabService implements OnInit {
             this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Battalion Name.' });
             return;
         }
+        if (this.serviceForm.get('serviceFrom')?.invalid) {
+            this.serviceForm.get('serviceFrom')?.markAsTouched();
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please enter the From date.' });
+            return;
+        }
+        if (this.toRangeInvalid) {
+            this.serviceForm.get('serviceTo')?.markAsTouched();
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'To date must be on or after From date.' });
+            return;
+        }
         const v = this.serviceForm.getRawValue();
         const now = new Date().toISOString();
         const newId = this.serviceList.length > 0
@@ -402,6 +457,11 @@ export class EmpPreviousRabService implements OnInit {
         const filesToUpload = this.fileReferencesForm?.getFilesToUpload() ?? [];
 
         const employeeId = this.selectedEmployeeId;
+        const uiPrecision = (v.precision ?? 'full') as ServicePrecision;
+        const dbPrecision = UI_TO_DB_PRECISION[uiPrecision];
+        const serviceFrom = v.serviceFrom ? toDateOnlyWithPrecision(v.serviceFrom, dbPrecision) : null;
+        const serviceTo = v.isCurrentlyActive === true || !v.serviceTo ? null : toDateOnlyWithPrecision(v.serviceTo, dbPrecision);
+
         const doSave = (filesReferencesJson: string | null) => {
             const payload = {
                 employeeID: employeeId as number,
@@ -412,8 +472,10 @@ export class EmpPreviousRabService implements OnInit {
                 rabSubBranchCodeId: v.rabSubBranchCodeId ?? null,
                 rabSectionCodeId: v.rabSectionCodeId ?? null,
                 rabSubSectionCodeId: v.rabSubSectionCodeId ?? null,
-                serviceFrom: this.toDateOnly(v.serviceFrom),
-                serviceTo: v.isCurrentlyActive === true ? null : this.toDateOnly(v.serviceTo),
+                serviceFrom,
+                serviceTo,
+                serviceFromPrecision: serviceFrom ? dbPrecision : null,
+                serviceToPrecision: serviceTo ? dbPrecision : null,
                 isCurrentlyActive: v.isCurrentlyActive === true,
                 appointment: v.appointment ?? null,
                 postingAuth: v.postingAuth || null,

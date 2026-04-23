@@ -35,3 +35,13 @@
     margin-bottom: 0.5rem !important;
   }
 }
+
+// Date precision segmented control — readable in both light and dark themes.
+// Aura renders SelectButton with a rail (.p-togglebutton) and an inner pill (.p-togglebutton-content).
+// Only recolor the inner pill — leave the root border matching the rail so buttons stay flush.
+:host ::ng-deep .service-form .p-selectbutton {
+  --p-togglebutton-color: var(--p-surface-700);
+  --p-togglebutton-hover-color: var(--p-surface-900);
+  --p-togglebutton-checked-color: #ffffff;
+  --p-togglebutton-content-checked-background: var(--p-primary-color);
+}

@@ -1,11 +1,15 @@
 import { AfterViewInit, Directive, ElementRef, OnDestroy, Optional } from '@angular/core';
 import { NgControl } from '@angular/forms';
-import { parseFlexibleDate } from '../utils/flexible-date.util';
+import { parseAnyFlexibleDate } from '../utils/flexible-date.util';
 
 /**
  * Auto-applies flexible date parsing to every <p-datepicker> in a standalone
- * component that imports this directive. Accepts user-typed dates in
- * DD-MM-YYYY, DD/MM/YYYY, or DDMMYYYY and patches the bound form control on blur.
+ * component that imports this directive. Accepts user-typed dates in any of:
+ *   Full date:  DD-MM-YYYY, DD/MM/YYYY, DDMMYYYY
+ *   Month+year: MM-YYYY, MM/YYYY, MMYYYY
+ *   Year only:  YYYY
+ * Patches the bound form control with a Date on blur (day/month snap to 1 when
+ * the input was partial).
  *
  * Usage: add `FlexibleDateDirective` to the component's `imports: [...]` array.
  * No template changes are required — the directive hooks every p-datepicker inside.
@@ -40,7 +44,7 @@ export class FlexibleDateDirective implements AfterViewInit, OnDestroy {
         // If the datepicker already holds a valid Date, nothing to do.
         const current = control.value;
         if (current instanceof Date && !Number.isNaN(current.getTime())) return;
-        const parsed = parseFlexibleDate(raw);
+        const parsed = parseAnyFlexibleDate(raw);
         if (parsed) {
             control.setValue(parsed);
         }
