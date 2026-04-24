@@ -2,324 +2,209 @@
 
 <div class="form-card">
 
-    <!-- ── Header ─────────────────────────────────────────────────── -->
+    <!-- ── Header ──────────────────────────────────────────────────── -->
     <div class="form-card-header">
         <h3 class="form-card-title">
             <i class="pi pi-arrow-right-arrow-left" style="font-size:1.1rem"></i>
-            {{ editId ? 'Edit' : 'New' }} Permanent Posting (MO Change)
+            {{ editId ? 'Edit' : 'New' }} — Permanent Posting (MO Change)
         </h3>
-        <div class="form-card-actions" *ngIf="editId">
-            <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true"
-                styleClass="form-btn-secondary" (onClick)="onCancel()"></p-button>
-        </div>
+        @if (editId) {
+            <div class="form-card-actions">
+                <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true"
+                    styleClass="form-btn-secondary" (onClick)="onCancel()"></p-button>
+            </div>
+        }
     </div>
 
-    <!-- ── Two-panel body ─────────────────────────────────────────── -->
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; align-items:start;">
-
-        <!-- ══ LEFT PANEL: Posted Out Person ════════════════════════ -->
-        <div>
-
-            <!-- Employee Search -->
-            <div class="form-section">
-                <p class="form-subtitle mb-3" style="font-size:1rem; border-bottom:2px solid var(--primary-color); padding-bottom:0.4rem;">
-                    <i class="pi pi-user-minus mr-2 text-primary"></i>Posted Out Person
-                </p>
-
-                <div class="form-row">
-                    <div class="form-field">
-                        <label class="form-label">Service ID</label>
-                        <input pInputText class="w-full" [(ngModel)]="searchServiceId"
-                            placeholder="Search by Service ID" (keyup.enter)="onSearchPostedOut()" />
-                    </div>
-                    <div class="form-field">
-                        <label class="form-label">RAB ID</label>
-                        <input pInputText class="w-full" [(ngModel)]="searchRabId"
-                            placeholder="Search by RAB ID" (keyup.enter)="onSearchPostedOut()" />
-                    </div>
-                    <div style="display:flex; align-items:flex-end; flex:0 0 auto;">
-                        <p-button icon="pi pi-search" [loading]="searching" (onClick)="onSearchPostedOut()"
-                            styleClass="form-btn-primary" size="small"></p-button>
-                    </div>
-                </div>
-
-                <!-- Employee info card -->
-                <div *ngIf="postedOutEmployee" class="form-summary mt-2">
-                    <p class="form-summary-title mb-2">
-                        <i class="pi pi-id-card mr-1"></i>{{ postedOutEmployee.FullNameEN ?? postedOutEmployee.fullNameEN }}
-                    </p>
-                    <div class="form-summary-row">
-                        <div class="form-summary-item">
-                            <span class="label">Service ID: </span>
-                            <span class="value font-semibold">{{ postedOutEmployee.ServiceId ?? postedOutEmployee.serviceId ?? '-' }}</span>
-                        </div>
-                        <div class="form-summary-item">
-                            <span class="label">RAB ID: </span>
-                            <span class="value font-semibold">{{ postedOutEmployee.RABID ?? '-' }}</span>
-                        </div>
-                        <div class="form-summary-item">
-                            <span class="label">Type: </span>
-                            <span class="value font-semibold">{{ postedOutEmployee.MemberType ?? postedOutEmployee.memberType ?? '-' }}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Posting Order Details -->
-            <div class="form-section">
-                <p class="form-subtitle mb-3" style="font-size:0.9rem; color:var(--text-color-secondary);">
-                    <i class="pi pi-file mr-1"></i>Posting Order Details
-                </p>
-
-                <div class="form-row">
-                    <div class="form-field">
-                        <label class="form-label">Posting Order No</label>
-                        <input pInputText class="w-full" [(ngModel)]="postingOrderNo"
-                            placeholder="Enter posting order number" />
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-field">
-                        <label class="form-label">
-                            Posting Order Date <span class="form-label-required">*</span>
-                        </label>
-                        <p-datepicker [(ngModel)]="postingOrderDate" dateFormat="dd-mm-yy"
-                            placeholder="Select date" appendTo="body" styleClass="w-full"></p-datepicker>
-                    </div>
-                    <div class="form-field">
-                        <label class="form-label">Possible Release Date</label>
-                        <p-datepicker [(ngModel)]="possibleReleaseDate" dateFormat="dd-mm-yy"
-                            placeholder="Select date" appendTo="body" styleClass="w-full"></p-datepicker>
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-field">
-                        <label class="form-label">
-                            Is Reliever? <span class="form-label-required">*</span>
-                        </label>
-                        <p-select [options]="yesNoOptions" [(ngModel)]="isReliever"
-                            optionLabel="label" optionValue="value"
-                            placeholder="Select" styleClass="w-full" appendTo="body"></p-select>
-                    </div>
-                </div>
-
-                <!-- Reliever = No: reason -->
-                <div *ngIf="isReliever === false" class="form-row">
-                    <div class="form-field">
-                        <label class="form-label">Reason (No Reliever)</label>
-                        <input pInputText class="w-full" [(ngModel)]="relieverNotGivenReason"
-                            placeholder="Enter reason" />
-                    </div>
-                </div>
-
-                <!-- Posting Order File -->
-                <div class="form-row">
-                    <div class="form-field">
-                        <label class="form-label">Posting Order Copy</label>
-                        <div class="flex align-items-center gap-2">
-                            <label class="p-button p-button-outlined p-button-sm cursor-pointer"
-                                style="width:fit-content; padding:0.4rem 0.75rem;">
-                                <i class="pi pi-upload mr-1"></i>
-                                {{ uploadingPO ? 'Uploading...' : 'Add File' }}
-                                <input type="file" class="hidden" [disabled]="uploadingPO"
-                                    (change)="onPostingOrderFileChange($event)" />
-                            </label>
-                        </div>
-                        <div *ngIf="postingOrderFiles.length" class="mt-2">
-                            <div *ngFor="let f of postingOrderFiles; let i = index"
-                                class="flex align-items-center gap-2 text-sm mb-1">
-                                <i class="pi pi-file text-primary"></i>
-                                <span>{{ f.fileName }}</span>
-                                <p-button icon="pi pi-times" size="small" severity="danger" [text]="true"
-                                    (onClick)="removeFile(postingOrderFiles, i)"></p-button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Officer-only fields -->
-            <div *ngIf="isOfficer" class="form-section">
-                <p class="form-subtitle mb-3" style="font-size:0.9rem; color:var(--text-color-secondary);">
-                    <i class="pi pi-star mr-1"></i>Officer Clearance
-                </p>
-
-                <div class="form-row">
-                    <div class="form-field">
-                        <label class="form-label">Note-Sheet Clearance</label>
-                        <p-select [options]="yesNoOptions" [(ngModel)]="noteSheetClearance"
-                            optionLabel="label" optionValue="value"
-                            placeholder="Select" styleClass="w-full" appendTo="body"></p-select>
-                    </div>
-                    <div class="form-field">
-                        <label class="form-label">NS Clearance Date</label>
-                        <p-datepicker [(ngModel)]="nsClearanceDate" dateFormat="dd-mm-yy"
-                            placeholder="Select date" appendTo="body" styleClass="w-full"></p-datepicker>
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-field">
-                        <label class="form-label">Clearance Given</label>
-                        <p-select [options]="yesNoOptions" [(ngModel)]="clearanceGiven"
-                            optionLabel="label" optionValue="value"
-                            placeholder="Select" styleClass="w-full" appendTo="body"></p-select>
-                    </div>
-                    <div class="form-field">
-                        <label class="form-label">Clearance Given Date</label>
-                        <p-datepicker [(ngModel)]="clearanceGivenDate" dateFormat="dd-mm-yy"
-                            placeholder="Select date" appendTo="body" styleClass="w-full"></p-datepicker>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-
-        <!-- ══ RIGHT PANEL: New Joining Person ══════════════════════ -->
-        <div>
-
-            <!-- Reliever search (shown only when isReliever = true) -->
-            <div *ngIf="isReliever === true" class="form-section">
-                <p class="form-subtitle mb-3" style="font-size:1rem; border-bottom:2px solid var(--primary-color); padding-bottom:0.4rem;">
-                    <i class="pi pi-user-plus mr-2 text-primary"></i>New Joining Person
-                </p>
-
-                <div class="form-row">
-                    <div class="form-field">
-                        <label class="form-label">Search Reliever</label>
-                        <div class="flex gap-2">
-                            <input pInputText class="flex-1" [(ngModel)]="relieverSearchId"
-                                placeholder="Service ID or RAB ID" (keyup.enter)="onSearchReliever()" />
-                            <p-button icon="pi pi-search" [loading]="relieverSearching"
-                                (onClick)="onSearchReliever()" size="small"></p-button>
-                        </div>
-                        <small class="text-500">Supernumerary / Present / Ex-Member</small>
-                    </div>
-                </div>
-
-                <!-- Found -->
-                <div *ngIf="relieverEmployee" class="form-summary mt-2">
-                    <p class="form-summary-title mb-1">
-                        <i class="pi pi-check-circle mr-1 text-green-600"></i>
-                        <span class="text-green-600">Found: </span>{{ relieverEmployee.FullNameEN ?? relieverEmployee.fullNameEN }}
-                    </p>
-                    <div class="form-summary-row text-sm">
-                        <span class="form-summary-item"><span class="label">Service ID: </span><b>{{ relieverEmployee.ServiceId ?? relieverEmployee.serviceId ?? '-' }}</b></span>
-                        <span class="form-summary-item"><span class="label">RAB ID: </span><b>{{ relieverEmployee.RABID ?? '-' }}</b></span>
-                    </div>
-                </div>
-
-                <!-- Not found -->
-                <div *ngIf="relieverNotFound" class="mt-2 flex align-items-center gap-2">
-                    <i class="pi pi-exclamation-triangle text-orange-500"></i>
-                    <span class="text-orange-500 text-sm">Reliever not found in system.</span>
-                    <p-button label="Add Manually" icon="pi pi-plus" size="small"
-                        [outlined]="true" severity="secondary"
-                        (onClick)="onAddJoineeManually()"></p-button>
-                </div>
-            </div>
-
-            <!-- New Joinee fields (always show panel title when isReliever === false or null) -->
-            <div *ngIf="isReliever !== true" class="form-section">
-                <p class="form-subtitle mb-0" style="font-size:1rem; border-bottom:2px solid var(--primary-color); padding-bottom:0.4rem;">
-                    <i class="pi pi-user-plus mr-2 text-primary"></i>New Joining Person
-                </p>
-                <small class="text-500 d-block mb-3">Select "Yes" for Reliever on the left to search an employee.</small>
-            </div>
-
-            <!-- Joinee detail fields -->
-            <div class="form-section">
-                <p class="form-subtitle mb-3" style="font-size:0.9rem; color:var(--text-color-secondary);">
-                    <i class="pi pi-file-edit mr-1"></i>Joining Details
-                </p>
-
-                <div class="form-row">
-                    <div class="form-field">
-                        <label class="form-label">Service ID</label>
-                        <input pInputText class="w-full" [(ngModel)]="joineeServiceId"
-                            placeholder="Service ID" />
-                    </div>
-                    <div class="form-field">
-                        <label class="form-label">Previous RAB ID</label>
-                        <input pInputText class="w-full" [(ngModel)]="joineePreviousRabId"
-                            placeholder="Previous RAB ID" />
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-field">
-                        <label class="form-label">Name (Bangla)</label>
-                        <input pInputText class="w-full" [(ngModel)]="joineeNameBangla"
-                            placeholder="নাম বাংলায়" />
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-field">
-                        <label class="form-label">Joining Order No</label>
-                        <input pInputText class="w-full" [(ngModel)]="joineeJoiningOrderNo"
-                            placeholder="Joining order number" />
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-field">
-                        <label class="form-label">Joining Order Date</label>
-                        <p-datepicker [(ngModel)]="joineeJoiningOrderDate" dateFormat="dd-mm-yy"
-                            placeholder="Select date" appendTo="body" styleClass="w-full"></p-datepicker>
-                    </div>
-                    <div class="form-field">
-                        <label class="form-label">Possible Joining Date</label>
-                        <p-datepicker [(ngModel)]="joineePossibleJoiningDate" dateFormat="dd-mm-yy"
-                            placeholder="Select date" appendTo="body" styleClass="w-full"></p-datepicker>
-                    </div>
-                </div>
-
-                <!-- Joining Order File -->
-                <div class="form-row">
-                    <div class="form-field">
-                        <label class="form-label">Joining Order Copy</label>
-                        <div class="flex align-items-center gap-2">
-                            <label class="p-button p-button-outlined p-button-sm cursor-pointer"
-                                style="width:fit-content; padding:0.4rem 0.75rem;">
-                                <i class="pi pi-upload mr-1"></i>
-                                {{ uploadingJO ? 'Uploading...' : 'Add File' }}
-                                <input type="file" class="hidden" [disabled]="uploadingJO"
-                                    (change)="onJoineeFileChange($event)" />
-                            </label>
-                        </div>
-                        <div *ngIf="joineeFiles.length" class="mt-2">
-                            <div *ngFor="let f of joineeFiles; let i = index"
-                                class="flex align-items-center gap-2 text-sm mb-1">
-                                <i class="pi pi-file text-primary"></i>
-                                <span>{{ f.fileName }}</span>
-                                <p-button icon="pi pi-times" size="small" severity="danger" [text]="true"
-                                    (onClick)="removeFile(joineeFiles, i)"></p-button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-        </div>
+    <!-- ══ SECTION 1: Posted Out Person ════════════════════════════ -->
+    <div class="form-section">
+        <p class="form-subtitle" style="font-size:1rem; display:flex; align-items:center; gap:0.5rem; border-bottom:2px solid var(--primary-color); padding-bottom:0.5rem; margin-bottom:1rem;">
+            <i class="pi pi-user-minus text-primary"></i> Posted Out Person
+        </p>
+        <app-employee-search
+            [initialEmployeeId]="editPostedOutEmployeeId"
+            (onEmployeeFound)="onPostedOutFound($event)"
+            (onSearchReset)="onPostedOutReset()">
+        </app-employee-search>
     </div>
 
-    <!-- ── Action Buttons ─────────────────────────────────────────── -->
+    <!-- ══ SECTION 2: Posting Order Details ════════════════════════ -->
+    <div class="form-section">
+        <p class="form-subtitle" style="font-size:1rem; display:flex; align-items:center; gap:0.5rem; border-bottom:2px solid var(--surface-border,#dee2e6); padding-bottom:0.5rem; margin-bottom:1rem;">
+            <i class="pi pi-file-edit" style="color:var(--text-color-secondary)"></i>
+            <span style="color:var(--text-color-secondary)">Post Out Details</span>
+        </p>
+
+        <div class="form-row">
+            <div class="form-field">
+                <label class="form-label">Posting Unit</label>
+                <p-select [options]="postingUnitOptions" [(ngModel)]="postingUnitId"
+                    optionLabel="label" optionValue="value"
+                    placeholder="Select posting unit" [filter]="true" filterBy="label"
+                    [showClear]="true" class="w-full" appendTo="body"
+                    [disabled]="!postingUnitOptions.length"></p-select>
+                @if (!postedOutEmployee) {
+                    <small class="text-500">Search a posted-out employee first</small>
+                }
+            </div>
+            <div class="form-field">
+                <label class="form-label">Posting Order No</label>
+                <input pInputText class="w-full" [(ngModel)]="postingOrderNo"
+                    placeholder="Enter posting order number" />
+            </div>
+            <div class="form-field">
+                <label class="form-label">Posting Order Date</label>
+                <p-datepicker [(ngModel)]="postingOrderDate" dateFormat="dd-mm-yy"
+                    placeholder="dd-mm-yyyy" appendTo="body" class="w-full" [inputStyle]="{'width':'100%'}"></p-datepicker>
+            </div>
+            <div class="form-field">
+                <label class="form-label">Possible Release Date</label>
+                <p-datepicker [(ngModel)]="possibleReleaseDate" dateFormat="dd-mm-yy"
+                    placeholder="dd-mm-yyyy" appendTo="body" class="w-full" [inputStyle]="{'width':'100%'}"></p-datepicker>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-field">
+                <label class="form-label">Note-Sheet Clearance</label>
+                <p-select [options]="yesNoOptions" [(ngModel)]="noteSheetClearance"
+                    optionLabel="label" optionValue="value"
+                    placeholder="Select" [showClear]="true" class="w-full" appendTo="body"></p-select>
+            </div>
+            <div class="form-field">
+                <label class="form-label">NS Clearance Date</label>
+                <p-datepicker [(ngModel)]="nsClearanceDate" dateFormat="dd-mm-yy"
+                    placeholder="dd-mm-yyyy" appendTo="body" class="w-full" [inputStyle]="{'width':'100%'}"></p-datepicker>
+            </div>
+            <div class="form-field">
+                <label class="form-label">Clearance Given</label>
+                <p-select [options]="yesNoOptions" [(ngModel)]="clearanceGiven"
+                    optionLabel="label" optionValue="value"
+                    placeholder="Select" [showClear]="true" class="w-full" appendTo="body"></p-select>
+            </div>
+            <div class="form-field">
+                <label class="form-label">Clearance Given Date</label>
+                <p-datepicker [(ngModel)]="clearanceGivenDate" dateFormat="dd-mm-yy"
+                    placeholder="dd-mm-yyyy" appendTo="body" class="w-full" [inputStyle]="{'width':'100%'}"></p-datepicker>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-field" style="max-width:280px;">
+                <label class="form-label">
+                    Is Reliever Assigned? <span class="form-label-required">*</span>
+                </label>
+                <p-select [options]="yesNoOptions" [(ngModel)]="isReliever"
+                    optionLabel="label" optionValue="value"
+                    placeholder="Select Yes / No" [showClear]="true"
+                    class="w-full" appendTo="body"></p-select>
+            </div>
+            @if (isReliever === false) {
+                <div class="form-field">
+                    <label class="form-label">Reason (No Reliever)</label>
+                    <input pInputText class="w-full" [(ngModel)]="relieverNotGivenReason"
+                        placeholder="Enter reason why no reliever is assigned" />
+                </div>
+            }
+        </div>
+
+        <!-- Posting Order Files -->
+        <app-file-references-form
+            #poFileForm
+            [fileRows]="postingOrderFileRows"
+            title="Posting Order Copy"
+            (fileRowsChange)="onPOFileRowsChange($event)"
+            (onDownloadFile)="onDownloadFile($event)">
+        </app-file-references-form>
+    </div>
+
+    <!-- ══ SECTION 4: New Joining Person ═══════════════════════════ -->
+    <div class="form-section">
+        <p class="form-subtitle" style="font-size:1rem; display:flex; align-items:center; gap:0.5rem; border-bottom:2px solid var(--primary-color); padding-bottom:0.5rem; margin-bottom:1rem;">
+            <i class="pi pi-user-plus text-primary"></i> New Joining Person
+        </p>
+
+        @if (isReliever === true) {
+            <div class="mb-3">
+                <label class="form-label">Search Reliever <small class="text-500 font-normal">(Supernumerary / Present / Ex-Member)</small></label>
+                <app-employee-search
+                    [initialEmployeeId]="editRelieverEmployeeId"
+                    (onEmployeeFound)="onRelieverFound($event)"
+                    (onSearchReset)="onRelieverReset()">
+                </app-employee-search>
+            </div>
+        } @else {
+            <div class="mb-3">
+                <small class="text-500">
+                    <i class="pi pi-info-circle mr-1"></i>
+                    Select "Yes" for Reliever above to search a reliever employee, or fill in the joining details manually below.
+                </small>
+            </div>
+        }
+
+        <!-- Joining detail fields -->
+        <div class="form-row">
+            <div class="form-field">
+                <label class="form-label">Service ID</label>
+                <input pInputText class="w-full" [(ngModel)]="joineeServiceId"
+                    placeholder="Service ID" />
+            </div>
+            <div class="form-field">
+                <label class="form-label">Previous RAB ID</label>
+                <input pInputText class="w-full" [(ngModel)]="joineePreviousRabId"
+                    placeholder="Previous RAB ID" />
+            </div>
+            <div class="form-field">
+                <label class="form-label">Name (Bangla)</label>
+                <input pInputText class="w-full" [(ngModel)]="joineeNameBangla"
+                    placeholder="নাম বাংলায়" />
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-field">
+                <label class="form-label">Joining Order No</label>
+                <input pInputText class="w-full" [(ngModel)]="joineeJoiningOrderNo"
+                    placeholder="Joining order number" />
+            </div>
+            <div class="form-field">
+                <label class="form-label">Joining Order Date</label>
+                <p-datepicker [(ngModel)]="joineeJoiningOrderDate" dateFormat="dd-mm-yy"
+                    placeholder="dd-mm-yyyy" appendTo="body" class="w-full" [inputStyle]="{'width':'100%'}"></p-datepicker>
+            </div>
+            <div class="form-field">
+                <label class="form-label">Possible Joining Date</label>
+                <p-datepicker [(ngModel)]="joineePossibleJoiningDate" dateFormat="dd-mm-yy"
+                    placeholder="dd-mm-yyyy" appendTo="body" class="w-full" [inputStyle]="{'width':'100%'}"></p-datepicker>
+            </div>
+        </div>
+
+        <!-- Joining Order Files -->
+        <app-file-references-form
+            #joFileForm
+            [fileRows]="joineeFileRows"
+            title="Joining Order Copy"
+            (fileRowsChange)="onJOFileRowsChange($event)"
+            (onDownloadFile)="onDownloadFile($event)">
+        </app-file-references-form>
+    </div>
+
+    <!-- ── Action Buttons ──────────────────────────────────────────── -->
     <div class="form-actions">
-        <p-button *ngIf="editId" label="Cancel" icon="pi pi-times" severity="secondary"
-            [outlined]="true" styleClass="form-btn-secondary" (onClick)="onCancel()"></p-button>
+        @if (editId) {
+            <p-button label="Cancel" icon="pi pi-times" severity="secondary"
+                [outlined]="true" styleClass="form-btn-secondary" (onClick)="onCancel()"></p-button>
+        }
         <p-button [label]="editId ? 'Update' : 'Save'" icon="pi pi-save"
             [loading]="saving" styleClass="form-btn-primary" (onClick)="onSave()"></p-button>
     </div>
 </div>
 
-<!-- ── Records List ───────────────────────────────────────────── -->
+<!-- ── Records List ────────────────────────────────────────────── -->
 <div class="form-card">
     <div class="form-card-header">
         <h3 class="form-card-title">
-            <i class="pi pi-list mr-2" style="font-size:1rem"></i>Permanent Posting Records
+            <i class="pi pi-list" style="font-size:1rem"></i> Permanent Posting Records
         </h3>
     </div>
 

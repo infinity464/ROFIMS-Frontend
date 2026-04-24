@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
@@ -10,34 +10,41 @@ import { DividerModule } from 'primeng/divider';
 import { TooltipModule } from 'primeng/tooltip';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
+import { forkJoin, of } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
-import { of } from 'rxjs';
 import { EmpService } from '@/services/emp-service';
 import { SharedService } from '@/shared/services/shared-service';
+import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
+import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/file-references-form/file-references-form';
 import { PermanentPostingMORecordService, PermanentPostingMORecordModel } from '@/services/permanent-posting-mo-record.service';
 import { PermanentPostingJoineeDetailService, PermanentPostingJoineeDetailModel } from '@/services/permanent-posting-joinee-detail.service';
-
-interface FileRef { fileId: number; fileName: string; }
+import { OrganizationService } from '@/Components/basic-setup/organization-setup/services/organization-service';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 
 @Component({
     selector: 'app-permanent-posting-mo-record',
     standalone: true,
-    imports: [CommonModule, FormsModule, ButtonModule, InputTextModule, DatePickerModule, SelectModule, TableModule, DividerModule, TooltipModule, Toast],
+    imports: [CommonModule, FormsModule, ButtonModule, InputTextModule, DatePickerModule, SelectModule, TableModule, DividerModule, TooltipModule, Toast, EmployeeSearchComponent, FileReferencesFormComponent, FlexibleDateDirective],
     providers: [MessageService],
     templateUrl: './permanent-posting-mo-record.html'
 })
 export class PermanentPostingMORecordComponent implements OnInit {
 
+    @ViewChild('poFileForm') poFileForm!: FileReferencesFormComponent;
+    @ViewChild('joFileForm') joFileForm!: FileReferencesFormComponent;
+
     editId: number | null = null;
     editDetailId: number | null = null;
     saving = false;
 
-    // Posted Out search
-    searchServiceId = '';
-    searchRabId = '';
-    searching = false;
-    postedOutEmployee: any = null;
+    // Posted Out employee
+    postedOutEmployee: EmployeeBasicInfo | null = null;
+    editPostedOutEmployeeId: number | null = null;
     isOfficer = false;
+
+    // Posting unit dropdown (loaded from posted-out employee's mother org)
+    postingUnitId: number | null = null;
+    postingUnitOptions: { label: string; value: number }[] = [];
 
     // Posted Out fields
     postingOrderNo = '';
@@ -52,16 +59,14 @@ export class PermanentPostingMORecordComponent implements OnInit {
     clearanceGiven: boolean | null = null;
     clearanceGivenDate: Date | null = null;
 
-    postingOrderFiles: FileRef[] = [];
-    uploadingPO = false;
+    // Posting Order files
+    postingOrderFileRows: FileRowData[] = [];
 
-    // Reliever search
-    relieverSearchId = '';
-    relieverSearching = false;
-    relieverEmployee: any = null;
-    relieverNotFound = false;
+    // Reliever / New Joinee employee
+    relieverEmployee: EmployeeBasicInfo | null = null;
+    editRelieverEmployeeId: number | null = null;
 
-    // New Joinee (detail table)
+    // New Joinee detail
     joineeEmployeeId: number | null = null;
     joineeServiceId = '';
     joineePreviousRabId = '';
@@ -69,8 +74,9 @@ export class PermanentPostingMORecordComponent implements OnInit {
     joineeJoiningOrderNo = '';
     joineeJoiningOrderDate: Date | null = null;
     joineePossibleJoiningDate: Date | null = null;
-    joineeFiles: FileRef[] = [];
-    uploadingJO = false;
+
+    // Joining Order files
+    joineeFileRows: FileRowData[] = [];
 
     yesNoOptions = [{ label: 'Yes', value: true }, { label: 'No', value: false }];
 
@@ -82,96 +88,127 @@ export class PermanentPostingMORecordComponent implements OnInit {
         private detailSvc: PermanentPostingJoineeDetailService,
         private empService: EmpService,
         private sharedService: SharedService,
-        private messageService: MessageService
+        private messageService: MessageService,
+        private orgService: OrganizationService
     ) {}
 
     ngOnInit(): void { this.loadList(); }
 
-    onSearchPostedOut(): void {
-        if (!this.searchServiceId.trim() && !this.searchRabId.trim()) {
-            this.messageService.add({ severity: 'warn', summary: 'Search', detail: 'Enter Service ID or RAB ID.' });
-            return;
-        }
-        this.searching = true;
-        this.empService.searchByRabIdOrServiceId(this.searchRabId || undefined, this.searchServiceId || undefined).subscribe({
-            next: (emp) => {
-                this.searching = false;
-                if (!emp) { this.messageService.add({ severity: 'warn', summary: 'Not Found', detail: 'No employee found.' }); return; }
-                this.postedOutEmployee = emp;
-                this.isOfficer = emp.officerType != null && emp.officerType > 0;
+    // ── Employee search events ──────────────────────────────────────
+    onPostedOutFound(employee: EmployeeBasicInfo): void {
+        this.postedOutEmployee = employee;
+        this.isOfficer = (employee as any).officerType != null && (employee as any).officerType > 0;
+
+        this.orgService.getOrgUnitsByEmployeeId(employee.employeeID).subscribe({
+            next: (units) => {
+                this.postingUnitOptions = units.map(u => ({ label: u.orgNameEN, value: u.orgId }));
             },
-            error: () => { this.searching = false; this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Search failed.' }); }
+            error: () => { this.postingUnitOptions = []; }
         });
     }
 
-    onSearchReliever(): void {
-        if (!this.relieverSearchId.trim()) { this.messageService.add({ severity: 'warn', summary: 'Search', detail: 'Enter Service ID or RAB ID.' }); return; }
-        this.relieverSearching = true; this.relieverEmployee = null; this.relieverNotFound = false;
-        this.empService.searchByRabIdOrServiceId(this.relieverSearchId, this.relieverSearchId).subscribe({
-            next: (emp) => {
-                this.relieverSearching = false;
-                if (!emp) { this.relieverNotFound = true; return; }
-                this.relieverEmployee = emp;
-                this.joineeEmployeeId = emp.EmployeeID;
-                this.joineeServiceId = emp.ServiceId ?? '';
-                this.joineePreviousRabId = emp.RABID ?? '';
-                this.joineeNameBangla = emp.FullNameBN ?? '';
-            },
-            error: () => { this.relieverSearching = false; this.relieverNotFound = true; }
+    onPostedOutReset(): void {
+        this.postedOutEmployee = null;
+        this.isOfficer = false;
+        this.postingUnitOptions = [];
+        this.postingUnitId = null;
+    }
+
+    onRelieverFound(employee: EmployeeBasicInfo): void {
+        this.relieverEmployee = employee;
+        this.joineeEmployeeId = employee.employeeID;
+        this.joineeServiceId = employee.serviceId ?? '';
+        this.joineePreviousRabId = employee.rabid ?? '';
+        this.joineeNameBangla = employee.fullNameBN ?? '';
+    }
+
+    onRelieverReset(): void {
+        this.relieverEmployee = null;
+        this.joineeEmployeeId = null;
+        this.joineeServiceId = '';
+        this.joineePreviousRabId = '';
+        this.joineeNameBangla = '';
+    }
+
+    // ── File row change (two-way binding with file-references-form) ─
+    onPOFileRowsChange(rows: FileRowData[]): void { this.postingOrderFileRows = rows; }
+    onJOFileRowsChange(rows: FileRowData[]): void { this.joineeFileRows = rows; }
+
+    // ── Download ────────────────────────────────────────────────────
+    onDownloadFile(payload: { fileId: number; fileName: string }): void {
+        this.empService.downloadFile(payload.fileId).subscribe({
+            next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
+            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file.' })
         });
     }
 
-    onAddJoineeManually(): void { this.relieverNotFound = false; this.joineeEmployeeId = null; this.joineeServiceId = ''; this.joineePreviousRabId = ''; this.joineeNameBangla = ''; }
-
-    onPostingOrderFileChange(e: Event): void {
-        const file = (e.target as HTMLInputElement).files?.[0]; if (!file) return;
-        this.uploadingPO = true;
-        this.empService.uploadEmployeeFile(file).subscribe({
-            next: (r) => { this.postingOrderFiles.push({ fileId: r.fileId, fileName: r.fileName }); this.uploadingPO = false; },
-            error: () => { this.uploadingPO = false; this.messageService.add({ severity: 'error', summary: 'Upload', detail: 'File upload failed.' }); }
-        });
-    }
-
-    onJoineeFileChange(e: Event): void {
-        const file = (e.target as HTMLInputElement).files?.[0]; if (!file) return;
-        this.uploadingJO = true;
-        this.empService.uploadEmployeeFile(file).subscribe({
-            next: (r) => { this.joineeFiles.push({ fileId: r.fileId, fileName: r.fileName }); this.uploadingJO = false; },
-            error: () => { this.uploadingJO = false; this.messageService.add({ severity: 'error', summary: 'Upload', detail: 'File upload failed.' }); }
-        });
-    }
-
-    removeFile(arr: FileRef[], i: number): void { arr.splice(i, 1); }
-
+    // ── Save ────────────────────────────────────────────────────────
     onSave(): void {
         if (!this.postedOutEmployee) { this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Search and select the posted-out employee.' }); return; }
-        if (!this.postingOrderDate) { this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Posting Order Date is required.' }); return; }
         if (this.isReliever === null) { this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Select whether a reliever is assigned.' }); return; }
 
+        this.saving = true;
+
+        const poNewFiles = this.poFileForm?.getFilesToUpload() ?? [];
+        const joNewFiles = this.joFileForm?.getFilesToUpload() ?? [];
+        const poExisting = this.poFileForm?.getExistingFileReferences() ?? [];
+        const joExisting = this.joFileForm?.getExistingFileReferences() ?? [];
+
+        const uploads$ = [
+            ...poNewFiles.map(r => this.empService.uploadEmployeeFile(r.file!)),
+            ...joNewFiles.map(r => this.empService.uploadEmployeeFile(r.file!))
+        ];
+
+        const proceed = (poUploaded: { fileId: number; fileName: string }[], joUploaded: { fileId: number; fileName: string }[]) => {
+            const poRefs = [
+                ...poExisting.map(r => ({ fileId: r.FileId, fileName: r.fileName })),
+                ...poUploaded
+            ];
+            const joRefs = [
+                ...joExisting.map(r => ({ fileId: r.FileId, fileName: r.fileName })),
+                ...joUploaded
+            ];
+            this.doSave(poRefs, joRefs);
+        };
+
+        if (uploads$.length > 0) {
+            forkJoin(uploads$).subscribe({
+                next: (results) => {
+                    proceed(
+                        results.slice(0, poNewFiles.length),
+                        results.slice(poNewFiles.length)
+                    );
+                },
+                error: () => { this.saving = false; this.messageService.add({ severity: 'error', summary: 'Upload', detail: 'File upload failed.' }); }
+            });
+        } else {
+            proceed([], []);
+        }
+    }
+
+    private doSave(poRefs: { fileId: number; fileName: string }[], joRefs: { fileId: number; fileName: string }[]): void {
         const user = this.sharedService.getCurrentUser() ?? 'system';
 
         const mainPayload: Partial<PermanentPostingMORecordModel> = {
             id: this.editId ?? 0,
-            postedOutEmployeeId: this.postedOutEmployee.EmployeeID,
+            postedOutEmployeeId: this.postedOutEmployee!.employeeID,
+            postingUnitId: this.postingUnitId,
             postingOrderNo: this.postingOrderNo || null,
             postingOrderDate: this.formatDate(this.postingOrderDate)!,
             possibleReleaseDate: this.formatDate(this.possibleReleaseDate),
-            isReliever: this.isReliever,
+            isReliever: this.isReliever!,
             relieverNotGivenReason: !this.isReliever ? (this.relieverNotGivenReason || null) : null,
-            relieverEmployeeId: this.isReliever ? (this.relieverEmployee?.EmployeeID ?? null) : null,
+            relieverEmployeeId: this.isReliever ? (this.relieverEmployee?.employeeID ?? null) : null,
             noteSheetClearance: this.isOfficer ? this.noteSheetClearance : null,
             nsClearanceDate: this.isOfficer ? this.formatDate(this.nsClearanceDate) : null,
             clearanceGiven: this.isOfficer ? this.clearanceGiven : null,
             clearanceGivenDate: this.isOfficer ? this.formatDate(this.clearanceGivenDate) : null,
-            postingOrderFilesReferences: this.postingOrderFiles.length ? JSON.stringify(this.postingOrderFiles) : null,
+            postingOrderFilesReferences: poRefs.length ? JSON.stringify(poRefs) : null,
             status: 'Draft',
             createdBy: user,
             lastUpdatedBy: user
         };
 
-        this.saving = true;
-
-        // Step 1: save main → Step 2: save joinee detail with returned Id
         this.recordSvc.saveUpdate(mainPayload).pipe(
             switchMap((res) => {
                 if (res?.statusCode !== 200) return of({ mainRes: res, detailRes: null });
@@ -186,7 +223,7 @@ export class PermanentPostingMORecordComponent implements OnInit {
                     joiningOrderNo: this.joineeJoiningOrderNo || null,
                     joiningOrderDate: this.formatDate(this.joineeJoiningOrderDate),
                     possibleJoiningDate: this.formatDate(this.joineePossibleJoiningDate),
-                    joiningOrderFilesReferences: this.joineeFiles.length ? JSON.stringify(this.joineeFiles) : null,
+                    joiningOrderFilesReferences: joRefs.length ? JSON.stringify(joRefs) : null,
                     createdBy: user,
                     lastUpdatedBy: user
                 };
@@ -203,8 +240,12 @@ export class PermanentPostingMORecordComponent implements OnInit {
         });
     }
 
+    // ── Edit ────────────────────────────────────────────────────────
     onEdit(row: PermanentPostingMORecordModel): void {
         this.editId = row.id;
+        this.editPostedOutEmployeeId = row.postedOutEmployeeId;
+        this.editRelieverEmployeeId = row.relieverEmployeeId ?? null;
+        this.postingUnitId = row.postingUnitId ?? null;
         this.postingOrderNo = row.postingOrderNo ?? '';
         this.postingOrderDate = row.postingOrderDate ? new Date(row.postingOrderDate) : null;
         this.possibleReleaseDate = row.possibleReleaseDate ? new Date(row.possibleReleaseDate) : null;
@@ -214,8 +255,13 @@ export class PermanentPostingMORecordComponent implements OnInit {
         this.nsClearanceDate = row.nsClearanceDate ? new Date(row.nsClearanceDate) : null;
         this.clearanceGiven = row.clearanceGiven ?? null;
         this.clearanceGivenDate = row.clearanceGivenDate ? new Date(row.clearanceGivenDate) : null;
-        this.postingOrderFiles = row.postingOrderFilesReferences ? JSON.parse(row.postingOrderFilesReferences) : [];
-        this.empService.getEmployeeById(row.postedOutEmployeeId).subscribe({ next: (emp) => { this.postedOutEmployee = emp; this.isOfficer = emp?.officerType != null && emp.officerType > 0; } });
+
+        // Convert stored JSON refs → FileRowData[]
+        this.postingOrderFileRows = row.postingOrderFilesReferences
+            ? (JSON.parse(row.postingOrderFilesReferences) as { fileId: number; fileName: string }[])
+                .map(r => ({ displayName: r.fileName, file: null, fileId: r.fileId }))
+            : [];
+
         this.detailSvc.getByRecordId(row.id).subscribe({
             next: (d) => {
                 if (!d) return;
@@ -227,7 +273,10 @@ export class PermanentPostingMORecordComponent implements OnInit {
                 this.joineeJoiningOrderNo = d.joiningOrderNo ?? '';
                 this.joineeJoiningOrderDate = d.joiningOrderDate ? new Date(d.joiningOrderDate) : null;
                 this.joineePossibleJoiningDate = d.possibleJoiningDate ? new Date(d.possibleJoiningDate) : null;
-                this.joineeFiles = d.joiningOrderFilesReferences ? JSON.parse(d.joiningOrderFilesReferences) : [];
+                this.joineeFileRows = d.joiningOrderFilesReferences
+                    ? (JSON.parse(d.joiningOrderFilesReferences) as { fileId: number; fileName: string }[])
+                        .map(r => ({ displayName: r.fileName, file: null, fileId: r.fileId }))
+                    : [];
             }
         });
     }
@@ -259,13 +308,16 @@ export class PermanentPostingMORecordComponent implements OnInit {
 
     resetForm(): void {
         this.editId = null; this.editDetailId = null;
-        this.searchServiceId = ''; this.searchRabId = ''; this.postedOutEmployee = null; this.isOfficer = false;
+        this.editPostedOutEmployeeId = null; this.editRelieverEmployeeId = null;
+        this.postedOutEmployee = null; this.isOfficer = false;
+        this.postingUnitId = null; this.postingUnitOptions = [];
         this.postingOrderNo = ''; this.postingOrderDate = null; this.possibleReleaseDate = null;
         this.isReliever = null; this.relieverNotGivenReason = '';
         this.noteSheetClearance = null; this.nsClearanceDate = null; this.clearanceGiven = null; this.clearanceGivenDate = null;
-        this.postingOrderFiles = [];
-        this.relieverSearchId = ''; this.relieverEmployee = null; this.relieverNotFound = false;
+        this.postingOrderFileRows = [];
+        this.relieverEmployee = null;
         this.joineeEmployeeId = null; this.joineeServiceId = ''; this.joineePreviousRabId = ''; this.joineeNameBangla = '';
-        this.joineeJoiningOrderNo = ''; this.joineeJoiningOrderDate = null; this.joineePossibleJoiningDate = null; this.joineeFiles = [];
+        this.joineeJoiningOrderNo = ''; this.joineeJoiningOrderDate = null; this.joineePossibleJoiningDate = null;
+        this.joineeFileRows = [];
     }
 }

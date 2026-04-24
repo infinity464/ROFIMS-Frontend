@@ -180,6 +180,7 @@ export class NoteSheetNumberConfigComponent implements OnInit {
         const formVal = this.configForm.getRawValue();
         const payload: any = {
             ...existing,
+            memberTypeId: formVal.memberTypeId,
             prefix: formVal.prefix,
             prefixBN: formVal.prefixBN ?? '',
             lastUpdatedBy: this.currentUser,
@@ -221,7 +222,6 @@ export class NoteSheetNumberConfigComponent implements OnInit {
         });
         // Disable fields that should not be changed after creation
         this.configForm.get('noteSheetType')?.disable();
-        this.configForm.get('memberTypeId')?.disable();
         this.configForm.get('startNumber')?.disable();
     }
 
@@ -264,7 +264,6 @@ export class NoteSheetNumberConfigComponent implements OnInit {
         });
         // Re-enable fields that were disabled during edit
         this.configForm.get('noteSheetType')?.enable();
-        this.configForm.get('memberTypeId')?.enable();
         this.configForm.get('startNumber')?.enable();
         this.isEditMode = false;
         this.editingConfigId = 0;
