@@ -20,6 +20,7 @@ import { EmpService } from '@/services/emp-service';
 import { CourseInfoService, CourseInfoModel } from '@/services/course-info-service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
+import { CommonCode } from '@/Components/basic-setup/shared/models/common-code';
 import { SharedService } from '@/shared/services/shared-service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 import { FileReferencesFormComponent, FileRowData } from '@components/Common/file-references-form/file-references-form';
@@ -75,7 +76,10 @@ export class EmpCourseInfoComponent implements OnInit {
 
     fileRows: FileRowData[] = [];
     courseTypeOptions: DropdownOption[] = [];
+    /** Options shown in the form's Course Name dropdown — filtered by the currently selected Course Type. */
     courseNameOptions: DropdownOption[] = [];
+    /** Full Course Name list kept around so the table can resolve labels for rows whose type isn't currently selected. */
+    private allCourseNameOptions: CourseNameOption[] = [];
     trainingInstituteOptions: TrainingInstituteOption[] = [];
     countryOptions: DropdownOption[] = [];
     courseResultOptions: { label: string; value: string }[] = [];
@@ -88,6 +92,16 @@ export class EmpCourseInfoComponent implements OnInit {
     newInstituteCountryId: number | null = null;
     newInstituteLocation = '';
     isSavingInstitute = false;
+
+    // Generic "Add CommonCode" dialog — shared by Course Type, Course Name, and Course Result.
+    showAddCodeDialog = false;
+    addingCodeType: 'CourseType' | 'CourseName' | 'CourseGrade' | null = null;
+    addingCodeTypeLabel = '';
+    /** Captured at open time for Course Name; drives the read-only parent dropdown in the dialog. */
+    addingCodeParentId: number | null = null;
+    newCodeValueEN = '';
+    newCodeValueBN = '';
+    isSavingCode = false;
 
     constructor(
         private empService: EmpService,
@@ -116,6 +130,16 @@ export class EmpCourseInfoComponent implements OnInit {
                 },
                 { emitEvent: false }
             );
+        });
+        this.courseForm.get('courseType')?.valueChanges.subscribe((courseTypeId: number | null) => {
+            this.courseNameOptions = courseTypeId != null
+                ? this.allCourseNameOptions.filter((o) => o.parentCodeId === courseTypeId)
+                : [];
+            // Clear the selected Course Name if it no longer belongs to the new Course Type.
+            const currentName = this.courseForm.get('courseName')?.value;
+            if (currentName != null && !this.courseNameOptions.some((o) => o.value === currentName)) {
+                this.courseForm.get('courseName')?.setValue(null);
+            }
         });
         if (this.embedMode && this.externalEmployeeId != null) {
             this.mode = 'edit';
@@ -157,7 +181,7 @@ export class EmpCourseInfoComponent implements OnInit {
                 this.courseResultSuggestions = strOpts;
             }
         });
-        const codeTypes = ['CourseType', 'CourseName', 'Country'];
+        const codeTypes = ['CourseType', 'Country'];
         codeTypes.forEach((codeType) => {
             this.commonCodeService.getAllActiveCommonCodesType(codeType).subscribe({
                 next: (data) => {
@@ -169,15 +193,29 @@ export class EmpCourseInfoComponent implements OnInit {
                         case 'CourseType':
                             this.courseTypeOptions = opts;
                             break;
-                        case 'CourseName':
-                            this.courseNameOptions = opts;
-                            break;
                         case 'Country':
                             this.countryOptions = opts;
                             break;
                     }
                 }
             });
+        });
+        // Course Name depends on Course Type via parentCodeId. Fetch the full list once (kept in
+        // allCourseNameOptions for table label resolution) and let the courseType valueChanges
+        // subscriber filter it into courseNameOptions for the form dropdown.
+        this.commonCodeService.getAllActiveCommonCodesType('CourseName').subscribe({
+            next: (data) => {
+                this.allCourseNameOptions = (data || []).map((d: any) => ({
+                    label: d.codeValueEN || d.displayCodeValueEN || String(d.codeId),
+                    value: d.codeId,
+                    parentCodeId: d.parentCodeId ?? null
+                }));
+                // If a Course Type is already selected (edit flow), populate the filtered list now.
+                const currentType: number | null = this.courseForm.get('courseType')?.value ?? null;
+                if (currentType != null) {
+                    this.courseNameOptions = this.allCourseNameOptions.filter((o) => o.parentCodeId === currentType);
+                }
+            }
         });
         // Training Institute: include location and countryId for auto-load in form
         this.masterBasicSetupService.getAllInstitute().subscribe({
@@ -274,6 +312,11 @@ export class EmpCourseInfoComponent implements OnInit {
         if (value == null) return 'N/A';
         const o = options.find((x) => x.value === value);
         return o ? o.label : 'N/A';
+    }
+
+    /** Table label lookup for Course Name — uses the full (unfiltered) list so rows of any Course Type resolve. */
+    getCourseNameLabel(value: number | null): string {
+        return this.getOptionLabel(this.allCourseNameOptions, value);
     }
 
     /** Location: read-only from Training Institute */
@@ -487,6 +530,113 @@ export class EmpCourseInfoComponent implements OnInit {
         this.newInstituteCountryId = null;
         this.newInstituteLocation = '';
         this.showInstituteDialog = true;
+    }
+
+    /** + button next to Course Type — open shared dialog in CourseType mode. */
+    openAddCourseTypeDialog(): void {
+        this.openAddCodeDialog('CourseType', 'Course Type');
+    }
+
+    /** + button next to Course Name — requires a Course Type to be selected so the new code has a parent. */
+    openAddCourseNameDialog(): void {
+        const courseTypeId: number | null = this.courseForm.get('courseType')?.value ?? null;
+        if (courseTypeId == null) {
+            this.messageService.add({ severity: 'warn', summary: 'Select Course Type', detail: 'Please select a Course Type before adding a Course Name.' });
+            return;
+        }
+        this.addingCodeParentId = courseTypeId;
+        this.openAddCodeDialog('CourseName', 'Course Name');
+    }
+
+    /** + button next to Course Result — Course Grade CommonCode. */
+    openAddCourseResultDialog(): void {
+        this.openAddCodeDialog('CourseGrade', 'Course Result');
+    }
+
+    private openAddCodeDialog(codeType: 'CourseType' | 'CourseName' | 'CourseGrade', label: string): void {
+        this.addingCodeType = codeType;
+        this.addingCodeTypeLabel = label;
+        if (codeType !== 'CourseName') this.addingCodeParentId = null;
+        this.newCodeValueEN = '';
+        this.newCodeValueBN = '';
+        this.showAddCodeDialog = true;
+    }
+
+    saveNewCommonCode(): void {
+        if (!this.addingCodeType || !this.newCodeValueEN?.trim()) return;
+        this.isSavingCode = true;
+        const currentUser = this.sharedService.getCurrentUser();
+        const nowIso = new Date().toISOString();
+        const payload: CommonCode = {
+            orgId: 0,
+            codeId: 0,
+            codeType: this.addingCodeType,
+            codeValueEN: this.newCodeValueEN.trim(),
+            codeValueBN: this.newCodeValueBN?.trim() || null,
+            commCode: null,
+            displayCodeValueEN: null,
+            displayCodeValueBN: null,
+            status: true,
+            parentCodeId: this.addingCodeType === 'CourseName' ? this.addingCodeParentId : null,
+            sortOrder: null,
+            level: null,
+            createdBy: currentUser,
+            createdDate: nowIso,
+            lastUpdatedBy: currentUser,
+            lastupdate: nowIso
+        };
+        const savedCodeType = this.addingCodeType;
+        const savedLabel = this.addingCodeTypeLabel;
+        const savedValueEN = payload.codeValueEN;
+        this.masterBasicSetupService.create(payload).subscribe({
+            next: (res: any) => {
+                this.messageService.add({ severity: 'success', summary: 'Success', detail: `${savedLabel} created successfully` });
+                const newId: number | undefined = res?.codeId ?? res?.CodeId;
+                this.reloadCodesAfterSave(savedCodeType, newId, savedValueEN);
+                this.showAddCodeDialog = false;
+                this.isSavingCode = false;
+            },
+            error: () => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: `Failed to create ${savedLabel}` });
+                this.isSavingCode = false;
+            }
+        });
+    }
+
+    /** Reload the affected dropdown after a new CommonCode is saved, then auto-select the new entry. */
+    private reloadCodesAfterSave(codeType: 'CourseType' | 'CourseName' | 'CourseGrade', newId: number | undefined, newValueEN: string): void {
+        this.commonCodeService.getAllActiveCommonCodesType(codeType).subscribe({
+            next: (data) => {
+                if (codeType === 'CourseType') {
+                    this.courseTypeOptions = (data || []).map((d: any) => ({
+                        label: d.codeValueEN || d.displayCodeValueEN || String(d.codeId),
+                        value: d.codeId
+                    }));
+                    if (newId != null) this.courseForm.patchValue({ courseType: newId });
+                } else if (codeType === 'CourseName') {
+                    this.allCourseNameOptions = (data || []).map((d: any) => ({
+                        label: d.codeValueEN || d.displayCodeValueEN || String(d.codeId),
+                        value: d.codeId,
+                        parentCodeId: d.parentCodeId ?? null
+                    }));
+                    const currentType: number | null = this.courseForm.get('courseType')?.value ?? null;
+                    if (currentType != null) {
+                        this.courseNameOptions = this.allCourseNameOptions.filter((o) => o.parentCodeId === currentType);
+                    }
+                    if (newId != null) this.courseForm.patchValue({ courseName: newId });
+                } else if (codeType === 'CourseGrade') {
+                    const strOpts = (data || []).map((d: any) => ({
+                        label: d.codeValueEN || d.displayCodeValueEN || String(d.codeId),
+                        value: (d.codeValueEN || d.displayCodeValueEN || String(d.codeId)) as string
+                    }));
+                    this.courseResultOptions = strOpts;
+                    this.courseResultSuggestions = strOpts;
+                    // Course Result is stored as a string; select the one that matches the newly added English value.
+                    const added = strOpts.find((o) => o.label === newValueEN);
+                    if (added) this.courseForm.patchValue({ result: added.value });
+                }
+            }
+        });
     }
 
     saveNewInstitute(): void {
