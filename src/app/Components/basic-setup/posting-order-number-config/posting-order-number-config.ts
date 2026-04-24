@@ -33,6 +33,8 @@ export class PostingOrderNumberConfigComponent implements OnInit {
         { label: 'Inter Posting', value: 'InterPosting' }
     ];
 
+    memberTypeOptions: { label: string; value: number }[] = [];
+
     currentUser: string = '';
 
     // Pagination
@@ -54,12 +56,16 @@ export class PostingOrderNumberConfigComponent implements OnInit {
         this.currentUser = this.sharedService.getCurrentUser();
         this.initForm();
         this.getAll();
+        this.masterBasicSetupService.getAllByType('EmployeeType').subscribe(res => {
+            this.memberTypeOptions = res.map(r => ({ label: r.codeValueEN, value: r.codeId }));
+        });
     }
 
     initForm() {
         this.configForm = this.fb.group({
             configId: [0],
             postingType: [null, Validators.required],
+            memberTypeId: [null, Validators.required],
             prefix: [null, Validators.required],
             prefixBN: [null, Validators.required],
             startNumber: [null, [Validators.required, Validators.min(1)]]
@@ -206,13 +212,19 @@ export class PostingOrderNumberConfigComponent implements OnInit {
         this.configForm.patchValue({
             configId: row.configId,
             postingType: row.postingType,
+            memberTypeId: row.memberTypeId,
             prefix: row.prefix,
             prefixBN: row.prefixBN ?? '',
             startNumber: row.startNumber
         });
         // Disable fields that should not be changed after creation
         this.configForm.get('postingType')?.disable();
+        this.configForm.get('memberTypeId')?.disable();
         this.configForm.get('startNumber')?.disable();
+    }
+
+    getMemberTypeLabel(id: number): string {
+        return this.memberTypeOptions.find(o => o.value === id)?.label ?? '-';
     }
 
     onDelete(row: PostingOrderNumberConfigModel) {
@@ -243,12 +255,14 @@ export class PostingOrderNumberConfigComponent implements OnInit {
         this.configForm.reset({
             configId: 0,
             postingType: null,
+            memberTypeId: null,
             prefix: null,
             prefixBN: null,
             startNumber: null
         });
         // Re-enable fields that were disabled during edit
         this.configForm.get('postingType')?.enable();
+        this.configForm.get('memberTypeId')?.enable();
         this.configForm.get('startNumber')?.enable();
         this.isEditMode = false;
         this.editingConfigId = 0;

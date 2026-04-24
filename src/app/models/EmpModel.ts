@@ -2,6 +2,8 @@ export interface EmpModel {
     EmployeeID: number;
     LastMotherUnit: number | null;
     MemberType: string;
+    MemberTypeId?: number | null;
+    officerType?: number | null;
     Appointment: string;
     JoiningDate: Date | string;
     Rank: number;

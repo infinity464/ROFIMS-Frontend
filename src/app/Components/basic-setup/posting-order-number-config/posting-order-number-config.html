@@ -26,6 +26,27 @@
                     }
                 </div>
 
+                <!-- Member Type -->
+                <div class="field">
+                    <label for="memberTypeId" class="block mb-2">
+                        Member Type <span class="text-red-500">*</span>
+                    </label>
+                    <p-select
+                        id="memberTypeId"
+                        formControlName="memberTypeId"
+                        [options]="memberTypeOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Select Member Type"
+                        class="w-full">
+                    </p-select>
+                    @if (configForm.get('memberTypeId')?.invalid && configForm.get('memberTypeId')?.touched) {
+                        <small class="text-red-500 block mt-1">
+                            Member Type is required
+                        </small>
+                    }
+                </div>
+
                 <!-- Prefix (English) -->
                 <div class="field">
                     <label for="prefix" class="block mb-2">
@@ -138,6 +159,7 @@
             <tr>
                 <th style="width:5%">#</th>
                 <th>Posting Type</th>
+                <th>Member Type</th>
                 <th>Prefix (EN)</th>
                 <th>Prefix (BN)</th>
                 <th>Start Number</th>
@@ -153,6 +175,7 @@
             <tr>
                 <td>{{ first + rowIndex + 1 }}</td>
                 <td>{{ row.postingType }}</td>
+                <td>{{ getMemberTypeLabel(row.memberTypeId) }}</td>
                 <td>{{ row.prefix }}</td>
                 <td>{{ row.prefixBN || '-' }}</td>
                 <td>{{ row.startNumber }}</td>
@@ -178,7 +201,7 @@
 
         <ng-template pTemplate="emptymessage">
             <tr>
-                <td colspan="10" class="text-center">No configurations found.</td>
+                <td colspan="11" class="text-center">No configurations found.</td>
             </tr>
         </ng-template>
 
