@@ -474,8 +474,10 @@ export class EmpPreviousRabService implements OnInit {
                 rabSubSectionCodeId: v.rabSubSectionCodeId ?? null,
                 serviceFrom,
                 serviceTo,
-                serviceFromPrecision: serviceFrom ? dbPrecision : null,
-                serviceToPrecision: serviceTo ? dbPrecision : null,
+                // Store the selected precision on BOTH columns regardless of whether the date is set.
+                // If a user later fills in the To date, the precision already matches the row's intent.
+                serviceFromPrecision: dbPrecision,
+                serviceToPrecision: dbPrecision,
                 isCurrentlyActive: v.isCurrentlyActive === true,
                 appointment: v.appointment ?? null,
                 postingAuth: v.postingAuth || null,

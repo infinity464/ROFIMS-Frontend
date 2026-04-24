@@ -67,14 +67,46 @@
                                         <input pInputText formControlName="locationName" class="w-full" placeholder="Location name" />
                                     </div>
                                 </div>
+                                <div class="mb-4">
+                                    <label class="font-semibold block mb-2 text-700">Date precision</label>
+                                    <p-selectButton
+                                        formControlName="precision"
+                                        [options]="precisionOptions"
+                                        optionLabel="label"
+                                        optionValue="value"
+                                        [allowEmpty]="false"></p-selectButton>
+                                </div>
                                 <div class="form-row flex gap-3 mb-4">
                                     <div class="form-field flex-1">
-                                        <label class="font-semibold block mb-2 text-700">From</label>
-                                        <p-datepicker formControlName="serviceFrom" dateFormat="dd-mm-yy" [showIcon]="true" placeholder="From" styleClass="w-full" [style]="{'width': '100%'}" appendTo="body"></p-datepicker>
+                                        <label class="font-semibold block mb-2 text-700">From&#32;*</label>
+                                        @switch (serviceForm.get('precision')?.value) {
+                                            @case ('year') {
+                                                <p-datepicker formControlName="serviceFrom" view="year" dateFormat="yy" [showIcon]="true" placeholder="YYYY" styleClass="w-full" [style]="{'width': '100%'}" appendTo="body"></p-datepicker>
+                                            }
+                                            @case ('month-year') {
+                                                <p-datepicker formControlName="serviceFrom" view="month" dateFormat="mm-yy" [showIcon]="true" placeholder="MM-YYYY" styleClass="w-full" [style]="{'width': '100%'}" appendTo="body"></p-datepicker>
+                                            }
+                                            @default {
+                                                <p-datepicker formControlName="serviceFrom" dateFormat="dd-mm-yy" [showIcon]="true" placeholder="DD-MM-YYYY" styleClass="w-full" [style]="{'width': '100%'}" appendTo="body"></p-datepicker>
+                                            }
+                                        }
                                     </div>
                                     <div class="form-field flex-1">
                                         <label class="font-semibold block mb-2 text-700">To</label>
-                                        <p-datepicker formControlName="serviceTo" dateFormat="dd-mm-yy" [showIcon]="true" placeholder="To" styleClass="w-full" [style]="{'width': '100%'}" appendTo="body"></p-datepicker>
+                                        @switch (serviceForm.get('precision')?.value) {
+                                            @case ('year') {
+                                                <p-datepicker formControlName="serviceTo" view="year" dateFormat="yy" [showIcon]="true" placeholder="YYYY" styleClass="w-full" [style]="{'width': '100%'}" appendTo="body"></p-datepicker>
+                                            }
+                                            @case ('month-year') {
+                                                <p-datepicker formControlName="serviceTo" view="month" dateFormat="mm-yy" [showIcon]="true" placeholder="MM-YYYY" styleClass="w-full" [style]="{'width': '100%'}" appendTo="body"></p-datepicker>
+                                            }
+                                            @default {
+                                                <p-datepicker formControlName="serviceTo" dateFormat="dd-mm-yy" [showIcon]="true" placeholder="DD-MM-YYYY" styleClass="w-full" [style]="{'width': '100%'}" appendTo="body"></p-datepicker>
+                                            }
+                                        }
+                                        @if (toRangeInvalid) {
+                                            <small class="block mt-1" style="color: var(--red-500);">To date must be on or after From date.</small>
+                                        }
                                     </div>
                                 </div>
                                 <div class="form-row flex gap-3 mb-4">
@@ -134,8 +166,8 @@
                                 <td class="text-center font-semibold">{{ i + 1 }}</td>
                                 <td>{{ getOrgUnitLabel(row.orgUnitId) }}</td>
                                 <td>{{ row.locationName || '—' }}</td>
-                                <td>{{ formatYearOnly(row.serviceFrom) }}</td>
-                                <td>{{ formatYearOnly(row.serviceTo) }}</td>
+                                <td>{{ row.serviceFrom | partialDate: row.servicePrecision }}</td>
+                                <td>{{ row.serviceTo | partialDate: row.servicePrecision }}</td>
                                 <td>{{ getOptionLabel(appointmentOptions, row.appointment) }}</td>
                                 <td>{{ row.auth || '—' }}</td>
                                 <td>{{ row.remarks || '—' }}</td>
