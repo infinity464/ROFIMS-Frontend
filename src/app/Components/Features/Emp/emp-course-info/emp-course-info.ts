@@ -30,6 +30,10 @@ interface DropdownOption {
     value: number;
 }
 
+interface CourseNameOption extends DropdownOption {
+    parentCodeId: number | null;
+}
+
 interface TrainingInstituteOption extends DropdownOption {
     location: string;
     countryId: number | null;
