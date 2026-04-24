@@ -114,27 +114,20 @@
                             styleClass="w-full">
                         </p-datepicker>
                     </div>
-                    <div class="report-filter-field report-filter-field-date">
-                        <label>Date of join in RAB from</label>
-                        <p-datepicker
-                            [(ngModel)]="joiningDateInRABFrom"
+                    <div class="report-filter-field">
+                        <label>Posting Status</label>
+                        <p-select
+                            id="postingStatus"
+                            [options]="postingStatusOptions"
+                            [(ngModel)]="selectedPostingStatus"
                             (ngModelChange)="onFilterChange()"
-                            dateFormat="dd-mm-yy"
-                            placeholder="From"
-                            appendTo="body"
-                            styleClass="w-full">
-                        </p-datepicker>
-                    </div>
-                    <div class="report-filter-field report-filter-field-date">
-                        <label>Date of join in RAB to</label>
-                        <p-datepicker
-                            [(ngModel)]="joiningDateInRABTo"
-                            (ngModelChange)="onFilterChange()"
-                            dateFormat="dd-mm-yy"
-                            placeholder="To"
-                            appendTo="body"
-                            styleClass="w-full">
-                        </p-datepicker>
+                            optionLabel="label"
+                            optionValue="value"
+                            placeholder="Select"
+                            styleClass="w-full"
+                            [showClear]="true"
+                            appendTo="body">
+                        </p-select>
                     </div>
                 </div>
 
@@ -165,6 +158,21 @@
                 <span class="report-results-count">{{ filteredList.length }} record(s)</span>
             </div>
             <div class="report-results-actions">
+                @if (selectedCount > 0) {
+                    <button type="button"
+                        class="report-btn-secondary report-btn-blue report-btn-send-selected"
+                        [disabled]="isSendingSelection"
+                        (click)="sendSelectedToPosting()">
+                        <i class="pi pi-send" style="margin-right: 6px;"></i>
+                        Send {{ selectedCount }} to Posting
+                    </button>
+                    <button type="button"
+                        class="report-btn-secondary"
+                        [disabled]="isSendingSelection"
+                        (click)="clearSelection()">
+                        Clear
+                    </button>
+                }
                 <div class="report-search-wrap">
                     <span class="report-search-icon">
                         <i class="pi pi-search"></i>
@@ -197,6 +205,7 @@
                 [showCurrentPageReport]="false">
                 <ng-template pTemplate="header">
                     <tr>
+                        <th style="width: 2.5rem"></th>
                         <th>Ser</th>
                         <th>Service ID</th>
                         <th>Rank</th>
@@ -205,12 +214,21 @@
                         <th>Name</th>
                         <th>Mother Unit</th>
                         <th>Date of Join in RAB</th>
-                        <th>Reliever Svc ID</th>
+                        <th>RAB ID</th>
                         <th>Action</th>
                     </tr>
                 </ng-template>
                 <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                     <tr>
+                        <td>
+                            <input #cb type="checkbox"
+                                class="report-row-checkbox"
+                                [checked]="isRowSelected(row)"
+                                [disabled]="!isSelectable(row) || isSendingSelection"
+                                (change)="onRowSelectionChange(row, cb.checked); cb.checked = isRowSelected(row)"
+                                [pTooltip]="isSelectable(row) ? '' : 'Already in posting list'"
+                                tooltipPosition="top" />
+                        </td>
                         <td><span class="report-ser-num">{{ rowIndex + 1 }}</span></td>
                         <td style="white-space: nowrap"><span class="font-semibold">{{ row.prefixName ? row.prefixName + " - " : "" }}{{ row.serviceId || '—' }}</span></td>
                         <td>{{ row.rankName || '—' }}</td>
@@ -231,13 +249,16 @@
                             }
                         </td>
                         <td>{{ formatDate(row.joiningDate) }}</td>
-                        <td style="white-space: nowrap">{{ row.relieverId ? (row.relieverPrefixName ? row.relieverPrefixName + " - " : "") + (row.relieverServiceId || '—') : '—' }}</td>
+                        <td style="white-space: nowrap">{{ rabIdOf(row) || '—' }}</td>
                         <td>
                             <span class="report-action-buttons">
                                 <a [routerLink]="['/supernumerary-profile', row.employeeID]" class="report-link-profile">
                                     <i class="pi pi-user"></i> Profile
                                 </a>
-                                <button type="button" class="report-btn-secondary" [disabled]="isSendPostingListDisabled(row)"
+                                <button type="button"
+                                    class="report-btn-secondary"
+                                    [ngClass]="getSendPostingListClass(row)"
+                                    [disabled]="isSendPostingListDisabled(row)"
                                     (click)="onSendNewPostingList(row)">
                                     {{ getSendPostingListLabel(row) }}
                                 </button>
@@ -247,7 +268,7 @@
                 </ng-template>
                 <ng-template pTemplate="emptymessage">
                     <tr>
-                        <td colspan="10" class="text-center p-4">No records found.</td>
+                        <td colspan="11" class="text-center p-4">No records found.</td>
                     </tr>
                 </ng-template>
             </p-table>
