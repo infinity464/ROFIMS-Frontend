@@ -16,6 +16,8 @@ export interface VwPreviousRABServiceInfoModel {
     rabSubSectionCodeId?: number | null;
     serviceFrom?: string | null;
     serviceTo?: string | null;
+    serviceFromPrecision?: 'D' | 'M' | 'Y' | null;
+    serviceToPrecision?: 'D' | 'M' | 'Y' | null;
     appointment?: number | null;
     postingAuth?: string | null;
     remarks?: string | null;
@@ -57,6 +59,8 @@ export interface PreviousRABServiceInfoModel {
     rabSubSectionCodeId?: number | null;
     serviceFrom?: string | null;
     serviceTo?: string | null;
+    serviceFromPrecision?: 'D' | 'M' | 'Y' | null;
+    serviceToPrecision?: 'D' | 'M' | 'Y' | null;
     isCurrentlyActive?: boolean;
     appointment?: number | null;
     postingAuth?: string | null;
@@ -128,6 +132,8 @@ export class PreviousRABServiceService {
             rabSubSectionCodeId: payload.rabSubSectionCodeId ?? null,
             serviceFrom: payload.serviceFrom ?? null,
             serviceTo: payload.serviceTo ?? null,
+            serviceFromPrecision: payload.serviceFromPrecision ?? null,
+            serviceToPrecision: payload.serviceToPrecision ?? null,
             isCurrentlyActive: payload.isCurrentlyActive === true,
             appointment: payload.appointment ?? null,
             postingAuth: payload.postingAuth ?? null,

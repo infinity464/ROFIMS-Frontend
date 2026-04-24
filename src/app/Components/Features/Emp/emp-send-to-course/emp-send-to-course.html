@@ -28,11 +28,11 @@
             </div>
             <div class="w-full">
                 <label class="font-semibold block mb-2 text-700">From</label>
-                <p-datepicker formControlName="dateFrom" dateFormat="dd/mm/yy" [showIcon]="true" styleClass="w-full" [style]="{'width': '100%'}" placeholder="From"></p-datepicker>
+                <p-datepicker formControlName="dateFrom" dateFormat="dd-mm-yy" [showIcon]="true" styleClass="w-full" [style]="{'width': '100%'}" placeholder="From"></p-datepicker>
             </div>
             <div class="w-full">
                 <label class="font-semibold block mb-2 text-700">To</label>
-                <p-datepicker formControlName="dateTo" dateFormat="dd/mm/yy" [showIcon]="true" styleClass="w-full" [style]="{'width': '100%'}" placeholder="To"></p-datepicker>
+                <p-datepicker formControlName="dateTo" dateFormat="dd-mm-yy" [showIcon]="true" styleClass="w-full" [style]="{'width': '100%'}" placeholder="To"></p-datepicker>
             </div>
             <div>
                 <label class="font-semibold block mb-2 text-700">Course Result</label>
@@ -115,11 +115,11 @@
                         </div>
                         <div style="min-width: 180px; max-width: 220px;">
                             <label class="font-semibold block mb-2 text-700">From</label>
-                            <p-datepicker [(ngModel)]="draftDateFrom" dateFormat="dd/mm/yy" [showIcon]="true" placeholder="From" styleClass="w-full" [style]="{'width': '100%'}"></p-datepicker>
+                            <p-datepicker [(ngModel)]="draftDateFrom" dateFormat="dd-mm-yy" [showIcon]="true" placeholder="From" styleClass="w-full" [style]="{'width': '100%'}"></p-datepicker>
                         </div>
                         <div style="min-width: 180px; max-width: 220px;">
                             <label class="font-semibold block mb-2 text-700">To</label>
-                            <p-datepicker [(ngModel)]="draftDateTo" dateFormat="dd/mm/yy" [showIcon]="true" placeholder="To" styleClass="w-full" [style]="{'width': '100%'}"></p-datepicker>
+                            <p-datepicker [(ngModel)]="draftDateTo" dateFormat="dd-mm-yy" [showIcon]="true" placeholder="To" styleClass="w-full" [style]="{'width': '100%'}"></p-datepicker>
                         </div>
                     </div>
                     <!-- Filter section (same structure as ex-members list filter) -->
@@ -143,8 +143,8 @@
                         <div class="filter-row">
                             <label class="filter-label">Search by Date of Joining:</label>
                             <div class="filter-inputs">
-                                <p-datepicker [(ngModel)]="filterDateFrom" placeholder="From" dateFormat="dd/mm/yy" class="filter-input filter-date"></p-datepicker>
-                                <p-datepicker [(ngModel)]="filterDateTo" placeholder="To" dateFormat="dd/mm/yy" class="filter-input filter-date"></p-datepicker>
+                                <p-datepicker [(ngModel)]="filterDateFrom" placeholder="From" dateFormat="dd-mm-yy" class="filter-input filter-date"></p-datepicker>
+                                <p-datepicker [(ngModel)]="filterDateTo" placeholder="To" dateFormat="dd-mm-yy" class="filter-input filter-date"></p-datepicker>
                             </div>
                         </div>
                         <div class="filter-row filter-actions">

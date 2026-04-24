@@ -65,6 +65,7 @@
                 <div class="core-row core-row-four">
                     <span class="detail-item"><span class="detail-label">{{ L['field.corps'] }} </span> <span class="detail-value">{{ codeValue(profile.corps, profile.corpsBN) }}</span></span>
                     <span class="detail-item"><span class="detail-label">{{ L['field.trade'] }} </span> <span class="detail-value">{{ tradeDisplay(profile) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">{{ L['field.specialQualification'] }} </span> <span class="detail-value">{{ codeValue(profile.specialQualifications, profile.specialQualificationsBN) }}</span></span>
                     <span class="detail-item"><span class="detail-label">{{ L['field.dateOfCommission'] }} </span> <span class="detail-value">{{ formatDateDisplay(profile.dateOfCommission) }}</span></span>
                 </div>
                 <div class="core-row core-row-three">
@@ -72,9 +73,10 @@
                     <span class="detail-item"><span class="detail-label">{{ L['field.motherUnit'] }} </span> <span class="detail-value">{{ codeValue(profile.motherUnit, profile.motherUnitBN) }}</span></span>
                     <span class="detail-item"><span class="detail-label">{{ L['field.location'] }} </span> <span class="detail-value">{{ codeValue(profile.location, profile.locationBN) }}</span></span>
                 </div>
-                <div class="core-row">
+                <div class="core-row core-row-three">
                     <span class="detail-item"><span class="detail-label">{{ L['field.rabUnit'] }} </span> <span class="detail-value">{{ codeValue(profile.rabUnit, profile.rabUnitBN) }}</span></span>
                     <span class="detail-item"><span class="detail-label">{{ L['field.joiningDate'] }} </span> <span class="detail-value">{{ formatDateDisplay(profile.joiningDate) }}</span></span>
+                    <span class="detail-item"><span class="detail-label">{{ L['field.maritalStatus'] }} </span> <span class="detail-value">{{ codeValue(profile.maritalStatus, profile.maritalStatusBN) }}</span></span>
                 </div>
             </div>
         </div>
@@ -163,9 +165,8 @@
                     <span class="detail-item"><span class="detail-label">{{ L['field.mobileNo'] }} </span> <span class="detail-value">{{ valDisplay(profile.mobileNo) }}</span></span>
                     <span class="detail-item"><span class="detail-label">{{ L['field.emergencyContactNo'] }} </span> <span class="detail-value">{{ valDisplay(profile.emergencyContactNo) }}</span></span>
                 </div>
-                <div class="core-row core-row-four">
+                <div class="core-row core-row-three">
                     <span class="detail-item"><span class="detail-label">{{ L['field.religion'] }} </span> <span class="detail-value">{{ codeValue(profile.religion, profile.religionBN) }}</span></span>
-                    <span class="detail-item"><span class="detail-label">{{ L['field.maritalStatus'] }} </span> <span class="detail-value">{{ codeValue(profile.maritalStatus, profile.maritalStatusBN) }}</span></span>
                     <span class="detail-item"><span class="detail-label">{{ L['field.weight'] }} </span> <span class="detail-value">{{ weightDisplay(profile) }}</span></span>
                 </div>
                 <div class="core-row core-row-full">
@@ -274,8 +275,8 @@
                         <tr>
                             <td>{{ rowNum(rowIndex) }}.</td>
                             <td>{{ codeValue(row.rabUnitName, row.rabUnitNameBN) }}</td>
-                            <td>{{ formatDateOnly(row.serviceFrom) }}</td>
-                            <td>{{ formatDateOnly(row.serviceTo) }}</td>
+                            <td>{{ row.serviceFrom | partialDate: row.serviceFromPrecision }}</td>
+                            <td>{{ row.serviceTo | partialDate: row.serviceToPrecision }}</td>
                             <td>{{ codeValue(row.appointmentName, row.appointmentNameBN) }}</td>
                             <td>{{ val(row.postingAuth) }}</td>
                             <td>{{ val(row.remarks) }}</td>
@@ -314,8 +315,8 @@
                         <tr>
                             <td>{{ rowNum(rowIndex) }}.</td>
                             <td>{{ codeValue(row.rabUnitName, row.rabUnitNameBN) }}</td>
-                            <td>{{ formatDateOnly(row.serviceFrom) }}</td>
-                            <td>{{ formatDateOnly(row.serviceTo) }}</td>
+                            <td>{{ row.serviceFrom | partialDate: row.serviceFromPrecision }}</td>
+                            <td>{{ row.serviceTo | partialDate: row.serviceToPrecision }}</td>
                             <td>{{ codeValue(row.appointmentName, row.appointmentNameBN) }}</td>
                             <td>{{ val(row.postingAuth) }}</td>
                             <td>{{ val(row.remarks) }}</td>

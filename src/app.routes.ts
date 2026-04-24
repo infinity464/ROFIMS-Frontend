@@ -81,6 +81,7 @@ import { EmpForeignVisit } from '@/Components/Features/Emp/emp-foreign-visit/emp
 import { EmpLeaveInfo } from '@/Components/Features/Emp/emp-leave-info/emp-leave-info.component';
 import { EmpMedicalCategory } from '@/Components/Features/Emp/emp-medical-category/emp-medical-category.component';
 import { EmpAdditionalRemarks } from '@/Components/Features/Emp/emp-additional-remarks/emp-additional-remarks.component';
+import { EmpConfidentialRemarks } from '@/Components/Features/Emp/emp-confidential-remarks/emp-confidential-remarks.component';
 import { EmpPermPostingMotherOrg } from '@/Components/Features/Emp/emp-perm-posting-mother-org/emp-perm-posting-mother-org.component';
 import { EmpPresentStatus } from '@/Components/Features/Emp/emp-present-status/emp-present-status';
 import { EmpPersonalServiceInfoComponent } from '@/Components/Features/Emp/emp-personal-service-info/emp-personal-service-info';
@@ -283,6 +284,7 @@ export const appRoutes: Routes = [
             { path: 'emp-leave-info', component: EmpLeaveInfo, canActivate: [MemberTypePermissionGuard] },
             { path: 'emp-medical-category', component: EmpMedicalCategory, canActivate: [MemberTypePermissionGuard] },
             { path: 'emp-additional-remarks', component: EmpAdditionalRemarks, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-confidential-remarks', component: EmpConfidentialRemarks, canActivate: [MemberTypePermissionGuard] },
             { path: 'emp-perm-posting-mother-org', component: EmpPermPostingMotherOrg, canActivate: [MemberTypePermissionGuard] },
             { path: 'emp-present-status', component: EmpPresentStatus, canActivate: [MemberTypePermissionGuard] },
             { path: 'emp-present-member-check', component: EmpPresentMemberCheckComponent, canActivate: [MemberTypePermissionGuard] },

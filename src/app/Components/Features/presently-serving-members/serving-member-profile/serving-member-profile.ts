@@ -28,11 +28,13 @@ import { TooltipModule } from 'primeng/tooltip';
 import { PROFILE_LABELS, type ProfileLang } from '@/Core/i18n/profile-labels';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import { ExportService, type ProfileExportConfig, type ProfileExportSection } from '@/services/export.service';
+import { PartialDatePipe } from '@/shared/pipes/partial-date.pipe';
+import { formatPartialDate } from '@/shared/utils/partial-date.util';
 
 @Component({
     selector: 'app-serving-member-profile',
     standalone: true,
-    imports: [CommonModule, RouterModule, ButtonModule, TableModule, Toast, DialogModule, TooltipModule],
+    imports: [CommonModule, RouterModule, ButtonModule, TableModule, Toast, DialogModule, TooltipModule, PartialDatePipe],
     providers: [MessageService],
     templateUrl: './serving-member-profile.html',
     styleUrl: './serving-member-profile.scss'
@@ -118,12 +120,14 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
             kv(L['field.rank'], this.codeValue(p.armyRank, p.armyRankBN)),
             kv(L['field.corps'], this.codeValue(p.corps, p.corpsBN)),
             kv(L['field.trade'], this.tradeDisplay(p)),
+            kv(L['field.specialQualification'], this.codeValue(p.specialQualifications, p.specialQualificationsBN)),
             kv(L['field.dateOfCommission'], this.formatDateDisplay(p.dateOfCommission)),
             kv(L['field.dateOfJoiningInServiceTraining'], this.formatDateDisplay(p.dateOfJoiningInServiceTraining)),
             kv(L['field.motherUnit'], this.codeValue(p.motherUnit, p.motherUnitBN)),
             kv(L['field.location'], this.codeValue(p.location, p.locationBN)),
             kv(L['field.rabUnit'], this.codeValue(p.rabUnit, p.rabUnitBN)),
             kv(L['field.joiningDate'], this.formatDateDisplay(p.joiningDate)),
+            kv(L['field.maritalStatus'], this.codeValue(p.maritalStatus, p.maritalStatusBN)),
         ], true);
 
         // Own Address (label-value; one block per address)
@@ -173,7 +177,6 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
             kv(L['field.mobileNo'], this.valDisplay(p.mobileNo)),
             kv(L['field.emergencyContactNo'], this.valDisplay(p.emergencyContactNo)),
             kv(L['field.religion'], this.codeValue(p.religion, p.religionBN)),
-            kv(L['field.maritalStatus'], this.codeValue(p.maritalStatus, p.maritalStatusBN)),
             kv(L['field.weight'], this.weightDisplay(p)),
             kv(L['field.identificationMark'], this.val(p.identificationMark)),
         ], true, false, 2);
@@ -206,8 +209,8 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
         const presentRabRows = this.presentRabList.map((row, i) => [
             this.rowNum(i) + '.',
             this.codeValue(row.rabUnitName, row.rabUnitNameBN),
-            this.formatDateOnly(row.serviceFrom),
-            this.formatDateOnly(row.serviceTo),
+            formatPartialDate(row.serviceFrom, row.serviceFromPrecision),
+            formatPartialDate(row.serviceTo, row.serviceToPrecision),
             this.codeValue(row.appointmentName, row.appointmentNameBN),
             this.val(row.postingAuth),
             this.val(row.remarks),
@@ -219,8 +222,8 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
         const prevRabRows = this.previousOnlyRabList.map((row, i) => [
             this.rowNum(i) + '.',
             this.codeValue(row.rabUnitName, row.rabUnitNameBN),
-            this.formatDateOnly(row.serviceFrom),
-            this.formatDateOnly(row.serviceTo),
+            formatPartialDate(row.serviceFrom, row.serviceFromPrecision),
+            formatPartialDate(row.serviceTo, row.serviceToPrecision),
             this.codeValue(row.appointmentName, row.appointmentNameBN),
             this.val(row.postingAuth),
             this.val(row.remarks),

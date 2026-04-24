@@ -22,6 +22,7 @@ import { MasterBasicSetupService } from '@/Components/basic-setup/shared/service
 import { SharedService } from '@/shared/services/shared-service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 import { FileReferencesFormComponent, FileRowData } from '@components/Common/file-references-form/file-references-form';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 
 interface DropdownOption {
     label: string;
@@ -31,7 +32,7 @@ interface DropdownOption {
 @Component({
     selector: 'app-emp-education-info',
     standalone: true,
-    imports: [CommonModule, FormsModule, ReactiveFormsModule, InputTextModule, ButtonModule, Fluid, TooltipModule, TableModule, SelectModule, DialogModule, ConfirmDialogModule, DatePickerModule, EmployeeSearchComponent, FileReferencesFormComponent],
+    imports: [CommonModule, FormsModule, ReactiveFormsModule, InputTextModule, ButtonModule, Fluid, TooltipModule, TableModule, SelectModule, DialogModule, ConfirmDialogModule, DatePickerModule, EmployeeSearchComponent, FileReferencesFormComponent, FlexibleDateDirective],
     providers: [ConfirmationService],
     templateUrl: './emp-education-info.html',
     styleUrl: './emp-education-info.scss'

@@ -23,6 +23,7 @@ import { CommonCodeService } from '@/services/common-code-service';
 import { OrganizationService } from '@/Components/basic-setup/organization-setup/services/organization-service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 import { FileReferencesFormComponent, FileRowData } from '@components/Common/file-references-form/file-references-form';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 
 interface OrgUnitOption {
     orgId: number;
@@ -62,7 +63,8 @@ export interface ServiceHistoryListRow {
         ConfirmDialogModule,
         DatePickerModule,
         EmployeeSearchComponent,
-        FileReferencesFormComponent
+        FileReferencesFormComponent,
+        FlexibleDateDirective
     ],
     providers: [ConfirmationService],
     templateUrl: './emp-service-history.html',

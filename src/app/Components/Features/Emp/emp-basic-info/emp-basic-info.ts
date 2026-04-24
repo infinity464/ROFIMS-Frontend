@@ -5,6 +5,7 @@ import { FileUpload } from 'primeng/fileupload';
 import { Select } from 'primeng/select';
 import { DatePicker } from 'primeng/datepicker';
 import { InputTextModule } from 'primeng/inputtext';
+import { MultiSelectModule } from 'primeng/multiselect';
 import { Button, ButtonModule } from 'primeng/button';
 import { CommonCodeModel } from '@/models/common-code-model';
 import { EmpService } from '@/services/emp-service';
@@ -26,16 +27,18 @@ import { OrganizationService } from '@/Components/basic-setup/organization-setup
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { SharedService } from '@/shared/services/shared-service';
 import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 
 @Component({
     selector: 'app-emp-basic-info',
-    imports: [FileUpload, Fluid, Button, ButtonModule, Select, DatePicker, ReactiveFormsModule, FormsModule, InputTextModule, AddressFormComponent, Checkbox, Dialog, TooltipModule, EmpPresentMemberCheckComponent, FileReferencesFormComponent],
+    imports: [FileUpload, Fluid, Button, ButtonModule, Select, MultiSelectModule, DatePicker, ReactiveFormsModule, FormsModule, InputTextModule, AddressFormComponent, Checkbox, Dialog, TooltipModule, EmpPresentMemberCheckComponent, FileReferencesFormComponent, FlexibleDateDirective],
     templateUrl: './emp-basic-info.html',
     styleUrl: './emp-basic-info.scss',
     standalone: true
 })
 export class EmpBasicInfo implements OnInit {
     @ViewChild('fileUpload') fileUpload!: FileUpload;
+    @ViewChild(EmpPresentMemberCheckComponent) presentMemberCheck?: EmpPresentMemberCheckComponent;
     @ViewChild('fileReferencesForm') fileReferencesForm!: any; // FileReferencesFormComponent
     @ViewChild('permanentAddressForm') permanentAddressForm!: AddressFormComponent;
     @ViewChild('presentAddressForm') presentAddressForm!: AddressFormComponent;
@@ -528,6 +531,8 @@ export class EmpBasicInfo implements OnInit {
 
     private formattedDataForEmployee(): any {
         const formValue = this.postingForm.getRawValue();
+        const specialQualsArr = Array.isArray(formValue.specialQualifications) ? formValue.specialQualifications : [];
+        const specialQualsCsv = specialQualsArr.length > 0 ? specialQualsArr.join(',') : null;
         return {
             ...formValue,
             employeeID: this.generatedEmployeeId || 0,
@@ -535,7 +540,9 @@ export class EmpBasicInfo implements OnInit {
             postingStatus: formValue.postingStatus || PostingStatus.Supernumerary,
             isReliever: this.isReliever,
             relieverId: this.isReliever && this.selectedRelieverEmployeeId ? this.selectedRelieverEmployeeId : null,
-            maritalStatus: formValue.maritalStatus ?? null
+            maritalStatus: formValue.maritalStatus ?? null,
+            batch: formValue.batch ?? null,
+            specialQualifications: specialQualsCsv
         };
     }
 
@@ -744,6 +751,10 @@ export class EmpBasicInfo implements OnInit {
                     summary: 'Success',
                     detail: this.isEditMode ? 'Employee and addresses updated successfully!' : 'Employee and addresses saved successfully!'
                 });
+
+                if (!this.isEditMode) {
+                    this.resetForNewEntry();
+                }
             },
             error: (err: any) => {
                 console.error('Error saving/updating addresses', err);
@@ -770,6 +781,8 @@ export class EmpBasicInfo implements OnInit {
     motherOrganizations: MotherOrganizationModel[] = [];
     lastUnitOrganizations: MotherOrganizationModel[] = [];
     memberTypes: CommonCodeModel[] = [];
+    batches: CommonCodeModel[] = [];
+    specialQualificationOptions: CommonCodeModel[] = [];
     officerTypes: CommonCodeModel[] = [];
     appointments: CommonCodeModel[] = [];
     ranks: CommonCodeModel[] = [];
@@ -787,14 +800,6 @@ export class EmpBasicInfo implements OnInit {
     showLastUnitDialog: boolean = false;
     newLastUnitNameEN: string = '';
     newLastUnitNameBN: string = '';
-    newLastUnitLocationEN: string = '';
-    newLastUnitLocationBN: string = '';
-    newLastUnitDistrictId: number | null = null;
-    newLastUnitStatus: boolean = true;
-    lastUnitStatusOptions = [
-        { label: 'Active', value: true },
-        { label: 'Inactive', value: false }
-    ];
     isSavingLastUnit: boolean = false;
 
     constructor(
@@ -832,6 +837,7 @@ export class EmpBasicInfo implements OnInit {
         this.loadMotherOrg();
         this.loadDistricts();
         this.loadMemberType();
+        this.loadSpecialQualifications();
         this.loadAppointment();
         this.loadGender();
         this.loadMaritalStatus();
@@ -883,16 +889,23 @@ export class EmpBasicInfo implements OnInit {
         this.empService.getEmployeeById(employeeId).subscribe({
             next: (employee: any) => {
                 // Populate form with employee data
+                const specialQualsRaw = employee.specialQualifications ?? employee.SpecialQualifications ?? '';
+                const specialQualIds = typeof specialQualsRaw === 'string' && specialQualsRaw.trim().length > 0
+                    ? specialQualsRaw.split(',').map((s: string) => Number(s.trim())).filter((n: number) => !Number.isNaN(n))
+                    : [];
+
                 this.postingForm.patchValue({
                     employeeID: employee.employeeID,
                     motherOrganization: employee.orgId,
                     lastMotherUnit: employee.lastMotherUnit,
                     memberType: employee.memberType,
+                    batch: employee.batch ?? employee.Batch ?? null,
                     appointment: employee.appointment,
                     joiningDate: employee.joiningDate ? new Date(employee.joiningDate) : null,
                     rank: employee.rank,
                     branch: employee.branch,
                     trade: employee.trade,
+                    specialQualifications: specialQualIds,
                     tradeMark: employee.tradeMark,
                     gender: employee.gender,
                     maritalStatus: employee.maritalStatus ?? employee.MaritalStatus ?? null,
@@ -975,6 +988,7 @@ export class EmpBasicInfo implements OnInit {
                     this.loadMotherOrgRank(employee.orgId);
                     this.loadMotherOrgCorps(employee.orgId);
                     this.loadMotherOrgPrefix(employee.orgId);
+                    this.loadMotherOrgBatch(employee.orgId);
                 }
                 if (employee.memberType) {
                     this.loadOfficerType(employee.memberType, employee.orgId);
@@ -1154,11 +1168,13 @@ export class EmpBasicInfo implements OnInit {
             picture: [null],
             lastMotherUnit: [null, Validators.required],
             memberType: [null, Validators.required],
+            batch: [null],
             appointment: [null, Validators.required],
             joiningDate: [null, Validators.required],
             rank: [null, Validators.required],
             branch: [null, Validators.required],
             trade: [null, Validators.required],
+            specialQualifications: [[] as number[]],
             tradeMark: [''],
             gender: [null, Validators.required],
             maritalStatus: [null],
@@ -1281,12 +1297,13 @@ export class EmpBasicInfo implements OnInit {
 
     onMotherOrgChange(orgId: number): void {
         // Set orgId in form
-        this.postingForm.patchValue({ orgId: orgId });
+        this.postingForm.patchValue({ orgId: orgId, batch: null });
 
         this.loadMotherOrgUnits(orgId);
         this.loadMotherOrgRank(orgId);
         this.loadMotherOrgCorps(orgId);
         this.loadMotherOrgPrefix(orgId);
+        this.loadMotherOrgBatch(orgId);
 
         const memberType = this.postingForm.get('memberType')?.value;
         this.postingForm.patchValue({ officerType: null });
@@ -1310,10 +1327,6 @@ export class EmpBasicInfo implements OnInit {
         if (!parentOrgId) return;
         this.newLastUnitNameEN = '';
         this.newLastUnitNameBN = '';
-        this.newLastUnitLocationEN = '';
-        this.newLastUnitLocationBN = '';
-        this.newLastUnitDistrictId = null;
-        this.newLastUnitStatus = true;
         this.showLastUnitDialog = true;
     }
 
@@ -1324,7 +1337,7 @@ export class EmpBasicInfo implements OnInit {
     }
 
     saveNewLastUnit(): void {
-        if (!this.newLastUnitNameEN?.trim() || !this.newLastUnitDistrictId) return;
+        if (!this.newLastUnitNameEN?.trim()) return;
 
         const parentOrgId = this.postingForm.get('motherOrganization')?.value;
         if (!parentOrgId) {
@@ -1344,11 +1357,11 @@ export class EmpBasicInfo implements OnInit {
             orgId: 0,
             orgNameEN: this.newLastUnitNameEN.trim(),
             orgNameBN: this.newLastUnitNameBN?.trim() || '',
-            locationEN: this.newLastUnitLocationEN?.trim() || '',
-            locationBN: this.newLastUnitLocationBN?.trim() || '',
-            districtId: this.newLastUnitDistrictId,
+            locationEN: '',
+            locationBN: '',
+            districtId: null,
             parentOrg: parentOrgId,
-            status: this.newLastUnitStatus,
+            status: true,
             createdBy: currentUser,
             createdDate: currentDateTime,
             lastUpdatedBy: currentUser,
@@ -1372,8 +1385,8 @@ export class EmpBasicInfo implements OnInit {
                         if (newOrgId) {
                             this.postingForm.patchValue({
                                 lastMotherUnit: newOrgId,
-                                lastMotherUnitLocation: this.newLastUnitLocationEN?.trim() || '',
-                                lastMotherUnitDistrictId: this.newLastUnitDistrictId
+                                lastMotherUnitLocation: '',
+                                lastMotherUnitDistrictId: null
                             });
                         }
                     }
@@ -1399,6 +1412,20 @@ export class EmpBasicInfo implements OnInit {
             error: (err) => {
                 console.log(err);
             }
+        });
+    }
+
+    loadMotherOrgBatch(orgId: number): void {
+        this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'Batch').subscribe({
+            next: (res) => (this.batches = res ?? []),
+            error: (err) => console.log(err)
+        });
+    }
+
+    loadSpecialQualifications(): void {
+        this.commonCodeService.getAllActiveCommonCodesType('SpecialQualification').subscribe({
+            next: (res) => (this.specialQualificationOptions = res ?? []),
+            error: (err) => console.log(err)
         });
     }
     loadGender() {
@@ -1652,11 +1679,13 @@ export class EmpBasicInfo implements OnInit {
         return `${year}-${month}-${day}`;
     }
 
+
     onReset(): void {
         const now = new Date();
         this.postingForm.reset({
             employeeID: 0,
             status: true,
+            specialQualifications: [],
             createdBy: 'system',
             createdDate: now,
             lastUpdatedBy: 'system',
@@ -1670,6 +1699,39 @@ export class EmpBasicInfo implements OnInit {
         if (this.fileUpload) {
             this.fileUpload.clear();
         }
+    }
+
+    /** Reset all state so the form is ready for a brand-new employee entry, then focus Service ID. Clears IDs that would otherwise cause the next save to update the previous record. */
+    private resetForNewEntry(): void {
+        this.onReset();
+
+        this.generatedEmployeeId = null;
+        this.permanentAddressId = undefined;
+        this.presentAddressId = undefined;
+        this.spousePermanentAddressId = undefined;
+        this.spousePresentAddressId = undefined;
+        this.spouseFmid = null;
+        this.profileImageRef = null;
+        this.fileRows = [];
+        this.permanentAddress = undefined;
+        this.presentAddress = undefined;
+        this.spousePermanentAddress = undefined;
+        this.spousePresentAddress = undefined;
+        this.isDuplicateCombo = false;
+
+        this.presentAddressConfig.employeeId = 0;
+        this.permanentAddressConfig.employeeId = 0;
+        this.spousePermanentAddressConfig.employeeId = 0;
+        this.spousePresentAddressConfig.employeeId = 0;
+
+        this.permanentAddressForm?.reset();
+        this.presentAddressForm?.reset();
+        this.spousePermanentAddressForm?.reset();
+        this.spousePresentAddressForm?.reset();
+
+        // Hide the form so the search section is the active surface; focus the search Service ID input.
+        this.showEntryForm = false;
+        this.presentMemberCheck?.resetForNewSearch();
     }
 
     /**

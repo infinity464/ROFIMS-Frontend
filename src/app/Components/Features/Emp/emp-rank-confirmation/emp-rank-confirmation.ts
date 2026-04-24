@@ -22,6 +22,7 @@ import { RankConfirmationInfoService, RankConfirmationInfoModel } from '@/servic
 import { CommonCodeService } from '@/services/common-code-service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 import { FileReferencesFormComponent, FileRowData } from '@components/Common/file-references-form/file-references-form';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 
 export interface RankConfirmationListRow extends RankConfirmationInfoModel {
     filesReferences?: string | null;
@@ -44,7 +45,8 @@ export interface RankConfirmationListRow extends RankConfirmationInfoModel {
         DialogModule,
         ConfirmDialogModule,
         EmployeeSearchComponent,
-        FileReferencesFormComponent
+        FileReferencesFormComponent,
+        FlexibleDateDirective
     ],
     providers: [ConfirmationService],
     templateUrl: './emp-rank-confirmation.html',

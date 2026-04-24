@@ -77,12 +77,8 @@
                         </div>
                     </div>
 
-                    <!-- Row 3: Marital Status, Emergency Contact, Date of Joining, Date of Commission -->
+                    <!-- Row 3: Emergency Contact, Date of Joining, Date of Commission -->
                     <div class="form-row">
-                        <div class="form-field">
-                            <label class="form-label">Marital Status</label>
-                            <p-select formControlName="maritalStatus" [options]="maritalStatuses" optionLabel="label" optionValue="value" placeholder="Select Marital Status" styleClass="w-full" [filter]="true"></p-select>
-                        </div>
                         <div class="form-field">
                             <label class="form-label">Emergency Contact No</label>
                             <input pInputText class="w-full" placeholder="Mobile Number" formControlName="emergencyContactNo" />
@@ -97,12 +93,8 @@
                         </div>
                     </div>
 
-                    <!-- Row 4: Batch, Investigation Experience -->
+                    <!-- Row 4: Investigation Experience (Batch moved to emp-basic-info) -->
                     <div class="form-row">
-                        <div class="form-field">
-                            <label class="form-label">Batch (Course/BCS/Dept/Other)</label>
-                            <p-select formControlName="batch" [options]="batches" optionLabel="label" optionValue="value" placeholder="Select Batch" styleClass="w-full" [filter]="true"></p-select>
-                        </div>
                         <div class="form-field">
                             <label class="form-label">Investigation Experience</label>
                             <div class="flex gap-4 h-full align-items-center pt-2">

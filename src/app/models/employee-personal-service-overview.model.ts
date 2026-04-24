@@ -83,6 +83,12 @@ export interface EmployeePersonalServiceOverview {
     medicalCategoryBN?: string | null;
     batch: string | null;
     batchBN?: string | null;
+    /** Comma-separated CommonCode ids from EmployeeInfo.SpecialQualifications. */
+    specialQualificationIds: string | null;
+    /** Comma-separated English labels for the ids. */
+    specialQualifications: string | null;
+    /** Comma-separated Bangla labels for the ids. */
+    specialQualificationsBN?: string | null;
     gallantryAwardsDecorationId: number | null;
     hasInvestigationExp: boolean | null;
     investigationExpDetails: string | null;

@@ -86,6 +86,8 @@ export class SupernumeraryProfile implements OnInit, OnDestroy {
             kv('Last Unit District', val(p.location)),
             kv('Appointment', val(p.appointment)),
             kv('Date of Joining in RAB', this.formatDateOfJoining(this.serviceOverview?.joiningDate ?? this.getDateOfJoiningInRAB(p))),
+            kv('Special Qualifications', val(this.serviceOverview?.specialQualifications ?? null)),
+            kv('Marital Status', val(this.serviceOverview?.maritalStatus ?? null)),
         ], true);
 
         // Own Permanent Address

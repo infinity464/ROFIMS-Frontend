@@ -107,11 +107,11 @@
                 </div>
                 <div class="ns-gen-field">
                   <label class="ns-gen-label">Date of Visit (From)</label>
-                  <p-datepicker [(ngModel)]="editDateOfVisitFrom" dateFormat="dd/mm/yy" styleClass="w-full" placeholder="Select date" (onSelect)="calculateEditTotalDays()"></p-datepicker>
+                  <p-datepicker [(ngModel)]="editDateOfVisitFrom" dateFormat="dd-mm-yy" styleClass="w-full" placeholder="Select date" (onSelect)="calculateEditTotalDays()"></p-datepicker>
                 </div>
                 <div class="ns-gen-field">
                   <label class="ns-gen-label">Date of Visit (To)</label>
-                  <p-datepicker [(ngModel)]="editDateOfVisitTo" dateFormat="dd/mm/yy" styleClass="w-full" placeholder="Select date" (onSelect)="calculateEditTotalDays()"></p-datepicker>
+                  <p-datepicker [(ngModel)]="editDateOfVisitTo" dateFormat="dd-mm-yy" styleClass="w-full" placeholder="Select date" (onSelect)="calculateEditTotalDays()"></p-datepicker>
                 </div>
               </div>
             } @else {
@@ -246,7 +246,7 @@
 
           <div class="ns-gen-field">
             <label class="ns-gen-label">Date <span class="ns-gen-req">*</span></label>
-            <p-datepicker formControlName="noteSheetDate" dateFormat="dd/mm/yy" styleClass="w-full" placeholder="Select date"></p-datepicker>
+            <p-datepicker formControlName="noteSheetDate" dateFormat="dd-mm-yy" styleClass="w-full" placeholder="Select date"></p-datepicker>
           </div>
 
           <div class="ns-gen-field">
@@ -347,7 +347,7 @@
           <!-- Row 6: Date of Visit From | Date of Visit To | Family Members -->
           <div class="ns-gen-field">
             <label class="ns-gen-label">Date of Visit (From) <span class="ns-gen-req">*</span></label>
-            <p-datepicker formControlName="dateOfVisitFrom" dateFormat="dd/mm/yy" styleClass="w-full" placeholder="Select date"></p-datepicker>
+            <p-datepicker formControlName="dateOfVisitFrom" dateFormat="dd-mm-yy" styleClass="w-full" placeholder="Select date"></p-datepicker>
             @if (form.get('dateOfVisitFrom')?.invalid && form.get('dateOfVisitFrom')?.touched) {
               <small class="ns-gen-error">Date of Visit (From) is required</small>
             }
@@ -355,7 +355,7 @@
 
           <div class="ns-gen-field">
             <label class="ns-gen-label">Date of Visit (To) <span class="ns-gen-req">*</span></label>
-            <p-datepicker formControlName="dateOfVisitTo" dateFormat="dd/mm/yy" styleClass="w-full" placeholder="Select date"></p-datepicker>
+            <p-datepicker formControlName="dateOfVisitTo" dateFormat="dd-mm-yy" styleClass="w-full" placeholder="Select date"></p-datepicker>
             @if (form.get('dateOfVisitTo')?.invalid && form.get('dateOfVisitTo')?.touched) {
               <small class="ns-gen-error">Date of Visit (To) is required</small>
             }

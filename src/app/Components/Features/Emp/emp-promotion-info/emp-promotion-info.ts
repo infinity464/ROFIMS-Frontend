@@ -23,6 +23,7 @@ import { PromotionInfoService, PromotionInfoModel } from '@/services/promotion-i
 import { CommonCodeService } from '@/services/common-code-service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 import { FileReferencesFormComponent, FileRowData } from '@components/Common/file-references-form/file-references-form';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 
 export interface PromotionListRow extends PromotionInfoModel {}
 
@@ -43,7 +44,8 @@ export interface PromotionListRow extends PromotionInfoModel {}
         DialogModule,
         ConfirmDialogModule,
         EmployeeSearchComponent,
-        FileReferencesFormComponent
+        FileReferencesFormComponent,
+        FlexibleDateDirective
     ],
     providers: [ConfirmationService],
     templateUrl: './emp-promotion-info.html',

@@ -44,6 +44,8 @@ import { EmpDisciplineInfoComponent } from '@/Components/Features/Emp/emp-discip
 import { EmpBankAccount } from '@/Components/Features/Emp/emp-bank-account/emp-bank-account.component';
 import { EmpAdditionalRemarks } from '@/Components/Features/Emp/emp-additional-remarks/emp-additional-remarks.component';
 import { ExportService, type ProfileExportConfig, type ProfileExportSection } from '@/services/export.service';
+import { PartialDatePipe } from '@/shared/pipes/partial-date.pipe';
+import { formatPartialDate } from '@/shared/utils/partial-date.util';
 
 @Component({
     selector: 'app-ex-member-profile',
@@ -68,7 +70,8 @@ import { ExportService, type ProfileExportConfig, type ProfileExportSection } fr
         EmpLeaveInfo,
         EmpDisciplineInfoComponent,
         EmpBankAccount,
-        EmpAdditionalRemarks
+        EmpAdditionalRemarks,
+        PartialDatePipe
     ],
     providers: [MessageService],
     templateUrl: './ex-member-profile.html',
@@ -160,12 +163,14 @@ export class ExMemberProfile implements OnInit, OnDestroy {
             kv(L['field.rank'], this.codeValue(p.armyRank, p.armyRankBN)),
             kv(L['field.corps'], this.codeValue(p.corps, p.corpsBN)),
             kv(L['field.trade'], this.tradeDisplay(p)),
+            kv(L['field.specialQualification'], this.codeValue(p.specialQualifications, p.specialQualificationsBN)),
             kv(L['field.dateOfCommission'], this.formatDateDisplay(p.dateOfCommission)),
             kv(L['field.dateOfJoiningInServiceTraining'], this.formatDateDisplay(p.dateOfJoiningInServiceTraining)),
             kv(L['field.motherUnit'], this.codeValue(p.motherUnit, p.motherUnitBN)),
             kv(L['field.location'], this.codeValue(p.location, p.locationBN)),
             kv(L['field.rabUnitLastPosting'], this.displayRabUnit),
             kv(L['field.joiningDate'], this.formatDateDisplay(p.joiningDate)),
+            kv(L['field.maritalStatus'], this.codeValue(p.maritalStatus, p.maritalStatusBN)),
         ], true);
 
         // Own Address (label-value; one block per address)
@@ -215,7 +220,6 @@ export class ExMemberProfile implements OnInit, OnDestroy {
             kv(L['field.mobileNo'], this.valDisplay(p.mobileNo)),
             kv(L['field.emergencyContactNo'], this.valDisplay(p.emergencyContactNo)),
             kv(L['field.religion'], this.codeValue(p.religion, p.religionBN)),
-            kv(L['field.maritalStatus'], this.codeValue(p.maritalStatus, p.maritalStatusBN)),
             kv(L['field.weight'], this.weightDisplay(p)),
             kv(L['field.identificationMark'], this.val(p.identificationMark)),
         ], true, false, 2);
@@ -248,8 +252,8 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         const prevRabRows = this.previousOnlyRabList.map((row, i) => [
             this.rowNum(i) + '.',
             this.codeValue(row.rabUnitName, row.rabUnitNameBN),
-            this.formatDateOnly(row.serviceFrom),
-            this.formatDateOnly(row.serviceTo),
+            formatPartialDate(row.serviceFrom, row.serviceFromPrecision),
+            formatPartialDate(row.serviceTo, row.serviceToPrecision),
             this.codeValue(row.appointmentName, row.appointmentNameBN),
             this.val(row.postingAuth),
             this.val(row.remarks),
