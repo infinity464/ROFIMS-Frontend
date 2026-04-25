@@ -5,6 +5,7 @@ import { HttpClient } from '@angular/common/http';
 import { Router, ActivatedRoute } from '@angular/router';
 import { environment } from '@/Core/Environments/environment';
 import { SharedService } from '@/shared/services/shared-service';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 import { EmpService } from '@/services/emp-service';
 import { LeaveApplicationService, LeaveApplicationModel } from '@/services/leave-application.service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
@@ -34,7 +35,7 @@ import { RouterModule } from '@angular/router';
         InputTextModule,
         ButtonModule,
         SelectModule,
-        DatePickerModule,
+        DatePickerModule, FlexibleDateDirective,
         CheckboxModule,
         TextareaModule,
         ToastModule,

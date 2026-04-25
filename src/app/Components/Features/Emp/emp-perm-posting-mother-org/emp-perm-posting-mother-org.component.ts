@@ -22,6 +22,7 @@ import { EmpService } from '@/services/emp-service';
 import { PermPostingMotherOrgService, PermPostingMotherOrgModel } from '@/services/perm-posting-mother-org.service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 import { FileReferencesFormComponent, FileRowData } from '@components/Common/file-references-form/file-references-form';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 
 interface DropdownOption {
     label: string;
@@ -43,7 +44,7 @@ interface DropdownOption {
         SelectModule,
         DialogModule,
         ConfirmDialogModule,
-        DatePickerModule,
+        DatePickerModule, FlexibleDateDirective,
         ToastModule,
         EmployeeSearchComponent,
         FileReferencesFormComponent

@@ -3,6 +3,7 @@ import { UserMenuService } from '@/services/user-menu.service';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MessageService } from 'primeng/api';
 import { SharedService } from '@/shared/services/shared-service';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule } from '@angular/forms';
 import { FluidModule } from 'primeng/fluid';
@@ -39,7 +40,7 @@ import { MasterBasicSetupService } from '@/Components/basic-setup/shared/service
         ButtonModule,
         SelectModule,
         MultiSelectModule,
-        DatePickerModule,
+        DatePickerModule, FlexibleDateDirective,
         RichEditorComponent,
         TextareaModule,
         ToastModule,

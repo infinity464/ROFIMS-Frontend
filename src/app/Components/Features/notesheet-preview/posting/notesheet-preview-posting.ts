@@ -21,6 +21,7 @@ import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/fi
 import { NotesheetPreviewBase } from '../notesheet-preview-base';
 import { NoteSheetCurrentStatus, NoteSheetCurrentStatusOptions, NoteSheetOperationTypeOptions, ApprovalStatus, NoteSheetRemarkAction, NoteSheetType, ApprovalLogAction, ApprovalLogActionOptions, DraftPostingStatus, PostingStatus, NoteSheetPreviewFrom } from '@/models/enums';
 import { SharedService } from '@/shared/services/shared-service';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 import { DraftPostingEmployeeRow } from '@/models/posting.model';
 import { environment } from '@/Core/Environments/environment';
 import { forkJoin, of } from 'rxjs';
@@ -53,7 +54,7 @@ interface ApprovalLogEntry {
     standalone: true,
     imports: [
         CommonModule, FormsModule, ButtonModule, ToastModule, ConfirmDialogModule, DialogModule, TableModule, TooltipModule,
-        InputTextModule, TextareaModule, SelectModule, MultiSelectModule, DatePickerModule,
+        InputTextModule, TextareaModule, SelectModule, MultiSelectModule, DatePickerModule, FlexibleDateDirective,
         NotesheetSignatoryComponent, RichEditorComponent, FileReferencesFormComponent
     ],
     providers: [MessageService, ConfirmationService],

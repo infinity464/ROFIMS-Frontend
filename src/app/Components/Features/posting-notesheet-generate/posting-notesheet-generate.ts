@@ -3,6 +3,7 @@ import { UserMenuService } from '@/services/user-menu.service';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MessageService } from 'primeng/api';
 import { SharedService } from '@/shared/services/shared-service';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule } from '@angular/forms';
 import { FluidModule } from 'primeng/fluid';
@@ -40,7 +41,7 @@ import { MasterBasicSetupService } from '@/Components/basic-setup/shared/service
         ButtonModule,
         SelectModule,
         MultiSelectModule,
-        DatePickerModule,
+        DatePickerModule, FlexibleDateDirective,
         RichEditorComponent,
         TextareaModule,
         ToastModule,
@@ -78,6 +79,12 @@ export class PostingNotesheetGenerateComponent implements OnInit {
     finalApproverOptions: { label: string; value: number }[] = [];
     fileRows: FileRowData[] = [];
     readonly noteSheetOperationTypeOptions = NoteSheetOperationTypeOptions;
+    /** All NoteSheetNumberConfigs for NewPosting */
+    private allNoteSheetConfigs: any[] = [];
+    /** MemberType map: codeId → { en, bn } */
+    private memberTypeMap = new Map<number, { en: string; bn: string }>();
+    /** Filtered dropdown options for Note Sheet No config selection */
+    noteSheetConfigOptions: { label: string; value: number }[] = [];
     /** Prefix config for notesheet number language swap */
     private noteSheetPrefixEN = '';
     private noteSheetPrefixBN = '';
@@ -101,10 +108,11 @@ export class PostingNotesheetGenerateComponent implements OnInit {
     ) {
         this.form = this.fb.group({
             draftPostingMasterId: [null as number | null, Validators.required],
-            textType: ['en'],
+            textType: ['bn'],
             noteSheetDate: [null as Date | null, Validators.required],
             referenceNumber: [''],
             noteSheetNo: [''],
+            noteSheetNumberConfigId: [null as number | null, Validators.required],
             mainText: [''],
             note: [''],
             preparedBy: [''],
@@ -142,8 +150,9 @@ export class PostingNotesheetGenerateComponent implements OnInit {
             }
         });
 
-        // In edit mode, swap noteSheetNo prefix/digits when textType changes
+        // When textType changes: rebuild config dropdown options + swap prefix in edit mode
         this.form.get('textType')?.valueChanges.subscribe((newType: string) => {
+            this.buildNoteSheetConfigOptions();
             if (this.editMode) {
                 this.transformNoteSheetNo(newType);
             }
@@ -381,8 +390,9 @@ export class PostingNotesheetGenerateComponent implements OnInit {
     private resetForm(): void {
         this.form.reset({
             draftPostingMasterId: null,
-            textType: 'en',
+            textType: 'bn',
             noteSheetNo: '',
+            noteSheetNumberConfigId: null,
             noteSheetDate: null,
             referenceNumber: '',
             subject: '',
@@ -401,20 +411,68 @@ export class PostingNotesheetGenerateComponent implements OnInit {
         this.resolvePreparedByMapping();
     }
 
-    /** Fetch NoteSheetNumberConfig for NewPosting to get EN/BN prefixes */
+    /** Fetch NoteSheetNumberConfig for NewPosting + MemberType labels, then build dropdown */
     private loadNoteSheetNumberConfig(): void {
-        const api = `${environment.apis.core}/NoteSheetNumberConfig`;
-        this.http.get<any[]>(`${api}/GetAll`).subscribe({
-            next: (configs) => {
-                const config = (configs ?? []).find(
+        const configApi = `${environment.apis.core}/NoteSheetNumberConfig`;
+        forkJoin([
+            this.http.get<any[]>(`${configApi}/GetAll`),
+            this.masterBasicSetupService.getAllByType('EmployeeType')
+        ]).subscribe({
+            next: ([configs, memberTypes]) => {
+                // Build member type map
+                (memberTypes ?? []).forEach(mt => {
+                    this.memberTypeMap.set(mt.codeId, {
+                        en: mt.codeValueEN ?? '',
+                        bn: mt.codeValueBN ?? mt.codeValueEN ?? ''
+                    });
+                });
+
+                // Keep only active NewPosting configs
+                this.allNoteSheetConfigs = (configs ?? []).filter(
                     (c: any) => (c.noteSheetType ?? c.NoteSheetType) === 'NewPosting'
+                        && (c.status ?? c.Status) !== false
                 );
-                if (config) {
-                    this.noteSheetPrefixEN = config.prefix ?? config.Prefix ?? '';
-                    this.noteSheetPrefixBN = config.prefixBN ?? config.PrefixBN ?? '';
+
+                // Backward compat: keep first config prefixes for edit-mode transform
+                const first = this.allNoteSheetConfigs[0];
+                if (first) {
+                    this.noteSheetPrefixEN = first.prefix ?? first.Prefix ?? '';
+                    this.noteSheetPrefixBN = first.prefixBN ?? first.PrefixBN ?? '';
                 }
+
+                this.buildNoteSheetConfigOptions();
             }
         });
+    }
+
+    /** Build dropdown options based on current textType */
+    private buildNoteSheetConfigOptions(): void {
+        const isBn = this.form.get('textType')?.value === 'bn';
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+
+        this.noteSheetConfigOptions = this.allNoteSheetConfigs.map((c: any) => {
+            const configId = c.configId ?? c.ConfigId;
+            const prefix = isBn
+                ? (c.prefixBN ?? c.PrefixBN ?? c.prefix ?? c.Prefix ?? '')
+                : (c.prefix ?? c.Prefix ?? '');
+            const memberTypeId = c.memberTypeId ?? c.MemberTypeId;
+            const mt = this.memberTypeMap.get(memberTypeId);
+            const memberLabel = mt ? (isBn ? mt.bn : mt.en) : '';
+
+            const yearStr = isBn ? BanglaNumerals.toBangla(String(year)) : String(year);
+            const monthStr = isBn ? BanglaNumerals.toBangla(month) : month;
+            const pattern = `${prefix}-${yearStr}-${monthStr}-***`;
+            const label = memberLabel ? `${pattern}  (${memberLabel})` : pattern;
+
+            return { label, value: configId };
+        });
+
+        // Auto-select if only one option available
+        if (this.noteSheetConfigOptions.length === 1) {
+            this.form.get('noteSheetNumberConfigId')?.setValue(this.noteSheetConfigOptions[0].value);
+        }
     }
 
     /** Convert Bangla digits back to Western digits */
@@ -591,6 +649,7 @@ export class PostingNotesheetGenerateComponent implements OnInit {
             noteSheetId: 0,
             noteSheetType: NoteSheetType.NewPosting,
             noteSheetNo,
+            noteSheetNumberConfigId: d.noteSheetNumberConfigId ?? null,
             noteSheetDate: dateStr,
             noteSheetTemplateId: null,
             referenceNumber: d.referenceNumber != null ? String(d.referenceNumber) : null,

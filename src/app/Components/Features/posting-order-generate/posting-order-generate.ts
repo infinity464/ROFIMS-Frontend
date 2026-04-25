@@ -19,6 +19,7 @@ import { environment } from '@/Core/Environments/environment';
 import { PostingService } from '@/services/posting.service';
 import { ApprovedNoteSheetItem, PostingOrderMasterDto } from '@/models/posting.model';
 import { NoteSheetType } from '@/models/enums';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 
 interface NoteSheetEmployee {
     employeeId: number;
@@ -72,7 +73,7 @@ interface TransferUnitOption {
         TableModule,
         ButtonModule,
         SelectModule,
-        DatePickerModule,
+        DatePickerModule, FlexibleDateDirective,
         InputTextModule,
         TextareaModule,
         Toast,

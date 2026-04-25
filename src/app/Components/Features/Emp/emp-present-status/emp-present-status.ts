@@ -26,6 +26,7 @@ import { CommonCodeService } from '@/services/common-code-service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 import { FileReferencesFormComponent, FileRowData } from '@components/Common/file-references-form/file-references-form';
 import { PresentStatusType, PresentStatusTypeOptions } from '@/models/enums';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 
 @Component({
     selector: 'app-emp-present-status',
@@ -38,7 +39,7 @@ import { PresentStatusType, PresentStatusTypeOptions } from '@/models/enums';
         ButtonModule,
         Fluid,
         SelectModule,
-        DatePickerModule,
+        DatePickerModule, FlexibleDateDirective,
         TextareaModule,
         CheckboxModule,
         TooltipModule,

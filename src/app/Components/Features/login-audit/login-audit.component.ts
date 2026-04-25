@@ -17,6 +17,7 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { LoginAuditService } from './login-audit.service';
 import { LoginAudit } from './login-audit.model';
 import { UserMenuService } from '@/services/user-menu.service';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 
 @Component({
   selector: 'app-login-audit',
@@ -28,7 +29,7 @@ import { UserMenuService } from '@/services/user-menu.service';
     InputTextModule,
     ButtonModule,
     SelectModule,
-    DatePickerModule,
+    DatePickerModule, FlexibleDateDirective,
     TagModule,
     IconFieldModule,
     InputIconModule,

@@ -4,6 +4,7 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { MessageService } from 'primeng/api';
 import { SharedService } from '@/shared/services/shared-service';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { FluidModule } from 'primeng/fluid';
@@ -52,7 +53,7 @@ import html2canvas from 'html2canvas';
         ButtonModule,
         SelectModule,
         MultiSelectModule,
-        DatePickerModule,
+        DatePickerModule, FlexibleDateDirective,
         RichEditorComponent,
         ToastModule,
         TooltipModule,

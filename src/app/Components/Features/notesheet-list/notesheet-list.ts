@@ -12,6 +12,7 @@ import { TextareaModule } from 'primeng/textarea';
 import { FormsModule } from '@angular/forms';
 import { ToastModule } from 'primeng/toast';
 import { SharedService } from '@/shared/services/shared-service';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 import { FluidModule } from 'primeng/fluid';
 import { ActivatedRoute, Router } from '@angular/router';
 import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor';
@@ -154,7 +155,7 @@ export interface ApprovalLogEntry {
     FluidModule,
     RichEditorComponent,
     TooltipModule,
-    DatePickerModule,
+    DatePickerModule, FlexibleDateDirective,
     InputTextModule,
     IconFieldModule,
     InputIconModule,

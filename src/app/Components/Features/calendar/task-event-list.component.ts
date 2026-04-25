@@ -17,6 +17,7 @@ import { MessageService, ConfirmationService } from 'primeng/api';
 import { TooltipModule } from 'primeng/tooltip';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { CalendarService, CalendarEventApi, CalendarEventPayload } from '@/services/calendar.service';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 
 export interface TaskEventItem {
     id: string;
@@ -53,7 +54,7 @@ const COLOR_OPTIONS = [
         InputTextModule,
         TableModule,
         SelectModule,
-        DatePickerModule,
+        DatePickerModule, FlexibleDateDirective,
         CheckboxModule,
         TextareaModule,
         Fluid,

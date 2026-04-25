@@ -13,6 +13,7 @@ import { MessageService } from 'primeng/api';
 import { EmployeeListService } from '@/services/employee-list.service';
 import { PostingService } from '@/services/posting.service';
 import { SharedService } from '@/shared/services/shared-service';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 import { EmployeeList } from '@/models/employee-list.model';
 import { DraftInterPostingMasterDto, DraftInterPostingMasterWithDetailsDto, DraftInterPostingDetailDto } from '@/models/posting.model';
 import { DraftPostingStatusOptions } from '@/models/enums';
@@ -26,7 +27,7 @@ import { DraftPostingStatusOptions } from '@/models/enums';
         TableModule,
         ButtonModule,
         InputTextModule,
-        DatePickerModule,
+        DatePickerModule, FlexibleDateDirective,
         SelectModule,
         Toast
     ],

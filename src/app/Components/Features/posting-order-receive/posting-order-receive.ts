@@ -14,6 +14,7 @@ import { MessageService } from 'primeng/api';
 import { Router } from '@angular/router';
 import { PostingService } from '@/services/posting.service';
 import { SharedService } from '@/shared/services/shared-service';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 import { UserMenuService } from '@/services/user-menu.service';
 import { PostingReceiveViewDto } from '@/models/posting.model';
 
@@ -40,7 +41,7 @@ interface PostingOrderGroup {
         FormsModule,
         TableModule,
         ButtonModule,
-        DatePickerModule,
+        DatePickerModule, FlexibleDateDirective,
         SelectModule,
         TabsModule,
         TagModule,

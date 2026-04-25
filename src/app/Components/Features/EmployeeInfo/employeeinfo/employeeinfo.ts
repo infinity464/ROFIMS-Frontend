@@ -20,6 +20,7 @@ import { AddressSectionComponent } from '../../Shared/address-section/address-se
 import { EmployeeinfoService } from '../Services/employeeinfo.service';
 import { EmployeeInfoModel } from '../model/employeeinfo.model';
 import { NomineeInfo } from '../../PersonalInfo/nominee-info/nominee-info';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 
 @Component({
     selector: 'app-employeeinfo',
@@ -31,7 +32,7 @@ import { NomineeInfo } from '../../PersonalInfo/nominee-info/nominee-info';
         DividerModule,
         SelectModule,
         InputTextModule,
-        DatePickerModule,
+        DatePickerModule, FlexibleDateDirective,
         TableModule,
         ButtonModule,
         CheckboxModule,

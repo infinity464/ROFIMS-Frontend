@@ -5,6 +5,7 @@ import { Location } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { environment } from '@/Core/Environments/environment';
 import { SharedService } from '@/shared/services/shared-service';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 import { LeaveApplicationService, LeaveApplicationModel, LeaveApplicationFilterParams } from '@/services/leave-application.service';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
 import { UserMenuService } from '@/services/user-menu.service';
@@ -40,7 +41,7 @@ export type LeaveApplicationTypeFilter = 'myApplication' | 'applyForOther' | 'ac
         ButtonModule,
         InputTextModule,
         SelectModule,
-        DatePickerModule,
+        DatePickerModule, FlexibleDateDirective,
         DialogModule,
         TextareaModule,
         ToastModule,

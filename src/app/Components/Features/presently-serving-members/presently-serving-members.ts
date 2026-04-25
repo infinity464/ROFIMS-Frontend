@@ -15,6 +15,7 @@ import { ServingMembersService, ServingMemberFilterRequest } from '@/services/se
 import { EmployeeListService } from '@/services/employee-list.service';
 import { EmployeeServiceOverview } from '@/models/employee-service-overview.model';
 import { TagModule } from 'primeng/tag';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 
 export interface FilterModel {
     rabId: string;
@@ -36,7 +37,7 @@ export interface FilterModel {
 @Component({
     selector: 'app-presently-serving-members',
     standalone: true,
-    imports: [CommonModule, FormsModule, RouterModule, TableModule, ButtonModule, InputTextModule, SelectModule, DatePickerModule, Toast, CheckboxModule, TagModule],
+    imports: [CommonModule, FormsModule, RouterModule, TableModule, ButtonModule, InputTextModule, SelectModule, DatePickerModule, FlexibleDateDirective, Toast, CheckboxModule, TagModule],
     providers: [MessageService],
     templateUrl: './presently-serving-members.html',
     styleUrls: ['./presently-serving-members.scss', '../employee-reports/report-theme.scss'],

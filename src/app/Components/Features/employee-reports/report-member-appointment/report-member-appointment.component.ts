@@ -17,6 +17,7 @@ import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import type { MemberAppointmentReportRow } from '@/models/report.model';
 import type { MotherOrganizationModel } from '@/models/mother-org-model';
 import type { CommonCodeModel } from '@/models/common-code-model';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 
 @Component({
     selector: 'app-report-member-appointment',
@@ -27,7 +28,7 @@ import type { CommonCodeModel } from '@/models/common-code-model';
         TableModule,
         ButtonModule,
         SelectModule,
-        DatePickerModule,
+        DatePickerModule, FlexibleDateDirective,
         Toast,
     ],
     providers: [MessageService],

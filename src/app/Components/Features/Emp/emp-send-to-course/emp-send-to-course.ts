@@ -26,6 +26,7 @@ import { CommonCodeService } from '@/services/common-code-service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { EmployeeSearchInfoModel } from '@/models/EmpModel';
 import { DraftCourseList, DraftCourseMemberRow, RftsTrainingRow } from '@/models/draft-course.model';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 
 interface DropdownOption {
     label: string;
@@ -55,7 +56,7 @@ interface TrainingInstituteOption extends DropdownOption {
         ConfirmPopupModule,
         DialogModule,
         InputTextModule,
-        DatePickerModule,
+        DatePickerModule, FlexibleDateDirective,
         AutoCompleteModule,
         TooltipModule
     ],

@@ -16,6 +16,7 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { TextareaModule } from 'primeng/textarea';
 import { PostingService } from '@/services/posting.service';
 import { SharedService } from '@/shared/services/shared-service';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 import { UserMenuService } from '@/services/user-menu.service';
 import { PendingPostingJoiningDto } from '@/models/posting.model';
 
@@ -34,7 +35,7 @@ import { PendingPostingJoiningDto } from '@/models/posting.model';
         SelectModule,
         Toast,
         DialogModule,
-        DatePickerModule,
+        DatePickerModule, FlexibleDateDirective,
         TextareaModule
     ],
     providers: [MessageService],

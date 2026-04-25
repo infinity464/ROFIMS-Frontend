@@ -13,6 +13,7 @@ import { MessageService } from 'primeng/api';
 import { LoginAuditService } from '../login-audit/login-audit.service';
 import { LoginAudit } from '../login-audit/login-audit.model';
 import { UserMenuService } from '@/services/user-menu.service';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 
 @Component({
   selector: 'app-my-login-audit',
@@ -23,7 +24,7 @@ import { UserMenuService } from '@/services/user-menu.service';
     TableModule,
     ButtonModule,
     SelectModule,
-    DatePickerModule,
+    DatePickerModule, FlexibleDateDirective,
     TagModule,
     ToastModule
   ],

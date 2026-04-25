@@ -26,6 +26,7 @@ import {
     WidthType, BorderStyle, AlignmentType, PageOrientation, TabStopType, TabStopPosition, TableLayoutType, VerticalMergeType
 } from 'docx';
 import { saveAs } from 'file-saver';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 
 /** A footer paragraph linked to a specific transfer (RAB) unit. */
 interface FooterParagraph {
@@ -50,7 +51,7 @@ interface TransferUnitOption {
         ConfirmDialogModule,
         TooltipModule,
         SelectModule,
-        DatePickerModule,
+        DatePickerModule, FlexibleDateDirective,
         InputTextModule,
         TextareaModule,
         TableModule

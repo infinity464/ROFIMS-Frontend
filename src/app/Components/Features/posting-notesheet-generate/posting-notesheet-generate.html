@@ -28,7 +28,7 @@
               <small class="form-error">Draft Posting List is required</small>
             }
           </div>
-          <div class="form-field">
+          <div class="form-field" style="flex: 0 0 140px; max-width: 140px;">
             <label class="form-label">Note-Sheet Text Type</label>
             <p-select
               formControlName="textType"
@@ -38,16 +38,33 @@
               styleClass="w-full">
             </p-select>
           </div>
-          <div class="form-field">
+          <div class="form-field" style="flex: 0 0 160px; max-width: 160px;">
             <label class="form-label">Select Date <span class="form-label-required">*</span></label>
             <p-datepicker formControlName="noteSheetDate" dateFormat="dd-mm-yy" styleClass="w-full" placeholder="Select Date" appendTo="body"></p-datepicker>
             @if (form.get('noteSheetDate')?.invalid && form.get('noteSheetDate')?.touched) {
               <small class="form-error">Date is required</small>
             }
           </div>
-          <div class="form-field">
-            <label class="form-label">Note Sheet No</label>
-            <input pInputText formControlName="noteSheetNo" placeholder="Auto generated" class="w-full" [readonly]="true" />
+          <div class="form-field" style="flex: 2 1 0%;">
+            <label class="form-label">Note Sheet No <span class="form-label-required">*</span></label>
+            @if (editMode) {
+              <input pInputText formControlName="noteSheetNo" placeholder="Auto generated" class="w-full" [readonly]="true" />
+            } @else {
+              <p-select
+                formControlName="noteSheetNumberConfigId"
+                [options]="noteSheetConfigOptions"
+                optionLabel="label"
+                optionValue="value"
+                [filter]="true"
+                filterBy="label"
+                placeholder="Select Pattern"
+                [showClear]="true"
+                styleClass="w-full">
+              </p-select>
+              @if (form.get('noteSheetNumberConfigId')?.invalid && form.get('noteSheetNumberConfigId')?.touched) {
+                <small class="form-error">Note Sheet No is required</small>
+              }
+            }
           </div>
         </div>
 

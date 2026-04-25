@@ -19,6 +19,7 @@ import { TableModule } from "primeng/table";
 import { IconField } from "primeng/iconfield";
 import { InputIcon } from "primeng/inputicon";
 import { SharedService } from '@/shared/services/shared-service';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 
 interface OrgUnitRow extends OrganizationModel {
@@ -33,7 +34,7 @@ interface OrgUnitRow extends OrganizationModel {
         ReactiveFormsModule,
         InputTextModule,
         SelectModule,
-        DatePickerModule,
+        DatePickerModule, FlexibleDateDirective,
         InputNumberModule,
         Button,
         TableModule,

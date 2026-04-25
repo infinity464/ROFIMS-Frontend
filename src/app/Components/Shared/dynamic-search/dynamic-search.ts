@@ -18,6 +18,7 @@ import {
     DynamicSearchRequest
 } from '@/services/dynamic-search.service';
 import { UserMenuService } from '@/services/user-menu.service';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 
 interface CriterionValue {
     fieldKey: string;
@@ -34,7 +35,7 @@ interface CriterionValue {
     imports: [
         CommonModule, FormsModule, RouterModule,
         TableModule, ButtonModule, InputTextModule,
-        SelectModule, MultiSelectModule, DatePickerModule,
+        SelectModule, MultiSelectModule, DatePickerModule, FlexibleDateDirective,
         Toast
     ],
     providers: [MessageService],

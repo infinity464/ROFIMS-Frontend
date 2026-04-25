@@ -20,10 +20,11 @@ import { Tag } from 'primeng/tag';
 import { IconField } from 'primeng/iconfield';
 import { InputIcon } from 'primeng/inputicon';
 import { SharedService } from '@/shared/services/shared-service';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 
 @Component({
     selector: 'app-organization',
-    imports: [Fluid, ReactiveFormsModule, InputTextModule, SelectModule, DatePickerModule, InputNumberModule, Button, TableModule, IconField, InputIcon, ButtonModule, CommonModule],
+    imports: [Fluid, ReactiveFormsModule, InputTextModule, SelectModule, DatePickerModule, FlexibleDateDirective, InputNumberModule, Button, TableModule, IconField, InputIcon, ButtonModule, CommonModule],
     providers: [],
     templateUrl: './organization.html',
     styleUrl: './organization.scss'

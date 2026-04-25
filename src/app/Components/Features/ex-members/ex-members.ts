@@ -12,6 +12,7 @@ import { MessageService } from 'primeng/api';
 import { Toast } from 'primeng/toast';
 import { ServingMembersService, ServingMemberFilterRequest } from '@/services/serving-members.service';
 import { EmployeeServiceOverview } from '@/models/employee-service-overview.model';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 
 export interface FilterModel {
     rabId: string;
@@ -33,7 +34,7 @@ export interface FilterModel {
 @Component({
     selector: 'app-ex-members',
     standalone: true,
-    imports: [CommonModule, FormsModule, RouterModule, TableModule, ButtonModule, InputTextModule, SelectModule, DatePickerModule, Toast],
+    imports: [CommonModule, FormsModule, RouterModule, TableModule, ButtonModule, InputTextModule, SelectModule, DatePickerModule, FlexibleDateDirective, Toast],
     providers: [MessageService],
     templateUrl: './ex-members.html',
     styleUrls: ['./ex-members.scss', '../employee-reports/report-theme.scss']

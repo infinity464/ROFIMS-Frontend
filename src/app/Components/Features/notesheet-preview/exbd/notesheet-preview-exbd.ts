@@ -26,6 +26,7 @@ import {
     ApprovalLogAction, ApprovalLogActionOptions
 } from '@/models/enums';
 import { SharedService } from '@/shared/services/shared-service';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 import { environment } from '@/Core/Environments/environment';
 import { forkJoin, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
@@ -54,7 +55,7 @@ interface ApprovalLogEntry {
     standalone: true,
     imports: [
         CommonModule, FormsModule, ButtonModule, ToastModule, ConfirmDialogModule, DialogModule, TooltipModule,
-        InputTextModule, TextareaModule, SelectModule, MultiSelectModule, DatePickerModule,
+        InputTextModule, TextareaModule, SelectModule, MultiSelectModule, DatePickerModule, FlexibleDateDirective,
         NotesheetSignatoryComponent, RichEditorComponent
     ],
     providers: [MessageService, ConfirmationService],
