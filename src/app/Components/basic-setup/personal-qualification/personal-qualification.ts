@@ -147,7 +147,7 @@ export class PersonalQualification {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load data'
+                    detail: err?.error?.message || 'Failed to load data'
                 });
                 this.loading = false;
             }
@@ -200,7 +200,7 @@ export class PersonalQualification {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create personal-qualification'
+                    detail: err?.error?.message || 'Failed to create personal-qualification'
                 });
                 this.isSubmitting = false;
             }
@@ -236,7 +236,7 @@ export class PersonalQualification {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update personal-qualification'
+                    detail: err?.error?.message || 'Failed to update personal-qualification'
                 });
                 this.isSubmitting = false;
             }
@@ -283,7 +283,7 @@ export class PersonalQualification {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete personal-qualification'
+                            detail: err?.error?.message || 'Failed to delete personal-qualification'
                         });
                     }
                 });

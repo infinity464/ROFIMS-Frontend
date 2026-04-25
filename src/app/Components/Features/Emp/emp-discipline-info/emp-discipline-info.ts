@@ -248,7 +248,7 @@ export class EmpDisciplineInfoComponent implements OnInit {
                 }));
                 this.isLoading = false;
             },
-            error: () => { this.disciplineList = []; this.isLoading = false; }
+            error: (err: any) => { this.disciplineList = []; this.isLoading = false; }
         });
     }
 
@@ -272,7 +272,7 @@ export class EmpDisciplineInfoComponent implements OnInit {
             next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
             error: (err) => {
                 console.error('Download failed', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file' });
             }
         });
     }
@@ -412,7 +412,7 @@ export class EmpDisciplineInfoComponent implements OnInit {
                 },
                 error: (err) => {
                     console.error('Error uploading files', err);
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to upload one or more files' });
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to upload one or more files' });
                 }
             });
             return;
@@ -520,8 +520,8 @@ export class EmpDisciplineInfoComponent implements OnInit {
                     }
                 });
             },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to add Brief Statement' });
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to add Brief Statement' });
                 this.isSavingBriefStatement = false;
             }
         });
@@ -573,8 +573,8 @@ export class EmpDisciplineInfoComponent implements OnInit {
                     }
                 });
             },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to add Punishment Type' });
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to add Punishment Type' });
                 this.isSavingPunishmentType = false;
             }
         });

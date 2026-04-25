@@ -146,7 +146,7 @@ export class RabId {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load data'
+                    detail: err?.error?.message || 'Failed to load data'
                 });
                 this.loading = false;
             }
@@ -199,7 +199,7 @@ export class RabId {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create rab-id'
+                    detail: err?.error?.message || 'Failed to create rab-id'
                 });
                 this.isSubmitting = false;
             }
@@ -235,7 +235,7 @@ export class RabId {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update rab-id'
+                    detail: err?.error?.message || 'Failed to update rab-id'
                 });
                 this.isSubmitting = false;
             }
@@ -282,7 +282,7 @@ export class RabId {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete rab-id'
+                            detail: err?.error?.message || 'Failed to delete rab-id'
                         });
                     }
                 });

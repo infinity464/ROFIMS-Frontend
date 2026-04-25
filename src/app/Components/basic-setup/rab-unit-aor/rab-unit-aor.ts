@@ -124,8 +124,8 @@ export class RabUnitAor implements OnInit {
             next: (units) => {
                 this.rabUnitOptions = (units ?? []).map((u) => ({ label: u.codeValueEN, value: u.codeId }));
             },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load RAB units' });
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load RAB units' });
             }
         });
     }
@@ -135,8 +135,8 @@ export class RabUnitAor implements OnInit {
             next: (divs) => {
                 this.divisionOptions = (divs ?? []).map((d) => ({ label: d.codeValueEN, value: d.codeId }));
             },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load divisions' });
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load divisions' });
             }
         });
     }
@@ -157,8 +157,8 @@ export class RabUnitAor implements OnInit {
                 });
                 this.districtOptions = options.sort((a, b) => a.label.localeCompare(b.label));
             },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load districts' });
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load districts' });
             }
         });
     }
@@ -179,8 +179,8 @@ export class RabUnitAor implements OnInit {
                 });
                 this.upazilaOptions = options.sort((a, b) => a.label.localeCompare(b.label));
             },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load upazilas' });
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load upazilas' });
             }
         });
     }
@@ -332,7 +332,7 @@ export class RabUnitAor implements OnInit {
                                         }
                                         this.assignedLoading = false;
                                     },
-                                    error: () => {
+                                    error: (err: any) => {
                                         this.assigned = list.map((r) => ({
                                             aorId: r.aorId ?? r.AORId,
                                             rabUnitName: this.rabUnitOptions.find((o) => o.value === rabUnitId)?.label ?? String(rabUnitId),
@@ -347,7 +347,7 @@ export class RabUnitAor implements OnInit {
                                     }
                                 });
                             },
-                            error: () => {
+                            error: (err: any) => {
                                 this.assigned = list.map((r) => ({
                                     aorId: r.aorId ?? r.AORId,
                                     rabUnitName: this.rabUnitOptions.find((o) => o.value === rabUnitId)?.label ?? String(rabUnitId),
@@ -362,7 +362,7 @@ export class RabUnitAor implements OnInit {
                             }
                         });
                     },
-                    error: () => {
+                    error: (err: any) => {
                         this.assigned = list.map((r) => ({
                             aorId: r.aorId ?? r.AORId,
                             rabUnitName: this.rabUnitOptions.find((o) => o.value === rabUnitId)?.label ?? String(rabUnitId),
@@ -377,7 +377,7 @@ export class RabUnitAor implements OnInit {
                     }
                 });
             },
-            error: () => {
+            error: (err: any) => {
                 this.assigned = [];
                 this.assignedLoading = false;
             }
@@ -404,8 +404,8 @@ export class RabUnitAor implements OnInit {
                             this.messageService.add({ severity: 'warn', summary: 'Warning', detail: res?.description ?? 'Remove failed' });
                         }
                     },
-                    error: () => {
-                        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to remove assignment' });
+                    error: (err: any) => {
+                        this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to remove assignment' });
                     }
                 });
             }

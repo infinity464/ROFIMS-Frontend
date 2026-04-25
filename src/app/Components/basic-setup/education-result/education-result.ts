@@ -147,7 +147,7 @@ export class EducationResult {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load data'
+                    detail: err?.error?.message || 'Failed to load data'
                 });
                 this.loading = false;
             }
@@ -200,7 +200,7 @@ export class EducationResult {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create education result'
+                    detail: err?.error?.message || 'Failed to create education result'
                 });
                 this.isSubmitting = false;
             }
@@ -236,7 +236,7 @@ export class EducationResult {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update'
+                    detail: err?.error?.message || 'Failed to update'
                 });
                 this.isSubmitting = false;
             }
@@ -283,7 +283,7 @@ export class EducationResult {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete education result'
+                            detail: err?.error?.message || 'Failed to delete education result'
                         });
                     }
                 });

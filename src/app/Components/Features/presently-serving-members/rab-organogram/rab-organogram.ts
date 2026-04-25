@@ -186,10 +186,10 @@ export class RabOrganogramComponent implements OnInit {
                         this.hqLoading.set(false);
                     }
                 },
-                error: () => {
+                error: (err: any) => {
                     this.loading.set(false);
                     this.hqLoading.set(false);
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load organogram' });
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load organogram' });
                 }
             });
     }
@@ -232,12 +232,12 @@ export class RabOrganogramComponent implements OnInit {
                             const pendingResults = results.slice(memberTypes.length);
                             this.applyVirtualNodeCounts(superResults, pendingResults, memberTypes);
                         },
-                        error: () => {
+                        error: (err: any) => {
                             this.applyVirtualNodeCounts([], [], memberTypes);
                         }
                     });
                 },
-                error: () => {
+                error: (err: any) => {
                     this.memberTypes = [];
                 }
             });
@@ -365,10 +365,10 @@ export class RabOrganogramComponent implements OnInit {
                     this.loadingParentId.set(null);
                     this.hqLoading.set(false);
                 },
-                error: () => {
+                error: (err: any) => {
                     this.loadingParentId.set(null);
                     this.hqLoading.set(false);
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load children' });
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load children' });
                 }
             });
     }

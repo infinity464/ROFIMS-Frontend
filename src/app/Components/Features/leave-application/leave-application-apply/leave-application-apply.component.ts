@@ -152,7 +152,7 @@ export class LeaveApplicationApplyComponent implements OnInit {
                     value: c.codeId ?? c.CodeId
                 }));
             },
-            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load leave types' })
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load leave types' })
         });
     }
 
@@ -171,7 +171,7 @@ export class LeaveApplicationApplyComponent implements OnInit {
                     });
                 }
             },
-            error: () => {}
+            error: (err: any) => {}
         });
     }
 
@@ -207,12 +207,12 @@ export class LeaveApplicationApplyComponent implements OnInit {
                         };
                         this.form.patchValue({ applicantEmployeeId: id, appliedByEmployeeId: id });
                     },
-                    error: () =>
-                        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load employee details' })
+                    error: (err: any) =>
+                        this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load employee details' })
                 });
             },
-            error: () =>
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to resolve employee mapping' })
+            error: (err: any) =>
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to resolve employee mapping' })
         });
     }
 
@@ -321,7 +321,7 @@ export class LeaveApplicationApplyComponent implements OnInit {
                     }
                 });
             },
-            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load application' })
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load application' })
         });
     }
 

@@ -145,7 +145,7 @@ export class Religion {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load data'
+                    detail: err?.error?.message || 'Failed to load data'
                 });
                 this.loading = false;
             }
@@ -198,7 +198,7 @@ export class Religion {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create religion'
+                    detail: err?.error?.message || 'Failed to create religion'
                 });
                 this.isSubmitting = false;
             }
@@ -234,7 +234,7 @@ export class Religion {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update religion'
+                    detail: err?.error?.message || 'Failed to update religion'
                 });
                 this.isSubmitting = false;
             }
@@ -281,7 +281,7 @@ export class Religion {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete religion'
+                            detail: err?.error?.message || 'Failed to delete religion'
                         });
                     }
                 });

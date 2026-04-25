@@ -167,7 +167,7 @@ export class Corps {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load corps'
+                    detail: err?.error?.message || 'Failed to load corps'
                 });
             }
         });
@@ -183,7 +183,7 @@ export class Corps {
             },
             error: (err) => {
                 console.error('Error fetching data:', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load data' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load data' });
                 this.loading = false;
             }
         });
@@ -262,7 +262,7 @@ export class Corps {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create corps'
+                    detail: err?.error?.message || 'Failed to create corps'
                 });
 
                 this.isSubmitting = false;
@@ -298,7 +298,7 @@ export class Corps {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update corps'
+                    detail: err?.error?.message || 'Failed to update corps'
                 });
                 this.isSubmitting = false;
             }
@@ -348,7 +348,7 @@ export class Corps {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete corps'
+                            detail: err?.error?.message || 'Failed to delete corps'
                         });
                     }
                 });

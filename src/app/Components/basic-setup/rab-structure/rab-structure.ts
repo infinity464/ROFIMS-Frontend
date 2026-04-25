@@ -119,9 +119,9 @@ export class RabStructureComponent implements OnInit {
                     this.loading = false;
                 });
             },
-            error: () => {
+            error: (err: any) => {
                 this.loading = false;
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load structure' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load structure' });
             }
         });
     }

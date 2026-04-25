@@ -52,9 +52,9 @@ export class PostingOrderListComponent implements OnInit {
                 this.orders = data ?? [];
                 this.loading = false;
             },
-            error: () => {
+            error: (err: any) => {
                 this.loading = false;
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load posting orders.' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load posting orders.' });
             }
         });
     }

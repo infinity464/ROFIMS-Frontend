@@ -109,7 +109,7 @@ export class Organization implements OnInit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to fetch organizations'
+                    detail: err?.error?.message || 'Failed to fetch organizations'
                 });
             }
         });
@@ -164,7 +164,7 @@ export class Organization implements OnInit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create organization'
+                    detail: err?.error?.message || 'Failed to create organization'
                 });
                 this.isSubmitting = false;
             }
@@ -196,7 +196,7 @@ export class Organization implements OnInit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update organization'
+                    detail: err?.error?.message || 'Failed to update organization'
                 });
                 this.isSubmitting = false;
             }
@@ -243,7 +243,7 @@ export class Organization implements OnInit {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete organization'
+                            detail: err?.error?.message || 'Failed to delete organization'
                         });
                     }
                 });

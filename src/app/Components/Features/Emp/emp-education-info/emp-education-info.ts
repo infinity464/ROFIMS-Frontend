@@ -229,7 +229,7 @@ export class EmpEducationInfoComponent implements OnInit {
                     this.loadEducationList();
                 }
             },
-            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load employee' })
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load employee' })
         });
     }
 
@@ -257,7 +257,7 @@ export class EmpEducationInfoComponent implements OnInit {
                 }));
                 this.isLoading = false;
             },
-            error: () => {
+            error: (err: any) => {
                 this.isLoading = false;
             }
         });
@@ -283,7 +283,7 @@ export class EmpEducationInfoComponent implements OnInit {
             next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
             error: (err) => {
                 console.error('Download failed', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file' });
             }
         });
     }
@@ -401,8 +401,8 @@ export class EmpEducationInfoComponent implements OnInit {
                     this.loadEducationList();
                     this.isSaving = false;
                 },
-                error: () => {
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to save education' });
+                error: (err: any) => {
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to save education' });
                     this.isSaving = false;
                 }
             });
@@ -422,7 +422,7 @@ export class EmpEducationInfoComponent implements OnInit {
                 },
                 error: (err) => {
                     console.error('Error uploading files', err);
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to upload one or more files' });
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to upload one or more files' });
                 }
             });
             return;
@@ -448,7 +448,7 @@ export class EmpEducationInfoComponent implements OnInit {
                 this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Education deleted.' });
                 this.loadEducationList();
             },
-            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete' })
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to delete' })
         });
     }
 
@@ -550,7 +550,7 @@ export class EmpEducationInfoComponent implements OnInit {
                     }
                 });
             },
-            error: () => {
+            error: (err: any) => {
                 this.messageService.add({ severity: 'error', summary: 'Error', detail: `Failed to add ${this.departmentLabel}` });
                 this.isSavingDepartment = false;
             }
@@ -593,8 +593,8 @@ export class EmpEducationInfoComponent implements OnInit {
                     }
                 });
             },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to add Subject' });
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to add Subject' });
                 this.isSavingSubject = false;
             }
         });
@@ -636,8 +636,8 @@ export class EmpEducationInfoComponent implements OnInit {
                     }
                 });
             },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to add Qualification' });
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to add Qualification' });
                 this.isSavingQualification = false;
             }
         });
@@ -682,8 +682,8 @@ export class EmpEducationInfoComponent implements OnInit {
                     }
                 });
             },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to add Board/University Type' });
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to add Board/University Type' });
                 this.isSavingBoardType = false;
             }
         });
@@ -725,8 +725,8 @@ export class EmpEducationInfoComponent implements OnInit {
                     }
                 });
             },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to add Result/Grade' });
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to add Result/Grade' });
                 this.isSavingGrade = false;
             }
         });
@@ -789,8 +789,8 @@ export class EmpEducationInfoComponent implements OnInit {
                     }
                 });
             },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to create institution' });
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to create institution' });
                 this.isSavingInstitution = false;
             }
         });

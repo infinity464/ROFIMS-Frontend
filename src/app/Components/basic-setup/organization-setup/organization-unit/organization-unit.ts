@@ -178,7 +178,7 @@ export class OrganizationUnit implements OnInit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to fetch organizations'
+                    detail: err?.error?.message || 'Failed to fetch organizations'
                 });
             }
         });
@@ -195,7 +195,7 @@ export class OrganizationUnit implements OnInit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to fetch organizations'
+                    detail: err?.error?.message || 'Failed to fetch organizations'
                 });
             }
         });
@@ -283,7 +283,7 @@ export class OrganizationUnit implements OnInit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create organization-unit'
+                    detail: err?.error?.message || 'Failed to create organization-unit'
                 });
                 this.isSubmitting = false;
             }
@@ -318,7 +318,7 @@ export class OrganizationUnit implements OnInit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update organization-unit'
+                    detail: err?.error?.message || 'Failed to update organization-unit'
                 });
                 this.isSubmitting = false;
             }
@@ -365,7 +365,7 @@ export class OrganizationUnit implements OnInit {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete organization-unit'
+                            detail: err?.error?.message || 'Failed to delete organization-unit'
                         });
                     }
                 });

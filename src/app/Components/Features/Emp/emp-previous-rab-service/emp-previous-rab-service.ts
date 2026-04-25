@@ -314,7 +314,7 @@ export class EmpPreviousRabService implements OnInit {
                     });
                 this.isLoading = false;
             },
-            error: () => {
+            error: (err: any) => {
                 this.serviceList = [];
                 this.isLoading = false;
             }
@@ -436,7 +436,7 @@ export class EmpPreviousRabService implements OnInit {
             next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
             error: (err) => {
                 console.error('Download failed', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file' });
             }
         });
     }
@@ -540,7 +540,7 @@ export class EmpPreviousRabService implements OnInit {
                 error: (err) => {
                     this.isSaving = false;
                     console.error('Error uploading files', err);
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to upload one or more files' });
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to upload one or more files' });
                 }
             });
             return;
@@ -566,7 +566,7 @@ export class EmpPreviousRabService implements OnInit {
         if (rabUnitCodeId == null) return;
         this.commonCodeService.getAllActiveCommonCodesByParentId(rabUnitCodeId).subscribe({
             next: (list) => this.rabWingOptions = (Array.isArray(list) ? list : []).map((item: any) => this.mapCommonCodeToOption(item)),
-            error: () => { this.rabWingOptions = []; }
+            error: (err: any) => { this.rabWingOptions = []; }
         });
     }
 
@@ -584,7 +584,7 @@ export class EmpPreviousRabService implements OnInit {
         if (rabWingCodeId == null) return;
         this.commonCodeService.getAllActiveCommonCodesByParentId(rabWingCodeId).subscribe({
             next: (list) => this.rabBranchOptions = (Array.isArray(list) ? list : []).map((item: any) => this.mapCommonCodeToOption(item)),
-            error: () => { this.rabBranchOptions = []; }
+            error: (err: any) => { this.rabBranchOptions = []; }
         });
     }
 
@@ -600,7 +600,7 @@ export class EmpPreviousRabService implements OnInit {
         if (rabBranchCodeId == null) return;
         this.commonCodeService.getAllActiveCommonCodesByParentId(rabBranchCodeId).subscribe({
             next: (list) => this.rabSubBranchOptions = (Array.isArray(list) ? list : []).map((item: any) => this.mapCommonCodeToOption(item)),
-            error: () => { this.rabSubBranchOptions = []; }
+            error: (err: any) => { this.rabSubBranchOptions = []; }
         });
     }
 
@@ -614,7 +614,7 @@ export class EmpPreviousRabService implements OnInit {
         if (rabSubBranchCodeId == null) return;
         this.commonCodeService.getAllActiveCommonCodesByParentId(rabSubBranchCodeId).subscribe({
             next: (list) => this.rabSectionOptions = (Array.isArray(list) ? list : []).map((item: any) => this.mapCommonCodeToOption(item)),
-            error: () => { this.rabSectionOptions = []; }
+            error: (err: any) => { this.rabSectionOptions = []; }
         });
     }
 
@@ -624,7 +624,7 @@ export class EmpPreviousRabService implements OnInit {
         if (rabSectionCodeId == null) return;
         this.commonCodeService.getAllActiveCommonCodesByParentId(rabSectionCodeId).subscribe({
             next: (list) => this.rabSubSectionOptions = (Array.isArray(list) ? list : []).map((item: any) => this.mapCommonCodeToOption(item)),
-            error: () => { this.rabSubSectionOptions = []; }
+            error: (err: any) => { this.rabSubSectionOptions = []; }
         });
     }
 
@@ -650,19 +650,19 @@ export class EmpPreviousRabService implements OnInit {
                                             next: (subSections) => {
                                                 this.rabSubSectionOptions = (Array.isArray(subSections) ? subSections : []).map((item: any) => this.mapCommonCodeToOption(item));
                                             },
-                                            error: () => { this.rabSubSectionOptions = []; }
+                                            error: (err: any) => { this.rabSubSectionOptions = []; }
                                         });
                                     },
-                                    error: () => { this.rabSectionOptions = []; }
+                                    error: (err: any) => { this.rabSectionOptions = []; }
                                 });
                             },
-                            error: () => { this.rabSubBranchOptions = []; }
+                            error: (err: any) => { this.rabSubBranchOptions = []; }
                         });
                     },
-                    error: () => { this.rabBranchOptions = []; }
+                    error: (err: any) => { this.rabBranchOptions = []; }
                 });
             },
-            error: () => { this.rabWingOptions = []; }
+            error: (err: any) => { this.rabWingOptions = []; }
         });
     }
 

@@ -189,8 +189,8 @@ export class EmployeeSignatureUploadComponent {
                 this.loadCurrentSignature();
                 this.resetSelection();
             },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to upload signature.' });
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to upload signature.' });
                 this.uploading = false;
             }
         });
@@ -356,7 +356,7 @@ export class EmployeeSignatureUploadComponent {
                     this.currentSignatureUrl = URL.createObjectURL(blob);
                 }
             },
-            error: () => {
+            error: (err: any) => {
                 this.currentSignatureUrl = '';
             }
         });

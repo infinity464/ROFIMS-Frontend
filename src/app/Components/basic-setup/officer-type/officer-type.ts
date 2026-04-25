@@ -167,7 +167,7 @@ export class OfficerType {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load Mother orgs'
+                    detail: err?.error?.message || 'Failed to load Mother orgs'
                 });
             }
         });
@@ -194,7 +194,7 @@ export class OfficerType {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load employeeTypes'
+                    detail: err?.error?.message || 'Failed to load employeeTypes'
                 });
             }
         });
@@ -210,7 +210,7 @@ export class OfficerType {
             },
             error: (err) => {
                 console.error('Error fetching data:', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load data' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load data' });
                 this.loading = false;
             }
         });
@@ -302,7 +302,7 @@ export class OfficerType {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create officer-type'
+                    detail: err?.error?.message || 'Failed to create officer-type'
                 });
 
                 this.isSubmitting = false;
@@ -338,7 +338,7 @@ export class OfficerType {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update officer-type'
+                    detail: err?.error?.message || 'Failed to update officer-type'
                 });
                 this.isSubmitting = false;
             }
@@ -388,7 +388,7 @@ export class OfficerType {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete officer-type'
+                            detail: err?.error?.message || 'Failed to delete officer-type'
                         });
                     }
                 });

@@ -107,11 +107,11 @@ export class NoteSheetApproverConfigComponent implements OnInit {
                 this.filteredConfigs = [...res];
                 this.totalRecords = res.length;
             },
-            error: () => {
+            error: (err: any) => {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to fetch NoteSheet Approver Config data'
+                    detail: err?.error?.message || 'Failed to fetch NoteSheet Approver Config data'
                 });
             }
         });
@@ -194,11 +194,11 @@ export class NoteSheetApproverConfigComponent implements OnInit {
                 this.getAll();
                 this.isSubmitting = false;
             },
-            error: () => {
+            error: (err: any) => {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create NoteSheet Approver Config'
+                    detail: err?.error?.message || 'Failed to create NoteSheet Approver Config'
                 });
                 this.isSubmitting = false;
             }
@@ -229,11 +229,11 @@ export class NoteSheetApproverConfigComponent implements OnInit {
                 this.getAll();
                 this.isSubmitting = false;
             },
-            error: () => {
+            error: (err: any) => {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update NoteSheet Approver Config'
+                    detail: err?.error?.message || 'Failed to update NoteSheet Approver Config'
                 });
                 this.isSubmitting = false;
             }
@@ -268,11 +268,11 @@ export class NoteSheetApproverConfigComponent implements OnInit {
                 });
                 this.getAll();
             },
-            error: () => {
+            error: (err: any) => {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to delete NoteSheet Approver Config'
+                    detail: err?.error?.message || 'Failed to delete NoteSheet Approver Config'
                 });
             }
         });

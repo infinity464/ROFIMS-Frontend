@@ -86,11 +86,11 @@ export class TrainingInstitution {
         this.filteredInstitutes = [...res];
         this.totalRecords = res.length;
       },
-      error: () => {
+      error: (err: any) => {
         this.messageService.add({
           severity: 'error',
           summary: 'Error',
-          detail: 'Failed to fetch institutes'
+          detail: err?.error?.message || 'Failed to fetch institutes'
         });
       }
     });
@@ -151,11 +151,11 @@ export class TrainingInstitution {
         this.getAll();
         this.isSubmitting = false;
       },
-      error: () => {
+      error: (err: any) => {
         this.messageService.add({
           severity: 'error',
           summary: 'Error',
-          detail: 'Failed to create institute'
+          detail: err?.error?.message || 'Failed to create institute'
         });
         this.isSubmitting = false;
       }
@@ -181,11 +181,11 @@ export class TrainingInstitution {
         this.getAll();
         this.isSubmitting = false;
       },
-      error: () => {
+      error: (err: any) => {
         this.messageService.add({
           severity: 'error',
           summary: 'Error',
-          detail: 'Failed to update institute'
+          detail: err?.error?.message || 'Failed to update institute'
         });
         this.isSubmitting = false;
       }
@@ -227,11 +227,11 @@ export class TrainingInstitution {
             });
             this.getAll();
           },
-          error: () => {
+          error: (err: any) => {
             this.messageService.add({
               severity: 'error',
               summary: 'Error',
-              detail: 'Failed to delete institute'
+              detail: err?.error?.message || 'Failed to delete institute'
             });
           }
         });

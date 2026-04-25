@@ -155,11 +155,11 @@ export class PermanentPostingMORecordComponent implements OnInit {
     private loadStaticOptions(): void {
         this.commonCodeService.getAllActiveMotherOrgs().subscribe({
             next: (orgs) => { this.motherOrgOptions = orgs.map(o => ({ label: o.orgNameEN, value: o.orgId })); },
-            error: () => {}
+            error: (err: any) => {}
         });
         this.commonCodeService.getAllActiveCommonCodesType('EmployeeType').subscribe({
             next: (codes) => { this.memberTypeOptions = codes.map(c => ({ label: c.codeValueEN, value: c.codeId })); },
-            error: () => {}
+            error: (err: any) => {}
         });
     }
 
@@ -201,7 +201,7 @@ export class PermanentPostingMORecordComponent implements OnInit {
         if (!ropId) return;
         this.commonCodeService.getAllActiveCommonCodesByParentId(ropId).subscribe({
             next: (codes) => { this.tradeOptions = codes.map(c => ({ label: c.codeValueEN, value: c.codeId })); },
-            error: () => {}
+            error: (err: any) => {}
         });
     }
 
@@ -214,7 +214,7 @@ export class PermanentPostingMORecordComponent implements OnInit {
             next: (units) => {
                 this.postingUnitOptions = units.map(u => ({ label: u.orgNameEN, value: u.orgId }));
             },
-            error: () => { this.postingUnitOptions = []; }
+            error: (err: any) => { this.postingUnitOptions = []; }
         });
     }
 
@@ -309,7 +309,7 @@ export class PermanentPostingMORecordComponent implements OnInit {
     onDownloadFile(payload: { fileId: number; fileName: string }): void {
         this.empService.downloadFile(payload.fileId).subscribe({
             next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
-            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file.' })
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file.' })
         });
     }
 
@@ -347,7 +347,7 @@ export class PermanentPostingMORecordComponent implements OnInit {
                         results.slice(poNewFiles.length)
                     );
                 },
-                error: () => { this.saving = false; this.messageService.add({ severity: 'error', summary: 'Upload', detail: 'File upload failed.' }); }
+                error: (err: any) => { this.saving = false; this.messageService.add({ severity: 'error', summary: 'Upload', detail: 'File upload failed.' }); }
             });
         } else {
             proceed([], []);
@@ -487,7 +487,7 @@ export class PermanentPostingMORecordComponent implements OnInit {
             accept: () => {
                 this.recordSvc.delete(row.id).subscribe({
                     next: () => { this.messageService.add({ severity: 'success', summary: 'Deleted', detail: 'Record deleted.' }); this.loadList(); },
-                    error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Delete failed.' })
+                    error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Delete failed.' })
                 });
             }
         });
@@ -497,12 +497,12 @@ export class PermanentPostingMORecordComponent implements OnInit {
 
     loadList(): void {
         this.loadingList = true;
-        this.recordSvc.getAll().subscribe({ next: (d) => { this.records = d; this.loadingList = false; }, error: () => { this.loadingList = false; } });
+        this.recordSvc.getAll().subscribe({ next: (d) => { this.records = d; this.loadingList = false; }, error: (err: any) => { this.loadingList = false; } });
     }
 
     loadJoineeList(): void {
         this.loadingJoineeList = true;
-        this.detailSvc.getAll().subscribe({ next: (d) => { this.joineeRecords = d; this.loadingJoineeList = false; }, error: () => { this.loadingJoineeList = false; } });
+        this.detailSvc.getAll().subscribe({ next: (d) => { this.joineeRecords = d; this.loadingJoineeList = false; }, error: (err: any) => { this.loadingJoineeList = false; } });
     }
 
     onEditJoinee(row: PermanentPostingJoineeDetailModel): void {
@@ -546,7 +546,7 @@ export class PermanentPostingMORecordComponent implements OnInit {
             accept: () => {
                 this.detailSvc.delete(row.id).subscribe({
                     next: () => { this.messageService.add({ severity: 'success', summary: 'Deleted', detail: 'Joinee record deleted.' }); this.loadJoineeList(); },
-                    error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Delete failed.' })
+                    error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Delete failed.' })
                 });
             }
         });

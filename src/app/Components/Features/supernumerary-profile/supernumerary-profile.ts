@@ -256,7 +256,7 @@ export class SupernumeraryProfile implements OnInit, OnDestroy {
                     this.profileImageUrl = URL.createObjectURL(blob);
                 }
             },
-            error: () => {}
+            error: (err: any) => {}
         });
     }
 
@@ -309,7 +309,7 @@ export class SupernumeraryProfile implements OnInit, OnDestroy {
             next: (list) => {
                 this.documentList = list ?? [];
             },
-            error: () => {
+            error: (err: any) => {
                 this.documentList = [];
             }
         });
@@ -345,7 +345,7 @@ export class SupernumeraryProfile implements OnInit, OnDestroy {
         if (fileId == null) return;
         this.empService.downloadFile(fileId).subscribe({
             next: (blob) => this.empService.triggerFileDownload(blob, fileName),
-            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file.' })
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file.' })
         });
     }
 

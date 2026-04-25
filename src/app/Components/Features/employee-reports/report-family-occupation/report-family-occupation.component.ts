@@ -189,8 +189,8 @@ export class ReportFamilyOccupationComponent implements OnInit {
                     this.selectedRelationId = spouse.value;
                 }
             },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load relation types' });
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load relation types' });
             },
         });
     }
@@ -204,8 +204,8 @@ export class ReportFamilyOccupationComponent implements OnInit {
                     value: c.codeId,
                 }));
             },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load occupations' });
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load occupations' });
             },
         });
     }

@@ -71,8 +71,8 @@ export class RoleListComponent implements OnInit {
       next: (list) => {
         this.roles = Array.isArray(list) ? list : [];
       },
-      error: () => {
-        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load roles' });
+      error: (err: any) => {
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load roles' });
       }
     });
   }
@@ -99,7 +99,7 @@ export class RoleListComponent implements OnInit {
             this.messageService.add({ severity: 'error', summary: 'Error', detail: res.message ?? 'Update failed' });
           }
         },
-        error: () => {
+        error: (err: any) => {
           this.isSubmitting = false;
           this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Update failed' });
         }
@@ -116,7 +116,7 @@ export class RoleListComponent implements OnInit {
             this.messageService.add({ severity: 'error', summary: 'Error', detail: res.message ?? 'Add failed' });
           }
         },
-        error: () => {
+        error: (err: any) => {
           this.isSubmitting = false;
           this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Add failed' });
         }

@@ -145,7 +145,7 @@ export class Occupation {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load data'
+                    detail: err?.error?.message || 'Failed to load data'
                 });
                 this.loading = false;
             }
@@ -198,7 +198,7 @@ export class Occupation {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create occupation'
+                    detail: err?.error?.message || 'Failed to create occupation'
                 });
                 this.isSubmitting = false;
             }
@@ -234,7 +234,7 @@ export class Occupation {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update occupation'
+                    detail: err?.error?.message || 'Failed to update occupation'
                 });
                 this.isSubmitting = false;
             }
@@ -281,7 +281,7 @@ export class Occupation {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete occupation'
+                            detail: err?.error?.message || 'Failed to delete occupation'
                         });
                     }
                 });

@@ -77,12 +77,12 @@ export class MyLoginAuditComponent implements OnInit {
           this.totalRecords = res.totalRecords;
           this.loading = false;
         },
-        error: () => {
+        error: (err: any) => {
           this.loading = false;
           this.messageService.add({
             severity: 'error',
             summary: 'Error',
-            detail: 'Failed to load your login history.',
+            detail: err?.error?.message || 'Failed to load your login history.',
             life: 3000
           });
         }

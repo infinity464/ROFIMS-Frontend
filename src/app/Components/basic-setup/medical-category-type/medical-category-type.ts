@@ -146,7 +146,7 @@ export class MedicalCategoryType {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load data'
+                    detail: err?.error?.message || 'Failed to load data'
                 });
                 this.loading = false;
             }
@@ -197,7 +197,7 @@ export class MedicalCategoryType {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create medical category type'
+                    detail: err?.error?.message || 'Failed to create medical category type'
                 });
                 this.isSubmitting = false;
             }
@@ -232,7 +232,7 @@ export class MedicalCategoryType {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update medical category type'
+                    detail: err?.error?.message || 'Failed to update medical category type'
                 });
                 this.isSubmitting = false;
             }
@@ -278,7 +278,7 @@ export class MedicalCategoryType {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete medical category type'
+                            detail: err?.error?.message || 'Failed to delete medical category type'
                         });
                     }
                 });

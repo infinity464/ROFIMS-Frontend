@@ -133,8 +133,8 @@ export class IdentityUserCreateComponent implements OnInit {
           .filter((m) => m.status !== false && m.codeId > 0)
           .map((m) => ({ label: m.codeValueEN ?? '', value: m.codeId }));
       },
-      error: () => {
-        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load member types' });
+      error: (err: any) => {
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load member types' });
       }
     });
   }
@@ -151,8 +151,8 @@ export class IdentityUserCreateComponent implements OnInit {
         const arr = Array.isArray(users) ? users : [];
         this.users = arr.map((u) => this.buildUserRow(u));
       },
-      error: () => {
-        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load users' });
+      error: (err: any) => {
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load users' });
       }
     });
   }
@@ -229,8 +229,8 @@ export class IdentityUserCreateComponent implements OnInit {
           };
         });
       },
-      error: () => {
-        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load employees' });
+      error: (err: any) => {
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load employees' });
       }
     });
   }
@@ -264,11 +264,11 @@ export class IdentityUserCreateComponent implements OnInit {
       next: (list) => {
         this.roles = Array.isArray(list) ? list : [];
       },
-      error: () => {
+      error: (err: any) => {
         this.messageService.add({
           severity: 'error',
           summary: 'Error',
-          detail: 'Failed to load roles'
+          detail: err?.error?.message || 'Failed to load roles'
         });
       }
     });
@@ -380,7 +380,7 @@ export class IdentityUserCreateComponent implements OnInit {
                 this.onReset();
                 this.loadUsersAndMappings();
               },
-              error: () => {
+              error: (err: any) => {
                 this.isSubmitting = false;
                 this.messageService.add({
                   severity: 'warn',
@@ -489,7 +489,7 @@ export class IdentityUserCreateComponent implements OnInit {
                 this.resetFormAfterCreate(confirmUrl);
                 this.loadUsersAndMappings();
               },
-              error: () => {
+              error: (err: any) => {
                 this.isSubmitting = false;
                 this.messageService.add({
                   severity: 'warn',
@@ -501,7 +501,7 @@ export class IdentityUserCreateComponent implements OnInit {
               }
             });
           },
-          error: () => {
+          error: (err: any) => {
             this.isSubmitting = false;
             this.messageService.add({
               severity: 'warn',
@@ -513,7 +513,7 @@ export class IdentityUserCreateComponent implements OnInit {
           }
         });
       },
-      error: () => {
+      error: (err: any) => {
         this.isSubmitting = false;
         this.messageService.add({
           severity: 'warn',
@@ -561,7 +561,7 @@ export class IdentityUserCreateComponent implements OnInit {
         next: (ids) => {
           this.form.patchValue({ memberTypeIds: Array.isArray(ids) ? ids : [] });
         },
-        error: () => {
+        error: (err: any) => {
           this.messageService.add({
             severity: 'warn',
             summary: 'Warning',

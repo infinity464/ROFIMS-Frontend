@@ -100,8 +100,8 @@ export class DynamicSearchComponent implements OnInit {
             next: (fields) => {
                 this.availableFields = fields;
             },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load search fields.' });
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load search fields.' });
             }
         });
     }
@@ -219,7 +219,7 @@ export class DynamicSearchComponent implements OnInit {
                 this.totalRecords = response.pages?.rows || 0;
                 this.loading = false;
             },
-            error: () => {
+            error: (err: any) => {
                 this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Search failed.' });
                 this.loading = false;
             }

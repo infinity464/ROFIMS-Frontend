@@ -186,7 +186,7 @@ export class EmpBasicInfo implements OnInit, OnChanges {
                     });
                 }
             },
-            error: () => { this.isCheckingJoinee = false; this.joineeRecord = null; }
+            error: (err: any) => { this.isCheckingJoinee = false; this.joineeRecord = null; }
         });
     }
 
@@ -272,7 +272,7 @@ export class EmpBasicInfo implements OnInit, OnChanges {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to save address'
+                    detail: err?.error?.message || 'Failed to save address'
                 });
             }
         });
@@ -326,7 +326,7 @@ export class EmpBasicInfo implements OnInit, OnChanges {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to save address'
+                    detail: err?.error?.message || 'Failed to save address'
                 });
             }
         });
@@ -381,7 +381,7 @@ export class EmpBasicInfo implements OnInit, OnChanges {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to save address'
+                    detail: err?.error?.message || 'Failed to save address'
                 });
             }
         });
@@ -436,7 +436,7 @@ export class EmpBasicInfo implements OnInit, OnChanges {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to save address'
+                    detail: err?.error?.message || 'Failed to save address'
                 });
             }
         });
@@ -458,7 +458,7 @@ export class EmpBasicInfo implements OnInit, OnChanges {
             next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
             error: (err) => {
                 console.error('Download failed', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file' });
             }
         });
     }
@@ -559,7 +559,7 @@ export class EmpBasicInfo implements OnInit, OnChanges {
                     this.messageService.add({
                         severity: 'error',
                         summary: 'Error',
-                        detail: 'Failed to upload one or more files'
+                        detail: err?.error?.message || 'Failed to upload one or more files'
                     });
                 }
             });
@@ -1121,11 +1121,11 @@ export class EmpBasicInfo implements OnInit, OnChanges {
                                     this.relationOptions = res;
                                     applySpouseFromFamilyList(familyList);
                                 },
-                                error: () => applySpouseFromFamilyList(familyList)
+                                error: (err: any) => applySpouseFromFamilyList(familyList)
                             });
                         }
                     },
-                    error: () => {}
+                    error: (err: any) => {}
                 });
 
                 // Check reliever
@@ -1145,7 +1145,7 @@ export class EmpBasicInfo implements OnInit, OnChanges {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load employee data'
+                    detail: err?.error?.message || 'Failed to load employee data'
                 });
             }
         });
@@ -1488,7 +1488,7 @@ export class EmpBasicInfo implements OnInit, OnChanges {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create Last Unit of Mother Organization'
+                    detail: err?.error?.message || 'Failed to create Last Unit of Mother Organization'
                 });
                 this.isSavingLastUnit = false;
             }
@@ -1700,7 +1700,7 @@ export class EmpBasicInfo implements OnInit, OnChanges {
             next: (ids) => {
                 this.allowedMemberTypeIds = Array.isArray(ids) ? ids : [];
             },
-            error: () => {
+            error: (err: any) => {
                 this.allowedMemberTypeIds = null;
             }
         });
@@ -1747,7 +1747,7 @@ export class EmpBasicInfo implements OnInit, OnChanges {
                     this.messageService.add({
                         severity: 'error',
                         summary: 'Error',
-                        detail: 'Failed to save employee'
+                        detail: err?.error?.message || 'Failed to save employee'
                     });
                 }
             });

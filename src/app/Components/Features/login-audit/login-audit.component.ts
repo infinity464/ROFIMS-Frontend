@@ -85,12 +85,12 @@ export class LoginAuditComponent implements OnInit {
           this.totalRecords = res.totalRecords;
           this.loading = false;
         },
-        error: () => {
+        error: (err: any) => {
           this.loading = false;
           this.messageService.add({
             severity: 'error',
             summary: 'Error',
-            detail: 'Failed to load login audit data.',
+            detail: err?.error?.message || 'Failed to load login audit data.',
             life: 3000
           });
         }

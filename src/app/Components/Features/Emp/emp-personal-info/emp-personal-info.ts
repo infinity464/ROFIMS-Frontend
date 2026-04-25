@@ -193,7 +193,7 @@ export class EmpPersonalInfo implements OnInit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load employee data'
+                    detail: err?.error?.message || 'Failed to load employee data'
                 });
             }
         });
@@ -467,7 +467,7 @@ export class EmpPersonalInfo implements OnInit {
             next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
             error: (err) => {
                 console.error('Download failed', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file' });
             }
         });
     }
@@ -507,7 +507,7 @@ export class EmpPersonalInfo implements OnInit {
                     this.messageService.add({
                         severity: 'error',
                         summary: 'Error',
-                        detail: 'Failed to save personal information'
+                        detail: err?.error?.message || 'Failed to save personal information'
                     });
                 }
             });
@@ -528,7 +528,7 @@ export class EmpPersonalInfo implements OnInit {
                     this.messageService.add({
                         severity: 'error',
                         summary: 'Error',
-                        detail: 'Failed to upload one or more files'
+                        detail: err?.error?.message || 'Failed to upload one or more files'
                     });
                 }
             });

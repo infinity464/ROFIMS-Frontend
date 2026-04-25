@@ -417,15 +417,15 @@ export class NotesheetExBdLeaveComponent implements OnInit {
                     next: (list2) => {
                         this.unitOptions = mapList(list2);
                     },
-                    error: () => {}
+                    error: (err: any) => {}
                 });
             },
-            error: () => {
+            error: (err: any) => {
                 this.masterBasicSetupService.getAllByType('RABUNIT').subscribe({
                     next: (list) => {
                         this.unitOptions = mapList(list);
                     },
-                    error: () => {}
+                    error: (err: any) => {}
                 });
             }
         });
@@ -452,7 +452,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
                 }));
                 done?.();
             },
-            error: () => {
+            error: (err: any) => {
                 this.wingOptions = [];
                 done?.();
             }
@@ -468,7 +468,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
                     value: c.codeId
                 }));
             },
-            error: () => {}
+            error: (err: any) => {}
         });
     }
 
@@ -481,7 +481,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
                     value: c.codeId
                 }));
             },
-            error: () => {}
+            error: (err: any) => {}
         });
     }
 
@@ -494,7 +494,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
                     value: c.codeId
                 }));
             },
-            error: () => {}
+            error: (err: any) => {}
         });
     }
 
@@ -506,7 +506,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
                     value: c.codeId
                 }));
             },
-            error: () => {}
+            error: (err: any) => {}
         });
     }
 
@@ -544,14 +544,14 @@ export class NotesheetExBdLeaveComponent implements OnInit {
                             this.finalApproverOptions = allOpts;
                         }
                     },
-                    error: () => {
+                    error: (err: any) => {
                         this.initiatorOptions = allOpts;
                         this.recommenderOptions = allOpts;
                         this.finalApproverOptions = allOpts;
                     }
                 });
             },
-            error: () => {}
+            error: (err: any) => {}
         });
     }
 
@@ -599,7 +599,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
                     this.isPreparedByMapped = false;
                 }
             },
-            error: () => {
+            error: (err: any) => {
                 this.isPreparedByMapped = false;
             }
         });
@@ -614,7 +614,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
                     value: c.codeId
                 }));
             },
-            error: () => {}
+            error: (err: any) => {}
         });
     }
 
@@ -653,7 +653,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
                 this.form.patchValue({ familyMemberIds: toSet });
                 setTimeout(() => this.form.patchValue({ familyMemberIds: toSet }), 0);
             },
-            error: () => {
+            error: (err: any) => {
                 this.familyMemberOptions = [];
             }
         });
@@ -706,7 +706,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
     onDownloadFile(payload: { fileId: number; fileName: string }): void {
         this.empService.downloadFile(payload.fileId).subscribe({
             next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
-            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file.' })
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file.' })
         });
     }
 
@@ -759,8 +759,8 @@ export class NotesheetExBdLeaveComponent implements OnInit {
                     const allRefs = [...existingRefs.map((r) => ({ FileId: r.FileId, fileName: r.fileName })), ...newRefs];
                     doSave(JSON.stringify(allRefs));
                 },
-                error: () => {
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to upload files.' });
+                error: (err: any) => {
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to upload files.' });
                     this.isSubmitting = false;
                 }
             });
@@ -853,8 +853,8 @@ export class NotesheetExBdLeaveComponent implements OnInit {
                 if (this.viewNoteSheet) this.loadApprovalChain(this.viewNoteSheet);
                 this.viewLoading = false;
             },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load note sheet.' });
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load note sheet.' });
                 this.viewLoading = false;
             }
         });
@@ -912,7 +912,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
                 this.approversDetails = approverIds.length > 0 ? results.slice(idx) : [];
                 this.loadSignaturesForChain();
             },
-            error: () => {}
+            error: (err: any) => {}
         });
     }
 
@@ -932,7 +932,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
                         reader.readAsDataURL(blob);
                     }
                 },
-                error: () => { /* no signature available */ }
+                error: (err: any) => { /* no signature available */ }
             });
         }
     }
@@ -990,7 +990,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
     onViewDownloadDoc(fileId: number, fileName: string): void {
         this.empService.downloadFile(fileId).subscribe({
             next: (blob) => this.empService.triggerFileDownload(blob, fileName),
-            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file.' })
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file.' })
         });
     }
 
@@ -1001,7 +1001,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
                 window.open(url, '_blank');
                 setTimeout(() => URL.revokeObjectURL(url), 60000);
             },
-            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to open file.' })
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to open file.' })
         });
     }
 
@@ -1092,7 +1092,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
                     this.messageService.add({ severity: 'warn', summary: 'Notice', detail: 'Update may not have saved.' });
                 }
             },
-            error: () => {
+            error: (err: any) => {
                 this.savingView = false;
                 this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Update failed.' });
             }

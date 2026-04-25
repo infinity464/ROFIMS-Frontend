@@ -189,7 +189,7 @@ export class MotherOrgRank {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load Member Types'
+                    detail: err?.error?.message || 'Failed to load Member Types'
                 });
             }
         });
@@ -217,7 +217,7 @@ export class MotherOrgRank {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load Mother org Rank'
+                    detail: err?.error?.message || 'Failed to load Mother org Rank'
                 });
             }
         });
@@ -233,7 +233,7 @@ export class MotherOrgRank {
             },
             error: (err) => {
                 console.error('Error fetching data:', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load data' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load data' });
                 this.loading = false;
             }
         });
@@ -340,7 +340,7 @@ export class MotherOrgRank {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create mother-org-rank'
+                    detail: err?.error?.message || 'Failed to create mother-org-rank'
                 });
 
                 this.isSubmitting = false;
@@ -376,7 +376,7 @@ export class MotherOrgRank {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update mother-org-rank'
+                    detail: err?.error?.message || 'Failed to update mother-org-rank'
                 });
                 this.isSubmitting = false;
             }
@@ -427,7 +427,7 @@ export class MotherOrgRank {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete mother-org-rank'
+                            detail: err?.error?.message || 'Failed to delete mother-org-rank'
                         });
                     }
                 });

@@ -147,7 +147,7 @@ export class PunishmentType {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load data'
+                    detail: err?.error?.message || 'Failed to load data'
                 });
                 this.loading = false;
             }
@@ -199,7 +199,7 @@ export class PunishmentType {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create punishment-type'
+                    detail: err?.error?.message || 'Failed to create punishment-type'
                 });
                 this.isSubmitting = false;
             }
@@ -235,7 +235,7 @@ export class PunishmentType {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update punishment-type'
+                    detail: err?.error?.message || 'Failed to update punishment-type'
                 });
                 this.isSubmitting = false;
             }
@@ -282,7 +282,7 @@ export class PunishmentType {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete punishment-type'
+                            detail: err?.error?.message || 'Failed to delete punishment-type'
                         });
                     }
                 });

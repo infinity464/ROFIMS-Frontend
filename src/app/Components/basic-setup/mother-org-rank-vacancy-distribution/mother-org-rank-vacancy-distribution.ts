@@ -121,8 +121,8 @@ export class MotherOrgRankVacancyDistributionComponent implements OnInit {
     loadOrgs(): void {
         this.masterBasicSetup.getAllActiveMotherOrgs().subscribe({
             next: (list) => { this.orgList = list ?? []; },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load organizations' });
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load organizations' });
             }
         });
     }
@@ -138,8 +138,8 @@ export class MotherOrgRankVacancyDistributionComponent implements OnInit {
                 const rList = (ranks ?? []) as CommonCode[];
                 this.rankOptions = rList.map((r) => ({ codeId: r.codeId, label: r.codeValueEN ?? String(r.codeId) }));
             },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load ranks' });
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load ranks' });
             }
         });
     }
@@ -207,17 +207,17 @@ export class MotherOrgRankVacancyDistributionComponent implements OnInit {
                                 });
                                 this.rabTreeLoading = false;
                             },
-                            error: () => {
+                            error: (err: any) => {
                                 this.rabTreeLoading = false;
                             }
                         });
                     },
-                    error: () => {
+                    error: (err: any) => {
                         this.rabTreeLoading = false;
                     }
                 });
             },
-            error: () => {
+            error: (err: any) => {
                 this.rabTreeLoading = false;
             }
         });
@@ -312,7 +312,7 @@ export class MotherOrgRankVacancyDistributionComponent implements OnInit {
                     this.totalRecords = this.distributionData.length;
                     this.loading = false;
                 },
-                error: () => {
+                error: (err: any) => {
                     this.loading = false;
                 }
             });
@@ -358,8 +358,8 @@ export class MotherOrgRankVacancyDistributionComponent implements OnInit {
                             this.loadDistribution();
                         }
                     },
-                    error: () => {
-                        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete' });
+                    error: (err: any) => {
+                        this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to delete' });
                     }
                 });
             }

@@ -194,9 +194,9 @@ export class EmpNomineeInfo implements OnInit {
                 });
                 this.isLoadingFamilyMembers = false;
             },
-            error: () => {
+            error: (err: any) => {
                 this.isLoadingFamilyMembers = false;
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load family members.' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load family members.' });
             }
         });
     }
@@ -323,7 +323,7 @@ export class EmpNomineeInfo implements OnInit {
                     }
                 }
             },
-            error: () => {
+            error: (err: any) => {
                 this.nominees.clear();
             }
         });
@@ -385,7 +385,7 @@ export class EmpNomineeInfo implements OnInit {
             next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
             error: (err) => {
                 console.error('Download failed', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file' });
             }
         });
     }
@@ -449,9 +449,9 @@ export class EmpNomineeInfo implements OnInit {
                     this.messageService.add({ severity: 'success', summary: 'Saved', detail: 'Nominee information saved successfully.' });
                     this.loadNomineesForEmployee(this.selectedEmployeeId!);
                 },
-                error: () => {
+                error: (err: any) => {
                     this.isSaving = false;
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to save nominee information.' });
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to save nominee information.' });
                 }
             });
         };
@@ -470,7 +470,7 @@ export class EmpNomineeInfo implements OnInit {
                 },
                 error: (err) => {
                     console.error('Error uploading files', err);
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to upload one or more files' });
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to upload one or more files' });
                 }
             });
             return;

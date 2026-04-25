@@ -307,7 +307,7 @@ export class NotesheetListComponent implements OnInit {
 
     obs.subscribe({
       next: (list: any[]) => { this.membersList = list ?? []; this.membersLoading = false; },
-      error: () => { this.membersLoading = false; }
+      error: (err: any) => { this.membersLoading = false; }
     });
   }
 
@@ -364,7 +364,7 @@ export class NotesheetListComponent implements OnInit {
         this.approversDetails = approverIds.length > 0 ? results.slice(idx) : [];
         this.loadSignaturesForChain();
       },
-      error: () => {}
+      error: (err: any) => {}
     });
   }
 
@@ -385,7 +385,7 @@ export class NotesheetListComponent implements OnInit {
             reader.readAsDataURL(blob);
           }
         },
-        error: () => { /* no signature available */ }
+        error: (err: any) => { /* no signature available */ }
       });
     }
   }
@@ -467,7 +467,7 @@ export class NotesheetListComponent implements OnInit {
           this.messageService.add({ severity: 'warn', summary: 'Notice', detail: 'Update failed.' });
         }
       },
-      error: () => {
+      error: (err: any) => {
         this.savingPreview = false;
         this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Update failed.' });
       }
@@ -490,9 +490,9 @@ export class NotesheetListComponent implements OnInit {
         this.employeesList = list ?? [];
         this.loadingEmployees = false;
       },
-      error: () => {
+      error: (err: any) => {
         this.loadingEmployees = false;
-        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load employee list.' });
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load employee list.' });
       }
     });
   }
@@ -593,7 +593,7 @@ export class NotesheetListComponent implements OnInit {
   onDownloadSupportingDoc(fileId: number, fileName: string): void {
     this.empService.downloadFile(fileId).subscribe({
       next: (blob) => this.empService.triggerFileDownload(blob, fileName),
-      error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file.' })
+      error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file.' })
     });
   }
 
@@ -604,7 +604,7 @@ export class NotesheetListComponent implements OnInit {
         window.open(url, '_blank');
         setTimeout(() => URL.revokeObjectURL(url), 60000);
       },
-      error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to open file.' })
+      error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to open file.' })
     });
   }
 
@@ -620,7 +620,7 @@ export class NotesheetListComponent implements OnInit {
         this.editMainTextNoteSheet = full;
         this.mainTextEditValue = full?.mainText ?? '';
       },
-      error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load note-sheet.' })
+      error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load note-sheet.' })
     });
   }
 
@@ -640,7 +640,7 @@ export class NotesheetListComponent implements OnInit {
           this.messageService.add({ severity: 'warn', summary: 'Notice', detail: 'Update failed.' });
         }
       },
-      error: () => {
+      error: (err: any) => {
         this.savingMainText = false;
         this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Update failed.' });
       }
@@ -661,7 +661,7 @@ export class NotesheetListComponent implements OnInit {
         else if (noteSheetType === NoteSheetType.NewPosting) route = '/posting/notesheet-generate';
         this.router.navigate([route], { queryParams: { id: row.noteSheetId } });
       },
-      error: () => {
+      error: (err: any) => {
         this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Could not load note sheet for update.' });
         this.router.navigate(['/notesheet-generate'], { queryParams: { id: row.noteSheetId } });
       }
@@ -977,7 +977,7 @@ export class NotesheetListComponent implements OnInit {
           );
           if (me?.employeeId) this.currentUserEmployeeId = me.employeeId;
         },
-        error: () => {}
+        error: (err: any) => {}
       });
     }
   }
@@ -1014,7 +1014,7 @@ export class NotesheetListComponent implements OnInit {
         this.setCurrentList(list);
         this.loading = false;
       },
-      error: () => {
+      error: (err: any) => {
         this._fullList = [];
         this.setCurrentList([]);
         onError();
@@ -1128,10 +1128,10 @@ export class NotesheetListComponent implements OnInit {
   private loadLookups(): void {
     this.masterBasicSetup.getAllByType('RabUnit').subscribe({
       next: (list) => this.buildUnitAndWingMaps(list),
-      error: () =>
+      error: (err: any) =>
         this.masterBasicSetup.getAllByType('RABUNIT').subscribe({
           next: (list) => this.buildUnitAndWingMaps(list),
-          error: () => {}
+          error: (err: any) => {}
         })
     });
     this.masterBasicSetup.getAllByType('RabBranch').subscribe({
@@ -1142,7 +1142,7 @@ export class NotesheetListComponent implements OnInit {
           if (id != null) this.branchLabelMap[id] = (c.codeValueEN ?? c.displayCodeValueEN ?? '').trim() || '-';
         });
       },
-      error: () => {}
+      error: (err: any) => {}
     });
     this.commonCodeService.getAllActiveCommonCodesType('VisitType').subscribe({
       next: (list) => {
@@ -1152,7 +1152,7 @@ export class NotesheetListComponent implements OnInit {
           if (id != null) this.purposeLabelMap[id] = (c.codeValueEN || c.displayCodeValueEN || c.codeValueBN || '').trim() || '-';
         });
       },
-      error: () => {}
+      error: (err: any) => {}
     });
     this.commonCodeService.getAllActiveCommonCodesType('Country').subscribe({
       next: (list) => {
@@ -1162,7 +1162,7 @@ export class NotesheetListComponent implements OnInit {
           if (id != null) this.countryLabelMap[id] = (c.codeValueEN || c.displayCodeValueEN || c.codeValueBN || '').trim() || '-';
         });
       },
-      error: () => {}
+      error: (err: any) => {}
     });
   }
 
@@ -1246,8 +1246,8 @@ export class NotesheetListComponent implements OnInit {
           }
           this.doSubmitRemark();
         },
-        error: () => {
-          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to validate transfer units. Please try again.' });
+        error: (err: any) => {
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to validate transfer units. Please try again.' });
         }
       });
       return;
@@ -1319,7 +1319,7 @@ export class NotesheetListComponent implements OnInit {
             DraftPostingStatus.Approved
           ).subscribe({
             next: () => {},
-            error: () => this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Failed to update Draft Posting status.' })
+            error: (err: any) => this.messageService.add({ severity: 'warn', summary: 'Warning', detail: err?.error?.message || 'Failed to update Draft Posting status.' })
           });
         }
 
@@ -1328,11 +1328,11 @@ export class NotesheetListComponent implements OnInit {
         if (empIds.length > 0) {
           this.postingService.updateEmployeesPostingStatus(empIds, PostingStatus.PendingForJoining).subscribe({
             next: () => {},
-            error: () => this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Failed to update employee posting status.' })
+            error: (err: any) => this.messageService.add({ severity: 'warn', summary: 'Warning', detail: err?.error?.message || 'Failed to update employee posting status.' })
           });
         }
       },
-      error: () => this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Failed to load posting employees for status update.' })
+      error: (err: any) => this.messageService.add({ severity: 'warn', summary: 'Warning', detail: err?.error?.message || 'Failed to load posting employees for status update.' })
     });
   }
 
@@ -1385,12 +1385,12 @@ export class NotesheetListComponent implements OnInit {
                   lastUpdatedBy: currentUser
                 }).subscribe({
                   next: () => {},
-                  error: () => this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Failed to add family member to foreign visit record.' })
+                  error: (err: any) => this.messageService.add({ severity: 'warn', summary: 'Warning', detail: err?.error?.message || 'Failed to add family member to foreign visit record.' })
                 });
               });
             }
           },
-          error: () => this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Failed to create foreign visit entry from ExBD Leave notesheet.' })
+          error: (err: any) => this.messageService.add({ severity: 'warn', summary: 'Warning', detail: err?.error?.message || 'Failed to create foreign visit entry from ExBD Leave notesheet.' })
         });
       }
     });
@@ -1462,7 +1462,7 @@ export class NotesheetListComponent implements OnInit {
         if (!noteSheet) { this.approvalLogLoading = false; return; }
         this.buildApprovalLog(noteSheet, backHistory);
       },
-      error: () => { this.approvalLogLoading = false; }
+      error: (err: any) => { this.approvalLogLoading = false; }
     });
   }
 
@@ -1577,7 +1577,7 @@ export class NotesheetListComponent implements OnInit {
         }
         this.approvalLogLoading = false;
       },
-      error: () => { this.approvalLogLoading = false; }
+      error: (err: any) => { this.approvalLogLoading = false; }
     });
   }
 

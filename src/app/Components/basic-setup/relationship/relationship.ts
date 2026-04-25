@@ -145,7 +145,7 @@ export class Relationship {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load data'
+                    detail: err?.error?.message || 'Failed to load data'
                 });
                 this.loading = false;
             }
@@ -198,7 +198,7 @@ export class Relationship {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create relationship'
+                    detail: err?.error?.message || 'Failed to create relationship'
                 });
                 this.isSubmitting = false;
             }
@@ -234,7 +234,7 @@ export class Relationship {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update relationship'
+                    detail: err?.error?.message || 'Failed to update relationship'
                 });
                 this.isSubmitting = false;
             }
@@ -281,7 +281,7 @@ export class Relationship {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete relationship'
+                            detail: err?.error?.message || 'Failed to delete relationship'
                         });
                     }
                 });

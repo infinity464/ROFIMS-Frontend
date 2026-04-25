@@ -55,7 +55,7 @@ export class RabIdAllocation implements OnInit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load organizations'
+                    detail: err?.error?.message || 'Failed to load organizations'
                 });
             }
         });
@@ -75,7 +75,7 @@ export class RabIdAllocation implements OnInit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load member types'
+                    detail: err?.error?.message || 'Failed to load member types'
                 });
             }
         });

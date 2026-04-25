@@ -190,10 +190,10 @@ export abstract class NotesheetPreviewBase implements OnInit {
                 }
                 this.loading = false;
             },
-            error: () => {
+            error: (err: any) => {
                 this.error = true;
                 this.loading = false;
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load note-sheet.' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load note-sheet.' });
             }
         });
     }
@@ -207,7 +207,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
                 this.enrichEmployeePrefixes();
                 this.loadingEmployees = false;
             },
-            error: () => { this.loadingEmployees = false; }
+            error: (err: any) => { this.loadingEmployees = false; }
         });
     }
 
@@ -241,7 +241,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
                 }));
                 this.loadingEmployees = false;
             },
-            error: () => { this.loadingEmployees = false; }
+            error: (err: any) => { this.loadingEmployees = false; }
         });
     }
 
@@ -321,7 +321,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
                     reader.readAsDataURL(blob);
                 }
             },
-            error: () => { /* no signature */ }
+            error: (err: any) => { /* no signature */ }
         });
     }
 
@@ -552,7 +552,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
                             .subscribe({ next: (emp) => { row.backedByName = emp?.nameEnglish ?? 'Unknown'; } });
                     }
                 },
-                error: () => { this.loadingBackHistory = false; }
+                error: (err: any) => { this.loadingBackHistory = false; }
             });
     }
 

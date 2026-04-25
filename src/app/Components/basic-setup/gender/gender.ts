@@ -145,7 +145,7 @@ export class Gender {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load data'
+                    detail: err?.error?.message || 'Failed to load data'
                 });
                 this.loading = false;
             }
@@ -198,7 +198,7 @@ export class Gender {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create gender'
+                    detail: err?.error?.message || 'Failed to create gender'
                 });
                 this.isSubmitting = false;
             }
@@ -234,7 +234,7 @@ export class Gender {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update gender'
+                    detail: err?.error?.message || 'Failed to update gender'
                 });
                 this.isSubmitting = false;
             }
@@ -281,7 +281,7 @@ export class Gender {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete gender'
+                            detail: err?.error?.message || 'Failed to delete gender'
                         });
                     }
                 });

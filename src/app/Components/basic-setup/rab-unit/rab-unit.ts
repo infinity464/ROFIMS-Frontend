@@ -146,7 +146,7 @@ export class RabUnit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load data'
+                    detail: err?.error?.message || 'Failed to load data'
                 });
                 this.loading = false;
             }
@@ -199,7 +199,7 @@ export class RabUnit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create rab-unit'
+                    detail: err?.error?.message || 'Failed to create rab-unit'
                 });
                 this.isSubmitting = false;
             }
@@ -235,7 +235,7 @@ export class RabUnit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update rab-unit'
+                    detail: err?.error?.message || 'Failed to update rab-unit'
                 });
                 this.isSubmitting = false;
             }
@@ -282,7 +282,7 @@ export class RabUnit {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete rab-unit'
+                            detail: err?.error?.message || 'Failed to delete rab-unit'
                         });
                     }
                 });

@@ -138,7 +138,7 @@ export class CourseName {
             },
             error: (err) => {
                 console.error('Error loading data:', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load data' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load data' });
             }
         });
     }
@@ -180,7 +180,7 @@ export class CourseName {
             },
             error: (err) => {
                 console.error('Error fetching data:', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load data' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load data' });
                 this.loading = false;
             }
         });
@@ -257,7 +257,7 @@ export class CourseName {
             },
             error: (err) => {
                 console.error('Error creating:', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to create course name' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to create course name' });
                 this.isSubmitting = false;
             }
         });
@@ -283,7 +283,7 @@ export class CourseName {
             },
             error: (err) => {
                 console.error('Error updating:', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update course name' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to update course name' });
                 this.isSubmitting = false;
             }
         });
@@ -317,7 +317,7 @@ export class CourseName {
                     },
                     error: (err) => {
                         console.error('Error deleting:', err);
-                        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete course name' });
+                        this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to delete course name' });
                     }
                 });
             }

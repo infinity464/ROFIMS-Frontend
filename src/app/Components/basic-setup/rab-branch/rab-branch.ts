@@ -179,7 +179,7 @@ export class RabBranch {
             },
             error: (err) => {
                 console.error('Error loading rabUnits:', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load rabUnits' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load rabUnits' });
             }
         });
     }
@@ -193,7 +193,7 @@ export class RabBranch {
             },
             error: (err) => {
                 console.error('Error loading rabWings:', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load rabWings' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load rabWings' });
             }
         });
     }
@@ -215,7 +215,7 @@ export class RabBranch {
             },
             error: (err) => {
                 console.error('Error fetching data:', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load data' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load data' });
                 this.loading = false;
             }
         });
@@ -297,7 +297,7 @@ export class RabBranch {
             },
             error: (err) => {
                 console.error('Error creating:', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to create rab-branch' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to create rab-branch' });
                 this.isSubmitting = false;
             }
         });
@@ -315,7 +315,7 @@ export class RabBranch {
             },
             error: (err) => {
                 console.error('Error updating:', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update rab-branch' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to update rab-branch' });
                 this.isSubmitting = false;
             }
         });
@@ -361,7 +361,7 @@ export class RabBranch {
                     },
                     error: (err) => {
                         console.error('Error deleting:', err);
-                        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete rab-branch' });
+                        this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to delete rab-branch' });
                     }
                 });
             }

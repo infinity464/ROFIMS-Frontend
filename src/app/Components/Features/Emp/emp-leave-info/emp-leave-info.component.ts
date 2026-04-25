@@ -111,7 +111,7 @@ export class EmpLeaveInfo implements OnInit {
             next: (data) => {
                 this.leaveTypes = Array.isArray(data) ? data : [];
             },
-            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load leave types' })
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load leave types' })
         });
     }
 
@@ -137,7 +137,7 @@ export class EmpLeaveInfo implements OnInit {
                     this.loadLeaveList();
                 }
             },
-            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load employee' })
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load employee' })
         });
     }
 
@@ -158,7 +158,7 @@ export class EmpLeaveInfo implements OnInit {
                 }));
                 this.isLoading = false;
             },
-            error: () => {
+            error: (err: any) => {
                 this.isLoading = false;
             }
         });
@@ -251,8 +251,8 @@ export class EmpLeaveInfo implements OnInit {
                 this.loadLeaveList();
                 this.isSaving = false;
             },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to save leave record' });
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to save leave record' });
                 this.isSaving = false;
             }
         });
@@ -275,7 +275,7 @@ export class EmpLeaveInfo implements OnInit {
                 this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Leave record deleted.' });
                 this.loadLeaveList();
             },
-            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete' })
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to delete' })
         });
     }
 

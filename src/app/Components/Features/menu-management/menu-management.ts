@@ -158,7 +158,7 @@ export class MenuManagement implements OnInit {
             },
             error: (err) => {
                 console.error('Failed to load menus', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load menus' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load menus' });
                 this.loading = false;
             }
         });
@@ -386,7 +386,7 @@ export class MenuManagement implements OnInit {
                 },
                 error: (err) => {
                     console.error('Error updating menu', err);
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update menu' });
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to update menu' });
                     this.isSubmitting = false;
                 }
             });
@@ -419,7 +419,7 @@ export class MenuManagement implements OnInit {
                 },
                 error: (err) => {
                     console.error('Error creating menu', err);
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to create menu' });
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to create menu' });
                     this.isSubmitting = false;
                 }
             });
@@ -452,7 +452,7 @@ export class MenuManagement implements OnInit {
                     },
                     error: (err) => {
                         console.error('Error deleting menu', err);
-                        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete menu' });
+                        this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to delete menu' });
                     }
                 });
             }

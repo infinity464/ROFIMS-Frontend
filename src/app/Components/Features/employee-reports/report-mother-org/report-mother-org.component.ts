@@ -196,7 +196,7 @@ export class ReportMotherOrgComponent implements OnInit, OnChanges {
     private loadMotherOrgUnitsAndRankTrade(orgId: number): void {
         this.commonCodeService.getAllActiveMotherOrgUnits(orgId).subscribe({
             next: (units) => (this.motherOrgUnitOptions = units ?? []),
-            error: () => (this.motherOrgUnitOptions = []),
+            error: (err: any) => (this.motherOrgUnitOptions = []),
         });
         this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'MotherOrgRank').subscribe({
             next: (codes: CommonCodeModel[]) =>
@@ -213,7 +213,7 @@ export class ReportMotherOrgComponent implements OnInit, OnChanges {
             next: (orgs) => (this.orgOptions = orgs),
             error: (err) => {
                 console.error(err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load organizations' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load organizations' });
             },
         });
     }

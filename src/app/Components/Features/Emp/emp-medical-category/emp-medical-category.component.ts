@@ -110,7 +110,7 @@ export class EmpMedicalCategory implements OnInit {
                     .filter((c) => c.status !== false)
                     .map((c) => ({ label: c.codeValueEN || String(c.codeId), value: c.codeId }));
             },
-            error: () => {
+            error: (err: any) => {
                 this.messageService.add({
                     severity: 'warn',
                     summary: 'Warning',
@@ -155,7 +155,7 @@ export class EmpMedicalCategory implements OnInit {
                     this.loadMedicalList();
                 }
             },
-            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load employee' })
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load employee' })
         });
     }
 
@@ -168,9 +168,9 @@ export class EmpMedicalCategory implements OnInit {
                 this.medicalList = list.map((item: any) => this.mapApiToModel(item));
                 this.isLoading = false;
             },
-            error: () => {
+            error: (err: any) => {
                 this.isLoading = false;
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load medical records' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load medical records' });
             }
         });
     }
@@ -210,7 +210,7 @@ export class EmpMedicalCategory implements OnInit {
             next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
             error: (err) => {
                 console.error('Download failed', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file' });
             }
         });
     }
@@ -314,8 +314,8 @@ export class EmpMedicalCategory implements OnInit {
                     this.loadMedicalList();
                     this.isSaving = false;
                 },
-                error: () => {
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to save medical record' });
+                error: (err: any) => {
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to save medical record' });
                     this.isSaving = false;
                 }
             });
@@ -335,7 +335,7 @@ export class EmpMedicalCategory implements OnInit {
                 },
                 error: (err) => {
                     console.error('Error uploading files', err);
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to upload one or more files' });
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to upload one or more files' });
                 }
             });
             return;
@@ -361,7 +361,7 @@ export class EmpMedicalCategory implements OnInit {
                 this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Medical record deleted.' });
                 this.loadMedicalList();
             },
-            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete' })
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to delete' })
         });
     }
 

@@ -199,7 +199,7 @@ export class Trade {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load mother organizations'
+                    detail: err?.error?.message || 'Failed to load mother organizations'
                 });
             }
         });
@@ -227,7 +227,7 @@ export class Trade {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load corps'
+                    detail: err?.error?.message || 'Failed to load corps'
                 });
             }
         });
@@ -265,7 +265,7 @@ export class Trade {
             },
             error: (err) => {
                 console.error('Error fetching data:', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load data' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load data' });
                 this.loading = false;
             }
         });
@@ -351,7 +351,7 @@ export class Trade {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create trade'
+                    detail: err?.error?.message || 'Failed to create trade'
                 });
                 this.isSubmitting = false;
             }
@@ -386,7 +386,7 @@ export class Trade {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update trade'
+                    detail: err?.error?.message || 'Failed to update trade'
                 });
                 this.isSubmitting = false;
             }
@@ -472,7 +472,7 @@ export class Trade {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete trade'
+                            detail: err?.error?.message || 'Failed to delete trade'
                         });
                     }
                 });

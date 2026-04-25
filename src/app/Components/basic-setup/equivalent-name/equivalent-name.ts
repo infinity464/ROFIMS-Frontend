@@ -150,7 +150,7 @@ export class EquivalentName {
             },
             error: (err) => {
                 console.error('Error fetching data:', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load data' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load data' });
                 this.loading = false;
             }
         });
@@ -216,7 +216,7 @@ export class EquivalentName {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create equivalent-name'
+                    detail: err?.error?.message || 'Failed to create equivalent-name'
                 });
             }
         });
@@ -249,7 +249,7 @@ export class EquivalentName {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update equivalent-name'
+                    detail: err?.error?.message || 'Failed to update equivalent-name'
                 });
                 this.isSubmitting = false;
             }
@@ -293,7 +293,7 @@ export class EquivalentName {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete equivalent-name'
+                            detail: err?.error?.message || 'Failed to delete equivalent-name'
                         });
                     }
                 });

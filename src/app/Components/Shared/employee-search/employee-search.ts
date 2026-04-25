@@ -170,7 +170,7 @@ export class EmployeeSearchComponent implements OnChanges {
     ) {
         this.commonCodeService.getAllActiveMotherOrgs().subscribe({
             next: (res) => (this.motherOrganizations = res ?? []),
-            error: () => {}
+            error: (err: any) => {}
         });
     }
 
@@ -237,7 +237,7 @@ export class EmployeeSearchComponent implements OnChanges {
                     this.onEmployeeFound.emit(this.employeeInfo);
                 }
             },
-            error: () => {
+            error: (err: any) => {
                 // Fail-open if enrichment/view fails: emit with what we have rather than block.
                 this.employeeFound = true;
                 this.isSearching = false;
@@ -291,7 +291,7 @@ export class EmployeeSearchComponent implements OnChanges {
                     this.isSearching = false;
                 }
             },
-            error: () => {
+            error: (err: any) => {
                 this.isSearching = false;
                 this.employeeFound = false;
                 this.employeeInfo = null;
@@ -365,7 +365,7 @@ export class EmployeeSearchComponent implements OnChanges {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to search employee'
+                    detail: err?.error?.message || 'Failed to search employee'
                 });
             }
         });
@@ -440,7 +440,7 @@ export class EmployeeSearchComponent implements OnChanges {
                 this.showPickerDialog = true;
                 this.isSearching = false;
             },
-            error: () => {
+            error: (err: any) => {
                 this.pickerRows = this.makePickerRows(employees, new Map(), new Map());
                 this.showPickerDialog = true;
                 this.isSearching = false;

@@ -87,12 +87,12 @@ export class PendingInterPostingJoiningComponent implements OnInit {
                 this.applyFilters();
                 this.loading = false;
             },
-            error: () => {
+            error: (err: any) => {
                 this.loading = false;
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load pending inter-posting joining list.'
+                    detail: err?.error?.message || 'Failed to load pending inter-posting joining list.'
                 });
             }
         });
@@ -198,12 +198,12 @@ export class PendingInterPostingJoiningComponent implements OnInit {
                     });
                 }
             },
-            error: () => {
+            error: (err: any) => {
                 this.saving = false;
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to receive members.'
+                    detail: err?.error?.message || 'Failed to receive members.'
                 });
             }
         });

@@ -222,7 +222,7 @@ export class EmpCourseInfoComponent implements OnInit {
                     this.loadCourseList();
                 }
             },
-            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load employee' })
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load employee' })
         });
     }
 
@@ -247,7 +247,7 @@ export class EmpCourseInfoComponent implements OnInit {
                 }));
                 this.isLoading = false;
             },
-            error: () => {
+            error: (err: any) => {
                 this.isLoading = false;
             }
         });
@@ -273,7 +273,7 @@ export class EmpCourseInfoComponent implements OnInit {
             next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
             error: (err) => {
                 console.error('Download failed', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file' });
             }
         });
     }
@@ -405,8 +405,8 @@ export class EmpCourseInfoComponent implements OnInit {
                     this.loadCourseList();
                     this.isSaving = false;
                 },
-                error: () => {
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to save course' });
+                error: (err: any) => {
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to save course' });
                     this.isSaving = false;
                 }
             });
@@ -426,7 +426,7 @@ export class EmpCourseInfoComponent implements OnInit {
                 },
                 error: (err) => {
                     console.error('Error uploading files', err);
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to upload one or more files' });
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to upload one or more files' });
                 }
             });
             return;
@@ -452,7 +452,7 @@ export class EmpCourseInfoComponent implements OnInit {
                 this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Course deleted.' });
                 this.loadCourseList();
             },
-            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete' })
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to delete' })
         });
     }
 
@@ -533,8 +533,8 @@ export class EmpCourseInfoComponent implements OnInit {
                     }
                 });
             },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to create training institute' });
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to create training institute' });
                 this.isSavingInstitute = false;
             }
         });

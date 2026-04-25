@@ -210,7 +210,7 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
                     const me = (Array.isArray(list) ? list : []).find((m: any) => m.userId === userId);
                     if (me?.employeeId) this.currentUserEmployeeId = me.employeeId;
                 },
-                error: () => {}
+                error: (err: any) => {}
             });
         }
     }
@@ -416,7 +416,7 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
                     };
                 });
             },
-            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load employee list.' })
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load employee list.' })
         });
     }
 
@@ -508,8 +508,8 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
                 this.saving = false;
                 this.reloadNoteSheet();
             },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update note-sheet.' });
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to update note-sheet.' });
                 this.saving = false;
             }
         });
@@ -646,7 +646,7 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
                 if (!noteSheet) { this.approvalLogLoading = false; return; }
                 this.buildApprovalLog(noteSheet, backHistory);
             },
-            error: () => { this.approvalLogLoading = false; }
+            error: (err: any) => { this.approvalLogLoading = false; }
         });
     }
 
@@ -752,7 +752,7 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
                 }
                 this.approvalLogLoading = false;
             },
-            error: () => { this.approvalLogLoading = false; }
+            error: (err: any) => { this.approvalLogLoading = false; }
         });
     }
 

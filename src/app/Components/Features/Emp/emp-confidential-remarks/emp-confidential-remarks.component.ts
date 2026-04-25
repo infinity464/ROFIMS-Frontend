@@ -163,12 +163,12 @@ export class EmpConfidentialRemarks implements OnInit {
                     this.remarksList = Array.isArray(data.remarks) ? data.remarks : [];
                 }
             },
-            error: () => {
+            error: (err: any) => {
                 this.isLoading = false;
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load employee data'
+                    detail: err?.error?.message || 'Failed to load employee data'
                 });
             }
         });

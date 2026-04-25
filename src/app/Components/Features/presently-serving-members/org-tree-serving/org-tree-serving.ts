@@ -161,7 +161,7 @@ export class OrgTreeServingComponent implements OnInit {
                     this.messageService.add({
                         severity: 'error',
                         summary: 'Error',
-                        detail: 'Failed to load organogram'
+                        detail: err?.error?.message || 'Failed to load organogram'
                     });
                 }
             });
@@ -202,12 +202,12 @@ export class OrgTreeServingComponent implements OnInit {
                         const pendingResults = results.slice(memberTypes.length);
                         this.applyVirtualNodeCounts(superResults, pendingResults, memberTypes);
                     },
-                    error: () => {
+                    error: (err: any) => {
                         this.applyVirtualNodeCounts([], [], memberTypes);
                     }
                 });
             },
-            error: () => {
+            error: (err: any) => {
                 this.memberTypes = [];
             }
         });
@@ -347,12 +347,12 @@ export class OrgTreeServingComponent implements OnInit {
                     });
                     this.loadingParentId.set(null);
                 },
-                error: () => {
+                error: (err: any) => {
                     this.loadingParentId.set(null);
                     this.messageService.add({
                         severity: 'error',
                         summary: 'Error',
-                        detail: 'Failed to load children'
+                        detail: err?.error?.message || 'Failed to load children'
                     });
                 }
             });

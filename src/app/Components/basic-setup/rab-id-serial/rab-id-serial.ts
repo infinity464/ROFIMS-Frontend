@@ -155,11 +155,11 @@ export class RabIdSerial implements OnInit {
                 }));
                 this.setupFormFilterListeners();
             },
-            error: () => {
+            error: (err: any) => {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load employee types'
+                    detail: err?.error?.message || 'Failed to load employee types'
                 });
             }
         });
@@ -174,11 +174,11 @@ export class RabIdSerial implements OnInit {
                     value: o.orgId
                 }));
             },
-            error: () => {
+            error: (err: any) => {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load mother organizations'
+                    detail: err?.error?.message || 'Failed to load mother organizations'
                 });
             }
         });
@@ -194,11 +194,11 @@ export class RabIdSerial implements OnInit {
                 }));
                 this.buildTableData();
             },
-            error: () => {
+            error: (err: any) => {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to fetch RAB ID Serial data'
+                    detail: err?.error?.message || 'Failed to fetch RAB ID Serial data'
                 });
             }
         });
@@ -266,11 +266,11 @@ export class RabIdSerial implements OnInit {
                 this.getAll();
                 this.isSubmitting = false;
             },
-            error: () => {
+            error: (err: any) => {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create RAB ID Serial'
+                    detail: err?.error?.message || 'Failed to create RAB ID Serial'
                 });
                 this.isSubmitting = false;
             }

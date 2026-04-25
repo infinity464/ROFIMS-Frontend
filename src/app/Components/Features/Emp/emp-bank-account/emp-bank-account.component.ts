@@ -118,14 +118,14 @@ export class EmpBankAccount implements OnInit {
             next: (data) => {
                 this.banks = Array.isArray(data) ? data : [];
             },
-            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load banks' })
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load banks' })
         });
         this.masterBasicSetupService.getAllBankBranch().subscribe({
             next: (data) => {
                 this.bankBranches = Array.isArray(data) ? data : [];
                 this.updateBranchOptions();
             },
-            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load bank branches' })
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load bank branches' })
         });
     }
 
@@ -161,7 +161,7 @@ export class EmpBankAccount implements OnInit {
                     this.loadBankAccList();
                 }
             },
-            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load employee' })
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load employee' })
         });
     }
 
@@ -186,7 +186,7 @@ export class EmpBankAccount implements OnInit {
                 }));
                 this.isLoading = false;
             },
-            error: () => {
+            error: (err: any) => {
                 this.isLoading = false;
             }
         });
@@ -222,7 +222,7 @@ export class EmpBankAccount implements OnInit {
             next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
             error: (err) => {
                 console.error('Download failed', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file' });
             }
         });
     }
@@ -306,8 +306,8 @@ export class EmpBankAccount implements OnInit {
                     this.loadBankAccList();
                     this.isSaving = false;
                 },
-                error: () => {
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to save bank account' });
+                error: (err: any) => {
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to save bank account' });
                     this.isSaving = false;
                 }
             });
@@ -327,7 +327,7 @@ export class EmpBankAccount implements OnInit {
                 },
                 error: (err) => {
                     console.error('Error uploading files', err);
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to upload one or more files' });
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to upload one or more files' });
                 }
             });
             return;
@@ -353,7 +353,7 @@ export class EmpBankAccount implements OnInit {
                 this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Bank account deleted.' });
                 this.loadBankAccList();
             },
-            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete' })
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to delete' })
         });
     }
 

@@ -111,9 +111,9 @@ export class OrgTreeComponent implements OnInit {
                 this.flatNodes.set(flat);
                 this.loading.set(false);
             },
-            error: () => {
+            error: (err: any) => {
                 this.loading.set(false);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load hierarchy' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load hierarchy' });
             }
         });
     }
@@ -154,9 +154,9 @@ export class OrgTreeComponent implements OnInit {
                 });
                 this.loadingParentId.set(null);
             },
-            error: () => {
+            error: (err: any) => {
                 this.loadingParentId.set(null);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load children' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load children' });
             }
         });
     }
@@ -182,7 +182,7 @@ export class OrgTreeComponent implements OnInit {
                         this.selectedNode.set(null);
                         this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Deleted' });
                     },
-                    error: () => {
+                    error: (err: any) => {
                         this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Delete failed' });
                     }
                 });

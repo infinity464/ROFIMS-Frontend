@@ -265,7 +265,7 @@ export class EmpPromotionInfo implements OnInit {
                     });
                 this.isLoading = false;
             },
-            error: () => { this.promotionList = []; this.isLoading = false; }
+            error: (err: any) => { this.promotionList = []; this.isLoading = false; }
         });
     }
 
@@ -348,7 +348,7 @@ export class EmpPromotionInfo implements OnInit {
     onDownloadFile(payload: { fileId: number; fileName: string }): void {
         this.empService.downloadFile(payload.fileId).subscribe({
             next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
-            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file' })
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file' })
         });
     }
 
@@ -419,8 +419,8 @@ export class EmpPromotionInfo implements OnInit {
                     const filesReferencesJson = allRefs.length > 0 ? JSON.stringify(allRefs) : null;
                     doSave(filesReferencesJson);
                 },
-                error: () => {
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to upload one or more files' });
+                error: (err: any) => {
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to upload one or more files' });
                 }
             });
             return;
@@ -470,7 +470,7 @@ export class EmpPromotionInfo implements OnInit {
                     this.loadRankOptionsByOrg(this.selectedOrgId);
                     this.loadPromotionList();
                 },
-                error: () => this.loadPromotionList()
+                error: (err: any) => this.loadPromotionList()
             });
         }
     }

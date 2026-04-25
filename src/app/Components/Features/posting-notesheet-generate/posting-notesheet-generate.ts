@@ -186,9 +186,9 @@ export class PostingNotesheetGenerateComponent implements OnInit {
                     }));
                 this.loadingDraftList = false;
             },
-            error: () => {
+            error: (err: any) => {
                 this.loadingDraftList = false;
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load Draft Posting list.' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load Draft Posting list.' });
             }
         });
     }
@@ -224,14 +224,14 @@ export class PostingNotesheetGenerateComponent implements OnInit {
                             this.finalApproverOptions = allOpts;
                         }
                     },
-                    error: () => {
+                    error: (err: any) => {
                         this.initiatorOptions = allOpts;
                         this.recommenderOptions = allOpts;
                         this.finalApproverOptions = allOpts;
                     }
                 });
             },
-            error: () => {}
+            error: (err: any) => {}
         });
     }
 
@@ -264,7 +264,7 @@ export class PostingNotesheetGenerateComponent implements OnInit {
                     this.form.get('preparedBy')?.setValue(user);
                 }
             },
-            error: () => {
+            error: (err: any) => {
                 this.isPreparedByMapped = false;
                 const user = this.sharedService.getCurrentUser?.() ?? '';
                 this.form.get('preparedBy')?.setValue(user);
@@ -286,7 +286,7 @@ export class PostingNotesheetGenerateComponent implements OnInit {
                 const row = list[0];
                 if (row) this.applyCachedNoteSheetToForm(row);
             },
-            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load note-sheet for edit.' })
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load note-sheet for edit.' })
         });
     }
 
@@ -374,7 +374,7 @@ export class PostingNotesheetGenerateComponent implements OnInit {
     onDownloadFile(payload: { fileId: number; fileName: string }): void {
         this.empService.downloadFile(payload.fileId).subscribe({
             next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
-            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file.' })
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file.' })
         });
     }
 
@@ -535,8 +535,8 @@ export class PostingNotesheetGenerateComponent implements OnInit {
                     const filesReferencesJson = allRefs.length > 0 ? JSON.stringify(allRefs) : null;
                     doSave(filesReferencesJson);
                 },
-                error: () => {
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to upload one or more files.' });
+                error: (err: any) => {
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to upload one or more files.' });
                     this.isSubmitting = false;
                 }
             });

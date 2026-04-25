@@ -74,7 +74,7 @@ export class EmpList implements OnInit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load employees'
+                    detail: err?.error?.message || 'Failed to load employees'
                 });
                 this.loading = false;
             }
@@ -130,7 +130,7 @@ export class EmpList implements OnInit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to delete employee'
+                    detail: err?.error?.message || 'Failed to delete employee'
                 });
             }
         });

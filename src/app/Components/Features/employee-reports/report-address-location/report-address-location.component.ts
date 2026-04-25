@@ -245,7 +245,7 @@ export class ReportAddressLocationComponent implements OnInit {
                     labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId),
                     value: c.codeId,
                 }))),
-            error: () => (this.divisionOptions = []),
+            error: (err: any) => (this.divisionOptions = []),
         });
     }
 
@@ -264,7 +264,7 @@ export class ReportAddressLocationComponent implements OnInit {
                     ...relOptions,
                 ];
             },
-            error: () => {},
+            error: (err: any) => {},
         });
     }
 
@@ -283,7 +283,7 @@ export class ReportAddressLocationComponent implements OnInit {
                         labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId),
                         value: c.codeId,
                     }))),
-                error: () => (this.districtOptions = []),
+                error: (err: any) => (this.districtOptions = []),
             });
         }
     }
@@ -301,7 +301,7 @@ export class ReportAddressLocationComponent implements OnInit {
                         labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId),
                         value: c.codeId,
                     }))),
-                error: () => (this.upazilaOptions = []),
+                error: (err: any) => (this.upazilaOptions = []),
             });
         }
     }
@@ -317,7 +317,7 @@ export class ReportAddressLocationComponent implements OnInit {
                         labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId),
                         value: c.codeId,
                     }))),
-                error: () => (this.postOfficeOptions = []),
+                error: (err: any) => (this.postOfficeOptions = []),
             });
         }
     }

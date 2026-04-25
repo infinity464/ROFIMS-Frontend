@@ -618,7 +618,7 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
                     this.profileImageUrl = URL.createObjectURL(blob);
                 }
             },
-            error: () => {
+            error: (err: any) => {
                 // Optional: show no image on error
             }
         });
@@ -707,9 +707,9 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
                 this.previousYearSummary = list ?? [];
                 this.previousYearSummaryLoading = false;
             },
-            error: () => {
+            error: (err: any) => {
                 this.previousYearSummaryLoading = false;
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load previous year leave summary.' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load previous year leave summary.' });
             }
         });
     }
@@ -760,7 +760,7 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
         if (fileId == null) return;
         this.empService.downloadFile(fileId).subscribe({
             next: (blob) => this.empService.triggerFileDownload(blob, fileName),
-            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file.' })
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file.' })
         });
     }
 }

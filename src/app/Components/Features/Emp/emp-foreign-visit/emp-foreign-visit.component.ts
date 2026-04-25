@@ -254,11 +254,11 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
                     this.loadVisitList();
                 }
             },
-            error: () => {
+            error: (err: any) => {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load employee information'
+                    detail: err?.error?.message || 'Failed to load employee information'
                 });
             }
         });
@@ -289,12 +289,12 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
                 }));
                 this.isLoading = false;
             },
-            error: () => {
+            error: (err: any) => {
                 this.isLoading = false;
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load foreign visit records'
+                    detail: err?.error?.message || 'Failed to load foreign visit records'
                 });
             }
         });
@@ -313,7 +313,7 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
                     this.messageService.add({
                         severity: 'error',
                         summary: 'Error',
-                        detail: 'Failed to load family members'
+                        detail: error?.error?.message || 'Failed to load family members'
                     });
                     return of([]);
                 })
@@ -344,7 +344,7 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
                     this.messageService.add({
                         severity: 'error',
                         summary: 'Error',
-                        detail: 'Failed to load family members for this visit'
+                        detail: error?.error?.message || 'Failed to load family members for this visit'
                     });
                     return of([]);
                 })
@@ -385,7 +385,7 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
             next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
             error: (err) => {
                 console.error('Download failed', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file' });
             }
         });
     }
@@ -551,8 +551,8 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
                     this.isSaving = false;
                 }
             },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to save foreign visit' });
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to save foreign visit' });
                 this.isSaving = false;
             }
         });
@@ -572,7 +572,7 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
                 },
                 error: (err) => {
                     console.error('Error uploading files', err);
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to upload one or more files' });
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to upload one or more files' });
                 }
             });
             return;
@@ -618,8 +618,8 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
                 })
                 .subscribe({
                     next: () => done(),
-                    error: () => {
-                        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to add some family members' });
+                    error: (err: any) => {
+                        this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to add some family members' });
                         done();
                     }
                 });
@@ -660,13 +660,13 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
                                 this.deleteVisitRecord(row);
                             }
                         },
-                        error: () => {
-                            this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete family member' });
+                        error: (err: any) => {
+                            this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to delete family member' });
                         }
                     });
                 });
             },
-            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to retrieve family members' })
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to retrieve family members' })
         });
     }
 
@@ -676,7 +676,7 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
                 this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Foreign visit deleted.' });
                 this.loadVisitList();
             },
-            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete visit' })
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to delete visit' })
         });
     }
 
@@ -727,9 +727,9 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
                                 this.closeFamilyModal();
                             }
                         },
-                        error: () => {
+                        error: (err: any) => {
                             completed++;
-                            this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to add family member(s)' });
+                            this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to add family member(s)' });
                             if (completed >= newIds.length) this.closeFamilyModal();
                         }
                     });
@@ -786,8 +786,8 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
                                 this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Family member removed.' });
                                 this.loadFamilyForVisit(this.editingVisitId!);
                             },
-                            error: () =>
-                                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to remove' })
+                            error: (err: any) =>
+                                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to remove' })
                         });
                     }
                 }
@@ -845,8 +845,8 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
                     }
                 });
             },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to add Subject' });
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to add Subject' });
                 this.isSavingSubject = false;
             }
         });

@@ -227,7 +227,7 @@ export class EmpRankConfirmationComponent implements OnInit {
                     }));
                 this.isLoading = false;
             },
-            error: () => { this.rankList = []; this.isLoading = false; }
+            error: (err: any) => { this.rankList = []; this.isLoading = false; }
         });
     }
 
@@ -266,7 +266,7 @@ export class EmpRankConfirmationComponent implements OnInit {
             next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
             error: (err) => {
                 console.error('Download failed', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file' });
             }
         });
     }
@@ -366,7 +366,7 @@ export class EmpRankConfirmationComponent implements OnInit {
                 },
                 error: (err) => {
                     console.error('Error uploading files', err);
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to upload one or more files' });
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to upload one or more files' });
                 }
             });
             return;
@@ -415,7 +415,7 @@ export class EmpRankConfirmationComponent implements OnInit {
                     this.loadRankOptionsByOrg(this.selectedOrgId);
                     this.loadRankList();
                 },
-                error: () => this.loadRankList()
+                error: (err: any) => this.loadRankList()
             });
         }
     }

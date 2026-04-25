@@ -257,7 +257,7 @@ export class EmpSendToCourseComponent implements OnInit {
                 this.employeeList = Array.isArray(data) ? data : [];
                 this.isLoadingEmployees = false;
             },
-            error: () => {
+            error: (err: any) => {
                 this.employeeList = [];
                 this.isLoadingEmployees = false;
             }
@@ -420,7 +420,7 @@ export class EmpSendToCourseComponent implements OnInit {
                 this.draftLists = lists ?? [];
                 this.isLoadingDrafts = false;
             },
-            error: () => {
+            error: (err: any) => {
                 this.draftLists = [];
                 this.isLoadingDrafts = false;
             }
@@ -497,8 +497,8 @@ export class EmpSendToCourseComponent implements OnInit {
                 }
                 this.isSending = false;
             },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to approve.' });
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to approve.' });
                 this.isSending = false;
             }
         });
@@ -542,8 +542,8 @@ export class EmpSendToCourseComponent implements OnInit {
                 }
                 this.isSending = false;
             },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to send to course.' });
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to send to course.' });
                 this.isSending = false;
             }
         });
@@ -646,8 +646,8 @@ export class EmpSendToCourseComponent implements OnInit {
                         this.selectedDraftMembers = [];
                         this.isRemovingFromDraft = false;
                     },
-                    error: () => {
-                        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to remove.' });
+                    error: (err: any) => {
+                        this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to remove.' });
                         this.isRemovingFromDraft = false;
                     }
                 });
@@ -671,7 +671,7 @@ export class EmpSendToCourseComponent implements OnInit {
                 });
                 this.isLoadingAddToDraftEmployees = false;
             },
-            error: () => {
+            error: (err: any) => {
                 this.addToDraftEmployeeList = [];
                 this.isLoadingAddToDraftEmployees = false;
             }
@@ -695,8 +695,8 @@ export class EmpSendToCourseComponent implements OnInit {
                 }
                 this.isAddingToDraft = false;
             },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to add to draft.' });
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to add to draft.' });
                 this.isAddingToDraft = false;
             }
         });
@@ -710,7 +710,7 @@ export class EmpSendToCourseComponent implements OnInit {
                 this.groupRftsCompleted();
                 this.isLoadingCompleted = false;
             },
-            error: () => {
+            error: (err: any) => {
                 this.rftsCompletedList = [];
                 this.rftsGroupedList = [];
                 this.isLoadingCompleted = false;

@@ -402,8 +402,8 @@ export class VacancyDistributionSummaryComponent implements OnInit {
     private loadOrganizations(): void {
         this.masterBasicSetup.getAllActiveMotherOrgs().subscribe({
             next: (list) => { this.orgList = list ?? []; },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load organizations' });
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load organizations' });
             }
         });
     }
@@ -418,10 +418,10 @@ export class VacancyDistributionSummaryComponent implements OnInit {
                 this.rabUnitOptions = unitList.map((u) => ({ codeId: u.codeId, label: u.codeValueEN ?? '' }));
                 this.buildOrderedRabIds(unitList).subscribe({
                     next: (ordered) => { this.orderedRabIds = ordered; },
-                    error: () => {}
+                    error: (err: any) => {}
                 });
             },
-            error: () => {}
+            error: (err: any) => {}
         });
     }
 
@@ -564,15 +564,15 @@ export class VacancyDistributionSummaryComponent implements OnInit {
                                 this.buildDisplayRows(allDist);
                                 this.loading = false;
                             },
-                            error: () => {
+                            error: (err: any) => {
                                 this.loading = false;
-                                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load distribution data' });
+                                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load distribution data' });
                             }
                         });
             },
-            error: () => {
+            error: (err: any) => {
                 this.loading = false;
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load ranks' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load ranks' });
             }
         });
     }

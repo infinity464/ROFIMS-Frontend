@@ -145,7 +145,7 @@ export class AbsentType {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load data'
+                    detail: err?.error?.message || 'Failed to load data'
                 });
                 this.loading = false;
             }
@@ -194,7 +194,7 @@ export class AbsentType {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create Absent Type'
+                    detail: err?.error?.message || 'Failed to create Absent Type'
                 });
                 this.isSubmitting = false;
             }
@@ -226,7 +226,7 @@ export class AbsentType {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update Absent Type'
+                    detail: err?.error?.message || 'Failed to update Absent Type'
                 });
                 this.isSubmitting = false;
             }
@@ -269,7 +269,7 @@ export class AbsentType {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete Absent Type'
+                            detail: err?.error?.message || 'Failed to delete Absent Type'
                         });
                     }
                 });

@@ -148,7 +148,7 @@ export class RankEquivalent implements OnInit {
             },
             error: (err) => {
                 console.error(err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load Equivalent Names' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load Equivalent Names' });
             }
         });
     }
@@ -161,7 +161,7 @@ export class RankEquivalent implements OnInit {
             },
             error: (err) => {
                 console.error(err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load Mother Organizations' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load Mother Organizations' });
             }
         });
     }
@@ -174,7 +174,7 @@ export class RankEquivalent implements OnInit {
             },
             error: (err) => {
                 console.error(err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load Mother Org Ranks' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load Mother Org Ranks' });
             }
         });
     }
@@ -206,7 +206,7 @@ export class RankEquivalent implements OnInit {
                                 this.loading = false;
                             }
                         },
-                        error: () => {
+                        error: (err: any) => {
                             pending--;
                             if (pending === 0) {
                                 this.allMotherOrgRanks = allRanks;
@@ -220,7 +220,7 @@ export class RankEquivalent implements OnInit {
             },
             error: (err) => {
                 console.error(err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load Rank Equivalents' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load Rank Equivalents' });
                 this.loading = false;
             }
         });

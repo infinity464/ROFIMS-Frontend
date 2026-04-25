@@ -339,7 +339,7 @@ export class AddressFormComponent implements OnInit, OnChanges {
                     this.messageService.add({
                         severity: 'error',
                         summary: 'Error',
-                        detail: 'Failed to load address data'
+                        detail: err?.error?.message || 'Failed to load address data'
                     });
                     this.addressForm.patchValue({ sameAsPresent: false });
                 }
@@ -528,7 +528,7 @@ export class AddressFormComponent implements OnInit, OnChanges {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create post office'
+                    detail: err?.error?.message || 'Failed to create post office'
                 });
                 this.isSavingPostOffice = false;
             }

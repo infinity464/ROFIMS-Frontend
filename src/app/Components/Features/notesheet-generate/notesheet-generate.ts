@@ -177,7 +177,7 @@ export class NotesheetGenerateComponent implements OnInit {
                 }
                 this.applyCachedNoteSheetToForm(d, user);
             },
-            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load note-sheet for edit.' })
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load note-sheet for edit.' })
         });
     }
 
@@ -233,7 +233,7 @@ export class NotesheetGenerateComponent implements OnInit {
                     }));
                     this.form.patchValue({ wingBattalionId: d.wingBattalionId ?? d.WingBattalionId ?? null });
                 },
-                error: () => {}
+                error: (err: any) => {}
             });
         }
         const filesReferences = d.filesReferences ?? d.FilesReferences;
@@ -258,7 +258,7 @@ export class NotesheetGenerateComponent implements OnInit {
                     const ids = (Array.isArray(list) ? list : []).map((r: any) => r.employeeId ?? r.EmployeeId).filter(Boolean);
                     this.form.patchValue({ referenceEmployeeIds: ids });
                 },
-                error: () => {}
+                error: (err: any) => {}
             });
         }
     }
@@ -279,7 +279,7 @@ export class NotesheetGenerateComponent implements OnInit {
                     value: c.codeId
                 }));
             },
-            error: () => {}
+            error: (err: any) => {}
         });
     }
 
@@ -296,7 +296,7 @@ export class NotesheetGenerateComponent implements OnInit {
                         value: c.codeId
                     }));
                 },
-                error: () => {}
+                error: (err: any) => {}
             });
         }
     }
@@ -310,7 +310,7 @@ export class NotesheetGenerateComponent implements OnInit {
                     value: c.codeId
                 }));
             },
-            error: () => {}
+            error: (err: any) => {}
         });
     }
 
@@ -339,7 +339,7 @@ export class NotesheetGenerateComponent implements OnInit {
                     this.isPreparedByMapped = false;
                 }
             },
-            error: () => {
+            error: (err: any) => {
                 this.isPreparedByMapped = false;
             }
         });
@@ -376,14 +376,14 @@ export class NotesheetGenerateComponent implements OnInit {
                             this.finalApproverOptions = allOpts;
                         }
                     },
-                    error: () => {
+                    error: (err: any) => {
                         this.initiatorOptions = allOpts;
                         this.recommenderOptions = allOpts;
                         this.finalApproverOptions = allOpts;
                     }
                 });
             },
-            error: () => {}
+            error: (err: any) => {}
         });
     }
 
@@ -404,7 +404,7 @@ export class NotesheetGenerateComponent implements OnInit {
                     };
                 });
             },
-            error: () => {}
+            error: (err: any) => {}
         });
     }
 
@@ -522,7 +522,7 @@ export class NotesheetGenerateComponent implements OnInit {
     onDownloadFile(payload: { fileId: number; fileName: string }): void {
         this.empService.downloadFile(payload.fileId).subscribe({
             next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
-            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file.' })
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file.' })
         });
     }
 
@@ -592,7 +592,7 @@ export class NotesheetGenerateComponent implements OnInit {
                                 updatedBy: payload.createdBy ?? payload.lastUpdatedBy ?? 'system'
                             };
                             this.http.post(refApi + '/Sync', syncPayload).subscribe({
-                                error: () => this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Note Sheet saved but failed to sync reference employees.' })
+                                error: (err: any) => this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Note Sheet saved but failed to sync reference employees.' })
                             });
                         } else if (noteSheetId && refEmpIds.length === 0 && this.editMode) {
                             // Clear all reference employees on edit if none selected
@@ -642,8 +642,8 @@ export class NotesheetGenerateComponent implements OnInit {
                     const filesReferencesJson = allRefs.length > 0 ? JSON.stringify(allRefs) : null;
                     doSave(filesReferencesJson);
                 },
-                error: () => {
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to upload one or more files.' });
+                error: (err: any) => {
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to upload one or more files.' });
                     this.isSubmitting = false;
                 }
             });

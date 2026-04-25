@@ -147,7 +147,7 @@ export class BloodGroup {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load data'
+                    detail: err?.error?.message || 'Failed to load data'
                 });
                 this.loading = false;
             }
@@ -200,7 +200,7 @@ export class BloodGroup {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create blood-group'
+                    detail: err?.error?.message || 'Failed to create blood-group'
                 });
                 this.isSubmitting = false;
             }
@@ -236,7 +236,7 @@ export class BloodGroup {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update blood-group'
+                    detail: err?.error?.message || 'Failed to update blood-group'
                 });
                 this.isSubmitting = false;
             }
@@ -282,7 +282,7 @@ export class BloodGroup {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete blood-group'
+                            detail: err?.error?.message || 'Failed to delete blood-group'
                         });
                     }
                 });

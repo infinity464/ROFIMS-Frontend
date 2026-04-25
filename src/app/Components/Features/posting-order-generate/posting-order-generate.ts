@@ -272,9 +272,9 @@ export class PostingOrderGenerateComponent implements OnInit {
                             this.footerParagraphs = [];
                             this.postingText = '';
                         },
-                        error: () => {
+                        error: (err: any) => {
                             this.loadingEmployees = false;
-                            this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load employees.' });
+                            this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load employees.' });
                         }
                     });
                 } else {
@@ -282,9 +282,9 @@ export class PostingOrderGenerateComponent implements OnInit {
                     this.messageService.add({ severity: 'info', summary: 'Info', detail: 'No draft posting linked to this notesheet.' });
                 }
             },
-            error: () => {
+            error: (err: any) => {
                 this.loadingEmployees = false;
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load notesheet details.' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load notesheet details.' });
             }
         });
     }
@@ -442,9 +442,9 @@ export class PostingOrderGenerateComponent implements OnInit {
                 });
                 this.loadingGeneratedOrders = false;
             },
-            error: () => {
+            error: (err: any) => {
                 this.loadingGeneratedOrders = false;
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load generated posting orders.' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load generated posting orders.' });
             }
         });
     }

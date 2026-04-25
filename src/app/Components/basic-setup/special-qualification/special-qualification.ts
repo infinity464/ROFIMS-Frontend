@@ -147,7 +147,7 @@ export class SpecialQualification {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load data'
+                    detail: err?.error?.message || 'Failed to load data'
                 });
                 this.loading = false;
             }
@@ -200,7 +200,7 @@ export class SpecialQualification {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create special-qualification'
+                    detail: err?.error?.message || 'Failed to create special-qualification'
                 });
                 this.isSubmitting = false;
             }
@@ -236,7 +236,7 @@ export class SpecialQualification {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update special-qualification'
+                    detail: err?.error?.message || 'Failed to update special-qualification'
                 });
                 this.isSubmitting = false;
             }
@@ -282,7 +282,7 @@ export class SpecialQualification {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete special-qualification'
+                            detail: err?.error?.message || 'Failed to delete special-qualification'
                         });
                     }
                 });

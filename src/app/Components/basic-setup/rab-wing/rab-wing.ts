@@ -159,7 +159,7 @@ export class RabWing {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load RAB Unit'
+                    detail: err?.error?.message || 'Failed to load RAB Unit'
                 });
             }
         });
@@ -178,7 +178,7 @@ export class RabWing {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load data'
+                    detail: err?.error?.message || 'Failed to load data'
                 });
                 this.loading = false;
             }
@@ -256,7 +256,7 @@ export class RabWing {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create rab-wing'
+                    detail: err?.error?.message || 'Failed to create rab-wing'
                 });
                 this.isSubmitting = false;
             }
@@ -290,7 +290,7 @@ export class RabWing {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update rab-wing'
+                    detail: err?.error?.message || 'Failed to update rab-wing'
                 });
                 this.isSubmitting = false;
             }
@@ -338,7 +338,7 @@ export class RabWing {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete rab-wing'
+                            detail: err?.error?.message || 'Failed to delete rab-wing'
                         });
                     }
                 });

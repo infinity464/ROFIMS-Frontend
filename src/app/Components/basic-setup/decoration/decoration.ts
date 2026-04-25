@@ -155,7 +155,7 @@ export class Decoration {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load decoration'
+                    detail: err?.error?.message || 'Failed to load decoration'
                 });
             }
         });
@@ -171,7 +171,7 @@ export class Decoration {
             },
             error: (err) => {
                 console.error('Error fetching data:', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load data' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load data' });
                 this.loading = false;
             }
         });
@@ -244,7 +244,7 @@ export class Decoration {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create decoration'
+                    detail: err?.error?.message || 'Failed to create decoration'
                 });
 
                 this.isSubmitting = false;
@@ -280,7 +280,7 @@ export class Decoration {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update decoration'
+                    detail: err?.error?.message || 'Failed to update decoration'
                 });
                 this.isSubmitting = false;
             }
@@ -330,7 +330,7 @@ export class Decoration {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete decoration'
+                            detail: err?.error?.message || 'Failed to delete decoration'
                         });
                     }
                 });

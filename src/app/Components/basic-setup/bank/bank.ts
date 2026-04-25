@@ -87,11 +87,11 @@ export class Bank implements OnInit {
                 this.filteredBanks = [...res];
                 this.totalRecords = res.length;
             },
-            error: () => {
+            error: (err: any) => {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to fetch banks'
+                    detail: err?.error?.message || 'Failed to fetch banks'
                 });
             }
         });
@@ -144,11 +144,11 @@ export class Bank implements OnInit {
                 this.getAll();
                 this.isSubmitting = false;
             },
-            error: () => {
+            error: (err: any) => {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create bank'
+                    detail: err?.error?.message || 'Failed to create bank'
                 });
                 this.isSubmitting = false;
             }
@@ -174,11 +174,11 @@ export class Bank implements OnInit {
                 this.getAll();
                 this.isSubmitting = false;
             },
-            error: () => {
+            error: (err: any) => {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update bank'
+                    detail: err?.error?.message || 'Failed to update bank'
                 });
                 this.isSubmitting = false;
             }
@@ -220,11 +220,11 @@ export class Bank implements OnInit {
                         });
                         this.getAll();
                     },
-                    error: () => {
+                    error: (err: any) => {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete bank'
+                            detail: err?.error?.message || 'Failed to delete bank'
                         });
                     }
                 });

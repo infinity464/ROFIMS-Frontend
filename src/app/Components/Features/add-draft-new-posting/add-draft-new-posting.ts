@@ -164,7 +164,7 @@ export class AddDraftNewPostingComponent implements OnInit {
                 this.draftMastersList = data ?? [];
                 this.loadingMasters = false;
             },
-            error: () => {
+            error: (err: any) => {
                 this.loadingMasters = false;
             }
         });

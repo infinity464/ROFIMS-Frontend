@@ -265,7 +265,7 @@ export class EmpFamilyInfo implements OnInit {
             },
             error: (err) => {
                 console.error('Failed to load employee', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load employee' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load employee' });
             }
         });
     }
@@ -436,7 +436,7 @@ export class EmpFamilyInfo implements OnInit {
                 },
                 error: (err) => {
                     console.error('Failed to update family member', err);
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update family member' });
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to update family member' });
                 }
             });
         } else {
@@ -482,7 +482,7 @@ export class EmpFamilyInfo implements OnInit {
                 },
                 error: (err) => {
                     console.error('Failed to save family member', err);
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to save family member' });
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to save family member' });
                 }
             });
         }
@@ -509,7 +509,7 @@ export class EmpFamilyInfo implements OnInit {
             },
             error: (err) => {
                 console.error('Failed to delete family member', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete family member' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to delete family member' });
             }
         });
     }
@@ -698,7 +698,7 @@ export class EmpFamilyInfo implements OnInit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to save addresses'
+                    detail: err?.error?.message || 'Failed to save addresses'
                 });
                 this.isSavingAddresses = false;
             });
@@ -812,7 +812,7 @@ export class EmpFamilyInfo implements OnInit {
             error: (err) => {
                 console.error('Failed to save family member', err);
                 this.isSaving = false;
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to save family member' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to save family member' });
             }
         });
     }

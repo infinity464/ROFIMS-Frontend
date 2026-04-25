@@ -138,7 +138,7 @@ export class EmpAddressInfo implements OnInit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load employee data'
+                    detail: err?.error?.message || 'Failed to load employee data'
                 });
             }
         });

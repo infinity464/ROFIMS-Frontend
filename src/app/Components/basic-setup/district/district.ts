@@ -160,7 +160,7 @@ export class District {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load divisions'
+                    detail: err?.error?.message || 'Failed to load divisions'
                 });
             }
         });
@@ -179,7 +179,7 @@ export class District {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load data'
+                    detail: err?.error?.message || 'Failed to load data'
                 });
                 this.loading = false;
             }
@@ -259,7 +259,7 @@ export class District {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create district'
+                    detail: err?.error?.message || 'Failed to create district'
                 });
 
                 this.isSubmitting = false;
@@ -295,7 +295,7 @@ export class District {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update district'
+                    detail: err?.error?.message || 'Failed to update district'
                 });
                 this.isSubmitting = false;
             }
@@ -344,7 +344,7 @@ export class District {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete district'
+                            detail: err?.error?.message || 'Failed to delete district'
                         });
                     }
                 });

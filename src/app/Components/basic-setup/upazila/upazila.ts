@@ -178,7 +178,7 @@ export class Upazila {
             },
             error: (err) => {
                 console.error('Error loading divisions:', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load divisions' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load divisions' });
             }
         });
     }
@@ -192,7 +192,7 @@ export class Upazila {
             },
             error: (err) => {
                 console.error('Error loading districts:', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load districts' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load districts' });
             }
         });
     }
@@ -214,7 +214,7 @@ export class Upazila {
             },
             error: (err) => {
                 console.error('Error fetching data:', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load data' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load data' });
                 this.loading = false;
             }
         });
@@ -291,7 +291,7 @@ export class Upazila {
             },
             error: (err) => {
                 console.error('Error creating:', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to create upazila' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to create upazila' });
             }
         });
     }
@@ -306,7 +306,7 @@ export class Upazila {
             },
             error: (err) => {
                 console.error('Error updating:', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update upazila' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to update upazila' });
             }
         });
     }
@@ -351,7 +351,7 @@ export class Upazila {
                     },
                     error: (err) => {
                         console.error('Error deleting:', err);
-                        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete upazila' });
+                        this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to delete upazila' });
                     }
                 });
             }

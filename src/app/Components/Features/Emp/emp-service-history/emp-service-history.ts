@@ -192,7 +192,7 @@ export class EmpServiceHistory implements OnInit {
                     locationEN: u.locationEN ?? u.LocationEN ?? ''
                 }));
             },
-            error: () => { this.orgUnitOptions = []; }
+            error: (err: any) => { this.orgUnitOptions = []; }
         });
     }
 
@@ -285,7 +285,7 @@ export class EmpServiceHistory implements OnInit {
                     });
                 this.isLoading = false;
             },
-            error: () => { this.serviceList = []; this.isLoading = false; }
+            error: (err: any) => { this.serviceList = []; this.isLoading = false; }
         });
     }
 
@@ -405,7 +405,7 @@ export class EmpServiceHistory implements OnInit {
             next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
             error: (err) => {
                 console.error('Download failed', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file' });
             }
         });
     }
@@ -480,7 +480,7 @@ export class EmpServiceHistory implements OnInit {
                 },
                 error: (err) => {
                     console.error('Error uploading files', err);
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to upload one or more files' });
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to upload one or more files' });
                 }
             });
             return;
@@ -528,7 +528,7 @@ export class EmpServiceHistory implements OnInit {
                     this.loadOrgUnitsForMotherOrg();
                     this.loadServiceList();
                 },
-                error: () => this.loadServiceList()
+                error: (err: any) => this.loadServiceList()
             });
         }
     }

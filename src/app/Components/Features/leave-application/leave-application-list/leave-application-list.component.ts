@@ -314,7 +314,7 @@ export class LeaveApplicationListComponent implements OnInit {
                 this.totalRecords = res.pages?.rows ?? 0;
                 this.loading = false;
             },
-            error: () => {
+            error: (err: any) => {
                 this.currentList = [];
                 this.totalRecords = 0;
                 onError();

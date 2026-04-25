@@ -226,7 +226,7 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
     onDownloadFile(payload: { fileId: number; fileName: string }): void {
         this.empService.downloadFile(payload.fileId).subscribe({
             next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
-            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file.' })
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file.' })
         });
     }
 
@@ -246,8 +246,8 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
                     };
                 });
             },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load employee list.' });
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load employee list.' });
             }
         });
     }
@@ -293,8 +293,8 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
                     this.lastMeasuredHeight = 0;
                     this.reloadNoteSheet();
                 },
-                error: () => {
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update note-sheet.' });
+                error: (err: any) => {
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to update note-sheet.' });
                     this.saving = false;
                 }
             });
@@ -315,8 +315,8 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
                     ];
                     doSave(allRefs.length > 0 ? JSON.stringify(allRefs) : null);
                 },
-                error: () => {
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to upload files.' });
+                error: (err: any) => {
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to upload files.' });
                     this.saving = false;
                 }
             });
@@ -420,7 +420,7 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
                     const me = (Array.isArray(list) ? list : []).find((m: any) => m.userId === userId);
                     if (me?.employeeId) this.currentUserEmployeeId = me.employeeId;
                 },
-                error: () => {}
+                error: (err: any) => {}
             });
         }
     }
@@ -543,7 +543,7 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
                 if (!noteSheet) { this.approvalLogLoading = false; return; }
                 this.buildApprovalLog(noteSheet, backHistory);
             },
-            error: () => { this.approvalLogLoading = false; }
+            error: (err: any) => { this.approvalLogLoading = false; }
         });
     }
 
@@ -649,7 +649,7 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
                 }
                 this.approvalLogLoading = false;
             },
-            error: () => { this.approvalLogLoading = false; }
+            error: (err: any) => { this.approvalLogLoading = false; }
         });
     }
 

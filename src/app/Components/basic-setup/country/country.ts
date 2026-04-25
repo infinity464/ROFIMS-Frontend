@@ -146,7 +146,7 @@ export class Country {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load data'
+                    detail: err?.error?.message || 'Failed to load data'
                 });
                 this.loading = false;
             }
@@ -199,7 +199,7 @@ export class Country {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create country'
+                    detail: err?.error?.message || 'Failed to create country'
                 });
                 this.isSubmitting = false;
             }
@@ -235,7 +235,7 @@ export class Country {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update country'
+                    detail: err?.error?.message || 'Failed to update country'
                 });
                 this.isSubmitting = false;
             }
@@ -281,7 +281,7 @@ export class Country {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete country'
+                            detail: err?.error?.message || 'Failed to delete country'
                         });
                     }
                 });

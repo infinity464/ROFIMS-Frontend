@@ -125,8 +125,8 @@ export class PostingOrderReceiveComponent implements OnInit {
                 ];
                 this.loadingOrders = false;
             },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load approved posting orders' });
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load approved posting orders' });
                 this.loadingOrders = false;
             }
         });
@@ -148,8 +148,8 @@ export class PostingOrderReceiveComponent implements OnInit {
                 ];
                 this.loadingPending = false;
             },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load pending members' });
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load pending members' });
                 this.loadingPending = false;
             }
         });
@@ -189,8 +189,8 @@ export class PostingOrderReceiveComponent implements OnInit {
                 }
                 this.saving = false;
             },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to receive members' });
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to receive members' });
                 this.saving = false;
             }
         });
@@ -203,8 +203,8 @@ export class PostingOrderReceiveComponent implements OnInit {
                 this.historyRecords = data;
                 this.loadingHistory = false;
             },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load receive history' });
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load receive history' });
                 this.loadingHistory = false;
             }
         });

@@ -63,7 +63,7 @@ export class SupernumeraryList implements OnInit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load organizations'
+                    detail: err?.error?.message || 'Failed to load organizations'
                 });
             }
         });
@@ -83,7 +83,7 @@ export class SupernumeraryList implements OnInit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load member types'
+                    detail: err?.error?.message || 'Failed to load member types'
                 });
             }
         });
@@ -109,7 +109,7 @@ export class SupernumeraryList implements OnInit {
                     this.messageService.add({
                         severity: 'error',
                         summary: 'Error',
-                        detail: 'Failed to load ranks'
+                        detail: err?.error?.message || 'Failed to load ranks'
                     });
                 }
             });
@@ -125,7 +125,7 @@ export class SupernumeraryList implements OnInit {
                     this.messageService.add({
                         severity: 'error',
                         summary: 'Error',
-                        detail: 'Failed to load trades'
+                        detail: err?.error?.message || 'Failed to load trades'
                     });
                 }
             });

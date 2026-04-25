@@ -207,7 +207,7 @@ export class EmpPresentMemberCheckComponent implements OnInit, AfterViewInit {
                 this.pickerRows = this.makePickerRows(employees, prefixMap, rankMap);
                 this.showPickerDialog = true;
             },
-            error: () => {
+            error: (err: any) => {
                 this.pickerRows = this.makePickerRows(employees, new Map(), new Map());
                 this.showPickerDialog = true;
             }
@@ -292,7 +292,7 @@ export class EmpPresentMemberCheckComponent implements OnInit, AfterViewInit {
                 const prefixLabel = (prefixes as any[])?.find((p: any) => p?.codeId === prefixId)?.codeValueEN ?? '';
                 this.openMemberFoundDialog(header, employee, empId, this.formatMemberDetails(employee, rankName, prefixLabel), onYes);
             },
-            error: () => {
+            error: (err: any) => {
                 this.openMemberFoundDialog(header, employee, empId, this.formatMemberDetails(employee, '', ''), onYes);
             }
         });
@@ -343,7 +343,7 @@ export class EmpPresentMemberCheckComponent implements OnInit, AfterViewInit {
             next: (res: MotherOrganizationModel[]) => {
                 this.motherOrganizations = res;
             },
-            error: () => {
+            error: (err: any) => {
                 this.showInfo('Error', 'Failed to load Mother Organizations', 'error');
             }
         });

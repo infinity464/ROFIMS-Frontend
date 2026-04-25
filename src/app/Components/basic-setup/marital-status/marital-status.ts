@@ -145,7 +145,7 @@ export class MaritalStatus {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load data'
+                    detail: err?.error?.message || 'Failed to load data'
                 });
                 this.loading = false;
             }
@@ -198,7 +198,7 @@ export class MaritalStatus {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create marital-status'
+                    detail: err?.error?.message || 'Failed to create marital-status'
                 });
                 this.isSubmitting = false;
             }
@@ -234,7 +234,7 @@ export class MaritalStatus {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update marital-status'
+                    detail: err?.error?.message || 'Failed to update marital-status'
                 });
                 this.isSubmitting = false;
             }
@@ -281,7 +281,7 @@ export class MaritalStatus {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete marital-status'
+                            detail: err?.error?.message || 'Failed to delete marital-status'
                         });
                     }
                 });

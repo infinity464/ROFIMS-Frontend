@@ -145,7 +145,7 @@ export class EducationQualification {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load data'
+                    detail: err?.error?.message || 'Failed to load data'
                 });
                 this.loading = false;
             }
@@ -199,7 +199,7 @@ export class EducationQualification {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create education-qualification'
+                    detail: err?.error?.message || 'Failed to create education-qualification'
                 });
                 this.isSubmitting = false;
             }
@@ -235,7 +235,7 @@ export class EducationQualification {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update education-qualification'
+                    detail: err?.error?.message || 'Failed to update education-qualification'
                 });
                 this.isSubmitting = false;
             }
@@ -282,7 +282,7 @@ export class EducationQualification {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete education-qualification'
+                            detail: err?.error?.message || 'Failed to delete education-qualification'
                         });
                     }
                 });

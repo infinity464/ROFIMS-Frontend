@@ -158,7 +158,7 @@ export class Prefix {
             },
             error: (err) => {
                 console.error('Error loading prefix:', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load organizations' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load organizations' });
             }
         });
     }
@@ -173,7 +173,7 @@ export class Prefix {
             },
             error: (err) => {
                 console.error('Error fetching data:', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load data' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load data' });
                 this.loading = false;
             }
         });
@@ -238,7 +238,7 @@ export class Prefix {
             },
             error: (err) => {
                 console.error('Error creating:', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to create prefix' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to create prefix' });
                 this.isSubmitting = false;
             }
         });
@@ -264,7 +264,7 @@ export class Prefix {
             },
             error: (err) => {
                 console.error('Error updating:', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update prefix' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to update prefix' });
                 this.isSubmitting = false;
             }
         });
@@ -298,7 +298,7 @@ export class Prefix {
                     },
                     error: (err) => {
                         console.error('Error deleting:', err);
-                        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete prefix' });
+                        this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to delete prefix' });
                     }
                 });
             }

@@ -145,7 +145,7 @@ export class Division {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load data'
+                    detail: err?.error?.message || 'Failed to load data'
                 });
                 this.loading = false;
             }
@@ -198,7 +198,7 @@ export class Division {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create division'
+                    detail: err?.error?.message || 'Failed to create division'
                 });
                 this.isSubmitting = false;
             }
@@ -234,7 +234,7 @@ export class Division {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update division'
+                    detail: err?.error?.message || 'Failed to update division'
                 });
                 this.isSubmitting = false;
             }
@@ -281,7 +281,7 @@ export class Division {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete division'
+                            detail: err?.error?.message || 'Failed to delete division'
                         });
                     }
                 });

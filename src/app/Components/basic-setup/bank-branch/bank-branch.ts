@@ -112,11 +112,11 @@ export class BankBranchComponent implements OnInit {
                 this.banks = res ?? [];
                 this.bankOptions = this.banks;
             },
-            error: () => {
+            error: (err: any) => {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to fetch banks'
+                    detail: err?.error?.message || 'Failed to fetch banks'
                 });
             }
         });
@@ -128,11 +128,11 @@ export class BankBranchComponent implements OnInit {
                 this.bankBranches = Array.isArray(res) ? res : [];
                 this.buildTableData();
             },
-            error: () => {
+            error: (err: any) => {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to fetch bank branches'
+                    detail: err?.error?.message || 'Failed to fetch bank branches'
                 });
             }
         });
@@ -179,11 +179,11 @@ export class BankBranchComponent implements OnInit {
                 this.getAll();
                 this.isSubmitting = false;
             },
-            error: () => {
+            error: (err: any) => {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create bank branch'
+                    detail: err?.error?.message || 'Failed to create bank branch'
                 });
                 this.isSubmitting = false;
             }
@@ -209,11 +209,11 @@ export class BankBranchComponent implements OnInit {
                 this.getAll();
                 this.isSubmitting = false;
             },
-            error: () => {
+            error: (err: any) => {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update bank branch'
+                    detail: err?.error?.message || 'Failed to update bank branch'
                 });
                 this.isSubmitting = false;
             }
@@ -255,11 +255,11 @@ export class BankBranchComponent implements OnInit {
                         });
                         this.getAll();
                     },
-                    error: () => {
+                    error: (err: any) => {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete bank branch'
+                            detail: err?.error?.message || 'Failed to delete bank branch'
                         });
                     }
                 });

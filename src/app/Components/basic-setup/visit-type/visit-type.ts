@@ -146,7 +146,7 @@ export class VisitType {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load data'
+                    detail: err?.error?.message || 'Failed to load data'
                 });
                 this.loading = false;
             }
@@ -199,7 +199,7 @@ export class VisitType {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create visit-type'
+                    detail: err?.error?.message || 'Failed to create visit-type'
                 });
                 this.isSubmitting = false;
             }
@@ -235,7 +235,7 @@ export class VisitType {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update visit-type'
+                    detail: err?.error?.message || 'Failed to update visit-type'
                 });
                 this.isSubmitting = false;
             }
@@ -282,7 +282,7 @@ export class VisitType {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete visit-type'
+                            detail: err?.error?.message || 'Failed to delete visit-type'
                         });
                     }
                 });

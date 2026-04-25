@@ -167,7 +167,7 @@ export class Batch {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load batch'
+                    detail: err?.error?.message || 'Failed to load batch'
                 });
             }
         });
@@ -183,7 +183,7 @@ export class Batch {
             },
             error: (err) => {
                 console.error('Error fetching data:', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load data' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load data' });
                 this.loading = false;
             }
         });
@@ -262,7 +262,7 @@ export class Batch {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create batch'
+                    detail: err?.error?.message || 'Failed to create batch'
                 });
 
                 this.isSubmitting = false;
@@ -298,7 +298,7 @@ export class Batch {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update batch'
+                    detail: err?.error?.message || 'Failed to update batch'
                 });
                 this.isSubmitting = false;
             }
@@ -348,7 +348,7 @@ export class Batch {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete batch'
+                            detail: err?.error?.message || 'Failed to delete batch'
                         });
                     }
                 });

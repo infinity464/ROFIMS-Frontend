@@ -147,7 +147,7 @@ export class BriefStatementOfOffence {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load data'
+                    detail: err?.error?.message || 'Failed to load data'
                 });
                 this.loading = false;
             }
@@ -199,7 +199,7 @@ export class BriefStatementOfOffence {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create brief statement of offence'
+                    detail: err?.error?.message || 'Failed to create brief statement of offence'
                 });
                 this.isSubmitting = false;
             }
@@ -235,7 +235,7 @@ export class BriefStatementOfOffence {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update brief statement of offence'
+                    detail: err?.error?.message || 'Failed to update brief statement of offence'
                 });
                 this.isSubmitting = false;
             }
@@ -282,7 +282,7 @@ export class BriefStatementOfOffence {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete brief statement of offence'
+                            detail: err?.error?.message || 'Failed to delete brief statement of offence'
                         });
                     }
                 });

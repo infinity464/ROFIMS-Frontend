@@ -179,7 +179,7 @@ export class EducationalDepartment {
             },
             error: (err) => {
                 console.error('Error loading InstitutionTypes:', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load InstitutionTypes' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load InstitutionTypes' });
             }
         });
     }
@@ -193,7 +193,7 @@ export class EducationalDepartment {
             },
             error: (err) => {
                 console.error('Error loading institutionNames:', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load institutionNames' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load institutionNames' });
             }
         });
     }
@@ -215,7 +215,7 @@ export class EducationalDepartment {
             },
             error: (err) => {
                 console.error('Error fetching data:', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load data' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load data' });
                 this.loading = false;
             }
         });
@@ -292,7 +292,7 @@ export class EducationalDepartment {
             },
             error: (err) => {
                 console.error('Error creating:', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to create educational-department' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to create educational-department' });
             }
         });
     }
@@ -307,7 +307,7 @@ export class EducationalDepartment {
             },
             error: (err) => {
                 console.error('Error updating:', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update educational-department' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to update educational-department' });
             }
         });
     }
@@ -352,7 +352,7 @@ export class EducationalDepartment {
                     },
                     error: (err) => {
                         console.error('Error deleting:', err);
-                        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete educational-department' });
+                        this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to delete educational-department' });
                     }
                 });
             }

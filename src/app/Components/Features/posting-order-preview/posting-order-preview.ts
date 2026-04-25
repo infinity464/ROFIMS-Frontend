@@ -232,10 +232,10 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                 }
                 this.loading = false;
             },
-            error: () => {
+            error: (err: any) => {
                 this.loading = false;
                 this.error = true;
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load posting order.' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load posting order.' });
             }
         });
     }
@@ -273,7 +273,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                                 reader.readAsDataURL(blob);
                             }
                         },
-                        error: () => { /* no signature */ }
+                        error: (err: any) => { /* no signature */ }
                     });
                 }
 
@@ -300,7 +300,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                                 reader.readAsDataURL(blob);
                             }
                         },
-                        error: () => { /* no signature available */ }
+                        error: (err: any) => { /* no signature available */ }
                     });
                 }
             }

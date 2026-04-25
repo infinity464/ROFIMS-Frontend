@@ -146,7 +146,7 @@ export class EmpPresentStatus implements OnInit {
             },
             error: (err) => {
                 console.error('Failed to load employee', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load employee data' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load employee data' });
             }
         });
     }
@@ -440,7 +440,7 @@ export class EmpPresentStatus implements OnInit {
                 error: (err) => {
                     this.isSaving = false;
                     console.error('Failed to save/update', err);
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to save record' });
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to save record' });
                 }
             });
         };
@@ -457,7 +457,7 @@ export class EmpPresentStatus implements OnInit {
                 error: (err) => {
                     this.isSaving = false;
                     console.error('Error uploading files', err);
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to upload files' });
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to upload files' });
                 }
             });
             return;
@@ -554,7 +554,7 @@ export class EmpPresentStatus implements OnInit {
                     },
                     error: (err) => {
                         console.error('Failed to delete', err);
-                        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete record' });
+                        this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to delete record' });
                     }
                 });
             }
@@ -574,7 +574,7 @@ export class EmpPresentStatus implements OnInit {
             next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
             error: (err) => {
                 console.error('Download failed', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file' });
             }
         });
     }

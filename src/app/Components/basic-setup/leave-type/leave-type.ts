@@ -147,7 +147,7 @@ export class LeaveType {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load data'
+                    detail: err?.error?.message || 'Failed to load data'
                 });
                 this.loading = false;
             }
@@ -200,7 +200,7 @@ export class LeaveType {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create leave-type'
+                    detail: err?.error?.message || 'Failed to create leave-type'
                 });
                 this.isSubmitting = false;
             }
@@ -236,7 +236,7 @@ export class LeaveType {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update leave-type'
+                    detail: err?.error?.message || 'Failed to update leave-type'
                 });
                 this.isSubmitting = false;
             }
@@ -283,7 +283,7 @@ export class LeaveType {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete leave-type'
+                            detail: err?.error?.message || 'Failed to delete leave-type'
                         });
                     }
                 });

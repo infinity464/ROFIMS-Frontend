@@ -159,11 +159,11 @@ export class EmpPermPostingMotherOrg implements OnInit, OnDestroy {
                     this.loadRecordList();
                 }
             },
-            error: () => {
+            error: (err: any) => {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load employee information'
+                    detail: err?.error?.message || 'Failed to load employee information'
                 });
             }
         });
@@ -194,12 +194,12 @@ export class EmpPermPostingMotherOrg implements OnInit, OnDestroy {
                 }));
                 this.isLoading = false;
             },
-            error: () => {
+            error: (err: any) => {
                 this.isLoading = false;
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load posting records'
+                    detail: err?.error?.message || 'Failed to load posting records'
                 });
             }
         });
@@ -242,7 +242,7 @@ export class EmpPermPostingMotherOrg implements OnInit, OnDestroy {
             next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
             error: (err) => {
                 console.error('Download failed', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file' });
             }
         });
     }
@@ -341,7 +341,7 @@ export class EmpPermPostingMotherOrg implements OnInit, OnDestroy {
             } else {
                 this.empService.getEmployeeById(row.relieverID).subscribe({
                     next: (e: any) => { this.relieverName = e ? (e.FullNameEN || e.fullNameEN || 'N/A') : ''; },
-                    error: () => { this.relieverName = ''; }
+                    error: (err: any) => { this.relieverName = ''; }
                 });
             }
         } else {
@@ -443,14 +443,14 @@ export class EmpPermPostingMotherOrg implements OnInit, OnDestroy {
                         this.loadRecordList();
                         this.isSaving = false;
                     },
-                    error: () => {
-                        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to save record' });
+                    error: (err: any) => {
+                        this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to save record' });
                         this.isSaving = false;
                     }
                 });
             },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to upload files' });
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to upload files' });
                 this.isSaving = false;
             }
         });
@@ -479,7 +479,7 @@ export class EmpPermPostingMotherOrg implements OnInit, OnDestroy {
                 this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Record deleted.' });
                 this.loadRecordList();
             },
-            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete record' })
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to delete record' })
         });
     }
 

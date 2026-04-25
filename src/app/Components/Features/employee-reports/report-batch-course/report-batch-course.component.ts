@@ -182,7 +182,7 @@ export class ReportBatchCourseComponent implements OnInit, OnChanges {
             next: (orgs) => (this.orgOptions = orgs),
             error: (err) => {
                 console.error(err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load organizations' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load organizations' });
             },
         });
     }

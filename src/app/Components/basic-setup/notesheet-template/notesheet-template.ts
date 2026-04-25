@@ -107,8 +107,8 @@ export class NotesheetTemplateComponent {
                 this.totalRecords = this._filteredData.length;
                 this.loading = false;
             },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load notesheet templates' });
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load notesheet templates' });
                 this.loading = false;
             }
         });
@@ -141,7 +141,7 @@ export class NotesheetTemplateComponent {
                 this.messageService.add({ severity: 'success', summary: 'Success', detail: this.editingId ? 'Template updated.' : 'Template created.' });
                 this.isSubmitting = false;
             },
-            error: () => {
+            error: (err: any) => {
                 this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Save failed.' });
                 this.isSubmitting = false;
             }
@@ -174,7 +174,7 @@ export class NotesheetTemplateComponent {
                         this.loadData();
                         this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Deleted.' });
                     },
-                    error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Delete failed.' })
+                    error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Delete failed.' })
                 });
             }
         });

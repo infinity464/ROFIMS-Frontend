@@ -87,8 +87,8 @@ export class RoleMenuPermission implements OnInit {
             next: (roles) => {
                 this.roles = roles;
             },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load roles' });
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load roles' });
             }
         });
     }
@@ -98,8 +98,8 @@ export class RoleMenuPermission implements OnInit {
             next: (menus) => {
                 this.menus = menus;
             },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load menus' });
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load menus' });
             }
         });
     }
@@ -115,8 +115,8 @@ export class RoleMenuPermission implements OnInit {
                 this.buildPermissionTree(permissions);
                 this.loading = false;
             },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load permissions' });
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load permissions' });
                 this.loading = false;
             }
         });
@@ -244,8 +244,8 @@ export class RoleMenuPermission implements OnInit {
                     this.onRoleChange();
                 }
             },
-            error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to save permission' });
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to save permission' });
                 // Revert the checkbox
                 this.onRoleChange();
             }
@@ -319,7 +319,7 @@ export class RoleMenuPermission implements OnInit {
                         this.onRoleChange();
                     }
                 },
-                error: () => {
+                error: (err: any) => {
                     errors++;
                     if (completed + errors === rows.length) {
                         this.saving = false;
