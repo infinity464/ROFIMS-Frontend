@@ -42,14 +42,34 @@
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
                                     <label class="font-semibold block mb-2 text-700">Course Type <span class="text-red-500">*</span></label>
-                                    <p-select formControlName="courseType" [options]="courseTypeOptions" optionLabel="label" optionValue="value" placeholder="Select Course Type" styleClass="w-full" [filter]="true"></p-select>
+                                    <div style="display: flex; align-items: center; gap: 0.35rem;">
+                                        <div style="flex: 1; min-width: 0;">
+                                            <p-select formControlName="courseType" [options]="courseTypeOptions" optionLabel="label" optionValue="value" placeholder="Select Course Type" styleClass="w-full" [filter]="true" appendTo="body"></p-select>
+                                        </div>
+                                        <button type="button" pButton icon="pi pi-plus"
+                                            class="p-button-sm p-button-outlined p-button-success"
+                                            style="flex-shrink: 0; width: 2rem; height: 2rem; padding: 0;"
+                                            pTooltip="Add New Course Type" tooltipPosition="top"
+                                            (click)="openAddCourseTypeDialog()">
+                                        </button>
+                                    </div>
                                     @if (courseForm.get('courseType')?.invalid && courseForm.get('courseType')?.touched) {
                                         <small class="text-red-500">Course Type is required</small>
                                     }
                                 </div>
                                 <div>
                                     <label class="font-semibold block mb-2 text-700">Course Name <span class="text-red-500">*</span></label>
-                                    <p-select formControlName="courseName" [options]="courseNameOptions" optionLabel="label" optionValue="value" placeholder="Select / Enter Course Name" styleClass="w-full" [filter]="true"></p-select>
+                                    <div style="display: flex; align-items: center; gap: 0.35rem;">
+                                        <div style="flex: 1; min-width: 0;">
+                                            <p-select formControlName="courseName" [options]="courseNameOptions" optionLabel="label" optionValue="value" placeholder="Select / Enter Course Name" styleClass="w-full" [filter]="true" appendTo="body"></p-select>
+                                        </div>
+                                        <button type="button" pButton icon="pi pi-plus"
+                                            class="p-button-sm p-button-outlined p-button-success"
+                                            style="flex-shrink: 0; width: 2rem; height: 2rem; padding: 0;"
+                                            pTooltip="Add New Course Name" tooltipPosition="top"
+                                            (click)="openAddCourseNameDialog()">
+                                        </button>
+                                    </div>
                                     @if (courseForm.get('courseName')?.invalid && courseForm.get('courseName')?.touched) {
                                         <small class="text-red-500">Course Name is required</small>
                                     }
@@ -70,11 +90,21 @@
                                 </div>
                                 <div>
                                     <label class="font-semibold block mb-2 text-700">Country</label>
-                                    <input pInputText formControlName="countryDisplay" class="w-full" placeholder="From Training Institute" readonly />
+                                    <div style="display: flex; align-items: center; gap: 0.35rem;">
+                                        <div style="flex: 1; min-width: 0;">
+                                            <p-select formControlName="country" [options]="countryOptions" optionLabel="label" optionValue="value" placeholder="Select Country" styleClass="w-full" [filter]="true" filterPlaceholder="Search Country" appendTo="body" [showClear]="true"></p-select>
+                                        </div>
+                                        <button type="button" pButton icon="pi pi-plus"
+                                            class="p-button-sm p-button-outlined p-button-success"
+                                            style="flex-shrink: 0; width: 2rem; height: 2rem; padding: 0;"
+                                            pTooltip="Add New Country" tooltipPosition="top"
+                                            (click)="openAddCountryDialog()">
+                                        </button>
+                                    </div>
                                 </div>
                                 <div>
-                                    <label class="font-semibold block mb-2 text-700">Location</label>
-                                    <input pInputText formControlName="locationDisplay" class="w-full" placeholder="From Training Institute" readonly />
+                                    <label class="font-semibold block mb-2 text-700">Address</label>
+                                    <input pInputText formControlName="address" class="w-full" placeholder="Enter address" />
                                 </div>
                                 <div class="w-full">
                                     <label class="font-semibold block mb-2 text-700">From</label>
@@ -86,7 +116,17 @@
                                 </div>
                                 <div>
                                     <label class="font-semibold block mb-2 text-700">Course Result</label>
-                                    <p-autocomplete formControlName="result" [suggestions]="courseResultSuggestions" optionLabel="label" optionValue="value" (completeMethod)="filterCourseResult($event)" [dropdown]="true" placeholder="Select or type result" styleClass="w-full" [inputStyle]="{'width': '100%'}"></p-autocomplete>
+                                    <div style="display: flex; align-items: center; gap: 0.35rem;">
+                                        <div style="flex: 1; min-width: 0;">
+                                            <p-autocomplete formControlName="result" [suggestions]="courseResultSuggestions" optionLabel="label" optionValue="value" (completeMethod)="filterCourseResult($event)" [dropdown]="true" placeholder="Select or type result" styleClass="w-full" [inputStyle]="{'width': '100%'}"></p-autocomplete>
+                                        </div>
+                                        <button type="button" pButton icon="pi pi-plus"
+                                            class="p-button-sm p-button-outlined p-button-success"
+                                            style="flex-shrink: 0; width: 2rem; height: 2rem; padding: 0;"
+                                            pTooltip="Add New Course Result" tooltipPosition="top"
+                                            (click)="openAddCourseResultDialog()">
+                                        </button>
+                                    </div>
                                 </div>
                                 <div>
                                     <label class="font-semibold block mb-2 text-700">Auth</label>
@@ -122,7 +162,7 @@
                             <th>Course Name</th>
                             <th>Training Institute</th>
                             <th>Country</th>
-                            <th>Location</th>
+                            <th>Address</th>
                             <th>From</th>
                             <th>To</th>
                             <th>Course Result</th>
@@ -133,10 +173,10 @@
                     <ng-template pTemplate="body" let-row>
                         <tr>
                             <td>{{ getOptionLabel(courseTypeOptions, row.courseType) }}</td>
-                            <td>{{ getOptionLabel(courseNameOptions, row.courseName) }}</td>
+                            <td>{{ getCourseNameLabel(row.courseName) }}</td>
                             <td>{{ getOptionLabel(trainingInstituteOptions, row.trainingInstitueName) }}</td>
                             <td>{{ getCountryDisplay(row) }}</td>
-                            <td>{{ getLocationDisplay(row) }}</td>
+                            <td>{{ getAddressDisplay(row) }}</td>
                             <td>{{ formatDate(row.dateFrom) }}</td>
                             <td>{{ formatDate(row.dateTo) }}</td>
                             <td>{{ row.result || 'N/A' }}</td>
@@ -193,6 +233,31 @@
     <ng-template pTemplate="footer">
         <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="showInstituteDialog = false"></p-button>
         <p-button label="Save" icon="pi pi-check" [loading]="isSavingInstitute" [disabled]="!newInstituteNameEN?.trim()" (onClick)="saveNewInstitute()"></p-button>
+    </ng-template>
+</p-dialog>
+
+<!-- Shared dialog for adding a new Course Type / Course Name / Course Result CommonCode -->
+<p-dialog [header]="'Add New ' + addingCodeTypeLabel" [(visible)]="showAddCodeDialog" [modal]="true" [style]="{width: '450px'}" [closable]="true" [contentStyle]="{'border-top': '2px solid var(--primary-color)'}" appendTo="body">
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+        @if (addingCodeType === 'CourseName') {
+            <div>
+                <label class="font-semibold block mb-2 text-700">Course Type (Parent)</label>
+                <p-select [options]="courseTypeOptions" [ngModel]="addingCodeParentId" optionLabel="label" optionValue="value" [disabled]="true" styleClass="w-full" appendTo="body"></p-select>
+                <small class="text-500">The new Course Name will be added under this Course Type.</small>
+            </div>
+        }
+        <div>
+            <label class="font-semibold block mb-2 text-700">{{ addingCodeTypeLabel }} (English) <span class="text-red-500">*</span></label>
+            <input pInputText style="width: 100%;" [(ngModel)]="newCodeValueEN" placeholder="Enter in English" />
+        </div>
+        <div>
+            <label class="font-semibold block mb-2 text-700">{{ addingCodeTypeLabel }} (Bangla)</label>
+            <input pInputText style="width: 100%;" [(ngModel)]="newCodeValueBN" placeholder="Enter in Bangla" />
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="showAddCodeDialog = false"></p-button>
+        <p-button label="Save" icon="pi pi-check" [loading]="isSavingCode" [disabled]="!newCodeValueEN?.trim()" (onClick)="saveNewCommonCode()"></p-button>
     </ng-template>
 </p-dialog>
 

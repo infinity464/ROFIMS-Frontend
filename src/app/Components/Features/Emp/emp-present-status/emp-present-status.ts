@@ -327,7 +327,8 @@ export class EmpPresentStatus implements OnInit {
             rtuProfileShift: false,
             deceasedProfileShift: false,
             absentProfileShift: false,
-            arrestedProfileShift: false
+            arrestedProfileShift: false,
+            isActive: true
         });
         this.selectedStatusType = PresentStatusType.OnDuty;
         this.fileRows = [];

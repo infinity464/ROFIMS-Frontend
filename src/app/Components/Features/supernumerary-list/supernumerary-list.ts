@@ -7,10 +7,15 @@ import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { InputTextModule } from 'primeng/inputtext';
 import { DatePickerModule } from 'primeng/datepicker';
+import { CheckboxModule } from 'primeng/checkbox';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
+import { forkJoin, of } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
 import { EmployeeListService, GetSupernumeraryListRequest } from '@/services/employee-list.service';
 import { CommonCodeService } from '@/services/common-code-service';
+import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
+import { SharedService } from '@/shared/services/shared-service';
 import { EmployeeList } from '@/models/employee-list.model';
 import { TooltipModule } from 'primeng/tooltip';
 import { MotherOrganizationModel } from '@/models/mother-org-model';
@@ -20,7 +25,7 @@ import { IsSendingNotesheetStatus } from '@/models/enums';
 @Component({
     selector: 'app-supernumerary-list',
     standalone: true,
-    imports: [CommonModule, FormsModule, RouterModule, TableModule, ButtonModule, SelectModule, InputTextModule, DatePickerModule, Toast, TooltipModule],
+    imports: [CommonModule, FormsModule, RouterModule, TableModule, ButtonModule, SelectModule, InputTextModule, DatePickerModule, CheckboxModule, Toast, TooltipModule],
     providers: [MessageService],
     templateUrl: './supernumerary-list.html',
     styleUrls: ['./supernumerary-list.scss', '../employee-reports/report-theme-common.scss'],
@@ -41,16 +46,43 @@ export class SupernumeraryList implements OnInit {
     memberTypeOptions: { label: string; value: number }[] = [];
     selectedMemberTypeId: number | null = null;
 
+    /** CodeIds of Member Types the current user is allowed to use. `null` means "not yet loaded" (fail-open). */
+    private allowedMemberTypeIds: number[] | null = null;
+
     constructor(
         private employeeListService: EmployeeListService,
         private commonCodeService: CommonCodeService,
-        private messageService: MessageService
+        private messageService: MessageService,
+        private sharedService: SharedService,
+        private memberTypeAccess: IdentityUserMemberTypeAccessService
     ) {}
 
     ngOnInit(): void {
+        this.loadCurrentUserMemberTypePermissions();
         this.loadOrgOptions();
         this.loadMemberTypeOptions();
         this.loadData();
+    }
+
+    private loadCurrentUserMemberTypePermissions(): void {
+        const userId = this.sharedService.getCurrentUserId?.() ?? null;
+        if (!userId) {
+            this.allowedMemberTypeIds = null;
+            return;
+        }
+        const cached = this.memberTypeAccess.getCachedMemberTypeIds(userId);
+        if (cached !== null) {
+            this.allowedMemberTypeIds = cached;
+            return;
+        }
+        this.memberTypeAccess.cacheForUser(userId).subscribe({
+            next: (ids) => {
+                this.allowedMemberTypeIds = Array.isArray(ids) ? ids : [];
+            },
+            error: () => {
+                this.allowedMemberTypeIds = null;
+            }
+        });
     }
 
     loadOrgOptions(): void {
@@ -134,8 +166,20 @@ export class SupernumeraryList implements OnInit {
         this.loadData();
     }
 
-    /** Member Type change: reload list only. */
+    /** Member Type change: validate access, then reload list. */
     onMemberTypeChange(): void {
+        const codeId = this.selectedMemberTypeId;
+        if (codeId != null && this.allowedMemberTypeIds !== null && !this.allowedMemberTypeIds.includes(codeId)) {
+            const typeName = this.memberTypeOptions?.find((m) => m.value === codeId)?.label ?? 'this member type';
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'No Permission',
+                detail: `You do not have permission to use ${typeName}.`,
+                life: 6000
+            });
+            this.selectedMemberTypeId = null;
+            return;
+        }
         this.first = 0;
         this.loadData();
     }
@@ -147,8 +191,17 @@ export class SupernumeraryList implements OnInit {
     selectedTradeId: number | null = null;
     joiningDateFrom: Date | null = null;
     joiningDateTo: Date | null = null;
-    joiningDateInRABFrom: Date | null = null;
-    joiningDateInRABTo: Date | null = null;
+
+    /** Posting-status filter – mirrors the action-button buckets. */
+    postingStatusOptions: { label: string; value: 'in-process' | 'not-sent' }[] = [
+        { label: 'Posting In Process', value: 'in-process' },
+        { label: 'Not Send In Posting List', value: 'not-sent' }
+    ];
+    selectedPostingStatus: 'in-process' | 'not-sent' | null = null;
+
+    /** Row IDs currently checked in the multi-select column. */
+    selectedIds = new Set<number>();
+    isSendingSelection = false;
 
     onFilterChange(): void {
         this.first = 0;
@@ -160,15 +213,26 @@ export class SupernumeraryList implements OnInit {
         if (event.rows != null) this.rows = event.rows;
     }
 
-    /** List filtered by searchText (Service ID / RAB ID). Used for table value. */
+    /** List filtered by searchText (Service ID / RAB ID) and Posting Status bucket. Used for table value. */
     get filteredList(): EmployeeList[] {
         const q = this.searchText?.trim()?.toLowerCase() ?? '';
-        if (q === '') return this.list;
-        return this.list.filter(
-            (row) =>
-                (row.serviceId && row.serviceId.toLowerCase().includes(q)) ||
-                (row.RABID && row.RABID.toLowerCase().includes(q))
-        );
+        const status = this.selectedPostingStatus;
+        return this.list.filter((row) => {
+            if (q !== '') {
+                const rabId = this.rabIdOf(row).toLowerCase();
+                const idMatch = (row.serviceId && row.serviceId.toLowerCase().includes(q)) || (rabId !== '' && rabId.includes(q));
+                if (!idMatch) return false;
+            }
+            if (status === 'in-process' && !this.isPostingInProcess(row)) return false;
+            if (status === 'not-sent' && this.isPostingInProcess(row)) return false;
+            return true;
+        });
+    }
+
+    /** A row counts as "in process" when the action button shows an in-process label (Draft or DraftPosting). */
+    private isPostingInProcess(row: EmployeeList): boolean {
+        const s = row.isSendingNotesheetStatus;
+        return s === IsSendingNotesheetStatus.Draft || s === IsSendingNotesheetStatus.DraftPosting;
     }
 
     onSearchChange(): void {
@@ -188,8 +252,7 @@ export class SupernumeraryList implements OnInit {
         if (this.selectedTradeId != null) n++;
         if (this.joiningDateFrom != null) n++;
         if (this.joiningDateTo != null) n++;
-        if (this.joiningDateInRABFrom != null) n++;
-        if (this.joiningDateInRABTo != null) n++;
+        if (this.selectedPostingStatus != null) n++;
         return n;
     }
 
@@ -202,8 +265,7 @@ export class SupernumeraryList implements OnInit {
         this.selectedTradeId = null;
         this.joiningDateFrom = null;
         this.joiningDateTo = null;
-        this.joiningDateInRABFrom = null;
-        this.joiningDateInRABTo = null;
+        this.selectedPostingStatus = null;
         this.first = 0;
         this.loadData();
     }
@@ -216,9 +278,7 @@ export class SupernumeraryList implements OnInit {
             rankId: this.selectedRankId ?? undefined,
             tradeId: this.selectedTradeId ?? undefined,
             joiningDateFrom: this.toDateString(this.joiningDateFrom),
-            joiningDateTo: this.toDateString(this.joiningDateTo),
-            joiningDateInRABFrom: this.toDateString(this.joiningDateInRABFrom),
-            joiningDateInRABTo: this.toDateString(this.joiningDateInRABTo)
+            joiningDateTo: this.toDateString(this.joiningDateTo)
         };
         this.employeeListService.getSupernumeraryList(request).subscribe({
             next: (res) => {
@@ -237,8 +297,95 @@ export class SupernumeraryList implements OnInit {
         });
     }
 
+    /** Reads the RAB ID regardless of API casing (RABID / rabID / rabid). */
+    rabIdOf(row: EmployeeList): string {
+        return (row.RABID ?? row.rabID ?? row.rabid ?? '').toString().trim();
+    }
+
+    /** A row may be selected for bulk send when it is NOT already in the posting pipeline. */
+    isSelectable(row: EmployeeList): boolean {
+        return !this.isPostingInProcess(row);
+    }
+
+    isRowSelected(row: EmployeeList): boolean {
+        return this.selectedIds.has(row.employeeID);
+    }
+
+    /**
+     * Adds/removes a row from the selection.
+     * If the user tries to check a row without an allocated RAB ID, show a warning toast
+     * and leave it unchecked (auto-uncheck).
+     */
+    onRowSelectionChange(row: EmployeeList, checked: boolean): void {
+        if (!checked) {
+            this.selectedIds.delete(row.employeeID);
+            return;
+        }
+        if (!this.rabIdOf(row)) {
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'RAB ID Not Allcoated for the Member',
+                detail: 'Please Allocate RAB ID'
+            });
+            this.selectedIds.delete(row.employeeID);
+            return;
+        }
+        this.selectedIds.add(row.employeeID);
+    }
+
+    get selectedCount(): number {
+        return this.selectedIds.size;
+    }
+
+    clearSelection(): void {
+        this.selectedIds.clear();
+    }
+
+    /** Bulk send: fire SetIsSendingNotesheetStatus=Draft for every selected ID in parallel. */
+    sendSelectedToPosting(): void {
+        const ids = Array.from(this.selectedIds);
+        if (ids.length === 0 || this.isSendingSelection) return;
+
+        this.isSendingSelection = true;
+        const calls = ids.map(id =>
+            this.employeeListService.setIsSendingNotesheetStatus(id, IsSendingNotesheetStatus.Draft).pipe(
+                map(res => ({ id, ok: (res?.statusCode ?? 200) === 200, description: res?.description })),
+                catchError(err => of({ id, ok: false, description: err?.error?.message || 'Request failed' }))
+            )
+        );
+        forkJoin(calls).subscribe(results => {
+            const okCount = results.filter(r => r.ok).length;
+            const failCount = results.length - okCount;
+            if (okCount > 0) {
+                this.messageService.add({
+                    severity: 'success',
+                    summary: 'Sent to Posting',
+                    detail: `${okCount} member(s) moved to Posting in Process${failCount ? `, ${failCount} failed` : ''}.`
+                });
+            }
+            if (failCount > 0 && okCount === 0) {
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Failed',
+                    detail: `Could not update ${failCount} member(s).`
+                });
+            }
+            this.isSendingSelection = false;
+            this.clearSelection();
+            this.loadData();
+        });
+    }
+
     onSendNewPostingList(row: EmployeeList): void {
-        if (row.isSendingNotesheetStatus === IsSendingNotesheetStatus.DraftPosting) return;
+        if (this.isPostingInProcess(row)) return;
+        if (!this.rabIdOf(row)) {
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'RAB ID Not Allcoated for the Member',
+                detail: 'Please Allocate RAB ID'
+            });
+            return;
+        }
         this.employeeListService.setIsSendingNotesheetStatus(row.employeeID, IsSendingNotesheetStatus.Draft).subscribe({
             next: () => {
                 this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Status updated to Posting in Process' });
@@ -263,9 +410,18 @@ export class SupernumeraryList implements OnInit {
         return 'Send New Posting list';
     }
 
-    /** Button is inactive (disabled but visible) when status is draftPosting. */
+    /** Button is disabled whenever the row is already in the posting pipeline (Draft or DraftPosting). */
     isSendPostingListDisabled(row: EmployeeList): boolean {
-        return row.isSendingNotesheetStatus === IsSendingNotesheetStatus.DraftPosting;
+        return this.isPostingInProcess(row);
+    }
+
+    /**
+     * CSS class picked from the row's posting status (not from the rendered text):
+     *   Draft / DraftPosting (posting in process) → ash
+     *   anything else → blue
+     */
+    getSendPostingListClass(row: EmployeeList): string {
+        return this.isPostingInProcess(row) ? 'report-btn-ash' : 'report-btn-blue';
     }
 
     toDateString(d: Date | null): string | undefined {

@@ -17,6 +17,7 @@ import { SelectModule } from 'primeng/select';
 import { DialogModule } from 'primeng/dialog';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DatePickerModule } from 'primeng/datepicker';
+import { SelectButtonModule } from 'primeng/selectbutton';
 
 import { EmpService } from '@/services/emp-service';
 import { MOServHistoryService } from '@/services/mo-serv-history.service';
@@ -25,6 +26,14 @@ import { OrganizationService } from '@/Components/basic-setup/organization-setup
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 import { FileReferencesFormComponent, FileRowData } from '@components/Common/file-references-form/file-references-form';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
+import { PartialDatePipe } from '@/shared/pipes/partial-date.pipe';
+import { DatePrecision, toDateOnlyWithPrecision } from '@/shared/utils/partial-date.util';
+
+/** UI-level precision for the shared From/To selector. Maps to DB's 'D'|'M'|'Y' at the save boundary. */
+type ServicePrecision = 'full' | 'month-year' | 'year';
+
+const UI_TO_DB_PRECISION: Record<ServicePrecision, DatePrecision> = { 'full': 'D', 'month-year': 'M', 'year': 'Y' };
+const DB_TO_UI_PRECISION: Record<DatePrecision, ServicePrecision> = { 'D': 'full', 'M': 'month-year', 'Y': 'year' };
 
 interface OrgUnitOption {
     orgId: number;
@@ -38,6 +47,8 @@ export interface ServiceHistoryListRow {
     locationName: string | null;
     serviceFrom: string | null;
     serviceTo: string | null;
+    /** Shared precision for From/To (DB codes). Read from serviceFromPrecision, falling back to serviceToPrecision. */
+    servicePrecision: DatePrecision | null;
     appointment: number | null;
     auth: string | null;
     remarks: string | null;
@@ -63,9 +74,11 @@ export interface ServiceHistoryListRow {
         DialogModule,
         ConfirmDialogModule,
         DatePickerModule,
+        SelectButtonModule,
         EmployeeSearchComponent,
         FileReferencesFormComponent,
-        FlexibleDateDirective
+        FlexibleDateDirective,
+        PartialDatePipe
     ],
     providers: [ConfirmationService],
     templateUrl: './emp-service-history.html',
@@ -106,6 +119,12 @@ export class EmpServiceHistory implements OnInit {
     isSaving = false;
     serviceForm!: FormGroup;
     editingServHisId: number | null = null;
+
+    precisionOptions: { label: string; value: ServicePrecision }[] = [
+        { label: 'Full date', value: 'full' },
+        { label: 'Month & year', value: 'month-year' },
+        { label: 'Year only', value: 'year' }
+    ];
 
     appointmentOptions: { label: string; value: number }[] = [];
     yearOptions: { label: string; value: string }[] = [];
@@ -155,12 +174,34 @@ export class EmpServiceHistory implements OnInit {
             servHisID: [null],
             orgUnitId: [null, Validators.required],
             locationName: [''],
-            serviceFrom: [null],
+            serviceFrom: [null, Validators.required],
             serviceTo: [null],
+            precision: ['full' as ServicePrecision],
             appointment: [null],
             auth: [''],
             remarks: ['']
         });
+    }
+
+    /** True when To < From at the current precision (so the inline error should render). */
+    get toRangeInvalid(): boolean {
+        const from = this.serviceForm?.get('serviceFrom')?.value;
+        const to = this.serviceForm?.get('serviceTo')?.value;
+        if (!from || !to) return false;
+        const precision = (this.serviceForm?.get('precision')?.value ?? 'full') as ServicePrecision;
+        const fromKey = this.precisionCompareKey(from, precision);
+        const toKey = this.precisionCompareKey(to, precision);
+        if (fromKey == null || toKey == null) return false;
+        return toKey < fromKey;
+    }
+
+    private precisionCompareKey(value: Date | string, precision: ServicePrecision): number | null {
+        const d = value instanceof Date ? value : new Date(value);
+        if (isNaN(d.getTime())) return null;
+        const y = d.getFullYear();
+        const m = precision === 'year' ? 0 : d.getMonth();
+        const day = precision === 'full' ? d.getDate() : 1;
+        return y * 10000 + m * 100 + day;
     }
 
     private mapCommonCodeToOption(item: any): { label: string; value: number } {
@@ -274,6 +315,7 @@ export class EmpServiceHistory implements OnInit {
                             locationName: (item as any).locationName ?? (item as any).LocationName ?? null,
                             serviceFrom: item.serviceFrom ?? (item as any).ServiceFrom ?? null,
                             serviceTo: item.serviceTo ?? (item as any).ServiceTo ?? null,
+                            servicePrecision: (((item as any).serviceFromPrecision ?? (item as any).ServiceFromPrecision ?? (item as any).serviceToPrecision ?? (item as any).ServiceToPrecision) ?? null) as DatePrecision | null,
                             appointment: item.appointment ?? (item as any).Appointment ?? null,
                             auth: item.auth ?? (item as any).Auth ?? null,
                             remarks: item.remarks ?? (item as any).Remarks ?? null,
@@ -353,6 +395,7 @@ export class EmpServiceHistory implements OnInit {
             locationName: '',
             serviceFrom: null,
             serviceTo: null,
+            precision: 'full',
             appointment: null,
             auth: '',
             remarks: ''
@@ -371,6 +414,7 @@ export class EmpServiceHistory implements OnInit {
             locationName: row.locationName ?? '',
             serviceFrom,
             serviceTo,
+            precision: DB_TO_UI_PRECISION[row.servicePrecision ?? 'D'],
             appointment: row.appointment,
             auth: row.auth ?? '',
             remarks: row.remarks ?? ''
@@ -418,11 +462,26 @@ export class EmpServiceHistory implements OnInit {
             this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Organization Unit.' });
             return;
         }
+        if (this.serviceForm.get('serviceFrom')?.invalid) {
+            this.serviceForm.get('serviceFrom')?.markAsTouched();
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please enter the From date.' });
+            return;
+        }
+        if (this.toRangeInvalid) {
+            this.serviceForm.get('serviceTo')?.markAsTouched();
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'To date must be on or after From date.' });
+            return;
+        }
         const v = this.serviceForm.value;
         const now = new Date().toISOString();
 
         const existingRefs = this.fileReferencesForm?.getExistingFileReferences() || [];
         const filesToUpload = this.fileReferencesForm?.getFilesToUpload() || [];
+
+        const uiPrecision = (v.precision ?? 'full') as ServicePrecision;
+        const dbPrecision = UI_TO_DB_PRECISION[uiPrecision];
+        const serviceFrom = v.serviceFrom ? toDateOnlyWithPrecision(v.serviceFrom, dbPrecision) : null;
+        const serviceTo = v.serviceTo ? toDateOnlyWithPrecision(v.serviceTo, dbPrecision) : null;
 
         const doSave = (filesReferencesJson: string | null) => {
             const payload = {
@@ -431,8 +490,12 @@ export class EmpServiceHistory implements OnInit {
                 orgId: this.selectedOrgId ?? null,
                 orgUnitId: v.orgUnitId ?? null,
                 locationName: v.locationName || null,
-                serviceFrom: this.toDateOnly(v.serviceFrom),
-                serviceTo: this.toDateOnly(v.serviceTo),
+                serviceFrom,
+                serviceTo,
+                // Store the selected precision on BOTH columns regardless of whether the date is set.
+                // If a user later fills in the To date, the precision already matches the row's intent.
+                serviceFromPrecision: dbPrecision,
+                serviceToPrecision: dbPrecision,
                 auth: v.auth || null,
                 appointment: v.appointment ?? null,
                 remarks: v.remarks ?? '',

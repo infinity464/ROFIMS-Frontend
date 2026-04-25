@@ -68,6 +68,22 @@ export class EmpBankAccount implements OnInit {
     bankBranches: BankBranchModel[] = [];
     branchOptions: BankBranchModel[] = [];
 
+    // Add Bank dialog
+    showAddBankDialog = false;
+    newBankNameEN = '';
+    newBankNameBN = '';
+    newBankRoutingNumber = '';
+    newBankSwiftCode = '';
+    isSavingBank = false;
+
+    // Add Branch dialog — addBranchBankId is the captured parent bank (read-only in the dialog).
+    showAddBranchDialog = false;
+    addBranchBankId: number | null = null;
+    newBranchNameEN = '';
+    newBranchNameBN = '';
+    newBranchLocation = '';
+    isSavingBranch = false;
+
     constructor(
         private empService: EmpService,
         private bankAccInfoService: BankAccInfoService,
@@ -376,6 +392,107 @@ export class EmpBankAccount implements OnInit {
         this.mode = 'edit';
         this.isReadonly = false;
     }
+
+    /** + button next to the Bank dropdown. */
+    openAddBankDialog(): void {
+        this.newBankNameEN = '';
+        this.newBankNameBN = '';
+        this.newBankRoutingNumber = '';
+        this.newBankSwiftCode = '';
+        this.showAddBankDialog = true;
+    }
+
+    saveNewBank(): void {
+        if (!this.newBankNameEN?.trim()) return;
+        this.isSavingBank = true;
+        const now = new Date();
+        const payload: BankModel = {
+            bankId: 0,
+            bankNameEN: this.newBankNameEN.trim(),
+            bankNameBN: this.newBankNameBN?.trim() || '',
+            branchName: '',
+            routingNumber: this.newBankRoutingNumber?.trim() || '',
+            swiftCode: this.newBankSwiftCode?.trim() || '',
+            createdBy: 'system',
+            createdDate: now,
+            lastUpdatedBy: 'system',
+            lastUpdate: now
+        };
+        this.masterBasicSetupService.createBank(payload).subscribe({
+            next: (res: any) => {
+                this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Bank created successfully' });
+                const newId: number | undefined = res?.bankId ?? res?.BankId;
+                this.showAddBankDialog = false;
+                this.isSavingBank = false;
+                // Reload banks and auto-select the new one.
+                this.masterBasicSetupService.getAllBank().subscribe({
+                    next: (data) => {
+                        this.banks = Array.isArray(data) ? data : [];
+                        if (newId != null) {
+                            this.bankAccForm.patchValue({ bankId: newId, branchId: null });
+                            this.updateBranchOptions();
+                        }
+                    }
+                });
+            },
+            error: () => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to create bank' });
+                this.isSavingBank = false;
+            }
+        });
+    }
+
+    /** + button next to the Branch dropdown — requires a Bank to be selected so the branch has a parent. */
+    openAddBranchDialog(): void {
+        const bankId: number | null = this.bankAccForm.get('bankId')?.value ?? null;
+        if (bankId == null) {
+            this.messageService.add({ severity: 'warn', summary: 'Select Bank', detail: 'Please select a Bank before adding a Branch.' });
+            return;
+        }
+        this.addBranchBankId = bankId;
+        this.newBranchNameEN = '';
+        this.newBranchNameBN = '';
+        this.newBranchLocation = '';
+        this.showAddBranchDialog = true;
+    }
+
+    saveNewBranch(): void {
+        if (!this.newBranchNameEN?.trim() || this.addBranchBankId == null) return;
+        this.isSavingBranch = true;
+        const now = new Date();
+        const payload: BankBranchModel = {
+            bankBranchId: 0,
+            bankId: this.addBranchBankId,
+            branchNameEN: this.newBranchNameEN.trim(),
+            branchNameBN: this.newBranchNameBN?.trim() || '',
+            location: this.newBranchLocation?.trim() || '',
+            createdBy: 'system',
+            createdDate: now,
+            lastUpdatedBy: 'system',
+            lastupdate: now
+        };
+        this.masterBasicSetupService.createBankBranch(payload).subscribe({
+            next: (res: any) => {
+                this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Branch created successfully' });
+                const newId: number | undefined = res?.bankBranchId ?? res?.BankBranchId;
+                this.showAddBranchDialog = false;
+                this.isSavingBranch = false;
+                // Reload all branches and auto-select the new one under the current bank.
+                this.masterBasicSetupService.getAllBankBranch().subscribe({
+                    next: (data) => {
+                        this.bankBranches = Array.isArray(data) ? data : [];
+                        this.updateBranchOptions();
+                        if (newId != null) this.bankAccForm.patchValue({ branchId: newId });
+                    }
+                });
+            },
+            error: () => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to create branch' });
+                this.isSavingBranch = false;
+            }
+        });
+    }
+
     goBack(): void {
         if (this.embedMode) {
             this.cancelled.emit();

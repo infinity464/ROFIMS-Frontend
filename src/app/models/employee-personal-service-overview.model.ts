@@ -51,10 +51,12 @@ export interface EmployeePersonalServiceOverview {
     permanentDistrictTypeNameBN?: string | null;
     // Other Personal Information
     nid: string | null;
+    nidOld: string | null;
     courseBatch: string | null;
     dateOfBirth: string | null;
     bloodGroup: string | null;
     mobileNo: string | null;
+    mobileNoOfficial: string | null;
     emailAddress: string | null;
     emergencyContactNo: string | null;
     passportNo: string | null;

@@ -37,19 +37,27 @@
         @if (employeeFound) {
             <form [formGroup]="personalInfoForm">
                 <div class="form-section">
-                    <!-- Row 1: Blood Group, NID, Mobile No, Email Address -->
+                    <!-- Row 1: Blood Group, NID Old, New NID, Mobile No Personal, Mobile No Official, Email Address -->
                     <div class="form-row">
                         <div class="form-field">
                             <label class="form-label">Blood Group</label>
                             <p-select formControlName="bloodGroup" [options]="bloodGroups" optionLabel="label" optionValue="value" placeholder="Select Blood Group" styleClass="w-full" [filter]="true"></p-select>
                         </div>
                         <div class="form-field">
-                            <label class="form-label">NID (Old/New)</label>
+                            <label class="form-label">New NID</label>
                             <input pInputText class="w-full" placeholder="Only Number" formControlName="nid" />
                         </div>
                         <div class="form-field">
-                            <label class="form-label">Mobile No</label>
+                            <label class="form-label">Old NID</label>
+                            <input pInputText class="w-full" placeholder="Only Number" formControlName="nidOld" />
+                        </div>
+                        <div class="form-field">
+                            <label class="form-label">Mobile No Personal</label>
                             <input pInputText class="w-full" placeholder="Mobile Number" formControlName="mobileNo" />
+                        </div>
+                        <div class="form-field">
+                            <label class="form-label">Mobile No Official</label>
+                            <input pInputText class="w-full" placeholder="Mobile Number" formControlName="mobileNoOfficial" />
                         </div>
                         <div class="form-field">
                             <label class="form-label">Email Address</label>
@@ -163,7 +171,7 @@
                         </div>
                     </div>
 
-                    <!-- Row 7: Weight, Driving License, Service ID Card -->
+                    <!-- Row 7: Weight, Leaving Status, Driving License, Service ID Card -->
                     <div class="form-row">
                         <div class="form-field">
                             <label class="form-label">Weight</label>
@@ -173,6 +181,14 @@
                                 <p-inputNumber formControlName="weightLbs" [min]="0" placeholder="Lbs" styleClass="flex-1"></p-inputNumber>
                                 <span class="text-sm">Lbs</span>
                             </div>
+                        </div>
+                        <div class="form-field">
+                            <label class="form-label">Leaving Status</label>
+                            <p-select formControlName="leavingStatus" [options]="leavingStatusOptions" optionLabel="label" optionValue="value" placeholder="Select Leaving Status" styleClass="w-full"></p-select>
+                        </div>
+                        <div class="form-field">
+                            <label class="form-label">Present Status</label>
+                            <p-select formControlName="presentStatus" [options]="presentStatusTypes" optionLabel="label" optionValue="value" placeholder="Select Present Status" styleClass="w-full" [filter]="true"></p-select>
                         </div>
                         <div class="form-field">
                             <label class="form-label">Driving License No</label>

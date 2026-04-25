@@ -255,6 +255,7 @@
                         <div class="sp-field"><span class="sp-field-label">{{ L['field.gallantryAwards'] }}</span> <span class="sp-field-value">{{ codeValue(profile.gallantryAwardsDecoration, profile.gallantryAwardsDecorationBN) }}</span></div>
                         <div class="sp-field"><span class="sp-field-label">{{ L['field.bloodGroup'] }}</span> <span class="sp-field-value">{{ val(profile.bloodGroup) }}</span></div>
                         <div class="sp-field"><span class="sp-field-label">{{ L['field.nid'] }}</span> <span class="sp-field-value">{{ valDisplay(profile.nid) }}</span></div>
+                        <div class="sp-field"><span class="sp-field-label">{{ L['field.nidOld'] }}</span> <span class="sp-field-value">{{ valDisplay(profile.nidOld) }}</span></div>
                         <div class="sp-field"><span class="sp-field-label">{{ L['field.passportNo'] }}</span> <span class="sp-field-value">{{ valDisplay(profile.passportNo) }}</span></div>
                         <div class="sp-field"><span class="sp-field-label">{{ L['field.identificationMark'] }}</span> <span class="sp-field-value">{{ val(profile.identificationMark) }}</span></div>
                     </div>
@@ -266,6 +267,7 @@
                         <div class="sp-field"><span class="sp-field-label">{{ L['field.medicalCategory'] }}</span> <span class="sp-field-value">{{ codeValue(profile.medicalCategory, profile.medicalCategoryBN) }}</span></div>
                         <div class="sp-field"><span class="sp-field-label">{{ L['field.emailAddress'] }}</span> <span class="sp-field-value">{{ val(profile.emailAddress) }}</span></div>
                         <div class="sp-field"><span class="sp-field-label">{{ L['field.mobileNo'] }}</span> <span class="sp-field-value">{{ valDisplay(profile.mobileNo) }}</span></div>
+                        <div class="sp-field"><span class="sp-field-label">{{ L['field.mobileNoOfficial'] }}</span> <span class="sp-field-value">{{ valDisplay(profile.mobileNoOfficial) }}</span></div>
                         <div class="sp-field"><span class="sp-field-label">{{ L['field.emergencyContactNo'] }}</span> <span class="sp-field-value">{{ valDisplay(profile.emergencyContactNo) }}</span></div>
                     </div>
                 </div>
@@ -452,8 +454,8 @@
                             <td>{{ rowNum(rowIndex) }}.</td>
                             <td>{{ val(row.organizationName) }}</td>
                             <td>{{ val(row.locationName) }}</td>
-                            <td>{{ formatDateOnly(row.serviceFrom) }}</td>
-                            <td>{{ formatDateOnly(row.serviceTo) }}</td>
+                            <td>{{ row.serviceFrom | partialDate: row.serviceFromPrecision }}</td>
+                            <td>{{ row.serviceTo | partialDate: row.serviceToPrecision }}</td>
                             <td>{{ codeValue(row.appointment, row.appointmentBN) }}</td>
                             <td>{{ val(row.auth) }}</td>
                             <td>{{ val(row.remarks) }}</td>

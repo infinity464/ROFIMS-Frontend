@@ -357,8 +357,8 @@
                             <td>{{ rowNum(rowIndex) }}.</td>
                             <td>{{ val(row.organizationName) }}</td>
                             <td>{{ val(row.locationName) }}</td>
-                            <td>{{ formatDateOnly(row.serviceFrom) }}</td>
-                            <td>{{ formatDateOnly(row.serviceTo) }}</td>
+                            <td>{{ row.serviceFrom | partialDate: row.serviceFromPrecision }}</td>
+                            <td>{{ row.serviceTo | partialDate: row.serviceToPrecision }}</td>
                             <td>{{ codeValue(row.appointment, row.appointmentBN) }}</td>
                             <td>{{ val(row.auth) }}</td>
                             <td>{{ val(row.remarks) }}</td>

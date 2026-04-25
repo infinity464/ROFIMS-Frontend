@@ -10,6 +10,8 @@ import { ConfirmDialog } from 'primeng/confirmdialog';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { EmployeeListService } from '@/services/employee-list.service';
 import { CommonCodeService } from '@/services/common-code-service';
+import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
+import { SharedService } from '@/shared/services/shared-service';
 import { EmployeeList, GetEmployeeListRequest } from '@/models/employee-list.model';
 import { MotherOrganizationModel } from '@/models/mother-org-model';
 import { CommonCodeModel } from '@/models/common-code-model';
@@ -33,16 +35,57 @@ export class RabIdAllocation implements OnInit {
     memberTypeOptions: { label: string; value: number }[] = [];
     selectedMemberTypeId: number | null = null;
 
+    /** CodeIds of Member Types the current user is allowed to use. `null` means "not yet loaded" (fail-open). */
+    private allowedMemberTypeIds: number[] | null = null;
+
     constructor(
         private employeeListService: EmployeeListService,
         private commonCodeService: CommonCodeService,
         private messageService: MessageService,
-        private confirmationService: ConfirmationService
+        private confirmationService: ConfirmationService,
+        private sharedService: SharedService,
+        private memberTypeAccess: IdentityUserMemberTypeAccessService
     ) {}
 
     ngOnInit(): void {
+        this.loadCurrentUserMemberTypePermissions();
         this.loadOrgOptions();
         this.loadMemberTypeOptions();
+    }
+
+    onMemberTypeChange(codeId: number | null): void {
+        if (codeId != null && this.allowedMemberTypeIds !== null && !this.allowedMemberTypeIds.includes(codeId)) {
+            const typeName =
+                this.memberTypeOptions?.find((m) => m.value === codeId)?.label ?? 'this member type';
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'No Permission',
+                detail: `You do not have permission to use ${typeName}.`,
+                life: 6000
+            });
+            this.selectedMemberTypeId = null;
+        }
+    }
+
+    private loadCurrentUserMemberTypePermissions(): void {
+        const userId = this.sharedService.getCurrentUserId?.() ?? null;
+        if (!userId) {
+            this.allowedMemberTypeIds = null;
+            return;
+        }
+        const cached = this.memberTypeAccess.getCachedMemberTypeIds(userId);
+        if (cached !== null) {
+            this.allowedMemberTypeIds = cached;
+            return;
+        }
+        this.memberTypeAccess.cacheForUser(userId).subscribe({
+            next: (ids) => {
+                this.allowedMemberTypeIds = Array.isArray(ids) ? ids : [];
+            },
+            error: () => {
+                this.allowedMemberTypeIds = null;
+            }
+        });
     }
 
     loadOrgOptions(): void {

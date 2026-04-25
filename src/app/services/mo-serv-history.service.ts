@@ -14,6 +14,8 @@ export interface MOServHistoryByEmployeeView {
     locationName: string | null;
     serviceFrom: string | null;
     serviceTo: string | null;
+    serviceFromPrecision?: 'D' | 'M' | 'Y' | null;
+    serviceToPrecision?: 'D' | 'M' | 'Y' | null;
     auth: string | null;
     appointmentId?: number | null;
     appointment: string | null;
@@ -29,6 +31,8 @@ export interface MOServHistoryModel {
     locationName?: string | null;
     serviceFrom?: string | null;
     serviceTo?: string | null;
+    serviceFromPrecision?: 'D' | 'M' | 'Y' | null;
+    serviceToPrecision?: 'D' | 'M' | 'Y' | null;
     auth?: string | null;
     appointment?: number | null;
     remarks?: string | null;
@@ -88,6 +92,8 @@ export class MOServHistoryService {
             locationName: payload.locationName ?? null,
             serviceFrom: payload.serviceFrom ?? null,
             serviceTo: payload.serviceTo ?? null,
+            serviceFromPrecision: payload.serviceFromPrecision ?? null,
+            serviceToPrecision: payload.serviceToPrecision ?? null,
             auth: payload.auth ?? null,
             appointment: payload.appointment ?? null,
             remarks: payload.remarks ?? '',

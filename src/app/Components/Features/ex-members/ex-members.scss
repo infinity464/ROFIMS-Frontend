@@ -92,6 +92,28 @@
   border-color: var(--surface-border);
 }
 
+/* Dark mode: filter text inputs (RAB ID, Service ID, NID ID, Name English, Name Bangla).
+ * ::ng-deep pierces Angular encapsulation so the rule reaches the PrimeNG-rendered input;
+ * !important overrides PrimeNG's own .p-inputtext design-token styling. Matches the
+ * emp-basic-info / emp-family-info look via .form-card's dark rule in form-theme.scss. */
+:host-context(.app-dark) ::ng-deep .report-filter-body-inner input.p-inputtext,
+:host-context(.app-dark) ::ng-deep .report-filter-body-inner input[pInputText] {
+  background: var(--surface-card) !important;
+  background-color: var(--surface-card) !important;
+  color: var(--text-color) !important;
+  border: 1px solid var(--surface-border) !important;
+}
+:host-context(.app-dark) ::ng-deep .report-filter-body-inner input.p-inputtext:focus,
+:host-context(.app-dark) ::ng-deep .report-filter-body-inner input[pInputText]:focus {
+  border-color: var(--primary-color) !important;
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 25%, transparent) !important;
+}
+:host-context(.app-dark) ::ng-deep .report-filter-body-inner input.p-inputtext::placeholder,
+:host-context(.app-dark) ::ng-deep .report-filter-body-inner input[pInputText]::placeholder {
+  color: var(--text-color-secondary) !important;
+}
+
 /* Profile link in table – small primary-style link */
 .report-link-profile {
   display: inline-flex;

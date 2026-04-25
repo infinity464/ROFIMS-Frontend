@@ -42,31 +42,53 @@
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
                                     <label class="font-semibold block mb-2 text-700">Bank <span class="text-red-500">*</span></label>
-                                    <p-select
-                                        formControlName="bankId"
-                                        [options]="banks"
-                                        optionLabel="bankNameEN"
-                                        optionValue="bankId"
-                                        placeholder="Select Bank"
-                                        [filter]="true"
-                                        (onChange)="onBankChange()"
-                                        styleClass="w-full">
-                                    </p-select>
+                                    <div style="display: flex; align-items: center; gap: 0.35rem;">
+                                        <div style="flex: 1; min-width: 0;">
+                                            <p-select
+                                                formControlName="bankId"
+                                                [options]="banks"
+                                                optionLabel="bankNameEN"
+                                                optionValue="bankId"
+                                                placeholder="Select Bank"
+                                                [filter]="true"
+                                                (onChange)="onBankChange()"
+                                                styleClass="w-full"
+                                                appendTo="body">
+                                            </p-select>
+                                        </div>
+                                        <button type="button" pButton icon="pi pi-plus"
+                                            class="p-button-sm p-button-outlined p-button-success"
+                                            style="flex-shrink: 0; width: 2rem; height: 2rem; padding: 0;"
+                                            pTooltip="Add New Bank" tooltipPosition="top"
+                                            (click)="openAddBankDialog()">
+                                        </button>
+                                    </div>
                                     @if (bankAccForm.get('bankId')?.invalid && bankAccForm.get('bankId')?.touched) {
                                         <small class="text-red-500">Bank is required</small>
                                     }
                                 </div>
                                 <div>
                                     <label class="font-semibold block mb-2 text-700">Branch <span class="text-red-500">*</span></label>
-                                    <p-select
-                                        formControlName="branchId"
-                                        [options]="branchOptions"
-                                        optionLabel="branchNameEN"
-                                        optionValue="bankBranchId"
-                                        placeholder="Select Branch"
-                                        [filter]="true"
-                                        styleClass="w-full">
-                                    </p-select>
+                                    <div style="display: flex; align-items: center; gap: 0.35rem;">
+                                        <div style="flex: 1; min-width: 0;">
+                                            <p-select
+                                                formControlName="branchId"
+                                                [options]="branchOptions"
+                                                optionLabel="branchNameEN"
+                                                optionValue="bankBranchId"
+                                                placeholder="Select Branch"
+                                                [filter]="true"
+                                                styleClass="w-full"
+                                                appendTo="body">
+                                            </p-select>
+                                        </div>
+                                        <button type="button" pButton icon="pi pi-plus"
+                                            class="p-button-sm p-button-outlined p-button-success"
+                                            style="flex-shrink: 0; width: 2rem; height: 2rem; padding: 0;"
+                                            pTooltip="Add New Branch" tooltipPosition="top"
+                                            (click)="openAddBranchDialog()">
+                                        </button>
+                                    </div>
                                     @if (bankAccForm.get('branchId')?.invalid && bankAccForm.get('branchId')?.touched) {
                                         <small class="text-red-500">Branch is required</small>
                                     }
@@ -171,5 +193,58 @@
         }
     </div>
 </p-fluid>
+
+<!-- Add New Bank dialog -->
+<p-dialog header="Add New Bank" [(visible)]="showAddBankDialog" [modal]="true" [style]="{width: '500px'}" [closable]="true" [contentStyle]="{'border-top': '2px solid var(--primary-color)'}" appendTo="body">
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <div>
+            <label class="font-semibold block mb-2 text-700">Bank Name (English) <span class="text-red-500">*</span></label>
+            <input pInputText style="width: 100%;" [(ngModel)]="newBankNameEN" placeholder="Enter bank name in English" />
+        </div>
+        <div>
+            <label class="font-semibold block mb-2 text-700">Bank Name (Bangla)</label>
+            <input pInputText style="width: 100%;" [(ngModel)]="newBankNameBN" placeholder="Enter bank name in Bangla" />
+        </div>
+        <div>
+            <label class="font-semibold block mb-2 text-700">Routing Number</label>
+            <input pInputText style="width: 100%;" [(ngModel)]="newBankRoutingNumber" placeholder="Enter routing number" />
+        </div>
+        <div>
+            <label class="font-semibold block mb-2 text-700">Swift Code</label>
+            <input pInputText style="width: 100%;" [(ngModel)]="newBankSwiftCode" placeholder="Enter swift code" />
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="showAddBankDialog = false"></p-button>
+        <p-button label="Save" icon="pi pi-check" [loading]="isSavingBank" [disabled]="!newBankNameEN?.trim()" (onClick)="saveNewBank()"></p-button>
+    </ng-template>
+</p-dialog>
+
+<!-- Add New Branch dialog (parent Bank is shown read-only) -->
+<p-dialog header="Add New Branch" [(visible)]="showAddBranchDialog" [modal]="true" [style]="{width: '500px'}" [closable]="true" [contentStyle]="{'border-top': '2px solid var(--primary-color)'}" appendTo="body">
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <div>
+            <label class="font-semibold block mb-2 text-700">Bank (Parent)</label>
+            <p-select [options]="banks" [ngModel]="addBranchBankId" optionLabel="bankNameEN" optionValue="bankId" [disabled]="true" styleClass="w-full" appendTo="body"></p-select>
+            <small class="text-500">The new branch will be added under this bank.</small>
+        </div>
+        <div>
+            <label class="font-semibold block mb-2 text-700">Branch Name (English) <span class="text-red-500">*</span></label>
+            <input pInputText style="width: 100%;" [(ngModel)]="newBranchNameEN" placeholder="Enter branch name in English" />
+        </div>
+        <div>
+            <label class="font-semibold block mb-2 text-700">Branch Name (Bangla)</label>
+            <input pInputText style="width: 100%;" [(ngModel)]="newBranchNameBN" placeholder="Enter branch name in Bangla" />
+        </div>
+        <div>
+            <label class="font-semibold block mb-2 text-700">Location</label>
+            <input pInputText style="width: 100%;" [(ngModel)]="newBranchLocation" placeholder="Enter location" />
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="showAddBranchDialog = false"></p-button>
+        <p-button label="Save" icon="pi pi-check" [loading]="isSavingBranch" [disabled]="!newBranchNameEN?.trim()" (onClick)="saveNewBranch()"></p-button>
+    </ng-template>
+</p-dialog>
 
 <p-confirmDialog></p-confirmDialog>

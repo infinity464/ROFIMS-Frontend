@@ -17,6 +17,10 @@ export interface CourseInfoByEmployeeView {
     courseNameBN?: string | null;
     trainingInstituteId?: number | null;
     trainingInstituteName: string | null;
+    countryId?: number | null;
+    country: string | null;
+    countryBN?: string | null;
+    address: string | null;
     dateFrom: string | null;
     dateTo: string | null;
     result: string | null;
@@ -30,6 +34,8 @@ export interface CourseInfoModel {
     courseType: number | null;
     courseName: number | null;
     trainingInstitueName: number | null;
+    country: number | null;
+    address: string | null;
     dateFrom: string | null;
     dateTo: string | null;
     result: string | null;
