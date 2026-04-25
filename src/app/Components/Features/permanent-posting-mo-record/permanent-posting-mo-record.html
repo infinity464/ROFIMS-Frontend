@@ -4,10 +4,15 @@
 
     <!-- ── Header ──────────────────────────────────────────────────── -->
     <div class="form-card-header">
-        <h3 class="form-card-title">
-            <i class="pi pi-arrow-right-arrow-left" style="font-size:1.1rem"></i>
-            {{ editId ? 'Edit' : 'New' }} — Permanent Posting (MO Change)
-        </h3>
+        <div>
+            <h3 class="form-card-title">
+                <i class="pi pi-arrow-right-arrow-left" style="font-size:1.1rem"></i>
+                {{ editId ? 'Edit' : 'New' }} — Posted Out / New Joining Person
+            </h3>
+            <div style="font-size:0.8rem; color:var(--text-color-secondary); margin-top:0.2rem; padding-left:0.1rem;">
+                Permanent Posting (MO Change)
+            </div>
+        </div>
         @if (editId) {
             <div class="form-card-actions">
                 <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true"
@@ -287,11 +292,15 @@
                 <tr>
                     <th style="width:50px">#</th>
                     <th>Record No</th>
+                    <th>Posted Out Emp. ID</th>
                     <th>Posting Order No</th>
                     <th>PO Date</th>
                     <th>Possible Release</th>
                     <th>Reliever</th>
-                    <th>Status</th>
+                    <th>Service ID</th>
+                    <th>NS Clearance</th>
+                    <th>Clearance Given</th>
+                    <th>Created Date</th>
                     <th style="width:90px">Actions</th>
                 </tr>
             </ng-template>
@@ -299,6 +308,7 @@
                 <tr>
                     <td>{{ i + 1 }}</td>
                     <td>{{ row.id }}</td>
+                    <td>{{ row.postedOutEmployeeId ?? '-' }}</td>
                     <td>{{ row.postingOrderNo ?? '-' }}</td>
                     <td>{{ formatDisplay(row.postingOrderDate) }}</td>
                     <td>{{ formatDisplay(row.possibleReleaseDate) }}</td>
@@ -307,7 +317,18 @@
                             {{ row.isReliever === true ? 'Yes' : row.isReliever === false ? 'No' : '-' }}
                         </span>
                     </td>
-                    <td><span class="text-sm font-semibold">{{ row.status }}</span></td>
+                    <td>{{ row.serviceId ?? '-' }}</td>
+                    <td>
+                        <span [class]="row.noteSheetClearance === true ? 'text-green-600' : row.noteSheetClearance === false ? 'text-orange-500' : 'text-500'">
+                            {{ row.noteSheetClearance === true ? 'Yes' : row.noteSheetClearance === false ? 'No' : '-' }}
+                        </span>
+                    </td>
+                    <td>
+                        <span [class]="row.clearanceGiven === true ? 'text-green-600' : row.clearanceGiven === false ? 'text-orange-500' : 'text-500'">
+                            {{ row.clearanceGiven === true ? 'Yes' : row.clearanceGiven === false ? 'No' : '-' }}
+                        </span>
+                    </td>
+                    <td><span class="text-sm text-500">{{ formatDisplay(row.createdDate) }}</span></td>
                     <td>
                         <div class="flex gap-1">
                             <p-button icon="pi pi-pencil" size="small" [text]="true"
@@ -321,7 +342,7 @@
             </ng-template>
             <ng-template pTemplate="emptymessage">
                 <tr>
-                    <td colspan="8" class="text-center p-4 text-500">
+                    <td colspan="12" class="text-center p-4 text-500">
                         <i class="pi pi-inbox text-2xl mb-2 block"></i>No records found.
                     </td>
                 </tr>

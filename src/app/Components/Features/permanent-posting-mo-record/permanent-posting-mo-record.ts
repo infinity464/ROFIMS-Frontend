@@ -508,10 +508,14 @@ export class PermanentPostingMORecordComponent implements OnInit {
         const rows = this.records.map((r, i) => ({
             '#': i + 1,
             'Record No': r.id,
+            'Posted Out Emp. ID': r.postedOutEmployeeId ?? '-',
             'Posting Order No': r.postingOrderNo ?? '-',
             'PO Date': this.formatDisplay(r.postingOrderDate),
             'Possible Release': this.formatDisplay(r.possibleReleaseDate),
             'Reliever': r.isReliever === true ? 'Yes' : r.isReliever === false ? 'No' : '-',
+            'Reliever Emp. ID': r.relieverEmployeeId ?? '-',
+            'NS Clearance': r.noteSheetClearance === true ? 'Yes' : r.noteSheetClearance === false ? 'No' : '-',
+            'Clearance Given': r.clearanceGiven === true ? 'Yes' : r.clearanceGiven === false ? 'No' : '-',
             'Status': r.status ?? '-'
         }));
         this.exportExcel(rows, 'Posted_Out_Records');

@@ -25,6 +25,7 @@ export interface PermanentPostingMORecordModel {
     createdDate: string;
     lastUpdatedBy: string;
     lastupdate: string | null;
+    serviceId: string | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -34,7 +35,7 @@ export class PermanentPostingMORecordService {
     constructor(private http: HttpClient) {}
 
     getAll(): Observable<PermanentPostingMORecordModel[]> {
-        return this.http.get<any>(`${this.baseUrl}/GetAll`).pipe(map((r) => (Array.isArray(r) ? r : [])));
+        return this.http.get<any>(`${this.baseUrl}/GetAllWithEmployeeAsyn`).pipe(map((r) => (Array.isArray(r) ? r : [])));
     }
 
     getById(id: number): Observable<PermanentPostingMORecordModel | null> {
