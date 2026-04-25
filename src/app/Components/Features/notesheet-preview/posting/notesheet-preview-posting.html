@@ -184,19 +184,31 @@
                                 <tr *ngFor="let emp of postingEmployees; let i = index">
                                     <td>{{ isEnglish() ? (i + 1) : serial(i + 1) }}</td>
                                     <td>{{ getServiceIdDisplay(emp) }}</td>
-                                    <td>{{ isEnglish() ? (emp.rankName || '-') : (emp.rankNameBN || emp.rankName || '-') }}</td>
-                                    <td>{{ isEnglish() ? (emp.tradeName || '-') : (emp.tradeNameBN || emp.tradeName || '-') }}</td>
+                                    <td>{{ isEnglish() ? (emp.rankName || '-') : (emp.rankNameBN || emp.rankName || '-') }}<span *ngIf="getRankQualifications(emp)"><br>({{ getRankQualifications(emp) }})</span></td>
+                                    <td>{{ isEnglish() ? (emp.tradeName || '-') : (emp.tradeNameBN || emp.tradeName || '-') }}<span *ngIf="emp.tradeRemarks"><br>({{ emp.tradeRemarks }})</span></td>
                                     <td>{{ isEnglish() ? (emp.fullNameEN || '-') : (emp.fullNameBN || emp.fullNameEN || '-') }}</td>
                                     <td style="white-space: pre-line;">{{ isEnglish() ? (emp.presentDistrictName || '-') : (emp.presentDistrictNameBN || emp.presentDistrictName || '-') }}</td>
                                     <td style="white-space: pre-line;">{{ isEnglish() ? (emp.spousePresentDistrictName || '-') : (emp.spousePresentDistrictNameBN || emp.spousePresentDistrictName || '-') }}</td>
                                     <td style="white-space: pre-line;">{{ isInterPosting() ? (isEnglish() ? (emp.previousRabUnits || '-') : (emp.previousRabUnitsBN || emp.previousRabUnits || '-')) : (isEnglish() ? (emp.motherOrgLocationName || '-') : (emp.motherOrgLocationNameBN || emp.motherOrgLocationName || '-')) }}</td>
                                     <td>
-                                        <p-select [(ngModel)]="emp.transferRabUnitId" [options]="rabUnitOptions" optionLabel="label" optionValue="value"
-                                                  placeholder="Select Unit" [filter]="true" filterBy="label" [showClear]="true"
-                                                  styleClass="w-full" appendTo="body" size="small" (onChange)="onTransferUnitChange(emp)"></p-select>
+                                        <p-treeSelect [(ngModel)]="selectedUnitNodes[emp.employeeId]"
+                                                      [options]="unitTreeNodes" placeholder="Select Unit"
+                                                      [filter]="true" [filterInputAutoFocus]="true"
+                                                      [showClear]="true" selectionMode="single"
+                                                      styleClass="w-full" appendTo="body"
+                                                      (onNodeExpand)="onUnitNodeExpand($event)"
+                                                      (onNodeSelect)="onTreeUnitSelect(emp, $event)"
+                                                      (onClear)="onTreeUnitClear(emp)">
+                                            <ng-template pTemplate="value" let-node>
+                                                {{ node ? getUnitFullPath(node) : 'Select Unit' }}
+                                            </ng-template>
+                                        </p-treeSelect>
                                     </td>
                                     <td style="min-width:200px">
-                                        <input pInputText [(ngModel)]="emp.remarks" placeholder="{{ isEnglish() ? 'Remarks' : 'মন্তব্য' }}" class="w-full" />
+                                        <div *ngIf="originalRemarks[emp.employeeId]" style="font-size:0.85rem; color:#555; margin-bottom:4px;">
+                                            {{ originalRemarks[emp.employeeId] }}
+                                        </div>
+                                        <input pInputText [(ngModel)]="newRemarks[emp.employeeId]" placeholder="{{ isEnglish() ? 'Add Remarks' : 'মন্তব্য যোগ করুন' }}" class="w-full" />
                                     </td>
                                 </tr>
                             </tbody>
@@ -329,14 +341,14 @@
                             <tr *ngFor="let emp of postingEmployees; let i = index">
                                 <td>{{ isEnglish() ? (i + 1) : serial(i + 1) }}</td>
                                 <td>{{ getServiceIdDisplay(emp) }}</td>
-                                <td>{{ isEnglish() ? (emp.rankName || '') : (emp.rankNameBN || emp.rankName || '') }}</td>
-                                <td>{{ isEnglish() ? (emp.tradeName || '') : (emp.tradeNameBN || emp.tradeName || '') }}</td>
+                                <td>{{ isEnglish() ? (emp.rankName || '') : (emp.rankNameBN || emp.rankName || '') }}<span *ngIf="getRankQualifications(emp)"><br>({{ getRankQualifications(emp) }})</span></td>
+                                <td>{{ isEnglish() ? (emp.tradeName || '') : (emp.tradeNameBN || emp.tradeName || '') }}<span *ngIf="emp.tradeRemarks"><br>({{ emp.tradeRemarks }})</span></td>
                                 <td>{{ isEnglish() ? (emp.fullNameEN || '') : (emp.fullNameBN || emp.fullNameEN || '') }}</td>
                                 <td style="white-space: pre-line;">{{ isEnglish() ? (emp.presentDistrictName || '') : (emp.presentDistrictNameBN || emp.presentDistrictName || '') }}</td>
                                 <td style="white-space: pre-line;">{{ isEnglish() ? (emp.spousePresentDistrictName || '') : (emp.spousePresentDistrictNameBN || emp.spousePresentDistrictName || '') }}</td>
                                 <td style="white-space: pre-line;">{{ isInterPosting() ? (isEnglish() ? (emp.previousRabUnits || '') : (emp.previousRabUnitsBN || emp.previousRabUnits || '')) : (isEnglish() ? (emp.motherOrgLocationName || '') : (emp.motherOrgLocationNameBN || emp.motherOrgLocationName || '')) }}</td>
-                                <td>{{ isEnglish() ? (emp.transferRabUnitName || '') : (emp.transferRabUnitId ? unitLabelMapBN[emp.transferRabUnitId] : null) || emp.transferRabUnitName || '' }}</td>
-                                <td>{{ emp.remarks || '' }}</td>
+                                <td>{{ isEnglish() ? (emp.transferRabUnitName || '') : (emp.transferRabUnitNameBN || emp.transferRabUnitName || '') }}</td>
+                                <td>{{ getCombinedRemarks(emp) }}</td>
                             </tr>
                         </tbody>
                         <!-- tfoot note hidden for now -->
@@ -481,14 +493,14 @@
                 <tr>
                     <td>{{ i + 1 }}</td>
                     <td>{{ emp.serviceId || '-' }}</td>
-                    <td>{{ emp.rankName || '-' }}</td>
-                    <td>{{ emp.tradeName || '-' }}</td>
+                    <td>{{ emp.rankName || '-' }}<span *ngIf="emp.specialQualifications"><br>({{ emp.specialQualifications }})</span></td>
+                    <td>{{ emp.tradeName || '-' }}<span *ngIf="emp.tradeRemarks"><br>({{ emp.tradeRemarks }})</span></td>
                     <td>{{ emp.fullNameEN || '-' }}</td>
                     <td>{{ emp.motherUnitName || '-' }}</td>
                     <td>{{ emp.permanentDistrictName || '-' }}</td>
                     <td>{{ emp.motherOrgLocationName || '-' }}</td>
-                    <td>{{ emp.transferRabUnitName || '-' }}</td>
-                    <td>{{ emp.remarks || '-' }}</td>
+                    <td>{{ isEnglish() ? (emp.transferRabUnitName || '-') : (emp.transferRabUnitNameBN || emp.transferRabUnitName || '-') }}</td>
+                    <td>{{ getCombinedRemarks(emp) || '-' }}</td>
                 </tr>
             </ng-template>
         </p-table>

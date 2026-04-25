@@ -108,13 +108,14 @@ export class NoteSheetNumberConfigComponent implements OnInit {
     getPreview(): string {
         const prefix = this.configForm.get('prefix')?.value || 'PREFIX';
         const startNumber = this.configForm.get('startNumber')?.value || '10001';
+        const sep = prefix.endsWith('/') || prefix.endsWith('-') ? '' : '-';
         if (this.configForm.get('includeDateInNumber')?.value) {
             const now = new Date();
             const year = now.getFullYear();
             const month = String(now.getMonth() + 1).padStart(2, '0');
-            return `${prefix}-${year}-${month}-${startNumber}`;
+            return `${prefix}${sep}${year}/${month}/${startNumber}`;
         }
-        return `${prefix}-${startNumber}`;
+        return `${prefix}${sep}${startNumber}`;
     }
 
     onSearch(event: Event) {

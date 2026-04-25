@@ -1,7 +1,7 @@
 import { AfterViewChecked, ChangeDetectorRef, Component, ElementRef, Input, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ConfirmationService, MessageService } from 'primeng/api';
+import { ConfirmationService, MessageService, TreeNode } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
@@ -13,6 +13,7 @@ import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { DatePickerModule } from 'primeng/datepicker';
+import { TreeSelectModule } from 'primeng/treeselect';
 import { NotesheetSignatoryComponent } from '@/Components/Common/notesheet-signatory/notesheet-signatory';
 import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor';
 import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/file-references-form/file-references-form';
@@ -21,6 +22,7 @@ import { NoteSheetCurrentStatus, NoteSheetCurrentStatusOptions, NoteSheetOperati
 import { SharedService } from '@/shared/services/shared-service';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 import { DraftPostingEmployeeRow } from '@/models/posting.model';
+import { OrgService } from '@/Components/basic-setup/org-tree/org.service';
 import { environment } from '@/Core/Environments/environment';
 import { forkJoin, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
@@ -52,7 +54,7 @@ interface ApprovalLogEntry {
     standalone: true,
     imports: [
         CommonModule, FormsModule, ButtonModule, ToastModule, ConfirmDialogModule, DialogModule, TableModule, TooltipModule,
-        InputTextModule, TextareaModule, SelectModule, MultiSelectModule, DatePickerModule, FlexibleDateDirective,
+        InputTextModule, TextareaModule, SelectModule, MultiSelectModule, DatePickerModule, TreeSelectModule, FlexibleDateDirective,
         NotesheetSignatoryComponent, RichEditorComponent, FileReferencesFormComponent
     ],
     providers: [MessageService, ConfirmationService],
@@ -120,6 +122,16 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
 
     // ── RAB Unit dropdown options ─────────────────────────────
     rabUnitOptions: { label: string; value: number }[] = [];
+
+    // ── RAB Unit tree select ────────────────────────────────
+    private orgService = inject(OrgService);
+    unitTreeNodes: TreeNode[] = [];
+    selectedUnitNodes: Record<number, TreeNode | null> = {};
+    private unitNodeMap: Record<number, TreeNode> = {};
+
+    // ── Remarks: original (from draft posting) + new (added in edit mode) ──
+    originalRemarks: Record<number, string> = {};
+    newRemarks: Record<number, string> = {};
 
     // ── District → ID map & AOR cache for transfer-unit warning ──
     private districtNameToId: Record<string, number> = {};
@@ -783,8 +795,16 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         if (this.rabUnitOptions.length === 0) {
             this.loadRabUnitOptions();
         }
+        this.loadUnitTree();
         if (!Object.keys(this.districtNameToId).length) {
             this.loadDistrictMap();
+        }
+        // SendingRemark (from EmployeeInfo) as readonly original; dd.Remarks as editable
+        this.originalRemarks = {};
+        this.newRemarks = {};
+        for (const emp of this.postingEmployees) {
+            this.originalRemarks[emp.employeeId] = emp.sendingRemark ?? '';
+            this.newRemarks[emp.employeeId] = emp.remarks ?? '';
         }
     }
 
@@ -795,6 +815,120 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
                     label: c.codeValueEN ?? c.codeValueBN ?? `ID ${c.codeId}`,
                     value: c.codeId
                 }));
+            }
+        });
+    }
+
+    // ── Unit tree select helpers ────────────────────────────
+    private loadUnitTree(): void {
+        if (this.unitTreeNodes.length > 0) {
+            this.preselectUnitNodes();
+            return;
+        }
+        this.orgService.getAll(0).subscribe(roots => {
+            this.unitTreeNodes = roots
+                .filter(r => r.status === 1)
+                .sort((a, b) => a.sortOrder - b.sortOrder)
+                .map(r => this.orgNodeToTreeNode(r, null));
+            this.preselectUnitNodes();
+        });
+    }
+
+    private orgNodeToTreeNode(node: import('@/Components/basic-setup/org-tree/models/org-node.model').OrgNode, parent: TreeNode | null): TreeNode {
+        const tn: TreeNode = {
+            key: String(node.id),
+            label: node.nameEN || node.nameBN || `ID ${node.id}`,
+            data: { id: node.id, nameEN: node.nameEN, nameBN: node.nameBN, parent },
+            leaf: false,
+            children: []
+        };
+        this.unitNodeMap[node.id] = tn;
+        return tn;
+    }
+
+    onUnitNodeExpand(event: any): void {
+        const node: TreeNode = event.node;
+        if (node.children && node.children.length > 0) return;
+        const parentId = Number(node.key);
+        this.orgService.loadChildren(parentId).subscribe(children => {
+            const active = children.filter(c => c.status === 1).sort((a, b) => a.sortOrder - b.sortOrder);
+            node.children = active.map(c => this.orgNodeToTreeNode(c, node));
+            if (node.children!.length === 0) node.leaf = true;
+            this.unitTreeNodes = [...this.unitTreeNodes];
+        });
+    }
+
+    onTreeUnitSelect(emp: DraftPostingEmployeeRow, event: any): void {
+        const node: TreeNode = event.node;
+        emp.transferRabUnitId = Number(node.key);
+        emp.transferRabUnitName = this.getUnitFullPath(node, false);
+        this.onTransferUnitChange(emp);
+    }
+
+    onTreeUnitClear(emp: DraftPostingEmployeeRow): void {
+        emp.transferRabUnitId = null as any;
+        emp.transferRabUnitName = null as any;
+        this.selectedUnitNodes[emp.employeeId] = null;
+    }
+
+    getCombinedRemarks(emp: DraftPostingEmployeeRow): string {
+        return [emp.sendingRemark, emp.remarks].filter(s => s?.trim()).join(', ');
+    }
+
+    getRankQualifications(emp: DraftPostingEmployeeRow): string {
+        const q = this.isEnglish()
+            ? (emp.specialQualifications || '')
+            : (emp.specialQualificationsBN || emp.specialQualifications || '');
+        return q.trim();
+    }
+
+    getUnitFullPath(node: TreeNode | null, bn: boolean = false): string {
+        if (!node) return '';
+        const parts: string[] = [];
+        let current: TreeNode | null = node;
+        while (current) {
+            const d: any = current.data;
+            parts.unshift(bn ? (d?.nameBN || d?.nameEN || current.label || '') : (d?.nameEN || current.label || ''));
+            current = d?.parent ?? null;
+        }
+        return parts.join(', ');
+    }
+
+    private preselectUnitNodes(): void {
+        this.selectedUnitNodes = {};
+        for (const emp of this.postingEmployees) {
+            if (emp.transferRabUnitId && this.unitNodeMap[emp.transferRabUnitId]) {
+                this.selectedUnitNodes[emp.employeeId] = this.unitNodeMap[emp.transferRabUnitId];
+            } else if (emp.transferRabUnitId) {
+                // Node not in tree yet (child not loaded) — create a temporary node with ancestors
+                this.loadAndPreselectNode(emp);
+            }
+        }
+    }
+
+    private loadAndPreselectNode(emp: DraftPostingEmployeeRow): void {
+        this.masterBasicSetup.getAncestorsOfCommonCode(emp.transferRabUnitId!).subscribe(ancestors => {
+            if (!ancestors?.length) return;
+            // ancestors come from root to leaf; build path and create temp node
+            const sorted = [...ancestors].sort((a, b) => (a.level ?? 0) - (b.level ?? 0));
+            let parent: TreeNode | null = null;
+            for (const anc of sorted) {
+                if (this.unitNodeMap[anc.codeId]) {
+                    parent = this.unitNodeMap[anc.codeId];
+                    continue;
+                }
+                const tn: TreeNode = {
+                    key: String(anc.codeId),
+                    label: anc.codeValueEN || anc.codeValueBN || `ID ${anc.codeId}`,
+                    data: { id: anc.codeId, nameEN: anc.codeValueEN, nameBN: anc.codeValueBN, parent },
+                    leaf: false,
+                    children: []
+                };
+                this.unitNodeMap[anc.codeId] = tn;
+                parent = tn;
+            }
+            if (this.unitNodeMap[emp.transferRabUnitId!]) {
+                this.selectedUnitNodes[emp.employeeId] = this.unitNodeMap[emp.transferRabUnitId!];
             }
         });
     }
@@ -820,7 +954,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
 
         const checkAor = (districtIds: number[]) => {
             if (districtIds.includes(empDistrictId)) {
-                const unitName = this.rabUnitOptions.find(o => o.value === unitId)?.label ?? '';
+                const unitName = this.getUnitFullPath(this.unitNodeMap[unitId] ?? null) || (this.rabUnitOptions.find(o => o.value === unitId)?.label ?? '');
                 const name = emp.fullNameBN || emp.fullNameEN || '';
                 this.messageService.add({
                     severity: 'warn', summary: 'সতর্কতা / Warning',
@@ -950,7 +1084,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
             const postingDetailItems = this.postingEmployees.map(emp => ({
                 id: emp.draftPostingDetailId,
                 transferRabUnitId: emp.transferRabUnitId,
-                remarks: emp.remarks
+                remarks: (this.newRemarks[emp.employeeId] ?? '').trim() || null
             }));
 
             const noteSheetUpdate$ = this.http.post(`${this.api}/UpdateAsyn`, payload);
@@ -1323,15 +1457,15 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
             }
             const dataRows = this.postingEmployees.map((emp, i) => new TableRow({ children: [
                 bn ? this.toBanglaDigits(i + 1) : String(i + 1), this.getServiceIdDisplay(emp),
-                bn?(emp.rankNameBN||emp.rankName||''):(emp.rankName??''),
-                bn?(emp.tradeNameBN||emp.tradeName||''):(emp.tradeName??''),
+                (bn?(emp.rankNameBN||emp.rankName||''):(emp.rankName??'')) + (this.getRankQualifications(emp) ? '\n(' + this.getRankQualifications(emp) + ')' : ''),
+                (bn?(emp.tradeNameBN||emp.tradeName||''):(emp.tradeName??'')) + (emp.tradeRemarks ? '\n(' + emp.tradeRemarks + ')' : ''),
                 bn?(emp.fullNameBN||emp.fullNameEN||''):(emp.fullNameEN??''),
                 bn?(emp.presentDistrictNameBN||emp.presentDistrictName||''):(emp.presentDistrictName??''),
                 bn?(emp.spousePresentDistrictNameBN||emp.spousePresentDistrictName||''):(emp.spousePresentDistrictName??''),
                 this.isInterPosting()
                     ? (bn?(emp.previousRabUnitsBN||emp.previousRabUnits||''):(emp.previousRabUnits??''))
                     : (bn?(emp.motherOrgLocationNameBN||emp.motherOrgLocationName||''):(emp.motherOrgLocationName??'')),
-                bn ? (this.unitLabelMapBN[emp.transferRabUnitId!] || emp.transferRabUnitName || '') : (emp.transferRabUnitName ?? ''), emp.remarks??''
+                bn ? (this.getUnitFullPath(this.unitNodeMap[emp.transferRabUnitId!] ?? null, true) || this.unitLabelMapBN[emp.transferRabUnitId!] || emp.transferRabUnitName || '') : (emp.transferRabUnitName ?? ''), this.getCombinedRemarks(emp)
             ].map((v, ci) => {
                 const lines = v.split('\n');
                 const cellParas = lines.map(line => new Paragraph({ children: [new TextRun({ text: line, size: 20, sizeComplexScript: bn ? 20 : undefined, font, language: lang })], alignment: AlignmentType.CENTER }));

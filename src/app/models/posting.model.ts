@@ -174,6 +174,7 @@ export interface DraftPostingEmployeeRow {
     transferRabUnitName: string | null;
     transferRabUnitNameBN?: string | null;
     remarks: string | null;
+    sendingRemark: string | null;
     isSendingNotesheetStatus: string | null;
     serviceId: string | null;
     prefixName: string | null;
@@ -187,6 +188,9 @@ export interface DraftPostingEmployeeRow {
     corpsNameBN: string | null;
     tradeName: string | null;
     tradeNameBN: string | null;
+    tradeRemarks: string | null;
+    specialQualifications: string | null;
+    specialQualificationsBN: string | null;
     motherUnitName: string | null;
     motherUnitNameBN: string | null;
     joiningDateInRAB: string | null;
@@ -351,6 +355,7 @@ export interface PostingOrderEmployeeRow {
     employeeId: number;
     detailRemarks: string | null;
     noteSheetRemarks: string | null;
+    sendingRemark: string | null;
     transferRabUnitId: number | null;
     transferRabUnitName: string | null;
     transferRabUnitNameBN: string | null;
@@ -366,6 +371,9 @@ export interface PostingOrderEmployeeRow {
     corpsNameBN: string | null;
     tradeName: string | null;
     tradeNameBN: string | null;
+    tradeRemarks: string | null;
+    specialQualifications: string | null;
+    specialQualificationsBN: string | null;
     motherUnitName: string | null;
     motherUnitNameBN: string | null;
     joiningDateInRAB: string | null;
