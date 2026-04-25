@@ -109,8 +109,8 @@
                         @if (rowData.menuType === MenuType.Header) {
                             <p-button icon="pi pi-plus" size="small" [rounded]="true" [text]="true" severity="success" pTooltip="Add Child" tooltipPosition="top" (onClick)="openNewDialog(rowData.id)"></p-button>
                         }
-                        <p-button icon="pi pi-pencil" size="small" [rounded]="true" [text]="true" pTooltip="Edit" tooltipPosition="top" (onClick)="openEditDialog(rowData)"></p-button>
-                        <p-button icon="pi pi-trash" size="small" [rounded]="true" [text]="true" severity="danger" pTooltip="Delete" tooltipPosition="top" (onClick)="confirmDelete(rowData, $event)"></p-button>
+                        <p-button icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" size="small" [rounded]="true" [text]="true" pTooltip="Edit" tooltipPosition="top" (onClick)="openEditDialog(rowData)"></p-button>
+                        <p-button icon="pi pi-trash" [class.perm-hidden]="!canDelete" size="small" [rounded]="true" [text]="true" severity="danger" pTooltip="Delete" tooltipPosition="top" (onClick)="confirmDelete(rowData, $event)"></p-button>
                     </div>
                 </td>
             </tr>
@@ -417,7 +417,7 @@
 
         <!-- Footer -->
         <div class="flex justify-end gap-2 mt-4 pt-3" style="border-top: 1px solid var(--surface-border)">
-            <p-button label="Edit" icon="pi pi-pencil" severity="info" [outlined]="true" (onClick)="viewDialogVisible = false; openEditDialog(viewingMenu)"></p-button>
+            <p-button label="Edit" icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" severity="info" [outlined]="true" (onClick)="viewDialogVisible = false; openEditDialog(viewingMenu)"></p-button>
             <p-button label="Close" severity="secondary" [outlined]="true" (onClick)="viewDialogVisible = false"></p-button>
         </div>
     }

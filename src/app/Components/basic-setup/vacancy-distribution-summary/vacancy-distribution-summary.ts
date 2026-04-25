@@ -1,4 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
+import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { forkJoin, of } from 'rxjs';
@@ -41,6 +43,12 @@ export interface DisplayRow {
     styleUrl: './vacancy-distribution-summary.scss'
 })
 export class VacancyDistributionSummaryComponent implements OnInit {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     title = 'Man Power Setup';
     orgList: OrganizationModel[] = [];
     selectedOrg: OrganizationModel | null = null;
@@ -88,6 +96,11 @@ export class VacancyDistributionSummaryComponent implements OnInit {
     }
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.distributionForm = this.fb.group({
             motherOrgRankId: [null as number | null, Validators.required],
             unitId: [null as number | null, Validators.required],

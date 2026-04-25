@@ -44,7 +44,9 @@ export class UserMenuService {
      * for the PanelMenu sidebar.
      */
     buildPrimeNGMenu(flatMenus: UserMenuModel[]): MenuItem[] {
-        const sorted = [...flatMenus].sort((a, b) => a.sortOrder - b.sortOrder);
+        // Filter out menus where canView is explicitly false
+        const viewable = flatMenus.filter(m => m.canView !== false);
+        const sorted = [...viewable].sort((a, b) => a.sortOrder - b.sortOrder);
 
         // First pass: create all MenuItems
         const menuItemMap = new Map<number, MenuItem>();
@@ -97,5 +99,26 @@ export class UserMenuService {
         const menus = this.getStoredMenus();
         const menu = menus.find(m => m.permissionKey === permissionKey);
         return menu ? menu[action] : false;
+    }
+
+    /**
+     * Get all permission flags for a menu identified by its route path.
+     * Strips query params and leading/trailing slashes before matching.
+     */
+    getPermissionsByRoute(routePath: string): { canView: boolean; canInsert: boolean; canUpdate: boolean; canDelete: boolean } {
+        const noPerms = { canView: false, canInsert: false, canUpdate: false, canDelete: false };
+        if (!routePath) return noPerms;
+
+        const normalize = (p: string) => p.split('?')[0].replace(/^\/+|\/+$/g, '').toLowerCase();
+        const target = normalize(routePath);
+        const menus = this.getStoredMenus();
+        const menu = menus.find(m => m.routerName && normalize(m.routerName) === target);
+        if (!menu) return noPerms;
+        return {
+            canView: menu.canView,
+            canInsert: menu.canInsert,
+            canUpdate: menu.canUpdate,
+            canDelete: menu.canDelete
+        };
     }
 }

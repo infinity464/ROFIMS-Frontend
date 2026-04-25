@@ -1,4 +1,6 @@
-import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges , inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
+import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -32,6 +34,12 @@ import html2canvas from 'html2canvas';
     styleUrl: './posting-order-preview.scss'
 })
 export class PostingOrderPreviewComponent implements OnChanges, OnInit {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     @Input() noteSheet: any = null;
     @Input() isEnglish = true;
     @Input() initiatorDetails: any = null;
@@ -69,6 +77,11 @@ export class PostingOrderPreviewComponent implements OnChanges, OnInit {
     ) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.loadRabUnits();
     }
 

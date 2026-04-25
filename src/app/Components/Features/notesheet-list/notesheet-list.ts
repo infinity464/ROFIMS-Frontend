@@ -1,4 +1,5 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnInit , inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '@/Core/Environments/environment';
@@ -166,6 +167,12 @@ export interface ApprovalLogEntry {
   styleUrl: './notesheet-list.scss'
 })
 export class NotesheetListComponent implements OnInit {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
   private api = `${environment.apis.core}/NoteSheetInfo`;
 
   @Input() sectionInput: NoteSheetSection | null = null;
@@ -944,6 +951,11 @@ export class NotesheetListComponent implements OnInit {
   }
 
   ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
     if (this.sectionInput) {
       this.section = this.sectionInput;
       this.loadLookups();

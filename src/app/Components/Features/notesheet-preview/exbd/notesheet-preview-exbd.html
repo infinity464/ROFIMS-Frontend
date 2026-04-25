@@ -5,7 +5,7 @@
 
     <div class="preview-header no-print">
         <div class="preview-actions" *ngIf="noteSheet && !loading && !error">
-            <p-button *ngIf="canEdit && !editing" icon="pi pi-pencil" label="Edit" (onClick)="toggleEdit()" styleClass="p-button-outlined p-button-warning"></p-button>
+            <p-button *ngIf="canEdit && !editing" icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" label="Edit" (onClick)="toggleEdit()" styleClass="p-button-outlined p-button-warning"></p-button>
             <p-button *ngIf="editing" icon="pi pi-times" label="Cancel" (onClick)="cancelEdit()" styleClass="p-button-outlined p-button-secondary"></p-button>
             <p-button *ngIf="editing" icon="pi pi-check" label="Save" (onClick)="saveChanges()" [loading]="saving" styleClass="p-button-success"></p-button>
             <p-button *ngIf="!editing" icon="pi pi-print" label="Print Preview" (onClick)="printPreview()" [loading]="printingPreview" styleClass="p-button-outlined"></p-button>

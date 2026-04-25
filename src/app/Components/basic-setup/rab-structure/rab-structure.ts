@@ -1,4 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
+import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TreeNode } from 'primeng/api';
@@ -58,6 +60,12 @@ export interface OrgTreeNode extends TreeNode {
     styleUrl: './rab-structure.scss'
 })
 export class RabStructureComponent implements OnInit {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     treeNodes: OrgTreeNode[] = [];
     loading = false;
     displayDialog = false;
@@ -79,6 +87,11 @@ export class RabStructureComponent implements OnInit {
     }
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.loadTree();
     }
 

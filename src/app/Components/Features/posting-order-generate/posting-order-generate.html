@@ -114,7 +114,7 @@
                         <td>{{ (isBangla ? row.transferRabUnitNameBN || row.transferRabUnitName : row.transferRabUnitName) || '-' }}</td>
                         <td>{{ row.remarks || '-' }}</td>
                         <td class="text-center">
-                            <p-button icon="pi pi-trash" severity="danger" [rounded]="true" [text]="true" size="small" (onClick)="removeEmployee(row)"></p-button>
+                            <p-button icon="pi pi-trash" [class.perm-hidden]="!canDelete" severity="danger" [rounded]="true" [text]="true" size="small" (onClick)="removeEmployee(row)"></p-button>
                         </td>
                     </tr>
                 </ng-template>

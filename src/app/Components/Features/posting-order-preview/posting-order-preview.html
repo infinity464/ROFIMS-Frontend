@@ -9,7 +9,7 @@
                 <p-button icon="pi pi-file-word" label="Word" (onClick)="exportWord()" styleClass="p-button-outlined"></p-button>
                 <p-button icon="pi pi-file-pdf" label="PDF" (onClick)="exportPdf()" [loading]="exportingPdf" styleClass="p-button-outlined"></p-button>
                 <p-button icon="pi pi-print" label="Print Preview" (onClick)="printPreview()" [loading]="printingPreview" styleClass="p-button-outlined"></p-button>
-                <p-button *ngIf="canEdit" icon="pi pi-pencil" label="Edit" [outlined]="true" (onClick)="toggleEdit()"></p-button>
+                <p-button *ngIf="canEdit" icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" label="Edit" [outlined]="true" (onClick)="toggleEdit()"></p-button>
             </ng-container>
             <ng-container *ngIf="editing">
                 <p-button icon="pi pi-times" label="Cancel" severity="secondary" [outlined]="true" (onClick)="cancelEdit()"></p-button>
@@ -92,7 +92,7 @@
                         <td style="white-space: pre-line;">{{ empPrevWorkplace(row) }}</td>
                         <td>{{ empTransferUnit(row) }}</td>
                         <td class="text-center">
-                            <p-button icon="pi pi-trash" severity="danger" [rounded]="true" [text]="true" size="small" (onClick)="removeEditEmployee(row)"></p-button>
+                            <p-button icon="pi pi-trash" [class.perm-hidden]="!canDelete" severity="danger" [rounded]="true" [text]="true" size="small" (onClick)="removeEditEmployee(row)"></p-button>
                         </td>
                     </tr>
                 </ng-template>

@@ -1,4 +1,6 @@
 import { AfterViewChecked, ChangeDetectorRef, Component, ElementRef, Input, ViewChild, inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
+import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ConfirmationService, MessageService } from 'primeng/api';
@@ -59,6 +61,12 @@ interface ApprovalLogEntry {
     styleUrl: '../notesheet-preview.scss'
 })
 export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase implements AfterViewChecked {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
 
     @ViewChild('fileReferencesForm') fileReferencesForm!: FileReferencesFormComponent;
     @ViewChild('contentMeasure') contentMeasure!: ElementRef<HTMLDivElement>;
@@ -396,6 +404,11 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
 
     // ── Lifecycle: detect pending mode, resolve current user ──
     override ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         super.ngOnInit();
         this.route.queryParams.subscribe(params => {
             this.fromPending = (params['from'] ?? '').toString().toLowerCase() === NoteSheetPreviewFrom.Pending;

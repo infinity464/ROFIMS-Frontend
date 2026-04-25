@@ -121,8 +121,8 @@
                     </td>
                 <td>
                     <div class="flex gap-2">
-                        <button class="mx-2" pButton icon="pi pi-pencil" (click)="onEdit(row)"></button>
-                        <button pButton icon="pi pi-trash" (click)="onDelete(row, $event)"
+                        <button class="mx-2" pButton icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" (click)="onEdit(row)"></button>
+                        <button pButton icon="pi pi-trash" [class.perm-hidden]="!canDelete" (click)="onDelete(row, $event)"
                             class="p-button-danger"></button>
                     </div>
                 </td>

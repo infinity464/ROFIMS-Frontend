@@ -161,5 +161,6 @@ export class AuthenticationService {
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem(MEMBER_TYPE_ACCESS_CACHE_KEY);
+    localStorage.removeItem('user_menus');
   }
 }

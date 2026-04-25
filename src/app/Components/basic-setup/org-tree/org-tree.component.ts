@@ -7,6 +7,7 @@ import {
     computed,
     DestroyRef
 } from '@angular/core';
+import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { Fluid } from 'primeng/fluid';
 import { ButtonModule } from 'primeng/button';
@@ -19,6 +20,7 @@ import { OrgFormComponent, FormMode } from './org-form/org-form.component';
 import { OrgService } from './org.service';
 import { OrgNode } from './models/org-node.model';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { UserMenuService } from '@/services/user-menu.service';
 import { LayoutService } from '@/layout/service/layout.service';
 
 @Component({
@@ -40,6 +42,12 @@ import { LayoutService } from '@/layout/service/layout.service';
     styleUrl: './org-tree.component.scss'
 })
 export class OrgTreeComponent implements OnInit {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     private orgService = inject(OrgService);
     private messageService = inject(MessageService);
     private confirmationService = inject(ConfirmationService);
@@ -88,6 +96,11 @@ export class OrgTreeComponent implements OnInit {
     });
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.load();
     }
 

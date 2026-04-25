@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -59,6 +60,12 @@ interface TransferUnitOption {
     styleUrl: './posting-order-preview.scss'
 })
 export class PostingOrderPreviewPageComponent implements OnInit {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     loading = false;
     error = false;
     exportingPdf = false;
@@ -142,6 +149,11 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     ) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.route.queryParams.subscribe(params => {
             const id = params['id'];
             if (id) {

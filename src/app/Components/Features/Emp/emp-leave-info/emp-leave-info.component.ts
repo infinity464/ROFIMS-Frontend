@@ -1,4 +1,5 @@
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output , inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -32,6 +33,12 @@ import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directi
     styleUrl: './emp-leave-info.component.scss'
 })
 export class EmpLeaveInfo implements OnInit {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     @Input() hideTitle = false;
 
     @Input() embedMode = false;
@@ -71,6 +78,11 @@ export class EmpLeaveInfo implements OnInit {
     }
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.loadLeaveTypes();
         if (this.embedMode && this.externalEmployeeId != null) {
             this.mode = 'edit';

@@ -56,7 +56,7 @@
           <td>
             <div class="flex align-items-center gap-1">
               @if (row.currentStatus === NoteSheetCurrentStatus.Draft) {
-                <p-button type="button" icon="pi pi-pencil" [rounded]="true" [text]="true" size="small" pTooltip="Update" (onClick)="goToUpdate(row)"></p-button>
+                <p-button type="button" icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" [rounded]="true" [text]="true" size="small" pTooltip="Update" (onClick)="goToUpdate(row)"></p-button>
               }
               <p-button type="button" icon="pi pi-eye" [rounded]="true" [text]="true" size="small" pTooltip="Preview" (onClick)="openPreview(row)"></p-button>
               @if (row.currentStatus === NoteSheetCurrentStatus.Draft) {
@@ -398,7 +398,7 @@
             <p-button type="button" icon="pi pi-file-pdf" [rounded]="true" [text]="true" size="small" pTooltip="Export PDF" (onClick)="exportGeneralPdf()"></p-button>
             <p-button type="button" icon="pi pi-print" [rounded]="true" [text]="true" size="small" pTooltip="Print" (onClick)="printGeneralPreview()"></p-button>
             @if (isPreviewEditable()) {
-              <p-button type="button" icon="pi pi-pencil" [rounded]="true" [text]="true" size="small" pTooltip="Edit" (onClick)="togglePreviewEdit()"></p-button>
+              <p-button type="button" icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" [rounded]="true" [text]="true" size="small" pTooltip="Edit" (onClick)="togglePreviewEdit()"></p-button>
             }
           </div>
         }

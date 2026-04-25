@@ -1,4 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
+import { Router } from '@angular/router';
 import { CommonCode } from '../shared/models/common-code';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MasterBasicSetupService } from '../shared/services/MasterBasicSetupService';
@@ -19,6 +21,12 @@ import { SharedService } from '@/shared/services/shared-service';
     styleUrl: './personal-qualification.scss'
 })
 export class PersonalQualification {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     codeType: string = 'PersonalQualification';
     title: string = 'Personal Qualification';
     commonCodeData: CommonCode[] = [];
@@ -87,6 +95,11 @@ export class PersonalQualification {
     ) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.initForm();
         this.getCommonCodeWithPaging({
             first: this.first,

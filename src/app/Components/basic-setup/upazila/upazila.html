@@ -5,12 +5,14 @@
 
         <div class="font-semibold text-xl mb-5">{{ title }} Setup</div>
         <app-dynamic-form [config]="formConfig" [form]="upazilaForm" [editingId]="editingId" (save)="submit($event)"
-            (reset)="resetForm()" (fieldChange)="onFieldChange($event)">
+            (reset)="resetForm()" (fieldChange)="onFieldChange($event)"
+            [canInsert]="canInsert">
         </app-dynamic-form>
         </div>
 </p-fluid>
 
 <app-data-table [config]="tableConfig" [data]="upazilaData" [first]="first" [totalRecords]="totalRecords" [rows]="rows"
     [loading]="loading" [lazy]="false" (edit)="update($event)" (delete)="delete($event.row, $event.event)"
-    (search)="onSearch($event)">
+    (search)="onSearch($event)"
+    [canUpdate]="canUpdate" [canDelete]="canDelete">
 </app-data-table>

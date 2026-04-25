@@ -1,4 +1,5 @@
-import { Component, EventEmitter, Input, OnInit, OnDestroy, Output, ViewChild } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, OnDestroy, Output, ViewChild , inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -64,6 +65,12 @@ interface DropdownOption {
     styleUrl: './emp-foreign-visit.component.scss'
 })
 export class EmpForeignVisit implements OnInit, OnDestroy {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     @ViewChild('fileReferencesForm') fileReferencesForm!: any;
 
     @Input() hideTitle = false;
@@ -131,6 +138,11 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
     }
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.loadDropdowns();
         if (this.embedMode && this.externalEmployeeId != null) {
             this.mode = 'edit';

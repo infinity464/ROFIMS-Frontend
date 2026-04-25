@@ -13,7 +13,7 @@
                 </h3>
                 @if (mode === 'view') {
                     <div class="form-card-actions">
-                        <p-button label="Edit" icon="pi pi-pencil" (onClick)="enableEditMode()"></p-button>
+                        <p-button label="Edit" icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" (onClick)="enableEditMode()"></p-button>
                     </div>
                 }
             </div>
@@ -130,9 +130,9 @@
                                 <td>{{ row.remarks || '—' }}</td>
                                 <td>
                                     <div class="flex gap-1">
-                                        <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="info" pTooltip="Edit" (onClick)="openEditDialog(row)"></p-button>
+                                        <p-button icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" [rounded]="true" [text]="true" severity="info" pTooltip="Edit" (onClick)="openEditDialog(row)"></p-button>
                                         @if (!isReadonly) {
-                                            <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" pTooltip="Delete" (onClick)="confirmDelete(row)"></p-button>
+                                            <p-button icon="pi pi-trash" [class.perm-hidden]="!canDelete" [rounded]="true" [text]="true" severity="danger" pTooltip="Delete" (onClick)="confirmDelete(row)"></p-button>
                                         }
                                     </div>
                                 </td>
@@ -150,7 +150,7 @@
             @if (mode === 'view') {
                 <div class="form-actions">
                     <p-button type="button" label="Back to List" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" styleClass="form-btn-secondary" (onClick)="goBack()"></p-button>
-                    <p-button type="button" label="Edit" icon="pi pi-pencil" styleClass="form-btn-primary" (onClick)="enableEditMode()"></p-button>
+                    <p-button type="button" label="Edit" icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" styleClass="form-btn-primary" (onClick)="enableEditMode()"></p-button>
                 </div>
             }
             @else {

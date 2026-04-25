@@ -1,4 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
+import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import {
   FormBuilder,
@@ -79,6 +81,12 @@ const USERNAME_PATTERN = /^[A-Za-z0-9._@-]+$/;
   styleUrl: './identity-user-create.component.scss'
 })
 export class IdentityUserCreateComponent implements OnInit {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
   private fb = inject(FormBuilder);
   private identityService = inject(IdentityService);
   private mappingService = inject(IdentityUserMappingService);
@@ -105,6 +113,11 @@ export class IdentityUserCreateComponent implements OnInit {
   togglingUserId: string | null = null;
 
   ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
     this.initForm();
     this.loadRoles();
     this.loadEmployees();

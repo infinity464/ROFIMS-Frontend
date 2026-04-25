@@ -26,7 +26,9 @@
                         <th>{{ col.header }}</th>
                     }
                 }
-                <th>Action</th>
+                @if (canUpdate || canDelete) {
+                    <th>Action</th>
+                }
             </tr>
         </ng-template>
 
@@ -52,10 +54,16 @@
                     }
                 }
 
-                <td>
-                    <button class="mx-2" pButton icon="pi pi-pencil" (click)="onEdit(row)"></button>
-                    <button pButton icon="pi pi-trash" (click)="onDelete(row, $event)" class="p-button-danger"></button>
-                </td>
+                @if (canUpdate || canDelete) {
+                    <td>
+                        @if (canUpdate) {
+                            <button class="mx-2" pButton icon="pi pi-pencil" (click)="onEdit(row)"></button>
+                        }
+                        @if (canDelete) {
+                            <button pButton icon="pi pi-trash" (click)="onDelete(row, $event)" class="p-button-danger"></button>
+                        }
+                    </td>
+                }
             </tr>
         </ng-template>
     </p-table>

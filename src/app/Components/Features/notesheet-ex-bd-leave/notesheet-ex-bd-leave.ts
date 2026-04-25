@@ -1,4 +1,5 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild , inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { MessageService } from 'primeng/api';
@@ -65,6 +66,12 @@ import html2canvas from 'html2canvas';
     styleUrl: './notesheet-ex-bd-leave.scss'
 })
 export class NotesheetExBdLeaveComponent implements OnInit {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     title = 'a(3) Note-Sheet for Ex-BD Leave';
     form!: FormGroup;
     isSubmitting = false;
@@ -196,6 +203,11 @@ export class NotesheetExBdLeaveComponent implements OnInit {
     }
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.route.queryParams.pipe(take(1)).subscribe((params) => {
             const mode = params['mode'];
             const id = params['id'];

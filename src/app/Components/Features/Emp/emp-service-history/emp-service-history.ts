@@ -1,4 +1,5 @@
-import { Component, EventEmitter, Input, OnInit, Output, ViewChild } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output, ViewChild , inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -71,6 +72,12 @@ export interface ServiceHistoryListRow {
     styleUrl: './emp-service-history.scss'
 })
 export class EmpServiceHistory implements OnInit {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     @ViewChild('fileReferencesForm') fileReferencesForm!: any;
 
     /** When true (e.g. inside tab view), the "Service History in Mother Organization Entry" title and header actions are hidden. */
@@ -117,6 +124,11 @@ export class EmpServiceHistory implements OnInit {
     ) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.buildForm();
         this.buildYearOptions();
         this.loadDropdowns();

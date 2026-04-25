@@ -179,7 +179,7 @@
                 <span style="min-width: 1.5rem; padding-top: 0.6rem; font-weight: 600;">{{ $index + 1 }}.</span>
                 <textarea pInputTextarea class="w-full" rows="2" [value]="paragraphs[$index]" (input)="paragraphs[$index] = $any($event.target).value" [placeholder]="'Paragraph ' + ($index + 1)"></textarea>
                 @if (paragraphs.length > 1) {
-                  <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" (onClick)="removeParagraph($index)"></p-button>
+                  <p-button icon="pi pi-trash" [class.perm-hidden]="!canDelete" [rounded]="true" [text]="true" severity="danger" (onClick)="removeParagraph($index)"></p-button>
                 }
               </div>
             }

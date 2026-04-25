@@ -1,4 +1,6 @@
 import { AfterViewChecked, ChangeDetectorRef, Component, ElementRef, Input, ViewChild, inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
+import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ConfirmationService, MessageService } from 'primeng/api';
@@ -59,6 +61,12 @@ interface ApprovalLogEntry {
     styleUrl: '../notesheet-preview.scss'
 })
 export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase implements AfterViewChecked {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
 
     @ViewChild('fileReferencesForm') fileReferencesForm!: FileReferencesFormComponent;
     @ViewChild('contentMeasure') contentMeasure!: ElementRef<HTMLDivElement>;
@@ -253,6 +261,11 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     // ══════════════════════════════════════════════════════════════════
 
     override ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         super.ngOnInit();
         // Detect `from=pending` query param to enable inline approval actions
         this.route.queryParams.subscribe(params => {

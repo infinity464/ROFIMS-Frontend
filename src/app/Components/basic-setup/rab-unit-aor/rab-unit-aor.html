@@ -145,7 +145,7 @@
                         <td>{{ row.numberOfCamp ?? '-' }}</td>
                         <td>{{ row.nameOfCamps ?? '-' }}</td>
                         <td>
-                            <button class="mx-2" pButton icon="pi pi-trash" (click)="removeAssignment(row, $event)" class="p-button-danger"></button>
+                            <button class="mx-2" pButton icon="pi pi-trash" [class.perm-hidden]="!canDelete" (click)="removeAssignment(row, $event)" class="p-button-danger"></button>
                         </td>
                     </tr>
                 </ng-template>

@@ -133,13 +133,13 @@
                     <div class="flex gap-2">
                         <button
                             pButton
-                            icon="pi pi-pencil"
+                            icon="pi pi-pencil" [class.perm-hidden]="!canUpdate"
                             (click)="onEdit(row)">
                         </button>
 
                         <button
                             pButton
-                            icon="pi pi-trash"
+                            icon="pi pi-trash" [class.perm-hidden]="!canDelete"
                             class="p-button-danger"
                             (click)="onDelete(row, $event)">
                         </button>

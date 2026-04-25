@@ -1,4 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
+import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -53,6 +55,12 @@ import { SharedService } from '@/shared/services/shared-service';
     styleUrl: './menu-management.scss'
 })
 export class MenuManagement implements OnInit {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     treeData: TreeNode[] = [];
     filteredTreeData: TreeNode[] = [];
     flatMenus: MenuModel[] = [];
@@ -106,6 +114,11 @@ export class MenuManagement implements OnInit {
     ) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.initForm();
         this.loadMenus();
     }

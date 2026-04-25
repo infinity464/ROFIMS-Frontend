@@ -189,7 +189,7 @@
                 </td>
                 <td>
                     <p-button
-                        icon="pi pi-pencil"
+                        icon="pi pi-pencil" [class.perm-hidden]="!canUpdate"
                         severity="info"
                         [text]="true"
                         [rounded]="true"

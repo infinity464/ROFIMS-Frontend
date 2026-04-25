@@ -1,4 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
+import { Router } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { TreeNode } from 'primeng/api';
@@ -48,6 +50,12 @@ interface OrgRankSelection {
     styleUrls: ['./mother-org-rank-vacancy-distribution.scss']
 })
 export class MotherOrgRankVacancyDistributionComponent implements OnInit {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     title = 'Vacancy Distribution (RAB)';
     orgList: OrganizationModel[] = [];
     rankOptions: { codeId: number; label: string }[] = [];
@@ -101,6 +109,11 @@ export class MotherOrgRankVacancyDistributionComponent implements OnInit {
     }
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.loadOrgs();
         this.loadRabTree();
     }

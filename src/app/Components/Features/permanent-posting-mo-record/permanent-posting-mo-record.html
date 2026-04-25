@@ -1,4 +1,5 @@
 <p-toast position="top-center"></p-toast>
+<p-confirmdialog></p-confirmdialog>
 
 <div class="form-card">
 
@@ -331,9 +332,9 @@
                     <td><span class="text-sm text-500">{{ formatDisplay(row.createdDate) }}</span></td>
                     <td>
                         <div class="flex gap-1">
-                            <p-button icon="pi pi-pencil" size="small" [text]="true"
+                            <p-button icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" size="small" [text]="true"
                                 pTooltip="Edit" tooltipPosition="top" (onClick)="onEdit(row)"></p-button>
-                            <p-button icon="pi pi-trash" size="small" [text]="true"
+                            <p-button icon="pi pi-trash" [class.perm-hidden]="!canDelete" size="small" [text]="true"
                                 severity="danger" pTooltip="Delete" tooltipPosition="top"
                                 (onClick)="onDelete(row)"></p-button>
                         </div>
@@ -361,7 +362,11 @@
                 <span style="background:var(--primary-color);color:#fff;border-radius:12px;padding:1px 8px;font-size:0.75rem;margin-left:6px;">{{ joineeRecords.length }}</span>
             }
         </h3>
-        <div class="flex gap-2 align-items-center">
+        <div class="flex gap-2 align-items-center flex-wrap">
+            <p-select [options]="joineeFilterOptions" [(ngModel)]="joineeFilter"
+                optionLabel="label" optionValue="value"
+                placeholder="Filter by Entry Status"
+                styleClass="text-sm" [style]="{'min-width':'12rem'}"></p-select>
             <p-button label="Export Excel" icon="pi pi-file-excel" size="small" severity="success"
                 [outlined]="true" [disabled]="!joineeRecords.length"
                 (onClick)="exportJoineeExcel()"></p-button>
@@ -373,7 +378,7 @@
     </div>
 
     @if (showJoineeList) {
-        <p-table [value]="joineeRecords" [loading]="loadingJoineeList" dataKey="id"
+        <p-table [value]="filteredJoineeRecords" [loading]="loadingJoineeList" dataKey="id"
                  styleClass="p-datatable-striped p-datatable-gridlines"
                  [tableStyle]="{'min-width':'50rem'}"
                  [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10,25,50]">
@@ -386,6 +391,7 @@
                     <th>Joining Order No</th>
                     <th>Joining Date</th>
                     <th>Possible Joining</th>
+                    <th style="width:90px">Added</th>
                     <th style="width:90px">Actions</th>
                 </tr>
             </ng-template>
@@ -405,10 +411,16 @@
                     <td>{{ formatDisplay(row.joiningOrderDate) }}</td>
                     <td>{{ formatDisplay(row.possibleJoiningDate) }}</td>
                     <td>
+                        <span [class]="row.isAddedInNewJoineeDataEntry ? 'text-green-600 font-semibold' : 'text-orange-500'">
+                            <i [class]="row.isAddedInNewJoineeDataEntry ? 'pi pi-check-circle' : 'pi pi-clock'"></i>
+                            {{ row.isAddedInNewJoineeDataEntry ? 'Yes' : 'Pending' }}
+                        </span>
+                    </td>
+                    <td>
                         <div class="flex gap-1">
-                            <p-button icon="pi pi-pencil" size="small" [text]="true"
+                            <p-button icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" size="small" [text]="true"
                                 pTooltip="Edit" tooltipPosition="top" (onClick)="onEditJoinee(row)"></p-button>
-                            <p-button icon="pi pi-trash" size="small" [text]="true"
+                            <p-button icon="pi pi-trash" [class.perm-hidden]="!canDelete" size="small" [text]="true"
                                 severity="danger" pTooltip="Delete" tooltipPosition="top"
                                 (onClick)="onDeleteJoinee(row)"></p-button>
                         </div>
@@ -417,7 +429,7 @@
             </ng-template>
             <ng-template pTemplate="emptymessage">
                 <tr>
-                    <td colspan="8" class="text-center p-4 text-500">
+                    <td colspan="9" class="text-center p-4 text-500">
                         <i class="pi pi-inbox text-2xl mb-2 block"></i>No records found.
                     </td>
                 </tr>

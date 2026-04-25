@@ -1,4 +1,5 @@
-import { Component, EventEmitter, Input, OnInit, Output, ViewChild } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output, ViewChild , inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -44,6 +45,12 @@ interface TrainingInstituteOption extends DropdownOption {
     styleUrl: './emp-course-info.scss'
 })
 export class EmpCourseInfoComponent implements OnInit {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     @ViewChild('fileReferencesForm') fileReferencesForm!: any;
 
     @Input() hideTitle = false;
@@ -101,6 +108,11 @@ export class EmpCourseInfoComponent implements OnInit {
     }
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.loadDropdowns();
         this.courseForm.get('trainingInstitueName')?.valueChanges.subscribe((instituteId) => {
             const institute = this.trainingInstituteOptions.find((o) => o.value === instituteId);

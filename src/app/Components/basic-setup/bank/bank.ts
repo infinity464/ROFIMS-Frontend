@@ -1,4 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
+import { Router } from '@angular/router';
 import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Fluid } from "primeng/fluid";
 import { ButtonModule } from "primeng/button";
@@ -18,6 +20,12 @@ import { TableModule } from "primeng/table";
     styleUrl: './bank.scss'
 })
 export class Bank implements OnInit {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
      isSubmitting = false;
      bankForm! : FormGroup
 
@@ -44,6 +52,11 @@ export class Bank implements OnInit {
     ) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.getAll();
         this.currentUser = this.sharedService.getCurrentUser();
         this.initForm();

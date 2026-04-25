@@ -1,4 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
+import { Router } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MasterBasicSetupService } from '../shared/services/MasterBasicSetupService';
 import { CommonCode } from '../shared/models/common-code';
@@ -36,6 +38,12 @@ import { TableConfig } from '../shared/models/dataTableConfig';
     styleUrl: './rank-equivalent.scss'
 })
 export class RankEquivalent implements OnInit {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     title = 'Rank Equivalent';
     rankEquivalentForm!: FormGroup;
     isSubmitting = false;
@@ -76,6 +84,11 @@ export class RankEquivalent implements OnInit {
     ) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.initForm();
         this.setupFormFilterListeners();
         this.loadEquivalentName();

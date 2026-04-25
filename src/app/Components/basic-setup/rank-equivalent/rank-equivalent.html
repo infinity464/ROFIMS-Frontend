@@ -88,7 +88,8 @@
             [lazy]="false"
             (edit)="update($event)"
             (delete)="delete($event.row, $event.event)"
-            (search)="onSearch($event)">
+            (search)="onSearch($event)"
+    [canUpdate]="canUpdate" [canDelete]="canDelete">
         </app-data-table>
 
 <p-toast position="top-center"></p-toast>

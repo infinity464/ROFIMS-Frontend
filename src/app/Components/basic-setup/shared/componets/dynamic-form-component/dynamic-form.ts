@@ -57,6 +57,8 @@ export class DynamicFormComponent implements OnInit, OnChanges {
     @Input() config!: FormConfig;
     @Input() form!: FormGroup;
     @Input() editingId: number | null = null;
+    /** When false the Save button is hidden in create mode (no editingId) */
+    @Input() canInsert = true;
     @Output() save = new EventEmitter<any>();
     @Output() reset = new EventEmitter<void>();
     @Output() fieldChange = new EventEmitter<{ fieldName: string; value: any }>();

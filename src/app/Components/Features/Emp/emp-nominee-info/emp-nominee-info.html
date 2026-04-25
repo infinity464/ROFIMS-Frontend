@@ -15,7 +15,7 @@
                     <div class="form-card-actions">
                         <p-button
                             label="Edit"
-                            icon="pi pi-pencil"
+                            icon="pi pi-pencil" [class.perm-hidden]="!canUpdate"
                             (onClick)="enableEditMode()">
                         </p-button>
                     </div>
@@ -83,7 +83,7 @@
                                     </td>
                                     @if (!isReadonly) {
                                         <td>
-                                            <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" pTooltip="Remove" (onClick)="removeNominee(i)"></p-button>
+                                            <p-button icon="pi pi-trash" [class.perm-hidden]="!canDelete" [rounded]="true" [text]="true" severity="danger" pTooltip="Remove" (onClick)="removeNominee(i)"></p-button>
                                         </td>
                                     }
                                 </tr>
@@ -128,7 +128,7 @@
                     <p-button
                         type="button"
                         label="Edit"
-                        icon="pi pi-pencil"
+                        icon="pi pi-pencil" [class.perm-hidden]="!canUpdate"
                         styleClass="form-btn-primary"
                         (onClick)="enableEditMode()">
                     </p-button>

@@ -1,4 +1,5 @@
-import { Component, EventEmitter, Input, OnInit, Output, ViewChild } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output, ViewChild , inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -48,6 +49,12 @@ import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directi
     styleUrl: './emp-personal-info.scss'
 })
 export class EmpPersonalInfo implements OnInit {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     @ViewChild('fileReferencesForm') fileReferencesForm!: any; // FileReferencesFormComponent
 
     /** When true (e.g. inside tab view), the "Employee Personal Info" title and header actions are hidden. */
@@ -121,6 +128,11 @@ export class EmpPersonalInfo implements OnInit {
     ) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.initializeForm();
         this.loadDropdownData();
         if (this.embedMode && this.externalEmployeeId != null) {

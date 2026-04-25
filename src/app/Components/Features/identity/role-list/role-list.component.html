@@ -48,7 +48,7 @@
           <td>{{ rowIndex + 1 }}</td>
           <td>{{ role.name }}</td>
           <td>
-            <button pButton icon="pi pi-pencil" (click)="onEdit(role)" pTooltip="Edit"></button>
+            <button pButton icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" (click)="onEdit(role)" pTooltip="Edit"></button>
           </td>
         </tr>
       </ng-template>

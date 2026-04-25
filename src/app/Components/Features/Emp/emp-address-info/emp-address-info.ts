@@ -1,4 +1,5 @@
-import { Component, EventEmitter, Input, OnInit, Output, ViewChild } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output, ViewChild , inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -22,6 +23,12 @@ import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/
     styleUrl: './emp-address-info.scss'
 })
 export class EmpAddressInfo implements OnInit {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     @ViewChild('permanentAddressForm') permanentAddressForm!: AddressFormComponent;
     @ViewChild('presentAddressForm') presentAddressForm!: AddressFormComponent;
 
@@ -82,6 +89,11 @@ export class EmpAddressInfo implements OnInit {
     ) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         if (this.embedMode && this.externalEmployeeId != null) {
             this.mode = 'edit';
             this.isReadonly = false;

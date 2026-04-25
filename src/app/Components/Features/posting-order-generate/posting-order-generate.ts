@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -84,6 +85,12 @@ interface TransferUnitOption {
     styleUrl: './posting-order-generate.scss'
 })
 export class PostingOrderGenerateComponent implements OnInit {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     private noteSheetApi = `${environment.apis.core}/NoteSheetInfo`;
 
     postingTypeOptions = [
@@ -158,6 +165,11 @@ export class PostingOrderGenerateComponent implements OnInit {
     ) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.postingOrderDate = new Date();
     }
 

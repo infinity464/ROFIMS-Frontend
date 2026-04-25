@@ -1,4 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
+import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
 
@@ -62,6 +64,12 @@ interface TrainingInstituteOption extends DropdownOption {
     styleUrl: './emp-send-to-course.scss'
 })
 export class EmpSendToCourseComponent implements OnInit {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     activeTab = 0;
     private tab1Loaded = false;
 
@@ -132,6 +140,11 @@ export class EmpSendToCourseComponent implements OnInit {
     }
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         // Tab 0 (default) data only
         this.loadCourseOptions();
         this.loadFilterOptions();

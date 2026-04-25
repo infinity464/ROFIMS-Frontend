@@ -1,4 +1,5 @@
-import { Component, Input, OnInit, ViewChild } from '@angular/core';
+import { Component, Input, OnInit, ViewChild , inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -53,6 +54,12 @@ export interface RankConfirmationListRow extends RankConfirmationInfoModel {
     styleUrl: './emp-rank-confirmation.scss'
 })
 export class EmpRankConfirmationComponent implements OnInit {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     @ViewChild('fileReferencesForm') fileReferencesForm!: any;
 
     /** When true (e.g. inside tab view), the "Rank Confirmation Information Entry" title and header actions are hidden. */
@@ -93,6 +100,11 @@ export class EmpRankConfirmationComponent implements OnInit {
     ) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.buildForm();
         this.loadRankOptions();
         this.checkRouteParams();

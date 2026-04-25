@@ -307,7 +307,7 @@
           <td>
             <div class="flex gap-1">
               <p-button
-                icon="pi pi-pencil"
+                icon="pi pi-pencil" [class.perm-hidden]="!canUpdate"
                 [text]="true"
                 [rounded]="true"
                 size="small"

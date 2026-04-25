@@ -1,4 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
+import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TrainingInstituteModel } from '../shared/models/training-institution';
@@ -21,6 +23,12 @@ import { InputTextModule } from 'primeng/inputtext';
   styleUrl: './training-institution.scss',
 })
 export class TrainingInstitution {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
  trainingForm! : FormGroup
   institutes: TrainingInstituteModel[] = [];
   filteredInstitutes: TrainingInstituteModel[] = [];
@@ -46,6 +54,11 @@ export class TrainingInstitution {
   ) {}
 
   ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
     this.currentUser = this.sharedService.getCurrentUser();
     this.initForm();
     this.getAll();

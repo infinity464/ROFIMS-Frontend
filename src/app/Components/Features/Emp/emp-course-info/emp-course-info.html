@@ -9,7 +9,7 @@
                 </h3>
                 @if (mode === 'view') {
                     <div class="form-card-actions">
-                        <p-button label="Edit" icon="pi pi-pencil" (onClick)="enableEditMode()"></p-button>
+                        <p-button label="Edit" icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" (onClick)="enableEditMode()"></p-button>
                     </div>
                 }
             </div>
@@ -143,9 +143,9 @@
                             <td>{{ row.auth || 'N/A' }}</td>
                             <td>
                                 <div class="flex gap-1">
-                                    <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="info" pTooltip="Edit" (onClick)="openEditDialog(row)"></p-button>
+                                    <p-button icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" [rounded]="true" [text]="true" severity="info" pTooltip="Edit" (onClick)="openEditDialog(row)"></p-button>
                                     @if (!isReadonly) {
-                                        <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" pTooltip="Delete" (onClick)="confirmDelete(row)"></p-button>
+                                        <p-button icon="pi pi-trash" [class.perm-hidden]="!canDelete" [rounded]="true" [text]="true" severity="danger" pTooltip="Delete" (onClick)="confirmDelete(row)"></p-button>
                                     }
                                 </div>
                             </td>

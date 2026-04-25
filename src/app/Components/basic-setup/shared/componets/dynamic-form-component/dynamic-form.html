@@ -49,8 +49,10 @@
         }
     </div>
     <div class="flex flex-col sm:flex-row gap-2 justify-end">
-        <p-button type="submit"  [label]="editingId ? 'Update' : 'Save'" [disabled]="form.invalid || isSubmitting"
-            [fluid]="false"></p-button>
+        @if (editingId || canInsert) {
+            <p-button type="submit"  [label]="editingId ? 'Update' : 'Save'" [disabled]="form.invalid || isSubmitting"
+                [fluid]="false"></p-button>
+        }
         <p-button type="button" label="Reset" severity="secondary" [fluid]="false" (click)="onReset()">
         </p-button>
     </div>

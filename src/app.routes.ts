@@ -163,6 +163,7 @@ export const appRoutes: Routes = [
         path: '',
         component: AppLayout,
         canActivate: [AuthGuard],
+        canActivateChild: [AuthGuard],
         children: [
             { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
             { path: 'dashboard', component: Dashboard },

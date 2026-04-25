@@ -14,7 +14,7 @@
               <p-button type="button" icon="pi pi-file-pdf" [rounded]="true" [text]="true" size="small" pTooltip="Export PDF" (onClick)="exportPdf()"></p-button>
               <p-button type="button" icon="pi pi-print" [rounded]="true" [text]="true" size="small" pTooltip="Print" (onClick)="printView()"></p-button>
               @if (isViewDraft()) {
-                <p-button type="button" icon="pi pi-pencil" [rounded]="true" [text]="true" size="small" pTooltip="Edit Inline" (onClick)="toggleViewEdit()"></p-button>
+                <p-button type="button" icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" [rounded]="true" [text]="true" size="small" pTooltip="Edit Inline" (onClick)="toggleViewEdit()"></p-button>
                 <p-button type="button" icon="pi pi-file-edit" [rounded]="true" [text]="true" size="small" pTooltip="Edit Full Form" (onClick)="goToEditForm()"></p-button>
               }
             </div>

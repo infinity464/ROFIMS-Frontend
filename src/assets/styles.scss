@@ -5,6 +5,9 @@
 @use 'primeicons/primeicons.css';
 @use './demo/demo.scss';
 
+/* Permission-based UI: hide elements that the user cannot access */
+.perm-hidden { display: none !important; }
+
 /* Quill list counter fix: prevent extra "0" / "0." after list markers (ক, খ, i, ii, etc) */
 /* Blocks inside list items must NOT reset counters. Loaded last to override Quill. */
 .ql-editor li[data-list] p,

@@ -1,4 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
+import { Router } from '@angular/router';
 import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Fluid } from 'primeng/fluid';
 import { ButtonModule } from 'primeng/button';
@@ -23,6 +25,12 @@ import { MultiSelectModule } from 'primeng/multiselect';
     styleUrl: './rab-id-serial.scss'
 })
 export class RabIdSerial implements OnInit {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     isSubmitting = false;
     rabIdSerialForm!: FormGroup;
 
@@ -51,6 +59,11 @@ export class RabIdSerial implements OnInit {
     ) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.currentUser = this.sharedService.getCurrentUser();
         this.initForm();
         this.loadEmployeeTypes();

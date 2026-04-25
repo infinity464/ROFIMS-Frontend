@@ -1,4 +1,8 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild , inject } from '@angular/core';
+
+enum JoineeFilter { All = 'all', Added = 'added', NotAdded = 'notAdded' }
+import { UserMenuService } from '@/services/user-menu.service';
+import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import * as XLSX from 'xlsx';
@@ -11,7 +15,8 @@ import { TableModule } from 'primeng/table';
 import { DividerModule } from 'primeng/divider';
 import { TooltipModule } from 'primeng/tooltip';
 import { Toast } from 'primeng/toast';
-import { MessageService } from 'primeng/api';
+import { MessageService, ConfirmationService } from 'primeng/api';
+import { ConfirmDialog } from 'primeng/confirmdialog';
 import { forkJoin, of } from 'rxjs';
 import { switchMap, catchError } from 'rxjs/operators';
 import { EmpService } from '@/services/emp-service';
@@ -27,11 +32,17 @@ import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directi
 @Component({
     selector: 'app-permanent-posting-mo-record',
     standalone: true,
-    imports: [CommonModule, FormsModule, ButtonModule, InputTextModule, DatePickerModule, SelectModule, TableModule, DividerModule, TooltipModule, Toast, EmployeeSearchComponent, FileReferencesFormComponent, FlexibleDateDirective],
-    providers: [MessageService],
+    imports: [CommonModule, FormsModule, ButtonModule, InputTextModule, DatePickerModule, SelectModule, TableModule, DividerModule, TooltipModule, Toast, ConfirmDialog, EmployeeSearchComponent, FileReferencesFormComponent, FlexibleDateDirective],
+    providers: [MessageService, ConfirmationService],
     templateUrl: './permanent-posting-mo-record.html'
 })
 export class PermanentPostingMORecordComponent implements OnInit {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
 
     @ViewChild('poFileForm') poFileForm!: FileReferencesFormComponent;
     @ViewChild('joFileForm') joFileForm!: FileReferencesFormComponent;
@@ -105,6 +116,19 @@ export class PermanentPostingMORecordComponent implements OnInit {
     joineeRecords: PermanentPostingJoineeDetailModel[] = [];
     loadingJoineeList = false;
     showJoineeList = false;
+    readonly JoineeFilter = JoineeFilter;
+    joineeFilter = JoineeFilter.All;
+    joineeFilterOptions = [
+        { label: 'All Records',       value: JoineeFilter.All },
+        { label: 'Entry Completed',   value: JoineeFilter.Added },
+        { label: 'Entry Pending',     value: JoineeFilter.NotAdded },
+    ];
+
+    get filteredJoineeRecords(): PermanentPostingJoineeDetailModel[] {
+        if (this.joineeFilter === JoineeFilter.Added)    return this.joineeRecords.filter(r => r.isAddedInNewJoineeDataEntry);
+        if (this.joineeFilter === JoineeFilter.NotAdded) return this.joineeRecords.filter(r => !r.isAddedInNewJoineeDataEntry);
+        return this.joineeRecords;
+    }
 
     constructor(
         private recordSvc: PermanentPostingMORecordService,
@@ -112,11 +136,17 @@ export class PermanentPostingMORecordComponent implements OnInit {
         private empService: EmpService,
         private sharedService: SharedService,
         private messageService: MessageService,
+        private confirmationService: ConfirmationService,
         private orgService: OrganizationService,
         private commonCodeService: CommonCodeService
     ) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.loadList();
         this.loadJoineeList();
         this.loadStaticOptions();
@@ -447,10 +477,19 @@ export class PermanentPostingMORecordComponent implements OnInit {
     }
 
     onDelete(row: PermanentPostingMORecordModel): void {
-        if (!confirm(`Delete record #${row.id}?`)) return;
-        this.recordSvc.delete(row.id).subscribe({
-            next: () => { this.messageService.add({ severity: 'success', summary: 'Deleted', detail: 'Record deleted.' }); this.loadList(); },
-            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Delete failed.' })
+        this.confirmationService.confirm({
+            message: `Are you sure you want to delete Posted Out Record #${row.id}? This action cannot be undone.`,
+            header: 'Delete Confirmation',
+            icon: 'pi pi-exclamation-triangle',
+            acceptLabel: 'Yes, Delete',
+            rejectLabel: 'Cancel',
+            acceptButtonStyleClass: 'p-button-danger',
+            accept: () => {
+                this.recordSvc.delete(row.id).subscribe({
+                    next: () => { this.messageService.add({ severity: 'success', summary: 'Deleted', detail: 'Record deleted.' }); this.loadList(); },
+                    error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Delete failed.' })
+                });
+            }
         });
     }
 
@@ -497,10 +536,19 @@ export class PermanentPostingMORecordComponent implements OnInit {
     }
 
     onDeleteJoinee(row: PermanentPostingJoineeDetailModel): void {
-        if (!confirm(`Delete joinee record #${row.id}?`)) return;
-        this.detailSvc.delete(row.id).subscribe({
-            next: () => { this.messageService.add({ severity: 'success', summary: 'Deleted', detail: 'Joinee record deleted.' }); this.loadJoineeList(); },
-            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Delete failed.' })
+        this.confirmationService.confirm({
+            message: `Are you sure you want to delete New Joinee Record #${row.id}${row.serviceId ? ' (Service ID: ' + row.serviceId + ')' : ''}? This action cannot be undone.`,
+            header: 'Delete Confirmation',
+            icon: 'pi pi-exclamation-triangle',
+            acceptLabel: 'Yes, Delete',
+            rejectLabel: 'Cancel',
+            acceptButtonStyleClass: 'p-button-danger',
+            accept: () => {
+                this.detailSvc.delete(row.id).subscribe({
+                    next: () => { this.messageService.add({ severity: 'success', summary: 'Deleted', detail: 'Joinee record deleted.' }); this.loadJoineeList(); },
+                    error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Delete failed.' })
+                });
+            }
         });
     }
 

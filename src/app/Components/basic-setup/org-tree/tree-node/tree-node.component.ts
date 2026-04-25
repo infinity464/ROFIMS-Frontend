@@ -27,6 +27,8 @@ export class TreeNodeComponent {
     @Output() expandRequest = new EventEmitter<OrgNode>();
     @Output() expandToggled = new EventEmitter<{ node: OrgNode; expanded: boolean }>();
     @Output() nodeSelect = new EventEmitter<OrgNode>();
+    @Input() canUpdate = true;
+    @Input() canDelete = true;
 
     readonly LEVELS = LEVELS;
     readonly LEVEL_COLORS = LEVEL_COLORS;

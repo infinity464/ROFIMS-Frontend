@@ -10,6 +10,7 @@ import {
     inject,
     DestroyRef
 } from '@angular/core';
+import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { InputNumberModule } from 'primeng/inputnumber';
@@ -22,6 +23,7 @@ import { OrgService } from '../org.service';
 import type { CreateOrgDto, UpdateOrgDto } from '../models/org-node.model';
 import { SharedService } from '@/shared/services/shared-service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { UserMenuService } from '@/services/user-menu.service';
 
 export type FormMode = 'empty' | 'add-unit' | 'add-child' | 'edit';
 
@@ -34,6 +36,12 @@ export type FormMode = 'empty' | 'add-unit' | 'add-child' | 'edit';
     styleUrl: './org-form.component.scss'
 })
 export class OrgFormComponent implements OnInit, OnChanges {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     private fb = inject(FormBuilder);
     private orgService = inject(OrgService);
     private sharedService = inject(SharedService);
@@ -64,6 +72,11 @@ export class OrgFormComponent implements OnInit, OnChanges {
     }
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.buildForm();
         this.applyFormState();
     }

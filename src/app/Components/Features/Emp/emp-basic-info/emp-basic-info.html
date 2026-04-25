@@ -15,7 +15,7 @@
                     @if (isViewMode) {
                         <p-button
                             label="Edit"
-                            icon="pi pi-pencil"
+                            icon="pi pi-pencil" [class.perm-hidden]="!canUpdate"
                             (onClick)="switchToEditMode()">
                         </p-button>
                     }
@@ -24,6 +24,26 @@
         </div>
 
         <form class [formGroup]="postingForm" (ngSubmit)="onSubmit()">
+
+            @if (joineeRecord) {
+            <div style="display:flex; align-items:flex-start; gap:0.75rem; background:var(--green-50); border:1.5px solid var(--green-400); border-radius:8px; padding:0.85rem 1rem; margin-bottom:1rem;">
+                <i class="pi pi-check-circle" style="color:var(--green-600); font-size:1.3rem; margin-top:0.1rem;"></i>
+                <div>
+                    <div style="font-weight:700; color:var(--green-700); font-size:0.95rem;">Person Found in New Joining Person</div>
+                    <div style="font-size:0.82rem; color:var(--green-800); margin-top:0.25rem; display:flex; flex-wrap:wrap; gap:0.5rem 1.5rem;">
+                        @if (joineeRecord.serviceId) { <span><b>Service ID:</b> {{ joineeRecord.serviceId }}</span> }
+                        @if (joineeRecord.nameBangla) { <span><b>Name (BN):</b> {{ joineeRecord.nameBangla }}</span> }
+                        @if (joineeRecord.joiningOrderNo) { <span><b>Joining Order:</b> {{ joineeRecord.joiningOrderNo }}</span> }
+                        @if (joineeRecord.joiningOrderDate) { <span><b>Joining Order Date:</b> {{ joineeRecord.joiningOrderDate }}</span> }
+                        @if (joineeRecord.possibleJoiningDate) { <span><b>Possible Joining:</b> {{ joineeRecord.possibleJoiningDate }}</span> }
+                    </div>
+                    <div style="font-size:0.78rem; color:var(--green-700); margin-top:0.3rem;">
+                        <i class="pi pi-info-circle"></i> Related fields have been auto-filled from the posting record.
+                    </div>
+                </div>
+            </div>
+            }
+
             <div class="form-section">
                 <!-- Row 1: 4 Fields -->
                 <div class="form-row">

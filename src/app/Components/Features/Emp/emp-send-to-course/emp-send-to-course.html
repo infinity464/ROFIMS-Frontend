@@ -246,7 +246,7 @@
                                         (onClick)="toggleDraftMembers(row); $event.stopPropagation()">
                                     </p-button>
                                     <p-button
-                                        icon="pi pi-trash"
+                                        icon="pi pi-trash" [class.perm-hidden]="!canDelete"
                                         severity="danger"
                                         [text]="true"
                                         size="small"
@@ -299,7 +299,7 @@
                                
                                 <p-button
                                     label="Remove Selected from Draft"
-                                    icon="pi pi-trash"
+                                    icon="pi pi-trash" [class.perm-hidden]="!canDelete"
                                     severity="secondary"
                                     [outlined]="true"
                                     (onClick)="removeFromDraft()"

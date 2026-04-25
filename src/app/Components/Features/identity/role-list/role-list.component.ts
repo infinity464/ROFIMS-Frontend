@@ -1,4 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
+import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -32,6 +34,12 @@ import type { ApplicationRole, UpdateRoleModel } from '@/models/identity.model';
   styleUrl: './role-list.component.scss'
 })
 export class RoleListComponent implements OnInit {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
   private fb = inject(FormBuilder);
   private identityService = inject(IdentityService);
   private messageService = inject(MessageService);
@@ -43,6 +51,11 @@ export class RoleListComponent implements OnInit {
   isSubmitting = false;
 
   ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
     this.initForm();
     this.loadRoles();
   }

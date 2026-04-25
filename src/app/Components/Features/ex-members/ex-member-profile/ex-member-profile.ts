@@ -1,4 +1,5 @@
-import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit , inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
 import { CommonModule, Location } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
@@ -78,6 +79,12 @@ import { formatPartialDate } from '@/shared/utils/partial-date.util';
     styleUrl: './ex-member-profile.scss'
 })
 export class ExMemberProfile implements OnInit, OnDestroy {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     employeeId: number | null = null;
     profile: EmployeePersonalServiceOverview | null = null;
     profileImageUrl: string | null = null;
@@ -547,6 +554,11 @@ export class ExMemberProfile implements OnInit, OnDestroy {
     }
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         const id = this.route.snapshot.paramMap.get('employeeId');
         if (id != null) {
             this.employeeId = +id;

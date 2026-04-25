@@ -1,4 +1,5 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, OnChanges, SimpleChanges, Input, ViewChild, inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FileUpload } from 'primeng/fileupload';
@@ -28,7 +29,7 @@ import { MasterBasicSetupService } from '@/Components/basic-setup/shared/service
 import { SharedService } from '@/shared/services/shared-service';
 import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
-
+import { PermanentPostingJoineeDetailService, PermanentPostingJoineeDetailModel } from '@/services/permanent-posting-joinee-detail.service';
 @Component({
     selector: 'app-emp-basic-info',
     imports: [FileUpload, Fluid, Button, ButtonModule, Select, MultiSelectModule, DatePicker, ReactiveFormsModule, FormsModule, InputTextModule, AddressFormComponent, Checkbox, Dialog, TooltipModule, EmpPresentMemberCheckComponent, FileReferencesFormComponent, FlexibleDateDirective],
@@ -36,7 +37,16 @@ import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directi
     styleUrl: './emp-basic-info.scss',
     standalone: true
 })
-export class EmpBasicInfo implements OnInit {
+export class EmpBasicInfo implements OnInit, OnChanges {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
+    /** When provided, skips search and loads this employee in edit mode directly. */
+    @Input() editEmployeeId: number | null = null;
+
     @ViewChild('fileUpload') fileUpload!: FileUpload;
     @ViewChild(EmpPresentMemberCheckComponent) presentMemberCheck?: EmpPresentMemberCheckComponent;
     @ViewChild('fileReferencesForm') fileReferencesForm!: any; // FileReferencesFormComponent
@@ -49,6 +59,8 @@ export class EmpBasicInfo implements OnInit {
     isViewMode: boolean = false;
     isEditMode: boolean = false;
     pageTitle: string = 'New Posting Entry Form';
+    /** True when component is embedded via @Input editEmployeeId — disables router navigation. */
+    isEmbedded: boolean = false;
 
     /** When false, the entry form is hidden until search returns "employee not found". When true (or when opening with id in route), form is shown. */
     showEntryForm: boolean = false;
@@ -105,6 +117,10 @@ export class EmpBasicInfo implements OnInit {
         employeeId: this.employeeId
     };
 
+    // New Joining Person: found in PermanentPostingJoineeDetail
+    joineeRecord: PermanentPostingJoineeDetailModel | null = null;
+    isCheckingJoinee: boolean = false;
+
     // Duplicate check on (Mother Organization + Prefix + Service ID)
     isDuplicateCombo: boolean = false;
     isCheckingCombo: boolean = false;
@@ -146,6 +162,32 @@ export class EmpBasicInfo implements OnInit {
                     this.isCheckingCombo = false;
                 }
             });
+    }
+
+    checkJoineeDetail(serviceId: string): void {
+        const sid = serviceId?.trim();
+        if (!sid) { this.joineeRecord = null; return; }
+
+        this.isCheckingJoinee = true;
+        this.joineeDetailService.getByServiceId(sid).subscribe({
+            next: (record) => {
+                this.isCheckingJoinee = false;
+                this.joineeRecord = record;
+                if (record) {
+                    this.postingForm.patchValue({
+                        ...(record.rank        != null && { rank: record.rank }),
+                        ...(record.corps       != null && { branch: record.corps }),
+                        ...(record.trade       != null && { trade: record.trade }),
+                        ...(record.memberType  != null && { memberType: record.memberType }),
+                        ...(record.prefixId    != null && { prefix: record.prefixId }),
+                        ...(record.motherOrgId != null && { motherOrganization: record.motherOrgId, orgId: record.motherOrgId }),
+                        ...(record.motherOrgUnitId != null && { lastMotherUnit: record.motherOrgUnitId }),
+                        ...(record.nameBangla  != null && record.nameBangla.trim() && { fullNameBN: record.nameBangla }),
+                    });
+                }
+            },
+            error: () => { this.isCheckingJoinee = false; this.joineeRecord = null; }
+        });
     }
 
     // Reliever section
@@ -585,6 +627,14 @@ export class EmpBasicInfo implements OnInit {
                     this.spousePermanentAddressConfig.employeeId = employeeId;
                     this.spousePresentAddressConfig.employeeId = employeeId;
 
+                    // Mark joinee detail as added in new joinee data entry
+                    if (!this.isEditMode && this.joineeRecord) {
+                        this.joineeDetailService.saveUpdate({
+                            ...this.joineeRecord,
+                            isAddedInNewJoineeDataEntry: true
+                        }).subscribe();
+                    }
+
                     // Step 1.5: If Married, save/update spouse in FamilyInfo first so we have FMID for spouse addresses
                     // Step 2: Then save addresses (spouse addresses will include spouse FMID in AddressInfo)
                     this.saveSpouseIfMarried(employeeId).pipe(
@@ -632,10 +682,7 @@ export class EmpBasicInfo implements OnInit {
         const shouldSave = relationCodeId != null && (isNotUnmarried || spouseName.length > 0 || this.spouseFmid != null);
         if (!shouldSave) return of(null);
 
-        // If spouse name is empty but spouse address exists, use a default placeholder name
-        const resolvedSpouseName = spouseName.length > 0
-            ? spouseName
-            : (hasSpouseAddress || isNotUnmarried ? 'Wife (Name not set in Joining Page)' : null);
+        const resolvedSpouseName = spouseName.length > 0 ? spouseName : '';
 
         const nowIso = new Date().toISOString();
         const payload: Record<string, unknown> = {
@@ -813,7 +860,8 @@ export class EmpBasicInfo implements OnInit {
         private organizationService: OrganizationService,
         private masterBasicSetupService: MasterBasicSetupService,
         private sharedService: SharedService,
-        private memberTypeAccess: IdentityUserMemberTypeAccessService
+        private memberTypeAccess: IdentityUserMemberTypeAccessService,
+        private joineeDetailService: PermanentPostingJoineeDetailService
     ) {}
 
     /** CodeIds of Member Types the current user is allowed to use. `null` means "not yet loaded" (fail-open). */
@@ -822,7 +870,36 @@ export class EmpBasicInfo implements OnInit {
     /** Raw ranks for the currently selected mother org (before member-type filter). */
     private allRanksForOrg: CommonCodeModel[] = [];
 
+    ngOnChanges(changes: SimpleChanges): void {
+        if (changes['editEmployeeId'] && this.editEmployeeId && this.postingForm) {
+            this._loadAsEditMode(this.editEmployeeId);
+        }
+    }
+
+    private _loadAsEditMode(id: number): void {
+        this.isEmbedded = true;
+        this.generatedEmployeeId = id;
+        this.showEntryForm = true;
+        this.hideSearchSection = true;
+        this.isEditMode = true;
+        this.isViewMode = false;
+        this.pageTitle = 'Edit Employee';
+        this.presentAddressConfig.employeeId = id;
+        this.permanentAddressConfig.employeeId = id;
+        this.spousePermanentAddressConfig.employeeId = id;
+        this.spousePresentAddressConfig.employeeId = id;
+        this.loadEmployeeData(id);
+    }
+
     ngOnInit(): void {
+        // Must be set before queryParams subscription
+        if (this.editEmployeeId) this.isEmbedded = true;
+
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.initializeForm();
         this.loadCurrentUserMemberTypePermissions();
 
@@ -834,6 +911,12 @@ export class EmpBasicInfo implements OnInit {
             ).subscribe(() => this.checkDuplicateCombo());
         });
 
+        // Check if serviceId exists in PermanentPostingJoineeDetail (New Joining Person)
+        this.postingForm.get('serviceId')?.valueChanges.pipe(
+            debounceTime(700),
+            distinctUntilChanged()
+        ).subscribe((val) => this.checkJoineeDetail(val ?? ''));
+
         this.loadMotherOrg();
         this.loadDistricts();
         this.loadMemberType();
@@ -843,30 +926,37 @@ export class EmpBasicInfo implements OnInit {
         this.loadMaritalStatus();
         this.loadRelationshipOptions();
 
-        // Check for query params (view/edit mode)
-        this.route.queryParams.subscribe((params) => {
-            const employeeId = params['id'];
-            const mode = params['mode'];
+        // Check for query params (view/edit mode) — skip when embedded via @Input
+        if (!this.isEmbedded) {
+            this.route.queryParams.subscribe((params) => {
+                const employeeId = params['id'];
+                const mode = params['mode'];
 
-            if (employeeId) {
-                this.generatedEmployeeId = +employeeId;
-                this.showEntryForm = true;
-                this.hideSearchSection = true;
+                if (employeeId) {
+                    this.generatedEmployeeId = +employeeId;
+                    this.showEntryForm = true;
+                    this.hideSearchSection = true;
 
-                if (mode === 'edit') {
-                    this.isEditMode = true;
-                    this.isViewMode = false;
-                    this.pageTitle = 'Edit Employee';
-                } else {
-                    this.isViewMode = true;
-                    this.isEditMode = false;
-                    this.pageTitle = 'View Employee Details';
+                    if (mode === 'edit') {
+                        this.isEditMode = true;
+                        this.isViewMode = false;
+                        this.pageTitle = 'Edit Employee';
+                    } else {
+                        this.isViewMode = true;
+                        this.isEditMode = false;
+                        this.pageTitle = 'View Employee Details';
+                    }
+
+                    // Load employee data
+                    this.loadEmployeeData(+employeeId);
                 }
+            });
+        }
 
-                // Load employee data
-                this.loadEmployeeData(+employeeId);
-            }
-        });
+        // If editEmployeeId was already set via @Input before ngOnInit
+        if (this.editEmployeeId) {
+            this._loadAsEditMode(this.editEmployeeId);
+        }
     }
 
     /** Called when user clicks View Old Profile in present-member-check: show form and load ex-member data. */
@@ -1154,12 +1244,13 @@ export class EmpBasicInfo implements OnInit {
         this.pageTitle = 'Edit Employee';
         this.enableForm();
 
-        // Update URL without reloading
-        this.router.navigate([], {
-            relativeTo: this.route,
-            queryParams: { id: this.generatedEmployeeId, mode: 'edit' },
-            queryParamsHandling: 'merge'
-        });
+        if (!this.isEmbedded) {
+            this.router.navigate([], {
+                relativeTo: this.route,
+                queryParams: { id: this.generatedEmployeeId, mode: 'edit' },
+                queryParamsHandling: 'merge'
+            });
+        }
     }
 
     initializeForm(): void {

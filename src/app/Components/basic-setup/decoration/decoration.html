@@ -6,7 +6,8 @@
 
 
         <app-dynamic-form [config]="formConfig" [form]="commonForm" [editingId]="editingId" (save)="submit($event)"
-            (reset)="resetForm()" [isSubmitting]="isSubmitting">
+            (reset)="resetForm()" [isSubmitting]="isSubmitting"
+            [canInsert]="canInsert">
         </app-dynamic-form>
     </div>
 </p-fluid>
@@ -22,5 +23,6 @@
             (edit)="update($event)"
             (delete)="delete($event.row, $event.event)"
             [lazy]="false"
-            (search)="onSearch($event)">
+            (search)="onSearch($event)"
+    [canUpdate]="canUpdate" [canDelete]="canDelete">
         </app-data-table>

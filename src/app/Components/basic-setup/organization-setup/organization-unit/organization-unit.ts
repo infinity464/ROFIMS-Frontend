@@ -1,5 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
+import { Component, OnInit, inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DatePickerModule } from 'primeng/datepicker';
 import { Fluid } from 'primeng/fluid';
@@ -45,6 +47,12 @@ interface OrgUnitRow extends OrganizationModel {
     styleUrl: './organization-unit.scss'
 })
 export class OrganizationUnit implements OnInit {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     organizationForm!: FormGroup;
     isSubmitting = false;
     motherOrg: OrganizationModel[] = [];
@@ -76,6 +84,11 @@ export class OrganizationUnit implements OnInit {
     ) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.currentUser = this.sharedService.getCurrentUser();
         this.initForm();
         this.setupFormFilterListeners();

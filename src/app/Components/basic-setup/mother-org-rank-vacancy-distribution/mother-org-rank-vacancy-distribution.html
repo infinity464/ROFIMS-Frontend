@@ -112,7 +112,8 @@
                     [loading]="loading"
                     (edit)="editDistribution($event)"
                     (delete)="deleteDistribution($event.row, $event.event)"
-                    (lazyLoad)="loadDistribution()">
+                    (lazyLoad)="loadDistribution()"
+    [canUpdate]="canUpdate" [canDelete]="canDelete">
                 </app-data-table>
             </div>
         }

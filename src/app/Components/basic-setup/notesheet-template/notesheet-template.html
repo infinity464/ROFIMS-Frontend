@@ -63,6 +63,7 @@
     (edit)="update($event)"
     (delete)="delete($event.row, $event.event)"
     (lazyLoad)="onLazyLoad($event)"
-    (search)="onSearch($event)">
+    (search)="onSearch($event)"
+    [canUpdate]="canUpdate" [canDelete]="canDelete">
   </app-data-table>
 </p-fluid>

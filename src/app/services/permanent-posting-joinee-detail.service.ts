@@ -45,6 +45,12 @@ export class PermanentPostingJoineeDetailService {
         );
     }
 
+    getByServiceId(serviceId: string): Observable<PermanentPostingJoineeDetailModel | null> {
+        return this.http.get<any>(`${this.baseUrl}/GetByServiceIdAsyn/${encodeURIComponent(serviceId)}`).pipe(
+            map((r) => { const a = Array.isArray(r) ? r : r ? [r] : []; return a.length ? a[0] : null; })
+        );
+    }
+
     saveUpdate(model: Partial<PermanentPostingJoineeDetailModel>): Observable<any> {
         return this.http.post(`${this.baseUrl}/SaveUpdateAsyn`, {
             id: model.id ?? 0,
