@@ -90,11 +90,21 @@
                                 </div>
                                 <div>
                                     <label class="font-semibold block mb-2 text-700">Country</label>
-                                    <input pInputText formControlName="countryDisplay" class="w-full" placeholder="From Training Institute" readonly />
+                                    <div style="display: flex; align-items: center; gap: 0.35rem;">
+                                        <div style="flex: 1; min-width: 0;">
+                                            <p-select formControlName="country" [options]="countryOptions" optionLabel="label" optionValue="value" placeholder="Select Country" styleClass="w-full" [filter]="true" filterPlaceholder="Search Country" appendTo="body" [showClear]="true"></p-select>
+                                        </div>
+                                        <button type="button" pButton icon="pi pi-plus"
+                                            class="p-button-sm p-button-outlined p-button-success"
+                                            style="flex-shrink: 0; width: 2rem; height: 2rem; padding: 0;"
+                                            pTooltip="Add New Country" tooltipPosition="top"
+                                            (click)="openAddCountryDialog()">
+                                        </button>
+                                    </div>
                                 </div>
                                 <div>
-                                    <label class="font-semibold block mb-2 text-700">Location</label>
-                                    <input pInputText formControlName="locationDisplay" class="w-full" placeholder="From Training Institute" readonly />
+                                    <label class="font-semibold block mb-2 text-700">Address</label>
+                                    <input pInputText formControlName="address" class="w-full" placeholder="Enter address" />
                                 </div>
                                 <div class="w-full">
                                     <label class="font-semibold block mb-2 text-700">From</label>
@@ -152,7 +162,7 @@
                             <th>Course Name</th>
                             <th>Training Institute</th>
                             <th>Country</th>
-                            <th>Location</th>
+                            <th>Address</th>
                             <th>From</th>
                             <th>To</th>
                             <th>Course Result</th>
@@ -166,7 +176,7 @@
                             <td>{{ getCourseNameLabel(row.courseName) }}</td>
                             <td>{{ getOptionLabel(trainingInstituteOptions, row.trainingInstitueName) }}</td>
                             <td>{{ getCountryDisplay(row) }}</td>
-                            <td>{{ getLocationDisplay(row) }}</td>
+                            <td>{{ getAddressDisplay(row) }}</td>
                             <td>{{ formatDate(row.dateFrom) }}</td>
                             <td>{{ formatDate(row.dateTo) }}</td>
                             <td>{{ row.result || 'N/A' }}</td>

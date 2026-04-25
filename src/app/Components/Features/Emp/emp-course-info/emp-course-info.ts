@@ -93,9 +93,9 @@ export class EmpCourseInfoComponent implements OnInit {
     newInstituteLocation = '';
     isSavingInstitute = false;
 
-    // Generic "Add CommonCode" dialog — shared by Course Type, Course Name, and Course Result.
+    // Generic "Add CommonCode" dialog — shared by Course Type, Course Name, Course Result, and Country.
     showAddCodeDialog = false;
-    addingCodeType: 'CourseType' | 'CourseName' | 'CourseGrade' | null = null;
+    addingCodeType: 'CourseType' | 'CourseName' | 'CourseGrade' | 'Country' | null = null;
     addingCodeTypeLabel = '';
     /** Captured at open time for Course Name; drives the read-only parent dropdown in the dialog. */
     addingCodeParentId: number | null = null;
@@ -122,11 +122,12 @@ export class EmpCourseInfoComponent implements OnInit {
         this.loadDropdowns();
         this.courseForm.get('trainingInstitueName')?.valueChanges.subscribe((instituteId) => {
             const institute = this.trainingInstituteOptions.find((o) => o.value === instituteId);
-            const countryLabel = institute?.countryId != null ? this.getOptionLabel(this.countryOptions, institute.countryId) : '';
+            // Pre-fill Country and Address from the selected institute as a convenience.
+            // Both fields remain user-editable and the user's edits are what actually get saved.
             this.courseForm.patchValue(
                 {
-                    locationDisplay: institute?.location ?? '',
-                    countryDisplay: countryLabel
+                    country: institute?.countryId ?? null,
+                    address: institute?.location ?? ''
                 },
                 { emitEvent: false }
             );
@@ -159,8 +160,8 @@ export class EmpCourseInfoComponent implements OnInit {
             courseType: [null, Validators.required],
             courseName: [null, Validators.required],
             trainingInstitueName: [null],
-            countryDisplay: [''], // read-only from Training Institute
-            locationDisplay: [''], // read-only from Training Institute
+            country: [null],
+            address: [''],
             dateFrom: [null],
             dateTo: [null],
             result: [null],
@@ -268,6 +269,8 @@ export class EmpCourseInfoComponent implements OnInit {
                     courseType: item.courseType ?? item.CourseType,
                     courseName: item.courseName ?? item.CourseName,
                     trainingInstitueName: item.trainingInstitueName ?? item.TrainingInstitueName,
+                    country: item.country ?? item.Country ?? null,
+                    address: item.address ?? item.Address ?? null,
                     dateFrom: item.dateFrom ?? item.DateFrom,
                     dateTo: item.dateTo ?? item.DateTo,
                     result: item.result ?? item.Result,
@@ -319,16 +322,14 @@ export class EmpCourseInfoComponent implements OnInit {
         return this.getOptionLabel(this.allCourseNameOptions, value);
     }
 
-    /** Location: read-only from Training Institute */
-    getLocationDisplay(row: CourseInfoModel): string {
-        const inst = row.trainingInstitueName != null ? this.trainingInstituteOptions.find((o) => o.value === row.trainingInstitueName) : null;
-        return inst?.location ?? 'N/A';
+    /** Address: saved value from CourseInfo (pre-filled from institute on add/edit, but user-editable). */
+    getAddressDisplay(row: CourseInfoModel): string {
+        return row.address && String(row.address).trim() ? String(row.address) : 'N/A';
     }
 
-    /** Country: read-only from Training Institute */
+    /** Country: saved CommonCode id from CourseInfo (pre-filled from institute on add/edit, but user-editable). */
     getCountryDisplay(row: CourseInfoModel): string {
-        const inst = row.trainingInstitueName != null ? this.trainingInstituteOptions.find((o) => o.value === row.trainingInstitueName) : null;
-        return inst?.countryId != null ? this.getOptionLabel(this.countryOptions, inst.countryId) : 'N/A';
+        return row.country != null ? this.getOptionLabel(this.countryOptions, row.country) : 'N/A';
     }
 
     formatDate(d: string | null): string {
@@ -357,8 +358,8 @@ export class EmpCourseInfoComponent implements OnInit {
             courseType: null,
             courseName: null,
             trainingInstitueName: null,
-            countryDisplay: '',
-            locationDisplay: '',
+            country: null,
+            address: '',
             dateFrom: null,
             dateTo: null,
             result: null,
@@ -374,16 +375,14 @@ export class EmpCourseInfoComponent implements OnInit {
         this.fileRows = this.parseFileRowsFromReferences(row.filesReferences);
         const dateFrom = row.dateFrom ? new Date(row.dateFrom) : null;
         const dateTo = row.dateTo ? new Date(row.dateTo) : null;
-        const inst = row.trainingInstitueName != null ? this.trainingInstituteOptions.find((o) => o.value === row.trainingInstitueName) : null;
-        const countryLabel = inst?.countryId != null ? this.getOptionLabel(this.countryOptions, inst.countryId) : '';
         this.courseForm.patchValue({
             employeeId: row.employeeId,
             courseId: row.courseId,
             courseType: row.courseType,
             courseName: row.courseName,
             trainingInstitueName: row.trainingInstitueName,
-            countryDisplay: countryLabel,
-            locationDisplay: inst?.location ?? '',
+            country: row.country ?? null,
+            address: row.address ?? '',
             dateFrom,
             dateTo,
             result: row.result ?? '',
@@ -420,6 +419,8 @@ export class EmpCourseInfoComponent implements OnInit {
                 courseType: formValue.courseType ?? null,
                 courseName: formValue.courseName ?? null,
                 trainingInstitueName: formValue.trainingInstitueName ?? null,
+                country: formValue.country ?? null,
+                address: formValue.address && String(formValue.address).trim() ? String(formValue.address).trim() : null,
                 dateFrom: toDateStr(formValue.dateFrom),
                 dateTo: toDateStr(formValue.dateTo),
                 result: resultStr && String(resultStr).trim() ? String(resultStr).trim() : null,
@@ -553,7 +554,12 @@ export class EmpCourseInfoComponent implements OnInit {
         this.openAddCodeDialog('CourseGrade', 'Course Result');
     }
 
-    private openAddCodeDialog(codeType: 'CourseType' | 'CourseName' | 'CourseGrade', label: string): void {
+    /** + button next to Country — Country CommonCode. */
+    openAddCountryDialog(): void {
+        this.openAddCodeDialog('Country', 'Country');
+    }
+
+    private openAddCodeDialog(codeType: 'CourseType' | 'CourseName' | 'CourseGrade' | 'Country', label: string): void {
         this.addingCodeType = codeType;
         this.addingCodeTypeLabel = label;
         if (codeType !== 'CourseName') this.addingCodeParentId = null;
@@ -604,7 +610,7 @@ export class EmpCourseInfoComponent implements OnInit {
     }
 
     /** Reload the affected dropdown after a new CommonCode is saved, then auto-select the new entry. */
-    private reloadCodesAfterSave(codeType: 'CourseType' | 'CourseName' | 'CourseGrade', newId: number | undefined, newValueEN: string): void {
+    private reloadCodesAfterSave(codeType: 'CourseType' | 'CourseName' | 'CourseGrade' | 'Country', newId: number | undefined, newValueEN: string): void {
         this.commonCodeService.getAllActiveCommonCodesType(codeType).subscribe({
             next: (data) => {
                 if (codeType === 'CourseType') {
@@ -634,6 +640,12 @@ export class EmpCourseInfoComponent implements OnInit {
                     // Course Result is stored as a string; select the one that matches the newly added English value.
                     const added = strOpts.find((o) => o.label === newValueEN);
                     if (added) this.courseForm.patchValue({ result: added.value });
+                } else if (codeType === 'Country') {
+                    this.countryOptions = (data || []).map((d: any) => ({
+                        label: d.codeValueEN || d.displayCodeValueEN || String(d.codeId),
+                        value: d.codeId
+                    }));
+                    if (newId != null) this.courseForm.patchValue({ country: newId });
                 }
             }
         });
