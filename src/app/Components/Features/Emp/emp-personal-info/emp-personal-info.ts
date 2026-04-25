@@ -22,6 +22,7 @@ import { CommonCodeService } from '@/services/common-code-service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 import { FileReferencesFormComponent, FileRowData } from '@components/Common/file-references-form/file-references-form';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
+import { PresentStatusTypeOptions } from '@/models/enums';
 
 @Component({
     selector: 'app-emp-personal-info',
@@ -104,6 +105,7 @@ export class EmpPersonalInfo implements OnInit {
         { label: 'In Leaving', value: true },
         { label: 'Out Leaving', value: false }
     ];
+    presentStatusTypes: any[] = PresentStatusTypeOptions;
 
     // Investigation Experience toggle
     showInvestigationExperience: boolean = false;
@@ -242,7 +244,8 @@ export class EmpPersonalInfo implements OnInit {
             weightLbs: [null, [Validators.min(0), Validators.max(440)]],
             leavingStatus: [null],
             drivingLicenseNo: [''],
-            serviceIdCardNo: ['']
+            serviceIdCardNo: [''],
+            presentStatus: [null]
         });
 
         // Weight auto-conversion: KG to Lbs
@@ -429,7 +432,8 @@ export class EmpPersonalInfo implements OnInit {
                 weightLbs: weightLbs,
                 leavingStatus: data.LeavingStatus !== undefined ? data.LeavingStatus : data.leavingStatus !== undefined ? data.leavingStatus : null,
                 drivingLicenseNo: data.DrivingLicenseNo || data.drivingLicenseNo || '',
-                serviceIdCardNo: data.ServiceIdCardNo || data.serviceIdCardNo || ''
+                serviceIdCardNo: data.ServiceIdCardNo || data.serviceIdCardNo || '',
+                presentStatus: data.PresentStatus || data.presentStatus || null
             },
             { emitEvent: false }
         ); // Prevent auto-conversion trigger during load
@@ -579,6 +583,7 @@ export class EmpPersonalInfo implements OnInit {
             LeavingStatus: formValue.leavingStatus,
             DrivingLicenseNo: formValue.drivingLicenseNo,
             ServiceIdCardNo: formValue.serviceIdCardNo,
+            PresentStatus: formValue.presentStatus || null,
             FilesReferences: filesReferencesJson ?? undefined,
             CreatedBy: 'system',
             CreatedDate: new Date().toISOString(),

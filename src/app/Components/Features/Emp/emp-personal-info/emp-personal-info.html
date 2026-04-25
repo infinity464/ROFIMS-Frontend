@@ -187,6 +187,10 @@
                             <p-select formControlName="leavingStatus" [options]="leavingStatusOptions" optionLabel="label" optionValue="value" placeholder="Select Leaving Status" styleClass="w-full"></p-select>
                         </div>
                         <div class="form-field">
+                            <label class="form-label">Present Status</label>
+                            <p-select formControlName="presentStatus" [options]="presentStatusTypes" optionLabel="label" optionValue="value" placeholder="Select Present Status" styleClass="w-full" [filter]="true"></p-select>
+                        </div>
+                        <div class="form-field">
                             <label class="form-label">Driving License No</label>
                             <input pInputText class="w-full" placeholder="Enter Driving License No" formControlName="drivingLicenseNo" />
                         </div>
