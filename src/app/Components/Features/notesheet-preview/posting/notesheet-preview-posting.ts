@@ -35,6 +35,7 @@ import { saveAs } from 'file-saver';
 import type {
     NotesheetDocumentModel,
     ContentBlock,
+    InlineRun,
     TextAlignment
 } from '../notesheet-document-model';
 
@@ -112,6 +113,13 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     @Input() showEdit = true;
     @Input() showWord = true;
     @Input() showPdf = true;
+
+    // ── Page size for export ──────────────────────────────────
+    pageSizeOptions = [
+        { label: 'A4', value: 'A4' },
+        { label: 'Legal', value: 'Legal' }
+    ];
+    selectedPageSize = 'Legal';
 
     // ── Edit state ───────────────────────────────────────────
     editing = false;
@@ -1330,15 +1338,50 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
                 } else {
                     const text = this.normalizeTextForWord((el.textContent || '').trim());
                     if (text) {
-                        const bold = ['strong', 'b', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tag)
-                            || el.style.fontWeight === 'bold' || !!el.querySelector('strong, b');
-                        const italic = tag === 'em' || tag === 'i' || el.style.fontStyle === 'italic';
-                        blocks.push({ type: 'paragraph', text, bold, italic, indent: 'normal', alignment });
+                        // Check if the element is entirely bold/italic at the block level
+                        const blockBold = ['strong', 'b', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tag)
+                            || el.style.fontWeight === 'bold';
+                        const blockItalic = tag === 'em' || tag === 'i' || el.style.fontStyle === 'italic';
+
+                        // Extract inline runs to preserve bold/italic/underline
+                        const blockUnderline = tag === 'u' || el.style.textDecoration?.includes('underline');
+                        const inlineRuns = this.extractInlineRuns(el, blockBold, blockItalic, blockUnderline);
+                        if (inlineRuns.length > 1 || inlineRuns.some(r => r.underline)) {
+                            blocks.push({ type: 'paragraph', text, runs: inlineRuns, indent: 'normal', alignment });
+                        } else {
+                            const hasBold = blockBold || !!el.querySelector('strong, b');
+                            const hasItalic = blockItalic || !!el.querySelector('em, i');
+                            blocks.push({ type: 'paragraph', text, bold: hasBold, italic: hasItalic, indent: 'normal', alignment });
+                        }
                     }
                 }
             }
         }
         return blocks;
+    }
+
+    /** Walk child nodes of an element and extract inline runs with bold/italic/underline info. */
+    private extractInlineRuns(el: HTMLElement, parentBold: boolean, parentItalic: boolean, parentUnderline: boolean = false): InlineRun[] {
+        const runs: InlineRun[] = [];
+        const walk = (node: Node, bold: boolean, italic: boolean, underline: boolean) => {
+            if (node.nodeType === Node.TEXT_NODE) {
+                const t = this.normalizeTextForWord(node.textContent || '');
+                if (t) runs.push({ text: t, bold: bold || undefined, italic: italic || undefined, underline: underline || undefined });
+            } else if (node.nodeType === Node.ELEMENT_NODE) {
+                const child = node as HTMLElement;
+                const childTag = child.tagName.toLowerCase();
+                const b = bold || ['strong', 'b', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(childTag) || child.style.fontWeight === 'bold';
+                const i = italic || childTag === 'em' || childTag === 'i' || child.style.fontStyle === 'italic';
+                const u = underline || childTag === 'u' || child.style.textDecoration?.includes('underline');
+                for (const c of Array.from(child.childNodes)) {
+                    walk(c, b, i, u);
+                }
+            }
+        };
+        for (const child of Array.from(el.childNodes)) {
+            walk(child, parentBold, parentItalic, parentUnderline);
+        }
+        return runs;
     }
 
     private getAlignmentAsText(el: HTMLElement): TextAlignment | undefined {
@@ -1409,21 +1452,24 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
             const refLabel = bn ? 'সূত্রঃ ' : 'Reference: ';
             const refHtml = this.fixBanglaWordBreaks(this.noteSheet.referenceNumber);
             const refBlocks = this.parseHtmlToContentBlocks(refHtml);
-            const refTexts = refBlocks.map(b => b.text || '').filter(Boolean);
-            if (refTexts.length > 0) {
-                // First line: label + first block inline
+            const validBlocks = refBlocks.filter(b => b.text);
+            if (validBlocks.length > 0) {
+                // Label on its own line
                 mainChildren.push(new Paragraph({
                     children: [
-                        new TextRun({ text: refLabel, bold: true, size: 20, sizeComplexScript: csSize, font, language: lang }),
-                        new TextRun({ text: refTexts[0], size: 20, sizeComplexScript: csSize, font, language: lang })
+                        new TextRun({ text: refLabel, bold: true, size: 20, sizeComplexScript: csSize, font, language: lang })
                     ],
                     indent: { left: 240 }, spacing: { before: 40, after: 20 }
                 }));
-                // Remaining blocks as separate paragraphs
-                for (let ri = 1; ri < refTexts.length; ri++) {
+                // Content blocks as separate paragraphs below, preserving bold/italic
+                for (let ri = 0; ri < validBlocks.length; ri++) {
+                    const rb = validBlocks[ri];
+                    const children = rb.runs?.length
+                        ? rb.runs.map(r => new TextRun({ text: r.text, bold: r.bold, italics: r.italic, underline: r.underline ? {} : undefined, size: 20, sizeComplexScript: csSize, font, language: lang }))
+                        : [new TextRun({ text: rb.text!, bold: rb.bold, italics: rb.italic, size: 20, sizeComplexScript: csSize, font, language: lang })];
                     mainChildren.push(new Paragraph({
-                        children: [new TextRun({ text: refTexts[ri], size: 20, sizeComplexScript: csSize, font, language: lang })],
-                        indent: { left: 480 }, spacing: { before: 20, after: ri === refTexts.length - 1 ? 60 : 20 }
+                        children,
+                        indent: { left: 480 }, spacing: { before: 20, after: ri === validBlocks.length - 1 ? 60 : 20 }
                     }));
                 }
             }
@@ -1432,10 +1478,13 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         // Merge serial with first text block so they appear inline (like ২।, ৩। etc.)
         if (model.mainBlocks.length > 0 && model.mainBlocks[0].type === 'paragraph' && model.mainBlocks[0].text) {
             const firstBlock = model.mainBlocks[0];
+            const firstBlockRuns = firstBlock.runs?.length
+                ? firstBlock.runs.map(r => new TextRun({ text: r.text, bold: r.bold, italics: r.italic, underline: r.underline ? {} : undefined, size: 20, sizeComplexScript: csSize, font, language: lang }))
+                : [new TextRun({ text: firstBlock.text!, bold: firstBlock.bold, italics: firstBlock.italic, size: 20, sizeComplexScript: csSize, font, language: lang })];
             mainChildren.push(new Paragraph({
                 children: [
                     new TextRun({ text: `${model.mainSerialText}  `, bold: true, size: 20, sizeComplexScript: csSize, font, language: lang }),
-                    new TextRun({ text: firstBlock.text, bold: firstBlock.bold, italics: firstBlock.italic, size: 20, sizeComplexScript: csSize, font, language: lang })
+                    ...firstBlockRuns
                 ],
                 indent: { left: 240 }, spacing: { before: 160, after: 80 }, alignment: AlignmentType.JUSTIFIED
             }));
@@ -1696,8 +1745,12 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
                 else if (b.alignment === 'justify') align = AlignmentType.JUSTIFIED;
                 else align = b.indent === 'list' ? AlignmentType.LEFT : AlignmentType.JUSTIFIED;
                 const indent = b.indent === 'list' ? { left: 720 } : { left: 480 };
+                // Use inline runs if available for mixed bold/italic formatting
+                const children = b.runs?.length
+                    ? b.runs.map(r => new TextRun({ text: r.text, bold: r.bold, italics: r.italic, underline: r.underline ? {} : undefined, size: 20, sizeComplexScript: csSize, font, language: lang }))
+                    : [new TextRun({ text: b.text, bold: b.bold, italics: b.italic, size: 20, sizeComplexScript: csSize, font, language: lang })];
                 result.push(new Paragraph({
-                    children: [new TextRun({ text: b.text, bold: b.bold, italics: b.italic, size: 20, sizeComplexScript: csSize, font, language: lang })],
+                    children,
                     indent,
                     spacing: { after: b.indent === 'list' ? 60 : 80 },
                     alignment: align
