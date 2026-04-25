@@ -8,7 +8,6 @@
             <p-button *ngIf="showEdit && canEdit && !editing" icon="pi pi-pencil" label="Edit" (onClick)="toggleEdit()" styleClass="p-button-outlined p-button-warning"></p-button>
             <p-button *ngIf="editing" icon="pi pi-times" label="Cancel" (onClick)="cancelEdit()" styleClass="p-button-outlined p-button-secondary"></p-button>
             <p-button *ngIf="editing" icon="pi pi-check" label="Save" (onClick)="saveChanges()" [loading]="saving" styleClass="p-button-success"></p-button>
-            <p-select *ngIf="!editing" [options]="pageSizeOptions" [(ngModel)]="selectedPageSize" optionLabel="label" optionValue="value" placeholder="Page Size" [style]="{'width': '100px'}"></p-select>
             <p-button *ngIf="showWord && !editing" icon="pi pi-file-word" label="Word"  (onClick)="exportWord()" styleClass="p-button-outlined"></p-button>
             <p-button *ngIf="showPdf && !editing" icon="pi pi-file-pdf"  label="PDF"   (onClick)="exportPdf()" [loading]="exportingPdf" styleClass="p-button-outlined"></p-button>
             <p-button *ngIf="!editing" icon="pi pi-print" label="Print Preview" (onClick)="printPreview()" [loading]="printingPreview" styleClass="p-button-outlined"></p-button>
@@ -61,6 +60,21 @@
         <i class="pi pi-exclamation-circle" style="font-size:3rem; color:var(--red-500)"></i>
         <p>Failed to load note-sheet.</p>
         <p-button label="Go Back" icon="pi pi-arrow-left" (onClick)="goBack()"></p-button>
+    </div>
+
+    <!-- Export options -->
+    <div class="export-options-bar no-print" *ngIf="noteSheet && !loading && !error && !editing"
+         style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center; padding:0.5rem 1rem; background:var(--surface-ground); border-radius:6px; margin-bottom:0.5rem;">
+        <span style="font-weight:600; font-size:0.85rem;"><i class="pi pi-cog" style="margin-right:0.3rem;"></i>Export:</span>
+        <p-select [options]="pageSizeOptions" [(ngModel)]="selectedPageSize" optionLabel="label" optionValue="value" [style]="{'width': '90px'}"></p-select>
+        <ng-container *ngIf="isPostingType() && postingEmployees.length > 0">
+            <span style="border-left:1px solid var(--surface-border); height:1.5rem;"></span>
+            <span style="display:inline-flex; align-items:center; gap:0.3rem;"><p-checkbox [(ngModel)]="showRankQualifications" [binary]="true" inputId="chkRankQ"></p-checkbox><label for="chkRankQ" style="cursor:pointer;">পদবি বিবরণ</label></span>
+            <span style="display:inline-flex; align-items:center; gap:0.3rem;"><p-checkbox [(ngModel)]="showTradeRemarks" [binary]="true" inputId="chkTradeR"></p-checkbox><label for="chkTradeR" style="cursor:pointer;">ট্রেড বিবরণ</label></span>
+            <span style="display:inline-flex; align-items:center; gap:0.3rem;"><p-checkbox [(ngModel)]="showOwnDistrictDetail" [binary]="true" inputId="chkOwnDist"></p-checkbox><label for="chkOwnDist" style="cursor:pointer;">নিজ জেলা বিবরণ</label></span>
+            <span style="display:inline-flex; align-items:center; gap:0.3rem;"><p-checkbox [(ngModel)]="showSpouseDistrictDetail" [binary]="true" inputId="chkSpDist"></p-checkbox><label for="chkSpDist" style="cursor:pointer;">স্পাউস জেলা বিবরণ</label></span>
+            <span style="display:inline-flex; align-items:center; gap:0.3rem;"><p-checkbox [(ngModel)]="showRemarks" [binary]="true" inputId="chkRemarks"></p-checkbox><label for="chkRemarks" style="cursor:pointer;">মন্তব্য</label></span>
+        </ng-container>
     </div>
 
     <!-- ══════════════════════════════════════════════════════════ -->

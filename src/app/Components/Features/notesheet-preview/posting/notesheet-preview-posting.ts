@@ -12,6 +12,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
 import { MultiSelectModule } from 'primeng/multiselect';
+import { CheckboxModule } from 'primeng/checkbox';
 import { DatePickerModule } from 'primeng/datepicker';
 import { TreeSelectModule } from 'primeng/treeselect';
 import { NotesheetSignatoryComponent } from '@/Components/Common/notesheet-signatory/notesheet-signatory';
@@ -55,7 +56,7 @@ interface ApprovalLogEntry {
     standalone: true,
     imports: [
         CommonModule, FormsModule, ButtonModule, ToastModule, ConfirmDialogModule, DialogModule, TableModule, TooltipModule,
-        InputTextModule, TextareaModule, SelectModule, MultiSelectModule, DatePickerModule, TreeSelectModule, FlexibleDateDirective,
+        InputTextModule, TextareaModule, SelectModule, MultiSelectModule, CheckboxModule, DatePickerModule, TreeSelectModule, FlexibleDateDirective,
         NotesheetSignatoryComponent, RichEditorComponent, FileReferencesFormComponent
     ],
     providers: [MessageService, ConfirmationService],
@@ -120,6 +121,13 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         { label: 'Legal', value: 'Legal' }
     ];
     selectedPageSize = 'Legal';
+
+    // ── Export detail toggles ──────────────────────────────────
+    showRankQualifications = true;
+    showTradeRemarks = true;
+    showOwnDistrictDetail = true;
+    showSpouseDistrictDetail = true;
+    showRemarks = true;
 
     // ── Edit state ───────────────────────────────────────────
     editing = false;
@@ -1501,62 +1509,95 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
 
         // Posting employee table (posting-specific)
         if (this.isPostingType() && this.postingEmployees.length > 0) {
-            const cols = bn
+            // All column definitions keyed by exportColumnOptions order
+            const allColKeys = ['ser', 'serviceId', 'rank', 'trade', 'name', 'ownDistrict', 'spouseDistrict', 'prevWorkplace', 'transferUnit', 'remarks'];
+            const allColHeaders = bn
                 ? ['ক্রমিক','ব্যক্তিগত নম্বর','পদবি','ট্রেড','নাম','নিজ জেলা (দায়িত্বপূর্ণ এলাকা)','স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)','পূর্ববতী কর্মস্থল','বদলি ইউনিট','মন্তব্য']
                 : ['Ser','Service ID','Rank','Trade','Name','Own District (Responsible Area)','Spouse District (Responsible Area)','Previous Workplace','Transfer Unit','Remarks'];
-            // Dynamic widths: if remarks exist, give more to Remarks; otherwise give more to Trade
-            const hasRemarks = this.postingEmployees.some(e => !!e.remarks);
+            const allBaseWidths = [490, 1220, 850, 1200, 1380, 1220, 1220, 1340, 1060, 1100];
+
+            // Filter to only visible columns (remarks toggled by showRemarks checkbox)
+            const visibleIndices = allColKeys.map((k, i) => {
+                if (k === 'remarks' && !this.showRemarks) return -1;
+                return i;
+            }).filter(i => i >= 0);
+            const cols = visibleIndices.map(i => allColHeaders[i]);
+            const baseWidths = visibleIndices.map(i => allBaseWidths[i]);
+
+            // Scale widths to fill available page width
             const isA4 = this.selectedPageSize === 'A4';
-            //                  Ser,  ID,   Rank, Trade, Name, OwnDist, SpDist, Loc,  TrUnit, Remarks
-            const colWidths = isA4
-                ? (hasRemarks
-                    ? [470, 1170, 820, 990, 1330, 1170, 1170, 1290, 1020, 1250]
-                    : [470, 1170, 820, 1460, 1330, 1170, 1170, 1290, 1020,  780])
-                : (hasRemarks
-                    ? [490, 1220, 850, 1030, 1380, 1220, 1220, 1340, 1060, 1296]
-                    : [490, 1220, 850, 1516, 1380, 1220, 1220, 1340, 1060,  810]);
+            const pageUsable = isA4 ? 10772 : 11106; // twips (page width minus margins)
+            const baseTotal = baseWidths.reduce((a, b) => a + b, 0);
+            const colWidths = baseWidths.map(w => Math.round(w * pageUsable / baseTotal));
+
             const hdrPara = (text: string) => new Paragraph({ children: [new TextRun({ text, size: 20, sizeComplexScript: bn ? 20 : undefined, font, language: lang })], alignment: AlignmentType.CENTER });
-            const hdrCell = (text: string, ci: number, extra?: any) => new TableCell({
-                children: [hdrPara(text)], borders: cellBorders, width: { size: colWidths[ci], type: WidthType.DXA }, ...extra
+            const hdrCell = (text: string, wi: number, extra?: any) => new TableCell({
+                children: [hdrPara(text)], borders: cellBorders, width: { size: colWidths[wi], type: WidthType.DXA }, ...extra
             });
 
-            let headerRows: TableRow[];
-            if (this.isInterPosting()) {
-                headerRows = [
-                    new TableRow({ tableHeader: true, children: [
-                        ...cols.slice(0, 7).map((c, ci) => hdrCell(c, ci, { verticalMerge: VerticalMergeType.RESTART })),
-                        new TableCell({
-                            children: [hdrPara(bn ? 'বদলিকৃত কর্মস্থল' : 'Transfer Station')],
-                            columnSpan: 2, borders: cellBorders, width: { size: colWidths[7] + colWidths[8], type: WidthType.DXA }
-                        }),
-                        hdrCell(cols[9], 9, { verticalMerge: VerticalMergeType.RESTART })
-                    ]}),
-                    new TableRow({ tableHeader: true, children: [
-                        ...[0,1,2,3,4,5,6].map(ci => new TableCell({ children: [new Paragraph({})], verticalMerge: VerticalMergeType.CONTINUE, borders: cellBorders, width: { size: colWidths[ci], type: WidthType.DXA } })),
-                        hdrCell(bn ? 'হইতে' : 'From', 7),
-                        hdrCell(bn ? 'প্রতি' : 'To', 8),
-                        new TableCell({ children: [new Paragraph({})], verticalMerge: VerticalMergeType.CONTINUE, borders: cellBorders, width: { size: colWidths[9], type: WidthType.DXA } })
-                    ]})
-                ];
-            } else {
-                headerRows = [new TableRow({ tableHeader: true, children: cols.map((c, ci) => hdrCell(c, ci)) })];
-            }
-            const dataRows = this.postingEmployees.map((emp, i) => new TableRow({ children: [
-                bn ? this.toBanglaDigits(i + 1) : String(i + 1), this.getServiceIdDisplay(emp),
-                (bn?(emp.rankNameBN||emp.rankName||''):(emp.rankName??'')) + (this.getRankQualifications(emp) ? '\n(' + this.getRankQualifications(emp) + ')' : ''),
-                (bn?(emp.tradeNameBN||emp.tradeName||''):(emp.tradeName??'')) + (emp.tradeRemarks ? '\n(' + emp.tradeRemarks + ')' : ''),
+            // Build per-employee cell data (all 10 columns)
+            const buildAllCellValues = (emp: any, i: number): string[] => [
+                bn ? this.toBanglaDigits(i + 1) : String(i + 1),
+                this.getServiceIdDisplay(emp),
+                (bn?(emp.rankNameBN||emp.rankName||''):(emp.rankName??'')) + (this.showRankQualifications && this.getRankQualifications(emp) ? '\n(' + this.getRankQualifications(emp) + ')' : ''),
+                (bn?(emp.tradeNameBN||emp.tradeName||''):(emp.tradeName??'')) + (this.showTradeRemarks && emp.tradeRemarks ? '\n(' + emp.tradeRemarks + ')' : ''),
                 bn?(emp.fullNameBN||emp.fullNameEN||''):(emp.fullNameEN??''),
-                bn?(emp.presentDistrictNameBN||emp.presentDistrictName||''):(emp.presentDistrictName??''),
-                bn?(emp.spousePresentDistrictNameBN||emp.spousePresentDistrictName||''):(emp.spousePresentDistrictName??''),
+                this.showOwnDistrictDetail
+                    ? (bn?(emp.presentDistrictNameBN||emp.presentDistrictName||''):(emp.presentDistrictName??''))
+                    : (bn?(emp.presentDistrictNameBN||emp.presentDistrictName||''):(emp.presentDistrictName??'')).split('\n')[0].replace(/\s*\(.*$/, ''),
+                this.showSpouseDistrictDetail
+                    ? (bn?(emp.spousePresentDistrictNameBN||emp.spousePresentDistrictName||''):(emp.spousePresentDistrictName??''))
+                    : (bn?(emp.spousePresentDistrictNameBN||emp.spousePresentDistrictName||''):(emp.spousePresentDistrictName??'')).split('\n')[0].replace(/\s*\(.*$/, ''),
                 this.isInterPosting()
                     ? (bn?(emp.previousRabUnitsBN||emp.previousRabUnits||''):(emp.previousRabUnits??''))
                     : (bn?(emp.motherOrgLocationNameBN||emp.motherOrgLocationName||''):(emp.motherOrgLocationName??'')),
-                bn ? (emp.transferRabUnitNameBN || emp.transferRabUnitName || '') : (emp.transferRabUnitName ?? ''), this.getCombinedRemarks(emp)
-            ].map((v, ci) => {
-                const lines = v.split('\n');
-                const cellParas = lines.map(line => new Paragraph({ children: [new TextRun({ text: line, size: 20, sizeComplexScript: bn ? 20 : undefined, font, language: lang })], alignment: AlignmentType.CENTER }));
-                return new TableCell({ children: cellParas, borders: cellBorders, width: { size: colWidths[ci], type: WidthType.DXA } });
-            }) }));
+                bn ? (emp.transferRabUnitNameBN || emp.transferRabUnitName || '') : (emp.transferRabUnitName ?? ''),
+                this.getCombinedRemarks(emp)
+            ];
+
+            // Map original indices for inter-posting header logic
+            const prevWpVisIdx = visibleIndices.indexOf(7);  // prevWorkplace original index
+            const trUnitVisIdx = visibleIndices.indexOf(8);  // transferUnit original index
+            const bothTransferVisible = prevWpVisIdx >= 0 && trUnitVisIdx >= 0;
+
+            let headerRows: TableRow[];
+            if (this.isInterPosting() && bothTransferVisible) {
+                // Inter-posting: merge prevWorkplace + transferUnit under "বদলিকৃত কর্মস্থল"
+                const row1Cells: TableCell[] = [];
+                const row2Cells: TableCell[] = [];
+                for (let vi = 0; vi < cols.length; vi++) {
+                    if (vi === prevWpVisIdx) {
+                        // Merged header cell spanning 2 columns
+                        row1Cells.push(new TableCell({
+                            children: [hdrPara(bn ? 'বদলিকৃত কর্মস্থল' : 'Transfer Station')],
+                            columnSpan: 2, borders: cellBorders, width: { size: colWidths[prevWpVisIdx] + colWidths[trUnitVisIdx], type: WidthType.DXA }
+                        }));
+                        row2Cells.push(hdrCell(bn ? 'হইতে' : 'From', prevWpVisIdx));
+                    } else if (vi === trUnitVisIdx) {
+                        // Skip in row1 (covered by colspan), add sub-header in row2
+                        row2Cells.push(hdrCell(bn ? 'প্রতি' : 'To', trUnitVisIdx));
+                    } else {
+                        row1Cells.push(hdrCell(cols[vi], vi, { verticalMerge: VerticalMergeType.RESTART }));
+                        row2Cells.push(new TableCell({ children: [new Paragraph({})], verticalMerge: VerticalMergeType.CONTINUE, borders: cellBorders, width: { size: colWidths[vi], type: WidthType.DXA } }));
+                    }
+                }
+                headerRows = [
+                    new TableRow({ tableHeader: true, children: row1Cells }),
+                    new TableRow({ tableHeader: true, children: row2Cells })
+                ];
+            } else {
+                headerRows = [new TableRow({ tableHeader: true, children: cols.map((c, vi) => hdrCell(c, vi)) })];
+            }
+
+            const dataRows = this.postingEmployees.map((emp, i) => {
+                const allVals = buildAllCellValues(emp, i);
+                const visVals = visibleIndices.map(oi => allVals[oi]);
+                return new TableRow({ children: visVals.map((v, vi) => {
+                    const lines = v.split('\n');
+                    const cellParas = lines.map(line => new Paragraph({ children: [new TextRun({ text: line, size: 20, sizeComplexScript: bn ? 20 : undefined, font, language: lang })], alignment: AlignmentType.CENTER }));
+                    return new TableCell({ children: cellParas, borders: cellBorders, width: { size: colWidths[vi], type: WidthType.DXA } });
+                }) });
+            });
             const tableRows = [...headerRows, ...dataRows];
             mainChildren.push(new Paragraph({ spacing: { before: 200 }, children: [] }));
             const totalColW = colWidths.reduce((a, b) => a + b, 0);
