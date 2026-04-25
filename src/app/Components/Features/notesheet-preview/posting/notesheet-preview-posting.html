@@ -5,7 +5,7 @@
 
     <div class="preview-header no-print">
         <div class="preview-actions" *ngIf="noteSheet && !loading && !error">
-            <p-button *ngIf="showEdit && canEdit && !editing" icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" label="Edit" (onClick)="toggleEdit()" styleClass="p-button-outlined p-button-warning"></p-button>
+            <p-button *ngIf="showEdit && canEdit && !editing" icon="pi pi-pencil" label="Edit" (onClick)="toggleEdit()" styleClass="p-button-outlined p-button-warning"></p-button>
             <p-button *ngIf="editing" icon="pi pi-times" label="Cancel" (onClick)="cancelEdit()" styleClass="p-button-outlined p-button-secondary"></p-button>
             <p-button *ngIf="editing" icon="pi pi-check" label="Save" (onClick)="saveChanges()" [loading]="saving" styleClass="p-button-success"></p-button>
             <p-button *ngIf="showWord && !editing" icon="pi pi-file-word" label="Word"  (onClick)="exportWord()" styleClass="p-button-outlined"></p-button>
@@ -139,7 +139,7 @@
                         <div *ngFor="let p of editParagraphs; let pi = index; trackBy: trackByIndex" style="display:flex; gap:8px; align-items:start; margin-bottom:8px;">
                             <span style="font-weight:700; min-width:28px; padding-top:8px;">{{ serial(pi + 2) }}</span>
                             <textarea pInputTextarea [(ngModel)]="editParagraphs[pi]" rows="2" class="w-full" placeholder="{{ isEnglish() ? 'Paragraph ' + (pi + 1) : 'অনুচ্ছেদ ' + (pi + 1) }}"></textarea>
-                            <p-button icon="pi pi-trash" [class.perm-hidden]="!canDelete" (onClick)="removeParagraph(pi)" styleClass="p-button-danger p-button-text p-button-sm" [style]="{'margin-top': '4px'}"></p-button>
+                            <p-button icon="pi pi-trash" (onClick)="removeParagraph(pi)" styleClass="p-button-danger p-button-text p-button-sm" [style]="{'margin-top': '4px'}"></p-button>
                         </div>
                         <p-button icon="pi pi-plus" [label]="isEnglish() ? 'Add Paragraph' : 'অনুচ্ছেদ যোগ করুন'" (onClick)="addParagraph()" styleClass="p-button-outlined p-button-sm"></p-button>
                     </div>
@@ -343,6 +343,11 @@
                     </table>
                 </div>
 
+                <!-- ── Note (above paragraphs) ── -->
+                <div class="ns-note" *ngIf="noteSheet.note" style="white-space: pre-line;">
+                    {{ noteSheet.note }}
+                </div>
+
                 <!-- ── Paragraphs (after employee table) ── -->
                 <ng-container *ngIf="parsedParagraphs.length > 0">
                     <div class="ns-para" *ngFor="let para of parsedParagraphs; let pi = index">
@@ -350,11 +355,6 @@
                         <div class="ns-para-text">{{ para }}</div>
                     </div>
                 </ng-container>
-
-                <!-- ── Note (when no posting table) ── -->
-                <div class="ns-note" *ngIf="noteSheet.note && postingEmployees.length === 0">
-                    <strong>{{ isEnglish() ? 'Note:' : 'নোটঃ' }}</strong> {{ noteSheet.note }}
-                </div>
 
                 <!-- ── Initiator area ── -->
                 <div class="ns-initiator-area">
