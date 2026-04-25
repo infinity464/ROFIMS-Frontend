@@ -198,7 +198,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
         });
     }
 
-    private loadPostingEmployees(): void {
+    protected loadPostingEmployees(): void {
         if (!this.noteSheet?.draftPostingMasterId) return;
         this.loadingEmployees = true;
         this.postingService.getDraftPostingEmployees(this.noteSheet.draftPostingMasterId).subscribe({
@@ -228,7 +228,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
         });
     }
 
-    private loadInterPostingEmployees(): void {
+    protected loadInterPostingEmployees(): void {
         if (!this.noteSheet?.draftPostingMasterId) return;
         this.loadingEmployees = true;
         this.postingService.getDraftInterPostingEmployees(this.noteSheet.draftPostingMasterId).subscribe({

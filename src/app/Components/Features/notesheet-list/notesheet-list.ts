@@ -248,6 +248,9 @@ export class NotesheetListComponent implements OnInit {
   employeesDialogTitle = '';
   employeesList: DraftPostingEmployeeRow[] = [];
   loadingEmployees = false;
+  selectedEmployees: DraftPostingEmployeeRow[] = [];
+  removingEmployees = false;
+  private employeesDialogRow: NoteSheetInfoRow | null = null;
 
   readonly statusLabels: Record<string, string> = {
     [NoteSheetCurrentStatus.Draft]:         'Draft',
@@ -482,18 +485,64 @@ export class NotesheetListComponent implements OnInit {
       this.messageService.add({ severity: 'info', summary: 'Info', detail: 'No Draft Posting linked to this note-sheet.' });
       return;
     }
+    this.employeesDialogRow = row;
     this.employeesDialogTitle = `Employees in Posting List – ${row.noteSheetNo || ''}`;
     this.employeesList = [];
+    this.selectedEmployees = [];
     this.loadingEmployees = true;
     this.showEmployeesDialog = true;
-    this.postingService.getDraftPostingEmployees(masterId).subscribe({
-      next: (list) => {
-        this.employeesList = list ?? [];
+
+    const isInter = row.noteSheetType === NoteSheetType.InterPosting;
+    const obs = isInter
+      ? this.postingService.getDraftInterPostingEmployees(masterId)
+      : this.postingService.getDraftPostingEmployees(masterId);
+
+    obs.subscribe({
+      next: (list: any[]) => {
+        this.employeesList = (list ?? []).map(e => isInter
+          ? { ...e, draftPostingDetailId: e.draftInterPostingDetailId ?? e.draftPostingDetailId }
+          : e
+        );
         this.loadingEmployees = false;
       },
       error: (err: any) => {
         this.loadingEmployees = false;
         this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load employee list.' });
+      }
+    });
+  }
+
+  removeSelectedEmployees(): void {
+    const row = this.employeesDialogRow;
+    if (!row?.draftPostingMasterId || this.selectedEmployees.length === 0) return;
+
+    if (this.selectedEmployees.length >= this.employeesList.length) {
+      this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'At least one employee must remain in the posting list.' });
+      return;
+    }
+
+    const count = this.selectedEmployees.length;
+    this.confirmationService.confirm({
+      message: `Are you sure you want to remove ${count} employee(s) from this posting list? They will be returned to the supernumerary list.`,
+      header: 'Confirm Remove',
+      icon: 'pi pi-exclamation-triangle',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => {
+        this.removingEmployees = true;
+        const isInter = row.noteSheetType === NoteSheetType.InterPosting;
+        const detailIds = this.selectedEmployees.map(m => m.draftPostingDetailId);
+        this.postingService.removeDraftPostingDetails(row.draftPostingMasterId!, detailIds, isInter).subscribe({
+          next: (res) => {
+            this.messageService.add({ severity: 'success', summary: 'Success', detail: res.description || `${count} employee(s) removed.` });
+            this.selectedEmployees = [];
+            this.removingEmployees = false;
+            this.openEmployeesDialog(row);
+          },
+          error: (err: any) => {
+            this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.description || err?.error?.message || 'Failed to remove employees.' });
+            this.removingEmployees = false;
+          }
+        });
       }
     });
   }

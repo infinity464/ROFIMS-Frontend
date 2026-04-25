@@ -562,14 +562,26 @@
     [modal]="true"
     [style]="{ width: '72rem', maxWidth: '95vw' }"
     [contentStyle]="{ overflow: 'auto', 'border-top': '2px solid var(--primary-color)' }"
-    (onHide)="employeesList = []"
+    (onHide)="employeesList = []; selectedEmployees = []"
     [draggable]="false"
     [resizable]="true">
     @if (loadingEmployees) {
       <div class="flex align-items-center justify-content-center p-4"><i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i></div>
+    } @else if (employeesList.length === 0) {
+      <div class="text-center text-500 py-4">No employees found in this posting list.</div>
     } @else {
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+        <span class="text-500" style="font-size:0.85rem;">{{ employeesList.length }} employee(s) in posting list</span>
+        @if (selectedEmployees.length > 0) {
+          <p-button icon="pi pi-trash" label="Remove Selected ({{ selectedEmployees.length }})"
+                    severity="danger" [outlined]="true" size="small" [loading]="removingEmployees"
+                    (onClick)="removeSelectedEmployees()"></p-button>
+        }
+      </div>
       <p-table
         [value]="employeesList"
+        [(selection)]="selectedEmployees"
+        dataKey="draftPostingDetailId"
         [tableStyle]="{ 'min-width': '60rem' }"
         styleClass="p-datatable-striped p-datatable-gridlines p-datatable-sm"
         [paginator]="employeesList.length > 10"
@@ -577,6 +589,7 @@
         [rowsPerPageOptions]="[10, 25, 50]">
         <ng-template pTemplate="header">
           <tr>
+            <th style="width:3rem"><p-tableHeaderCheckbox></p-tableHeaderCheckbox></th>
             <th style="width: 50px">Ser</th>
             <th style="min-width: 120px">Service ID</th>
             <th style="min-width: 100px">Rank</th>
@@ -591,6 +604,7 @@
         </ng-template>
         <ng-template pTemplate="body" let-emp let-rowIndex="rowIndex">
           <tr>
+            <td><p-tableCheckbox [value]="emp"></p-tableCheckbox></td>
             <td>{{ rowIndex + 1 }}</td>
             <td><span class="font-semibold">{{ emp.prefixName ? emp.prefixName + ' - ' : '' }}{{ emp.serviceId || '-' }}</span></td>
             <td>{{ emp.rankName || '-' }}</td>
@@ -602,9 +616,6 @@
             <td>{{ emp.transferRabUnitName || '-' }}</td>
             <td>{{ emp.remarks || '-' }}</td>
           </tr>
-        </ng-template>
-        <ng-template pTemplate="emptymessage">
-          <tr><td colspan="10" class="text-center p-4 text-500">No employees found in this posting list.</td></tr>
         </ng-template>
       </p-table>
     }

@@ -140,6 +140,11 @@ export class PostingService {
         return this.http.post<{ statusCode: number; description: string }>(`${API}/UpdateDraftPostingDetails`, { items });
     }
 
+    /** Remove employees from a draft posting list and revert to supernumerary. */
+    removeDraftPostingDetails(draftPostingMasterId: number, detailIds: number[], isInterPosting: boolean): Observable<{ statusCode: number; description: string }> {
+        return this.http.post<{ statusCode: number; description: string }>(`${API}/RemoveDraftPostingDetails`, { draftPostingMasterId, detailIds, isInterPosting });
+    }
+
     /** Update Draft New Posting master (DraftPostingNo, DraftPostingDate, DraftPostingStatus). */
     updateDraftNewPosting(id: number, draftPostingNo: string, draftPostingDate: string, draftPostingStatus: string): Observable<{ statusCode: number; description: string }> {
         return this.http.post<{ statusCode: number; description: string }>(`${API}/UpdateDraftNewPosting`, {

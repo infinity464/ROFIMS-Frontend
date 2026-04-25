@@ -14,6 +14,9 @@
         </div>
         <div class="preview-status-actions" *ngIf="noteSheet && !loading && !error && !editing">
             @if (isDraftStatus) {
+                <p-button type="button" icon="pi pi-users" [rounded]="true" [text]="true" size="small" severity="info"
+                          pTooltip="View Members" (onClick)="openViewMembers()"
+                          *ngIf="noteSheet.draftPostingMasterId"></p-button>
                 <p-button icon="pi pi-send" label="Submit" severity="success" [outlined]="true" [loading]="submitting"
                           pTooltip="Submit for approval" (onClick)="submitForApproval()"></p-button>
             } @else if (fromPending) {
@@ -489,9 +492,17 @@
         <div class="text-center text-500 py-4">No members found.</div>
     }
     @if (!membersLoading && membersList.length > 0) {
-        <p-table [value]="membersList" [tableStyle]="{ 'min-width': '60rem' }" styleClass="p-datatable-striped p-datatable-gridlines p-datatable-sm">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+            <span class="text-500" style="font-size:0.85rem;">{{ membersList.length }} member(s) in posting list</span>
+            <p-button *ngIf="selectedMembers.length > 0" icon="pi pi-trash" label="Remove Selected ({{ selectedMembers.length }})"
+                      severity="danger" [outlined]="true" size="small" [loading]="removingMembers"
+                      (onClick)="removeSelectedMembers()"></p-button>
+        </div>
+        <p-table [value]="membersList" [(selection)]="selectedMembers" dataKey="draftPostingDetailId"
+                 [tableStyle]="{ 'min-width': '60rem' }" styleClass="p-datatable-striped p-datatable-gridlines p-datatable-sm">
             <ng-template pTemplate="header">
                 <tr>
+                    <th style="width:3rem"><p-tableHeaderCheckbox></p-tableHeaderCheckbox></th>
                     <th>Ser</th>
                     <th>Service ID</th>
                     <th>Rank</th>
@@ -506,6 +517,7 @@
             </ng-template>
             <ng-template pTemplate="body" let-emp let-i="rowIndex">
                 <tr>
+                    <td><p-tableCheckbox [value]="emp"></p-tableCheckbox></td>
                     <td>{{ i + 1 }}</td>
                     <td>{{ emp.serviceId || '-' }}</td>
                     <td>{{ emp.rankName || '-' }}<span *ngIf="emp.specialQualifications"><br>({{ emp.specialQualifications }})</span></td>

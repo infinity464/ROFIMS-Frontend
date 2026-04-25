@@ -95,6 +95,8 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     membersLoading = false;
     membersList: DraftPostingEmployeeRow[] = [];
     membersNoteSheetNo = '';
+    selectedMembers: DraftPostingEmployeeRow[] = [];
+    removingMembers = false;
 
     // Approval Log dialog
     showApprovalLogDialog = false;
@@ -448,15 +450,65 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         this.membersNoteSheetNo = this.noteSheet.noteSheetNo || '';
         this.membersLoading = true;
         this.membersList = [];
+        this.selectedMembers = [];
         this.showMembersDialog = true;
 
         const obs = this.noteSheet.noteSheetType === NoteSheetType.InterPosting
             ? this.postingService.getDraftInterPostingEmployees(this.noteSheet.draftPostingMasterId)
             : this.postingService.getDraftPostingEmployees(this.noteSheet.draftPostingMasterId);
 
+        const isInter = this.noteSheet.noteSheetType === NoteSheetType.InterPosting;
         obs.subscribe({
-            next: (list: any[]) => { this.membersList = list ?? []; this.membersLoading = false; },
+            next: (list: any[]) => {
+                this.membersList = (list ?? []).map(e => isInter
+                    ? { ...e, draftPostingDetailId: e.draftInterPostingDetailId ?? e.draftPostingDetailId }
+                    : e
+                );
+                this.membersLoading = false;
+            },
             error: (err: any) => { this.membersLoading = false; }
+        });
+    }
+
+    removeSelectedMembers(): void {
+        if (!this.noteSheet?.draftPostingMasterId || this.selectedMembers.length === 0) return;
+
+        // Validation: at least 1 must remain
+        if (this.selectedMembers.length >= this.membersList.length) {
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'At least one employee must remain in the posting list.' });
+            return;
+        }
+
+        const count = this.selectedMembers.length;
+        this.confirmationService.confirm({
+            message: `Are you sure you want to remove ${count} employee(s) from this posting list? They will be returned to the supernumerary list.`,
+            header: 'Confirm Remove',
+            icon: 'pi pi-exclamation-triangle',
+            acceptButtonStyleClass: 'p-button-danger',
+            accept: () => {
+                this.removingMembers = true;
+                const isInter = this.noteSheet!.noteSheetType === NoteSheetType.InterPosting;
+                const detailIds = this.selectedMembers.map(m => m.draftPostingDetailId);
+
+                this.postingService.removeDraftPostingDetails(this.noteSheet!.draftPostingMasterId!, detailIds, isInter).subscribe({
+                    next: (res) => {
+                        this.messageService.add({ severity: 'success', summary: 'Success', detail: res.description || `${count} employee(s) removed.` });
+                        this.selectedMembers = [];
+                        this.removingMembers = false;
+                        // Refresh members list and posting employees
+                        this.openViewMembers();
+                        if (this.isInterPosting()) {
+                            this.loadInterPostingEmployees();
+                        } else {
+                            this.loadPostingEmployees();
+                        }
+                    },
+                    error: (err: any) => {
+                        this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.description || err?.error?.message || 'Failed to remove employees.' });
+                        this.removingMembers = false;
+                    }
+                });
+            }
         });
     }
 
