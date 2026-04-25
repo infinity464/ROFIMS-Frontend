@@ -8,6 +8,7 @@
             <p-button *ngIf="showEdit && canEdit && !editing" icon="pi pi-pencil" label="Edit" (onClick)="toggleEdit()" styleClass="p-button-outlined p-button-warning"></p-button>
             <p-button *ngIf="editing" icon="pi pi-times" label="Cancel" (onClick)="cancelEdit()" styleClass="p-button-outlined p-button-secondary"></p-button>
             <p-button *ngIf="editing" icon="pi pi-check" label="Save" (onClick)="saveChanges()" [loading]="saving" styleClass="p-button-success"></p-button>
+            <p-select *ngIf="!editing" [options]="pageSizeOptions" [(ngModel)]="selectedPageSize" optionLabel="label" optionValue="value" placeholder="Page Size" [style]="{'width': '100px'}"></p-select>
             <p-button *ngIf="showWord && !editing" icon="pi pi-file-word" label="Word"  (onClick)="exportWord()" styleClass="p-button-outlined"></p-button>
             <p-button *ngIf="showPdf && !editing" icon="pi pi-file-pdf"  label="PDF"   (onClick)="exportPdf()" [loading]="exportingPdf" styleClass="p-button-outlined"></p-button>
             <p-button *ngIf="!editing" icon="pi pi-print" label="Print Preview" (onClick)="printPreview()" [loading]="printingPreview" styleClass="p-button-outlined"></p-button>

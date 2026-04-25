@@ -1506,10 +1506,15 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
                 : ['Ser','Service ID','Rank','Trade','Name','Own District (Responsible Area)','Spouse District (Responsible Area)','Previous Workplace','Transfer Unit','Remarks'];
             // Dynamic widths: if remarks exist, give more to Remarks; otherwise give more to Trade
             const hasRemarks = this.postingEmployees.some(e => !!e.remarks);
+            const isA4 = this.selectedPageSize === 'A4';
             //                  Ser,  ID,   Rank, Trade, Name, OwnDist, SpDist, Loc,  TrUnit, Remarks
-            const colWidths = hasRemarks
-                ? [490, 1220, 850, 1030, 1380, 1220, 1220, 1340, 1060, 1296]
-                : [490, 1220, 850, 1516, 1380, 1220, 1220, 1340, 1060,  810];
+            const colWidths = isA4
+                ? (hasRemarks
+                    ? [470, 1170, 820, 990, 1330, 1170, 1170, 1290, 1020, 1250]
+                    : [470, 1170, 820, 1460, 1330, 1170, 1170, 1290, 1020,  780])
+                : (hasRemarks
+                    ? [490, 1220, 850, 1030, 1380, 1220, 1220, 1340, 1060, 1296]
+                    : [490, 1220, 850, 1516, 1380, 1220, 1220, 1340, 1060,  810]);
             const hdrPara = (text: string) => new Paragraph({ children: [new TextRun({ text, size: 20, sizeComplexScript: bn ? 20 : undefined, font, language: lang })], alignment: AlignmentType.CENTER });
             const hdrCell = (text: string, ci: number, extra?: any) => new TableCell({
                 children: [hdrPara(text)], borders: cellBorders, width: { size: colWidths[ci], type: WidthType.DXA }, ...extra
@@ -1688,12 +1693,16 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         // Use page borders so every page renders the same border consistently
         const pageBorder = { style: BorderStyle.SINGLE, size: 6, color: '000000', space: 10 };
 
+        // Page dimensions: A4 = 8.27" x 11.69", Legal = 8.5" x 14"
+        const pageWidth = this.selectedPageSize === 'A4' ? 11906 : 12240;   // twips
+        const pageHeight = this.selectedPageSize === 'A4' ? 16838 : 20160;  // twips
+
         return new Document({
             styles: bn ? { default: { document: { run: { language: { value: 'bn-BD', bidirectional: 'bn-BD' } } } } } : undefined,
             sections: [{
                 properties: {
                     page: {
-                        size: { width: 12240, height: 20160, orientation: PageOrientation.PORTRAIT },
+                        size: { width: pageWidth, height: pageHeight, orientation: PageOrientation.PORTRAIT },
                         margin: { top: 567, right: 567, bottom: 567, left: 567 },
                         borders: {
                             pageBorderTop: pageBorder,
