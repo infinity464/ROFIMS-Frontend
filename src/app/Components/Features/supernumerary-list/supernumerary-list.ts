@@ -241,7 +241,7 @@ export class SupernumeraryList implements OnInit {
     }
 
     /** A row counts as "in process" when the action button shows an in-process label (Draft or DraftPosting). */
-    private isPostingInProcess(row: EmployeeList): boolean {
+    isPostingInProcess(row: EmployeeList): boolean {
         const s = row.isSendingNotesheetStatus;
         return s === IsSendingNotesheetStatus.Draft || s === IsSendingNotesheetStatus.DraftPosting;
     }
@@ -362,12 +362,13 @@ export class SupernumeraryList implements OnInit {
         if (ids.length === 0 || this.isSendingSelection) return;
 
         this.isSendingSelection = true;
-        const calls = ids.map(id =>
-            this.employeeListService.setIsSendingNotesheetStatus(id, IsSendingNotesheetStatus.Draft).pipe(
+        const calls = ids.map(id => {
+            const row = this.list.find(r => r.employeeID === id);
+            return this.employeeListService.setIsSendingNotesheetStatus(id, IsSendingNotesheetStatus.Draft, row?.sendingRemark ?? undefined).pipe(
                 map(res => ({ id, ok: (res?.statusCode ?? 200) === 200, description: res?.description })),
                 catchError(err => of({ id, ok: false, description: err?.error?.message || 'Request failed' }))
-            )
-        );
+            );
+        });
         forkJoin(calls).subscribe(results => {
             const okCount = results.filter(r => r.ok).length;
             const failCount = results.length - okCount;
@@ -405,7 +406,7 @@ export class SupernumeraryList implements OnInit {
             });
             return;
         }
-        this.employeeListService.setIsSendingNotesheetStatus(row.employeeID, IsSendingNotesheetStatus.Draft).subscribe({
+        this.employeeListService.setIsSendingNotesheetStatus(row.employeeID, IsSendingNotesheetStatus.Draft, row.sendingRemark ?? undefined).subscribe({
             next: () => {
                 this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Status updated to Posting in Process' });
                 this.loadData();

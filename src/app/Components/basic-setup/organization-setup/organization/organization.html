@@ -57,7 +57,8 @@
             <div class="flex justify-end gap-2">
 
                 <p-button [label]="editingId ? 'Update' : 'Save'" type="submit"
-                    [disabled]="organizationForm.invalid || isSubmitting"></p-button>
+                    [disabled]="organizationForm.invalid || isSubmitting"
+                    [class.perm-hidden]="editingId ? !canUpdate : !canInsert"></p-button>
                 <p-button label="Reset" icon="pi pi-refresh" severity="secondary" (onClick)="onReset()" type="button"
                     [disabled]="isSubmitting"></p-button>
 

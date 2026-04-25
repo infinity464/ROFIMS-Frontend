@@ -57,6 +57,7 @@
                     <th style="min-width: 180px">Name</th>
                     <th style="min-width: 140px">Mother Unit</th>
                     <th style="min-width: 130px">Date of Join in Rab</th>
+                    <th style="min-width: 140px">Remark</th>
                     <th *ngIf="isEditMode" style="min-width: 140px">Transfer Unit</th>
                     <th *ngIf="isEditMode" style="min-width: 140px">Remarks</th>
                 </tr>
@@ -74,13 +75,14 @@
                     <td>{{ (row.fullNameEN ?? row.name) || '-' }}{{ (row.corpsName ?? row.corps) ? ', ' + (row.corpsName ?? row.corps) : '' }}</td>
                     <td>{{ (row.motherUnitName ?? row.motherUnit) || '-' }}</td>
                     <td>{{ formatDate(row.joiningDateInRAB ?? row.joiningDate ?? row.rabJoingdate) }}</td>
+                    <td>{{ row.sendingRemark || row.remarks || '-' }}</td>
                     <td *ngIf="isEditMode">{{ row.transferRabUnitName || '-' }}</td>
                     <td *ngIf="isEditMode">{{ row.remarks || '-' }}</td>
                 </tr>
             </ng-template>
             <ng-template pTemplate="emptymessage">
                 <tr>
-                    <td [attr.colspan]="isEditMode ? 10 : 9" class="text-center p-4">
+                    <td [attr.colspan]="isEditMode ? 11 : 10" class="text-center p-4">
                         <div class="flex flex-column align-items-center gap-3 py-5">
                             <i class="pi pi-inbox text-5xl text-400"></i>
                             <span class="text-lg text-500">No employees with draft status. Use Supernumerary List and click "Send New Posting list" to add here.</span>

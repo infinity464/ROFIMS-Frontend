@@ -6,7 +6,8 @@
         <div class="font-semibold text-xl mb-5">{{ title }} Setup</div>
         <app-dynamic-form [config]="formConfig" [form]="upazilaForm" [editingId]="editingId" (save)="submit($event)"
             (reset)="resetForm()" [isSubmitting]="isSubmitting" (fieldChange)="onFieldChange($event)"
-            [canInsert]="canInsert">
+            [canInsert]="canInsert"
+            [canUpdate]="canUpdate">
         </app-dynamic-form>
         </div>
 </p-fluid>

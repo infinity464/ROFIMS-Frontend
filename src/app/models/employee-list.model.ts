@@ -33,6 +33,8 @@ export interface EmployeeList {
     isSendingNotesheetStatus?: string | null;
     /** RAB Unit (Battalion Name) from PreviousRABServiceInfo where IsCurrentlyActive = 1. */
     rabUnit?: string | null;
+    /** Remark entered when sending to new posting list. */
+    sendingRemark?: string | null;
 }
 
 /** Request for AllocateRabId API. */
