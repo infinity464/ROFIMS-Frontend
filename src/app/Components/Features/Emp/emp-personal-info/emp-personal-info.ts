@@ -100,6 +100,10 @@ export class EmpPersonalInfo implements OnInit {
         { label: 'No', value: false },
         { label: 'Yes', value: true }
     ];
+    leavingStatusOptions: { label: string; value: boolean }[] = [
+        { label: 'In Leaving', value: true },
+        { label: 'Out Leaving', value: false }
+    ];
 
     // Investigation Experience toggle
     showInvestigationExperience: boolean = false;
@@ -209,8 +213,10 @@ export class EmpPersonalInfo implements OnInit {
     initializeForm(): void {
         this.personalInfoForm = this.fb.group({
             bloodGroup: [null],
+            nidOld: ['', [Validators.pattern('^[0-9]{0,17}$'), Validators.maxLength(17)]],
             nid: ['', [Validators.pattern('^[0-9]{0,17}$'), Validators.maxLength(17)]],
             mobileNo: ['', [Validators.pattern('^01[3-9][0-9]{8}$')]],
+            mobileNoOfficial: ['', [Validators.pattern('^01[3-9][0-9]{8}$')]],
             emailAddress: ['', [Validators.email]],
             dateOfBirth: [null],
             religion: [null],
@@ -234,6 +240,7 @@ export class EmpPersonalInfo implements OnInit {
             heightInch: [null, [Validators.min(0), Validators.max(11)]],
             weightKg: [null, [Validators.min(0), Validators.max(200)]],
             weightLbs: [null, [Validators.min(0), Validators.max(440)]],
+            leavingStatus: [null],
             drivingLicenseNo: [''],
             serviceIdCardNo: ['']
         });
@@ -393,8 +400,10 @@ export class EmpPersonalInfo implements OnInit {
         this.personalInfoForm.patchValue(
             {
                 bloodGroup: data.BloodGroup || data.bloodGroup || null,
+                nidOld: data.NidOld || data.nidOld || '',
                 nid: data.Nid || data.nid || '',
                 mobileNo: data.MobileNo || data.mobileNo || '',
+                mobileNoOfficial: data.MobileNoOfficial || data.mobileNoOfficial || '',
                 emailAddress: data.Email || data.email || '',
                 dateOfBirth: data.DOB ? new Date(data.DOB) : data.dob ? new Date(data.dob) : null,
                 religion: parseDropdownValue(data.Religion || data.religion),
@@ -418,6 +427,7 @@ export class EmpPersonalInfo implements OnInit {
                 heightInch: heightInch || null,
                 weightKg: weightKg,
                 weightLbs: weightLbs,
+                leavingStatus: data.LeavingStatus !== undefined ? data.LeavingStatus : data.leavingStatus !== undefined ? data.leavingStatus : null,
                 drivingLicenseNo: data.DrivingLicenseNo || data.drivingLicenseNo || '',
                 serviceIdCardNo: data.ServiceIdCardNo || data.serviceIdCardNo || ''
             },
@@ -541,9 +551,11 @@ export class EmpPersonalInfo implements OnInit {
         return {
             EmployeeID: this.selectedEmployeeId,
             Nid: formValue.nid,
+            NidOld: formValue.nidOld,
             Email: formValue.emailAddress,
             BloodGroup: formValue.bloodGroup, // varchar(5) - value from CommonCode (e.g., "A+", "B+")
             MobileNo: formValue.mobileNo,
+            MobileNoOfficial: formValue.mobileNoOfficial,
             DOB: formValue.dateOfBirth ? new Date(formValue.dateOfBirth).toISOString().split('T')[0] : null,
             Religion: formValue.religion ? formValue.religion.toString() : null,
             PassportNo: formValue.passportNo,
@@ -564,6 +576,7 @@ export class EmpPersonalInfo implements OnInit {
             FreedomFighter: formValue.freedomFighter,
             Height: totalHeightInches > 0 ? totalHeightInches : null,
             Weight: weightKg,
+            LeavingStatus: formValue.leavingStatus,
             DrivingLicenseNo: formValue.drivingLicenseNo,
             ServiceIdCardNo: formValue.serviceIdCardNo,
             FilesReferences: filesReferencesJson ?? undefined,
