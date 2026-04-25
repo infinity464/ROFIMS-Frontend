@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
+import { UserMenuService } from '@/services/user-menu.service';
 import { DialogModule } from 'primeng/dialog';
 import { ButtonModule } from 'primeng/button';
 import { CalendarService, CalendarEventApi } from '@/services/calendar.service';
@@ -27,6 +28,10 @@ export interface CalendarEvent {
     styleUrl: './calendar.component.scss'
 })
 export class CalendarComponent implements OnInit {
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     currentDate = new Date();
     weeks: { date: Date; isCurrentMonth: boolean; events: CalendarEvent[] }[][] = [];
     weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -36,9 +41,14 @@ export class CalendarComponent implements OnInit {
     events: CalendarEvent[] = [];
     loading = false;
 
-    constructor(private calendarService: CalendarService) {}
+    constructor(private calendarService: CalendarService, private _router: Router, private _userMenuService: UserMenuService) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.buildMonth();
         this.loadEvents();
     }

@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { TableModule } from 'primeng/table';
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
@@ -15,6 +16,7 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 
 import { LoginAuditService } from './login-audit.service';
 import { LoginAudit } from './login-audit.model';
+import { UserMenuService } from '@/services/user-menu.service';
 
 @Component({
   selector: 'app-login-audit',
@@ -36,6 +38,10 @@ import { LoginAudit } from './login-audit.model';
   templateUrl: './login-audit.component.html'
 })
 export class LoginAuditComponent implements OnInit {
+  canInsert = true;
+  canUpdate = true;
+  canDelete = true;
+
   audits: LoginAudit[] = [];
   totalRecords = 0;
   loading = false;
@@ -57,10 +63,17 @@ export class LoginAuditComponent implements OnInit {
 
   constructor(
     private auditService: LoginAuditService,
-    private messageService: MessageService
+    private messageService: MessageService,
+    private _router: Router,
+    private _userMenuService: UserMenuService
   ) {}
 
   ngOnInit(): void {
+    const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+    this.canInsert = _perms.canInsert;
+    this.canUpdate = _perms.canUpdate;
+    this.canDelete = _perms.canDelete;
+
     this.searchSubject
       .pipe(debounceTime(500), distinctUntilChanged())
       .subscribe(() => {

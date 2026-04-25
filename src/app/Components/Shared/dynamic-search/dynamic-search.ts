@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { TableModule, TableLazyLoadEvent } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
@@ -17,6 +17,7 @@ import {
     DynamicSearchCriterion,
     DynamicSearchRequest
 } from '@/services/dynamic-search.service';
+import { UserMenuService } from '@/services/user-menu.service';
 
 interface CriterionValue {
     fieldKey: string;
@@ -41,6 +42,10 @@ interface CriterionValue {
     styleUrls: ['./dynamic-search.scss', '../../../Components/Features/employee-reports/report-theme.scss']
 })
 export class DynamicSearchComponent implements OnInit {
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     // Category
     categoryOptions = [
         { label: 'Employee', value: 'Employee' as SearchCategory },
@@ -78,10 +83,17 @@ export class DynamicSearchComponent implements OnInit {
 
     constructor(
         private searchService: DynamicSearchService,
-        private messageService: MessageService
+        private messageService: MessageService,
+        private _router: Router,
+        private _userMenuService: UserMenuService
     ) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.loadFields();
     }
 

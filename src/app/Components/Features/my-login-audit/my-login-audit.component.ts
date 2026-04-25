@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
@@ -11,6 +12,7 @@ import { MessageService } from 'primeng/api';
 
 import { LoginAuditService } from '../login-audit/login-audit.service';
 import { LoginAudit } from '../login-audit/login-audit.model';
+import { UserMenuService } from '@/services/user-menu.service';
 
 @Component({
   selector: 'app-my-login-audit',
@@ -29,6 +31,10 @@ import { LoginAudit } from '../login-audit/login-audit.model';
   templateUrl: './my-login-audit.component.html'
 })
 export class MyLoginAuditComponent implements OnInit {
+  canInsert = true;
+  canUpdate = true;
+  canDelete = true;
+
   audits: LoginAudit[] = [];
   totalRecords = 0;
   loading = false;
@@ -48,10 +54,17 @@ export class MyLoginAuditComponent implements OnInit {
 
   constructor(
     private auditService: LoginAuditService,
-    private messageService: MessageService
+    private messageService: MessageService,
+    private _router: Router,
+    private _userMenuService: UserMenuService
   ) {}
 
   ngOnInit(): void {
+    const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+    this.canInsert = _perms.canInsert;
+    this.canUpdate = _perms.canUpdate;
+    this.canDelete = _perms.canDelete;
+
     const auth = localStorage.getItem('auth');
     if (auth) {
       const parsed = JSON.parse(auth);

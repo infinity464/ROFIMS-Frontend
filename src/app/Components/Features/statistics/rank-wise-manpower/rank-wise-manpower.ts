@@ -1,8 +1,10 @@
 import { Component, HostListener, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { ExportService } from '@/services/export.service';
+import { UserMenuService } from '@/services/user-menu.service';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import {
     StatisticsService,
@@ -21,6 +23,10 @@ type Lang = 'en' | 'bn';
     styleUrl: './rank-wise-manpower.scss'
 })
 export class RankWiseManpowerComponent implements OnInit {
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     lang: Lang = 'en';
     loading = false;
     exportDropdownOpen = false;
@@ -44,6 +50,8 @@ export class RankWiseManpowerComponent implements OnInit {
     ];
 
     constructor(
+        private _router: Router,
+        private _userMenuService: UserMenuService,
         private statisticsService: StatisticsService,
         private exportService: ExportService
     ) {}
@@ -51,7 +59,14 @@ export class RankWiseManpowerComponent implements OnInit {
     @HostListener('document:click')
     onDocumentClick(): void { this.exportDropdownOpen = false; }
 
-    ngOnInit(): void { this.loadData(); }
+    ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
+        this.loadData();
+    }
 
     loadData(): void {
         this.loading = true;

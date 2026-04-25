@@ -1,6 +1,8 @@
 import { Component, HostListener, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { ExportService } from '@/services/export.service';
+import { UserMenuService } from '@/services/user-menu.service';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import {
     StatisticsService,
@@ -39,6 +41,10 @@ const COLUMNS: ColDef[] = [
     styleUrl: './manpower-summary.scss'
 })
 export class ManpowerSummaryComponent implements OnInit {
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     lang: Lang = 'en';
     loading = false;
     exporting = false;
@@ -50,6 +56,8 @@ export class ManpowerSummaryComponent implements OnInit {
     readonly columns = COLUMNS;
 
     constructor(
+        private _router: Router,
+        private _userMenuService: UserMenuService,
         private statisticsService: StatisticsService,
         private exportService: ExportService
     ) {}
@@ -60,6 +68,11 @@ export class ManpowerSummaryComponent implements OnInit {
     }
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.loadData();
     }
 

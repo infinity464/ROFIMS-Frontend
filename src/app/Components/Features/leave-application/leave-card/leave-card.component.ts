@@ -1,6 +1,7 @@
 import { Component, HostListener, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { UserMenuService } from '@/services/user-menu.service';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '@/Core/Environments/environment';
 import { LeaveApplicationService, LeaveApplicationModel } from '@/services/leave-application.service';
@@ -37,6 +38,10 @@ const BN_DIGITS = '০১২৩৪৫৬৭৮৯';
     styleUrls: ['./leave-card.component.scss', '../../employee-reports/report-theme-common.scss']
 })
 export class LeaveCardComponent implements OnInit {
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     row: LeaveApplicationModel | null = null;
     loading = true;
     lang: 'bn' | 'en' = 'bn';
@@ -63,10 +68,16 @@ export class LeaveCardComponent implements OnInit {
         private http: HttpClient,
         private leaveAppService: LeaveApplicationService,
         private empService: EmpService,
-        private masterBasicSetup: MasterBasicSetupService
+        private masterBasicSetup: MasterBasicSetupService,
+        private _userMenuService: UserMenuService
     ) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this.router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.loadLeaveTypes();
         this.loadRanks();
         this.loadOffices();

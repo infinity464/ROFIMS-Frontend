@@ -1,6 +1,7 @@
 import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { UserMenuService } from '@/services/user-menu.service';
 import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { MessageService } from 'primeng/api';
@@ -40,6 +41,10 @@ import { formatPartialDate } from '@/shared/utils/partial-date.util';
     styleUrl: './serving-member-profile.scss'
 })
 export class ServingMemberProfile implements OnInit, OnDestroy {
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     employeeId: number | null = null;
     profile: EmployeePersonalServiceOverview | null = null;
     /** Object URL for profile image (from FileInformation/Download). Revoke in ngOnDestroy. */
@@ -83,7 +88,8 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
         private promotionInfoService: PromotionInfoService,
         private messageService: MessageService,
         private empService: EmpService,
-        private exportService: ExportService
+        private exportService: ExportService,
+        private _userMenuService: UserMenuService
     ) {}
 
     exportDropdownOpen = false;
@@ -523,6 +529,11 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
     }
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this.router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         const id = this.route.snapshot.paramMap.get('employeeId');
         if (id != null) {
             this.employeeId = +id;

@@ -1,7 +1,8 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { UserMenuService } from '@/services/user-menu.service';
 import { TableModule, TableLazyLoadEvent } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
@@ -39,11 +40,17 @@ interface FilterModel {
     styleUrls: ['./rab-organogram-members.scss', '../../../employee-reports/report-theme.scss']
 })
 export class RabOrganogramMembersComponent implements OnInit {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
     private route = inject(ActivatedRoute);
     private servingMembersService = inject(ServingMembersService);
     private employeeListService = inject(EmployeeListService);
     private commonCodeService = inject(CommonCodeService);
     private messageService = inject(MessageService);
+
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
 
     nodeId: number = 0;
     nodeName: string = '';
@@ -82,6 +89,11 @@ export class RabOrganogramMembersComponent implements OnInit {
 
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         const params = this.route.snapshot.queryParamMap;
         this.nodeId = +(params.get('nodeId') ?? 0);
         this.nodeName = params.get('name') ?? '';

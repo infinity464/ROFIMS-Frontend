@@ -1,7 +1,9 @@
 import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { UserMenuService } from '@/services/user-menu.service';
 import { ConfirmationService } from 'primeng/api';
 import { ChatService } from '@/services/chat.service';
 import { ChatUserDto, DirectConversation, DirectMessageDto, GroupDto, GroupMessageDto } from '@/models/chat.model';
@@ -423,6 +425,10 @@ import { takeUntil } from 'rxjs/operators';
 export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewChecked {
   @ViewChild('messagesContainer', { static: false }) messagesContainer?: ElementRef<HTMLDivElement>;
 
+  canInsert = true;
+  canUpdate = true;
+  canDelete = true;
+
   directConversations: DirectConversation[] = [];
   filteredDirectConversations: DirectConversation[] = [];
   selectedOtherUserId: string | null = null;
@@ -467,7 +473,7 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
   createGroupSelectedUserIds: string[] = [];
   creatingGroup = false;
 
-  constructor(private chatService: ChatService, private fb: FormBuilder, private confirmationService: ConfirmationService) {
+  constructor(private chatService: ChatService, private fb: FormBuilder, private confirmationService: ConfirmationService, private _router: Router, private _userMenuService: UserMenuService) {
     this.messageForm = this.fb.group({
       messageContent: ['', [Validators.required, Validators.minLength(1)]]
     });
@@ -675,6 +681,11 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
   }
 
   ngOnInit(): void {
+    const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+    this.canInsert = _perms.canInsert;
+    this.canUpdate = _perms.canUpdate;
+    this.canDelete = _perms.canDelete;
+
     const auth = JSON.parse(localStorage.getItem('auth') || '{}');
     this.currentUserId = auth.userId || '';
     this.chatService.setSelectedConversation(null);

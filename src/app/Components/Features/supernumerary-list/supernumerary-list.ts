@@ -22,11 +22,12 @@ import { TooltipModule } from 'primeng/tooltip';
 import { MotherOrganizationModel } from '@/models/mother-org-model';
 import { CommonCodeModel } from '@/models/common-code-model';
 import { IsSendingNotesheetStatus } from '@/models/enums';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 
 @Component({
     selector: 'app-supernumerary-list',
     standalone: true,
-    imports: [CommonModule, FormsModule, RouterModule, TableModule, ButtonModule, SelectModule, InputTextModule, DatePickerModule, CheckboxModule, Toast, TooltipModule],
+    imports: [CommonModule, FormsModule, RouterModule, TableModule, ButtonModule, SelectModule, InputTextModule, DatePickerModule, CheckboxModule, Toast, TooltipModule, FlexibleDateDirective],
     providers: [MessageService],
     templateUrl: './supernumerary-list.html',
     styleUrls: ['./supernumerary-list.scss', '../employee-reports/report-theme-common.scss'],
@@ -201,39 +202,6 @@ export class SupernumeraryList implements OnInit {
     selectedTradeId: number | null = null;
     joiningDateFrom: Date | null = null;
     joiningDateTo: Date | null = null;
-    joiningDateFromRaw = '';
-    joiningDateToRaw = '';
-    joiningDateFromInvalid = false;
-    joiningDateToInvalid = false;
-
-    onJoiningDateFromChange(val: Date | null): void {
-        if (val != null) this.joiningDateFromInvalid = false;
-        this.onFilterChange();
-    }
-
-    onJoiningDateToChange(val: Date | null): void {
-        if (val != null) this.joiningDateToInvalid = false;
-        this.onFilterChange();
-    }
-
-    onJoiningDateInput(field: 'from' | 'to', event: { value: unknown }): void {
-        const raw = typeof event?.value === 'string' ? event.value : '';
-        if (field === 'from') {
-            this.joiningDateFromRaw = raw;
-            if (!raw.trim()) this.joiningDateFromInvalid = false;
-        } else {
-            this.joiningDateToRaw = raw;
-            if (!raw.trim()) this.joiningDateToInvalid = false;
-        }
-    }
-
-    onJoiningDateBlur(field: 'from' | 'to'): void {
-        const raw = field === 'from' ? this.joiningDateFromRaw : this.joiningDateToRaw;
-        const model = field === 'from' ? this.joiningDateFrom : this.joiningDateTo;
-        const invalid = raw.trim().length > 0 && model == null;
-        if (field === 'from') this.joiningDateFromInvalid = invalid;
-        else this.joiningDateToInvalid = invalid;
-    }
 
     /** Posting-status filter – mirrors the action-button buckets. */
     postingStatusOptions: { label: string; value: 'in-process' | 'not-sent' }[] = [
@@ -308,10 +276,6 @@ export class SupernumeraryList implements OnInit {
         this.selectedTradeId = null;
         this.joiningDateFrom = null;
         this.joiningDateTo = null;
-        this.joiningDateFromRaw = '';
-        this.joiningDateToRaw = '';
-        this.joiningDateFromInvalid = false;
-        this.joiningDateToInvalid = false;
         this.selectedPostingStatus = null;
         this.first = 0;
         this.loadData();

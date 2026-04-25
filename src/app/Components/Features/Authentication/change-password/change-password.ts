@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 
@@ -8,6 +8,7 @@ import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 
 import { AuthenticationService } from '../Service/authentication';
+import { UserMenuService } from '@/services/user-menu.service';
 
 @Component({
     selector: 'app-change-password',
@@ -15,7 +16,11 @@ import { AuthenticationService } from '../Service/authentication';
     providers: [MessageService],
     templateUrl: './change-password.html'
 })
-export class ChangePassword {
+export class ChangePassword implements OnInit {
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     currentPassword = '';
     newPassword = '';
     confirmPassword = '';
@@ -25,8 +30,16 @@ export class ChangePassword {
     constructor(
         private auth: AuthenticationService,
         private messageService: MessageService,
-        private router: Router
+        private router: Router,
+        private _userMenuService: UserMenuService
     ) {}
+
+    ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this.router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+    }
 
     get hasUppercase(): boolean {
         return /[A-Z]/.test(this.newPassword);

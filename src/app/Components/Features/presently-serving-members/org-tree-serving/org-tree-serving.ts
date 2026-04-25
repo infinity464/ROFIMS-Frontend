@@ -8,7 +8,8 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CardModule } from 'primeng/card';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
+import { UserMenuService } from '@/services/user-menu.service';
 import { Fluid } from 'primeng/fluid';
 import { ButtonModule } from 'primeng/button';
 import { ToastModule } from 'primeng/toast';
@@ -54,6 +55,8 @@ function authCountMapFromApi(rows: AuthorizedCountItem[] | null | undefined): Ma
     styleUrl: './org-tree-serving.scss'
 })
 export class OrgTreeServingComponent implements OnInit {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
     private orgService = inject(OrgService);
     private servingMembersService = inject(ServingMembersService);
     private masterBasicSetupService = inject(MasterBasicSetupService);
@@ -71,6 +74,10 @@ export class OrgTreeServingComponent implements OnInit {
     readonly sidebarCollapsed = signal(false);
     readonly isDarkMode = computed(() => this.layoutService.isDarkTheme());
 
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     memberTypes: CommonCode[] = [];
 
     readonly treeNodes = computed(() => this.orgService.getTree(this.flatNodes()));
@@ -84,6 +91,11 @@ export class OrgTreeServingComponent implements OnInit {
     private currentPageNo = 1;
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.loadTreeAndCounts();
     }
 

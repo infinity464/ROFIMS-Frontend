@@ -1,6 +1,7 @@
 import { AfterViewInit, Component, ElementRef, OnInit, Output, EventEmitter, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
@@ -18,6 +19,7 @@ import { TableModule } from 'primeng/table';
 import { forkJoin, of } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { PartialDatePipe } from '@/shared/pipes/partial-date.pipe';
+import { UserMenuService } from '@/services/user-menu.service';
 
 @Component({
     selector: 'app-emp-present-member-check',
@@ -27,6 +29,10 @@ import { PartialDatePipe } from '@/shared/pipes/partial-date.pipe';
     styleUrl: './emp-present-member-check.component.scss'
 })
 export class EmpPresentMemberCheckComponent implements OnInit, AfterViewInit {
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     @ViewChild('serviceIdInput', { read: ElementRef }) serviceIdInput?: ElementRef<HTMLElement>;
 
     motherOrgId: number | null = null;
@@ -90,7 +96,9 @@ export class EmpPresentMemberCheckComponent implements OnInit, AfterViewInit {
     constructor(
         private empService: EmpService,
         private commonCodeService: CommonCodeService,
-        private previousRABService: PreviousRABServiceService
+        private previousRABService: PreviousRABServiceService,
+        private _router: Router,
+        private _userMenuService: UserMenuService
     ) {}
 
     private showInfo(
@@ -311,6 +319,11 @@ export class EmpPresentMemberCheckComponent implements OnInit, AfterViewInit {
     }
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.loadMotherOrgs();
     }
 

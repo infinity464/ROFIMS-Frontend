@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
@@ -10,6 +11,7 @@ import {
     type UnitBarItem,
     type UnitWiseBarChartResponse
 } from '@/services/statistics.service';
+import { UserMenuService } from '@/services/user-menu.service';
 
 type Lang = 'en' | 'bn';
 
@@ -28,6 +30,10 @@ const BAR_COLORS = [
     styleUrl: './unit-wise-bar-chart.scss'
 })
 export class UnitWiseBarChartComponent implements OnInit {
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     lang: Lang = 'en';
     loading = false;
 
@@ -49,9 +55,14 @@ export class UnitWiseBarChartComponent implements OnInit {
         'জুলাই','আগস্ট','সেপ্টেম্বর','অক্টোবর','নভেম্বর','ডিসেম্বর'
     ];
 
-    constructor(private statisticsService: StatisticsService) {}
+    constructor(private _router: Router, private _userMenuService: UserMenuService, private statisticsService: StatisticsService) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.buildChartOptions();
         this.loadData();
     }

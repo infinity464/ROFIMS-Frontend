@@ -96,35 +96,25 @@
                         <label>Date of joining from</label>
                         <p-datepicker
                             [(ngModel)]="joiningDateFrom"
-                            (ngModelChange)="onJoiningDateFromChange($event)"
-                            (onInput)="onJoiningDateInput('from', $event)"
-                            (onBlur)="onJoiningDateBlur('from')"
+                            (ngModelChange)="onFilterChange()"
                             dateFormat="dd-mm-yy"
                             placeholder="dd-mm-yyyy"
                             appendTo="body"
                             class="w-full"
                             [inputStyle]="{'width':'100%'}">
                         </p-datepicker>
-                        @if (joiningDateFromInvalid) {
-                            <small class="p-error">Invalid date (dd-mm-yyyy)</small>
-                        }
                     </div>
                     <div class="report-filter-field report-filter-field-date">
                         <label>Date of joining to</label>
                         <p-datepicker
                             [(ngModel)]="joiningDateTo"
-                            (ngModelChange)="onJoiningDateToChange($event)"
-                            (onInput)="onJoiningDateInput('to', $event)"
-                            (onBlur)="onJoiningDateBlur('to')"
+                            (ngModelChange)="onFilterChange()"
                             dateFormat="dd-mm-yy"
                             placeholder="dd-mm-yyyy"
                             appendTo="body"
                             class="w-full"
                             [inputStyle]="{'width':'100%'}">
                         </p-datepicker>
-                        @if (joiningDateToInvalid) {
-                            <small class="p-error">Invalid date (dd-mm-yyyy)</small>
-                        }
                     </div>
                     <div class="report-filter-field">
                         <label>Posting Status</label>

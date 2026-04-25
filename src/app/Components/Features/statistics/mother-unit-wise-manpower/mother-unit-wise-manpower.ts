@@ -1,8 +1,10 @@
 import { Component, HostListener, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { ExportService } from '@/services/export.service';
+import { UserMenuService } from '@/services/user-menu.service';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import {
     StatisticsService,
@@ -24,6 +26,10 @@ type Lang = 'en' | 'bn';
     styleUrl: './mother-unit-wise-manpower.scss'
 })
 export class MotherUnitWiseManpowerComponent implements OnInit {
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     lang: Lang = 'en';
     loading = false;
     loadingOrgs = false;
@@ -51,6 +57,8 @@ export class MotherUnitWiseManpowerComponent implements OnInit {
     ];
 
     constructor(
+        private _router: Router,
+        private _userMenuService: UserMenuService,
         private statisticsService: StatisticsService,
         private exportService: ExportService
     ) {}
@@ -58,7 +66,14 @@ export class MotherUnitWiseManpowerComponent implements OnInit {
     @HostListener('document:click')
     onDocumentClick(): void { this.exportDropdownOpen = false; }
 
-    ngOnInit(): void { this.loadOrgOptions(); }
+    ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
+        this.loadOrgOptions();
+    }
 
     loadOrgOptions(): void {
         this.loadingOrgs = true;

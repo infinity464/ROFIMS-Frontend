@@ -1,11 +1,13 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { ChartModule } from 'primeng/chart';
 import { TagModule } from 'primeng/tag';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { MetricsService, ConnectionState } from '@/services/metrics.service';
 import { SystemMetrics } from '@/models/system-metrics.model';
 import { Subscription } from 'rxjs';
+import { UserMenuService } from '@/services/user-menu.service';
 
 interface ThresholdConfig {
     green: number;
@@ -20,6 +22,10 @@ interface ThresholdConfig {
     styleUrl: './system-monitoring.scss'
 })
 export class SystemMonitoringComponent implements OnInit, OnDestroy {
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     metrics: SystemMetrics | null = null;
     connectionState: ConnectionState = 'Disconnected';
 
@@ -38,9 +44,14 @@ export class SystemMonitoringComponent implements OnInit, OnDestroy {
     private metricsSub: Subscription | null = null;
     private connectionSub: Subscription | null = null;
 
-    constructor(private metricsService: MetricsService) {}
+    constructor(private metricsService: MetricsService, private _router: Router, private _userMenuService: UserMenuService) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.buildChartOptions();
 
         this.metricsSub = this.metricsService.metrics$.subscribe((m) => {

@@ -1,6 +1,8 @@
 import { Component, OnInit, inject, signal, computed, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { Fluid } from 'primeng/fluid';
+import { UserMenuService } from '@/services/user-menu.service';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { TreeNodeComponent } from '@/Components/basic-setup/org-tree/tree-node/tree-node.component';
@@ -41,6 +43,8 @@ function authCountMapFromApi(rows: AuthorizedCountItem[] | null | undefined): Ma
     styleUrl: './rab-organogram.scss'
 })
 export class RabOrganogramComponent implements OnInit {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
     private orgService = inject(OrgService);
     private servingMembersService = inject(ServingMembersService);
     private masterBasicSetupService = inject(MasterBasicSetupService);
@@ -51,6 +55,10 @@ export class RabOrganogramComponent implements OnInit {
     private layoutService = inject(LayoutService);
 
     readonly isDarkMode = computed(() => this.layoutService.isDarkTheme());
+
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
 
     // All flat nodes from API
     readonly flatNodes = signal<OrgNode[]>([]);
@@ -102,6 +110,11 @@ export class RabOrganogramComponent implements OnInit {
     });
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.loadTreeAndCounts();
     }
 

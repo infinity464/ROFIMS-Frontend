@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
+import { UserMenuService } from '@/services/user-menu.service';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { Toast } from 'primeng/toast';
@@ -32,16 +33,26 @@ import { PostingOrderMasterDto } from '@/models/posting.model';
     styleUrl: './posting-order-list.scss'
 })
 export class PostingOrderListComponent implements OnInit {
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     orders: PostingOrderMasterDto[] = [];
     loading = false;
 
     constructor(
         private postingService: PostingService,
         private router: Router,
-        private messageService: MessageService
+        private messageService: MessageService,
+        private _userMenuService: UserMenuService
     ) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this.router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.loadOrders();
     }
 

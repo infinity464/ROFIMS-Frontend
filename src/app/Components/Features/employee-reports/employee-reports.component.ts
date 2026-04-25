@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
@@ -12,6 +13,7 @@ import { ReportWingsComponent } from './report-wings/report-wings.component';
 import { SelectModule } from 'primeng/select';
 import { REPORT_LABELS, type ReportLang } from '@/Core/i18n/report-labels';
 import { CommonCodeService } from '@/services/common-code-service';
+import { UserMenuService } from '@/services/user-menu.service';
 import type { CommonCodeModel } from '@/models/common-code-model';
 import type { MotherOrganizationModel } from '@/models/mother-org-model';
 
@@ -55,6 +57,10 @@ const COMMON_CODE_TYPE_BY_REPORT: Record<ReportType, string> = {
     styleUrls: ['./employee-reports.component.scss', './report-theme.scss'],
 })
 export class EmployeeReportsComponent implements OnInit {
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     reportLang: ReportLang = 'en';
     readonly L = REPORT_LABELS;
 
@@ -86,9 +92,14 @@ export class EmployeeReportsComponent implements OnInit {
     ];
     selectedPostingStatus: string = 'Servings';
 
-    constructor(private commonCodeService: CommonCodeService) {}
+    constructor(private _router: Router, private _userMenuService: UserMenuService, private commonCodeService: CommonCodeService) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.loadCommonCodeOptions();
     }
 

@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { ChartModule } from 'primeng/chart';
 import {
@@ -6,6 +7,7 @@ import {
     type ManpowerSummaryRow,
     type ManpowerSummaryResponse
 } from '@/services/statistics.service';
+import { UserMenuService } from '@/services/user-menu.service';
 
 const SLICE_COLORS = [
     '#4f46e5','#06b6d4','#10b981','#f59e0b','#ef4444',
@@ -64,6 +66,10 @@ const PIE_PERCENTAGE_PLUGIN = {
     styleUrl: './manpower-chart.scss'
 })
 export class ManpowerChartComponent implements OnInit {
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     loading = false;
     rows: ManpowerSummaryRow[] = [];
 
@@ -77,9 +83,14 @@ export class ManpowerChartComponent implements OnInit {
     /** Passed to [plugins] on every p-chart so percentages are drawn on canvas. */
     readonly chartPlugins = [PIE_PERCENTAGE_PLUGIN];
 
-    constructor(private statisticsService: StatisticsService) {}
+    constructor(private _router: Router, private _userMenuService: UserMenuService, private statisticsService: StatisticsService) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.buildOptions();
         this.loadData();
     }

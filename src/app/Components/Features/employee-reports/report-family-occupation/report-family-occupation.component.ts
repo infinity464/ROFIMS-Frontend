@@ -1,4 +1,5 @@
 import { Component, HostListener, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -10,6 +11,7 @@ import { MessageService } from 'primeng/api';
 import { ReportService } from '@/services/report.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { ExportService } from '@/services/export.service';
+import { UserMenuService } from '@/services/user-menu.service';
 import { REPORT_LABELS, type ReportLang } from '@/Core/i18n/report-labels';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import type { FamilyOccupationReportRow } from '@/models/report.model';
@@ -24,6 +26,10 @@ import type { CommonCodeModel } from '@/models/common-code-model';
     styleUrls: ['./report-family-occupation.component.scss', '../report-theme.scss'],
 })
 export class ReportFamilyOccupationComponent implements OnInit {
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     L = REPORT_LABELS;
     lang: ReportLang = 'en';
 
@@ -60,6 +66,8 @@ export class ReportFamilyOccupationComponent implements OnInit {
     appliedFilterLines: string[] = [];
 
     constructor(
+        private _router: Router,
+        private _userMenuService: UserMenuService,
         private reportService: ReportService,
         private commonCodeService: CommonCodeService,
         private messageService: MessageService,
@@ -166,6 +174,11 @@ export class ReportFamilyOccupationComponent implements OnInit {
     }
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.loadRelationOptions();
         this.loadOccupationOptions();
     }

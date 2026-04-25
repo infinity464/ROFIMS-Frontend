@@ -9,7 +9,9 @@ import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { ReportService } from '@/services/report.service';
 import { CommonCodeService } from '@/services/common-code-service';
+import { Router } from '@angular/router';
 import { ExportService } from '@/services/export.service';
+import { UserMenuService } from '@/services/user-menu.service';
 import { REPORT_LABELS, type ReportLang } from '@/Core/i18n/report-labels';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import type { MemberAppointmentReportRow } from '@/models/report.model';
@@ -63,11 +65,17 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
     exporting = false;
     appliedFilterLines: string[] = [];
 
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     constructor(
         private reportService: ReportService,
         private commonCodeService: CommonCodeService,
         private messageService: MessageService,
-        private exportService: ExportService
+        private exportService: ExportService,
+        private _router: Router,
+        private _userMenuService: UserMenuService
     ) {}
 
     @HostListener('document:click')
@@ -178,6 +186,11 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
     }
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.loadOrgOptions();
         this.load();
     }

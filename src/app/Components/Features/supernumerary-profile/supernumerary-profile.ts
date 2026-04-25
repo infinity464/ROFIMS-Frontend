@@ -1,6 +1,7 @@
 import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { UserMenuService } from '@/services/user-menu.service';
 import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { Toast } from 'primeng/toast';
@@ -25,6 +26,10 @@ import { ExportService, type ProfileExportConfig, type ProfileExportSection } fr
     styleUrl: './supernumerary-profile.scss'
 })
 export class SupernumeraryProfile implements OnInit, OnDestroy {
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     employeeId: number | null = null;
     profile: SupernumeraryEmpProfile | null = null;
     profileImageUrl: string | null = null;
@@ -48,7 +53,8 @@ export class SupernumeraryProfile implements OnInit, OnDestroy {
         private servingMembersService: ServingMembersService,
         private messageService: MessageService,
         private empService: EmpService,
-        private exportService: ExportService
+        private exportService: ExportService,
+        private _userMenuService: UserMenuService
     ) {}
 
     @HostListener('document:click')
@@ -179,6 +185,11 @@ export class SupernumeraryProfile implements OnInit, OnDestroy {
     }
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this.router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         const id = this.route.snapshot.paramMap.get('id');
         if (id != null) {
             this.employeeId = +id;
