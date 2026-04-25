@@ -6,8 +6,16 @@ import { environment } from '@/Core/Environments/environment';
 
 export interface PermanentPostingJoineeDetailModel {
     id: number;
-    permanentPostingMORecordId: number;
+    permanentPostingMORecordId: number | null;
+    isAddedInNewJoineeDataEntry: boolean;
     employeeId: number | null;
+    prefixId: number | null;
+    motherOrgId: number | null;
+    motherOrgUnitId: number | null;
+    memberType: number | null;
+    rank: number | null;
+    corps: number | null;
+    trade: number | null;
     serviceId: string | null;
     previousRabId: string | null;
     nameBangla: string | null;
@@ -27,6 +35,10 @@ export class PermanentPostingJoineeDetailService {
 
     constructor(private http: HttpClient) {}
 
+    getAll(): Observable<PermanentPostingJoineeDetailModel[]> {
+        return this.http.get<any>(`${this.baseUrl}/GetAll`).pipe(map((r) => (Array.isArray(r) ? r : [])));
+    }
+
     getByRecordId(recordId: number): Observable<PermanentPostingJoineeDetailModel | null> {
         return this.http.get<any>(`${this.baseUrl}/GetByRecordIdAsyn/${recordId}`).pipe(
             map((r) => { const a = Array.isArray(r) ? r : r ? [r] : []; return a.length ? a[0] : null; })
@@ -36,8 +48,16 @@ export class PermanentPostingJoineeDetailService {
     saveUpdate(model: Partial<PermanentPostingJoineeDetailModel>): Observable<any> {
         return this.http.post(`${this.baseUrl}/SaveUpdateAsyn`, {
             id: model.id ?? 0,
-            permanentPostingMORecordId: model.permanentPostingMORecordId ?? 0,
+            permanentPostingMORecordId: model.permanentPostingMORecordId ?? null,
+            isAddedInNewJoineeDataEntry: model.isAddedInNewJoineeDataEntry ?? false,
             employeeId: model.employeeId ?? null,
+            prefixId: model.prefixId ?? null,
+            motherOrgId: model.motherOrgId ?? null,
+            motherOrgUnitId: model.motherOrgUnitId ?? null,
+            memberType: model.memberType ?? null,
+            rank: model.rank ?? null,
+            corps: model.corps ?? null,
+            trade: model.trade ?? null,
             serviceId: model.serviceId ?? null,
             previousRabId: model.previousRabId ?? null,
             nameBangla: model.nameBangla ?? null,

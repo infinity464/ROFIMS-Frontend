@@ -18,9 +18,13 @@
 
     <!-- ══ SECTION 1: Posted Out Person ════════════════════════════ -->
     <div class="form-section">
-        <p class="form-subtitle" style="font-size:1rem; display:flex; align-items:center; gap:0.5rem; border-bottom:2px solid var(--primary-color); padding-bottom:0.5rem; margin-bottom:1rem;">
-            <i class="pi pi-user-minus text-primary"></i> Posted Out Person
-        </p>
+        <div style="display:flex; align-items:center; justify-content:space-between; border-bottom:2px solid var(--primary-color); padding-bottom:0.5rem; margin-bottom:1rem;">
+            <span style="font-size:1rem; display:flex; align-items:center; gap:0.5rem;">
+                <i class="pi pi-user-minus text-primary"></i> Posted Out Person
+            </span>
+            <p-button label="Clear" icon="pi pi-eraser" size="small" severity="secondary" [text]="true"
+                (onClick)="clearPostedOutSection()"></p-button>
+        </div>
         <app-employee-search
             [initialEmployeeId]="editPostedOutEmployeeId"
             (onEmployeeFound)="onPostedOutFound($event)"
@@ -120,48 +124,101 @@
 
     <!-- ══ SECTION 4: New Joining Person ═══════════════════════════ -->
     <div class="form-section">
-        <p class="form-subtitle" style="font-size:1rem; display:flex; align-items:center; gap:0.5rem; border-bottom:2px solid var(--primary-color); padding-bottom:0.5rem; margin-bottom:1rem;">
-            <i class="pi pi-user-plus text-primary"></i> New Joining Person
-        </p>
+        <div style="display:flex; align-items:center; justify-content:space-between; border-bottom:2px solid var(--primary-color); padding-bottom:0.5rem; margin-bottom:1rem;">
+            <span style="font-size:1rem; display:flex; align-items:center; gap:0.5rem;">
+                <i class="pi pi-user-plus text-primary"></i> New Joining Person
+            </span>
+            <p-button label="Clear" icon="pi pi-eraser" size="small" severity="secondary" [text]="true"
+                (onClick)="clearJoineeSection()"></p-button>
+        </div>
 
         @if (isReliever === true) {
             <div class="mb-3">
-                <label class="form-label">Search Reliever <small class="text-500 font-normal">(Supernumerary / Present / Ex-Member)</small></label>
+                <label class="form-label">
+                    Search Reliever
+                    <small class="text-500 font-normal">(auto-fill from employee record)</small>
+                </label>
                 <app-employee-search
                     [initialEmployeeId]="editRelieverEmployeeId"
                     (onEmployeeFound)="onRelieverFound($event)"
                     (onSearchReset)="onRelieverReset()">
                 </app-employee-search>
             </div>
-        } @else {
-            <div class="mb-3">
-                <small class="text-500">
-                    <i class="pi pi-info-circle mr-1"></i>
-                    Select "Yes" for Reliever above to search a reliever employee, or fill in the joining details manually below.
-                </small>
-            </div>
         }
 
-        <!-- Joining detail fields -->
         <div class="form-row">
+            <div class="form-field">
+                <label class="form-label">Mother Org</label>
+                <p-select [options]="motherOrgOptions" [(ngModel)]="joineeMotherOrgId"
+                    optionLabel="label" optionValue="value"
+                    placeholder="Select mother org" [filter]="true" filterBy="label"
+                    [showClear]="true" class="w-full" appendTo="body"
+                    (onChange)="onMotherOrgChange($event.value)"></p-select>
+            </div>
+            <div class="form-field">
+                <label class="form-label">Mother Org Unit</label>
+                <p-select [options]="motherOrgUnitOptions" [(ngModel)]="joineeMotherOrgUnitId"
+                    optionLabel="label" optionValue="value"
+                    placeholder="Select unit" [filter]="true" filterBy="label"
+                    [showClear]="true" class="w-full" appendTo="body"
+                    [disabled]="!motherOrgUnitOptions.length"></p-select>
+            </div>
+            <div class="form-field">
+                <label class="form-label">Member Type</label>
+                <p-select [options]="memberTypeOptions" [(ngModel)]="joineeMemberType"
+                    optionLabel="label" optionValue="value"
+                    placeholder="Select member type"
+                    [showClear]="true" class="w-full" appendTo="body"></p-select>
+            </div>
+            <div class="form-field">
+                <label class="form-label">Prefix</label>
+                <p-select [options]="prefixOptions" [(ngModel)]="joineePrefixId"
+                    optionLabel="label" optionValue="value"
+                    placeholder="Select prefix"
+                    [showClear]="true" class="w-full" appendTo="body"
+                    [disabled]="!prefixOptions.length"></p-select>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-field">
+                <label class="form-label">Rank</label>
+                <p-select [options]="rankOptions" [(ngModel)]="joineeRank"
+                    optionLabel="label" optionValue="value"
+                    placeholder="Select rank" [filter]="true" filterBy="label"
+                    [showClear]="true" class="w-full" appendTo="body"
+                    [disabled]="!rankOptions.length"></p-select>
+            </div>
+            <div class="form-field">
+                <label class="form-label">Corps</label>
+                <p-select [options]="corpsOptions" [(ngModel)]="joineeCorps"
+                    optionLabel="label" optionValue="value"
+                    placeholder="Select Corps"
+                    [showClear]="true" class="w-full" appendTo="body"
+                    [disabled]="!corpsOptions.length"
+                    (onChange)="onCorpsChange($event.value)"></p-select>
+            </div>
+            <div class="form-field">
+                <label class="form-label">Trade</label>
+                <p-select [options]="tradeOptions" [(ngModel)]="joineeTrade"
+                    optionLabel="label" optionValue="value"
+                    placeholder="Select trade"
+                    [showClear]="true" class="w-full" appendTo="body"
+                    [disabled]="!tradeOptions.length"></p-select>
+            </div>
             <div class="form-field">
                 <label class="form-label">Service ID</label>
                 <input pInputText class="w-full" [(ngModel)]="joineeServiceId"
                     placeholder="Service ID" />
             </div>
-            <div class="form-field">
-                <label class="form-label">Previous RAB ID</label>
-                <input pInputText class="w-full" [(ngModel)]="joineePreviousRabId"
-                    placeholder="Previous RAB ID" />
-            </div>
+        </div>
+
+        <div class="form-row">
             <div class="form-field">
                 <label class="form-label">Name (Bangla)</label>
                 <input pInputText class="w-full" [(ngModel)]="joineeNameBangla"
                     placeholder="নাম বাংলায়" />
             </div>
-        </div>
-
-        <div class="form-row">
             <div class="form-field">
                 <label class="form-label">Joining Order No</label>
                 <input pInputText class="w-full" [(ngModel)]="joineeJoiningOrderNo"
@@ -200,60 +257,150 @@
     </div>
 </div>
 
-<!-- ── Records List ────────────────────────────────────────────── -->
+<!-- ── Posted Out Records List ──────────────────────────────── -->
 <div class="form-card">
     <div class="form-card-header">
         <h3 class="form-card-title">
-            <i class="pi pi-list" style="font-size:1rem"></i> Permanent Posting Records
+            <i class="pi pi-user-minus" style="font-size:1rem"></i>
+            Posted Out Records
+            @if (records.length) {
+                <span style="background:var(--primary-color);color:#fff;border-radius:12px;padding:1px 8px;font-size:0.75rem;margin-left:6px;">{{ records.length }}</span>
+            }
         </h3>
+        <div class="flex gap-2 align-items-center">
+            <p-button label="Export Excel" icon="pi pi-file-excel" size="small" severity="success"
+                [outlined]="true" [disabled]="!records.length"
+                (onClick)="exportPostedOutExcel()"></p-button>
+            <p-button [label]="showPostedOutList ? 'Hide' : 'Show List'"
+                [icon]="showPostedOutList ? 'pi pi-chevron-up' : 'pi pi-chevron-down'"
+                size="small" severity="secondary" [outlined]="true"
+                (onClick)="showPostedOutList = !showPostedOutList"></p-button>
+        </div>
     </div>
 
-    <p-table [value]="records" [loading]="loadingList" dataKey="id"
-             styleClass="p-datatable-striped p-datatable-gridlines"
-             [tableStyle]="{'min-width':'50rem'}"
-             [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10,25,50]">
-        <ng-template pTemplate="header">
-            <tr>
-                <th style="width:50px">#</th>
-                <th>Record No</th>
-                <th>Posting Order No</th>
-                <th>PO Date</th>
-                <th>Possible Release</th>
-                <th>Reliever</th>
-                <th>Status</th>
-                <th style="width:90px">Actions</th>
-            </tr>
-        </ng-template>
-        <ng-template pTemplate="body" let-row let-i="rowIndex">
-            <tr>
-                <td>{{ i + 1 }}</td>
-                <td>{{ row.recordNo ?? '-' }}</td>
-                <td>{{ row.postingOrderNo ?? '-' }}</td>
-                <td>{{ formatDisplay(row.postingOrderDate) }}</td>
-                <td>{{ formatDisplay(row.possibleReleaseDate) }}</td>
-                <td>
-                    <span [class]="row.isReliever ? 'text-green-600 font-semibold' : 'text-orange-500'">
-                        {{ row.isReliever ? 'Yes' : 'No' }}
-                    </span>
-                </td>
-                <td><span class="text-sm font-semibold">{{ row.status }}</span></td>
-                <td>
-                    <div class="flex gap-1">
-                        <p-button icon="pi pi-pencil" size="small" [text]="true"
-                            pTooltip="Edit" tooltipPosition="top" (onClick)="onEdit(row)"></p-button>
-                        <p-button icon="pi pi-trash" size="small" [text]="true"
-                            severity="danger" pTooltip="Delete" tooltipPosition="top"
-                            (onClick)="onDelete(row)"></p-button>
-                    </div>
-                </td>
-            </tr>
-        </ng-template>
-        <ng-template pTemplate="emptymessage">
-            <tr>
-                <td colspan="8" class="text-center p-4 text-500">
-                    <i class="pi pi-inbox text-2xl mb-2 block"></i>No records found.
-                </td>
-            </tr>
-        </ng-template>
-    </p-table>
+    @if (showPostedOutList) {
+        <p-table [value]="records" [loading]="loadingList" dataKey="id"
+                 styleClass="p-datatable-striped p-datatable-gridlines"
+                 [tableStyle]="{'min-width':'50rem'}"
+                 [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10,25,50]">
+            <ng-template pTemplate="header">
+                <tr>
+                    <th style="width:50px">#</th>
+                    <th>Record No</th>
+                    <th>Posting Order No</th>
+                    <th>PO Date</th>
+                    <th>Possible Release</th>
+                    <th>Reliever</th>
+                    <th>Status</th>
+                    <th style="width:90px">Actions</th>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-row let-i="rowIndex">
+                <tr>
+                    <td>{{ i + 1 }}</td>
+                    <td>{{ row.id }}</td>
+                    <td>{{ row.postingOrderNo ?? '-' }}</td>
+                    <td>{{ formatDisplay(row.postingOrderDate) }}</td>
+                    <td>{{ formatDisplay(row.possibleReleaseDate) }}</td>
+                    <td>
+                        <span [class]="row.isReliever === true ? 'text-green-600 font-semibold' : row.isReliever === false ? 'text-orange-500' : 'text-500'">
+                            {{ row.isReliever === true ? 'Yes' : row.isReliever === false ? 'No' : '-' }}
+                        </span>
+                    </td>
+                    <td><span class="text-sm font-semibold">{{ row.status }}</span></td>
+                    <td>
+                        <div class="flex gap-1">
+                            <p-button icon="pi pi-pencil" size="small" [text]="true"
+                                pTooltip="Edit" tooltipPosition="top" (onClick)="onEdit(row)"></p-button>
+                            <p-button icon="pi pi-trash" size="small" [text]="true"
+                                severity="danger" pTooltip="Delete" tooltipPosition="top"
+                                (onClick)="onDelete(row)"></p-button>
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td colspan="8" class="text-center p-4 text-500">
+                        <i class="pi pi-inbox text-2xl mb-2 block"></i>No records found.
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+    }
+</div>
+
+<!-- ── New Joinee Records List ──────────────────────────────── -->
+<div class="form-card">
+    <div class="form-card-header">
+        <h3 class="form-card-title">
+            <i class="pi pi-user-plus" style="font-size:1rem"></i>
+            New Joinee Records
+            @if (joineeRecords.length) {
+                <span style="background:var(--primary-color);color:#fff;border-radius:12px;padding:1px 8px;font-size:0.75rem;margin-left:6px;">{{ joineeRecords.length }}</span>
+            }
+        </h3>
+        <div class="flex gap-2 align-items-center">
+            <p-button label="Export Excel" icon="pi pi-file-excel" size="small" severity="success"
+                [outlined]="true" [disabled]="!joineeRecords.length"
+                (onClick)="exportJoineeExcel()"></p-button>
+            <p-button [label]="showJoineeList ? 'Hide' : 'Show List'"
+                [icon]="showJoineeList ? 'pi pi-chevron-up' : 'pi pi-chevron-down'"
+                size="small" severity="secondary" [outlined]="true"
+                (onClick)="showJoineeList = !showJoineeList"></p-button>
+        </div>
+    </div>
+
+    @if (showJoineeList) {
+        <p-table [value]="joineeRecords" [loading]="loadingJoineeList" dataKey="id"
+                 styleClass="p-datatable-striped p-datatable-gridlines"
+                 [tableStyle]="{'min-width':'50rem'}"
+                 [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10,25,50]">
+            <ng-template pTemplate="header">
+                <tr>
+                    <th style="width:50px">#</th>
+                    <th>Parent Record</th>
+                    <th>Service ID</th>
+                    <th>Name (Bangla)</th>
+                    <th>Joining Order No</th>
+                    <th>Joining Date</th>
+                    <th>Possible Joining</th>
+                    <th style="width:90px">Actions</th>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-row let-i="rowIndex">
+                <tr>
+                    <td>{{ i + 1 }}</td>
+                    <td>
+                        @if (row.permanentPostingMORecordId) {
+                            <span class="text-sm">#{{ row.permanentPostingMORecordId }}</span>
+                        } @else {
+                            <span class="text-500 text-sm">Standalone</span>
+                        }
+                    </td>
+                    <td>{{ row.serviceId ?? '-' }}</td>
+                    <td>{{ row.nameBangla ?? '-' }}</td>
+                    <td>{{ row.joiningOrderNo ?? '-' }}</td>
+                    <td>{{ formatDisplay(row.joiningOrderDate) }}</td>
+                    <td>{{ formatDisplay(row.possibleJoiningDate) }}</td>
+                    <td>
+                        <div class="flex gap-1">
+                            <p-button icon="pi pi-pencil" size="small" [text]="true"
+                                pTooltip="Edit" tooltipPosition="top" (onClick)="onEditJoinee(row)"></p-button>
+                            <p-button icon="pi pi-trash" size="small" [text]="true"
+                                severity="danger" pTooltip="Delete" tooltipPosition="top"
+                                (onClick)="onDeleteJoinee(row)"></p-button>
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td colspan="8" class="text-center p-4 text-500">
+                        <i class="pi pi-inbox text-2xl mb-2 block"></i>No records found.
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+    }
 </div>

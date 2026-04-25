@@ -7,12 +7,12 @@ import { environment } from '@/Core/Environments/environment';
 export interface PermanentPostingMORecordModel {
     id: number;
     recordNo: string | null;
-    postedOutEmployeeId: number;
+    postedOutEmployeeId: number | null;
     postingUnitId: number | null;
     postingOrderNo: string | null;
-    postingOrderDate: string;
+    postingOrderDate: string | null;
     possibleReleaseDate: string | null;
-    isReliever: boolean;
+    isReliever: boolean | null;
     relieverNotGivenReason: string | null;
     relieverEmployeeId: number | null;
     noteSheetClearance: boolean | null;
@@ -47,12 +47,12 @@ export class PermanentPostingMORecordService {
         return this.http.post(`${this.baseUrl}/SaveUpdateAsyn`, {
             id: model.id ?? 0,
             recordNo: model.recordNo ?? null,
-            postedOutEmployeeId: model.postedOutEmployeeId ?? 0,
+            postedOutEmployeeId: model.postedOutEmployeeId ?? null,
             postingUnitId: model.postingUnitId ?? null,
             postingOrderNo: model.postingOrderNo ?? null,
             postingOrderDate: model.postingOrderDate ?? null,
             possibleReleaseDate: model.possibleReleaseDate ?? null,
-            isReliever: model.isReliever ?? false,
+            isReliever: model.isReliever ?? null,
             relieverNotGivenReason: model.relieverNotGivenReason ?? null,
             relieverEmployeeId: model.relieverEmployeeId ?? null,
             noteSheetClearance: model.noteSheetClearance ?? null,
