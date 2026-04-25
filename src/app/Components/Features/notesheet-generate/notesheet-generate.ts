@@ -22,6 +22,7 @@ import { EmpService } from '@/services/emp-service';
 import { ActivatedRoute, Router } from '@angular/router';
 import { take } from 'rxjs/operators';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
+import { UserMenuService } from '@/services/user-menu.service';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
 import { NoteSheetType, NoteSheetOperationTypeOptions, ApprovalStatus, ApproverRoleType } from '@/models/enums';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
@@ -78,6 +79,9 @@ export class NotesheetGenerateComponent implements OnInit {
     referenceEmployeeOptions: { label: string; labelBn: string | null; value: number }[] = [];
     /** Supporting documents – stored in NoteSheetInfo.FilesReferences (JSON array of { FileId, fileName }). */
     fileRows: FileRowData[] = [];
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
     /** Prefix config for notesheet number language swap */
     private noteSheetPrefixEN = '';
     private noteSheetPrefixBN = '';
@@ -95,7 +99,8 @@ export class NotesheetGenerateComponent implements OnInit {
         private router: Router,
         private sanitizer: DomSanitizer,
         private noteSheetEditCache: NoteSheetEditCacheService,
-        private identityMappingService: IdentityUserMappingService
+        private identityMappingService: IdentityUserMappingService,
+        private _userMenuService: UserMenuService
     ) {
         this.form = this.fb.group({
             noteSheetTemplateId: [null as number | null],
@@ -120,6 +125,10 @@ export class NotesheetGenerateComponent implements OnInit {
     }
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this.router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
         this.loadUnits();
         this.loadBranches();
         this.loadApproverOptions();
@@ -554,6 +563,10 @@ export class NotesheetGenerateComponent implements OnInit {
     }
 
     submit(): void {
+        if (this.editMode ? !this.canUpdate : !this.canInsert) {
+            this.messageService.add({ severity: 'warn', summary: 'Permission Denied', detail: 'You do not have permission to perform this action.' });
+            return;
+        }
         if (this.form.invalid) {
             this.form.markAllAsTouched();
             this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please fill required fields.' });

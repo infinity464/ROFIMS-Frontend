@@ -11,8 +11,10 @@ import { InputText } from 'primeng/inputtext';
 import { TooltipModule } from 'primeng/tooltip';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
+import { Router } from '@angular/router';
 import { PostingService } from '@/services/posting.service';
 import { SharedService } from '@/shared/services/shared-service';
+import { UserMenuService } from '@/services/user-menu.service';
 import { PostingReceiveViewDto } from '@/models/posting.model';
 
 interface PostingOrderGroup {
@@ -77,14 +79,23 @@ export class PostingOrderReceiveComponent implements OnInit {
 
     activeTabIndex = 0;
     currentUser = '';
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
 
     constructor(
         private postingService: PostingService,
         private messageService: MessageService,
-        private sharedService: SharedService
+        private sharedService: SharedService,
+        private _router: Router,
+        private _userMenuService: UserMenuService
     ) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
         this.currentUser = this.sharedService.getCurrentUser();
         this.loadApprovedOrders();
     }
@@ -156,6 +167,10 @@ export class PostingOrderReceiveComponent implements OnInit {
     }
 
     receiveSelected(): void {
+        if (!this.canUpdate) {
+            this.messageService.add({ severity: 'warn', summary: 'Permission Denied', detail: 'You do not have permission to perform this action.' });
+            return;
+        }
         if (!this.selectedMembers.length) {
             this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Please select at least one member' });
             return;

@@ -99,6 +99,7 @@
                 [label]="isEditMode ? 'Update' : 'Save'"
                 icon="pi pi-save"
                 [loading]="saving"
+                [class.perm-hidden]="isEditMode ? !canUpdate : !canInsert"
                 (onClick)="onSave()"
             ></p-button>
         </div>

@@ -16,6 +16,7 @@
                     label="Receive Posting Order ({{ selectedRows.length }})"
                     severity="success"
                     [disabled]="!selectedRows.length"
+                    [class.perm-hidden]="!canUpdate"
                     (onClick)="openReceiveDialog()"
                 ></p-button>
             </div>

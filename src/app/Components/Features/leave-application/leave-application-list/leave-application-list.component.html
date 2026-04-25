@@ -5,7 +5,7 @@
     <div class="report-filter-card">
         <div class="report-filter-card-title leave-app-header-row">
             <h1 class="report-page-title">Leave Applications</h1>
-            <p-button label="New Application" icon="pi pi-plus" [routerLink]="['/leave-application/apply']"></p-button>
+            <p-button label="New Application" icon="pi pi-plus" [routerLink]="['/leave-application/apply']" [class.perm-hidden]="!canInsert"></p-button>
         </div>
 
         <div class="report-filter-header" [class.open]="filterOpen" (click)="toggleFilter()" role="button" tabindex="0" (keydown.enter)="toggleFilter()" (keydown.space)="toggleFilter()">
@@ -338,8 +338,8 @@
     <ng-template pTemplate="footer">
         <p-button label="Close" (onClick)="closePreview()"></p-button>
         @if (previewRow && isPendingForMe(previewRow)) {
-            <p-button label="Accept" icon="pi pi-check" (onClick)="approveFromPreview()"></p-button>
-            <p-button label="Reject" icon="pi pi-times" severity="danger" (onClick)="rejectFromPreview()"></p-button>
+            <p-button label="Accept" icon="pi pi-check" (onClick)="approveFromPreview()" [class.perm-hidden]="!canUpdate"></p-button>
+            <p-button label="Reject" icon="pi pi-times" severity="danger" (onClick)="rejectFromPreview()" [class.perm-hidden]="!canUpdate"></p-button>
         }
     </ng-template>
 </p-dialog>

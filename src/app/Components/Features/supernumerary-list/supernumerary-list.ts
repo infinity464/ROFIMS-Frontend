@@ -1,7 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
+import { UserMenuService } from '@/services/user-menu.service';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
@@ -48,20 +49,28 @@ export class SupernumeraryList implements OnInit {
 
     /** CodeIds of Member Types the current user is allowed to use. `null` means "not yet loaded" (fail-open). */
     private allowedMemberTypeIds: number[] | null = null;
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
 
     constructor(
         private employeeListService: EmployeeListService,
         private commonCodeService: CommonCodeService,
         private messageService: MessageService,
         private sharedService: SharedService,
-        private memberTypeAccess: IdentityUserMemberTypeAccessService
+        private memberTypeAccess: IdentityUserMemberTypeAccessService,
+        private _router: Router,
+        private _userMenuService: UserMenuService
     ) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
         this.loadCurrentUserMemberTypePermissions();
         this.loadOrgOptions();
         this.loadMemberTypeOptions();
-        this.loadData();
     }
 
     private loadCurrentUserMemberTypePermissions(): void {
@@ -89,6 +98,7 @@ export class SupernumeraryList implements OnInit {
         this.commonCodeService.getAllActiveMotherOrgs().subscribe({
             next: (orgs) => {
                 this.orgOptions = orgs;
+                this.loadData();
             },
             error: (err) => {
                 console.error('Failed to load organizations', err);
@@ -191,6 +201,39 @@ export class SupernumeraryList implements OnInit {
     selectedTradeId: number | null = null;
     joiningDateFrom: Date | null = null;
     joiningDateTo: Date | null = null;
+    joiningDateFromRaw = '';
+    joiningDateToRaw = '';
+    joiningDateFromInvalid = false;
+    joiningDateToInvalid = false;
+
+    onJoiningDateFromChange(val: Date | null): void {
+        if (val != null) this.joiningDateFromInvalid = false;
+        this.onFilterChange();
+    }
+
+    onJoiningDateToChange(val: Date | null): void {
+        if (val != null) this.joiningDateToInvalid = false;
+        this.onFilterChange();
+    }
+
+    onJoiningDateInput(field: 'from' | 'to', event: { value: unknown }): void {
+        const raw = typeof event?.value === 'string' ? event.value : '';
+        if (field === 'from') {
+            this.joiningDateFromRaw = raw;
+            if (!raw.trim()) this.joiningDateFromInvalid = false;
+        } else {
+            this.joiningDateToRaw = raw;
+            if (!raw.trim()) this.joiningDateToInvalid = false;
+        }
+    }
+
+    onJoiningDateBlur(field: 'from' | 'to'): void {
+        const raw = field === 'from' ? this.joiningDateFromRaw : this.joiningDateToRaw;
+        const model = field === 'from' ? this.joiningDateFrom : this.joiningDateTo;
+        const invalid = raw.trim().length > 0 && model == null;
+        if (field === 'from') this.joiningDateFromInvalid = invalid;
+        else this.joiningDateToInvalid = invalid;
+    }
 
     /** Posting-status filter – mirrors the action-button buckets. */
     postingStatusOptions: { label: string; value: 'in-process' | 'not-sent' }[] = [
@@ -265,6 +308,10 @@ export class SupernumeraryList implements OnInit {
         this.selectedTradeId = null;
         this.joiningDateFrom = null;
         this.joiningDateTo = null;
+        this.joiningDateFromRaw = '';
+        this.joiningDateToRaw = '';
+        this.joiningDateFromInvalid = false;
+        this.joiningDateToInvalid = false;
         this.selectedPostingStatus = null;
         this.first = 0;
         this.loadData();
@@ -343,6 +390,10 @@ export class SupernumeraryList implements OnInit {
 
     /** Bulk send: fire SetIsSendingNotesheetStatus=Draft for every selected ID in parallel. */
     sendSelectedToPosting(): void {
+        if (!this.canUpdate) {
+            this.messageService.add({ severity: 'warn', summary: 'Permission Denied', detail: 'You do not have permission to perform this action.' });
+            return;
+        }
         const ids = Array.from(this.selectedIds);
         if (ids.length === 0 || this.isSendingSelection) return;
 
@@ -377,6 +428,10 @@ export class SupernumeraryList implements OnInit {
     }
 
     onSendNewPostingList(row: EmployeeList): void {
+        if (!this.canUpdate) {
+            this.messageService.add({ severity: 'warn', summary: 'Permission Denied', detail: 'You do not have permission to perform this action.' });
+            return;
+        }
         if (this.isPostingInProcess(row)) return;
         if (!this.rabIdOf(row)) {
             this.messageService.add({

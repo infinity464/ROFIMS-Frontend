@@ -1,6 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
+import { UserMenuService } from '@/services/user-menu.service';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
@@ -46,15 +48,24 @@ export class AddDraftInterPostingComponent implements OnInit {
     editDraft: DraftInterPostingMasterWithDetailsDto | null = null;
     editDraftStatus = '';
     draftPostingStatusOptions = DraftPostingStatusOptions;
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
 
     constructor(
         private employeeListService: EmployeeListService,
         private postingService: PostingService,
         private sharedService: SharedService,
-        private messageService: MessageService
+        private messageService: MessageService,
+        private _router: Router,
+        private _userMenuService: UserMenuService
     ) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
         this.loadData();
         this.loadDraftMasters();
     }
@@ -73,6 +84,10 @@ export class AddDraftInterPostingComponent implements OnInit {
 
     /** Save: create Draft Inter Posting (add) or update master (edit). */
     onSave(): void {
+        if (this.isEditMode ? !this.canUpdate : !this.canInsert) {
+            this.messageService.add({ severity: 'warn', summary: 'Permission Denied', detail: 'You do not have permission to perform this action.' });
+            return;
+        }
         if (!this.draftPostingDate) {
             this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select a date.' });
             return;

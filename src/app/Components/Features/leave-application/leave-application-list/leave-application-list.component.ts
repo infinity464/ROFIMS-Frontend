@@ -7,6 +7,7 @@ import { environment } from '@/Core/Environments/environment';
 import { SharedService } from '@/shared/services/shared-service';
 import { LeaveApplicationService, LeaveApplicationModel, LeaveApplicationFilterParams } from '@/services/leave-application.service';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
+import { UserMenuService } from '@/services/user-menu.service';
 import { EmpService } from '@/services/emp-service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { MessageService } from 'primeng/api';
@@ -88,6 +89,9 @@ export class LeaveApplicationListComponent implements OnInit {
 
     /** Collapsible search panel open by default (like Ex-Members List). */
     filterOpen = true;
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
 
     private api = `${environment.apis.core}/LeaveApplication`;
 
@@ -108,10 +112,15 @@ export class LeaveApplicationListComponent implements OnInit {
         private messageService: MessageService,
         private router: Router,
         private route: ActivatedRoute,
-        private location: Location
+        private location: Location,
+        private _userMenuService: UserMenuService
     ) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this.router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
         this.loadEmployeeNames();
         this.loadLeaveTypeNames();
         const userId = this.sharedService.getCurrentUserId?.();

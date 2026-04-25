@@ -12,6 +12,8 @@ import { FileUploadModule } from 'primeng/fileupload';
 import { TabsModule, Tab, TabList, Tabs, TabPanels, TabPanel } from 'primeng/tabs';
 import { DatePickerModule } from 'primeng/datepicker';
 
+import { Router } from '@angular/router';
+import { UserMenuService } from '@/services/user-menu.service';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { switchMap } from 'rxjs/operators';
 import { AddressSectionComponent } from '../../Shared/address-section/address-section';
@@ -61,6 +63,9 @@ export class Employeeinfo implements OnInit {
     ];
 
     employees: EmployeeInfoModel[] = [];
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
 
     lastUnitOrganizations = [
         { label: 'Unit A', value: 1 },
@@ -143,10 +148,16 @@ export class Employeeinfo implements OnInit {
         private fb: FormBuilder,
         private employeeService: EmployeeinfoService,
         private confirmationService: ConfirmationService,
-        private messageService: MessageService
+        private messageService: MessageService,
+        private _router: Router,
+        private _userMenuService: UserMenuService
     ) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
         this.buildForm();
         this.handleSameAsPermanent();
         this.handleWifeSameAsPermanent();
@@ -530,6 +541,10 @@ export class Employeeinfo implements OnInit {
     }
 
     onSubmit(): void {
+        if (this.mode === 'edit' ? !this.canUpdate : !this.canInsert) {
+            this.messageService.add({ severity: 'warn', summary: 'Permission Denied', detail: 'You do not have permission to perform this action.' });
+            return;
+        }
         if (this.form.invalid) {
             this.form.markAllAsTouched();
             this.showError('Please fill all required fields');

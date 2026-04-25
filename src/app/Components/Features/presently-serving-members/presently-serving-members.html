@@ -206,6 +206,7 @@
                     severity="warn"
                     [loading]="savingInterPosting"
                     [disabled]="!selectedRows?.length"
+                    [class.perm-hidden]="!canUpdate"
                     (onClick)="sendInterPosting()">
                 </p-button>
             </div>

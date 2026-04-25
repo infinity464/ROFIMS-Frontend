@@ -240,7 +240,7 @@
 
       <!-- Actions -->
       <div class="ns-gen-actions">
-        <p-button type="submit" label="Generate Note Sheet" icon="pi pi-check" [loading]="isSubmitting" [disabled]="form.invalid" />
+        <p-button type="submit" label="Generate Note Sheet" icon="pi pi-check" [loading]="isSubmitting" [disabled]="form.invalid" [class.perm-hidden]="editMode ? !canUpdate : !canInsert" />
       </div>
     </form>
   </div>

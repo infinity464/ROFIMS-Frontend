@@ -10,6 +10,7 @@ import { LeaveApplicationService, LeaveApplicationModel } from '@/services/leave
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
+import { UserMenuService } from '@/services/user-menu.service';
 import { MessageService } from 'primeng/api';
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
@@ -68,6 +69,9 @@ export class LeaveApplicationApplyComponent implements OnInit {
     editId: number | null = null;
     editMode = false;
     currentUserEmployeeId: number | null = null;
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
 
     private api = `${environment.apis.core}/EmployeeInfo`;
 
@@ -81,12 +85,17 @@ export class LeaveApplicationApplyComponent implements OnInit {
         private identityMappingService: IdentityUserMappingService,
         private messageService: MessageService,
         private router: Router,
-        private route: ActivatedRoute
+        private route: ActivatedRoute,
+        private _userMenuService: UserMenuService
     ) {
         this.initForm();
     }
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this.router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
         this.loadLeaveTypes();
         this.loadApproverOptions();
         this.route.queryParams.pipe(take(1)).subscribe((params) => {
@@ -355,6 +364,10 @@ export class LeaveApplicationApplyComponent implements OnInit {
     }
 
     submitForApproval(): void {
+        if (this.editMode ? !this.canUpdate : !this.canInsert) {
+            this.messageService.add({ severity: 'warn', summary: 'Permission Denied', detail: 'You do not have permission to perform this action.' });
+            return;
+        }
         if (!this.buildAndValidate()) return;
         const processType = this.form.get('processType')?.value;
 

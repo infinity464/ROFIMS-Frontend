@@ -120,6 +120,7 @@
                     icon="pi pi-upload"
                     [loading]="uploading"
                     [disabled]="!hasImageReady"
+                    [class.perm-hidden]="!canUpdate"
                     (onClick)="upload()">
                 </p-button>
             </div>

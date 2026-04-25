@@ -96,23 +96,35 @@
                         <label>Date of joining from</label>
                         <p-datepicker
                             [(ngModel)]="joiningDateFrom"
-                            (ngModelChange)="onFilterChange()"
+                            (ngModelChange)="onJoiningDateFromChange($event)"
+                            (onInput)="onJoiningDateInput('from', $event)"
+                            (onBlur)="onJoiningDateBlur('from')"
                             dateFormat="dd-mm-yy"
-                            placeholder="From"
+                            placeholder="dd-mm-yyyy"
                             appendTo="body"
-                            styleClass="w-full">
+                            class="w-full"
+                            [inputStyle]="{'width':'100%'}">
                         </p-datepicker>
+                        @if (joiningDateFromInvalid) {
+                            <small class="p-error">Invalid date (dd-mm-yyyy)</small>
+                        }
                     </div>
                     <div class="report-filter-field report-filter-field-date">
                         <label>Date of joining to</label>
                         <p-datepicker
                             [(ngModel)]="joiningDateTo"
-                            (ngModelChange)="onFilterChange()"
+                            (ngModelChange)="onJoiningDateToChange($event)"
+                            (onInput)="onJoiningDateInput('to', $event)"
+                            (onBlur)="onJoiningDateBlur('to')"
                             dateFormat="dd-mm-yy"
-                            placeholder="To"
+                            placeholder="dd-mm-yyyy"
                             appendTo="body"
-                            styleClass="w-full">
+                            class="w-full"
+                            [inputStyle]="{'width':'100%'}">
                         </p-datepicker>
+                        @if (joiningDateToInvalid) {
+                            <small class="p-error">Invalid date (dd-mm-yyyy)</small>
+                        }
                     </div>
                     <div class="report-filter-field">
                         <label>Posting Status</label>
@@ -162,6 +174,7 @@
                     <button type="button"
                         class="report-btn-secondary report-btn-blue report-btn-send-selected"
                         [disabled]="isSendingSelection"
+                        [class.perm-hidden]="!canUpdate"
                         (click)="sendSelectedToPosting()">
                         <i class="pi pi-send" style="margin-right: 6px;"></i>
                         Send {{ selectedCount }} to Posting
@@ -259,6 +272,7 @@
                                     class="report-btn-secondary"
                                     [ngClass]="getSendPostingListClass(row)"
                                     [disabled]="isSendPostingListDisabled(row)"
+                                    [class.perm-hidden]="!canUpdate"
                                     (click)="onSendNewPostingList(row)">
                                     {{ getSendPostingListLabel(row) }}
                                 </button>

@@ -16,6 +16,7 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { TextareaModule } from 'primeng/textarea';
 import { PostingService } from '@/services/posting.service';
 import { SharedService } from '@/shared/services/shared-service';
+import { UserMenuService } from '@/services/user-menu.service';
 import { PendingPostingJoiningDto } from '@/models/posting.model';
 
 @Component({
@@ -64,15 +65,23 @@ export class PendingInterPostingJoiningComponent implements OnInit {
     remarks = '';
     saving = false;
     currentUser = '';
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
 
     constructor(
         private postingService: PostingService,
         private router: Router,
         private messageService: MessageService,
-        private sharedService: SharedService
+        private sharedService: SharedService,
+        private _userMenuService: UserMenuService
     ) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this.router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
         this.currentUser = this.sharedService.getCurrentUser();
         this.loadPending();
     }
@@ -161,6 +170,10 @@ export class PendingInterPostingJoiningComponent implements OnInit {
     }
 
     confirmReceive(): void {
+        if (!this.canUpdate) {
+            this.messageService.add({ severity: 'warn', summary: 'Permission Denied', detail: 'You do not have permission to perform this action.' });
+            return;
+        }
         if (!this.selectedRows.length) return;
         if (!this.joiningDate) {
             this.messageService.add({

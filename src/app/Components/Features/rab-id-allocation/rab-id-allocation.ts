@@ -8,6 +8,8 @@ import { SelectModule } from 'primeng/select';
 import { Toast } from 'primeng/toast';
 import { ConfirmDialog } from 'primeng/confirmdialog';
 import { ConfirmationService, MessageService } from 'primeng/api';
+import { Router } from '@angular/router';
+import { UserMenuService } from '@/services/user-menu.service';
 import { EmployeeListService } from '@/services/employee-list.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
@@ -37,6 +39,9 @@ export class RabIdAllocation implements OnInit {
 
     /** CodeIds of Member Types the current user is allowed to use. `null` means "not yet loaded" (fail-open). */
     private allowedMemberTypeIds: number[] | null = null;
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
 
     constructor(
         private employeeListService: EmployeeListService,
@@ -44,10 +49,16 @@ export class RabIdAllocation implements OnInit {
         private messageService: MessageService,
         private confirmationService: ConfirmationService,
         private sharedService: SharedService,
-        private memberTypeAccess: IdentityUserMemberTypeAccessService
+        private memberTypeAccess: IdentityUserMemberTypeAccessService,
+        private _router: Router,
+        private _userMenuService: UserMenuService
     ) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
         this.loadCurrentUserMemberTypePermissions();
         this.loadOrgOptions();
         this.loadMemberTypeOptions();
@@ -174,6 +185,10 @@ export class RabIdAllocation implements OnInit {
     }
 
     generateId(): void {
+        if (!this.canUpdate) {
+            this.messageService.add({ severity: 'warn', summary: 'Permission Denied', detail: 'You do not have permission to generate RAB IDs.' });
+            return;
+        }
         if (!this.list?.length) {
             this.messageService.add({
                 severity: 'warn',

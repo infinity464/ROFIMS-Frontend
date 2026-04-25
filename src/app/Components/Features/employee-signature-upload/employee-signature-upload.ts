@@ -1,6 +1,8 @@
-import { Component, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
+import { UserMenuService } from '@/services/user-menu.service';
 import { ButtonModule } from 'primeng/button';
 import { ToastModule } from 'primeng/toast';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
@@ -29,7 +31,7 @@ import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/
     styleUrl: './employee-signature-upload.scss',
     providers: [MessageService]
 })
-export class EmployeeSignatureUploadComponent {
+export class EmployeeSignatureUploadComponent implements OnInit {
     employeeId: number | null = null;
     employeeInfo: EmployeeBasicInfo | null = null;
 
@@ -49,6 +51,10 @@ export class EmployeeSignatureUploadComponent {
     private readonly SIGNATURE_WIDTH = 600;
     private readonly SIGNATURE_HEIGHT = 200;
 
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     // Direct upload (no crop)
     directFile: File | null = null;
     directPreviewUrl: string = '';
@@ -61,8 +67,17 @@ export class EmployeeSignatureUploadComponent {
 
     constructor(
         private empService: EmpService,
-        private messageService: MessageService
+        private messageService: MessageService,
+        private _router: Router,
+        private _userMenuService: UserMenuService
     ) {}
+
+    ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+    }
 
     onEmployeeFound(emp: EmployeeBasicInfo): void {
         this.employeeId = emp.employeeID;
@@ -160,6 +175,10 @@ export class EmployeeSignatureUploadComponent {
     }
 
     upload(): void {
+        if (!this.canUpdate) {
+            this.messageService.add({ severity: 'warn', summary: 'Permission Denied', detail: 'You do not have permission to upload signatures.' });
+            return;
+        }
         if (!this.employeeId) {
             this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Please select an employee.' });
             return;

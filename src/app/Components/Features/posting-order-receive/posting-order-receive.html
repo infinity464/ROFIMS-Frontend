@@ -160,7 +160,8 @@
                                         severity="success"
                                         (onClick)="receiveSelected()"
                                         [loading]="saving"
-                                        [disabled]="saving || !joiningDate">
+                                        [disabled]="saving || !joiningDate"
+                                        [class.perm-hidden]="!canUpdate">
                                     </p-button>
                                 </div>
                         </div>

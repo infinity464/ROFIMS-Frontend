@@ -143,7 +143,7 @@
       </div>
 
       <div class="flex gap-2 mt-4">
-        <p-button type="submit" label="Submit" icon="pi pi-send" [loading]="isSaving"></p-button>
+        <p-button type="submit" label="Submit" icon="pi pi-send" [loading]="isSaving" [class.perm-hidden]="editMode ? !canUpdate : !canInsert"></p-button>
       </div>
     </form>
   </div>
