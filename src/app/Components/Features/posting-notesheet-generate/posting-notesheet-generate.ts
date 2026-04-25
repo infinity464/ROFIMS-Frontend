@@ -448,9 +448,6 @@ export class PostingNotesheetGenerateComponent implements OnInit {
     /** Build dropdown options based on current textType */
     private buildNoteSheetConfigOptions(): void {
         const isBn = this.form.get('textType')?.value === 'bn';
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
 
         this.noteSheetConfigOptions = this.allNoteSheetConfigs.map((c: any) => {
             const configId = c.configId ?? c.ConfigId;
@@ -460,10 +457,19 @@ export class PostingNotesheetGenerateComponent implements OnInit {
             const memberTypeId = c.memberTypeId ?? c.MemberTypeId;
             const mt = this.memberTypeMap.get(memberTypeId);
             const memberLabel = mt ? (isBn ? mt.bn : mt.en) : '';
+            const includeDate = c.includeDateInNumber ?? c.IncludeDateInNumber ?? false;
 
-            const yearStr = isBn ? BanglaNumerals.toBangla(String(year)) : String(year);
-            const monthStr = isBn ? BanglaNumerals.toBangla(month) : month;
-            const pattern = `${prefix}-${yearStr}-${monthStr}-***`;
+            let pattern: string;
+            if (includeDate) {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const yearStr = isBn ? BanglaNumerals.toBangla(String(year)) : String(year);
+                const monthStr = isBn ? BanglaNumerals.toBangla(month) : month;
+                pattern = `${prefix}-${yearStr}-${monthStr}-***`;
+            } else {
+                pattern = `${prefix}-***`;
+            }
             const label = memberLabel ? `${pattern}  (${memberLabel})` : pattern;
 
             return { label, value: configId };

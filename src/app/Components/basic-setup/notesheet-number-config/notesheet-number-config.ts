@@ -14,10 +14,10 @@ import { IconField } from 'primeng/iconfield';
 import { InputIcon } from 'primeng/inputicon';
 import { TableModule } from 'primeng/table';
 import { Select } from 'primeng/select';
-
+import { Checkbox } from 'primeng/checkbox';
 @Component({
     selector: 'app-notesheet-number-config',
-    imports: [ReactiveFormsModule, TableModule, InputText, InputNumber, Fluid, ButtonModule, IconField, InputIcon, Select],
+    imports: [ReactiveFormsModule, TableModule, InputText, InputNumber, Fluid, ButtonModule, IconField, InputIcon, Select, Checkbox],
     templateUrl: './notesheet-number-config.html',
     styleUrl: './notesheet-number-config.scss'
 })
@@ -83,7 +83,8 @@ export class NoteSheetNumberConfigComponent implements OnInit {
             memberTypeId: [null, Validators.required],
             prefix: [null, Validators.required],
             prefixBN: [null, Validators.required],
-            startNumber: [null, [Validators.required, Validators.min(1)]]
+            startNumber: [null, [Validators.required, Validators.min(1)]],
+            includeDateInNumber: [false]
         });
     }
 
@@ -107,10 +108,13 @@ export class NoteSheetNumberConfigComponent implements OnInit {
     getPreview(): string {
         const prefix = this.configForm.get('prefix')?.value || 'PREFIX';
         const startNumber = this.configForm.get('startNumber')?.value || '10001';
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        return `${prefix}-${year}-${month}-${startNumber}`;
+        if (this.configForm.get('includeDateInNumber')?.value) {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            return `${prefix}-${year}-${month}-${startNumber}`;
+        }
+        return `${prefix}-${startNumber}`;
     }
 
     onSearch(event: Event) {
@@ -149,12 +153,11 @@ export class NoteSheetNumberConfigComponent implements OnInit {
         this.isSubmitting = true;
         const currentDateTime = this.sharedService.getCurrentDateTime();
 
+        const formVal = this.configForm.value;
         const payload: any = {
-            ...this.configForm.value,
+            ...formVal,
             configId: 0,
             currentNumber: 0,
-            currentYear: 0,
-            currentMonth: 0,
             status: true,
             createdBy: this.currentUser,
             createdDate: currentDateTime,
@@ -196,6 +199,7 @@ export class NoteSheetNumberConfigComponent implements OnInit {
             memberTypeId: formVal.memberTypeId,
             prefix: formVal.prefix,
             prefixBN: formVal.prefixBN ?? '',
+            includeDateInNumber: formVal.includeDateInNumber ?? false,
             lastUpdatedBy: this.currentUser,
             lastupdate: currentDateTime
         };
@@ -231,7 +235,8 @@ export class NoteSheetNumberConfigComponent implements OnInit {
             memberTypeId: row.memberTypeId,
             prefix: row.prefix,
             prefixBN: row.prefixBN ?? '',
-            startNumber: row.startNumber
+            startNumber: row.startNumber,
+            includeDateInNumber: row.includeDateInNumber ?? false
         });
         // Disable fields that should not be changed after creation
         this.configForm.get('noteSheetType')?.disable();
@@ -273,7 +278,8 @@ export class NoteSheetNumberConfigComponent implements OnInit {
             memberTypeId: null,
             prefix: null,
             prefixBN: null,
-            startNumber: null
+            startNumber: null,
+            includeDateInNumber: false
         });
         // Re-enable fields that were disabled during edit
         this.configForm.get('noteSheetType')?.enable();
