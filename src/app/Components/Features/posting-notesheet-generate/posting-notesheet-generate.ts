@@ -145,6 +145,8 @@ export class PostingNotesheetGenerateComponent implements OnInit {
                     this.editId = numId;
                     this.editMode = true;
                     this.title = 'Update New Posting Note-Sheet';
+                    this.form.get('noteSheetNumberConfigId')?.clearValidators();
+                    this.form.get('noteSheetNumberConfigId')?.updateValueAndValidity();
                     this.loadNoteSheetForEdit(numId);
                 }
             }

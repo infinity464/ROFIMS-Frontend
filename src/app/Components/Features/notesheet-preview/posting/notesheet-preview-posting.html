@@ -75,11 +75,6 @@
         <!-- Visible: paginated pages -->
         <div class="a4-paper-container" #pagesContainer>
             <div *ngFor="let offset of pageOffsets; let i = index; trackBy: trackByIndex" class="a4-paper paginated">
-                <!-- Title above border on first page only -->
-                <div class="ns-title-block" *ngIf="i === 0">
-                    <div class="ns-title-en">NOTE SHEET</div>
-                    <div class="ns-title-bn">মন্তব্য পত্র</div>
-                </div>
                 <div class="page-viewport">
                     <div class="page-inner" [style.transform]="'translateY(-' + offset + 'px)'">
                         <ng-container *ngTemplateOutlet="viewContent"></ng-container>
@@ -99,13 +94,13 @@
     <div class="a4-paper-container" *ngIf="noteSheet && !loading && !error && editing">
         <div class="a4-paper">
 
-            <div class="ns-title-block">
-                <div class="ns-title-en">NOTE SHEET</div>
-                <div class="ns-title-bn">মন্তব্য পত্র</div>
-            </div>
-
             <div class="ns-doc-box">
                 <div class="ns-main-col">
+
+                    <div class="ns-title-area">
+                        <div class="ns-title-en">NOTE SHEET</div>
+                        <div class="ns-title-bn">মন্তব্য পত্র</div>
+                    </div>
 
                     <div class="ns-org-header" style="text-align:center; padding:8px 16px 4px; font-weight:700; font-size:10pt; line-height:1.5;">
                         <div>{{ getOrgHeaderLine1() }}</div>
@@ -121,6 +116,11 @@
                     <div class="ns-edit-field">
                         <label class="ns-edit-label">{{ isEnglish() ? 'Subject' : 'বিষয়' }}</label>
                         <input pInputText [(ngModel)]="editSubject" class="w-full" placeholder="{{ isEnglish() ? 'Subject' : 'বিষয়' }}" />
+                    </div>
+
+                    <div class="ns-edit-field">
+                        <label class="ns-edit-label">Reference Number</label>
+                        <app-rich-editor [(ngModel)]="editReferenceNumber" [hideTable]="true" height="120px"></app-rich-editor>
                     </div>
 
                     <div class="ns-edit-field">
@@ -249,25 +249,38 @@
     <!-- ══════════════════════════════════════════════════════════ -->
     <ng-template #viewContent>
       <ng-container *ngIf="noteSheet">
-        <div class="ns-title-block">
-            <div class="ns-title-en">NOTE SHEET</div>
-            <div class="ns-title-bn">মন্তব্য পত্র</div>
-        </div>
-
         <div class="ns-doc-box">
             <div class="ns-main-col">
+
+                <div class="ns-title-area">
+                    <div class="ns-title-en">NOTE SHEET</div>
+                    <div class="ns-title-bn">মন্তব্য পত্র</div>
+                </div>
 
                 <div class="ns-org-header" style="text-align:center; padding:8px 16px 4px; font-weight:700; font-size:10pt; line-height:1.5;">
                     <div>{{ getOrgHeaderLine1() }}</div>
                     <div style="border-bottom:1.5px solid #000; display:inline-block; padding-bottom:2px;">{{ getOrgHeaderLine2() }}</div>
                 </div>
 
-                <div class="ns-notesheet-no" *ngIf="noteSheet.noteSheetNo" style="padding:4px 16px 2px; font-size:10pt;">
-                    {{ noteSheet.noteSheetNo }}
+                <div *ngIf="noteSheet.noteSheetNo" style="padding:4px 16px 2px; font-size:10pt; display:flex; justify-content:space-between; align-items:baseline;">
+                    <span>{{ noteSheet.noteSheetNo }}</span>
+                    <span *ngIf="noteSheet.noteSheetDate">{{ isEnglish() ? 'Date:' : 'তারিখঃ' }} {{ formatMonthYear(noteSheet.noteSheetDate) }}</span>
                 </div>
 
                 <div *ngIf="noteSheet.subject" style="padding:2px 16px 4px; font-size:10pt;">
                     <strong><u>{{ noteSheet.subject }}</u></strong>
+                </div>
+
+                <!-- ── Reference / Date ── -->
+                <div class="ns-cell-ref">
+                    <ng-container *ngIf="noteSheet.referenceNumber">
+                        <span class="ns-ref-key">{{ isEnglish() ? 'Reference:' : 'সূত্রঃ' }}</span>
+                        <div class="ns-ref-content" [innerHTML]="getReferenceNumberSafe()"></div>
+                    </ng-container>
+                    <ng-container *ngIf="!noteSheet.referenceNumber && noteSheet.noteSheetDate">
+                        <span class="ns-ref-key">{{ isEnglish() ? 'Date:' : 'তারিখঃ' }}</span>
+                        {{ formatDate(noteSheet.noteSheetDate) }}
+                    </ng-container>
                 </div>
 
                 <!-- ── Main Text ── -->
