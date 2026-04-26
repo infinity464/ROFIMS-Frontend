@@ -18,21 +18,25 @@ import { Toast } from 'primeng/toast';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { ConfirmDialog } from 'primeng/confirmdialog';
 import { forkJoin, of } from 'rxjs';
-import { switchMap, catchError } from 'rxjs/operators';
+import { switchMap, catchError, map } from 'rxjs/operators';
 import { EmpService } from '@/services/emp-service';
 import { SharedService } from '@/shared/services/shared-service';
-import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
+import { EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/file-references-form/file-references-form';
 import { PermanentPostingMORecordService, PermanentPostingMORecordModel } from '@/services/permanent-posting-mo-record.service';
 import { PermanentPostingJoineeDetailService, PermanentPostingJoineeDetailModel } from '@/services/permanent-posting-joinee-detail.service';
 import { OrganizationService } from '@/Components/basic-setup/organization-setup/services/organization-service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
+import { DialogModule } from 'primeng/dialog';
+import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
+import { MotherOrganizationModel } from '@/models/mother-org-model';
+import { PostingStatus } from '@/models/enums';
 
 @Component({
     selector: 'app-permanent-posting-mo-record',
     standalone: true,
-    imports: [CommonModule, FormsModule, ButtonModule, InputTextModule, DatePickerModule, SelectModule, TableModule, DividerModule, TooltipModule, Toast, ConfirmDialog, EmployeeSearchComponent, FileReferencesFormComponent, FlexibleDateDirective],
+    imports: [CommonModule, FormsModule, ButtonModule, InputTextModule, DatePickerModule, SelectModule, TableModule, DividerModule, TooltipModule, Toast, ConfirmDialog, FileReferencesFormComponent, FlexibleDateDirective, DialogModule],
     providers: [MessageService, ConfirmationService],
     templateUrl: './permanent-posting-mo-record.html',
     styleUrl: './permanent-posting-mo-record.scss'
@@ -57,9 +61,36 @@ export class PermanentPostingMORecordComponent implements OnInit {
     editPostedOutEmployeeId: number | null = null;
     isOfficer = false;
 
+    // Posted Out inline search
+    poSearchRabId = '';
+    poSearchServiceId = '';
+    poSearching = false;
+    showPoPickerDialog = false;
+    poPickerRows: Array<{ employee: any; displayName: string; orgName: string; postingStatus: string; sortKey: string }> = [];
+    private poMotherOrganizations: MotherOrganizationModel[] = [];
+    private readonly poStatusLabels: Record<string, string> = {
+        [PostingStatus.Supernumerary]: 'Supernumerary',
+        [PostingStatus.Servings]: 'Serving',
+        [PostingStatus.ExMember]: 'Ex-Member',
+        [PostingStatus.PendingForJoining]: 'Pending for Joining',
+        [PostingStatus.Pending]: 'Pending'
+    };
+
+    // Joinee inline search
+    joineeSearchServiceId = '';
+    joineeSearching = false;
+    showJoineePickerDialog = false;
+    joineePickerRows: Array<{ employee: any; displayName: string; orgName: string; postingStatus: string; sortKey: string }> = [];
+
     // Posting unit dropdown (loaded from posted-out employee's mother org)
     postingUnitId: number | null = null;
     postingUnitOptions: { label: string; value: number }[] = [];
+
+    // Add Posting Unit dialog
+    showAddUnitDialog = false;
+    newUnitNameEN = '';
+    newUnitNameBN = '';
+    isSavingUnit = false;
 
     // Posted Out fields
     postingOrderNo = '';
@@ -139,7 +170,8 @@ export class PermanentPostingMORecordComponent implements OnInit {
         private messageService: MessageService,
         private confirmationService: ConfirmationService,
         private orgService: OrganizationService,
-        private commonCodeService: CommonCodeService
+        private commonCodeService: CommonCodeService,
+        private memberTypeAccess: IdentityUserMemberTypeAccessService
     ) {}
 
     ngOnInit(): void {
@@ -155,7 +187,7 @@ export class PermanentPostingMORecordComponent implements OnInit {
 
     private loadStaticOptions(): void {
         this.commonCodeService.getAllActiveMotherOrgs().subscribe({
-            next: (orgs) => { this.motherOrgOptions = orgs.map(o => ({ label: o.orgNameEN, value: o.orgId })); },
+            next: (orgs) => { this.motherOrgOptions = orgs.map(o => ({ label: o.orgNameEN, value: o.orgId })); this.poMotherOrganizations = orgs; },
             error: (err: any) => {}
         });
         this.commonCodeService.getAllActiveCommonCodesType('EmployeeType').subscribe({
@@ -211,7 +243,7 @@ export class PermanentPostingMORecordComponent implements OnInit {
         this.postedOutEmployee = employee;
         this.isOfficer = (employee as any).officerType != null && (employee as any).officerType > 0;
 
-        this.orgService.getOrgUnitsByEmployeeId(employee.employeeID).subscribe({
+        this.orgService.GetAllOrgUnit().subscribe({
             next: (units) => {
                 this.postingUnitOptions = units.map(u => ({ label: u.orgNameEN, value: u.orgId }));
             },
@@ -224,6 +256,367 @@ export class PermanentPostingMORecordComponent implements OnInit {
         this.isOfficer = false;
         this.postingUnitOptions = [];
         this.postingUnitId = null;
+    }
+
+    // ── Add Posting Unit Dialog ──────────────────────────────────
+    openAddPostingUnitDialog(): void {
+        if (!this.postedOutEmployee?.orgId) {
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Please search a posted-out employee first' });
+            return;
+        }
+        this.newUnitNameEN = '';
+        this.newUnitNameBN = '';
+        this.showAddUnitDialog = true;
+    }
+
+    getPostedOutMotherOrgName(): string {
+        // Try display name first (from getEmployeeSearchInfo)
+        const display = (this.postedOutEmployee as any)?.motherOrganizationDisplay;
+        if (display) return display;
+        // Fallback: lookup from mother orgs list
+        const orgId = this.postedOutEmployee?.motherOrganization;
+        if (!orgId) return '';
+        const org = this.poMotherOrganizations.find(o => o.orgId === orgId);
+        return org?.orgNameEN ?? '';
+    }
+
+    saveNewPostingUnit(): void {
+        if (!this.newUnitNameEN?.trim()) return;
+        const parentOrgId = this.postedOutEmployee?.orgId;
+        if (!parentOrgId) return;
+
+        this.isSavingUnit = true;
+        const currentUser = this.sharedService.getCurrentUser();
+        const currentDateTime = this.sharedService.getCurrentDateTime();
+
+        const payload = {
+            orgId: 0,
+            orgNameEN: this.newUnitNameEN.trim(),
+            orgNameBN: this.newUnitNameBN?.trim() || '',
+            locationEN: '',
+            locationBN: '',
+            districtId: null,
+            parentOrg: parentOrgId,
+            status: true,
+            createdBy: currentUser,
+            createdDate: currentDateTime,
+            lastUpdatedBy: currentUser,
+            lastupdate: currentDateTime
+        };
+
+        this.orgService.post(payload as any).subscribe({
+            next: (res: any) => {
+                this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Posting Unit created successfully' });
+                this.showAddUnitDialog = false;
+                this.isSavingUnit = false;
+
+                const newOrgId = res?.orgId ?? res?.OrgId;
+                // Reload ALL org units
+                this.orgService.GetAllOrgUnit().subscribe({
+                    next: (units) => {
+                        this.postingUnitOptions = units.map(u => ({ label: u.orgNameEN, value: u.orgId }));
+                        if (newOrgId) this.postingUnitId = newOrgId;
+                    }
+                });
+            },
+            error: (err) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to create Posting Unit' });
+                this.isSavingUnit = false;
+            }
+        });
+    }
+
+    // ── Posted Out Employee Inline Search ──────────────────────────
+    private isMemberTypeAllowed(memberTypeId: number | null | undefined): boolean {
+        if (memberTypeId == null) return true;
+        const userId = this.sharedService.getCurrentUserId?.() ?? null;
+        if (!userId) return true;
+        const allowed = this.memberTypeAccess.getCachedMemberTypeIds(userId);
+        if (allowed === null) return true;
+        return allowed.includes(memberTypeId as number);
+    }
+
+    searchPostedOut(): void {
+        if (!this.poSearchRabId && !this.poSearchServiceId) {
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Please enter RAB ID or Service ID' });
+            return;
+        }
+        this.postedOutEmployee = null;
+        this.showPoPickerDialog = false;
+        this.poPickerRows = [];
+        this.onPostedOutReset();
+        this.poSearching = true;
+
+        this.empService.searchListByRabIdOrServiceId(this.poSearchRabId || undefined, this.poSearchServiceId || undefined, true).subscribe({
+            next: (employees: any[]) => {
+                if (!employees || employees.length === 0) {
+                    this.poSearching = false;
+                    this.messageService.add({ severity: 'warn', summary: 'Not Found', detail: 'No employee found with the given ID' });
+                    return;
+                }
+                if (employees.length === 1) {
+                    this.loadSelectedPostedOut(employees[0]);
+                    return;
+                }
+                this.buildPoPickerRows(employees);
+            },
+            error: (err) => {
+                this.poSearching = false;
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to search employee' });
+            }
+        });
+    }
+
+    private loadSelectedPostedOut(employee: any): void {
+        const employeeID = employee.EmployeeID ?? employee.employeeID;
+        const info: EmployeeBasicInfo = {
+            employeeID,
+            fullNameEN: employee.FullNameEN || employee.fullNameEN || '',
+            fullNameBN: employee.FullNameBN || employee.fullNameBN,
+            rabid: employee.RABID || employee.Rabid || employee.rabid || '',
+            serviceId: employee.ServiceId || employee.serviceId || '',
+            motherOrganization: employee.LastMotherUnit ?? employee.MotherOrganization ?? employee.motherOrganization,
+            rank: employee.Rank ?? employee.rank,
+            unit: employee.Unit ?? employee.unit,
+            branch: employee.Branch ?? employee.branch,
+            trade: employee.Trade ?? employee.trade,
+            memberType: employee.MemberType ?? employee.memberType,
+            orgId: employee.orgId
+        };
+        if (this.poSearchRabId && !this.poSearchServiceId) this.poSearchServiceId = info.serviceId || '';
+        else if (this.poSearchServiceId && !this.poSearchRabId) this.poSearchRabId = info.rabid || '';
+        this.postedOutEmployee = info;
+        this.finalizePostedOut(employeeID);
+    }
+
+    private finalizePostedOut(employeeID: number): void {
+        this.empService.getEmployeeSearchInfo(employeeID).subscribe({
+            next: (searchInfo) => {
+                if (searchInfo && this.postedOutEmployee && this.postedOutEmployee.employeeID === employeeID) {
+                    const reliableMemberTypeId = (searchInfo as any).memberTypeId ?? (searchInfo as any).MemberTypeId ?? this.postedOutEmployee.memberType;
+                    const motherOrgId = (searchInfo as any).lastMotherUnitId ?? (searchInfo as any).LastMotherUnitId ?? this.postedOutEmployee.motherOrganization;
+                    this.postedOutEmployee = {
+                        ...this.postedOutEmployee,
+                        rankDisplay: searchInfo.rank ?? searchInfo.Rank,
+                        corpsDisplay: searchInfo.corps ?? searchInfo.Corps,
+                        tradeDisplay: searchInfo.trade ?? searchInfo.Trade,
+                        motherOrganizationDisplay: searchInfo.motherOrganization ?? searchInfo.MotherOrganization,
+                        memberTypeDisplay: searchInfo.memberType ?? searchInfo.MemberType,
+                        memberType: reliableMemberTypeId as number | undefined,
+                        motherOrganization: motherOrgId as number | undefined
+                    };
+                }
+                const memberTypeId = this.postedOutEmployee?.memberType ?? null;
+                if (!this.isMemberTypeAllowed(memberTypeId)) {
+                    const typeName = this.postedOutEmployee?.memberTypeDisplay ?? null;
+                    this.postedOutEmployee = null;
+                    this.poSearchRabId = '';
+                    this.poSearchServiceId = '';
+                    this.poSearching = false;
+                    this.messageService.add({ severity: 'warn', summary: 'No Permission', detail: typeName ? `You do not have permission to view ${typeName}.` : 'You do not have permission to view this member type.', life: 6000 });
+                    return;
+                }
+                this.poSearching = false;
+                if (this.postedOutEmployee) this.onPostedOutFound(this.postedOutEmployee);
+            },
+            error: () => {
+                this.poSearching = false;
+                if (this.postedOutEmployee) this.onPostedOutFound(this.postedOutEmployee);
+            }
+        });
+    }
+
+    private buildPoPickerRows(employees: any[]): void {
+        const distinctOrgIds = Array.from(new Set(
+            employees.map(e => e.orgId ?? e.OrgId).filter(id => id != null && !Number.isNaN(Number(id))).map(id => Number(id))
+        ));
+        const prefix$ = distinctOrgIds.length > 0
+            ? forkJoin(distinctOrgIds.map(orgId => this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'Prefix').pipe(map(list => ({ orgId, list })))))
+            : of([] as { orgId: number; list: any[] }[]);
+        const rankInfo$ = forkJoin(
+            employees.map(e => {
+                const empId = e.EmployeeID ?? e.employeeID;
+                return empId != null ? this.empService.getEmployeeSearchInfo(Number(empId)).pipe(map(info => ({ empId: Number(empId), rankName: (info as any)?.rank ?? (info as any)?.Rank ?? '' }))) : of({ empId: 0, rankName: '' });
+            })
+        );
+        forkJoin({ prefixes: prefix$, ranks: rankInfo$ }).subscribe({
+            next: ({ prefixes, ranks }) => {
+                const prefixMap = new Map<string, string>();
+                for (const { orgId, list } of prefixes) { for (const p of list as any[]) { prefixMap.set(`${orgId}:${p?.codeId}`, p?.codeValueEN ?? ''); } }
+                const rankMap = new Map<number, string>();
+                for (const { empId, rankName } of ranks) { rankMap.set(empId, rankName); }
+                this.poPickerRows = this.makePoPickerRows(employees, prefixMap, rankMap);
+                this.showPoPickerDialog = true;
+                this.poSearching = false;
+            },
+            error: () => {
+                this.poPickerRows = this.makePoPickerRows(employees, new Map(), new Map());
+                this.showPoPickerDialog = true;
+                this.poSearching = false;
+            }
+        });
+    }
+
+    private makePoPickerRows(employees: any[], prefixMap: Map<string, string>, rankMap: Map<number, string>): typeof this.poPickerRows {
+        const rows = employees.map(e => {
+            const orgId = e.orgId ?? e.OrgId;
+            const prefixId = Number(e.Prefix ?? e.prefix);
+            const prefixLabel = orgId != null ? (prefixMap.get(`${orgId}:${prefixId}`) ?? '') : '';
+            const serviceId = e.ServiceId ?? e.serviceId ?? '';
+            const fullName = e.FullNameEN ?? e.fullNameEN ?? '';
+            const empId = Number(e.EmployeeID ?? e.employeeID);
+            const rankName = rankMap.get(empId) ?? '';
+            const orgName = this.poMotherOrganizations.find(o => o.orgId === orgId)?.orgNameEN ?? '';
+            const status = e.PostingStatus ?? e.postingStatus ?? '';
+            const parts: string[] = [];
+            if (prefixLabel && serviceId) parts.push(`${prefixLabel}-${serviceId}`);
+            else if (prefixLabel) parts.push(prefixLabel);
+            else if (serviceId) parts.push(String(serviceId));
+            if (rankName) parts.push(rankName);
+            if (fullName) parts.push(fullName);
+            return { employee: e, displayName: parts.join(' '), orgName, postingStatus: this.poStatusLabels[status] ?? status, sortKey: `${orgName.toLowerCase()}|${prefixLabel.toLowerCase()}|${String(serviceId).padStart(10, '0')}` };
+        });
+        rows.sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+        return rows;
+    }
+
+    selectPoPickerRow(row: { employee: any }): void {
+        this.showPoPickerDialog = false;
+        this.poPickerRows = [];
+        this.loadSelectedPostedOut(row.employee);
+    }
+
+    closePoPickerDialog(): void {
+        this.showPoPickerDialog = false;
+        this.poPickerRows = [];
+        this.postedOutEmployee = null;
+        this.poSearching = false;
+    }
+
+    loadPostedOutEmployeeById(employeeId: number): void {
+        this.poSearching = true;
+        this.empService.getEmployeeById(employeeId).subscribe({
+            next: (employee: any) => {
+                if (employee) {
+                    const employeeID = employee.EmployeeID ?? employee.employeeID;
+                    this.postedOutEmployee = {
+                        employeeID,
+                        fullNameEN: employee.FullNameEN || employee.fullNameEN || '',
+                        fullNameBN: employee.FullNameBN || employee.fullNameBN,
+                        rabid: employee.RABID || employee.Rabid || employee.rabid || '',
+                        serviceId: employee.ServiceId || employee.serviceId || '',
+                        motherOrganization: employee.LastMotherUnit ?? employee.MotherOrganization ?? employee.motherOrganization,
+                        rank: employee.Rank ?? employee.rank,
+                        unit: employee.Unit ?? employee.unit,
+                        branch: employee.Branch ?? employee.branch,
+                        trade: employee.Trade ?? employee.trade,
+                        memberType: employee.MemberType ?? employee.memberType,
+                        orgId: employee.orgId
+                    };
+                    this.poSearchRabId = this.postedOutEmployee.rabid || '';
+                    this.poSearchServiceId = this.postedOutEmployee.serviceId || '';
+                    this.finalizePostedOut(employeeID);
+                } else {
+                    this.poSearching = false;
+                }
+            },
+            error: () => { this.poSearching = false; }
+        });
+    }
+
+    // ── Joinee Inline Search (Service ID only) ─────────────────────
+    searchJoinee(): void {
+        if (!this.joineeSearchServiceId) {
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Please enter Service ID' });
+            return;
+        }
+        this.onRelieverReset();
+        this.showJoineePickerDialog = false;
+        this.joineePickerRows = [];
+        this.joineeSearching = true;
+
+        this.empService.searchListByRabIdOrServiceId(undefined, this.joineeSearchServiceId).subscribe({
+            next: (employees: any[]) => {
+                if (!employees || employees.length === 0) {
+                    this.joineeSearching = false;
+                    this.messageService.add({ severity: 'warn', summary: 'Not Found', detail: 'No employee found with the given Service ID' });
+                    return;
+                }
+                if (employees.length === 1) {
+                    this.loadSelectedJoinee(employees[0]);
+                    return;
+                }
+                this.buildJoineePickerRows(employees);
+            },
+            error: (err) => {
+                this.joineeSearching = false;
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to search employee' });
+            }
+        });
+    }
+
+    private loadSelectedJoinee(employee: any): void {
+        const employeeID = employee.EmployeeID ?? employee.employeeID;
+        const info: EmployeeBasicInfo = {
+            employeeID,
+            fullNameEN: employee.FullNameEN || employee.fullNameEN || '',
+            fullNameBN: employee.FullNameBN || employee.fullNameBN,
+            rabid: employee.RABID || employee.Rabid || employee.rabid || '',
+            serviceId: employee.ServiceId || employee.serviceId || '',
+            motherOrganization: employee.LastMotherUnit ?? employee.MotherOrganization ?? employee.motherOrganization,
+            rank: employee.Rank ?? employee.rank,
+            unit: employee.Unit ?? employee.unit,
+            branch: employee.Branch ?? employee.branch,
+            trade: employee.Trade ?? employee.trade,
+            memberType: employee.MemberType ?? employee.memberType,
+            orgId: employee.orgId
+        };
+        this.joineeSearchServiceId = info.serviceId || '';
+        this.joineeSearching = false;
+        this.onRelieverFound(info);
+    }
+
+    private buildJoineePickerRows(employees: any[]): void {
+        const distinctOrgIds = Array.from(new Set(
+            employees.map(e => e.orgId ?? e.OrgId).filter(id => id != null && !Number.isNaN(Number(id))).map(id => Number(id))
+        ));
+        const prefix$ = distinctOrgIds.length > 0
+            ? forkJoin(distinctOrgIds.map(orgId => this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'Prefix').pipe(map(list => ({ orgId, list })))))
+            : of([] as { orgId: number; list: any[] }[]);
+        const rankInfo$ = forkJoin(
+            employees.map(e => {
+                const empId = e.EmployeeID ?? e.employeeID;
+                return empId != null ? this.empService.getEmployeeSearchInfo(Number(empId)).pipe(map(info => ({ empId: Number(empId), rankName: (info as any)?.rank ?? (info as any)?.Rank ?? '' }))) : of({ empId: 0, rankName: '' });
+            })
+        );
+        forkJoin({ prefixes: prefix$, ranks: rankInfo$ }).subscribe({
+            next: ({ prefixes, ranks }) => {
+                const prefixMap = new Map<string, string>();
+                for (const { orgId, list } of prefixes) { for (const p of list as any[]) { prefixMap.set(`${orgId}:${p?.codeId}`, p?.codeValueEN ?? ''); } }
+                const rankMap = new Map<number, string>();
+                for (const { empId, rankName } of ranks) { rankMap.set(empId, rankName); }
+                this.joineePickerRows = this.makePoPickerRows(employees, prefixMap, rankMap);
+                this.showJoineePickerDialog = true;
+                this.joineeSearching = false;
+            },
+            error: () => {
+                this.joineePickerRows = this.makePoPickerRows(employees, new Map(), new Map());
+                this.showJoineePickerDialog = true;
+                this.joineeSearching = false;
+            }
+        });
+    }
+
+    selectJoineePickerRow(row: { employee: any }): void {
+        this.showJoineePickerDialog = false;
+        this.joineePickerRows = [];
+        this.loadSelectedJoinee(row.employee);
+    }
+
+    closeJoineePickerDialog(): void {
+        this.showJoineePickerDialog = false;
+        this.joineePickerRows = [];
+        this.joineeSearching = false;
     }
 
     onRelieverFound(employee: EmployeeBasicInfo): void {
@@ -289,11 +682,15 @@ export class PermanentPostingMORecordComponent implements OnInit {
     }
 
     clearPostedOutSection(): void {
+        this.poSearchRabId = '';
+        this.poSearchServiceId = '';
         this.onPostedOutReset();
         this.editPostedOutEmployeeId = null;
     }
 
     clearJoineeSection(): void {
+        this.joineeSearchServiceId = '';
+        this.joineeSearching = false;
         this.onRelieverReset();
         this.editRelieverEmployeeId = null;
         this.joineeJoiningOrderNo = '';
@@ -429,6 +826,9 @@ export class PermanentPostingMORecordComponent implements OnInit {
     onEdit(row: PermanentPostingMORecordModel): void {
         this.editId = row.id;
         this.editPostedOutEmployeeId = row.postedOutEmployeeId;
+        if (row.postedOutEmployeeId) {
+            this.loadPostedOutEmployeeById(row.postedOutEmployeeId);
+        }
         this.editRelieverEmployeeId = row.relieverEmployeeId ?? null;
         this.postingUnitId = row.postingUnitId ?? null;
         this.postingOrderNo = row.postingOrderNo ?? '';
@@ -454,6 +854,7 @@ export class PermanentPostingMORecordComponent implements OnInit {
                 this.joineeMotherOrgId = d.motherOrgId ?? null;
                 this.joineeMemberType = d.memberType ?? null;
                 this.joineeServiceId = d.serviceId ?? '';
+                this.joineeSearchServiceId = d.serviceId ?? '';
                 this.joineeNameBangla = d.nameBangla ?? '';
                 this.joineeJoiningOrderNo = d.joiningOrderNo ?? '';
                 this.joineeJoiningOrderDate = d.joiningOrderDate ? new Date(d.joiningOrderDate) : null;
@@ -515,6 +916,7 @@ export class PermanentPostingMORecordComponent implements OnInit {
         this.joineeMotherOrgId = row.motherOrgId ?? null;
         this.joineeMemberType = row.memberType ?? null;
         this.joineeServiceId = row.serviceId ?? '';
+        this.joineeSearchServiceId = row.serviceId ?? '';
         this.joineeNameBangla = row.nameBangla ?? '';
         this.joineeJoiningOrderNo = row.joiningOrderNo ?? '';
         this.joineeJoiningOrderDate = row.joiningOrderDate ? new Date(row.joiningOrderDate) : null;
@@ -605,6 +1007,8 @@ export class PermanentPostingMORecordComponent implements OnInit {
         this.editId = null; this.editDetailId = null;
         this.editPostedOutEmployeeId = null; this.editRelieverEmployeeId = null;
         this.postedOutEmployee = null; this.isOfficer = false;
+        this.poSearchRabId = ''; this.poSearchServiceId = ''; this.poSearching = false;
+        this.joineeSearchServiceId = ''; this.joineeSearching = false;
         this.postingUnitId = null; this.postingUnitOptions = [];
         this.postingOrderNo = ''; this.postingOrderDate = null; this.possibleReleaseDate = null;
         this.isReliever = null; this.relieverNotGivenReason = '';

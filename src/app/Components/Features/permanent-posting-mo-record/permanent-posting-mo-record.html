@@ -22,22 +22,6 @@
         }
     </div>
 
-    <!-- ══ Employee Search (full width) ══════════════════════════ -->
-    <div class="form-section">
-        <div style="display:flex; align-items:center; justify-content:space-between; border-bottom:2px solid var(--primary-color); padding-bottom:0.5rem; margin-bottom:1rem;">
-            <span style="font-size:1rem; display:flex; align-items:center; gap:0.5rem;">
-                <i class="pi pi-user-minus text-primary"></i> Posted Out Person
-            </span>
-            <p-button label="Clear" icon="pi pi-eraser" size="small" severity="secondary" [text]="true"
-                (onClick)="clearPostedOutSection()"></p-button>
-        </div>
-        <app-employee-search
-            [initialEmployeeId]="editPostedOutEmployeeId"
-            (onEmployeeFound)="onPostedOutFound($event)"
-            (onSearchReset)="onPostedOutReset()">
-        </app-employee-search>
-    </div>
-
     <!-- ══ Two-column layout ════════════════════════════════════ -->
     <div class="two-col-layout">
 
@@ -46,19 +30,69 @@
             <div class="col-panel-header">
                 <i class="pi pi-file-edit"></i>
                 <span>Post Out Details</span>
+                <p-button label="Clear" icon="pi pi-eraser" size="small" severity="secondary" [text]="true"
+                    [style]="{'margin-left':'auto'}" (onClick)="clearPostedOutSection()"></p-button>
             </div>
+
+            <!-- Search Row -->
+            <div class="form-row" style="align-items:flex-end;">
+                <div class="form-field">
+                    <label class="form-label">RAB ID</label>
+                    <input pInputText class="w-full" [(ngModel)]="poSearchRabId" placeholder="RAB ID"
+                        (keyup.enter)="searchPostedOut()" />
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Service ID</label>
+                    <div style="display:flex; gap:0.5rem;">
+                        <input pInputText class="w-full" [(ngModel)]="poSearchServiceId" placeholder="Service ID"
+                            (keyup.enter)="searchPostedOut()" />
+                        <p-button icon="pi pi-search" [loading]="poSearching" (onClick)="searchPostedOut()"
+                            size="small" pTooltip="Search" tooltipPosition="top"></p-button>
+                        <p-button icon="pi pi-times" severity="secondary" [outlined]="true"
+                            (onClick)="clearPostedOutSection()" size="small" pTooltip="Clear" tooltipPosition="top"></p-button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Readonly Employee Info -->
+            @if (postedOutEmployee) {
+                <div class="form-row">
+                    <div class="form-field">
+                        <label class="form-label text-500">Name</label>
+                        <input pInputText class="w-full" [value]="postedOutEmployee.fullNameEN || '-'" readonly />
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label text-500">Rank</label>
+                        <input pInputText class="w-full" [value]="postedOutEmployee.rankDisplay || '-'" readonly />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-field">
+                        <label class="form-label text-500">Corps</label>
+                        <input pInputText class="w-full" [value]="postedOutEmployee.corpsDisplay || '-'" readonly />
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label text-500">Trade</label>
+                        <input pInputText class="w-full" [value]="postedOutEmployee.tradeDisplay || '-'" readonly />
+                    </div>
+                </div>
+            }
 
             <div class="form-row">
                 <div class="form-field">
-                    <label class="form-label">Posting Unit</label>
-                    <p-select [options]="postingUnitOptions" [(ngModel)]="postingUnitId"
-                        optionLabel="label" optionValue="value"
-                        placeholder="Select posting unit" [filter]="true" filterBy="label"
-                        [showClear]="true" class="w-full" appendTo="body"
-                        [disabled]="!postingUnitOptions.length"></p-select>
-                    @if (!postedOutEmployee) {
-                        <small class="text-500">Search a posted-out employee first</small>
-                    }
+                    <label class="form-label">
+                        Posting Unit <span class="form-label-required">*</span>
+                    </label>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <p-select [options]="postingUnitOptions" [(ngModel)]="postingUnitId"
+                            optionLabel="label" optionValue="value"
+                            placeholder="Select posting unit" [filter]="true" filterBy="label"
+                            [showClear]="true" class="w-full" appendTo="body"
+                            [disabled]="!postingUnitOptions.length"></p-select>
+                        <p-button icon="pi pi-plus" severity="success" [outlined]="true"
+                            (onClick)="openAddPostingUnitDialog()" size="small"
+                            pTooltip="Add unit" tooltipPosition="top"></p-button>
+                    </div>
                 </div>
                 <div class="form-field">
                     <label class="form-label">Posting Order No</label>
@@ -108,8 +142,8 @@
                 </div>
             </div>
 
-            <div class="form-row">
-                <div class="form-field">
+            <div class="form-row" style="align-items:flex-end;">
+                <div class="form-field" style="flex:0 0 calc(50% - 0.5rem);">
                     <label class="form-label">
                         Is Reliever Assigned? <span class="form-label-required">*</span>
                     </label>
@@ -118,6 +152,17 @@
                         placeholder="Select Yes / No" [showClear]="true"
                         class="w-full" appendTo="body"></p-select>
                 </div>
+                @if (isReliever === true) {
+                    <div class="form-field">
+                        <label class="form-label">Service ID <small class="text-500 font-normal">(search to auto-fill)</small></label>
+                        <div style="display:flex; gap:0.5rem;">
+                            <input pInputText class="w-full" [(ngModel)]="joineeSearchServiceId" placeholder="Enter Service ID"
+                                (keyup.enter)="searchJoinee()" />
+                            <p-button icon="pi pi-search" [loading]="joineeSearching" (onClick)="searchJoinee()"
+                                size="small" pTooltip="Search" tooltipPosition="top"></p-button>
+                        </div>
+                    </div>
+                }
                 @if (isReliever === false) {
                     <div class="form-field">
                         <label class="form-label">Reason (No Reliever)</label>
@@ -139,26 +184,12 @@
 
         <!-- ── RIGHT: New Joining Person ───────────────────────── -->
         <div class="col-panel">
-            <div class="col-panel-header col-panel-header--green">
+            <div class="col-panel-header">
                 <i class="pi pi-user-plus"></i>
                 <span>New Joining Person</span>
                 <p-button label="Clear" icon="pi pi-eraser" size="small" severity="secondary" [text]="true"
                     [style]="{'margin-left':'auto'}" (onClick)="clearJoineeSection()"></p-button>
             </div>
-
-            @if (isReliever === true) {
-                <div class="mb-3">
-                    <label class="form-label">
-                        Search Reliever
-                        <small class="text-500 font-normal">(auto-fill from employee record)</small>
-                    </label>
-                    <app-employee-search
-                        [initialEmployeeId]="editRelieverEmployeeId"
-                        (onEmployeeFound)="onRelieverFound($event)"
-                        (onSearchReset)="onRelieverReset()">
-                    </app-employee-search>
-                </div>
-            }
 
             <div class="form-row">
                 <div class="form-field">
@@ -281,3 +312,97 @@
             [loading]="saving" styleClass="form-btn-primary" (onClick)="onSave()"></p-button>
     </div>
 </div>
+
+<!-- ── Multiple Employee Picker Dialog ────────────────────────── -->
+<p-dialog [(visible)]="showPoPickerDialog"
+    header="Multiple Members Found — Please Select"
+    [modal]="true" [closable]="false"
+    [style]="{ width: '820px' }" [draggable]="false" [resizable]="false"
+    [contentStyle]="{ 'border-top': '2px solid var(--primary-color)' }">
+    <p class="m-0 mt-3 mb-3 text-600">The search matched more than one member. Pick the correct one to continue.</p>
+    <p-table [value]="poPickerRows" styleClass="p-datatable-sm">
+        <ng-template pTemplate="header">
+            <tr>
+                <th style="width:5%">#</th>
+                <th>Name</th>
+                <th>Mother Organization</th>
+                <th>Status</th>
+                <th style="width:110px">Action</th>
+            </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-row let-i="rowIndex">
+            <tr>
+                <td>{{ i + 1 }}</td>
+                <td class="font-semibold">{{ row.displayName || '-' }}</td>
+                <td>{{ row.orgName || '-' }}</td>
+                <td>{{ row.postingStatus || '-' }}</td>
+                <td>
+                    <p-button label="Select" size="small" (onClick)="selectPoPickerRow(row)"></p-button>
+                </td>
+            </tr>
+        </ng-template>
+    </p-table>
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel" severity="secondary" [outlined]="true" (onClick)="closePoPickerDialog()"></p-button>
+    </ng-template>
+</p-dialog>
+
+<!-- ── Joinee Multiple Employee Picker Dialog ─────────────────── -->
+<p-dialog [(visible)]="showJoineePickerDialog"
+    header="Multiple Members Found — Please Select"
+    [modal]="true" [closable]="false"
+    [style]="{ width: '820px' }" [draggable]="false" [resizable]="false"
+    [contentStyle]="{ 'border-top': '2px solid var(--green-600, #16a34a)' }">
+    <p class="m-0 mt-3 mb-3 text-600">The search matched more than one member. Pick the correct one to continue.</p>
+    <p-table [value]="joineePickerRows" styleClass="p-datatable-sm">
+        <ng-template pTemplate="header">
+            <tr>
+                <th style="width:5%">#</th>
+                <th>Name</th>
+                <th>Mother Organization</th>
+                <th>Status</th>
+                <th style="width:110px">Action</th>
+            </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-row let-i="rowIndex">
+            <tr>
+                <td>{{ i + 1 }}</td>
+                <td class="font-semibold">{{ row.displayName || '-' }}</td>
+                <td>{{ row.orgName || '-' }}</td>
+                <td>{{ row.postingStatus || '-' }}</td>
+                <td>
+                    <p-button label="Select" size="small" (onClick)="selectJoineePickerRow(row)"></p-button>
+                </td>
+            </tr>
+        </ng-template>
+    </p-table>
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel" severity="secondary" [outlined]="true" (onClick)="closeJoineePickerDialog()"></p-button>
+    </ng-template>
+</p-dialog>
+
+<!-- ── Add Posting Unit Dialog ───────────────────────────── -->
+<p-dialog [(visible)]="showAddUnitDialog"
+    header="Add Posting Unit" [modal]="true" [closable]="true"
+    [style]="{ width: '672px' }"
+    [contentStyle]="{'border-top': '2px solid var(--primary-color)'}"
+    appendTo="body">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+        <div>
+            <label class="font-semibold block mb-2 text-700">Mother Organization</label>
+            <input pInputText class="w-full" [value]="getPostedOutMotherOrgName()" [disabled]="true" />
+        </div>
+        <div>
+            <label class="font-semibold block mb-2 text-700">Unit Name (English) <span class="text-red-500">*</span></label>
+            <input pInputText class="w-full" [(ngModel)]="newUnitNameEN" placeholder="Enter unit name in English" />
+        </div>
+        <div>
+            <label class="font-semibold block mb-2 text-700">Unit Name (Bangla)</label>
+            <input pInputText class="w-full" [(ngModel)]="newUnitNameBN" placeholder="Enter unit name in Bangla" />
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="showAddUnitDialog = false"></p-button>
+        <p-button label="Save" icon="pi pi-check" [loading]="isSavingUnit" [disabled]="!newUnitNameEN?.trim()" (onClick)="saveNewPostingUnit()"></p-button>
+    </ng-template>
+</p-dialog>
