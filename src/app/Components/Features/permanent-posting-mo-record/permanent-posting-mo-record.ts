@@ -2,7 +2,7 @@ import { Component, OnInit, ViewChild , inject } from '@angular/core';
 
 enum JoineeFilter { All = 'all', Added = 'added', NotAdded = 'notAdded' }
 import { UserMenuService } from '@/services/user-menu.service';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import * as XLSX from 'xlsx';
@@ -171,7 +171,8 @@ export class PermanentPostingMORecordComponent implements OnInit {
         private confirmationService: ConfirmationService,
         private orgService: OrganizationService,
         private commonCodeService: CommonCodeService,
-        private memberTypeAccess: IdentityUserMemberTypeAccessService
+        private memberTypeAccess: IdentityUserMemberTypeAccessService,
+        private route: ActivatedRoute
     ) {}
 
     ngOnInit(): void {
@@ -180,9 +181,38 @@ export class PermanentPostingMORecordComponent implements OnInit {
         this.canUpdate = _perms.canUpdate;
         this.canDelete = _perms.canDelete;
 
-        this.loadList();
-        this.loadJoineeList();
         this.loadStaticOptions();
+
+        // Check query params for edit from list pages
+        const params = this.route.snapshot.queryParams;
+        const editRecordId = params['id'] ? Number(params['id']) : null;
+        const editJoineeId = params['joineeId'] ? Number(params['joineeId']) : null;
+
+        if (editRecordId) {
+            // From posted-out-person-list: load main record by id then call onEdit
+            this.loadList();
+            this.loadJoineeList();
+            this.recordSvc.getById(editRecordId).subscribe({
+                next: (record) => {
+                    if (record) this.onEdit(record);
+                }
+            });
+        } else if (editJoineeId) {
+            // From new-joining-person-list: load lists then find joinee by id
+            this.loadList();
+            this.detailSvc.getAll().subscribe({
+                next: (all) => {
+                    this.joineeRecords = all;
+                    this.loadingJoineeList = false;
+                    const detail = all.find(r => r.id === editJoineeId);
+                    if (detail) this.onEditJoinee(detail);
+                },
+                error: () => { this.loadingJoineeList = false; }
+            });
+        } else {
+            this.loadList();
+            this.loadJoineeList();
+        }
     }
 
     private loadStaticOptions(): void {
@@ -511,7 +541,7 @@ export class PermanentPostingMORecordComponent implements OnInit {
                         branch: employee.Branch ?? employee.branch,
                         trade: employee.Trade ?? employee.trade,
                         memberType: employee.MemberType ?? employee.memberType,
-                        orgId: employee.orgId
+                        orgId: employee.OrgId ?? employee.orgId
                     };
                     this.poSearchRabId = this.postedOutEmployee.rabid || '';
                     this.poSearchServiceId = this.postedOutEmployee.serviceId || '';
@@ -574,6 +604,32 @@ export class PermanentPostingMORecordComponent implements OnInit {
         this.joineeSearchServiceId = info.serviceId || '';
         this.joineeSearching = false;
         this.onRelieverFound(info);
+    }
+
+    private loadJoineeEmployeeById(employeeId: number): void {
+        this.empService.getEmployeeById(employeeId).subscribe({
+            next: (employee: any) => {
+                if (employee) {
+                    const employeeID = employee.EmployeeID ?? employee.employeeID;
+                    const info: EmployeeBasicInfo = {
+                        employeeID,
+                        fullNameEN: employee.FullNameEN || employee.fullNameEN || '',
+                        fullNameBN: employee.FullNameBN || employee.fullNameBN,
+                        rabid: employee.RABID || employee.Rabid || employee.rabid || '',
+                        serviceId: employee.ServiceId || employee.serviceId || '',
+                        motherOrganization: employee.LastMotherUnit ?? employee.MotherOrganization ?? employee.motherOrganization,
+                        rank: employee.Rank ?? employee.rank,
+                        unit: employee.Unit ?? employee.unit,
+                        branch: employee.Branch ?? employee.branch,
+                        trade: employee.Trade ?? employee.trade,
+                        memberType: employee.MemberType ?? employee.memberType,
+                        orgId: employee.OrgId ?? employee.orgId
+                    };
+                    this.joineeSearchServiceId = info.serviceId || '';
+                    this.onRelieverFound(info);
+                }
+            }
+        });
     }
 
     private buildJoineePickerRows(employees: any[]): void {
@@ -826,11 +882,16 @@ export class PermanentPostingMORecordComponent implements OnInit {
     onEdit(row: PermanentPostingMORecordModel): void {
         this.editId = row.id;
         this.editPostedOutEmployeeId = row.postedOutEmployeeId;
+
+        // Store postingUnitId before loading employee (which triggers async GetAllOrgUnit)
+        const savedPostingUnitId = row.postingUnitId ?? null;
+        this.postingUnitId = savedPostingUnitId;
+
         if (row.postedOutEmployeeId) {
             this.loadPostedOutEmployeeById(row.postedOutEmployeeId);
         }
+
         this.editRelieverEmployeeId = row.relieverEmployeeId ?? null;
-        this.postingUnitId = row.postingUnitId ?? null;
         this.postingOrderNo = row.postingOrderNo ?? '';
         this.postingOrderDate = row.postingOrderDate ? new Date(row.postingOrderDate) : null;
         this.possibleReleaseDate = row.possibleReleaseDate ? new Date(row.possibleReleaseDate) : null;
@@ -846,6 +907,11 @@ export class PermanentPostingMORecordComponent implements OnInit {
                 .map(r => ({ displayName: r.fileName, file: null, fileId: r.fileId }))
             : [];
 
+        // Load reliever employee if isReliever === true and relieverEmployeeId exists
+        if (row.isReliever === true && row.relieverEmployeeId) {
+            this.loadJoineeEmployeeById(row.relieverEmployeeId);
+        }
+
         this.detailSvc.getByRecordId(row.id).subscribe({
             next: (d) => {
                 if (!d) return;
@@ -855,6 +921,7 @@ export class PermanentPostingMORecordComponent implements OnInit {
                 this.joineeMemberType = d.memberType ?? null;
                 this.joineeServiceId = d.serviceId ?? '';
                 this.joineeSearchServiceId = d.serviceId ?? '';
+                this.joineePreviousRabId = d.previousRabId ?? '';
                 this.joineeNameBangla = d.nameBangla ?? '';
                 this.joineeJoiningOrderNo = d.joiningOrderNo ?? '';
                 this.joineeJoiningOrderDate = d.joiningOrderDate ? new Date(d.joiningOrderDate) : null;
@@ -874,6 +941,9 @@ export class PermanentPostingMORecordComponent implements OnInit {
                         if (d.corps) { this.onCorpsChange(d.corps, true); }
                     });
                 }
+
+                // Restore postingUnitId in case async loading cleared it
+                this.postingUnitId = savedPostingUnitId;
             }
         });
     }
