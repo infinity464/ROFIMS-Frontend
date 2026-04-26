@@ -1,0 +1,69 @@
+:host {
+  display: block;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.two-col-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-top: 0.5rem;
+  max-width: 100%;
+  overflow: hidden;
+
+  @media (max-width: 1200px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.col-panel {
+  border: 1px solid var(--surface-border, #dee2e6);
+  border-radius: 0.75rem;
+  padding: 1rem 1.25rem;
+  background: var(--surface-ground, #fafafa);
+  min-width: 0;
+  overflow: hidden;
+
+  .form-row {
+    flex-wrap: wrap;
+  }
+
+  .form-field {
+    min-width: 0;
+    flex: 1 1 45%;
+  }
+
+  // file references table overflow
+  ::ng-deep {
+    .p-datatable {
+      max-width: 100%;
+      overflow-x: auto;
+    }
+
+    table {
+      min-width: 0 !important;
+    }
+  }
+}
+
+.col-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--primary-color);
+  border-bottom: 2px solid var(--primary-color);
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+
+  i {
+    font-size: 1rem;
+  }
+}
+
+.col-panel-header--green {
+  color: var(--green-600, #16a34a);
+  border-bottom-color: var(--green-600, #16a34a);
+}

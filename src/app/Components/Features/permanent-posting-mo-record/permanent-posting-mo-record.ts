@@ -34,7 +34,8 @@ import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directi
     standalone: true,
     imports: [CommonModule, FormsModule, ButtonModule, InputTextModule, DatePickerModule, SelectModule, TableModule, DividerModule, TooltipModule, Toast, ConfirmDialog, EmployeeSearchComponent, FileReferencesFormComponent, FlexibleDateDirective],
     providers: [MessageService, ConfirmationService],
-    templateUrl: './permanent-posting-mo-record.html'
+    templateUrl: './permanent-posting-mo-record.html',
+    styleUrl: './permanent-posting-mo-record.scss'
 })
 export class PermanentPostingMORecordComponent implements OnInit {
     private _router = inject(Router);
