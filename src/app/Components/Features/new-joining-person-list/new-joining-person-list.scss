@@ -1,0 +1,44 @@
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem 1.25rem;
+  padding: 0.875rem 1rem;
+  border-radius: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  width: 190px;
+  flex: 0 0 auto;
+
+  label {
+    font-weight: 600;
+    font-size: 0.8125rem;
+    color: var(--text-color-secondary, #64748b);
+  }
+}
+
+.filter-search {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-left: auto;
+  width: 240px;
+  flex: 0 0 auto;
+
+  label {
+    font-weight: 600;
+    font-size: 0.8125rem;
+    color: var(--text-color-secondary, #64748b);
+  }
+}
+
+.filter-btn {
+  flex: 0 0 auto;
+  align-self: flex-end;
+  padding-bottom: 1px;
+}

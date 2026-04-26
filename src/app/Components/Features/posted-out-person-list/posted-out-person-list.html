@@ -1,0 +1,104 @@
+<p-toast position="top-center"></p-toast>
+<p-confirmdialog></p-confirmdialog>
+
+<div class="form-card">
+    <div class="form-card-header">
+        <h3 class="form-card-title">
+            <i class="pi pi-user-minus" style="font-size:1.1rem"></i>
+            Posted Out Person List
+        </h3>
+        <div class="flex gap-2 align-items-center">
+            <p-button label="Export Excel" icon="pi pi-file-excel" size="small" severity="success"
+                [outlined]="true" [disabled]="!records.length"
+                (onClick)="exportExcel()"></p-button>
+        </div>
+    </div>
+
+    <p-table #dt [value]="records" [loading]="loading" dataKey="id"
+             styleClass="p-datatable-striped p-datatable-gridlines"
+             [tableStyle]="{'min-width':'50rem'}"
+             [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10,25,50]"
+             [globalFilterFields]="['postingOrderNo', 'serviceId', 'recordNo']">
+        <ng-template pTemplate="caption">
+            <div class="filter-bar">
+                <div class="filter-group">
+                    <label>From Date</label>
+                    <p-datepicker [(ngModel)]="filterDateFrom" dateFormat="dd-mm-yy" placeholder="dd-mm-yyyy" [showIcon]="true" appendTo="body" class="w-full" [inputStyle]="{'width':'100%'}" (onSelect)="applyDateFilter()" (onClear)="applyDateFilter()" [showClear]="true"></p-datepicker>
+                </div>
+                <div class="filter-group">
+                    <label>To Date</label>
+                    <p-datepicker [(ngModel)]="filterDateTo" dateFormat="dd-mm-yy" placeholder="dd-mm-yyyy" [showIcon]="true" appendTo="body" class="w-full" [inputStyle]="{'width':'100%'}" (onSelect)="applyDateFilter()" (onClear)="applyDateFilter()" [showClear]="true"></p-datepicker>
+                </div>
+                <div class="filter-btn">
+                    <p-button icon="pi pi-filter-slash" label="Clear" severity="secondary" [outlined]="true" size="small" (onClick)="clearDateFilter()"></p-button>
+                </div>
+                <div class="filter-search">
+                    <label>Search</label>
+                    <p-iconfield>
+                        <p-inputicon styleClass="pi pi-search"></p-inputicon>
+                        <input pInputText type="text" placeholder="Search..." (input)="onGlobalFilter(dt, $event)" />
+                    </p-iconfield>
+                </div>
+            </div>
+        </ng-template>
+        <ng-template pTemplate="header">
+            <tr>
+                <th style="width:50px">#</th>
+                <th>Record No</th>
+                <th>Posted Out Emp. ID</th>
+                <th>Posting Order No</th>
+                <th>PO Date</th>
+                <th>Possible Release</th>
+                <th>Reliever</th>
+                <th>Service ID</th>
+                <th>NS Clearance</th>
+                <th>Clearance Given</th>
+                <th>Created Date</th>
+                <th style="width:90px">Actions</th>
+            </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-row let-i="rowIndex">
+            <tr>
+                <td>{{ i + 1 }}</td>
+                <td>{{ row.id }}</td>
+                <td>{{ row.postedOutEmployeeId ?? '-' }}</td>
+                <td>{{ row.postingOrderNo ?? '-' }}</td>
+                <td>{{ formatDisplay(row.postingOrderDate) }}</td>
+                <td>{{ formatDisplay(row.possibleReleaseDate) }}</td>
+                <td>
+                    <span [class]="row.isReliever === true ? 'text-green-600 font-semibold' : row.isReliever === false ? 'text-orange-500' : 'text-500'">
+                        {{ row.isReliever === true ? 'Yes' : row.isReliever === false ? 'No' : '-' }}
+                    </span>
+                </td>
+                <td>{{ row.serviceId ?? '-' }}</td>
+                <td>
+                    <span [class]="row.noteSheetClearance === true ? 'text-green-600' : row.noteSheetClearance === false ? 'text-orange-500' : 'text-500'">
+                        {{ row.noteSheetClearance === true ? 'Yes' : row.noteSheetClearance === false ? 'No' : '-' }}
+                    </span>
+                </td>
+                <td>
+                    <span [class]="row.clearanceGiven === true ? 'text-green-600' : row.clearanceGiven === false ? 'text-orange-500' : 'text-500'">
+                        {{ row.clearanceGiven === true ? 'Yes' : row.clearanceGiven === false ? 'No' : '-' }}
+                    </span>
+                </td>
+                <td><span class="text-sm text-500">{{ formatDisplay(row.createdDate) }}</span></td>
+                <td>
+                    <div class="flex gap-1">
+                        <p-button icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" size="small" [text]="true"
+                            pTooltip="Edit" tooltipPosition="top" (onClick)="onEdit(row)"></p-button>
+                        <p-button icon="pi pi-trash" [class.perm-hidden]="!canDelete" size="small" [text]="true"
+                            severity="danger" pTooltip="Delete" tooltipPosition="top"
+                            (onClick)="onDelete(row)"></p-button>
+                    </div>
+                </td>
+            </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+            <tr>
+                <td colspan="12" class="text-center p-4 text-500">
+                    <i class="pi pi-inbox text-2xl mb-2 block"></i>No records found.
+                </td>
+            </tr>
+        </ng-template>
+    </p-table>
+</div>

@@ -84,6 +84,8 @@ import { EmpAdditionalRemarks } from '@/Components/Features/Emp/emp-additional-r
 import { EmpConfidentialRemarks } from '@/Components/Features/Emp/emp-confidential-remarks/emp-confidential-remarks.component';
 import { EmpPermPostingMotherOrg } from '@/Components/Features/Emp/emp-perm-posting-mother-org/emp-perm-posting-mother-org.component';
 import { PermanentPostingMORecordComponent } from '@/Components/Features/permanent-posting-mo-record/permanent-posting-mo-record';
+import { PostedOutPersonListComponent } from '@/Components/Features/posted-out-person-list/posted-out-person-list';
+import { NewJoiningPersonListComponent } from '@/Components/Features/new-joining-person-list/new-joining-person-list';
 import { EmpPresentStatus } from '@/Components/Features/Emp/emp-present-status/emp-present-status';
 import { EmpPersonalServiceInfoComponent } from '@/Components/Features/Emp/emp-personal-service-info/emp-personal-service-info';
 import { EmpPresentMemberCheckComponent } from '@/Components/Features/Emp/emp-present-member-check/emp-present-member-check.component';
@@ -294,6 +296,8 @@ export const appRoutes: Routes = [
             { path: 'supernumerary-list', component: SupernumeraryList },
             { path: 'supernumerary-profile/:id', component: SupernumeraryProfile },
             { path: 'posting/permanent-posting-mo-record', component: PermanentPostingMORecordComponent },
+            { path: 'posting/posted-out-person-list', component: PostedOutPersonListComponent },
+            { path: 'posting/new-joining-person-list', component: NewJoiningPersonListComponent },
             { path: 'posting/add-draft-new-posting', component: AddDraftNewPostingComponent },
             { path: 'posting/notesheet-generate', component: PostingNotesheetGenerateComponent },
             { path: 'posting/add-draft-inter-posting', component: AddDraftInterPostingComponent },
