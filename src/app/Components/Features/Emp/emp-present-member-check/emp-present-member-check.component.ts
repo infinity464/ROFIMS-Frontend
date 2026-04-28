@@ -15,6 +15,7 @@ import { MotherOrganizationModel } from '@/models/mother-org-model';
 import { EmpModel } from '@/models/EmpModel';
 import { PostingStatus } from '@/models/enums';
 import { PreviousRABServiceService, VwPreviousRABServiceInfoModel } from '@/services/previous-rab-service.service';
+import { PermanentPostingJoineeDetailService } from '@/services/permanent-posting-joinee-detail.service';
 import { TableModule } from 'primeng/table';
 import { forkJoin, of } from 'rxjs';
 import { map } from 'rxjs/operators';
@@ -86,8 +87,8 @@ export class EmpPresentMemberCheckComponent implements OnInit, AfterViewInit {
     isLoadingExMemberData = false;
     exMemberDetailsText: string = '';
 
-    /** Emitted when search completes and no employee is found (so parent can show the entry form). */
-    @Output() employeeNotFound = new EventEmitter<void>();
+    /** Emitted when search completes and no employee is found (so parent can show the entry form). Emits searched motherOrgId + serviceId. */
+    @Output() employeeNotFound = new EventEmitter<{ motherOrgId: number | null; serviceId: string }>();
     /** Emitted when search finds an employee (present or ex-member), so parent can hide the entry form. */
     @Output() employeeFound = new EventEmitter<void>();
     /** Emitted when user clicks View Old Profile: parent should show form and load this employee id. */
@@ -97,6 +98,7 @@ export class EmpPresentMemberCheckComponent implements OnInit, AfterViewInit {
         private empService: EmpService,
         private commonCodeService: CommonCodeService,
         private previousRABService: PreviousRABServiceService,
+        private joineeDetailService: PermanentPostingJoineeDetailService,
         private _router: Router,
         private _userMenuService: UserMenuService
     ) {}
@@ -261,7 +263,7 @@ export class EmpPresentMemberCheckComponent implements OnInit, AfterViewInit {
     pickerYes(): void {
         this.showPickerDialog = false;
         this.pickerRows = [];
-        this.employeeNotFound.emit();
+        this.employeeNotFound.emit({ motherOrgId: this.motherOrgId, serviceId: this.serviceId != null ? String(this.serviceId) : '' });
     }
 
     pickerNo(): void {
@@ -289,7 +291,7 @@ export class EmpPresentMemberCheckComponent implements OnInit, AfterViewInit {
         const empId = emp.EmployeeID ?? emp.employeeID;
         const orgId = emp.orgId ?? emp.OrgId;
         const prefixId = Number(emp.Prefix ?? emp.prefix);
-        const onYes = () => this.employeeNotFound.emit();
+        const onYes = () => this.employeeNotFound.emit({ motherOrgId: this.motherOrgId, serviceId: this.serviceId != null ? String(this.serviceId) : '' });
 
         const rankInfo$ = empId != null && !Number.isNaN(Number(empId))
             ? this.empService.getEmployeeSearchInfo(Number(empId))
@@ -385,6 +387,31 @@ export class EmpPresentMemberCheckComponent implements OnInit, AfterViewInit {
         this.exMemberViewList = [];
         this.exMemberDetailsText = '';
 
+        // First check if a pending joinee record exists for this service ID
+        if (serviceIdStr) {
+            this.joineeDetailService.getPendingByServiceId(serviceIdStr).subscribe({
+                next: (joinee) => {
+                    if (joinee) {
+                        // Pending joinee found — skip employee search, directly load the form
+                        this.isSearching = false;
+                        this.employeeNotFound.emit({ motherOrgId: joinee.motherOrgId ?? this.motherOrgId, serviceId: serviceIdStr });
+                        return;
+                    }
+                    // No pending joinee — proceed with normal employee search
+                    this.performEmployeeSearch(serviceIdStr, nidStr);
+                },
+                error: () => {
+                    // API error — fallback to normal employee search
+                    this.performEmployeeSearch(serviceIdStr, nidStr);
+                }
+            });
+        } else {
+            // No service ID provided, search by NID only
+            this.performEmployeeSearch(serviceIdStr, nidStr);
+        }
+    }
+
+    private performEmployeeSearch(serviceIdStr: string, nidStr: string): void {
         const motherOrgId = this.motherOrgId != null && this.motherOrgId > 0 ? this.motherOrgId : undefined;
         this.empService.searchListByRabIdOrServiceId(undefined, serviceIdStr, true, motherOrgId, nidStr || undefined).subscribe({
             next: (employees: EmpModel[]) => {
@@ -412,7 +439,7 @@ export class EmpPresentMemberCheckComponent implements OnInit, AfterViewInit {
                         'Member Not Found',
                         'No Member found with the given NID/Service ID.',
                         'info',
-                        () => this.employeeNotFound.emit()
+                        () => this.employeeNotFound.emit({ motherOrgId: this.motherOrgId, serviceId: this.serviceId != null ? String(this.serviceId) : '' })
                     );
                     return;
                 }

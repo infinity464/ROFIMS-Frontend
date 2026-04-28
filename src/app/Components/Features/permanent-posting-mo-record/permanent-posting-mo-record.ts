@@ -3,6 +3,7 @@ import { Component, OnInit, ViewChild , inject } from '@angular/core';
 enum JoineeFilter { All = 'all', Added = 'added', NotAdded = 'notAdded' }
 import { UserMenuService } from '@/services/user-menu.service';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Location } from '@angular/common';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import * as XLSX from 'xlsx';
@@ -44,9 +45,11 @@ import { PostingStatus } from '@/models/enums';
 export class PermanentPostingMORecordComponent implements OnInit {
     private _router = inject(Router);
     private _userMenuService = inject(UserMenuService);
+    private _location = inject(Location);
     canInsert = true;
     canUpdate = true;
     canDelete = true;
+    isQueryParamEdit = false;
 
 
     @ViewChild('poFileForm') poFileForm!: FileReferencesFormComponent;
@@ -156,6 +159,8 @@ export class PermanentPostingMORecordComponent implements OnInit {
         { label: 'Entry Pending',     value: JoineeFilter.NotAdded },
     ];
 
+    get isEditing(): boolean { return !!(this.editId || this.editDetailId); }
+
     get filteredJoineeRecords(): PermanentPostingJoineeDetailModel[] {
         if (this.joineeFilter === JoineeFilter.Added)    return this.joineeRecords.filter(r => r.isAddedInNewJoineeDataEntry);
         if (this.joineeFilter === JoineeFilter.NotAdded) return this.joineeRecords.filter(r => !r.isAddedInNewJoineeDataEntry);
@@ -190,6 +195,7 @@ export class PermanentPostingMORecordComponent implements OnInit {
 
         if (editRecordId) {
             // From posted-out-person-list: load main record by id then call onEdit
+            this.isQueryParamEdit = true;
             this.loadList();
             this.loadJoineeList();
             this.recordSvc.getById(editRecordId).subscribe({
@@ -199,6 +205,7 @@ export class PermanentPostingMORecordComponent implements OnInit {
             });
         } else if (editJoineeId) {
             // From new-joining-person-list: load lists then find joinee by id
+            this.isQueryParamEdit = true;
             this.loadList();
             this.detailSvc.getAll().subscribe({
                 next: (all) => {
@@ -838,7 +845,28 @@ export class PermanentPostingMORecordComponent implements OnInit {
             this.saving = false;
             const ok = res?.statusCode === 200;
             this.messageService.add({ severity: ok ? 'success' : 'warn', summary: 'Save', detail: ok ? 'Saved successfully.' : (res?.description ?? 'Save failed.') });
-            if (ok) { this.resetForm(); this.loadList(); this.loadJoineeList(); }
+            if (ok) {
+                if (this.isQueryParamEdit) {
+                    // Stay in edit mode — reload the saved data
+                    this.loadList();
+                    this.loadJoineeList();
+                    const recordId = res.data?.id ?? res.id ?? this.editId;
+                    if (recordId) {
+                        this.recordSvc.getById(recordId).subscribe({
+                            next: (record) => { if (record) this.onEdit(record); }
+                        });
+                    } else if (this.editDetailId) {
+                        this.detailSvc.getAll().subscribe({
+                            next: (all) => {
+                                const detail = all.find(r => r.id === this.editDetailId);
+                                if (detail) this.onEditJoinee(detail);
+                            }
+                        });
+                    }
+                } else {
+                    this.resetForm(); this.loadList(); this.loadJoineeList();
+                }
+            }
         };
         const onError = (err: any) => { this.saving = false; this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.description ?? 'Save failed.' }); };
 
@@ -966,6 +994,8 @@ export class PermanentPostingMORecordComponent implements OnInit {
     }
 
     onCancel(): void { this.resetForm(); }
+
+    goBack(): void { this._location.back(); }
 
     loadList(): void {
         this.loadingList = true;

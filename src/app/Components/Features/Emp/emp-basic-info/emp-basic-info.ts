@@ -63,6 +63,22 @@ export class EmpBasicInfo implements OnInit {
     /** Hide search section when opened via query params (view/edit from another tab). */
     hideSearchSection: boolean = false;
 
+    /** Called when emp-present-member-check emits employeeNotFound with motherOrgId + serviceId. */
+    onEmployeeNotFound(data: { motherOrgId: number | null; serviceId: string }): void {
+        this.showEntryForm = true;
+        // Set motherOrganization first so dependent dropdowns load
+        if (data.motherOrgId) {
+            this.postingForm.patchValue({ motherOrganization: data.motherOrgId, orgId: data.motherOrgId });
+            this.onMotherOrgChange(data.motherOrgId);
+        }
+        if (data.serviceId) {
+            setTimeout(() => {
+                this.postingForm.patchValue({ serviceId: data.serviceId });
+                this.checkJoineeDetail(data.serviceId);
+            }, 100);
+        }
+    }
+
     // Image preview modal
     showImagePreviewModal: boolean = false;
     selectedFileName: string = '';
@@ -165,25 +181,62 @@ export class EmpBasicInfo implements OnInit {
         if (!sid) { this.joineeRecord = null; return; }
 
         this.isCheckingJoinee = true;
-        this.joineeDetailService.getByServiceId(sid).subscribe({
+        this.joineeDetailService.getPendingByServiceId(sid).subscribe({
             next: (record) => {
                 this.isCheckingJoinee = false;
-                this.joineeRecord = record;
                 if (record) {
-                    this.postingForm.patchValue({
-                        ...(record.rank        != null && { rank: record.rank }),
-                        ...(record.corps       != null && { branch: record.corps }),
-                        ...(record.trade       != null && { trade: record.trade }),
-                        ...(record.memberType  != null && { memberType: record.memberType }),
-                        ...(record.prefixId    != null && { prefix: record.prefixId }),
-                        ...(record.motherOrgId != null && { motherOrganization: record.motherOrgId, orgId: record.motherOrgId }),
-                        ...(record.motherOrgUnitId != null && { lastMotherUnit: record.motherOrgUnitId }),
-                        ...(record.nameBangla  != null && record.nameBangla.trim() && { fullNameBN: record.nameBangla }),
+                    this.joineeRecord = record;
+                    this.loadAndPatchJoineeData(record);
+                    this.messageService.add({
+                        severity: 'info',
+                        summary: 'নতুন জয়নি তথ্য লোড হয়েছে',
+                        detail: 'এই সদস্য "New Joining Person" তালিকায় রয়েছে। তথ্য স্বয়ংক্রিয়ভাবে লোড করা হয়েছে।',
+                        life: 6000
                     });
+                } else {
+                    this.joineeRecord = null;
                 }
             },
             error: (err: any) => { this.isCheckingJoinee = false; this.joineeRecord = null; }
         });
+    }
+
+    /** Patch form with joinee data, then load dependent dropdowns (same pattern as loadEmployeeData). */
+    private loadAndPatchJoineeData(record: PermanentPostingJoineeDetailModel): void {
+        // Patch all values first
+        this.postingForm.patchValue({
+            ...(record.motherOrgId      != null && { motherOrganization: record.motherOrgId, orgId: record.motherOrgId }),
+            ...(record.motherOrgUnitId  != null && { lastMotherUnit: record.motherOrgUnitId }),
+            ...(record.memberType       != null && { memberType: record.memberType }),
+            ...(record.prefixId         != null && { prefix: record.prefixId }),
+            ...(record.rank             != null && { rank: record.rank }),
+            ...(record.corps            != null && { branch: record.corps }),
+            ...(record.trade            != null && { trade: record.trade }),
+            ...(record.nameBangla       != null && record.nameBangla.trim() && { fullNameBN: record.nameBangla }),
+        });
+
+        // Load dependent dropdowns based on joinee data
+        if (record.motherOrgId != null) {
+            // Load units, then auto-fill district from selected unit
+            this.commonCodeService.getAllActiveMotherOrgUnits(record.motherOrgId).subscribe({
+                next: (res) => {
+                    this.lastUnitOrganizations = res;
+                    if (record.motherOrgUnitId != null) {
+                        this.onLastUnitChange(record.motherOrgUnitId);
+                    }
+                }
+            });
+            this.loadMotherOrgRank(record.motherOrgId);
+            this.loadMotherOrgCorps(record.motherOrgId);
+            this.loadMotherOrgPrefix(record.motherOrgId);
+            this.loadMotherOrgBatch(record.motherOrgId);
+        }
+        if (record.memberType != null) {
+            this.loadOfficerType(record.memberType, record.motherOrgId);
+        }
+        if (record.corps != null) {
+            this.loadTrade(record.corps);
+        }
     }
 
     // Reliever section
@@ -890,11 +943,6 @@ export class EmpBasicInfo implements OnInit {
             ).subscribe(() => this.checkDuplicateCombo());
         });
 
-        // Check if serviceId exists in PermanentPostingJoineeDetail (New Joining Person)
-        this.postingForm.get('serviceId')?.valueChanges.pipe(
-            debounceTime(700),
-            distinctUntilChanged()
-        ).subscribe((val) => this.checkJoineeDetail(val ?? ''));
         this.postingForm.get('rank')?.valueChanges.subscribe((rankId) => this.updateRabRankEquivalent(rankId));
 
         this.loadMotherOrg();

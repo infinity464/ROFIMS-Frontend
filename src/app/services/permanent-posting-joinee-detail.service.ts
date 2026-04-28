@@ -51,6 +51,13 @@ export class PermanentPostingJoineeDetailService {
         );
     }
 
+    /** Returns the joinee record only if IsAddedInNewJoineeDataEntry == false (pending). */
+    getPendingByServiceId(serviceId: string): Observable<PermanentPostingJoineeDetailModel | null> {
+        return this.http.get<any>(`${this.baseUrl}/GetPendingByServiceIdAsyn/${encodeURIComponent(serviceId)}`).pipe(
+            map((r) => { const a = Array.isArray(r) ? r : r ? [r] : []; return a.length ? a[0] : null; })
+        );
+    }
+
     saveUpdate(model: Partial<PermanentPostingJoineeDetailModel>): Observable<any> {
         return this.http.post(`${this.baseUrl}/SaveUpdateAsyn`, {
             id: model.id ?? 0,

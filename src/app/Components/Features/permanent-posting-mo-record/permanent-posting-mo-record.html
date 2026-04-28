@@ -8,28 +8,32 @@
         <div>
             <h3 class="form-card-title">
                 <i class="pi pi-arrow-right-arrow-left" style="font-size:1.1rem"></i>
-                {{ editId ? 'Edit' : 'New' }} — Posted Out / New Joining Person
+                {{ isEditing ? 'Edit' : 'New' }} — Posted Out / New Posting Person
             </h3>
             <div style="font-size:0.8rem; color:var(--text-color-secondary); margin-top:0.2rem; padding-left:0.1rem;">
                 Permanent Posting (MO Change)
             </div>
         </div>
-        @if (editId) {
-            <div class="form-card-actions">
+        <div class="form-card-actions">
+            @if (isQueryParamEdit) {
+                <p-button label="Back" icon="pi pi-arrow-left" severity="secondary" [outlined]="true"
+                    styleClass="form-btn-secondary" (onClick)="goBack()"></p-button>
+            }
+            @if (isEditing && !isQueryParamEdit) {
                 <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true"
                     styleClass="form-btn-secondary" (onClick)="onCancel()"></p-button>
-            </div>
-        }
+            }
+        </div>
     </div>
 
     <!-- ══ Two-column layout ════════════════════════════════════ -->
     <div class="two-col-layout">
 
-        <!-- ── LEFT: Post Out Details ──────────────────────────── -->
+        <!-- ── LEFT: Posted Out Details ─────────────────────────── -->
         <div class="col-panel">
             <div class="col-panel-header">
                 <i class="pi pi-file-edit"></i>
-                <span>Post Out Details</span>
+                <span>Posted Out Details</span>
                 <p-button label="Clear" icon="pi pi-eraser" size="small" severity="secondary" [text]="true"
                     [style]="{'margin-left':'auto'}" (onClick)="clearPostedOutSection()"></p-button>
             </div>
@@ -182,11 +186,11 @@
             </app-file-references-form>
         </div>
 
-        <!-- ── RIGHT: New Joining Person ───────────────────────── -->
+        <!-- ── RIGHT: New Posting Person ───────────────────────── -->
         <div class="col-panel">
             <div class="col-panel-header">
                 <i class="pi pi-user-plus"></i>
-                <span>New Joining Person</span>
+                <span>New Posting Person</span>
                 <p-button label="Clear" icon="pi pi-eraser" size="small" severity="secondary" [text]="true"
                     [style]="{'margin-left':'auto'}" (onClick)="clearJoineeSection()"></p-button>
             </div>
@@ -304,11 +308,14 @@
 
     <!-- ── Action Buttons ──────────────────────────────────────────── -->
     <div class="form-actions">
-        @if (editId) {
+        @if (isQueryParamEdit) {
+            <p-button label="Back" icon="pi pi-arrow-left" severity="secondary"
+                [outlined]="true" styleClass="form-btn-secondary" (onClick)="goBack()"></p-button>
+        } @else if (isEditing) {
             <p-button label="Cancel" icon="pi pi-times" severity="secondary"
                 [outlined]="true" styleClass="form-btn-secondary" (onClick)="onCancel()"></p-button>
         }
-        <p-button [label]="editId ? 'Update' : 'Save'" icon="pi pi-save"
+        <p-button [label]="isEditing ? 'Update' : 'Save'" icon="pi pi-save"
             [loading]="saving" styleClass="form-btn-primary" (onClick)="onSave()"></p-button>
     </div>
 </div>
