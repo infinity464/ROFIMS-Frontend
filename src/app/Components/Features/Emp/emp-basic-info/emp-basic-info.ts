@@ -1,7 +1,7 @@
 import { Component, OnInit, ViewChild, inject } from '@angular/core';
 import { UserMenuService } from '@/services/user-menu.service';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FileUpload } from 'primeng/fileupload';
 import { Select } from 'primeng/select';
 import { DatePicker } from 'primeng/datepicker';
@@ -26,13 +26,14 @@ import { EmpPresentMemberCheckComponent } from '../emp-present-member-check/emp-
 import { FileReferencesFormComponent } from '@components/Common/file-references-form/file-references-form';
 import { OrganizationService } from '@/Components/basic-setup/organization-setup/services/organization-service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
+import { EquivalentRankModel } from '@/Components/basic-setup/shared/models/equivalent-rank';
 import { SharedService } from '@/shared/services/shared-service';
 import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 import { PermanentPostingJoineeDetailService, PermanentPostingJoineeDetailModel } from '@/services/permanent-posting-joinee-detail.service';
 @Component({
     selector: 'app-emp-basic-info',
-    imports: [FileUpload, Fluid, Button, ButtonModule, Select, MultiSelectModule, DatePicker, ReactiveFormsModule, FormsModule, InputTextModule, AddressFormComponent, Checkbox, Dialog, TooltipModule, EmpPresentMemberCheckComponent, FileReferencesFormComponent, FlexibleDateDirective],
+    imports: [FileUpload, Fluid, Button, ButtonModule, Select, MultiSelectModule, DatePicker, ReactiveFormsModule, FormsModule, InputTextModule, AddressFormComponent, Checkbox, Dialog, TooltipModule, EmpPresentMemberCheckComponent, FileReferencesFormComponent, FlexibleDateDirective, RouterLink],
     templateUrl: './emp-basic-info.html',
     styleUrl: './emp-basic-info.scss',
     standalone: true
@@ -837,6 +838,13 @@ export class EmpBasicInfo implements OnInit {
     spouseFmid: number | null = null;
     prefixes: CommonCodeModel[] = [];
     districtOptions: { label: string; value: number }[] = [];
+    rabRankEquivalentDisplay: string = '';
+    rabRankDropdownOptions: { label: string; value: number }[] = [];
+    selectedRabEquivalentNameId: number | null = null;
+    private rankEquivalentList: Array<{ equivalentNameID: number; motherOrgRankId: number; sortOrder: number | null }> = [];
+    private rankEquivalentListWithOrg: Array<{ equivalentNameID: number; motherOrgRankId: number; motherOrgId: number; sortOrder: number | null }> = [];
+    private rabMotherOrgId: number | null = null;
+    private motherOrgRankNameById = new Map<number, string>();
 
     // Add Last Unit of Mother Organization dialog (same pattern as Post Office setup)
     showLastUnitDialog: boolean = false;
@@ -887,6 +895,7 @@ export class EmpBasicInfo implements OnInit {
             debounceTime(700),
             distinctUntilChanged()
         ).subscribe((val) => this.checkJoineeDetail(val ?? ''));
+        this.postingForm.get('rank')?.valueChanges.subscribe((rankId) => this.updateRabRankEquivalent(rankId));
 
         this.loadMotherOrg();
         this.loadDistricts();
@@ -896,6 +905,7 @@ export class EmpBasicInfo implements OnInit {
         this.loadGender();
         this.loadMaritalStatus();
         this.loadRelationshipOptions();
+        this.loadRankEquivalentMappings();
 
         // Check for query params (view/edit mode)
         this.route.queryParams.subscribe((params) => {
@@ -1315,6 +1325,8 @@ export class EmpBasicInfo implements OnInit {
         this.commonCodeService.getAllActiveMotherOrgs().subscribe({
             next: (res: MotherOrganizationModel[]) => {
                 this.motherOrganizations = res;
+                this.rabMotherOrgId = this.motherOrganizations.find((org) => (org?.orgNameEN || '').toLowerCase().includes('rab'))?.orgId ?? null;
+                this.updateRabRankEquivalent(this.postingForm?.get('rank')?.value);
             },
             error: (error) => {
                 console.error('Failed to load mother organizations', error);
@@ -1345,6 +1357,87 @@ export class EmpBasicInfo implements OnInit {
             error: (err) => {
                 console.error('Error loading districts:', err);
             }
+        });
+    }
+
+    private loadRankEquivalentMappings(): void {
+        forkJoin({
+            equivalentNames: this.masterBasicSetupService.getAllByType('EquivalentName').pipe(catchError(() => of([]))),
+            rankEquivalents: this.masterBasicSetupService.getAllRankEquivalents().pipe(catchError(() => of([] as EquivalentRankModel[]))),
+            allMotherOrgRanks: this.masterBasicSetupService.getAllByType('MotherOrgRank').pipe(catchError(() => of([])))
+        }).subscribe({
+            next: ({ equivalentNames, rankEquivalents, allMotherOrgRanks }) => {
+                const eqNames = Array.isArray(equivalentNames) ? equivalentNames : [];
+                this.rabRankDropdownOptions = eqNames.map((item: any) => ({
+                    label: item?.codeValueEN ?? '',
+                    value: Number(item?.codeId ?? item?.CodeId)
+                })).filter((x) => x.label && Number.isFinite(x.value));
+
+                const rawRankEquivalents = Array.isArray(rankEquivalents) ? rankEquivalents : [];
+                this.rankEquivalentListWithOrg = rawRankEquivalents
+                    .map((row: any) => ({
+                        equivalentNameID: Number(row?.equivalentNameID ?? row?.EquivalentNameID),
+                        motherOrgRankId: Number(row?.motherOrgRankId ?? row?.MotherOrgRankId),
+                        motherOrgId: Number(row?.motherOrgId ?? row?.MotherOrgId),
+                        sortOrder: row?.sortOrder ?? row?.SortOrder ?? null
+                    }))
+                    .filter((row) => Number.isFinite(row.equivalentNameID) && Number.isFinite(row.motherOrgRankId) && Number.isFinite(row.motherOrgId));
+                this.rankEquivalentList = this.rankEquivalentListWithOrg.map((row) => ({
+                    equivalentNameID: row.equivalentNameID,
+                    motherOrgRankId: row.motherOrgRankId,
+                    sortOrder: row.sortOrder
+                }));
+
+                const allRanks = Array.isArray(allMotherOrgRanks) ? allMotherOrgRanks : [];
+                this.motherOrgRankNameById.clear();
+                allRanks.forEach((rank: any) => {
+                    const codeId = Number(rank?.codeId ?? rank?.CodeId);
+                    const codeValue = rank?.codeValueEN ?? rank?.CodeValueEN ?? '';
+                    if (Number.isFinite(codeId) && codeValue) {
+                        this.motherOrgRankNameById.set(codeId, codeValue);
+                    }
+                });
+                this.updateRabRankEquivalent(this.postingForm.get('rank')?.value);
+            },
+            error: () => {
+                this.rankEquivalentList = [];
+                this.rankEquivalentListWithOrg = [];
+                this.rabRankEquivalentDisplay = '';
+            }
+        });
+    }
+
+    private updateRabRankEquivalent(selectedRankId: number | null): void {
+        const selectedRankCodeId = selectedRankId != null ? Number(selectedRankId) : null;
+        if (!selectedRankCodeId || this.rankEquivalentListWithOrg.length === 0) {
+            this.rabRankEquivalentDisplay = '';
+            this.selectedRabEquivalentNameId = null;
+            console.log('[RAB Rank Mapping] No mapping context', {
+                selectedRankId: selectedRankCodeId,
+                equivalentNameOptions: this.rabRankDropdownOptions.length,
+                rankEquivalentCount: this.rankEquivalentListWithOrg.length
+            });
+            return;
+        }
+
+        const selectedRankEquivalent = this.rankEquivalentListWithOrg.find((row) => Number(row.motherOrgRankId) === selectedRankCodeId);
+        if (!selectedRankEquivalent) {
+            this.rabRankEquivalentDisplay = '';
+            this.selectedRabEquivalentNameId = null;
+            console.log('[RAB Rank Mapping] Selected rank has no equivalent setup', {
+                selectedRankId: selectedRankCodeId
+            });
+            return;
+        }
+
+        this.selectedRabEquivalentNameId = Number(selectedRankEquivalent.equivalentNameID);
+        this.rabRankEquivalentDisplay =
+            this.rabRankDropdownOptions.find((x) => Number(x.value) === Number(this.selectedRabEquivalentNameId))?.label ?? '';
+
+        console.log('[RAB Rank Mapping] Resolved equivalent rank', {
+            selectedRankId: selectedRankCodeId,
+            selectedEquivalentNameId: this.selectedRabEquivalentNameId,
+            resolvedEquivalentName: this.rabRankEquivalentDisplay
         });
     }
 

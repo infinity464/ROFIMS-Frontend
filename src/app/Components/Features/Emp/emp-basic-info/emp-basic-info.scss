@@ -154,3 +154,30 @@
     margin-bottom: 0.5rem !important;
   }
 }
+
+/* Profile link style to match presently-serving-members */
+.report-link-profile {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--primary-color);
+  text-decoration: none;
+  padding: 4px 10px;
+  border-radius: 6px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.report-link-profile:hover {
+  background: var(--report-accent-bg);
+  color: var(--primary-color);
+}
+
+:host-context(.app-dark) .report-link-profile {
+  color: var(--primary-color);
+}
+
+:host-context(.app-dark) .report-link-profile:hover {
+  background: var(--report-accent-bg);
+}

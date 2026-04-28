@@ -13,6 +13,11 @@
             @if (isViewMode || isEditMode) {
                 <div class="form-card-actions">
                     @if (isViewMode) {
+                        @if (generatedEmployeeId) {
+                            <a [routerLink]="['/members/profile', generatedEmployeeId]" class="report-link-profile">
+                                <i class="pi pi-user"></i> Profile
+                            </a>
+                        }
                         <p-button
                             label="Edit"
                             icon="pi pi-pencil" [class.perm-hidden]="!canUpdate"
@@ -188,6 +193,22 @@
                         @if (isFieldInvalid('appointment')) {
                         <small class="form-error">{{ getErrorMessage('appointment') }}</small>
                         }
+                    </div>
+
+                    <div class="form-field">
+                        <label class="form-label">RAB Rank</label>
+                        <p-select
+                            [options]="rabRankDropdownOptions"
+                            optionLabel="label"
+                            optionValue="value"
+                            placeholder="Auto"
+                            styleClass="w-full"
+                            [(ngModel)]="selectedRabEquivalentNameId"
+                            [ngModelOptions]="{ standalone: true }"
+                            [disabled]="true"
+                            [filter]="true"
+                            filterPlaceholder="Search">
+                        </p-select>
                     </div>
 
                     <div class="form-field">

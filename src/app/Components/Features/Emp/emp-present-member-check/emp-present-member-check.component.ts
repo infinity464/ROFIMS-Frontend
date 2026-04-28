@@ -158,6 +158,11 @@ export class EmpPresentMemberCheckComponent implements OnInit, AfterViewInit {
         return parts.join(' ');
     }
 
+    private isExMember(employee: EmpModel): boolean {
+        const status = (((employee as any).PostingStatus ?? (employee as any).postingStatus ?? '') as string).trim().toLowerCase();
+        return status === PostingStatus.ExMember.toLowerCase() || status === 'ex-member';
+    }
+
     private handleFoundEmployee(employee: EmpModel): void {
         this.employeeFound.emit();
         this.showMemberFoundDialog(employee);
@@ -308,6 +313,10 @@ export class EmpPresentMemberCheckComponent implements OnInit, AfterViewInit {
 
     private openMemberFoundDialog(header: string, employee: EmpModel, empId: any, details: string, onYes: () => void): void {
         const onNo = () => {
+            if (!this.isExMember(employee)) {
+                this.clearExMemberSection();
+                return;
+            }
             this.exMemberEmployee = employee;
             this.exMemberDetailsText = details;
             const id = Number(empId);
@@ -443,12 +452,12 @@ export class EmpPresentMemberCheckComponent implements OnInit, AfterViewInit {
         this.exMemberViewList = [];
     }
 
-    /** Open old profile in a new browser tab in view mode. */
+    /** Open member profile page. */
     viewOldProfile(): void {
         if (!this.exMemberEmployee) return;
         const id = (this.exMemberEmployee as any).employeeID ?? (this.exMemberEmployee as any).EmployeeID;
         if (id != null) {
-            window.open(`/emp-basic-info?id=${id}&mode=view`, '_blank');
+            this._router.navigate(['/members/profile', id]);
         }
     }
 }
