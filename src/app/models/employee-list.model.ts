@@ -13,6 +13,7 @@ export interface EmployeeList {
     employeeID: number;
     serviceId: string;
     fullNameEN: string;
+    fullNameBN: string | null;
     officerType: number | null;
     orgId: number | null;
     joiningDate: string | null;

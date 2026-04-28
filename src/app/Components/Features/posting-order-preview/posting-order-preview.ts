@@ -397,7 +397,12 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         if (this.postingType === NoteSheetType.InterPosting) {
             return (this.isBangla ? (emp.previousRabUnitsBN || emp.previousRabUnits) : emp.previousRabUnits) || '';
         }
-        return (this.isBangla ? (emp.motherOrgLocationNameBN || emp.motherOrgLocationName) : emp.motherOrgLocationName) || '';
+        const rabUnit = (this.isBangla ? (emp.motherOrgLocationNameBN || emp.motherOrgLocationName) : emp.motherOrgLocationName) || '';
+        const motherOrg = (this.isBangla ? (emp.previousMotherOrgNameBN || emp.previousMotherOrgName) : emp.previousMotherOrgName) || '';
+        if (motherOrg && rabUnit) return motherOrg + '\n(' + rabUnit + ')';
+        if (motherOrg) return motherOrg;
+        if (rabUnit) return rabUnit;
+        return '';
     }
 
     empTransferUnit(emp: PostingOrderEmployeeRow): string {

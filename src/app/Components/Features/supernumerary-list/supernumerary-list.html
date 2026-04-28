@@ -244,7 +244,7 @@
                             }
                         </td>
                         <td>{{ row.tradeName || '—' }}</td>
-                        <td>{{ row.fullNameEN || '—' }}{{ row.corpsName ? ", " + row.corpsName : "" }}</td>
+                        <td>{{ row.fullNameEN || '—' }}{{ row.fullNameBN ? ' (' + row.fullNameBN + ')' : '' }}{{ row.corpsName ? ", " + row.corpsName : "" }}</td>
                         <td>
                             @if (row.motherUnitName) {
                                 <span class="report-badge-unit">{{ row.motherUnitName }}</span>

@@ -127,6 +127,11 @@ export abstract class NotesheetPreviewBase implements OnInit {
 
     postingEmployees: DraftPostingEmployeeRow[] = [];
     loadingEmployees = false;
+    loadingApprovalChain = false;
+
+    get isFullyLoaded(): boolean {
+        return !this.loading && !this.loadingEmployees && !this.loadingApprovalChain;
+    }
 
     purposeLabelMap: Record<number, string> = {};
     purposeLabelMapBN: Record<number, string> = {};
@@ -283,6 +288,10 @@ export abstract class NotesheetPreviewBase implements OnInit {
 
         if (allIds.length === 0) return;
 
+        this.loadingApprovalChain = true;
+        let completed = 0;
+        const total = allIds.length;
+
         allIds.forEach(({ empId, step }) => {
             this.servingMembersService.getEmployeePersonalServiceOverview(empId)
                 .pipe(catchError(() => of(null)))
@@ -306,6 +315,12 @@ export abstract class NotesheetPreviewBase implements OnInit {
                         else this.approversDetails.push(detail);
 
                         this.loadSignature(detail);
+                        completed++;
+                        if (completed >= total) this.loadingApprovalChain = false;
+                    },
+                    error: () => {
+                        completed++;
+                        if (completed >= total) this.loadingApprovalChain = false;
                     }
                 });
         });

@@ -204,6 +204,8 @@ export interface DraftPostingEmployeeRow {
     spousePresentDistrictNameBN: string | null;
     motherOrgLocationName: string | null;
     motherOrgLocationNameBN: string | null;
+    previousMotherOrgName: string | null;
+    previousMotherOrgNameBN: string | null;
     /** Previous RAB service units (comma-separated). Inter-posting only. */
     previousRabUnits?: string | null;
     previousRabUnitsBN?: string | null;
@@ -387,6 +389,8 @@ export interface PostingOrderEmployeeRow {
     spousePresentDistrictNameBN: string | null;
     motherOrgLocationName: string | null;
     motherOrgLocationNameBN: string | null;
+    previousMotherOrgName: string | null;
+    previousMotherOrgNameBN: string | null;
     previousRabUnits: string | null;
     previousRabUnitsBN: string | null;
 }

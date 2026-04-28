@@ -4,7 +4,7 @@
 <div class="preview-page">
 
     <div class="preview-header no-print">
-        <div class="preview-actions" *ngIf="noteSheet && !loading && !error">
+        <div class="preview-actions" *ngIf="noteSheet && isFullyLoaded && !error">
             <p-button *ngIf="showEdit && canEdit && !editing" icon="pi pi-pencil" label="Edit" (onClick)="toggleEdit()" styleClass="p-button-outlined p-button-warning"></p-button>
             <p-button *ngIf="editing" icon="pi pi-times" label="Cancel" (onClick)="cancelEdit()" styleClass="p-button-outlined p-button-secondary"></p-button>
             <p-button *ngIf="editing" icon="pi pi-check" label="Save" (onClick)="saveChanges()" [loading]="saving" styleClass="p-button-success"></p-button>
@@ -12,7 +12,7 @@
             <p-button *ngIf="showPdf && !editing" icon="pi pi-file-pdf"  label="PDF"   (onClick)="exportPdf()" [loading]="exportingPdf" styleClass="p-button-outlined"></p-button>
             <p-button *ngIf="!editing" icon="pi pi-print" label="Print Preview" (onClick)="printPreview()" [loading]="printingPreview" styleClass="p-button-outlined"></p-button>
         </div>
-        <div class="preview-status-actions" *ngIf="noteSheet && !loading && !error && !editing">
+        <div class="preview-status-actions" *ngIf="noteSheet && isFullyLoaded && !error && !editing">
             @if (isDraftStatus) {
                 <p-button type="button" icon="pi pi-users" [rounded]="true" [text]="true" size="small" severity="info"
                           pTooltip="View Members" (onClick)="openViewMembers()"
@@ -54,19 +54,19 @@
         </div>
     </div>
 
-    <div class="preview-loading" *ngIf="loading">
+    <div class="preview-loading" *ngIf="!isFullyLoaded && !error">
         <i class="pi pi-spin pi-spinner" style="font-size:2rem"></i>
         <p>Loading...</p>
     </div>
 
-    <div class="preview-error" *ngIf="error && !loading">
+    <div class="preview-error" *ngIf="error && isFullyLoaded">
         <i class="pi pi-exclamation-circle" style="font-size:3rem; color:var(--red-500)"></i>
         <p>Failed to load note-sheet.</p>
         <p-button label="Go Back" icon="pi pi-arrow-left" (onClick)="goBack()"></p-button>
     </div>
 
     <!-- Export options -->
-    <div class="export-options-bar no-print" *ngIf="noteSheet && !loading && !error && !editing"
+    <div class="export-options-bar no-print" *ngIf="noteSheet && isFullyLoaded && !error && !editing"
          style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center; padding:0.5rem 1rem; background:var(--surface-ground); border-radius:6px; margin-bottom:0.5rem;">
         <span style="font-weight:600; font-size:0.85rem;"><i class="pi pi-cog" style="margin-right:0.3rem;"></i>Export:</span>
         <p-select [options]="pageSizeOptions" [(ngModel)]="selectedPageSize" optionLabel="label" optionValue="value" [style]="{'width': '90px'}"></p-select>
@@ -76,6 +76,7 @@
             <span style="display:inline-flex; align-items:center; gap:0.3rem;"><p-checkbox [(ngModel)]="showTradeRemarks" [binary]="true" inputId="chkTradeR"></p-checkbox><label for="chkTradeR" style="cursor:pointer;">ট্রেড বিবরণ</label></span>
             <span style="display:inline-flex; align-items:center; gap:0.3rem;"><p-checkbox [(ngModel)]="showOwnDistrictDetail" [binary]="true" inputId="chkOwnDist"></p-checkbox><label for="chkOwnDist" style="cursor:pointer;">নিজ জেলা বিবরণ</label></span>
             <span style="display:inline-flex; align-items:center; gap:0.3rem;"><p-checkbox [(ngModel)]="showSpouseDistrictDetail" [binary]="true" inputId="chkSpDist"></p-checkbox><label for="chkSpDist" style="cursor:pointer;">স্পাউস জেলা বিবরণ</label></span>
+            <span style="display:inline-flex; align-items:center; gap:0.3rem;"><p-checkbox [(ngModel)]="showPrevWorkplaceDetail" [binary]="true" inputId="chkPrevWp"></p-checkbox><label for="chkPrevWp" style="cursor:pointer;">পূর্ববতী কর্মস্থল বিবরণ</label></span>
             <span style="display:inline-flex; align-items:center; gap:0.3rem;"><p-checkbox [(ngModel)]="showRemarks" [binary]="true" inputId="chkRemarks"></p-checkbox><label for="chkRemarks" style="cursor:pointer;">মন্তব্য</label></span>
         </ng-container>
     </div>
@@ -83,7 +84,7 @@
     <!-- ══════════════════════════════════════════════════════════ -->
     <!-- VIEW MODE: paginated legal pages                          -->
     <!-- ══════════════════════════════════════════════════════════ -->
-    <ng-container *ngIf="noteSheet && !loading && !error && !editing">
+    <ng-container *ngIf="noteSheet && isFullyLoaded && !error && !editing">
 
         <!-- Hidden: measure full content height -->
         <div class="page-measure" #contentMeasure>
@@ -109,7 +110,7 @@
     <!-- ══════════════════════════════════════════════════════════ -->
     <!-- EDIT MODE: single page, no pagination                     -->
     <!-- ══════════════════════════════════════════════════════════ -->
-    <div class="a4-paper-container" *ngIf="noteSheet && !loading && !error && editing">
+    <div class="a4-paper-container" *ngIf="noteSheet && isFullyLoaded && !error && editing">
         <div class="a4-paper">
 
             <div class="ns-doc-box">
@@ -120,7 +121,7 @@
                         <div class="ns-title-bn">মন্তব্য পত্র</div>
                     </div>
 
-                    <div class="ns-org-header" style="text-align:center; padding:8px 16px 4px; font-weight:700; font-size:10pt; line-height:1.5;">
+                    <div class="ns-org-header" style="text-align:center; padding:8px 16px 4px; font-weight:700; font-size:9pt; line-height:1.5;">
                         <div>{{ getOrgHeaderLine1() }}</div>
                         <div style="border-bottom:1.5px solid #000; display:inline-block; padding-bottom:2px;">{{ getOrgHeaderLine2() }}</div>
                     </div>
@@ -287,7 +288,7 @@
                     <div class="ns-title-bn">মন্তব্য পত্র</div>
                 </div>
 
-                <div class="ns-org-header" style="text-align:center; padding:8px 16px 4px; font-weight:700; font-size:10pt; line-height:1.5;">
+                <div class="ns-org-header" style="text-align:center; padding:8px 16px 4px; font-weight:700; font-size:9pt; line-height:1.5;">
                     <div>{{ getOrgHeaderLine1() }}</div>
                     <div style="border-bottom:1.5px solid #000; display:inline-block; padding-bottom:2px;">{{ getOrgHeaderLine2() }}</div>
                 </div>
@@ -364,7 +365,7 @@
                                 <td>{{ isEnglish() ? (emp.fullNameEN || '') : (emp.fullNameBN || emp.fullNameEN || '') }}</td>
                                 <td style="white-space: pre-line;">{{ isEnglish() ? (emp.presentDistrictName || '') : (emp.presentDistrictNameBN || emp.presentDistrictName || '') }}</td>
                                 <td style="white-space: pre-line;">{{ isEnglish() ? (emp.spousePresentDistrictName || '') : (emp.spousePresentDistrictNameBN || emp.spousePresentDistrictName || '') }}</td>
-                                <td style="white-space: pre-line;">{{ isInterPosting() ? (isEnglish() ? (emp.previousRabUnits || '') : (emp.previousRabUnitsBN || emp.previousRabUnits || '')) : (isEnglish() ? (emp.motherOrgLocationName || '') : (emp.motherOrgLocationNameBN || emp.motherOrgLocationName || '')) }}</td>
+                                <td style="white-space: pre-line;">{{ isInterPosting() ? (isEnglish() ? (emp.previousRabUnits || '') : (emp.previousRabUnitsBN || emp.previousRabUnits || '')) : getPreviousWorkplace(emp) }}</td>
                                 <td>{{ isEnglish() ? (emp.transferRabUnitName || '') : (emp.transferRabUnitNameBN || emp.transferRabUnitName || '') }}</td>
                                 <td>{{ getCombinedRemarks(emp) }}</td>
                             </tr>

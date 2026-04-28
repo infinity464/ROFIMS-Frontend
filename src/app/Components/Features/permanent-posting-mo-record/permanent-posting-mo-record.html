@@ -219,17 +219,6 @@
                         [showClear]="true" class="w-full" appendTo="body"></p-select>
                 </div>
                 <div class="form-field">
-                    <label class="form-label">Prefix</label>
-                    <p-select [options]="prefixOptions" [(ngModel)]="joineePrefixId"
-                        optionLabel="label" optionValue="value"
-                        placeholder="Select prefix"
-                        [showClear]="true" class="w-full" appendTo="body"
-                        [disabled]="!prefixOptions.length"></p-select>
-                </div>
-            </div>
-
-            <div class="form-row">
-                <div class="form-field">
                     <label class="form-label">Rank</label>
                     <p-select [options]="rankOptions" [(ngModel)]="joineeRank"
                         optionLabel="label" optionValue="value"
@@ -237,6 +226,9 @@
                         [showClear]="true" class="w-full" appendTo="body"
                         [disabled]="!rankOptions.length"></p-select>
                 </div>
+            </div>
+
+            <div class="form-row">
                 <div class="form-field">
                     <label class="form-label">Corps</label>
                     <p-select [options]="corpsOptions" [(ngModel)]="joineeCorps"
@@ -246,9 +238,6 @@
                         [disabled]="!corpsOptions.length"
                         (onChange)="onCorpsChange($event.value)"></p-select>
                 </div>
-            </div>
-
-            <div class="form-row">
                 <div class="form-field">
                     <label class="form-label">Trade</label>
                     <p-select [options]="tradeOptions" [(ngModel)]="joineeTrade"
@@ -256,6 +245,17 @@
                         placeholder="Select trade"
                         [showClear]="true" class="w-full" appendTo="body"
                         [disabled]="!tradeOptions.length"></p-select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-field">
+                    <label class="form-label">Prefix</label>
+                    <p-select [options]="prefixOptions" [(ngModel)]="joineePrefixId"
+                        optionLabel="label" optionValue="value"
+                        placeholder="Select prefix"
+                        [showClear]="true" class="w-full" appendTo="body"
+                        [disabled]="!prefixOptions.length"></p-select>
                 </div>
                 <div class="form-field">
                     <label class="form-label">Service ID</label>
