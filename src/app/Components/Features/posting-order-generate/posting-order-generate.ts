@@ -3,7 +3,7 @@ import { UserMenuService } from '@/services/user-menu.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
@@ -101,6 +101,8 @@ export class PostingOrderGenerateComponent implements OnInit {
         { label: 'Inter Posting', value: NoteSheetType.InterPosting }
     ];
 
+    /** Fixed by route data — null means show the dropdown selector. */
+    fixedPostingType: string | null = null;
     selectedPostingType: string | null = null;
     approvedNoteSheets: ApprovedNoteSheetItem[] = [];
     selectedNoteSheetId: number | null = null;
@@ -163,6 +165,7 @@ export class PostingOrderGenerateComponent implements OnInit {
         private postingService: PostingService,
         private http: HttpClient,
         private router: Router,
+        private route: ActivatedRoute,
         private messageService: MessageService,
         private confirmationService: ConfirmationService
     ) {}
@@ -174,6 +177,14 @@ export class PostingOrderGenerateComponent implements OnInit {
         this.canDelete = _perms.canDelete;
 
         this.postingOrderDate = new Date();
+
+        // Lock posting type from route data if provided
+        const routePostingType = this.route.snapshot.data['postingType'] as string | undefined;
+        if (routePostingType) {
+            this.fixedPostingType = routePostingType;
+            this.selectedPostingType = routePostingType;
+            this.onPostingTypeChange();
+        }
     }
 
     /** When posting type dropdown changes, load approved notesheets of that type

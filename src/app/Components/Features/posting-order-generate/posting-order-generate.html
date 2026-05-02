@@ -4,14 +4,16 @@
 <div class="posting-order-generate">
     <div class="form-card">
         <div class="form-card-header">
-            <h3 class="form-card-title">Generate Posting Order</h3>
+            <h3 class="form-card-title">
+                {{ fixedPostingType === 'InterPosting' ? 'Generate Inter-Posting Order' : fixedPostingType === 'NewPosting' ? 'Generate New Posting Order' : 'Generate Posting Order' }}
+            </h3>
         </div>
 
         <!-- Row 1: Posting Type + NoteSheet -->
         <div class="draft-master-section mb-4 p-4 surface-50 border-round">
             <div class="flex flex-wrap gap-4 align-items-end">
-                <!-- Posting Type Dropdown -->
-                <div class="field min-w-200px">
+                <!-- Posting Type Dropdown (hidden when type is fixed by route) -->
+                <div class="field min-w-200px" *ngIf="!fixedPostingType">
                     <label class="font-semibold block mb-2 text-700">Posting Type <span class="text-red-500">*</span></label>
                     <p-select
                         [options]="postingTypeOptions"
@@ -42,10 +44,7 @@
                         (onChange)="onNoteSheetChange()"
                     ></p-select>
                 </div>
-            </div>
 
-            <!-- Row 2: Date -->
-            <div class="flex flex-wrap gap-4 align-items-end mt-3">
                 <!-- Posting Order Date -->
                 <div class="field min-w-200px">
                     <label class="font-semibold block mb-2 text-700">Posting Order Date <span class="text-red-500">*</span></label>
@@ -135,14 +134,7 @@
                 <div class="flex align-items-center gap-2 mb-2">
                     <span class="font-semibold text-700">{{ isBangla ? 'পোস্টিং টেক্সট' : 'Posting Text' }}</span>
                 </div>
-                <textarea
-                    pTextarea
-                    [(ngModel)]="postingText"
-                    rows="3"
-                    class="w-full"
-                    placeholder="{{ isBangla ? 'পোস্টিং টেক্সট লিখুন...' : 'Enter posting text...' }}"
-                    [autoResize]="true"
-                ></textarea>
+                <p-editor [(ngModel)]="postingText" [style]="{ height: '200px' }"></p-editor>
             </div>
 
             <!-- Footer Text (dynamic paragraphs, each linked to a transfer unit) -->
