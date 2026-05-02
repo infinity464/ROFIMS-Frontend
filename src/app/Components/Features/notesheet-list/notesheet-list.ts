@@ -29,11 +29,18 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { InputTextModule } from 'primeng/inputtext';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
+import { SelectModule } from 'primeng/select';
+import { TreeSelectModule } from 'primeng/treeselect';
+import { TreeNode } from 'primeng/api';
+import { OrgService } from '@/Components/basic-setup/org-tree/org.service';
 import { forkJoin, of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import { Table } from 'primeng/table';
 import { PostingService } from '@/services/posting.service';
 import { DraftPostingEmployeeRow, PostingMemberRemovalHistoryDto } from '@/models/posting.model';
+import { EmployeeList } from '@/models/employee-list.model';
+import { EmployeeListService } from '@/services/employee-list.service';
+import { IsSendingNotesheetStatus } from '@/models/enums';
 import { ForeignVisitInfoService } from '@/services/foreign-visit-info.service';
 import { PostingOrderPreviewComponent } from './posting-order-preview/posting-order-preview';
 import { NotesheetSignatoryComponent } from '@/Components/Common/notesheet-signatory/notesheet-signatory';
@@ -161,7 +168,9 @@ export interface ApprovalLogEntry {
     InputIconModule,
     PostingOrderPreviewComponent,
     NotesheetSignatoryComponent,
-    ConfirmDialogModule
+    ConfirmDialogModule,
+    SelectModule,
+    TreeSelectModule
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './notesheet-list.html',
@@ -252,6 +261,19 @@ export class NotesheetListComponent implements OnInit {
   removingEmployees = false;
   private employeesDialogRow: NoteSheetInfoRow | null = null;
 
+  /** Add member to posting list */
+  addMemberList: EmployeeList[] = [];
+  addMemberLoading = false;
+  addMemberSaving = false;
+  selectedAddEmployee: EmployeeList | null = null;
+
+  /** Transfer unit tree-select (required on approved-new-posting route) */
+  addMemberUnitTreeNodes: TreeNode[] = [];
+  selectedAddUnitNode: TreeNode | null = null;
+  private addMemberUnitNodeMap: Record<number, TreeNode> = {};
+  addMemberTreeLoading = false;
+  addMemberRemarks = '';
+
   /** Removal history dialog */
   showRemovalHistoryDialog = false;
   removalHistoryLoading = false;
@@ -281,10 +303,12 @@ export class NotesheetListComponent implements OnInit {
     private empService: EmpService,
     private noteSheetEditCache: NoteSheetEditCacheService,
     private masterBasicSetup: MasterBasicSetupService,
+    private orgService: OrgService,
     private postingService: PostingService,
     private commonCodeService: CommonCodeService,
     private servingMembersService: ServingMembersService,
-    private foreignVisitService: ForeignVisitInfoService
+    private foreignVisitService: ForeignVisitInfoService,
+    private employeeListService: EmployeeListService
   ) {}
 
   /** Open preview page: navigate to the type-specific preview route */
@@ -497,6 +521,15 @@ export class NotesheetListComponent implements OnInit {
     this.selectedEmployees = [];
     this.loadingEmployees = true;
     this.showEmployeesDialog = true;
+    // Reset add-member panel
+    this.selectedAddEmployee = null;
+    this.addMemberList = [];
+    this.selectedAddUnitNode = null;
+    this.addMemberRemarks = '';
+    // Load employees available to add (draft status)
+    this.loadAddMemberList();
+    // Load unit tree if on approved route (transfer unit is required)
+    if (this.isApprovedPostingRoute) this.loadAddMemberUnitTree();
 
     const isInter = row.noteSheetType === NoteSheetType.InterPosting;
     const obs = isInter
@@ -522,12 +555,8 @@ export class NotesheetListComponent implements OnInit {
     const row = this.employeesDialogRow;
     if (!row?.draftPostingMasterId || this.selectedEmployees.length === 0) return;
 
-    if (this.selectedEmployees.length >= this.employeesList.length) {
-      this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'At least one employee must remain in the posting list.' });
-      return;
-    }
-
     const count = this.selectedEmployees.length;
+    const isLastRemoval = count >= this.employeesList.length;
     this.confirmationService.confirm({
       message: `Are you sure you want to remove ${count} employee(s) from this posting list? They will be returned to the supernumerary list.`,
       header: 'Confirm Remove',
@@ -545,7 +574,12 @@ export class NotesheetListComponent implements OnInit {
             this.messageService.add({ severity: 'success', summary: 'Success', detail: res.description || `${count} employee(s) removed.` });
             this.selectedEmployees = [];
             this.removingEmployees = false;
-            this.openEmployeesDialog(row);
+            if (isLastRemoval) {
+              this.showEmployeesDialog = false;
+              this.loadSection();
+            } else {
+              this.openEmployeesDialog(row);
+            }
           },
           error: (err: any) => {
             this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.description || err?.error?.message || 'Failed to remove employees.' });
@@ -554,6 +588,121 @@ export class NotesheetListComponent implements OnInit {
         });
       }
     });
+  }
+
+  /** Load employees with draft status available to be added to the current posting list. */
+  private loadAddMemberList(): void {
+    this.addMemberLoading = true;
+    this.employeeListService.getEmployeesByIsSendingNotesheetStatus(IsSendingNotesheetStatus.Draft).subscribe({
+      next: (list) => {
+        this.addMemberList = list ?? [];
+        this.addMemberLoading = false;
+      },
+      error: () => { this.addMemberLoading = false; }
+    });
+  }
+
+  /** Add the selected employee to the current posting list. */
+  addMemberToPosting(): void {
+    const row = this.employeesDialogRow;
+    if (!row?.draftPostingMasterId || !this.selectedAddEmployee) return;
+    if (this.isApprovedPostingRoute && !this.addMemberTransferUnitId) {
+      this.messageService.add({ severity: 'warn', summary: 'Required', detail: 'Please select a Transfer Unit (Wing / Branch / Section).' });
+      return;
+    }
+
+    const empId = this.selectedAddEmployee.employeeID;
+    const isInter = row.noteSheetType === NoteSheetType.InterPosting;
+    const createdBy = this.sharedService.getCurrentUser?.() ?? 'system';
+
+    this.addMemberSaving = true;
+    this.postingService.addDraftPostingDetail(
+      row.draftPostingMasterId, isInter, [empId], createdBy, this.addMemberTransferUnitId, this.addMemberRemarks
+    ).subscribe({
+      next: (res) => {
+        this.messageService.add({ severity: 'success', summary: 'Added', detail: res.description || 'Employee added successfully.' });
+        this.selectedAddEmployee = null;
+        this.selectedAddUnitNode = null;
+        this.addMemberRemarks = '';
+        this.addMemberSaving = false;
+        this.openEmployeesDialog(row);
+      },
+      error: (err: any) => {
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.description || err?.error?.message || 'Failed to add employee.' });
+        this.addMemberSaving = false;
+      }
+    });
+  }
+
+  get isApprovedPostingRoute(): boolean {
+    return this._router.url.includes('approved-new-posting');
+  }
+
+  get addMemberTransferUnitId(): number | null {
+    return this.selectedAddUnitNode ? Number(this.selectedAddUnitNode.key) : null;
+  }
+
+  getAddMemberUnitFullPath(node: TreeNode | null): string {
+    if (!node) return '';
+    const parts: string[] = [];
+    let cur: TreeNode | null = node;
+    while (cur) {
+      parts.unshift(cur.label ?? '');
+      cur = (cur.data?.parent) ?? null;
+    }
+    return parts.join(' > ');
+  }
+
+  private loadAddMemberUnitTree(): void {
+    if (this.addMemberUnitTreeNodes.length > 0) return; // already loaded
+    this.addMemberTreeLoading = true;
+    this.orgService.getAll(0).subscribe({
+      next: (roots) => {
+        this.addMemberUnitNodeMap = {};
+        this.addMemberUnitTreeNodes = roots
+          .filter(r => r.status === 1)
+          .sort((a, b) => a.sortOrder - b.sortOrder)
+          .map(r => this.toAddMemberTreeNode(r, null));
+        this.addMemberTreeLoading = false;
+      },
+      error: () => { this.addMemberTreeLoading = false; }
+    });
+  }
+
+  private toAddMemberTreeNode(node: any, parent: TreeNode | null): TreeNode {
+    const tn: TreeNode = {
+      key: String(node.id),
+      label: node.nameEN || node.nameBN || `ID ${node.id}`,
+      data: { id: node.id, nameEN: node.nameEN, nameBN: node.nameBN, parent },
+      leaf: false,
+      children: []
+    };
+    this.addMemberUnitNodeMap[node.id] = tn;
+    return tn;
+  }
+
+  onAddMemberNodeExpand(event: any): void {
+    const node: TreeNode = event.node;
+    if (node.children && node.children.length > 0) return;
+    this.orgService.loadChildren(Number(node.key)).subscribe({
+      next: (children) => {
+        node.children = children
+          .filter(c => c.status === 1)
+          .sort((a, b) => a.sortOrder - b.sortOrder)
+          .map(c => this.toAddMemberTreeNode(c, node));
+        if (node.children.length === 0) node.leaf = true;
+        this.addMemberUnitTreeNodes = [...this.addMemberUnitTreeNodes];
+      },
+      error: () => {}
+    });
+  }
+
+  onAddMemberNodeSelect(event: any): void {
+    this.selectedAddUnitNode = event.node;
+  }
+
+  onAddMemberNodeClear(): void {
+    this.selectedAddUnitNode = null;
   }
 
   openRemovalHistory(row: NoteSheetInfoRow): void {

@@ -44,7 +44,7 @@
                 </div>
             </div>
 
-            <!-- Row 2: Date + Text Type + Remarks -->
+            <!-- Row 2: Date -->
             <div class="flex flex-wrap gap-4 align-items-end mt-3">
                 <!-- Posting Order Date -->
                 <div class="field min-w-200px">
@@ -56,12 +56,12 @@
                         placeholder="Select date"
                     ></p-datepicker>
                 </div>
+            </div>
 
-                <!-- Remarks -->
-                <div class="field flex-1 min-w-300px">
-                    <label class="font-semibold block mb-2 text-700">Note</label>
-                    <input pInputText type="text" [(ngModel)]="remarks" placeholder="Enter remarks (optional)" class="w-full" />
-                </div>
+            <!-- Row 3: Note (Rich Text) -->
+            <div class="field mt-3">
+                <label class="font-semibold block mb-2 text-700">Note</label>
+                <p-editor [(ngModel)]="remarks" [style]="{ height: '160px' }" placeholder="Enter note (optional)"></p-editor>
             </div>
         </div>
 

@@ -10,6 +10,7 @@ import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
+import { EditorModule } from 'primeng/editor';
 import { Toast } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TagModule } from 'primeng/tag';
@@ -76,6 +77,7 @@ interface TransferUnitOption {
         DatePickerModule, FlexibleDateDirective,
         InputTextModule,
         TextareaModule,
+        EditorModule,
         Toast,
         ConfirmDialogModule,
         TagModule,

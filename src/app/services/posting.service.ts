@@ -111,6 +111,25 @@ export class PostingService {
         return this.draftNewLists$.value;
     }
 
+    /** Add employees to an existing Draft Posting list (New or Inter). Employees must have IsSendingNotesheetStatus = 'draft'. */
+    addDraftPostingDetail(
+        draftPostingMasterId: number,
+        isInterPosting: boolean,
+        employeeIds: number[],
+        createdBy: string,
+        transferRabUnitId?: number | null,
+        remarks?: string | null
+    ): Observable<{ statusCode: number; description: string }> {
+        return this.http.post<{ statusCode: number; description: string }>(`${API}/AddDraftPostingDetail`, {
+            draftPostingMasterId,
+            isInterPosting,
+            employeeIds,
+            createdBy,
+            transferRabUnitId: transferRabUnitId ?? null,
+            remarks: remarks?.trim() || null
+        });
+    }
+
     /** Save Draft New Posting: creates master + details, sets IsSendingNotesheetStatus to draftPosting for selected employees. */
     saveDraftNewPosting(draftPostingNo: string, draftPostingDate: string, employeeIds: number[], createdBy: string): Observable<{ statusCode: number; description: string }> {
         return this.http.post<{ statusCode: number; description: string }>(`${API}/SaveDraftNewPosting`, {

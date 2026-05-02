@@ -570,9 +570,131 @@
     [modal]="true"
     [style]="{ width: '72rem', maxWidth: '95vw' }"
     [contentStyle]="{ overflow: 'auto', 'border-top': '2px solid var(--primary-color)' }"
-    (onHide)="employeesList = []; selectedEmployees = []"
+    (onHide)="employeesList = []; selectedEmployees = []; selectedAddEmployee = null; addMemberList = []; selectedAddUnitNode = null; addMemberRemarks = ''"
     [draggable]="false"
     [resizable]="true">
+    <!-- ── Add Member Section ── -->
+    @if (canInsert) {
+    <div class="mb-3 p-3" style="background:var(--surface-50); border-radius:8px; border:1px solid var(--surface-200);">
+      <div class="flex align-items-center gap-2 mb-2">
+        <i class="pi pi-user-plus text-primary" style="font-size:1rem"></i>
+        <span class="font-semibold text-sm text-900">Add Employee to Posting List</span>
+        <span class="text-400 text-xs">(only employees with draft status are listed)</span>
+      </div>
+      <div class="flex align-items-center gap-2">
+        <div style="flex:1; min-width:0;">
+          @if (addMemberLoading) {
+            <div class="flex align-items-center gap-2 text-500 text-sm p-2"><i class="pi pi-spin pi-spinner"></i> Loading employees...</div>
+          } @else {
+            <p-select
+              [(ngModel)]="selectedAddEmployee"
+              [options]="addMemberList"
+              optionLabel="serviceId"
+              [filter]="true"
+              filterBy="serviceId,fullNameEN,rankName,corpsName,tradeName,motherUnitName,RABID,rabID"
+              placeholder="Search by Service ID, Name, Rank, Corps..."
+              [style]="{ width: '100%' }"
+              appendTo="body"
+              [showClear]="true">
+              <ng-template let-emp pTemplate="selectedItem">
+                <span class="text-500 text-xs">Name&nbsp;:</span>
+                <span class="font-semibold text-900 ml-1 mr-3">{{ emp.fullNameEN }}</span>
+                <span class="text-500 text-xs">Service ID&nbsp;:</span>
+                <span class="font-semibold text-primary ml-1 mr-3">{{ emp.serviceId }}</span>
+                <span class="text-500 text-xs">Rank&nbsp;:</span>
+                <span class="font-medium text-700 ml-1 mr-3">{{ emp.rankName || '—' }}</span>
+                <span class="text-500 text-xs">Unit&nbsp;:</span>
+                <span class="font-medium text-700 ml-1 mr-3">{{ emp.motherUnitName || '—' }}</span>
+                <span class="text-500 text-xs">Remarks&nbsp;:</span>
+                <span class="font-medium text-700 ml-1">{{ emp.sendingRemark || '—' }}</span>
+              </ng-template>
+              <ng-template let-emp pTemplate="item">
+                <div class="flex flex-column gap-1 py-1">
+                  <div class="flex align-items-center flex-wrap gap-2">
+                    <span class="text-500 text-xs">Name&nbsp;:</span>
+                    <span class="font-semibold text-900 mr-2">{{ emp.fullNameEN }}</span>
+                    <span class="text-500 text-xs">Service ID&nbsp;:</span>
+                    <span class="font-semibold text-primary mr-2">{{ emp.serviceId }}</span>
+                    <span class="text-500 text-xs">Rank&nbsp;:</span>
+                    <span class="font-medium text-700 mr-2">{{ emp.rankName || '—' }}</span>
+                    <span class="text-500 text-xs">Unit&nbsp;:</span>
+                    <span class="font-medium text-700">{{ emp.motherUnitName || '—' }}</span>
+                  </div>
+                  <div class="flex align-items-center flex-wrap gap-2 text-xs text-500">
+                    <span class="text-400">Corps&nbsp;:</span>
+                    <span class="mr-2">{{ emp.corpsName || '—' }}</span>
+                    <span class="text-400">Trade&nbsp;:</span>
+                    <span class="mr-2">{{ emp.tradeName || '—' }}</span>
+                    <span class="text-400">Remarks&nbsp;:</span>
+                    <span class="text-700 mr-2">{{ emp.sendingRemark || '—' }}</span>
+                    <span class="text-400 ml-auto">{{ emp.RABID || emp.rabID || '' }}</span>
+                  </div>
+                </div>
+              </ng-template>
+            </p-select>
+          }
+        </div>
+        <p-button
+          icon="pi pi-plus"
+          label="Add Member"
+          severity="success"
+          size="small"
+          [loading]="addMemberSaving"
+          [disabled]="!selectedAddEmployee || (isApprovedPostingRoute && !addMemberTransferUnitId) || addMemberSaving"
+          (onClick)="addMemberToPosting()">
+        </p-button>
+      </div>
+
+      <!-- Transfer Unit + Remarks — required only on approved-new-posting route -->
+      @if (isApprovedPostingRoute) {
+      <div class="mt-3 pt-2" style="border-top: 1px dashed var(--surface-300);">
+        <div style="display:grid; grid-template-columns:2fr 1fr; gap:0.5rem; align-items:start;">
+          <!-- Transfer Unit -->
+          <div class="flex flex-column gap-1">
+            <label class="text-xs text-500">
+              <i class="pi pi-sitemap mr-1 text-orange-500"></i>Transfer Unit <span class="text-red-400">*</span>
+            </label>
+            @if (addMemberTreeLoading) {
+              <div class="text-500 text-xs p-1"><i class="pi pi-spin pi-spinner mr-1"></i>Loading...</div>
+            } @else {
+              <p-treeSelect
+                [(ngModel)]="selectedAddUnitNode"
+                [options]="addMemberUnitTreeNodes"
+                placeholder="Select Transfer Unit"
+                [filter]="true"
+                [filterInputAutoFocus]="true"
+                [showClear]="true"
+                selectionMode="single"
+                styleClass="w-full"
+                appendTo="body"
+                (onNodeExpand)="onAddMemberNodeExpand($event)"
+                (onNodeSelect)="onAddMemberNodeSelect($event)"
+                (onClear)="onAddMemberNodeClear()">
+                <ng-template pTemplate="value" let-node>
+                  {{ node ? getAddMemberUnitFullPath(node) : 'Select Transfer Unit' }}
+                </ng-template>
+              </p-treeSelect>
+            }
+          </div>
+          <!-- Remarks -->
+          <div class="flex flex-column gap-1">
+            <label class="text-xs text-500">
+              <i class="pi pi-comment mr-1"></i>Remarks
+            </label>
+            <textarea
+              pTextarea
+              [(ngModel)]="addMemberRemarks"
+              placeholder="Optional..."
+              rows="1"
+              style="width:100%; resize:none; font-size:0.8rem; line-height:1.4; min-height:2rem;">
+            </textarea>
+          </div>
+        </div>
+      </div>
+      }<!-- /isApprovedPostingRoute -->
+    </div>
+    }<!-- /canInsert -->
+
     @if (loadingEmployees) {
       <div class="flex align-items-center justify-content-center p-4"><i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i></div>
     } @else if (employeesList.length === 0) {

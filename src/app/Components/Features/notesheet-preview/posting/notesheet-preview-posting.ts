@@ -474,12 +474,6 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     removeSelectedMembers(): void {
         if (!this.noteSheet?.draftPostingMasterId || this.selectedMembers.length === 0) return;
 
-        // Validation: at least 1 must remain
-        if (this.selectedMembers.length >= this.membersList.length) {
-            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'At least one employee must remain in the posting list.' });
-            return;
-        }
-
         const count = this.selectedMembers.length;
         this.confirmationService.confirm({
             message: `Are you sure you want to remove ${count} employee(s) from this posting list? They will be returned to the supernumerary list.`,
