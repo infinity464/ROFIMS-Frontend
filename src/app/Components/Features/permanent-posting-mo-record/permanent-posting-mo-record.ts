@@ -821,7 +821,7 @@ export class PermanentPostingMORecordComponent implements OnInit {
         const buildDetail = (recordId: number | null): Partial<PermanentPostingJoineeDetailModel> => ({
             id: this.editDetailId ?? 0,
             permanentPostingMORecordId: recordId,
-            isAddedInNewJoineeDataEntry: recordId === null,
+            isAddedInNewJoineeDataEntry: false,
             employeeId: this.joineeEmployeeId,
             prefixId: this.joineePrefixId,
             motherOrgId: this.joineeMotherOrgId,

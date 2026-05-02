@@ -4,7 +4,7 @@
     <!-- Title + filter in same card -->
     <div class="report-type-card">
         <div class="report-page-header">
-            <h1 class="report-page-title">Supernumerary List</h1>
+            <h1 class="report-page-title">New Joinee Sending Notesheet</h1>
         </div>
         <div class="report-filter-header" [class.open]="filterOpen" (click)="toggleFilter()" role="button" tabindex="0" (keydown.enter)="toggleFilter()" (keydown.space)="toggleFilter()">
             <div class="report-filter-header-left">
@@ -242,6 +242,7 @@
                         <th>Mother Unit</th>
                         <th>Date of Join in RAB</th>
                         <th>RAB ID</th>
+                        <th>Remark</th>
                         <th>Action</th>
                     </tr>
                 </ng-template>
@@ -278,6 +279,13 @@
                         <td>{{ formatDate(row.joiningDate) }}</td>
                         <td style="white-space: nowrap">{{ rabIdOf(row) || '—' }}</td>
                         <td>
+                            <input pInputText type="text"
+                                [(ngModel)]="row.sendingRemark"
+                                placeholder="Remark"
+                                [disabled]="isPostingInProcess(row)"
+                                style="width: 100%; min-width: 120px;" />
+                        </td>
+                        <td>
                             <span class="report-action-buttons">
                                 <a [routerLink]="['/supernumerary-profile', row.employeeID]" class="report-link-profile" pTooltip="Profile" tooltipPosition="top">
                                     <i class="pi pi-user"></i>
@@ -296,7 +304,7 @@
                 </ng-template>
                 <ng-template pTemplate="emptymessage">
                     <tr>
-                        <td colspan="11" class="text-center p-4">No records found.</td>
+                        <td colspan="12" class="text-center p-4">No records found.</td>
                     </tr>
                 </ng-template>
             </p-table>

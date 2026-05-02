@@ -20,7 +20,8 @@ import {
     PostingOrderEmployeeRow,
     ApprovedNoteSheetItem,
     PostingType,
-    PostingNoteSheetStatus
+    PostingNoteSheetStatus,
+    PostingMemberRemovalHistoryDto
 } from '@/models/posting.model';
 
 /** Status for action button: None | PostingInProcess | NoteSheetInProcess */
@@ -140,9 +141,31 @@ export class PostingService {
         return this.http.post<{ statusCode: number; description: string }>(`${API}/UpdateDraftPostingDetails`, { items });
     }
 
-    /** Remove employees from a draft posting list and revert to supernumerary. */
-    removeDraftPostingDetails(draftPostingMasterId: number, detailIds: number[], isInterPosting: boolean): Observable<{ statusCode: number; description: string }> {
-        return this.http.post<{ statusCode: number; description: string }>(`${API}/RemoveDraftPostingDetails`, { draftPostingMasterId, detailIds, isInterPosting });
+    /** Remove employees from a draft posting list and revert to supernumerary.
+     *  Pass notesheet context so removal history is logged accurately. */
+    removeDraftPostingDetails(
+        draftPostingMasterId: number,
+        detailIds: number[],
+        isInterPosting: boolean,
+        noteSheetId?: number | null,
+        noteSheetNo?: string | null,
+        removedFromStep?: string | null
+    ): Observable<{ statusCode: number; description: string }> {
+        return this.http.post<{ statusCode: number; description: string }>(`${API}/RemoveDraftPostingDetails`, {
+            draftPostingMasterId,
+            detailIds,
+            isInterPosting,
+            noteSheetId: noteSheetId ?? null,
+            noteSheetNo: noteSheetNo ?? null,
+            removedFromStep: removedFromStep ?? null
+        });
+    }
+
+    /** Get the removal history log for a draft posting list. */
+    getPostingMemberRemovalHistory(draftPostingMasterId: number, isInterPosting: boolean): Observable<PostingMemberRemovalHistoryDto[]> {
+        return this.http.get<PostingMemberRemovalHistoryDto[]>(
+            `${API}/GetPostingMemberRemovalHistory?draftPostingMasterId=${draftPostingMasterId}&isInterPosting=${isInterPosting}`
+        );
     }
 
     /** Update Draft New Posting master (DraftPostingNo, DraftPostingDate, DraftPostingStatus). */

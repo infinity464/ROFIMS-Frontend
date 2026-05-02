@@ -15,6 +15,8 @@ export interface GetSupernumeraryListRequest {
     joiningDateTo?: string | null;
     joiningDateInRABFrom?: string | null;
     joiningDateInRABTo?: string | null;
+    createdDateFrom?: string | null;
+    createdDateTo?: string | null;
 }
 
 /** Request body for GetSupernumeraryListPaginated API. Extends filter request with pagination + text/dropdown filters. */

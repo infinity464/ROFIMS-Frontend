@@ -33,7 +33,7 @@ import { forkJoin, of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import { Table } from 'primeng/table';
 import { PostingService } from '@/services/posting.service';
-import { DraftPostingEmployeeRow } from '@/models/posting.model';
+import { DraftPostingEmployeeRow, PostingMemberRemovalHistoryDto } from '@/models/posting.model';
 import { ForeignVisitInfoService } from '@/services/foreign-visit-info.service';
 import { PostingOrderPreviewComponent } from './posting-order-preview/posting-order-preview';
 import { NotesheetSignatoryComponent } from '@/Components/Common/notesheet-signatory/notesheet-signatory';
@@ -251,6 +251,12 @@ export class NotesheetListComponent implements OnInit {
   selectedEmployees: DraftPostingEmployeeRow[] = [];
   removingEmployees = false;
   private employeesDialogRow: NoteSheetInfoRow | null = null;
+
+  /** Removal history dialog */
+  showRemovalHistoryDialog = false;
+  removalHistoryLoading = false;
+  removalHistoryList: PostingMemberRemovalHistoryDto[] = [];
+  removalHistoryTitle = '';
 
   readonly statusLabels: Record<string, string> = {
     [NoteSheetCurrentStatus.Draft]:         'Draft',
@@ -531,7 +537,10 @@ export class NotesheetListComponent implements OnInit {
         this.removingEmployees = true;
         const isInter = row.noteSheetType === NoteSheetType.InterPosting;
         const detailIds = this.selectedEmployees.map(m => m.draftPostingDetailId);
-        this.postingService.removeDraftPostingDetails(row.draftPostingMasterId!, detailIds, isInter).subscribe({
+        this.postingService.removeDraftPostingDetails(
+          row.draftPostingMasterId!, detailIds, isInter,
+          row.noteSheetId, row.noteSheetNo
+        ).subscribe({
           next: (res) => {
             this.messageService.add({ severity: 'success', summary: 'Success', detail: res.description || `${count} employee(s) removed.` });
             this.selectedEmployees = [];
@@ -545,6 +554,27 @@ export class NotesheetListComponent implements OnInit {
         });
       }
     });
+  }
+
+  openRemovalHistory(row: NoteSheetInfoRow): void {
+    if (!row.draftPostingMasterId) return;
+    const isInter = row.noteSheetType === NoteSheetType.InterPosting;
+    this.removalHistoryTitle = `Removal History — ${row.noteSheetNo || 'Notesheet'}`;
+    this.removalHistoryList = [];
+    this.removalHistoryLoading = true;
+    this.showRemovalHistoryDialog = true;
+    this.postingService.getPostingMemberRemovalHistory(row.draftPostingMasterId, isInter).subscribe({
+      next: (list) => { this.removalHistoryList = list ?? []; this.removalHistoryLoading = false; },
+      error: () => { this.removalHistoryLoading = false; }
+    });
+  }
+
+  formatRemovalDate(value: string | null | undefined): string {
+    if (!value) return '-';
+    try {
+      const d = new Date(value);
+      return isNaN(d.getTime()) ? String(value) : d.toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    } catch { return String(value); }
   }
 
   formatEmployeeDate(value: string | null | undefined): string {

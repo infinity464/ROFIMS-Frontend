@@ -25,14 +25,14 @@ import { IsSendingNotesheetStatus } from '@/models/enums';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 
 @Component({
-    selector: 'app-supernumerary-list',
+    selector: 'app-new-joinee-sending-notesheet',
     standalone: true,
     imports: [CommonModule, FormsModule, RouterModule, TableModule, ButtonModule, SelectModule, InputTextModule, DatePickerModule, CheckboxModule, Toast, TooltipModule, FlexibleDateDirective],
     providers: [MessageService],
-    templateUrl: './supernumerary-list.html',
-    styleUrls: ['./supernumerary-list.scss', '../employee-reports/report-theme-common.scss'],
+    templateUrl: './new-joinee-sending-notesheet.html',
+    styleUrls: ['./new-joinee-sending-notesheet.scss', '../employee-reports/report-theme-common.scss'],
 })
-export class SupernumeraryList implements OnInit {
+export class NewJoineeSendingNotesheet implements OnInit {
     list: EmployeeList[] = [];
     loading = false;
     first = 0;
@@ -313,11 +313,11 @@ export class SupernumeraryList implements OnInit {
                 this.loading = false;
             },
             error: (err) => {
-                console.error('Failed to load supernumerary list', err);
+                console.error('Failed to load new joinee sending notesheet list', err);
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: err?.error?.message || 'Failed to load supernumerary list'
+                    detail: err?.error?.message || 'Failed to load new joinee sending notesheet list'
                 });
                 this.loading = false;
             }
@@ -338,11 +338,6 @@ export class SupernumeraryList implements OnInit {
         return this.selectedIds.has(row.employeeID);
     }
 
-    /**
-     * Adds/removes a row from the selection.
-     * If the user tries to check a row without an allocated RAB ID, show a warning toast
-     * and leave it unchecked (auto-uncheck).
-     */
     onRowSelectionChange(row: EmployeeList, checked: boolean): void {
         if (!checked) {
             this.selectedIds.delete(row.employeeID);
@@ -451,11 +446,6 @@ export class SupernumeraryList implements OnInit {
         return this.isPostingInProcess(row);
     }
 
-    /**
-     * CSS class picked from the row's posting status (not from the rendered text):
-     *   Draft / DraftPosting (posting in process) → ash
-     *   anything else → blue
-     */
     getSendPostingListClass(row: EmployeeList): string {
         return this.isPostingInProcess(row) ? 'report-btn-ash' : 'report-btn-blue';
     }

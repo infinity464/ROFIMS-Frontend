@@ -92,6 +92,7 @@ import { EmpPresentMemberCheckComponent } from '@/Components/Features/Emp/emp-pr
 import { RabIdAllocation } from '@/Components/Features/rab-id-allocation/rab-id-allocation';
 import { SupernumeraryList } from '@/Components/Features/supernumerary-list/supernumerary-list';
 import { SupernumeraryProfile } from '@/Components/Features/supernumerary-profile/supernumerary-profile';
+import { NewJoineeSendingNotesheet } from '@/Components/Features/new-joinee-sending-notesheet/new-joinee-sending-notesheet';
 import { AddDraftNewPostingComponent } from '@/Components/Features/add-draft-new-posting/add-draft-new-posting';
 import { PostingNotesheetGenerateComponent } from '@/Components/Features/posting-notesheet-generate/posting-notesheet-generate';
 import { PostingOrderReceiveComponent } from '@/Components/Features/posting-order-receive/posting-order-receive';
@@ -295,6 +296,7 @@ export const appRoutes: Routes = [
             { path: 'rab-id-allocation', component: RabIdAllocation },
             { path: 'supernumerary-list', component: SupernumeraryList },
             { path: 'supernumerary-profile/:id', component: SupernumeraryProfile },
+            { path: 'new-joinee-sending-notesheet', component: NewJoineeSendingNotesheet },
             { path: 'posting/permanent-posting-mo-record', component: PermanentPostingMORecordComponent },
             { path: 'posting/posted-out-person-list', component: PostedOutPersonListComponent },
             { path: 'posting/new-joining-person-list', component: NewJoiningPersonListComponent },

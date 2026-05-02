@@ -6,6 +6,35 @@
 /** Posting type: New (from Supernumerary) or Inter (from Presently Serving). */
 export type PostingType = 'New' | 'Inter';
 
+/** Audit record for a member removal from a draft posting list. */
+export interface PostingMemberRemovalHistoryDto {
+    id: number;
+    draftPostingMasterId: number;
+    isInterPosting: boolean;
+    /** DraftPostingMaster.DraftPostingNo or DraftInterPostingMaster.DraftInterPostingNo at time of removal. */
+    draftPostingNo: string | null;
+    employeeId: number;
+    /** Live lookup from EmployeeInfo at query time. */
+    serviceId: string | null;
+    rabId: string | null;
+    fullNameEN: string | null;
+    originalTransferRabUnitId: number | null;
+    originalTransferRabUnitName: string | null;
+    originalTransferWingName: string | null;
+    originalTransferBranchName: string | null;
+    originalTransferSectionName: string | null;
+    originalRemarks: string | null;
+    noteSheetId: number | null;
+    noteSheetNo: string | null;
+    /**
+     * Precise stage computed by backend from NoteSheetInfo at time of removal:
+     * Draft | Pending - Initiator | Pending - Recommender | Pending - Final Approval | Approved | Declined
+     */
+    noteSheetStatusAtRemoval: string | null;
+    createdBy: string | null;
+    createdDate: string;
+}
+
 /** Status of a posting note-sheet. */
 export type PostingNoteSheetStatus = 'Draft' | 'PendingFinalized' | 'PendingApproval' | 'Approved' | 'Declined';
 

@@ -118,9 +118,13 @@
 :host ::ng-deep .report-table-wrap .p-datatable th:nth-child(10),
 :host ::ng-deep .report-table-wrap .p-datatable td:nth-child(10) { width: 70px; }
 
-/* Action – wide enough for icon + button on one line */
+/* Remark input */
 :host ::ng-deep .report-table-wrap .p-datatable th:nth-child(11),
-:host ::ng-deep .report-table-wrap .p-datatable td:nth-child(11) { width: 210px; min-width: 210px; }
+:host ::ng-deep .report-table-wrap .p-datatable td:nth-child(11) { width: 130px; }
+
+/* Action – wide enough for icon + button on one line */
+:host ::ng-deep .report-table-wrap .p-datatable th:nth-child(12),
+:host ::ng-deep .report-table-wrap .p-datatable td:nth-child(12) { width: 210px; min-width: 210px; }
 
 /* Native checkbox in the select column – sized to match the PrimeNG look. */
 .employee-reports-page .report-row-checkbox {
