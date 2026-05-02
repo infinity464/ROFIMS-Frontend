@@ -574,7 +574,13 @@
     [draggable]="false"
     [resizable]="true">
     <!-- ── Add Member Section ── -->
-    @if (canInsert) {
+    @if (isDialogRowPosted) {
+      <div class="mb-3 p-3 flex align-items-center gap-2" style="background:var(--yellow-50); border-radius:8px; border:1px solid var(--yellow-300);">
+        <i class="pi pi-lock text-yellow-600"></i>
+        <span class="text-yellow-700 text-sm font-semibold">Posting Order already generated — member add/remove is locked.</span>
+      </div>
+    }
+    @if (canInsert && !isDialogRowPosted) {
     <div class="mb-3 p-3" style="background:var(--surface-50); border-radius:8px; border:1px solid var(--surface-200);">
       <div class="flex align-items-center gap-2 mb-2">
         <i class="pi pi-user-plus text-primary" style="font-size:1rem"></i>
@@ -702,7 +708,7 @@
     } @else {
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
         <span class="text-500" style="font-size:0.85rem;">{{ employeesList.length }} employee(s) in posting list</span>
-        @if (selectedEmployees.length > 0) {
+        @if (selectedEmployees.length > 0 && !isDialogRowPosted) {
           <p-button icon="pi pi-trash" label="Remove Selected ({{ selectedEmployees.length }})"
                     severity="danger" [outlined]="true" size="small" [loading]="removingEmployees"
                     (onClick)="removeSelectedEmployees()"></p-button>

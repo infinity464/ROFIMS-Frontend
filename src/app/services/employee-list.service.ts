@@ -109,10 +109,13 @@ export class EmployeeListService {
         });
     }
 
-    /** Sets IsSendingNotesheetStatus for multiple employees in bulk (e.g. draftInterPosting from Presently Serving Members). */
-    setBulkIsSendingNotesheetStatus(employeeIds: number[], isSendingNotesheetStatus: string): Observable<{ statusCode?: number; description?: string }> {
+    /** Sets IsSendingNotesheetStatus for multiple employees in bulk (e.g. draftInterPosting from Presently Serving Members). Each item can include an optional interPostingRemark. */
+    setBulkIsSendingNotesheetStatus(
+        employees: { employeeId: number; interPostingRemark?: string | null }[],
+        isSendingNotesheetStatus: string
+    ): Observable<{ statusCode?: number; description?: string }> {
         return this.http.post<{ statusCode?: number; description?: string }>(`${this.apiUrl}/SetBulkIsSendingNotesheetStatus`, {
-            employeeIds,
+            employees,
             isSendingNotesheetStatus
         });
     }

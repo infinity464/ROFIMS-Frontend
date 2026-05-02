@@ -28,6 +28,7 @@ import { IdentityUserMappingService } from '@/services/identity-user-mapping.ser
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
 import { NoteSheetType, NoteSheetOperationTypeOptions, ApprovalStatus, ApproverRoleType } from '@/models/enums';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
+import { NoteSheetNumberConfigModel } from '@/Components/basic-setup/shared/models/notesheet-number-config';
 
 @Component({
     selector: 'app-inter-posting-notesheet-generate',
@@ -77,6 +78,7 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
     finalApproverOptions: { label: string; value: number }[] = [];
     fileRows: FileRowData[] = [];
     readonly noteSheetOperationTypeOptions = NoteSheetOperationTypeOptions;
+    configOptions: { label: string; value: number }[] = [];
     /** Dynamic paragraphs */
     paragraphs: string[] = [''];
 
@@ -101,6 +103,7 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
             noteSheetDate: [null as Date | null, Validators.required],
             referenceNumber: [''],
             noteSheetNo: [''],
+            noteSheetNumberConfigId: [null as number | null],
             subject: [''],
             mainText: [''],
             note: [''],
@@ -123,6 +126,7 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
         this.loadDraftInterPostingMasters();
         this.loadApproverOptions();
         this.resolvePreparedByMapping();
+        this.loadNoteSheetNumberConfigs();
 
         this.route.queryParams.pipe(take(1)).subscribe((params) => {
             const id = params['id'];
@@ -169,6 +173,25 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
                 this.loadingDraftList = false;
                 this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load Draft Inter Posting list.' });
             }
+        });
+    }
+
+    loadNoteSheetNumberConfigs(): void {
+        forkJoin({
+            configs: this.masterBasicSetupService.getAllNoteSheetNumberConfig(),
+            memberTypes: this.masterBasicSetupService.getAllByType('EmployeeType')
+        }).subscribe({
+            next: ({ configs, memberTypes }) => {
+                const typeMap: Record<number, string> = {};
+                (memberTypes ?? []).forEach((t) => { typeMap[t.codeId] = t.codeValueEN; });
+                this.configOptions = (configs ?? [])
+                    .filter((c) => c.noteSheetType === 'InterPosting' && c.status)
+                    .map((c) => ({
+                        label: `${c.prefix}${typeMap[c.memberTypeId] ? ' — ' + typeMap[c.memberTypeId] : ''}`,
+                        value: c.configId
+                    }));
+            },
+            error: () => {}
         });
     }
 
@@ -352,6 +375,7 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
             draftPostingMasterId: null,
             textType: 'en',
             noteSheetNo: '',
+            noteSheetNumberConfigId: null,
             noteSheetDate: null,
             referenceNumber: '',
             subject: '',
@@ -497,6 +521,7 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
             noteSheetId: 0,
             noteSheetType: NoteSheetType.InterPosting,
             noteSheetNo,
+            noteSheetNumberConfigId: d.noteSheetNumberConfigId ?? null,
             noteSheetDate: dateStr,
             noteSheetTemplateId: null,
             referenceNumber: d.referenceNumber != null ? String(d.referenceNumber) : null,

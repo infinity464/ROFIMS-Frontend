@@ -81,6 +81,8 @@ export interface NoteSheetInfoRow {
   noteSheetOperationType?: string;
   /** Whether the note sheet is marked as secret */
   isSecret?: boolean;
+  /** True when a PostingOrder has already been generated for this notesheet. */
+  hasPostingOrder?: boolean;
 }
 
 /** Full model for single note-sheet (get by id, preview, update). */
@@ -636,6 +638,11 @@ export class NotesheetListComponent implements OnInit {
 
   get isApprovedPostingRoute(): boolean {
     return this._router.url.includes('approved-new-posting');
+  }
+
+  /** True when the current dialog row already has a generated posting order — add/remove locked. */
+  get isDialogRowPosted(): boolean {
+    return this.isApprovedPostingRoute && (this.employeesDialogRow?.hasPostingOrder === true);
   }
 
   get addMemberTransferUnitId(): number | null {

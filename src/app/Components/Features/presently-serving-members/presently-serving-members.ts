@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { UserMenuService } from '@/services/user-menu.service';
 import { TableModule, TableLazyLoadEvent } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
@@ -88,21 +88,33 @@ export class PresentlyServingMembers implements OnInit {
     canUpdate = true;
     canDelete = true;
 
+    /** True when this component is used for the inter-posting send flow. */
+    interPostingMode = false;
+
+    /** Per-row remarks entered by user before sending to inter posting. Keyed by employeeID. */
+    interPostingRemarks = new Map<number, string>();
+
     constructor(
         private servingMembersService: ServingMembersService,
         private employeeListService: EmployeeListService,
         private messageService: MessageService,
         private _router: Router,
+        private _route: ActivatedRoute,
         private _userMenuService: UserMenuService
     ) {}
 
     ngOnInit(): void {
+        this.interPostingMode = this._route.snapshot.data['mode'] === 'interPosting';
         const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
         this.canInsert = _perms.canInsert;
         this.canUpdate = _perms.canUpdate;
         this.canDelete = _perms.canDelete;
         this.loadFilterOptions();
         this.onLazyLoad({ first: 0, rows: this.rows });
+    }
+
+    get pageTitle(): string {
+        return this.interPostingMode ? 'Serving Members for Inter Posting' : 'Presently Serving Members List';
     }
 
     loadFilterOptions(): void {
@@ -319,13 +331,17 @@ export class PresentlyServingMembers implements OnInit {
             return;
         }
         this.savingInterPosting = true;
-        const employeeIds = this.selectedRows.map(r => r.employeeID);
-        this.employeeListService.setBulkIsSendingNotesheetStatus(employeeIds, 'draftInterPosting').subscribe({
+        const employees = this.selectedRows.map(r => ({
+            employeeId: r.employeeID,
+            interPostingRemark: this.interPostingRemarks.get(r.employeeID) || null
+        }));
+        this.employeeListService.setBulkIsSendingNotesheetStatus(employees, 'draftInterPosting').subscribe({
             next: (res) => {
                 this.savingInterPosting = false;
                 if (res.statusCode === 200) {
                     this.messageService.add({ severity: 'success', summary: 'Success', detail: res.description || 'Employees marked for inter posting.' });
                     this.selectedRows = [];
+                    this.interPostingRemarks.clear();
                     this.loadList(1, this.rows);
                 } else {
                     this.messageService.add({ severity: 'error', summary: 'Error', detail: res.description || 'Failed to update status.' });

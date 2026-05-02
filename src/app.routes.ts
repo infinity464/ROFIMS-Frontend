@@ -313,6 +313,7 @@ export const appRoutes: Routes = [
             { path: 'posting/posting-order-preview', component: PostingOrderPreviewPageComponent },
             { path: 'employee-signature-upload', component: EmployeeSignatureUploadComponent },
             { path: 'presently-serving-members', component: PresentlyServingMembers },
+            { path: 'serving-members-for-inter-posting', component: PresentlyServingMembers, data: { mode: 'interPosting' } },
             { path: 'presently-serving-members/organogram', component: OrgTreeServingComponent },
             { path: 'organogram', component: RabOrganogramComponent },
             { path: 'presently-serving-members/rab-organogram-members', component: RabOrganogramMembersComponent },

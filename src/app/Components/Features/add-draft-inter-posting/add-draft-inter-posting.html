@@ -58,6 +58,7 @@
                     <th style="min-width: 140px">Mother Unit</th>
                     <th style="min-width: 130px">RAB Unit</th>
                     <th style="min-width: 130px">Date of Join in Rab</th>
+                    <th *ngIf="!isEditMode" style="min-width: 140px">Remarks</th>
                     <th *ngIf="isEditMode" style="min-width: 140px">Transfer Unit</th>
                     <th *ngIf="isEditMode" style="min-width: 140px">Remarks</th>
                 </tr>
@@ -76,13 +77,14 @@
                     <td>{{ (row.motherUnitName ?? row.motherUnit) || '-' }}</td>
                     <td>{{ row.rabUnit || row.rabUnitName || '-' }}</td>
                     <td>{{ formatDate(row.joiningDateInRAB ?? row.joiningDate ?? row.rabJoingdate) }}</td>
+                    <td *ngIf="!isEditMode">{{ row.interPostingRemark || '-' }}</td>
                     <td *ngIf="isEditMode">{{ row.transferRabUnitName || '-' }}</td>
                     <td *ngIf="isEditMode">{{ row.remarks || '-' }}</td>
                 </tr>
             </ng-template>
             <ng-template pTemplate="emptymessage">
                 <tr>
-                    <td [attr.colspan]="isEditMode ? 12 : 10" class="text-center p-4">
+                    <td [attr.colspan]="isEditMode ? 12 : 11" class="text-center p-4">
                         <div class="flex flex-column align-items-center gap-3 py-5">
                             <i class="pi pi-inbox text-5xl text-400"></i>
                             <span class="text-lg text-500">No serving employees available for inter posting.</span>
