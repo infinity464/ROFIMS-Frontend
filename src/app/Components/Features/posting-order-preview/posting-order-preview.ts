@@ -5,20 +5,24 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { Toast } from 'primeng/toast';
-import { MessageService, ConfirmationService } from 'primeng/api';
+import { MessageService, ConfirmationService, TreeNode } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { SelectModule } from 'primeng/select';
+import { TreeSelectModule } from 'primeng/treeselect';
 import { DatePickerModule } from 'primeng/datepicker';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { TableModule } from 'primeng/table';
 import { EditorModule } from 'primeng/editor';
 import { PostingService } from '@/services/posting.service';
+import { OrgService } from '@/Components/basic-setup/org-tree/org.service';
 import { ServingMembersService } from '@/services/serving-members.service';
 import { EmpService } from '@/services/emp-service';
-import { PostingOrderEmployeeRow } from '@/models/posting.model';
-import { NoteSheetType } from '@/models/enums';
+import { EmployeeListService } from '@/services/employee-list.service';
+import { PostingOrderEmployeeRow, PostingMemberRemovalHistoryDto } from '@/models/posting.model';
+import { EmployeeList } from '@/models/employee-list.model';
+import { NoteSheetType, IsSendingNotesheetStatus } from '@/models/enums';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '@/Core/Environments/environment';
 import { firstValueFrom } from 'rxjs';
@@ -52,6 +56,7 @@ interface TransferUnitOption {
         ConfirmDialogModule,
         TooltipModule,
         SelectModule,
+        TreeSelectModule,
         DatePickerModule, FlexibleDateDirective,
         InputTextModule,
         TextareaModule,
@@ -106,6 +111,11 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     private currentOrderId: number | null = null;
     private rawFooterText: string | null = null;
 
+    // ─── Removal history ──────────────────────────────────
+    removalHistory: PostingMemberRemovalHistoryDto[] = [];
+    removalHistoryLoading = false;
+    draftPostingMasterId: number | null = null;
+
     // ─── Edit mode state ──────────────────────────────────
     editing = false;
     saving = false;
@@ -115,6 +125,36 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     editSubText = '';
     editFooterParagraphs: FooterParagraph[] = [];
     editEmployees: PostingOrderEmployeeRow[] = [];
+
+    // ─── Add member (inline dropdown) ��────────────────
+    addMemberList: EmployeeList[] = [];
+    addMemberLoading = false;
+    addMemberSaving = false;
+    selectedAddEmployee: EmployeeList | null = null;
+    selectedAddMemberTransferUnitId: number | null = null;
+    addMemberRemarks: string = '';
+    addMemberUnitTreeNodes: TreeNode[] = [];
+    selectedAddUnitNode: TreeNode | null = null;
+    addMemberTreeLoading = false;
+    private addMemberUnitNodeMap: Record<number, TreeNode> = {};
+
+    // ─── Remove member ──────────────────────────────────
+    removingEmployeeId: number | null = null;
+
+    get addMemberTransferUnitId(): number | null {
+        return this.selectedAddUnitNode ? Number(this.selectedAddUnitNode.key) : null;
+    }
+
+    getAddMemberUnitFullPath(node: TreeNode | null): string {
+        if (!node) return '';
+        const parts: string[] = [];
+        let cur: TreeNode | null = node;
+        while (cur) {
+            parts.unshift(cur.label ?? '');
+            cur = (cur.data?.parent) ?? null;
+        }
+        return parts.join(' > ');
+    }
 
     // Final approver info
     approverName = '';
@@ -146,8 +186,10 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         private route: ActivatedRoute,
         private router: Router,
         private postingService: PostingService,
+        private orgService: OrgService,
         private servingMembersService: ServingMembersService,
         private empService: EmpService,
+        private employeeListService: EmployeeListService,
         private http: HttpClient,
         private messageService: MessageService,
         private confirmationService: ConfirmationService
@@ -231,10 +273,122 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                     this.availableTransferUnits = this.computeTransferUnits(this.employees);
                     this.applyFilter();
 
+                    this.draftPostingMasterId = first.draftPostingMasterId ?? null;
+
                     // Load final approver info from notesheet
                     if (first.noteSheetId) {
                         this.loadApproverInfo(first.noteSheetId);
                     }
+
+                    // Load removal history
+                    this.loadRemovalHistory();
+
+                    // Keep edit table in sync when reloading during edit mode (e.g. after add/remove member).
+                    if (this.editing) this.editEmployees = [...this.employees];
+                } else {
+                    // View returned no rows — fall back to PostingOrderById to get master + details.
+                    // This populates header fields AND builds a minimal employee list from PostingOrderDetail
+                    // so the edit table and preview document are usable even if the SQL view hasn't been refreshed.
+                    this.postingService.getPostingOrderById(id).subscribe({
+                        next: (master) => {
+                            if (master) {
+                                this.postingOrderNo   = master.postingOrderNo ?? '';
+                                this.postingOrderDate = master.postingOrderDate ?? '';
+                                this.postingType      = master.postingType ?? '';
+                                this.subject          = master.subject ?? '';
+                                this.mainText         = master.mainText ?? '';
+                                this.textType         = master.textType ?? '';
+                                this.filesReferences  = master.filesReferences ?? '';
+                                this.status           = master.status ?? '';
+                                this.masterRemarks    = master.remarks ?? '';
+                                this.noteSheetNo      = master.noteSheetNo ?? '';
+                                this.referenceNumber  = master.referenceNumber ?? '';
+                                this.isBangla         = this.textType === 'bn' || this.textType === '1' || this.textType === 'Bangla';
+                                this.postingText      = master.mainText ?? '';
+                                this.subText          = master.subText ?? '';
+                                this.rawFooterText    = master.footerText ?? null;
+                                this.footerParagraphs = this.parseFooterParagraphs(this.rawFooterText);
+
+                                // Map PostingOrderDetail rows → minimal PostingOrderEmployeeRow so the
+                                // edit table shows existing employees and the preview doc can render.
+                                if (master.details?.length) {
+                                    this.employees = master.details.map(d => ({
+                                        postingOrderMasterId: id,
+                                        postingOrderNo:  master.postingOrderNo ?? '',
+                                        postingOrderDate: master.postingOrderDate ?? '',
+                                        postingType:      master.postingType ?? '',
+                                        noteSheetId:      master.noteSheetId,
+                                        noteSheetNo:      master.noteSheetNo ?? null,
+                                        refPostingOrderMasterId: master.refPostingOrderMasterId ?? null,
+                                        referenceNumber:  master.referenceNumber ?? null,
+                                        subject:          master.subject ?? null,
+                                        mainText:         master.mainText ?? null,
+                                        subText:          master.subText ?? null,
+                                        textType:         master.textType ?? null,
+                                        filesReferences:  master.filesReferences ?? null,
+                                        status:           master.status ?? null,
+                                        masterRemarks:    master.remarks ?? null,
+                                        footerText:       null,
+                                        createdBy:        master.createdBy ?? '',
+                                        createdDate:      master.createdDate ?? '',
+                                        nsTextType:       null,
+                                        draftPostingMasterId: null,
+                                        postingOrderDetailId: d.id,
+                                        employeeId:       d.employeeId,
+                                        detailRemarks:    d.remarks ?? null,
+                                        noteSheetRemarks: null,
+                                        sendingRemark:    null,
+                                        transferRabUnitId:   null,
+                                        transferRabUnitName: null,
+                                        transferRabUnitNameBN: null,
+                                        serviceId:        d.serviceId ?? null,
+                                        prefixName:       null,
+                                        prefixNameBN:     null,
+                                        fullNameEN:       d.name ?? null,
+                                        fullNameBN:       null,
+                                        rabID:            null,
+                                        rankName:         d.rank ?? null,
+                                        rankNameBN:       null,
+                                        corpsName:        d.corps ?? null,
+                                        corpsNameBN:      null,
+                                        tradeName:        d.trade ?? null,
+                                        tradeNameBN:      null,
+                                        tradeRemarks:     null,
+                                        specialQualifications: null,
+                                        specialQualificationsBN: null,
+                                        motherUnitName:   d.motherUnit ?? null,
+                                        motherUnitNameBN: null,
+                                        joiningDateInRAB: d.rabJoingdate ?? null,
+                                        rankSortOrder:    null,
+                                        motherOrgSortOrder: null,
+                                        permanentDistrictName: null,
+                                        permanentDistrictNameBN: null,
+                                        presentDistrictName: null,
+                                        presentDistrictNameBN: null,
+                                        spousePresentDistrictName: null,
+                                        spousePresentDistrictNameBN: null,
+                                        motherOrgLocationName: null,
+                                        motherOrgLocationNameBN: null,
+                                        previousMotherOrgName: null,
+                                        previousMotherOrgNameBN: null,
+                                        previousRabUnits: null,
+                                        previousRabUnitsBN: null
+                                    } as PostingOrderEmployeeRow));
+
+                                    this.availableTransferUnits = this.computeTransferUnits(this.employees);
+                                    this.applyFilter();
+                                }
+
+                                if (master.noteSheetId) {
+                                    this.loadApproverInfo(master.noteSheetId);
+                                    this.loadRemovalHistory();
+                                }
+                            }
+                            this.loading = false;
+                        },
+                        error: () => { this.loading = false; }
+                    });
+                    return; // loading = false handled in inner subscribe
                 }
                 this.loading = false;
             },
@@ -311,6 +465,24 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                 }
             }
         });
+    }
+
+    loadRemovalHistory(): void {
+        if (!this.draftPostingMasterId) { this.removalHistory = []; return; }
+        this.removalHistoryLoading = true;
+        const isInter = this.postingType === NoteSheetType.InterPosting;
+        this.postingService.getPostingMemberRemovalHistory(this.draftPostingMasterId, isInter).subscribe({
+            next: (list) => { this.removalHistory = list ?? []; this.removalHistoryLoading = false; },
+            error: () => { this.removalHistoryLoading = false; }
+        });
+    }
+
+    formatRemovalDate(value: string | null | undefined): string {
+        if (!value) return '-';
+        try {
+            const d = new Date(value);
+            return isNaN(d.getTime()) ? String(value) : d.toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        } catch { return String(value); }
     }
 
     // ─── Body text (verbatim from the linked NoteSheet's Main Text) ──
@@ -498,10 +670,15 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         this.editPostingText = this.postingText || '';
         this.editSubText = this.subText || '';
         this.editEmployees = [...this.employees];
+        this.selectedAddEmployee = null;
+        this.selectedAddMemberTransferUnitId = null;
+        this.selectedAddUnitNode = null;
 
         // Re-parse the raw footerText into full FooterParagraph objects (with unit linkage).
         this.editFooterParagraphs = this.parseFooterParagraphs(this.rawFooterText);
 
+        this.loadAddMemberList();
+        this.loadAddMemberUnitTree();
         this.editing = true;
     }
 
@@ -513,6 +690,113 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         this.editSubText = '';
         this.editFooterParagraphs = [];
         this.editEmployees = [];
+        this.selectedAddEmployee = null;
+        this.selectedAddMemberTransferUnitId = null;
+        this.selectedAddUnitNode = null;
+        this.addMemberRemarks = '';
+        this.addMemberList = [];
+    }
+
+    private loadAddMemberUnitTree(): void {
+        if (this.addMemberUnitTreeNodes.length > 0) return;
+        this.addMemberTreeLoading = true;
+        this.orgService.getAll(0).subscribe({
+            next: (roots) => {
+                this.addMemberUnitNodeMap = {};
+                this.addMemberUnitTreeNodes = roots
+                    .filter((r: any) => r.status === 1)
+                    .sort((a: any, b: any) => a.sortOrder - b.sortOrder)
+                    .map((r: any) => this.toAddMemberTreeNode(r, null));
+                this.addMemberTreeLoading = false;
+            },
+            error: () => { this.addMemberTreeLoading = false; }
+        });
+    }
+
+    private toAddMemberTreeNode(node: any, parent: TreeNode | null): TreeNode {
+        const tn: TreeNode = {
+            key: String(node.id),
+            label: node.nameEN || node.nameBN || `ID ${node.id}`,
+            data: { id: node.id, nameEN: node.nameEN, nameBN: node.nameBN, parent },
+            leaf: false,
+            children: []
+        };
+        this.addMemberUnitNodeMap[node.id] = tn;
+        return tn;
+    }
+
+    onAddMemberNodeExpand(event: any): void {
+        const node: TreeNode = event.node;
+        if (node.children && node.children.length > 0) return;
+        this.orgService.loadChildren(Number(node.key)).subscribe({
+            next: (children: any[]) => {
+                node.children = children
+                    .filter((c: any) => c.status === 1)
+                    .sort((a: any, b: any) => a.sortOrder - b.sortOrder)
+                    .map((c: any) => this.toAddMemberTreeNode(c, node));
+                if (node.children.length === 0) node.leaf = true;
+                this.addMemberUnitTreeNodes = [...this.addMemberUnitTreeNodes];
+            },
+            error: () => {}
+        });
+    }
+
+    onAddMemberNodeSelect(event: any): void {
+        this.selectedAddUnitNode = event.node;
+        this.selectedAddMemberTransferUnitId = this.addMemberTransferUnitId;
+    }
+
+    onAddMemberNodeClear(): void {
+        this.selectedAddUnitNode = null;
+        this.selectedAddMemberTransferUnitId = null;
+    }
+
+    private loadAddMemberList(): void {
+        this.addMemberLoading = true;
+        const isInter = this.postingType === NoteSheetType.InterPosting;
+        const obs = isInter
+            ? this.employeeListService.getEmployeesMarkedForInterPosting()
+            : this.employeeListService.getEmployeesByIsSendingNotesheetStatus(IsSendingNotesheetStatus.Draft);
+        obs.subscribe({
+            next: (list) => { this.addMemberList = list ?? []; this.addMemberLoading = false; },
+            error: () => { this.addMemberLoading = false; }
+        });
+    }
+
+    addMemberToList(): void {
+        const emp = this.selectedAddEmployee;
+        if (!emp || !this.currentOrderId) return;
+        const empId = emp.employeeID;
+        if (this.addMemberSaving) return;
+
+        this.addMemberSaving = true;
+        this.postingService.addPostingOrderEmployee(
+            this.currentOrderId,
+            empId,
+            this.addMemberTransferUnitId,
+            'system',
+            this.draftPostingMasterId,
+            this.postingType || null,
+            this.addMemberRemarks || null
+        ).subscribe({
+            next: (res) => {
+                this.addMemberSaving = false;
+                if (res.statusCode === 200) {
+                    this.selectedAddEmployee = null;
+                    this.selectedAddUnitNode = null;
+                    this.selectedAddMemberTransferUnitId = null;
+                    this.addMemberRemarks = '';
+                    this.messageService.add({ severity: 'success', summary: 'Added', detail: `${emp.fullNameEN} added to posting order.` });
+                    this.loadOrder(this.currentOrderId!);
+                } else {
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: res.description ?? 'Failed to add employee.' });
+                }
+            },
+            error: (err) => {
+                this.addMemberSaving = false;
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.description ?? 'Failed to add employee.' });
+            }
+        });
     }
 
     /** Parse footerText JSON into full FooterParagraph objects for edit mode. */
@@ -572,7 +856,30 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             acceptLabel: 'হ্যাঁ',
             rejectLabel: 'না',
             accept: () => {
-                this.editEmployees = this.editEmployees.filter(e => e.employeeId !== emp.employeeId);
+                if (!this.currentOrderId || this.removingEmployeeId) return;
+                this.removingEmployeeId = emp.employeeId;
+
+                this.postingService.removePostingOrderEmployee(
+                    this.currentOrderId,
+                    emp.employeeId,
+                    'system',
+                    this.draftPostingMasterId,
+                    this.postingType || null
+                ).subscribe({
+                    next: (res) => {
+                        this.removingEmployeeId = null;
+                        if (res.statusCode === 200) {
+                            this.messageService.add({ severity: 'success', summary: 'Removed', detail: `${name} removed from posting order.` });
+                            this.loadOrder(this.currentOrderId!);
+                        } else {
+                            this.messageService.add({ severity: 'error', summary: 'Error', detail: res.description ?? 'Failed to remove employee.' });
+                        }
+                    },
+                    error: (err) => {
+                        this.removingEmployeeId = null;
+                        this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.description ?? 'Failed to remove employee.' });
+                    }
+                });
             }
         });
     }

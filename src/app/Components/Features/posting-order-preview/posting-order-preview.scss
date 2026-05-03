@@ -338,3 +338,72 @@
         padding: 12mm 8mm;
     }
 }
+
+/* ── Removal History Section ──────────────────────── */
+.removal-history-section {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 2rem 2rem;
+}
+
+/* ── Status Badges (reused from notesheet-list) ──── */
+.ns-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.625rem;
+    border-radius: 1rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+
+    &--initiator {
+        background: #fef3c7;
+        color: #92400e;
+        border: 1px solid #fcd34d;
+    }
+
+    &--recommender {
+        background: #dbeafe;
+        color: #1e40af;
+        border: 1px solid #93c5fd;
+    }
+
+    &--backed {
+        background: #fff7ed;
+        color: #9a3412;
+        border: 1px solid #fdba74;
+    }
+
+    &--approved {
+        background: #dcfce7;
+        color: #166534;
+        border: 1px solid #86efac;
+    }
+}
+
+:host-context(.app-dark) .ns-status-badge {
+    &--initiator {
+        background: rgba(146, 64, 14, 0.25);
+        color: #fcd34d;
+        border: 1px solid rgba(252, 211, 77, 0.35);
+    }
+
+    &--recommender {
+        background: rgba(30, 64, 175, 0.25);
+        color: #93c5fd;
+        border: 1px solid rgba(147, 197, 253, 0.35);
+    }
+
+    &--backed {
+        background: rgba(154, 52, 18, 0.2);
+        color: #fdba74;
+        border: 1px solid rgba(253, 186, 116, 0.35);
+    }
+
+    &--approved {
+        background: rgba(22, 101, 52, 0.25);
+        color: #86efac;
+        border: 1px solid rgba(134, 239, 172, 0.35);
+    }
+}

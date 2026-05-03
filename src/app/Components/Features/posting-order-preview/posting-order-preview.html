@@ -4,11 +4,13 @@
 <div class="preview-page">
 
     <div class="preview-header no-print">
-        <div class="preview-actions" *ngIf="!loading && employees.length > 0">
+        <div class="preview-actions" *ngIf="!loading && !error">
             <ng-container *ngIf="!editing">
-                <p-button icon="pi pi-file-word" label="Word" (onClick)="exportWord()" styleClass="p-button-outlined"></p-button>
-                <p-button icon="pi pi-file-pdf" label="PDF" (onClick)="exportPdf()" [loading]="exportingPdf" styleClass="p-button-outlined"></p-button>
-                <p-button icon="pi pi-print" label="Print Preview" (onClick)="printPreview()" [loading]="printingPreview" styleClass="p-button-outlined"></p-button>
+                <ng-container *ngIf="employees.length > 0">
+                    <p-button icon="pi pi-file-word" label="Word" (onClick)="exportWord()" styleClass="p-button-outlined"></p-button>
+                    <p-button icon="pi pi-file-pdf" label="PDF" (onClick)="exportPdf()" [loading]="exportingPdf" styleClass="p-button-outlined"></p-button>
+                    <p-button icon="pi pi-print" label="Print Preview" (onClick)="printPreview()" [loading]="printingPreview" styleClass="p-button-outlined"></p-button>
+                </ng-container>
                 <p-button icon="pi pi-pencil" label="Edit" [outlined]="true" (onClick)="toggleEdit()"></p-button>
             </ng-container>
             <ng-container *ngIf="editing">
@@ -60,6 +62,115 @@
                 <span class="text-500 text-sm">({{ editEmployees.length }} member(s))</span>
             </div>
 
+            <!-- Add Member — inline dropdown (same pattern as notesheet-list) -->
+            <div class="mb-3 p-3" style="background:var(--surface-50); border-radius:8px; border:1px solid var(--surface-200);">
+                <div class="flex align-items-center gap-2 mb-2">
+                    <i class="pi pi-user-plus text-primary" style="font-size:1rem"></i>
+                    <span class="font-semibold text-sm text-900">Add Employee to Posting Order</span>
+                    <span class="text-400 text-xs">({{ isInterPosting ? 'presently serving employees marked for inter posting' : 'employees with draft status' }})</span>
+                </div>
+                <div class="flex align-items-center gap-2">
+                    <div style="flex:1; min-width:0; display:flex; gap:0.5rem;">
+                    <div style="flex:0 0 calc(50% - 0.25rem); min-width:0; overflow:hidden;">
+                        @if (addMemberLoading) {
+                            <div class="flex align-items-center gap-2 text-500 text-sm p-2">
+                                <i class="pi pi-spin pi-spinner"></i> Loading employees...
+                            </div>
+                        } @else {
+                            <p-select
+                                [(ngModel)]="selectedAddEmployee"
+                                [options]="addMemberList"
+                                optionLabel="serviceId"
+                                [filter]="true"
+                                filterBy="serviceId,fullNameEN,rankName,corpsName,tradeName,motherUnitName,RABID,rabID"
+                                placeholder="Service ID, Name, Rank, Corps অনুযায়ী খুঁজুন..."
+                                [style]="{ width: '100%' }"
+                                appendTo="body"
+                                [showClear]="true">
+                                <ng-template let-emp pTemplate="selectedItem">
+                                    <span class="text-500 text-xs">Name&nbsp;:</span>
+                                    <span class="font-semibold text-900 ml-1 mr-3">{{ emp.fullNameEN }}</span>
+                                    <span class="text-500 text-xs">Service ID&nbsp;:</span>
+                                    <span class="font-semibold text-primary ml-1 mr-3">{{ emp.serviceId }}</span>
+                                    <span class="text-500 text-xs">Rank&nbsp;:</span>
+                                    <span class="font-medium text-700 ml-1 mr-3">{{ emp.rankName || '—' }}</span>
+                                    <span class="text-500 text-xs">Unit&nbsp;:</span>
+                                    <span class="font-medium text-700 ml-1">{{ emp.motherUnitName || '—' }}</span>
+                                </ng-template>
+                                <ng-template let-emp pTemplate="item">
+                                    <div class="flex flex-column gap-1 py-1">
+                                        <div class="flex align-items-center flex-wrap gap-2">
+                                            <span class="text-500 text-xs">Name&nbsp;:</span>
+                                            <span class="font-semibold text-900 mr-2">{{ emp.fullNameEN }}</span>
+                                            <span class="text-500 text-xs">Service ID&nbsp;:</span>
+                                            <span class="font-semibold text-primary mr-2">{{ emp.serviceId }}</span>
+                                            <span class="text-500 text-xs">Rank&nbsp;:</span>
+                                            <span class="font-medium text-700 mr-2">{{ emp.rankName || '—' }}</span>
+                                            <span class="text-500 text-xs">Unit&nbsp;:</span>
+                                            <span class="font-medium text-700">{{ emp.motherUnitName || '—' }}</span>
+                                        </div>
+                                        <div class="flex align-items-center flex-wrap gap-2 text-xs text-500">
+                                            <span class="text-400">Corps&nbsp;:</span>
+                                            <span class="mr-2">{{ emp.corpsName || '—' }}</span>
+                                            <span class="text-400">Trade&nbsp;:</span>
+                                            <span class="mr-2">{{ emp.tradeName || '—' }}</span>
+                                            <span class="text-400 ml-auto">{{ emp.RABID || emp.rabID || '' }}</span>
+                                        </div>
+                                    </div>
+                                </ng-template>
+                            </p-select>
+                        }
+                    </div>
+                    <div style="flex:0 0 calc(50% - 0.25rem); min-width:0; overflow:hidden;">
+                        @if (addMemberTreeLoading) {
+                            <div class="text-500 text-xs p-2"><i class="pi pi-spin pi-spinner mr-1"></i>Loading units...</div>
+                        } @else {
+                            <p-treeSelect
+                                [(ngModel)]="selectedAddUnitNode"
+                                [options]="addMemberUnitTreeNodes"
+                                [placeholder]="isBangla ? 'বদলি ইউনিট' : 'Transfer Unit'"
+                                [filter]="true"
+                                [filterInputAutoFocus]="true"
+                                [showClear]="true"
+                                selectionMode="single"
+                                styleClass="w-full"
+                                appendTo="body"
+                                (onNodeExpand)="onAddMemberNodeExpand($event)"
+                                (onNodeSelect)="onAddMemberNodeSelect($event)"
+                                (onClear)="onAddMemberNodeClear()">
+                                <ng-template pTemplate="value" let-node>
+                                    <span style="display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                                        {{ node ? getAddMemberUnitFullPath(node) : (isBangla ? 'বদলি ইউনিট' : 'Transfer Unit') }}
+                                    </span>
+                                </ng-template>
+                            </p-treeSelect>
+                        }
+                    </div>
+                    </div>
+                </div>
+                <div class="flex align-items-center gap-2 mt-2">
+                    <div style="flex:1; min-width:0;">
+                        <textarea
+                            pTextarea
+                            [(ngModel)]="addMemberRemarks"
+                            [rows]="2"
+                            [autoResize]="true"
+                            placeholder="{{ isBangla ? 'মন্তব্য (ঐচ্ছিক)' : 'Remarks (optional)' }}"
+                            [style]="{ width: '100%' }"
+                            [maxlength]="500"
+                        ></textarea>
+                    </div>
+                    <p-button
+                        [icon]="addMemberSaving ? 'pi pi-spin pi-spinner' : 'pi pi-plus'"
+                        label="Add Member"
+                        severity="success"
+                        size="small"
+                        [disabled]="!selectedAddEmployee || addMemberSaving"
+                        (onClick)="addMemberToList()">
+                    </p-button>
+                </div>
+            </div>
+
             <p-table
                 [value]="editEmployees"
                 dataKey="employeeId"
@@ -91,7 +202,15 @@
                         <td style="white-space: pre-line;">{{ empPrevWorkplace(row) }}</td>
                         <td>{{ empTransferUnit(row) }}</td>
                         <td class="text-center">
-                            <p-button icon="pi pi-trash" [class.perm-hidden]="!canDelete" severity="danger" [rounded]="true" [text]="true" size="small" (onClick)="removeEditEmployee(row)"></p-button>
+                            <p-button
+                                [icon]="removingEmployeeId === row.employeeId ? 'pi pi-spin pi-spinner' : 'pi pi-trash'"
+                                severity="danger"
+                                [rounded]="true"
+                                [text]="true"
+                                size="small"
+                                [disabled]="removingEmployeeId !== null"
+                                (onClick)="removeEditEmployee(row)">
+                            </p-button>
                         </td>
                     </tr>
                 </ng-template>
@@ -199,6 +318,14 @@
             [outlined]="selectedFilterUnitId !== u.id"
             (onClick)="selectFilterUnit(u.id)"
         ></p-button>
+    </div>
+
+    <!-- Empty state — order loaded but no employees yet -->
+    <div *ngIf="!editing && !loading && !error && employees.length === 0" class="flex flex-column align-items-center justify-content-center gap-3 py-6 text-center">
+        <i class="pi pi-inbox text-6xl text-400"></i>
+        <span class="text-xl text-600 font-semibold">{{ postingOrderNo || 'Posting Order' }}</span>
+        <span class="text-500">No employees in this posting order yet.</span>
+        <p-button icon="pi pi-pencil" label="Edit to Add Employees" severity="primary" (onClick)="toggleEdit()"></p-button>
     </div>
 
     <div class="legal-paper-container" *ngIf="!editing && !loading && !error && employees.length > 0">
@@ -332,6 +459,82 @@
             </div>
 
           </div><!-- /po-doc-box -->
+        </div>
+    </div>
+
+    <!-- ── Member Removal History ── -->
+    <div class="removal-history-section no-print mt-4" *ngIf="!loading && !error && draftPostingMasterId">
+        <div class="p-3 surface-100 border-round">
+            <h4 class="mt-0 mb-3 text-700">Member Removal History</h4>
+
+            @if (removalHistoryLoading) {
+                <div class="flex align-items-center gap-2 py-3">
+                    <i class="pi pi-spin pi-spinner"></i>
+                    <span class="text-500">Loading history...</span>
+                </div>
+            }
+
+            @if (!removalHistoryLoading && removalHistory.length === 0) {
+                <div class="text-500 text-sm py-2">No removal history found.</div>
+            }
+
+            @if (!removalHistoryLoading && removalHistory.length > 0) {
+                <span class="text-500 text-sm block mb-2">{{ removalHistory.length }} removal record(s)</span>
+                <p-table
+                    [value]="removalHistory"
+                    [tableStyle]="{ 'min-width': '90rem' }"
+                    styleClass="p-datatable-striped p-datatable-gridlines p-datatable-sm"
+                    [paginator]="removalHistory.length > 10"
+                    [rows]="10"
+                    [rowsPerPageOptions]="[10, 25, 50]">
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 45px">Ser</th>
+                            <th style="min-width: 110px">Posting No</th>
+                            <th style="min-width: 100px">Service ID</th>
+                            <th style="min-width: 100px">RAB ID</th>
+                            <th style="min-width: 160px">Name</th>
+                            <th style="min-width: 115px">Notesheet No</th>
+                            <th style="min-width: 160px">Stage at Removal</th>
+                            <th style="min-width: 140px">Transfer Unit</th>
+                            <th style="min-width: 130px">Wing</th>
+                            <th style="min-width: 130px">Branch</th>
+                            <th style="min-width: 130px">Section</th>
+                            <th style="min-width: 140px">Original Remarks</th>
+                            <th style="min-width: 110px">Removed By</th>
+                            <th style="min-width: 145px">Removed Date</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-h let-i="rowIndex">
+                        <tr>
+                            <td>{{ i + 1 }}</td>
+                            <td><span class="font-semibold">{{ h.draftPostingNo || '-' }}</span></td>
+                            <td>{{ h.serviceId || '-' }}</td>
+                            <td>{{ h.rabId || '-' }}</td>
+                            <td>{{ h.fullNameEN || '-' }}</td>
+                            <td>{{ h.noteSheetNo || '-' }}</td>
+                            <td>
+                                <span class="ns-status-badge"
+                                    [ngClass]="{
+                                        'ns-status-badge--initiator':   h.noteSheetStatusAtRemoval === 'Pending - Initiator',
+                                        'ns-status-badge--recommender': h.noteSheetStatusAtRemoval === 'Pending - Recommender' || h.noteSheetStatusAtRemoval === 'Pending - Final Approval',
+                                        'ns-status-badge--backed':      h.noteSheetStatusAtRemoval === 'Declined',
+                                        'ns-status-badge--approved':    h.noteSheetStatusAtRemoval === 'Approved'
+                                    }">
+                                    {{ h.noteSheetStatusAtRemoval || '-' }}
+                                </span>
+                            </td>
+                            <td>{{ h.originalTransferRabUnitName || '-' }}</td>
+                            <td>{{ h.originalTransferWingName || '-' }}</td>
+                            <td>{{ h.originalTransferBranchName || '-' }}</td>
+                            <td>{{ h.originalTransferSectionName || '-' }}</td>
+                            <td>{{ h.originalRemarks || '-' }}</td>
+                            <td>{{ h.createdBy || '-' }}</td>
+                            <td>{{ formatRemovalDate(h.createdDate) }}</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            }
         </div>
     </div>
 

@@ -592,6 +592,44 @@ export class PostingService {
         return this.http.post<{ statusCode: number; description: string; data?: any }>(`${API}/CreatePostingOrder`, body);
     }
 
+    /** Add a single employee directly to an existing Posting Order (immediate DB persist). */
+    addPostingOrderEmployee(
+        postingOrderMasterId: number,
+        employeeId: number,
+        transferRabUnitId: number | null,
+        addedBy: string,
+        draftPostingMasterId: number | null = null,
+        postingType: string | null = null,
+        remarks: string | null = null
+    ): Observable<{ statusCode: number; description: string }> {
+        return this.http.post<{ statusCode: number; description: string }>(`${API}/AddPostingOrderEmployee`, {
+            postingOrderMasterId,
+            employeeId,
+            transferRabUnitId: transferRabUnitId ?? null,
+            addedBy,
+            draftPostingMasterId: draftPostingMasterId ?? null,
+            postingType: postingType ?? null,
+            remarks: remarks?.trim() || null
+        });
+    }
+
+    /** Remove a single employee from an existing Posting Order (immediate DB persist + history). */
+    removePostingOrderEmployee(
+        postingOrderMasterId: number,
+        employeeId: number,
+        removedBy: string,
+        draftPostingMasterId: number | null = null,
+        postingType: string | null = null
+    ): Observable<{ statusCode: number; description: string }> {
+        return this.http.post<{ statusCode: number; description: string }>(`${API}/RemovePostingOrderEmployee`, {
+            postingOrderMasterId,
+            employeeId,
+            removedBy,
+            draftPostingMasterId: draftPostingMasterId ?? null,
+            postingType: postingType ?? null
+        });
+    }
+
     /** Update an existing posting order. */
     updatePostingOrder(body: {
         id: number;
@@ -612,5 +650,15 @@ export class PostingService {
         updatedBy: string;
     }): Observable<{ statusCode: number; description: string }> {
         return this.http.post<{ statusCode: number; description: string }>(`${API}/UpdatePostingOrder`, body);
+    }
+
+    /** Set TransferRabUnitId on a draft detail row by DraftPostingMasterId + EmployeeId. */
+    setDraftDetailTransferUnit(draftPostingMasterId: number, isInterPosting: boolean, employeeId: number, transferRabUnitId: number | null): Observable<{ statusCode: number; description: string }> {
+        return this.http.post<{ statusCode: number; description: string }>(`${API}/SetDraftDetailTransferUnit`, {
+            draftPostingMasterId,
+            isInterPosting,
+            employeeId,
+            transferRabUnitId
+        });
     }
 }

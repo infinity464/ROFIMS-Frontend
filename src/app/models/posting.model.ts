@@ -358,6 +358,7 @@ export interface PostingOrderMasterWithDetailsDto {
     filesReferences: string | null;
     status: string;
     remarks: string | null;
+    footerText?: string | null;
     createdBy: string;
     createdDate: string;
     details: PostingOrderDetailDto[];
