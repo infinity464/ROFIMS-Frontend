@@ -74,15 +74,18 @@
                 </div>
             </div>
 
-            <!-- Row 3: Note (Rich Text) -->
-            <div class="field mt-3">
-                <label class="font-semibold block mb-2 text-700">Note</label>
-                <p-editor [(ngModel)]="remarks" [style]="{ height: '160px' }" placeholder="Enter note (optional)"></p-editor>
-            </div>
         </div>
 
         <!-- Employee List Table -->
         <div *ngIf="selectedNoteSheetId">
+            <!-- Posting Text (pre-filled from notesheet main text) -->
+            <div class="posting-text-section mb-4 p-4 surface-50 border-round">
+                <div class="flex align-items-center gap-2 mb-2">
+                    <span class="font-semibold text-700">{{ isBangla ? 'পোস্টিং টেক্সট' : 'Posting Text' }}</span>
+                </div>
+                <p-editor [(ngModel)]="postingText" [style]="{ height: '120px' }"></p-editor>
+            </div>
+
             <!-- NoteSheet Info Bar -->
             <div class="flex flex-wrap gap-4 align-items-center mb-3">
                 <span class="font-semibold text-700">NoteSheet Employees</span>
@@ -146,12 +149,16 @@
                 </ng-template>
             </p-table>
 
-            <!-- Posting Text (single paragraph shown above Onulipi) -->
-            <div class="posting-text-section mt-4 p-4 surface-50 border-round">
-                <div class="flex align-items-center gap-2 mb-2">
-                    <span class="font-semibold text-700">{{ isBangla ? 'পোস্টিং টেক্সট' : 'Posting Text' }}</span>
-                </div>
-                <p-editor [(ngModel)]="postingText" [style]="{ height: '200px' }"></p-editor>
+            <!-- Sub Text (Rich Text) -->
+            <div class="field mt-4">
+                <label class="font-semibold block mb-2 text-700">{{ isBangla ? 'সাব টেক্সট' : 'Sub Text' }}</label>
+                <p-editor [(ngModel)]="subText" [style]="{ height: '120px' }"></p-editor>
+            </div>
+
+            <!-- Main Text (Rich Text) -->
+            <div class="field mt-4">
+                <label class="font-semibold block mb-2 text-700">{{ isBangla ? 'মূল বক্তব্য' : 'Main Text' }}</label>
+                <p-editor [(ngModel)]="remarks" [style]="{ height: '100px' }"></p-editor>
             </div>
 
             <!-- Footer Text (dynamic paragraphs, each linked to a transfer unit) -->

@@ -13,6 +13,7 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { TableModule } from 'primeng/table';
+import { EditorModule } from 'primeng/editor';
 import { PostingService } from '@/services/posting.service';
 import { ServingMembersService } from '@/services/serving-members.service';
 import { EmpService } from '@/services/emp-service';
@@ -54,7 +55,8 @@ interface TransferUnitOption {
         DatePickerModule, FlexibleDateDirective,
         InputTextModule,
         TextareaModule,
-        TableModule
+        TableModule,
+        EditorModule
     ],
     providers: [MessageService, ConfirmationService],
     templateUrl: './posting-order-preview.html',
@@ -89,6 +91,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     referenceNumber = '';
     footerParagraphs: FooterParagraph[] = [];
     postingText = '';
+    subText = '';
 
     /** Per-unit filter: null = "All units" (default), otherwise the transferRabUnitId to show. */
     selectedFilterUnitId: number | null = null;
@@ -109,6 +112,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     editPostingOrderDate: Date | null = null;
     editRemarks = '';
     editPostingText = '';
+    editSubText = '';
     editFooterParagraphs: FooterParagraph[] = [];
     editEmployees: PostingOrderEmployeeRow[] = [];
 
@@ -216,6 +220,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                         this.postingText = '';
                     }
 
+                    this.subText = first.subText ?? '';
                     this.rawFooterText = first.footerText ?? null;
 
                     // Parse footer paragraphs into FooterParagraph objects (keeps unit linkage for per-unit filtering).
@@ -471,10 +476,8 @@ export class PostingOrderPreviewPageComponent implements OnInit {
 
     // ─── Edit mode ────────────────────────────────────────
 
-    /** Can edit if status is Draft (or empty/unknown). */
     get canEdit(): boolean {
-        const s = (this.status ?? '').toLowerCase();
-        return s === '' || s === 'draft';
+        return true;
     }
 
     /** Unique transfer (RAB) units from currently-loaded edit employees. */
@@ -493,6 +496,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         this.editPostingOrderDate = this.postingOrderDate ? new Date(this.postingOrderDate) : null;
         this.editRemarks = this.masterRemarks || '';
         this.editPostingText = this.postingText || '';
+        this.editSubText = this.subText || '';
         this.editEmployees = [...this.employees];
 
         // Re-parse the raw footerText into full FooterParagraph objects (with unit linkage).
@@ -506,6 +510,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         this.editPostingOrderDate = null;
         this.editRemarks = '';
         this.editPostingText = '';
+        this.editSubText = '';
         this.editFooterParagraphs = [];
         this.editEmployees = [];
     }
@@ -606,6 +611,8 @@ export class PostingOrderPreviewPageComponent implements OnInit {
 
         const trimmedPostingText = this.editPostingText.trim();
         const mainText = trimmedPostingText.length > 0 ? trimmedPostingText : null;
+        const trimmedSubText = this.editSubText.trim();
+        const subText = trimmedSubText.length > 0 ? trimmedSubText : null;
 
         const postingOrderDateStr = this.editPostingOrderDate
             ? this.formatDateToString(this.editPostingOrderDate)
@@ -619,6 +626,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             referenceNumber: this.referenceNumber || null,
             subject: this.subject || null,
             mainText: mainText,
+            subText: subText,
             textType: this.textType || (this.isBangla ? 'bn' : 'en'),
             status: this.status || null,
             remarks: this.editRemarks || null,
@@ -762,11 +770,11 @@ export class PostingOrderPreviewPageComponent implements OnInit {
 
         // ── Employee Table (header 8.5pt, data 9pt) ──
         const cols = bn
-            ? ['ক্রমিক', 'ব্যক্তিগত নম্বর', 'পদবি', 'ট্রেড', 'নাম', 'নিজ জেলা', 'পূর্ববতী কর্মস্থল', 'বদলিকৃত কর্মস্থল', 'র‌্যাব আইডি', 'মন্তব্য']
-            : ['Ser', 'Service ID', 'Rank', 'Trade', 'Name', 'Own District', 'Previous Workplace', 'Transfer Unit', 'RAB ID', 'Remarks'];
+            ? ['ক্রমিক', 'ব্যক্তিগত নম্বর', 'পদবি', 'ট্রেড', 'নাম', 'নিজ জেলা', 'পূর্ববতী কর্মস্থল', 'বদলিকৃত কর্মস্থল', 'র‌্যাব আইডি']
+            : ['Ser', 'Service ID', 'Rank', 'Trade', 'Name', 'Own District', 'Previous Workplace', 'Transfer Unit', 'RAB ID'];
         // Column widths in DXA – must sum to full content width (page 12240 - margins 567*2 = 11106)
-        //         Ser  SvcID  Rank  Trade  Name   OwnDist PrevWk TrUnit RabID Remarks
-        const colW = [580, 1100, 860, 924, 2174, 1060, 1174, 1174, 1030, 1030];
+        //         Ser  SvcID  Rank  Trade  Name   OwnDist PrevWk TrUnit RabID
+        const colW = [580, 1100, 860, 924, 2474, 1260, 1374, 1374, 1160];
 
         const hdrPara = (text: string) => new Paragraph({ children: [new TextRun({ text, bold: true, size: 17, sizeComplexScript: bn ? 17 : undefined, font, language: lang })], alignment: AlignmentType.CENTER });
         const hdrCell = (text: string, ci: number, extra?: Partial<ConstructorParameters<typeof TableCell>[0]>) => new TableCell({
@@ -788,7 +796,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                     ...[0,1,2,3,4,5].map(ci => new TableCell({ children: [new Paragraph({})], verticalMerge: VerticalMergeType.CONTINUE, borders: cellBorders, width: { size: colW[ci], type: WidthType.DXA } })),
                     hdrCell(bn ? 'হইতে' : 'From', 6),
                     hdrCell(bn ? 'প্রতি' : 'To', 7),
-                    ...[8,9].map(ci => new TableCell({ children: [new Paragraph({})], verticalMerge: VerticalMergeType.CONTINUE, borders: cellBorders, width: { size: colW[ci], type: WidthType.DXA } }))
+                    new TableCell({ children: [new Paragraph({})], verticalMerge: VerticalMergeType.CONTINUE, borders: cellBorders, width: { size: colW[8], type: WidthType.DXA } })
                 ]})
             ];
         } else {
@@ -800,12 +808,12 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                 bn ? this.toBanglaDigits(String(i + 1)) : String(i + 1),
                 this.empServiceId(emp), this.empRank(emp), this.empTrade(emp), this.empName(emp),
                 this.empDistrict(emp), this.empPrevWorkplace(emp), this.empTransferUnit(emp),
-                this.empRabId(emp), emp.noteSheetRemarks ?? ''
+                this.empRabId(emp)
             ].map((val, ci) => {
                 const lines = val.split('\n');
                 const cellParas = lines.map(line => new Paragraph({
                     children: [new TextRun({ text: line, size: 18, sizeComplexScript: bn ? 18 : undefined, font, language: lang })],
-                    alignment: ci === 9 ? AlignmentType.LEFT : AlignmentType.CENTER,
+                    alignment: AlignmentType.CENTER,
                     spacing: { after: 20 }
                 }));
                 return new TableCell({
@@ -815,22 +823,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             })
         }));
 
-        // Master remarks row (spans all columns, left-aligned)
         const allRows = [...headerRows, ...dataRows];
-        if (this.masterRemarks) {
-            allRows.push(new TableRow({
-                children: [new TableCell({
-                    columnSpan: 10,
-                    borders: cellBorders,
-                    width: { size: 11106, type: WidthType.DXA },
-                    children: [new Paragraph({
-                        children: [new TextRun({ text: this.masterRemarks, size: 18, sizeComplexScript: bn ? 18 : undefined, font, language: lang })],
-                        alignment: AlignmentType.LEFT,
-                        spacing: { before: 40, after: 40 }
-                    })]
-                })]
-            }));
-        }
 
         const empTable = new Table({
             width: { size: 11106, type: WidthType.DXA },
@@ -840,14 +833,19 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             columnWidths: colW
         });
 
-        // ── Posting Text (10pt, justified) – single paragraph (split on blank lines) ──
-        const postingTextParas = this.postingText
-            ? this.postingText.split(/\n{2,}/).filter(t => t.trim().length > 0).map(t => new Paragraph({
-                children: [new TextRun({ text: t, size: 20, sizeComplexScript: csSize, font, language: lang })],
-                alignment: AlignmentType.JUSTIFIED,
-                spacing: { before: 100, after: 100 }
-            }))
-            : [];
+        // Helper: HTML string → plain paragraphs for Word
+        const htmlToParas = (html: string) =>
+            this.htmlToPlainText(html).split(/\n{2,}/).map(t => t.trim()).filter(t => t.length > 0)
+                .map(t => new Paragraph({
+                    children: [new TextRun({ text: t, size: 20, sizeComplexScript: csSize, font, language: lang })],
+                    alignment: AlignmentType.JUSTIFIED,
+                    spacing: { before: 100, after: 100 }
+                }));
+
+        // ── Main Text (masterRemarks, after reference), Posting Text, Sub Text ──
+        const masterRemarksParas = this.masterRemarks ? htmlToParas(this.masterRemarks) : [];
+        const postingTextParas = this.postingText ? htmlToParas(this.postingText) : [];
+        const subTextParas     = this.subText ? htmlToParas(this.subText) : [];
 
         // ── Signature Block (right-aligned block using borderless table) ──
         const approverNameText = (bn ? this.approverNameBN : this.approverName) || this.approverName || '...................................';
@@ -900,7 +898,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                         margin: { top: 567, right: 567, bottom: 567, left: 567 },
                     }
                 },
-                children: [...headerParas, titlePara, orderLine, ...referenceParas, ...bodyParas, empTable, ...postingTextParas, ...sigParas, copyPara, ...footerParas]
+                children: [...headerParas, titlePara, orderLine, ...referenceParas, ...masterRemarksParas, ...bodyParas, empTable, ...postingTextParas, ...subTextParas, ...sigParas, copyPara, ...footerParas]
             }]
         });
     }

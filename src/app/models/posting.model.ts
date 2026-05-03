@@ -353,6 +353,7 @@ export interface PostingOrderMasterWithDetailsDto {
     referenceNumber: string | null;
     subject: string | null;
     mainText: string | null;
+    subText?: string | null;
     textType: string | null;
     filesReferences: string | null;
     status: string;
@@ -373,6 +374,7 @@ export interface PostingOrderEmployeeRow {
     referenceNumber: string | null;
     subject: string | null;
     mainText: string | null;
+    subText?: string | null;
     textType: string | null;
     filesReferences: string | null;
     noteSheetNo: string | null;

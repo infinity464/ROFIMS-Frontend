@@ -9,7 +9,7 @@
                 <p-button icon="pi pi-file-word" label="Word" (onClick)="exportWord()" styleClass="p-button-outlined"></p-button>
                 <p-button icon="pi pi-file-pdf" label="PDF" (onClick)="exportPdf()" [loading]="exportingPdf" styleClass="p-button-outlined"></p-button>
                 <p-button icon="pi pi-print" label="Print Preview" (onClick)="printPreview()" [loading]="printingPreview" styleClass="p-button-outlined"></p-button>
-                <p-button *ngIf="canEdit" icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" label="Edit" [outlined]="true" (onClick)="toggleEdit()"></p-button>
+                <p-button icon="pi pi-pencil" label="Edit" [outlined]="true" (onClick)="toggleEdit()"></p-button>
             </ng-container>
             <ng-container *ngIf="editing">
                 <p-button icon="pi pi-times" label="Cancel" severity="secondary" [outlined]="true" (onClick)="cancelEdit()"></p-button>
@@ -37,7 +37,7 @@
             </div>
 
             <div class="draft-master-section mb-4 p-4 surface-50 border-round">
-                <div class="flex flex-wrap gap-4 align-items-end">
+                <div class="flex flex-wrap gap-4 align-items-end mb-3">
                     <div class="field min-w-200px">
                         <label class="font-semibold block mb-2 text-700">Posting Order Date <span class="text-red-500">*</span></label>
                         <p-datepicker
@@ -47,11 +47,10 @@
                             placeholder="Select date"
                         ></p-datepicker>
                     </div>
-
-                    <div class="field flex-1 min-w-300px">
-                        <label class="font-semibold block mb-2 text-700">Note</label>
-                        <input pInputText type="text" [(ngModel)]="editRemarks" placeholder="Enter remarks (optional)" class="w-full" />
-                    </div>
+                </div>
+                <div class="field">
+                    <label class="font-semibold block mb-2 text-700">{{ isBangla ? 'মূল বক্তব্য' : 'Main Text' }}</label>
+                    <p-editor [(ngModel)]="editRemarks" [style]="{ height: '100px' }"></p-editor>
                 </div>
             </div>
 
@@ -108,19 +107,16 @@
                 </ng-template>
             </p-table>
 
-            <!-- Posting Text (single paragraph) -->
-            <div class="posting-text-section mt-4 p-4 surface-50 border-round">
-                <div class="flex align-items-center gap-2 mb-2">
-                    <span class="font-semibold text-700">{{ isBangla ? 'পোস্টিং টেক্সট' : 'Posting Text' }}</span>
-                </div>
-                <textarea
-                    pTextarea
-                    [(ngModel)]="editPostingText"
-                    rows="3"
-                    class="w-full"
-                    placeholder="{{ isBangla ? 'পোস্টিং টেক্সট লিখুন...' : 'Enter posting text...' }}"
-                    [autoResize]="true"
-                ></textarea>
+            <!-- Posting Text (rich editor) -->
+            <div class="mt-4 p-4 surface-50 border-round">
+                <label class="font-semibold block mb-2 text-700">{{ isBangla ? 'পোস্টিং টেক্সট' : 'Posting Text' }}</label>
+                <p-editor [(ngModel)]="editPostingText" [style]="{ height: '120px' }"></p-editor>
+            </div>
+
+            <!-- Sub Text (rich editor) -->
+            <div class="mt-4 p-4 surface-50 border-round">
+                <label class="font-semibold block mb-2 text-700">{{ isBangla ? 'সাব টেক্সট' : 'Sub Text' }}</label>
+                <p-editor [(ngModel)]="editSubText" [style]="{ height: '120px' }"></p-editor>
             </div>
 
             <!-- Footer paragraphs (Onulipi) -->
@@ -240,6 +236,9 @@
                 <span class="po-doc-reference-value">{{ referenceLine }}</span>
             </div>
 
+            <!-- Main Text (Remarks) — shown after সূত্র -->
+            <div class="po-doc-master-remarks" *ngIf="masterRemarks" [innerHTML]="masterRemarks"></div>
+
             <!-- Body Text (verbatim from linked notesheet's Main Text) -->
             <div class="po-doc-body" style="white-space: pre-line;">{{ bodyText }}</div>
 
@@ -256,8 +255,7 @@
                             <th rowspan="2" style="width:20%">{{ isBangla ? 'নাম' : 'Name' }}</th>
                             <th rowspan="2" style="width:10%">{{ isBangla ? 'নিজ জেলা' : 'Own District' }}</th>
                             <th colspan="2" style="width:22%">{{ isBangla ? 'বদলিকৃত কর্মস্থল' : 'Transfer Station' }}</th>
-                            <th rowspan="2" style="width:9%">{{ isBangla ? 'র‌্যাব আইডি' : 'RAB ID' }}</th>
-                            <th rowspan="2" style="width:8%">{{ isBangla ? 'মন্তব্য' : 'Remarks' }}</th>
+                            <th rowspan="2" style="width:10%">{{ isBangla ? 'র‌্যাব আইডি' : 'RAB ID' }}</th>
                         </tr>
                         <tr>
                             <th>{{ isBangla ? 'হইতে' : 'From' }}</th>
@@ -276,20 +274,18 @@
                                 <th style="width:10%">নিজ জেলা</th>
                                 <th style="width:11%">পূর্ববতী কর্মস্থল</th>
                                 <th style="width:11%">বদলিকৃত কর্মস্থল</th>
-                                <th style="width:9%">র‌্যাব আইডি</th>
-                                <th style="width:8%">মন্তব্য</th>
+                                <th style="width:12%">র‌্যাব আইডি</th>
                             </ng-container>
                             <ng-container *ngIf="!isBangla">
                                 <th style="width:5%">Ser</th>
                                 <th style="width:10%">Service ID</th>
                                 <th style="width:8%">Rank</th>
                                 <th style="width:8%">Trade</th>
-                                <th style="width:20%">Name</th>
-                                <th style="width:10%">Own District</th>
-                                <th style="width:11%">Previous Workplace</th>
-                                <th style="width:11%">Transfer Unit</th>
-                                <th style="width:9%">RAB ID</th>
-                                <th style="width:8%">Remarks</th>
+                                <th style="width:22%">Name</th>
+                                <th style="width:11%">Own District</th>
+                                <th style="width:12%">Previous Workplace</th>
+                                <th style="width:12%">Transfer Unit</th>
+                                <th style="width:12%">RAB ID</th>
                             </ng-container>
                         </tr>
                     </ng-container>
@@ -305,20 +301,15 @@
                         <td style="white-space: pre-line;">{{ empPrevWorkplace(emp) }}</td>
                         <td>{{ empTransferUnit(emp) }}</td>
                         <td>{{ empRabId(emp) }}</td>
-                        <td style="text-align: left;">{{ emp.noteSheetRemarks || '' }}</td>
-                    </tr>
-                    <tr *ngIf="masterRemarks">
-                        <td colspan="10" style="border-top: 1px solid #000; padding: 6px; text-align: left;">
-                            {{ masterRemarks }}
-                        </td>
                     </tr>
                 </tbody>
             </table>
 
-            <!-- Posting Text (single paragraph, above signature) -->
-            <div class="po-doc-posting-text" *ngIf="postingText" style="white-space: pre-line; text-align: justify;">
-                {{ postingText }}
-            </div>
+            <!-- Posting Text (rich HTML from editor) -->
+            <div class="po-doc-posting-text" *ngIf="postingText" [innerHTML]="postingText"></div>
+
+            <!-- Sub Text (rich HTML from editor) -->
+            <div class="po-doc-sub-text" *ngIf="subText" [innerHTML]="subText"></div>
 
             <!-- Signature Block -->
             <div class="po-doc-signature">

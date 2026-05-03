@@ -135,6 +135,7 @@ export class PostingOrderGenerateComponent implements OnInit {
     selectedTextType = 'en';
     /** Single plain-text paragraph that appears below the employee table and above the Onulipi section. */
     postingText = '';
+    subText = '';
     footerParagraphs: FooterParagraph[] = [];
 
     /** true = Bangla, false = English */
@@ -326,9 +327,10 @@ export class PostingOrderGenerateComponent implements OnInit {
                                 joiningDateInRAB: e.joiningDateInRAB
                             }));
                             this.loadingEmployees = false;
-                            // Reset footer paragraphs + posting text when a new notesheet is loaded
+                            // Reset footer paragraphs; pre-fill posting text from notesheet main text
                             this.footerParagraphs = [];
-                            this.postingText = '';
+                            this.postingText = ns.mainText ?? '';
+                            this.remarks = '';
                         },
                         error: (err: any) => {
                             this.loadingEmployees = false;
@@ -431,6 +433,7 @@ export class PostingOrderGenerateComponent implements OnInit {
             noteSheetId: this.selectedNoteSheetId,
             textType: this.selectedTextType === 'bn' ? 'bn' : 'en',
             mainText: mainText,
+            subText: this.subText.trim() || null,
             remarks: this.remarks || null,
             footerText: footerText,
             employeeIds: this.employees.map(e => e.employeeId),
@@ -447,6 +450,7 @@ export class PostingOrderGenerateComponent implements OnInit {
                     this.selectedNoteSheetNo = null;
                     this.selectedNoteSheetApprovedDate = null;
                     this.remarks = '';
+                    this.subText = '';
                     this.footerParagraphs = [];
                     this.postingText = '';
                     this.postingOrderDate = new Date();

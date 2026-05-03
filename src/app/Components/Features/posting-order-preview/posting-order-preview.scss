@@ -158,6 +158,45 @@
     }
 }
 
+/* ── Posting Text (rich HTML) ─────────────────────── */
+.po-doc-posting-text {
+    margin: 8px 0 6px;
+    font-size: 10pt;
+    line-height: 1.8;
+    text-align: justify;
+
+    p { margin: 4px 0; }
+    ul, ol { padding-left: 20px; margin: 4px 0; }
+    strong { font-weight: 700; }
+    em { font-style: italic; }
+}
+
+/* ── Sub Text (rich HTML) ─────────────────────────── */
+.po-doc-sub-text {
+    margin: 6px 0;
+    font-size: 10pt;
+    line-height: 1.8;
+    text-align: justify;
+
+    p { margin: 4px 0; }
+    ul, ol { padding-left: 20px; margin: 4px 0; }
+    strong { font-weight: 700; }
+    em { font-style: italic; }
+}
+
+/* ── Master Remarks (rich HTML, outside table) ────── */
+.po-doc-master-remarks {
+    margin: 6px 0 8px;
+    font-size: 10pt;
+    line-height: 1.8;
+    text-align: justify;
+
+    p { margin: 4px 0; }
+    ul, ol { padding-left: 20px; margin: 4px 0; }
+    strong { font-weight: 700; }
+    em { font-style: italic; }
+}
+
 /* ── Note ─────────────────────────────────────────── */
 .po-doc-note {
     margin: 8px 0;
