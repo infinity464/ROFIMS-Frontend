@@ -55,6 +55,23 @@
                         placeholder="Select date"
                     ></p-datepicker>
                 </div>
+
+                <!-- Posting Order Number Config -->
+                <div class="field min-w-250px">
+                    <label class="font-semibold block mb-2 text-700">Order No Config</label>
+                    <p-select
+                        [options]="configOptions"
+                        [(ngModel)]="postingOrderNumberConfigId"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Select config (optional)"
+                        [showClear]="true"
+                        [filter]="true"
+                        filterBy="label"
+                        styleClass="w-full"
+                        appendTo="body"
+                    ></p-select>
+                </div>
             </div>
 
             <!-- Row 3: Note (Rich Text) -->

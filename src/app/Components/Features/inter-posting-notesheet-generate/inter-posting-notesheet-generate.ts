@@ -79,6 +79,8 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
     fileRows: FileRowData[] = [];
     readonly noteSheetOperationTypeOptions = NoteSheetOperationTypeOptions;
     configOptions: { label: string; value: number }[] = [];
+    private _allConfigs: NoteSheetNumberConfigModel[] = [];
+    private _typeMap: Record<number, string> = {};
     /** Dynamic paragraphs */
     paragraphs: string[] = [''];
 
@@ -99,7 +101,7 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
     ) {
         this.form = this.fb.group({
             draftPostingMasterId: [null as number | null, Validators.required],
-            textType: ['en'],
+            textType: ['bn'],
             noteSheetDate: [null as Date | null, Validators.required],
             referenceNumber: [''],
             noteSheetNo: [''],
@@ -112,7 +114,7 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
             initiatorId: [null as number | null, Validators.required],
             recommenderIds: [[] as number[]],
             finalApproverId: [null as number | null, Validators.required],
-            noteSheetOperationType: [null as string | null, Validators.required],
+            noteSheetOperationType: ['manual' as string | null, Validators.required],
             isSecret: [false]
         });
     }
@@ -127,6 +129,11 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
         this.loadApproverOptions();
         this.resolvePreparedByMapping();
         this.loadNoteSheetNumberConfigs();
+
+        this.form.get('textType')!.valueChanges.subscribe(() => {
+            this.form.get('noteSheetNumberConfigId')?.setValue(null);
+            this.rebuildConfigOptions();
+        });
 
         this.route.queryParams.pipe(take(1)).subscribe((params) => {
             const id = params['id'];
@@ -182,17 +189,21 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
             memberTypes: this.masterBasicSetupService.getAllByType('EmployeeType')
         }).subscribe({
             next: ({ configs, memberTypes }) => {
-                const typeMap: Record<number, string> = {};
-                (memberTypes ?? []).forEach((t) => { typeMap[t.codeId] = t.codeValueEN; });
-                this.configOptions = (configs ?? [])
-                    .filter((c) => c.noteSheetType === 'InterPosting' && c.status)
-                    .map((c) => ({
-                        label: `${c.prefix}${typeMap[c.memberTypeId] ? ' — ' + typeMap[c.memberTypeId] : ''}`,
-                        value: c.configId
-                    }));
+                this._typeMap = {};
+                (memberTypes ?? []).forEach((t) => { this._typeMap[t.codeId] = t.codeValueEN; });
+                this._allConfigs = (configs ?? []).filter((c) => c.noteSheetType === 'InterPosting' && c.status);
+                this.rebuildConfigOptions();
             },
             error: () => {}
         });
+    }
+
+    private rebuildConfigOptions(): void {
+        const bangla = this.isBangla;
+        this.configOptions = this._allConfigs.map((c) => ({
+            label: `${(bangla && c.prefixBN) ? c.prefixBN : c.prefix}${this._typeMap[c.memberTypeId] ? ' — ' + this._typeMap[c.memberTypeId] : ''}`,
+            value: c.configId
+        }));
     }
 
     loadApproverOptions(): void {
@@ -373,7 +384,7 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
     private resetForm(): void {
         this.form.reset({
             draftPostingMasterId: null,
-            textType: 'en',
+            textType: 'bn',
             noteSheetNo: '',
             noteSheetNumberConfigId: null,
             noteSheetDate: null,
@@ -386,7 +397,7 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
             initiatorId: null,
             recommenderIds: [],
             finalApproverId: null,
-            noteSheetOperationType: null,
+            noteSheetOperationType: 'manual',
             isSecret: false
         });
         this.fileRows = [];

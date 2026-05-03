@@ -232,6 +232,7 @@
                 (onLazyLoad)="onLazyLoad($event)"
                 dataKey="employeeID"
                 [(selection)]="selectedRows"
+                [rowSelectable]="isRowSelectable.bind(this)"
                 [tableStyle]="{ 'min-width': '60rem' }"
                 styleClass="p-datatable-sm"
                 paginatorDropdownAppendTo="body"
@@ -299,8 +300,8 @@
                                 <input
                                     pInputText
                                     type="text"
-                                    [ngModel]="interPostingRemarks.get(row.employeeID) ?? ''"
-                                    (ngModelChange)="interPostingRemarks.set(row.employeeID, $event)"
+                                    [ngModel]="interPostingRemarks[row.employeeID] || ''"
+                                    (ngModelChange)="interPostingRemarks[row.employeeID] = $event"
                                     placeholder="Enter remark..."
                                     [disabled]="isInPostingProcess(row)"
                                     style="width: 100%; min-width: 160px;" />

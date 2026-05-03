@@ -862,11 +862,13 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         if (!Object.keys(this.districtNameToId).length) {
             this.loadDistrictMap();
         }
-        // SendingRemark (from EmployeeInfo) as readonly original; dd.Remarks as editable
+        // For new-posting: sendingRemark readonly, remarks editable.
+        // For inter-posting: interPostingRemark readonly, remarks editable.
         this.originalRemarks = {};
         this.newRemarks = {};
+        const isInter = this.isInterPosting();
         for (const emp of this.postingEmployees) {
-            this.originalRemarks[emp.employeeId] = emp.sendingRemark ?? '';
+            this.originalRemarks[emp.employeeId] = isInter ? (emp.interPostingRemark ?? '') : (emp.sendingRemark ?? '');
             this.newRemarks[emp.employeeId] = emp.remarks ?? '';
         }
     }
@@ -935,6 +937,9 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     }
 
     getCombinedRemarks(emp: DraftPostingEmployeeRow): string {
+        if (this.isInterPosting()) {
+            return [emp.interPostingRemark, emp.remarks].filter(s => s?.trim()).join(', ');
+        }
         return [emp.sendingRemark, emp.remarks].filter(s => s?.trim()).join(', ');
     }
 

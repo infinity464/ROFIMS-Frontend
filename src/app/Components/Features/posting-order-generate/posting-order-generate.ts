@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
+import { forkJoin } from 'rxjs';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
@@ -18,6 +19,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { environment } from '@/Core/Environments/environment';
 import { PostingService } from '@/services/posting.service';
+import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { ApprovedNoteSheetItem, PostingOrderMasterDto } from '@/models/posting.model';
 import { NoteSheetType } from '@/models/enums';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
@@ -111,6 +113,10 @@ export class PostingOrderGenerateComponent implements OnInit {
     loadingEmployees = false;
     saving = false;
 
+    // ─── Posting Order Number Config dropdown ────────────
+    configOptions: { label: string; value: number }[] = [];
+    postingOrderNumberConfigId: number | null = null;
+
     // ─── Generated Posting Orders list (toggleable) ──────
     showGeneratedList = false;
     generatedOrders: PostingOrderMasterDto[] = [];
@@ -163,6 +169,7 @@ export class PostingOrderGenerateComponent implements OnInit {
 
     constructor(
         private postingService: PostingService,
+        private masterBasicSetupService: MasterBasicSetupService,
         private http: HttpClient,
         private router: Router,
         private route: ActivatedRoute,
@@ -177,6 +184,7 @@ export class PostingOrderGenerateComponent implements OnInit {
         this.canDelete = _perms.canDelete;
 
         this.postingOrderDate = new Date();
+        this.loadPostingOrderNumberConfigs();
 
         // Lock posting type from route data if provided
         const routePostingType = this.route.snapshot.data['postingType'] as string | undefined;
@@ -193,6 +201,8 @@ export class PostingOrderGenerateComponent implements OnInit {
         this.approvedNoteSheets = [];
         this.selectedNoteSheetId = null;
         this.employees = [];
+        this.postingOrderNumberConfigId = null;
+        this.loadPostingOrderNumberConfigs();
 
         if (!this.selectedPostingType) return;
 
@@ -209,6 +219,26 @@ export class PostingOrderGenerateComponent implements OnInit {
                 this.loadingNoteSheets = false;
                 this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message ?? 'Failed to load notesheets.' });
             }
+        });
+    }
+
+    loadPostingOrderNumberConfigs(): void {
+        forkJoin({
+            configs: this.masterBasicSetupService.getAllPostingOrderNumberConfig(),
+            memberTypes: this.masterBasicSetupService.getAllByType('EmployeeType')
+        }).subscribe({
+            next: ({ configs, memberTypes }) => {
+                const typeMap: Record<number, string> = {};
+                (memberTypes ?? []).forEach((t) => { typeMap[t.codeId] = t.codeValueEN; });
+                const postingType = this.fixedPostingType ?? this.selectedPostingType;
+                this.configOptions = (configs ?? [])
+                    .filter((c) => (!postingType || c.postingType === postingType) && c.status)
+                    .map((c) => ({
+                        label: `${c.prefix}${typeMap[c.memberTypeId] ? ' — ' + typeMap[c.memberTypeId] : ''}`,
+                        value: c.configId
+                    }));
+            },
+            error: () => {}
         });
     }
 
@@ -390,7 +420,8 @@ export class PostingOrderGenerateComponent implements OnInit {
             remarks: this.remarks || null,
             footerText: footerText,
             employeeIds: this.employees.map(e => e.employeeId),
-            createdBy: 'system'
+            createdBy: 'system',
+            postingOrderNumberConfigId: this.postingOrderNumberConfigId ?? null
         }).subscribe({
             next: (res) => {
                 this.saving = false;
@@ -405,6 +436,7 @@ export class PostingOrderGenerateComponent implements OnInit {
                     this.footerParagraphs = [];
                     this.postingText = '';
                     this.postingOrderDate = new Date();
+                    this.postingOrderNumberConfigId = null;
                     // Refresh the generated list if it's currently visible
                     if (this.showGeneratedList) {
                         this.loadGeneratedOrders();

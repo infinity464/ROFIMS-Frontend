@@ -592,10 +592,16 @@ export class NotesheetListComponent implements OnInit {
     });
   }
 
-  /** Load employees with draft status available to be added to the current posting list. */
+  /** Load employees available to be added to the current posting list.
+   *  Inter-posting: employees marked for inter posting (same list as add-draft-inter-posting "Presently Serving Employees").
+   *  New posting: employees with Draft status. */
   private loadAddMemberList(): void {
     this.addMemberLoading = true;
-    this.employeeListService.getEmployeesByIsSendingNotesheetStatus(IsSendingNotesheetStatus.Draft).subscribe({
+    const isInter = this.employeesDialogRow?.noteSheetType === NoteSheetType.InterPosting;
+    const obs = isInter
+      ? this.employeeListService.getEmployeesMarkedForInterPosting()
+      : this.employeeListService.getEmployeesByIsSendingNotesheetStatus(IsSendingNotesheetStatus.Draft);
+    obs.subscribe({
       next: (list) => {
         this.addMemberList = list ?? [];
         this.addMemberLoading = false;
@@ -637,7 +643,11 @@ export class NotesheetListComponent implements OnInit {
   }
 
   get isApprovedPostingRoute(): boolean {
-    return this._router.url.includes('approved-new-posting');
+    return this._router.url.includes('approved-new-posting') || this._router.url.includes('approved-inter-posting');
+  }
+
+  get isInterPostingDialog(): boolean {
+    return this.employeesDialogRow?.noteSheetType === NoteSheetType.InterPosting;
   }
 
   /** True when the current dialog row already has a generated posting order — add/remove locked. */

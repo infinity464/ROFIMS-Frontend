@@ -204,6 +204,7 @@ export interface DraftPostingEmployeeRow {
     transferRabUnitNameBN?: string | null;
     remarks: string | null;
     sendingRemark: string | null;
+    interPostingRemark?: string | null;
     isSendingNotesheetStatus: string | null;
     serviceId: string | null;
     prefixName: string | null;

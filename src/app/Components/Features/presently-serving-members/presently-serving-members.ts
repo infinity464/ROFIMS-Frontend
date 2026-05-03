@@ -92,7 +92,7 @@ export class PresentlyServingMembers implements OnInit {
     interPostingMode = false;
 
     /** Per-row remarks entered by user before sending to inter posting. Keyed by employeeID. */
-    interPostingRemarks = new Map<number, string>();
+    interPostingRemarks: Record<number, string> = {};
 
     constructor(
         private servingMembersService: ServingMembersService,
@@ -155,6 +155,15 @@ export class PresentlyServingMembers implements OnInit {
         this.rows = rowPerPage;
     }
 
+    private prefillRemarks(): void {
+        if (!this.interPostingMode) return;
+        for (const row of this.list) {
+            if (row.interPostingRemark && !this.interPostingRemarks[row.employeeID]) {
+                this.interPostingRemarks[row.employeeID] = row.interPostingRemark;
+            }
+        }
+    }
+
     loadList(pageNo = 1, rowPerPage?: number): void {
         const rows = rowPerPage ?? this.rows;
         this.loading = true;
@@ -169,6 +178,7 @@ export class PresentlyServingMembers implements OnInit {
                     next: (res) => {
                         this.list = res.datalist ?? [];
                         this.totalRecords = res.pages?.rows ?? 0;
+                        this.prefillRemarks();
                         this.loading = false;
                     },
                     error: (err) => {
@@ -186,6 +196,7 @@ export class PresentlyServingMembers implements OnInit {
                 next: (res) => {
                     this.list = res.datalist ?? [];
                     this.totalRecords = res.pages?.rows ?? 0;
+                    this.prefillRemarks();
                     this.loading = false;
                 },
                 error: (err) => {
@@ -304,9 +315,14 @@ export class PresentlyServingMembers implements OnInit {
         }
     }
 
-    /** Whether an employee is already in a posting process (cannot be re-selected). */
+    /** Whether an employee is already in inter-posting process (cannot be re-selected). */
     isInPostingProcess(row: EmployeeServiceOverview): boolean {
-        return !!row.isSendingNotesheetStatus;
+        return row.isSendingNotesheetStatus === 'draftInterPosting';
+    }
+
+    /** Used by p-table [rowSelectable] to prevent header checkbox from selecting blocked rows. */
+    isRowSelectable(event: { data: EmployeeServiceOverview; index: number }): boolean {
+        return event.data.isSendingNotesheetStatus !== 'draftInterPosting';
     }
 
     /** Maps IsSendingNotesheetStatus to a display label. */
@@ -333,7 +349,7 @@ export class PresentlyServingMembers implements OnInit {
         this.savingInterPosting = true;
         const employees = this.selectedRows.map(r => ({
             employeeId: r.employeeID,
-            interPostingRemark: this.interPostingRemarks.get(r.employeeID) || null
+            interPostingRemark: this.interPostingRemarks[r.employeeID] || null
         }));
         this.employeeListService.setBulkIsSendingNotesheetStatus(employees, 'draftInterPosting').subscribe({
             next: (res) => {
@@ -341,7 +357,7 @@ export class PresentlyServingMembers implements OnInit {
                 if (res.statusCode === 200) {
                     this.messageService.add({ severity: 'success', summary: 'Success', detail: res.description || 'Employees marked for inter posting.' });
                     this.selectedRows = [];
-                    this.interPostingRemarks.clear();
+                    this.interPostingRemarks = {};
                     this.loadList(1, this.rows);
                 } else {
                     this.messageService.add({ severity: 'error', summary: 'Error', detail: res.description || 'Failed to update status.' });

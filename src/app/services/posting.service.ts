@@ -586,6 +586,7 @@ export class PostingService {
         footerText?: string | null;
         employeeIds: number[];
         createdBy: string;
+        postingOrderNumberConfigId?: number | null;
     }): Observable<{ statusCode: number; description: string; data?: any }> {
         return this.http.post<{ statusCode: number; description: string; data?: any }>(`${API}/CreatePostingOrder`, body);
     }
