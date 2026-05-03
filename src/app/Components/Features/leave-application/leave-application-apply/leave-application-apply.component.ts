@@ -1,29 +1,33 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormArray, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Router, ActivatedRoute } from '@angular/router';
 import { environment } from '@/Core/Environments/environment';
 import { SharedService } from '@/shared/services/shared-service';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 import { EmpService } from '@/services/emp-service';
-import { LeaveApplicationService, LeaveApplicationModel } from '@/services/leave-application.service';
+import { LeaveApplicationService, LeaveApplicationModel, LeaveApplicationDetailModel, LeaveApplicationRecommenderModel } from '@/services/leave-application.service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
 import { UserMenuService } from '@/services/user-menu.service';
+import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/file-references-form/file-references-form';
 import { MessageService } from 'primeng/api';
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
 import { CheckboxModule } from 'primeng/checkbox';
+import { MultiSelectModule } from 'primeng/multiselect';
 import { TextareaModule } from 'primeng/textarea';
 import { ToastModule } from 'primeng/toast';
 import { FluidModule } from 'primeng/fluid';
 import { FormsModule } from '@angular/forms';
-import { take } from 'rxjs/operators';
+import { forkJoin, of, take } from 'rxjs';
 import { RouterModule } from '@angular/router';
+
+interface ApproverOption { label: string; value: number; }
 
 @Component({
     selector: 'app-leave-application-apply',
@@ -37,10 +41,12 @@ import { RouterModule } from '@angular/router';
         SelectModule,
         DatePickerModule, FlexibleDateDirective,
         CheckboxModule,
+        MultiSelectModule,
         TextareaModule,
         ToastModule,
         FluidModule,
         EmployeeSearchComponent,
+        FileReferencesFormComponent,
         RouterModule
     ],
     providers: [MessageService],
@@ -48,13 +54,15 @@ import { RouterModule } from '@angular/router';
     styleUrl: './leave-application-apply.component.scss'
 })
 export class LeaveApplicationApplyComponent implements OnInit {
+    @ViewChild('fileReferencesForm') fileReferencesForm?: FileReferencesFormComponent;
+
     title = 'ApplyLeave';
     form!: FormGroup;
     applyForSelf = true;
     applicantInfo: EmployeeBasicInfo | null = null;
     applicantEmployeeId: number | null = null;
     leaveTypeOptions: { label: string; value: number }[] = [];
-    approverOptions: { label: string; value: number }[] = [];
+    approverOptions: ApproverOption[] = [];
     processTypeOptions = [
         { label: 'Automatic', value: 'automatic' },
         { label: 'Manual', value: 'manual' }
@@ -65,7 +73,6 @@ export class LeaveApplicationApplyComponent implements OnInit {
     ];
     hasReliever = false;
     relieverInfo: EmployeeBasicInfo | null = null;
-    totalDays: number | null = null;
     isSaving = false;
     editId: number | null = null;
     editMode = false;
@@ -73,6 +80,7 @@ export class LeaveApplicationApplyComponent implements OnInit {
     canInsert = true;
     canUpdate = true;
     canDelete = true;
+    fileRows: FileRowData[] = [];
 
     private api = `${environment.apis.core}/EmployeeInfo`;
 
@@ -117,18 +125,15 @@ export class LeaveApplicationApplyComponent implements OnInit {
         this.form = this.fb.group({
             applicantEmployeeId: [null as number | null, Validators.required],
             appliedByEmployeeId: [null as number | null],
-            leaveTypeId: [null as number | null, Validators.required],
-            processType: ['automatic' as string],
+            processType: [null as string | null, Validators.required],
             manualDecision: [null as string | null],
-            fromDate: [null as Date | null, Validators.required],
-            toDate: [null as Date | null, Validators.required],
             relieverEmployeeId: [null as number | null],
             addressDuringLeave: [''],
             remarks: [''],
-            finalApproverId: [null as number | null]
+            finalApproverId: [null as number | null],
+            leaveDetails: this.fb.array([this.createLeaveDetailRow()], this.overlapValidator()),
+            recommenderIds: [[] as number[]]
         });
-        this.form.get('fromDate')!.valueChanges.subscribe(() => this.calculateTotalDays());
-        this.form.get('toDate')!.valueChanges.subscribe(() => this.calculateTotalDays());
         this.form.get('processType')!.valueChanges.subscribe((val) => {
             if (val === 'manual') {
                 this.form.get('manualDecision')!.setValidators(Validators.required);
@@ -143,15 +148,66 @@ export class LeaveApplicationApplyComponent implements OnInit {
         });
     }
 
-    private calculateTotalDays(): void {
-        const from = this.form.get('fromDate')?.value as Date | null;
-        const to = this.form.get('toDate')?.value as Date | null;
-        if (from && to && to >= from) {
-            const diffMs = to.getTime() - from.getTime();
-            this.totalDays = Math.round(diffMs / (1000 * 60 * 60 * 24)) + 1;
-        } else {
-            this.totalDays = null;
+    /** Builds an empty leave-detail row FormGroup. */
+    private createLeaveDetailRow(initial?: Partial<{ leaveTypeId: number; fromDate: Date; toDate: Date }>): FormGroup {
+        return this.fb.group({
+            leaveTypeId: [initial?.leaveTypeId ?? null, Validators.required],
+            fromDate: [initial?.fromDate ?? null, Validators.required],
+            toDate: [initial?.toDate ?? null, Validators.required]
+        });
+    }
+
+    /** Sorts rows by fromDate and flags any pair with overlapping ranges. */
+    private overlapValidator(): ValidatorFn {
+        return (control: AbstractControl): ValidationErrors | null => {
+            const arr = control as FormArray;
+            const rows = arr.controls
+                .map((c, idx) => {
+                    const v = c.value;
+                    return v.fromDate && v.toDate
+                        ? { idx, from: new Date(v.fromDate).getTime(), to: new Date(v.toDate).getTime() }
+                        : null;
+                })
+                .filter((r): r is { idx: number; from: number; to: number } => r !== null)
+                .sort((a, b) => a.from - b.from);
+            for (let i = 1; i < rows.length; i++) {
+                if (rows[i].from <= rows[i - 1].to) {
+                    return { overlap: true };
+                }
+            }
+            return null;
+        };
+    }
+
+    get leaveDetails(): FormArray { return this.form.get('leaveDetails') as FormArray; }
+
+    addLeaveDetailRow(): void {
+        this.leaveDetails.push(this.createLeaveDetailRow());
+    }
+
+    removeLeaveDetailRow(index: number): void {
+        if (this.leaveDetails.length <= 1) return; // keep at least one row
+        this.leaveDetails.removeAt(index);
+    }
+
+    /** Inclusive day count for a row (returns null if either date is missing or invalid). */
+    leaveDetailRowDays(index: number): number | null {
+        const row = this.leaveDetails.at(index)?.value;
+        if (!row?.fromDate || !row?.toDate) return null;
+        const from = new Date(row.fromDate);
+        const to = new Date(row.toDate);
+        if (isNaN(from.getTime()) || isNaN(to.getTime()) || to < from) return null;
+        return Math.round((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    }
+
+    /** Total days across all valid leave-detail rows. */
+    get totalDays(): number {
+        let sum = 0;
+        for (let i = 0; i < this.leaveDetails.length; i++) {
+            const d = this.leaveDetailRowDays(i);
+            if (d != null) sum += d;
         }
+        return sum;
     }
 
     loadLeaveTypes(): void {
@@ -181,7 +237,7 @@ export class LeaveApplicationApplyComponent implements OnInit {
                     });
                 }
             },
-            error: (err: any) => {}
+            error: (_err: any) => {}
         });
     }
 
@@ -255,6 +311,27 @@ export class LeaveApplicationApplyComponent implements OnInit {
         }
     }
 
+    onFileRowsChange(rows: FileRowData[]): void {
+        this.fileRows = rows;
+    }
+
+    onDownloadFile(evt: { fileId: number; fileName: string }): void {
+        this.empService.downloadFile(evt.fileId).subscribe({
+            next: (blob) => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = evt.fileName || `file-${evt.fileId}`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(url), 100);
+            },
+            error: (err: any) =>
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file' })
+        });
+    }
+
     private getAppliedByEmployeeId(): number | null {
         if (this.applyForSelf && this.applicantEmployeeId) return this.applicantEmployeeId;
         const user = this.sharedService.getCurrentUser?.();
@@ -274,25 +351,54 @@ export class LeaveApplicationApplyComponent implements OnInit {
                     this.messageService.add({ severity: 'warn', summary: 'Cannot edit', detail: 'Only draft or manually processed applications can be edited.' });
                     return;
                 }
-                const from = d.fromDate ? new Date(d.fromDate) : null;
-                const to = d.toDate ? new Date(d.toDate) : null;
-                // Determine processType from saved status
+
+                // Determine processType: trust backend value, fall back to status-derived for old rows.
                 const savedStatus = d.leaveApplicationStatusId;
                 const isManual = savedStatus === 3 || savedStatus === 4;
                 const manualDecision = savedStatus === 3 ? 'approved' : savedStatus === 4 ? 'rejected' : null;
+                const processType = d.processType || (isManual ? 'manual' : 'automatic');
 
                 this.form.patchValue({
                     applicantEmployeeId: d.applicantEmployeeId ?? (d as any).ApplicantEmployeeId,
-                    leaveTypeId: d.leaveTypeId ?? (d as any).LeaveTypeId,
-                    processType: isManual ? 'manual' : 'automatic',
+                    processType: processType,
                     manualDecision: manualDecision,
-                    fromDate: from,
-                    toDate: to,
                     relieverEmployeeId: d.relieverEmployeeId ?? (d as any).RelieverEmployeeId ?? null,
                     addressDuringLeave: d.addressDuringLeave ?? (d as any).AddressDuringLeave ?? '',
                     remarks: d.remarks ?? (d as any).Remarks ?? '',
                     finalApproverId: d.finalApproverId ?? (d as any).FinalApproverId ?? null
                 });
+
+                // Rehydrate leave-detail rows from the response (or fall back to summary fields for legacy data).
+                this.leaveDetails.clear();
+                const detailRows = (d.leaveDetails && d.leaveDetails.length > 0)
+                    ? d.leaveDetails.map((r) => ({
+                        leaveTypeId: r.leaveTypeId,
+                        fromDate: r.fromDate ? new Date(r.fromDate) : null,
+                        toDate: r.toDate ? new Date(r.toDate) : null
+                    }))
+                    : [{
+                        leaveTypeId: (d.leaveTypeId ?? null) as number | null,
+                        fromDate: d.fromDate ? new Date(d.fromDate) : null,
+                        toDate: d.toDate ? new Date(d.toDate) : null
+                    }];
+                detailRows.forEach((r: any) => this.leaveDetails.push(this.createLeaveDetailRow(r)));
+                if (this.leaveDetails.length === 0) this.leaveDetails.push(this.createLeaveDetailRow());
+
+                // Recommenders — preserve sequence order from the backend.
+                const orderedRecommenderIds = (d.recommenders || [])
+                    .slice()
+                    .sort((a, b) => (a.sequenceNo ?? 0) - (b.sequenceNo ?? 0))
+                    .map((r) => r.employeeId);
+                this.form.patchValue({ recommenderIds: orderedRecommenderIds });
+
+                // Attachments → file-references-form rows (existing fileId, no local file).
+                this.fileRows = (d.attachments || []).map((a) => ({
+                    displayName: a.fileName || `file-${a.fileId}`,
+                    file: null,
+                    fileId: a.fileId
+                } as FileRowData));
+
+                // Reliever info.
                 this.applicantEmployeeId = d.applicantEmployeeId ?? (d as any).ApplicantEmployeeId;
                 const relieverId = d.relieverEmployeeId ?? (d as any).RelieverEmployeeId;
                 this.hasReliever = relieverId != null && relieverId !== 0;
@@ -314,7 +420,7 @@ export class LeaveApplicationApplyComponent implements OnInit {
                         }
                     });
                 }
-                this.empService.getEmployeeById(this.applicantEmployeeId).subscribe({
+                this.empService.getEmployeeById(this.applicantEmployeeId!).subscribe({
                     next: (emp: any) => {
                         if (emp)
                             this.applicantInfo = {
@@ -335,35 +441,6 @@ export class LeaveApplicationApplyComponent implements OnInit {
         });
     }
 
-    saveDraft(): void {
-        if (!this.buildAndValidate()) return;
-        const payload = this.buildPayload(1);
-        this.isSaving = true;
-        const obs = this.editId
-            ? this.leaveAppService.update({ ...payload, leaveApplicationId: this.editId })
-            : this.leaveAppService.save(payload);
-        obs.subscribe({
-            next: (res) => {
-                this.isSaving = false;
-                const code = res.statusCode ?? res.StatusCode ?? 0;
-                const msg = res.description ?? res.Description ?? '';
-                if (code === 200) {
-                    this.messageService.add({ severity: 'success', summary: 'Saved', detail: 'Draft saved.' });
-                    const data = res.data as any;
-                    const id = data?.leaveApplicationId ?? data?.LeaveApplicationId ?? this.editId;
-                    if (id && !this.editId) this.router.navigate(['/leave-application/apply'], { queryParams: { id } });
-                } else {
-                    this.messageService.add({ severity: 'warn', summary: 'Save failed', detail: msg || 'Save failed.' });
-                }
-            },
-            error: (err: any) => {
-                this.isSaving = false;
-                const detail = err?.error?.description ?? err?.error?.Description ?? err?.message ?? 'Failed to save draft';
-                this.messageService.add({ severity: 'error', summary: 'Error', detail });
-            }
-        });
-    }
-
     submitForApproval(): void {
         if (this.editMode ? !this.canUpdate : !this.canInsert) {
             this.messageService.add({ severity: 'warn', summary: 'Permission Denied', detail: 'You do not have permission to perform this action.' });
@@ -371,23 +448,92 @@ export class LeaveApplicationApplyComponent implements OnInit {
         }
         if (!this.buildAndValidate()) return;
         const processType = this.form.get('processType')?.value;
-
-        if (processType === 'manual') {
-            this.submitManual();
-        } else {
-            this.submitAutomatic();
-        }
+        // Upload any pending files first, then submit with the resolved attachment fileIds.
+        this.resolveAttachmentsThen((attachmentFileIds) => {
+            if (processType === 'manual') {
+                this.submitManual(attachmentFileIds);
+            } else {
+                this.submitAutomatic(attachmentFileIds);
+            }
+        });
     }
 
-    private submitManual(): void {
+    /** Saves the current form as a Draft (status 1) without triggering the approval workflow. */
+    saveDraft(): void {
+        if (this.editMode ? !this.canUpdate : !this.canInsert) {
+            this.messageService.add({ severity: 'warn', summary: 'Permission Denied', detail: 'You do not have permission to perform this action.' });
+            return;
+        }
+        if (!this.buildAndValidate()) return;
+        this.resolveAttachmentsThen((attachmentFileIds) => {
+            const payload = this.buildPayload(1, attachmentFileIds);
+            this.isSaving = true;
+            const obs = this.editId
+                ? this.leaveAppService.update({ ...payload, leaveApplicationId: this.editId })
+                : this.leaveAppService.save(payload);
+            obs.subscribe({
+                next: (res) => {
+                    this.isSaving = false;
+                    const code = res.statusCode ?? res.StatusCode ?? 0;
+                    const msg = res.description ?? res.Description ?? '';
+                    if (code === 200) {
+                        this.messageService.add({ severity: 'success', summary: 'Draft Saved', detail: 'Your draft has been saved.' });
+                        const data = res.data as any;
+                        const id = data?.leaveApplicationId ?? data?.LeaveApplicationId ?? this.editId;
+                        if (id && !this.editId) this.router.navigate(['/leave-application/apply'], { queryParams: { id } });
+                    } else {
+                        this.messageService.add({ severity: 'warn', summary: 'Save failed', detail: msg || 'Save failed.' });
+                    }
+                },
+                error: (err: any) => {
+                    this.isSaving = false;
+                    const detail = err?.error?.description ?? err?.error?.Description ?? err?.message ?? 'Failed to save draft';
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail });
+                }
+            });
+        });
+    }
+
+    /** Discards changes and navigates back to the list. */
+    cancel(): void {
+        this.router.navigate(['/leave-application/list']);
+    }
+
+    /** Uploads any locally-selected files via EmpService, then invokes the callback with the full set of fileIds (existing + newly uploaded). */
+    private resolveAttachmentsThen(cb: (attachmentFileIds: number[]) => void): void {
+        const filesToUpload = this.fileReferencesForm?.getFilesToUpload() || [];
+        const existingRefs = this.fileReferencesForm?.getExistingFileReferences() || [];
+        const existingIds = existingRefs.map((r) => r.FileId);
+
+        if (filesToUpload.length === 0) {
+            cb(existingIds);
+            return;
+        }
+
+        this.isSaving = true;
+        const uploads = filesToUpload.map((r: FileRowData) =>
+            this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
+        );
+        forkJoin(uploads).subscribe({
+            next: (results: { fileId: number; fileName: string }[]) => {
+                const newIds = (Array.isArray(results) ? results : []).map((r) => r.fileId);
+                cb([...existingIds, ...newIds]);
+            },
+            error: (err: any) => {
+                this.isSaving = false;
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to upload one or more files' });
+            }
+        });
+    }
+
+    private submitManual(attachmentFileIds: number[]): void {
         const decision = this.form.get('manualDecision')?.value;
         if (!decision) {
             this.messageService.add({ severity: 'warn', summary: 'Required', detail: 'Please select Approved or Rejected.' });
             return;
         }
-        // Manual: status 3=Approved, 4=Declined — no notification
         const statusId = decision === 'approved' ? 3 : 4;
-        const payload = this.buildPayload(statusId);
+        const payload = this.buildPayload(statusId, attachmentFileIds);
         this.isSaving = true;
 
         const obs = this.editId
@@ -415,13 +561,13 @@ export class LeaveApplicationApplyComponent implements OnInit {
         });
     }
 
-    private submitAutomatic(): void {
+    private submitAutomatic(attachmentFileIds: number[]): void {
         const finalApproverId = this.form.get('finalApproverId')?.value;
         if (!finalApproverId) {
             this.messageService.add({ severity: 'warn', summary: 'Required', detail: 'Please select Final Approver before submitting.' });
             return;
         }
-        const payload = this.buildPayload(1);
+        const payload = this.buildPayload(1, attachmentFileIds);
         this.isSaving = true;
         const doSubmit = (id: number) => {
             this.leaveAppService.submitForApproval(id).subscribe({
@@ -490,6 +636,7 @@ export class LeaveApplicationApplyComponent implements OnInit {
         if (applicantId != null && applicantId > 0) {
             this.form.patchValue({ applicantEmployeeId: applicantId });
         } else {
+            this.messageService.add({ severity: 'warn', summary: 'Required', detail: 'Please select an applicant.' });
             return false;
         }
         const user = this.sharedService.getCurrentUser?.();
@@ -498,33 +645,73 @@ export class LeaveApplicationApplyComponent implements OnInit {
             return false;
         }
         this.form.markAllAsTouched();
-        if (this.form.invalid) {
-            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please fill required fields: Leave Type, From Date, To Date.' });
+
+        // Surface specific row-level errors before the generic "Validation" message.
+        for (let i = 0; i < this.leaveDetails.length; i++) {
+            const row = this.leaveDetails.at(i).value;
+            if (!row.fromDate || !row.toDate || !row.leaveTypeId) {
+                this.messageService.add({ severity: 'warn', summary: 'Validation', detail: `Row ${i + 1}: please fill Leave Type, From Date, and To Date.` });
+                return false;
+            }
+            if (new Date(row.toDate) < new Date(row.fromDate)) {
+                this.messageService.add({ severity: 'warn', summary: 'Validation', detail: `Row ${i + 1}: To Date must be on or after From Date.` });
+                return false;
+            }
+        }
+        if (this.leaveDetails.errors?.['overlap']) {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Leave date ranges cannot overlap.' });
             return false;
         }
-        const from = this.form.get('fromDate')?.value as Date | null;
-        const to = this.form.get('toDate')?.value as Date | null;
-        if (from && to && to < from) {
-            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'To Date must be on or after From Date.' });
+        if (this.form.invalid) {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please fill all required fields.' });
             return false;
         }
         return true;
     }
 
-    private buildPayload(statusId: number): Partial<LeaveApplicationModel> {
-        const from = this.form.get('fromDate')?.value as Date | null;
-        const to = this.form.get('toDate')?.value as Date | null;
+    private buildPayload(statusId: number, attachmentFileIds: number[]): Partial<LeaveApplicationModel> {
         const applicantId = this.form.get('applicantEmployeeId')?.value ?? this.applicantEmployeeId;
         const user = this.sharedService.getCurrentUser?.() ?? '';
         const appliedBy = this.currentUserEmployeeId ?? applicantId ?? this.form.get('appliedByEmployeeId')?.value;
         const isManualApproval = statusId === 3 || statusId === 4;
         const now = new Date().toISOString();
+
+        const details: LeaveApplicationDetailModel[] = this.leaveDetails.controls
+            .map((c, idx) => {
+                const v = c.value;
+                const from = v.fromDate ? new Date(v.fromDate) : null;
+                const to = v.toDate ? new Date(v.toDate) : null;
+                if (!from || !to || !v.leaveTypeId) return null;
+                const days = Math.round((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                return {
+                    leaveTypeId: v.leaveTypeId,
+                    fromDate: this.toIsoDate(from),
+                    toDate: this.toIsoDate(to),
+                    days,
+                    sequenceNo: idx + 1
+                } as LeaveApplicationDetailModel;
+            })
+            .filter((d): d is LeaveApplicationDetailModel => d !== null);
+
+        // Summary fields (also computed server-side, but we set them so list views work even pre-DB-trip).
+        const firstRow = details[0];
+        const minFrom = details.reduce((min, d) => !min || d.fromDate < min ? d.fromDate : min, '' as string);
+        const maxTo = details.reduce((max, d) => !max || d.toDate > max ? d.toDate : max, '' as string);
+
+        const recommenderIds: number[] = (this.form.get('recommenderIds')?.value as number[] | null) ?? [];
+        const recommenders: LeaveApplicationRecommenderModel[] = recommenderIds.map((employeeId, idx) => ({
+            employeeId,
+            sequenceNo: idx + 1,
+            status: 1
+        }));
+
         return {
             applicantEmployeeId: applicantId,
             appliedByEmployeeId: appliedBy ?? applicantId,
-            leaveTypeId: this.form.get('leaveTypeId')?.value,
-            fromDate: from ? from.toISOString().slice(0, 10) : '',
-            toDate: to ? to.toISOString().slice(0, 10) : '',
+            processType: this.form.get('processType')?.value,
+            leaveTypeId: firstRow?.leaveTypeId ?? null,
+            fromDate: minFrom || null,
+            toDate: maxTo || null,
             relieverEmployeeId: this.form.get('relieverEmployeeId')?.value ?? null,
             addressDuringLeave: this.form.get('addressDuringLeave')?.value ?? '',
             remarks: this.form.get('remarks')?.value ?? '',
@@ -535,7 +722,18 @@ export class LeaveApplicationApplyComponent implements OnInit {
             declinedByEmployeeId: isManualApproval && statusId === 4 ? (this.currentUserEmployeeId ?? appliedBy) : null,
             declinedDate: isManualApproval && statusId === 4 ? now : null,
             createdBy: user,
-            lastUpdatedBy: user
+            lastUpdatedBy: user,
+            leaveDetails: details,
+            recommenders,
+            attachments: attachmentFileIds.map((fileId) => ({ fileId }))
         };
+    }
+
+    private toIsoDate(d: Date): string {
+        // yyyy-MM-dd in local time (matches the DateOnly contract on the backend).
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
     }
 }

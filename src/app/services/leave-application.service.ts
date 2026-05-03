@@ -5,14 +5,49 @@ import { map } from 'rxjs/operators';
 import { environment } from '@/Core/Environments/environment';
 import { PagedResponse } from '@/Core/Models/Pagination';
 
+/** One leave-type row inside a multi-row leave application. */
+export interface LeaveApplicationDetailModel {
+    leaveApplicationDetailId?: number;
+    leaveApplicationId?: number;
+    leaveTypeId: number;
+    fromDate: string; // yyyy-MM-dd
+    toDate: string;   // yyyy-MM-dd
+    days?: number;
+    sequenceNo?: number;
+}
+
+/** Recommender step. Status: 1=Pending, 2=Approved, 3=Declined. */
+export interface LeaveApplicationRecommenderModel {
+    leaveApplicationRecommenderId?: number;
+    leaveApplicationId?: number;
+    employeeId: number;
+    sequenceNo: number;
+    status?: number;
+    remarkText?: string | null;
+    actionedDate?: string | null;
+}
+
+/** Attachment row (FileId points at FileInformation). For reads we also surface fileName for display. */
+export interface LeaveApplicationAttachmentModel {
+    leaveApplicationAttachmentId?: number;
+    leaveApplicationId?: number;
+    fileId: number;
+    fileName?: string;
+}
+
 /** Leave application (system generated leave). Status: 1=Draft, 2=PendingApproval, 3=Approved, 4=Declined. */
 export interface LeaveApplicationModel {
     leaveApplicationId: number;
     applicantEmployeeId: number;
     appliedByEmployeeId: number;
-    leaveTypeId: number;
-    fromDate: string;
-    toDate: string;
+    /** 'automatic' or 'manual' — required from backend (mandatory selection). */
+    processType: string;
+    /** Summary leave type (first detail row); kept for backward compatibility with list views. */
+    leaveTypeId?: number | null;
+    /** Summary earliest from-date (min across detail rows). */
+    fromDate?: string | null;
+    /** Summary latest to-date (max across detail rows). */
+    toDate?: string | null;
     relieverEmployeeId?: number | null;
     addressDuringLeave?: string | null;
     remarks?: string | null;
@@ -27,6 +62,12 @@ export interface LeaveApplicationModel {
     createdDate?: string;
     lastUpdatedBy?: string;
     lastupdate?: string;
+    /** Per-row leave entries. At least one row is required on save. */
+    leaveDetails?: LeaveApplicationDetailModel[];
+    /** Recommender chain (0..N) walked between submit and FinalApprover. */
+    recommenders?: LeaveApplicationRecommenderModel[];
+    /** File attachments (0..N). */
+    attachments?: LeaveApplicationAttachmentModel[];
 }
 
 /** Filter params for GetByStatusForUserPaginated (server-side). */
@@ -126,13 +167,17 @@ export class LeaveApplicationService {
 
     /** Normalize API response (PascalCase or camelCase) to LeaveApplicationModel (camelCase). */
     private normalizeRow(r: any): LeaveApplicationModel {
+        const detailsRaw = r.leaveDetails ?? r.LeaveDetails ?? [];
+        const recommendersRaw = r.recommenders ?? r.Recommenders ?? [];
+        const attachmentsRaw = r.attachments ?? r.Attachments ?? [];
         return {
             leaveApplicationId: r.leaveApplicationId ?? r.LeaveApplicationId ?? 0,
             applicantEmployeeId: r.applicantEmployeeId ?? r.ApplicantEmployeeId ?? 0,
             appliedByEmployeeId: r.appliedByEmployeeId ?? r.AppliedByEmployeeId ?? 0,
-            leaveTypeId: r.leaveTypeId ?? r.LeaveTypeId ?? 0,
-            fromDate: r.fromDate ?? r.FromDate ?? '',
-            toDate: r.toDate ?? r.ToDate ?? '',
+            processType: r.processType ?? r.ProcessType ?? '',
+            leaveTypeId: r.leaveTypeId ?? r.LeaveTypeId ?? null,
+            fromDate: r.fromDate ?? r.FromDate ?? null,
+            toDate: r.toDate ?? r.ToDate ?? null,
             relieverEmployeeId: r.relieverEmployeeId ?? r.RelieverEmployeeId ?? null,
             addressDuringLeave: r.addressDuringLeave ?? r.AddressDuringLeave ?? null,
             remarks: r.remarks ?? r.Remarks ?? null,
@@ -146,7 +191,31 @@ export class LeaveApplicationService {
             createdBy: r.createdBy ?? r.CreatedBy,
             createdDate: r.createdDate ?? r.CreatedDate,
             lastUpdatedBy: r.lastUpdatedBy ?? r.LastUpdatedBy,
-            lastupdate: r.lastupdate ?? r.Lastupdate
+            lastupdate: r.lastupdate ?? r.Lastupdate,
+            leaveDetails: (Array.isArray(detailsRaw) ? detailsRaw : []).map((d: any) => ({
+                leaveApplicationDetailId: d.leaveApplicationDetailId ?? d.LeaveApplicationDetailId,
+                leaveApplicationId: d.leaveApplicationId ?? d.LeaveApplicationId,
+                leaveTypeId: d.leaveTypeId ?? d.LeaveTypeId,
+                fromDate: d.fromDate ?? d.FromDate ?? '',
+                toDate: d.toDate ?? d.ToDate ?? '',
+                days: d.days ?? d.Days,
+                sequenceNo: d.sequenceNo ?? d.SequenceNo
+            } as LeaveApplicationDetailModel)),
+            recommenders: (Array.isArray(recommendersRaw) ? recommendersRaw : []).map((rc: any) => ({
+                leaveApplicationRecommenderId: rc.leaveApplicationRecommenderId ?? rc.LeaveApplicationRecommenderId,
+                leaveApplicationId: rc.leaveApplicationId ?? rc.LeaveApplicationId,
+                employeeId: rc.employeeId ?? rc.EmployeeId,
+                sequenceNo: rc.sequenceNo ?? rc.SequenceNo,
+                status: rc.status ?? rc.Status,
+                remarkText: rc.remarkText ?? rc.RemarkText ?? null,
+                actionedDate: rc.actionedDate ?? rc.ActionedDate ?? null
+            } as LeaveApplicationRecommenderModel)),
+            attachments: (Array.isArray(attachmentsRaw) ? attachmentsRaw : []).map((a: any) => ({
+                leaveApplicationAttachmentId: a.leaveApplicationAttachmentId ?? a.LeaveApplicationAttachmentId,
+                leaveApplicationId: a.leaveApplicationId ?? a.LeaveApplicationId,
+                fileId: a.fileId ?? a.FileId,
+                fileName: a.file?.fileName ?? a.File?.FileName ?? a.fileName ?? a.FileName
+            } as LeaveApplicationAttachmentModel))
         };
     }
 

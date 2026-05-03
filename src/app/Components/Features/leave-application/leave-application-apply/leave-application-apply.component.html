@@ -1,134 +1,225 @@
 <p-fluid>
   <p-toast position="top-center"></p-toast>
-  <div class="card">
-    <div class="font-semibold text-xl mb-4">{{ title }}</div>
-    
-    <form [formGroup]="form" (ngSubmit)="submitForApproval()">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        <div>
-          <label class="font-medium block mb-2">Apply for</label>
-          <div class="flex gap-2">
-            <p-button
-              type="button"
-              [label]="'For myself'"
-              [outlined]="!applyForSelf"
-              (onClick)="setApplyForSelf(true)">
-            </p-button>
-            <p-button
-              type="button"
-              [label]="'For others'"
-              [outlined]="applyForSelf"
-              (onClick)="setApplyForSelf(false)">
-            </p-button>
-          </div>
-        </div>
-      </div>
 
-      @if (applyForSelf) {
-        @if (applicantInfo) {
-         
-        }
-      } @else {
-        <div class="mb-4">
-          <app-employee-search
-            [initialEmployeeId]="applicantEmployeeId ?? null"
-            (onEmployeeFound)="onApplicantSelected($event)"
-            (onSearchReset)="onApplicantSelected(null)">
-          </app-employee-search>
-         
-        </div>
-      }
+  <div class="leave-apply-page">
+    <form [formGroup]="form" (ngSubmit)="submitForApproval()" class="leave-apply-form">
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-        <div>
-          <label class="font-medium block mb-2">Leave Type</label>
-          <p-select
-            formControlName="leaveTypeId"
-            [options]="leaveTypeOptions"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="Select Leave Type"
-            styleClass="w-full">
-          </p-select>
+      <!-- ─────────────── Section 1: Apply Leave (request details) ─────────────── -->
+      <section class="form-section">
+        <div class="section-header">
+          <h2 class="section-title">Apply Leave</h2>
+          <span class="section-hint">Submit a new leave application for yourself or another member.</span>
         </div>
-        <div>
-          <label class="font-medium block mb-2">Process Type</label>
-          <p-select
-            formControlName="processType"
-            [options]="processTypeOptions"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="Select Process Type"
-            styleClass="w-full">
-          </p-select>
-        </div>
-        @if (form.get('processType')?.value === 'manual') {
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <!-- Apply for toggle -->
           <div>
-            <label class="font-medium block mb-2">Decision</label>
+            <label class="field-label">Apply for <span class="req">*</span></label>
+            <div class="apply-for-toggle" role="radiogroup" aria-label="Apply for">
+              <button
+                type="button"
+                role="radio"
+                [attr.aria-checked]="applyForSelf"
+                class="toggle-btn"
+                [class.is-active]="applyForSelf"
+                (click)="setApplyForSelf(true)">
+                <i class="pi pi-user mr-2"></i>For myself
+              </button>
+              <button
+                type="button"
+                role="radio"
+                [attr.aria-checked]="!applyForSelf"
+                class="toggle-btn"
+                [class.is-active]="!applyForSelf"
+                (click)="setApplyForSelf(false)">
+                <i class="pi pi-users mr-2"></i>For others
+              </button>
+            </div>
+          </div>
+
+          <!-- Process Type -->
+          <div>
+            <label class="field-label">Process Type <span class="req">*</span></label>
             <p-select
-              formControlName="manualDecision"
-              [options]="manualDecisionOptions"
+              formControlName="processType"
+              [options]="processTypeOptions"
               optionLabel="label"
               optionValue="value"
-              placeholder="Select Decision"
-              styleClass="w-full">
+              placeholder="Select Process Type"
+              styleClass="w-full"
+              appendTo="body">
             </p-select>
-          </div>
-        }
-      </div>
-
-      <div class="grid grid-cols-[1fr_1fr_auto] gap-4 mb-4 items-end">
-        <div>
-          <label class="font-medium block mb-2">From Date</label>
-          <p-datepicker formControlName="fromDate" dateFormat="dd-mm-yy" styleClass="w-full" placeholder="From"></p-datepicker>
-        </div>
-        <div>
-          <label class="font-medium block mb-2">To Date</label>
-          <p-datepicker formControlName="toDate" dateFormat="dd-mm-yy" styleClass="w-full" placeholder="To"></p-datepicker>
-        </div>
-        <div class="flex items-center pb-1" style="min-width: 70px;">
-          @if (totalDays !== null) {
-            <span class="font-semibold text-primary whitespace-nowrap">{{ totalDays }} Day{{ totalDays > 1 ? 's' : '' }}</span>
-          }
-        </div>
-      </div>
-
-      <div class="mb-4">
-        <div class="flex align-items-center gap-2 mb-2">
-          <p-checkbox [(ngModel)]="hasReliever" [ngModelOptions]="{ standalone: true }" [binary]="true" inputId="hasReliever" (onChange)="onRelieverCheckChange()"></p-checkbox>
-          <label for="hasReliever" class="font-medium cursor-pointer">Reliever</label>
-        </div>
-        @if (hasReliever) {
-          <div class="ml-4">
-            <label class="font-medium block mb-2">Reliever's Service ID / RAB ID</label>
-            <app-employee-search
-              (onEmployeeFound)="onRelieverSelected($event)"
-              (onSearchReset)="onRelieverSelected(null)">
-            </app-employee-search>
-            @if (relieverInfo) {
-              <p class="text-sm text-500 mt-1">{{ relieverInfo.fullNameEN }} ({{ relieverInfo.rabid }})</p>
+            @if (form.get('processType')?.touched && form.get('processType')?.invalid) {
+              <small class="field-error">Process Type is required.</small>
             }
           </div>
+        </div>
+
+        <!-- Applicant search (only when "For others") -->
+        @if (!applyForSelf) {
+          <div class="mb-4">
+            <label class="field-label">Applicant <span class="req">*</span></label>
+            <app-employee-search
+              [initialEmployeeId]="applicantEmployeeId ?? null"
+              (onEmployeeFound)="onApplicantSelected($event)"
+              (onSearchReset)="onApplicantSelected(null)">
+            </app-employee-search>
+          </div>
         }
-      </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        <div>
-          <label class="font-medium block mb-2">Address During Leave</label>
-          <textarea pTextarea formControlName="addressDuringLeave" rows="2" class="w-full" placeholder="Address during leave"></textarea>
-        </div>
-        <div>
-          <label class="font-medium block mb-2">Remarks</label>
-          <textarea pTextarea formControlName="remarks" rows="2" class="w-full" placeholder="Remarks"></textarea>
-        </div>
-      </div>
+        <!-- Manual decision (conditional) -->
+        @if (form.get('processType')?.value === 'manual') {
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label class="field-label">Decision <span class="req">*</span></label>
+              <p-select
+                formControlName="manualDecision"
+                [options]="manualDecisionOptions"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Select Decision"
+                styleClass="w-full"
+                appendTo="body">
+              </p-select>
+            </div>
+          </div>
+        }
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <!-- Leave-type rows (one or more). -->
+        <div class="leave-entries" formArrayName="leaveDetails">
+          <div class="subsection-header">
+            <div>
+              <h3 class="subsection-title">Leave Entries <span class="req">*</span></h3>
+              <small class="field-hint">Add one row per leave type. Date ranges cannot overlap.</small>
+            </div>
+            <p-button type="button" icon="pi pi-plus" label="Add Leave" size="small" [outlined]="true" (onClick)="addLeaveDetailRow()"></p-button>
+          </div>
+          <div class="entries-table-wrap">
+            <table class="entries-table">
+              <thead>
+                <tr>
+                  <th class="col-type">Leave Type</th>
+                  <th class="col-date">From</th>
+                  <th class="col-date">To</th>
+                  <th class="col-days">Days</th>
+                  <th class="col-action"></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of leaveDetails.controls; track $index) {
+                  <tr [formGroupName]="$index">
+                    <td>
+                      <p-select
+                        formControlName="leaveTypeId"
+                        [options]="leaveTypeOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Select Leave Type"
+                        styleClass="w-full"
+                        appendTo="body">
+                      </p-select>
+                    </td>
+                    <td>
+                      <p-datepicker formControlName="fromDate" dateFormat="dd-mm-yy" [showIcon]="true" styleClass="w-full" placeholder="Pick date" appendTo="body"></p-datepicker>
+                    </td>
+                    <td>
+                      <p-datepicker formControlName="toDate" dateFormat="dd-mm-yy" [showIcon]="true" styleClass="w-full" placeholder="Pick date" appendTo="body"></p-datepicker>
+                    </td>
+                    <td class="days-cell">
+                      @if (leaveDetailRowDays($index) !== null) {
+                        <span class="days-badge">{{ leaveDetailRowDays($index) }} {{ (leaveDetailRowDays($index) ?? 0) === 1 ? 'day' : 'days' }}</span>
+                      } @else {
+                        <span class="days-placeholder">—</span>
+                      }
+                    </td>
+                    <td class="action-cell">
+                      @if (leaveDetails.length > 1) {
+                        <p-button type="button" icon="pi pi-trash" severity="danger" [text]="true" [rounded]="true" size="small" (onClick)="removeLeaveDetailRow($index)" pTooltip="Remove row"></p-button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="3" class="total-label">Total</td>
+                  <td class="total-value">
+                    <span class="days-badge total">{{ totalDays }} {{ totalDays === 1 ? 'day' : 'days' }}</span>
+                  </td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          @if (leaveDetails.errors?.['overlap']) {
+            <small class="field-error block mt-2"><i class="pi pi-exclamation-triangle mr-1"></i>Leave date ranges cannot overlap.</small>
+          }
+        </div>
+
+        <div class="reliever-block mt-4">
+          <div class="reliever-toggle">
+            <p-checkbox [(ngModel)]="hasReliever" [ngModelOptions]="{ standalone: true }" [binary]="true" inputId="hasReliever" (onChange)="onRelieverCheckChange()"></p-checkbox>
+            <label for="hasReliever" class="reliever-label">
+              <span class="font-medium">Assign a Reliever</span>
+              <small class="field-hint block">Pick someone to cover your responsibilities while you are on leave.</small>
+            </label>
+          </div>
+          @if (hasReliever) {
+            <div class="reliever-picker">
+              <label class="field-label">Reliever's Service ID / RAB ID</label>
+              <app-employee-search
+                (onEmployeeFound)="onRelieverSelected($event)"
+                (onSearchReset)="onRelieverSelected(null)">
+              </app-employee-search>
+              @if (relieverInfo) {
+                <p class="reliever-selected"><i class="pi pi-check-circle mr-1"></i>{{ relieverInfo.fullNameEN }} ({{ relieverInfo.rabid }})</p>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <div>
+            <label class="field-label">Address During Leave</label>
+            <textarea pTextarea formControlName="addressDuringLeave" rows="3" class="w-full" placeholder="Where you can be reached"></textarea>
+          </div>
+          <div>
+            <label class="field-label">Remarks</label>
+            <textarea pTextarea formControlName="remarks" rows="3" class="w-full" placeholder="Any additional notes for the approver"></textarea>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─────────────── Section 3: Approval Flow ─────────────── -->
+      <section class="form-section">
+        <div class="section-header">
+          <h2 class="section-title">Approval Flow</h2>
+          <span class="section-hint">Optional recommenders are walked in order before the final approver.</span>
+        </div>
+
+        <div class="mb-4">
+          <label class="field-label">Recommenders</label>
+          <p-multiselect
+            formControlName="recommenderIds"
+            [options]="approverOptions"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Select one or more recommenders (optional)"
+            styleClass="w-full"
+            [filter]="true"
+            display="chip"
+            appendTo="body">
+          </p-multiselect>
+          <small class="field-hint">Application is routed through recommenders in selection order, then the Final Approver.</small>
+        </div>
+
         <div>
-          <label class="font-medium block mb-2">
+          <label class="field-label">
             Final Approver
-            @if (form.get('processType')?.value === 'manual') {
-              <span class="text-sm text-500 font-normal">(Optional)</span>
+            @if (form.get('processType')?.value !== 'manual') {
+              <span class="req">*</span>
+            } @else {
+              <span class="optional-tag">(Optional)</span>
             }
           </label>
           <p-select
@@ -137,14 +228,49 @@
             optionLabel="label"
             optionValue="value"
             placeholder="Select final approver"
-            styleClass="w-full">
+            styleClass="w-full"
+            [filter]="true"
+            appendTo="body">
           </p-select>
+          <small class="field-hint">The person who gives the final go-ahead on this application.</small>
         </div>
+      </section>
+
+      <!-- ─────────────── Section 4: Supporting Documents ─────────────── -->
+      <section class="form-section">
+        <div class="section-header">
+          <h2 class="section-title">Supporting Documents</h2>
+          <span class="section-hint">Attach any files relevant to the leave (medical certificate, travel itinerary, etc.).</span>
+        </div>
+
+        @if (fileRows.length === 0) {
+          <div class="attachments-empty">
+            <i class="pi pi-paperclip empty-icon"></i>
+            <div>
+              <p class="empty-title">No files attached yet</p>
+              <p class="empty-subtitle">Click <strong>Add File</strong> below to upload supporting documents.</p>
+            </div>
+          </div>
+        }
+
+        <div class="attachments-host" [class.has-files]="fileRows.length > 0">
+          <app-file-references-form
+            #fileReferencesForm
+            [fileRows]="fileRows"
+            [isViewMode]="false"
+            title="Attachments"
+            (fileRowsChange)="onFileRowsChange($event)"
+            (onDownloadFile)="onDownloadFile($event)">
+          </app-file-references-form>
+        </div>
+      </section>
+
+      <!-- ─────────────── Sticky Action Bar ─────────────── -->
+      <div class="form-action-bar">
+        <span class="spacer"></span>
+        <p-button type="submit" label="Submit" icon="pi pi-send" severity="success" [loading]="isSaving" [class.perm-hidden]="editMode ? !canUpdate : !canInsert"></p-button>
       </div>
 
-      <div class="flex gap-2 mt-4">
-        <p-button type="submit" label="Submit" icon="pi pi-send" [loading]="isSaving" [class.perm-hidden]="editMode ? !canUpdate : !canInsert"></p-button>
-      </div>
     </form>
   </div>
 </p-fluid>
