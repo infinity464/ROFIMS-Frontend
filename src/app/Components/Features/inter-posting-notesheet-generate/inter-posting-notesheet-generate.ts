@@ -26,7 +26,7 @@ import { EmpService } from '@/services/emp-service';
 import { PostingService } from '@/services/posting.service';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
-import { NoteSheetType, NoteSheetOperationTypeOptions, ApprovalStatus, ApproverRoleType } from '@/models/enums';
+import { NoteSheetType, NoteSheetOperationTypeOptions, ApprovalStatus, ApproverRoleType, CodeType } from '@/models/enums';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { NoteSheetNumberConfigModel } from '@/Components/basic-setup/shared/models/notesheet-number-config';
 
@@ -186,7 +186,7 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
     loadNoteSheetNumberConfigs(): void {
         forkJoin({
             configs: this.masterBasicSetupService.getAllNoteSheetNumberConfig(),
-            memberTypes: this.masterBasicSetupService.getAllByType('EmployeeType')
+            memberTypes: this.masterBasicSetupService.getAllByType(CodeType.EmployeeType)
         }).subscribe({
             next: ({ configs, memberTypes }) => {
                 this._typeMap = {};

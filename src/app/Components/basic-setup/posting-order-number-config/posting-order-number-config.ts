@@ -8,6 +8,7 @@ import { PostingOrderNumberConfigModel } from '../shared/models/posting-order-nu
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { SharedService } from '@/shared/services/shared-service';
 import { MasterBasicSetupService } from '../shared/services/MasterBasicSetupService';
+import { CodeType } from '@/models/enums';
 import { InputText } from 'primeng/inputtext';
 import { InputNumber } from 'primeng/inputnumber';
 import { IconField } from 'primeng/iconfield';
@@ -69,7 +70,7 @@ export class PostingOrderNumberConfigComponent implements OnInit {
         this.currentUser = this.sharedService.getCurrentUser();
         this.initForm();
         this.getAll();
-        this.masterBasicSetupService.getAllByType('EmployeeType').subscribe(res => {
+        this.masterBasicSetupService.getAllByType(CodeType.EmployeeType).subscribe(res => {
             this.memberTypeOptions = res.map(r => ({ label: r.codeValueEN, value: r.codeId }));
         });
     }

@@ -21,7 +21,8 @@ import { environment } from '@/Core/Environments/environment';
 import { PostingService } from '@/services/posting.service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { ApprovedNoteSheetItem, PostingOrderMasterDto } from '@/models/posting.model';
-import { NoteSheetType } from '@/models/enums';
+import { PostingOrderNumberConfigModel } from '@/Components/basic-setup/shared/models/posting-order-number-config';
+import { NoteSheetType, CodeType } from '@/models/enums';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 
 interface NoteSheetEmployee {
@@ -116,6 +117,8 @@ export class PostingOrderGenerateComponent implements OnInit {
     // ─── Posting Order Number Config dropdown ────────────
     configOptions: { label: string; value: number }[] = [];
     postingOrderNumberConfigId: number | null = null;
+    private allConfigs: PostingOrderNumberConfigModel[] = [];
+    private memberTypeMap: Record<number, string> = {};
 
     // ─── Generated Posting Orders list (toggleable) ──────
     showGeneratedList = false;
@@ -225,21 +228,30 @@ export class PostingOrderGenerateComponent implements OnInit {
     loadPostingOrderNumberConfigs(): void {
         forkJoin({
             configs: this.masterBasicSetupService.getAllPostingOrderNumberConfig(),
-            memberTypes: this.masterBasicSetupService.getAllByType('EmployeeType')
+            memberTypes: this.masterBasicSetupService.getAllByType(CodeType.EmployeeType)
         }).subscribe({
             next: ({ configs, memberTypes }) => {
-                const typeMap: Record<number, string> = {};
-                (memberTypes ?? []).forEach((t) => { typeMap[t.codeId] = t.codeValueEN; });
-                const postingType = this.fixedPostingType ?? this.selectedPostingType;
-                this.configOptions = (configs ?? [])
-                    .filter((c) => (!postingType || c.postingType === postingType) && c.status)
-                    .map((c) => ({
-                        label: `${c.prefix}${typeMap[c.memberTypeId] ? ' — ' + typeMap[c.memberTypeId] : ''}`,
-                        value: c.configId
-                    }));
+                this.memberTypeMap = {};
+                (memberTypes ?? []).forEach((t) => { this.memberTypeMap[t.codeId] = t.codeValueEN; });
+                this.allConfigs = configs ?? [];
+                this.rebuildConfigOptions();
             },
             error: () => {}
         });
+    }
+
+    private rebuildConfigOptions(): void {
+        const postingType = this.fixedPostingType ?? this.selectedPostingType;
+        const isBN = this.selectedTextType === 'bn';
+        this.configOptions = this.allConfigs
+            .filter((c) => (!postingType || c.postingType === postingType) && c.status)
+            .map((c) => {
+                const prefixLabel = isBN ? (c.prefixBN || c.prefix) : c.prefix;
+                return {
+                    label: `${prefixLabel}${this.memberTypeMap[c.memberTypeId] ? ' — ' + this.memberTypeMap[c.memberTypeId] : ''}`,
+                    value: c.configId
+                };
+            });
     }
 
     /** Dropdown options for notesheet select. */
@@ -271,6 +283,8 @@ export class PostingOrderGenerateComponent implements OnInit {
                 this.selectedNoteSheetApprovedDate = ns.finalApprovalApprovedDate ?? ns.lastupdate;
                 // Set textType from notesheet (TextType: 1 = Bangla, else English)
                 this.selectedTextType = (ns.textType === 1 || ns.textType === '1') ? 'bn' : 'en';
+                this.postingOrderNumberConfigId = null;
+                this.rebuildConfigOptions();
 
                 const draftPostingMasterId = ns.draftPostingMasterId;
                 if (draftPostingMasterId) {

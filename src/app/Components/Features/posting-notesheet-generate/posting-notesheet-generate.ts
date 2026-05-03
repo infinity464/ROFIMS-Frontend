@@ -26,7 +26,7 @@ import { EmpService } from '@/services/emp-service';
 import { PostingService } from '@/services/posting.service';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
-import { NoteSheetType, NoteSheetOperationTypeOptions, ApprovalStatus, ApproverRoleType } from '@/models/enums';
+import { NoteSheetType, NoteSheetOperationTypeOptions, ApprovalStatus, ApproverRoleType, CodeType } from '@/models/enums';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 
@@ -418,7 +418,7 @@ export class PostingNotesheetGenerateComponent implements OnInit {
         const configApi = `${environment.apis.core}/NoteSheetNumberConfig`;
         forkJoin([
             this.http.get<any[]>(`${configApi}/GetAll`),
-            this.masterBasicSetupService.getAllByType('EmployeeType')
+            this.masterBasicSetupService.getAllByType(CodeType.EmployeeType)
         ]).subscribe({
             next: ([configs, memberTypes]) => {
                 // Build member type map

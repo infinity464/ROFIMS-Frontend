@@ -24,6 +24,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { DialogModule } from 'primeng/dialog';
 import { TagModule } from 'primeng/tag';
 import { forkJoin } from 'rxjs';
+import { CodeType } from '@/models/enums';
 import { IdentityService } from '@/services/identity.service';
 import {
   IdentityUserMappingService,
@@ -126,7 +127,7 @@ export class IdentityUserCreateComponent implements OnInit {
   }
 
   loadMemberTypes(): void {
-    this.masterBasicSetupService.getAllByType('EmployeeType').subscribe({
+    this.masterBasicSetupService.getAllByType(CodeType.EmployeeType).subscribe({
       next: (list) => {
         const arr = Array.isArray(list) ? list : [];
         this.memberTypes = arr

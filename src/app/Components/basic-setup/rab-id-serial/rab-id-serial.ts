@@ -10,6 +10,7 @@ import { OrganizationModel } from '../organization-setup/models/organization';
 import { MessageService } from 'primeng/api';
 import { SharedService } from '@/shared/services/shared-service';
 import { MasterBasicSetupService } from '../shared/services/MasterBasicSetupService';
+import { CodeType } from '@/models/enums';
 import { InputText } from 'primeng/inputtext';
 import { InputNumber } from 'primeng/inputnumber';
 import { IconField } from 'primeng/iconfield';
@@ -146,7 +147,7 @@ export class RabIdSerial implements OnInit {
     }
 
     loadEmployeeTypes() {
-        this.masterBasicSetupService.getAllByType('EmployeeType').subscribe({
+        this.masterBasicSetupService.getAllByType(CodeType.EmployeeType).subscribe({
             next: (res: CommonCode[]) => {
                 this.employeeTypes = res;
                 this.employeeTypeOptions = res.map((o) => ({
