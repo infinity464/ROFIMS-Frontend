@@ -563,9 +563,8 @@
             <!-- Sub Text (rich HTML from editor) -->
             <div class="po-doc-sub-text" *ngIf="subText" [innerHTML]="subText"></div>
 
-            <!-- Signature Block -->
+            <!-- Signature Block (top right, standalone) -->
             <div class="po-doc-signature">
-                <div>স্বাক্ষরিত/-</div>
                 <div>{{ (isBangla ? approverNameBN : approverName) || approverName || '...................................' }}</div>
                 <div>{{ (isBangla ? approverRankBN : approverRank) || approverRank || '............................' }}</div>
                 <div>{{ (isBangla ? approverAppointmentBN : approverAppointment) || approverAppointment || '............................' }}</div>
@@ -573,14 +572,21 @@
                 <div>{{ isBangla ? 'তারিখঃ' : 'Date:' }} {{ previewDate }}</div>
             </div>
 
-            <!-- Copy Distribution -->
+            <!-- Copy Distribution + Footer - two-column layout -->
             <div class="po-doc-copy">
                 <div class="po-doc-copy-title">{{ isBangla ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নহে)' : 'Copy (not in order of seniority):' }}</div>
-            </div>
-
-            <!-- Footer Paragraphs (only checked ones) -->
-            <div class="po-doc-footer-text" *ngIf="exportFooterParagraphs.length > 0">
-                <p *ngFor="let para of exportFooterParagraphs; let i = index">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}। {{ para.text }}</p>
+                <div class="po-doc-copy-body">
+                    <div class="po-doc-copy-list" *ngIf="exportFooterParagraphs.length > 0">
+                        <p *ngFor="let para of exportFooterParagraphs; let i = index">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}। {{ para.text }}</p>
+                    </div>
+                    <div class="po-doc-copy-sig" *ngIf="approvalEmployeeId">
+                        <div>স্বাক্ষরিত/-</div>
+                        <img *ngIf="approverSignatureUrl" [src]="approverSignatureUrl" class="approver-signature-img" alt="Signature" />
+                        <div class="sig-name">{{ (isBangla ? approverNameBN : approverName) || approverName || '...................................' }}</div>
+                        <div class="sig-rank">{{ (isBangla ? approverRankBN : approverRank) || approverRank || '............................' }}</div>
+                        <div class="sig-appointment">{{ (isBangla ? approverAppointmentBN : approverAppointment) || approverAppointment || '............................' }}</div>
+                    </div>
+                </div>
             </div>
 
           </div><!-- /po-doc-box -->
