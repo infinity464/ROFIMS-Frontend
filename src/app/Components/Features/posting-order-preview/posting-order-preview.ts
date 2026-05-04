@@ -232,7 +232,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                     this.textType = first.textType ?? '';
                     this.filesReferences = first.filesReferences ?? '';
                     this.status = first.status ?? '';
-                    this.masterRemarks = first.masterRemarks ?? '';
+                    this.masterRemarks = this.fixBanglaWordBreaks(first.masterRemarks ?? '');
                     this.noteSheetNo = first.noteSheetNo ?? '';
                     this.referenceNumber = first.referenceNumber ?? '';
                     this.isBangla = first.nsTextType === 1 || this.textType === 'bn' || this.textType === '1' || this.textType === 'Bangla';
@@ -261,8 +261,9 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                     } else {
                         this.postingText = '';
                     }
+                    this.postingText = this.fixBanglaWordBreaks(this.postingText);
 
-                    this.subText = first.subText ?? '';
+                    this.subText = this.fixBanglaWordBreaks(first.subText ?? '');
                     this.rawFooterText = first.footerText ?? null;
 
                     // Parse footer paragraphs into FooterParagraph objects (keeps unit linkage for per-unit filtering).
@@ -300,12 +301,12 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                                 this.textType         = master.textType ?? '';
                                 this.filesReferences  = master.filesReferences ?? '';
                                 this.status           = master.status ?? '';
-                                this.masterRemarks    = master.remarks ?? '';
+                                this.masterRemarks    = this.fixBanglaWordBreaks(master.remarks ?? '');
                                 this.noteSheetNo      = master.noteSheetNo ?? '';
                                 this.referenceNumber  = master.referenceNumber ?? '';
                                 this.isBangla         = this.textType === 'bn' || this.textType === '1' || this.textType === 'Bangla';
-                                this.postingText      = master.mainText ?? '';
-                                this.subText          = master.subText ?? '';
+                                this.postingText      = this.fixBanglaWordBreaks(master.mainText ?? '');
+                                this.subText          = this.fixBanglaWordBreaks(master.subText ?? '');
                                 this.rawFooterText    = master.footerText ?? null;
                                 this.footerParagraphs = this.parseFooterParagraphs(this.rawFooterText);
 
@@ -447,7 +448,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                                 this.approverRankBN = emp.armyRankBN ?? '';
                                 this.approverAppointment = emp.appointment ?? '';
                                 this.approverAppointmentBN = emp.appointmentBN ?? '';
-                                this.approverPhone = emp.mobileNo ?? '';
+                                this.approverPhone = emp.mobileNoOfficial ?? '';
                             }
                         }
                     });
@@ -504,6 +505,27 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         return (doc.body.textContent ?? '')
             .replace(/\n{3,}/g, '\n\n')
             .trim();
+    }
+
+    /** Replace &nbsp; / \u00A0 with regular spaces so Bangla text wraps at word boundaries. */
+    private fixBanglaWordBreaks(html: string): string {
+        if (!html) return html;
+        html = html.replace(/&nbsp;/gi, ' ');
+        html = html.replace(/&#160;/gi, ' ');
+        html = html.replace(/&#xa0;/gi, ' ');
+        html = html.replace(/&#x00a0;/gi, ' ');
+        const div = document.createElement('div');
+        div.innerHTML = html;
+        const walker = document.createTreeWalker(div, NodeFilter.SHOW_TEXT);
+        while (walker.nextNode()) {
+            const node = walker.currentNode as Text;
+            if (node.textContent) {
+                node.textContent = node.textContent
+                    .replace(/\u00A0/g, ' ')
+                    .replace(/\u200B/g, '');
+            }
+        }
+        return div.innerHTML;
     }
 
     // ─── Display helpers ──────────────────────────────────
@@ -1016,7 +1038,12 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         const font = bn
             ? { ascii: 'Nirmala UI', hAnsi: 'Nirmala UI', cs: 'Nirmala UI', hint: 'cs' as const }
             : 'Times New Roman';
-        const csSize = bn ? 20 : undefined;
+        const csSize = bn ? 16 : undefined;   // 8pt for order context
+        const hdrSize = 18;                     // 9pt for header
+        const hdrCsSize = bn ? 18 : undefined;
+        const tblSize = 14;                     // 7pt for table content
+        const tblCsSize = bn ? 14 : undefined;
+        const ctxSize = 16;                     // 8pt for order context
         const lang = bn ? { value: 'bn-BD', bidirectional: 'bn-BD' } : undefined;
         const thinBorder = { style: BorderStyle.SINGLE, size: 1, color: '000000' };
         const cellBorders = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
@@ -1027,7 +1054,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             : ['Government of the Peoples Republic of Bangladesh', 'Bangladesh Police', 'RAB Forces Headquarters', 'Kurmitola, Dhaka'];
 
         const headerParas = headerLines.map(line => new Paragraph({
-            children: [new TextRun({ text: line, bold: true, size: 22, sizeComplexScript: bn ? 22 : undefined, font, language: lang })],
+            children: [new TextRun({ text: line, bold: true, size: hdrSize, sizeComplexScript: hdrCsSize, font, language: lang })],
             alignment: AlignmentType.CENTER,
             spacing: { after: 40 }
         }));
@@ -1043,11 +1070,11 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         const orderLine = new Paragraph({
             tabStops: [{ type: TabStopType.RIGHT, position: TabStopPosition.MAX }],
             children: [
-                new TextRun({ text: bn ? 'ফোর্স অর্ডার নং: ' : 'Force Order No: ', bold: true, size: 20, sizeComplexScript: csSize, font, language: lang }),
-                new TextRun({ text: this.postingOrderNo, size: 20, sizeComplexScript: csSize, font, language: lang }),
+                new TextRun({ text: bn ? 'ফোর্স অর্ডার নং: ' : 'Force Order No: ', bold: true, size: ctxSize, sizeComplexScript: csSize, font, language: lang }),
+                new TextRun({ text: this.postingOrderNo, size: ctxSize, sizeComplexScript: csSize, font, language: lang }),
                 new TextRun({ text: '\t', font }),
-                new TextRun({ text: bn ? 'তারিখ: ' : 'Date: ', bold: true, size: 20, sizeComplexScript: csSize, font, language: lang }),
-                new TextRun({ text: this.previewDate, size: 20, sizeComplexScript: csSize, font, language: lang })
+                new TextRun({ text: bn ? 'তারিখ: ' : 'Date: ', bold: true, size: ctxSize, sizeComplexScript: csSize, font, language: lang }),
+                new TextRun({ text: this.previewDate, size: ctxSize, sizeComplexScript: csSize, font, language: lang })
             ],
             spacing: { after: 80 }
         });
@@ -1055,8 +1082,8 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         // ── Reference / সূত্র : linked Note-Sheet No + final approval date ──
         const referenceParas: Paragraph[] = this.referenceLine ? [new Paragraph({
             children: [
-                new TextRun({ text: bn ? 'সূত্রঃ ' : 'Reference: ', bold: true, size: 20, sizeComplexScript: csSize, font, language: lang }),
-                new TextRun({ text: this.referenceLine, size: 20, sizeComplexScript: csSize, font, language: lang })
+                new TextRun({ text: bn ? 'সূত্রঃ ' : 'Reference: ', bold: true, size: ctxSize, sizeComplexScript: csSize, font, language: lang }),
+                new TextRun({ text: this.referenceLine, size: ctxSize, sizeComplexScript: csSize, font, language: lang })
             ],
             spacing: { after: 160 }
         })] : [];
@@ -1068,7 +1095,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             .filter(t => t.length > 0)
             .map(block => new Paragraph({
                 children: block.split('\n').flatMap((line, idx) => {
-                    const run = new TextRun({ text: line, size: 20, sizeComplexScript: csSize, font, language: lang });
+                    const run = new TextRun({ text: line, size: ctxSize, sizeComplexScript: csSize, font, language: lang });
                     return idx === 0 ? [run] : [new TextRun({ text: '', break: 1, font }), run];
                 }),
                 alignment: AlignmentType.JUSTIFIED,
@@ -1083,7 +1110,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         //         Ser  SvcID  Rank  Trade  Name   OwnDist PrevWk TrUnit RabID
         const colW = [580, 1100, 860, 924, 2474, 1260, 1374, 1374, 1160];
 
-        const hdrPara = (text: string) => new Paragraph({ children: [new TextRun({ text, bold: true, size: 17, sizeComplexScript: bn ? 17 : undefined, font, language: lang })], alignment: AlignmentType.CENTER });
+        const hdrPara = (text: string) => new Paragraph({ children: [new TextRun({ text, bold: true, size: tblSize, sizeComplexScript: tblCsSize, font, language: lang })], alignment: AlignmentType.CENTER });
         const hdrCell = (text: string, ci: number, extra?: Partial<ConstructorParameters<typeof TableCell>[0]>) => new TableCell({
             children: [hdrPara(text)], borders: cellBorders, width: { size: colW[ci], type: WidthType.DXA }, ...extra
         });
@@ -1119,7 +1146,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             ].map((val, ci) => {
                 const lines = val.split('\n');
                 const cellParas = lines.map(line => new Paragraph({
-                    children: [new TextRun({ text: line, size: 18, sizeComplexScript: bn ? 18 : undefined, font, language: lang })],
+                    children: [new TextRun({ text: line, size: tblSize, sizeComplexScript: tblCsSize, font, language: lang })],
                     alignment: AlignmentType.CENTER,
                     spacing: { after: 20 }
                 }));
@@ -1140,14 +1167,93 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             columnWidths: colW
         });
 
-        // Helper: HTML string → plain paragraphs for Word
-        const htmlToParas = (html: string) =>
-            this.htmlToPlainText(html).split(/\n{2,}/).map(t => t.trim()).filter(t => t.length > 0)
-                .map(t => new Paragraph({
-                    children: [new TextRun({ text: t, size: 20, sizeComplexScript: csSize, font, language: lang })],
-                    alignment: AlignmentType.JUSTIFIED,
-                    spacing: { before: 100, after: 100 }
-                }));
+        // Helper: rich HTML → Word paragraphs (preserves bold/italic/underline, bullets, line breaks)
+        const htmlToParas = (html: string): Paragraph[] => {
+            if (!html) return [];
+            html = this.fixBanglaWordBreaks(html);
+            const parsed = new DOMParser().parseFromString(html, 'text/html');
+            const result: Paragraph[] = [];
+
+            interface RunStyle { bold?: boolean; italic?: boolean; underline?: boolean; }
+
+            const extractRuns = (node: Node, style: RunStyle): TextRun[] => {
+                const runs: TextRun[] = [];
+                node.childNodes.forEach(child => {
+                    if (child.nodeType === Node.TEXT_NODE) {
+                        const text = child.textContent || '';
+                        if (text) {
+                            runs.push(new TextRun({
+                                text,
+                                size: ctxSize, sizeComplexScript: csSize, font, language: lang,
+                                bold: style.bold || undefined,
+                                italics: style.italic || undefined,
+                                underline: style.underline ? {} : undefined,
+                            }));
+                        }
+                    } else if (child.nodeType === Node.ELEMENT_NODE) {
+                        const el = child as HTMLElement;
+                        const tag = el.tagName.toLowerCase();
+                        if (tag === 'br') {
+                            runs.push(new TextRun({ break: 1, size: ctxSize, font, language: lang }));
+                        } else {
+                            const next: RunStyle = { ...style };
+                            if (tag === 'strong' || tag === 'b') next.bold = true;
+                            if (tag === 'em' || tag === 'i') next.italic = true;
+                            if (tag === 'u') next.underline = true;
+                            runs.push(...extractRuns(el, next));
+                        }
+                    }
+                });
+                return runs;
+            };
+
+            const processNode = (node: Node) => {
+                if (node.nodeType !== Node.ELEMENT_NODE) {
+                    const text = (node.textContent || '').trim();
+                    if (text) {
+                        result.push(new Paragraph({
+                            children: [new TextRun({ text, size: ctxSize, sizeComplexScript: csSize, font, language: lang })],
+                            spacing: { before: 50, after: 50 }
+                        }));
+                    }
+                    return;
+                }
+                const el = node as HTMLElement;
+                const tag = el.tagName.toLowerCase();
+
+                if (tag === 'ul' || tag === 'ol') {
+                    el.querySelectorAll(':scope > li').forEach(li => {
+                        const runs = extractRuns(li, {});
+                        result.push(new Paragraph({
+                            children: [
+                                new TextRun({ text: '• ', size: ctxSize, sizeComplexScript: csSize, font, language: lang }),
+                                ...runs
+                            ],
+                            spacing: { before: 50, after: 50 },
+                            indent: { left: 360 }
+                        }));
+                    });
+                } else if (tag === 'p' || tag === 'div' || /^h[1-6]$/.test(tag)) {
+                    const runs = extractRuns(el, {});
+                    const isEmpty = runs.length === 0 ||
+                        (el.innerHTML.trim() === '' || el.innerHTML.trim() === '<br>');
+                    if (isEmpty) {
+                        result.push(new Paragraph({ spacing: { before: 50, after: 50 } }));
+                    } else {
+                        result.push(new Paragraph({
+                            children: runs,
+                            alignment: AlignmentType.JUSTIFIED,
+                            spacing: { before: 50, after: 50 }
+                        }));
+                    }
+                } else {
+                    el.childNodes.forEach(c => processNode(c));
+                }
+            };
+
+            parsed.body.childNodes.forEach(n => processNode(n));
+            return result;
+        };
 
         // ── Main Text (masterRemarks, after reference), Posting Text, Sub Text ──
         const masterRemarksParas = this.masterRemarks ? htmlToParas(this.masterRemarks) : [];
@@ -1164,34 +1270,34 @@ export class PostingOrderPreviewPageComponent implements OnInit {
 
         const sigCellChildren: Paragraph[] = [];
         sigCellChildren.push(new Paragraph({
-            children: [new TextRun({ text: 'স্বাক্ষরিত/-', size: 20, sizeComplexScript: csSize, font, language: lang })],
-            spacing: { before: 200 }
+            children: [new TextRun({ text: 'স্বাক্ষরিত/-', size: ctxSize, sizeComplexScript: csSize, font, language: lang })],
+            spacing: { before: 200 }, keepNext: true, keepLines: true
         }));
         sigCellChildren.push(
-            new Paragraph({ children: [new TextRun({ text: approverNameText, size: 20, sizeComplexScript: csSize, font, language: lang })] }),
-            new Paragraph({ children: [new TextRun({ text: approverRankText, size: 20, sizeComplexScript: csSize, font, language: lang })] }),
-            new Paragraph({ children: [new TextRun({ text: approverApptText, size: 20, sizeComplexScript: csSize, font, language: lang })] }),
-            new Paragraph({ children: [new TextRun({ text: `${bn ? 'টেলিঃ' : 'Tel:'} ${approverPhoneText}`, size: 20, sizeComplexScript: csSize, font, language: lang })] }),
-            new Paragraph({ children: [new TextRun({ text: bn ? `তারিখঃ ${this.previewDate}` : `Date: ${this.previewDate}`, size: 20, sizeComplexScript: csSize, font, language: lang })], spacing: { before: 100 } })
+            new Paragraph({ children: [new TextRun({ text: approverNameText, size: ctxSize, sizeComplexScript: csSize, font, language: lang })], keepNext: true, keepLines: true }),
+            new Paragraph({ children: [new TextRun({ text: approverRankText, size: ctxSize, sizeComplexScript: csSize, font, language: lang })], keepNext: true, keepLines: true }),
+            new Paragraph({ children: [new TextRun({ text: approverApptText, size: ctxSize, sizeComplexScript: csSize, font, language: lang })], keepNext: true, keepLines: true }),
+            new Paragraph({ children: [new TextRun({ text: `${bn ? 'টেলিঃ' : 'Tel:'} ${approverPhoneText}`, size: ctxSize, sizeComplexScript: csSize, font, language: lang })], keepNext: true, keepLines: true }),
+            new Paragraph({ children: [new TextRun({ text: bn ? `তারিখঃ ${this.previewDate}` : `Date: ${this.previewDate}`, size: ctxSize, sizeComplexScript: csSize, font, language: lang })], spacing: { before: 100 }, keepLines: true })
         );
 
         const sigTable = new Table({
             alignment: AlignmentType.RIGHT,
             width: { size: 3500, type: WidthType.DXA },
             borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder, insideHorizontal: noBorder, insideVertical: noBorder },
-            rows: [new TableRow({ children: [new TableCell({ borders: noBorders, width: { size: 3500, type: WidthType.DXA }, children: sigCellChildren })] })]
+            rows: [new TableRow({ cantSplit: true, children: [new TableCell({ borders: noBorders, width: { size: 3500, type: WidthType.DXA }, children: sigCellChildren })] })]
         });
-        const sigParas = [new Paragraph({ spacing: { before: 600 } }), sigTable] as any[];
+        const sigParas = [new Paragraph({ spacing: { before: 600 }, keepNext: true }), sigTable] as any[];
 
         // ── Copy Distribution (10pt, bold) ──
         const copyPara = new Paragraph({
-            children: [new TextRun({ text: bn ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নহে)' : 'Copy (not in order of seniority):', bold: true, size: 20, sizeComplexScript: csSize, font, language: lang })],
+            children: [new TextRun({ text: bn ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নহে)' : 'Copy (not in order of seniority):', bold: true, size: ctxSize, sizeComplexScript: csSize, font, language: lang })],
             spacing: { before: 300 }
         });
 
         // ── Footer paragraphs (10pt) – only those linked to the selected unit (or all if no filter) ──
         const footerParas = this.filteredFooterParagraphs.map((p, i) => new Paragraph({
-            children: [new TextRun({ text: `${bn ? this.toBanglaDigits(String(i + 1)) : (i + 1)}। ${p.text}`, size: 20, sizeComplexScript: csSize, font, language: lang })],
+            children: [new TextRun({ text: `${bn ? this.toBanglaDigits(String(i + 1)) : (i + 1)}। ${p.text}`, size: ctxSize, sizeComplexScript: csSize, font, language: lang })],
             spacing: { after: 100 }
         }));
 
@@ -1205,7 +1311,19 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                         margin: { top: 567, right: 567, bottom: 567, left: 567 },
                     }
                 },
-                children: [...headerParas, titlePara, orderLine, ...referenceParas, ...masterRemarksParas, ...bodyParas, empTable, ...postingTextParas, ...subTextParas, ...sigParas, copyPara, ...footerParas]
+                children: [
+                    ...headerParas, titlePara, orderLine, ...referenceParas,
+                    ...postingTextParas,
+                    new Paragraph({ spacing: { before: 100 } }),
+                    empTable,
+                    new Paragraph({ spacing: { before: 100 } }),
+                    ...masterRemarksParas,
+                    ...(masterRemarksParas.length > 0 && subTextParas.length > 0
+                        ? [new Paragraph({ spacing: { before: 100 } })]
+                        : []),
+                    ...subTextParas,
+                    ...sigParas, copyPara, ...footerParas
+                ]
             }]
         });
     }

@@ -50,10 +50,34 @@
                         ></p-datepicker>
                     </div>
                 </div>
-                <div class="field">
-                    <label class="font-semibold block mb-2 text-700">{{ isBangla ? 'মূল বক্তব্য' : 'Main Text' }}</label>
-                    <p-editor [(ngModel)]="editRemarks" [style]="{ height: '100px' }"></p-editor>
-                </div>
+            </div>
+
+            <!-- Posting Text (rich editor) -->
+            <div class="mt-4 p-4 surface-50 border-round">
+                <label class="font-semibold block mb-2 text-700">{{ isBangla ? 'পোস্টিং টেক্সট' : 'Posting Text' }}</label>
+                <p-editor [(ngModel)]="editPostingText" [style]="{ height: '120px' }">
+                    <ng-template pTemplate="header">
+                        <span class="ql-formats">
+                            <select class="ql-header">
+                                <option value="1"></option>
+                                <option value="2"></option>
+                                <option selected></option>
+                            </select>
+                            <select class="ql-font"></select>
+                        </span>
+                        <span class="ql-formats">
+                            <button class="ql-bold"></button>
+                            <button class="ql-italic"></button>
+                            <button class="ql-underline"></button>
+                        </span>
+                        <span class="ql-formats">
+                            <button class="ql-list" value="bullet"></button>
+                        </span>
+                        <span class="ql-formats">
+                            <button class="ql-clean"></button>
+                        </span>
+                    </ng-template>
+                </p-editor>
             </div>
 
             <!-- Employee table (edit mode) -->
@@ -226,16 +250,60 @@
                 </ng-template>
             </p-table>
 
-            <!-- Posting Text (rich editor) -->
-            <div class="mt-4 p-4 surface-50 border-round">
-                <label class="font-semibold block mb-2 text-700">{{ isBangla ? 'পোস্টিং টেক্সট' : 'Posting Text' }}</label>
-                <p-editor [(ngModel)]="editPostingText" [style]="{ height: '120px' }"></p-editor>
+            <!-- Main Text (rich editor) -->
+            <div class="field mt-4 p-4 surface-50 border-round">
+                <label class="font-semibold block mb-2 text-700">{{ isBangla ? 'মূল বক্তব্য' : 'Main Text' }}</label>
+                <p-editor [(ngModel)]="editRemarks" [style]="{ height: '100px' }">
+                    <ng-template pTemplate="header">
+                        <span class="ql-formats">
+                            <select class="ql-header">
+                                <option value="1"></option>
+                                <option value="2"></option>
+                                <option selected></option>
+                            </select>
+                            <select class="ql-font"></select>
+                        </span>
+                        <span class="ql-formats">
+                            <button class="ql-bold"></button>
+                            <button class="ql-italic"></button>
+                            <button class="ql-underline"></button>
+                        </span>
+                        <span class="ql-formats">
+                            <button class="ql-list" value="bullet"></button>
+                        </span>
+                        <span class="ql-formats">
+                            <button class="ql-clean"></button>
+                        </span>
+                    </ng-template>
+                </p-editor>
             </div>
 
             <!-- Sub Text (rich editor) -->
             <div class="mt-4 p-4 surface-50 border-round">
                 <label class="font-semibold block mb-2 text-700">{{ isBangla ? 'সাব টেক্সট' : 'Sub Text' }}</label>
-                <p-editor [(ngModel)]="editSubText" [style]="{ height: '120px' }"></p-editor>
+                <p-editor [(ngModel)]="editSubText" [style]="{ height: '120px' }">
+                    <ng-template pTemplate="header">
+                        <span class="ql-formats">
+                            <select class="ql-header">
+                                <option value="1"></option>
+                                <option value="2"></option>
+                                <option selected></option>
+                            </select>
+                            <select class="ql-font"></select>
+                        </span>
+                        <span class="ql-formats">
+                            <button class="ql-bold"></button>
+                            <button class="ql-italic"></button>
+                            <button class="ql-underline"></button>
+                        </span>
+                        <span class="ql-formats">
+                            <button class="ql-list" value="bullet"></button>
+                        </span>
+                        <span class="ql-formats">
+                            <button class="ql-clean"></button>
+                        </span>
+                    </ng-template>
+                </p-editor>
             </div>
 
             <!-- Footer paragraphs (Onulipi) -->
@@ -363,11 +431,8 @@
                 <span class="po-doc-reference-value">{{ referenceLine }}</span>
             </div>
 
-            <!-- Main Text (Remarks) — shown after সূত্র -->
-            <div class="po-doc-master-remarks" *ngIf="masterRemarks" [innerHTML]="masterRemarks"></div>
-
-            <!-- Body Text (verbatim from linked notesheet's Main Text) -->
-            <div class="po-doc-body" style="white-space: pre-line;">{{ bodyText }}</div>
+            <!-- Posting Text (rich HTML from editor) — shown after সূত্র -->
+            <div class="po-doc-posting-text" *ngIf="postingText" [innerHTML]="postingText"></div>
 
             <!-- Employee Table -->
             <table class="po-doc-table">
@@ -432,8 +497,8 @@
                 </tbody>
             </table>
 
-            <!-- Posting Text (rich HTML from editor) -->
-            <div class="po-doc-posting-text" *ngIf="postingText" [innerHTML]="postingText"></div>
+            <!-- Main Text (Remarks) -->
+            <div class="po-doc-master-remarks" *ngIf="masterRemarks" [innerHTML]="masterRemarks"></div>
 
             <!-- Sub Text (rich HTML from editor) -->
             <div class="po-doc-sub-text" *ngIf="subText" [innerHTML]="subText"></div>

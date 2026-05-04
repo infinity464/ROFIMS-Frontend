@@ -116,7 +116,6 @@
                         <th style="min-width: 130px">{{ isBangla ? 'পূর্ববর্তী কর্মস্থল' : 'Previous Workplace' }}</th>
                         <th style="min-width: 100px">{{ isBangla ? 'বদলি ইউনিট' : 'Transfer Unit' }}</th>
                         <th style="min-width: 100px">{{ isBangla ? 'মন্তব্য' : 'Remarks' }}</th>
-                        <th style="width: 50px"></th>
                     </tr>
                 </ng-template>
                 <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
@@ -132,9 +131,6 @@
                         <td>{{ selectedPostingType === 'InterPosting' ? ((isBangla ? row.previousRabUnitsBN || row.previousRabUnits : row.previousRabUnits) || '-') : ((isBangla ? row.motherOrgLocationNameBN : row.motherOrgLocationName) || row.motherOrgLocationName || '-') }}</td>
                         <td>{{ (isBangla ? row.transferRabUnitNameBN || row.transferRabUnitName : row.transferRabUnitName) || '-' }}</td>
                         <td>{{ row.remarks || '-' }}</td>
-                        <td class="text-center">
-                            <p-button icon="pi pi-trash" [class.perm-hidden]="!canDelete" severity="danger" [rounded]="true" [text]="true" size="small" (onClick)="removeEmployee(row)"></p-button>
-                        </td>
                     </tr>
                 </ng-template>
                 <ng-template pTemplate="emptymessage">
@@ -149,16 +145,16 @@
                 </ng-template>
             </p-table>
 
-            <!-- Sub Text (Rich Text) -->
-            <div class="field mt-4">
-                <label class="font-semibold block mb-2 text-700">{{ isBangla ? 'সাব টেক্সট' : 'Sub Text' }}</label>
-                <p-editor [(ngModel)]="subText" [style]="{ height: '120px' }"></p-editor>
-            </div>
-
             <!-- Main Text (Rich Text) -->
             <div class="field mt-4">
                 <label class="font-semibold block mb-2 text-700">{{ isBangla ? 'মূল বক্তব্য' : 'Main Text' }}</label>
                 <p-editor [(ngModel)]="remarks" [style]="{ height: '100px' }"></p-editor>
+            </div>
+
+            <!-- Sub Text (Rich Text) -->
+            <div class="field mt-4">
+                <label class="font-semibold block mb-2 text-700">{{ isBangla ? 'সাব টেক্সট' : 'Sub Text' }}</label>
+                <p-editor [(ngModel)]="subText" [style]="{ height: '120px' }"></p-editor>
             </div>
 
             <!-- Footer Text (dynamic paragraphs, each linked to a transfer unit) -->
