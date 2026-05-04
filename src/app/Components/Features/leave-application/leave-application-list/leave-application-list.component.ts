@@ -21,15 +21,14 @@ import { DialogModule } from 'primeng/dialog';
 import { TextareaModule } from 'primeng/textarea';
 import { FormsModule } from '@angular/forms';
 import { ToastModule } from 'primeng/toast';
-import { TabsModule } from 'primeng/tabs';
 import { PaginatorModule } from 'primeng/paginator';
 import type { PaginatorState } from 'primeng/types/paginator';
 import { RouterModule } from '@angular/router';
 
-export type LeaveApplicationSection = 'pending' | 'approved' | 'declined';
+export type LeaveApplicationSection = 'all' | 'approved' | 'declined';
 
-/** UI type; actionByMe sends actionRequiredByMe (pending) or actionTakenByMe (approved/declined) to API. */
-export type LeaveApplicationTypeFilter = 'myApplication' | 'applyForOther' | 'actionByMe';
+/** UI type filter for the list. (Pending applications live on /leave-application/pending-approval.) */
+export type LeaveApplicationTypeFilter = 'myApplication' | 'applyForOther' | 'actionTakenByMe';
 
 @Component({
     selector: 'app-leave-application-list',
@@ -45,7 +44,6 @@ export type LeaveApplicationTypeFilter = 'myApplication' | 'applyForOther' | 'ac
         DialogModule,
         TextareaModule,
         ToastModule,
-        TabsModule,
         PaginatorModule,
         RouterModule
     ],
@@ -55,9 +53,14 @@ export type LeaveApplicationTypeFilter = 'myApplication' | 'applyForOther' | 'ac
 })
 export class LeaveApplicationListComponent implements OnInit {
     @Input() sectionInput: LeaveApplicationSection | null = null;
-    section: LeaveApplicationSection = 'pending';
-    tabIndex = 0;
-    typeFilter: LeaveApplicationTypeFilter = 'actionByMe';
+    section: LeaveApplicationSection = 'all';
+    typeFilter: LeaveApplicationTypeFilter = 'myApplication';
+    /** Dropdown options for the inline status filter (replaces the old Approved/Declined tabs). */
+    sectionOptions: { label: string; value: LeaveApplicationSection }[] = [
+        { label: 'All', value: 'all' },
+        { label: 'Approved', value: 'approved' },
+        { label: 'Declined', value: 'declined' }
+    ];
 
     currentList: LeaveApplicationModel[] = [];
     pageNumber = 1;
@@ -292,14 +295,18 @@ export class LeaveApplicationListComponent implements OnInit {
     }
 
     private applySectionFromParams(params: Record<string, string | string[] | undefined>): void {
-        const s = params['section'] as LeaveApplicationSection | undefined;
-        if (s && ['pending', 'approved', 'declined'].includes(s)) this.section = s;
-        else if (this.sectionInput) this.section = this.sectionInput;
-        this.tabIndex = ['pending', 'approved', 'declined'].indexOf(this.section);
-        if (this.tabIndex < 0) this.tabIndex = 0;
+        const raw = params['section'] as string | undefined;
+        // Legacy ?section=pending links route to the dedicated pending-approval page; map them away.
+        if (raw === 'pending') {
+            this.router.navigate(['/leave-application/pending-approval']);
+            return;
+        }
+        // The Approval Status dropdown is a client-side filter and always defaults to 'all'.
+        // We deliberately ignore any ?section= value carried over from an old URL so the page
+        // always opens on All; the user can still narrow with the dropdown.
+        if (this.sectionInput) this.section = this.sectionInput;
         const t = params['type'] as string | undefined;
-        if (t === 'actionRequiredByMe' || t === 'actionTakenByMe') this.typeFilter = 'actionByMe';
-        else if (t && ['myApplication', 'applyForOther', 'actionByMe'].includes(t)) this.typeFilter = t as LeaveApplicationTypeFilter;
+        if (t === 'myApplication' || t === 'applyForOther' || t === 'actionTakenByMe') this.typeFilter = t;
     }
 
     loadSection(): void {
@@ -312,13 +319,26 @@ export class LeaveApplicationListComponent implements OnInit {
             this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load list.' });
             this.loading = false;
         };
-        const statusMap = { pending: 2, approved: 3, declined: 4 } as const;
-        const statusId = statusMap[this.section];
+        // For Action-Taken-by-Me, the Approval Status dropdown filters by the user's *own* decision
+        // (Approved/Declined as recommender or final approver) rather than by the application's
+        // overall status. We pass that intent via myDecisionFilter and skip the status-id filter so
+        // still-Pending applications that the user has already acted on still show up.
+        let statusId: number | null;
+        let additionalStatusIds: number[] | undefined;
+        let myDecisionFilter: 'approved' | 'declined' | null = null;
+        if (this.typeFilter === 'actionTakenByMe') {
+            statusId = null;
+            additionalStatusIds = undefined;
+            if (this.section === 'approved') myDecisionFilter = 'approved';
+            else if (this.section === 'declined') myDecisionFilter = 'declined';
+        } else {
+            // myApplication / applyForOther — dropdown filters by overall app status as before.
+            statusId = this.section === 'all' ? null : (this.section === 'approved' ? 3 : 4);
+            additionalStatusIds = this.section === 'all' ? [3, 4] : undefined;
+        }
         const filter = this.buildFilterParams();
-        const apiTypeFilter = this.typeFilter === 'actionByMe'
-            ? (this.section === 'pending' ? 'actionRequiredByMe' : 'actionTakenByMe')
-            : this.typeFilter;
-        this.leaveAppService.getByStatusForUserPaginated(statusId, this.currentUserEmployeeId, apiTypeFilter, this.pageNumber, this.pageSize, filter).subscribe({
+        const apiTypeFilter = this.typeFilter;
+        this.leaveAppService.getByStatusForUserPaginated(statusId, this.currentUserEmployeeId, apiTypeFilter, this.pageNumber, this.pageSize, filter, additionalStatusIds, myDecisionFilter).subscribe({
             next: (res) => {
                 this.currentList = res.datalist ?? [];
                 this.totalRecords = res.pages?.rows ?? 0;
@@ -360,19 +380,51 @@ export class LeaveApplicationListComponent implements OnInit {
         }
     }
 
-    onTabChangeByValue(value: number | string | undefined): void {
-        const idx = typeof value === 'number' ? value : typeof value === 'string' ? parseInt(value, 10) : 0;
-        const tabIdx = !isNaN(idx) && idx >= 0 ? idx : 0;
-        this.tabIndex = tabIdx;
-        const s = ['pending', 'approved', 'declined'][tabIdx] as LeaveApplicationSection;
-        this.section = s;
+    /** Overall application status as a UI label. 1=Draft, 2=Pending, 3=Approved, 4=Declined. */
+    getOverallStatus(row: LeaveApplicationModel): string {
+        switch (row.leaveApplicationStatusId) {
+            case 1: return 'Draft';
+            case 2: return 'Pending';
+            case 3: return 'Approved';
+            case 4: return 'Declined';
+            default: return '-';
+        }
+    }
+
+    /** CSS class hint for the overall-status pill. */
+    getOverallStatusClass(row: LeaveApplicationModel): string {
+        switch (row.leaveApplicationStatusId) {
+            case 2: return 'is-pending';
+            case 3: return 'is-approved';
+            case 4: return 'is-declined';
+            default: return '';
+        }
+    }
+
+    /**
+     * Returns what the *current user* did on this application (independent of the overall status).
+     * Looks at: final-approver columns, then the user's own recommender row attached by the backend.
+     * Recommender status: 1=Pending, 2=Approved (=Recommended), 3=Declined.
+     */
+    getMyDecision(row: LeaveApplicationModel): { label: string; cssClass: string } {
+        if (row.approvedByEmployeeId === this.currentUserEmployeeId) {
+            return { label: 'Approved', cssClass: 'is-approved' };
+        }
+        if (row.declinedByEmployeeId === this.currentUserEmployeeId) {
+            return { label: 'Declined', cssClass: 'is-declined' };
+        }
+        const myRec = (row.recommenders ?? []).find((r) => r.employeeId === this.currentUserEmployeeId);
+        if (myRec) {
+            if (myRec.status === 2) return { label: 'Recommended', cssClass: 'is-approved' };
+            if (myRec.status === 3) return { label: 'Declined', cssClass: 'is-declined' };
+            return { label: 'Pending', cssClass: 'is-pending' };
+        }
+        return { label: '-', cssClass: '' };
+    }
+
+    /** Fired when the user picks an Approval Status from the dropdown. Client-side filter — no URL state. */
+    onSectionChange(): void {
         this.pageNumber = 1;
-        const tree = this.router.createUrlTree([], {
-            relativeTo: this.route,
-            queryParams: { section: s },
-            queryParamsHandling: 'merge'
-        });
-        this.location.replaceState(this.router.serializeUrl(tree));
         this.loadSection();
     }
 

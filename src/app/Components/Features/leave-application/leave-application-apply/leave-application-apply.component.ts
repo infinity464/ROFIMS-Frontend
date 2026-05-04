@@ -577,7 +577,7 @@ export class LeaveApplicationApplyComponent implements OnInit {
                     const msg = res.description ?? res.Description ?? '';
                     if (code === 200) {
                         this.messageService.add({ severity: 'success', summary: 'Submitted', detail: 'Leave application submitted for approval.' });
-                        this.router.navigate(['/leave-application/list'], { queryParams: { section: 'pending' } });
+                        this.router.navigate(['/leave-application/pending-approval']);
                     } else {
                         this.messageService.add({ severity: 'warn', summary: 'Submit failed', detail: msg || 'Submit failed.' });
                     }

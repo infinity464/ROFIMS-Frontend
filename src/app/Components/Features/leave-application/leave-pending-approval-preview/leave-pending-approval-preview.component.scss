@@ -1,0 +1,219 @@
+:host {
+    display: block;
+}
+
+.preview-page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 1rem;
+}
+
+// Header sits inside the white letter card — neutral colors so it reads against the sheet.
+.preview-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: -0.75rem 0 1.25rem 0;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #e5e7eb;
+
+    .spacer { flex: 1; }
+}
+
+.preview-header-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.preview-state {
+    padding: 2rem;
+    text-align: center;
+    color: var(--text-color-secondary, rgba(255, 255, 255, 0.6));
+
+    &.error { color: var(--red-400, #f87171); }
+}
+
+// ───────── Letter card (white sheet, like a printed document) ─────────
+.letter-card {
+    background: #ffffff;
+    color: #1f2937;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 2.5rem 3rem;
+    margin-bottom: 1rem;
+}
+
+.leave-letter {
+    font-family: 'Times New Roman', Georgia, serif;
+    line-height: 1.6;
+}
+
+.letter-title {
+    text-align: center;
+    font-size: 1.4rem;
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    margin: 0 0 1.25rem 0;
+    color: #111;
+}
+
+.letter-para {
+    text-align: justify;
+    margin: 0 0 1rem 0;
+    font-size: 0.95rem;
+    color: #1f2937;
+}
+
+.letter-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.5rem 0 1.25rem 0;
+
+    th, td {
+        border: 1px solid #d1d5db;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.9rem;
+    }
+
+    thead th {
+        text-align: center;
+        font-weight: 600;
+        background: #f3f4f6;
+    }
+
+    tbody td {
+        text-align: center;
+        &:first-child { text-align: left; }
+    }
+
+    tfoot td {
+        font-weight: 600;
+        text-align: center;
+        background: #f3f4f6;
+    }
+
+    .total-label, .total-value { text-align: center; }
+}
+
+.letter-section {
+    margin-top: 1rem;
+}
+
+.letter-section-title {
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    margin: 0 0 0.4rem 0;
+    font-size: 0.95rem;
+    color: #111;
+}
+
+.letter-section-body {
+    margin: 0;
+    font-size: 0.9rem;
+    white-space: pre-line;
+    color: #1f2937;
+}
+
+// ───────── Approval flow chain ─────────
+.approval-chain {
+    list-style: decimal inside;
+    padding: 0;
+    margin: 0;
+    font-size: 0.9rem;
+    color: #1f2937;
+}
+
+.approval-step {
+    padding: 0.4rem 0;
+    border-bottom: 1px dashed #e5e7eb;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.5rem;
+
+    &:last-child { border-bottom: none; }
+    &.muted { color: #6b7280; font-style: italic; }
+}
+
+.step-role {
+    font-weight: 600;
+    color: #111;
+    min-width: 7.5rem;
+}
+
+.step-name {
+    flex: 1;
+    min-width: 12rem;
+}
+
+.step-status {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.15rem 0.55rem;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    border: 1px solid transparent;
+
+    &.is-approved {
+        background: #ecfdf5;
+        color: #047857;
+        border-color: #a7f3d0;
+    }
+    &.is-pending {
+        background: #fef3c7;
+        color: #92400e;
+        border-color: #fde68a;
+    }
+    &.is-waiting {
+        background: #f3f4f6;
+        color: #4b5563;
+        border-color: #e5e7eb;
+    }
+    &.is-declined {
+        background: #fee2e2;
+        color: #b91c1c;
+        border-color: #fecaca;
+    }
+    &.is-skipped {
+        background: #f3f4f6;
+        color: #6b7280;
+        border-color: #e5e7eb;
+        text-decoration: line-through;
+    }
+}
+
+.step-remark {
+    flex-basis: 100%;
+    margin-left: 7.5rem;
+    font-size: 0.8rem;
+    color: #4b5563;
+    font-style: italic;
+}
+
+// ───────── Reviewer's remark + actions ─────────
+.review-card {
+    background: var(--surface-card, rgba(255, 255, 255, 0.04));
+    border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.1));
+    border-radius: 0.5rem;
+    padding: 1rem 1.25rem;
+}
+
+.review-label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--text-color, #fff);
+}
+
+.review-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}

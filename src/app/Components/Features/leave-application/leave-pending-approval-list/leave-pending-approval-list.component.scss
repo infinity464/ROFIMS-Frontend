@@ -1,0 +1,105 @@
+:host {
+    display: block;
+}
+
+// ───────── Leave-application letter style for the preview modal ─────────
+:host ::ng-deep .leave-preview-dialog .p-dialog-content {
+    padding: 1.5rem 2rem;
+}
+
+.leave-letter {
+    font-family: 'Times New Roman', Georgia, serif;
+    color: var(--text-color, #1f2937);
+    line-height: 1.6;
+}
+
+.letter-title {
+    text-align: center;
+    font-size: 1.35rem;
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    margin: 0 0 1.25rem 0;
+    color: var(--text-color, #111);
+}
+
+.letter-para {
+    text-align: justify;
+    margin: 0 0 1rem 0;
+    font-size: 0.95rem;
+}
+
+.letter-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.5rem 0 1.25rem 0;
+
+    th, td {
+        border: 1px solid var(--surface-border, #d1d5db);
+        padding: 0.5rem 0.75rem;
+        font-size: 0.9rem;
+    }
+
+    thead th {
+        text-align: center;
+        font-weight: 600;
+        background: var(--surface-ground, rgba(0, 0, 0, 0.04));
+    }
+
+    tbody td {
+        text-align: center;
+        &:first-child { text-align: left; }
+    }
+
+    tfoot td {
+        font-weight: 600;
+        text-align: center;
+        background: var(--surface-ground, rgba(0, 0, 0, 0.04));
+    }
+
+    .total-label {
+        text-align: center;
+    }
+
+    .total-value {
+        text-align: center;
+    }
+}
+
+.letter-section {
+    margin-top: 1rem;
+
+    &.reviewer-remark {
+        margin-top: 1.5rem;
+        padding-top: 1rem;
+        border-top: 1px dashed var(--surface-border, #d1d5db);
+    }
+}
+
+.letter-section-title {
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    margin: 0 0 0.4rem 0;
+    font-size: 0.95rem;
+}
+
+.letter-section-body {
+    margin: 0;
+    font-size: 0.9rem;
+    white-space: pre-line;
+}
+
+.page-subtitle {
+    font-size: 0.85rem;
+    color: var(--text-color-secondary, rgba(255, 255, 255, 0.6));
+    margin: 0.15rem 0 0 0;
+}
+
+.leave-app-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    flex-wrap: wrap;
+}

@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '@/Core/Environments/environment';
@@ -125,35 +125,41 @@ export class LeaveApplicationService {
         );
     }
 
-    /** Get applications by status and type with server-side pagination. Optional filter. */
+    /** Get applications by status and type with server-side pagination. Optional filter. additionalStatusIds combines with leaveApplicationStatusId for multi-status views (e.g. "All Approved & Declined" → pass null for leaveApplicationStatusId and [3,4] here). myDecisionFilter ('approved' | 'declined') narrows actionTakenByMe results to the user's own action regardless of overall status. */
     getByStatusForUserPaginated(
         leaveApplicationStatusId: number | null,
         currentUserEmployeeId: number,
         typeFilter: string,
         pageNo: number,
         rowPerPage: number,
-        filter?: LeaveApplicationFilterParams
+        filter?: LeaveApplicationFilterParams,
+        additionalStatusIds?: number[],
+        myDecisionFilter?: 'approved' | 'declined' | null
     ): Observable<PagedResponse<LeaveApplicationModel>> {
-        const params: Record<string, string> = {
-            currentUserEmployeeId: String(currentUserEmployeeId),
-            typeFilter,
-            page_no: String(pageNo),
-            row_per_page: String(rowPerPage)
-        };
-        if (leaveApplicationStatusId != null) params['leaveApplicationStatusId'] = String(leaveApplicationStatusId);
-        if (filter) {
-            if (filter.rabId?.trim()) params['rabId'] = filter.rabId.trim();
-            if (filter.serviceId?.trim()) params['serviceId'] = filter.serviceId.trim();
-            if (filter.leaveTypeId != null && filter.leaveTypeId > 0) params['leaveTypeId'] = String(filter.leaveTypeId);
-            if (filter.fromDate) params['fromDate'] = filter.fromDate;
-            if (filter.toDate) params['toDate'] = filter.toDate;
+        let params = new HttpParams()
+            .set('currentUserEmployeeId', String(currentUserEmployeeId))
+            .set('typeFilter', typeFilter)
+            .set('page_no', String(pageNo))
+            .set('row_per_page', String(rowPerPage));
+        if (leaveApplicationStatusId != null) params = params.set('leaveApplicationStatusId', String(leaveApplicationStatusId));
+        if (additionalStatusIds && additionalStatusIds.length > 0) {
+            for (const s of additionalStatusIds) params = params.append('additionalStatusIds', String(s));
         }
-        return this.http.get<{ datalist: unknown; pages: { Rows: number; TotalPages: number } }>(`${this.apiUrl}/GetByStatusForUserPaginated`, { params }).pipe(
+        if (myDecisionFilter) params = params.set('myDecisionFilter', myDecisionFilter);
+        if (filter) {
+            if (filter.rabId?.trim()) params = params.set('rabId', filter.rabId.trim());
+            if (filter.serviceId?.trim()) params = params.set('serviceId', filter.serviceId.trim());
+            if (filter.leaveTypeId != null && filter.leaveTypeId > 0) params = params.set('leaveTypeId', String(filter.leaveTypeId));
+            if (filter.fromDate) params = params.set('fromDate', filter.fromDate);
+            if (filter.toDate) params = params.set('toDate', filter.toDate);
+        }
+        return this.http.get<{ datalist: unknown; pages: { Rows?: number; rows?: number; TotalPages?: number; totalPages?: number } }>(`${this.apiUrl}/GetByStatusForUserPaginated`, { params }).pipe(
             map((res: any) => ({
                 datalist: (Array.isArray(res?.datalist) ? res.datalist : []).map((r: any) => this.normalizeRow(r)),
                 pages: {
-                    rows: res?.pages?.Rows ?? 0,
-                    totalPages: res?.pages?.TotalPages ?? 0
+                    // Backend returns camelCase (System.Text.Json default) but accept PascalCase too for safety.
+                    rows: res?.pages?.rows ?? res?.pages?.Rows ?? 0,
+                    totalPages: res?.pages?.totalPages ?? res?.pages?.TotalPages ?? 0
                 }
             }))
         );
