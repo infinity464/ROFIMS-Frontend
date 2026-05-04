@@ -1,5 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
-import { UserMenuService } from '@/services/user-menu.service';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -15,14 +14,17 @@ import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { TableModule } from 'primeng/table';
 import { EditorModule } from 'primeng/editor';
+import { DialogModule } from 'primeng/dialog';
+import { TagModule } from 'primeng/tag';
+import { CheckboxModule } from 'primeng/checkbox';
 import { PostingService } from '@/services/posting.service';
 import { OrgService } from '@/Components/basic-setup/org-tree/org.service';
 import { ServingMembersService } from '@/services/serving-members.service';
 import { EmpService } from '@/services/emp-service';
 import { EmployeeListService } from '@/services/employee-list.service';
-import { PostingOrderEmployeeRow, PostingMemberRemovalHistoryDto } from '@/models/posting.model';
+import { PostingOrderEmployeeRow } from '@/models/posting.model';
 import { EmployeeList } from '@/models/employee-list.model';
-import { NoteSheetType, IsSendingNotesheetStatus } from '@/models/enums';
+import { NoteSheetType, IsSendingNotesheetStatus, ApprovalStatus } from '@/models/enums';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '@/Core/Environments/environment';
 import { firstValueFrom } from 'rxjs';
@@ -61,19 +63,16 @@ interface TransferUnitOption {
         InputTextModule,
         TextareaModule,
         TableModule,
-        EditorModule
+        EditorModule,
+        DialogModule,
+        TagModule,
+        CheckboxModule
     ],
     providers: [MessageService, ConfirmationService],
     templateUrl: './posting-order-preview.html',
     styleUrl: './posting-order-preview.scss'
 })
 export class PostingOrderPreviewPageComponent implements OnInit {
-    private _router = inject(Router);
-    private _userMenuService = inject(UserMenuService);
-    canInsert = true;
-    canUpdate = true;
-    canDelete = true;
-
     loading = false;
     error = false;
     exportingPdf = false;
@@ -98,6 +97,29 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     postingText = '';
     subText = '';
 
+    // ── Page size for export ──────────────────────────────────
+    pageSizeOptions = [
+        { label: 'A4', value: 'A4' },
+        { label: 'Legal', value: 'Legal' }
+    ];
+    selectedPageSize = 'A4';
+
+    // ── অনুলিপি paragraph checkboxes ────────────────────────
+    showOnulipiFilter = false;
+    paragraphChecked: boolean[] = [];
+
+    private syncParagraphChecked(): void {
+        const paras = this.filteredFooterParagraphs;
+        if (this.paragraphChecked.length !== paras.length) {
+            this.paragraphChecked = paras.map((_, i) => this.paragraphChecked[i] ?? true);
+        }
+    }
+
+    get exportFooterParagraphs(): FooterParagraph[] {
+        this.syncParagraphChecked();
+        return this.filteredFooterParagraphs.filter((_, i) => this.paragraphChecked[i] !== false);
+    }
+
     /** Per-unit filter: null = "All units" (default), otherwise the transferRabUnitId to show. */
     selectedFilterUnitId: number | null = null;
 
@@ -111,9 +133,6 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     private currentOrderId: number | null = null;
     private rawFooterText: string | null = null;
 
-    // ─── Removal history ──────────────────────────────────
-    removalHistory: PostingMemberRemovalHistoryDto[] = [];
-    removalHistoryLoading = false;
     draftPostingMasterId: number | null = null;
 
     // ─── Edit mode state ──────────────────────────────────
@@ -156,6 +175,26 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         return parts.join(' > ');
     }
 
+    // Expose enum to template
+    readonly ApprovalStatus = ApprovalStatus;
+
+    // ─── Posting Order Approval ──────────────────────────
+    approvalEmployeeId: number | null = null;
+    approvalEmployeeName: string | null = null;
+    approvalStatus: string | null = null;
+    approvalNote: string | null = null;
+    cancelReason: string | null = null;
+    approvalDate: string | null = null;
+    // Edit-mode approval person
+    editApprovalEmployeeId: number | null = null;
+    approvalEmployees: { value: number; label: string }[] = [];
+    loadingApprovalEmployees = false;
+    // Approval modal state
+    showApprovalModal = false;
+    approvalModalAction: ApprovalStatus.Approve | ApprovalStatus.Cancel | null = null;
+    approvalModalRemarks = '';
+    savingApproval = false;
+
     // Final approver info
     approverName = '';
     approverNameBN = '';
@@ -196,11 +235,6 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     ) {}
 
     ngOnInit(): void {
-        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
-        this.canInsert = _perms.canInsert;
-        this.canUpdate = _perms.canUpdate;
-        this.canDelete = _perms.canDelete;
-
         this.route.queryParams.subscribe(params => {
             const id = params['id'];
             if (id) {
@@ -276,13 +310,13 @@ export class PostingOrderPreviewPageComponent implements OnInit {
 
                     this.draftPostingMasterId = first.draftPostingMasterId ?? null;
 
+                    // Load approval fields from master DTO
+                    this.loadApprovalInfo(id);
+
                     // Load final approver info from notesheet
                     if (first.noteSheetId) {
                         this.loadApproverInfo(first.noteSheetId);
                     }
-
-                    // Load removal history
-                    this.loadRemovalHistory();
 
                     // Keep edit table in sync when reloading during edit mode (e.g. after add/remove member).
                     if (this.editing) this.editEmployees = [...this.employees];
@@ -380,9 +414,16 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                                     this.applyFilter();
                                 }
 
+                                // Set approval fields from master DTO
+                                this.approvalEmployeeId = master.approvalEmployeeId ?? null;
+                                this.approvalEmployeeName = master.approvalEmployeeName ?? null;
+                                this.approvalStatus = master.approvalStatus ?? null;
+                                this.approvalNote = master.approvalNote ?? null;
+                                this.cancelReason = master.cancelReason ?? null;
+                                this.approvalDate = master.approvalDate ?? null;
+
                                 if (master.noteSheetId) {
                                     this.loadApproverInfo(master.noteSheetId);
-                                    this.loadRemovalHistory();
                                 }
                             }
                             this.loading = false;
@@ -399,6 +440,97 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                 this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load posting order.' });
             }
         });
+    }
+
+    /** Fetch approval fields from master DTO. */
+    private loadApprovalInfo(orderId: number): void {
+        this.postingService.getPostingOrderById(orderId).subscribe({
+            next: (master) => {
+                if (master) {
+                    this.approvalEmployeeId = master.approvalEmployeeId ?? null;
+                    this.approvalEmployeeName = master.approvalEmployeeName ?? null;
+                    this.approvalStatus = master.approvalStatus ?? null;
+                    this.approvalNote = master.approvalNote ?? null;
+                    this.cancelReason = master.cancelReason ?? null;
+                    this.approvalDate = master.approvalDate ?? null;
+                }
+            },
+            error: () => {}
+        });
+    }
+
+    approvalStatusLabel(status: string | null | undefined): string {
+        const bn = this.isBangla;
+        switch (status) {
+            case ApprovalStatus.Approve: return bn ? 'অনুমোদিত' : 'Approved';
+            case ApprovalStatus.Cancel: return bn ? 'বাতিল' : 'Cancelled';
+            case ApprovalStatus.Pending:
+            default: return bn ? 'অপেক্ষমাণ' : 'Pending';
+        }
+    }
+
+    approvalStatusSeverity(status: string | null | undefined): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' {
+        switch (status) {
+            case ApprovalStatus.Approve: return 'success';
+            case ApprovalStatus.Cancel: return 'danger';
+            case ApprovalStatus.Pending:
+            default: return 'warn';
+        }
+    }
+
+    openApprovalModal(): void {
+        this.approvalModalAction = null;
+        this.approvalModalRemarks = '';
+        this.showApprovalModal = true;
+    }
+
+    selectApprovalAction(action: ApprovalStatus.Approve | ApprovalStatus.Cancel): void {
+        this.approvalModalAction = action;
+        this.approvalModalRemarks = '';
+    }
+
+    saveApproval(): void {
+        if (!this.currentOrderId || !this.approvalModalAction) return;
+
+        this.savingApproval = true;
+        const id = this.currentOrderId;
+        const bn = this.isBangla;
+
+        if (this.approvalModalAction === ApprovalStatus.Approve) {
+            this.postingService.approvePostingOrder(id, this.approvalModalRemarks, 'system').subscribe({
+                next: (res) => {
+                    this.savingApproval = false;
+                    if (res.statusCode === 200) {
+                        this.messageService.add({ severity: 'success', summary: bn ? 'সফল' : 'Success', detail: bn ? 'পোস্টিং অর্ডার অনুমোদিত হয়েছে।' : 'Posting Order approved.' });
+                        this.showApprovalModal = false;
+                        this.loadApprovalInfo(id);
+                    } else {
+                        this.messageService.add({ severity: 'error', summary: bn ? 'ত্রুটি' : 'Error', detail: res.description ?? (bn ? 'অনুমোদন ব্যর্থ হয়েছে।' : 'Failed to approve.') });
+                    }
+                },
+                error: (err) => {
+                    this.savingApproval = false;
+                    this.messageService.add({ severity: 'error', summary: bn ? 'ত্রুটি' : 'Error', detail: err?.error?.description ?? (bn ? 'অনুমোদন ব্যর্থ হয়েছে।' : 'Failed to approve.') });
+                }
+            });
+        } else {
+            this.postingService.cancelPostingOrder(id, this.approvalModalRemarks, 'system').subscribe({
+                next: (res) => {
+                    this.savingApproval = false;
+                    if (res.statusCode === 200) {
+                        this.messageService.add({ severity: 'success', summary: bn ? 'সফল' : 'Success', detail: bn ? 'পোস্টিং অর্ডার বাতিল হয়েছে।' : 'Posting Order cancelled.' });
+                        this.showApprovalModal = false;
+                        this.loadApprovalInfo(id);
+                    } else {
+                        this.messageService.add({ severity: 'error', summary: bn ? 'ত্রুটি' : 'Error', detail: res.description ?? (bn ? 'বাতিল ব্যর্থ হয়েছে।' : 'Failed to cancel.') });
+                    }
+                },
+                error: (err) => {
+                    this.savingApproval = false;
+                    this.messageService.add({ severity: 'error', summary: bn ? 'ত্রুটি' : 'Error', detail: err?.error?.description ?? (bn ? 'বাতিল ব্যর্থ হয়েছে।' : 'Failed to cancel.') });
+                }
+            });
+        }
     }
 
     private loadApproverInfo(noteSheetId: number): void {
@@ -466,24 +598,6 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                 }
             }
         });
-    }
-
-    loadRemovalHistory(): void {
-        if (!this.draftPostingMasterId) { this.removalHistory = []; return; }
-        this.removalHistoryLoading = true;
-        const isInter = this.postingType === NoteSheetType.InterPosting;
-        this.postingService.getPostingMemberRemovalHistory(this.draftPostingMasterId, isInter).subscribe({
-            next: (list) => { this.removalHistory = list ?? []; this.removalHistoryLoading = false; },
-            error: () => { this.removalHistoryLoading = false; }
-        });
-    }
-
-    formatRemovalDate(value: string | null | undefined): string {
-        if (!value) return '-';
-        try {
-            const d = new Date(value);
-            return isNaN(d.getTime()) ? String(value) : d.toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-        } catch { return String(value); }
     }
 
     // ─── Body text (verbatim from the linked NoteSheet's Main Text) ──
@@ -638,14 +752,15 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         if (this.selectedFilterUnitId == null) {
             this.filteredEmployees = this.employees;
             this.filteredFooterParagraphs = this.footerParagraphs;
-            return;
+        } else {
+            const unitId = this.selectedFilterUnitId;
+            this.filteredEmployees = this.employees.filter(e => e.transferRabUnitId === unitId);
+            this.filteredFooterParagraphs = this.footerParagraphs.filter(p =>
+                p.transferRabUnitId == null || p.transferRabUnitId === unitId
+            );
         }
-        const unitId = this.selectedFilterUnitId;
-        this.filteredEmployees = this.employees.filter(e => e.transferRabUnitId === unitId);
-        // Paragraphs without a linked unit (`transferRabUnitId` null) are always shown.
-        this.filteredFooterParagraphs = this.footerParagraphs.filter(p =>
-            p.transferRabUnitId == null || p.transferRabUnitId === unitId
-        );
+        // Reset paragraph checkboxes when filter changes
+        this.paragraphChecked = this.filteredFooterParagraphs.map(() => true);
     }
 
     selectFilterUnit(unitId: number | null): void {
@@ -699,9 +814,23 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         // Re-parse the raw footerText into full FooterParagraph objects (with unit linkage).
         this.editFooterParagraphs = this.parseFooterParagraphs(this.rawFooterText);
 
+        this.editApprovalEmployeeId = this.approvalEmployeeId;
+        this.loadApprovalEmployees();
         this.loadAddMemberList();
         this.loadAddMemberUnitTree();
         this.editing = true;
+    }
+
+    private loadApprovalEmployees(): void {
+        if (this.approvalEmployees.length > 0) return;
+        this.loadingApprovalEmployees = true;
+        this.postingService.getApprovalEmployees().subscribe({
+            next: (list) => {
+                this.approvalEmployees = list ?? [];
+                this.loadingApprovalEmployees = false;
+            },
+            error: () => { this.loadingApprovalEmployees = false; }
+        });
     }
 
     cancelEdit(): void {
@@ -961,7 +1090,8 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             remarks: this.editRemarks || null,
             footerText: footerText,
             employeeIds: this.editEmployees.map(e => e.employeeId),
-            updatedBy: 'system'
+            updatedBy: 'system',
+            approvalEmployeeId: this.editApprovalEmployeeId ?? null
         }).subscribe({
             next: (res) => {
                 this.saving = false;
@@ -1296,18 +1426,20 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         });
 
         // ── Footer paragraphs (10pt) – only those linked to the selected unit (or all if no filter) ──
-        const footerParas = this.filteredFooterParagraphs.map((p, i) => new Paragraph({
+        const footerParas = this.exportFooterParagraphs.map((p, i) => new Paragraph({
             children: [new TextRun({ text: `${bn ? this.toBanglaDigits(String(i + 1)) : (i + 1)}। ${p.text}`, size: ctxSize, sizeComplexScript: csSize, font, language: lang })],
             spacing: { after: 100 }
         }));
+
+        const pageWidth = this.selectedPageSize === 'Legal' ? 12240 : 11906;
+        const pageHeight = this.selectedPageSize === 'Legal' ? 20160 : 16838;
 
         return new Document({
             styles: bn ? { default: { document: { run: { language: { value: 'bn-BD', bidirectional: 'bn-BD' } } } } } : undefined,
             sections: [{
                 properties: {
                     page: {
-                        // A4 portrait: 11906 × 16838 DXA (210mm × 297mm)
-                        size: { orientation: PageOrientation.PORTRAIT, width: 11906, height: 16838 },
+                        size: { orientation: PageOrientation.PORTRAIT, width: pageWidth, height: pageHeight },
                         margin: { top: 567, right: 567, bottom: 567, left: 567 },
                     }
                 },

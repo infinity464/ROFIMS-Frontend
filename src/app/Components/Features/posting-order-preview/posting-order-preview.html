@@ -7,6 +7,7 @@
         <div class="preview-actions" *ngIf="!loading && !error">
             <ng-container *ngIf="!editing">
                 <ng-container *ngIf="employees.length > 0">
+                    <p-select [options]="pageSizeOptions" [(ngModel)]="selectedPageSize" optionLabel="label" optionValue="value" [style]="{'width': '90px'}"></p-select>
                     <p-button icon="pi pi-file-word" label="Word" (onClick)="exportWord()" styleClass="p-button-outlined"></p-button>
                     <p-button icon="pi pi-file-pdf" label="PDF" (onClick)="exportPdf()" [loading]="exportingPdf" styleClass="p-button-outlined"></p-button>
                     <p-button icon="pi pi-print" label="Print Preview" (onClick)="printPreview()" [loading]="printingPreview" styleClass="p-button-outlined"></p-button>
@@ -16,6 +17,30 @@
             <ng-container *ngIf="editing">
                 <p-button icon="pi pi-times" label="Cancel" severity="secondary" [outlined]="true" (onClick)="cancelEdit()"></p-button>
                 <p-button icon="pi pi-check" label="Save" severity="success" [loading]="saving" (onClick)="saveChanges()"></p-button>
+            </ng-container>
+        </div>
+
+        <!-- Approval Status (right side) -->
+        <div class="approval-header-right" *ngIf="approvalEmployeeId || approvalStatus">
+            <p-tag [value]="approvalStatusLabel(approvalStatus)" [severity]="approvalStatusSeverity(approvalStatus)"></p-tag>
+            <span *ngIf="approvalEmployeeName" class="text-600 text-sm">{{ approvalEmployeeName }}</span>
+            <span *ngIf="approvalStatus === ApprovalStatus.Approve && approvalNote" class="text-500 text-xs">{{ approvalNote }}</span>
+            <span *ngIf="approvalStatus === ApprovalStatus.Cancel && cancelReason" class="text-500 text-xs">{{ cancelReason }}</span>
+            <ng-container *ngIf="!approvalStatus || approvalStatus === ApprovalStatus.Pending">
+                <p-button
+                    icon="pi pi-check"
+                    label="Approve"
+                    severity="success"
+                    size="small"
+                    (onClick)="selectApprovalAction(ApprovalStatus.Approve); showApprovalModal = true"
+                ></p-button>
+                <p-button
+                    icon="pi pi-times"
+                    label="Cancel"
+                    severity="danger"
+                    size="small"
+                    (onClick)="selectApprovalAction(ApprovalStatus.Cancel); showApprovalModal = true"
+                ></p-button>
             </ng-container>
         </div>
     </div>
@@ -39,8 +64,12 @@
             </div>
 
             <div class="draft-master-section mb-4 p-4 surface-50 border-round">
-                <div class="flex flex-wrap gap-4 align-items-end mb-3">
-                    <div class="field min-w-200px">
+                <div class="edit-master-grid">
+                    <div class="field edit-field-po-no">
+                        <label class="font-semibold block mb-2 text-700">Posting Order No</label>
+                        <input pInputText [value]="postingOrderNo" [readonly]="true" class="w-full" style="background: var(--surface-100); cursor: default;" />
+                    </div>
+                    <div class="field edit-field-date">
                         <label class="font-semibold block mb-2 text-700">Posting Order Date <span class="text-red-500">*</span></label>
                         <p-datepicker
                             [(ngModel)]="editPostingOrderDate"
@@ -48,6 +77,22 @@
                             styleClass="w-full"
                             placeholder="Select date"
                         ></p-datepicker>
+                    </div>
+                    <div class="field edit-field-approval">
+                        <label class="font-semibold block mb-2 text-700">Approval Person <span class="text-red-500">*</span></label>
+                        <p-select
+                            [options]="approvalEmployees"
+                            [(ngModel)]="editApprovalEmployeeId"
+                            optionLabel="label"
+                            optionValue="value"
+                            placeholder="{{ loadingApprovalEmployees ? 'Loading...' : 'Select Approval Person' }}"
+                            [disabled]="loadingApprovalEmployees"
+                            [showClear]="true"
+                            [filter]="true"
+                            filterBy="label"
+                            styleClass="w-full"
+                            appendTo="body"
+                        ></p-select>
                     </div>
                 </div>
             </div>
@@ -388,6 +433,21 @@
         ></p-button>
     </div>
 
+    <!-- অনুলিপি paragraph filter (collapsed by default) -->
+    <div class="unit-filter-bar no-print" *ngIf="!editing && !loading && !error && filteredFooterParagraphs.length > 0"
+         style="flex-direction:column; align-items:flex-start;">
+        <span style="font-weight:600; font-size:0.85rem; cursor:pointer;" (click)="showOnulipiFilter = !showOnulipiFilter">
+            <i class="pi" [ngClass]="showOnulipiFilter ? 'pi-chevron-down' : 'pi-chevron-right'" style="margin-right:0.3rem;"></i>{{ isBangla ? 'অনুলিপি ফিল্টার' : 'Copy Filter' }}
+        </span>
+        <div *ngIf="showOnulipiFilter" style="display:flex; flex-direction:column; gap:0.3rem; margin-top:0.4rem; width:100%;">
+            <span *ngFor="let para of filteredFooterParagraphs; let pi = index"
+                  style="display:inline-flex; align-items:flex-start; gap:0.4rem; font-size:0.82rem; line-height:1.4;">
+                <p-checkbox [(ngModel)]="paragraphChecked[pi]" [binary]="true" [inputId]="'chkPara' + pi"></p-checkbox>
+                <label [for]="'chkPara' + pi" style="cursor:pointer;">{{ isBangla ? toBanglaDigits('' + (pi + 1)) : (pi + 1) }}। {{ para.text }}</label>
+            </span>
+        </div>
+    </div>
+
     <!-- Empty state — order loaded but no employees yet -->
     <div *ngIf="!editing && !loading && !error && employees.length === 0" class="flex flex-column align-items-center justify-content-center gap-3 py-6 text-center">
         <i class="pi pi-inbox text-6xl text-400"></i>
@@ -518,89 +578,61 @@
                 <div class="po-doc-copy-title">{{ isBangla ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নহে)' : 'Copy (not in order of seniority):' }}</div>
             </div>
 
-            <!-- Footer Paragraphs -->
-            <div class="po-doc-footer-text" *ngIf="filteredFooterParagraphs.length > 0">
-                <p *ngFor="let para of filteredFooterParagraphs; let i = index">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}। {{ para.text }}</p>
+            <!-- Footer Paragraphs (only checked ones) -->
+            <div class="po-doc-footer-text" *ngIf="exportFooterParagraphs.length > 0">
+                <p *ngFor="let para of exportFooterParagraphs; let i = index">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}। {{ para.text }}</p>
             </div>
 
           </div><!-- /po-doc-box -->
         </div>
     </div>
 
-    <!-- ── Member Removal History ── -->
-    <div class="removal-history-section no-print mt-4" *ngIf="!loading && !error && draftPostingMasterId">
-        <div class="p-3 surface-100 border-round">
-            <h4 class="mt-0 mb-3 text-700">Member Removal History</h4>
-
-            @if (removalHistoryLoading) {
-                <div class="flex align-items-center gap-2 py-3">
-                    <i class="pi pi-spin pi-spinner"></i>
-                    <span class="text-500">Loading history...</span>
-                </div>
-            }
-
-            @if (!removalHistoryLoading && removalHistory.length === 0) {
-                <div class="text-500 text-sm py-2">No removal history found.</div>
-            }
-
-            @if (!removalHistoryLoading && removalHistory.length > 0) {
-                <span class="text-500 text-sm block mb-2">{{ removalHistory.length }} removal record(s)</span>
-                <p-table
-                    [value]="removalHistory"
-                    [tableStyle]="{ 'min-width': '90rem' }"
-                    styleClass="p-datatable-striped p-datatable-gridlines p-datatable-sm"
-                    [paginator]="removalHistory.length > 10"
-                    [rows]="10"
-                    [rowsPerPageOptions]="[10, 25, 50]">
-                    <ng-template pTemplate="header">
-                        <tr>
-                            <th style="width: 45px">Ser</th>
-                            <th style="min-width: 110px">Posting No</th>
-                            <th style="min-width: 100px">Service ID</th>
-                            <th style="min-width: 100px">RAB ID</th>
-                            <th style="min-width: 160px">Name</th>
-                            <th style="min-width: 115px">Notesheet No</th>
-                            <th style="min-width: 160px">Stage at Removal</th>
-                            <th style="min-width: 140px">Transfer Unit</th>
-                            <th style="min-width: 130px">Wing</th>
-                            <th style="min-width: 130px">Branch</th>
-                            <th style="min-width: 130px">Section</th>
-                            <th style="min-width: 140px">Original Remarks</th>
-                            <th style="min-width: 110px">Removed By</th>
-                            <th style="min-width: 145px">Removed Date</th>
-                        </tr>
-                    </ng-template>
-                    <ng-template pTemplate="body" let-h let-i="rowIndex">
-                        <tr>
-                            <td>{{ i + 1 }}</td>
-                            <td><span class="font-semibold">{{ h.draftPostingNo || '-' }}</span></td>
-                            <td>{{ h.serviceId || '-' }}</td>
-                            <td>{{ h.rabId || '-' }}</td>
-                            <td>{{ h.fullNameEN || '-' }}</td>
-                            <td>{{ h.noteSheetNo || '-' }}</td>
-                            <td>
-                                <span class="ns-status-badge"
-                                    [ngClass]="{
-                                        'ns-status-badge--initiator':   h.noteSheetStatusAtRemoval === 'Pending - Initiator',
-                                        'ns-status-badge--recommender': h.noteSheetStatusAtRemoval === 'Pending - Recommender' || h.noteSheetStatusAtRemoval === 'Pending - Final Approval',
-                                        'ns-status-badge--backed':      h.noteSheetStatusAtRemoval === 'Declined',
-                                        'ns-status-badge--approved':    h.noteSheetStatusAtRemoval === 'Approved'
-                                    }">
-                                    {{ h.noteSheetStatusAtRemoval || '-' }}
-                                </span>
-                            </td>
-                            <td>{{ h.originalTransferRabUnitName || '-' }}</td>
-                            <td>{{ h.originalTransferWingName || '-' }}</td>
-                            <td>{{ h.originalTransferBranchName || '-' }}</td>
-                            <td>{{ h.originalTransferSectionName || '-' }}</td>
-                            <td>{{ h.originalRemarks || '-' }}</td>
-                            <td>{{ h.createdBy || '-' }}</td>
-                            <td>{{ formatRemovalDate(h.createdDate) }}</td>
-                        </tr>
-                    </ng-template>
-                </p-table>
-            }
-        </div>
-    </div>
 
 </div>
+
+<!-- ─── Approval Modal ─── -->
+<p-dialog
+    [header]="approvalModalAction === ApprovalStatus.Approve ? 'Approve Posting Order' : 'Cancel Posting Order'"
+    [(visible)]="showApprovalModal"
+    [modal]="true"
+    [style]="{ width: '500px' }"
+    [closable]="true"
+>
+    <div class="mb-3">
+        <div class="flex gap-3 mb-2">
+            <span class="text-600">Order No:</span>
+            <strong>{{ postingOrderNo }}</strong>
+        </div>
+        <div class="flex gap-3 mb-3">
+            <span class="text-600">Date:</span>
+            <strong>{{ postingOrderDate }}</strong>
+        </div>
+
+        <!-- Remarks textarea -->
+        @if (approvalModalAction) {
+            <div class="field">
+                <label class="font-semibold block mb-2 text-700">
+                    {{ approvalModalAction === ApprovalStatus.Approve ? 'Approval Note' : 'Cancel Reason' }}
+                </label>
+                <textarea
+                    pTextarea
+                    [(ngModel)]="approvalModalRemarks"
+                    rows="4"
+                    class="w-full"
+                    placeholder="{{ approvalModalAction === ApprovalStatus.Approve ? 'Enter approval note...' : 'Enter cancel reason...' }}"
+                    [autoResize]="true"
+                ></textarea>
+            </div>
+
+            <div class="flex justify-content-end mt-3">
+                <p-button
+                    [label]="approvalModalAction === ApprovalStatus.Approve ? 'Approve' : 'Cancel Order'"
+                    [icon]="approvalModalAction === ApprovalStatus.Approve ? 'pi pi-check' : 'pi pi-times'"
+                    [severity]="approvalModalAction === ApprovalStatus.Approve ? 'success' : 'danger'"
+                    [loading]="savingApproval"
+                    (onClick)="saveApproval()"
+                ></p-button>
+            </div>
+        }
+    </div>
+</p-dialog>

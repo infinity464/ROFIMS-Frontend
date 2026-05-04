@@ -1690,7 +1690,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
 
         // Paragraphs (after employee table)
         const wordParagraphs = this.parsedParagraphs;
-        wordParagraphs.forEach((para, pi) => {
+        wordParagraphs.forEach((para: string, pi: number) => {
             mainChildren.push(new Paragraph({
                 children: [
                     new TextRun({ text: `${this.serial(pi + 2)}  `, bold: true, size: BODY_SZ, sizeComplexScript: csSize, font, language: lang }),

@@ -588,8 +588,24 @@ export class PostingService {
         employeeIds: number[];
         createdBy: string;
         postingOrderNumberConfigId?: number | null;
+        approvalEmployeeId?: number | null;
     }): Observable<{ statusCode: number; description: string; data?: any }> {
         return this.http.post<{ statusCode: number; description: string; data?: any }>(`${API}/CreatePostingOrder`, body);
+    }
+
+    /** Approve a posting order. */
+    approvePostingOrder(id: number, approvalNote: string, approvedBy: string): Observable<{ statusCode: number; description: string }> {
+        return this.http.post<{ statusCode: number; description: string }>(`${API}/ApprovePostingOrder`, { id, approvalNote, approvedBy });
+    }
+
+    /** Cancel a posting order. */
+    cancelPostingOrder(id: number, cancelReason: string, cancelledBy: string): Observable<{ statusCode: number; description: string }> {
+        return this.http.post<{ statusCode: number; description: string }>(`${API}/CancelPostingOrder`, { id, cancelReason, cancelledBy });
+    }
+
+    /** Get employees for approval person dropdown. */
+    getApprovalEmployees(): Observable<{ value: number; label: string }[]> {
+        return this.http.get<{ value: number; label: string }[]>(`${API}/GetApprovalEmployees`);
     }
 
     /** Add a single employee directly to an existing Posting Order (immediate DB persist). */
@@ -648,6 +664,7 @@ export class PostingService {
         footerText?: string | null;
         employeeIds: number[];
         updatedBy: string;
+        approvalEmployeeId?: number | null;
     }): Observable<{ statusCode: number; description: string }> {
         return this.http.post<{ statusCode: number; description: string }>(`${API}/UpdatePostingOrder`, body);
     }

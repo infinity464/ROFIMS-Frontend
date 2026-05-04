@@ -324,6 +324,13 @@ export interface PostingOrderMasterDto {
     createdBy: string;
     createdDate: string;
     detailCount: number;
+    // Approval fields
+    approvalEmployeeId?: number | null;
+    approvalEmployeeName?: string | null;
+    approvalStatus?: string | null;
+    approvalNote?: string | null;
+    cancelReason?: string | null;
+    approvalDate?: string | null;
 }
 
 /** Posting Order detail row (employee). */
@@ -361,6 +368,13 @@ export interface PostingOrderMasterWithDetailsDto {
     footerText?: string | null;
     createdBy: string;
     createdDate: string;
+    // Approval fields
+    approvalEmployeeId?: number | null;
+    approvalEmployeeName?: string | null;
+    approvalStatus?: string | null;
+    approvalNote?: string | null;
+    cancelReason?: string | null;
+    approvalDate?: string | null;
     details: PostingOrderDetailDto[];
 }
 

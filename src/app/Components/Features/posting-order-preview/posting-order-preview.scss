@@ -22,6 +22,36 @@
     gap: 0.5rem;
 }
 
+.approval-header-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+/* ── Edit form master grid ─────────────────────────── */
+.edit-master-grid {
+    display: grid;
+    grid-template-columns: 1fr 200px 1fr;
+    gap: 1rem;
+    align-items: end;
+}
+
+@media screen and (max-width: 900px) {
+    .edit-master-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+    .edit-field-po-no {
+        grid-column: 1 / -1;
+    }
+}
+
+@media screen and (max-width: 600px) {
+    .edit-master-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* ── Loading / Error ──────────────────────────────── */
 .preview-loading,
 .preview-error {
