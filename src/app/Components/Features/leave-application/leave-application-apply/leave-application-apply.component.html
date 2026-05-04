@@ -191,50 +191,47 @@
       </section>
 
       <!-- ─────────────── Section 3: Approval Flow ─────────────── -->
-      <section class="form-section">
-        <div class="section-header">
-          <h2 class="section-title">Approval Flow</h2>
-          <span class="section-hint">Optional recommenders are walked in order before the final approver.</span>
-        </div>
+      <!-- Approval Flow only applies to automatic applications. Manual processing records the
+           decision immediately and does not need a recommender chain or a final approver. -->
+      @if (form.get('processType')?.value !== 'manual') {
+        <section class="form-section">
+          <div class="section-header">
+            <h2 class="section-title">Approval Flow</h2>
+            <span class="section-hint">Optional recommenders are walked in order before the final approver.</span>
+          </div>
 
-        <div class="mb-4">
-          <label class="field-label">Recommenders</label>
-          <p-multiselect
-            formControlName="recommenderIds"
-            [options]="approverOptions"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="Select one or more recommenders (optional)"
-            styleClass="w-full"
-            [filter]="true"
-            display="chip"
-            appendTo="body">
-          </p-multiselect>
-          <small class="field-hint">Application is routed through recommenders in selection order, then the Final Approver.</small>
-        </div>
+          <div class="mb-4">
+            <label class="field-label">Recommenders</label>
+            <p-multiselect
+              formControlName="recommenderIds"
+              [options]="approverOptions"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Select one or more recommenders (optional)"
+              styleClass="w-full"
+              [filter]="true"
+              display="chip"
+              appendTo="body">
+            </p-multiselect>
+            <small class="field-hint">Application is routed through recommenders in selection order, then the Final Approver.</small>
+          </div>
 
-        <div>
-          <label class="field-label">
-            Final Approver
-            @if (form.get('processType')?.value !== 'manual') {
-              <span class="req">*</span>
-            } @else {
-              <span class="optional-tag">(Optional)</span>
-            }
-          </label>
-          <p-select
-            formControlName="finalApproverId"
-            [options]="approverOptions"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="Select final approver"
-            styleClass="w-full"
-            [filter]="true"
-            appendTo="body">
-          </p-select>
-          <small class="field-hint">The person who gives the final go-ahead on this application.</small>
-        </div>
-      </section>
+          <div>
+            <label class="field-label">Final Approver <span class="req">*</span></label>
+            <p-select
+              formControlName="finalApproverId"
+              [options]="approverOptions"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Select final approver"
+              styleClass="w-full"
+              [filter]="true"
+              appendTo="body">
+            </p-select>
+            <small class="field-hint">The person who gives the final go-ahead on this application.</small>
+          </div>
+        </section>
+      }
 
       <!-- ─────────────── Section 4: Supporting Documents ─────────────── -->
       <section class="form-section">

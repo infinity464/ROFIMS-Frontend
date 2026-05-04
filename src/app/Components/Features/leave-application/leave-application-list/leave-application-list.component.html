@@ -148,7 +148,6 @@
                                 <th>My Decision</th>
                             } @else {
                                 @if (section === 'all') { <th>Status</th> }
-                                <th>Action By</th>
                                 <th>Action Date</th>
                                 @if (section !== 'approved') { <th>Remark</th> }
                             }
@@ -182,7 +181,6 @@
                                         </span>
                                     </td>
                                 }
-                                <td>{{ getApplicantName(row.leaveApplicationStatusId === 3 ? row.approvedByEmployeeId : row.declinedByEmployeeId) }}</td>
                                 <td>{{ formatDate(row.leaveApplicationStatusId === 3 ? row.approvedDate : row.declinedDate) }}</td>
                                 @if (section !== 'approved') { <td>{{ row.remark ?? '-' }}</td> }
                             }
@@ -195,7 +193,7 @@
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="emptymessage">
-                        <tr><td [attr.colspan]="typeFilter === 'actionTakenByMe' ? 9 : (section === 'all' ? 11 : (section === 'declined' ? 10 : 9))" class="text-center p-4">No applications.</td></tr>
+                        <tr><td [attr.colspan]="typeFilter === 'actionTakenByMe' ? 9 : (section === 'all' ? 10 : (section === 'declined' ? 9 : 8))" class="text-center p-4">No applications.</td></tr>
                     </ng-template>
                 </p-table>
                 @if (totalRecords > pageSize) {

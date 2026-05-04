@@ -136,8 +136,11 @@ export class LeaveApplicationApplyComponent implements OnInit {
         });
         this.form.get('processType')!.valueChanges.subscribe((val) => {
             if (val === 'manual') {
+                // Manual mode: decision is mandatory, the approval-flow fields are not used.
+                // Clear them so they don't leak into the submit payload or sit stale in the UI.
                 this.form.get('manualDecision')!.setValidators(Validators.required);
                 this.form.get('finalApproverId')!.clearValidators();
+                this.form.patchValue({ finalApproverId: null, recommenderIds: [] }, { emitEvent: false });
             } else {
                 this.form.get('manualDecision')!.clearValidators();
                 this.form.get('manualDecision')!.setValue(null);
@@ -674,7 +677,8 @@ export class LeaveApplicationApplyComponent implements OnInit {
         const user = this.sharedService.getCurrentUser?.() ?? '';
         const appliedBy = this.currentUserEmployeeId ?? applicantId ?? this.form.get('appliedByEmployeeId')?.value;
         const isManualApproval = statusId === 3 || statusId === 4;
-        const now = new Date().toISOString();
+        // ApprovedDate / DeclinedDate on the backend are DateOnly — yyyy-MM-dd, not ISO datetime.
+        const today = this.toIsoDate(new Date());
 
         const details: LeaveApplicationDetailModel[] = this.leaveDetails.controls
             .map((c, idx) => {
@@ -718,9 +722,9 @@ export class LeaveApplicationApplyComponent implements OnInit {
             finalApproverId: this.form.get('finalApproverId')?.value ?? null,
             leaveApplicationStatusId: statusId,
             approvedByEmployeeId: isManualApproval && statusId === 3 ? (this.currentUserEmployeeId ?? appliedBy) : null,
-            approvedDate: isManualApproval && statusId === 3 ? now : null,
+            approvedDate: isManualApproval && statusId === 3 ? today : null,
             declinedByEmployeeId: isManualApproval && statusId === 4 ? (this.currentUserEmployeeId ?? appliedBy) : null,
-            declinedDate: isManualApproval && statusId === 4 ? now : null,
+            declinedDate: isManualApproval && statusId === 4 ? today : null,
             createdBy: user,
             lastUpdatedBy: user,
             leaveDetails: details,
