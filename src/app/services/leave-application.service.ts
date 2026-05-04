@@ -165,6 +165,37 @@ export class LeaveApplicationService {
         );
     }
 
+    /** Admin-style "full history": every leave application with the full recommender chain attached. Optional filters. */
+    getAllPaginated(
+        pageNo: number,
+        rowPerPage: number,
+        filter?: LeaveApplicationFilterParams,
+        statusIds?: number[]
+    ): Observable<PagedResponse<LeaveApplicationModel>> {
+        let params = new HttpParams()
+            .set('page_no', String(pageNo))
+            .set('row_per_page', String(rowPerPage));
+        if (statusIds && statusIds.length > 0) {
+            for (const s of statusIds) params = params.append('statusIds', String(s));
+        }
+        if (filter) {
+            if (filter.rabId?.trim()) params = params.set('rabId', filter.rabId.trim());
+            if (filter.serviceId?.trim()) params = params.set('serviceId', filter.serviceId.trim());
+            if (filter.leaveTypeId != null && filter.leaveTypeId > 0) params = params.set('leaveTypeId', String(filter.leaveTypeId));
+            if (filter.fromDate) params = params.set('fromDate', filter.fromDate);
+            if (filter.toDate) params = params.set('toDate', filter.toDate);
+        }
+        return this.http.get<{ datalist: unknown; pages: { Rows?: number; rows?: number; TotalPages?: number; totalPages?: number } }>(`${this.apiUrl}/GetAllPaginated`, { params }).pipe(
+            map((res: any) => ({
+                datalist: (Array.isArray(res?.datalist) ? res.datalist : []).map((r: any) => this.normalizeRow(r)),
+                pages: {
+                    rows: res?.pages?.rows ?? res?.pages?.Rows ?? 0,
+                    totalPages: res?.pages?.totalPages ?? res?.pages?.TotalPages ?? 0
+                }
+            }))
+        );
+    }
+
     getByApplicant(applicantEmployeeId: number): Observable<LeaveApplicationModel[]> {
         return this.http.get<LeaveApplicationModel[]>(`${this.apiUrl}/GetByApplicant/${applicantEmployeeId}`).pipe(
             map((res: unknown) => (Array.isArray(res) ? res.map((r: any) => this.normalizeRow(r)) : []))

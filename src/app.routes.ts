@@ -134,6 +134,7 @@ import { LeaveApplicationApplyComponent } from '@/Components/Features/leave-appl
 import { LeaveApplicationListComponent } from '@/Components/Features/leave-application/leave-application-list/leave-application-list.component';
 import { LeavePendingApprovalListComponent } from '@/Components/Features/leave-application/leave-pending-approval-list/leave-pending-approval-list.component';
 import { LeavePendingApprovalPreviewComponent } from '@/Components/Features/leave-application/leave-pending-approval-preview/leave-pending-approval-preview.component';
+import { LeaveHistoryListComponent } from '@/Components/Features/leave-application/leave-history-list/leave-history-list.component';
 import { LeaveCardComponent } from '@/Components/Features/leave-application/leave-card/leave-card.component';
 import { CalendarComponent } from '@/Components/Features/calendar/calendar.component';
 import { TaskEventListComponent } from '@/Components/Features/calendar/task-event-list.component';
@@ -269,6 +270,7 @@ export const appRoutes: Routes = [
             { path: 'leave-application/list', component: LeaveApplicationListComponent },
             { path: 'leave-application/pending-approval', component: LeavePendingApprovalListComponent },
             { path: 'leave-application/preview', component: LeavePendingApprovalPreviewComponent },
+            { path: 'leave-application/history', component: LeaveHistoryListComponent },
             { path: 'leave-application/card', component: LeaveCardComponent },
 
             // EMP
