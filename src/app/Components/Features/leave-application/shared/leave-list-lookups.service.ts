@@ -84,6 +84,29 @@ export class LeaveListLookupsService {
         return this.leaveTypeName[leaveTypeId] ?? String(leaveTypeId);
     }
 
+    getApplicantUnit(empId: number | null | undefined): string {
+        if (empId == null) return '-';
+        const orgId = this.employeeUnitId[empId];
+        if (orgId == null) return '-';
+        return this.unitName[orgId] ?? String(orgId);
+    }
+
+    getApplicantAppointment(empId: number | null | undefined): string {
+        if (empId == null) return '-';
+        const codeId = this.employeeAppointmentId[empId];
+        if (codeId == null) return '-';
+        return this.appointmentName[codeId] ?? String(codeId);
+    }
+
+    /** Inclusive day count between two ISO/Date values; returns '-' if either is missing. */
+    getTotalDays(fromDate: string | Date | null | undefined, toDate: string | Date | null | undefined): string {
+        if (!fromDate || !toDate) return '-';
+        const from = fromDate instanceof Date ? fromDate : new Date(fromDate);
+        const to = toDate instanceof Date ? toDate : new Date(toDate);
+        if (isNaN(from.getTime()) || isNaN(to.getTime())) return '-';
+        return String(Math.floor((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+    }
+
     private loadEmployees(): void {
         this.http.get<any[]>(`${environment.apis.core}/EmployeeInfo/GetAll`).subscribe({
             next: (list) => {

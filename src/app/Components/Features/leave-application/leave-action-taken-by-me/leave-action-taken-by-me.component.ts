@@ -34,7 +34,9 @@ type DecisionSection = 'all' | 'approved' | 'declined';
     ],
     providers: [MessageService],
     templateUrl: './leave-action-taken-by-me.component.html',
-    styleUrls: ['./leave-action-taken-by-me.component.scss', '../leave-my-applications/leave-my-applications.component.scss', '../../employee-reports/report-theme-common.scss']
+    // Order matters: report-theme-common is the base, leave-my-applications is the shared
+    // "leave list" re-skin, local scss can add component-specific tweaks last.
+    styleUrls: ['../../employee-reports/report-theme-common.scss', '../leave-my-applications/leave-my-applications.component.scss', './leave-action-taken-by-me.component.scss']
 })
 export class LeaveActionTakenByMeComponent implements OnInit {
     readonly TYPE_FILTER = 'actionTakenByMe';
@@ -55,7 +57,6 @@ export class LeaveActionTakenByMeComponent implements OnInit {
 
     filterRabId = '';
     filterServiceId = '';
-    filterLeaveTypeId: number | null = null;
     filterFromDate: Date | null = null;
     filterToDate: Date | null = null;
     filterOpen = true;
@@ -83,15 +84,13 @@ export class LeaveActionTakenByMeComponent implements OnInit {
     private buildFilterParams(): LeaveApplicationFilterParams | undefined {
         const hasRab = (this.filterRabId || '').trim();
         const hasSvc = (this.filterServiceId || '').trim();
-        const hasLt = this.filterLeaveTypeId != null && this.filterLeaveTypeId > 0;
         const hasFrom = !!this.filterFromDate;
         const hasTo = !!this.filterToDate;
-        if (!hasRab && !hasSvc && !hasLt && !hasFrom && !hasTo) return undefined;
+        if (!hasRab && !hasSvc && !hasFrom && !hasTo) return undefined;
         const toDateStr = (d: Date | null) => d ? new Date(d).toISOString().slice(0, 10) : undefined;
         return {
             rabId: hasRab ? this.filterRabId.trim() : undefined,
             serviceId: hasSvc ? this.filterServiceId.trim() : undefined,
-            leaveTypeId: hasLt ? this.filterLeaveTypeId! : undefined,
             fromDate: toDateStr(this.filterFromDate),
             toDate: toDateStr(this.filterToDate)
         };
@@ -101,7 +100,6 @@ export class LeaveActionTakenByMeComponent implements OnInit {
     clearFilter(): void {
         this.filterRabId = '';
         this.filterServiceId = '';
-        this.filterLeaveTypeId = null;
         this.filterFromDate = null;
         this.filterToDate = null;
         this.pageNumber = 1;
@@ -114,10 +112,14 @@ export class LeaveActionTakenByMeComponent implements OnInit {
         let n = 0;
         if ((this.filterRabId || '').trim()) n++;
         if ((this.filterServiceId || '').trim()) n++;
-        if (this.filterLeaveTypeId != null) n++;
         if (this.filterFromDate != null) n++;
         if (this.filterToDate != null) n++;
         return n;
+    }
+
+    /** Continuous serial number across pages: e.g. page 2 with size 10 starts at 11. */
+    serialNumber(rowIndexOnPage: number): number {
+        return (this.pageNumber - 1) * this.pageSize + rowIndexOnPage + 1;
     }
 
     load(): void {

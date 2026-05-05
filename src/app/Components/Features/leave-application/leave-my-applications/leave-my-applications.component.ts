@@ -33,7 +33,10 @@ type Section = 'all' | 'draft' | 'pending' | 'approved' | 'declined' | 'returned
     ],
     providers: [MessageService, ConfirmationService],
     templateUrl: './leave-my-applications.component.html',
-    styleUrls: ['./leave-my-applications.component.scss', '../../employee-reports/report-theme-common.scss']
+    // Order matters: report-theme provides the base, local SCSS overrides it to mirror the
+    // leave-application/apply page's tokens (surface-card / surface-border / #10b981 accent,
+    // 0.75rem radius, apply-form typography). Local must come LAST to win the cascade.
+    styleUrls: ['../../employee-reports/report-theme-common.scss', './leave-my-applications.component.scss']
 })
 export class LeaveMyApplicationsComponent implements OnInit {
     readonly TYPE_FILTER = 'myApplication';
@@ -57,7 +60,6 @@ export class LeaveMyApplicationsComponent implements OnInit {
 
     filterRabId = '';
     filterServiceId = '';
-    filterLeaveTypeId: number | null = null;
     filterFromDate: Date | null = null;
     filterToDate: Date | null = null;
     filterOpen = true;
@@ -89,15 +91,13 @@ export class LeaveMyApplicationsComponent implements OnInit {
     private buildFilterParams(): LeaveApplicationFilterParams | undefined {
         const hasRab = (this.filterRabId || '').trim();
         const hasSvc = (this.filterServiceId || '').trim();
-        const hasLt = this.filterLeaveTypeId != null && this.filterLeaveTypeId > 0;
         const hasFrom = !!this.filterFromDate;
         const hasTo = !!this.filterToDate;
-        if (!hasRab && !hasSvc && !hasLt && !hasFrom && !hasTo) return undefined;
+        if (!hasRab && !hasSvc && !hasFrom && !hasTo) return undefined;
         const toDateStr = (d: Date | null) => d ? new Date(d).toISOString().slice(0, 10) : undefined;
         return {
             rabId: hasRab ? this.filterRabId.trim() : undefined,
             serviceId: hasSvc ? this.filterServiceId.trim() : undefined,
-            leaveTypeId: hasLt ? this.filterLeaveTypeId! : undefined,
             fromDate: toDateStr(this.filterFromDate),
             toDate: toDateStr(this.filterToDate)
         };
@@ -107,7 +107,6 @@ export class LeaveMyApplicationsComponent implements OnInit {
     clearFilter(): void {
         this.filterRabId = '';
         this.filterServiceId = '';
-        this.filterLeaveTypeId = null;
         this.filterFromDate = null;
         this.filterToDate = null;
         this.pageNumber = 1;
@@ -120,7 +119,6 @@ export class LeaveMyApplicationsComponent implements OnInit {
         let n = 0;
         if ((this.filterRabId || '').trim()) n++;
         if ((this.filterServiceId || '').trim()) n++;
-        if (this.filterLeaveTypeId != null) n++;
         if (this.filterFromDate != null) n++;
         if (this.filterToDate != null) n++;
         return n;
