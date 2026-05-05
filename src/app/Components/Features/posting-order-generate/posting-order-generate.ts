@@ -205,14 +205,19 @@ export class PostingOrderGenerateComponent implements OnInit {
         this.canDelete = _perms.canDelete;
 
         this.postingOrderDate = new Date();
-        this.loadPostingOrderNumberConfigs();
         this.loadApprovalEmployees();
 
-        // Lock posting type from route data if provided
+        // Lock posting type from route data if provided — must be set BEFORE loadPostingOrderNumberConfigs
         const routePostingType = this.route.snapshot.data['postingType'] as string | undefined;
         if (routePostingType) {
             this.fixedPostingType = routePostingType;
             this.selectedPostingType = routePostingType;
+        }
+
+        this.loadPostingOrderNumberConfigs();
+
+        if (this.fixedPostingType) {
+            this.onPostingTypeChange(false);
         }
     }
 
@@ -551,7 +556,9 @@ export class PostingOrderGenerateComponent implements OnInit {
         this.loadingGeneratedOrders = true;
         this.postingService.getPostingOrderMasters().subscribe({
             next: (data) => {
-                this.generatedOrders = (data ?? []).slice().sort((a, b) => {
+                const postingType = this.fixedPostingType ?? this.selectedPostingType;
+                const filtered = postingType ? (data ?? []).filter(o => o.postingType === postingType) : (data ?? []);
+                this.generatedOrders = filtered.slice().sort((a, b) => {
                     const ad = a.createdDate ? new Date(a.createdDate).getTime() : 0;
                     const bd = b.createdDate ? new Date(b.createdDate).getTime() : 0;
                     return bd - ad;

@@ -670,6 +670,33 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         return this.formatDateShort(d);
     }
 
+    formatJoiningDate(d: string | null | undefined): string {
+        return this.formatDateShort(d).replace(/\//g, '-');
+    }
+
+    toBnDigits(s: string): string {
+        const bn = ['০','১','২','৩','৪','৫','৬','৭','৮','৯'];
+        return s.replace(/\d/g, d => bn[+d]);
+    }
+
+    calcTenure(joinDateStr: string | null | undefined): { y: number; m: number; d: number } {
+        if (!joinDateStr) return { y: 0, m: 0, d: 0 };
+        const join = new Date(joinDateStr);
+        if (isNaN(join.getTime())) return { y: 0, m: 0, d: 0 };
+        const now = new Date();
+        let y = now.getFullYear() - join.getFullYear();
+        let mo = now.getMonth() - join.getMonth();
+        let d = now.getDate() - join.getDate();
+        if (d < 0) { mo--; d += new Date(now.getFullYear(), now.getMonth(), 0).getDate(); }
+        if (mo < 0) { y--; mo += 12; }
+        return { y, m: mo, d };
+    }
+
+    tenure(joinDateStr: string | null | undefined, field: 'y' | 'm' | 'd'): string {
+        const n = this.calcTenure(joinDateStr)[field];
+        return this.isEnglish() ? String(n) : this.toBnDigits(String(n));
+    }
+
     // ── Pagination logic ──────────────────────────────────────
     ngAfterViewChecked(): void {
         if (this.editing || !this.contentMeasure?.nativeElement) return;
@@ -925,7 +952,23 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
 
     onTreeUnitSelect(emp: DraftPostingEmployeeRow, event: any): void {
         const node: TreeNode = event.node;
-        emp.transferRabUnitId = Number(node.key);
+        const selectedUnitId = Number(node.key);
+
+        if (emp.presentRabUnitId && selectedUnitId === emp.presentRabUnitId) {
+            const name = emp.fullNameBN || emp.fullNameEN || '';
+            this.messageService.add({
+                severity: 'error',
+                summary: 'অবৈধ নির্বাচন / Invalid Selection',
+                detail: `${name} বর্তমানে এই ইউনিটেই কর্মরত আছেন। একই ইউনিটে বদলি করা যাবে না।`,
+                life: 6000
+            });
+            emp.transferRabUnitId = null as any;
+            emp.transferRabUnitName = null as any;
+            this.selectedUnitNodes[emp.employeeId] = null;
+            return;
+        }
+
+        emp.transferRabUnitId = selectedUnitId;
         emp.transferRabUnitName = this.getUnitFullPath(node, false);
         this.onTransferUnitChange(emp);
     }
@@ -1580,101 +1623,142 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
 
         // Posting employee table (posting-specific)
         if (this.isPostingType() && this.postingEmployees.length > 0) {
-            // All column definitions keyed by exportColumnOptions order
-            const allColKeys = ['ser', 'serviceId', 'rank', 'trade', 'name', 'ownDistrict', 'spouseDistrict', 'prevWorkplace', 'transferUnit', 'remarks'];
-            const allColHeaders = bn
-                ? ['ক্রমিক','ব্যক্তিগত নম্বর','পদবি','ট্রেড','নাম','নিজ জেলা (দায়িত্বপূর্ণ এলাকা)','স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)','পূর্ববতী কর্মস্থল','বদলি ইউনিট','মন্তব্য']
-                : ['Ser','Service ID','Rank','Trade','Name','Own District (Responsible Area)','Spouse District (Responsible Area)','Previous Workplace','Transfer Unit','Remarks'];
-            const allBaseWidths = [490, 1220, 850, 1200, 1380, 1220, 1220, 1340, 1060, 1100];
-
-            // Filter to only visible columns (remarks toggled by showRemarks checkbox)
-            const visibleIndices = allColKeys.map((k, i) => {
-                if (k === 'remarks' && !this.showRemarks) return -1;
-                return i;
-            }).filter(i => i >= 0);
-            const cols = visibleIndices.map(i => allColHeaders[i]);
-            const baseWidths = visibleIndices.map(i => allBaseWidths[i]);
-
-            // Scale widths to fill available page width
             const isA4 = this.selectedPageSize === 'A4';
-            const pageUsable = isA4 ? 10772 : 11106; // twips (page width minus margins)
-            const baseTotal = baseWidths.reduce((a, b) => a + b, 0);
-            const colWidths = baseWidths.map(w => Math.round(w * pageUsable / baseTotal));
-
+            const pageUsable = isA4 ? 10772 : 11106;
             const cellMargins = { top: 30, bottom: 30, left: 0, right: 0 };
             const cellSpacing = { before: 0, after: 0, line: 220 };
-            const hdrPara = (text: string) => new Paragraph({ children: [new TextRun({ text, size: TBL_SZ, sizeComplexScript: bn ? TBL_SZ : undefined, font, language: lang })], alignment: AlignmentType.CENTER, spacing: cellSpacing });
-            const hdrCell = (text: string, wi: number, extra?: any) => new TableCell({
-                children: [hdrPara(text)], borders: cellBorders, width: { size: colWidths[wi], type: WidthType.DXA }, margins: cellMargins, ...extra
-            });
+            const hdrParaFn = (text: string) => new Paragraph({ children: [new TextRun({ text, size: TBL_SZ, sizeComplexScript: bn ? TBL_SZ : undefined, font, language: lang })], alignment: AlignmentType.CENTER, spacing: cellSpacing });
+            const dataCellFn = (v: string, w: number) => {
+                const lines = v.split('\n');
+                const cellParas = lines.map(line => new Paragraph({ children: [new TextRun({ text: line, size: TBL_SZ, sizeComplexScript: bn ? TBL_SZ : undefined, font, language: lang })], alignment: AlignmentType.CENTER, spacing: cellSpacing }));
+                return new TableCell({ children: cellParas, borders: cellBorders, width: { size: w, type: WidthType.DXA }, margins: cellMargins });
+            };
 
-            // Build per-employee cell data (all 10 columns)
-            const buildAllCellValues = (emp: any, i: number): string[] => [
-                bn ? this.serial(i + 1) : String(i + 1),
-                this.getServiceIdDisplay(emp),
-                (bn?(emp.rankNameBN||emp.rankName||''):(emp.rankName??'')) + (this.showRankQualifications && this.getRankQualifications(emp) ? '\n(' + this.getRankQualifications(emp) + ')' : ''),
-                (bn?(emp.tradeNameBN||emp.tradeName||''):(emp.tradeName??'')) + (this.showTradeRemarks && emp.tradeRemarks ? '\n(' + emp.tradeRemarks + ')' : ''),
-                bn?(emp.fullNameBN||emp.fullNameEN||''):(emp.fullNameEN??''),
-                this.showOwnDistrictDetail
-                    ? (bn?(emp.presentDistrictNameBN||emp.presentDistrictName||''):(emp.presentDistrictName??''))
-                    : (bn?(emp.presentDistrictNameBN||emp.presentDistrictName||''):(emp.presentDistrictName??'')).split('\n')[0].replace(/\s*\(.*$/, ''),
-                this.showSpouseDistrictDetail
-                    ? (bn?(emp.spousePresentDistrictNameBN||emp.spousePresentDistrictName||''):(emp.spousePresentDistrictName??''))
-                    : (bn?(emp.spousePresentDistrictNameBN||emp.spousePresentDistrictName||''):(emp.spousePresentDistrictName??'')).split('\n')[0].replace(/\s*\(.*$/, ''),
-                this.isInterPosting()
-                    ? (bn?(emp.previousRabUnitsBN||emp.previousRabUnits||''):(emp.previousRabUnits??''))
-                    : this.getPreviousWorkplace(emp),
-                bn ? (emp.transferRabUnitNameBN || emp.transferRabUnitName || '') : (emp.transferRabUnitName ?? ''),
-                this.getCombinedRemarks(emp)
-            ];
+            if (this.isInterPosting()) {
+                // ── Inter-posting: 13-column (no Trade), 3-row header ──
+                // Indices: 0=ser,1=svcId,2=rank,3=name,4=ownDist,5=spouseDist,
+                //          6=joinDate,7=yr,8=mo,9=day,10=prevWp,11=trUnit,12=remarks
+                const iBase = [300, 900, 700, 1000, 900, 900, 800, 400, 400, 400, 900, 900, 800];
+                const iBnHdr = ['ক্রমিক','ব্যক্তিগত নং','পদবি','নাম','নিজ জেলা (দায়িত্বপূর্ণ এলাকা)','স্বামী/স্ত্রীর জেলা (দায়িত্বপূর্ণ এলাকা)','','','','','পূর্ববতী কর্মস্থল','বদলিকৃত কর্মস্থল','মন্তব্য'];
+                const iEnHdr = ['Ser','Service ID','Rank','Name','Own District (Responsible Area)',"Husband/Wife's District (Responsible Area)",'','','','','Previous Workplace','Transfer Station','Remarks'];
+                const iVisIdx = iBase.map((_, i) => i).filter(i => i !== 12 || this.showRemarks);
+                const iBaseTotal = iBase.reduce((a, b) => a + b, 0);
+                const iW = iBase.map(w => Math.round(w * pageUsable / iBaseTotal));
 
-            // Map original indices for inter-posting header logic
-            const prevWpVisIdx = visibleIndices.indexOf(7);  // prevWorkplace original index
-            const trUnitVisIdx = visibleIndices.indexOf(8);  // transferUnit original index
-            const bothTransferVisible = prevWpVisIdx >= 0 && trUnitVisIdx >= 0;
+                const iMkHdrCell = (text: string, w: number, extra?: any) => new TableCell({
+                    children: [hdrParaFn(text)], borders: cellBorders, width: { size: w, type: WidthType.DXA }, margins: cellMargins, ...extra
+                });
+                const iContCell = (w: number) => new TableCell({ children: [new Paragraph({})], verticalMerge: VerticalMergeType.CONTINUE, borders: cellBorders, width: { size: w, type: WidthType.DXA }, margins: cellMargins });
 
-            let headerRows: TableRow[];
-            if (this.isInterPosting() && bothTransferVisible) {
-                // Inter-posting: merge prevWorkplace + transferUnit under "বদলিকৃত কর্মস্থল"
-                const row1Cells: TableCell[] = [];
-                const row2Cells: TableCell[] = [];
-                for (let vi = 0; vi < cols.length; vi++) {
-                    if (vi === prevWpVisIdx) {
-                        // Merged header cell spanning 2 columns
-                        row1Cells.push(new TableCell({
-                            children: [hdrPara(bn ? 'বদলিকৃত কর্মস্থল' : 'Transfer Station')],
-                            columnSpan: 2, borders: cellBorders, width: { size: colWidths[prevWpVisIdx] + colWidths[trUnitVisIdx], type: WidthType.DXA }, margins: cellMargins
-                        }));
-                        row2Cells.push(hdrCell(bn ? 'হইতে' : 'From', prevWpVisIdx));
-                    } else if (vi === trUnitVisIdx) {
-                        // Skip in row1 (covered by colspan), add sub-header in row2
-                        row2Cells.push(hdrCell(bn ? 'প্রতি' : 'To', trUnitVisIdx));
+                // Row 1: outer cols span 3 rows, tenure block colspan=4
+                const r1: TableCell[] = [];
+                for (const oi of iVisIdx) {
+                    if (oi >= 7 && oi <= 9) continue; // covered by colspan=4 from oi=6
+                    if (oi === 6) {
+                        r1.push(iMkHdrCell(bn ? 'র‌্যাবে অবস্থানকাল' : 'Tenure in RAB', iW[6]+iW[7]+iW[8]+iW[9], { columnSpan: 4 }));
                     } else {
-                        row1Cells.push(hdrCell(cols[vi], vi, { verticalMerge: VerticalMergeType.RESTART }));
-                        row2Cells.push(new TableCell({ children: [new Paragraph({})], verticalMerge: VerticalMergeType.CONTINUE, borders: cellBorders, width: { size: colWidths[vi], type: WidthType.DXA }, margins: cellMargins }));
+                        r1.push(iMkHdrCell(bn ? iBnHdr[oi] : iEnHdr[oi], iW[oi], { verticalMerge: VerticalMergeType.RESTART }));
                     }
                 }
-                headerRows = [
-                    new TableRow({ tableHeader: true, children: row1Cells }),
-                    new TableRow({ tableHeader: true, children: row2Cells })
-                ];
-            } else {
-                headerRows = [new TableRow({ tableHeader: true, children: cols.map((c, vi) => hdrCell(c, vi)) })];
-            }
 
-            const dataRows = this.postingEmployees.map((emp, i) => {
-                const allVals = buildAllCellValues(emp, i);
-                const visVals = visibleIndices.map(oi => allVals[oi]);
-                return new TableRow({ children: visVals.map((v, vi) => {
-                    const lines = v.split('\n');
-                    const cellParas = lines.map(line => new Paragraph({ children: [new TextRun({ text: line, size: TBL_SZ, sizeComplexScript: bn ? TBL_SZ : undefined, font, language: lang })], alignment: AlignmentType.CENTER, spacing: cellSpacing }));
-                    return new TableCell({ children: cellParas, borders: cellBorders, width: { size: colWidths[vi], type: WidthType.DXA }, margins: cellMargins });
-                }) });
-            });
-            const tableRows = [...headerRows, ...dataRows];
-            mainChildren.push(new Paragraph({ spacing: { before: 200 }, children: [] }));
-            const totalColW = colWidths.reduce((a, b) => a + b, 0);
-            mainChildren.push(new Table({ width: { size: totalColW, type: WidthType.DXA }, rows: tableRows, columnWidths: colWidths, alignment: AlignmentType.CENTER }));
+                // Row 2: joining date spans 2 rows, duration colspan=3
+                const r2: TableCell[] = [];
+                for (const oi of iVisIdx) {
+                    if (oi < 6 || oi >= 10) { r2.push(iContCell(iW[oi])); }
+                    else if (oi === 6) { r2.push(iMkHdrCell(bn ? 'যোগদানের তারিখ' : 'Joining Date', iW[6], { verticalMerge: VerticalMergeType.RESTART })); }
+                    else if (oi === 7) { r2.push(iMkHdrCell(bn ? 'অবস্থানকাল' : 'Duration', iW[7]+iW[8]+iW[9], { columnSpan: 3 })); }
+                    // oi 8,9: skipped (covered by colspan=3)
+                }
+
+                // Row 3: joining date continues, বছর/মাস/দিন cells
+                const r3: TableCell[] = [];
+                const subBn = ['বছর','মাস','দিন'];
+                const subEn = ['Year','Month','Day'];
+                for (const oi of iVisIdx) {
+                    if (oi < 6 || oi >= 10) { r3.push(iContCell(iW[oi])); }
+                    else if (oi === 6) { r3.push(iContCell(iW[6])); }
+                    else { r3.push(iMkHdrCell(bn ? subBn[oi-7] : subEn[oi-7], iW[oi])); }
+                }
+
+                const iHdrRows = [
+                    new TableRow({ tableHeader: true, children: r1 }),
+                    new TableRow({ tableHeader: true, children: r2 }),
+                    new TableRow({ tableHeader: true, children: r3 }),
+                ];
+
+                const iDataRows = this.postingEmployees.map((emp, i) => {
+                    const t = this.calcTenure(emp.joiningDateInRAB);
+                    const allV: string[] = [
+                        bn ? this.serial(i + 1) : String(i + 1),
+                        this.getServiceIdDisplay(emp),
+                        (bn?(emp.rankNameBN||emp.rankName||''):(emp.rankName??'')) + (this.showRankQualifications && this.getRankQualifications(emp) ? '\n(' + this.getRankQualifications(emp) + ')' : ''),
+                        bn?(emp.fullNameBN||emp.fullNameEN||''):(emp.fullNameEN??''),
+                        bn?(emp.presentDistrictNameBN||emp.presentDistrictName||''):(emp.presentDistrictName??''),
+                        bn?(emp.spousePresentDistrictNameBN||emp.spousePresentDistrictName||''):(emp.spousePresentDistrictName??''),
+                        bn ? this.toBnDigits(this.formatJoiningDate(emp.joiningDateInRAB)) : this.formatJoiningDate(emp.joiningDateInRAB),
+                        bn ? this.toBnDigits(String(t.y)) : String(t.y),
+                        bn ? this.toBnDigits(String(t.m)) : String(t.m),
+                        bn ? this.toBnDigits(String(t.d)) : String(t.d),
+                        bn?(emp.previousRabUnitsBN||emp.previousRabUnits||''):(emp.previousRabUnits??''),
+                        bn?(emp.transferRabUnitNameBN||emp.transferRabUnitName||''):(emp.transferRabUnitName??''),
+                        this.getCombinedRemarks(emp)
+                    ];
+                    return new TableRow({ children: iVisIdx.map(oi => dataCellFn(allV[oi], iW[oi])) });
+                });
+
+                const iTotalW = iVisIdx.reduce((a, oi) => a + iW[oi], 0);
+                mainChildren.push(new Paragraph({ spacing: { before: 200 }, children: [] }));
+                mainChildren.push(new Table({ width: { size: iTotalW, type: WidthType.DXA }, rows: [...iHdrRows, ...iDataRows], columnWidths: iVisIdx.map(oi => iW[oi]), alignment: AlignmentType.CENTER }));
+
+            } else {
+                // ── New posting: 10-column, single-row header ──
+                const allColKeys = ['ser', 'serviceId', 'rank', 'trade', 'name', 'ownDistrict', 'spouseDistrict', 'prevWorkplace', 'transferUnit', 'remarks'];
+                const allColHeaders = bn
+                    ? ['ক্রমিক','ব্যক্তিগত নম্বর','পদবি','ট্রেড','নাম','নিজ জেলা (দায়িত্বপূর্ণ এলাকা)','স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)','পূর্ববতী কর্মস্থল','বদলি ইউনিট','মন্তব্য']
+                    : ['Ser','Service ID','Rank','Trade','Name','Own District (Responsible Area)','Spouse District (Responsible Area)','Previous Workplace','Transfer Unit','Remarks'];
+                const allBaseWidths = [490, 1220, 850, 1200, 1380, 1220, 1220, 1340, 1060, 1100];
+
+                const visibleIndices = allColKeys.map((k, i) => {
+                    if (k === 'remarks' && !this.showRemarks) return -1;
+                    return i;
+                }).filter(i => i >= 0);
+                const cols = visibleIndices.map(i => allColHeaders[i]);
+                const baseWidths = visibleIndices.map(i => allBaseWidths[i]);
+                const baseTotal = baseWidths.reduce((a, b) => a + b, 0);
+                const colWidths = baseWidths.map(w => Math.round(w * pageUsable / baseTotal));
+
+                const hdrCell = (text: string, wi: number, extra?: any) => new TableCell({
+                    children: [hdrParaFn(text)], borders: cellBorders, width: { size: colWidths[wi], type: WidthType.DXA }, margins: cellMargins, ...extra
+                });
+
+                const buildAllCellValues = (emp: any, i: number): string[] => [
+                    bn ? this.serial(i + 1) : String(i + 1),
+                    this.getServiceIdDisplay(emp),
+                    (bn?(emp.rankNameBN||emp.rankName||''):(emp.rankName??'')) + (this.showRankQualifications && this.getRankQualifications(emp) ? '\n(' + this.getRankQualifications(emp) + ')' : ''),
+                    (bn?(emp.tradeNameBN||emp.tradeName||''):(emp.tradeName??'')) + (this.showTradeRemarks && emp.tradeRemarks ? '\n(' + emp.tradeRemarks + ')' : ''),
+                    bn?(emp.fullNameBN||emp.fullNameEN||''):(emp.fullNameEN??''),
+                    this.showOwnDistrictDetail
+                        ? (bn?(emp.presentDistrictNameBN||emp.presentDistrictName||''):(emp.presentDistrictName??''))
+                        : (bn?(emp.presentDistrictNameBN||emp.presentDistrictName||''):(emp.presentDistrictName??'')).split('\n')[0].replace(/\s*\(.*$/, ''),
+                    this.showSpouseDistrictDetail
+                        ? (bn?(emp.spousePresentDistrictNameBN||emp.spousePresentDistrictName||''):(emp.spousePresentDistrictName??''))
+                        : (bn?(emp.spousePresentDistrictNameBN||emp.spousePresentDistrictName||''):(emp.spousePresentDistrictName??'')).split('\n')[0].replace(/\s*\(.*$/, ''),
+                    this.getPreviousWorkplace(emp),
+                    bn ? (emp.transferRabUnitNameBN || emp.transferRabUnitName || '') : (emp.transferRabUnitName ?? ''),
+                    this.getCombinedRemarks(emp)
+                ];
+
+                const headerRows = [new TableRow({ tableHeader: true, children: cols.map((c, vi) => hdrCell(c, vi)) })];
+                const dataRows = this.postingEmployees.map((emp, i) => {
+                    const allVals = buildAllCellValues(emp, i);
+                    const visVals = visibleIndices.map(oi => allVals[oi]);
+                    return new TableRow({ children: visVals.map((v, vi) => dataCellFn(v, colWidths[vi])) });
+                });
+                const tableRows = [...headerRows, ...dataRows];
+                mainChildren.push(new Paragraph({ spacing: { before: 200 }, children: [] }));
+                const totalColW = colWidths.reduce((a, b) => a + b, 0);
+                mainChildren.push(new Table({ width: { size: totalColW, type: WidthType.DXA }, rows: tableRows, columnWidths: colWidths, alignment: AlignmentType.CENTER }));
+            }
         }
 
         // Note (between employee table and paragraphs, matching view order)
