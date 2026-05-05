@@ -76,6 +76,12 @@
     border-bottom: 1px solid #000;
 }
 
+/* Wraps each underlined line so consecutive --underline blocks don't sit on the same row. */
+.lc-org-row {
+    display: block;
+    margin-top: 4px;
+}
+
 .lc-org-line__hint {
     display: inline-block;
     margin-left: 6px;
@@ -85,6 +91,7 @@
 /* ── Title ────────────────────────────────────────── */
 .lc-title {
     text-align: center;
+    margin-top: 24px;
     margin-bottom: 18px;
 }
 
@@ -144,8 +151,10 @@
 }
 
 .lc-address-label {
+    display: inline-block;
     font-weight: 600;
-    text-decoration: underline;
+    border-bottom: 1px solid #000;
+    padding-bottom: 1px;
     margin-bottom: 4px;
 }
 

@@ -7,6 +7,7 @@ import { environment } from '@/Core/Environments/environment';
 import { LeaveApplicationService, LeaveApplicationModel, LeaveApplicationDetailModel } from '@/services/leave-application.service';
 import { EmpService } from '@/services/emp-service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
+import { ServingMembersService } from '@/services/serving-members.service';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, Table, TableRow, TableCell, WidthType, TableBorders } from 'docx';
@@ -26,6 +27,22 @@ interface EmpInfo {
     officeBN: string;
     appointmentEN: string;
     appointmentBN: string;
+    /** Corps display strings — surfaced by vw_EmployeeSearchInfo. */
+    corpsEN: string;
+    corpsBN: string;
+    corpsId: number | null;
+    /** Decoration / Award (from PersonalInfo.Awards → CommonCode 'Decoration'). */
+    decorationEN: string;
+    decorationBN: string;
+    decorationId: number | null;
+    /** Professional qualification (from PersonalInfo.ProfessionalQualification → CommonCode 'ProfessionalQualification'). */
+    profQualEN: string;
+    profQualBN: string;
+    profQualId: number | null;
+    /** Current RAB Unit (from vw_EmployeePersonalServiceOverview). */
+    rabUnitEN: string;
+    rabUnitBN: string;
+    rabUnitId: number | null;
 }
 
 const BN_DIGITS = '০১২৩৪৫৬৭৮৯';
@@ -77,10 +94,29 @@ export class LeaveCardComponent implements OnInit {
     prefixBNMap: Record<number, string> = {};
     appointmentENMap: Record<number, string> = {};
     appointmentBNMap: Record<number, string> = {};
+    /** CommonCode 'Decoration' lookups — fallback when vw_EmployeePersonalServiceOverview.GallantryAwardsDecorationBN is empty. */
+    decorationENMap: Record<number, string> = {};
+    decorationBNMap: Record<number, string> = {};
+    /** CommonCode 'ProfessionalQualification' lookups — fallback when overview's BN field is empty. */
+    profQualENMap: Record<number, string> = {};
+    profQualBNMap: Record<number, string> = {};
+    /** CommonCode 'RabUnit' lookups — fallback when overview's RABUnitBN is empty. */
+    rabUnitENMap: Record<number, string> = {};
+    rabUnitBNMap: Record<number, string> = {};
+    /** CommonCode 'Corps' lookups — fallback when overview's CorpsBN is empty. */
+    corpsENMap: Record<number, string> = {};
+    corpsBNMap: Record<number, string> = {};
     exportDropdownOpen = false;
     exporting = false;
 
     private api = `${environment.apis.core}/EmployeeInfo`;
+
+    /** Applicant's current RAB Unit name in English (resolved from EmployeePersonalServiceOverview.RABUnit). */
+    applicantRabUnitNameEN = '';
+    /** Applicant's current RAB Unit name in Bangla (from EmployeePersonalServiceOverview.RABUnitBN). */
+    applicantRabUnitNameBN = '';
+    /** Battalion HQ address from RABUnitAOR for the applicant's RAB Unit. */
+    applicantBattalionHQ = '';
 
     constructor(
         private route: ActivatedRoute,
@@ -89,6 +125,7 @@ export class LeaveCardComponent implements OnInit {
         private leaveAppService: LeaveApplicationService,
         private empService: EmpService,
         private masterBasicSetup: MasterBasicSetupService,
+        private servingMembersService: ServingMembersService,
         private _userMenuService: UserMenuService
     ) {}
 
@@ -103,6 +140,10 @@ export class LeaveCardComponent implements OnInit {
         this.loadOffices();
         this.loadPrefixes();
         this.loadAppointments();
+        this.loadCommonCodeMap('Decoration', this.decorationENMap, this.decorationBNMap);
+        this.loadCommonCodeMap('ProfessionalQualification', this.profQualENMap, this.profQualBNMap);
+        this.loadCommonCodeMap('RabUnit', this.rabUnitENMap, this.rabUnitBNMap);
+        this.loadCommonCodeMap('Corps', this.corpsENMap, this.corpsBNMap);
         this.route.queryParams.subscribe((params) => {
             const id = Number(params['id']);
             if (id > 0) {
@@ -138,7 +179,7 @@ export class LeaveCardComponent implements OnInit {
                     const approverId = d.approvedByEmployeeId ?? d.finalApproverId ?? d.appliedByEmployeeId;
                     if (approverId) empIds.add(approverId);
                     if (d.relieverEmployeeId) empIds.add(d.relieverEmployeeId);
-                    empIds.forEach((empId) => this.loadEmployeeInfo(empId));
+                    empIds.forEach((empId) => this.loadEmployeeInfo(empId, empId === d.applicantEmployeeId));
                 }
             },
             error: () => {
@@ -147,7 +188,13 @@ export class LeaveCardComponent implements OnInit {
         });
     }
 
-    private loadEmployeeInfo(empId: number): void {
+    /**
+     * Loads the basic-info row, the search-info display labels, and the personal-service-overview
+     * (which carries Corps / Decoration / ProfessionalQualification / RAB Unit display strings) for
+     * a single employee. When `isApplicant` is true, also looks up the applicant's RAB Unit AOR to
+     * populate the certificate header's unit-name + battalion-HQ-address lines.
+     */
+    private loadEmployeeInfo(empId: number, isApplicant: boolean = false): void {
         this.empService.getEmployeeById(empId).subscribe({
             next: (emp: any) => {
                 if (!emp) return;
@@ -168,7 +215,19 @@ export class LeaveCardComponent implements OnInit {
                     officeEN: '',
                     officeBN: '',
                     appointmentEN: '',
-                    appointmentBN: ''
+                    appointmentBN: '',
+                    corpsEN: '',
+                    corpsBN: '',
+                    corpsId: null,
+                    decorationEN: '',
+                    decorationBN: '',
+                    decorationId: null,
+                    profQualEN: '',
+                    profQualBN: '',
+                    profQualId: null,
+                    rabUnitEN: '',
+                    rabUnitBN: '',
+                    rabUnitId: null
                 };
                 // Load display names from search info view
                 this.empService.getEmployeeSearchInfo(empId).subscribe({
@@ -192,6 +251,54 @@ export class LeaveCardComponent implements OnInit {
                             appointmentEN: aEN || (aId != null ? this.appointmentENMap[aId] : '') || '',
                             appointmentBN: aBN || (aId != null ? this.appointmentBNMap[aId] : '') || ''
                         };
+                    }
+                });
+                // Pull the Corps / Decoration / ProfessionalQualification / RAB Unit display strings from
+                // vw_EmployeePersonalServiceOverview — same view emp-personal-info / emp-basic-info read.
+                // Also capture the FK ids so we can fall back to the CommonCode master if a BN field is empty.
+                this.servingMembersService.getEmployeePersonalServiceOverview(empId).subscribe({
+                    next: (overview: any) => {
+                        if (!overview || !this.empMap[empId]) return;
+                        const corpsEN = String(overview.corps ?? overview.Corps ?? '');
+                        const corpsBN = String(overview.corpsBN ?? overview.CorpsBN ?? '');
+                        const corpsId = this.toIntOrNull(overview.corpsId ?? overview.CorpsId);
+                        const decoEN = String(overview.gallantryAwardsDecoration ?? overview.GallantryAwardsDecoration ?? '');
+                        const decoBN = String(overview.gallantryAwardsDecorationBN ?? overview.GallantryAwardsDecorationBN ?? '');
+                        const decoId = this.toIntOrNull(overview.gallantryAwardsDecorationId ?? overview.GallantryAwardsDecorationId);
+                        const profEN = String(overview.professionalQualification ?? overview.ProfessionalQualification ?? '');
+                        const profBN = String(overview.professionalQualificationBN ?? overview.ProfessionalQualificationBN ?? '');
+                        const profId = this.toIntOrNull(overview.professionalQualificationId ?? overview.ProfessionalQualificationId);
+                        const rabUnitEN = String(overview.rabUnit ?? overview.RABUnit ?? '');
+                        const rabUnitBN = String(overview.rabUnitBN ?? overview.RABUnitBN ?? '');
+                        const rabUnitId = this.toIntOrNull(overview.rabUnitId ?? overview.RABUnitId);
+                        this.empMap[empId] = {
+                            ...this.empMap[empId],
+                            corpsEN,
+                            corpsBN: corpsBN || corpsEN,
+                            corpsId,
+                            decorationEN: decoEN,
+                            decorationBN: decoBN || decoEN,
+                            decorationId: decoId,
+                            profQualEN: profEN,
+                            profQualBN: profBN || profEN,
+                            profQualId: profId,
+                            rabUnitEN,
+                            rabUnitBN: rabUnitBN || rabUnitEN,
+                            rabUnitId
+                        };
+                        if (isApplicant) {
+                            // Header lines mirror the applicant's personal RAB Unit.
+                            this.applicantRabUnitNameEN = rabUnitEN;
+                            this.applicantRabUnitNameBN = rabUnitBN || rabUnitEN;
+                            if (rabUnitId != null) {
+                                this.masterBasicSetup.getRABUnitAORByRabUnit(rabUnitId).subscribe({
+                                    next: (aorRows: any[]) => {
+                                        const first = (Array.isArray(aorRows) ? aorRows : []).find((r) => !!(r?.locationOfBattalionHQ ?? r?.LocationOfBattalionHQ));
+                                        if (first) this.applicantBattalionHQ = String(first.locationOfBattalionHQ ?? first.LocationOfBattalionHQ ?? '');
+                                    }
+                                });
+                            }
+                        }
                     }
                 });
             }
@@ -258,6 +365,27 @@ export class LeaveCardComponent implements OnInit {
         });
     }
 
+    /**
+     * Generic CommonCode loader that hydrates `enMap` + `bnMap` (keyed by codeId) from a master type.
+     * Used as a fallback for fields whose vw_EmployeePersonalServiceOverview BN column may be NULL.
+     */
+    private loadCommonCodeMap(codeType: string, enMap: Record<number, string>, bnMap: Record<number, string>): void {
+        this.masterBasicSetup.getAllByType(codeType).subscribe({
+            next: (list) => {
+                const arr = Array.isArray(list) ? list : [];
+                arr.forEach((c: any) => {
+                    const id = c.codeId ?? c.CodeId;
+                    if (id != null) {
+                        const en = c.codeValueEN ?? c.CodeValueEN ?? String(id);
+                        const bn = c.codeValueBN ?? c.CodeValueBN ?? '';
+                        enMap[id] = String(en);
+                        bnMap[id] = String(bn || en);
+                    }
+                });
+            }
+        });
+    }
+
     private loadPrefixes(): void {
         this.masterBasicSetup.getAllByType('Prefix').subscribe({
             next: (list) => {
@@ -276,6 +404,18 @@ export class LeaveCardComponent implements OnInit {
     getApproverId(): number | null {
         if (!this.row) return null;
         return this.row.approvedByEmployeeId ?? this.row.finalApproverId ?? this.row.appliedByEmployeeId ?? null;
+    }
+
+    /** True when the leave was processed via the Manual flow (no approver chain). */
+    isManualProcess(): boolean {
+        return String(this.row?.processType ?? '').toLowerCase() === 'manual';
+    }
+
+    /** Coerces an api-supplied value to a positive integer, or null if it isn't one. */
+    private toIntOrNull(v: any): number | null {
+        if (v == null || v === '') return null;
+        const n = typeof v === 'number' ? v : Number(v);
+        return Number.isFinite(n) && n > 0 ? n : null;
     }
 
     /**
@@ -358,14 +498,75 @@ export class LeaveCardComponent implements OnInit {
         return emp.appointmentEN;
     }
 
-    /** Unit name on the header — uses approver's office (where the certificate is issued from). */
-    getUnitName(): string {
-        return this.getOffice(this.getApproverId());
+    /**
+     * Resolves a display value for one of the lookup fields. When the active language is `bn`,
+     * prefers the overview-BN value, then the CommonCode-master BN, then any non-empty EN
+     * value (so we never render an empty cell when *some* label exists).
+     */
+    private resolveLabel(bn: string, en: string, id: number | null, enMap: Record<number, string>, bnMap: Record<number, string>): string {
+        if (this.lang === 'bn') {
+            return bn || (id != null ? bnMap[id] : '') || en || (id != null ? enMap[id] : '') || '';
+        }
+        return en || (id != null ? enMap[id] : '') || bn || (id != null ? bnMap[id] : '') || '';
     }
 
-    /** Unit address on the header — not currently captured anywhere; left blank for the operator to fill in print. */
+    /** Corps display string for the active language (empty when the employee has no corps). */
+    getCorps(empId: number | null | undefined): string {
+        const emp = this.getEmp(empId);
+        if (!emp) return '';
+        return this.resolveLabel(emp.corpsBN, emp.corpsEN, emp.corpsId, this.corpsENMap, this.corpsBNMap);
+    }
+
+    /** Gallantry awards / Decoration display string for the active language (empty when none). */
+    getDecoration(empId: number | null | undefined): string {
+        const emp = this.getEmp(empId);
+        if (!emp) return '';
+        return this.resolveLabel(emp.decorationBN, emp.decorationEN, emp.decorationId, this.decorationENMap, this.decorationBNMap);
+    }
+
+    /** Professional Qualification display string for the active language (empty when none). */
+    getProfessionalQualification(empId: number | null | undefined): string {
+        const emp = this.getEmp(empId);
+        if (!emp) return '';
+        return this.resolveLabel(emp.profQualBN, emp.profQualEN, emp.profQualId, this.profQualENMap, this.profQualBNMap);
+    }
+
+    /** Current RAB Unit display string for the active language (empty when none). */
+    getRabUnit(empId: number | null | undefined): string {
+        const emp = this.getEmp(empId);
+        if (!emp) return '';
+        return this.resolveLabel(emp.rabUnitBN, emp.rabUnitEN, emp.rabUnitId, this.rabUnitENMap, this.rabUnitBNMap);
+    }
+
+    /**
+     * Build the descriptor segment that comes after the rank+name on the body line.
+     * Order: Decoration, Professional Qualification, Corps, Appointment, RAB Unit (each only if non-empty).
+     * Returns a comma-separated string with no leading/trailing comma — caller appends a comma after the name.
+     */
+    getDescriptors(empId: number | null | undefined): string {
+        const parts = [
+            this.getDecoration(empId),
+            this.getProfessionalQualification(empId),
+            this.getCorps(empId),
+            this.getAppointment(empId),
+            this.getRabUnit(empId)
+        ].map(s => (s ?? '').trim()).filter(s => s.length > 0);
+        return parts.join(', ');
+    }
+
+    /**
+     * Unit name on the header — applicant's current RAB Unit (resolved via EmployeePersonalServiceOverview).
+     * Picks the Bangla name when the certificate language is `bn`, falling back to English when the
+     * BN field is empty.
+     */
+    getUnitName(): string {
+        if (this.lang === 'bn') return this.applicantRabUnitNameBN || this.applicantRabUnitNameEN || '';
+        return this.applicantRabUnitNameEN || '';
+    }
+
+    /** Unit address on the header — Location of Battalion HQ from the RABUnitAOR row matching the applicant's RAB Unit. */
     getUnitAddress(): string {
-        return '';
+        return this.applicantBattalionHQ || '';
     }
 
     toggleExportDropdown(event: Event): void {
@@ -496,7 +697,7 @@ export class LeaveCardComponent implements OnInit {
   .lc-table th { font-weight: 700; background: #fff; }
   .lc-table__total td { font-weight: 700; }
   .lc-address-block { margin: 18px 0 0; }
-  .lc-address-label { font-weight: 600; text-decoration: underline; margin-bottom: 4px; }
+  .lc-address-label { display: inline-block; font-weight: 600; border-bottom: 1px solid #000; padding-bottom: 1px; margin-bottom: 4px; }
   .lc-address-text { white-space: pre-line; }
   .lc-footer { display: flex; justify-content: flex-end; margin-top: 28px; }
   .lc-footer__signature { text-align: left; min-width: 240px; }
@@ -594,13 +795,13 @@ export class LeaveCardComponent implements OnInit {
             const headerLines: Paragraph[] = isBn ? [
                 center('গণপ্রজাতন্ত্রী বাংলাদেশ সরকার', { bold: true, size: 24 }),
                 center('বাংলাদেশ পুলিশ', { bold: true, size: 24 }),
-                center(`${this.getUnitName() || '...........................'}   (সংশ্লিষ্ট ইউনিটের নাম)`, { underline: true, size: 22 }),
-                center(`${this.getUnitAddress() || '...........................'}   (সংশ্লিষ্ট ইউনিটের ঠিকানা)`, { underline: true, size: 22 }),
+                center(`${this.getUnitName() || '...........................'}`, { size: 22 }),
+                center(`${this.getUnitAddress() || '...........................'}`, { size: 22 }),
             ] : [
                 center("Government of the People's Republic of Bangladesh", { bold: true, size: 24 }),
                 center('Bangladesh Police', { bold: true, size: 24 }),
-                center(`${this.getUnitName() || '...........................'}   (Concerned Unit Name)`, { underline: true, size: 22 }),
-                center(`${this.getUnitAddress() || '...........................'}   (Concerned Unit Address)`, { underline: true, size: 22 }),
+                center(`${this.getUnitName() || '...........................'}`, { size: 22 }),
+                center(`${this.getUnitAddress() || '...........................'}`, { size: 22 }),
             ];
 
             const titleParagraph = new Paragraph({
@@ -645,9 +846,10 @@ export class LeaveCardComponent implements OnInit {
                 })]
             });
 
-            const apptApp = this.getAppointment(appId);
-            const introBn = `${this.getPrefix(appId)}-${this.getServiceId(appId)} ${this.getRank(appId)} ${this.getName(appId)}, ${apptApp ? apptApp + ', ' : ''}${this.getOffice(appId)}'কে নিম্নবর্নিত তারিখে মোট ${this.getTotalDays()} (${this.getTotalDaysWord()}) দিনের ছুটি ভোগের মঞ্জুরী প্রদান করা হয়েছেঃ`;
-            const introEn = `${this.getPrefix(appId)}-${this.getServiceId(appId)} ${this.getRank(appId)} ${this.getName(appId)}, ${apptApp ? apptApp + ', ' : ''}${this.getOffice(appId)} has been granted a total of ${this.getTotalDays()} (${this.getTotalDaysWord()}) days of leave on the dates noted below:`;
+            const descApp = this.getDescriptors(appId);
+            const descAppSuffix = descApp ? `, ${descApp}` : '';
+            const introBn = `${this.getPrefix(appId)}-${this.getServiceId(appId)} ${this.getRank(appId)} ${this.getName(appId)}${descAppSuffix}'কে নিম্নবর্নিত তারিখে মোট ${this.getTotalDays()} (${this.getTotalDaysWord()}) দিনের ছুটি ভোগের মঞ্জুরী প্রদান করা হয়েছেঃ`;
+            const introEn = `${this.getPrefix(appId)}-${this.getServiceId(appId)} ${this.getRank(appId)} ${this.getName(appId)}${descAppSuffix} has been granted a total of ${this.getTotalDays()} (${this.getTotalDaysWord()}) days of leave on the dates noted below:`;
 
             const introPara = new Paragraph({
                 spacing: { before: 160, after: 160, line: 360 },
@@ -735,9 +937,13 @@ export class LeaveCardComponent implements OnInit {
             ];
 
             if (relieverId && this.empMap[relieverId]) {
-                const apptR = this.getAppointment(relieverId);
-                const relieverBn = `উক্ত অফিসার ছুটিতে থাকাকালীন ${this.getPrefix(relieverId)}-${this.getServiceId(relieverId)} ${this.getRank(relieverId)} ${this.getName(relieverId)}, ${apptR ? apptR + ', ' : ''}${this.getOffice(relieverId)} নিজ দায়িত্ব ছাড়াও ভারপ্রাপ্ত অধিনায়কের দায়িত্ব পালন করবেন। ছুটি শেষে উক্ত অফিসার প্রত্যাবর্তনের পর উভয়েই স্ব স্ব দায়িত্বে বহাল থাকছেন।`;
-                const relieverEn = `While the above officer is on leave, ${this.getPrefix(relieverId)}-${this.getServiceId(relieverId)} ${this.getRank(relieverId)} ${this.getName(relieverId)}, ${apptR ? apptR + ', ' : ''}${this.getOffice(relieverId)} will perform the duties of acting commander in addition to their own duties. After the leave, both officers will resume their respective duties.`;
+                const descR = this.getDescriptors(relieverId);
+                const descRSuffix = descR ? `, ${descR}` : '';
+                const apptApplicant = this.getAppointment(appId);
+                const dutyBn = apptApplicant ? `ভারপ্রাপ্ত ${apptApplicant} এর দায়িত্ব` : 'তার দায়িত্ব';
+                const dutyEn = apptApplicant ? `perform the duties of acting ${apptApplicant}` : 'perform their duties';
+                const relieverBn = `উক্ত অফিসার ছুটিতে থাকাকালীন ${this.getPrefix(relieverId)}-${this.getServiceId(relieverId)} ${this.getRank(relieverId)} ${this.getName(relieverId)}${descRSuffix} নিজ দায়িত্ব ছাড়াও ${dutyBn} পালন করবেন। ছুটি শেষে উক্ত অফিসার প্রত্যাবর্তনের পর উভয়েই স্ব স্ব দায়িত্বে বহাল থাকছেন।`;
+                const relieverEn = `While the above officer is on leave, ${this.getPrefix(relieverId)}-${this.getServiceId(relieverId)} ${this.getRank(relieverId)} ${this.getName(relieverId)}${descRSuffix} will ${dutyEn} in addition to their own duties. After the leave, both officers will resume their respective duties.`;
                 children.push(new Paragraph({
                     spacing: { before: 200, after: 160, line: 360 },
                     alignment: AlignmentType.JUSTIFIED,
@@ -763,6 +969,19 @@ export class LeaveCardComponent implements OnInit {
             const sysNote = isBn ? '(সিস্টেম জেনারেটেড লিভ কার্ড, স্বাক্ষর প্রয়োজন নেই)' : '(System Generated Leave Card, Signature not Required)';
             const dateLabel = isBn ? 'তারিখঃ' : 'Date:';
 
+            const isManual = this.isManualProcess();
+            const signatureCellChildren: Paragraph[] = [
+                new Paragraph({ spacing: { before: 400 }, children: [new TextRun({ text: sysNote, italics: true, size: 20, font: FONT })] }),
+            ];
+            if (!isManual) {
+                signatureCellChildren.push(
+                    new Paragraph({ children: [new TextRun({ text: this.getName(approveId), bold: true, size: 22, font: FONT })] }),
+                    new Paragraph({ children: [new TextRun({ text: this.getRank(approveId), size: 20, font: FONT })] }),
+                    new Paragraph({ children: [new TextRun({ text: this.getAppointment(approveId), size: 20, font: FONT })] }),
+                    new Paragraph({ children: [new TextRun({ text: `${dateLabel} ${this.formatLongDate(this.row.approvedDate)}`, size: 20, font: FONT })] }),
+                );
+            }
+
             const footerTable = new Table({
                 width: { size: 100, type: WidthType.PERCENTAGE },
                 borders: TableBorders.NONE,
@@ -772,13 +991,7 @@ export class LeaveCardComponent implements OnInit {
                         new TableCell({
                             width: { size: 50, type: WidthType.PERCENTAGE },
                             borders: noBorders,
-                            children: [
-                                new Paragraph({ spacing: { before: 400 }, children: [new TextRun({ text: sysNote, italics: true, size: 20, font: FONT })] }),
-                                new Paragraph({ children: [new TextRun({ text: this.getName(approveId), bold: true, size: 22, font: FONT })] }),
-                                new Paragraph({ children: [new TextRun({ text: this.getRank(approveId), size: 20, font: FONT })] }),
-                                new Paragraph({ children: [new TextRun({ text: this.getAppointment(approveId), size: 20, font: FONT })] }),
-                                new Paragraph({ children: [new TextRun({ text: `${dateLabel} ${this.formatLongDate(this.row.approvedDate)}`, size: 20, font: FONT })] }),
-                            ]
+                            children: signatureCellChildren
                         }),
                     ]
                 })]

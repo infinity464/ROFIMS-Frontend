@@ -53,13 +53,13 @@
                     @if (lang === 'bn') {
                         <div class="lc-org-line">গণপ্রজাতন্ত্রী বাংলাদেশ সরকার</div>
                         <div class="lc-org-line">বাংলাদেশ পুলিশ</div>
-                        <div class="lc-org-line lc-org-line--underline">{{ getUnitName() || '...........................' }}<span class="lc-org-line__hint">(সংশ্লিষ্ট ইউনিটের নাম)</span></div>
-                        <div class="lc-org-line lc-org-line--underline">{{ getUnitAddress() || '...........................' }}<span class="lc-org-line__hint">(সংশ্লিষ্ট ইউনিটের ঠিকানা)</span></div>
+                        <div class="lc-org-row"><span class="lc-org-line">{{ getUnitName() || '...........................' }}</span></div>
+                        <div class="lc-org-row"><span class="lc-org-line">{{ getUnitAddress() || '...........................' }}</span></div>
                     } @else {
                         <div class="lc-org-line">Government of the People's Republic of Bangladesh</div>
                         <div class="lc-org-line">Bangladesh Police</div>
-                        <div class="lc-org-line lc-org-line--underline">{{ getUnitName() || '...........................' }}<span class="lc-org-line__hint">(Concerned Unit Name)</span></div>
-                        <div class="lc-org-line lc-org-line--underline">{{ getUnitAddress() || '...........................' }}<span class="lc-org-line__hint">(Concerned Unit Address)</span></div>
+                        <div class="lc-org-row"><span class="lc-org-line">{{ getUnitName() || '...........................' }}</span></div>
+                        <div class="lc-org-row"><span class="lc-org-line">{{ getUnitAddress() || '...........................' }}</span></div>
                     }
                 </div>
 
@@ -79,16 +79,15 @@
                 </div>
 
                 <!-- ── Body intro paragraph ────────────────────────── -->
+                <!-- After the rank+name, descriptors render in order: Decoration, ProfessionalQualification, Corps, Appointment, RAB Unit. -->
                 <div class="lc-body-text">
                     @if (lang === 'bn') {
                         {{ getPrefix(row.applicantEmployeeId) }}-{{ getServiceId(row.applicantEmployeeId) }}
-                        {{ getRank(row.applicantEmployeeId) }} {{ getName(row.applicantEmployeeId) }},
-                        {{ getAppointment(row.applicantEmployeeId) ? getAppointment(row.applicantEmployeeId) + ', ' : '' }}{{ getOffice(row.applicantEmployeeId) }}'কে নিম্নবর্নিত তারিখে মোট
+                        {{ getRank(row.applicantEmployeeId) }} {{ getName(row.applicantEmployeeId) }}{{ getDescriptors(row.applicantEmployeeId) ? ', ' + getDescriptors(row.applicantEmployeeId) : '' }}'কে নিম্নবর্নিত তারিখে মোট
                         {{ getTotalDays() }} ({{ getTotalDaysWord() }}) দিনের ছুটি ভোগের মঞ্জুরী প্রদান করা হয়েছেঃ
                     } @else {
                         {{ getPrefix(row.applicantEmployeeId) }}-{{ getServiceId(row.applicantEmployeeId) }}
-                        {{ getRank(row.applicantEmployeeId) }} {{ getName(row.applicantEmployeeId) }},
-                        {{ getAppointment(row.applicantEmployeeId) ? getAppointment(row.applicantEmployeeId) + ', ' : '' }}{{ getOffice(row.applicantEmployeeId) }} has been granted a total of
+                        {{ getRank(row.applicantEmployeeId) }} {{ getName(row.applicantEmployeeId) }}{{ getDescriptors(row.applicantEmployeeId) ? ', ' + getDescriptors(row.applicantEmployeeId) : '' }} has been granted a total of
                         {{ getTotalDays() }} ({{ getTotalDaysWord() }}) days of leave on the dates noted below:
                     }
                 </div>
@@ -126,13 +125,21 @@
                     <div class="lc-body-text">
                         @if (lang === 'bn') {
                             উক্ত অফিসার ছুটিতে থাকাকালীন {{ getPrefix(getRelieverId()) }}-{{ getServiceId(getRelieverId()) }}
-                            {{ getRank(getRelieverId()) }} {{ getName(getRelieverId()) }},
-                            {{ getAppointment(getRelieverId()) ? getAppointment(getRelieverId()) + ', ' : '' }}{{ getOffice(getRelieverId()) }} নিজ দায়িত্ব ছাড়াও ভারপ্রাপ্ত অধিনায়কের দায়িত্ব
-                            পালন করবেন। ছুটি শেষে উক্ত অফিসার প্রত্যাবর্তনের পর উভয়েই স্ব স্ব দায়িত্বে বহাল থাকছেন।
+                            {{ getRank(getRelieverId()) }} {{ getName(getRelieverId()) }}{{ getDescriptors(getRelieverId()) ? ', ' + getDescriptors(getRelieverId()) : '' }} নিজ দায়িত্ব ছাড়াও
+                            @if (getAppointment(row.applicantEmployeeId)) {
+                                ভারপ্রাপ্ত {{ getAppointment(row.applicantEmployeeId) }} এর দায়িত্ব পালন করবেন।
+                            } @else {
+                                তার দায়িত্ব পালন করবেন।
+                            }
+                            ছুটি শেষে উক্ত অফিসার প্রত্যাবর্তনের পর উভয়েই স্ব স্ব দায়িত্বে বহাল থাকছেন।
                         } @else {
                             While the above officer is on leave, {{ getPrefix(getRelieverId()) }}-{{ getServiceId(getRelieverId()) }}
-                            {{ getRank(getRelieverId()) }} {{ getName(getRelieverId()) }},
-                            {{ getAppointment(getRelieverId()) ? getAppointment(getRelieverId()) + ', ' : '' }}{{ getOffice(getRelieverId()) }} will perform the duties of acting commander
+                            {{ getRank(getRelieverId()) }} {{ getName(getRelieverId()) }}{{ getDescriptors(getRelieverId()) ? ', ' + getDescriptors(getRelieverId()) : '' }} will
+                            @if (getAppointment(row.applicantEmployeeId)) {
+                                perform the duties of acting {{ getAppointment(row.applicantEmployeeId) }}
+                            } @else {
+                                perform their duties
+                            }
                             in addition to their own duties. After the leave, both officers will resume their respective duties.
                         }
                     </div>
@@ -146,18 +153,21 @@
                     </div>
                 }
 
-                <!-- ── Signature footer ────────────────────────────── -->
+                <!-- ── Signature footer ──────────────────────────────
+                     Manual leaves have no approver, so we only show the system-generated note. -->
                 <div class="lc-footer">
                     <div class="lc-footer__signature">
                         <div class="lc-footer__sysnote">
                             ({{ lang === 'bn' ? 'সিস্টেম জেনারেটেড লিভ কার্ড, স্বাক্ষর প্রয়োজন নেই' : 'System Generated Leave Card, Signature not Required' }})
                         </div>
-                        <div class="lc-footer__name">{{ getName(getApproverId()) }}</div>
-                        <div class="lc-footer__rank">{{ getRank(getApproverId()) }}</div>
-                        <div class="lc-footer__appointment">{{ getAppointment(getApproverId()) }}</div>
-                        <div class="lc-footer__date">
-                            {{ lang === 'bn' ? 'তারিখঃ' : 'Date:' }} {{ formatLongDate(row.approvedDate) }}
-                        </div>
+                        @if (!isManualProcess()) {
+                            <div class="lc-footer__name">{{ getName(getApproverId()) }}</div>
+                            <div class="lc-footer__rank">{{ getRank(getApproverId()) }}</div>
+                            <div class="lc-footer__appointment">{{ getAppointment(getApproverId()) }}</div>
+                            <div class="lc-footer__date">
+                                {{ lang === 'bn' ? 'তারিখঃ' : 'Date:' }} {{ formatLongDate(row.approvedDate) }}
+                            </div>
+                        }
                     </div>
                 </div>
 

@@ -28,6 +28,8 @@ export class FileReferencesFormComponent implements OnInit, OnChanges {
     @Input() fileRows: FileRowData[] = [];
     @Input() isViewMode: boolean = false;
     @Input() title: string = 'Files';
+    /** Placeholder for the file display-name input on each row. Override per usage (e.g. "Doctor's prescription"). */
+    @Input() namePlaceholder: string = 'e.g. Posting order 1';
 
     @Output() fileRowsChange = new EventEmitter<FileRowData[]>();
     @Output() filesUploaded = new EventEmitter<{ index: number; file: File }[]>();

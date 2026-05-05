@@ -88,7 +88,7 @@
           </div>
         }
 
-        <!-- Manual decision (conditional) -->
+        <!-- Manual decision (conditional) — Approved Date appears alongside when Decision = Approved. -->
         @if (form.get('processType')?.value === 'manual') {
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
@@ -103,6 +103,19 @@
                 appendTo="body">
               </p-select>
             </div>
+            @if (form.get('manualDecision')?.value === 'approved') {
+              <div>
+                <label class="field-label">Approved Date <span class="req">*</span></label>
+                <p-datepicker
+                  formControlName="manualApprovedDate"
+                  dateFormat="dd-mm-yy"
+                  [showIcon]="true"
+                  styleClass="w-full"
+                  placeholder="Pick approval date"
+                  appendTo="body">
+                </p-datepicker>
+              </div>
+            }
           </div>
         }
 
@@ -192,9 +205,6 @@
                 (onEmployeeFound)="onRelieverSelected($event)"
                 (onSearchReset)="onRelieverSelected(null)">
               </app-employee-search>
-              @if (relieverInfo) {
-                <p class="reliever-selected"><i class="pi pi-check-circle mr-1"></i>{{ relieverInfo.fullNameEN }} ({{ relieverInfo.rabid }})</p>
-              }
             </div>
           }
         </div>
@@ -290,6 +300,7 @@
             [fileRows]="fileRows"
             [isViewMode]="false"
             title="Attachments"
+            namePlaceholder="e.g. Doctor's prescription"
             (fileRowsChange)="onFileRowsChange($event)"
             (onDownloadFile)="onDownloadFile($event)">
           </app-file-references-form>

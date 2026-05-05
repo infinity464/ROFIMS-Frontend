@@ -174,6 +174,8 @@ export class LeaveApplicationApplyComponent implements OnInit {
             appliedByEmployeeId: [null as number | null],
             processType: [null as string | null, Validators.required],
             manualDecision: [null as string | null],
+            /** Date the manual approval is recorded. Only used when processType=manual and decision=approved. Defaults to today. */
+            manualApprovedDate: [new Date() as Date | null],
             relieverEmployeeId: [null as number | null],
             addressDuringLeave: [''],
             remarks: [''],
@@ -445,10 +447,12 @@ export class LeaveApplicationApplyComponent implements OnInit {
                 const manualDecision = savedStatus === 3 ? 'approved' : savedStatus === 4 ? 'rejected' : null;
                 const processType = d.processType || (isManual ? 'manual' : 'automatic');
 
+                const savedApprovedDate = d.approvedDate ?? (d as any).ApprovedDate ?? null;
                 this.form.patchValue({
                     applicantEmployeeId: d.applicantEmployeeId ?? (d as any).ApplicantEmployeeId,
                     processType: processType,
                     manualDecision: manualDecision,
+                    manualApprovedDate: savedApprovedDate ? new Date(savedApprovedDate) : new Date(),
                     relieverEmployeeId: d.relieverEmployeeId ?? (d as any).RelieverEmployeeId ?? null,
                     addressDuringLeave: d.addressDuringLeave ?? (d as any).AddressDuringLeave ?? '',
                     remarks: d.remarks ?? (d as any).Remarks ?? '',
@@ -642,6 +646,7 @@ export class LeaveApplicationApplyComponent implements OnInit {
             appliedByEmployeeId: null,
             processType: null,
             manualDecision: null,
+            manualApprovedDate: new Date(),
             relieverEmployeeId: null,
             addressDuringLeave: '',
             remarks: '',
@@ -896,7 +901,10 @@ export class LeaveApplicationApplyComponent implements OnInit {
             finalApproverId: this.form.get('finalApproverId')?.value ?? null,
             leaveApplicationStatusId: statusId,
             approvedByEmployeeId: isManualApproval && statusId === 3 ? (this.currentUserEmployeeId ?? appliedBy) : null,
-            approvedDate: isManualApproval && statusId === 3 ? today : null,
+            // Manual approval date: prefer the user-picked Manual Approved Date; fall back to today.
+            approvedDate: isManualApproval && statusId === 3
+                ? (this.form.get('manualApprovedDate')?.value ? this.toIsoDate(this.form.get('manualApprovedDate')!.value as Date) : today)
+                : null,
             declinedByEmployeeId: isManualApproval && statusId === 4 ? (this.currentUserEmployeeId ?? appliedBy) : null,
             declinedDate: isManualApproval && statusId === 4 ? today : null,
             createdBy: user,
