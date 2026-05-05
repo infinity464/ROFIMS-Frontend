@@ -70,63 +70,47 @@
         </div>
 
         <div class="report-table-wrap">
-            @if (loading) {
-                <p class="flex align-items-center"><i class="pi pi-spin pi-spinner mr-2"></i>Loading...</p>
-            } @else {
-                <p-table [value]="currentList" dataKey="leaveApplicationId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-sm" [loading]="loading">
-                    <ng-template pTemplate="header">
-                        <tr>
-                            <th>RAB ID</th>
-                            <th>Service ID</th>
-                            <th>Applicant</th>
-                            <th>Leave Type</th>
-                            <th>From</th>
-                            <th>To</th>
-                            <th>Status</th>
-                            <th>Action Date</th>
-                            @if (section !== 'approved') { <th>Remark</th> }
-                            <th>Actions</th>
-                        </tr>
-                    </ng-template>
-                    <ng-template pTemplate="body" let-row>
-                        <tr>
-                            <td>{{ lookups.getApplicantRabId(row.applicantEmployeeId) }}</td>
-                            <td>{{ lookups.getApplicantServiceId(row.applicantEmployeeId) }}</td>
-                            <td>{{ lookups.getApplicantName(row.applicantEmployeeId) }}</td>
-                            <td>{{ lookups.getLeaveTypeName(row.leaveTypeId) }}</td>
-                            <td>{{ formatDate(row.fromDate) }}</td>
-                            <td>{{ formatDate(row.toDate) }}</td>
-                            <td><span class="status-pill" [ngClass]="getOverallStatusClass(row)">{{ getOverallStatus(row) }}</span></td>
-                            <td>
-                                @if (isReturnedRow(row)) { {{ formatDate(row.returnHistory?.[0]?.returnedDate) }} }
-                                @else { {{ formatDate(row.leaveApplicationStatusId === 3 ? row.approvedDate : row.declinedDate) }} }
-                            </td>
-                            @if (section !== 'approved') {
-                                <td>
-                                    @if (isReturnedRow(row)) { {{ row.returnHistory?.[0]?.reason || '-' }} }
-                                    @else { {{ row.remark ?? '-' }} }
-                                </td>
+            <p-table [value]="currentList" dataKey="leaveApplicationId" [tableStyle]="{ 'min-width': '40rem' }" styleClass="p-datatable-sm"
+                     [loading]="loading"
+                     [lazy]="true" (onLazyLoad)="onLazyLoad($event)"
+                     [paginator]="true" [rows]="pageSize" [totalRecords]="totalRecords"
+                     [first]="(pageNumber - 1) * pageSize" [rowsPerPageOptions]="[5, 10, 20, 50]"
+                     currentPageReportTemplate="Showing {first} – {last} of {totalRecords}" [showCurrentPageReport]="true">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th style="width: 4rem;">SL</th>
+                        <th>Applicant</th>
+                        <th>From</th>
+                        <th>To</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-row let-i="rowIndex">
+                    <tr>
+                        <td>{{ serialNumber(i) }}</td>
+                        <td>{{ lookups.getApplicantName(row.applicantEmployeeId) }}</td>
+                        <td>{{ formatDate(row.fromDate) }}</td>
+                        <td>{{ formatDate(row.toDate) }}</td>
+                        <td><span class="status-pill" [ngClass]="getOverallStatusClass(row)">{{ getOverallStatus(row) }}</span></td>
+                        <td class="flex gap-1">
+                            <button type="button" class="report-btn-secondary" [routerLink]="['/leave-application/preview']" [queryParams]="{ id: row.leaveApplicationId }" title="Preview"><i class="pi pi-eye mr-1"></i>Preview</button>
+                            @if (row.leaveApplicationStatusId === 3) {
+                                <button type="button" class="report-btn-secondary" [routerLink]="['/leave-application/card']" [queryParams]="{ id: row.leaveApplicationId }" title="Leave Card"><i class="pi pi-id-card"></i></button>
                             }
-                            <td class="flex gap-1">
-                                @if (isReturnedRow(row)) {
-                                    <button type="button" class="report-btn-secondary" [routerLink]="['/leave-application/apply']" [queryParams]="{ id: row.leaveApplicationId }" title="Edit"><i class="pi pi-pencil mr-1"></i>Edit</button>
-                                } @else {
-                                    <button type="button" class="report-btn-secondary" [routerLink]="['/leave-application/preview']" [queryParams]="{ id: row.leaveApplicationId }"><i class="pi pi-eye mr-1"></i>Preview</button>
-                                }
-                                @if (row.leaveApplicationStatusId === 3) {
-                                    <button type="button" class="report-btn-secondary" [routerLink]="['/leave-application/card']" [queryParams]="{ id: row.leaveApplicationId }" title="Leave Card"><i class="pi pi-id-card"></i></button>
-                                }
-                            </td>
-                        </tr>
-                    </ng-template>
-                    <ng-template pTemplate="emptymessage">
-                        <tr><td [attr.colspan]="section === 'approved' ? 9 : 10" class="text-center p-4">No applications.</td></tr>
-                    </ng-template>
-                </p-table>
-                @if (totalRecords > pageSize) {
-                    <p-paginator [first]="(pageNumber - 1) * pageSize" [rows]="pageSize" [totalRecords]="totalRecords" [rowsPerPageOptions]="[5, 10, 20, 50]" (onPageChange)="onPageChange($event)"></p-paginator>
-                }
-            }
+                            @if (canEditOrDelete(row)) {
+                                <button type="button" class="report-btn-secondary" (click)="tryEdit(row)" title="Edit"><i class="pi pi-pencil mr-1"></i>Edit</button>
+                                <button type="button" class="report-btn-secondary danger" (click)="deleteRow(row)" title="Delete"><i class="pi pi-trash mr-1"></i>Delete</button>
+                            }
+                        </td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr><td colspan="6" class="text-center p-4">No applications.</td></tr>
+                </ng-template>
+            </p-table>
         </div>
     </div>
 </div>
+
+<p-confirmDialog></p-confirmDialog>

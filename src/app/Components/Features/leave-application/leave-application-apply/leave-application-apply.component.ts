@@ -424,19 +424,20 @@ export class LeaveApplicationApplyComponent implements OnInit {
                     this.messageService.add({ severity: 'warn', summary: 'Cannot edit', detail: 'Application not found.' });
                     return;
                 }
-                // Edit is allowed only while the application is still a Draft (status 1) AND no
-                // recommender has acted yet AND no final approver has approved/declined. Once any
-                // step in the chain has acted, the record is locked. The Return action puts an
-                // application back into Draft so the applicant can resume editing.
-                const isDraft = d.leaveApplicationStatusId === 1 || d.leaveApplicationStatusId === 0;
+                // Edit is allowed while the chain hasn't moved yet: Draft (status=1) or Pending
+                // (status=2) where no recommender has approved/declined and no final approver has
+                // stamped a decision. The Return action also puts an application back into Draft.
+                // Approved (3) / Declined (4) / Pending with any chain action are locked.
+                const status = d.leaveApplicationStatusId;
+                const isEditableStatus = status === 1 || status === 2 || status === 0;
                 const anyRecommenderActed = (d.recommenders || []).some((r) => (r.status ?? 1) !== 1);
                 const finalApproverActed = (d.approvedByEmployeeId != null && d.approvedByEmployeeId !== 0)
                     || (d.declinedByEmployeeId != null && d.declinedByEmployeeId !== 0);
-                if (!isDraft || anyRecommenderActed || finalApproverActed) {
+                if (!isEditableStatus || anyRecommenderActed || finalApproverActed) {
                     this.messageService.add({
                         severity: 'warn',
                         summary: 'Cannot edit',
-                        detail: 'This application has been acted on and can no longer be edited.'
+                        detail: 'Edit disabled — this application is under processing.'
                     });
                     return;
                 }
