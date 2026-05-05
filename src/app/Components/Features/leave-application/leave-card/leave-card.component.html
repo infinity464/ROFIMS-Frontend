@@ -1,5 +1,5 @@
-<div class="leave-card-page employee-reports-page">
-    <div class="leave-card-toolbar">
+<div class="leave-card-page">
+    <div class="leave-card-toolbar no-print">
         <button type="button" class="report-btn-back" (click)="goBack()">
             <i class="pi pi-arrow-left" style="font-size:0.75rem"></i> Back
         </button>
@@ -45,73 +45,123 @@
     } @else if (!row) {
         <div class="leave-card-empty">Application not found.</div>
     } @else {
-        <div class="leave-card" id="leave-card-print">
-            @if (lang === 'bn') {
-                <!-- Bangla Version -->
-                <div class="leave-card-header">ছুটির সনদপত্র</div>
-                <div class="leave-card-body">
-                    <p class="leave-card-text">
-                        প্রত্যয়ন করা যাচ্ছে নং {{ getPrefix(row.applicantEmployeeId) }}-{{ getServiceId(row.applicantEmployeeId) }}
-                        পদবী/পেশাঃ {{ getRank(row.applicantEmployeeId) }} নামঃ {{ getName(row.applicantEmployeeId) }}
-                        তাহাকে আগামী {{ formatDate(row.fromDate) }} তারিখ হতে {{ formatDate(row.toDate) }}
-                        তারিখ পর্যন্ত মোট {{ getTotalDays() }} দিনের
-                        {{ getLeaveType(row.leaveTypeId) }}  মঞ্জুর করা হলো।
-                    </p>
-                    @if (row.addressDuringLeave) {
-                        <div class="leave-card-address">
-                            <span class="leave-card-address-label">ছুটি থাকাকালীন তাহার ঠিকানা নিম্নরূপঃ</span>
-                            <p class="leave-card-address-text">{{ row.addressDuringLeave }}</p>
-                        </div>
+        <div class="lc-paper-container">
+            <div class="lc-paper" id="leave-card-print">
+
+                <!-- ── Org Header ─────────────────────────────────── -->
+                <div class="lc-org-header">
+                    @if (lang === 'bn') {
+                        <div class="lc-org-line">গণপ্রজাতন্ত্রী বাংলাদেশ সরকার</div>
+                        <div class="lc-org-line">বাংলাদেশ পুলিশ</div>
+                        <div class="lc-org-line lc-org-line--underline">{{ getUnitName() || '...........................' }}<span class="lc-org-line__hint">(সংশ্লিষ্ট ইউনিটের নাম)</span></div>
+                        <div class="lc-org-line lc-org-line--underline">{{ getUnitAddress() || '...........................' }}<span class="lc-org-line__hint">(সংশ্লিষ্ট ইউনিটের ঠিকানা)</span></div>
+                    } @else {
+                        <div class="lc-org-line">Government of the People's Republic of Bangladesh</div>
+                        <div class="lc-org-line">Bangladesh Police</div>
+                        <div class="lc-org-line lc-org-line--underline">{{ getUnitName() || '...........................' }}<span class="lc-org-line__hint">(Concerned Unit Name)</span></div>
+                        <div class="lc-org-line lc-org-line--underline">{{ getUnitAddress() || '...........................' }}<span class="lc-org-line__hint">(Concerned Unit Address)</span></div>
                     }
                 </div>
-                <div class="leave-card-footer">
-                    <div class="leave-card-footer-left">
-                        <p>স্থানঃ প্রশাসন ও অর্থ, র‌্যাব সদর দপ্তর</p>
-                        <p>তারিখঃ {{ formatDate(row.approvedDate) }}</p>
-                    </div>
-                    <div class="leave-card-footer-right">
-                        <div class="leave-card-signature">
-                            <div class="leave-card-approver-name">{{ getName(getApproverId()) }}</div>
-                            <div class="leave-card-approver-rank">{{ getRank(getApproverId()) }}</div>
-                            <div class="leave-card-approver-appointment">{{ getAppointment(getApproverId()) }}</div>
-                            <div class="leave-card-approver-office">র‌্যাব সদর দপ্তর</div>
-                        </div>
-                    </div>
+
+                <!-- ── Title ───────────────────────────────────────── -->
+                <div class="lc-title">
+                    <span class="lc-title__text">{{ lang === 'bn' ? 'ছুটির সনদপত্র/অফিস আদেশ' : 'Leave Certificate / Office Order' }}</span>
                 </div>
-            } @else {
-                <!-- English Version -->
-                <div class="leave-card-header">Leave Certificate</div>
-                <div class="leave-card-body">
-                    <p class="leave-card-text">
-                        It is certified that No. {{ getPrefix(row.applicantEmployeeId) }}-{{ getServiceId(row.applicantEmployeeId) }},
-                        Rank/Designation: {{ getRank(row.applicantEmployeeId) }},
-                        Name: {{ getName(row.applicantEmployeeId) }},
-                        has been granted {{ getLeaveType(row.leaveTypeId) }} leave
-                        for a total of {{ getTotalDays() }} day(s)
-                        from {{ formatDate(row.fromDate) }} to {{ formatDate(row.toDate) }}.
-                    </p>
-                    @if (row.addressDuringLeave) {
-                        <div class="leave-card-address">
-                            <span class="leave-card-address-label">Address during leave:</span>
-                            <p class="leave-card-address-text">{{ row.addressDuringLeave }}</p>
-                        </div>
+
+                <!-- ── Number / Date row ───────────────────────────── -->
+                <div class="lc-meta-row">
+                    <span class="lc-meta-no">
+                        {{ lang === 'bn' ? 'ছুটির সনদপত্র নং-' : 'Leave Certificate No.-' }}({{ lang === 'bn' ? 'স্বয়ংক্রিয়ভাবে তৈরি' : 'Auto Generated' }})
+                    </span>
+                    <span class="lc-meta-date">
+                        {{ lang === 'bn' ? 'তারিখঃ' : 'Date:' }} {{ formatDate(row.approvedDate) }}
+                    </span>
+                </div>
+
+                <!-- ── Body intro paragraph ────────────────────────── -->
+                <div class="lc-body-text">
+                    @if (lang === 'bn') {
+                        {{ getPrefix(row.applicantEmployeeId) }}-{{ getServiceId(row.applicantEmployeeId) }}
+                        {{ getRank(row.applicantEmployeeId) }} {{ getName(row.applicantEmployeeId) }},
+                        {{ getAppointment(row.applicantEmployeeId) ? getAppointment(row.applicantEmployeeId) + ', ' : '' }}{{ getOffice(row.applicantEmployeeId) }}'কে নিম্নবর্নিত তারিখে মোট
+                        {{ getTotalDays() }} ({{ getTotalDaysWord() }}) দিনের ছুটি ভোগের মঞ্জুরী প্রদান করা হয়েছেঃ
+                    } @else {
+                        {{ getPrefix(row.applicantEmployeeId) }}-{{ getServiceId(row.applicantEmployeeId) }}
+                        {{ getRank(row.applicantEmployeeId) }} {{ getName(row.applicantEmployeeId) }},
+                        {{ getAppointment(row.applicantEmployeeId) ? getAppointment(row.applicantEmployeeId) + ', ' : '' }}{{ getOffice(row.applicantEmployeeId) }} has been granted a total of
+                        {{ getTotalDays() }} ({{ getTotalDaysWord() }}) days of leave on the dates noted below:
                     }
                 </div>
-                <div class="leave-card-footer">
-                    <div class="leave-card-footer-left">
-                        <p>Place: Administration & Finance, RAB HQ</p>
-                        <p>Date: {{ formatDate(row.approvedDate) }}</p>
+
+                <!-- ── Leave detail table ──────────────────────────── -->
+                <div class="lc-table-wrap">
+                    <table class="lc-table">
+                        <thead>
+                            <tr>
+                                <th>{{ lang === 'bn' ? 'ছুটির ধরন' : 'Leave Type' }}</th>
+                                <th>{{ lang === 'bn' ? 'হইতে' : 'From' }}</th>
+                                <th>{{ lang === 'bn' ? 'পর্যন্ত' : 'To' }}</th>
+                                <th>{{ lang === 'bn' ? 'দিন' : 'Days' }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (det of getLeaveDetails(); track $index) {
+                                <tr>
+                                    <td>{{ getLeaveType(det.leaveTypeId) }}</td>
+                                    <td>{{ formatTableDate(det.fromDate) }}</td>
+                                    <td>{{ formatTableDate(det.toDate) }}</td>
+                                    <td>{{ formatDays(getDetailDays(det)) }}</td>
+                                </tr>
+                            }
+                            <tr class="lc-table__total">
+                                <td colspan="3">{{ lang === 'bn' ? 'সর্বমোট' : 'Total' }}</td>
+                                <td>{{ formatDays(getTotalDaysNumeric()) }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- ── Reliever paragraph ──────────────────────────── -->
+                @if (getReliever()) {
+                    <div class="lc-body-text">
+                        @if (lang === 'bn') {
+                            উক্ত অফিসার ছুটিতে থাকাকালীন {{ getPrefix(getRelieverId()) }}-{{ getServiceId(getRelieverId()) }}
+                            {{ getRank(getRelieverId()) }} {{ getName(getRelieverId()) }},
+                            {{ getAppointment(getRelieverId()) ? getAppointment(getRelieverId()) + ', ' : '' }}{{ getOffice(getRelieverId()) }} নিজ দায়িত্ব ছাড়াও ভারপ্রাপ্ত অধিনায়কের দায়িত্ব
+                            পালন করবেন। ছুটি শেষে উক্ত অফিসার প্রত্যাবর্তনের পর উভয়েই স্ব স্ব দায়িত্বে বহাল থাকছেন।
+                        } @else {
+                            While the above officer is on leave, {{ getPrefix(getRelieverId()) }}-{{ getServiceId(getRelieverId()) }}
+                            {{ getRank(getRelieverId()) }} {{ getName(getRelieverId()) }},
+                            {{ getAppointment(getRelieverId()) ? getAppointment(getRelieverId()) + ', ' : '' }}{{ getOffice(getRelieverId()) }} will perform the duties of acting commander
+                            in addition to their own duties. After the leave, both officers will resume their respective duties.
+                        }
                     </div>
-                    <div class="leave-card-footer-right">
-                        <div class="leave-card-signature">
-                            <div class="leave-card-approver-name">{{ getName(getApproverId()) }}</div>
-                            <div class="leave-card-approver-rank">{{ getRank(getApproverId()) }}</div>
-                            <div class="leave-card-approver-appointment">{{ getAppointment(getApproverId()) }}</div>
-                            <div class="leave-card-approver-office">RAB HQ</div>
+                }
+
+                <!-- ── Address during leave ────────────────────────── -->
+                @if (row.addressDuringLeave) {
+                    <div class="lc-address-block">
+                        <div class="lc-address-label">{{ lang === 'bn' ? 'ছুটি থাকাকালীন ঠিকানাঃ' : 'Address during leave:' }}</div>
+                        <div class="lc-address-text">{{ row.addressDuringLeave }}</div>
+                    </div>
+                }
+
+                <!-- ── Signature footer ────────────────────────────── -->
+                <div class="lc-footer">
+                    <div class="lc-footer__signature">
+                        <div class="lc-footer__sysnote">
+                            ({{ lang === 'bn' ? 'সিস্টেম জেনারেটেড লিভ কার্ড, স্বাক্ষর প্রয়োজন নেই' : 'System Generated Leave Card, Signature not Required' }})
+                        </div>
+                        <div class="lc-footer__name">{{ getName(getApproverId()) }}</div>
+                        <div class="lc-footer__rank">{{ getRank(getApproverId()) }}</div>
+                        <div class="lc-footer__appointment">{{ getAppointment(getApproverId()) }}</div>
+                        <div class="lc-footer__date">
+                            {{ lang === 'bn' ? 'তারিখঃ' : 'Date:' }} {{ formatLongDate(row.approvedDate) }}
                         </div>
                     </div>
                 </div>
-            }
+
+            </div>
         </div>
     }
 </div>

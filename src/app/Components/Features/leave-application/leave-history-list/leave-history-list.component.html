@@ -133,7 +133,12 @@
                         </span>
                     </td>
                     <td>
-                        <button type="button" class="report-btn-secondary" [routerLink]="['/leave-application/preview']" [queryParams]="{ id: row.leaveApplicationId }"><i class="pi pi-eye mr-1"></i>Preview</button>
+                        <div class="leave-history-actions">
+                            <button type="button" class="report-btn-secondary" [routerLink]="['/leave-application/preview']" [queryParams]="{ id: row.leaveApplicationId }"><i class="pi pi-eye mr-1"></i>Preview</button>
+                            @if (row.leaveApplicationStatusId === 3) {
+                                <button type="button" class="report-btn-secondary" [routerLink]="['/leave-application/card']" [queryParams]="{ id: row.leaveApplicationId }"><i class="pi pi-id-card mr-1"></i>Card</button>
+                            }
+                        </div>
                     </td>
                 </tr>
             </ng-template>

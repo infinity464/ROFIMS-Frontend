@@ -33,6 +33,12 @@
     min-width: 140px;
 }
 
+.leave-history-actions {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+
 // The recommenders column can get long — keep it from blowing the row height.
 .recommender-cell {
     display: -webkit-box;
