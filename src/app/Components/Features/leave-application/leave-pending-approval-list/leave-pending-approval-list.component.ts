@@ -13,9 +13,7 @@ import { MasterBasicSetupService } from '@/Components/basic-setup/shared/service
 import { CommonCodeService } from '@/services/common-code-service';
 import { MessageService } from 'primeng/api';
 import { TableModule } from 'primeng/table';
-import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
-import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
 import { ToastModule } from 'primeng/toast';
 import type { TableLazyLoadEvent } from 'primeng/table';
@@ -33,9 +31,7 @@ import type { TableLazyLoadEvent } from 'primeng/table';
         CommonModule,
         FormsModule,
         TableModule,
-        ButtonModule,
         InputTextModule,
-        SelectModule,
         DatePickerModule, FlexibleDateDirective,
         ToastModule,
         RouterModule
@@ -82,11 +78,9 @@ export class LeavePendingApprovalListComponent implements OnInit {
     /** CodeId → professional qualification label (e.g. "psc"). Loaded via MasterBasicSetupService('ProfessionalQualification'). */
     profQualNameMap: Record<number, string> = {};
     leaveTypeNameMap: Record<number, string> = {};
-    leaveTypeOptions: { label: string; value: number }[] = [];
 
     filterRabId = '';
     filterServiceId = '';
-    filterLeaveTypeId: number | null = null;
     filterFromDate: Date | null = null;
     filterToDate: Date | null = null;
 
@@ -256,14 +250,10 @@ export class LeavePendingApprovalListComponent implements OnInit {
             next: (list) => {
                 const arr = Array.isArray(list) ? list : [];
                 this.leaveTypeNameMap = {};
-                this.leaveTypeOptions = [];
                 arr.forEach((c: any) => {
                     const id = c.codeId ?? c.CodeId;
                     const name = c.codeValueEN ?? c.CodeValueEN ?? String(id);
-                    if (id != null) {
-                        this.leaveTypeNameMap[id] = name;
-                        this.leaveTypeOptions.push({ label: name, value: id });
-                    }
+                    if (id != null) this.leaveTypeNameMap[id] = name;
                 });
             }
         });
@@ -272,10 +262,9 @@ export class LeavePendingApprovalListComponent implements OnInit {
     private buildFilterParams(): LeaveApplicationFilterParams | undefined {
         const hasRab = (this.filterRabId || '').trim();
         const hasSvc = (this.filterServiceId || '').trim();
-        const hasLt = this.filterLeaveTypeId != null && this.filterLeaveTypeId > 0;
         const hasFrom = !!this.filterFromDate;
         const hasTo = !!this.filterToDate;
-        if (!hasRab && !hasSvc && !hasLt && !hasFrom && !hasTo) return undefined;
+        if (!hasRab && !hasSvc && !hasFrom && !hasTo) return undefined;
         const toDateStr = (d: Date | null): string | undefined => {
             if (!d) return undefined;
             const x = new Date(d);
@@ -284,7 +273,6 @@ export class LeavePendingApprovalListComponent implements OnInit {
         return {
             rabId: hasRab ? this.filterRabId.trim() : undefined,
             serviceId: hasSvc ? this.filterServiceId.trim() : undefined,
-            leaveTypeId: hasLt ? this.filterLeaveTypeId! : undefined,
             fromDate: toDateStr(this.filterFromDate),
             toDate: toDateStr(this.filterToDate)
         };
@@ -299,7 +287,6 @@ export class LeavePendingApprovalListComponent implements OnInit {
     clearFilter(): void {
         this.filterRabId = '';
         this.filterServiceId = '';
-        this.filterLeaveTypeId = null;
         this.filterFromDate = null;
         this.filterToDate = null;
         this.pageNumber = 1;
@@ -355,7 +342,6 @@ export class LeavePendingApprovalListComponent implements OnInit {
         let n = 0;
         if ((this.filterRabId || '').trim()) n++;
         if ((this.filterServiceId || '').trim()) n++;
-        if (this.filterLeaveTypeId != null) n++;
         if (this.filterFromDate != null) n++;
         if (this.filterToDate != null) n++;
         return n;

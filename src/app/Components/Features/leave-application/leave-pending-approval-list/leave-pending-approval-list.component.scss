@@ -251,13 +251,33 @@
         box-shadow: none;
     }
 
-    /* Calendar trigger button + select chevron — flush, no inner border, icon
-     * inherits text-color so it stays visible on dark backgrounds. */
-    .p-datepicker .p-datepicker-trigger,
-    .p-select .p-select-dropdown {
-        border: none;
-        background: transparent;
-        color: var(--text-color, rgba(255, 255, 255, 0.85));
+    /* Calendar trigger button + select chevron — strip ALL button styling so the
+     * icon sits flush against the input, on the same surface, no separator box.
+     * `!important` on bg/border/shadow because PrimeNG's global p-button styles
+     * load outside view encapsulation and define the same props at multiple
+     * states (:hover, :focus, :enabled, etc) — without !important the trigger
+     * keeps showing a faint button background. */
+    .p-datepicker .p-datepicker-dropdown,
+    .p-datepicker .p-datepicker-dropdown.p-button,
+    .p-select .p-select-dropdown,
+    .p-select .p-select-dropdown.p-button {
+        &,
+        &:hover,
+        &:focus,
+        &:active,
+        &:focus-visible,
+        &:enabled:hover,
+        &:enabled:focus,
+        &:enabled:active {
+            border: none !important;
+            background: transparent !important;
+            background-color: transparent !important;
+            background-image: none !important;
+            box-shadow: none !important;
+            outline: none !important;
+        }
+
+        color: var(--text-color-secondary, rgba(255, 255, 255, 0.55));
         width: var(--filter-input-h);
         height: var(--filter-input-h);
         display: inline-flex;
@@ -265,22 +285,32 @@
         justify-content: center;
         flex-shrink: 0;
         padding: 0;
+        margin: 0;
         cursor: pointer;
+        transition: color 0.15s ease;
 
         &:hover {
-            color: var(--p-primary-color, #10b981);
-            background: rgba(16, 185, 129, 0.1);
+            color: var(--text-color, #111);
+        }
+
+        /* PrimeNG p-button often renders an empty label span next to the icon —
+         * hide it so it doesn't add ghost width or push the icon off-center. */
+        .p-button-label {
+            display: none;
         }
     }
 
     /* Cover every shape PrimeNG might use for the icon: a wrapped <p-icon> /
-     * <CalendarIcon> svg component, a bare <svg>, or a font-icon <i class="pi">. */
-    .p-datepicker .p-datepicker-trigger,
+     * <CalendarIcon> svg component, a bare <svg>, or a font-icon <i class="pi">.
+     * `color: inherit` + `fill/stroke: currentColor` makes the icon pick up the
+     * trigger button's color (which we inherit from text-color-secondary above
+     * so it matches the placeholder). */
+    .p-datepicker .p-datepicker-dropdown,
     .p-select .p-select-dropdown {
         .p-icon,
         svg {
-            width: 16px;
-            height: 16px;
+            width: 14px;
+            height: 14px;
             color: inherit;
             fill: currentColor;
             stroke: currentColor;
@@ -288,7 +318,7 @@
 
         i,
         i.pi {
-            font-size: 16px;
+            font-size: 14px;
             line-height: 1;
             color: inherit;
         }
