@@ -175,6 +175,20 @@ export class EmpLeaveInfo implements OnInit {
         return d.toLocaleDateString();
     }
 
+    /**
+     * Serializes a calendar date as midnight-UTC ISO of the *local* calendar day.
+     * The LeaveInfo column is DateTimeOffset, but logically these are calendar dates.
+     * Using `.toISOString()` directly would shift the day for positive-offset timezones
+     * (e.g. BD +06:00 turning June 1 local into May 31 UTC) and break overlap comparisons
+     * that read `DateTimeOffset.UtcDateTime` server-side.
+     */
+    private toCalendarDateIso(d: Date): string {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}T00:00:00.000Z`;
+    }
+
     calculateDays(fromDate: string | Date | null, toDate: string | Date | null): number | string {
         if (!fromDate || !toDate) return '—';
         const from = typeof fromDate === 'string' ? new Date(fromDate) : fromDate;
@@ -233,8 +247,8 @@ export class EmpLeaveInfo implements OnInit {
             employeeId: this.selectedEmployeeId,
             leaveId: this.isEditMode ? (this.editingLeaveId ?? 0) : 0,
             leaveTypeId: formValue.leaveTypeId,
-            fromDate: fromDate.toISOString(),
-            toDate: toDate.toISOString(),
+            fromDate: this.toCalendarDateIso(fromDate),
+            toDate: this.toCalendarDateIso(toDate),
             remarks: formValue.remarks || null,
             auth: null,
             createdBy: 'system',

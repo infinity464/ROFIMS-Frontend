@@ -140,7 +140,7 @@
                 </tr>
               </thead>
               <tbody>
-                @for (row of leaveDetails.controls; track $index) {
+                @for (row of leaveDetails.controls; track row) {
                   <tr [formGroupName]="$index">
                     <td>
                       <p-select

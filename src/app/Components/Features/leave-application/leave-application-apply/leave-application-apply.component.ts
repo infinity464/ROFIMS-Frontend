@@ -8,6 +8,7 @@ import { SharedService } from '@/shared/services/shared-service';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 import { EmpService } from '@/services/emp-service';
 import { LeaveApplicationService, LeaveApplicationModel, LeaveApplicationDetailModel, LeaveApplicationRecommenderModel, LeaveApplicationReturnHistoryModel } from '@/services/leave-application.service';
+import { LeaveInfoService, LeaveInfoModel } from '@/services/leave-info-service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
@@ -89,6 +90,13 @@ export class LeaveApplicationApplyComponent implements OnInit {
     returnHistory: LeaveApplicationReturnHistoryModel[] = [];
     /** Map of employeeId → formatted name, used to render the Return History entries. */
     private employeeNameCache: Record<number, string> = {};
+    /**
+     * Existing LeaveInfo ranges (yyyy-MM-dd, in the applicant's local calendar) for the currently
+     * loaded applicant. The apply form rejects any date row that intersects one of these — both for
+     * immediate UX feedback and to defend against historical LeaveInfo rows that were saved with the
+     * `.toISOString()` bug (where the stored UTC date is one day behind the user's intended date).
+     */
+    private applicantLeaveInfoRanges: { from: string; to: string }[] = [];
 
     private api = `${environment.apis.core}/EmployeeInfo`;
 
@@ -98,6 +106,7 @@ export class LeaveApplicationApplyComponent implements OnInit {
         private sharedService: SharedService,
         private empService: EmpService,
         private leaveAppService: LeaveApplicationService,
+        private leaveInfoService: LeaveInfoService,
         private masterBasicSetup: MasterBasicSetupService,
         private identityMappingService: IdentityUserMappingService,
         private messageService: MessageService,
@@ -182,6 +191,15 @@ export class LeaveApplicationApplyComponent implements OnInit {
             finalApproverId: [null as number | null],
             leaveDetails: this.fb.array([this.createLeaveDetailRow()], this.overlapValidator()),
             recommenderIds: [[] as number[]]
+        });
+        // Refresh the applicant's existing LeaveInfo ranges whenever the applicant changes, so the
+        // overlap check in buildAndValidate has up-to-date data. Clears on null/0.
+        this.form.get('applicantEmployeeId')!.valueChanges.subscribe((empId: number | null) => {
+            if (empId && empId > 0) {
+                this.loadApplicantLeaveInfo(empId);
+            } else {
+                this.applicantLeaveInfoRanges = [];
+            }
         });
         this.form.get('processType')!.valueChanges.subscribe((val) => {
             if (val === 'manual') {
@@ -358,6 +376,41 @@ export class LeaveApplicationApplyComponent implements OnInit {
             error: (err: any) =>
                 this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to resolve employee mapping' })
         });
+    }
+
+    /**
+     * Pulls the applicant's existing LeaveInfo records and converts each to a yyyy-MM-dd range in
+     * the applicant's local calendar. We compare in this frame (rather than UTC) because LeaveInfo
+     * is conceptually a calendar date and historic rows may have been saved with a UTC-shifted ISO.
+     */
+    private loadApplicantLeaveInfo(employeeId: number): void {
+        this.leaveInfoService.getByEmployeeId(employeeId).subscribe({
+            next: (rows: LeaveInfoModel[]) => {
+                const list = Array.isArray(rows) ? rows : [];
+                this.applicantLeaveInfoRanges = list
+                    .map((r) => {
+                        const from = this.toLocalCalendarDate(r.fromDate);
+                        const to = this.toLocalCalendarDate(r.toDate);
+                        return from && to ? { from, to } : null;
+                    })
+                    .filter((x): x is { from: string; to: string } => x !== null);
+            },
+            error: () => {
+                // Silent: a failed fetch shouldn't block the form. Backend overlap check is still in place.
+                this.applicantLeaveInfoRanges = [];
+            }
+        });
+    }
+
+    /** yyyy-MM-dd built from local components — matches what the user sees in emp-leave-info's table. */
+    private toLocalCalendarDate(val: string | Date | null | undefined): string | null {
+        if (!val) return null;
+        const d = val instanceof Date ? val : new Date(val);
+        if (isNaN(d.getTime())) return null;
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
     }
 
     setApplyForSelf(forSelf: boolean): void {
@@ -637,11 +690,9 @@ export class LeaveApplicationApplyComponent implements OnInit {
      * without a redirect.
      */
     private resetForm(): void {
-        // Reset to a single empty leave-detail row.
-        this.leaveDetails.clear();
-        this.leaveDetails.push(this.createLeaveDetailRow());
-
-        // Reset scalar form fields to their initial defaults.
+        // Reset scalar form fields first, then rebuild the FormArray. Doing the FormArray rebuild
+        // AFTER form.reset avoids form.reset() also iterating into the freshly-pushed row and
+        // re-emitting null values that can leave the bound p-select / p-datepicker out of sync.
         this.form.reset({
             applicantEmployeeId: null,
             appliedByEmployeeId: null,
@@ -654,6 +705,13 @@ export class LeaveApplicationApplyComponent implements OnInit {
             finalApproverId: null,
             recommenderIds: []
         });
+
+        // Rebuild leave-detail rows: drop everything, add a single fresh empty row. The template
+        // tracks rows by FormGroup reference, so the new row mounts fresh DOM (and fresh PrimeNG
+        // component state) instead of reusing the previous row's nodes.
+        while (this.leaveDetails.length > 0) this.leaveDetails.removeAt(0);
+        this.leaveDetails.push(this.createLeaveDetailRow());
+
         this.form.markAsPristine();
         this.form.markAsUntouched();
 
@@ -844,6 +902,22 @@ export class LeaveApplicationApplyComponent implements OnInit {
         if (this.leaveDetails.errors?.['overlap']) {
             this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Leave date ranges cannot overlap.' });
             return false;
+        }
+        // Cross-record overlap: each row vs the applicant's existing LeaveInfo ranges.
+        for (let i = 0; i < this.leaveDetails.length; i++) {
+            const v = this.leaveDetails.at(i).value;
+            const rowFrom = this.toLocalCalendarDate(v.fromDate);
+            const rowTo = this.toLocalCalendarDate(v.toDate);
+            if (!rowFrom || !rowTo) continue;
+            const clash = this.applicantLeaveInfoRanges.find((r) => rowFrom <= r.to && rowTo >= r.from);
+            if (clash) {
+                this.messageService.add({
+                    severity: 'warn',
+                    summary: 'Date Conflict',
+                    detail: 'Dates overlap with an existing leave record'
+                });
+                return false;
+            }
         }
         if (this.form.invalid) {
             this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please fill all required fields.' });
