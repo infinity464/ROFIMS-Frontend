@@ -251,7 +251,7 @@
 /* ── Signature Block ──────────────────────────────── */
 .po-doc-signature {
     margin-left: auto;
-    width: fit-content;
+    width: 20%;
     text-align: left;
     line-height: 1.2;
     font-size: 8pt;
@@ -290,34 +290,43 @@
     margin-top: 16px;
 }
 
+.po-doc-copy-table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+}
+
+.po-doc-copy-left {
+    width: 80%;
+    vertical-align: top;
+    padding: 0;
+}
+
 .po-doc-copy-title {
     font-weight: 600;
     margin-bottom: 6px;
     font-size: 10pt;
 }
 
-.po-doc-copy-body {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 80px;
-}
-
 .po-doc-copy-list {
-    flex: 0 0 70%;
     line-height: 2;
     font-size: 10pt;
 }
 
+.po-doc-copy-right {
+    width: 20%;
+    vertical-align: top;
+    padding: 0;
+}
+
 .po-doc-copy-sig {
-    flex: 0 0 30%;
     text-align: left;
     line-height: 1.2;
     font-size: 8pt;
     padding-top: 20px;
     .approver-signature-img {
-        max-height: 25px;
-        max-width: 60px;
+        max-height: 55px;
+        max-width: 130px;
         width: auto;
         height: auto;
         object-fit: contain;

@@ -12,7 +12,7 @@
                     <p-button icon="pi pi-file-pdf" label="PDF" (onClick)="exportPdf()" [loading]="exportingPdf" styleClass="p-button-outlined"></p-button>
                     <p-button icon="pi pi-print" label="Print Preview" (onClick)="printPreview()" [loading]="printingPreview" styleClass="p-button-outlined"></p-button>
                 </ng-container>
-                <p-button icon="pi pi-pencil" label="Edit" [outlined]="true" (onClick)="toggleEdit()"></p-button>
+                <p-button *ngIf="canEdit" icon="pi pi-pencil" label="Edit" [outlined]="true" (onClick)="toggleEdit()"></p-button>
             </ng-container>
             <ng-container *ngIf="editing">
                 <p-button icon="pi pi-times" label="Cancel" severity="secondary" [outlined]="true" (onClick)="cancelEdit()"></p-button>
@@ -23,8 +23,6 @@
         <!-- Approval Status (right side) -->
         <div class="approval-header-right" *ngIf="approvalEmployeeId || approvalStatus">
             <p-tag [value]="approvalStatusLabel(approvalStatus)" [severity]="approvalStatusSeverity(approvalStatus)"></p-tag>
-            <span *ngIf="approvalEmployeeName" class="text-600 text-sm">{{ approvalEmployeeName }}</span>
-            <span *ngIf="approvalStatus === ApprovalStatus.Approve && approvalNote" class="text-500 text-xs">{{ approvalNote }}</span>
             <span *ngIf="approvalStatus === ApprovalStatus.Cancel && cancelReason" class="text-500 text-xs">{{ cancelReason }}</span>
             <ng-container *ngIf="!approvalStatus || approvalStatus === ApprovalStatus.Pending">
                 <p-button
@@ -448,6 +446,18 @@
         </div>
     </div>
 
+    <!-- পূর্ববতী কর্মস্থল unit filter (collapsed by default) -->
+    <div class="unit-filter-bar no-print" *ngIf="!editing && !loading && !error && !isInterPosting && employees.length > 0"
+         style="flex-direction:column; align-items:flex-start;">
+        <span style="font-weight:600; font-size:0.85rem; cursor:pointer;" (click)="showPrevWorkplaceFilter = !showPrevWorkplaceFilter">
+            <i class="pi" [ngClass]="showPrevWorkplaceFilter ? 'pi-chevron-down' : 'pi-chevron-right'" style="margin-right:0.3rem;"></i>{{ isBangla ? 'পূর্ববতী কর্মস্থল ফিল্টার' : 'Previous Workplace Filter' }}
+        </span>
+        <div *ngIf="showPrevWorkplaceFilter" style="display:flex; align-items:center; gap:0.4rem; margin-top:0.4rem; font-size:0.82rem;">
+            <p-checkbox [(ngModel)]="showPrevWorkplaceUnit" [binary]="true" inputId="chkPrevUnit"></p-checkbox>
+            <label for="chkPrevUnit" style="cursor:pointer;">{{ isBangla ? 'র‌্যাব ইউনিট দেখান ()' : 'Show RAB Unit ()' }}</label>
+        </div>
+    </div>
+
     <!-- Empty state — order loaded but no employees yet -->
     <div *ngIf="!editing && !loading && !error && employees.length === 0" class="flex flex-column align-items-center justify-content-center gap-3 py-6 text-center">
         <i class="pi pi-inbox text-6xl text-400"></i>
@@ -573,20 +583,26 @@
                 <div>{{ isBangla ? 'তারিখঃ' : 'Date:' }} {{ previewDate }}</div>
             </div>
 
-            <!-- Copy Distribution + Footer - two-column layout -->
+            <!-- Copy Distribution + Footer - mirrors Word two-column table exactly -->
             <div class="po-doc-copy">
-                <div class="po-doc-copy-title">{{ isBangla ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নহে)' : 'Copy (not in order of seniority):' }}</div>
-                <div class="po-doc-copy-body">
-                    <div class="po-doc-copy-list" *ngIf="exportFooterParagraphs.length > 0">
-                        <p *ngFor="let para of exportFooterParagraphs; let i = index">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}। {{ para.text }}</p>
-                    </div>
-                    <div class="po-doc-copy-sig" *ngIf="approvalEmployeeId">
-                        <img *ngIf="approverSignatureUrl" [src]="approverSignatureUrl" class="approver-signature-img" alt="Signature" />
-                        <div class="sig-name">{{ (isBangla ? approverNameBN : approverName) || approverName || '...................................' }}</div>
-                        <div class="sig-rank">{{ (isBangla ? approverRankBN : approverRank) || approverRank || '............................' }}</div>
-                        <div class="sig-appointment">{{ (isBangla ? approverAppointmentBN : approverAppointment) || approverAppointment || '............................' }}</div>
-                    </div>
-                </div>
+                <table class="po-doc-copy-table">
+                    <tr>
+                        <td class="po-doc-copy-left">
+                            <div class="po-doc-copy-title">{{ isBangla ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নহে)' : 'Copy (not in order of seniority):' }}</div>
+                            <div class="po-doc-copy-list" *ngIf="exportFooterParagraphs.length > 0">
+                                <p *ngFor="let para of exportFooterParagraphs; let i = index">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}। {{ para.text }}</p>
+                            </div>
+                        </td>
+                        <td class="po-doc-copy-right">
+                            <div class="po-doc-copy-sig" *ngIf="approvalEmployeeId">
+                                <img *ngIf="approvalPersonSignatureUrl" [src]="approvalPersonSignatureUrl" class="approver-signature-img" alt="Signature" />
+                                <div class="sig-name">{{ (isBangla ? approvalPersonNameBN : approvalPersonName) || approvalPersonName || '...................................' }}</div>
+                                <div class="sig-rank">{{ (isBangla ? approvalPersonRankBN : approvalPersonRank) || approvalPersonRank || '............................' }}</div>
+                                <div class="sig-appointment">{{ (isBangla ? approvalPersonAppointmentBN : approvalPersonAppointment) || approvalPersonAppointment || '............................' }}</div>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
             </div>
 
           </div><!-- /po-doc-box -->

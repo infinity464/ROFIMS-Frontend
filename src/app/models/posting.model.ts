@@ -291,6 +291,7 @@ export interface PendingPostingJoiningDto {
     postingOrderNo: string;
     postingOrderDate: string;
     postingType: string;
+    approvalStatus: string | null;
 
     noteSheetNo: string | null;
 

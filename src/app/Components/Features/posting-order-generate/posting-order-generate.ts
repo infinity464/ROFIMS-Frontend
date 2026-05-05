@@ -275,12 +275,23 @@ export class PostingOrderGenerateComponent implements OnInit {
     private rebuildConfigOptions(): void {
         const postingType = this.fixedPostingType ?? this.selectedPostingType;
         const isBN = this.selectedTextType === 'bn';
+        const now = new Date();
+        const nowYear = now.getFullYear();
+        const nowMonth = now.getMonth() + 1;
         this.configOptions = this.allConfigs
             .filter((c) => (!postingType || c.postingType === postingType) && c.status)
             .map((c) => {
                 const prefixLabel = isBN ? (c.prefixBN || c.prefix) : c.prefix;
+                const yearReset = c.currentYear !== nowYear || c.currentMonth !== nowMonth;
+                const nextNum = yearReset ? c.startNumber : c.currentNumber + 1;
+                const yearStr = String(nowYear);
+                const monthStr = String(nowMonth).padStart(2, '0');
+                const previewNo = c.includeDate
+                    ? `${prefixLabel}/${yearStr}/${monthStr}/${nextNum}`
+                    : `${prefixLabel}/${nextNum}`;
+                const memberTypeLabel = this.memberTypeMap[c.memberTypeId] ? ` — ${this.memberTypeMap[c.memberTypeId]}` : '';
                 return {
-                    label: `${prefixLabel}${this.memberTypeMap[c.memberTypeId] ? ' — ' + this.memberTypeMap[c.memberTypeId] : ''}`,
+                    label: `${previewNo}${memberTypeLabel}`,
                     value: c.configId
                 };
             });

@@ -108,6 +108,10 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     showOnulipiFilter = false;
     paragraphChecked: boolean[] = [];
 
+    // ── পূর্ববতী কর্মস্থল unit visibility ───────────────────
+    showPrevWorkplaceFilter = false;
+    showPrevWorkplaceUnit = false;
+
     private syncParagraphChecked(): void {
         const paras = this.filteredFooterParagraphs;
         if (this.paragraphChecked.length !== paras.length) {
@@ -450,7 +454,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         });
     }
 
-    /** Fetch approval fields from master DTO. */
+    /** Fetch approval fields from master DTO and load approval person's full details. */
     private loadApprovalInfo(orderId: number): void {
         this.postingService.getPostingOrderById(orderId).subscribe({
             next: (master) => {
@@ -461,6 +465,31 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                     this.approvalNote = master.approvalNote ?? null;
                     this.cancelReason = master.cancelReason ?? null;
                     this.approvalDate = master.approvalDate ?? null;
+
+                    if (master.approvalEmployeeId) {
+                        this.servingMembersService.getEmployeePersonalServiceOverview(master.approvalEmployeeId).subscribe({
+                            next: (emp) => {
+                                if (emp) {
+                                    this.approvalPersonName = emp.nameEnglish ?? '';
+                                    this.approvalPersonNameBN = emp.nameBN ?? '';
+                                    this.approvalPersonRank = emp.armyRank ?? '';
+                                    this.approvalPersonRankBN = emp.armyRankBN ?? '';
+                                    this.approvalPersonAppointment = emp.appointment ?? '';
+                                    this.approvalPersonAppointmentBN = emp.appointmentBN ?? '';
+                                }
+                            }
+                        });
+                        this.empService.getSignatureBlob(master.approvalEmployeeId).subscribe({
+                            next: (blob) => {
+                                if (blob && blob.size > 0) {
+                                    const reader = new FileReader();
+                                    reader.onloadend = () => { this.approvalPersonSignatureUrl = reader.result as string; };
+                                    reader.readAsDataURL(blob);
+                                }
+                            },
+                            error: () => {}
+                        });
+                    }
                 }
             },
             error: () => {}
@@ -470,7 +499,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     approvalStatusLabel(status: string | null | undefined): string {
         const bn = this.isBangla;
         switch (status) {
-            case ApprovalStatus.Approve: return bn ? 'অনুমোদিত' : 'Approved';
+            case ApprovalStatus.Approve: return 'Approved';
             case ApprovalStatus.Cancel: return bn ? 'বাতিল' : 'Cancelled';
             case ApprovalStatus.Pending:
             default: return bn ? 'অপেক্ষমাণ' : 'Pending';
@@ -720,7 +749,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         }
         const rabUnit = (this.isBangla ? (emp.motherOrgLocationNameBN || emp.motherOrgLocationName) : emp.motherOrgLocationName) || '';
         const motherOrg = (this.isBangla ? (emp.previousMotherOrgNameBN || emp.previousMotherOrgName) : emp.previousMotherOrgName) || '';
-        if (motherOrg && rabUnit) return motherOrg + '\n(' + rabUnit + ')';
+        if (motherOrg && rabUnit && this.showPrevWorkplaceUnit) return motherOrg + '\n(' + rabUnit + ')';
         if (motherOrg) return motherOrg;
         if (rabUnit) return rabUnit;
         return '';
@@ -794,7 +823,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     // ─── Edit mode ────────────────────────────────────────
 
     get canEdit(): boolean {
-        return true;
+        return this.approvalStatus !== ApprovalStatus.Approve;
     }
 
     /** Unique transfer (RAB) units from currently-loaded edit employees. */
@@ -1414,11 +1443,23 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             new Paragraph({ children: [new TextRun({ text: `${bn ? 'টেলিঃ' : 'Tel:'} ${approverPhoneText}`, size: ctxSize, sizeComplexScript: csSize, font, language: lang })], keepNext: true, keepLines: true }),
             new Paragraph({ children: [new TextRun({ text: bn ? `তারিখঃ ${this.previewDate}` : `Date: ${this.previewDate}`, size: ctxSize, sizeComplexScript: csSize, font, language: lang })], spacing: { before: 100 }, keepLines: true })
         ];
+        // DXA widths: both tables are identical 100%-wide structures → exact same column positions
+        // contentWidth = page width − left margin − right margin (DXA units)
+        const contentWidth = this.selectedPageSize === 'Legal' ? 11106 : 10772;
+        const sigWidth  = Math.round(contentWidth * 0.20);   // right 20%
+        const leftWidth = contentWidth - sigWidth;            // left  80%
+        const zeroMargins = { top: 0, bottom: 0, left: 0, right: 0 };
+        const sigCellMargins = { top: 0, bottom: 0, left: 250, right: 0 };
+        // Standalone sig: same 100% / 85-15 structure — empty left + sig right
         const sigTable = new Table({
-            alignment: AlignmentType.RIGHT,
-            width: { size: 2200, type: WidthType.DXA },
+            width: { size: contentWidth, type: WidthType.DXA },
+            layout: TableLayoutType.FIXED,
+            columnWidths: [leftWidth, sigWidth],
             borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder, insideHorizontal: noBorder, insideVertical: noBorder },
-            rows: [new TableRow({ cantSplit: true, children: [new TableCell({ borders: noBorders, width: { size: 2200, type: WidthType.DXA }, children: standaloneSigChildren })] })]
+            rows: [new TableRow({ cantSplit: true, children: [
+                new TableCell({ borders: noBorders, width: { size: leftWidth, type: WidthType.DXA }, margins: zeroMargins, children: [new Paragraph({})] }),
+                new TableCell({ borders: noBorders, width: { size: sigWidth,  type: WidthType.DXA }, margins: sigCellMargins, children: standaloneSigChildren })
+            ] })]
         });
         const sigParas = [new Paragraph({ spacing: { before: 600 }, keepNext: true }), sigTable] as any[];
 
@@ -1436,42 +1477,44 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             }));
         });
 
-        // Right cell: digital signature image + name/rank/appointment
-        const sigIndent = { left: 800 };
+        // Right cell: approval person's digital signature + name/rank/appointment
+        const approvalPersonNameText = (bn ? this.approvalPersonNameBN : this.approvalPersonName) || this.approvalPersonName || '...................................';
+        const approvalPersonRankText = (bn ? this.approvalPersonRankBN : this.approvalPersonRank) || this.approvalPersonRank || '............................';
+        const approvalPersonApptText = (bn ? this.approvalPersonAppointmentBN : this.approvalPersonAppointment) || this.approvalPersonAppointment || '............................';
         const sigCellChildren: Paragraph[] = [];
 
-        // Embed digital signature image if available
-        if (this.approverSignatureUrl) {
+        // Embed approval person's digital signature image if available
+        if (this.approvalPersonSignatureUrl) {
             try {
-                const base64Data = this.approverSignatureUrl.split(',')[1];
+                const base64Data = this.approvalPersonSignatureUrl.split(',')[1];
                 const binaryString = atob(base64Data);
                 const bytes = new Uint8Array(binaryString.length);
                 for (let j = 0; j < binaryString.length; j++) {
                     bytes[j] = binaryString.charCodeAt(j);
                 }
                 sigCellChildren.push(new Paragraph({
-                    children: [new ImageRun({ data: bytes, transformation: { width: 60, height: 18 }, type: 'png' })],
-                    indent: sigIndent, keepNext: true, keepLines: true
+                    children: [new ImageRun({ data: bytes, transformation: { width: 130, height: 40 }, type: 'png' })],
+                    keepNext: true, keepLines: true
                 }));
             } catch (e) {
-                console.warn('Failed to embed signature image in Word export', e);
+                console.warn('Failed to embed approval person signature image in Word export', e);
             }
         }
 
         sigCellChildren.push(
-            new Paragraph({ children: [new TextRun({ text: approverNameText, size: ctxSize, sizeComplexScript: csSize, font, language: lang })], indent: sigIndent, keepNext: true, keepLines: true }),
-            new Paragraph({ children: [new TextRun({ text: approverRankText, size: ctxSize, sizeComplexScript: csSize, font, language: lang })], indent: sigIndent, keepNext: true, keepLines: true }),
-            new Paragraph({ children: [new TextRun({ text: approverApptText, size: ctxSize, sizeComplexScript: csSize, font, language: lang })], indent: sigIndent, keepNext: true, keepLines: true }),
-            new Paragraph({ children: [new TextRun({ text: `${bn ? 'টেলিঃ' : 'Tel:'} ${approverPhoneText}`, size: ctxSize, sizeComplexScript: csSize, font, language: lang })], indent: sigIndent, keepNext: true, keepLines: true }),
-            new Paragraph({ children: [new TextRun({ text: bn ? `তারিখঃ ${this.previewDate}` : `Date: ${this.previewDate}`, size: ctxSize, sizeComplexScript: csSize, font, language: lang })], indent: sigIndent, spacing: { before: 100 }, keepLines: true })
+            new Paragraph({ children: [new TextRun({ text: approvalPersonNameText, size: ctxSize, sizeComplexScript: csSize, font, language: lang })], keepNext: true, keepLines: true }),
+            new Paragraph({ children: [new TextRun({ text: approvalPersonRankText, size: ctxSize, sizeComplexScript: csSize, font, language: lang })], keepNext: true, keepLines: true }),
+            new Paragraph({ children: [new TextRun({ text: approvalPersonApptText, size: ctxSize, sizeComplexScript: csSize, font, language: lang })], keepLines: true })
         );
 
         const copySigTable = new Table({
-            width: { size: 10700, type: WidthType.DXA },
+            width: { size: contentWidth, type: WidthType.DXA },
+            layout: TableLayoutType.FIXED,
+            columnWidths: [leftWidth, sigWidth],
             borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder, insideHorizontal: noBorder, insideVertical: noBorder },
             rows: [new TableRow({ cantSplit: true, children: [
-                new TableCell({ borders: noBorders, width: { size: 6500, type: WidthType.DXA }, children: leftCellChildren }),
-                new TableCell({ borders: noBorders, width: { size: 4200, type: WidthType.DXA }, children: sigCellChildren })
+                new TableCell({ borders: noBorders, width: { size: leftWidth, type: WidthType.DXA }, margins: zeroMargins, children: leftCellChildren }),
+                new TableCell({ borders: noBorders, width: { size: sigWidth,  type: WidthType.DXA }, margins: sigCellMargins, children: sigCellChildren })
             ] })]
         });
 
