@@ -10,6 +10,7 @@ import { BankModel } from '../models/bank';
 import { BankBranchModel } from '../models/bank-branch';
 import { TrainingInstituteModel } from '../models/training-institution';
 import { RabIdSerialModel } from '../models/rab-id-serial';
+import { LeaveCardNumberConfigModel } from '../models/leave-card-number-config';
 import { EquivalentRankModel } from '../models/equivalent-rank';
 import { MotherOrgRankVacancyDistributionModel } from '../models/mother-org-rank-vacancy';
 
@@ -35,6 +36,7 @@ export class MasterBasicSetupService {
     private apiUrlBankBranch = `${environment.apis.core}/BankBranch`;
     private apiUrlTraining = `${environment.apis.core}/TrainingInstitute`;
     private apiUrlRabIdSerial = `${environment.apis.core}/RabIdSerial`;
+    private apiUrlLeaveCardNumberConfig = `${environment.apis.core}/LeaveCardNumberConfig`;
     private apiUrlRankEquivalent = `${environment.apis.core}/RankEquivalent`;
     private apiUrlMotherOrgRankVacancyDistribution = `${environment.apis.core}/MotherOrgRankVacancyDistribution`;
     private apiUrlNoteSheetTemplate = `${environment.apis.core}/NoteSheetTemplate`;
@@ -258,6 +260,28 @@ export class MasterBasicSetupService {
     // DELETE: delete RabIdSerial
     deleteRabIdSerial(id: number): Observable<any> {
         return this.http.delete(`${this.apiUrlRabIdSerial}/DeleteAsyn/${id}`);
+    }
+
+    // LeaveCardNumberConfig CRUD (singleton — backend rejects a second insert)
+
+    getAllLeaveCardNumberConfig(): Observable<LeaveCardNumberConfigModel[]> {
+        return this.http.get<LeaveCardNumberConfigModel[]>(`${this.apiUrlLeaveCardNumberConfig}/GetAll`);
+    }
+
+    getLeaveCardNumberConfigById(id: number): Observable<LeaveCardNumberConfigModel> {
+        return this.http.get<LeaveCardNumberConfigModel>(`${this.apiUrlLeaveCardNumberConfig}/GetFilteredByKeysAsyn/${id}`);
+    }
+
+    createLeaveCardNumberConfig(model: LeaveCardNumberConfigModel): Observable<any> {
+        return this.http.post(`${this.apiUrlLeaveCardNumberConfig}/SaveAsyn`, model);
+    }
+
+    updateLeaveCardNumberConfig(model: LeaveCardNumberConfigModel): Observable<any> {
+        return this.http.post(`${this.apiUrlLeaveCardNumberConfig}/UpdateAsyn`, model);
+    }
+
+    deleteLeaveCardNumberConfig(id: number): Observable<any> {
+        return this.http.delete(`${this.apiUrlLeaveCardNumberConfig}/DeleteAsyn/${id}`);
     }
 
     getNoteSheetTemplates(): Observable<NoteSheetTemplateModel[]> {

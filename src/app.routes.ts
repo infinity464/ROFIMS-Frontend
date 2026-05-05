@@ -121,6 +121,7 @@ import { RabIdSerial } from '@/Components/basic-setup/rab-id-serial/rab-id-seria
 import { AbsentType } from '@/Components/basic-setup/absent-type/absent-type';
 import { NotesheetTemplateComponent } from '@/Components/basic-setup/notesheet-template/notesheet-template';
 import { NoteSheetNumberConfigComponent } from '@/Components/basic-setup/notesheet-number-config/notesheet-number-config';
+import { LeaveCardNumberConfigComponent } from '@/Components/basic-setup/leave-card-number-config/leave-card-number-config';
 import { NoteSheetApproverConfigComponent } from '@/Components/basic-setup/notesheet-approver-config/notesheet-approver-config';
 import { PostingOrderNumberConfigComponent } from '@/Components/basic-setup/posting-order-number-config/posting-order-number-config';
 import { NotesheetGenerateComponent } from '@/Components/Features/notesheet-generate/notesheet-generate';
@@ -243,6 +244,7 @@ export const appRoutes: Routes = [
             { path: 'basic-setup/absent-type', component: AbsentType },
             { path: 'basic-setup/notesheet-template', component: NotesheetTemplateComponent },
             { path: 'basic-setup/notesheet-number-config', component: NoteSheetNumberConfigComponent },
+            { path: 'basic-setup/leave-card-number-config', component: LeaveCardNumberConfigComponent },
             { path: 'basic-setup/notesheet-approver-config', component: NoteSheetApproverConfigComponent },
             { path: 'basic-setup/posting-order-number-config', component: PostingOrderNumberConfigComponent },
             { path: 'notesheet-generate', component: NotesheetGenerateComponent },

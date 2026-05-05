@@ -71,7 +71,7 @@
                 <!-- ── Number / Date row ───────────────────────────── -->
                 <div class="lc-meta-row">
                     <span class="lc-meta-no">
-                        {{ lang === 'bn' ? 'ছুটির সনদপত্র নং-' : 'Leave Certificate No.-' }}({{ lang === 'bn' ? 'স্বয়ংক্রিয়ভাবে তৈরি' : 'Auto Generated' }})
+                        {{ lang === 'bn' ? 'ছুটির সনদপত্র নং-' : 'Leave Certificate No.-' }}{{ getCertificateNoDisplay() }}
                     </span>
                     <span class="lc-meta-date">
                         {{ lang === 'bn' ? 'তারিখঃ' : 'Date:' }} {{ formatDate(row.approvedDate) }}

@@ -278,6 +278,17 @@ export class LeaveCardComponent implements OnInit {
         return this.row.approvedByEmployeeId ?? this.row.finalApproverId ?? this.row.appliedByEmployeeId ?? null;
     }
 
+    /**
+     * Display the certificate number from the backend, converting digits to Bangla in `bn` mode.
+     * Falls back to the "(Auto Generated)" placeholder when the application is not yet approved
+     * (or when no LeaveCardNumberConfig has been set up by the admin).
+     */
+    getCertificateNoDisplay(): string {
+        const v = this.row?.leaveCertificateNo;
+        if (!v) return this.lang === 'bn' ? '(স্বয়ংক্রিয়ভাবে তৈরি)' : '(Auto Generated)';
+        return this.lang === 'bn' ? this.toBn(v) : v;
+    }
+
     getRelieverId(): number | null {
         return this.row?.relieverEmployeeId ?? null;
     }
@@ -614,7 +625,7 @@ export class LeaveCardComponent implements OnInit {
                             borders: noBorders,
                             children: [new Paragraph({
                                 children: [new TextRun({
-                                    text: isBn ? `ছুটির সনদপত্র নং-(স্বয়ংক্রিয়ভাবে তৈরি)` : `Leave Certificate No.-(Auto Generated)`,
+                                    text: `${isBn ? 'ছুটির সনদপত্র নং-' : 'Leave Certificate No.-'}${this.getCertificateNoDisplay()}`,
                                     bold: true, size: 22, font: FONT
                                 })]
                             })]

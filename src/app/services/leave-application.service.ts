@@ -67,6 +67,8 @@ export interface LeaveApplicationModel {
     declinedByEmployeeId?: number | null;
     declinedDate?: string | null;
     remark?: string | null;
+    /** Auto-generated on final approval from LeaveCardNumberConfig. Null on draft/pending/declined. */
+    leaveCertificateNo?: string | null;
     createdBy?: string;
     createdDate?: string;
     lastUpdatedBy?: string;
@@ -241,6 +243,7 @@ export class LeaveApplicationService {
             declinedByEmployeeId: r.declinedByEmployeeId ?? r.DeclinedByEmployeeId ?? null,
             declinedDate: r.declinedDate ?? r.DeclinedDate ?? null,
             remark: r.remark ?? r.Remark ?? null,
+            leaveCertificateNo: r.leaveCertificateNo ?? r.LeaveCertificateNo ?? null,
             createdBy: r.createdBy ?? r.CreatedBy,
             createdDate: r.createdDate ?? r.CreatedDate,
             lastUpdatedBy: r.lastUpdatedBy ?? r.LastUpdatedBy,

@@ -260,6 +260,32 @@ export class LeaveApplicationApplyComponent implements OnInit {
         return sum;
     }
 
+    /** Display label for a leave type from the loaded options (used by the pre-submit summary). */
+    getLeaveTypeLabel(leaveTypeId: number | null | undefined): string {
+        if (leaveTypeId == null) return '-';
+        const opt = this.leaveTypeOptions.find((o) => o.value === leaveTypeId);
+        return opt?.label ?? String(leaveTypeId);
+    }
+
+    /** dd-mm-yyyy format used by the pre-submit summary table to match the printed leave letter. */
+    formatRowDate(d: Date | string | null | undefined): string {
+        if (!d) return '-';
+        const dt = d instanceof Date ? d : new Date(d);
+        if (isNaN(dt.getTime())) return '-';
+        const day = String(dt.getDate()).padStart(2, '0');
+        const month = String(dt.getMonth() + 1).padStart(2, '0');
+        return `${day}-${month}-${dt.getFullYear()}`;
+    }
+
+    /** True when at least one leave-detail row has Leave Type + From + To filled — drives summary visibility. */
+    get hasFilledLeaveRows(): boolean {
+        for (let i = 0; i < this.leaveDetails.length; i++) {
+            const v = this.leaveDetails.at(i).value;
+            if (v?.leaveTypeId && v?.fromDate && v?.toDate) return true;
+        }
+        return false;
+    }
+
     loadLeaveTypes(): void {
         this.masterBasicSetup.getAllByType('LeaveType').subscribe({
             next: (list) => {
@@ -583,13 +609,13 @@ export class LeaveApplicationApplyComponent implements OnInit {
                         const id = data?.leaveApplicationId ?? data?.LeaveApplicationId ?? this.editId;
                         if (id && !this.editId) this.router.navigate(['/leave-application/apply'], { queryParams: { id } });
                     } else {
-                        this.messageService.add({ severity: 'warn', summary: 'Save failed', detail: msg || 'Save failed.' });
+                        this.messageService.add({ severity: 'warn', summary: this.failureSummary('Save failed', msg), detail: msg || 'Save failed.' });
                     }
                 },
                 error: (err: any) => {
                     this.isSaving = false;
                     const detail = err?.error?.description ?? err?.error?.Description ?? err?.message ?? 'Failed to save draft';
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail });
+                    this.messageService.add({ severity: 'error', summary: this.failureSummary('Error', detail), detail });
                 }
             });
         });
@@ -598,6 +624,54 @@ export class LeaveApplicationApplyComponent implements OnInit {
     /** Discards changes and navigates back to the list. */
     cancel(): void {
         this.router.navigate(['/leave-application/list']);
+    }
+
+    /**
+     * Resets the form to its pristine "new application" state — same as a fresh page load.
+     * Used after a successful save/submit so the user can immediately enter another application
+     * without a redirect.
+     */
+    private resetForm(): void {
+        // Reset to a single empty leave-detail row.
+        this.leaveDetails.clear();
+        this.leaveDetails.push(this.createLeaveDetailRow());
+
+        // Reset scalar form fields to their initial defaults.
+        this.form.reset({
+            applicantEmployeeId: null,
+            appliedByEmployeeId: null,
+            processType: null,
+            manualDecision: null,
+            relieverEmployeeId: null,
+            addressDuringLeave: '',
+            remarks: '',
+            finalApproverId: null,
+            recommenderIds: []
+        });
+        this.form.markAsPristine();
+        this.form.markAsUntouched();
+
+        // Reset side state held outside the FormGroup.
+        this.applyForSelf = true;
+        this.applicantInfo = null;
+        this.applicantEmployeeId = null;
+        this.hasReliever = false;
+        this.relieverInfo = null;
+        this.fileRows = [];
+        this.returnHistory = [];
+
+        // Drop edit mode + remove the ?id= query param from the URL.
+        if (this.editId != null || this.editMode) {
+            this.editId = null;
+            this.editMode = false;
+            this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true });
+        }
+
+        // Re-resolve the current user as applicant (default "For myself" path).
+        this.loadCurrentUserAsApplicant();
+
+        // Scroll to top so the user sees the cleared form.
+        try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch {}
     }
 
     /** Uploads any locally-selected files via EmpService, then invokes the callback with the full set of fileIds (existing + newly uploaded). */
@@ -649,15 +723,15 @@ export class LeaveApplicationApplyComponent implements OnInit {
                 if (code === 200) {
                     const label = statusId === 3 ? 'Approved' : 'Rejected';
                     this.messageService.add({ severity: 'success', summary: label, detail: `Leave application saved as ${label}.` });
-                    this.router.navigate(['/leave-application/list'], { queryParams: { section: statusId === 3 ? 'approved' : 'declined' } });
+                    this.resetForm();
                 } else {
-                    this.messageService.add({ severity: 'warn', summary: 'Save failed', detail: msg || 'Save failed.' });
+                    this.messageService.add({ severity: 'warn', summary: this.failureSummary('Save failed', msg), detail: msg || 'Save failed.' });
                 }
             },
             error: (err: any) => {
                 this.isSaving = false;
                 const detail = err?.error?.description ?? err?.error?.Description ?? err?.message ?? 'Failed to save';
-                this.messageService.add({ severity: 'error', summary: 'Error', detail });
+                this.messageService.add({ severity: 'error', summary: this.failureSummary('Error', detail), detail });
             }
         });
     }
@@ -678,15 +752,15 @@ export class LeaveApplicationApplyComponent implements OnInit {
                     const msg = res.description ?? res.Description ?? '';
                     if (code === 200) {
                         this.messageService.add({ severity: 'success', summary: 'Submitted', detail: 'Leave application submitted for approval.' });
-                        this.router.navigate(['/leave-application/pending-approval']);
+                        this.resetForm();
                     } else {
-                        this.messageService.add({ severity: 'warn', summary: 'Submit failed', detail: msg || 'Submit failed.' });
+                        this.messageService.add({ severity: 'warn', summary: this.failureSummary('Submit failed', msg), detail: msg || 'Submit failed.' });
                     }
                 },
                 error: (err: any) => {
                     this.isSaving = false;
                     const detail = err?.error?.description ?? err?.error?.Description ?? err?.message ?? 'Failed to submit';
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail });
+                    this.messageService.add({ severity: 'error', summary: this.failureSummary('Error', detail), detail });
                 }
             });
         };
@@ -698,13 +772,14 @@ export class LeaveApplicationApplyComponent implements OnInit {
                         doSubmit(this.editId!);
                     } else {
                         this.isSaving = false;
-                        this.messageService.add({ severity: 'warn', summary: 'Save failed', detail: res.description ?? res.Description ?? '' });
+                        const failMsg = res.description ?? res.Description ?? '';
+                        this.messageService.add({ severity: 'warn', summary: this.failureSummary('Save failed', failMsg), detail: failMsg });
                     }
                 },
                 error: (err: any) => {
                     this.isSaving = false;
                     const detail = err?.error?.description ?? err?.error?.Description ?? err?.message ?? 'Failed to save';
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail });
+                    this.messageService.add({ severity: 'error', summary: this.failureSummary('Error', detail), detail });
                 }
             });
         } else {
@@ -717,13 +792,14 @@ export class LeaveApplicationApplyComponent implements OnInit {
                         doSubmit(id);
                     } else {
                         this.isSaving = false;
-                        this.messageService.add({ severity: 'warn', summary: 'Submit failed', detail: res.description ?? res.Description ?? '' });
+                        const failMsg = res.description ?? res.Description ?? '';
+                        this.messageService.add({ severity: 'warn', summary: this.failureSummary('Submit failed', failMsg), detail: failMsg });
                     }
                 },
                 error: (err: any) => {
                     this.isSaving = false;
                     const detail = err?.error?.description ?? err?.error?.Description ?? err?.message ?? 'Failed to submit';
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail });
+                    this.messageService.add({ severity: 'error', summary: this.failureSummary('Error', detail), detail });
                 }
             });
         }
@@ -829,6 +905,16 @@ export class LeaveApplicationApplyComponent implements OnInit {
             recommenders,
             attachments: attachmentFileIds.map((fileId) => ({ fileId }))
         };
+    }
+
+    /**
+     * Picks a friendlier toast summary based on the backend's failure message — overlap errors
+     * surface as "Date Conflict" so the user immediately recognises why the submission was blocked.
+     */
+    private failureSummary(defaultSummary: string, detail: string | null | undefined): string {
+        const msg = (detail ?? '').toLowerCase();
+        if (msg.includes('overlap')) return 'Date Conflict';
+        return defaultSummary;
     }
 
     private toIsoDate(d: Date): string {

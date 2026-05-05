@@ -32,15 +32,6 @@
           <span class="section-hint">Submit a new leave application for yourself or another member.</span>
         </div>
 
-        <!-- Prepared By — read-only, auto-filled from the logged-in user's identity mapping. -->
-        <div class="mb-4">
-          <label class="field-label">Prepared By</label>
-          <input pInputText [value]="preparedByDisplay" readonly class="w-full" />
-          @if (!isPreparedByMapped) {
-            <small class="field-error">Your account is not mapped to an employee. Please contact admin to set Identity User Mapping.</small>
-          }
-        </div>
-
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <!-- Apply for toggle -->
           <div>
@@ -230,6 +221,19 @@
             <span class="section-hint">Optional recommenders are walked in order before the final approver.</span>
           </div>
 
+          <!-- Prepared By — only relevant when applying on behalf of someone else; auto-filled from
+               the logged-in user's identity mapping and read-only. For "For myself" the applicant
+               and preparer are the same person, so the field is omitted. -->
+          @if (!applyForSelf) {
+            <div class="mb-4">
+              <label class="field-label">Prepared By</label>
+              <input pInputText [value]="preparedByDisplay" readonly class="w-full" />
+              @if (!isPreparedByMapped) {
+                <small class="field-error">Your account is not mapped to an employee. Please contact admin to set Identity User Mapping.</small>
+              }
+            </div>
+          }
+
           <div class="mb-4">
             <label class="field-label">Recommenders</label>
             <p-multiselect
@@ -292,10 +296,49 @@
         </div>
       </section>
 
-      <!-- ─────────────── Sticky Action Bar ─────────────── -->
+      <!-- ─────────────── Action Bar (with pre-submit summary) ─────────────── -->
       <div class="form-action-bar">
-        <span class="spacer"></span>
-        <p-button type="submit" label="Submit" icon="pi pi-send" severity="success" [loading]="isSaving" [class.perm-hidden]="editMode ? !canUpdate : !canInsert"></p-button>
+        @if (hasFilledLeaveRows) {
+          <h3 class="submit-summary-title">Review &amp; Confirm</h3>
+          <table class="submit-summary-table">
+            <thead>
+              <tr>
+                <th>Leave Type</th>
+                <th>From</th>
+                <th>To</th>
+                <th>Days</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of leaveDetails.controls; track $index) {
+                @if (row.value.leaveTypeId && row.value.fromDate && row.value.toDate) {
+                  <tr>
+                    <td>{{ getLeaveTypeLabel(row.value.leaveTypeId) }}</td>
+                    <td>{{ formatRowDate(row.value.fromDate) }}</td>
+                    <td>{{ formatRowDate(row.value.toDate) }}</td>
+                    <td>
+                      @if (leaveDetailRowDays($index) !== null) {
+                        {{ leaveDetailRowDays($index) | number:'2.0-0' }} {{ (leaveDetailRowDays($index) ?? 0) === 1 ? 'Day' : 'Days' }}
+                      }
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+            <tfoot>
+              <tr>
+                <td>Total</td>
+                <td>—</td>
+                <td>—</td>
+                <td>{{ totalDays | number:'2.0-0' }} {{ totalDays === 1 ? 'Day' : 'Days' }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        }
+        <div class="submit-row">
+          <span class="spacer"></span>
+          <p-button type="submit" label="Submit" icon="pi pi-send" severity="success" [loading]="isSaving" [class.perm-hidden]="editMode ? !canUpdate : !canInsert"></p-button>
+        </div>
       </div>
 
     </form>
