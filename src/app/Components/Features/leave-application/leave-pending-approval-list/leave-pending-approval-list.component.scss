@@ -2,7 +2,442 @@
     display: block;
 }
 
-// ───────── Leave-application letter style for the preview modal ─────────
+/* ─────────────────────────────────────────────────────────────────────────
+ * Re-skin the report-theme to match leave-application/apply.
+ * Color tokens, font sizes, spacing, and border-radii are all aligned with
+ * leave-application-apply.component.scss so the two pages feel like part of
+ * the same module.
+ * ───────────────────────────────────────────────────────────────────────── */
+
+.employee-reports-page {
+    background: transparent;
+    color: var(--text-color, inherit);
+    font-family: inherit;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 0 1.5rem 0;
+}
+
+/* Section card — mirrors `.form-section` from the apply page. */
+.report-filter-card {
+    background: var(--surface-card, rgba(255, 255, 255, 0.03));
+    border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.08));
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+    overflow: visible;
+}
+
+/* Header row inside the first card (page title + Back button). */
+.report-filter-card-title {
+    padding: 0;
+    margin: 0 0 1.25rem 0;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--surface-border, rgba(255, 255, 255, 0.08));
+}
+
+/* Page title — matches `.page-title` from apply (1.75rem, bold). */
+.report-page-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-color, #fff);
+    margin: 0 0 0.25rem 0;
+    letter-spacing: 0;
+}
+
+:host-context(.app-dark) .report-page-title {
+    color: var(--text-color);
+}
+
+.page-subtitle {
+    font-size: 0.9rem;
+    color: var(--text-color-secondary, rgba(255, 255, 255, 0.6));
+    margin: 0;
+}
+
+.leave-app-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+/* Collapsible filter header — looks like a sub-section pill. */
+.report-filter-header {
+    border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.08));
+    border-radius: 0.5rem;
+    background: var(--surface-ground, rgba(0, 0, 0, 0.15));
+    padding: 0.75rem 1rem;
+    margin-top: 0.25rem;
+    transition: border-color 0.18s, background 0.18s;
+
+    &:hover {
+        background: var(--surface-hover, rgba(255, 255, 255, 0.05));
+    }
+
+    &.open {
+        border-color: var(--p-primary-color, #10b981);
+        border-bottom-color: transparent;
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+}
+
+.report-filter-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 0.5rem;
+    background: rgba(16, 185, 129, 0.15);
+
+    svg path {
+        stroke: var(--p-primary-color, #10b981);
+    }
+}
+
+.report-filter-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-color, #fff);
+}
+
+:host-context(.app-dark) .report-filter-title {
+    color: var(--text-color);
+}
+
+.report-filter-subtitle {
+    font-size: 0.78rem;
+    color: var(--text-color-secondary, rgba(255, 255, 255, 0.6));
+    margin-top: 1px;
+}
+
+.report-filters-badge {
+    background: var(--p-primary-color, #10b981);
+    color: var(--p-primary-contrast-color, #fff);
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 2px 9px;
+    border-radius: 999px;
+}
+
+.report-chevron {
+    width: 28px;
+    height: 28px;
+    border-radius: 0.5rem;
+    border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.1));
+    background: var(--surface-card, rgba(255, 255, 255, 0.03));
+    color: var(--text-color-secondary, rgba(255, 255, 255, 0.6));
+}
+
+.report-filter-header.open .report-chevron {
+    border-color: var(--p-primary-color, #10b981);
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--p-primary-color, #10b981);
+}
+
+/* Body of the collapsible filter — joins to the open header. */
+.report-filter-body {
+    background: var(--surface-ground, rgba(0, 0, 0, 0.1));
+    border: 1px solid var(--p-primary-color, #10b981);
+    border-top: none;
+    border-bottom-left-radius: 0.5rem;
+    border-bottom-right-radius: 0.5rem;
+
+    /* Only show borders when the body is actually open (max-height > 0). */
+    &:not(.open) {
+        border-color: transparent;
+    }
+}
+
+.report-filter-body-inner {
+    padding: 1.25rem;
+}
+
+.report-fields-row {
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.report-filter-field {
+    label {
+        display: block;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-color, #fff);
+        margin-bottom: 0.4rem;
+        text-transform: none;
+        letter-spacing: 0;
+    }
+}
+
+/* Inputs in the filter body — match apply-form look but a touch shorter (34px).
+ * Uses ::ng-deep because PrimeNG's global stylesheet loads outside view
+ * encapsulation; without ::ng-deep the height/border overrides lose the cascade.
+ *
+ * The selector chain `:host ::ng-deep .employee-reports-page .report-filter-body-inner`
+ * is intentionally long: report-theme-common.scss has dark-mode overrides like
+ * `.app-dark .employee-reports-page .report-filter-body-inner .p-inputtext { background: var(--white); }`
+ * (4-class specificity) which would otherwise paint the plain text inputs white.
+ * Adding `.employee-reports-page` here gives us 4 classes + element, beating it. */
+:host ::ng-deep .employee-reports-page .report-filter-body-inner {
+    --filter-input-h: 34px;
+    --filter-input-bg: var(--surface-card, rgba(255, 255, 255, 0.03));
+    --filter-input-border: var(--surface-border, rgba(255, 255, 255, 0.18));
+
+    /* The custom-element hosts default to inline — stretch them so each field
+     * claims its full flex column. */
+    p-select,
+    p-datepicker,
+    p-multiselect {
+        display: block;
+        width: 100%;
+    }
+
+    /* Outer wrappers PrimeNG renders for each control. The border + radius go
+     * here (NOT on the inner label), so p-select keeps its chevron/clear icons
+     * inside a single bordered box. */
+    .p-select,
+    .p-datepicker,
+    .p-multiselect {
+        width: 100%;
+        height: var(--filter-input-h);
+        box-sizing: border-box;
+        border: 1px solid var(--filter-input-border);
+        border-radius: 0.5rem;
+        background: var(--filter-input-bg);
+        display: inline-flex;
+        align-items: center;
+        overflow: hidden; /* keeps the trigger button corners inside the wrapper radius */
+    }
+
+    /* Plain text input (pInputText) gets the same border/radius/height directly. */
+    input.p-inputtext {
+        height: var(--filter-input-h);
+        line-height: calc(var(--filter-input-h) - 2px);
+        box-sizing: border-box;
+        border: 1px solid var(--filter-input-border);
+        border-radius: 0.5rem;
+        padding: 0 12px;
+        font-size: 0.9rem;
+        color: var(--text-color, #fff);
+        background: var(--filter-input-bg);
+        width: 100%;
+    }
+
+    /* Inner label / inner input — no border, transparent so the wrapper's bg shows. */
+    .p-select .p-select-label,
+    .p-multiselect .p-multiselect-label {
+        border: none;
+        background: transparent;
+        height: 100%;
+        line-height: calc(var(--filter-input-h) - 2px);
+        padding: 0 12px;
+        font-size: 0.9rem;
+        color: var(--text-color, #fff);
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    /* Date picker input lives inside the wrapper — borderless, transparent. */
+    .p-datepicker input.p-inputtext {
+        flex: 1 1 auto;
+        min-width: 0;
+        height: 100%;
+        border: none;
+        background: transparent;
+        border-radius: 0;
+        padding: 0 12px;
+        box-shadow: none;
+    }
+
+    /* Calendar trigger button + select chevron — flush, no inner border, icon
+     * inherits text-color so it stays visible on dark backgrounds. */
+    .p-datepicker .p-datepicker-trigger,
+    .p-select .p-select-dropdown {
+        border: none;
+        background: transparent;
+        color: var(--text-color, rgba(255, 255, 255, 0.85));
+        width: var(--filter-input-h);
+        height: var(--filter-input-h);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        padding: 0;
+        cursor: pointer;
+
+        &:hover {
+            color: var(--p-primary-color, #10b981);
+            background: rgba(16, 185, 129, 0.1);
+        }
+    }
+
+    /* Cover every shape PrimeNG might use for the icon: a wrapped <p-icon> /
+     * <CalendarIcon> svg component, a bare <svg>, or a font-icon <i class="pi">. */
+    .p-datepicker .p-datepicker-trigger,
+    .p-select .p-select-dropdown {
+        .p-icon,
+        svg {
+            width: 16px;
+            height: 16px;
+            color: inherit;
+            fill: currentColor;
+            stroke: currentColor;
+        }
+
+        i,
+        i.pi {
+            font-size: 16px;
+            line-height: 1;
+            color: inherit;
+        }
+    }
+
+    /* Focus ring on the OUTER wrapper so it surrounds icons + text together. */
+    .p-select:focus-within,
+    .p-multiselect:focus-within,
+    .p-datepicker:focus-within,
+    input.p-inputtext:focus {
+        border-color: var(--p-primary-color, #10b981);
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18);
+        outline: none;
+    }
+}
+
+/* Dark-mode safety net: the report theme normally cascades `--white` to
+ * `--surface-card`, but in some host setups that var ends up resolving to
+ * #ffffff anyway, painting the inputs white. Pin the bg to surface-card
+ * directly when the app is in dark mode. */
+:host-context(.app-dark) ::ng-deep .employee-reports-page .report-filter-body-inner {
+    --filter-input-bg: var(--surface-card);
+    --filter-input-border: var(--surface-border);
+}
+
+/* Filter action buttons (Clear + Search). */
+.report-filter-actions {
+    border-top: 1px solid var(--surface-border, rgba(255, 255, 255, 0.08));
+    padding-top: 1rem;
+    margin-top: 0.25rem;
+    gap: 0.5rem;
+}
+
+.report-btn-secondary {
+    height: 36px;
+    padding: 0 16px;
+    border-radius: 0.5rem;
+    border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.18));
+    background: var(--surface-card, rgba(255, 255, 255, 0.03));
+    color: var(--text-color-secondary, rgba(255, 255, 255, 0.7));
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+
+    &:hover {
+        border-color: var(--p-primary-color, #10b981);
+        color: var(--p-primary-color, #10b981);
+        background: rgba(16, 185, 129, 0.08);
+    }
+}
+
+/* Primary button (Search). The class had no styles in either stylesheet. */
+.report-btn-primary {
+    height: 36px;
+    padding: 0 22px;
+    border-radius: 0.5rem;
+    border: none;
+    background: var(--p-primary-color, #10b981);
+    color: var(--p-primary-contrast-color, #fff);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 1px 3px rgba(16, 185, 129, 0.3);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+
+    &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 3px 10px rgba(16, 185, 129, 0.4);
+    }
+
+    &:active {
+        transform: none;
+    }
+}
+
+/* Results card panel title — green accent bar like `.section-title` on apply. */
+.report-panel-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-color, #fff);
+    margin: 0 0 1rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    &::before {
+        content: '';
+        display: inline-block;
+        width: 4px;
+        height: 1.1rem;
+        border-radius: 2px;
+        background: var(--p-primary-color, #10b981);
+    }
+}
+
+:host-context(.app-dark) .report-panel-title {
+    color: var(--text-color);
+}
+
+/* PrimeNG table inside the results card — match the apply page entries-table. */
+:host ::ng-deep .p-datatable .p-datatable-thead > tr > th {
+    background: var(--surface-ground, rgba(0, 0, 0, 0.2));
+    color: var(--text-color-secondary, rgba(255, 255, 255, 0.6));
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.65rem 0.75rem;
+    border-bottom: 1px solid var(--surface-border, rgba(255, 255, 255, 0.1));
+}
+
+:host ::ng-deep .p-datatable .p-datatable-tbody > tr > td {
+    padding: 0.6rem 0.75rem;
+    font-size: 0.85rem;
+    color: var(--text-color, inherit);
+    border-bottom: 1px solid var(--surface-border, rgba(255, 255, 255, 0.06));
+}
+
+:host ::ng-deep .p-datatable .p-datatable-tbody > tr:hover {
+    background: rgba(16, 185, 129, 0.06);
+}
+
+:host ::ng-deep .p-paginator {
+    padding: 0.75rem 1rem;
+    background: transparent;
+    border-top: 1px solid var(--surface-border, rgba(255, 255, 255, 0.08));
+}
+
+/* Placeholders match the apply form. */
+:host ::ng-deep {
+    .p-select .p-select-label.p-placeholder,
+    .p-multiselect .p-multiselect-label.p-placeholder,
+    .p-datepicker-input::placeholder,
+    input::placeholder {
+        color: var(--text-color-secondary, rgba(255, 255, 255, 0.55)) !important;
+        opacity: 1;
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * Leave-letter style for the preview dialog (kept from before).
+ * ───────────────────────────────────────────────────────────────────────── */
 :host ::ng-deep .leave-preview-dialog .p-dialog-content {
     padding: 1.5rem 2rem;
 }
@@ -88,18 +523,4 @@
     margin: 0;
     font-size: 0.9rem;
     white-space: pre-line;
-}
-
-.page-subtitle {
-    font-size: 0.85rem;
-    color: var(--text-color-secondary, rgba(255, 255, 255, 0.6));
-    margin: 0.15rem 0 0 0;
-}
-
-.leave-app-header-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 1rem;
-    flex-wrap: wrap;
 }

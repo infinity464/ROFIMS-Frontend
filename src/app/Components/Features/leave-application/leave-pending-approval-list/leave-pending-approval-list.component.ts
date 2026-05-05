@@ -42,7 +42,10 @@ import type { TableLazyLoadEvent } from 'primeng/table';
     ],
     providers: [MessageService],
     templateUrl: './leave-pending-approval-list.component.html',
-    styleUrls: ['./leave-pending-approval-list.component.scss', '../../employee-reports/report-theme-common.scss']
+    // Order matters: report-theme-common provides the base, local scss overrides it to match the
+    // leave-application/apply page's tokens (surface-card / surface-border / #10b981 accent, 0.75rem
+    // card radius, apply-form typography). Putting the local file LAST lets it win the cascade.
+    styleUrls: ['../../employee-reports/report-theme-common.scss', './leave-pending-approval-list.component.scss']
 })
 export class LeavePendingApprovalListComponent implements OnInit {
     currentList: LeaveApplicationModel[] = [];
