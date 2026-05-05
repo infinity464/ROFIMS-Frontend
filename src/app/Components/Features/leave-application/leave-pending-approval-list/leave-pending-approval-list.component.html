@@ -100,7 +100,7 @@
                     <td>{{ getTotalDays(row.fromDate, row.toDate) }}</td>
                     <td>{{ getApplicantName(row.relieverEmployeeId) }}</td>
                     <td>
-                        <button type="button" class="report-btn-secondary" [routerLink]="['/leave-application/preview']" [queryParams]="{ id: row.leaveApplicationId }"><i class="pi pi-eye mr-1"></i>Review</button>
+                        <button type="button" class="report-btn-secondary" [routerLink]="['/leave-application/preview']" [queryParams]="{ id: row.leaveApplicationId }" title="Review"><i class="pi pi-eye"></i></button>
                     </td>
                 </tr>
             </ng-template>

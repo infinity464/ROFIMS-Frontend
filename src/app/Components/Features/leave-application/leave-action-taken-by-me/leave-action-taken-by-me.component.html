@@ -85,7 +85,6 @@
                             <th>Total Days</th>
                             <th>Reliever</th>
                             <th>Status</th>
-                            <th>My Decision</th>
                             <th>Action</th>
                         </tr>
                     </ng-template>
@@ -100,9 +99,8 @@
                             <td>{{ lookups.getTotalDays(row.fromDate, row.toDate) }}</td>
                             <td>{{ lookups.getApplicantName(row.relieverEmployeeId) }}</td>
                             <td><span class="status-pill" [ngClass]="getOverallStatusClass(row)">{{ getOverallStatus(row) }}</span></td>
-                            <td><span class="status-pill" [ngClass]="getMyDecision(row).cssClass">{{ getMyDecision(row).label }}</span></td>
                             <td class="flex gap-1">
-                                <button type="button" class="report-btn-secondary" [routerLink]="['/leave-application/preview']" [queryParams]="{ id: row.leaveApplicationId }"><i class="pi pi-eye mr-1"></i>Preview</button>
+                                <button type="button" class="report-btn-secondary" [routerLink]="['/leave-application/preview']" [queryParams]="{ id: row.leaveApplicationId }" title="Preview"><i class="pi pi-eye"></i></button>
                                 @if (row.leaveApplicationStatusId === 3) {
                                     <button type="button" class="report-btn-secondary" [routerLink]="['/leave-application/card']" [queryParams]="{ id: row.leaveApplicationId }" title="Leave Card"><i class="pi pi-id-card"></i></button>
                                 }
@@ -110,7 +108,7 @@
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="emptymessage">
-                        <tr><td colspan="11" class="text-center p-4">No applications.</td></tr>
+                        <tr><td colspan="10" class="text-center p-4">No applications.</td></tr>
                     </ng-template>
                 </p-table>
                 @if (totalRecords > pageSize) {

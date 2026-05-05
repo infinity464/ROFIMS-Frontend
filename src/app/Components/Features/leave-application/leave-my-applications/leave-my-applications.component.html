@@ -103,13 +103,13 @@
                         <td>{{ lookups.getApplicantName(row.relieverEmployeeId) }}</td>
                         <td><span class="status-pill" [ngClass]="getOverallStatusClass(row)">{{ getOverallStatus(row) }}</span></td>
                         <td class="flex gap-1">
-                            <button type="button" class="report-btn-secondary" [routerLink]="['/leave-application/preview']" [queryParams]="{ id: row.leaveApplicationId }" title="Preview"><i class="pi pi-eye mr-1"></i>Preview</button>
+                            <button type="button" class="report-btn-secondary" [routerLink]="['/leave-application/preview']" [queryParams]="{ id: row.leaveApplicationId }" title="Preview"><i class="pi pi-eye"></i></button>
                             @if (row.leaveApplicationStatusId === 3) {
                                 <button type="button" class="report-btn-secondary" [routerLink]="['/leave-application/card']" [queryParams]="{ id: row.leaveApplicationId }" title="Leave Card"><i class="pi pi-id-card"></i></button>
                             }
                             @if (canEditOrDelete(row)) {
-                                <button type="button" class="report-btn-secondary" (click)="tryEdit(row)" title="Edit"><i class="pi pi-pencil mr-1"></i>Edit</button>
-                                <button type="button" class="report-btn-secondary danger" (click)="deleteRow(row)" title="Delete"><i class="pi pi-trash mr-1"></i>Delete</button>
+                                <button type="button" class="report-btn-secondary" (click)="tryEdit(row)" title="Edit"><i class="pi pi-pencil"></i></button>
+                                <button type="button" class="report-btn-secondary danger" (click)="deleteRow(row)" title="Delete"><i class="pi pi-trash"></i></button>
                             }
                         </td>
                     </tr>

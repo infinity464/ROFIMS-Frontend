@@ -320,8 +320,12 @@
 }
 
 .report-btn-secondary {
+    /* Filter bar uses the labelled form (Clear / Search). Action-column buttons
+     * are icon-only — :empty selectors below collapse them into a compact square.
+     * The native `title="..."` attribute on each button provides the hover label. */
     height: 36px;
-    padding: 0 16px;
+    min-width: 36px;
+    padding: 0 12px;
     border-radius: 0.5rem;
     border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.18));
     background: var(--surface-card, rgba(255, 255, 255, 0.03));
@@ -331,6 +335,7 @@
     cursor: pointer;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
     transition: border-color 0.15s, color 0.15s, background 0.15s;
 

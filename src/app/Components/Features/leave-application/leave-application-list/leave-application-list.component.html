@@ -199,9 +199,9 @@
                             <td class="flex gap-1">
                                 @if (isReturnedRow(row)) {
                                     <!-- Returned applications belong to the applicant — let them edit and resubmit. -->
-                                    <button type="button" class="report-btn-secondary" [routerLink]="['/leave-application/apply']" [queryParams]="{ id: row.leaveApplicationId }" title="Edit returned application"><i class="pi pi-pencil mr-1"></i>Edit</button>
+                                    <button type="button" class="report-btn-secondary" [routerLink]="['/leave-application/apply']" [queryParams]="{ id: row.leaveApplicationId }" title="Edit returned application"><i class="pi pi-pencil"></i></button>
                                 } @else {
-                                    <button type="button" class="report-btn-secondary" [routerLink]="['/leave-application/preview']" [queryParams]="{ id: row.leaveApplicationId }"><i class="pi pi-eye mr-1"></i>Preview</button>
+                                    <button type="button" class="report-btn-secondary" [routerLink]="['/leave-application/preview']" [queryParams]="{ id: row.leaveApplicationId }" title="Preview"><i class="pi pi-eye"></i></button>
                                 }
                                 @if (row.leaveApplicationStatusId === 3) {
                                     <button type="button" class="report-btn-secondary" [routerLink]="['/leave-application/card']" [queryParams]="{ id: row.leaveApplicationId }" title="Leave Card"><i class="pi pi-id-card"></i></button>

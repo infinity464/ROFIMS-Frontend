@@ -15,7 +15,6 @@ import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
 import { ToastModule } from 'primeng/toast';
-import { TooltipModule } from 'primeng/tooltip';
 import type { TableLazyLoadEvent } from 'primeng/table';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 
@@ -36,12 +35,13 @@ import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directi
         SelectModule,
         DatePickerModule, FlexibleDateDirective,
         ToastModule,
-        TooltipModule,
         RouterModule
     ],
     providers: [MessageService],
     templateUrl: './leave-history-list.component.html',
-    styleUrls: ['./leave-history-list.component.scss', '../../employee-reports/report-theme-common.scss']
+    // Order matters: report-theme-common is the base, leave-my-applications is the shared
+    // "leave list" re-skin (filter card + results card + apply-page tokens), local scss last.
+    styleUrls: ['../../employee-reports/report-theme-common.scss', '../leave-my-applications/leave-my-applications.component.scss', './leave-history-list.component.scss']
 })
 export class LeaveHistoryListComponent implements OnInit {
     currentList: LeaveApplicationModel[] = [];
@@ -65,7 +65,6 @@ export class LeaveHistoryListComponent implements OnInit {
     // Filter form state.
     filterRabId = '';
     filterServiceId = '';
-    filterLeaveTypeId: number | null = null;
     filterFromDate: Date | null = null;
     filterToDate: Date | null = null;
     filterOpen = true;
@@ -84,7 +83,6 @@ export class LeaveHistoryListComponent implements OnInit {
     rankNameMap: Record<number, string> = {};
     profQualNameMap: Record<number, string> = {};
     leaveTypeNameMap: Record<number, string> = {};
-    leaveTypeOptions: { label: string; value: number }[] = [];
 
     constructor(
         private http: HttpClient,
@@ -153,7 +151,6 @@ export class LeaveHistoryListComponent implements OnInit {
                     if (id == null) return;
                     const name = c.codeValueEN ?? c.CodeValueEN ?? String(id);
                     this.leaveTypeNameMap[id] = name;
-                    this.leaveTypeOptions.push({ label: name, value: id });
                 });
             }
         });
@@ -203,10 +200,9 @@ export class LeaveHistoryListComponent implements OnInit {
     private buildFilterParams(): LeaveApplicationFilterParams | undefined {
         const hasRab = (this.filterRabId || '').trim();
         const hasSvc = (this.filterServiceId || '').trim();
-        const hasLt = this.filterLeaveTypeId != null && this.filterLeaveTypeId > 0;
         const hasFrom = !!this.filterFromDate;
         const hasTo = !!this.filterToDate;
-        if (!hasRab && !hasSvc && !hasLt && !hasFrom && !hasTo) return undefined;
+        if (!hasRab && !hasSvc && !hasFrom && !hasTo) return undefined;
         const toDateStr = (d: Date | null): string | undefined => {
             if (!d) return undefined;
             const x = new Date(d);
@@ -215,7 +211,6 @@ export class LeaveHistoryListComponent implements OnInit {
         return {
             rabId: hasRab ? this.filterRabId.trim() : undefined,
             serviceId: hasSvc ? this.filterServiceId.trim() : undefined,
-            leaveTypeId: hasLt ? this.filterLeaveTypeId! : undefined,
             fromDate: toDateStr(this.filterFromDate),
             toDate: toDateStr(this.filterToDate)
         };
@@ -235,7 +230,6 @@ export class LeaveHistoryListComponent implements OnInit {
     clearFilter(): void {
         this.filterRabId = '';
         this.filterServiceId = '';
-        this.filterLeaveTypeId = null;
         this.filterFromDate = null;
         this.filterToDate = null;
         this.pageNumber = 1;
@@ -282,7 +276,6 @@ export class LeaveHistoryListComponent implements OnInit {
         let n = 0;
         if ((this.filterRabId || '').trim()) n++;
         if ((this.filterServiceId || '').trim()) n++;
-        if (this.filterLeaveTypeId != null) n++;
         if (this.filterFromDate != null) n++;
         if (this.filterToDate != null) n++;
         if (this.statusFilter !== 'all') n++;
@@ -332,13 +325,6 @@ export class LeaveHistoryListComponent implements OnInit {
         const to = new Date(toDate);
         if (isNaN(from.getTime()) || isNaN(to.getTime())) return '-';
         return String(Math.floor((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)) + 1);
-    }
-
-    /** Comma-separated list of recommender names in sequence order (or '-' when none configured). */
-    getRecommenderNames(row: LeaveApplicationModel): string {
-        const list = (row.recommenders ?? []).slice().sort((a, b) => (a.sequenceNo ?? 0) - (b.sequenceNo ?? 0));
-        if (list.length === 0) return '-';
-        return list.map((r) => this.getApplicantName(r.employeeId)).join('; ');
     }
 
     /**
