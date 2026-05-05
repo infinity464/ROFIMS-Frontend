@@ -565,6 +565,7 @@
 
             <!-- Signature Block (top right, standalone) -->
             <div class="po-doc-signature">
+                <div>স্বাক্ষরিত/-</div>
                 <div>{{ (isBangla ? approverNameBN : approverName) || approverName || '...................................' }}</div>
                 <div>{{ (isBangla ? approverRankBN : approverRank) || approverRank || '............................' }}</div>
                 <div>{{ (isBangla ? approverAppointmentBN : approverAppointment) || approverAppointment || '............................' }}</div>
@@ -580,7 +581,6 @@
                         <p *ngFor="let para of exportFooterParagraphs; let i = index">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}। {{ para.text }}</p>
                     </div>
                     <div class="po-doc-copy-sig" *ngIf="approvalEmployeeId">
-                        <div>স্বাক্ষরিত/-</div>
                         <img *ngIf="approverSignatureUrl" [src]="approverSignatureUrl" class="approver-signature-img" alt="Signature" />
                         <div class="sig-name">{{ (isBangla ? approverNameBN : approverName) || approverName || '...................................' }}</div>
                         <div class="sig-rank">{{ (isBangla ? approverRankBN : approverRank) || approverRank || '............................' }}</div>

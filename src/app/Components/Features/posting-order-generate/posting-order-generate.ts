@@ -213,7 +213,6 @@ export class PostingOrderGenerateComponent implements OnInit {
         if (routePostingType) {
             this.fixedPostingType = routePostingType;
             this.selectedPostingType = routePostingType;
-            this.onPostingTypeChange();
         }
     }
 
@@ -233,7 +232,7 @@ export class PostingOrderGenerateComponent implements OnInit {
 
     /** When posting type dropdown changes, load approved notesheets of that type
      *  (backend already excludes notesheets with a generated Posting Order). */
-    onPostingTypeChange(): void {
+    onPostingTypeChange(showEmptyToast = true): void {
         this.approvedNoteSheets = [];
         this.selectedNoteSheetId = null;
         this.employees = [];
@@ -247,7 +246,7 @@ export class PostingOrderGenerateComponent implements OnInit {
             next: (notesheets) => {
                 this.approvedNoteSheets = notesheets ?? [];
                 this.loadingNoteSheets = false;
-                if (this.approvedNoteSheets.length === 0) {
+                if (showEmptyToast && this.approvedNoteSheets.length === 0) {
                     this.messageService.add({ severity: 'info', summary: this.isBangla ? 'তথ্য' : 'Info', detail: this.isBangla ? 'এই ধরনের জন্য কোনো অনুমোদিত নোটশীট পাওয়া যায়নি।' : 'No approved notesheets found for this type.' });
                 }
             },

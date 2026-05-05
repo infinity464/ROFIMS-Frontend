@@ -1,3 +1,4 @@
+/* rebuilt */
 :host {
     display: block;
     min-height: 100vh;
@@ -249,14 +250,15 @@
 
 /* ── Signature Block ──────────────────────────────── */
 .po-doc-signature {
-    text-align: right;
+    margin-left: auto;
+    width: fit-content;
+    text-align: left;
     line-height: 1.2;
     font-size: 8pt;
     div {
         margin-bottom: 0px;
         font-size: 8pt;
     }
-}
 }
 
 /* ── Memo + Initiator Section ─────────────────────── */
@@ -276,15 +278,6 @@
     line-height: 1.8;
     font-size: 10pt;
 
-    .approver-signature-img {
-        max-height: 30px;
-        max-width: 80px;
-        width: auto;
-        height: auto;
-        object-fit: contain;
-        margin-bottom: 2px;
-    }
-    
     div {
         line-height: 1.3;
         margin-bottom: 1px;
@@ -307,17 +300,29 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
+    gap: 80px;
 }
 
 .po-doc-copy-list {
+    flex: 0 0 70%;
     line-height: 2;
     font-size: 10pt;
 }
 
 .po-doc-copy-sig {
-    text-align: right;
+    flex: 0 0 30%;
+    text-align: left;
     line-height: 1.2;
     font-size: 8pt;
+    padding-top: 20px;
+    .approver-signature-img {
+        max-height: 25px;
+        max-width: 60px;
+        width: auto;
+        height: auto;
+        object-fit: contain;
+        margin-bottom: 1px;
+    }
     div {
         margin-bottom: 0px;
         font-size: 8pt;
