@@ -9,12 +9,14 @@ import { SharedService } from '@/shared/services/shared-service';
 import { LeaveApplicationService, LeaveApplicationModel } from '@/services/leave-application.service';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
 import { UserMenuService } from '@/services/user-menu.service';
+import { EmpService } from '@/services/emp-service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { CommonCodeService } from '@/services/common-code-service';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { TextareaModule } from 'primeng/textarea';
 import { ToastModule } from 'primeng/toast';
+import { TooltipModule } from 'primeng/tooltip';
 
 /**
  * Standalone preview page for a single leave application — opened from the Pending Approval list
@@ -25,7 +27,7 @@ import { ToastModule } from 'primeng/toast';
 @Component({
     selector: 'app-leave-pending-approval-preview',
     standalone: true,
-    imports: [CommonModule, FormsModule, ButtonModule, TextareaModule, ToastModule, RouterModule],
+    imports: [CommonModule, FormsModule, ButtonModule, TextareaModule, ToastModule, TooltipModule, RouterModule],
     providers: [MessageService],
     templateUrl: './leave-pending-approval-preview.component.html',
     styleUrl: './leave-pending-approval-preview.component.scss'
@@ -65,7 +67,8 @@ export class LeavePendingApprovalPreviewComponent implements OnInit {
         private masterBasicSetup: MasterBasicSetupService,
         private commonCodeService: CommonCodeService,
         private messageService: MessageService,
-        private _userMenuService: UserMenuService
+        private _userMenuService: UserMenuService,
+        private empService: EmpService
     ) {}
 
     ngOnInit(): void {
@@ -411,9 +414,41 @@ export class LeavePendingApprovalPreviewComponent implements OnInit {
         });
     }
 
+    /**
+     * Sends the application back to the applicant. The reviewer's remark is mandatory; we surface
+     * a clear toast if it's empty rather than letting the backend reject the call.
+     */
+    returnToApplicant(): void {
+        if (!this.application || this.submitting) return;
+        const reason = (this.remarkText ?? '').trim();
+        if (reason.length === 0) {
+            this.messageService.add({ severity: 'warn', summary: 'Reason required', detail: 'Please add a remark explaining what needs to change before returning.' });
+            return;
+        }
+        this.submitting = true;
+        this.leaveAppService.returnApplication(this.application.leaveApplicationId, this.currentUserEmployeeId, reason).subscribe({
+            next: (res) => this.handleResult(res, 'Returned'),
+            error: (err) => this.handleError(err)
+        });
+    }
+
     /** Returns to the previous page in browser history (e.g. the list or pending-approval the user came from). */
     back(): void {
         this.location.back();
+    }
+
+    /** Streams the file from the backend and opens it in a new browser tab for preview. */
+    previewAttachment(fileId: number): void {
+        this.empService.downloadFile(fileId).subscribe({
+            next: (blob: Blob) => {
+                const url = URL.createObjectURL(blob);
+                window.open(url, '_blank', 'noopener,noreferrer');
+                // Revoke after a delay so the new tab has time to load it.
+                setTimeout(() => URL.revokeObjectURL(url), 30_000);
+            },
+            error: (err: any) =>
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to open file.' })
+        });
     }
 
     private handleResult(res: any, label: string): void {

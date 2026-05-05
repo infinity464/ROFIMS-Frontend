@@ -7,7 +7,7 @@ import { environment } from '@/Core/Environments/environment';
 import { SharedService } from '@/shared/services/shared-service';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 import { EmpService } from '@/services/emp-service';
-import { LeaveApplicationService, LeaveApplicationModel, LeaveApplicationDetailModel, LeaveApplicationRecommenderModel } from '@/services/leave-application.service';
+import { LeaveApplicationService, LeaveApplicationModel, LeaveApplicationDetailModel, LeaveApplicationRecommenderModel, LeaveApplicationReturnHistoryModel } from '@/services/leave-application.service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
@@ -81,6 +81,14 @@ export class LeaveApplicationApplyComponent implements OnInit {
     canUpdate = true;
     canDelete = true;
     fileRows: FileRowData[] = [];
+    /** Read-only "Prepared By" display string built from the logged-in user (mirrors notesheet-generate). */
+    preparedByDisplay = '';
+    /** False when the logged-in user has no employee mapping — show a hint and block submit. */
+    isPreparedByMapped = false;
+    /** Audit log of "Return to applicant" events on this application. Visible only to the applicant. */
+    returnHistory: LeaveApplicationReturnHistoryModel[] = [];
+    /** Map of employeeId → formatted name, used to render the Return History entries. */
+    private employeeNameCache: Record<number, string> = {};
 
     private api = `${environment.apis.core}/EmployeeInfo`;
 
@@ -107,6 +115,7 @@ export class LeaveApplicationApplyComponent implements OnInit {
         this.canDelete = _perms.canDelete;
         this.loadLeaveTypes();
         this.loadApproverOptions();
+        this.resolvePreparedByMapping();
         this.route.queryParams.pipe(take(1)).subscribe((params) => {
             const id = params['id'];
             if (id != null && id !== '') {
@@ -119,6 +128,44 @@ export class LeaveApplicationApplyComponent implements OnInit {
             }
         });
         if (this.applyForSelf) this.loadCurrentUserAsApplicant();
+    }
+
+    /**
+     * Resolve the read-only Prepared By field from the logged-in user. Mirrors the auto-fill in
+     * notesheet-generate (SharedService → IdentityUserMappingService → EmpService) and formats as
+     * "{FullNameEN} | RAB: {rabid} | SVC: {serviceId}". Falls back to a notice if the user has no
+     * employee mapping (leave applications require a mapped user).
+     */
+    private resolvePreparedByMapping(): void {
+        const userId = this.sharedService.getCurrentUserId?.();
+        if (!userId) {
+            this.isPreparedByMapped = false;
+            this.preparedByDisplay = 'No mapped user.';
+            return;
+        }
+        this.identityMappingService.getEmployeeIdForUser(userId).subscribe({
+            next: (empId) => {
+                if (!empId) {
+                    this.isPreparedByMapped = false;
+                    this.preparedByDisplay = 'Your account is not mapped to an employee.';
+                    return;
+                }
+                this.isPreparedByMapped = true;
+                this.empService.getEmployeeById(empId).subscribe({
+                    next: (emp: any) => {
+                        const name = emp?.fullNameEN ?? emp?.FullNameEN ?? '';
+                        const rabId = emp?.rabid ?? emp?.RABID ?? emp?.Rabid ?? '';
+                        const serviceId = emp?.serviceId ?? emp?.ServiceId ?? '';
+                        const parts = [name, rabId ? `RAB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : ''].filter(Boolean);
+                        this.preparedByDisplay = parts.join(' | ') || `Employee #${empId}`;
+                    }
+                });
+            },
+            error: () => {
+                this.isPreparedByMapped = false;
+                this.preparedByDisplay = 'Could not resolve preparer.';
+            }
+        });
     }
 
     private initForm(): void {
@@ -349,9 +396,20 @@ export class LeaveApplicationApplyComponent implements OnInit {
                     this.messageService.add({ severity: 'warn', summary: 'Cannot edit', detail: 'Application not found.' });
                     return;
                 }
-                const editableStatuses = [0, 1, 3, 4]; // Draft, Draft, Approved(manual), Declined(manual)
-                if (!editableStatuses.includes(d.leaveApplicationStatusId)) {
-                    this.messageService.add({ severity: 'warn', summary: 'Cannot edit', detail: 'Only draft or manually processed applications can be edited.' });
+                // Edit is allowed only while the application is still a Draft (status 1) AND no
+                // recommender has acted yet AND no final approver has approved/declined. Once any
+                // step in the chain has acted, the record is locked. The Return action puts an
+                // application back into Draft so the applicant can resume editing.
+                const isDraft = d.leaveApplicationStatusId === 1 || d.leaveApplicationStatusId === 0;
+                const anyRecommenderActed = (d.recommenders || []).some((r) => (r.status ?? 1) !== 1);
+                const finalApproverActed = (d.approvedByEmployeeId != null && d.approvedByEmployeeId !== 0)
+                    || (d.declinedByEmployeeId != null && d.declinedByEmployeeId !== 0);
+                if (!isDraft || anyRecommenderActed || finalApproverActed) {
+                    this.messageService.add({
+                        severity: 'warn',
+                        summary: 'Cannot edit',
+                        detail: 'This application has been acted on and can no longer be edited.'
+                    });
                     return;
                 }
 
@@ -439,9 +497,49 @@ export class LeaveApplicationApplyComponent implements OnInit {
                             };
                     }
                 });
+
+                // Return history — visible only when the current user is the applicant.
+                // We pre-fetch each returner's display name so the card can render names eagerly.
+                this.returnHistory = (d.returnHistory ?? [])
+                    .slice()
+                    .sort((a, b) => (b.returnedDate ?? '').localeCompare(a.returnedDate ?? ''));
+                const uniqReturnerIds = Array.from(new Set(this.returnHistory.map((h) => h.returnedByEmployeeId).filter((id) => !!id)));
+                uniqReturnerIds.forEach((empId) => {
+                    if (this.employeeNameCache[empId]) return;
+                    this.empService.getEmployeeById(empId).subscribe({
+                        next: (emp: any) => {
+                            const name = emp?.fullNameEN ?? emp?.FullNameEN ?? '';
+                            const rabId = emp?.rabid ?? emp?.RABID ?? emp?.Rabid ?? '';
+                            const serviceId = emp?.serviceId ?? emp?.ServiceId ?? '';
+                            const parts = [name, rabId ? `RAB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : ''].filter(Boolean);
+                            this.employeeNameCache[empId] = parts.join(' | ') || `Employee #${empId}`;
+                        }
+                    });
+                });
             },
             error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load application' })
         });
+    }
+
+    /** Returns the cached returner name; falls back to the employee id while the lookup is pending. */
+    getReturnerName(employeeId: number): string {
+        return this.employeeNameCache[employeeId] ?? `Employee #${employeeId}`;
+    }
+
+    /** Format the ReturnedDate for display (locale dd-mm-yyyy with hh:mm). */
+    formatReturnDate(d: string | null | undefined): string {
+        if (!d) return '-';
+        const dt = new Date(d);
+        if (isNaN(dt.getTime())) return d;
+        return dt.toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+
+    /** Show the Return History card only to the applicant on this application. */
+    get showReturnHistory(): boolean {
+        if (!this.editMode || this.returnHistory.length === 0) return false;
+        // applicantEmployeeId is set for editMode; current user is the applicant if their employee
+        // id matches. We compare against currentUserEmployeeId which is resolved by loadApproverOptions.
+        return this.currentUserEmployeeId != null && this.applicantEmployeeId === this.currentUserEmployeeId;
     }
 
     submitForApproval(): void {

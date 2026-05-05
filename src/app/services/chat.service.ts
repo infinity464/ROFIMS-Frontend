@@ -34,6 +34,10 @@ export class ChatService {
   private leaveApprovalRequestedSubject = new Subject<{ leaveApplicationId: number; applicantEmployeeId: number; fromDate: string; toDate: string; leaveTypeId: number; message: string; notificationId?: number }>();
   public leaveApprovalRequested$ = this.leaveApprovalRequestedSubject.asObservable();
 
+  /** Emitted when a recommender or final approver returns a leave application back to this applicant. */
+  private leaveReturnedSubject = new Subject<{ leaveApplicationId: number; applicantEmployeeId: number; returnedByEmployeeId: number; reason: string; message: string; notificationId?: number }>();
+  public leaveReturned$ = this.leaveReturnedSubject.asObservable();
+
   private connectionStatusSubject = new BehaviorSubject<boolean>(false);
   public connectionStatus$ = this.connectionStatusSubject.asObservable();
 
@@ -115,6 +119,13 @@ export class ChatService {
         console.debug('[ChatService] LeaveApprovalRequested received', payload);
       }
       this.leaveApprovalRequestedSubject.next(payload);
+    });
+
+    this.hubConnection.on('LeaveReturned', (payload: any) => {
+      if (typeof console !== 'undefined' && console.debug) {
+        console.debug('[ChatService] LeaveReturned received', payload);
+      }
+      this.leaveReturnedSubject.next(payload);
     });
 
     this.hubConnection.on('Error', (message: string) => {

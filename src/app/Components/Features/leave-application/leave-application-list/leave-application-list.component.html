@@ -147,7 +147,7 @@
                                 <th>Overall Status</th>
                                 <th>My Decision</th>
                             } @else {
-                                @if (section === 'all') { <th>Status</th> }
+                                @if (section === 'all' || section === 'returned') { <th>Status</th> }
                                 <th>Action Date</th>
                                 @if (section !== 'approved') { <th>Remark</th> }
                             }
@@ -174,18 +174,35 @@
                                     </span>
                                 </td>
                             } @else {
-                                @if (section === 'all') {
+                                @if (section === 'all' || section === 'returned') {
                                     <td>
-                                        <span class="status-pill" [class.is-approved]="row.leaveApplicationStatusId === 3" [class.is-declined]="row.leaveApplicationStatusId === 4">
-                                            {{ row.leaveApplicationStatusId === 3 ? 'Approved' : 'Declined' }}
-                                        </span>
+                                        <span class="status-pill" [ngClass]="getOverallStatusClass(row)">{{ getOverallStatus(row) }}</span>
                                     </td>
                                 }
-                                <td>{{ formatDate(row.leaveApplicationStatusId === 3 ? row.approvedDate : row.declinedDate) }}</td>
-                                @if (section !== 'approved') { <td>{{ row.remark ?? '-' }}</td> }
+                                <td>
+                                    @if (isReturnedRow(row)) {
+                                        {{ formatDate(getLatestReturn(row)?.date) }}
+                                    } @else {
+                                        {{ formatDate(row.leaveApplicationStatusId === 3 ? row.approvedDate : row.declinedDate) }}
+                                    }
+                                </td>
+                                @if (section !== 'approved') {
+                                    <td>
+                                        @if (isReturnedRow(row)) {
+                                            {{ row.returnHistory?.[0]?.reason || '-' }}
+                                        } @else {
+                                            {{ row.remark ?? '-' }}
+                                        }
+                                    </td>
+                                }
                             }
                             <td class="flex gap-1">
-                                <button type="button" class="report-btn-secondary" [routerLink]="['/leave-application/preview']" [queryParams]="{ id: row.leaveApplicationId }"><i class="pi pi-eye mr-1"></i>Preview</button>
+                                @if (isReturnedRow(row)) {
+                                    <!-- Returned applications belong to the applicant — let them edit and resubmit. -->
+                                    <button type="button" class="report-btn-secondary" [routerLink]="['/leave-application/apply']" [queryParams]="{ id: row.leaveApplicationId }" title="Edit returned application"><i class="pi pi-pencil mr-1"></i>Edit</button>
+                                } @else {
+                                    <button type="button" class="report-btn-secondary" [routerLink]="['/leave-application/preview']" [queryParams]="{ id: row.leaveApplicationId }"><i class="pi pi-eye mr-1"></i>Preview</button>
+                                }
                                 @if (row.leaveApplicationStatusId === 3) {
                                     <button type="button" class="report-btn-secondary" [routerLink]="['/leave-application/card']" [queryParams]="{ id: row.leaveApplicationId }" title="Leave Card"><i class="pi pi-id-card"></i></button>
                                 }
@@ -193,7 +210,7 @@
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="emptymessage">
-                        <tr><td [attr.colspan]="typeFilter === 'actionTakenByMe' ? 9 : (section === 'all' ? 10 : (section === 'declined' ? 9 : 8))" class="text-center p-4">No applications.</td></tr>
+                        <tr><td [attr.colspan]="typeFilter === 'actionTakenByMe' ? 9 : (section === 'all' || section === 'returned' ? 10 : (section === 'declined' ? 9 : 8))" class="text-center p-4">No applications.</td></tr>
                     </ng-template>
                 </p-table>
                 @if (totalRecords > pageSize) {

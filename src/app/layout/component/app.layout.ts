@@ -30,6 +30,7 @@ import { NotificationService } from '@/services/notification.service';
 export class AppLayout implements OnInit, OnDestroy {
     overlayMenuOpenSubscription: Subscription;
     private leaveApprovalSub: Subscription | null = null;
+    private leaveReturnedSub: Subscription | null = null;
 
     menuOutsideClickListener: any;
 
@@ -73,6 +74,17 @@ export class AppLayout implements OnInit, OnDestroy {
                 title: 'Leave Approval',
                 message: msg,
                 link: '/leave-application/pending-approval',
+                data: { leaveApplicationId: p?.leaveApplicationId },
+                serverId: p?.notificationId ?? undefined
+            });
+        });
+        this.leaveReturnedSub = this.chatService.leaveReturned$.subscribe((p) => {
+            const reasonSnippet = p?.reason ? ` Reason: ${p.reason}` : '';
+            this.notificationService.add({
+                type: 'leaveReturn',
+                title: 'Leave Returned',
+                message: (p?.message ?? 'Your leave application was returned for corrections.') + reasonSnippet,
+                link: `/leave-application/apply?id=${p?.leaveApplicationId}`,
                 data: { leaveApplicationId: p?.leaveApplicationId },
                 serverId: p?.notificationId ?? undefined
             });
@@ -124,6 +136,7 @@ export class AppLayout implements OnInit, OnDestroy {
 
     ngOnDestroy(): void {
         this.leaveApprovalSub?.unsubscribe();
+        this.leaveReturnedSub?.unsubscribe();
         if (this.overlayMenuOpenSubscription) {
             this.overlayMenuOpenSubscription.unsubscribe();
         }

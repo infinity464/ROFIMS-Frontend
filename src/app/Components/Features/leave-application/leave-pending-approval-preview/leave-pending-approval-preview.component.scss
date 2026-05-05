@@ -117,6 +117,56 @@
     color: #1f2937;
 }
 
+// ───────── Attachments list ─────────
+.attachment-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.attachment-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.375rem;
+    margin-bottom: 0.35rem;
+    background: #f9fafb;
+
+    &:last-child { margin-bottom: 0; }
+}
+
+.attachment-icon {
+    color: #6b7280;
+    flex-shrink: 0;
+}
+
+.attachment-name {
+    flex: 1;
+    color: #1f2937;
+    font-size: 0.9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.attachment-download {
+    background: transparent;
+    border: 1px solid #d1d5db;
+    color: #1f2937;
+    border-radius: 0.375rem;
+    padding: 0.3rem 0.55rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+
+    &:hover {
+        background: #ffffff;
+        border-color: var(--p-primary-color, #10b981);
+        color: var(--p-primary-color, #10b981);
+    }
+}
+
 // ───────── Approval flow chain ─────────
 .approval-chain {
     list-style: decimal inside;

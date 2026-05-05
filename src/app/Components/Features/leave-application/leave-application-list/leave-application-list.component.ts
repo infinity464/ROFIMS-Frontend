@@ -25,7 +25,7 @@ import { PaginatorModule } from 'primeng/paginator';
 import type { PaginatorState } from 'primeng/types/paginator';
 import { RouterModule } from '@angular/router';
 
-export type LeaveApplicationSection = 'all' | 'approved' | 'declined';
+export type LeaveApplicationSection = 'all' | 'approved' | 'declined' | 'returned';
 
 /** UI type filter for the list. (Pending applications live on /leave-application/pending-approval.) */
 export type LeaveApplicationTypeFilter = 'myApplication' | 'applyForOther' | 'actionTakenByMe';
@@ -59,7 +59,8 @@ export class LeaveApplicationListComponent implements OnInit {
     sectionOptions: { label: string; value: LeaveApplicationSection }[] = [
         { label: 'All', value: 'all' },
         { label: 'Approved', value: 'approved' },
-        { label: 'Declined', value: 'declined' }
+        { label: 'Declined', value: 'declined' },
+        { label: 'Returned', value: 'returned' }
     ];
 
     currentList: LeaveApplicationModel[] = [];
@@ -323,22 +324,39 @@ export class LeaveApplicationListComponent implements OnInit {
         // (Approved/Declined as recommender or final approver) rather than by the application's
         // overall status. We pass that intent via myDecisionFilter and skip the status-id filter so
         // still-Pending applications that the user has already acted on still show up.
-        let statusId: number | null;
+        let statusId: number | null = null;
         let additionalStatusIds: number[] | undefined;
         let myDecisionFilter: 'approved' | 'declined' | null = null;
+        let includeReturned = false;
+        let onlyReturned = false;
         if (this.typeFilter === 'actionTakenByMe') {
-            statusId = null;
-            additionalStatusIds = undefined;
+            // Return status doesn't apply to "actions taken by me" — when the user picks Returned,
+            // ignore the dropdown narrowing for that filter (no rows match anyway).
             if (this.section === 'approved') myDecisionFilter = 'approved';
             else if (this.section === 'declined') myDecisionFilter = 'declined';
         } else {
-            // myApplication / applyForOther — dropdown filters by overall app status as before.
-            statusId = this.section === 'all' ? null : (this.section === 'approved' ? 3 : 4);
-            additionalStatusIds = this.section === 'all' ? [3, 4] : undefined;
+            // myApplication / applyForOther — dropdown filters by overall app status PLUS the
+            // optional "returned-to-applicant" pseudo-status (status=1 with return history).
+            switch (this.section) {
+                case 'approved':
+                    statusId = 3;
+                    break;
+                case 'declined':
+                    statusId = 4;
+                    break;
+                case 'returned':
+                    onlyReturned = true;
+                    break;
+                case 'all':
+                default:
+                    additionalStatusIds = [3, 4];
+                    includeReturned = true;
+                    break;
+            }
         }
         const filter = this.buildFilterParams();
         const apiTypeFilter = this.typeFilter;
-        this.leaveAppService.getByStatusForUserPaginated(statusId, this.currentUserEmployeeId, apiTypeFilter, this.pageNumber, this.pageSize, filter, additionalStatusIds, myDecisionFilter).subscribe({
+        this.leaveAppService.getByStatusForUserPaginated(statusId, this.currentUserEmployeeId, apiTypeFilter, this.pageNumber, this.pageSize, filter, additionalStatusIds, myDecisionFilter, includeReturned, onlyReturned).subscribe({
             next: (res) => {
                 this.currentList = res.datalist ?? [];
                 this.totalRecords = res.pages?.rows ?? 0;
@@ -380,8 +398,14 @@ export class LeaveApplicationListComponent implements OnInit {
         }
     }
 
-    /** Overall application status as a UI label. 1=Draft, 2=Pending, 3=Approved, 4=Declined. */
+    /** True when this application is currently with the applicant after a return (status=1 with return history). */
+    isReturnedRow(row: LeaveApplicationModel): boolean {
+        return row.leaveApplicationStatusId === 1 && (row.returnHistory?.length ?? 0) > 0;
+    }
+
+    /** Overall application status as a UI label. 1=Draft (or "Returned" if there's history), 2=Pending, 3=Approved, 4=Declined. */
     getOverallStatus(row: LeaveApplicationModel): string {
+        if (this.isReturnedRow(row)) return 'Returned';
         switch (row.leaveApplicationStatusId) {
             case 1: return 'Draft';
             case 2: return 'Pending';
@@ -393,12 +417,22 @@ export class LeaveApplicationListComponent implements OnInit {
 
     /** CSS class hint for the overall-status pill. */
     getOverallStatusClass(row: LeaveApplicationModel): string {
+        if (this.isReturnedRow(row)) return 'is-returned';
         switch (row.leaveApplicationStatusId) {
             case 2: return 'is-pending';
             case 3: return 'is-approved';
             case 4: return 'is-declined';
             default: return '';
         }
+    }
+
+    /** Returner info for a row (latest return-history entry, if any) — used in the Action By/Date columns when a row is currently returned. */
+    getLatestReturn(row: LeaveApplicationModel): { byEmployeeId: number; date: string | null } | null {
+        const history = row.returnHistory ?? [];
+        if (history.length === 0) return null;
+        // Backend already orders newest-first.
+        const latest = history[0];
+        return { byEmployeeId: latest.returnedByEmployeeId, date: latest.returnedDate };
     }
 
     /**

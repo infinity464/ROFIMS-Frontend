@@ -69,6 +69,23 @@
                     </div>
                 }
 
+                @if ((application.attachments?.length ?? 0) > 0) {
+                    <div class="letter-section">
+                        <h4 class="letter-section-title">Attached Files:</h4>
+                        <ul class="attachment-list">
+                            @for (a of application.attachments; track a.fileId) {
+                                <li class="attachment-item">
+                                    <i class="pi pi-paperclip attachment-icon"></i>
+                                    <span class="attachment-name">{{ a.fileName || 'file-' + a.fileId }}</span>
+                                    <button type="button" class="attachment-download" (click)="previewAttachment(a.fileId)" title="Open in new tab">
+                                        <i class="pi pi-external-link"></i>
+                                    </button>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                }
+
                 @if (application.remarks) {
                     <div class="letter-section">
                         <h4 class="letter-section-title">Applicant's Remarks:</h4>
@@ -111,10 +128,11 @@
         <!-- Reviewer's remark + actions (only while the application is still pending). -->
         @if (isActionable) {
             <div class="review-card">
-                <label class="review-label">Your Remark <span class="text-xs">(optional)</span></label>
+                <label class="review-label">Your Remark <span class="text-xs">(optional for Recommend/Approve · required to Return)</span></label>
                 <textarea pTextarea [(ngModel)]="remarkText" rows="3" class="w-full" placeholder="Add a remark with your decision"></textarea>
                 <div class="review-actions">
                     <p-button label="Reject" icon="pi pi-times" severity="danger" [loading]="submitting" [class.perm-hidden]="!canUpdate" (onClick)="reject()"></p-button>
+                    <p-button label="Return" icon="pi pi-undo" severity="warn" [loading]="submitting" [class.perm-hidden]="!canUpdate" [disabled]="!remarkText?.trim()" pTooltip="A remark is required when returning" tooltipPosition="top" (onClick)="returnToApplicant()"></p-button>
                     <p-button [label]="acceptLabel" icon="pi pi-check" severity="success" [loading]="submitting" [class.perm-hidden]="!canUpdate" (onClick)="accept()"></p-button>
                 </div>
             </div>

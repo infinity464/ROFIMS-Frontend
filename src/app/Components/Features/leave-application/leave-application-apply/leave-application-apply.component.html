@@ -4,11 +4,41 @@
   <div class="leave-apply-page">
     <form [formGroup]="form" (ngSubmit)="submitForApproval()" class="leave-apply-form">
 
+      <!-- Return History — visible only to the applicant when this application has been returned at least once. -->
+      @if (showReturnHistory) {
+        <section class="form-section return-history-card">
+          <div class="section-header">
+            <h2 class="section-title"><i class="pi pi-undo mr-2"></i>Returned for Correction</h2>
+            <span class="section-hint">A reviewer has asked for changes. Please address the feedback below and resubmit.</span>
+          </div>
+          <ul class="return-history-list">
+            @for (h of returnHistory; track h.leaveApplicationReturnHistoryId) {
+              <li class="return-history-item">
+                <div class="return-meta">
+                  <span class="return-by"><i class="pi pi-user mr-1"></i>{{ getReturnerName(h.returnedByEmployeeId) }}</span>
+                  <span class="return-date"><i class="pi pi-clock mr-1"></i>{{ formatReturnDate(h.returnedDate) }}</span>
+                </div>
+                <div class="return-reason">{{ h.reason || '(no reason provided)' }}</div>
+              </li>
+            }
+          </ul>
+        </section>
+      }
+
       <!-- ─────────────── Section 1: Apply Leave (request details) ─────────────── -->
       <section class="form-section">
         <div class="section-header">
           <h2 class="section-title">Apply Leave</h2>
           <span class="section-hint">Submit a new leave application for yourself or another member.</span>
+        </div>
+
+        <!-- Prepared By — read-only, auto-filled from the logged-in user's identity mapping. -->
+        <div class="mb-4">
+          <label class="field-label">Prepared By</label>
+          <input pInputText [value]="preparedByDisplay" readonly class="w-full" />
+          @if (!isPreparedByMapped) {
+            <small class="field-error">Your account is not mapped to an employee. Please contact admin to set Identity User Mapping.</small>
+          }
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">

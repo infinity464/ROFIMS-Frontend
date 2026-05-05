@@ -35,6 +35,15 @@ export interface LeaveApplicationAttachmentModel {
     fileName?: string;
 }
 
+/** One audit row per "Return to applicant" event. Visible only to the applicant in the apply UI. */
+export interface LeaveApplicationReturnHistoryModel {
+    leaveApplicationReturnHistoryId?: number;
+    leaveApplicationId?: number;
+    returnedByEmployeeId: number;
+    returnedDate: string;
+    reason?: string | null;
+}
+
 /** Leave application (system generated leave). Status: 1=Draft, 2=PendingApproval, 3=Approved, 4=Declined. */
 export interface LeaveApplicationModel {
     leaveApplicationId: number;
@@ -68,6 +77,8 @@ export interface LeaveApplicationModel {
     recommenders?: LeaveApplicationRecommenderModel[];
     /** File attachments (0..N). */
     attachments?: LeaveApplicationAttachmentModel[];
+    /** Audit log of every "Return to applicant" event on this application. */
+    returnHistory?: LeaveApplicationReturnHistoryModel[];
 }
 
 /** Filter params for GetByStatusForUserPaginated (server-side). */
@@ -125,7 +136,7 @@ export class LeaveApplicationService {
         );
     }
 
-    /** Get applications by status and type with server-side pagination. Optional filter. additionalStatusIds combines with leaveApplicationStatusId for multi-status views (e.g. "All Approved & Declined" → pass null for leaveApplicationStatusId and [3,4] here). myDecisionFilter ('approved' | 'declined') narrows actionTakenByMe results to the user's own action regardless of overall status. */
+    /** Get applications by status and type with server-side pagination. Optional filter. additionalStatusIds combines with leaveApplicationStatusId for multi-status views (e.g. "All Approved & Declined" → pass null for leaveApplicationStatusId and [3,4] here). myDecisionFilter ('approved' | 'declined') narrows actionTakenByMe results to the user's own action regardless of overall status. includeReturned=true also surfaces apps currently returned to the applicant (status=1 with return history). onlyReturned=true narrows to ONLY those returned apps. */
     getByStatusForUserPaginated(
         leaveApplicationStatusId: number | null,
         currentUserEmployeeId: number,
@@ -134,7 +145,9 @@ export class LeaveApplicationService {
         rowPerPage: number,
         filter?: LeaveApplicationFilterParams,
         additionalStatusIds?: number[],
-        myDecisionFilter?: 'approved' | 'declined' | null
+        myDecisionFilter?: 'approved' | 'declined' | null,
+        includeReturned?: boolean,
+        onlyReturned?: boolean
     ): Observable<PagedResponse<LeaveApplicationModel>> {
         let params = new HttpParams()
             .set('currentUserEmployeeId', String(currentUserEmployeeId))
@@ -146,6 +159,8 @@ export class LeaveApplicationService {
             for (const s of additionalStatusIds) params = params.append('additionalStatusIds', String(s));
         }
         if (myDecisionFilter) params = params.set('myDecisionFilter', myDecisionFilter);
+        if (includeReturned) params = params.set('includeReturned', 'true');
+        if (onlyReturned) params = params.set('onlyReturned', 'true');
         if (filter) {
             if (filter.rabId?.trim()) params = params.set('rabId', filter.rabId.trim());
             if (filter.serviceId?.trim()) params = params.set('serviceId', filter.serviceId.trim());
@@ -207,6 +222,7 @@ export class LeaveApplicationService {
         const detailsRaw = r.leaveDetails ?? r.LeaveDetails ?? [];
         const recommendersRaw = r.recommenders ?? r.Recommenders ?? [];
         const attachmentsRaw = r.attachments ?? r.Attachments ?? [];
+        const returnHistoryRaw = r.returnHistory ?? r.ReturnHistory ?? [];
         return {
             leaveApplicationId: r.leaveApplicationId ?? r.LeaveApplicationId ?? 0,
             applicantEmployeeId: r.applicantEmployeeId ?? r.ApplicantEmployeeId ?? 0,
@@ -252,7 +268,14 @@ export class LeaveApplicationService {
                 leaveApplicationId: a.leaveApplicationId ?? a.LeaveApplicationId,
                 fileId: a.fileId ?? a.FileId,
                 fileName: a.file?.fileName ?? a.File?.FileName ?? a.fileName ?? a.FileName
-            } as LeaveApplicationAttachmentModel))
+            } as LeaveApplicationAttachmentModel)),
+            returnHistory: (Array.isArray(returnHistoryRaw) ? returnHistoryRaw : []).map((h: any) => ({
+                leaveApplicationReturnHistoryId: h.leaveApplicationReturnHistoryId ?? h.LeaveApplicationReturnHistoryId,
+                leaveApplicationId: h.leaveApplicationId ?? h.LeaveApplicationId,
+                returnedByEmployeeId: h.returnedByEmployeeId ?? h.ReturnedByEmployeeId,
+                returnedDate: h.returnedDate ?? h.ReturnedDate ?? '',
+                reason: h.reason ?? h.Reason ?? null
+            } as LeaveApplicationReturnHistoryModel))
         };
     }
 
@@ -281,6 +304,15 @@ export class LeaveApplicationService {
             leaveApplicationId,
             employeeId,
             remark: remark || ''
+        });
+    }
+
+    /** Sends a Pending application back to the applicant. The reason is required by the backend. */
+    returnApplication(leaveApplicationId: number, employeeId: number, reason: string): Observable<ResultViewModel> {
+        return this.http.post<ResultViewModel>(`${this.apiUrl}/Return`, {
+            leaveApplicationId,
+            employeeId,
+            remark: reason || ''
         });
     }
 
