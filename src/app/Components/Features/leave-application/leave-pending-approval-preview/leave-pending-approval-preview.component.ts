@@ -915,6 +915,19 @@ export class LeavePendingApprovalPreviewComponent implements OnInit {
         return !!next && next.employeeId === this.currentUserEmployeeId;
     }
 
+    /** True when the current user is the final approver and all recommenders have already approved. */
+    get isCurrentUserFinalApprover(): boolean {
+        if (!this.application || this.currentUserEmployeeId <= 0) return false;
+        if (this.application.finalApproverId !== this.currentUserEmployeeId) return false;
+        const anyRecommenderPending = (this.application.recommenders ?? []).some((r) => r.status === 1);
+        return !anyRecommenderPending;
+    }
+
+    /** True when the current user is whoever's turn it is to act on the application. */
+    get canActOnApplication(): boolean {
+        return this.isActionable && (this.isCurrentUserRecommender || this.isCurrentUserFinalApprover);
+    }
+
     get acceptLabel(): string {
         return this.isCurrentUserRecommender ? 'Recommend' : 'Approve';
     }

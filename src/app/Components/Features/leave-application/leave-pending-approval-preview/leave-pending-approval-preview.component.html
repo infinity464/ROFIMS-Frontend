@@ -173,8 +173,8 @@
             </ol>
         </div>
 
-        <!-- Reviewer's remark + actions (only while the application is still pending). -->
-        @if (isActionable) {
+        <!-- Reviewer's remark + actions — visible only to the next pending recommender or to the final approver (after all recommenders have approved). -->
+        @if (canActOnApplication) {
             <div class="review-card">
                 <label class="review-label">Your Remark <span class="text-xs">(optional)</span></label>
                 <textarea pTextarea [(ngModel)]="remarkText" rows="3" class="w-full" placeholder="Add a remark with your decision"></textarea>
