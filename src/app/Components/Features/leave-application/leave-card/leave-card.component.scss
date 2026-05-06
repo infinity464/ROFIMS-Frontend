@@ -12,13 +12,15 @@
 }
 
 /* ── Toolbar ──────────────────────────────────────── */
+/* Transparent + no bottom border so the host's #d8d8d8 background flows
+   through, matching the leave-preview look (gray everywhere, white paper). */
 .leave-card-toolbar {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 0.6rem 1.5rem;
-    background: #fff;
-    border-bottom: 1px solid var(--surface-border);
+    background: transparent;
+    border-bottom: none;
     position: sticky;
     top: 0;
     z-index: 100;
@@ -194,34 +196,94 @@
     margin-top: 4px;
 }
 
-/* ── Back / language toggle button ───────────────── */
-.report-btn-back {
+/* ── Toolbar buttons — match the leave-preview look (white bg, gray border) ── */
+.report-btn-back,
+.report-lang-toggle {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    font-size: 0.84rem;
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 0.4rem;
+    padding: 0.4rem 0.85rem;
+    font-size: 0.85rem;
     font-weight: 500;
-    color: var(--text-color-secondary, #555);
-    background: none;
-    border: none;
+    color: #1f2937;
     cursor: pointer;
-    padding: 4px 8px;
-    border-radius: 6px;
     transition: all 0.18s;
 
     &:hover {
-        color: var(--primary-color);
-        background: var(--surface-hover, #f5f5f5);
+        background: #f3f4f6;
+        border-color: #9ca3af;
+        color: #1f2937;
     }
 }
 
-/* ── Dark mode (paper stays white as it's a printed doc) ─ */
+/* Export button — green primary CTA, matching the preview */
+.report-btn-export {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: var(--primary-color, #22c55e);
+    color: #fff;
+    border: none;
+    border-radius: 0.4rem;
+    padding: 0.45rem 0.9rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    height: auto;
+    cursor: pointer;
+    transition: all 0.18s;
+
+    &:hover:not(:disabled) {
+        filter: brightness(1.05);
+        background: var(--primary-color, #22c55e);
+        color: #fff;
+    }
+
+    &:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+}
+
+/* ── Dark mode — match the leave-preview behaviour: outer page and toolbar
+     buttons keep their light look, paper stays white. The shared
+     report-theme-common.scss adds `!important` overrides for buttons in
+     dark mode, so we must use `!important` here to beat them. ─ */
 :host-context(.app-dark) {
-    background: #1f2937;
+    background: #d8d8d8;
 
     .lc-paper {
         background: #fff;
         color: #000;
+    }
+
+    /* Back and English — white-with-gray-border like the preview */
+    .report-btn-back,
+    .report-lang-toggle {
+        background: #fff !important;
+        border: 1px solid #d1d5db !important;
+        color: #1f2937 !important;
+
+        &:hover {
+            background: #f3f4f6 !important;
+            border-color: #9ca3af !important;
+            color: #1f2937 !important;
+        }
+    }
+
+    /* Export — keep its green primary CTA fill */
+    .report-btn-export {
+        background: var(--primary-color, #22c55e) !important;
+        color: #fff !important;
+        border: none !important;
+
+        &:hover:not(:disabled) {
+            background: var(--primary-color, #22c55e) !important;
+            color: #fff !important;
+            filter: brightness(1.05);
+        }
     }
 }
 

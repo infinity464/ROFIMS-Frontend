@@ -34,7 +34,10 @@
     color: #1f2937;
 }
 
-.lang-toggle {
+// Shared toolbar button style — used for Back and the language toggle so they match visually.
+.toolbar-btn {
+    display: inline-flex;
+    align-items: center;
     background: #fff;
     border: 1px solid #d1d5db;
     border-radius: 0.4rem;

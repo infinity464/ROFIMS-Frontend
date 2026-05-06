@@ -11,10 +11,12 @@
         <div class="letter-card">
             <!-- Header bar with Back button + screen title + language toggle + export dropdown. -->
             <div class="preview-header no-print">
-                <p-button label="Back" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" (onClick)="back()"></p-button>
+                <button type="button" class="toolbar-btn" (click)="back()">
+                    <i class="pi pi-arrow-left" style="font-size:0.75rem; margin-right:4px"></i>Back
+                </button>
                 <div class="preview-header-title">Review Leave Application</div>
                 <span class="spacer"></span>
-                <button type="button" class="lang-toggle" (click)="toggleLang()">
+                <button type="button" class="toolbar-btn" (click)="toggleLang()">
                     {{ lang === 'bn' ? 'English' : 'বাংলা' }}
                 </button>
                 <div class="report-export-wrap">

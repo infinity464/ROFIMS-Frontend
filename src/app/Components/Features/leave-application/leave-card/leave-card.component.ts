@@ -1,5 +1,5 @@
 import { Component, HostListener, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { UserMenuService } from '@/services/user-menu.service';
 import { HttpClient } from '@angular/common/http';
@@ -72,7 +72,7 @@ const EN_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July
     standalone: true,
     imports: [CommonModule, RouterModule],
     templateUrl: './leave-card.component.html',
-    styleUrls: ['./leave-card.component.scss', '../../employee-reports/report-theme-common.scss']
+    styleUrls: ['../../employee-reports/report-theme-common.scss', './leave-card.component.scss']
 })
 export class LeaveCardComponent implements OnInit {
     canInsert = true;
@@ -121,6 +121,7 @@ export class LeaveCardComponent implements OnInit {
     constructor(
         private route: ActivatedRoute,
         private router: Router,
+        private location: Location,
         private http: HttpClient,
         private leaveAppService: LeaveApplicationService,
         private empService: EmpService,
@@ -1014,6 +1015,6 @@ export class LeaveCardComponent implements OnInit {
     }
 
     goBack(): void {
-        this.router.navigate(['/leave-application/list'], { queryParams: { section: 'approved' } });
+        this.location.back();
     }
 }
