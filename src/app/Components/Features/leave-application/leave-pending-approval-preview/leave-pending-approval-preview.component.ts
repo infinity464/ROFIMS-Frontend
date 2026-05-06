@@ -393,7 +393,7 @@ export class LeavePendingApprovalPreviewComponent implements OnInit {
                     new Paragraph({
                         spacing: { before: 200, after: 60 },
                         children: [new TextRun({
-                            text: isBn ? 'আবেদনকারীর মন্তব্য:' : "Applicant's Remarks:",
+                            text: isBn ? 'মন্তব্য:' : 'Remark:',
                             bold: true, underline: {}, size: 22, font: FONT
                         })]
                     }),

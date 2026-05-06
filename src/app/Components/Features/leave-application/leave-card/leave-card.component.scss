@@ -77,6 +77,12 @@
     line-height: 1.55;
 }
 
+/* The first two lines are the gov / police title and should read slightly larger
+   than the unit-name and address lines below. */
+.lc-org-header > .lc-org-line {
+    font-size: 12pt;
+}
+
 .lc-org-line--underline {
     display: inline-block;
     padding: 0 30px 1px;

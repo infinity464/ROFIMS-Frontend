@@ -686,6 +686,7 @@ export class LeaveCardComponent implements OnInit {
   .lc-paper { width: 100%; padding: 0; box-sizing: border-box; color: #000; }
   .lc-org-header { text-align: center; margin-bottom: 14px; }
   .lc-org-line { font-weight: 600; font-size: 10pt; line-height: 1.5; }
+  .lc-org-header > .lc-org-line { font-size: 12pt; }
   .lc-org-line--underline { display: inline-block; padding: 0 30px; border-bottom: 1px solid #000; }
   .lc-org-line__hint { display: inline-block; margin-left: 6px; font-weight: 400; }
   .lc-title { text-align: center; margin-bottom: 16px; }
