@@ -448,7 +448,6 @@ export class LeavePendingApprovalPreviewComponent implements OnInit {
                 this.loading = false;
                 if (!full) { this.notFound = true; return; }
                 this.application = full;
-                this.remarkText = full.remarks ?? full.remark ?? '';
 
                 // Hydrate employee info for everyone we'll render.
                 const empIds = new Set<number>();
