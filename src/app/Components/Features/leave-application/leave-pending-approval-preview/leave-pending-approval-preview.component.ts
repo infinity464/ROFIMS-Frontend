@@ -18,7 +18,6 @@ import { TooltipModule } from 'primeng/tooltip';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, Table, TableRow, TableCell, WidthType, TableBorders } from 'docx';
-import { saveAs } from 'file-saver';
 
 interface EmpInfo {
     nameEN: string;
@@ -261,10 +260,10 @@ export class LeavePendingApprovalPreviewComponent implements OnInit {
             const titleParagraph = new Paragraph({
                 alignment: AlignmentType.CENTER,
                 spacing: { before: 0, after: 240 },
-                border: { bottom: { style: BorderStyle.SINGLE, size: 8, color: '000000', space: 4 } },
                 children: [new TextRun({
                     text: isBn ? 'ছুটির আবেদন' : 'Leave Application',
                     bold: true,
+                    underline: {},
                     size: 26,
                     font: FONT
                 })]
@@ -413,8 +412,26 @@ export class LeavePendingApprovalPreviewComponent implements OnInit {
                 }]
             });
             const blob = await Packer.toBlob(doc);
-            const fileName = isBn ? 'ছুটির_আবেদন.docx' : 'Leave_Application.docx';
-            saveAs(blob, fileName);
+            if (!blob || blob.size === 0) {
+                this.messageService.add({ severity: 'error', summary: 'Export failed', detail: 'Generated document is empty.' });
+                return;
+            }
+            // Force a `.docx` extension and an ASCII filename — some browsers strip
+            // non-ASCII characters from the `download` attribute, leaving a UUID-only name.
+            const fileName = 'Leave_Application.docx';
+            // Re-wrap with the official Word MIME type so the browser recognises the type.
+            const typedBlob = new Blob([blob], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+            const url = URL.createObjectURL(typedBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        } catch (err: any) {
+            this.messageService.add({ severity: 'error', summary: 'Export failed', detail: err?.message || 'Could not generate Word document.' });
         } finally {
             this.exporting = false;
         }
@@ -970,13 +987,32 @@ export class LeavePendingApprovalPreviewComponent implements OnInit {
         this.location.back();
     }
 
-    /** Streams the file from the backend and opens it in a new browser tab. */
-    previewAttachment(fileId: number): void {
+    /** PDFs and images render natively in the browser, so we open those in a new tab.
+     *  Everything else (Word, Excel, ZIP, etc.) is offered as a file download. */
+    isPreviewableFile(fileName?: string | null): boolean {
+        const ext = (fileName || '').split('.').pop()?.toLowerCase() || '';
+        return ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'avif', 'ico'].includes(ext);
+    }
+
+    /** Streams the file from the backend; previewable types open in a new tab,
+     *  everything else triggers a download with the original filename. */
+    previewAttachment(fileId: number, fileName?: string | null): void {
         this.empService.downloadFile(fileId).subscribe({
             next: (blob: Blob) => {
                 const url = URL.createObjectURL(blob);
-                window.open(url, '_blank', 'noopener,noreferrer');
-                setTimeout(() => URL.revokeObjectURL(url), 30_000);
+                if (this.isPreviewableFile(fileName)) {
+                    window.open(url, '_blank', 'noopener,noreferrer');
+                    setTimeout(() => URL.revokeObjectURL(url), 30_000);
+                } else {
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = fileName || `file-${fileId}`;
+                    a.style.display = 'none';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    setTimeout(() => URL.revokeObjectURL(url), 1000);
+                }
             },
             error: (err: any) =>
                 this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to open file.' })

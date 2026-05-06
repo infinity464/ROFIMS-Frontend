@@ -81,6 +81,16 @@
                         formControlName="locationOfBattalionHQ">
                 </div>
                 <div>
+                    <label for="locationOfBattalionHQBangla" class="block mb-2">Location of Battalion HQ Bangla</label>
+                    <input
+                        pInputText
+                        id="locationOfBattalionHQBangla"
+                        type="text"
+                        class="w-full"
+                        placeholder="বাংলা"
+                        formControlName="locationOfBattalionHQBangla">
+                </div>
+                <div>
                     <label for="numberOfCamp" class="block mb-2">Number of Camp</label>
                     <p-inputNumber
                         id="numberOfCamp"
@@ -129,6 +139,7 @@
                         <th>District</th>
                         <th>Upazila</th>
                         <th>Location of Battalion HQ</th>
+                        <th>Location of Battalion HQ (Bangla)</th>
                         <th>Number of Camp</th>
                         <th>Name of Camps</th>
                         <th>Action</th>
@@ -142,6 +153,7 @@
                         <td>{{ row.districtNames }}</td>
                         <td>{{ row.upazilaNames }}</td>
                         <td>{{ row.locationOfBattalionHQ ?? '-' }}</td>
+                        <td>{{ row.locationOfBattalionHQBangla ?? '-' }}</td>
                         <td>{{ row.numberOfCamp ?? '-' }}</td>
                         <td>{{ row.nameOfCamps ?? '-' }}</td>
                         <td>

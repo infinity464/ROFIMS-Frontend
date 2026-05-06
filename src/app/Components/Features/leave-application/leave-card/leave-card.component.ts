@@ -115,8 +115,10 @@ export class LeaveCardComponent implements OnInit {
     applicantRabUnitNameEN = '';
     /** Applicant's current RAB Unit name in Bangla (from EmployeePersonalServiceOverview.RABUnitBN). */
     applicantRabUnitNameBN = '';
-    /** Battalion HQ address from RABUnitAOR for the applicant's RAB Unit. */
+    /** Battalion HQ address (English) from RABUnitAOR for the applicant's RAB Unit. */
     applicantBattalionHQ = '';
+    /** Battalion HQ address (Bangla) from RABUnitAOR for the applicant's RAB Unit. */
+    applicantBattalionHQBN = '';
 
     constructor(
         private route: ActivatedRoute,
@@ -294,8 +296,11 @@ export class LeaveCardComponent implements OnInit {
                             if (rabUnitId != null) {
                                 this.masterBasicSetup.getRABUnitAORByRabUnit(rabUnitId).subscribe({
                                     next: (aorRows: any[]) => {
-                                        const first = (Array.isArray(aorRows) ? aorRows : []).find((r) => !!(r?.locationOfBattalionHQ ?? r?.LocationOfBattalionHQ));
+                                        const rows = Array.isArray(aorRows) ? aorRows : [];
+                                        const first = rows.find((r) => !!(r?.locationOfBattalionHQ ?? r?.LocationOfBattalionHQ));
                                         if (first) this.applicantBattalionHQ = String(first.locationOfBattalionHQ ?? first.LocationOfBattalionHQ ?? '');
+                                        const firstBN = rows.find((r) => !!(r?.locationOfBattalionHQBangla ?? r?.LocationOfBattalionHQBangla));
+                                        if (firstBN) this.applicantBattalionHQBN = String(firstBN.locationOfBattalionHQBangla ?? firstBN.LocationOfBattalionHQBangla ?? '');
                                     }
                                 });
                             }
@@ -565,8 +570,11 @@ export class LeaveCardComponent implements OnInit {
         return this.applicantRabUnitNameEN || '';
     }
 
-    /** Unit address on the header — Location of Battalion HQ from the RABUnitAOR row matching the applicant's RAB Unit. */
+    /** Unit address on the header — Location of Battalion HQ from the RABUnitAOR row
+     *  matching the applicant's RAB Unit. Picks the Bangla translation when the
+     *  certificate language is `bn`, falling back to English when no BN value exists. */
     getUnitAddress(): string {
+        if (this.lang === 'bn') return this.applicantBattalionHQBN || this.applicantBattalionHQ || '';
         return this.applicantBattalionHQ || '';
     }
 

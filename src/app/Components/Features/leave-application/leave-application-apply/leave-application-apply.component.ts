@@ -1,9 +1,7 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AbstractControl, FormArray, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
 import { Router, ActivatedRoute } from '@angular/router';
-import { environment } from '@/Core/Environments/environment';
 import { SharedService } from '@/shared/services/shared-service';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 import { EmpService } from '@/services/emp-service';
@@ -98,11 +96,8 @@ export class LeaveApplicationApplyComponent implements OnInit {
      */
     private applicantLeaveInfoRanges: { from: string; to: string }[] = [];
 
-    private api = `${environment.apis.core}/EmployeeInfo`;
-
     constructor(
         private fb: FormBuilder,
-        private http: HttpClient,
         private sharedService: SharedService,
         private empService: EmpService,
         private leaveAppService: LeaveApplicationService,
@@ -318,14 +313,31 @@ export class LeaveApplicationApplyComponent implements OnInit {
         });
     }
 
+    /**
+     * Recommenders / Final Approver dropdown source = employees who have an Identity user
+     * account (created via /identity/user-create). Driving this off IdentityUserMapping
+     * (instead of EmployeeInfo/GetAll) ensures the chosen approver can actually log in and
+     * act on the application. Label format: "Name | RAB: 200009 | SVC: 54321".
+     */
     loadApproverOptions(): void {
-        this.http.get<any[]>(`${this.api}/GetAll`).subscribe({
+        this.identityMappingService.getMappings().subscribe({
             next: (list) => {
                 const arr = Array.isArray(list) ? list : [];
-                this.approverOptions = arr.map((e: any) => ({
-                    label: `${e.fullNameEN || e.FullNameEN || ''} (${e.rabid || e.Rabid || e.employeeID || e.EmployeeID})`,
-                    value: e.employeeID ?? e.EmployeeID
-                }));
+                this.approverOptions = arr
+                    .map((m: any) => {
+                        const empId = m.employeeId ?? m.EmployeeId;
+                        if (!empId || empId <= 0) return null;
+                        const name = m.employeeName ?? m.EmployeeName ?? '';
+                        const rabId = m.rabID ?? m.RABID ?? '';
+                        const serviceId = m.serviceId ?? m.ServiceId ?? '';
+                        const parts = [name, rabId ? `RAB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : ''].filter(Boolean);
+                        return {
+                            label: parts.join(' | ') || `Employee #${empId}`,
+                            value: empId as number
+                        } as ApproverOption;
+                    })
+                    .filter((o): o is ApproverOption => o !== null)
+                    .sort((a, b) => a.label.localeCompare(b.label));
                 const userId = this.sharedService.getCurrentUserId?.();
                 if (userId) {
                     this.identityMappingService.getEmployeeIdForUser(userId).subscribe({

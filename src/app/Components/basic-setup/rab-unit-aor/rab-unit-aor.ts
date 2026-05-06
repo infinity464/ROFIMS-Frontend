@@ -29,6 +29,7 @@ type AssignedRow = {
     districtNames: string;
     upazilaNames: string;
     locationOfBattalionHQ?: string | null;
+    locationOfBattalionHQBangla?: string | null;
     numberOfCamp?: number | null;
     nameOfCamps?: string | null;
 };
@@ -86,6 +87,7 @@ export class RabUnitAor implements OnInit {
             districtIds: [[], Validators.required],
             upazilaIds: [[], Validators.required],
             locationOfBattalionHQ: [null],
+            locationOfBattalionHQBangla: [null],
             numberOfCamp: [null],
             nameOfCamps: [null]
         });
@@ -218,6 +220,7 @@ export class RabUnitAor implements OnInit {
             districtIds: this.toCsv(districtIds),
             upazilaIds: this.toCsv(upazilaIds),
             locationOfBattalionHQ: val.locationOfBattalionHQ ?? null,
+            locationOfBattalionHQBangla: val.locationOfBattalionHQBangla ?? null,
             numberOfCamp: val.numberOfCamp ?? null,
             nameOfCamps: val.nameOfCamps ?? null,
             status: true,
@@ -312,6 +315,7 @@ export class RabUnitAor implements OnInit {
                                                 districtNames: this.idsToNames(distIds, districtMap),
                                                 upazilaNames: this.idsToNames(upaIds, upazilaMap),
                                                 locationOfBattalionHQ: r.locationOfBattalionHQ ?? r.LocationOfBattalionHQ ?? null,
+                                                locationOfBattalionHQBangla: r.locationOfBattalionHQBangla ?? r.LocationOfBattalionHQBangla ?? null,
                                                 numberOfCamp: r.numberOfCamp ?? r.NumberOfCamp ?? null,
                                                 nameOfCamps: r.nameOfCamps ?? r.NameOfCamps ?? null
                                             };
@@ -324,6 +328,7 @@ export class RabUnitAor implements OnInit {
                                                 districtIds: this.csvToIds(first.districtIds ?? first.DistrictIds),
                                                 upazilaIds: this.csvToIds(first.upazilaIds ?? first.UpazilaIds),
                                                 locationOfBattalionHQ: first.locationOfBattalionHQ ?? first.LocationOfBattalionHQ ?? null,
+                                                locationOfBattalionHQBangla: first.locationOfBattalionHQBangla ?? first.LocationOfBattalionHQBangla ?? null,
                                                 numberOfCamp: first.numberOfCamp ?? first.NumberOfCamp ?? null,
                                                 nameOfCamps: first.nameOfCamps ?? first.NameOfCamps ?? null
                                             }, { emitEvent: false });
@@ -340,6 +345,7 @@ export class RabUnitAor implements OnInit {
                                             districtNames: (r.districtIds ?? r.DistrictIds) ?? '-',
                                             upazilaNames: (r.upazilaIds ?? r.UpazilaIds) ?? '-',
                                             locationOfBattalionHQ: r.locationOfBattalionHQ ?? r.LocationOfBattalionHQ ?? null,
+                                            locationOfBattalionHQBangla: r.locationOfBattalionHQBangla ?? r.LocationOfBattalionHQBangla ?? null,
                                             numberOfCamp: r.numberOfCamp ?? r.NumberOfCamp ?? null,
                                             nameOfCamps: r.nameOfCamps ?? r.NameOfCamps ?? null
                                         }));
@@ -355,6 +361,7 @@ export class RabUnitAor implements OnInit {
                                     districtNames: (r.districtIds ?? r.DistrictIds) ?? '-',
                                     upazilaNames: (r.upazilaIds ?? r.UpazilaIds) ?? '-',
                                     locationOfBattalionHQ: r.locationOfBattalionHQ ?? r.LocationOfBattalionHQ ?? null,
+                                    locationOfBattalionHQBangla: r.locationOfBattalionHQBangla ?? r.LocationOfBattalionHQBangla ?? null,
                                     numberOfCamp: r.numberOfCamp ?? r.NumberOfCamp ?? null,
                                     nameOfCamps: r.nameOfCamps ?? r.NameOfCamps ?? null
                                 }));
@@ -370,6 +377,7 @@ export class RabUnitAor implements OnInit {
                             districtNames: (r.districtIds ?? r.DistrictIds) ?? '-',
                             upazilaNames: (r.upazilaIds ?? r.UpazilaIds) ?? '-',
                             locationOfBattalionHQ: r.locationOfBattalionHQ ?? r.LocationOfBattalionHQ ?? null,
+                            locationOfBattalionHQBangla: r.locationOfBattalionHQBangla ?? r.LocationOfBattalionHQBangla ?? null,
                             numberOfCamp: r.numberOfCamp ?? r.NumberOfCamp ?? null,
                             nameOfCamps: r.nameOfCamps ?? r.NameOfCamps ?? null
                         }));
@@ -418,6 +426,7 @@ export class RabUnitAor implements OnInit {
             districtIds: [],
             upazilaIds: [],
             locationOfBattalionHQ: null,
+            locationOfBattalionHQBangla: null,
             numberOfCamp: null,
             nameOfCamps: null
         });

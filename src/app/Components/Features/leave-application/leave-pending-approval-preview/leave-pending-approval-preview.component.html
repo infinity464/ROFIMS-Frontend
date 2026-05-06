@@ -139,8 +139,8 @@
                         <li class="attachment-item">
                             <i class="pi pi-paperclip attachment-icon"></i>
                             <span class="attachment-name">{{ a.fileName || 'file-' + a.fileId }}</span>
-                            <button type="button" class="attachment-download" (click)="previewAttachment(a.fileId)" title="Open in new tab">
-                                <i class="pi pi-external-link"></i>
+                            <button type="button" class="attachment-download" (click)="previewAttachment(a.fileId, a.fileName)" [title]="isPreviewableFile(a.fileName) ? 'Open in new tab' : 'Download'">
+                                <i [class]="isPreviewableFile(a.fileName) ? 'pi pi-external-link' : 'pi pi-download'"></i>
                             </button>
                         </li>
                     }

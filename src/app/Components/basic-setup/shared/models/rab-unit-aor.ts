@@ -9,6 +9,8 @@ export interface RABUnitAORModel {
     upazilaIds?: string | null;
     /** Location of Battalion HQ (text). */
     locationOfBattalionHQ?: string | null;
+    /** Location of Battalion HQ — Bangla translation (text). */
+    locationOfBattalionHQBangla?: string | null;
     /** Number of Camp. */
     numberOfCamp?: number | null;
     /** Name of Camps (text). */
