@@ -54,8 +54,8 @@
     box-sizing: border-box;
     color: #000;
     font-family: 'SolaimanLipi', 'Noto Sans Bengali', 'Times New Roman', serif;
-    font-size: 11pt;
-    line-height: 1.6;
+    font-size: 10pt;
+    line-height: 1.7;
 }
 
 /* ── Org header (govt + police + unit lines) ──────── */
@@ -66,7 +66,7 @@
 
 .lc-org-line {
     font-weight: 600;
-    font-size: 12pt;
+    font-size: 10pt;
     line-height: 1.55;
 }
 
@@ -97,7 +97,8 @@
 
 .lc-title__text {
     font-weight: 700;
-    font-size: 13pt;
+    font-size: 11pt;
+    letter-spacing: 1px;
     border-bottom: 1px solid #000;
     padding-bottom: 1px;
 }
@@ -126,7 +127,7 @@
 .lc-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 11pt;
+    font-size: 9pt;
 
     th, td {
         border: 1px solid #000;
@@ -137,7 +138,8 @@
 
     th {
         font-weight: 700;
-        background: #fff;
+        background: #f0f0f0;
+        font-size: 9pt;
     }
 
     &__total td {
@@ -185,7 +187,7 @@
 
 .lc-footer__rank,
 .lc-footer__appointment {
-    font-size: 11pt;
+    font-size: 10pt;
 }
 
 .lc-footer__date {

@@ -681,20 +681,20 @@ export class LeaveCardComponent implements OnInit {
     private getPrintStyles(): string {
         return `
   @page { size: A4; margin: 18mm 16mm; }
-  body { font-family: 'SolaimanLipi','Noto Sans Bengali','Times New Roman',serif; margin: 0; padding: 0; color: #000; line-height: 1.6; font-size: 11pt; }
-  .lc-paper { width: 100%; padding: 0; box-sizing: border-box; }
+  body { font-family: 'SolaimanLipi','Noto Sans Bengali','Times New Roman',serif; margin: 0; padding: 0; color: #000; line-height: 1.7; font-size: 10pt; }
+  .lc-paper { width: 100%; padding: 0; box-sizing: border-box; color: #000; }
   .lc-org-header { text-align: center; margin-bottom: 14px; }
-  .lc-org-line { font-weight: 600; font-size: 12pt; line-height: 1.5; }
+  .lc-org-line { font-weight: 600; font-size: 10pt; line-height: 1.5; }
   .lc-org-line--underline { display: inline-block; padding: 0 30px; border-bottom: 1px solid #000; }
   .lc-org-line__hint { display: inline-block; margin-left: 6px; font-weight: 400; }
   .lc-title { text-align: center; margin-bottom: 16px; }
-  .lc-title__text { font-weight: 700; font-size: 13pt; border-bottom: 1px solid #000; padding-bottom: 1px; }
-  .lc-meta-row { display: flex; justify-content: space-between; margin-bottom: 14px; font-weight: 600; }
-  .lc-body-text { margin: 10px 0; line-height: 1.9; text-align: justify; }
+  .lc-title__text { font-weight: 700; font-size: 11pt; letter-spacing: 1px; border-bottom: 1px solid #000; padding-bottom: 1px; }
+  .lc-meta-row { display: flex; justify-content: space-between; margin-bottom: 14px; font-weight: 600; font-size: 10pt; }
+  .lc-body-text { margin: 10px 0; line-height: 1.85; text-align: justify; font-size: 10pt; }
   .lc-table-wrap { margin: 10px 40px; }
   .lc-table { width: 100%; border-collapse: collapse; }
-  .lc-table th, .lc-table td { border: 1px solid #000; padding: 4px 8px; text-align: center; vertical-align: middle; font-size: 11pt; }
-  .lc-table th { font-weight: 700; background: #fff; }
+  .lc-table th, .lc-table td { border: 1px solid #000; padding: 4px 8px; text-align: center; vertical-align: middle; font-size: 9pt; }
+  .lc-table th { font-weight: 700; background: #f0f0f0; }
   .lc-table__total td { font-weight: 700; }
   .lc-address-block { margin: 18px 0 0; }
   .lc-address-label { display: inline-block; font-weight: 600; border-bottom: 1px solid #000; padding-bottom: 1px; margin-bottom: 4px; }
@@ -703,7 +703,7 @@ export class LeaveCardComponent implements OnInit {
   .lc-footer__signature { text-align: left; min-width: 240px; }
   .lc-footer__sysnote { font-style: italic; margin-bottom: 4px; }
   .lc-footer__name { font-weight: 700; }
-  .lc-footer__rank, .lc-footer__appointment { }
+  .lc-footer__rank, .lc-footer__appointment { font-size: 10pt; }
   .lc-footer__date { margin-top: 4px; }`;
     }
 

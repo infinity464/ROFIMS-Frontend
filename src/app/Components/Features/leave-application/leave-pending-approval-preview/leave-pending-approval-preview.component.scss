@@ -1,11 +1,18 @@
 :host {
     display: block;
+    min-height: 100vh;
+    background: #d8d8d8;
 }
 
 .preview-page {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem;
+    min-height: calc(100vh - 60px);
+    gap: 1rem;
+    max-width: none;
+    margin: 0;
 }
 
 // Header sits inside the white letter card — neutral colors so it reads against the sheet.
@@ -16,6 +23,7 @@
     margin: -0.75rem 0 1.25rem 0;
     padding-bottom: 0.75rem;
     border-bottom: 1px solid #e5e7eb;
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
     .spacer { flex: 1; }
 }
@@ -43,6 +51,72 @@
     }
 }
 
+// ───────── Export dropdown (matches leave-card toolbar) ─────────
+.report-export-wrap {
+    position: relative;
+    display: inline-block;
+}
+
+.report-btn-export {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: var(--primary-color, #4f46e5);
+    color: #fff;
+    border: none;
+    border-radius: 0.4rem;
+    padding: 0.45rem 0.9rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.18s;
+
+    &:hover:not(:disabled) {
+        filter: brightness(1.05);
+    }
+
+    &:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+}
+
+.report-export-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    min-width: 140px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.4rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    z-index: 1000;
+    overflow: hidden;
+}
+
+.report-export-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.55rem 0.85rem;
+    background: #fff;
+    border: none;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: #1f2937;
+    text-align: left;
+    transition: background 0.15s;
+
+    &:hover {
+        background: #f3f4f6;
+    }
+
+    & + & {
+        border-top: 1px solid #f1f5f9;
+    }
+}
+
 .preview-state {
     padding: 2rem;
     text-align: center;
@@ -51,61 +125,75 @@
     &.error { color: var(--red-400, #f87171); }
 }
 
-// ───────── Letter card (white sheet, like a printed document) ─────────
+// ───────── Letter card (legal-size sheet, matches notesheet preview) ─────────
 .letter-card {
-    background: #ffffff;
-    color: #1f2937;
-    border-radius: 0.5rem;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    padding: 2.5rem 3rem;
-    margin-bottom: 1rem;
+    width: 215.9mm;
+    padding: 14mm 10mm 20mm;
+    background: #fff;
+    color: #000;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+    box-sizing: border-box;
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 10pt;
+    line-height: 1.7;
+    position: relative;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .leave-letter {
-    font-family: 'Times New Roman', Georgia, serif;
-    line-height: 1.6;
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 10pt;
+    line-height: 1.7;
+    color: #000;
 
     // When language is Bangla, swap to a Bangla-friendly font stack.
+    // Includes 'Nirmala UI' / 'Vrinda' so Windows machines without SolaimanLipi
+    // still get proper Bangla shaping (avoids broken cluster spacing).
     &.is-bn {
-        font-family: 'SolaimanLipi', 'Noto Sans Bengali', 'Times New Roman', Georgia, serif;
+        font-family: 'SolaimanLipi', 'Noto Sans Bengali', 'Nirmala UI', 'Vrinda', 'Shonar Bangla', 'Times New Roman', sans-serif;
     }
 }
 
 .letter-title {
     text-align: center;
-    font-size: 1.4rem;
+    font-size: 11pt;
     font-weight: 700;
-    color: #111827;
-    margin: 0 0 1.5rem;
-    border-bottom: 1px solid #1f2937;
+    color: #000;
+    margin: 0 0 1rem;
+    border-bottom: 1.5px solid #000;
     padding-bottom: 0.4rem;
     display: inline-block;
     width: 100%;
+    letter-spacing: 1px;
 }
 
 .letter-para {
-    line-height: 1.9;
+    font-size: 10pt;
+    line-height: 1.85;
     text-align: justify;
-    margin: 0.85rem 0;
+    margin: 0.6rem 0;
 }
 
 // ── Letter table (leave-detail rows) ─────────────────────────────
 .letter-table {
-    width: calc(100% - 60px);
-    margin: 1rem auto;
+    width: calc(100% - 40px);
+    margin: 0.75rem auto;
     border-collapse: collapse;
-    font-size: 0.95rem;
+    font-size: 9pt;
 
     th, td {
-        border: 1px solid #1f2937;
-        padding: 6px 10px;
+        border: 1px solid #000;
+        padding: 4px 8px;
         text-align: center;
         vertical-align: middle;
     }
 
     th {
         font-weight: 700;
-        background: #fff;
+        background: #f0f0f0;
+        font-size: 9pt;
     }
 
     .total-label, .total-value {
@@ -117,18 +205,27 @@
 
 // ── Generic letter section (address / attachments / remarks / approval) ─────
 .letter-section {
-    margin: 1.25rem 0 0;
+    margin: 0.9rem 0 0;
 }
 
+// Global _typography.scss applies `color: var(--text-color)` to all h1–h6 — that
+// overrides our inherited #000 and can render as a near-invisible themed color.
+// Explicitly set color + a Bangla-shaping font chain so the h4 always renders.
 .letter-section-title {
-    font-weight: 600;
-    text-decoration: underline;
-    margin: 0 0 0.4rem;
-    font-size: 0.95rem;
+    font-weight: 700;
+    margin: 0 0 0.3rem;
+    font-size: 10pt;
+    color: #000;
+    font-family: 'SolaimanLipi', 'Noto Sans Bengali', 'Nirmala UI', 'Vrinda', 'Shonar Bangla', 'Times New Roman', sans-serif;
+    line-height: 1.5;
+    display: inline-block;
+    border-bottom: 1px solid #000;
+    padding-bottom: 1px;
 }
 
 .letter-section-body {
     margin: 0;
+    font-size: 10pt;
     white-space: pre-line;
 }
 
@@ -143,24 +240,26 @@
     display: flex;
     align-items: center;
     gap: 0.6rem;
-    padding: 0.5rem 0.75rem;
+    padding: 0.4rem 0.6rem;
     border: 1px solid #e5e7eb;
     border-radius: 0.4rem;
+    font-size: 9pt;
 
-    & + & { margin-top: 0.4rem; }
+    & + & { margin-top: 0.35rem; }
 }
 
-.attachment-icon { color: #6366f1; font-size: 1rem; }
+.attachment-icon { color: #6366f1; font-size: 0.9rem; }
 
-.attachment-name { flex: 1; color: #1f2937; font-size: 0.875rem; word-break: break-all; }
+.attachment-name { flex: 1; color: #1f2937; font-size: 9pt; word-break: break-all; }
 
 .attachment-download {
     background: transparent;
     border: 1px solid #d1d5db;
     border-radius: 0.3rem;
-    padding: 0.3rem 0.5rem;
+    padding: 0.25rem 0.45rem;
     cursor: pointer;
     color: #4f46e5;
+    font-size: 9pt;
 
     &:hover {
         background: #eef2ff;
@@ -173,6 +272,7 @@
     list-style: decimal inside;
     margin: 0;
     padding: 0;
+    font-size: 10pt;
 }
 
 .approval-step {
@@ -180,7 +280,7 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.5rem 0;
+    padding: 0.4rem 0;
     border-bottom: 1px solid #f3f4f6;
 
     &:last-child { border-bottom: none; }
@@ -189,20 +289,20 @@
 }
 
 .step-role {
-    font-weight: 600;
-    font-size: 0.8rem;
+    font-weight: 700;
+    font-size: 9pt;
     color: #4b5563;
     min-width: 130px;
 }
 
-.step-name { color: #1f2937; font-size: 0.95rem; flex: 1; }
+.step-name { color: #000; font-size: 10pt; flex: 1; }
 
 .step-status {
     display: inline-block;
-    padding: 0.15rem 0.55rem;
+    padding: 0.12rem 0.5rem;
     border-radius: 0.5rem;
-    font-size: 0.72rem;
-    font-weight: 600;
+    font-size: 8pt;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.02em;
 
@@ -217,12 +317,42 @@
     width: 100%;
     margin-left: calc(130px + 0.5rem);
     color: #6b7280;
-    font-size: 0.85rem;
+    font-size: 9pt;
     font-style: italic;
+}
+
+// ───────── Approval flow card (separate from the letter sheet) ─────────
+.approval-card {
+    width: 215.9mm;
+    box-sizing: border-box;
+    background: #ffffff;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    padding: 1.25rem 1.5rem;
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+.approval-card-title {
+    margin: 0 0 0.75rem;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #1f2937;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #e5e7eb;
+
+    & + & {
+        margin-top: 1.25rem;
+    }
+}
+
+.approval-card .attachment-list {
+    margin-bottom: 0.25rem;
 }
 
 // ───────── Review remark + actions ─────────
 .review-card {
+    width: 215.9mm;
+    box-sizing: border-box;
     background: #ffffff;
     border-radius: 0.5rem;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -230,6 +360,7 @@
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
 
 .review-label {
@@ -248,3 +379,16 @@
 }
 
 .perm-hidden { display: none !important; }
+
+// ── Responsive (matches notesheet behavior on narrow viewports) ──
+@media screen and (max-width: 1200px) {
+    .preview-page { padding: 1rem; }
+    .letter-card,
+    .approval-card,
+    .review-card {
+        width: 100%;
+    }
+    .letter-card {
+        padding: 12mm 8mm;
+    }
+}

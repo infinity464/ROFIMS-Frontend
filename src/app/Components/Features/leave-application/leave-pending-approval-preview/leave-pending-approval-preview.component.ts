@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -15,6 +15,10 @@ import { ButtonModule } from 'primeng/button';
 import { TextareaModule } from 'primeng/textarea';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
+import { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, Table, TableRow, TableCell, WidthType, TableBorders } from 'docx';
+import { saveAs } from 'file-saver';
 
 interface EmpInfo {
     nameEN: string;
@@ -89,6 +93,9 @@ export class LeavePendingApprovalPreviewComponent implements OnInit {
 
     lang: 'bn' | 'en' = 'bn';
 
+    exportDropdownOpen = false;
+    exporting = false;
+
     empMap: Record<number, EmpInfo> = {};
     leaveTypeNameMap: Record<number, string> = {};
     leaveTypeNameBNMap: Record<number, string> = {};
@@ -158,6 +165,259 @@ export class LeavePendingApprovalPreviewComponent implements OnInit {
 
     toggleLang(): void {
         this.lang = this.lang === 'bn' ? 'en' : 'bn';
+    }
+
+    @HostListener('document:click')
+    onDocumentClick(): void {
+        this.exportDropdownOpen = false;
+    }
+
+    toggleExportDropdown(event: Event): void {
+        event.stopPropagation();
+        this.exportDropdownOpen = !this.exportDropdownOpen;
+    }
+
+    async exportAs(type: 'print' | 'pdf' | 'word'): Promise<void> {
+        this.exportDropdownOpen = false;
+        if (type !== 'print') this.exporting = true;
+        await new Promise(resolve => setTimeout(resolve, 50));
+        if (type === 'print') {
+            this.printPreview();
+        } else if (type === 'pdf') {
+            await this.exportPDF();
+        } else if (type === 'word') {
+            await this.exportWord();
+        }
+    }
+
+    private getPrintStyles(): string {
+        return `
+  @page { size: A4; margin: 18mm 16mm; }
+  body { font-family: 'SolaimanLipi','Noto Sans Bengali','Times New Roman',serif; margin: 0; padding: 0; color: #000; line-height: 1.7; font-size: 10pt; }
+  .leave-letter { width: 100%; padding: 0; box-sizing: border-box; }
+  .letter-title { text-align: center; font-size: 13pt; font-weight: 700; margin: 0 0 14px; padding-bottom: 4px; border-bottom: 1.5px solid #000; display: inline-block; width: 100%; letter-spacing: 1px; }
+  .letter-para { line-height: 1.9; text-align: justify; margin: 10px 0; font-size: 11pt; }
+  .letter-table { width: calc(100% - 40px); margin: 12px auto; border-collapse: collapse; font-size: 10pt; }
+  .letter-table th, .letter-table td { border: 1px solid #000; padding: 5px 8px; text-align: center; vertical-align: middle; }
+  .letter-table th { font-weight: 700; background: #f0f0f0; }
+  .letter-table tfoot td { font-weight: 700; }
+  .letter-section { margin: 14px 0 0; }
+  .letter-section-title { font-weight: 700; display: inline-block; border-bottom: 1px solid #000; padding-bottom: 1px; margin: 0 0 4px; font-size: 11pt; }
+  .letter-section-body { margin: 0; white-space: pre-line; font-size: 11pt; }`;
+    }
+
+    private printPreview(): void {
+        const el = document.getElementById('leave-preview-print');
+        if (!el) return;
+        const title = this.lang === 'bn' ? 'ছুটির আবেদন' : 'Leave Application';
+        const w = window.open('', '_blank', 'width=800,height=600');
+        if (!w) return;
+        w.document.write(`<html><head><title>${title}</title><style>${this.getPrintStyles()}</style></head><body>${el.outerHTML}</body></html>`);
+        w.document.close();
+        w.onload = () => {
+            w.focus();
+            w.print();
+        };
+    }
+
+    private async exportPDF(): Promise<void> {
+        const el = document.getElementById('leave-preview-print');
+        if (!el) return;
+        try {
+            const canvas = await html2canvas(el, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: '#ffffff',
+                logging: false
+            });
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const marginMm = 10;
+            const pdfWidth = pdf.internal.pageSize.getWidth() - marginMm * 2;
+            const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+            pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', marginMm, marginMm, pdfWidth, imgHeight);
+            const pdfBlob = pdf.output('blob');
+            const pdfUrl = URL.createObjectURL(pdfBlob);
+            window.open(pdfUrl, '_blank');
+        } finally {
+            this.exporting = false;
+        }
+    }
+
+    private async exportWord(): Promise<void> {
+        if (!this.application) return;
+        try {
+            const FONT = 'Nirmala UI';
+            const isBn = this.lang === 'bn';
+            const appId = this.application.applicantEmployeeId;
+            const relieverId = this.getRelieverId();
+
+            const noBorders = {
+                top: { style: BorderStyle.NONE, size: 0 },
+                bottom: { style: BorderStyle.NONE, size: 0 },
+                left: { style: BorderStyle.NONE, size: 0 },
+                right: { style: BorderStyle.NONE, size: 0 },
+            };
+
+            const titleParagraph = new Paragraph({
+                alignment: AlignmentType.CENTER,
+                spacing: { before: 0, after: 240 },
+                border: { bottom: { style: BorderStyle.SINGLE, size: 8, color: '000000', space: 4 } },
+                children: [new TextRun({
+                    text: isBn ? 'ছুটির আবেদন' : 'Leave Application',
+                    bold: true,
+                    size: 26,
+                    font: FONT
+                })]
+            });
+
+            const descApp = this.getDescriptors(appId);
+            const descAppSuffix = descApp ? `, ${descApp}` : '';
+            const introBn = `${this.getPrefix(appId)}-${this.getServiceId(appId)} ${this.getRank(appId)} ${this.getName(appId)}${descAppSuffix} নিম্নবর্নিত তারিখে মোট ${this.getTotalDays()} (${this.getTotalDaysWord()}) দিনের ছুটির আবেদন করেছেনঃ`;
+            const introEn = `${this.getPrefix(appId)}-${this.getServiceId(appId)} ${this.getRank(appId)} ${this.getName(appId)}${descAppSuffix} has applied for leave for the dates mentioned below totaling ${this.getTotalDays()} (${this.getTotalDaysWord()}) days:`;
+
+            const introPara = new Paragraph({
+                spacing: { before: 160, after: 160, line: 360 },
+                alignment: AlignmentType.JUSTIFIED,
+                children: [new TextRun({ text: isBn ? introBn : introEn, size: 22, font: FONT })]
+            });
+
+            const tableHeader = (text: string) => new TableCell({
+                borders: {
+                    top: { style: BorderStyle.SINGLE, size: 6 },
+                    bottom: { style: BorderStyle.SINGLE, size: 6 },
+                    left: { style: BorderStyle.SINGLE, size: 6 },
+                    right: { style: BorderStyle.SINGLE, size: 6 },
+                },
+                children: [new Paragraph({
+                    alignment: AlignmentType.CENTER,
+                    children: [new TextRun({ text, bold: true, size: 22, font: FONT })]
+                })]
+            });
+            const tableCell = (text: string, bold = false) => new TableCell({
+                borders: {
+                    top: { style: BorderStyle.SINGLE, size: 6 },
+                    bottom: { style: BorderStyle.SINGLE, size: 6 },
+                    left: { style: BorderStyle.SINGLE, size: 6 },
+                    right: { style: BorderStyle.SINGLE, size: 6 },
+                },
+                children: [new Paragraph({
+                    alignment: AlignmentType.CENTER,
+                    children: [new TextRun({ text, bold, size: 22, font: FONT })]
+                })]
+            });
+
+            const detailRows = this.getLeaveDetails().map(d => new TableRow({
+                children: [
+                    tableCell(this.getLeaveType(d.leaveTypeId)),
+                    tableCell(this.formatTableDate(d.fromDate)),
+                    tableCell(this.formatTableDate(d.toDate)),
+                    tableCell(this.formatDays(this.getDetailDays(d))),
+                ]
+            }));
+
+            const totalRow = new TableRow({
+                children: [
+                    new TableCell({
+                        columnSpan: 3,
+                        borders: {
+                            top: { style: BorderStyle.SINGLE, size: 6 },
+                            bottom: { style: BorderStyle.SINGLE, size: 6 },
+                            left: { style: BorderStyle.SINGLE, size: 6 },
+                            right: { style: BorderStyle.SINGLE, size: 6 },
+                        },
+                        children: [new Paragraph({
+                            alignment: AlignmentType.CENTER,
+                            children: [new TextRun({ text: isBn ? 'সর্বমোট' : 'Total', bold: true, size: 22, font: FONT })]
+                        })]
+                    }),
+                    tableCell(this.formatDays(this.getTotalDaysNumeric()), true),
+                ]
+            });
+
+            const detailTable = new Table({
+                width: { size: 80, type: WidthType.PERCENTAGE },
+                alignment: AlignmentType.CENTER,
+                rows: [
+                    new TableRow({
+                        tableHeader: true,
+                        children: [
+                            tableHeader(isBn ? 'ছুটির ধরন' : 'Leave Type'),
+                            tableHeader(isBn ? 'হইতে' : 'From'),
+                            tableHeader(isBn ? 'পর্যন্ত' : 'To'),
+                            tableHeader(isBn ? 'দিন' : 'Days'),
+                        ]
+                    }),
+                    ...detailRows,
+                    totalRow
+                ]
+            });
+
+            const children: (Paragraph | Table)[] = [
+                titleParagraph,
+                introPara,
+                detailTable
+            ];
+
+            if (relieverId && this.empMap[relieverId]) {
+                const descR = this.getDescriptors(relieverId);
+                const descRSuffix = descR ? `, ${descR}` : '';
+                const apptApplicant = this.getAppointment(appId);
+                const dutyBn = apptApplicant ? `ভারপ্রাপ্ত ${apptApplicant} এর দায়িত্ব` : 'তার দায়িত্ব';
+                const dutyEn = apptApplicant ? `perform the duties of acting ${apptApplicant}` : 'perform their duties';
+                const relieverBn = `উক্ত অফিসার ছুটিতে থাকাকালীন ${this.getPrefix(relieverId)}-${this.getServiceId(relieverId)} ${this.getRank(relieverId)} ${this.getName(relieverId)}${descRSuffix} নিজ দায়িত্ব ছাড়াও ${dutyBn} পালন করবেন।`;
+                const relieverEn = `While the above officer is on leave, ${this.getPrefix(relieverId)}-${this.getServiceId(relieverId)} ${this.getRank(relieverId)} ${this.getName(relieverId)}${descRSuffix} will ${dutyEn} in addition to their own duties.`;
+                children.push(new Paragraph({
+                    spacing: { before: 200, after: 160, line: 360 },
+                    alignment: AlignmentType.JUSTIFIED,
+                    children: [new TextRun({ text: isBn ? relieverBn : relieverEn, size: 22, font: FONT })]
+                }));
+            }
+
+            if (this.application.addressDuringLeave) {
+                children.push(
+                    new Paragraph({
+                        spacing: { before: 200, after: 60 },
+                        children: [new TextRun({
+                            text: isBn ? 'ছুটি থাকাকালীন ঠিকানাঃ' : 'Address During Leave:',
+                            bold: true, underline: {}, size: 22, font: FONT
+                        })]
+                    }),
+                    new Paragraph({
+                        children: [new TextRun({ text: this.application.addressDuringLeave, size: 22, font: FONT })]
+                    })
+                );
+            }
+
+            if (this.application.remarks) {
+                children.push(
+                    new Paragraph({
+                        spacing: { before: 200, after: 60 },
+                        children: [new TextRun({
+                            text: isBn ? 'আবেদনকারীর মন্তব্য:' : "Applicant's Remarks:",
+                            bold: true, underline: {}, size: 22, font: FONT
+                        })]
+                    }),
+                    new Paragraph({
+                        children: [new TextRun({ text: this.application.remarks, size: 22, font: FONT })]
+                    })
+                );
+            }
+
+            // Suppress unused-variable lint for noBorders (kept in case future sections need it)
+            void noBorders;
+
+            const doc = new Document({
+                sections: [{
+                    properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 1080, bottom: 1080, left: 1080, right: 1080 } } },
+                    children
+                }]
+            });
+            const blob = await Packer.toBlob(doc);
+            const fileName = isBn ? 'ছুটির_আবেদন.docx' : 'Leave_Application.docx';
+            saveAs(blob, fileName);
+        } finally {
+            this.exporting = false;
+        }
     }
 
     toBn(str: string): string {
@@ -471,6 +731,41 @@ export class LeavePendingApprovalPreviewComponent implements OnInit {
         ].map(s => (s ?? '').trim()).filter(s => s.length > 0).join(', ');
     }
 
+    /**
+     * English-only formatted employee string used in the approval card —
+     * matches the applicant rendering: "BA-9000 Lt Col Md Fahad, BPM, psc, EB, Deputy Director (DD), RAB-2".
+     * Independent of the lang toggle.
+     */
+    formatEmpFullEn(empId: number | null | undefined): string {
+        if (empId == null) return '';
+        const emp = this.getEmp(empId);
+        if (!emp) return '';
+
+        const prefixRaw = emp.prefixRaw || '';
+        let prefix = '';
+        if (prefixRaw) {
+            const numId = Number(prefixRaw);
+            prefix = (!isNaN(numId) && numId > 0) ? (this.prefixENMap[numId] || prefixRaw) : prefixRaw;
+        }
+        const sid = emp.serviceId || '';
+        const rank = emp.rankEN || '';
+        const name = emp.nameEN || '';
+        const apptEn = (emp.appointmentId != null && this.appointmentENMap[emp.appointmentId])
+            ? this.appointmentENMap[emp.appointmentId]
+            : emp.appointmentEN;
+        const descriptors = [
+            emp.decorationEN,
+            emp.profQualEN,
+            emp.corpsEN,
+            apptEn,
+            emp.rabUnitEN
+        ].map(s => (s ?? '').trim()).filter(s => s.length > 0).join(', ');
+
+        const head = (prefix && sid) ? `${prefix}-${sid}` : (prefix || sid);
+        const main = [head, rank, name].filter(s => s && s.length > 0).join(' ');
+        return descriptors ? `${main}, ${descriptors}` : main;
+    }
+
     getLeaveType(leaveTypeId: number | null | undefined): string {
         if (leaveTypeId == null) return '';
         if (this.lang === 'bn') return this.leaveTypeNameBNMap[leaveTypeId] ?? String(leaveTypeId);
@@ -651,10 +946,6 @@ export class LeavePendingApprovalPreviewComponent implements OnInit {
     returnToApplicant(): void {
         if (!this.application || this.submitting) return;
         const reason = (this.remarkText ?? '').trim();
-        if (reason.length === 0) {
-            this.messageService.add({ severity: 'warn', summary: 'Reason required', detail: 'Please add a remark explaining what needs to change before returning.' });
-            return;
-        }
         this.submitting = true;
         this.leaveAppService.returnApplication(this.application.leaveApplicationId, this.currentUserEmployeeId, reason).subscribe({
             next: (res) => this.handleResult(res, 'Returned'),
