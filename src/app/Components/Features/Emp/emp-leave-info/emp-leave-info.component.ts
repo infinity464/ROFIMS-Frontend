@@ -172,7 +172,11 @@ export class EmpLeaveInfo implements OnInit {
     formatDate(val: string | Date | null): string {
         if (!val) return 'N/A';
         const d = typeof val === 'string' ? new Date(val) : val;
-        return d.toLocaleDateString();
+        if (isNaN(d.getTime())) return 'N/A';
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
+        return `${day}-${month}-${year}`;
     }
 
     /**
