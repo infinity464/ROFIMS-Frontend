@@ -44,6 +44,35 @@ export interface LeaveApplicationReturnHistoryModel {
     reason?: string | null;
 }
 
+/**
+ * Frozen-at-action ids for the 6 volatile profile attributes (rank, RABUnit, corps, appointment,
+ * decoration, profQual). Stored on the leave application so historical previews / leave cards keep
+ * showing what was true on the day the actor signed, even after later transfer / promotion. Render
+ * code resolves these ids to EN/BN strings via the existing CommonCode / MotherOrg lookup maps.
+ */
+export interface EmployeeSnapshotIds {
+    rankId?: number | null;
+    rabUnitId?: number | null;
+    corpsId?: number | null;
+    appointmentId?: number | null;
+    /** May be a CSV of CommonCode ids (mirrors view shape); null when unset. */
+    decorationId?: string | null;
+    profQualId?: number | null;
+}
+
+/** Wraps applicant + appliedBy + reliever — the three "static actors" set at submit time. */
+export interface ActorsSnapshotEnvelope {
+    applicant?: EmployeeSnapshotIds | null;
+    appliedBy?: EmployeeSnapshotIds | null;
+    reliever?: EmployeeSnapshotIds | null;
+}
+
+/** One entry inside RecommendersSnapshotJson, keyed by sequenceNo (1-based, unique within an app). */
+export interface RecommenderSnapshotEntry extends EmployeeSnapshotIds {
+    sequenceNo: number;
+    employeeId: number;
+}
+
 /** Leave application (system generated leave). Status: 1=Draft, 2=PendingApproval, 3=Approved, 4=Declined. */
 export interface LeaveApplicationModel {
     leaveApplicationId: number;
@@ -81,6 +110,14 @@ export interface LeaveApplicationModel {
     attachments?: LeaveApplicationAttachmentModel[];
     /** Audit log of every "Return to applicant" event on this application. */
     returnHistory?: LeaveApplicationReturnHistoryModel[];
+    /** Raw JSON columns from the backend — kept for round-tripping. Prefer the parsed siblings below at render time. */
+    actorsSnapshotJson?: string | null;
+    recommendersSnapshotJson?: string | null;
+    finalApproverSnapshotJson?: string | null;
+    /** Pre-parsed snapshot envelopes (filled in by normalizeRow). Null when the row predates the snapshot feature. */
+    actorsSnapshot?: ActorsSnapshotEnvelope | null;
+    recommendersSnapshot?: RecommenderSnapshotEntry[] | null;
+    finalApproverSnapshot?: EmployeeSnapshotIds | null;
 }
 
 /** Filter params for GetByStatusForUserPaginated (server-side). */
@@ -219,12 +256,21 @@ export class LeaveApplicationService {
         );
     }
 
+    /** Parses one of the snapshot JSON columns. Returns null on null/empty/invalid. */
+    private parseJson<T>(raw: string | null | undefined): T | null {
+        if (!raw) return null;
+        try { return JSON.parse(raw) as T; } catch { return null; }
+    }
+
     /** Normalize API response (PascalCase or camelCase) to LeaveApplicationModel (camelCase). */
     private normalizeRow(r: any): LeaveApplicationModel {
         const detailsRaw = r.leaveDetails ?? r.LeaveDetails ?? [];
         const recommendersRaw = r.recommenders ?? r.Recommenders ?? [];
         const attachmentsRaw = r.attachments ?? r.Attachments ?? [];
         const returnHistoryRaw = r.returnHistory ?? r.ReturnHistory ?? [];
+        const actorsJson = r.actorsSnapshotJson ?? r.ActorsSnapshotJson ?? null;
+        const recommendersJson = r.recommendersSnapshotJson ?? r.RecommendersSnapshotJson ?? null;
+        const finalApproverJson = r.finalApproverSnapshotJson ?? r.FinalApproverSnapshotJson ?? null;
         return {
             leaveApplicationId: r.leaveApplicationId ?? r.LeaveApplicationId ?? 0,
             applicantEmployeeId: r.applicantEmployeeId ?? r.ApplicantEmployeeId ?? 0,
@@ -278,7 +324,13 @@ export class LeaveApplicationService {
                 returnedByEmployeeId: h.returnedByEmployeeId ?? h.ReturnedByEmployeeId,
                 returnedDate: h.returnedDate ?? h.ReturnedDate ?? '',
                 reason: h.reason ?? h.Reason ?? null
-            } as LeaveApplicationReturnHistoryModel))
+            } as LeaveApplicationReturnHistoryModel)),
+            actorsSnapshotJson: actorsJson,
+            recommendersSnapshotJson: recommendersJson,
+            finalApproverSnapshotJson: finalApproverJson,
+            actorsSnapshot: this.parseJson<ActorsSnapshotEnvelope>(actorsJson),
+            recommendersSnapshot: this.parseJson<RecommenderSnapshotEntry[]>(recommendersJson),
+            finalApproverSnapshot: this.parseJson<EmployeeSnapshotIds>(finalApproverJson)
         };
     }
 

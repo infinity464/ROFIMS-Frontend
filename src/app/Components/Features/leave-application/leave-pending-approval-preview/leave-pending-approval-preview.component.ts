@@ -4,7 +4,7 @@ import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { take } from 'rxjs';
 import { SharedService } from '@/shared/services/shared-service';
-import { LeaveApplicationService, LeaveApplicationModel, LeaveApplicationDetailModel } from '@/services/leave-application.service';
+import { LeaveApplicationService, LeaveApplicationModel, LeaveApplicationDetailModel, EmployeeSnapshotIds } from '@/services/leave-application.service';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
 import { UserMenuService } from '@/services/user-menu.service';
 import { EmpService } from '@/services/emp-service';
@@ -449,13 +449,25 @@ export class LeavePendingApprovalPreviewComponent implements OnInit {
                 if (!full) { this.notFound = true; return; }
                 this.application = full;
 
-                // Hydrate employee info for everyone we'll render.
-                const empIds = new Set<number>();
-                if (full.applicantEmployeeId) empIds.add(full.applicantEmployeeId);
-                if (full.relieverEmployeeId) empIds.add(full.relieverEmployeeId);
-                if (full.finalApproverId) empIds.add(full.finalApproverId);
-                (full.recommenders ?? []).forEach((r) => { if (r.employeeId) empIds.add(r.employeeId); });
-                empIds.forEach((empId) => this.loadEmployeeInfo(empId));
+                // Hydrate employee info for every actor we'll render. Each actor brings the snapshot
+                // for the role we're rendering them in so the preview keeps showing what was true on
+                // the day of leave even after later transfer / promotion. The first job for each empId
+                // wins (the same person could appear in multiple roles).
+                const jobs: { empId: number; snapshot: EmployeeSnapshotIds | null; isApplicant: boolean }[] = [];
+                if (full.applicantEmployeeId) jobs.push({ empId: full.applicantEmployeeId, snapshot: full.actorsSnapshot?.applicant ?? null, isApplicant: true });
+                if (full.relieverEmployeeId) jobs.push({ empId: full.relieverEmployeeId, snapshot: full.actorsSnapshot?.reliever ?? null, isApplicant: false });
+                if (full.finalApproverId) jobs.push({ empId: full.finalApproverId, snapshot: full.finalApproverSnapshot ?? null, isApplicant: false });
+                (full.recommenders ?? []).forEach((r) => {
+                    if (!r.employeeId) return;
+                    const snap = (full.recommendersSnapshot ?? []).find((e) => e.sequenceNo === r.sequenceNo) ?? null;
+                    jobs.push({ empId: r.employeeId, snapshot: snap, isApplicant: false });
+                });
+                const seen = new Set<number>();
+                for (const job of jobs.sort((a, b) => Number(b.isApplicant) - Number(a.isApplicant))) {
+                    if (seen.has(job.empId)) continue;
+                    seen.add(job.empId);
+                    this.loadEmployeeInfo(job.empId, job.snapshot);
+                }
             },
             error: () => {
                 this.loading = false;
@@ -465,10 +477,12 @@ export class LeavePendingApprovalPreviewComponent implements OnInit {
     }
 
     /**
-     * Loads basic-info, search-info display labels, and personal-service-overview (Corps /
-     * Decoration / ProfessionalQualification / RAB Unit display strings) for one employee.
+     * Loads basic-info for one employee. The 6 volatile profile attributes (rank, RABUnit, corps,
+     * appointment, decoration, profQual) come from the supplied snapshot when present (rendering
+     * what was true on the day of leave); otherwise we fall back to the live search-info +
+     * personal-service-overview lookups for backwards compat with pre-snapshot rows.
      */
-    private loadEmployeeInfo(empId: number): void {
+    private loadEmployeeInfo(empId: number, snapshot: EmployeeSnapshotIds | null = null): void {
         this.empService.getEmployeeById(empId).subscribe({
             next: (emp: any) => {
                 if (!emp) return;
@@ -492,6 +506,10 @@ export class LeavePendingApprovalPreviewComponent implements OnInit {
                     profQualEN: '', profQualBN: '', profQualId: null,
                     rabUnitEN: '', rabUnitBN: '', rabUnitId: null
                 };
+                if (snapshot) {
+                    this.applySnapshotToEmpMap(empId, snapshot);
+                    return;
+                }
                 this.empService.getEmployeeSearchInfo(empId).subscribe({
                     next: (info: any) => {
                         if (!info || !this.empMap[empId]) return;
@@ -555,6 +573,37 @@ export class LeavePendingApprovalPreviewComponent implements OnInit {
                 });
             }
         });
+    }
+
+    /**
+     * Resolves snapshot ids to EN/BN display strings via the lookup maps already loaded for this
+     * component. Skips the live getEmployeeSearchInfo + getEmployeePersonalServiceOverview calls
+     * — the volatile attribute values come from the frozen snapshot, not the current employee state.
+     */
+    private applySnapshotToEmpMap(empId: number, snap: EmployeeSnapshotIds): void {
+        const cur = this.empMap[empId];
+        if (!cur) return;
+        const decoIdNum = this.toIntOrNull(snap.decorationId);
+        cur.rankId = snap.rankId ?? null;
+        cur.rankEN = snap.rankId != null ? (this.rankENMap[snap.rankId] || '') : '';
+        cur.rankBN = snap.rankId != null ? (this.rankBNMap[snap.rankId] || cur.rankEN) : '';
+        cur.officeEN = snap.rabUnitId != null ? (this.officeENMap[snap.rabUnitId] || '') : '';
+        cur.officeBN = snap.rabUnitId != null ? (this.officeBNMap[snap.rabUnitId] || cur.officeEN) : '';
+        cur.appointmentId = snap.appointmentId ?? null;
+        cur.appointmentEN = snap.appointmentId != null ? (this.appointmentENMap[snap.appointmentId] || '') : '';
+        cur.appointmentBN = snap.appointmentId != null ? (this.appointmentBNMap[snap.appointmentId] || cur.appointmentEN) : '';
+        cur.corpsId = snap.corpsId ?? null;
+        cur.corpsEN = snap.corpsId != null ? (this.corpsENMap[snap.corpsId] || '') : '';
+        cur.corpsBN = snap.corpsId != null ? (this.corpsBNMap[snap.corpsId] || cur.corpsEN) : '';
+        cur.decorationId = decoIdNum;
+        cur.decorationEN = decoIdNum != null ? (this.decorationENMap[decoIdNum] || '') : '';
+        cur.decorationBN = decoIdNum != null ? (this.decorationBNMap[decoIdNum] || cur.decorationEN) : '';
+        cur.profQualId = snap.profQualId ?? null;
+        cur.profQualEN = snap.profQualId != null ? (this.profQualENMap[snap.profQualId] || '') : '';
+        cur.profQualBN = snap.profQualId != null ? (this.profQualBNMap[snap.profQualId] || cur.profQualEN) : '';
+        cur.rabUnitId = snap.rabUnitId ?? null;
+        cur.rabUnitEN = snap.rabUnitId != null ? (this.rabUnitENMap[snap.rabUnitId] || '') : '';
+        cur.rabUnitBN = snap.rabUnitId != null ? (this.rabUnitBNMap[snap.rabUnitId] || cur.rabUnitEN) : '';
     }
 
     private loadRanks(): void {

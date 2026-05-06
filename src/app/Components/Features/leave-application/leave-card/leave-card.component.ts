@@ -4,7 +4,7 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { UserMenuService } from '@/services/user-menu.service';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '@/Core/Environments/environment';
-import { LeaveApplicationService, LeaveApplicationModel, LeaveApplicationDetailModel } from '@/services/leave-application.service';
+import { LeaveApplicationService, LeaveApplicationModel, LeaveApplicationDetailModel, EmployeeSnapshotIds } from '@/services/leave-application.service';
 import { EmpService } from '@/services/emp-service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { ServingMembersService } from '@/services/serving-members.service';
@@ -177,12 +177,27 @@ export class LeaveCardComponent implements OnInit {
                 this.row = d;
                 this.loading = false;
                 if (d) {
-                    const empIds = new Set<number>();
-                    if (d.applicantEmployeeId) empIds.add(d.applicantEmployeeId);
                     const approverId = d.approvedByEmployeeId ?? d.finalApproverId ?? d.appliedByEmployeeId;
-                    if (approverId) empIds.add(approverId);
-                    if (d.relieverEmployeeId) empIds.add(d.relieverEmployeeId);
-                    empIds.forEach((empId) => this.loadEmployeeInfo(empId, empId === d.applicantEmployeeId));
+                    // Pair each empId with the snapshot for the role we're rendering it in. The same
+                    // person can play multiple roles on one application — we still want the snapshot
+                    // that matches the role being rendered, so we hydrate per-role.
+                    const jobs: { empId: number; snapshot: EmployeeSnapshotIds | null; isApplicant: boolean }[] = [];
+                    if (d.applicantEmployeeId) jobs.push({ empId: d.applicantEmployeeId, snapshot: d.actorsSnapshot?.applicant ?? null, isApplicant: true });
+                    if (approverId) {
+                        const approverSnap = approverId === d.appliedByEmployeeId
+                            ? (d.actorsSnapshot?.appliedBy ?? null)
+                            : (d.finalApproverSnapshot ?? null);
+                        jobs.push({ empId: approverId, snapshot: approverSnap, isApplicant: false });
+                    }
+                    if (d.relieverEmployeeId) jobs.push({ empId: d.relieverEmployeeId, snapshot: d.actorsSnapshot?.reliever ?? null, isApplicant: false });
+                    // De-dupe by empId, but prefer the applicant entry when the same employee appears in
+                    // multiple roles — applicant is the most-rendered role on the certificate.
+                    const seen = new Set<number>();
+                    for (const job of jobs.sort((a, b) => Number(b.isApplicant) - Number(a.isApplicant))) {
+                        if (seen.has(job.empId)) continue;
+                        seen.add(job.empId);
+                        this.loadEmployeeInfo(job.empId, job.isApplicant, job.snapshot);
+                    }
                 }
             },
             error: () => {
@@ -196,8 +211,13 @@ export class LeaveCardComponent implements OnInit {
      * (which carries Corps / Decoration / ProfessionalQualification / RAB Unit display strings) for
      * a single employee. When `isApplicant` is true, also looks up the applicant's RAB Unit AOR to
      * populate the certificate header's unit-name + battalion-HQ-address lines.
+     *
+     * If `snapshot` is provided, the 6 volatile profile attributes (rank, RABUnit, corps,
+     * appointment, decoration, profQual) come from the frozen snapshot instead of the live employee
+     * record. The basic-info call is still made for the stable identity fields (name/prefix/serviceId),
+     * which are not snapshotted.
      */
-    private loadEmployeeInfo(empId: number, isApplicant: boolean = false): void {
+    private loadEmployeeInfo(empId: number, isApplicant: boolean = false, snapshot: EmployeeSnapshotIds | null = null): void {
         this.empService.getEmployeeById(empId).subscribe({
             next: (emp: any) => {
                 if (!emp) return;
@@ -232,6 +252,24 @@ export class LeaveCardComponent implements OnInit {
                     rabUnitBN: '',
                     rabUnitId: null
                 };
+                if (snapshot) {
+                    this.applySnapshotToEmpMap(empId, snapshot);
+                    if (isApplicant && snapshot.rabUnitId != null) {
+                        this.applicantRabUnitNameEN = this.rabUnitENMap[snapshot.rabUnitId] || '';
+                        this.applicantRabUnitNameBN = this.rabUnitBNMap[snapshot.rabUnitId] || this.applicantRabUnitNameEN;
+                        // Battalion HQ is intentionally excluded from the snapshot scope — keep live lookup.
+                        this.masterBasicSetup.getRABUnitAORByRabUnit(snapshot.rabUnitId).subscribe({
+                            next: (aorRows: any[]) => {
+                                const rows = Array.isArray(aorRows) ? aorRows : [];
+                                const first = rows.find((r) => !!(r?.locationOfBattalionHQ ?? r?.LocationOfBattalionHQ));
+                                if (first) this.applicantBattalionHQ = String(first.locationOfBattalionHQ ?? first.LocationOfBattalionHQ ?? '');
+                                const firstBN = rows.find((r) => !!(r?.locationOfBattalionHQBangla ?? r?.LocationOfBattalionHQBangla));
+                                if (firstBN) this.applicantBattalionHQBN = String(firstBN.locationOfBattalionHQBangla ?? firstBN.LocationOfBattalionHQBangla ?? '');
+                            }
+                        });
+                    }
+                    return;
+                }
                 // Load display names from search info view
                 this.empService.getEmployeeSearchInfo(empId).subscribe({
                     next: (info: any) => {
@@ -324,6 +362,38 @@ export class LeaveCardComponent implements OnInit {
                 });
             }
         });
+    }
+
+    /**
+     * Resolves snapshot ids to EN/BN display strings via the lookup maps that are already loaded
+     * for this component (rankBNMap, officeBNMap, appointmentBNMap, corpsENMap, decorationENMap,
+     * profQualENMap, rabUnitENMap). Skips the live getEmployeeSearchInfo + getEmployeePersonalServiceOverview
+     * calls — the volatile attribute values come from the frozen snapshot, not the current employee state.
+     */
+    private applySnapshotToEmpMap(empId: number, snap: EmployeeSnapshotIds): void {
+        const cur = this.empMap[empId];
+        if (!cur) return;
+        const decoIdNum = this.toIntOrNull(snap.decorationId);
+        cur.rankId = snap.rankId ?? null;
+        cur.rankEN = snap.rankId != null ? (this.rankENMap[snap.rankId] || '') : '';
+        cur.rankBN = snap.rankId != null ? (this.rankBNMap[snap.rankId] || cur.rankEN) : '';
+        cur.officeEN = snap.rabUnitId != null ? (this.officeENMap[snap.rabUnitId] || '') : '';
+        cur.officeBN = snap.rabUnitId != null ? (this.officeBNMap[snap.rabUnitId] || cur.officeEN) : '';
+        cur.appointmentId = snap.appointmentId ?? null;
+        cur.appointmentEN = snap.appointmentId != null ? (this.appointmentENMap[snap.appointmentId] || '') : '';
+        cur.appointmentBN = snap.appointmentId != null ? (this.appointmentBNMap[snap.appointmentId] || cur.appointmentEN) : '';
+        cur.corpsId = snap.corpsId ?? null;
+        cur.corpsEN = snap.corpsId != null ? (this.corpsENMap[snap.corpsId] || '') : '';
+        cur.corpsBN = snap.corpsId != null ? (this.corpsBNMap[snap.corpsId] || cur.corpsEN) : '';
+        cur.decorationId = decoIdNum;
+        cur.decorationEN = decoIdNum != null ? (this.decorationENMap[decoIdNum] || '') : '';
+        cur.decorationBN = decoIdNum != null ? (this.decorationBNMap[decoIdNum] || cur.decorationEN) : '';
+        cur.profQualId = snap.profQualId ?? null;
+        cur.profQualEN = snap.profQualId != null ? (this.profQualENMap[snap.profQualId] || '') : '';
+        cur.profQualBN = snap.profQualId != null ? (this.profQualBNMap[snap.profQualId] || cur.profQualEN) : '';
+        cur.rabUnitId = snap.rabUnitId ?? null;
+        cur.rabUnitEN = snap.rabUnitId != null ? (this.rabUnitENMap[snap.rabUnitId] || '') : '';
+        cur.rabUnitBN = snap.rabUnitId != null ? (this.rabUnitBNMap[snap.rabUnitId] || cur.rabUnitEN) : '';
     }
 
     private loadRanks(): void {
