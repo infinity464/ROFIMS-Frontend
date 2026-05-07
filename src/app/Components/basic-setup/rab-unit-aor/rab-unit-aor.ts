@@ -70,6 +70,14 @@ export class RabUnitAor implements OnInit {
     allDistrictsPool: AorChipWithParent[] = [];
     allUpazilasPool: AorChipWithParent[] = [];
 
+    /** Every AOR across all units — used to detect upazila ownership conflicts. */
+    private allAors: RABUnitAORModel[] = [];
+
+    /** Pool minus upazilas owned by other units; recomputed when unit/AORs change. */
+    upazilasPoolForCard: AorChipWithParent[] = [];
+    /** Map of upazilaId -> "Assigned to RAB-X" string passed to cards as the lock reasons. */
+    lockedUpazilas: Record<number, string> = {};
+
     assigned: AssignedRow[] = [];
     assignedLoading = false;
 
@@ -82,9 +90,9 @@ export class RabUnitAor implements OnInit {
     ) {
         this.form = this.fb.group({
             rabUnitId: [null, Validators.required],
-            divisionIds: [[], Validators.required],
-            districtIds: [[], Validators.required],
-            upazilaIds: [[], Validators.required],
+            divisionIds: [[]],
+            districtIds: [[]],
+            upazilaIds: [[]],
             locationOfBattalionHQ: [null],
             locationOfBattalionHQBangla: [null],
             numberOfCamp: [null],
@@ -102,6 +110,7 @@ export class RabUnitAor implements OnInit {
         this.loadRabUnits();
         this.loadDivisions();
         this.loadAllPools();
+        this.loadAllAors();
 
         this.form.get('divisionIds')?.valueChanges.subscribe((divisionIds: number[]) => {
             if (!divisionIds?.length) {
@@ -123,6 +132,7 @@ export class RabUnitAor implements OnInit {
         });
 
         this.form.get('rabUnitId')?.valueChanges.subscribe((rabUnitId) => {
+            this.recomputeUpazilaPoolForCard();
             if (rabUnitId) this.loadAssigned(rabUnitId);
             else this.assigned = [];
         });
@@ -166,11 +176,52 @@ export class RabUnitAor implements OnInit {
                 this.allUpazilasPool = (upazilas ?? [])
                     .map((u) => ({ id: u.codeId, name: u.codeValueEN ?? '', parentId: u.parentCodeId ?? 0 }))
                     .sort((a, b) => a.name.localeCompare(b.name));
+                this.recomputeUpazilaPoolForCard();
             },
             error: (err: any) => {
                 this.messageService.add({ severity: 'warn', summary: 'Warning', detail: err?.error?.message || 'Failed to load pools' });
             }
         });
+    }
+
+    private loadAllAors(): void {
+        this.master.getAllRABUnitAOR().subscribe({
+            next: (rows) => {
+                this.allAors = rows ?? [];
+                this.recomputeUpazilaPoolForCard();
+            },
+            error: () => {
+                // Non-fatal; ownership filtering will degrade to "no exclusions".
+                this.allAors = [];
+            }
+        });
+    }
+
+    /** Map of upazilaId -> { unitId, unitName } owned by another unit (not the currently-picked one). */
+    private upazilaOwnership(): Map<number, { unitId: number; unitName: string }> {
+        const currentUnit = this.form?.value?.rabUnitId as number | null | undefined;
+        const map = new Map<number, { unitId: number; unitName: string }>();
+        for (const aor of this.allAors) {
+            const ownerUnit = (aor as any).rabUnitId ?? (aor as any).RABUnitId;
+            if (!ownerUnit || ownerUnit === currentUnit) continue;
+            const csv = (aor as any).upazilaIds ?? (aor as any).UpazilaIds ?? '';
+            for (const id of String(csv).split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n))) {
+                if (!map.has(id)) {
+                    const unitName = this.rabUnitOptions.find((o) => o.value === ownerUnit)?.label ?? `Unit ${ownerUnit}`;
+                    map.set(id, { unitId: ownerUnit, unitName });
+                }
+            }
+        }
+        return map;
+    }
+
+    /** Pass the full pool to the card and surface the conflict-owned ones as a "locked" map. */
+    private recomputeUpazilaPoolForCard(): void {
+        this.upazilasPoolForCard = this.allUpazilasPool;
+        const owned = this.upazilaOwnership();
+        const map: Record<number, string> = {};
+        owned.forEach((info, id) => (map[id] = `Assigned to ${info.unitName}`));
+        this.lockedUpazilas = map;
     }
 
     private loadDistrictsForDivisions(divisionIds: number[]): void {
@@ -212,14 +263,14 @@ export class RabUnitAor implements OnInit {
         const calls = districtIds.map((id) => this.master.getByParentId(id));
         forkJoin(calls).subscribe({
             next: (upazilaLists) => {
+                const owned = this.upazilaOwnership();
                 const seen = new Set<number>();
                 const options: Option[] = [];
                 (upazilaLists ?? []).forEach((list) => {
                     (list ?? []).forEach((u: CommonCode) => {
-                        if (!seen.has(u.codeId)) {
-                            seen.add(u.codeId);
-                            options.push({ label: u.codeValueEN ?? '', value: u.codeId });
-                        }
+                        if (seen.has(u.codeId) || owned.has(u.codeId)) return;
+                        seen.add(u.codeId);
+                        options.push({ label: u.codeValueEN ?? '', value: u.codeId });
                     });
                 });
                 this.upazilaOptions = options.sort((a, b) => a.label.localeCompare(b.label));
@@ -254,8 +305,26 @@ export class RabUnitAor implements OnInit {
         const districtIds = (val.districtIds as number[]) ?? [];
         const upazilaIds = (val.upazilaIds as number[]) ?? [];
 
-        if (!divisionIds.length || !districtIds.length || !upazilaIds.length) {
-            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Select at least one division, district, and upazila' });
+        // Block save if any upazila is already owned by a different unit (race-condition safety net).
+        const owned = this.upazilaOwnership();
+        const conflicts = upazilaIds.filter((id) => owned.has(id));
+        if (conflicts.length) {
+            const namesByUnit = new Map<string, string[]>();
+            for (const id of conflicts) {
+                const owner = owned.get(id)!;
+                const upaName = this.allUpazilasPool.find((u) => u.id === id)?.name ?? String(id);
+                if (!namesByUnit.has(owner.unitName)) namesByUnit.set(owner.unitName, []);
+                namesByUnit.get(owner.unitName)!.push(upaName);
+            }
+            const detail = Array.from(namesByUnit.entries())
+                .map(([unit, ups]) => `${ups.join(', ')} → ${unit}`)
+                .join('; ');
+            this.messageService.add({
+                severity: 'error',
+                summary: 'Upazila already assigned',
+                detail: `These upazilas are already assigned to another unit: ${detail}`,
+                life: 8000
+            });
             return;
         }
 
@@ -289,6 +358,7 @@ export class RabUnitAor implements OnInit {
                     this.messageService.add({ severity: 'warn', summary: 'Warning', detail: res?.description ?? 'Save failed' });
                 }
                 this.loadAssigned(rabUnitId);
+                this.loadAllAors();
             },
             error: (err) => {
                 this.messageService.add({
@@ -362,6 +432,25 @@ export class RabUnitAor implements OnInit {
         const row = this.assigned.find((r) => r.aorId === payload.data.aorId);
         if (!row) return;
 
+        // Race-condition guard: refuse to add an upazila already owned by another unit.
+        if (kind === 'upazila') {
+            const owned = this.upazilaOwnership();
+            const previous = new Set(row.upazilas.map((u) => u.id));
+            const newlyAdded = payload.ids.filter((id) => !previous.has(id));
+            const conflicts = newlyAdded.filter((id) => owned.has(id));
+            if (conflicts.length) {
+                const names = conflicts.map((id) => this.allUpazilasPool.find((u) => u.id === id)?.name ?? String(id));
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Upazila already assigned',
+                    detail: `${names.join(', ')} ${conflicts.length === 1 ? 'is' : 'are'} already assigned to another unit`,
+                    life: 6000
+                });
+                this.loadAssigned(this.form.value.rabUnitId as number);
+                return;
+            }
+        }
+
         let divIds = row.divisions.map((d) => d.id);
         let distIds = row.districts.map((d) => d.id);
         let upaIds = row.upazilas.map((u) => u.id);
@@ -397,6 +486,7 @@ export class RabUnitAor implements OnInit {
                     if (res?.statusCode === 200) {
                         this.messageService.add({ severity: 'success', summary: 'Saved', detail: `${kind}s updated` });
                         this.loadAssigned(rabUnitId);
+                        this.loadAllAors();
                     } else {
                         this.messageService.add({ severity: 'warn', summary: 'Warning', detail: res?.description ?? 'Update failed' });
                     }
@@ -450,6 +540,15 @@ export class RabUnitAor implements OnInit {
     }
     onCardSetUpazilas(payload: AorAddPayload): void {
         this.setOnAor(payload, 'upazila');
+    }
+
+    onLockedUpazilaClick(evt: { id: number; name: string; reason: string }): void {
+        this.messageService.add({
+            severity: 'info',
+            summary: 'Already assigned',
+            detail: `${evt.name}: ${evt.reason}`,
+            life: 4000
+        });
     }
 
     private loadAssigned(rabUnitId: number): void {
@@ -553,6 +652,7 @@ export class RabUnitAor implements OnInit {
                             this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Removed' });
                             const rabUnitId = this.form.value.rabUnitId as number;
                             if (rabUnitId) this.loadAssigned(rabUnitId);
+                            this.loadAllAors();
                         } else {
                             this.messageService.add({ severity: 'warn', summary: 'Warning', detail: res?.description ?? 'Remove failed' });
                         }

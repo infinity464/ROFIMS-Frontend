@@ -324,6 +324,17 @@
     color: var(--aor-text-muted) !important;
 }
 
+.aor-card__picker-lockedhint {
+    margin-left: auto;
+    font-size: 0.7rem;
+    font-style: italic;
+    color: var(--aor-text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 110px;
+}
+
 .aor-card__picker-footer {
     display: flex;
     align-items: center;

@@ -23,56 +23,6 @@
                     }
                 </div>
                 <div>
-                    <label for="divisionIds" class="block mb-2">Division <span class="text-red-500">*</span></label>
-                    <p-multiselect
-                        id="divisionIds"
-                        [options]="divisionOptions"
-                        optionLabel="label"
-                        optionValue="value"
-                        styleClass="w-full"
-                        placeholder="Select one or more divisions"
-                        [filter]="true"
-                        formControlName="divisionIds">
-                    </p-multiselect>
-                    @if (form.get('divisionIds')?.invalid && form.get('divisionIds')?.touched) {
-                        <small class="text-red-500 block mt-1">Select at least one division</small>
-                    }
-                </div>
-                <div>
-                    <label for="districtIds" class="block mb-2">District <span class="text-red-500">*</span></label>
-                    <p-multiselect
-                        id="districtIds"
-                        [options]="districtOptions"
-                        optionLabel="label"
-                        optionValue="value"
-                        styleClass="w-full"
-                        [placeholder]="(form.value.divisionIds?.length ? 'Select one or more districts' : 'Select division first')"
-                        [filter]="true"
-                        [disabled]="!form.value.divisionIds?.length"
-                        formControlName="districtIds">
-                    </p-multiselect>
-                    @if (form.get('districtIds')?.invalid && form.get('districtIds')?.touched) {
-                        <small class="text-red-500 block mt-1">Select at least one district</small>
-                    }
-                </div>
-                <div>
-                    <label for="upazilaIds" class="block mb-2">Upazilas <span class="text-red-500">*</span></label>
-                    <p-multiselect
-                        id="upazilaIds"
-                        [options]="upazilaOptions"
-                        optionLabel="label"
-                        optionValue="value"
-                        styleClass="w-full"
-                        [placeholder]="(form.value.districtIds?.length ? 'Select one or more upazilas' : 'Select district first')"
-                        [filter]="true"
-                        [disabled]="!form.value.districtIds?.length"
-                        formControlName="upazilaIds">
-                    </p-multiselect>
-                    @if (form.get('upazilaIds')?.invalid && form.get('upazilaIds')?.touched) {
-                        <small class="text-red-500 block mt-1">Select at least one upazila</small>
-                    }
-                </div>
-                <div>
                     <label for="locationOfBattalionHQ" class="block mb-2">Location of Battalion HQ</label>
                     <input
                         pInputText
@@ -152,13 +102,15 @@
                         [canUpdate]="canUpdate"
                         [availableDivisions]="allDivisionsPool"
                         [availableDistricts]="allDistrictsPool"
-                        [availableUpazilas]="allUpazilasPool"
+                        [availableUpazilas]="upazilasPoolForCard"
+                        [lockedUpazilas]="lockedUpazilas"
                         (view)="onCardView()"
                         (edit)="onCardEdit($event)"
                         (delete)="removeAssignment($event.data, $event.event)"
                         (setDivisions)="onCardSetDivisions($event)"
                         (setDistricts)="onCardSetDistricts($event)"
-                        (setUpazilas)="onCardSetUpazilas($event)">
+                        (setUpazilas)="onCardSetUpazilas($event)"
+                        (lockedUpazilaClick)="onLockedUpazilaClick($event)">
                     </app-aor-card>
                 }
             </div>

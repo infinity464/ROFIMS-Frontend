@@ -192,9 +192,17 @@
                     @for (opt of filtered(upazilasForPicker(), upaFilter); track opt.id) {
                         <li class="aor-card__picker-item"
                             [class.aor-card__picker-item--checked]="upaPicked.has(opt.id)"
+                            [class.aor-card__picker-item--locked]="isUpaLocked(opt.id)"
+                            [title]="isUpaLocked(opt.id) ? upaLockReason(opt.id) : ''"
                             (click)="toggleUpaPick(opt.id)">
-                            <i class="pi" [class.pi-check-square]="upaPicked.has(opt.id)" [class.pi-stop]="!upaPicked.has(opt.id)"></i>
+                            <i class="pi"
+                               [class.pi-check-square]="upaPicked.has(opt.id) && !isUpaLocked(opt.id)"
+                               [class.pi-stop]="!upaPicked.has(opt.id) && !isUpaLocked(opt.id)"
+                               [class.pi-lock]="isUpaLocked(opt.id)"></i>
                             <span>{{ opt.name }}</span>
+                            @if (isUpaLocked(opt.id)) {
+                                <span class="aor-card__picker-lockedhint">{{ upaLockReason(opt.id) }}</span>
+                            }
                         </li>
                     } @empty {
                         <li class="aor-card__picker-empty">

@@ -55,6 +55,8 @@ export class AorCardComponent {
     @Input() availableDistricts: AorChipWithParent[] = [];
     /** Full pool of upazilas (with their parent district id). */
     @Input() availableUpazilas: AorChipWithParent[] = [];
+    /** Map: upazilaId -> reason ("Assigned to RAB-3"). Locked items render as un-toggleable. */
+    @Input() lockedUpazilas: Record<number, string> = {};
 
     @Output() view = new EventEmitter<AorCardData>();
     @Output() edit = new EventEmitter<AorCardData>();
@@ -65,6 +67,8 @@ export class AorCardComponent {
     @Output() setDivisions = new EventEmitter<AorAddPayload>();
     @Output() setDistricts = new EventEmitter<AorAddPayload>();
     @Output() setUpazilas = new EventEmitter<AorAddPayload>();
+    /** Fired when the user clicks a locked upazila row (already owned by another unit). */
+    @Output() lockedUpazilaClick = new EventEmitter<{ id: number; name: string; reason: string }>();
 
     divFilter = '';
     distFilter = '';
@@ -224,7 +228,21 @@ export class AorCardComponent {
             this.distPicked.add(id);
         }
     }
+    isUpaLocked(id: number): boolean {
+        return !!this.lockedUpazilas?.[id];
+    }
+    upaLockReason(id: number): string {
+        return this.lockedUpazilas?.[id] ?? '';
+    }
+
     toggleUpaPick(id: number): void {
+        // Locked upazilas (owned by another unit) cannot be toggled - emit a signal so the parent
+        // can show the user a toast naming the owning unit.
+        if (this.isUpaLocked(id)) {
+            const opt = (this.availableUpazilas ?? []).find((u) => u.id === id);
+            this.lockedUpazilaClick.emit({ id, name: opt?.name ?? String(id), reason: this.upaLockReason(id) });
+            return;
+        }
         if (this.upaPicked.has(id)) this.upaPicked.delete(id);
         else this.upaPicked.add(id);
     }
