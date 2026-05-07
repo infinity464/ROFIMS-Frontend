@@ -348,6 +348,10 @@ export class MasterBasicSetupService {
         return this.http.delete(`${this.apiUrlNoteSheetApproverConfig}/DeleteAsyn/${id}`);
     }
 
+    getAllRABUnitAOR(): Observable<RABUnitAORModel[]> {
+        return this.http.get<RABUnitAORModel[]>(`${this.apiUrlRABUnitAOR}/GetAll`);
+    }
+
     getRABUnitAORByUpazila(upazilaId: number): Observable<RABUnitAORModel[]> {
         return this.http.get<RABUnitAORModel[]>(`${this.apiUrlRABUnitAOR}/GetByUpazila/${upazilaId}`);
     }

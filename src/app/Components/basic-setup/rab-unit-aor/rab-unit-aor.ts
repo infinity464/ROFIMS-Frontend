@@ -15,6 +15,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TableModule } from 'primeng/table';
+import { ColorPickerModule } from 'primeng/colorpicker';
 
 import { MasterBasicSetupService } from '../shared/services/MasterBasicSetupService';
 import { SharedService } from '@/shared/services/shared-service';
@@ -32,6 +33,7 @@ type AssignedRow = {
     locationOfBattalionHQBangla?: string | null;
     numberOfCamp?: number | null;
     nameOfCamps?: string | null;
+    identificationColor?: string | null;
 };
 
 @Component({
@@ -48,7 +50,8 @@ type AssignedRow = {
         InputTextModule,
         ToastModule,
         ConfirmDialogModule,
-        TableModule
+        TableModule,
+        ColorPickerModule
     ],
     providers: [MessageService, ConfirmationService],
     templateUrl: './rab-unit-aor.html',
@@ -89,7 +92,8 @@ export class RabUnitAor implements OnInit {
             locationOfBattalionHQ: [null],
             locationOfBattalionHQBangla: [null],
             numberOfCamp: [null],
-            nameOfCamps: [null]
+            nameOfCamps: [null],
+            identificationColor: [null]
         });
     }
 
@@ -103,16 +107,22 @@ export class RabUnitAor implements OnInit {
         this.loadDivisions();
 
         this.form.get('divisionIds')?.valueChanges.subscribe((divisionIds: number[]) => {
-            this.districtOptions = [];
-            this.upazilaOptions = [];
-            this.form.patchValue({ districtIds: [], upazilaIds: [] }, { emitEvent: false });
-            if (divisionIds?.length) this.loadDistrictsForDivisions(divisionIds);
+            if (!divisionIds?.length) {
+                this.districtOptions = [];
+                this.upazilaOptions = [];
+                this.form.patchValue({ districtIds: [], upazilaIds: [] }, { emitEvent: false });
+                return;
+            }
+            this.loadDistrictsForDivisions(divisionIds);
         });
 
         this.form.get('districtIds')?.valueChanges.subscribe((districtIds: number[]) => {
-            this.upazilaOptions = [];
-            this.form.patchValue({ upazilaIds: [] }, { emitEvent: false });
-            if (districtIds?.length) this.loadUpazilasForDistricts(districtIds);
+            if (!districtIds?.length) {
+                this.upazilaOptions = [];
+                this.form.patchValue({ upazilaIds: [] }, { emitEvent: false });
+                return;
+            }
+            this.loadUpazilasForDistricts(districtIds);
         });
 
         this.form.get('rabUnitId')?.valueChanges.subscribe((rabUnitId) => {
@@ -158,6 +168,19 @@ export class RabUnitAor implements OnInit {
                     });
                 });
                 this.districtOptions = options.sort((a, b) => a.label.localeCompare(b.label));
+
+                const validIds = new Set(this.districtOptions.map((o) => o.value));
+                const current = (this.form.value.districtIds as number[]) ?? [];
+                const pruned = current.filter((id) => validIds.has(id));
+                if (pruned.length !== current.length) {
+                    this.form.patchValue({ districtIds: pruned }, { emitEvent: false });
+                }
+                if (pruned.length) {
+                    this.loadUpazilasForDistricts(pruned);
+                } else {
+                    this.upazilaOptions = [];
+                    this.form.patchValue({ upazilaIds: [] }, { emitEvent: false });
+                }
             },
             error: (err: any) => {
                 this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load districts' });
@@ -180,6 +203,13 @@ export class RabUnitAor implements OnInit {
                     });
                 });
                 this.upazilaOptions = options.sort((a, b) => a.label.localeCompare(b.label));
+
+                const validIds = new Set(this.upazilaOptions.map((o) => o.value));
+                const current = (this.form.value.upazilaIds as number[]) ?? [];
+                const pruned = current.filter((id) => validIds.has(id));
+                if (pruned.length !== current.length) {
+                    this.form.patchValue({ upazilaIds: pruned }, { emitEvent: false });
+                }
             },
             error: (err: any) => {
                 this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load upazilas' });
@@ -223,6 +253,7 @@ export class RabUnitAor implements OnInit {
             locationOfBattalionHQBangla: val.locationOfBattalionHQBangla ?? null,
             numberOfCamp: val.numberOfCamp ?? null,
             nameOfCamps: val.nameOfCamps ?? null,
+            identificationColor: val.identificationColor ?? null,
             status: true,
             createdBy: user,
             createdDate: now,
@@ -317,7 +348,8 @@ export class RabUnitAor implements OnInit {
                                                 locationOfBattalionHQ: r.locationOfBattalionHQ ?? r.LocationOfBattalionHQ ?? null,
                                                 locationOfBattalionHQBangla: r.locationOfBattalionHQBangla ?? r.LocationOfBattalionHQBangla ?? null,
                                                 numberOfCamp: r.numberOfCamp ?? r.NumberOfCamp ?? null,
-                                                nameOfCamps: r.nameOfCamps ?? r.NameOfCamps ?? null
+                                                nameOfCamps: r.nameOfCamps ?? r.NameOfCamps ?? null,
+                                                identificationColor: r.identificationColor ?? r.IdentificationColor ?? null
                                             };
                                         });
                                         // Populate form with first record for editing
@@ -330,7 +362,8 @@ export class RabUnitAor implements OnInit {
                                                 locationOfBattalionHQ: first.locationOfBattalionHQ ?? first.LocationOfBattalionHQ ?? null,
                                                 locationOfBattalionHQBangla: first.locationOfBattalionHQBangla ?? first.LocationOfBattalionHQBangla ?? null,
                                                 numberOfCamp: first.numberOfCamp ?? first.NumberOfCamp ?? null,
-                                                nameOfCamps: first.nameOfCamps ?? first.NameOfCamps ?? null
+                                                nameOfCamps: first.nameOfCamps ?? first.NameOfCamps ?? null,
+                                                identificationColor: first.identificationColor ?? first.IdentificationColor ?? null
                                             }, { emitEvent: false });
                                             this.loadDistrictsForDivisions(this.csvToIds(first.divisionIds ?? first.DivisionIds));
                                             this.loadUpazilasForDistricts(this.csvToIds(first.districtIds ?? first.DistrictIds));
@@ -428,7 +461,8 @@ export class RabUnitAor implements OnInit {
             locationOfBattalionHQ: null,
             locationOfBattalionHQBangla: null,
             numberOfCamp: null,
-            nameOfCamps: null
+            nameOfCamps: null,
+            identificationColor: null
         });
         this.districtOptions = [];
         this.upazilaOptions = [];

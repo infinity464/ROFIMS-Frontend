@@ -153,6 +153,7 @@ import { EmployeeReportsComponent } from '@/Components/Features/employee-reports
 import { ReportFamilyOccupationComponent } from '@/Components/Features/employee-reports/report-family-occupation/report-family-occupation.component';
 import { ReportAddressLocationComponent } from '@/Components/Features/employee-reports/report-address-location/report-address-location.component';
 import { RabUnitAor } from '@/Components/basic-setup/rab-unit-aor/rab-unit-aor';
+import { RabUnitAorMap } from '@/Components/basic-setup/rab-unit-aor-map/rab-unit-aor-map';
 import { ManpowerSummaryComponent } from '@/Components/Features/statistics/manpower-summary/manpower-summary';
 import { ManpowerChartComponent } from '@/Components/Features/statistics/manpower-chart/manpower-chart';
 import { RankWiseManpowerComponent } from '@/Components/Features/statistics/rank-wise-manpower/rank-wise-manpower';
@@ -214,6 +215,7 @@ export const appRoutes: Routes = [
             { path: 'basic-setup/org-tree', component: OrgTreeComponent },
             { path: 'basic-setup/rab-unit', component: RabUnit },
             { path: 'basic-setup/rab-unit-aor', component: RabUnitAor },
+            { path: 'basic-setup/rab-unit-aor-map', component: RabUnitAorMap },
             { path: 'basic-setup/officer-type', component: OfficerType },
             { path: 'basic-setup/rab-wing', component: RabWing },
             { path: 'basic-setup/mother-org', component: Organization },

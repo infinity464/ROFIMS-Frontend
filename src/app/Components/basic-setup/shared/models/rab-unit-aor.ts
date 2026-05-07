@@ -15,6 +15,8 @@ export interface RABUnitAORModel {
     numberOfCamp?: number | null;
     /** Name of Camps (text). */
     nameOfCamps?: string | null;
+    /** Identification color for the unit's AOR (CSS hex, e.g. "#8c3a1f"). Used to tint the upazila map. */
+    identificationColor?: string | null;
     status: boolean;
     createdBy?: string;
     createdDate?: string;

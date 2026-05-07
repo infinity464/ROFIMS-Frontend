@@ -110,6 +110,22 @@
                         placeholder="Text"
                         formControlName="nameOfCamps">
                 </div>
+                <div>
+                    <label for="identificationColor" class="block mb-2">Identification Color</label>
+                    <div class="flex items-center gap-2">
+                        <p-colorPicker
+                            inputId="identificationColor"
+                            formControlName="identificationColor"
+                            [format]="'hex'">
+                        </p-colorPicker>
+                        <input
+                            pInputText
+                            type="text"
+                            class="flex-1"
+                            placeholder="#RRGGBB"
+                            formControlName="identificationColor">
+                    </div>
+                </div>
             </div>
             <div class="flex flex-col sm:flex-row gap-2 justify-end">
                 <p-button type="submit" label="Save" [disabled]="form.invalid || isSubmitting" [fluid]="false"></p-button>
@@ -142,6 +158,7 @@
                         <th>Location of Battalion HQ (Bangla)</th>
                         <th>Number of Camp</th>
                         <th>Name of Camps</th>
+                        <th>Color</th>
                         <th>Action</th>
                     </tr>
                 </ng-template>
@@ -156,6 +173,16 @@
                         <td>{{ row.locationOfBattalionHQBangla ?? '-' }}</td>
                         <td>{{ row.numberOfCamp ?? '-' }}</td>
                         <td>{{ row.nameOfCamps ?? '-' }}</td>
+                        <td>
+                            @if (row.identificationColor) {
+                                <span class="inline-flex items-center gap-2">
+                                    <span class="inline-block w-5 h-5 rounded border border-surface-300" [style.background]="row.identificationColor"></span>
+                                    <span class="text-sm">{{ row.identificationColor }}</span>
+                                </span>
+                            } @else {
+                                <span class="text-color-secondary">-</span>
+                            }
+                        </td>
                         <td>
                             <button class="mx-2" pButton icon="pi pi-trash" [class.perm-hidden]="!canDelete" (click)="removeAssignment(row, $event)" class="p-button-danger"></button>
                         </td>
