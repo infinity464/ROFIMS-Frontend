@@ -21,20 +21,10 @@ import { MasterBasicSetupService } from '../shared/services/MasterBasicSetupServ
 import { SharedService } from '@/shared/services/shared-service';
 import { CommonCode } from '../shared/models/common-code';
 import { RABUnitAORModel } from '../shared/models/rab-unit-aor';
+import { AorCardComponent, AorCardData } from '../shared/componets/aor-card/aor-card';
 
 type Option = { label: string; value: number };
-type AssignedRow = {
-    aorId: number;
-    rabUnitName: string;
-    divisionNames: string;
-    districtNames: string;
-    upazilaNames: string;
-    locationOfBattalionHQ?: string | null;
-    locationOfBattalionHQBangla?: string | null;
-    numberOfCamp?: number | null;
-    nameOfCamps?: string | null;
-    identificationColor?: string | null;
-};
+type AssignedRow = AorCardData;
 
 @Component({
     selector: 'app-rab-unit-aor',
@@ -51,7 +41,8 @@ type AssignedRow = {
         ToastModule,
         ConfirmDialogModule,
         TableModule,
-        ColorPickerModule
+        ColorPickerModule,
+        AorCardComponent
     ],
     providers: [MessageService, ConfirmationService],
     templateUrl: './rab-unit-aor.html',
@@ -293,6 +284,35 @@ export class RabUnitAor implements OnInit {
         return ids.map((id) => map[id] ?? String(id)).join(', ');
     }
 
+    private idsToList(ids: number[], map: Record<number, string>): string[] {
+        return ids.map((id) => map[id] ?? String(id)).filter((s) => s);
+    }
+
+    private buildAssignedRow(
+        r: any,
+        rabUnitId: number,
+        divisionMap: Record<number, string>,
+        districtMap: Record<number, string>,
+        upazilaMap: Record<number, string>
+    ): AssignedRow {
+        const divIds = this.csvToIds(r.divisionIds ?? r.DivisionIds);
+        const distIds = this.csvToIds(r.districtIds ?? r.DistrictIds);
+        const upaIds = this.csvToIds(r.upazilaIds ?? r.UpazilaIds);
+        return {
+            aorId: r.aorId ?? r.AORId,
+            unitName: this.rabUnitOptions.find((o) => o.value === rabUnitId)?.label ?? String(rabUnitId),
+            color: r.identificationColor ?? r.IdentificationColor ?? null,
+            isActive: r.status ?? r.Status ?? true,
+            locationEN: r.locationOfBattalionHQ ?? r.LocationOfBattalionHQ ?? null,
+            locationBN: r.locationOfBattalionHQBangla ?? r.LocationOfBattalionHQBangla ?? null,
+            divisions: this.idsToList(divIds, divisionMap),
+            districts: this.idsToList(distIds, districtMap),
+            upazilas: this.idsToList(upaIds, upazilaMap),
+            numberOfCamp: r.numberOfCamp ?? r.NumberOfCamp ?? null,
+            nameOfCamps: r.nameOfCamps ?? r.NameOfCamps ?? null
+        };
+    }
+
     private loadAssigned(rabUnitId: number): void {
         this.assignedLoading = true;
         this.master.getRABUnitAORByRabUnit(rabUnitId).subscribe({
@@ -334,24 +354,7 @@ export class RabUnitAor implements OnInit {
                                                 upazilaMap[u.codeId] = u.codeValueEN ?? '';
                                             });
                                         });
-                                        const rabName = this.rabUnitOptions.find((o) => o.value === rabUnitId)?.label ?? String(rabUnitId);
-                                        this.assigned = list.map((r) => {
-                                            const divIds = this.csvToIds(r.divisionIds ?? r.DivisionIds);
-                                            const distIds = this.csvToIds(r.districtIds ?? r.DistrictIds);
-                                            const upaIds = this.csvToIds(r.upazilaIds ?? r.UpazilaIds);
-                                            return {
-                                                aorId: r.aorId ?? r.AORId,
-                                                rabUnitName: rabName,
-                                                divisionNames: this.idsToNames(divIds, divisionMap),
-                                                districtNames: this.idsToNames(distIds, districtMap),
-                                                upazilaNames: this.idsToNames(upaIds, upazilaMap),
-                                                locationOfBattalionHQ: r.locationOfBattalionHQ ?? r.LocationOfBattalionHQ ?? null,
-                                                locationOfBattalionHQBangla: r.locationOfBattalionHQBangla ?? r.LocationOfBattalionHQBangla ?? null,
-                                                numberOfCamp: r.numberOfCamp ?? r.NumberOfCamp ?? null,
-                                                nameOfCamps: r.nameOfCamps ?? r.NameOfCamps ?? null,
-                                                identificationColor: r.identificationColor ?? r.IdentificationColor ?? null
-                                            };
-                                        });
+                                        this.assigned = list.map((r) => this.buildAssignedRow(r, rabUnitId, divisionMap, districtMap, upazilaMap));
                                         // Populate form with first record for editing
                                         const first = list[0];
                                         if (first && this.form.value.rabUnitId === rabUnitId) {
@@ -371,49 +374,19 @@ export class RabUnitAor implements OnInit {
                                         this.assignedLoading = false;
                                     },
                                     error: (err: any) => {
-                                        this.assigned = list.map((r) => ({
-                                            aorId: r.aorId ?? r.AORId,
-                                            rabUnitName: this.rabUnitOptions.find((o) => o.value === rabUnitId)?.label ?? String(rabUnitId),
-                                            divisionNames: (r.divisionIds ?? r.DivisionIds) ?? '-',
-                                            districtNames: (r.districtIds ?? r.DistrictIds) ?? '-',
-                                            upazilaNames: (r.upazilaIds ?? r.UpazilaIds) ?? '-',
-                                            locationOfBattalionHQ: r.locationOfBattalionHQ ?? r.LocationOfBattalionHQ ?? null,
-                                            locationOfBattalionHQBangla: r.locationOfBattalionHQBangla ?? r.LocationOfBattalionHQBangla ?? null,
-                                            numberOfCamp: r.numberOfCamp ?? r.NumberOfCamp ?? null,
-                                            nameOfCamps: r.nameOfCamps ?? r.NameOfCamps ?? null
-                                        }));
+                                        this.assigned = list.map((r) => this.buildAssignedRow(r, rabUnitId, {}, {}, {}));
                                         this.assignedLoading = false;
                                     }
                                 });
                             },
                             error: (err: any) => {
-                                this.assigned = list.map((r) => ({
-                                    aorId: r.aorId ?? r.AORId,
-                                    rabUnitName: this.rabUnitOptions.find((o) => o.value === rabUnitId)?.label ?? String(rabUnitId),
-                                    divisionNames: (r.divisionIds ?? r.DivisionIds) ?? '-',
-                                    districtNames: (r.districtIds ?? r.DistrictIds) ?? '-',
-                                    upazilaNames: (r.upazilaIds ?? r.UpazilaIds) ?? '-',
-                                    locationOfBattalionHQ: r.locationOfBattalionHQ ?? r.LocationOfBattalionHQ ?? null,
-                                    locationOfBattalionHQBangla: r.locationOfBattalionHQBangla ?? r.LocationOfBattalionHQBangla ?? null,
-                                    numberOfCamp: r.numberOfCamp ?? r.NumberOfCamp ?? null,
-                                    nameOfCamps: r.nameOfCamps ?? r.NameOfCamps ?? null
-                                }));
+                                this.assigned = list.map((r) => this.buildAssignedRow(r, rabUnitId, {}, {}, {}));
                                 this.assignedLoading = false;
                             }
                         });
                     },
                     error: (err: any) => {
-                        this.assigned = list.map((r) => ({
-                            aorId: r.aorId ?? r.AORId,
-                            rabUnitName: this.rabUnitOptions.find((o) => o.value === rabUnitId)?.label ?? String(rabUnitId),
-                            divisionNames: (r.divisionIds ?? r.DivisionIds) ?? '-',
-                            districtNames: (r.districtIds ?? r.DistrictIds) ?? '-',
-                            upazilaNames: (r.upazilaIds ?? r.UpazilaIds) ?? '-',
-                            locationOfBattalionHQ: r.locationOfBattalionHQ ?? r.LocationOfBattalionHQ ?? null,
-                            locationOfBattalionHQBangla: r.locationOfBattalionHQBangla ?? r.LocationOfBattalionHQBangla ?? null,
-                            numberOfCamp: r.numberOfCamp ?? r.NumberOfCamp ?? null,
-                            nameOfCamps: r.nameOfCamps ?? r.NameOfCamps ?? null
-                        }));
+                        this.assigned = list.map((r) => this.buildAssignedRow(r, rabUnitId, {}, {}, {}));
                         this.assignedLoading = false;
                     }
                 });
@@ -428,7 +401,7 @@ export class RabUnitAor implements OnInit {
     removeAssignment(row: AssignedRow, event: Event): void {
         this.confirmationService.confirm({
             target: event.target as EventTarget,
-            message: `Remove this Area of Responsibility from ${row.rabUnitName}?`,
+            message: `Remove this Area of Responsibility from ${row.unitName}?`,
             header: 'Remove Confirmation',
             icon: 'pi pi-info-circle',
             rejectLabel: 'Cancel',

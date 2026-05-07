@@ -31,8 +31,7 @@ type RenderedFeature = {
 
 type LegendEntry = { unitId: number; name: string; color: string; upazilaCount: number; sortOrder: number };
 
-const DEFAULT_LAND = '#b8c49c';
-const DEFAULT_LAND_ALT = '#a9b68d';
+const UNASSIGNED_FILL = '#e8d9b0';
 
 @Component({
     selector: 'app-rab-unit-aor-map',
@@ -138,7 +137,7 @@ export class RabUnitAorMap implements OnInit {
         const rendered: RenderedFeature[] = [];
         const unmatched: string[] = [];
 
-        geo.features.forEach((f, i) => {
+        geo.features.forEach((f) => {
             const name = (f.properties?.n ?? '').trim();
             const key = this.normalizeName(name);
             const upazilaId = upazilaIdByName.get(key);
@@ -146,7 +145,7 @@ export class RabUnitAorMap implements OnInit {
 
             if (!upazilaId) unmatched.push(name);
 
-            const fill = aor?.color ?? (i % 3 === 0 ? DEFAULT_LAND_ALT : DEFAULT_LAND);
+            const fill = aor?.color ?? UNASSIGNED_FILL;
             rendered.push({
                 name,
                 nameBn: f.properties?.bn,

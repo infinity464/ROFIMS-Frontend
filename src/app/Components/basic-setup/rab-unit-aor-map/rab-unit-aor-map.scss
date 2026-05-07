@@ -14,7 +14,7 @@
 
 .aor-map-host {
     position: relative;
-    background: #ece4d0;
+    background: #faf6ec;
     border: 1px solid var(--surface-border, #d4d4d8);
     border-radius: 6px;
     overflow: hidden;
@@ -27,9 +27,10 @@
     }
 
     .upazila {
-        stroke: #6b7854;
+        stroke: #9c8466;
         stroke-width: 0.35;
         stroke-linejoin: round;
+        pointer-events: all;
         transition: fill 0.12s ease-out, stroke-width 0.12s;
 
         &:hover {

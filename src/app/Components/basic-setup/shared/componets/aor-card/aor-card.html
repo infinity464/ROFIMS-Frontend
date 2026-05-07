@@ -1,0 +1,110 @@
+<article class="aor-card" [style.--accent]="data.color || 'var(--p-primary-color, #6366f1)'">
+    <header class="aor-card__header">
+        <div class="aor-card__id">
+            <div class="aor-card__avatar" [style.background]="avatarBg">{{ initials }}</div>
+            <div class="aor-card__title-block">
+                <div class="aor-card__title-row">
+                    <span class="aor-card__title">{{ data.unitName }}</span>
+                    @if (data.isActive) {
+                        <span class="aor-card__pill aor-card__pill--active">Active</span>
+                    } @else {
+                        <span class="aor-card__pill aor-card__pill--inactive">Inactive</span>
+                    }
+                </div>
+                <div class="aor-card__sub">
+                    <i class="pi pi-map-marker"></i>
+                    @if (data.locationEN) {
+                        <span>{{ data.unitName }} · {{ data.locationEN }}</span>
+                    } @else {
+                        <span>{{ data.unitName }}</span>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="aor-card__actions">
+            <button type="button" class="aor-card__icon-btn" title="View" (click)="onView()">
+                <i class="pi pi-eye"></i>
+            </button>
+            <button type="button" class="aor-card__icon-btn" title="Edit" [disabled]="!canUpdate" (click)="onEdit()">
+                <i class="pi pi-pencil"></i>
+            </button>
+            <button type="button" class="aor-card__icon-btn" title="More" (click)="onMenu($event)">
+                <i class="pi pi-ellipsis-v"></i>
+            </button>
+            <button type="button" class="aor-card__icon-btn aor-card__icon-btn--danger" title="Delete" [disabled]="!canDelete" (click)="onDelete($event)">
+                <i class="pi pi-trash"></i>
+            </button>
+        </div>
+    </header>
+
+    <hr class="aor-card__rule">
+
+    <section class="aor-card__group">
+        <div class="aor-card__group-label">
+            Divisions <span class="aor-card__count">· {{ data.divisions.length }}</span>
+        </div>
+        @if (data.divisions.length === 0) {
+            <span class="aor-card__muted">None</span>
+        } @else {
+            <div class="aor-card__chips">
+                @for (name of data.divisions; track name) {
+                    <span class="aor-card__chip">{{ name }}</span>
+                }
+            </div>
+        }
+    </section>
+
+    <section class="aor-card__group">
+        <div class="aor-card__group-label">
+            Districts <span class="aor-card__count">· {{ data.districts.length }}</span>
+        </div>
+        @if (data.districts.length === 0) {
+            <span class="aor-card__muted">None</span>
+        } @else {
+            <div class="aor-card__chips">
+                @for (name of data.districts; track name) {
+                    <span class="aor-card__chip">{{ name }}</span>
+                }
+            </div>
+        }
+    </section>
+
+    <section class="aor-card__group">
+        <div class="aor-card__group-label">
+            Upazilas <span class="aor-card__count">· {{ data.upazilas.length }}</span>
+        </div>
+        @if (data.upazilas.length === 0) {
+            <span class="aor-card__muted">None</span>
+        } @else {
+            <div class="aor-card__chips">
+                @for (name of data.upazilas; track name) {
+                    <span class="aor-card__chip">{{ name }}</span>
+                }
+            </div>
+        }
+    </section>
+
+    @if (hasCamps) {
+        <footer class="aor-card__panel aor-card__panel--info">
+            <div class="aor-card__panel-icon"><i class="pi pi-flag"></i></div>
+            <div class="aor-card__panel-text">
+                <div class="aor-card__panel-title">{{ data.numberOfCamp ?? 0 }} camp(s) assigned</div>
+                @if (data.nameOfCamps) {
+                    <div class="aor-card__panel-sub">{{ data.nameOfCamps }}</div>
+                }
+            </div>
+        </footer>
+    } @else {
+        <footer class="aor-card__panel aor-card__panel--warn">
+            <div class="aor-card__panel-icon"><i class="pi pi-exclamation-triangle"></i></div>
+            <div class="aor-card__panel-text">
+                <div class="aor-card__panel-title">No camps assigned yet</div>
+                <div class="aor-card__panel-sub">Add operational camps to track deployments under this unit</div>
+            </div>
+            <button type="button" class="aor-card__panel-btn" [disabled]="!canUpdate" (click)="onAddCamp()">
+                <i class="pi pi-plus"></i><span>Add camp</span><i class="pi pi-arrow-up-right"></i>
+            </button>
+        </footer>
+    }
+</article>
