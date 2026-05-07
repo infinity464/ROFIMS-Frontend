@@ -229,9 +229,13 @@ export class AorCardComponent {
         }
     }
     isUpaLocked(id: number): boolean {
+        // An upazila that's already part of THIS AOR can never be "locked" - it must be removable
+        // even if the parent's ownership map mistakenly listed it (e.g. duplicate AOR rows).
+        if (this.data.upazilas.some((u) => u.id === id)) return false;
         return !!this.lockedUpazilas?.[id];
     }
     upaLockReason(id: number): string {
+        if (this.data.upazilas.some((u) => u.id === id)) return '';
         return this.lockedUpazilas?.[id] ?? '';
     }
 

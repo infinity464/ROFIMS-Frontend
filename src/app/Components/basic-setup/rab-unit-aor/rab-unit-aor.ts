@@ -226,11 +226,15 @@ export class RabUnitAor implements OnInit {
 
     /** Map of upazilaId -> { unitId, unitName } owned by another unit (not the currently-picked one). */
     private upazilaOwnership(): Map<number, { unitId: number; unitName: string }> {
-        const currentUnit = this.form?.value?.rabUnitId as number | null | undefined;
+        const currentUnitRaw = this.form?.value?.rabUnitId;
+        const currentUnitNum = currentUnitRaw != null ? Number(currentUnitRaw) : null;
         const map = new Map<number, { unitId: number; unitName: string }>();
         for (const aor of this.allAors) {
-            const ownerUnit = (aor as any).rabUnitId ?? (aor as any).RABUnitId;
-            if (!ownerUnit || ownerUnit === currentUnit) continue;
+            const ownerUnitRaw = (aor as any).rabUnitId ?? (aor as any).RABUnitId;
+            if (ownerUnitRaw == null) continue;
+            const ownerUnit = Number(ownerUnitRaw);
+            // Skip AORs owned by the currently-picked unit; these upazilas are editable, not "locked".
+            if (currentUnitNum != null && ownerUnit === currentUnitNum) continue;
             const csv = (aor as any).upazilaIds ?? (aor as any).UpazilaIds ?? '';
             for (const id of String(csv).split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n))) {
                 if (!map.has(id)) {
