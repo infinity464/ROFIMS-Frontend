@@ -153,10 +153,12 @@
                         [availableDivisions]="allDivisionsPool"
                         [availableDistricts]="allDistrictsPool"
                         [availableUpazilas]="allUpazilasPool"
+                        (view)="onCardView()"
+                        (edit)="onCardEdit($event)"
                         (delete)="removeAssignment($event.data, $event.event)"
-                        (addDivision)="onCardAddDivision($event)"
-                        (addDistrict)="onCardAddDistrict($event)"
-                        (addUpazila)="onCardAddUpazila($event)">
+                        (setDivisions)="onCardSetDivisions($event)"
+                        (setDistricts)="onCardSetDistricts($event)"
+                        (setUpazilas)="onCardSetUpazilas($event)">
                     </app-aor-card>
                 }
             </div>

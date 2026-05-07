@@ -307,6 +307,21 @@
             color: var(--accent);
         }
     }
+
+    &--locked {
+        cursor: not-allowed;
+        opacity: 0.7;
+
+        &:hover {
+            background: rgba(99, 102, 241, 0.08);
+        }
+    }
+}
+
+.aor-card__picker-lock {
+    margin-left: auto;
+    font-size: 0.7rem !important;
+    color: var(--aor-text-muted) !important;
 }
 
 .aor-card__picker-footer {

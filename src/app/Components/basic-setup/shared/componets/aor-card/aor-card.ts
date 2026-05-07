@@ -61,9 +61,10 @@ export class AorCardComponent {
     @Output() menu = new EventEmitter<{ data: AorCardData; event: MouseEvent }>();
     @Output() delete = new EventEmitter<{ data: AorCardData; event: MouseEvent }>();
     @Output() addCamp = new EventEmitter<AorCardData>();
-    @Output() addDivision = new EventEmitter<AorAddPayload>();
-    @Output() addDistrict = new EventEmitter<AorAddPayload>();
-    @Output() addUpazila = new EventEmitter<AorAddPayload>();
+    /** Emitted with the final desired set of IDs for that group after the popover closes. */
+    @Output() setDivisions = new EventEmitter<AorAddPayload>();
+    @Output() setDistricts = new EventEmitter<AorAddPayload>();
+    @Output() setUpazilas = new EventEmitter<AorAddPayload>();
 
     divFilter = '';
     distFilter = '';
@@ -104,31 +105,39 @@ export class AorCardComponent {
         return { shown: list.slice(0, this.chipPreviewLimit), more: list.length - this.chipPreviewLimit };
     }
 
-    /** Divisions still addable to this AOR. */
-    divisionsToAdd(): AorChip[] {
-        const taken = new Set(this.data.divisions.map((d) => d.id));
-        return (this.availableDivisions ?? []).filter((d) => !taken.has(d.id));
+    /** All divisions shown in the picker (everything available). */
+    divisionsForPicker(): AorChip[] {
+        return this.availableDivisions ?? [];
     }
 
-    /**
-     * Districts addable: parent division must be in this AOR (or matches the focused division
-     * when one is selected via chip click), and not already added.
-     */
-    districtsToAdd(): AorChipWithParent[] {
+    /** Districts shown in the picker: only those whose parent division is in the AOR. */
+    districtsForPicker(): AorChipWithParent[] {
         const allowedParents = this.focusedDivisionId != null
             ? new Set([this.focusedDivisionId])
             : new Set(this.data.divisions.map((d) => d.id));
-        const taken = new Set(this.data.districts.map((d) => d.id));
-        return (this.availableDistricts ?? []).filter((d) => allowedParents.has(d.parentId) && !taken.has(d.id));
+        if (allowedParents.size === 0) return [];
+        return (this.availableDistricts ?? []).filter((d) => allowedParents.has(d.parentId));
     }
 
-    /** Upazilas addable: parent district must be in this AOR (or focused), and not already added. */
-    upazilasToAdd(): AorChipWithParent[] {
+    /** Upazilas shown in the picker: only those whose parent district is in the AOR. */
+    upazilasForPicker(): AorChipWithParent[] {
         const allowedParents = this.focusedDistrictId != null
             ? new Set([this.focusedDistrictId])
             : new Set(this.data.districts.map((d) => d.id));
-        const taken = new Set(this.data.upazilas.map((u) => u.id));
-        return (this.availableUpazilas ?? []).filter((u) => allowedParents.has(u.parentId) && !taken.has(u.id));
+        if (allowedParents.size === 0) return [];
+        return (this.availableUpazilas ?? []).filter((u) => allowedParents.has(u.parentId));
+    }
+
+    /**
+     * Cascade-protection: only allow unchecking a parent when no child of it is currently
+     * in the AOR (data, not the picker's in-flight selection — which is empty when only the
+     * parent's popover is open).
+     */
+    canUncheckDivision(id: number): boolean {
+        return !this.data.districts.some((d) => d.parentId === id);
+    }
+    canUncheckDistrict(id: number): boolean {
+        return !this.data.upazilas.some((u) => u.parentId === id);
     }
 
     /** Districts shown in the chip list - filtered by focused division when set. */
@@ -198,36 +207,62 @@ export class AorCardComponent {
         this.addCamp.emit(this.data);
     }
 
+    /** Toggle requested in the picker; blocks unchecking parents that still have children. */
     toggleDivPick(id: number): void {
-        if (this.divPicked.has(id)) this.divPicked.delete(id);
-        else this.divPicked.add(id);
+        if (this.divPicked.has(id)) {
+            if (!this.canUncheckDivision(id)) return; // has districts under it
+            this.divPicked.delete(id);
+        } else {
+            this.divPicked.add(id);
+        }
     }
     toggleDistPick(id: number): void {
-        if (this.distPicked.has(id)) this.distPicked.delete(id);
-        else this.distPicked.add(id);
+        if (this.distPicked.has(id)) {
+            if (!this.canUncheckDistrict(id)) return; // has upazilas under it
+            this.distPicked.delete(id);
+        } else {
+            this.distPicked.add(id);
+        }
     }
     toggleUpaPick(id: number): void {
         if (this.upaPicked.has(id)) this.upaPicked.delete(id);
         else this.upaPicked.add(id);
     }
 
-    /** Popover (onHide) handlers: commit any picked items, then clear local state. */
-    commitDivPicks(): void {
-        const ids = Array.from(this.divPicked);
-        this.divPicked.clear();
+    /** Popover onShow: hydrate the picker state from the current AOR. */
+    initDivPicks(): void {
+        this.divPicked = new Set(this.data.divisions.map((d) => d.id));
         this.divFilter = '';
-        if (ids.length) this.addDivision.emit({ data: this.data, ids });
+    }
+    initDistPicks(): void {
+        this.distPicked = new Set(this.data.districts.map((d) => d.id));
+        this.distFilter = '';
+    }
+    initUpaPicks(): void {
+        this.upaPicked = new Set(this.data.upazilas.map((u) => u.id));
+        this.upaFilter = '';
+    }
+
+    /** Popover onHide: emit the final desired set if anything changed. */
+    commitDivPicks(): void {
+        const next = Array.from(this.divPicked).sort((a, b) => a - b);
+        const prev = this.data.divisions.map((d) => d.id).sort((a, b) => a - b);
+        if (next.length !== prev.length || next.some((v, i) => v !== prev[i])) {
+            this.setDivisions.emit({ data: this.data, ids: next });
+        }
     }
     commitDistPicks(): void {
-        const ids = Array.from(this.distPicked);
-        this.distPicked.clear();
-        this.distFilter = '';
-        if (ids.length) this.addDistrict.emit({ data: this.data, ids });
+        const next = Array.from(this.distPicked).sort((a, b) => a - b);
+        const prev = this.data.districts.map((d) => d.id).sort((a, b) => a - b);
+        if (next.length !== prev.length || next.some((v, i) => v !== prev[i])) {
+            this.setDistricts.emit({ data: this.data, ids: next });
+        }
     }
     commitUpaPicks(): void {
-        const ids = Array.from(this.upaPicked);
-        this.upaPicked.clear();
-        this.upaFilter = '';
-        if (ids.length) this.addUpazila.emit({ data: this.data, ids });
+        const next = Array.from(this.upaPicked).sort((a, b) => a - b);
+        const prev = this.data.upazilas.map((u) => u.id).sort((a, b) => a - b);
+        if (next.length !== prev.length || next.some((v, i) => v !== prev[i])) {
+            this.setUpazilas.emit({ data: this.data, ids: next });
+        }
     }
 }

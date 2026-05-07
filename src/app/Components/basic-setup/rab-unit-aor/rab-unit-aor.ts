@@ -357,19 +357,18 @@ export class RabUnitAor implements OnInit {
         };
     }
 
-    /** Apply an inline-add from a card (one or more ids) and persist via UpdateAsyn. */
-    private addToAor(payload: AorAddPayload, kind: 'division' | 'district' | 'upazila'): void {
+    /** Replace one of the AOR's lists (divisions/districts/upazilas) with the picker's final set. */
+    private setOnAor(payload: AorAddPayload, kind: 'division' | 'district' | 'upazila'): void {
         const row = this.assigned.find((r) => r.aorId === payload.data.aorId);
-        if (!row || !payload.ids?.length) return;
+        if (!row) return;
 
-        const divIds = row.divisions.map((d) => d.id);
-        const distIds = row.districts.map((d) => d.id);
-        const upaIds = row.upazilas.map((u) => u.id);
+        let divIds = row.divisions.map((d) => d.id);
+        let distIds = row.districts.map((d) => d.id);
+        let upaIds = row.upazilas.map((u) => u.id);
 
-        const target = kind === 'division' ? divIds : kind === 'district' ? distIds : upaIds;
-        for (const id of payload.ids) {
-            if (!target.includes(id)) target.push(id);
-        }
+        if (kind === 'division') divIds = [...payload.ids];
+        else if (kind === 'district') distIds = [...payload.ids];
+        else upaIds = [...payload.ids];
 
         const user = this.shareService.getCurrentUser() ?? 'System';
         const now = this.shareService.getCurrentDateTime();
@@ -396,8 +395,7 @@ export class RabUnitAor implements OnInit {
             .subscribe({
                 next: (res) => {
                     if (res?.statusCode === 200) {
-                        const n = payload.ids.length;
-                        this.messageService.add({ severity: 'success', summary: 'Added', detail: `${n} ${kind}${n > 1 ? 's' : ''} added` });
+                        this.messageService.add({ severity: 'success', summary: 'Saved', detail: `${kind}s updated` });
                         this.loadAssigned(rabUnitId);
                     } else {
                         this.messageService.add({ severity: 'warn', summary: 'Warning', detail: res?.description ?? 'Update failed' });
@@ -413,14 +411,45 @@ export class RabUnitAor implements OnInit {
             });
     }
 
-    onCardAddDivision(payload: AorAddPayload): void {
-        this.addToAor(payload, 'division');
+    onCardView(): void {
+        this._router.navigate(['/basic-setup/rab-unit-aor-map']);
     }
-    onCardAddDistrict(payload: AorAddPayload): void {
-        this.addToAor(payload, 'district');
+
+    /** Populate the form with the clicked AOR's values and scroll to the top. */
+    onCardEdit(row: AorCardData): void {
+        const divisionIds = row.divisions.map((d) => d.id);
+        const districtIds = row.districts.map((d) => d.id);
+        const upazilaIds = row.upazilas.map((u) => u.id);
+
+        // Refresh dependent option lists so the multiselects render with selections.
+        if (divisionIds.length) this.loadDistrictsForDivisions(divisionIds);
+        if (districtIds.length) this.loadUpazilasForDistricts(districtIds);
+
+        this.form.patchValue(
+            {
+                divisionIds,
+                districtIds,
+                upazilaIds,
+                locationOfBattalionHQ: row.locationEN ?? null,
+                locationOfBattalionHQBangla: row.locationBN ?? null,
+                numberOfCamp: row.numberOfCamp ?? null,
+                nameOfCamps: row.nameOfCamps ?? null,
+                identificationColor: row.color ?? null
+            },
+            { emitEvent: false }
+        );
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-    onCardAddUpazila(payload: AorAddPayload): void {
-        this.addToAor(payload, 'upazila');
+
+    onCardSetDivisions(payload: AorAddPayload): void {
+        this.setOnAor(payload, 'division');
+    }
+    onCardSetDistricts(payload: AorAddPayload): void {
+        this.setOnAor(payload, 'district');
+    }
+    onCardSetUpazilas(payload: AorAddPayload): void {
+        this.setOnAor(payload, 'upazila');
     }
 
     private loadAssigned(rabUnitId: number): void {
