@@ -15,6 +15,7 @@ import { MessageService } from 'primeng/api';
 import { AuthenticationService } from '../Service/authentication';
 import { UserMenuService } from '@/services/user-menu.service';
 import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
+import { IdentityUserRabUnitAccessService } from '@/services/identity-user-rab-unit-access.service';
 import { AppFloatingConfigurator } from '@/layout/component/app.floatingconfigurator';
 
 @Component({
@@ -57,7 +58,8 @@ export class Login implements OnInit {
     private router: Router,
     private messageService: MessageService,
     private userMenuService: UserMenuService,
-    private memberTypeAccess: IdentityUserMemberTypeAccessService
+    private memberTypeAccess: IdentityUserMemberTypeAccessService,
+    private rabUnitAccess: IdentityUserRabUnitAccessService
   ) {}
 
   ngOnInit(): void {
@@ -90,10 +92,11 @@ export class Login implements OnInit {
           this.auth.setRememberMeEmail(null);
         }
 
-        // Cache this user's allowed member-type IDs so other screens don't refetch.
-        // Fire-and-forget: errors are swallowed inside the service; navigation proceeds regardless.
+        // Cache this user's allowed member-type and RAB-unit IDs so other screens don't refetch.
+        // Fire-and-forget: errors are swallowed inside the services; navigation proceeds regardless.
         if (res.userId) {
           this.memberTypeAccess.cacheForUser(res.userId).subscribe();
+          this.rabUnitAccess.cacheForUser(res.userId).subscribe();
         }
 
         // Load user menus based on role, then navigate

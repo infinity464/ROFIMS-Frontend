@@ -4,6 +4,7 @@ import { Observable, tap, map, throwError, catchError } from 'rxjs';
 import { environment } from '../../../../Core/Environments/environment';
 import { LoginResponse } from '../Model/login-response.model';
 import { MEMBER_TYPE_ACCESS_CACHE_KEY } from '@/services/identity-user-member-type-access.service';
+import { RAB_UNIT_ACCESS_CACHE_KEY } from '@/services/identity-user-rab-unit-access.service';
 
 const REMEMBER_ME_EMAIL_KEY = 'remember_me_email';
 
@@ -161,6 +162,7 @@ export class AuthenticationService {
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem(MEMBER_TYPE_ACCESS_CACHE_KEY);
+    localStorage.removeItem(RAB_UNIT_ACCESS_CACHE_KEY);
     localStorage.removeItem('user_menus');
   }
 }
