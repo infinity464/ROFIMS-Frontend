@@ -103,33 +103,35 @@
         </p-select>
     </div>
 
-    <div class="card mt-4 aor-list-card">
-        @if (assignedLoading) {
-            <div class="py-2">Loading...</div>
-        } @else if (form.value.rabUnitId && assigned.length === 0) {
-            <div class="text-color-secondary py-2">No area assigned. Use the form above to add.</div>
-        } @else if (assigned.length > 0) {
-            <div class="aor-card-grid">
-                @for (row of assigned; track row.aorId) {
-                    <app-aor-card
-                        [data]="row"
-                        [canDelete]="canDelete"
-                        [canUpdate]="canUpdate"
-                        [availableDivisions]="allDivisionsPool"
-                        [availableDistricts]="allDistrictsPool"
-                        [availableUpazilas]="upazilasPoolForCard"
-                        [lockedUpazilas]="lockedUpazilas"
-                        (view)="onCardView()"
-                        (edit)="onCardEdit($event)"
-                        (delete)="removeAssignment($event.data, $event.event)"
-                        (setDivisions)="onCardSetDivisions($event)"
-                        (setDistricts)="onCardSetDistricts($event)"
-                        (setUpazilas)="onCardSetUpazilas($event)"
-                        (lockedUpazilaClick)="onLockedUpazilaClick($event)">
-                    </app-aor-card>
-                }
-            </div>
-        }
-    </div>
+    @if (assignedLoading || form.value.rabUnitId || assigned.length > 0) {
+        <div class="card mt-4 aor-list-card">
+            @if (assignedLoading) {
+                <div class="py-2">Loading...</div>
+            } @else if (form.value.rabUnitId && assigned.length === 0) {
+                <div class="text-color-secondary py-2">No area assigned. Use the form above to add.</div>
+            } @else if (assigned.length > 0) {
+                <div class="aor-card-grid">
+                    @for (row of assigned; track row.aorId) {
+                        <app-aor-card
+                            [data]="row"
+                            [canDelete]="canDelete"
+                            [canUpdate]="canUpdate"
+                            [availableDivisions]="allDivisionsPool"
+                            [availableDistricts]="allDistrictsPool"
+                            [availableUpazilas]="upazilasPoolForCard"
+                            [lockedUpazilas]="lockedUpazilas"
+                            (view)="onCardView()"
+                            (edit)="onCardEdit($event)"
+                            (delete)="removeAssignment($event.data, $event.event)"
+                            (setDivisions)="onCardSetDivisions($event)"
+                            (setDistricts)="onCardSetDistricts($event)"
+                            (setUpazilas)="onCardSetUpazilas($event)"
+                            (lockedUpazilaClick)="onLockedUpazilaClick($event)">
+                        </app-aor-card>
+                    }
+                </div>
+            }
+        </div>
+    }
 </p-fluid>
 
