@@ -3,10 +3,22 @@
 }
 
 :host ::ng-deep .user-list-table {
-  .p-datatable-tbody > tr > td,
+  .p-datatable-tbody > tr > td {
+    padding-top: 0.65rem;
+    padding-bottom: 0.65rem;
+    vertical-align: middle;
+  }
+
   .p-datatable-thead > tr > th {
-    padding-top: 0.4rem;
-    padding-bottom: 0.4rem;
+    padding-top: 0.6rem;
+    padding-bottom: 0.6rem;
+    color: var(--text-color-secondary);
+    font-weight: 600;
+  }
+
+  .user-avatar {
+    line-height: 1;
+    letter-spacing: 0.02em;
   }
 
   .p-tag {

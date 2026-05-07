@@ -145,6 +145,40 @@
             }
           </div>
           <div class="field md:col-span-2">
+            <label for="rabUnitIds" class="block mb-2 font-medium">Accessible RAB Units</label>
+            <p class="text-sm text-color-secondary mb-2">
+              Pick the RAB Units whose data this user is allowed to see. Leave empty to grant access to
+              <strong>all units</strong>, or pick one or more to restrict the user to those specific units only.
+            </p>
+            @if (rabUnits.length === 0) {
+              <div class="p-3 border border-surface rounded text-sm text-color-secondary">
+                No RAB units available yet. Add them from
+                <span class="font-medium">Basic Setup &rarr; RAB Unit</span>, then come back here.
+              </div>
+            } @else {
+              <p-multiSelect
+                inputId="rabUnitIds"
+                formControlName="rabUnitIds"
+                [options]="rabUnits"
+                optionLabel="label"
+                optionValue="value"
+                [filter]="true"
+                [showToggleAll]="true"
+                display="chip"
+                placeholder="All units (no restriction)"
+                appendTo="body"
+                styleClass="w-full"
+              />
+              <small class="text-color-secondary block mt-1">
+                {{ (form.get('rabUnitIds')?.value?.length ?? 0) }} of {{ rabUnits.length }} selected
+                @if ((form.get('rabUnitIds')?.value?.length ?? 0) === 0) {
+                  &nbsp;— user can access all units.
+                }
+              </small>
+            }
+          </div>
+
+          <div class="field md:col-span-2">
             <label class="block mb-2 font-medium">Accessible Member Types</label>
             <p class="text-sm text-color-secondary mb-2">
               Pick the member types whose data this user is allowed to see across the system.
@@ -220,67 +254,83 @@
       [rowsPerPageOptions]="[10, 25, 50]"
       size="small"
       styleClass="user-list-table"
-      [globalFilterFields]="['email','userName','phoneNumber','roleName','employeeName','employeeMeta','memberTypeNamesJoined']"
+      [globalFilterFields]="['email','userName','phoneNumber','roleName','employeeName','employeeMeta','memberTypeNamesJoined','rabUnitNamesJoined']"
     >
       <ng-template pTemplate="caption">
         <div class="flex flex-wrap items-center justify-between gap-2">
           <p-iconField iconPosition="left">
             <p-inputIcon styleClass="pi pi-search" />
             <input
-              #searchInput
               pInputText
               type="text"
               placeholder="Search users…"
               (input)="dt.filterGlobal($any($event.target).value, 'contains')"
             />
           </p-iconField>
-          <p-button
-            icon="pi pi-filter-slash"
-            label="Clear"
-            [text]="true"
-            size="small"
-            severity="secondary"
-            (onClick)="dt.clear(); searchInput.value = ''"
-            pTooltip="Clear all filters and sort"
-          />
         </div>
       </ng-template>
 
       <ng-template pTemplate="header">
         <tr>
-          <th>Email</th>
-          <th>User Name</th>
-          <th>Phone</th>
-          <th>Role</th>
-          <th>Mapped Employee</th>
-          <th>Member Type Access</th>
-          <th style="width: 8rem">Status</th>
-          <th style="width: 9rem">Action</th>
+          <th class="uppercase text-xs tracking-wide">User</th>
+          <th class="uppercase text-xs tracking-wide" style="width: 7rem">Role</th>
+          <th class="uppercase text-xs tracking-wide">Mapped Employee</th>
+          <th class="uppercase text-xs tracking-wide" style="width: 8rem">Type Access</th>
+          <th class="uppercase text-xs tracking-wide" style="width: 8rem">Unit Access</th>
+          <th class="uppercase text-xs tracking-wide" style="width: 7rem">Status</th>
+          <th class="uppercase text-xs tracking-wide" style="width: 9rem">Actions</th>
         </tr>
       </ng-template>
       <ng-template pTemplate="body" let-user>
         <tr>
-          <td>{{ user.email }}</td>
-          <td>{{ user.userName ?? '-' }}</td>
-          <td>{{ user.phoneNumber ?? '-' }}</td>
-          <td>{{ user.roleName ?? '-' }}</td>
+          <!-- USER -->
           <td>
-            @if (user.employeeName) {
-              <div class="font-medium leading-tight">{{ user.employeeName }}</div>
-              @if (user.employeeMeta) {
-                <div class="text-xs text-color-secondary leading-tight">{{ user.employeeMeta }}</div>
+            <div class="leading-tight min-w-0">
+              <div class="font-semibold truncate">{{ user.userName || user.email }}</div>
+              @if (user.userName && user.email && user.userName !== user.email) {
+                <div class="text-xs text-color-secondary truncate">{{ user.email }}</div>
               }
+              <div class="text-xs text-color-secondary flex items-center gap-1 mt-0.5">
+                <i class="pi pi-phone text-[10px]"></i>
+                <span>{{ user.phoneNumber || 'No phone' }}</span>
+              </div>
+            </div>
+          </td>
+
+          <!-- ROLE -->
+          <td>
+            @if (user.roleName) {
+              <span
+                class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold"
+                [class]="getRolePillClass(user.roleName)"
+              >
+                {{ user.roleName }}
+              </span>
             } @else {
-              <span class="text-color-secondary">-</span>
+              <span class="text-color-secondary">—</span>
             }
           </td>
+
+          <!-- MAPPED EMPLOYEE -->
+          <td>
+            @if (user.employeeName) {
+              <div class="font-semibold leading-tight">{{ user.employeeName }}</div>
+              @if (user.serviceId) {
+                <div class="text-xs text-color-secondary leading-tight">Service {{ user.serviceId }}</div>
+              }
+            } @else {
+              <span class="text-color-secondary">—</span>
+            }
+          </td>
+
+          <!-- TYPE ACCESS -->
           <td>
             @if (!user.memberTypeNames?.length) {
-              <span class="text-color-secondary">-</span>
+              <span class="text-color-secondary">—</span>
             } @else if (memberTypes.length > 0 && user.memberTypeNames.length === memberTypes.length) {
               <p-tag
                 severity="success"
-                [value]="'All (' + user.memberTypeNames.length + ')'"
+                value="All"
                 [pTooltip]="user.memberTypeNames.join(', ')"
                 tooltipPosition="top"
               />
@@ -292,9 +342,39 @@
               </div>
             }
           </td>
+
+          <!-- UNIT ACCESS -->
+          <td>
+            @if (!user.rabUnitNames?.length) {
+              <p-tag severity="success" value="All units" pTooltip="No restriction — full RAB Unit access" tooltipPosition="top" />
+            } @else if (rabUnits.length > 0 && user.rabUnitNames.length === rabUnits.length) {
+              <p-tag
+                severity="success"
+                [value]="'All (' + user.rabUnitNames.length + ')'"
+                [pTooltip]="user.rabUnitNames.join(', ')"
+                tooltipPosition="top"
+              />
+            } @else {
+              <div class="flex flex-wrap items-center gap-1">
+                @for (name of user.rabUnitNames.slice(0, 3); track name) {
+                  <p-tag [value]="name" severity="info" />
+                }
+                @if (user.rabUnitNames.length > 3) {
+                  <p-tag
+                    [value]="'+' + (user.rabUnitNames.length - 3) + ' more'"
+                    severity="warn"
+                    [pTooltip]="user.rabUnitNames.join(', ')"
+                    tooltipPosition="top"
+                  />
+                }
+              </div>
+            }
+          </td>
+
+          <!-- STATUS -->
           <td>
             <span
-              class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium"
+              class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
               [class]="user.isActive ? 'bg-green-500/10 text-green-700 dark:text-green-400' : 'bg-red-500/10 text-red-700 dark:text-red-400'"
             >
               <span
@@ -304,6 +384,8 @@
               {{ user.isActive ? 'Active' : 'Disabled' }}
             </span>
           </td>
+
+          <!-- ACTIONS -->
           <td>
             <div class="flex gap-1">
               <p-button
@@ -344,7 +426,7 @@
       </ng-template>
       <ng-template pTemplate="emptymessage">
         <tr>
-          <td colspan="8" class="text-center text-color-secondary">No users found.</td>
+          <td colspan="7" class="text-center text-color-secondary">No users found.</td>
         </tr>
       </ng-template>
     </p-table>
