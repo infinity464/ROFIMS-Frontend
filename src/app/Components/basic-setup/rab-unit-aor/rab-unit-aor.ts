@@ -21,7 +21,7 @@ import { MasterBasicSetupService } from '../shared/services/MasterBasicSetupServ
 import { SharedService } from '@/shared/services/shared-service';
 import { CommonCode } from '../shared/models/common-code';
 import { RABUnitAORModel } from '../shared/models/rab-unit-aor';
-import { AorCardComponent, AorCardData } from '../shared/componets/aor-card/aor-card';
+import { AorAddPayload, AorCardComponent, AorCardData, AorChip, AorChipWithParent } from '../shared/componets/aor-card/aor-card';
 
 type Option = { label: string; value: number };
 type AssignedRow = AorCardData;
@@ -65,6 +65,11 @@ export class RabUnitAor implements OnInit {
     districtOptions: Option[] = [];
     upazilaOptions: Option[] = [];
 
+    /** Pool of every division/district/upazila — used by AOR cards' inline pickers. */
+    allDivisionsPool: AorChip[] = [];
+    allDistrictsPool: AorChipWithParent[] = [];
+    allUpazilasPool: AorChipWithParent[] = [];
+
     assigned: AssignedRow[] = [];
     assignedLoading = false;
 
@@ -96,6 +101,7 @@ export class RabUnitAor implements OnInit {
 
         this.loadRabUnits();
         this.loadDivisions();
+        this.loadAllPools();
 
         this.form.get('divisionIds')?.valueChanges.subscribe((divisionIds: number[]) => {
             if (!divisionIds?.length) {
@@ -140,6 +146,29 @@ export class RabUnitAor implements OnInit {
             },
             error: (err: any) => {
                 this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load divisions' });
+            }
+        });
+    }
+
+    private loadAllPools(): void {
+        forkJoin({
+            divisions: this.master.getAllByType('Division'),
+            districts: this.master.getAllByType('District'),
+            upazilas: this.master.getAllByType('Upazila')
+        }).subscribe({
+            next: ({ divisions, districts, upazilas }) => {
+                this.allDivisionsPool = (divisions ?? [])
+                    .map((d) => ({ id: d.codeId, name: d.codeValueEN ?? '' }))
+                    .sort((a, b) => a.name.localeCompare(b.name));
+                this.allDistrictsPool = (districts ?? [])
+                    .map((d) => ({ id: d.codeId, name: d.codeValueEN ?? '', parentId: d.parentCodeId ?? 0 }))
+                    .sort((a, b) => a.name.localeCompare(b.name));
+                this.allUpazilasPool = (upazilas ?? [])
+                    .map((u) => ({ id: u.codeId, name: u.codeValueEN ?? '', parentId: u.parentCodeId ?? 0 }))
+                    .sort((a, b) => a.name.localeCompare(b.name));
+            },
+            error: (err: any) => {
+                this.messageService.add({ severity: 'warn', summary: 'Warning', detail: err?.error?.message || 'Failed to load pools' });
             }
         });
     }
@@ -288,12 +317,27 @@ export class RabUnitAor implements OnInit {
         return ids.map((id) => map[id] ?? String(id)).filter((s) => s);
     }
 
+    private resolveDivisions(ids: number[]): AorChip[] {
+        const byId = new Map(this.allDivisionsPool.map((d) => [d.id, d]));
+        return ids.map((id) => byId.get(id) ?? { id, name: String(id) });
+    }
+
+    private resolveDistricts(ids: number[]): AorChipWithParent[] {
+        const byId = new Map(this.allDistrictsPool.map((d) => [d.id, d]));
+        return ids.map((id) => byId.get(id) ?? { id, name: String(id), parentId: 0 });
+    }
+
+    private resolveUpazilas(ids: number[]): AorChipWithParent[] {
+        const byId = new Map(this.allUpazilasPool.map((u) => [u.id, u]));
+        return ids.map((id) => byId.get(id) ?? { id, name: String(id), parentId: 0 });
+    }
+
     private buildAssignedRow(
         r: any,
         rabUnitId: number,
-        divisionMap: Record<number, string>,
-        districtMap: Record<number, string>,
-        upazilaMap: Record<number, string>
+        _divisionMap: Record<number, string>,
+        _districtMap: Record<number, string>,
+        _upazilaMap: Record<number, string>
     ): AssignedRow {
         const divIds = this.csvToIds(r.divisionIds ?? r.DivisionIds);
         const distIds = this.csvToIds(r.districtIds ?? r.DistrictIds);
@@ -305,12 +349,78 @@ export class RabUnitAor implements OnInit {
             isActive: r.status ?? r.Status ?? true,
             locationEN: r.locationOfBattalionHQ ?? r.LocationOfBattalionHQ ?? null,
             locationBN: r.locationOfBattalionHQBangla ?? r.LocationOfBattalionHQBangla ?? null,
-            divisions: this.idsToList(divIds, divisionMap),
-            districts: this.idsToList(distIds, districtMap),
-            upazilas: this.idsToList(upaIds, upazilaMap),
+            divisions: this.resolveDivisions(divIds),
+            districts: this.resolveDistricts(distIds),
+            upazilas: this.resolveUpazilas(upaIds),
             numberOfCamp: r.numberOfCamp ?? r.NumberOfCamp ?? null,
             nameOfCamps: r.nameOfCamps ?? r.NameOfCamps ?? null
         };
+    }
+
+    /** Apply an inline-add from a card (one or more ids) and persist via UpdateAsyn. */
+    private addToAor(payload: AorAddPayload, kind: 'division' | 'district' | 'upazila'): void {
+        const row = this.assigned.find((r) => r.aorId === payload.data.aorId);
+        if (!row || !payload.ids?.length) return;
+
+        const divIds = row.divisions.map((d) => d.id);
+        const distIds = row.districts.map((d) => d.id);
+        const upaIds = row.upazilas.map((u) => u.id);
+
+        const target = kind === 'division' ? divIds : kind === 'district' ? distIds : upaIds;
+        for (const id of payload.ids) {
+            if (!target.includes(id)) target.push(id);
+        }
+
+        const user = this.shareService.getCurrentUser() ?? 'System';
+        const now = this.shareService.getCurrentDateTime();
+        const rabUnitId = this.form.value.rabUnitId as number;
+
+        this.master
+            .updateRABUnitAOR({
+                aorId: row.aorId,
+                rabUnitId,
+                divisionIds: this.toCsv(divIds),
+                districtIds: this.toCsv(distIds),
+                upazilaIds: this.toCsv(upaIds),
+                locationOfBattalionHQ: row.locationEN ?? null,
+                locationOfBattalionHQBangla: row.locationBN ?? null,
+                numberOfCamp: row.numberOfCamp ?? null,
+                nameOfCamps: row.nameOfCamps ?? null,
+                identificationColor: row.color ?? null,
+                status: row.isActive,
+                createdBy: user,
+                createdDate: now,
+                lastUpdatedBy: user,
+                lastupdate: now
+            })
+            .subscribe({
+                next: (res) => {
+                    if (res?.statusCode === 200) {
+                        const n = payload.ids.length;
+                        this.messageService.add({ severity: 'success', summary: 'Added', detail: `${n} ${kind}${n > 1 ? 's' : ''} added` });
+                        this.loadAssigned(rabUnitId);
+                    } else {
+                        this.messageService.add({ severity: 'warn', summary: 'Warning', detail: res?.description ?? 'Update failed' });
+                    }
+                },
+                error: (err) => {
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'Error',
+                        detail: err?.error?.description ?? err?.message ?? 'Failed to update'
+                    });
+                }
+            });
+    }
+
+    onCardAddDivision(payload: AorAddPayload): void {
+        this.addToAor(payload, 'division');
+    }
+    onCardAddDistrict(payload: AorAddPayload): void {
+        this.addToAor(payload, 'district');
+    }
+    onCardAddUpazila(payload: AorAddPayload): void {
+        this.addToAor(payload, 'upazila');
     }
 
     private loadAssigned(rabUnitId: number): void {

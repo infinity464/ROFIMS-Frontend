@@ -46,8 +46,9 @@
                         optionLabel="label"
                         optionValue="value"
                         styleClass="w-full"
-                        placeholder="Select one or more districts"
+                        [placeholder]="(form.value.divisionIds?.length ? 'Select one or more districts' : 'Select division first')"
                         [filter]="true"
+                        [disabled]="!form.value.divisionIds?.length"
                         formControlName="districtIds">
                     </p-multiselect>
                     @if (form.get('districtIds')?.invalid && form.get('districtIds')?.touched) {
@@ -62,8 +63,9 @@
                         optionLabel="label"
                         optionValue="value"
                         styleClass="w-full"
-                        placeholder="Select one or more upazilas"
+                        [placeholder]="(form.value.districtIds?.length ? 'Select one or more upazilas' : 'Select district first')"
                         [filter]="true"
+                        [disabled]="!form.value.districtIds?.length"
                         formControlName="upazilaIds">
                     </p-multiselect>
                     @if (form.get('upazilaIds')?.invalid && form.get('upazilaIds')?.touched) {
@@ -148,7 +150,13 @@
                         [data]="row"
                         [canDelete]="canDelete"
                         [canUpdate]="canUpdate"
-                        (delete)="removeAssignment($event.data, $event.event)">
+                        [availableDivisions]="allDivisionsPool"
+                        [availableDistricts]="allDistrictsPool"
+                        [availableUpazilas]="allUpazilasPool"
+                        (delete)="removeAssignment($event.data, $event.event)"
+                        (addDivision)="onCardAddDivision($event)"
+                        (addDistrict)="onCardAddDistrict($event)"
+                        (addUpazila)="onCardAddUpazila($event)">
                     </app-aor-card>
                 }
             </div>

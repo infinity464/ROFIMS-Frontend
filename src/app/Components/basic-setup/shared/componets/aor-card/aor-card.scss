@@ -26,6 +26,10 @@
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
     color: var(--aor-text);
     transition: border-color 0.15s, box-shadow 0.15s;
+    // Prevent the card from collapsing when filtering chips by focused division/district.
+    min-height: 380px;
+    display: flex;
+    flex-direction: column;
 
     &:hover {
         border-color: var(--accent);
@@ -199,6 +203,18 @@
     &:last-of-type {
         margin-bottom: 1rem;
     }
+
+    &--disabled {
+        opacity: 0.55;
+        pointer-events: none;
+    }
+}
+
+.aor-card__hint {
+    font-size: 0.72rem;
+    font-weight: 400;
+    color: var(--aor-text-muted);
+    font-style: italic;
 }
 
 .aor-card__group-label {
@@ -206,6 +222,109 @@
     font-weight: 600;
     margin-bottom: 0.45rem;
     color: var(--aor-text);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.aor-card__add-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    border: 1px dashed var(--aor-border);
+    background: transparent;
+    color: var(--aor-text-muted);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+
+    &:hover:not(:disabled) {
+        background: var(--aor-icon-btn-hover);
+        border-color: var(--accent);
+        color: var(--aor-text);
+    }
+
+    &:disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
+    }
+}
+
+.aor-card__picker {
+    display: flex;
+    flex-direction: column;
+    width: 240px;
+    max-height: 300px;
+}
+
+.aor-card__picker-search {
+    margin-bottom: 0.5rem;
+    width: 100%;
+}
+
+.aor-card__picker-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    flex: 1 1 auto;
+    border: 1px solid var(--aor-border);
+    border-radius: 6px;
+}
+
+.aor-card__picker-item {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background 0.12s;
+    border-bottom: 1px solid var(--aor-border);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    &:last-child {
+        border-bottom: none;
+    }
+
+    &:hover {
+        background: var(--aor-icon-btn-hover);
+    }
+
+    i {
+        font-size: 0.85rem;
+        color: var(--aor-text-muted);
+        transition: color 0.12s;
+    }
+
+    &--checked {
+        background: rgba(99, 102, 241, 0.08);
+
+        i {
+            color: var(--accent);
+        }
+    }
+}
+
+.aor-card__picker-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    margin-top: 0.5rem;
+    border-top: 1px solid var(--aor-border);
+    font-size: 0.8rem;
+    color: var(--aor-text-muted);
+}
+
+.aor-card__picker-empty {
+    padding: 0.6rem;
+    font-size: 0.8rem;
+    text-align: center;
+    color: var(--aor-text-muted);
 }
 
 .aor-card__count {
@@ -229,6 +348,25 @@
     font-size: 0.78rem;
     line-height: 1.4;
     border: 1px solid transparent;
+    font-family: inherit;
+
+    &--clickable {
+        cursor: pointer;
+        transition: filter 0.12s, box-shadow 0.12s, transform 0.06s;
+
+        &:hover {
+            filter: brightness(1.1);
+        }
+        &:active {
+            transform: translateY(1px);
+        }
+    }
+
+    &--focused {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+        box-shadow: 0 0 0 1px var(--aor-bg);
+    }
 
     &--overflow {
         background: transparent;
@@ -245,6 +383,8 @@
     padding: 0.9rem 1rem;
     border-radius: 10px;
     border: 1px solid transparent;
+    // Anchor to the bottom of the flex card so chip filtering doesn't pull it up.
+    margin-top: auto;
 
     &--warn {
         background: var(--aor-panel-warn-bg);

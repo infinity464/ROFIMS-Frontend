@@ -40,49 +40,175 @@
 
     <hr class="aor-card__rule">
 
+    <!-- Divisions -->
     <section class="aor-card__group">
         <div class="aor-card__group-label">
-            Divisions <span class="aor-card__count">· {{ data.divisions.length }}</span>
+            <span>Divisions <span class="aor-card__count">· {{ data.divisions.length }}</span></span>
+            <button type="button" class="aor-card__add-btn"
+                    [disabled]="!canUpdate || divisionsToAdd().length === 0"
+                    title="Add division"
+                    (click)="divPopover.toggle($event)">
+                <i class="pi pi-plus"></i>
+            </button>
         </div>
         @if (data.divisions.length === 0) {
             <span class="aor-card__muted">None</span>
         } @else {
             <div class="aor-card__chips">
-                @for (name of data.divisions; track name) {
-                    <span class="aor-card__chip">{{ name }}</span>
+                @for (item of data.divisions; track item.id) {
+                    <button type="button"
+                            class="aor-card__chip aor-card__chip--clickable"
+                            [class.aor-card__chip--focused]="focusedDivisionId === item.id"
+                            [title]="'Click to filter by ' + item.name"
+                            (click)="onDivisionClick(item.id)">
+                        {{ item.name }}
+                    </button>
                 }
             </div>
         }
+        <p-popover #divPopover [dismissable]="true" appendTo="body" (onHide)="commitDivPicks()">
+            <div class="aor-card__picker">
+                <input pInputText class="aor-card__picker-search" placeholder="Search division..." [(ngModel)]="divFilter">
+                <ul class="aor-card__picker-list">
+                    @for (opt of filtered(divisionsToAdd(), divFilter); track opt.id) {
+                        <li class="aor-card__picker-item"
+                            [class.aor-card__picker-item--checked]="divPicked.has(opt.id)"
+                            (click)="toggleDivPick(opt.id)">
+                            <i class="pi" [class.pi-check-square]="divPicked.has(opt.id)" [class.pi-stop]="!divPicked.has(opt.id)"></i>
+                            <span>{{ opt.name }}</span>
+                        </li>
+                    } @empty {
+                        <li class="aor-card__picker-empty">No options</li>
+                    }
+                </ul>
+                @if (divPicked.size > 0) {
+                    <div class="aor-card__picker-footer">
+                        <span>{{ divPicked.size }} selected</span>
+                        <button type="button" class="aor-card__panel-btn" (click)="divPopover.hide()">
+                            <i class="pi pi-check"></i><span>Save</span>
+                        </button>
+                    </div>
+                }
+            </div>
+        </p-popover>
     </section>
 
-    <section class="aor-card__group">
+    <!-- Districts -->
+    <section class="aor-card__group" [class.aor-card__group--disabled]="data.divisions.length === 0">
         <div class="aor-card__group-label">
-            Districts <span class="aor-card__count">· {{ data.districts.length }}</span>
+            <span>
+                Districts
+                <span class="aor-card__count">· {{ visibleDistricts().length }}@if (focusedDivisionId != null && data.districts.length !== visibleDistricts().length) { / {{ data.districts.length }} }</span>
+            </span>
+            <button type="button" class="aor-card__add-btn"
+                    [disabled]="!canUpdate || data.divisions.length === 0 || districtsToAdd().length === 0"
+                    title="Add district"
+                    (click)="distPopover.toggle($event)">
+                <i class="pi pi-plus"></i>
+            </button>
         </div>
-        @if (data.districts.length === 0) {
+        @if (visibleDistricts().length === 0) {
             <span class="aor-card__muted">None</span>
         } @else {
             <div class="aor-card__chips">
-                @for (name of data.districts; track name) {
-                    <span class="aor-card__chip">{{ name }}</span>
+                @for (item of visibleDistricts(); track item.id) {
+                    <button type="button"
+                            class="aor-card__chip aor-card__chip--clickable"
+                            [class.aor-card__chip--focused]="focusedDistrictId === item.id"
+                            [title]="'Click to filter by ' + item.name"
+                            (click)="onDistrictClick(item.id)">
+                        {{ item.name }}
+                    </button>
                 }
             </div>
         }
+        <p-popover #distPopover [dismissable]="true" appendTo="body" (onHide)="commitDistPicks()">
+            <div class="aor-card__picker">
+                <input pInputText class="aor-card__picker-search" placeholder="Search district..." [(ngModel)]="distFilter">
+                <ul class="aor-card__picker-list">
+                    @for (opt of filtered(districtsToAdd(), distFilter); track opt.id) {
+                        <li class="aor-card__picker-item"
+                            [class.aor-card__picker-item--checked]="distPicked.has(opt.id)"
+                            (click)="toggleDistPick(opt.id)">
+                            <i class="pi" [class.pi-check-square]="distPicked.has(opt.id)" [class.pi-stop]="!distPicked.has(opt.id)"></i>
+                            <span>{{ opt.name }}</span>
+                        </li>
+                    } @empty {
+                        <li class="aor-card__picker-empty">
+                            @if (data.divisions.length === 0) {
+                                Add a division first
+                            } @else {
+                                No options
+                            }
+                        </li>
+                    }
+                </ul>
+                @if (distPicked.size > 0) {
+                    <div class="aor-card__picker-footer">
+                        <span>{{ distPicked.size }} selected</span>
+                        <button type="button" class="aor-card__panel-btn" (click)="distPopover.hide()">
+                            <i class="pi pi-check"></i><span>Save</span>
+                        </button>
+                    </div>
+                }
+            </div>
+        </p-popover>
     </section>
 
-    <section class="aor-card__group">
+    <!-- Upazilas -->
+    <section class="aor-card__group" [class.aor-card__group--disabled]="data.districts.length === 0">
         <div class="aor-card__group-label">
-            Upazilas <span class="aor-card__count">· {{ data.upazilas.length }}</span>
+            <span>
+                Upazilas
+                <span class="aor-card__count">· {{ visibleUpazilas().length }}@if ((focusedDivisionId != null || focusedDistrictId != null) && data.upazilas.length !== visibleUpazilas().length) { / {{ data.upazilas.length }} }</span>
+            </span>
+            <button type="button" class="aor-card__add-btn"
+                    [disabled]="!canUpdate || data.districts.length === 0 || upazilasToAdd().length === 0"
+                    title="Add upazila"
+                    (click)="upaPopover.toggle($event)">
+                <i class="pi pi-plus"></i>
+            </button>
         </div>
-        @if (data.upazilas.length === 0) {
+        @if (visibleUpazilas().length === 0) {
             <span class="aor-card__muted">None</span>
         } @else {
             <div class="aor-card__chips">
-                @for (name of data.upazilas; track name) {
-                    <span class="aor-card__chip">{{ name }}</span>
+                @for (item of visibleUpazilas(); track item.id) {
+                    <span class="aor-card__chip">{{ item.name }}</span>
                 }
             </div>
         }
+        <p-popover #upaPopover [dismissable]="true" appendTo="body" (onHide)="commitUpaPicks()">
+            <div class="aor-card__picker">
+                <input pInputText class="aor-card__picker-search" placeholder="Search upazila..." [(ngModel)]="upaFilter">
+                <ul class="aor-card__picker-list">
+                    @for (opt of filtered(upazilasToAdd(), upaFilter); track opt.id) {
+                        <li class="aor-card__picker-item"
+                            [class.aor-card__picker-item--checked]="upaPicked.has(opt.id)"
+                            (click)="toggleUpaPick(opt.id)">
+                            <i class="pi" [class.pi-check-square]="upaPicked.has(opt.id)" [class.pi-stop]="!upaPicked.has(opt.id)"></i>
+                            <span>{{ opt.name }}</span>
+                        </li>
+                    } @empty {
+                        <li class="aor-card__picker-empty">
+                            @if (data.districts.length === 0) {
+                                Add a district first
+                            } @else {
+                                No options
+                            }
+                        </li>
+                    }
+                </ul>
+                @if (upaPicked.size > 0) {
+                    <div class="aor-card__picker-footer">
+                        <span>{{ upaPicked.size }} selected</span>
+                        <button type="button" class="aor-card__panel-btn" (click)="upaPopover.hide()">
+                            <i class="pi pi-check"></i><span>Save</span>
+                        </button>
+                    </div>
+                }
+            </div>
+        </p-popover>
     </section>
 
     @if (hasCamps) {
