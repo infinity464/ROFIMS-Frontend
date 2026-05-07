@@ -1,3 +1,437 @@
 :host {
   display: block;
 }
+
+.leave-apply-page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding-bottom: 5.5rem; // leaves room for the sticky action bar
+}
+
+// ───────── Page header ─────────
+.page-header {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--surface-border, rgba(255, 255, 255, 0.1));
+}
+
+.page-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0 0 0.25rem 0;
+  color: var(--text-color, #fff);
+}
+
+.page-subtitle {
+  font-size: 0.9rem;
+  color: var(--text-color-secondary, rgba(255, 255, 255, 0.6));
+  margin: 0;
+}
+
+// ───────── Section cards ─────────
+.form-section {
+  background: var(--surface-card, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.08));
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  margin-bottom: 1.25rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.section-header {
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--surface-border, rgba(255, 255, 255, 0.08));
+}
+
+.section-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 0.25rem 0;
+  color: var(--text-color, #fff);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  &::before {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 1.1rem;
+    border-radius: 2px;
+    background: var(--p-primary-color, #10b981);
+  }
+}
+
+.section-hint {
+  font-size: 0.85rem;
+  color: var(--text-color-secondary, rgba(255, 255, 255, 0.6));
+  display: block;
+  margin-left: calc(4px + 0.5rem); // align under title text, not the bar
+}
+
+.subsection-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.subsection-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--text-color, #fff);
+}
+
+// ───────── Field labels & hints ─────────
+.field-label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+  color: var(--text-color, #fff);
+}
+
+.field-hint {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-color-secondary, rgba(255, 255, 255, 0.55));
+  margin-top: 0.35rem;
+  line-height: 1.4;
+}
+
+.field-error {
+  display: inline-block;
+  font-size: 0.75rem;
+  color: var(--red-400, #f87171);
+  margin-top: 0.35rem;
+}
+
+.req {
+  color: var(--red-400, #f87171);
+  font-weight: 600;
+  margin-left: 2px;
+}
+
+.optional-tag {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--text-color-secondary, rgba(255, 255, 255, 0.6));
+  margin-left: 0.4rem;
+}
+
+// ───────── Apply-for toggle (radio-style buttons) ─────────
+.apply-for-toggle {
+  display: inline-flex;
+  background: var(--surface-ground, rgba(0, 0, 0, 0.25));
+  padding: 0.25rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.1));
+  width: 100%;
+  max-width: 360px;
+}
+
+.toggle-btn {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 0.6rem 1rem;
+  border-radius: 0.375rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-color-secondary, rgba(255, 255, 255, 0.65));
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover:not(.is-active) {
+    color: var(--text-color, #fff);
+    background: var(--surface-hover, rgba(255, 255, 255, 0.05));
+  }
+
+  &.is-active {
+    background: var(--p-primary-color, #10b981);
+    color: var(--p-primary-contrast-color, #fff);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--p-primary-color, #10b981);
+    outline-offset: 2px;
+  }
+}
+
+// ───────── Leave entries table ─────────
+.entries-table-wrap {
+  border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.1));
+  border-radius: 0.5rem;
+  overflow: hidden; // contains the rounded corners; overlays use appendTo="body"
+}
+
+.entries-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  thead th {
+    background: var(--surface-ground, rgba(0, 0, 0, 0.2));
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-color-secondary, rgba(255, 255, 255, 0.6));
+    text-align: left;
+    padding: 0.65rem 0.75rem;
+    border-bottom: 1px solid var(--surface-border, rgba(255, 255, 255, 0.1));
+  }
+
+  tbody td {
+    padding: 0.6rem 0.75rem;
+    vertical-align: top;
+    border-bottom: 1px solid var(--surface-border, rgba(255, 255, 255, 0.06));
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  tfoot td {
+    padding: 0.65rem 0.75rem;
+    background: var(--surface-ground, rgba(0, 0, 0, 0.15));
+    border-top: 1px solid var(--surface-border, rgba(255, 255, 255, 0.1));
+  }
+
+  .col-type { min-width: 200px; }
+  .col-date { min-width: 160px; }
+  .col-days { width: 110px; }
+  .col-action { width: 48px; }
+
+  .total-label {
+    text-align: right;
+    font-weight: 600;
+    color: var(--text-color, #fff);
+  }
+
+  .total-value {
+    font-weight: 600;
+  }
+
+  .days-cell {
+    white-space: nowrap;
+  }
+
+  .days-placeholder {
+    color: var(--text-color-secondary, rgba(255, 255, 255, 0.35));
+  }
+
+  .action-cell {
+    text-align: center;
+  }
+}
+
+.days-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--p-primary-color, #10b981);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  white-space: nowrap;
+
+  &.total {
+    background: rgba(16, 185, 129, 0.25);
+    font-size: 0.85rem;
+  }
+}
+
+// ───────── Reliever block ─────────
+.reliever-block {
+  background: var(--surface-ground, rgba(0, 0, 0, 0.15));
+  border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.08));
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+.reliever-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.reliever-label {
+  cursor: pointer;
+  line-height: 1.3;
+}
+
+.reliever-picker {
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px dashed var(--surface-border, rgba(255, 255, 255, 0.1));
+}
+
+.reliever-selected {
+  font-size: 0.85rem;
+  color: var(--p-primary-color, #10b981);
+  margin: 0.5rem 0 0 0;
+}
+
+// ───────── Attachments ─────────
+.attachments-empty {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem;
+  background: var(--surface-ground, rgba(0, 0, 0, 0.15));
+  border: 1px dashed var(--surface-border, rgba(255, 255, 255, 0.15));
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.empty-icon {
+  font-size: 1.75rem;
+  color: var(--text-color-secondary, rgba(255, 255, 255, 0.4));
+}
+
+.empty-title {
+  font-weight: 600;
+  margin: 0;
+  color: var(--text-color, #fff);
+}
+
+.empty-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-color-secondary, rgba(255, 255, 255, 0.6));
+  margin: 0.15rem 0 0 0;
+}
+
+.attachments-host {
+  // When the embedded form has no files yet, the empty state above already explains it,
+  // so visually push the file-references-form's own empty header down.
+  &:not(.has-files) {
+    :host ::ng-deep & h3 {
+      display: none;
+    }
+  }
+}
+
+// ───────── Sticky action bar ─────────
+// ───────── Pre-submit summary table (lives inside the action bar — plain bordered look) ─────────
+.submit-summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    margin-bottom: 0.75rem;
+
+    th, td {
+        border: 1px solid var(--surface-border, #d1d5db);
+        padding: 0.45rem 0.7rem;
+        text-align: center;
+    }
+
+    tbody td:first-child,
+    tfoot td:first-child {
+        text-align: left;
+    }
+}
+
+.submit-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    .spacer { flex: 1; }
+}
+
+.form-action-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  background: var(--surface-card, rgba(20, 20, 20, 0.95));
+  border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.1));
+  border-radius: 0.75rem;
+  margin-top: 1.5rem;
+
+  .spacer {
+    flex: 1;
+  }
+}
+
+.submit-summary-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+    color: var(--text-color, inherit);
+}
+
+// ───────── Return History card (shown only to the applicant after a return) ─────────
+.return-history-card {
+    border-color: rgba(245, 158, 11, 0.45);
+    background: rgba(245, 158, 11, 0.08);
+
+    .section-title {
+        color: #b45309;
+        &::before { background: #f59e0b; }
+    }
+}
+
+.return-history-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.return-history-item {
+    background: var(--surface-card, rgba(255, 255, 255, 0.03));
+    border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.08));
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+
+    &:last-child { margin-bottom: 0; }
+}
+
+.return-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    font-size: 0.78rem;
+    color: var(--text-color-secondary, rgba(255, 255, 255, 0.65));
+    margin-bottom: 0.4rem;
+
+    .return-by { font-weight: 600; color: var(--text-color, inherit); }
+}
+
+.return-reason {
+    font-size: 0.9rem;
+    color: var(--text-color, inherit);
+    line-height: 1.45;
+    white-space: pre-line;
+}
+
+// Make placeholder text in inputs more readable.
+:host ::ng-deep {
+  .p-select .p-select-label.p-placeholder,
+  .p-multiselect .p-multiselect-label.p-placeholder,
+  .p-datepicker-input::placeholder,
+  textarea::placeholder,
+  input::placeholder {
+    color: var(--text-color-secondary, rgba(255, 255, 255, 0.55)) !important;
+    opacity: 1;
+  }
+
+  // Slightly stronger borders for inputs to improve scannability.
+  .p-select,
+  .p-multiselect,
+  .p-datepicker-input,
+  textarea,
+  input.p-inputtext {
+    border-color: var(--surface-border, rgba(255, 255, 255, 0.18));
+  }
+}

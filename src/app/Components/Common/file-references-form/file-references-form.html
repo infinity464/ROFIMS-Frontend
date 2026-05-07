@@ -16,7 +16,7 @@
                 @for (row of rows; track $index) {
                     <tr class="file-references-table__row">
                         <td class="file-references-table__td file-references-table__td--name">
-                            <input pInputText class="w-full" placeholder="e.g. Posting order 1"
+                            <input pInputText class="w-full" [placeholder]="namePlaceholder"
                                 [(ngModel)]="row.displayName" [ngModelOptions]="{standalone: true}"
                                 [readonly]="isViewMode" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"/>
                         </td>

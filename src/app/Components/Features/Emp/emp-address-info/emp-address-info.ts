@@ -66,6 +66,10 @@ export class EmpAddressInfo implements OnInit {
     mode: 'search' | 'view' | 'edit' = 'search';
     isReadonly: boolean = false;
 
+    // Tracks the last employeeId we fetched, so route mode-only changes (e.g., view → edit
+    // via Edit button) don't trigger a redundant refetch that would snap mode back to view.
+    private _lastLoadedEmployeeId: number | null = null;
+
     // Address form configs
     permanentAddressConfig: AddressFormConfig = {
         title: 'Permanent Address',
@@ -112,10 +116,23 @@ export class EmpAddressInfo implements OnInit {
             const mode = params['mode'];
 
             if (employeeId) {
-                this.mode = mode === 'edit' ? 'edit' : 'view';
-                this.isReadonly = this.mode === 'view';
-                this.loadEmployeeById(parseInt(employeeId, 10));
+                const idNum = parseInt(employeeId, 10);
+                const newMode: 'view' | 'edit' = mode === 'edit' ? 'edit' : 'view';
+
+                if (this._lastLoadedEmployeeId !== idNum) {
+                    // New employee — load fresh.
+                    this._lastLoadedEmployeeId = idNum;
+                    this.mode = newMode;
+                    this.isReadonly = this.mode === 'view';
+                    this.loadEmployeeById(idNum);
+                } else {
+                    // Same employee, mode-only change (e.g., Edit click) — just toggle
+                    // readonly without refetching.
+                    this.mode = newMode;
+                    this.isReadonly = this.mode === 'view';
+                }
             } else {
+                this._lastLoadedEmployeeId = null;
                 this.mode = 'search';
                 this.isReadonly = false;
             }
@@ -206,6 +223,15 @@ export class EmpAddressInfo implements OnInit {
                         }
                     }
                 });
+
+                // When a record already exists, start in view (readonly) mode so the user
+                // explicitly opts into editing via the Edit button. Skip for embedMode and
+                // for the standalone search flow (which uses its own search-mode readonly).
+                const hasAddress = !!this.permanentAddressData || !!this.presentAddressData;
+                if (hasAddress && !this.embedMode && this.mode !== 'search') {
+                    this.mode = 'view';
+                    this.isReadonly = true;
+                }
             },
             error: (err) => {
                 console.error('Failed to load addresses', err);

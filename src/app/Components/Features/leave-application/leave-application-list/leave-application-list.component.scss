@@ -16,7 +16,63 @@
 .report-type-buttons {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: 8px;
+}
+
+/* Inline status filter dropdown — sits to the right of the type buttons. */
+.leave-app-section-filter {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+}
+
+.section-filter-label {
+    font-size: 0.84rem;
+    font-weight: 500;
+    color: var(--muted);
+    white-space: nowrap;
+}
+
+:host ::ng-deep .leave-app-section-select {
+    min-width: 130px;
+}
+
+/* Status pill in the unified table (when section = 'all'). */
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.18rem 0.55rem;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border: 1px solid transparent;
+    background: var(--surface-ground);
+    color: var(--text-color-secondary);
+
+    &.is-approved {
+        background: rgba(16, 185, 129, 0.15);
+        color: #047857;
+        border-color: rgba(16, 185, 129, 0.35);
+    }
+    &.is-declined {
+        background: rgba(239, 68, 68, 0.15);
+        color: #b91c1c;
+        border-color: rgba(239, 68, 68, 0.35);
+    }
+    &.is-pending {
+        background: rgba(245, 158, 11, 0.15);
+        color: #92400e;
+        border-color: rgba(245, 158, 11, 0.35);
+    }
+    &.is-returned {
+        background: rgba(99, 102, 241, 0.15);
+        color: #4338ca;
+        border-color: rgba(99, 102, 241, 0.35);
+    }
 }
 
 .report-btn-filter-tab {

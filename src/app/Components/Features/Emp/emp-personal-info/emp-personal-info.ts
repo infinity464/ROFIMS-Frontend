@@ -124,6 +124,10 @@ export class EmpPersonalInfo implements OnInit {
     // Track if personal info record exists (for save vs update)
     personalInfoExists: boolean = false;
 
+    // Tracks the last employeeId we fetched, so route mode-only changes (e.g., view → edit
+    // via Edit button) don't trigger a redundant refetch that would snap mode back to view.
+    private _lastLoadedEmployeeId: number | null = null;
+
     constructor(
         private fb: FormBuilder,
         private empService: EmpService,
@@ -158,10 +162,28 @@ export class EmpPersonalInfo implements OnInit {
             const mode = params['mode'];
 
             if (employeeId) {
-                this.mode = mode === 'edit' ? 'edit' : 'view';
-                this.isReadonly = this.mode === 'view';
-                this.loadEmployeeById(parseInt(employeeId, 10));
+                const idNum = parseInt(employeeId, 10);
+                const newMode: 'view' | 'edit' = mode === 'edit' ? 'edit' : 'view';
+
+                if (this._lastLoadedEmployeeId !== idNum) {
+                    // New employee — load fresh.
+                    this._lastLoadedEmployeeId = idNum;
+                    this.mode = newMode;
+                    this.isReadonly = this.mode === 'view';
+                    this.loadEmployeeById(idNum);
+                } else {
+                    // Same employee, mode-only change (e.g., user clicked Edit) — just
+                    // toggle form state without refetching.
+                    this.mode = newMode;
+                    this.isReadonly = this.mode === 'view';
+                    if (this.isReadonly) {
+                        this.personalInfoForm.disable();
+                    } else {
+                        this.personalInfoForm.enable();
+                    }
+                }
             } else {
+                this._lastLoadedEmployeeId = null;
                 this.mode = 'search';
                 this.isReadonly = false;
             }
@@ -383,6 +405,14 @@ export class EmpPersonalInfo implements OnInit {
                 if (personalInfo) {
                     this.personalInfoExists = true;
                     this.populateFormWithPersonalInfo(personalInfo);
+                    // When a record already exists, start in view (readonly) mode so the user
+                    // explicitly opts into editing via the Edit button. Skip for embedMode,
+                    // which is intentionally direct-edit (e.g., ex-member profile).
+                    if (!this.embedMode) {
+                        this.mode = 'view';
+                        this.isReadonly = true;
+                        this.personalInfoForm.disable();
+                    }
                 } else {
                     this.personalInfoExists = false;
                     this.fileRows = [];
