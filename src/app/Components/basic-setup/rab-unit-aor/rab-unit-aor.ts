@@ -89,6 +89,7 @@ export class RabUnitAor implements OnInit {
         private confirmationService: ConfirmationService
     ) {
         this.form = this.fb.group({
+            searchUpazilaId: [null],
             rabUnitId: [null, Validators.required],
             divisionIds: [[]],
             districtIds: [[]],
@@ -135,6 +136,32 @@ export class RabUnitAor implements OnInit {
             this.recomputeUpazilaPoolForCard();
             if (rabUnitId) this.loadAssigned(rabUnitId);
             else this.assigned = [];
+        });
+
+        // Search by upazila: jump to the unit that owns it.
+        this.form.get('searchUpazilaId')?.valueChanges.subscribe((upaId: number | null) => {
+            if (!upaId) return;
+            const aor = this.allAors.find((a) => {
+                const csv = (a as any).upazilaIds ?? (a as any).UpazilaIds ?? '';
+                return String(csv)
+                    .split(',')
+                    .map((s) => parseInt(s.trim(), 10))
+                    .includes(upaId);
+            });
+            if (aor) {
+                const unitId = (aor as any).rabUnitId ?? (aor as any).RABUnitId;
+                if (unitId && unitId !== this.form.value.rabUnitId) {
+                    this.form.patchValue({ rabUnitId: unitId });
+                }
+            } else {
+                const upaName = this.allUpazilasPool.find((u) => u.id === upaId)?.name ?? 'This upazila';
+                this.messageService.add({
+                    severity: 'info',
+                    summary: 'Not assigned',
+                    detail: `${upaName} is not assigned to any unit yet`,
+                    life: 4000
+                });
+            }
         });
     }
 

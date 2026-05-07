@@ -86,14 +86,29 @@
         </form>
     </div>
 
+    <div class="card mt-4 aor-search-card">
+        <label for="searchUpazilaId" class="block mb-2 text-color-secondary">Select Unit or Search by Upazila to load its unit's Area of Responsibility</label>
+        <p-select
+            id="searchUpazilaId"
+            [options]="allUpazilasPool"
+            optionLabel="name"
+            optionValue="id"
+            styleClass="w-full"
+            placeholder="Type to find an upazila…"
+            [filter]="true"
+            [showClear]="true"
+            [virtualScroll]="true"
+            [virtualScrollItemSize]="38"
+            [formControl]="$any(form.get('searchUpazilaId'))">
+        </p-select>
+    </div>
+
     <div class="card mt-4 aor-list-card">
-        @if (!form.value.rabUnitId) {
-            <div class="text-color-secondary py-2">Select a RAB Unit to see assigned area of responsibility.</div>
-        } @else if (assignedLoading) {
+        @if (assignedLoading) {
             <div class="py-2">Loading...</div>
-        } @else if (assigned.length === 0) {
+        } @else if (form.value.rabUnitId && assigned.length === 0) {
             <div class="text-color-secondary py-2">No area assigned. Use the form above to add.</div>
-        } @else {
+        } @else if (assigned.length > 0) {
             <div class="aor-card-grid">
                 @for (row of assigned; track row.aorId) {
                     <app-aor-card
