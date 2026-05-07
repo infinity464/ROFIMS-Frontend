@@ -1,11 +1,11 @@
 <p-toast position="top-center"></p-toast>
 
 <div class="employee-reports-page">
-    <!-- Title + filter in same card (like Supernumerary List) -->
     <div class="report-filter-card">
-        <div class="report-filter-card-title">
+        <div class="report-filter-card-title psm-header-row">
             <h1 class="report-page-title">Presently Serving Members List</h1>
         </div>
+
         <div class="report-filter-header" [class.open]="filterOpen" (click)="toggleFilter()" role="button" tabindex="0" (keydown.enter)="toggleFilter()" (keydown.space)="toggleFilter()">
             <div class="report-filter-header-left">
                 <div class="report-filter-icon">
@@ -135,7 +135,9 @@
                             [(ngModel)]="filter.durationFrom"
                             placeholder="From"
                             dateFormat="dd-mm-yy"
-                            styleClass="w-full">
+                            [showIcon]="true"
+                            styleClass="w-full"
+                            appendTo="body">
                         </p-datepicker>
                     </div>
                     <div class="report-filter-field report-filter-field-date">
@@ -144,7 +146,9 @@
                             [(ngModel)]="filter.durationTo"
                             placeholder="To"
                             dateFormat="dd-mm-yy"
-                            styleClass="w-full">
+                            [showIcon]="true"
+                            styleClass="w-full"
+                            appendTo="body">
                         </p-datepicker>
                     </div>
                     <div class="report-filter-field">
@@ -162,77 +166,50 @@
                 </div>
 
                 <div class="report-filter-actions">
-                    <button type="button" class="report-btn-clear" (click)="clearFilter()">
-                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                            <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-                        </svg>
-                        Clear
-                    </button>
-                    <button type="button" class="report-btn-search" (click)="search()" [disabled]="loading">
-                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                            <circle cx="6" cy="6" r="4.5" stroke="white" stroke-width="1.6"/>
-                            <path d="M10 10l2.5 2.5" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
-                        </svg>
-                        Search
-                    </button>
+                    <button type="button" class="report-btn-secondary" (click)="clearFilter()"><i class="pi pi-times mr-1"></i>Clear</button>
+                    <button type="button" class="report-btn-primary" (click)="search()" [disabled]="loading"><i class="pi pi-search mr-1"></i>Search</button>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Results card -->
-    <div class="report-results-card">
-        <div class="report-results-header">
-            <div class="report-results-title">
-                Results
-                <span class="report-results-count">{{ searchText ? filteredList.length : totalRecords }} record(s)</span>
-            </div>
-            <div class="report-results-actions" style="display: flex; align-items: center; gap: 0.75rem;">
-                <div class="report-search-wrap">
-                    <span class="report-search-icon">
-                        <i class="pi pi-search"></i>
-                    </span>
-                    <input
-                        pInputText
-                        type="text"
-                        placeholder="Search by Service ID / RAB ID"
-                        [(ngModel)]="searchText"
-                        (ngModelChange)="onSearchChange()"
-                        class="report-search-input" />
-                </div>
-                <p-button
-                    label="Send Inter Posting"
-                    icon="pi pi-send"
-                    severity="warn"
-                    [loading]="savingInterPosting"
-                    [disabled]="!selectedRows?.length"
-                    [class.perm-hidden]="!canUpdate"
-                    (onClick)="sendInterPosting()">
-                </p-button>
-            </div>
+    <div class="report-filter-card">
+        <div class="psm-results-header">
+            <h3 class="report-panel-title">Presently Serving Members ({{ totalRecords }})</h3>
+            <p-button
+                label="Send Inter Posting"
+                icon="pi pi-send"
+                severity="warn"
+                [loading]="savingInterPosting"
+                [disabled]="!selectedRows?.length"
+                [class.perm-hidden]="!canUpdate"
+                (onClick)="sendInterPosting()">
+            </p-button>
         </div>
 
         <div class="report-table-wrap">
             <p-table
-                [value]="filteredList"
+                #dt
+                [value]="list"
                 [lazy]="true"
                 [loading]="loading"
                 [paginator]="true"
-                [first]="first"
-                [rows]="rows"
+                [rows]="pageSize"
                 [totalRecords]="totalRecords"
                 [rowsPerPageOptions]="[10, 20, 50]"
                 (onLazyLoad)="onLazyLoad($event)"
                 dataKey="employeeID"
                 [(selection)]="selectedRows"
-                [tableStyle]="{ 'min-width': '60rem' }"
+                [tableStyle]="{ 'min-width': '70rem' }"
                 styleClass="p-datatable-sm"
                 paginatorDropdownAppendTo="body"
-                [showCurrentPageReport]="false">
+                currentPageReportTemplate="Showing {first} – {last} of {totalRecords}"
+                [showCurrentPageReport]="true">
                 <ng-template pTemplate="header">
                     <tr>
                         <th style="width: 44px"><p-tableHeaderCheckbox></p-tableHeaderCheckbox></th>
-                        <th>Ser</th>
+                        <th style="width: 4rem;">Ser</th>
                         <th>Service ID</th>
                         <th>Rank</th>
                         <th>Corps</th>
@@ -254,7 +231,7 @@
                                 <p-tableCheckbox [value]="row"></p-tableCheckbox>
                             }
                         </td>
-                        <td><span class="report-ser-num">{{ first + rowIndex + 1 }}</span></td>
+                        <td><span class="report-ser-num">{{ serialNumber(rowIndex) }}</span></td>
                         <td><span class="font-semibold">{{ row.serviceId || '—' }}</span></td>
                         <td>{{ row.armyRank || '—' }}</td>
                         <td>
@@ -283,7 +260,7 @@
                             }
                         </td>
                         <td>
-                            <a [routerLink]="['/members/profile', row.employeeID]" class="report-link-profile">
+                            <a [routerLink]="['/members/profile', row.employeeID]" class="report-link-profile" title="View profile">
                                 <i class="pi pi-user"></i> Profile
                             </a>
                         </td>

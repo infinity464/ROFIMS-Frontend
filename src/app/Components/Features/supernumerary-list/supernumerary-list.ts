@@ -30,7 +30,7 @@ import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directi
     imports: [CommonModule, FormsModule, RouterModule, TableModule, ButtonModule, SelectModule, InputTextModule, DatePickerModule, CheckboxModule, Toast, TooltipModule, FlexibleDateDirective],
     providers: [MessageService],
     templateUrl: './supernumerary-list.html',
-    styleUrls: ['./supernumerary-list.scss', '../employee-reports/report-theme-common.scss'],
+    styleUrls: ['../employee-reports/report-theme-common.scss', './supernumerary-list.scss'],
 })
 export class SupernumeraryList implements OnInit {
     list: EmployeeList[] = [];

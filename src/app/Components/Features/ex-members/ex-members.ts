@@ -37,7 +37,7 @@ export interface FilterModel {
     imports: [CommonModule, FormsModule, RouterModule, TableModule, ButtonModule, InputTextModule, SelectModule, DatePickerModule, FlexibleDateDirective, Toast],
     providers: [MessageService],
     templateUrl: './ex-members.html',
-    styleUrls: ['./ex-members.scss', '../employee-reports/report-theme.scss']
+    styleUrls: ['../employee-reports/report-theme-common.scss', './ex-members.scss']
 })
 export class ExMembers implements OnInit {
     canInsert = true;
