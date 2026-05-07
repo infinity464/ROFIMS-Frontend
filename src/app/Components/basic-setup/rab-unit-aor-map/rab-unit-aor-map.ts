@@ -258,13 +258,12 @@ export class RabUnitAorMap implements OnInit {
         return geom.coordinates.map((poly) => poly.map(ringToPath).join(' ')).join(' ');
     }
 
+    /**
+     * Collapse a name to a compact, lowercase, non-alphanumeric-stripped key so spacing variants
+     * like "Alikadam" vs "Ali Kadam" or "Cox's Bazar Sadar" vs "Coxs-Bazar Sadar" all match.
+     */
     private normalizeName(s: string): string {
-        return (s || '')
-            .toLowerCase()
-            .replace(/['’`]/g, '')
-            .replace(/[\s\-_.]+/g, ' ')
-            .replace(/\bsadar\b/g, 'sadar')
-            .trim();
+        return (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
     }
 
     private fallbackColor(seed: number): string {
