@@ -28,6 +28,10 @@ export interface ManpowerSummaryTotals {
 export interface ManpowerSummaryResponse {
     rows: ManpowerSummaryRow[];
     totals: ManpowerSummaryTotals;
+    /** Names (EN) of the RAB Units the current user is restricted to. null = unrestricted. */
+    accessibleRabUnitNames?: string[] | null;
+    /** Bangla names paired with accessibleRabUnitNames. */
+    accessibleRabUnitNamesBN?: string[] | null;
 }
 
 export interface RankWiseRankRow {
