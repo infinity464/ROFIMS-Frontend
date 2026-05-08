@@ -151,6 +151,18 @@
     line-height: 1.4;
 }
 
+.report-scope-line {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--primary-color, #4f46e5);
+    margin-top: 0.2rem;
+    line-height: 1.35;
+    padding: 0.15rem 0.5rem;
+    display: inline-block;
+    background: rgba(79, 70, 229, 0.08);
+    border-radius: 6px;
+}
+
 .report-date-line {
     font-size: 0.875rem;
     font-weight: 500;

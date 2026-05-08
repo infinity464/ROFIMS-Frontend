@@ -56,6 +56,10 @@ export interface RankWiseOrgBlock {
 export interface RankWiseManpowerResponse {
     orgs: RankWiseOrgBlock[];
     grandTotal: RankWiseRankRow;
+    /** Names (EN) of the RAB Units the current user is restricted to. null = unrestricted. */
+    accessibleRabUnitNames?: string[] | null;
+    /** Bangla names paired with accessibleRabUnitNames. */
+    accessibleRabUnitNamesBN?: string[] | null;
 }
 
 export interface MotherUnitOrgOption {
@@ -86,6 +90,10 @@ export interface MotherUnitWiseManpowerResponse {
     units: MotherUnitRow[];
     totals: Record<number, number>;
     grandTotal: number;
+    /** Names (EN) of the RAB Units the current user is restricted to. null = unrestricted. */
+    accessibleRabUnitNames?: string[] | null;
+    /** Bangla names paired with accessibleRabUnitNames. */
+    accessibleRabUnitNamesBN?: string[] | null;
 }
 
 export interface CorpsRow {
@@ -118,6 +126,10 @@ export interface TradeWiseManpowerResponse {
     trades: TradeRow[];
     totals: Record<number, number>;
     grandTotal: number;
+    /** Names (EN) of the RAB Units the current user is restricted to. null = unrestricted. */
+    accessibleRabUnitNames?: string[] | null;
+    /** Bangla names paired with accessibleRabUnitNames. */
+    accessibleRabUnitNamesBN?: string[] | null;
 }
 
 export interface MemberTypeOption {
@@ -147,6 +159,10 @@ export interface CorpsWiseManpowerResponse {
     corps: CorpsRow[];
     totals: Record<number, number>;
     grandTotal: number;
+    /** Names (EN) of the RAB Units the current user is restricted to. null = unrestricted. */
+    accessibleRabUnitNames?: string[] | null;
+    /** Bangla names paired with accessibleRabUnitNames. */
+    accessibleRabUnitNamesBN?: string[] | null;
 }
 
 @Injectable({ providedIn: 'root' })

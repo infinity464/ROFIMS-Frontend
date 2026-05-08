@@ -35,6 +35,10 @@ export class RankWiseManpowerComponent implements OnInit {
     filteredOrgs: RankWiseOrgBlock[] = [];
     grandTotal: RankWiseRankRow = this.emptyRow();
 
+    /** Names of the RAB Units the user is restricted to. null/empty = full access. */
+    accessibleRabUnitNames: string[] | null = null;
+    accessibleRabUnitNamesBN: string[] | null = null;
+
     /** Options for p-multiselect */
     orgOptions: { label: string; value: number }[] = [];
     /** Currently selected org IDs (empty = show all) */
@@ -79,10 +83,21 @@ export class RankWiseManpowerComponent implements OnInit {
                     label: o.orgName,
                     value: o.orgId
                 }));
+                this.accessibleRabUnitNames   = res.accessibleRabUnitNames ?? null;
+                this.accessibleRabUnitNamesBN = res.accessibleRabUnitNamesBN ?? null;
                 this.loading = false;
             },
             error: () => { this.loading = false; }
         });
+    }
+
+    /** Comma-separated unit-scope line shown under the report title; null when unrestricted. */
+    get scopeLine(): string | null {
+        const names = this.lang === 'bn'
+            ? (this.accessibleRabUnitNamesBN ?? this.accessibleRabUnitNames)
+            : this.accessibleRabUnitNames;
+        if (!names || names.length === 0) return null;
+        return names.join(', ');
     }
 
     onOrgFilterChange(): void {
@@ -108,13 +123,15 @@ export class RankWiseManpowerComponent implements OnInit {
             return;
         }
         const { columns, rows } = this.getFlatExportData();
+        const scope = this.scopeLine;
         const config = {
             title: this.titleLabel,
             lang: this.lang,
             columns,
             rows,
             showPageNumbers: true,
-            filename: 'rank-wise-manpower'
+            filename: 'rank-wise-manpower',
+            filterLines: scope ? [scope] : undefined
         };
         if (type === 'word') {
             await this.exportService.exportWord(config);
@@ -317,6 +334,7 @@ export class RankWiseManpowerComponent implements OnInit {
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: ${fontFamily}; font-size: 10pt; color: #000; background: #fff; padding: 15mm; }
         h1 { font-size: 14pt; font-weight: 700; text-align: center; margin-bottom: 3px; }
+        .scope { font-size: 10pt; font-weight: 600; text-align: center; margin: 2px 0 6px 0; color: #1e3a5f; }
         .date { font-size: 10pt; text-align: center; margin-bottom: 18px; }
         .org-block { margin-bottom: 18px; page-break-inside: avoid; }
         .org-title { font-size: 11pt; font-weight: 700; padding: 4px 0; border-bottom: 2px solid #000; margin-bottom: 2px; }
@@ -345,6 +363,7 @@ export class RankWiseManpowerComponent implements OnInit {
 </head>
 <body>
     <h1>${esc(this.titleLabel)}</h1>
+    ${this.scopeLine ? `<div class="scope">${esc(this.scopeLine)}</div>` : ''}
     <div class="date">${esc(dateStr)}</div>
     ${orgTables}
     ${grandRow}
