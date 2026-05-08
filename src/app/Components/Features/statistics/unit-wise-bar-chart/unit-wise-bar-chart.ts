@@ -43,6 +43,10 @@ export class UnitWiseBarChartComponent implements OnInit {
     units: UnitBarItem[] = [];
     total = 0;
 
+    /** Names of the RAB Units the user is restricted to. null/empty = full access. */
+    accessibleRabUnitNames: string[] | null = null;
+    accessibleRabUnitNamesBN: string[] | null = null;
+
     chartData: any = null;
     chartOptions: any = null;
 
@@ -114,6 +118,15 @@ export class UnitWiseBarChartComponent implements OnInit {
         return this.lang === 'en' ? m.memberTypeName : (m.memberTypeNameBN || m.memberTypeName);
     }
 
+    /** Comma-separated unit-scope line shown under the report title; null when unrestricted. */
+    get scopeLine(): string | null {
+        const names = this.lang === 'bn'
+            ? (this.accessibleRabUnitNamesBN ?? this.accessibleRabUnitNames)
+            : this.accessibleRabUnitNames;
+        if (!names || names.length === 0) return null;
+        return names.join(', ');
+    }
+
     // ── Data loading ─────────────────────────────────────────────────────
 
     private loadData(): void {
@@ -123,6 +136,8 @@ export class UnitWiseBarChartComponent implements OnInit {
                 this.memberTypeOptions = res.memberTypes ?? [];
                 this.units = res.units ?? [];
                 this.total = res.total ?? 0;
+                this.accessibleRabUnitNames   = res.accessibleRabUnitNames ?? null;
+                this.accessibleRabUnitNamesBN = res.accessibleRabUnitNamesBN ?? null;
                 this.buildChart();
                 this.loading = false;
             },
@@ -189,11 +204,17 @@ export class UnitWiseBarChartComponent implements OnInit {
             ? "'Noto Sans Bengali', 'Nirmala UI', sans-serif"
             : "'Times New Roman', serif";
 
+        const scope = this.scopeLine;
+        const escScope = (s: string) => s
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
         const html = `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><title>${this.titleLabel}</title>
 <style>
     body { font-family: ${fontFamily}; text-align: center; padding: 20px; color: #000; }
     h1 { font-size: 14pt; font-weight: 700; margin-bottom: 4px; }
+    .scope { font-size: 11pt; font-weight: 600; margin: 2px 0 6px 0; color: #1e3a5f; }
     .date { font-size: 10pt; margin-bottom: 8px; color: #555; }
     .total { font-size: 11pt; font-weight: 600; margin-bottom: 16px; }
     img { max-width: 100%; height: auto; }
@@ -201,6 +222,7 @@ export class UnitWiseBarChartComponent implements OnInit {
     @media print { body { padding: 0; } }
 </style></head><body>
     <h1>${this.titleLabel}</h1>
+    ${scope ? `<div class="scope">${escScope(scope)}</div>` : ''}
     <div class="date">${this.dateLine}</div>
     <div class="total">${this.totalLabel}</div>
     <img src="${imgData}" />

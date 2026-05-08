@@ -149,6 +149,10 @@ export interface UnitWiseBarChartResponse {
     memberTypes: MemberTypeOption[];
     units: UnitBarItem[];
     total: number;
+    /** Names (EN) of the RAB Units the current user is restricted to. null = unrestricted. */
+    accessibleRabUnitNames?: string[] | null;
+    /** Bangla names paired with accessibleRabUnitNames. */
+    accessibleRabUnitNamesBN?: string[] | null;
 }
 
 export interface CorpsWiseManpowerResponse {
