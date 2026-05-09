@@ -507,21 +507,17 @@
             <!-- Employee Table -->
             <table class="po-doc-table">
                 <thead>
-                    <!-- Inter-posting: two-row header with merged বদলিকৃত কর্মস্থল -->
+                    <!-- Inter-posting: single-row header (no Trade, no RAB ID) -->
                     <ng-container *ngIf="isInterPosting">
                         <tr>
-                            <th rowspan="2" style="width:5%">{{ isBangla ? 'ক্রমিক' : 'Ser' }}</th>
-                            <th rowspan="2" style="width:10%">{{ isBangla ? 'ব্যক্তিগত নম্বর' : 'Service ID' }}</th>
-                            <th rowspan="2" style="width:8%">{{ isBangla ? 'পদবি' : 'Rank' }}</th>
-                            <th rowspan="2" style="width:8%">{{ isBangla ? 'ট্রেড' : 'Trade' }}</th>
-                            <th rowspan="2" style="width:20%">{{ isBangla ? 'নাম' : 'Name' }}</th>
-                            <th rowspan="2" style="width:10%">{{ isBangla ? 'নিজ জেলা' : 'Own District' }}</th>
-                            <th colspan="2" style="width:22%">{{ isBangla ? 'বদলিকৃত কর্মস্থল' : 'Transfer Station' }}</th>
-                            <th rowspan="2" style="width:10%">{{ isBangla ? 'র‌্যাব আইডি' : 'RAB ID' }}</th>
-                        </tr>
-                        <tr>
-                            <th>{{ isBangla ? 'হইতে' : 'From' }}</th>
-                            <th>{{ isBangla ? 'প্রতি' : 'To' }}</th>
+                            <th style="width:5%">{{ isBangla ? 'ক্রমিক' : 'Ser' }}</th>
+                            <th style="width:10%">{{ isBangla ? 'ব্যক্তিগত নং' : 'Service ID' }}</th>
+                            <th style="width:8%">{{ isBangla ? 'পদবি' : 'Rank' }}</th>
+                            <th style="width:18%">{{ isBangla ? 'নাম' : 'Name' }}</th>
+                            <th style="width:12%">{{ isBangla ? 'নিজ জেলা' : 'Own District' }}</th>
+                            <th style="width:16%">{{ isBangla ? 'পূর্ববতী কর্মস্থল' : 'Previous Workplace' }}</th>
+                            <th style="width:16%">{{ isBangla ? 'বদলিকৃত কর্মস্থল' : 'Transfer Station' }}</th>
+                            <th style="width:15%">{{ isBangla ? 'মন্তব্য' : 'Remarks' }}</th>
                         </tr>
                     </ng-container>
                     <!-- Non-inter-posting: single header row -->
@@ -553,17 +549,31 @@
                     </ng-container>
                 </thead>
                 <tbody>
-                    <tr *ngFor="let emp of filteredEmployees; let i = index">
-                        <td class="text-center">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}</td>
-                        <td class="font-semibold">{{ empServiceId(emp) }}</td>
-                        <td>{{ empRank(emp) }}</td>
-                        <td>{{ empTrade(emp) }}</td>
-                        <td>{{ empName(emp) }}</td>
-                        <td style="white-space: pre-line;">{{ empDistrict(emp) }}</td>
-                        <td style="white-space: pre-line;">{{ empPrevWorkplace(emp) }}</td>
-                        <td>{{ empTransferUnit(emp) }}</td>
-                        <td>{{ empRabId(emp) }}</td>
-                    </tr>
+                    <ng-container *ngIf="isInterPosting">
+                        <tr *ngFor="let emp of filteredEmployees; let i = index">
+                            <td class="text-center">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}</td>
+                            <td class="font-semibold">{{ empServiceId(emp) }}</td>
+                            <td>{{ empRank(emp) }}</td>
+                            <td>{{ empName(emp) }}</td>
+                            <td style="white-space: pre-line;">{{ empDistrict(emp) }}</td>
+                            <td style="white-space: pre-line;">{{ empPrevWorkplace(emp) }}</td>
+                            <td>{{ empTransferUnit(emp) }}</td>
+                            <td>{{ emp.detailRemarks || '' }}</td>
+                        </tr>
+                    </ng-container>
+                    <ng-container *ngIf="!isInterPosting">
+                        <tr *ngFor="let emp of filteredEmployees; let i = index">
+                            <td class="text-center">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}</td>
+                            <td class="font-semibold">{{ empServiceId(emp) }}</td>
+                            <td>{{ empRank(emp) }}</td>
+                            <td>{{ empTrade(emp) }}</td>
+                            <td>{{ empName(emp) }}</td>
+                            <td style="white-space: pre-line;">{{ empDistrict(emp) }}</td>
+                            <td style="white-space: pre-line;">{{ empPrevWorkplace(emp) }}</td>
+                            <td>{{ empTransferUnit(emp) }}</td>
+                            <td>{{ empRabId(emp) }}</td>
+                        </tr>
+                    </ng-container>
                 </tbody>
             </table>
 

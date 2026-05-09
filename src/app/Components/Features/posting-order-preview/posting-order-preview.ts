@@ -30,7 +30,7 @@ import { environment } from '@/Core/Environments/environment';
 import { firstValueFrom } from 'rxjs';
 import {
     Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, ImageRun,
-    WidthType, BorderStyle, AlignmentType, PageOrientation, TabStopType, TabStopPosition, TableLayoutType, VerticalMergeType
+    WidthType, BorderStyle, AlignmentType, PageOrientation, TabStopType, TabStopPosition, TableLayoutType
 } from 'docx';
 import { saveAs } from 'file-saver';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
@@ -752,7 +752,9 @@ export class PostingOrderPreviewPageComponent implements OnInit {
 
     empPrevWorkplace(emp: PostingOrderEmployeeRow): string {
         if (this.postingType === NoteSheetType.InterPosting) {
-            return (this.isBangla ? (emp.previousRabUnitsBN || emp.previousRabUnits) : emp.previousRabUnits) || '';
+            const motherOrg = (this.isBangla ? (emp.motherUnitNameBN || emp.motherUnitName) : emp.motherUnitName) || '';
+            const currentRabUnit = (this.isBangla ? (emp.presentRabUnitNameBN || emp.presentRabUnitName) : emp.presentRabUnitName) || '';
+            return [motherOrg, currentRabUnit].filter(p => p).join('/ ') || '';
         }
         const rabUnit = (this.isBangla ? (emp.motherOrgLocationNameBN || emp.motherOrgLocationName) : emp.motherOrgLocationName) || '';
         const motherOrg = (this.isBangla ? (emp.previousMotherOrgNameBN || emp.previousMotherOrgName) : emp.previousMotherOrgName) || '';
@@ -1277,59 +1279,53 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             }));
 
         // ── Employee Table (header 8.5pt, data 9pt) ──
-        const cols = bn
-            ? ['ক্রমিক', 'ব্যক্তিগত নম্বর', 'পদবি', 'ট্রেড', 'নাম', 'নিজ জেলা', 'পূর্ববতী কর্মস্থল', 'বদলিকৃত কর্মস্থল', 'র‌্যাব আইডি']
-            : ['Ser', 'Service ID', 'Rank', 'Trade', 'Name', 'Own District', 'Previous Workplace', 'Transfer Unit', 'RAB ID'];
+        const isInter = this.isInterPosting;
+        const cols = isInter
+            ? (bn ? ['ক্রমিক', 'ব্যক্তিগত নং', 'পদবি', 'নাম', 'নিজ জেলা', 'পূর্ববতী কর্মস্থল', 'বদলিকৃত কর্মস্থল', 'মন্তব্য']
+                   : ['Ser', 'Service ID', 'Rank', 'Name', 'Own District', 'Previous Workplace', 'Transfer Station', 'Remarks'])
+            : (bn ? ['ক্রমিক', 'ব্যক্তিগত নম্বর', 'পদবি', 'ট্রেড', 'নাম', 'নিজ জেলা', 'পূর্ববতী কর্মস্থল', 'বদলিকৃত কর্মস্থল', 'র‌্যাব আইডি']
+                   : ['Ser', 'Service ID', 'Rank', 'Trade', 'Name', 'Own District', 'Previous Workplace', 'Transfer Unit', 'RAB ID']);
         // Column widths in DXA – must sum to full content width (page 12240 - margins 567*2 = 11106)
-        //         Ser  SvcID  Rank  Trade  Name   OwnDist PrevWk TrUnit RabID
-        const colW = [580, 1100, 860, 924, 2474, 1260, 1374, 1374, 1160];
+        const colW = isInter
+            ? [580, 1200, 1000, 2300, 1400, 1700, 1700, 1226]
+            : [580, 1100, 860, 924, 2474, 1260, 1374, 1374, 1160];
 
         const hdrPara = (text: string) => new Paragraph({ children: [new TextRun({ text, bold: true, size: tblSize, sizeComplexScript: tblCsSize, font, language: lang })], alignment: AlignmentType.CENTER });
         const hdrCell = (text: string, ci: number, extra?: Partial<ConstructorParameters<typeof TableCell>[0]>) => new TableCell({
             children: [hdrPara(text)], borders: cellBorders, width: { size: colW[ci], type: WidthType.DXA }, ...extra
         });
 
-        let headerRows: TableRow[];
-        if (this.isInterPosting) {
-            headerRows = [
-                new TableRow({ tableHeader: true, children: [
-                    ...cols.slice(0, 6).map((c, ci) => hdrCell(c, ci, { verticalMerge: VerticalMergeType.RESTART })),
-                    new TableCell({
-                        children: [hdrPara(bn ? 'বদলিকৃত কর্মস্থল' : 'Transfer Station')],
-                        columnSpan: 2, borders: cellBorders, width: { size: colW[6] + colW[7], type: WidthType.DXA }
-                    }),
-                    ...cols.slice(8).map((c, ci) => hdrCell(c, ci + 8, { verticalMerge: VerticalMergeType.RESTART }))
-                ]}),
-                new TableRow({ tableHeader: true, children: [
-                    ...[0,1,2,3,4,5].map(ci => new TableCell({ children: [new Paragraph({})], verticalMerge: VerticalMergeType.CONTINUE, borders: cellBorders, width: { size: colW[ci], type: WidthType.DXA } })),
-                    hdrCell(bn ? 'হইতে' : 'From', 6),
-                    hdrCell(bn ? 'প্রতি' : 'To', 7),
-                    new TableCell({ children: [new Paragraph({})], verticalMerge: VerticalMergeType.CONTINUE, borders: cellBorders, width: { size: colW[8], type: WidthType.DXA } })
-                ]})
-            ];
-        } else {
-            headerRows = [new TableRow({ tableHeader: true, children: cols.map((col, ci) => hdrCell(col, ci)) })];
-        }
+        const headerRows = [new TableRow({ tableHeader: true, children: cols.map((col, ci) => hdrCell(col, ci)) })];
 
-        const dataRows = this.filteredEmployees.map((emp, i) => new TableRow({
-            children: [
-                bn ? this.toBanglaDigits(String(i + 1)) : String(i + 1),
-                this.empServiceId(emp), this.empRank(emp), this.empTrade(emp), this.empName(emp),
-                this.empDistrict(emp), this.empPrevWorkplace(emp), this.empTransferUnit(emp),
-                this.empRabId(emp)
-            ].map((val, ci) => {
-                const lines = val.split('\n');
-                const cellParas = lines.map(line => new Paragraph({
-                    children: [new TextRun({ text: line, size: tblSize, sizeComplexScript: tblCsSize, font, language: lang })],
-                    alignment: AlignmentType.CENTER,
-                    spacing: { after: 20 }
-                }));
-                return new TableCell({
-                    children: cellParas,
-                    borders: cellBorders, width: { size: colW[ci], type: WidthType.DXA }
-                });
-            })
-        }));
+        const dataRows = this.filteredEmployees.map((emp, i) => {
+            const vals = isInter
+                ? [
+                    bn ? this.toBanglaDigits(String(i + 1)) : String(i + 1),
+                    this.empServiceId(emp), this.empRank(emp), this.empName(emp),
+                    this.empDistrict(emp), this.empPrevWorkplace(emp), this.empTransferUnit(emp),
+                    emp.detailRemarks || ''
+                ]
+                : [
+                    bn ? this.toBanglaDigits(String(i + 1)) : String(i + 1),
+                    this.empServiceId(emp), this.empRank(emp), this.empTrade(emp), this.empName(emp),
+                    this.empDistrict(emp), this.empPrevWorkplace(emp), this.empTransferUnit(emp),
+                    this.empRabId(emp)
+                ];
+            return new TableRow({
+                children: vals.map((val, ci) => {
+                    const lines = val.split('\n');
+                    const cellParas = lines.map(line => new Paragraph({
+                        children: [new TextRun({ text: line, size: tblSize, sizeComplexScript: tblCsSize, font, language: lang })],
+                        alignment: AlignmentType.CENTER,
+                        spacing: { after: 20 }
+                    }));
+                    return new TableCell({
+                        children: cellParas,
+                        borders: cellBorders, width: { size: colW[ci], type: WidthType.DXA }
+                    });
+                })
+            });
+        });
 
         const allRows = [...headerRows, ...dataRows];
 

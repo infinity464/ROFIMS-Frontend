@@ -700,9 +700,8 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     getInterPrevWorkplace(emp: DraftPostingEmployeeRow): string {
         const bn = !this.isEnglish();
         const motherOrg = bn ? (emp.motherUnitNameBN || emp.motherUnitName || '') : (emp.motherUnitName || '');
-        const rabUnit = bn ? (emp.presentRabUnitNameBN || emp.presentRabUnitName || '') : (emp.presentRabUnitName || '');
-        const parts = [motherOrg, rabUnit].filter(p => p);
-        return parts.join('/ ') || '';
+        const currentRabUnit = bn ? (emp.presentRabUnitNameBN || emp.presentRabUnitName || '') : (emp.presentRabUnitName || '');
+        return [motherOrg, currentRabUnit].filter(p => p).join('/ ') || '';
     }
 
     // ── Pagination logic ──────────────────────────────────────

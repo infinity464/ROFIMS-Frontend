@@ -445,6 +445,9 @@ export interface PostingOrderEmployeeRow {
     previousMotherOrgNameBN: string | null;
     previousRabUnits: string | null;
     previousRabUnitsBN: string | null;
+    presentRabUnitId?: number | null;
+    presentRabUnitName?: string | null;
+    presentRabUnitNameBN?: string | null;
 }
 
 /** Approved NoteSheet row for dropdown. */
