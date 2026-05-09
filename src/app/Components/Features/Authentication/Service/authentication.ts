@@ -5,6 +5,7 @@ import { environment } from '../../../../Core/Environments/environment';
 import { LoginResponse } from '../Model/login-response.model';
 import { MEMBER_TYPE_ACCESS_CACHE_KEY } from '@/services/identity-user-member-type-access.service';
 import { RAB_UNIT_ACCESS_CACHE_KEY } from '@/services/identity-user-rab-unit-access.service';
+import { clearAllAuth, getAuthItem, setAuthItem } from '@/shared/services/auth-storage';
 
 const REMEMBER_ME_EMAIL_KEY = 'remember_me_email';
 
@@ -95,9 +96,10 @@ export class AuthenticationService {
   login(email: string, password: string): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(this.loginUrl, { email, password }).pipe(
       tap((res) => {
-        localStorage.setItem('auth', JSON.stringify(res));
-        localStorage.setItem('token', res.token);
-        localStorage.setItem('refreshToken', res.refreshToken);
+        // Storage tier (localStorage vs sessionStorage) is picked from the cached session policy.
+        setAuthItem('auth', JSON.stringify(res));
+        setAuthItem('token', res.token);
+        setAuthItem('refreshToken', res.refreshToken);
       }),
       catchError((err) => {
         // Never expose password or sensitive server details; use safe user-facing messages
@@ -122,7 +124,7 @@ export class AuthenticationService {
   }
 
   refreshToken(): Observable<LoginResponse> {
-    const refreshToken = localStorage.getItem('refreshToken');
+    const refreshToken = getAuthItem('refreshToken');
     if (!refreshToken) {
       return throwError(() => ({ status: 401, message: 'Session expired. Please login again.' }));
     }
@@ -135,13 +137,13 @@ export class AuthenticationService {
         return res as LoginResponse;
       }),
       tap((res) => {
-        const existing = localStorage.getItem('auth');
+        const existing = getAuthItem('auth');
         const merged = existing
           ? { ...JSON.parse(existing), token: res.token, refreshToken: res.refreshToken }
           : res;
-        localStorage.setItem('auth', JSON.stringify(merged));
-        localStorage.setItem('token', res.token);
-        localStorage.setItem('refreshToken', res.refreshToken);
+        setAuthItem('auth', JSON.stringify(merged));
+        setAuthItem('token', res.token);
+        setAuthItem('refreshToken', res.refreshToken);
       }),
       catchError(() => {
         return throwError(() => ({ status: 401, message: 'Session expired. Please login again.' }));
@@ -150,7 +152,7 @@ export class AuthenticationService {
   }
 
   getToken(): string | null {
-    return localStorage.getItem('token');
+    return getAuthItem('token');
   }
 
   isLoggedIn(): boolean {
@@ -158,9 +160,7 @@ export class AuthenticationService {
   }
 
   logout(): void {
-    localStorage.removeItem('auth');
-    localStorage.removeItem('token');
-    localStorage.removeItem('refreshToken');
+    clearAllAuth();
     localStorage.removeItem(MEMBER_TYPE_ACCESS_CACHE_KEY);
     localStorage.removeItem(RAB_UNIT_ACCESS_CACHE_KEY);
     localStorage.removeItem('user_menus');

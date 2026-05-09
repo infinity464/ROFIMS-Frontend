@@ -132,6 +132,7 @@ export class IdentityUserCreateComponent implements OnInit {
   resetSubmitting = false;
 
   togglingUserId: string | null = null;
+  forceLogoutUserId: string | null = null;
 
   ngOnInit(): void {
         const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
@@ -718,6 +719,35 @@ export class IdentityUserCreateComponent implements OnInit {
     this.resetTargetUser = null;
     this.resetNewPassword = '';
     this.resetConfirmPassword = '';
+  }
+
+  /**
+   * Force-logout: rotates the target's SecurityStamp on the server, which invalidates every
+   * JWT issued for them. Their next API call returns 401 and they're redirected to login.
+   */
+  forceLogoutUser(user: UserRow): void {
+    if (!user?.id || !user.email || this.forceLogoutUserId) return;
+    if (!this.canManageRole(user.roleName)) return;
+    if (typeof window !== 'undefined' &&
+        !window.confirm(`Force-logout ${user.email}? They'll be signed out from every device immediately.`)) {
+      return;
+    }
+    this.forceLogoutUserId = user.id;
+    this.identityService.forceLogoutUser({ email: user.email }).subscribe({
+      next: (res) => {
+        this.forceLogoutUserId = null;
+        this.messageService.add({
+          severity: res.isSuccess ? 'success' : 'error',
+          summary: res.isSuccess ? 'Logged out' : 'Force logout failed',
+          detail: res.message ?? (res.isSuccess ? 'User signed out from all devices.' : 'Could not force-logout user.')
+        });
+      },
+      error: (err) => {
+        this.forceLogoutUserId = null;
+        const msg = err?.error?.message ?? (typeof err?.message === 'string' ? err.message : 'Could not force-logout user.');
+        this.messageService.add({ severity: 'error', summary: 'Force logout failed', detail: msg });
+      }
+    });
   }
 
   toggleUserActive(user: UserRow): void {

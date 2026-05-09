@@ -16,6 +16,7 @@ import { AuthenticationService } from '../Service/authentication';
 import { UserMenuService } from '@/services/user-menu.service';
 import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
 import { IdentityUserRabUnitAccessService } from '@/services/identity-user-rab-unit-access.service';
+import { SessionPolicyService } from '@/shared/services/session-policy.service';
 import { AppFloatingConfigurator } from '@/layout/component/app.floatingconfigurator';
 
 @Component({
@@ -61,7 +62,8 @@ export class Login implements OnInit {
     private messageService: MessageService,
     private userMenuService: UserMenuService,
     private memberTypeAccess: IdentityUserMemberTypeAccessService,
-    private rabUnitAccess: IdentityUserRabUnitAccessService
+    private rabUnitAccess: IdentityUserRabUnitAccessService,
+    private sessionPolicy: SessionPolicyService
   ) {}
 
   ngOnInit(): void {
@@ -100,6 +102,9 @@ export class Login implements OnInit {
           this.memberTypeAccess.cacheForUser(res.userId).subscribe();
           this.rabUnitAccess.cacheForUser(res.userId).subscribe();
         }
+
+        // Refresh session policy so the idle-timeout watcher and storage-tier choice are current.
+        this.sessionPolicy.load().subscribe({ error: () => { /* policy stays at last cached / default */ } });
 
         // Load user menus based on role, then navigate
         this.userMenuService.loadUserMenus(res.roleId).subscribe({

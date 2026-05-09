@@ -50,4 +50,18 @@ export class IdentityService {
   setUserActive(model: SetUserActiveModel): Observable<Responses> {
     return this.http.post<Responses>(`${BASE}/SetUserActive`, model);
   }
+
+  // --- Session policy + force logout ---
+
+  getSessionPolicy(): Observable<{ idleTimeoutMinutes: number; logoutOnBrowserClose: boolean }> {
+    return this.http.get<{ idleTimeoutMinutes: number; logoutOnBrowserClose: boolean }>(`${BASE}/GetSessionPolicy`);
+  }
+
+  updateSessionPolicy(model: { idleTimeoutMinutes: number; logoutOnBrowserClose: boolean }): Observable<Responses> {
+    return this.http.post<Responses>(`${BASE}/UpdateSessionPolicy`, model);
+  }
+
+  forceLogoutUser(model: { email: string }): Observable<Responses> {
+    return this.http.post<Responses>(`${BASE}/ForceLogoutUser`, model);
+  }
 }

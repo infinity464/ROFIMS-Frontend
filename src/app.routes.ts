@@ -149,6 +149,7 @@ import { MenuManagement } from '@/Components/Features/menu-management/menu-manag
 import { RoleMenuPermission } from '@/Components/Features/role-menu-permission/role-menu-permission';
 import { LoginAuditComponent } from '@/Components/Features/login-audit/login-audit.component';
 import { MyLoginAuditComponent } from '@/Components/Features/my-login-audit/my-login-audit.component';
+import { SessionPolicyComponent } from '@/Components/Features/settings/session-policy/session-policy.component';
 import { EmployeeReportsComponent } from '@/Components/Features/employee-reports/employee-reports.component';
 import { ReportFamilyOccupationComponent } from '@/Components/Features/employee-reports/report-family-occupation/report-family-occupation.component';
 import { ReportAddressLocationComponent } from '@/Components/Features/employee-reports/report-address-location/report-address-location.component';
@@ -366,6 +367,9 @@ export const appRoutes: Routes = [
 
             // Change Password
             { path: 'change-password', component: ChangePassword },
+
+            // Settings
+            { path: 'settings/session-policy', component: SessionPolicyComponent },
 
             { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
             { path: 'documentation', component: Documentation },

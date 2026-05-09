@@ -63,10 +63,11 @@ export class ChatService {
   }
 
   private getAccessToken(): string | null {
-    const token = localStorage.getItem('token');
+    // Use the auth-storage shim so we find the token whether the policy puts it in localStorage or sessionStorage.
+    const token = sessionStorage.getItem('token') ?? localStorage.getItem('token');
     if (token) return token;
     try {
-      const auth = localStorage.getItem('auth');
+      const auth = sessionStorage.getItem('auth') ?? localStorage.getItem('auth');
       if (auth) {
         const parsed = JSON.parse(auth) as { token?: string; Token?: string };
         return parsed?.token ?? parsed?.Token ?? null;

@@ -458,6 +458,19 @@
                 tooltipPosition="top"
               />
               <p-button
+                icon="pi pi-sign-out"
+                [class.perm-hidden]="!canManageRole(user.roleName)"
+                [text]="true"
+                [rounded]="true"
+                size="small"
+                severity="contrast"
+                (onClick)="forceLogoutUser(user)"
+                [loading]="forceLogoutUserId === user.id"
+                [disabled]="forceLogoutUserId !== null && forceLogoutUserId !== user.id"
+                pTooltip="Force Logout (sign out from all devices)"
+                tooltipPosition="top"
+              />
+              <p-button
                 [icon]="user.isActive ? 'pi pi-ban' : 'pi pi-check-circle'"
                 [class.perm-hidden]="!canManageRole(user.roleName)"
                 [text]="true"

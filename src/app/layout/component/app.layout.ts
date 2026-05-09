@@ -9,11 +9,12 @@ import { LayoutService } from '../service/layout.service';
 import { FloatingChatWidgetComponent } from '@/Components/Features/chat/floating-chat-widget.component';
 import { ChatService } from '@/services/chat.service';
 import { NotificationService } from '@/services/notification.service';
+import { Toast } from 'primeng/toast';
 
 @Component({
     selector: 'app-layout',
     standalone: true,
-    imports: [CommonModule, AppTopbar, AppSidebar, RouterModule, AppFooter, FloatingChatWidgetComponent],
+    imports: [CommonModule, AppTopbar, AppSidebar, RouterModule, AppFooter, FloatingChatWidgetComponent, Toast],
     template: `<div class="layout-wrapper" [ngClass]="containerClass">
         <app-topbar></app-topbar>
         <app-sidebar></app-sidebar>
@@ -25,6 +26,10 @@ import { NotificationService } from '@/services/notification.service';
         </div>
         <app-floating-chat-widget></app-floating-chat-widget>
         <div class="layout-mask animate-fadein"></div>
+        <!-- Global toast — used by root-level services for non-blocking notifications. -->
+        <p-toast position="top-right" key="global"></p-toast>
+        <!-- Idle-warning toast — center-stage, dismissed by IdleTimeoutService on activity. -->
+        <p-toast position="center" key="idle"></p-toast>
     </div> `
 })
 export class AppLayout implements OnInit, OnDestroy {

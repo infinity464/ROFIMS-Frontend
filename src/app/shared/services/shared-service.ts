@@ -1,11 +1,12 @@
 import { Injectable } from '@angular/core';
+import { getAuthItem } from './auth-storage';
 
 @Injectable({
     providedIn: 'root'
 })
 export class SharedService {
     getCurrentUser() {
-        const auth = localStorage.getItem('auth');
+        const auth = getAuthItem('auth');
         if (auth) {
             const userInfo = JSON.parse(auth);
             return userInfo.userName;
@@ -15,7 +16,7 @@ export class SharedService {
 
     /** Returns the identity user ID (userId) from auth. */
     getCurrentUserId(): string | null {
-        const auth = localStorage.getItem('auth');
+        const auth = getAuthItem('auth');
         if (auth) {
             const userInfo = JSON.parse(auth);
             return userInfo.userId ?? userInfo.id ?? null;
@@ -30,7 +31,7 @@ export class SharedService {
      * in case a stale cached token from an older deploy is still in localStorage.
      */
     getCurrentResetRoleIds(): string[] {
-        const auth = localStorage.getItem('auth');
+        const auth = getAuthItem('auth');
         if (!auth) return [];
         try {
             const info = JSON.parse(auth);
