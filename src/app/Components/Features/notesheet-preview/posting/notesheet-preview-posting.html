@@ -218,7 +218,7 @@
                                         <td>{{ tenure(emp.joiningDateInRAB, 'y') }}</td>
                                         <td>{{ tenure(emp.joiningDateInRAB, 'm') }}</td>
                                         <td>{{ tenure(emp.joiningDateInRAB, 'd') }}</td>
-                                        <td style="white-space: pre-line;">{{ isEnglish() ? (emp.previousRabUnits || '-') : (emp.previousRabUnitsBN || emp.previousRabUnits || '-') }}</td>
+                                        <td style="white-space: pre-line;">{{ getInterPrevWorkplace(emp) || '-' }}</td>
                                         <td>
                                             <p-treeSelect [(ngModel)]="selectedUnitNodes[emp.employeeId]"
                                                           [options]="unitTreeNodes" placeholder="Select Unit"
@@ -418,7 +418,7 @@
                                     <td>{{ tenure(emp.joiningDateInRAB, 'y') }}</td>
                                     <td>{{ tenure(emp.joiningDateInRAB, 'm') }}</td>
                                     <td>{{ tenure(emp.joiningDateInRAB, 'd') }}</td>
-                                    <td style="white-space: pre-line;">{{ isEnglish() ? (emp.previousRabUnits || '') : (emp.previousRabUnitsBN || emp.previousRabUnits || '') }}</td>
+                                    <td style="white-space: pre-line;">{{ getInterPrevWorkplace(emp) }}</td>
                                     <td>{{ isEnglish() ? (emp.transferRabUnitName || '') : (emp.transferRabUnitNameBN || emp.transferRabUnitName || '') }}</td>
                                     <td>{{ getCombinedRemarks(emp) }}</td>
                                 </tr>

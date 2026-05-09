@@ -588,6 +588,7 @@
                 <table class="po-doc-copy-table">
                     <tr>
                         <td class="po-doc-copy-left">
+                            <div *ngIf="noteSheetPrefix" style="margin-bottom:0.3rem;">{{ noteSheetPrefix }}</div>
                             <div class="po-doc-copy-title">{{ isBangla ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নহে)' : 'Copy (not in order of seniority):' }}</div>
                             <div class="po-doc-copy-list" *ngIf="exportFooterParagraphs.length > 0">
                                 <p *ngFor="let para of exportFooterParagraphs; let i = index">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}। {{ para.text }}</p>

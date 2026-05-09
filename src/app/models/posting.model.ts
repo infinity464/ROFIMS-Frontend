@@ -241,6 +241,8 @@ export interface DraftPostingEmployeeRow {
     previousRabUnitsBN?: string | null;
     /** Current RAB unit the employee is presently serving in. Inter-posting only. */
     presentRabUnitId?: number | null;
+    presentRabUnitName?: string | null;
+    presentRabUnitNameBN?: string | null;
     createdBy: string | null;
     createdDate: string | null;
 }

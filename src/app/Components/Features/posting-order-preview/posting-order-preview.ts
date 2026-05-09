@@ -688,6 +688,13 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             : this.formatDate(this.postingOrderDate);
     }
 
+    get noteSheetPrefix(): string {
+        const no = (this.noteSheetNo ?? '').trim();
+        if (!no) return '';
+        const lastSlash = no.lastIndexOf('/');
+        return lastSlash > 0 ? no.substring(0, lastSlash) : no;
+    }
+
     /** NoteSheet number + final approval date, shown after the bold "সূত্রঃ / Reference:" label. */
     get referenceLine(): string {
         const no = (this.noteSheetNo ?? '').trim();
@@ -1464,11 +1471,18 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         const sigParas = [new Paragraph({ spacing: { before: 600 }, keepNext: true }), sigTable] as any[];
 
         // ── Copy + Signature (two-column borderless table next to অনুলিপি) ──
-        // Left cell: অনুলিপি title + footer paragraphs
+        // Left cell: notesheet prefix + অনুলিপি title + footer paragraphs
         const leftCellChildren: Paragraph[] = [];
+        const nsPrefix = this.noteSheetPrefix;
+        if (nsPrefix) {
+            leftCellChildren.push(new Paragraph({
+                children: [new TextRun({ text: nsPrefix, size: ctxSize, sizeComplexScript: csSize, font, language: lang })],
+                spacing: { before: 200, after: 60 }
+            }));
+        }
         leftCellChildren.push(new Paragraph({
             children: [new TextRun({ text: bn ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নহে)' : 'Copy (not in order of seniority):', bold: true, size: ctxSize, sizeComplexScript: csSize, font, language: lang })],
-            spacing: { before: 200 }
+            spacing: { before: nsPrefix ? 0 : 200 }
         }));
         this.exportFooterParagraphs.forEach((p, i) => {
             leftCellChildren.push(new Paragraph({

@@ -697,6 +697,14 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         return this.isEnglish() ? String(n) : this.toBnDigits(String(n));
     }
 
+    getInterPrevWorkplace(emp: DraftPostingEmployeeRow): string {
+        const bn = !this.isEnglish();
+        const motherOrg = bn ? (emp.motherUnitNameBN || emp.motherUnitName || '') : (emp.motherUnitName || '');
+        const rabUnit = bn ? (emp.presentRabUnitNameBN || emp.presentRabUnitName || '') : (emp.presentRabUnitName || '');
+        const parts = [motherOrg, rabUnit].filter(p => p);
+        return parts.join('/ ') || '';
+    }
+
     // ── Pagination logic ──────────────────────────────────────
     ngAfterViewChecked(): void {
         if (this.editing || !this.contentMeasure?.nativeElement) return;
@@ -1699,7 +1707,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
                         bn ? this.toBnDigits(String(t.y)) : String(t.y),
                         bn ? this.toBnDigits(String(t.m)) : String(t.m),
                         bn ? this.toBnDigits(String(t.d)) : String(t.d),
-                        bn?(emp.previousRabUnitsBN||emp.previousRabUnits||''):(emp.previousRabUnits??''),
+                        this.getInterPrevWorkplace(emp),
                         bn?(emp.transferRabUnitNameBN||emp.transferRabUnitName||''):(emp.transferRabUnitName??''),
                         this.getCombinedRemarks(emp)
                     ];
