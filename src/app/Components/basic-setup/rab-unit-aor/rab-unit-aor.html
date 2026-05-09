@@ -23,54 +23,6 @@
                     }
                 </div>
                 <div>
-                    <label for="divisionIds" class="block mb-2">Division <span class="text-red-500">*</span></label>
-                    <p-multiselect
-                        id="divisionIds"
-                        [options]="divisionOptions"
-                        optionLabel="label"
-                        optionValue="value"
-                        styleClass="w-full"
-                        placeholder="Select one or more divisions"
-                        [filter]="true"
-                        formControlName="divisionIds">
-                    </p-multiselect>
-                    @if (form.get('divisionIds')?.invalid && form.get('divisionIds')?.touched) {
-                        <small class="text-red-500 block mt-1">Select at least one division</small>
-                    }
-                </div>
-                <div>
-                    <label for="districtIds" class="block mb-2">District <span class="text-red-500">*</span></label>
-                    <p-multiselect
-                        id="districtIds"
-                        [options]="districtOptions"
-                        optionLabel="label"
-                        optionValue="value"
-                        styleClass="w-full"
-                        placeholder="Select one or more districts"
-                        [filter]="true"
-                        formControlName="districtIds">
-                    </p-multiselect>
-                    @if (form.get('districtIds')?.invalid && form.get('districtIds')?.touched) {
-                        <small class="text-red-500 block mt-1">Select at least one district</small>
-                    }
-                </div>
-                <div>
-                    <label for="upazilaIds" class="block mb-2">Upazilas <span class="text-red-500">*</span></label>
-                    <p-multiselect
-                        id="upazilaIds"
-                        [options]="upazilaOptions"
-                        optionLabel="label"
-                        optionValue="value"
-                        styleClass="w-full"
-                        placeholder="Select one or more upazilas"
-                        [filter]="true"
-                        formControlName="upazilaIds">
-                    </p-multiselect>
-                    @if (form.get('upazilaIds')?.invalid && form.get('upazilaIds')?.touched) {
-                        <small class="text-red-500 block mt-1">Select at least one upazila</small>
-                    }
-                </div>
-                <div>
                     <label for="locationOfBattalionHQ" class="block mb-2">Location of Battalion HQ</label>
                     <input
                         pInputText
@@ -79,6 +31,16 @@
                         class="w-full"
                         placeholder="Text"
                         formControlName="locationOfBattalionHQ">
+                </div>
+                <div>
+                    <label for="locationOfBattalionHQBangla" class="block mb-2">Location of Battalion HQ Bangla</label>
+                    <input
+                        pInputText
+                        id="locationOfBattalionHQBangla"
+                        type="text"
+                        class="w-full"
+                        placeholder="বাংলা"
+                        formControlName="locationOfBattalionHQBangla">
                 </div>
                 <div>
                     <label for="numberOfCamp" class="block mb-2">Number of Camp</label>
@@ -100,6 +62,22 @@
                         placeholder="Text"
                         formControlName="nameOfCamps">
                 </div>
+                <div>
+                    <label for="identificationColor" class="block mb-2">Identification Color</label>
+                    <div class="flex items-center gap-2">
+                        <p-colorPicker
+                            inputId="identificationColor"
+                            formControlName="identificationColor"
+                            [format]="'hex'">
+                        </p-colorPicker>
+                        <input
+                            pInputText
+                            type="text"
+                            class="flex-1"
+                            placeholder="#RRGGBB"
+                            formControlName="identificationColor">
+                    </div>
+                </div>
             </div>
             <div class="flex flex-col sm:flex-row gap-2 justify-end">
                 <p-button type="submit" label="Save" [disabled]="form.invalid || isSubmitting" [fluid]="false"></p-button>
@@ -108,49 +86,52 @@
         </form>
     </div>
 
-    <div class="card mt-4">
-        <div class="flex justify-between items-center flex-column sm:flex-row">
-            <span class="font-medium">Assigned Area of Responsibility</span>
-        </div>
-
-        @if (!form.value.rabUnitId) {
-            <div class="text-color-secondary py-4">Select a RAB Unit to see assigned area of responsibility.</div>
-        } @else if (assignedLoading) {
-            <div class="py-4">Loading...</div>
-        } @else if (assigned.length === 0) {
-            <div class="text-color-secondary py-4">No area assigned. Use the form above to add.</div>
-        } @else {
-            <p-table [value]="assigned" [loading]="false" styleClass="p-datatable-sm p-datatable-striped">
-                <ng-template pTemplate="header">
-                    <tr>
-                        <th>#</th>
-                        <th>RAB Unit</th>
-                        <th>Division</th>
-                        <th>District</th>
-                        <th>Upazila</th>
-                        <th>Location of Battalion HQ</th>
-                        <th>Number of Camp</th>
-                        <th>Name of Camps</th>
-                        <th>Action</th>
-                    </tr>
-                </ng-template>
-                <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
-                    <tr>
-                        <td>{{ rowIndex + 1 }}</td>
-                        <td>{{ row.rabUnitName }}</td>
-                        <td>{{ row.divisionNames }}</td>
-                        <td>{{ row.districtNames }}</td>
-                        <td>{{ row.upazilaNames }}</td>
-                        <td>{{ row.locationOfBattalionHQ ?? '-' }}</td>
-                        <td>{{ row.numberOfCamp ?? '-' }}</td>
-                        <td>{{ row.nameOfCamps ?? '-' }}</td>
-                        <td>
-                            <button class="mx-2" pButton icon="pi pi-trash" [class.perm-hidden]="!canDelete" (click)="removeAssignment(row, $event)" class="p-button-danger"></button>
-                        </td>
-                    </tr>
-                </ng-template>
-            </p-table>
-        }
+    <div class="card mt-4 aor-search-card">
+        <label for="searchUpazilaId" class="block mb-2 text-color-secondary">Select Unit or Search by Upazila to load its unit's Area of Responsibility</label>
+        <p-select
+            id="searchUpazilaId"
+            [options]="allUpazilasPool"
+            optionLabel="name"
+            optionValue="id"
+            styleClass="w-full"
+            placeholder="Type to find an upazila…"
+            [filter]="true"
+            [showClear]="true"
+            [virtualScroll]="true"
+            [virtualScrollItemSize]="38"
+            [formControl]="$any(form.get('searchUpazilaId'))">
+        </p-select>
     </div>
+
+    @if (assignedLoading || form.value.rabUnitId || assigned.length > 0) {
+        <div class="card mt-4 aor-list-card">
+            @if (assignedLoading) {
+                <div class="py-2">Loading...</div>
+            } @else if (form.value.rabUnitId && assigned.length === 0) {
+                <div class="text-color-secondary py-2">No area assigned. Use the form above to add.</div>
+            } @else if (assigned.length > 0) {
+                <div class="aor-card-grid">
+                    @for (row of assigned; track row.aorId) {
+                        <app-aor-card
+                            [data]="row"
+                            [canDelete]="canDelete"
+                            [canUpdate]="canUpdate"
+                            [availableDivisions]="allDivisionsPool"
+                            [availableDistricts]="allDistrictsPool"
+                            [availableUpazilas]="upazilasPoolForCard"
+                            [lockedUpazilas]="lockedUpazilas"
+                            (view)="onCardView()"
+                            (edit)="onCardEdit($event)"
+                            (delete)="removeAssignment($event.data, $event.event)"
+                            (setDivisions)="onCardSetDivisions($event)"
+                            (setDistricts)="onCardSetDistricts($event)"
+                            (setUpazilas)="onCardSetUpazilas($event)"
+                            (lockedUpazilaClick)="onLockedUpazilaClick($event)">
+                        </app-aor-card>
+                    }
+                </div>
+            }
+        </div>
+    }
 </p-fluid>
 

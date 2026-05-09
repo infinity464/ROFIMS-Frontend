@@ -47,19 +47,19 @@ export interface EmployeeBasicInfo {
             <div class="flex flex-wrap align-items-end gap-3">
                 <div style="min-width: 140px; max-width: 160px;">
                     <label class="font-semibold block mb-2 text-700">RAB ID</label>
-                    <input pInputText class="w-full" placeholder="RAB ID" [(ngModel)]="searchRabId" (ngModelChange)="onRabIdInput($event)" (keyup.enter)="search()" />
+                    <input pInputText class="w-full" placeholder="RAB ID" [(ngModel)]="searchRabId" (ngModelChange)="onRabIdInput($event)" (keydown.enter)="$event.preventDefault(); search()" />
                 </div>
                 <div style="min-width: 140px; max-width: 160px;">
                     <label class="font-semibold block mb-2 text-700">Service ID</label>
-                    <input pInputText class="w-full" placeholder="Service ID" [(ngModel)]="searchServiceId" (ngModelChange)="onServiceIdInput($event)" (keyup.enter)="search()" />
+                    <input pInputText class="w-full" placeholder="Service ID" [(ngModel)]="searchServiceId" (ngModelChange)="onServiceIdInput($event)" (keydown.enter)="$event.preventDefault(); search()" />
                 </div>
                 <div>
                     <label class="font-semibold block mb-2 text-700">&nbsp;</label>
-                    <p-button label="Search" icon="pi pi-search" [loading]="isSearching" (onClick)="search()"></p-button>
+                    <button type="button" pButton label="Search" icon="pi pi-search" [loading]="isSearching" (click)="$event.preventDefault(); $event.stopPropagation(); search()"></button>
                 </div>
                 <div>
                     <label class="font-semibold block mb-2 text-700">&nbsp;</label>
-                    <p-button label="Clear" icon="pi pi-times" severity="secondary" (onClick)="reset()"></p-button>
+                    <button type="button" pButton label="Clear" icon="pi pi-times" severity="secondary" (click)="$event.preventDefault(); $event.stopPropagation(); reset()"></button>
                 </div>
                 @if (employeeFound && employeeInfo) {
                     <div class="ml-3">
@@ -83,7 +83,7 @@ export interface EmployeeBasicInfo {
                                     <span class="font-semibold">{{ employeeInfo.motherOrganizationDisplay ?? employeeInfo.motherOrganization ?? 'N/A' }}</span></span
                                 >
                             </div>
-                            <p-button label="View Profile" (onClick)="openEmployeeProfile()"></p-button>
+                            <button type="button" pButton label="View Profile" (click)="$event.preventDefault(); $event.stopPropagation(); openEmployeeProfile()"></button>
                         </div>
                     </div>
                 }
@@ -117,13 +117,13 @@ export interface EmployeeBasicInfo {
                         <td>{{ row.orgName || '-' }}</td>
                         <td>{{ row.postingStatus || '-' }}</td>
                         <td>
-                            <p-button label="Select" size="small" (onClick)="selectPickerRow(row)"></p-button>
+                            <p-button type="button" label="Select" size="small" (onClick)="selectPickerRow(row)"></p-button>
                         </td>
                     </tr>
                 </ng-template>
             </p-table>
             <ng-template pTemplate="footer">
-                <p-button label="Cancel" severity="secondary" [outlined]="true" (onClick)="closePickerDialog()"></p-button>
+                <p-button type="button" label="Cancel" severity="secondary" [outlined]="true" (onClick)="closePickerDialog()"></p-button>
             </ng-template>
         </p-dialog>
     `

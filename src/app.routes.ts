@@ -122,6 +122,7 @@ import { RabIdSerial } from '@/Components/basic-setup/rab-id-serial/rab-id-seria
 import { AbsentType } from '@/Components/basic-setup/absent-type/absent-type';
 import { NotesheetTemplateComponent } from '@/Components/basic-setup/notesheet-template/notesheet-template';
 import { NoteSheetNumberConfigComponent } from '@/Components/basic-setup/notesheet-number-config/notesheet-number-config';
+import { LeaveCardNumberConfigComponent } from '@/Components/basic-setup/leave-card-number-config/leave-card-number-config';
 import { NoteSheetApproverConfigComponent } from '@/Components/basic-setup/notesheet-approver-config/notesheet-approver-config';
 import { PostingOrderNumberConfigComponent } from '@/Components/basic-setup/posting-order-number-config/posting-order-number-config';
 import { NotesheetGenerateComponent } from '@/Components/Features/notesheet-generate/notesheet-generate';
@@ -133,6 +134,12 @@ import { NotesheetPreviewPostingComponent } from '@/Components/Features/noteshee
 import { NotesheetPreviewExbdComponent } from '@/Components/Features/notesheet-preview/exbd/notesheet-preview-exbd';
 import { LeaveApplicationApplyComponent } from '@/Components/Features/leave-application/leave-application-apply/leave-application-apply.component';
 import { LeaveApplicationListComponent } from '@/Components/Features/leave-application/leave-application-list/leave-application-list.component';
+import { LeavePendingApprovalListComponent } from '@/Components/Features/leave-application/leave-pending-approval-list/leave-pending-approval-list.component';
+import { LeavePendingApprovalPreviewComponent } from '@/Components/Features/leave-application/leave-pending-approval-preview/leave-pending-approval-preview.component';
+import { LeaveHistoryListComponent } from '@/Components/Features/leave-application/leave-history-list/leave-history-list.component';
+import { LeaveMyApplicationsComponent } from '@/Components/Features/leave-application/leave-my-applications/leave-my-applications.component';
+import { LeaveApplyForOtherComponent } from '@/Components/Features/leave-application/leave-apply-for-other/leave-apply-for-other.component';
+import { LeaveActionTakenByMeComponent } from '@/Components/Features/leave-application/leave-action-taken-by-me/leave-action-taken-by-me.component';
 import { LeaveCardComponent } from '@/Components/Features/leave-application/leave-card/leave-card.component';
 import { CalendarComponent } from '@/Components/Features/calendar/calendar.component';
 import { TaskEventListComponent } from '@/Components/Features/calendar/task-event-list.component';
@@ -147,6 +154,7 @@ import { EmployeeReportsComponent } from '@/Components/Features/employee-reports
 import { ReportFamilyOccupationComponent } from '@/Components/Features/employee-reports/report-family-occupation/report-family-occupation.component';
 import { ReportAddressLocationComponent } from '@/Components/Features/employee-reports/report-address-location/report-address-location.component';
 import { RabUnitAor } from '@/Components/basic-setup/rab-unit-aor/rab-unit-aor';
+import { RabUnitAorMap } from '@/Components/basic-setup/rab-unit-aor-map/rab-unit-aor-map';
 import { ManpowerSummaryComponent } from '@/Components/Features/statistics/manpower-summary/manpower-summary';
 import { ManpowerChartComponent } from '@/Components/Features/statistics/manpower-chart/manpower-chart';
 import { RankWiseManpowerComponent } from '@/Components/Features/statistics/rank-wise-manpower/rank-wise-manpower';
@@ -208,6 +216,7 @@ export const appRoutes: Routes = [
             { path: 'basic-setup/org-tree', component: OrgTreeComponent },
             { path: 'basic-setup/rab-unit', component: RabUnit },
             { path: 'basic-setup/rab-unit-aor', component: RabUnitAor },
+            { path: 'basic-setup/rab-unit-aor-map', component: RabUnitAorMap },
             { path: 'basic-setup/officer-type', component: OfficerType },
             { path: 'basic-setup/rab-wing', component: RabWing },
             { path: 'basic-setup/mother-org', component: Organization },
@@ -238,6 +247,7 @@ export const appRoutes: Routes = [
             { path: 'basic-setup/absent-type', component: AbsentType },
             { path: 'basic-setup/notesheet-template', component: NotesheetTemplateComponent },
             { path: 'basic-setup/notesheet-number-config', component: NoteSheetNumberConfigComponent },
+            { path: 'basic-setup/leave-card-number-config', component: LeaveCardNumberConfigComponent },
             { path: 'basic-setup/notesheet-approver-config', component: NoteSheetApproverConfigComponent },
             { path: 'basic-setup/posting-order-number-config', component: PostingOrderNumberConfigComponent },
             { path: 'notesheet-generate', component: NotesheetGenerateComponent },
@@ -266,6 +276,12 @@ export const appRoutes: Routes = [
             // Leave Application (apply and approve/reject - standalone from notesheet)
             { path: 'leave-application/apply', component: LeaveApplicationApplyComponent },
             { path: 'leave-application/list', component: LeaveApplicationListComponent },
+            { path: 'leave-application/pending-approval', component: LeavePendingApprovalListComponent },
+            { path: 'leave-application/preview', component: LeavePendingApprovalPreviewComponent },
+            { path: 'leave-application/history', component: LeaveHistoryListComponent },
+            { path: 'leave-application/my-applications', component: LeaveMyApplicationsComponent },
+            { path: 'leave-application/apply-for-other', component: LeaveApplyForOtherComponent },
+            { path: 'leave-application/action-taken-by-me', component: LeaveActionTakenByMeComponent },
             { path: 'leave-application/card', component: LeaveCardComponent },
 
             // EMP

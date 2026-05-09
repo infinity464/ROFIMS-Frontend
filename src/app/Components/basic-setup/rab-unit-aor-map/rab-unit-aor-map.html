@@ -1,0 +1,60 @@
+<div class="card">
+    <div class="font-semibold text-xl mb-4">{{ title }}</div>
+
+    @if (loading) {
+        <div class="flex items-center gap-3 py-6">
+            <p-progressSpinner styleClass="w-8 h-8"></p-progressSpinner>
+            <span>Loading upazila atlas and AOR data…</span>
+        </div>
+    } @else if (errorMessage) {
+        <p-message severity="error" [text]="errorMessage"></p-message>
+    } @else {
+        <div class="aor-map-grid">
+            <div class="aor-map-host" #mapHost (mouseleave)="onFeatureLeave()">
+                <svg [attr.viewBox]="viewBox" preserveAspectRatio="xMidYMid meet">
+                    @for (f of rendered; track $index) {
+                        <path
+                            class="upazila"
+                            [attr.d]="f.pathD"
+                            [attr.fill]="f.color"
+                            (mousemove)="onFeatureMove($event, f)">
+                        </path>
+                    }
+                </svg>
+
+                @if (tooltip.visible) {
+                    <div class="aor-map-tip" [style.left.px]="tooltip.x" [style.top.px]="tooltip.y">
+                        <div class="font-semibold">{{ tooltip.name }}</div>
+                        @if (tooltip.nameBn) { <div class="bn">{{ tooltip.nameBn }}</div> }
+                        <div class="mt-1 text-sm">
+                            <span class="text-color-secondary">Unit:</span> {{ tooltip.unitName }}
+                        </div>
+                        @if (tooltip.battalionHQ) {
+                            <div class="text-sm">
+                                <span class="text-color-secondary">HQ:</span> {{ tooltip.battalionHQ }}
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            <aside class="aor-map-legend">
+                <div class="font-semibold mb-2">RAB Units</div>
+                @if (legend.length === 0) {
+                    <div class="text-color-secondary text-sm">No AORs configured yet.</div>
+                } @else {
+                    <ul class="legend-list">
+                        @for (l of legend; track l.unitId) {
+                            <li>
+                                <span class="swatch" [style.background]="l.color"></span>
+                                <span class="name">{{ l.name }}</span>
+                                <span class="count">{{ l.upazilaCount }}</span>
+                            </li>
+                        }
+                    </ul>
+                }
+
+            </aside>
+        </div>
+    }
+</div>

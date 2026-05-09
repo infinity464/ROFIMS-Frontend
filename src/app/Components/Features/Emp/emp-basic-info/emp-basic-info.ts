@@ -926,6 +926,10 @@ export class EmpBasicInfo implements OnInit {
     /** Raw ranks for the currently selected mother org (before member-type filter). */
     private allRanksForOrg: CommonCodeModel[] = [];
 
+    /** Tracks the last employeeId we fetched, so route mode-only changes (e.g., view → edit
+     * via Edit button) don't trigger a redundant refetch that would snap mode back to view. */
+    private _lastLoadedEmployeeId: number | null = null;
+
     ngOnInit(): void {
         const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
         this.canInsert = _perms.canInsert;
@@ -961,22 +965,35 @@ export class EmpBasicInfo implements OnInit {
             const mode = params['mode'];
 
             if (employeeId) {
-                this.generatedEmployeeId = +employeeId;
-                this.showEntryForm = true;
-                this.hideSearchSection = true;
+                const idNum = +employeeId;
 
-                if (mode === 'edit') {
-                    this.isEditMode = true;
-                    this.isViewMode = false;
-                    this.pageTitle = 'Edit Employee';
-                } else {
+                if (this._lastLoadedEmployeeId !== idNum) {
+                    // First load (or new employee) — always start in view mode so the user
+                    // explicitly opts into editing via the Edit button. URL's mode is ignored
+                    // here intentionally; clicking Edit will navigate to mode=edit.
+                    this._lastLoadedEmployeeId = idNum;
+                    this.generatedEmployeeId = idNum;
+                    this.showEntryForm = true;
+                    this.hideSearchSection = true;
                     this.isViewMode = true;
                     this.isEditMode = false;
                     this.pageTitle = 'View Employee Details';
+                    this.loadEmployeeData(idNum);
+                } else {
+                    // Same employee, mode-only change (e.g., Edit click) — toggle state
+                    // without refetching, so the form doesn't snap back to view.
+                    if (mode === 'edit') {
+                        this.isEditMode = true;
+                        this.isViewMode = false;
+                        this.pageTitle = 'Edit Employee';
+                        this.enableForm();
+                    } else {
+                        this.isViewMode = true;
+                        this.isEditMode = false;
+                        this.pageTitle = 'View Employee Details';
+                        this.disableForm();
+                    }
                 }
-
-                // Load employee data
-                this.loadEmployeeData(+employeeId);
             }
         });
     }

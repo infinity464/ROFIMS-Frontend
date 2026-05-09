@@ -1,0 +1,48 @@
+:host {
+    display: block;
+}
+
+.page-subtitle {
+    font-size: 0.85rem;
+    color: var(--text-color-secondary, rgba(255, 255, 255, 0.6));
+    margin: 0.15rem 0 0 0;
+}
+
+.leave-app-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.header-status-filter {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    .filter-label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-color, inherit);
+        white-space: nowrap;
+    }
+}
+
+:host ::ng-deep .leave-history-status-select {
+    min-width: 140px;
+}
+
+.leave-history-actions {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+
+// Status pill — base + most variants come from leave-my-applications.scss.
+// Only the Draft variant is unique to the history page.
+.status-pill.is-draft {
+    background: rgba(107, 114, 128, 0.15);
+    color: #4b5563;
+    border-color: rgba(107, 114, 128, 0.35);
+}

@@ -33,6 +33,18 @@
             </div>
         }
 
+        <!-- Top Edit button for tab/embedded view (header is hidden via hideTitle) -->
+        @if (hideTitle && employeeFound && mode === 'view') {
+            <div class="flex justify-end mb-3">
+                <p-button
+                    label="Edit"
+                    icon="pi pi-pencil"
+                    [class.perm-hidden]="!canUpdate"
+                    (onClick)="enableEditMode()">
+                </p-button>
+            </div>
+        }
+
         <!-- Address Forms -->
         @if (employeeFound) {
             <!-- Permanent Address (showInnerWrapper false so title/fields align with RAB ID section) -->
@@ -61,19 +73,6 @@
             </div>
 
             <!-- Action Buttons -->
-            @if (mode === 'view') {
-                <div class="form-actions">
-                    <p-button
-                        type="button"
-                        label="Back to List"
-                        icon="pi pi-arrow-left"
-                        severity="secondary"
-                        [outlined]="true"
-                        styleClass="form-btn-secondary"
-                        (onClick)="goBack()">
-                    </p-button>
-                </div>
-            }
             @if (mode === 'edit') {
                 <div class="form-actions">
                     <p-button

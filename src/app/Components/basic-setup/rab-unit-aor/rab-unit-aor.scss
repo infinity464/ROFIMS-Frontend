@@ -2,3 +2,18 @@
     border-collapse: collapse;
 }
 
+.aor-list-card {
+    // Tighter than the default `.card` 2rem padding so cards don't feel boxed-in.
+    padding: 1rem;
+    margin-bottom: 0;
+}
+
+.aor-search-card {
+    padding: 1rem;
+}
+
+.aor-card-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
