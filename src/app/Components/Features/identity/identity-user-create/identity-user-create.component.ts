@@ -40,6 +40,7 @@ import {
   UserRabUnitAccessDto
 } from '@/services/identity-user-rab-unit-access.service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
+import { SharedService } from '@/shared/services/shared-service';
 import type { ApplicationRole, ApplicationUser } from '@/models/identity.model';
 
 interface UserRow extends ApplicationUser {
@@ -108,9 +109,12 @@ export class IdentityUserCreateComponent implements OnInit {
   private rabUnitAccessService = inject(IdentityUserRabUnitAccessService);
   private masterBasicSetupService = inject(MasterBasicSetupService);
   private messageService = inject(MessageService);
+  private sharedService = inject(SharedService);
 
   form!: FormGroup;
   roles: ApplicationRole[] = [];
+  /** Role IDs whose users the current caller may reset passwords for. `['*']` = any. */
+  private currentResetRoleIds: string[] = [];
   users: UserRow[] = [];
   employees: EmployeeDropdownDto[] = [];
   memberTypes: MemberTypeOption[] = [];
@@ -134,6 +138,8 @@ export class IdentityUserCreateComponent implements OnInit {
         this.canInsert = _perms.canInsert;
         this.canUpdate = _perms.canUpdate;
         this.canDelete = _perms.canDelete;
+
+    this.currentResetRoleIds = this.sharedService.getCurrentResetRoleIds();
 
     this.initForm();
     this.loadRoles();
@@ -667,7 +673,34 @@ export class IdentityUserCreateComponent implements OnInit {
     });
   }
 
+  /**
+   * Whether the current caller may manage users of `roleName` — gates create, update,
+   * disable, and password reset. Backed by the same `canResetRoleIds` allowlist.
+   * Resolves role ID from the loaded `roles` list so target's role ID isn't needed in the user payload.
+   * Match is case-insensitive + trimmed to defend against legacy data.
+   */
+  canManageRole(roleName: string | null | undefined): boolean {
+    const allow = this.currentResetRoleIds;
+    if (!allow?.length) return false;
+    if (allow.includes('*')) return true;
+    const needle = (roleName ?? '').trim().toLowerCase();
+    if (!needle) return false;
+    const targetRoleId = this.roles.find((r) => (r.name ?? '').trim().toLowerCase() === needle)?.id;
+    return !!targetRoleId && allow.includes(targetRoleId);
+  }
+
+  /** Roles the caller is allowed to assign — used to filter the role dropdown. */
+  get manageableRoles(): ApplicationRole[] {
+    return this.roles.filter((r) => this.canManageRole(r.name));
+  }
+
+  /** True when the caller can manage at least one role (i.e. the create/edit form is usable). */
+  get hasAnyManagePermission(): boolean {
+    return this.currentResetRoleIds.length > 0;
+  }
+
   openResetPassword(user: UserRow): void {
+    if (!this.canManageRole(user.roleName)) return;
     this.resetTargetUser = user;
     this.resetNewPassword = '';
     this.resetConfirmPassword = '';

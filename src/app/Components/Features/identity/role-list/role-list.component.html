@@ -2,7 +2,7 @@
 <p-confirmDialog />
 <p-fluid>
   <div class="card">
-    <div class="font-semibold text-xl mb-4">Role List &amp; Add Role</div>
+    <div class="font-semibold text-xl mb-4">{{ editingRoleId ? 'Edit Role' : 'Add Role' }}</div>
     <form [formGroup]="form" (ngSubmit)="onSubmit()">
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         <div class="field md:col-span-2">
@@ -30,6 +30,54 @@
           }
         </div>
       </div>
+
+      <!-- Password-reset permission — only users with full ["*"] access may edit this. -->
+      @if (currentUserHasFullAccess) {
+        <div class="field">
+          <label class="block mb-2 font-medium">Password Reset Permission</label>
+          <p class="text-sm text-color-secondary mb-2">
+            Pick which roles' users this role is allowed to reset passwords for.
+            Tick <strong>Full access</strong> to grant permission for any role, or pick specific roles below.
+            Leave both empty to deny all password resets.
+          </p>
+
+          <div class="flex items-center gap-2 mb-3">
+            <p-checkbox
+              inputId="allowAll"
+              [binary]="true"
+              formControlName="allowAll"
+            />
+            <label for="allowAll" class="cursor-pointer">
+              Full access <span class="text-color-secondary font-normal">— may reset any role's users</span>
+            </label>
+          </div>
+
+          @if (!form.get('allowAll')?.value) {
+            @if (roleOptions.length === 0) {
+              <div class="p-3 border border-surface rounded text-sm text-color-secondary">
+                No other roles available yet. Create more roles first, then come back here to grant per-role permission.
+              </div>
+            } @else {
+              <p-multiSelect
+                inputId="canResetRoleIds"
+                formControlName="canResetRoleIds"
+                [options]="roleOptions"
+                optionLabel="label"
+                optionValue="value"
+                [filter]="true"
+                [showToggleAll]="true"
+                display="chip"
+                placeholder="Pick allowed roles…"
+                appendTo="body"
+                styleClass="w-full"
+              />
+              <small class="text-color-secondary block mt-1">
+                {{ (form.get('canResetRoleIds')?.value?.length ?? 0) }} of {{ roleOptions.length }} selected
+              </small>
+            }
+          }
+        </div>
+      }
     </form>
   </div>
 
@@ -40,6 +88,7 @@
         <tr>
           <th style="width: 5%">#</th>
           <th>Role Name</th>
+          <th style="width: 18%">Reset Password Permission</th>
           <th style="width: 12%">Action</th>
         </tr>
       </ng-template>
@@ -48,13 +97,21 @@
           <td>{{ rowIndex + 1 }}</td>
           <td>{{ role.name }}</td>
           <td>
+            <p-tag
+              [severity]="getResetSummary(role).severity"
+              [value]="getResetSummary(role).text"
+              [pTooltip]="getResetTooltip(role)"
+              tooltipPosition="top"
+            />
+          </td>
+          <td>
             <button pButton icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" (click)="onEdit(role)" pTooltip="Edit"></button>
           </td>
         </tr>
       </ng-template>
       <ng-template pTemplate="emptymessage">
         <tr>
-          <td colspan="3">No roles found.</td>
+          <td colspan="4">No roles found.</td>
         </tr>
       </ng-template>
     </p-table>

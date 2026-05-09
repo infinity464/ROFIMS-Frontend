@@ -7,6 +7,7 @@ import type {
   ApplicationRole,
   UserModel,
   UpdateRoleModel,
+  CreateRoleModel,
   Responses,
   AdminResetPasswordModel,
   SetUserActiveModel
@@ -34,7 +35,7 @@ export class IdentityService {
     return this.http.post<Responses>(`${BASE}/UpdateUser`, user);
   }
 
-  createRole(role: { name: string }): Observable<Responses> {
+  createRole(role: CreateRoleModel): Observable<Responses> {
     return this.http.post<Responses>(`${BASE}/CreateRole`, role);
   }
 

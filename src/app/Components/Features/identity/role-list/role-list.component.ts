@@ -6,6 +6,9 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
+import { MultiSelectModule } from 'primeng/multiselect';
+import { CheckboxModule } from 'primeng/checkbox';
+import { TagModule } from 'primeng/tag';
 import { Fluid } from 'primeng/fluid';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
@@ -13,7 +16,10 @@ import { ConfirmationService } from 'primeng/api';
 import { ConfirmDialog } from 'primeng/confirmdialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { IdentityService } from '@/services/identity.service';
-import type { ApplicationRole, UpdateRoleModel } from '@/models/identity.model';
+import { SharedService } from '@/shared/services/shared-service';
+import type { ApplicationRole, CreateRoleModel, UpdateRoleModel } from '@/models/identity.model';
+
+const FULL_ACCESS_TOKEN = '*';
 
 @Component({
   selector: 'app-role-list',
@@ -24,6 +30,9 @@ import type { ApplicationRole, UpdateRoleModel } from '@/models/identity.model';
     TableModule,
     ButtonModule,
     InputTextModule,
+    MultiSelectModule,
+    CheckboxModule,
+    TagModule,
     Fluid,
     Toast,
     ConfirmDialog,
@@ -44,11 +53,14 @@ export class RoleListComponent implements OnInit {
   private identityService = inject(IdentityService);
   private messageService = inject(MessageService);
   private confirmationService = inject(ConfirmationService);
+  private sharedService = inject(SharedService);
 
   form!: FormGroup;
   roles: ApplicationRole[] = [];
   editingRoleId: string | null = null;
   isSubmitting = false;
+  /** Only users whose own role has `["*"]` may edit other roles' reset permission. */
+  currentUserHasFullAccess = false;
 
   ngOnInit(): void {
         const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
@@ -56,14 +68,26 @@ export class RoleListComponent implements OnInit {
         this.canUpdate = _perms.canUpdate;
         this.canDelete = _perms.canDelete;
 
+    this.currentUserHasFullAccess = this.sharedService.getCurrentResetRoleIds().includes('*');
+
     this.initForm();
     this.loadRoles();
   }
 
   initForm(): void {
     this.form = this.fb.group({
-      name: ['', Validators.required]
+      name: ['', Validators.required],
+      allowAll: [false],
+      canResetRoleIds: [[] as string[]]
     });
+  }
+
+  /**
+   * Options for the multi-select. Includes the role itself so a role can be granted
+   * permission to manage its own role (e.g. Admin managing other Admins).
+   */
+  get roleOptions(): { label: string; value: string }[] {
+    return this.roles.map((r) => ({ label: r.name, value: r.id }));
   }
 
   loadRoles(): void {
@@ -77,6 +101,16 @@ export class RoleListComponent implements OnInit {
     });
   }
 
+  /**
+   * Builds the wire-shape array for `canResetRoleIds` from the current form state.
+   * `allowAll` checked → `["*"]`; otherwise the picked role IDs (or `[]`).
+   */
+  private buildCanResetRoleIds(): string[] {
+    const v = this.form.getRawValue();
+    if (v.allowAll) return [FULL_ACCESS_TOKEN];
+    return Array.isArray(v.canResetRoleIds) ? v.canResetRoleIds.filter((x: string) => !!x && x !== FULL_ACCESS_TOKEN) : [];
+  }
+
   onSubmit(): void {
     if (this.isSubmitting || this.form.invalid) {
       this.form.markAllAsTouched();
@@ -84,10 +118,11 @@ export class RoleListComponent implements OnInit {
     }
     const name = this.form.get('name')?.value?.trim();
     if (!name) return;
+    const canResetRoleIds = this.buildCanResetRoleIds();
 
     this.isSubmitting = true;
     if (this.editingRoleId) {
-      const payload: UpdateRoleModel = { id: this.editingRoleId, name };
+      const payload: UpdateRoleModel = { id: this.editingRoleId, name, canResetRoleIds };
       this.identityService.updateRole(payload).subscribe({
         next: (res) => {
           this.isSubmitting = false;
@@ -105,7 +140,8 @@ export class RoleListComponent implements OnInit {
         }
       });
     } else {
-      this.identityService.createRole({ name }).subscribe({
+      const payload: CreateRoleModel = { name, canResetRoleIds };
+      this.identityService.createRole(payload).subscribe({
         next: (res) => {
           this.isSubmitting = false;
           if (res.isSuccess) {
@@ -126,13 +162,40 @@ export class RoleListComponent implements OnInit {
 
   onEdit(role: ApplicationRole): void {
     this.editingRoleId = role.id;
-    this.form.patchValue({ name: role.name });
+    const ids = role.canResetRoleIds ?? [];
+    const fullAccess = ids.includes(FULL_ACCESS_TOKEN);
+    this.form.patchValue({
+      name: role.name,
+      allowAll: fullAccess,
+      canResetRoleIds: fullAccess ? [] : ids
+    });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   onReset(): void {
     this.editingRoleId = null;
-    this.form.reset({ name: '' });
+    this.form.reset({ name: '', allowAll: false, canResetRoleIds: [] });
     this.isSubmitting = false;
+  }
+
+  // --- table-cell helpers ---
+
+  /** Summary chip for a role's reset permission. */
+  getResetSummary(role: ApplicationRole): { text: string; severity: 'success' | 'info' | 'secondary' } {
+    const ids = role.canResetRoleIds ?? [];
+    if (ids.includes(FULL_ACCESS_TOKEN)) return { text: 'Full access', severity: 'success' };
+    if (ids.length === 0) return { text: 'None', severity: 'secondary' };
+    return { text: `${ids.length} role${ids.length === 1 ? '' : 's'}`, severity: 'info' };
+  }
+
+  /** Names of roles a given role may reset (for tooltip). Empty when full access or none. */
+  getResetTooltip(role: ApplicationRole): string {
+    const ids = role.canResetRoleIds ?? [];
+    if (ids.includes(FULL_ACCESS_TOKEN)) return 'May reset any role';
+    if (ids.length === 0) return 'Not allowed to reset any role';
+    const names = ids
+      .map((id) => this.roles.find((r) => r.id === id)?.name)
+      .filter((n): n is string => !!n);
+    return names.join(', ');
   }
 }

@@ -23,6 +23,33 @@ export class SharedService {
         return null;
     }
 
+    /**
+     * Role IDs the current user is allowed to reset passwords for.
+     * `["*"]` = any role; `[]` = none.
+     * Defensive: the backend wire shape is an array, but tolerate a JSON-string payload
+     * in case a stale cached token from an older deploy is still in localStorage.
+     */
+    getCurrentResetRoleIds(): string[] {
+        const auth = localStorage.getItem('auth');
+        if (!auth) return [];
+        try {
+            const info = JSON.parse(auth);
+            const raw = info?.canResetRoleIds;
+            if (Array.isArray(raw)) return raw;
+            if (typeof raw === 'string' && raw.trim()) {
+                try {
+                    const parsed = JSON.parse(raw);
+                    return Array.isArray(parsed) ? parsed : [];
+                } catch {
+                    return [];
+                }
+            }
+            return [];
+        } catch {
+            return [];
+        }
+    }
+
     getCurrentDateTime(){
         return new Date().toISOString();
     }

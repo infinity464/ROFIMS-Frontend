@@ -110,13 +110,19 @@
             <p-select
               id="roleName"
               formControlName="roleName"
-              [options]="roles"
+              [options]="manageableRoles"
               optionLabel="name"
               optionValue="name"
               placeholder="Select role"
               appendTo="body"
               styleClass="w-full"
             />
+            @if (manageableRoles.length === 0) {
+              <small class="text-color-secondary block mt-1">
+                You don't have permission to assign any role. Ask your administrator to grant your role
+                "Reset Password Permission" for the roles you should be able to manage.
+              </small>
+            }
             @if (form.get('roleName')?.invalid && form.get('roleName')?.touched) {
               <small class="text-red-500 block mt-1">Role is required</small>
             }
@@ -389,7 +395,8 @@
           <td>
             <div class="flex gap-1">
               <p-button
-                icon="pi pi-pencil" [class.perm-hidden]="!canUpdate"
+                icon="pi pi-pencil"
+                [class.perm-hidden]="!canUpdate || !canManageRole(user.roleName)"
                 [text]="true"
                 [rounded]="true"
                 size="small"
@@ -400,6 +407,7 @@
               />
               <p-button
                 icon="pi pi-key"
+                [class.perm-hidden]="!canManageRole(user.roleName)"
                 [text]="true"
                 [rounded]="true"
                 size="small"
@@ -410,6 +418,7 @@
               />
               <p-button
                 [icon]="user.isActive ? 'pi pi-ban' : 'pi pi-check-circle'"
+                [class.perm-hidden]="!canManageRole(user.roleName)"
                 [text]="true"
                 [rounded]="true"
                 size="small"

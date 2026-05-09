@@ -13,6 +13,13 @@ export interface ApplicationRole {
   id: string;
   name: string;
   normalizedName?: string;
+  /** Role IDs this role may reset passwords for. `["*"]` = any. Empty/undefined = none. */
+  canResetRoleIds?: string[];
+}
+
+export interface CreateRoleModel {
+  name: string;
+  canResetRoleIds?: string[];
 }
 
 export interface UserModel {
@@ -37,6 +44,7 @@ export interface SetUserActiveModel {
 export interface UpdateRoleModel {
   id: string;
   name: string;
+  canResetRoleIds?: string[];
 }
 
 export interface Responses {
