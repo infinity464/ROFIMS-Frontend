@@ -468,6 +468,7 @@ export interface PostingOrderEmployeeRow {
     presentRabSectionNameBN?: string | null;
     presentRabSubSectionName?: string | null;
     presentRabSubSectionNameBN?: string | null;
+    receiveStatus?: string | null;
 }
 
 /** Approved NoteSheet row for dropdown. */

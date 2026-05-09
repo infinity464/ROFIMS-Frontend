@@ -167,6 +167,9 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     // ─── Remove member ──────────────────────────────────
     removingEmployeeId: number | null = null;
 
+    // ─── Removal history (shows previous posting order no in remarks) ──
+    removalHistoryMap: Record<number, string> = {};
+
     get addMemberTransferUnitId(): number | null {
         return this.selectedAddUnitNode ? Number(this.selectedAddUnitNode.key) : null;
     }
@@ -324,6 +327,9 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                     this.applyFilter();
 
                     this.draftPostingMasterId = first.draftPostingMasterId ?? null;
+
+                    // Load removal history for মন্তব্য column
+                    this.loadRemovalHistory(this.employees);
 
                     // Load approval fields from master DTO
                     this.loadApprovalInfo(id);
@@ -865,6 +871,16 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         return '_' + name.replace(/[^\p{L}\p{N}_-]+/gu, '_');
     }
 
+    // ─── Approved-mode removal ─────────────────────────────
+
+    get isApproved(): boolean {
+        return this.approvalStatus === ApprovalStatus.Approve;
+    }
+
+    isEmployeeReceived(emp: PostingOrderEmployeeRow): boolean {
+        return emp.receiveStatus === 'Received';
+    }
+
     // ─── Edit mode ────────────────────────────────────────
 
     get canEdit(): boolean {
@@ -1115,6 +1131,28 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                 });
             }
         });
+    }
+
+    private loadRemovalHistory(emps: PostingOrderEmployeeRow[]): void {
+        const ids = emps.map(e => e.employeeId).filter(Boolean);
+        if (ids.length === 0) return;
+        this.postingService.getRemovalHistoryByEmployeeIds(ids).subscribe({
+            next: (list) => {
+                this.removalHistoryMap = {};
+                for (const item of (list ?? [])) {
+                    if (item.postingOrderNo) {
+                        this.removalHistoryMap[item.employeeId] = item.postingOrderNo;
+                    } else if (item.draftPostingNo) {
+                        this.removalHistoryMap[item.employeeId] = item.draftPostingNo;
+                    }
+                }
+            },
+            error: () => {}
+        });
+    }
+
+    getRemovalRemark(emp: PostingOrderEmployeeRow): string {
+        return this.removalHistoryMap[emp.employeeId] || '';
     }
 
     trackByIndex(index: number): number {

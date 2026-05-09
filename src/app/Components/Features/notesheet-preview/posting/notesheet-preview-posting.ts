@@ -150,6 +150,44 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     originalRemarks: Record<number, string> = {};
     newRemarks: Record<number, string> = {};
 
+    // ── Removal history (previous posting order no) ──
+    removalHistoryMap: Record<number, string> = {};
+
+    protected override loadPostingEmployees(): void {
+        super.loadPostingEmployees();
+        // After base finishes loading, fetch removal history
+        if (!this.noteSheet?.draftPostingMasterId) return;
+        this.postingService.getDraftPostingEmployees(this.noteSheet.draftPostingMasterId).subscribe({
+            next: (list) => { this.loadRemovalHistory(list ?? []); }
+        });
+    }
+
+    protected override loadInterPostingEmployees(): void {
+        super.loadInterPostingEmployees();
+        if (!this.noteSheet?.draftPostingMasterId) return;
+        this.postingService.getDraftInterPostingEmployees(this.noteSheet.draftPostingMasterId).subscribe({
+            next: (list: any[]) => { this.loadRemovalHistory(list ?? []); }
+        });
+    }
+
+    private loadRemovalHistory(emps: { employeeId: number }[]): void {
+        const ids = emps.map(e => e.employeeId).filter(Boolean);
+        if (ids.length === 0) return;
+        this.postingService.getRemovalHistoryByEmployeeIds(ids).subscribe({
+            next: (list) => {
+                this.removalHistoryMap = {};
+                for (const item of (list ?? [])) {
+                    if (item.postingOrderNo) {
+                        this.removalHistoryMap[item.employeeId] = item.postingOrderNo;
+                    } else if (item.draftPostingNo) {
+                        this.removalHistoryMap[item.employeeId] = item.draftPostingNo;
+                    }
+                }
+            },
+            error: () => {}
+        });
+    }
+
     // ── District → ID map & AOR cache for transfer-unit warning ──
     private districtNameToId: Record<string, number> = {};
     private aorCache: Record<number, number[]> = {};
@@ -989,10 +1027,11 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     }
 
     getCombinedRemarks(emp: DraftPostingEmployeeRow): string {
+        const removalRemark = this.removalHistoryMap[emp.employeeId] || '';
         if (this.isInterPosting()) {
-            return [emp.interPostingRemark, emp.remarks].filter(s => s?.trim()).join(', ');
+            return [emp.interPostingRemark, emp.remarks, removalRemark].filter(s => s?.trim()).join(', ');
         }
-        return [emp.sendingRemark, emp.remarks].filter(s => s?.trim()).join(', ');
+        return [emp.sendingRemark, emp.remarks, removalRemark].filter(s => s?.trim()).join(', ');
     }
 
     getPreviousWorkplace(emp: DraftPostingEmployeeRow): string {

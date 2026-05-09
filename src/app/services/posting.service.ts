@@ -187,6 +187,13 @@ export class PostingService {
         );
     }
 
+    /** Get the latest removal history for a list of employee IDs (across all postings). */
+    getRemovalHistoryByEmployeeIds(employeeIds: number[]): Observable<{ employeeId: number; postingOrderNo: string | null; draftPostingNo: string | null; removedDate: string }[]> {
+        return this.http.post<{ employeeId: number; postingOrderNo: string | null; draftPostingNo: string | null; removedDate: string }[]>(
+            `${API}/GetRemovalHistoryByEmployeeIds`, employeeIds
+        );
+    }
+
     /** Update Draft New Posting master (DraftPostingNo, DraftPostingDate, DraftPostingStatus). */
     updateDraftNewPosting(id: number, draftPostingNo: string, draftPostingDate: string, draftPostingStatus: string): Observable<{ statusCode: number; description: string }> {
         return this.http.post<{ statusCode: number; description: string }>(`${API}/UpdateDraftNewPosting`, {
