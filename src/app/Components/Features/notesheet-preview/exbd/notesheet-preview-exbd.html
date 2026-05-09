@@ -191,25 +191,14 @@
                     <!-- ── Approval Chain Edit ── -->
                     <div class="ns-approval-edit">
                         <h4 class="ns-approval-edit-title">Approval Chain</h4>
-                        <div class="ns-edit-row">
-                            <div class="ns-edit-col">
-                                <label class="ns-edit-label">Initiator</label>
-                                <p-select [(ngModel)]="editInitiatorId" [options]="employeeOptions" optionLabel="label" optionValue="value"
-                                          placeholder="Select Initiator" [filter]="true" filterBy="label" [showClear]="true" styleClass="w-full" appendTo="body"
-                                          [disabled]="isInitiatorStatus"></p-select>
-                            </div>
-                            <div class="ns-edit-col">
-                                <label class="ns-edit-label">Final Approver</label>
-                                <p-select [(ngModel)]="editFinalApproverId" [options]="employeeOptions" optionLabel="label" optionValue="value"
-                                          placeholder="Select Final Approver" [filter]="true" filterBy="label" [showClear]="true" styleClass="w-full" appendTo="body"></p-select>
-                            </div>
-                        </div>
-                        <div class="ns-edit-field">
-                            <label class="ns-edit-label">Recommender(s)</label>
-                            <p-multiselect [(ngModel)]="editRecommenderIds" [options]="employeeOptions" optionLabel="label" optionValue="value"
-                                           placeholder="Select Recommenders" [filter]="true" filterBy="label" [showClear]="true" styleClass="w-full"
-                                           display="chip" appendTo="body"></p-multiselect>
-                        </div>
+                        <app-notesheet-approver-select
+                            [noteSheetType]="'ExBDLeave'"
+                            [(initiatorId)]="editInitiatorId"
+                            [(recommenderIds)]="editRecommenderIds"
+                            [(finalApproverId)]="editFinalApproverId"
+                            [disableInitiator]="isInitiatorStatus"
+                            [showErrors]="false">
+                        </app-notesheet-approver-select>
                     </div>
 
                 </div>

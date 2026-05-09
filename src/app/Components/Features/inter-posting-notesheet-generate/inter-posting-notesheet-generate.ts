@@ -26,8 +26,9 @@ import { EmpService } from '@/services/emp-service';
 import { PostingService } from '@/services/posting.service';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
-import { NoteSheetType, NoteSheetOperationTypeOptions, ApprovalStatus, ApproverRoleType, CodeType } from '@/models/enums';
+import { NoteSheetType, NoteSheetOperationTypeOptions, ApprovalStatus, CodeType } from '@/models/enums';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
+import { NotesheetApproverSelectComponent } from '@/Components/Common/notesheet-approver-select/notesheet-approver-select';
 import { NoteSheetNumberConfigModel } from '@/Components/basic-setup/shared/models/notesheet-number-config';
 
 @Component({
@@ -46,7 +47,8 @@ import { NoteSheetNumberConfigModel } from '@/Components/basic-setup/shared/mode
         TextareaModule,
         ToastModule,
         CheckboxModule,
-        FileReferencesFormComponent
+        FileReferencesFormComponent,
+        NotesheetApproverSelectComponent
     ],
     templateUrl: './inter-posting-notesheet-generate.html',
     providers: [MessageService],
@@ -73,9 +75,6 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
     draftPostingOptions: { label: string; value: number }[] = [];
     loadingDraftList = false;
     isPreparedByMapped = false;
-    initiatorOptions: { label: string; value: number }[] = [];
-    recommenderOptions: { label: string; value: number }[] = [];
-    finalApproverOptions: { label: string; value: number }[] = [];
     fileRows: FileRowData[] = [];
     readonly noteSheetOperationTypeOptions = NoteSheetOperationTypeOptions;
     configOptions: { label: string; value: number }[] = [];
@@ -126,8 +125,8 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
         this.canDelete = _perms.canDelete;
 
         this.loadDraftInterPostingMasters();
-        this.loadApproverOptions();
         this.resolvePreparedByMapping();
+        this.loadPreparedByOptions();
         this.loadNoteSheetNumberConfigs();
 
         this.form.get('textType')!.valueChanges.subscribe(() => {
@@ -151,16 +150,6 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
 
     get isBangla(): boolean {
         return this.form?.get('textType')?.value === 'bn';
-    }
-
-    get initiatorOptionsDisplay(): { label: string; value: number }[] {
-        return this.initiatorOptions.map((o) => ({ label: o.label, value: o.value }));
-    }
-    get recommenderOptionsDisplay(): { label: string; value: number }[] {
-        return this.recommenderOptions.map((o) => ({ label: o.label, value: o.value }));
-    }
-    get finalApproverOptionsDisplay(): { label: string; value: number }[] {
-        return this.finalApproverOptions.map((o) => ({ label: o.label, value: o.value }));
     }
 
     loadDraftInterPostingMasters(): void {
@@ -206,44 +195,12 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
         }));
     }
 
-    loadApproverOptions(): void {
-        const api = `${environment.apis.core}/EmployeeInfo`;
-        this.http.get<any[]>(`${api}/GetAll`).subscribe({
-            next: (list) => {
-                const allOpts = (Array.isArray(list) ? list : []).map((e: any) => {
-                    const name = e.fullNameEN || e.FullNameEN || '';
-                    const rabId = e.rabid || e.Rabid || e.RABID || '';
-                    const serviceId = e.serviceId || e.ServiceId || '';
-                    const parts = [name, rabId ? `RAB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : ''].filter(Boolean);
-                    return {
-                        label: parts.join(' | ') || `ID ${e.employeeID ?? e.EmployeeID}`,
-                        value: e.employeeID ?? e.EmployeeID
-                    };
-                });
-                this.masterBasicSetupService.getNoteSheetApproverConfigByType(NoteSheetType.InterPosting).subscribe({
-                    next: (configs) => {
-                        const cfg = Array.isArray(configs) ? configs[0] : configs;
-                        if (cfg?.details?.length) {
-                            const initIds = cfg.details.filter((d: any) => d.roleType === ApproverRoleType.Initiator).map((d: any) => d.employeeId);
-                            const recIds = cfg.details.filter((d: any) => d.roleType === ApproverRoleType.Recommender).map((d: any) => d.employeeId);
-                            const faIds = cfg.details.filter((d: any) => d.roleType === ApproverRoleType.FinalApprover).map((d: any) => d.employeeId);
-                            this.initiatorOptions = initIds.length > 0 ? allOpts.filter(o => initIds.includes(o.value)) : allOpts;
-                            this.recommenderOptions = recIds.length > 0 ? allOpts.filter(o => recIds.includes(o.value)) : allOpts;
-                            this.finalApproverOptions = faIds.length > 0 ? allOpts.filter(o => faIds.includes(o.value)) : allOpts;
-                        } else {
-                            this.initiatorOptions = allOpts;
-                            this.recommenderOptions = allOpts;
-                            this.finalApproverOptions = allOpts;
-                        }
-                    },
-                    error: (err: any) => {
-                        this.initiatorOptions = allOpts;
-                        this.recommenderOptions = allOpts;
-                        this.finalApproverOptions = allOpts;
-                    }
-                });
-            },
-            error: (err: any) => {}
+    preparedByOptions: { label: string; value: number }[] = [];
+
+    private loadPreparedByOptions(): void {
+        this.postingService.getApprovalEmployees().subscribe({
+            next: (opts) => { this.preparedByOptions = opts ?? []; },
+            error: () => {}
         });
     }
 

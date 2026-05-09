@@ -11,13 +11,14 @@ import { TooltipModule } from 'primeng/tooltip';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
-import { MultiSelectModule } from 'primeng/multiselect';
+
 import { CheckboxModule } from 'primeng/checkbox';
 import { DatePickerModule } from 'primeng/datepicker';
 import { TreeSelectModule } from 'primeng/treeselect';
 import { NotesheetSignatoryComponent } from '@/Components/Common/notesheet-signatory/notesheet-signatory';
 import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor';
 import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/file-references-form/file-references-form';
+import { NotesheetApproverSelectComponent } from '@/Components/Common/notesheet-approver-select/notesheet-approver-select';
 import { NotesheetPreviewBase } from '../notesheet-preview-base';
 import { NoteSheetCurrentStatus, NoteSheetCurrentStatusOptions, NoteSheetOperationTypeOptions, ApprovalStatus, NoteSheetRemarkAction, NoteSheetType, ApprovalLogAction, ApprovalLogActionOptions, DraftPostingStatus, PostingStatus, NoteSheetPreviewFrom } from '@/models/enums';
 import { SharedService } from '@/shared/services/shared-service';
@@ -56,8 +57,8 @@ interface ApprovalLogEntry {
     standalone: true,
     imports: [
         CommonModule, FormsModule, ButtonModule, ToastModule, ConfirmDialogModule, DialogModule, TableModule, TooltipModule,
-        InputTextModule, TextareaModule, SelectModule, MultiSelectModule, CheckboxModule, DatePickerModule, TreeSelectModule, FlexibleDateDirective,
-        NotesheetSignatoryComponent, RichEditorComponent, FileReferencesFormComponent
+        InputTextModule, TextareaModule, SelectModule, CheckboxModule, DatePickerModule, TreeSelectModule, FlexibleDateDirective,
+        NotesheetSignatoryComponent, RichEditorComponent, FileReferencesFormComponent, NotesheetApproverSelectComponent
     ],
     providers: [MessageService, ConfirmationService],
     templateUrl: './notesheet-preview-posting.html',
@@ -135,9 +136,6 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     // ── Edit state ───────────────────────────────────────────
     editing = false;
     saving = false;
-
-    // ── Employee dropdown options ────────────────────────────
-    employeeOptions: { label: string; value: number }[] = [];
 
     // ── RAB Unit dropdown options ─────────────────────────────
     rabUnitOptions: { label: string; value: number }[] = [];
@@ -893,9 +891,6 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
 
         this.fileRows = this.parseFileReferences();
 
-        if (this.employeeOptions.length === 0) {
-            this.loadEmployeeOptions();
-        }
         if (this.rabUnitOptions.length === 0) {
             this.loadRabUnitOptions();
         }
@@ -1165,27 +1160,6 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         });
     }
 
-    // ── Load employee dropdown options ───────────────────────
-    loadEmployeeOptions(): void {
-        const api = `${environment.apis.core}/EmployeeInfo`;
-        this.http.get<any[]>(`${api}/GetAll`).subscribe({
-            next: (list) => {
-                this.employeeOptions = (Array.isArray(list) ? list : []).map((e: any) => {
-                    const name = e.fullNameEN || e.FullNameEN || '';
-                    const rabId = e.rabid || e.Rabid || e.RABID || '';
-                    const serviceId = e.serviceId || e.ServiceId || '';
-                    const parts = [name, rabId ? `RAB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : ''].filter(Boolean);
-                    return {
-                        label: parts.join(' | ') || `ID ${e.employeeID ?? e.EmployeeID}`,
-                        value: e.employeeID ?? e.EmployeeID
-                    };
-                });
-            },
-            error: (err: any) => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load employee list.' });
-            }
-        });
-    }
 
     // ── Save changes ─────────────────────────────────────────
     saveChanges(): void {

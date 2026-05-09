@@ -26,9 +26,10 @@ import { EmpService } from '@/services/emp-service';
 import { PostingService } from '@/services/posting.service';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
-import { NoteSheetType, NoteSheetOperationTypeOptions, ApprovalStatus, ApproverRoleType, CodeType } from '@/models/enums';
+import { NoteSheetType, NoteSheetOperationTypeOptions, ApprovalStatus, CodeType } from '@/models/enums';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
+import { NotesheetApproverSelectComponent } from '@/Components/Common/notesheet-approver-select/notesheet-approver-select';
 
 @Component({
     selector: 'app-posting-notesheet-generate',
@@ -46,7 +47,8 @@ import { MasterBasicSetupService } from '@/Components/basic-setup/shared/service
         TextareaModule,
         ToastModule,
         CheckboxModule,
-        FileReferencesFormComponent
+        FileReferencesFormComponent,
+        NotesheetApproverSelectComponent
     ],
     templateUrl: './posting-notesheet-generate.html',
     providers: [MessageService],
@@ -74,9 +76,7 @@ export class PostingNotesheetGenerateComponent implements OnInit {
     draftPostingOptions: { label: string; value: number }[] = [];
     loadingDraftList = false;
     isPreparedByMapped = false;
-    initiatorOptions: { label: string; value: number }[] = [];
-    recommenderOptions: { label: string; value: number }[] = [];
-    finalApproverOptions: { label: string; value: number }[] = [];
+    preparedByOptions: { label: string; value: number }[] = [];
     fileRows: FileRowData[] = [];
     readonly noteSheetOperationTypeOptions = NoteSheetOperationTypeOptions;
     /** All NoteSheetNumberConfigs for NewPosting */
@@ -133,7 +133,7 @@ export class PostingNotesheetGenerateComponent implements OnInit {
         this.canDelete = _perms.canDelete;
 
         this.loadDraftPostingMasters();
-        this.loadApproverOptions();
+        this.loadPreparedByOptions();
         this.resolvePreparedByMapping();
         this.loadNoteSheetNumberConfig();
 
@@ -165,25 +165,6 @@ export class PostingNotesheetGenerateComponent implements OnInit {
         return this.form?.get('textType')?.value === 'bn';
     }
 
-    get initiatorOptionsDisplay(): { label: string; value: number }[] {
-        return this.initiatorOptions.map((o) => ({
-            label: o.label,
-            value: o.value
-        }));
-    }
-    get recommenderOptionsDisplay(): { label: string; value: number }[] {
-        return this.recommenderOptions.map((o) => ({
-            label: o.label,
-            value: o.value
-        }));
-    }
-    get finalApproverOptionsDisplay(): { label: string; value: number }[] {
-        return this.finalApproverOptions.map((o) => ({
-            label: o.label,
-            value: o.value
-        }));
-    }
-
     loadDraftPostingMasters(): void {
         this.loadingDraftList = true;
         this.postingService.getDraftNewPostingMasters().subscribe({
@@ -204,45 +185,10 @@ export class PostingNotesheetGenerateComponent implements OnInit {
         });
     }
 
-    loadApproverOptions(): void {
-        const api = `${environment.apis.core}/EmployeeInfo`;
-        this.http.get<any[]>(`${api}/GetAll`).subscribe({
-            next: (list) => {
-                const allOpts = (Array.isArray(list) ? list : []).map((e: any) => {
-                    const name = e.fullNameEN || e.FullNameEN || '';
-                    const rabId = e.rabid || e.Rabid || e.RABID || '';
-                    const serviceId = e.serviceId || e.ServiceId || '';
-                    const parts = [name, rabId ? `RAB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : ''].filter(Boolean);
-                    return {
-                        label: parts.join(' | ') || `ID ${e.employeeID ?? e.EmployeeID}`,
-                        labelBn: e.fullNameBN || e.FullNameBN || null,
-                        value: e.employeeID ?? e.EmployeeID
-                    };
-                });
-                this.masterBasicSetupService.getNoteSheetApproverConfigByType(NoteSheetType.NewPosting).subscribe({
-                    next: (configs) => {
-                        const cfg = Array.isArray(configs) ? configs[0] : configs;
-                        if (cfg?.details?.length) {
-                            const initIds = cfg.details.filter((d: any) => d.roleType === ApproverRoleType.Initiator).map((d: any) => d.employeeId);
-                            const recIds = cfg.details.filter((d: any) => d.roleType === ApproverRoleType.Recommender).map((d: any) => d.employeeId);
-                            const faIds = cfg.details.filter((d: any) => d.roleType === ApproverRoleType.FinalApprover).map((d: any) => d.employeeId);
-                            this.initiatorOptions = initIds.length > 0 ? allOpts.filter(o => initIds.includes(o.value)) : allOpts;
-                            this.recommenderOptions = recIds.length > 0 ? allOpts.filter(o => recIds.includes(o.value)) : allOpts;
-                            this.finalApproverOptions = faIds.length > 0 ? allOpts.filter(o => faIds.includes(o.value)) : allOpts;
-                        } else {
-                            this.initiatorOptions = allOpts;
-                            this.recommenderOptions = allOpts;
-                            this.finalApproverOptions = allOpts;
-                        }
-                    },
-                    error: (err: any) => {
-                        this.initiatorOptions = allOpts;
-                        this.recommenderOptions = allOpts;
-                        this.finalApproverOptions = allOpts;
-                    }
-                });
-            },
-            error: (err: any) => {}
+    private loadPreparedByOptions(): void {
+        this.postingService.getApprovalEmployees().subscribe({
+            next: (opts) => { this.preparedByOptions = opts ?? []; },
+            error: () => {}
         });
     }
 

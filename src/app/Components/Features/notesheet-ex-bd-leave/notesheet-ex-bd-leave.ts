@@ -30,7 +30,9 @@ import { take, map, catchError } from 'rxjs/operators';
 import { RouterLink } from '@angular/router';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
-import { NoteSheetType, NoteSheetCurrentStatus, ApprovalStatus, NoteSheetOperationTypeOptions, ApproverRoleType } from '@/models/enums';
+import { PostingService } from '@/services/posting.service';
+import { NoteSheetType, NoteSheetCurrentStatus, ApprovalStatus, NoteSheetOperationTypeOptions } from '@/models/enums';
+import { NotesheetApproverSelectComponent } from '@/Components/Common/notesheet-approver-select/notesheet-approver-select';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { NotesheetSignatoryComponent, SignatoryDetail } from '@/Components/Common/notesheet-signatory/notesheet-signatory';
 import {
@@ -60,7 +62,8 @@ import html2canvas from 'html2canvas';
         FileReferencesFormComponent,
         RouterLink,
         NotesheetSignatoryComponent,
-        CheckboxModule
+        CheckboxModule,
+        NotesheetApproverSelectComponent
     ],
     templateUrl: './notesheet-ex-bd-leave.html',
     providers: [MessageService],
@@ -90,9 +93,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
     branchOptions: { label: string; labelBn: string | null; value: number }[] = [];
     purposeOfLeaveOptions: { label: string; labelBn: string | null; value: number }[] = [];
     countryOptions: { label: string; labelBn: string | null; value: number }[] = [];
-    initiatorOptions: { label: string; labelBn: string | null; value: number }[] = [];
-    recommenderOptions: { label: string; labelBn: string | null; value: number }[] = [];
-    finalApproverOptions: { label: string; labelBn: string | null; value: number }[] = [];
+    preparedByOptions: { label: string; value: number }[] = [];
     familyMemberOptions: { label: string; labelBn?: string; value: number; fmid: number; employeeId: number; relationLabel?: string }[] = [];
     relationshipOptions: { label: string; labelBn: string | null; value: number }[] = [];
     subjectTypeOptions: { label: string; value: number }[] = [];
@@ -144,7 +145,8 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         private noteSheetEditCache: NoteSheetEditCacheService,
         private sanitizer: DomSanitizer,
         private identityMappingService: IdentityUserMappingService,
-        private commonCodeService: CommonCodeService
+        private commonCodeService: CommonCodeService,
+        private postingService: PostingService
     ) {
         this.form = this.fb.group({
             textType: ['en'],
@@ -189,18 +191,9 @@ export class NotesheetExBdLeaveComponent implements OnInit {
     get countryOptionsDisplay(): { label: string; value: number }[] {
         return this.countryOptions.map((o) => ({ label: o.label, value: o.value }));
     }
-    get initiatorOptionsDisplay(): { label: string; value: number }[] {
-        return this.initiatorOptions.map((o) => ({ label: o.label, value: o.value }));
-    }
-    get recommenderOptionsDisplay(): { label: string; value: number }[] {
-        return this.recommenderOptions.map((o) => ({ label: o.label, value: o.value }));
-    }
-    get finalApproverOptionsDisplay(): { label: string; value: number }[] {
-        return this.finalApproverOptions.map((o) => ({ label: o.label, value: o.value }));
-    }
-    /** RAB employee dropdown uses the same options as initiator */
+    /** RAB employee dropdown uses the same approval employee options */
     get rabEmployeeOptionsDisplay(): { label: string; value: number }[] {
-        return this.initiatorOptions.map((o) => ({ label: o.label, value: o.value }));
+        return this.preparedByOptions;
     }
 
     ngOnInit(): void {
@@ -515,44 +508,15 @@ export class NotesheetExBdLeaveComponent implements OnInit {
     private allEmployees: any[] = [];
 
     loadApproverOptions(): void {
+        // Load all employees for RAB employee lookup (onRabEmployeeChange)
         this.http.get<any[]>(`${environment.apis.core}/EmployeeInfo/GetAll`).subscribe({
-            next: (list) => {
-                this.allEmployees = Array.isArray(list) ? list : [];
-                const allOpts = this.allEmployees.map((e: any) => {
-                    const name = e.fullNameEN || e.FullNameEN || '';
-                    const rabId = e.rabid || e.Rabid || e.RABID || '';
-                    const serviceId = e.serviceId || e.ServiceId || '';
-                    const parts = [name, rabId ? `RAB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : ''].filter(Boolean);
-                    return {
-                        label: parts.join(' | ') || `ID ${e.employeeID ?? e.EmployeeID}`,
-                        labelBn: e.fullNameBN || e.FullNameBN || null,
-                        value: e.employeeID ?? e.EmployeeID
-                    };
-                });
-                this.masterBasicSetupService.getNoteSheetApproverConfigByType(NoteSheetType.ExBDLeave).subscribe({
-                    next: (configs) => {
-                        const cfg = Array.isArray(configs) ? configs[0] : configs;
-                        if (cfg?.details?.length) {
-                            const initIds = cfg.details.filter((d: any) => d.roleType === ApproverRoleType.Initiator).map((d: any) => d.employeeId);
-                            const recIds = cfg.details.filter((d: any) => d.roleType === ApproverRoleType.Recommender).map((d: any) => d.employeeId);
-                            const faIds = cfg.details.filter((d: any) => d.roleType === ApproverRoleType.FinalApprover).map((d: any) => d.employeeId);
-                            this.initiatorOptions = initIds.length > 0 ? allOpts.filter(o => initIds.includes(o.value)) : allOpts;
-                            this.recommenderOptions = recIds.length > 0 ? allOpts.filter(o => recIds.includes(o.value)) : allOpts;
-                            this.finalApproverOptions = faIds.length > 0 ? allOpts.filter(o => faIds.includes(o.value)) : allOpts;
-                        } else {
-                            this.initiatorOptions = allOpts;
-                            this.recommenderOptions = allOpts;
-                            this.finalApproverOptions = allOpts;
-                        }
-                    },
-                    error: (err: any) => {
-                        this.initiatorOptions = allOpts;
-                        this.recommenderOptions = allOpts;
-                        this.finalApproverOptions = allOpts;
-                    }
-                });
-            },
-            error: (err: any) => {}
+            next: (list) => { this.allEmployees = Array.isArray(list) ? list : []; },
+            error: () => {}
+        });
+        // Load options for Prepared By and RAB Employee dropdowns
+        this.postingService.getApprovalEmployees().subscribe({
+            next: (opts) => { this.preparedByOptions = opts ?? []; },
+            error: () => {}
         });
     }
 
@@ -675,17 +639,6 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         }
         const diff = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
         this.form.patchValue({ totalDays: diff >= 0 ? diff : 0 }, { emitEvent: false });
-    }
-
-    getSelectedRecommenderNames(): string[] {
-        const ids = this.form.get('recommenderIds')?.value as number[] | null;
-        if (!Array.isArray(ids) || ids.length === 0) return [];
-        return ids
-            .map((id) => {
-                const o = this.recommenderOptions.find((op) => op.value === id);
-                return o ? o.label : '';
-            })
-            .filter((l) => !!l);
     }
 
     /** Selected family members with relation, e.g. "Name (Son)", "Name (Wife)" - like recommender list. */

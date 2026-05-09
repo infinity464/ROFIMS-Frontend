@@ -16,6 +16,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
 import { NotesheetSignatoryComponent } from '@/Components/Common/notesheet-signatory/notesheet-signatory';
 import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor';
+import { NotesheetApproverSelectComponent } from '@/Components/Common/notesheet-approver-select/notesheet-approver-select';
 import { NotesheetPreviewBase } from '../notesheet-preview-base';
 import { FamilyInfoService, FamilyInfoByEmployeeView } from '@/services/family-info-service';
 import { CommonCodeService } from '@/services/common-code-service';
@@ -56,7 +57,7 @@ interface ApprovalLogEntry {
     imports: [
         CommonModule, FormsModule, ButtonModule, ToastModule, ConfirmDialogModule, DialogModule, TooltipModule,
         InputTextModule, TextareaModule, SelectModule, MultiSelectModule, DatePickerModule, FlexibleDateDirective,
-        NotesheetSignatoryComponent, RichEditorComponent
+        NotesheetSignatoryComponent, RichEditorComponent, NotesheetApproverSelectComponent
     ],
     providers: [MessageService, ConfirmationService],
     templateUrl: './notesheet-preview-exbd.html',

@@ -414,83 +414,36 @@
             <app-rich-editor formControlName="mainText" height="220px" placeholder="Write content here..."></app-rich-editor>
           </div>
 
-          <!-- Row 8: Prepared By | Initiator | Final Approver -->
-          <div class="ns-gen-field">
-            <label class="ns-gen-label">Prepared By</label>
-            @if (isPreparedByMapped) {
-              <input pInputText formControlName="preparedBy" readonly class="w-full" />
-            } @else {
-              <p-select
-                formControlName="preparedByEmployeeId"
-                [options]="initiatorOptionsDisplay"
-                optionLabel="label"
-                optionValue="value"
-                [filter]="true"
-                filterBy="label"
-                [showClear]="true"
-                placeholder="Select Prepared By"
-                styleClass="w-full">
-              </p-select>
-            }
-          </div>
-
-          <div class="ns-gen-field">
-            <label class="ns-gen-label">Initiator <span class="ns-gen-req">*</span></label>
-            <p-select
-              formControlName="initiatorId"
-              [options]="initiatorOptionsDisplay"
-              optionLabel="label"
-              optionValue="value"
-              [filter]="true"
-              filterBy="label"
-              [showClear]="true"
-              placeholder="Select Initiator"
-              styleClass="w-full">
-            </p-select>
-            @if (form.get('initiatorId')?.invalid && form.get('initiatorId')?.touched) {
-              <small class="ns-gen-error">Initiator is required</small>
-            }
-          </div>
-
-          <div class="ns-gen-field">
-            <label class="ns-gen-label">Final Approver <span class="ns-gen-req">*</span></label>
-            <p-select
-              formControlName="finalApproverId"
-              [options]="finalApproverOptionsDisplay"
-              optionLabel="label"
-              optionValue="value"
-              [filter]="true"
-              filterBy="label"
-              [showClear]="true"
-              placeholder="Select Final Approver"
-              styleClass="w-full">
-            </p-select>
-            @if (form.get('finalApproverId')?.invalid && form.get('finalApproverId')?.touched) {
-              <small class="ns-gen-error">Final Approver is required</small>
-            }
-          </div>
-
-          <!-- Row 9: Recommenders (full) -->
+          <!-- Prepared By / Initiator / Recommender / Final Approver -->
           <div class="ns-gen-field ns-gen-full">
-            <label class="ns-gen-label">Recommender(s)</label>
-            <p-multiselect
-              formControlName="recommenderIds"
-              [options]="recommenderOptionsDisplay"
-              optionLabel="label"
-              optionValue="value"
-              [filter]="true"
-              filterBy="label"
-              [showClear]="true"
-              placeholder="Select Recommender(s)"
-              styleClass="w-full">
-            </p-multiselect>
-            @if (getSelectedRecommenderNames().length > 0) {
-              <div class="ns-gen-chips">
-                @for (name of getSelectedRecommenderNames(); track name) {
-                  <span class="ns-gen-chip">{{ name }}</span>
+            <app-notesheet-approver-select
+              [noteSheetType]="'ExBDLeave'"
+              [(initiatorId)]="form.controls['initiatorId'].value"
+              (initiatorIdChange)="form.controls['initiatorId'].setValue($event); form.controls['initiatorId'].markAsTouched()"
+              [(recommenderIds)]="form.controls['recommenderIds'].value"
+              (recommenderIdsChange)="form.controls['recommenderIds'].setValue($event)"
+              [(finalApproverId)]="form.controls['finalApproverId'].value"
+              (finalApproverIdChange)="form.controls['finalApproverId'].setValue($event); form.controls['finalApproverId'].markAsTouched()"
+              [showErrors]="!!(form.get('initiatorId')?.touched || form.get('finalApproverId')?.touched)">
+              <div class="form-field">
+                <label class="form-label">Prepared By</label>
+                @if (isPreparedByMapped) {
+                  <input pInputText formControlName="preparedBy" readonly class="w-full" />
+                } @else {
+                  <p-select
+                    formControlName="preparedByEmployeeId"
+                    [options]="preparedByOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    [filter]="true"
+                    filterBy="label"
+                    [showClear]="true"
+                    placeholder="Select Prepared By"
+                    styleClass="w-full">
+                  </p-select>
                 }
               </div>
-            }
+            </app-notesheet-approver-select>
           </div>
 
           <!-- Row 10: Supporting Documents (full) -->
