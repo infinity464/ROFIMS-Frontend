@@ -104,7 +104,7 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
             noteSheetDate: [null as Date | null, Validators.required],
             referenceNumber: [''],
             noteSheetNo: [''],
-            noteSheetNumberConfigId: [null as number | null],
+            noteSheetNumberConfigId: [null as number | null, Validators.required],
             subject: [''],
             mainText: [''],
             note: [''],

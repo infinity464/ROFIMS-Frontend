@@ -11,6 +11,7 @@ import { ApproverRoleType } from '@/models/enums';
     selector: 'app-notesheet-approver-select',
     standalone: true,
     imports: [CommonModule, FormsModule, SelectModule, MultiSelectModule],
+    styles: [`:host { display: block; margin-bottom: 1rem; }`],
     template: `
         <div class="form-row">
             <ng-content></ng-content>

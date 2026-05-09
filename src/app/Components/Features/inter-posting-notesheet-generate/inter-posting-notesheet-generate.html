@@ -46,12 +46,15 @@
             }
           </div>
           <div class="form-field">
-            <label class="form-label">Note Sheet No Config</label>
+            <label class="form-label">Note Sheet No Config <span class="form-label-required">*</span></label>
             <p-select formControlName="noteSheetNumberConfigId"
               [options]="configOptions" optionLabel="label" optionValue="value"
               placeholder="Select config" [showClear]="true" [filter]="true" filterBy="label"
               styleClass="w-full" appendTo="body">
             </p-select>
+            @if (form.get('noteSheetNumberConfigId')?.invalid && form.get('noteSheetNumberConfigId')?.touched) {
+              <small class="form-error">Note Sheet No Config is required</small>
+            }
           </div>
         </div>
 

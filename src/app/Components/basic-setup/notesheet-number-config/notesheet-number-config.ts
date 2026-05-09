@@ -116,7 +116,7 @@ export class NoteSheetNumberConfigComponent implements OnInit {
             const month = String(now.getMonth() + 1).padStart(2, '0');
             return `${prefix}/${year}/${month}/${startNumber}`;
         }
-        return `${prefix}/${startNumber}`;
+        return `${prefix}-${startNumber}`;
     }
 
     onSearch(event: Event) {
