@@ -112,6 +112,9 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     showPrevWorkplaceFilter = false;
     showPrevWorkplaceUnit = false;
 
+    // ── নিজ জেলা column visibility ───────────────────
+    showOwnDistrict = true;
+
     private syncParagraphChecked(): void {
         const paras = this.filteredFooterParagraphs;
         if (this.paragraphChecked.length !== paras.length) {
@@ -526,12 +529,33 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         this.approvalModalRemarks = '';
     }
 
-    saveApproval(): void {
+    async saveApproval(): Promise<void> {
         if (!this.currentOrderId || !this.approvalModalAction) return;
 
         this.savingApproval = true;
         const id = this.currentOrderId;
         const bn = this.isBangla;
+
+        // If in edit mode, save edits first before approving/cancelling
+        if (this.editing) {
+            if (this.editEmployees.length === 0) {
+                this.savingApproval = false;
+                this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'At least one employee is required.' });
+                return;
+            }
+            try {
+                const saveRes = await firstValueFrom(this.postingService.updatePostingOrder(this.buildSavePayload()));
+                if (saveRes.statusCode !== 200) {
+                    this.savingApproval = false;
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: saveRes.description ?? 'Failed to save changes.' });
+                    return;
+                }
+            } catch (err: any) {
+                this.savingApproval = false;
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.description ?? 'Failed to save changes.' });
+                return;
+            }
+        }
 
         if (this.approvalModalAction === ApprovalStatus.Approve) {
             this.postingService.approvePostingOrder(id, this.approvalModalRemarks, 'system').subscribe({
@@ -540,6 +564,8 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                     if (res.statusCode === 200) {
                         this.messageService.add({ severity: 'success', summary: bn ? 'সফল' : 'Success', detail: bn ? 'পোস্টিং অর্ডার অনুমোদিত হয়েছে।' : 'Posting Order approved.' });
                         this.showApprovalModal = false;
+                        this.editing = false;
+                        this.loadOrder(id);
                         this.loadApprovalInfo(id);
                     } else {
                         this.messageService.add({ severity: 'error', summary: bn ? 'ত্রুটি' : 'Error', detail: res.description ?? (bn ? 'অনুমোদন ব্যর্থ হয়েছে।' : 'Failed to approve.') });
@@ -557,6 +583,8 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                     if (res.statusCode === 200) {
                         this.messageService.add({ severity: 'success', summary: bn ? 'সফল' : 'Success', detail: bn ? 'পোস্টিং অর্ডার বাতিল হয়েছে।' : 'Posting Order cancelled.' });
                         this.showApprovalModal = false;
+                        this.editing = false;
+                        this.loadOrder(id);
                         this.loadApprovalInfo(id);
                     } else {
                         this.messageService.add({ severity: 'error', summary: bn ? 'ত্রুটি' : 'Error', detail: res.description ?? (bn ? 'বাতিল ব্যর্থ হয়েছে।' : 'Failed to cancel.') });
@@ -752,9 +780,17 @@ export class PostingOrderPreviewPageComponent implements OnInit {
 
     empPrevWorkplace(emp: PostingOrderEmployeeRow): string {
         if (this.postingType === NoteSheetType.InterPosting) {
-            const motherOrg = (this.isBangla ? (emp.motherUnitNameBN || emp.motherUnitName) : emp.motherUnitName) || '';
-            const currentRabUnit = (this.isBangla ? (emp.presentRabUnitNameBN || emp.presentRabUnitName) : emp.presentRabUnitName) || '';
-            return [motherOrg, currentRabUnit].filter(p => p).join('/ ') || '';
+            const bn = this.isBangla;
+            const parts = [
+                (bn ? (emp.motherUnitNameBN || emp.motherUnitName) : emp.motherUnitName) || '',
+                (bn ? (emp.presentRabUnitNameBN || emp.presentRabUnitName) : emp.presentRabUnitName) || '',
+                (bn ? (emp.presentRabWingNameBN || emp.presentRabWingName) : emp.presentRabWingName) || '',
+                (bn ? (emp.presentRabBranchNameBN || emp.presentRabBranchName) : emp.presentRabBranchName) || '',
+                (bn ? (emp.presentRabSubBranchNameBN || emp.presentRabSubBranchName) : emp.presentRabSubBranchName) || '',
+                (bn ? (emp.presentRabSectionNameBN || emp.presentRabSectionName) : emp.presentRabSectionName) || '',
+                (bn ? (emp.presentRabSubSectionNameBN || emp.presentRabSubSectionName) : emp.presentRabSubSectionName) || '',
+            ];
+            return parts.filter(p => p).join('/ ') || '';
         }
         const rabUnit = (this.isBangla ? (emp.motherOrgLocationNameBN || emp.motherOrgLocationName) : emp.motherOrgLocationName) || '';
         const motherOrg = (this.isBangla ? (emp.previousMotherOrgNameBN || emp.previousMotherOrgName) : emp.previousMotherOrgName) || '';
@@ -1094,16 +1130,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     }
 
-    saveChanges(): void {
-        if (this.saving || !this.currentOrderId) return;
-
-        if (this.editEmployees.length === 0) {
-            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'At least one employee is required.' });
-            return;
-        }
-
-        this.saving = true;
-
+    private buildSavePayload() {
         const nonEmptyFooter = this.editFooterParagraphs
             .filter(p => p.text.trim().length > 0)
             .map(p => ({
@@ -1112,18 +1139,16 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                 transferRabUnitName: p.transferRabUnitName
             }));
         const footerText = nonEmptyFooter.length > 0 ? JSON.stringify(nonEmptyFooter) : null;
-
         const trimmedPostingText = this.editPostingText.trim();
         const mainText = trimmedPostingText.length > 0 ? trimmedPostingText : null;
         const trimmedSubText = this.editSubText.trim();
         const subText = trimmedSubText.length > 0 ? trimmedSubText : null;
-
         const postingOrderDateStr = this.editPostingOrderDate
             ? this.formatDateToString(this.editPostingOrderDate)
             : (this.postingOrderDate || this.formatDateToString(new Date()));
 
-        this.postingService.updatePostingOrder({
-            id: this.currentOrderId,
+        return {
+            id: this.currentOrderId!,
             postingOrderNo: this.postingOrderNo,
             postingOrderDate: postingOrderDateStr,
             postingType: this.postingType,
@@ -1138,8 +1163,21 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             employeeIds: this.editEmployees.map(e => e.employeeId),
             updatedBy: 'system',
             approvalEmployeeId: this.editApprovalEmployeeId ?? null
-        }).subscribe({
-            next: (res) => {
+        };
+    }
+
+    saveChanges(): void {
+        if (this.saving || !this.currentOrderId) return;
+
+        if (this.editEmployees.length === 0) {
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'At least one employee is required.' });
+            return;
+        }
+
+        this.saving = true;
+
+        this.postingService.updatePostingOrder(this.buildSavePayload()).subscribe({
+            next: (res: { statusCode: number; description: string }) => {
                 this.saving = false;
                 if (res.statusCode === 200) {
                     this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Posting order updated successfully.' });
@@ -1149,7 +1187,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                     this.messageService.add({ severity: 'error', summary: 'Error', detail: res.description ?? 'Failed to update.' });
                 }
             },
-            error: (err) => {
+            error: (err: any) => {
                 this.saving = false;
                 this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.description ?? 'Failed to update posting order.' });
             }
@@ -1280,15 +1318,18 @@ export class PostingOrderPreviewPageComponent implements OnInit {
 
         // ── Employee Table (header 8.5pt, data 9pt) ──
         const isInter = this.isInterPosting;
+        const sd = this.showOwnDistrict;
         const cols = isInter
-            ? (bn ? ['ক্রমিক', 'ব্যক্তিগত নং', 'পদবি', 'নাম', 'নিজ জেলা', 'পূর্ববতী কর্মস্থল', 'বদলিকৃত কর্মস্থল', 'মন্তব্য']
-                   : ['Ser', 'Service ID', 'Rank', 'Name', 'Own District', 'Previous Workplace', 'Transfer Station', 'Remarks'])
-            : (bn ? ['ক্রমিক', 'ব্যক্তিগত নম্বর', 'পদবি', 'ট্রেড', 'নাম', 'নিজ জেলা', 'পূর্ববতী কর্মস্থল', 'বদলিকৃত কর্মস্থল', 'র‌্যাব আইডি']
-                   : ['Ser', 'Service ID', 'Rank', 'Trade', 'Name', 'Own District', 'Previous Workplace', 'Transfer Unit', 'RAB ID']);
+            ? (bn ? ['ক্রমিক', 'ব্যক্তিগত নং', 'পদবি', 'নাম', ...(sd ? ['নিজ জেলা'] : []), 'পূর্ববতী কর্মস্থল', 'বদলিকৃত কর্মস্থল', 'মন্তব্য']
+                   : ['Ser', 'Service ID', 'Rank', 'Name', ...(sd ? ['Own District'] : []), 'Previous Workplace', 'Transfer Station', 'Remarks'])
+            : (bn ? ['ক্রমিক', 'ব্যক্তিগত নম্বর', 'পদবি', 'ট্রেড', 'নাম', ...(sd ? ['নিজ জেলা'] : []), 'পূর্ববতী কর্মস্থল', 'বদলিকৃত কর্মস্থল', 'র‌্যাব আইডি']
+                   : ['Ser', 'Service ID', 'Rank', 'Trade', 'Name', ...(sd ? ['Own District'] : []), 'Previous Workplace', 'Transfer Unit', 'RAB ID']);
         // Column widths in DXA – must sum to full content width (page 12240 - margins 567*2 = 11106)
         const colW = isInter
-            ? [580, 1200, 1000, 2300, 1400, 1700, 1700, 1226]
-            : [580, 1100, 860, 924, 2474, 1260, 1374, 1374, 1160];
+            ? (sd ? [550, 1150, 970, 2200, 1350, 1650, 1650, 1586]
+                  : [550, 1150, 970, 2550, 2000, 2000, 1886])
+            : (sd ? [580, 1100, 860, 924, 2474, 1260, 1374, 1374, 1160]
+                  : [580, 1100, 860, 924, 2874, 1634, 1634, 1500]);
 
         const hdrPara = (text: string) => new Paragraph({ children: [new TextRun({ text, bold: true, size: tblSize, sizeComplexScript: tblCsSize, font, language: lang })], alignment: AlignmentType.CENTER });
         const hdrCell = (text: string, ci: number, extra?: Partial<ConstructorParameters<typeof TableCell>[0]>) => new TableCell({
@@ -1298,17 +1339,18 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         const headerRows = [new TableRow({ tableHeader: true, children: cols.map((col, ci) => hdrCell(col, ci)) })];
 
         const dataRows = this.filteredEmployees.map((emp, i) => {
+            const serial = bn ? this.toBanglaDigits(String(i + 1)) : String(i + 1);
             const vals = isInter
                 ? [
-                    bn ? this.toBanglaDigits(String(i + 1)) : String(i + 1),
-                    this.empServiceId(emp), this.empRank(emp), this.empName(emp),
-                    this.empDistrict(emp), this.empPrevWorkplace(emp), this.empTransferUnit(emp),
+                    serial, this.empServiceId(emp), this.empRank(emp), this.empName(emp),
+                    ...(sd ? [this.empDistrict(emp)] : []),
+                    this.empPrevWorkplace(emp), this.empTransferUnit(emp),
                     emp.detailRemarks || ''
                 ]
                 : [
-                    bn ? this.toBanglaDigits(String(i + 1)) : String(i + 1),
-                    this.empServiceId(emp), this.empRank(emp), this.empTrade(emp), this.empName(emp),
-                    this.empDistrict(emp), this.empPrevWorkplace(emp), this.empTransferUnit(emp),
+                    serial, this.empServiceId(emp), this.empRank(emp), this.empTrade(emp), this.empName(emp),
+                    ...(sd ? [this.empDistrict(emp)] : []),
+                    this.empPrevWorkplace(emp), this.empTransferUnit(emp),
                     this.empRabId(emp)
                 ];
             return new TableRow({

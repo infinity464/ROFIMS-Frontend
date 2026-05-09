@@ -699,9 +699,16 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
 
     getInterPrevWorkplace(emp: DraftPostingEmployeeRow): string {
         const bn = !this.isEnglish();
-        const motherOrg = bn ? (emp.motherUnitNameBN || emp.motherUnitName || '') : (emp.motherUnitName || '');
-        const currentRabUnit = bn ? (emp.presentRabUnitNameBN || emp.presentRabUnitName || '') : (emp.presentRabUnitName || '');
-        return [motherOrg, currentRabUnit].filter(p => p).join('/ ') || '';
+        const parts = [
+            bn ? (emp.motherUnitNameBN || emp.motherUnitName || '') : (emp.motherUnitName || ''),
+            bn ? (emp.presentRabUnitNameBN || emp.presentRabUnitName || '') : (emp.presentRabUnitName || ''),
+            bn ? (emp.presentRabWingNameBN || emp.presentRabWingName || '') : (emp.presentRabWingName || ''),
+            bn ? (emp.presentRabBranchNameBN || emp.presentRabBranchName || '') : (emp.presentRabBranchName || ''),
+            bn ? (emp.presentRabSubBranchNameBN || emp.presentRabSubBranchName || '') : (emp.presentRabSubBranchName || ''),
+            bn ? (emp.presentRabSectionNameBN || emp.presentRabSectionName || '') : (emp.presentRabSectionName || ''),
+            bn ? (emp.presentRabSubSectionNameBN || emp.presentRabSubSectionName || '') : (emp.presentRabSubSectionName || ''),
+        ];
+        return parts.filter(p => p).join('/ ') || '';
     }
 
     // ── Pagination logic ──────────────────────────────────────

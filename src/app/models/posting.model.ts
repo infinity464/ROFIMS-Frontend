@@ -243,6 +243,16 @@ export interface DraftPostingEmployeeRow {
     presentRabUnitId?: number | null;
     presentRabUnitName?: string | null;
     presentRabUnitNameBN?: string | null;
+    presentRabWingName?: string | null;
+    presentRabWingNameBN?: string | null;
+    presentRabBranchName?: string | null;
+    presentRabBranchNameBN?: string | null;
+    presentRabSubBranchName?: string | null;
+    presentRabSubBranchNameBN?: string | null;
+    presentRabSectionName?: string | null;
+    presentRabSectionNameBN?: string | null;
+    presentRabSubSectionName?: string | null;
+    presentRabSubSectionNameBN?: string | null;
     createdBy: string | null;
     createdDate: string | null;
 }
@@ -448,6 +458,16 @@ export interface PostingOrderEmployeeRow {
     presentRabUnitId?: number | null;
     presentRabUnitName?: string | null;
     presentRabUnitNameBN?: string | null;
+    presentRabWingName?: string | null;
+    presentRabWingNameBN?: string | null;
+    presentRabBranchName?: string | null;
+    presentRabBranchNameBN?: string | null;
+    presentRabSubBranchName?: string | null;
+    presentRabSubBranchNameBN?: string | null;
+    presentRabSectionName?: string | null;
+    presentRabSectionNameBN?: string | null;
+    presentRabSubSectionName?: string | null;
+    presentRabSubSectionNameBN?: string | null;
 }
 
 /** Approved NoteSheet row for dropdown. */

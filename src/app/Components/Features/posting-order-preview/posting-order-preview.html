@@ -446,15 +446,18 @@
         </div>
     </div>
 
-    <!-- পূর্ববতী কর্মস্থল unit filter (collapsed by default) -->
-    <div class="unit-filter-bar no-print" *ngIf="!editing && !loading && !error && !isInterPosting && employees.length > 0"
+    <!-- Column visibility filter -->
+    <div class="unit-filter-bar no-print" *ngIf="!editing && !loading && !error && employees.length > 0"
          style="flex-direction:column; align-items:flex-start;">
-        <span style="font-weight:600; font-size:0.85rem; cursor:pointer;" (click)="showPrevWorkplaceFilter = !showPrevWorkplaceFilter">
-            <i class="pi" [ngClass]="showPrevWorkplaceFilter ? 'pi-chevron-down' : 'pi-chevron-right'" style="margin-right:0.3rem;"></i>{{ isBangla ? 'পূর্ববতী কর্মস্থল ফিল্টার' : 'Previous Workplace Filter' }}
-        </span>
-        <div *ngIf="showPrevWorkplaceFilter" style="display:flex; align-items:center; gap:0.4rem; margin-top:0.4rem; font-size:0.82rem;">
-            <p-checkbox [(ngModel)]="showPrevWorkplaceUnit" [binary]="true" inputId="chkPrevUnit"></p-checkbox>
-            <label for="chkPrevUnit" style="cursor:pointer;">{{ isBangla ? 'র‌্যাব ইউনিট দেখান ()' : 'Show RAB Unit ()' }}</label>
+        <div style="display:flex; align-items:center; gap:0.8rem; font-size:0.82rem;">
+            <span style="display:inline-flex; align-items:center; gap:0.4rem;">
+                <p-checkbox [(ngModel)]="showOwnDistrict" [binary]="true" inputId="chkOwnDistrict"></p-checkbox>
+                <label for="chkOwnDistrict" style="cursor:pointer;">{{ isBangla ? 'নিজ জেলা' : 'Own District' }}</label>
+            </span>
+            <span *ngIf="!isInterPosting" style="display:inline-flex; align-items:center; gap:0.4rem;">
+                <p-checkbox [(ngModel)]="showPrevWorkplaceUnit" [binary]="true" inputId="chkPrevUnit"></p-checkbox>
+                <label for="chkPrevUnit" style="cursor:pointer;">{{ isBangla ? 'পূর্ববতী কর্মস্থল (র‌্যাব ইউনিট)' : 'Previous Workplace (RAB Unit)' }}</label>
+            </span>
         </div>
     </div>
 
@@ -513,11 +516,11 @@
                             <th style="width:5%">{{ isBangla ? 'ক্রমিক' : 'Ser' }}</th>
                             <th style="width:10%">{{ isBangla ? 'ব্যক্তিগত নং' : 'Service ID' }}</th>
                             <th style="width:8%">{{ isBangla ? 'পদবি' : 'Rank' }}</th>
-                            <th style="width:18%">{{ isBangla ? 'নাম' : 'Name' }}</th>
-                            <th style="width:12%">{{ isBangla ? 'নিজ জেলা' : 'Own District' }}</th>
-                            <th style="width:16%">{{ isBangla ? 'পূর্ববতী কর্মস্থল' : 'Previous Workplace' }}</th>
-                            <th style="width:16%">{{ isBangla ? 'বদলিকৃত কর্মস্থল' : 'Transfer Station' }}</th>
-                            <th style="width:15%">{{ isBangla ? 'মন্তব্য' : 'Remarks' }}</th>
+                            <th>{{ isBangla ? 'নাম' : 'Name' }}</th>
+                            <th *ngIf="showOwnDistrict">{{ isBangla ? 'নিজ জেলা' : 'Own District' }}</th>
+                            <th>{{ isBangla ? 'পূর্ববতী কর্মস্থল' : 'Previous Workplace' }}</th>
+                            <th>{{ isBangla ? 'বদলিকৃত কর্মস্থল' : 'Transfer Station' }}</th>
+                            <th>{{ isBangla ? 'মন্তব্য' : 'Remarks' }}</th>
                         </tr>
                     </ng-container>
                     <!-- Non-inter-posting: single header row -->
@@ -528,22 +531,22 @@
                                 <th style="width:10%">ব্যক্তিগত নম্বর</th>
                                 <th style="width:8%">পদবি</th>
                                 <th style="width:8%">ট্রেড</th>
-                                <th style="width:20%">নাম</th>
-                                <th style="width:10%">নিজ জেলা</th>
-                                <th style="width:11%">পূর্ববতী কর্মস্থল</th>
-                                <th style="width:11%">বদলিকৃত কর্মস্থল</th>
-                                <th style="width:12%">র‌্যাব আইডি</th>
+                                <th>নাম</th>
+                                <th *ngIf="showOwnDistrict">নিজ জেলা</th>
+                                <th>পূর্ববতী কর্মস্থল</th>
+                                <th>বদলিকৃত কর্মস্থল</th>
+                                <th>র‌্যাব আইডি</th>
                             </ng-container>
                             <ng-container *ngIf="!isBangla">
                                 <th style="width:5%">Ser</th>
                                 <th style="width:10%">Service ID</th>
                                 <th style="width:8%">Rank</th>
                                 <th style="width:8%">Trade</th>
-                                <th style="width:22%">Name</th>
-                                <th style="width:11%">Own District</th>
-                                <th style="width:12%">Previous Workplace</th>
-                                <th style="width:12%">Transfer Unit</th>
-                                <th style="width:12%">RAB ID</th>
+                                <th>Name</th>
+                                <th *ngIf="showOwnDistrict">Own District</th>
+                                <th>Previous Workplace</th>
+                                <th>Transfer Unit</th>
+                                <th>RAB ID</th>
                             </ng-container>
                         </tr>
                     </ng-container>
@@ -555,7 +558,7 @@
                             <td class="font-semibold">{{ empServiceId(emp) }}</td>
                             <td>{{ empRank(emp) }}</td>
                             <td>{{ empName(emp) }}</td>
-                            <td style="white-space: pre-line;">{{ empDistrict(emp) }}</td>
+                            <td *ngIf="showOwnDistrict" style="white-space: pre-line;">{{ empDistrict(emp) }}</td>
                             <td style="white-space: pre-line;">{{ empPrevWorkplace(emp) }}</td>
                             <td>{{ empTransferUnit(emp) }}</td>
                             <td>{{ emp.detailRemarks || '' }}</td>
@@ -568,7 +571,7 @@
                             <td>{{ empRank(emp) }}</td>
                             <td>{{ empTrade(emp) }}</td>
                             <td>{{ empName(emp) }}</td>
-                            <td style="white-space: pre-line;">{{ empDistrict(emp) }}</td>
+                            <td *ngIf="showOwnDistrict" style="white-space: pre-line;">{{ empDistrict(emp) }}</td>
                             <td style="white-space: pre-line;">{{ empPrevWorkplace(emp) }}</td>
                             <td>{{ empTransferUnit(emp) }}</td>
                             <td>{{ empRabId(emp) }}</td>
