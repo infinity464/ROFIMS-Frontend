@@ -13,7 +13,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { MultiSelectModule } from 'primeng/multiselect';
-import { CheckboxModule } from 'primeng/checkbox';
+import { RadioButtonModule } from 'primeng/radiobutton';
 import { PasswordModule } from 'primeng/password';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
@@ -80,7 +80,7 @@ const USERNAME_PATTERN = /^[A-Za-z0-9._@-]+$/;
     ButtonModule,
     SelectModule,
     MultiSelectModule,
-    CheckboxModule,
+    RadioButtonModule,
     PasswordModule,
     IconFieldModule,
     InputIconModule,
@@ -299,6 +299,7 @@ export class IdentityUserCreateComponent implements OnInit {
       roleName: ['', Validators.required],
       employeeId: [null as number | null, Validators.required],
       memberTypeIds: [[] as number[]],
+      rabUnitMode: ['all' as 'all' | 'specific'],
       rabUnitIds: [[] as number[]],
       confirmUrl: [confirmUrl, Validators.required]
     });
@@ -395,7 +396,7 @@ export class IdentityUserCreateComponent implements OnInit {
     if (this.editingUser) {
       const editingUserId = this.editingUser.id;
       const memberTypeIds: number[] = Array.isArray(value.memberTypeIds) ? value.memberTypeIds : [];
-      const rabUnitIds: number[] = Array.isArray(value.rabUnitIds) ? value.rabUnitIds : [];
+      const rabUnitIds: number[] = this.buildRabUnitIds();
       this.identityService
         .updateUser({
           email: value.email,
@@ -456,7 +457,7 @@ export class IdentityUserCreateComponent implements OnInit {
 
     const employeeId: number = value.employeeId;
     const memberTypeIds: number[] = Array.isArray(value.memberTypeIds) ? value.memberTypeIds : [];
-    const rabUnitIds: number[] = Array.isArray(value.rabUnitIds) ? value.rabUnitIds : [];
+    const rabUnitIds: number[] = this.buildRabUnitIds();
     const createdEmail: string = value.email;
 
     this.identityService
@@ -599,6 +600,7 @@ export class IdentityUserCreateComponent implements OnInit {
       roleName: '',
       employeeId: null,
       memberTypeIds: [],
+      rabUnitMode: 'all',
       rabUnitIds: [],
       confirmUrl
     });
@@ -629,9 +631,11 @@ export class IdentityUserCreateComponent implements OnInit {
         rabUnitIds: this.rabUnitAccessService.getByUserId(user.id)
       }).subscribe({
         next: ({ memberTypeIds, rabUnitIds }) => {
+          const ids = Array.isArray(rabUnitIds) ? rabUnitIds : [];
           this.form.patchValue({
             memberTypeIds: Array.isArray(memberTypeIds) ? memberTypeIds : [],
-            rabUnitIds: Array.isArray(rabUnitIds) ? rabUnitIds : []
+            rabUnitMode: ids.length === 0 ? 'all' : 'specific',
+            rabUnitIds: ids
           });
         },
         error: (err: any) => {
@@ -668,6 +672,7 @@ export class IdentityUserCreateComponent implements OnInit {
       roleName: '',
       employeeId: null,
       memberTypeIds: [],
+      rabUnitMode: 'all',
       rabUnitIds: [],
       confirmUrl: confirmUrl ?? ''
     });
@@ -801,37 +806,52 @@ export class IdentityUserCreateComponent implements OnInit {
       });
   }
 
-  get allMemberTypesSelected(): boolean {
-    const ids: number[] = this.form?.get('memberTypeIds')?.value ?? [];
-    return this.memberTypes.length > 0 && ids.length === this.memberTypes.length;
-  }
-
-  get someMemberTypesSelected(): boolean {
-    const ids: number[] = this.form?.get('memberTypeIds')?.value ?? [];
-    return ids.length > 0 && ids.length < this.memberTypes.length;
-  }
-
   toggleAllMemberTypes(checked: boolean): void {
     const ids = checked ? this.memberTypes.map((m) => m.value) : [];
     this.form.get('memberTypeIds')?.setValue(ids);
     this.form.get('memberTypeIds')?.markAsDirty();
   }
 
-  get allRabUnitsSelected(): boolean {
-    const ids: number[] = this.form?.get('rabUnitIds')?.value ?? [];
-    return this.rabUnits.length > 0 && ids.length === this.rabUnits.length;
+  /** Whether a given member-type chip is currently selected. */
+  isMemberTypeSelected(id: number): boolean {
+    const ids: number[] = this.form?.get('memberTypeIds')?.value ?? [];
+    return ids.includes(id);
   }
 
-  get someRabUnitsSelected(): boolean {
-    const ids: number[] = this.form?.get('rabUnitIds')?.value ?? [];
-    return ids.length > 0 && ids.length < this.rabUnits.length;
+  /** Toggle a single member-type chip in/out of the selection. */
+  toggleMemberType(id: number): void {
+    const ids: number[] = this.form.get('memberTypeIds')?.value ?? [];
+    const next = ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id];
+    this.form.get('memberTypeIds')?.setValue(next);
+    this.form.get('memberTypeIds')?.markAsDirty();
   }
 
-  toggleAllRabUnits(checked: boolean): void {
-    const ids = checked ? this.rabUnits.map((u) => u.value) : [];
-    this.form.get('rabUnitIds')?.setValue(ids);
-    this.form.get('rabUnitIds')?.markAsDirty();
+  /** Clear all selected member-type chips. */
+  clearMemberTypes(): void {
+    this.form.get('memberTypeIds')?.setValue([]);
+    this.form.get('memberTypeIds')?.markAsDirty();
   }
+
+  /**
+   * Builds the wire-shape array for `rabUnitIds` from the current form state.
+   * `all` mode → `[]` (backend treats empty as "all units, no restriction").
+   * `specific` mode → the picked IDs.
+   */
+  private buildRabUnitIds(): number[] {
+    const v = this.form.getRawValue();
+    if (v.rabUnitMode === 'all') return [];
+    return Array.isArray(v.rabUnitIds) ? v.rabUnitIds : [];
+  }
+
+  // --- Password live-checklist getters (drive the requirement chips under the password input) ---
+  private get pwValue(): string {
+    return this.form?.get('password')?.value ?? '';
+  }
+  get pwHasMinLength(): boolean { return this.pwValue.length >= 6 && this.pwValue.length <= 20; }
+  get pwHasLower(): boolean { return /[a-z]/.test(this.pwValue); }
+  get pwHasUpper(): boolean { return /[A-Z]/.test(this.pwValue); }
+  get pwHasNumber(): boolean { return /\d/.test(this.pwValue); }
+  get pwHasSymbol(): boolean { return /[^\da-zA-Z]/.test(this.pwValue); }
 
   // --- User-list cell helpers ---
 

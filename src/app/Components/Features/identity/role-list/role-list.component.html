@@ -2,98 +2,139 @@
 <p-confirmDialog />
 <p-fluid>
   <div class="card">
-    <div class="font-semibold text-xl mb-4">{{ editingRoleId ? 'Edit Role' : 'Add Role' }}</div>
-    <form [formGroup]="form" (ngSubmit)="onSubmit()">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-        <div class="field md:col-span-2">
-          <label for="roleName" class="block mb-2">Role Name <span class="text-red-500">*</span></label>
-          <input
-            pInputText
-            id="roleName"
-            formControlName="name"
-            placeholder="Enter role name"
-            class="w-full"
-          />
-          @if (form.get('name')?.invalid && form.get('name')?.touched) {
-            <small class="text-red-500 block mt-1">Role name is required</small>
-          }
-        </div>
-        <div class="field flex items-end gap-2">
-          <p-button
-            [label]="editingRoleId ? 'Update Role' : 'Add Role'"
-            type="submit"
-            [loading]="isSubmitting"
-            [disabled]="form.invalid || isSubmitting"
-          />
-          @if (editingRoleId) {
-            <p-button label="Cancel" severity="secondary" type="button" (onClick)="onReset()" [disabled]="isSubmitting" />
-          }
-        </div>
+    <div class="font-semibold text-xl mb-5">{{ editingRoleId ? 'Edit Role' : 'Add Role' }}</div>
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-6">
+
+      <!-- Role name -->
+      <div class="field">
+        <label for="roleName" class="block mb-2 font-semibold">Role name <span class="text-red-500">*</span></label>
+        <input
+          pInputText
+          id="roleName"
+          formControlName="name"
+          placeholder="e.g. Regional manager"
+          class="w-full"
+        />
+        <small class="text-color-secondary block mt-1">Shown to admins when assigning users. Keep it short.</small>
+        @if (form.get('name')?.invalid && form.get('name')?.touched) {
+          <small class="text-red-500 block mt-1">Role name is required</small>
+        }
       </div>
 
-      <!-- Password-reset permission — only users with full ["*"] access may edit this. -->
+      <!-- Password reset permission — only users with full ["*"] access may edit this. -->
       @if (currentUserHasFullAccess) {
         <div class="field">
-          <label class="block mb-2 font-medium">Password Reset Permission</label>
-          <p class="text-sm text-color-secondary mb-2">
-            Pick which roles' users this role is allowed to reset passwords for.
-            Tick <strong>Full access</strong> to grant permission for any role, or pick specific roles below.
-            Leave both empty to deny all password resets.
+          <div class="font-semibold mb-1">Password reset permission</div>
+          <p class="text-sm text-color-secondary mb-3">
+            Which other roles' users can members of this role reset passwords for?
           </p>
 
-          <div class="flex items-center gap-2 mb-3">
-            <p-checkbox
-              inputId="allowAll"
-              [binary]="true"
-              formControlName="allowAll"
-            />
-            <label for="allowAll" class="cursor-pointer">
-              Full access <span class="text-color-secondary font-normal">— may reset any role's users</span>
-            </label>
-          </div>
-
-          @if (!form.get('allowAll')?.value) {
-            @if (roleOptions.length === 0) {
-              <div class="p-3 border border-surface rounded text-sm text-color-secondary">
-                No other roles available yet. Create more roles first, then come back here to grant per-role permission.
+          <div class="flex flex-col gap-2">
+            <!-- Deny all -->
+            <label
+              for="permModeDeny"
+              class="flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors"
+              [class.border-primary]="form.get('permissionMode')?.value === 'deny'"
+              [class.ring-1]="form.get('permissionMode')?.value === 'deny'"
+              [class.ring-primary]="form.get('permissionMode')?.value === 'deny'"
+              [class.border-surface]="form.get('permissionMode')?.value !== 'deny'"
+            >
+              <p-radioButton inputId="permModeDeny" name="permissionMode" value="deny" formControlName="permissionMode" />
+              <div class="leading-tight">
+                <div class="font-medium">Deny all resets</div>
+                <div class="text-sm text-color-secondary">Members cannot reset passwords for anyone.</div>
               </div>
-            } @else {
-              <p-multiSelect
-                inputId="canResetRoleIds"
-                formControlName="canResetRoleIds"
-                [options]="roleOptions"
-                optionLabel="label"
-                optionValue="value"
-                [filter]="true"
-                [showToggleAll]="true"
-                display="chip"
-                placeholder="Pick allowed roles…"
-                appendTo="body"
-                styleClass="w-full"
-              />
-              <small class="text-color-secondary block mt-1">
-                {{ (form.get('canResetRoleIds')?.value?.length ?? 0) }} of {{ roleOptions.length }} selected
-              </small>
-            }
-          }
+            </label>
 
-          <!-- Self-service "Forgot Password" gate -->
-          <div class="flex items-center gap-2 mt-4 pt-3 border-t border-surface">
-            <p-checkbox
-              inputId="canSelfResetPassword"
-              [binary]="true"
-              formControlName="canSelfResetPassword"
-            />
-            <label for="canSelfResetPassword" class="cursor-pointer">
-              Allow self-service password reset
-              <span class="text-color-secondary font-normal">— users in this role may use the "Forgot Password" link on login</span>
+            <!-- Specific roles -->
+            <label
+              for="permModeSpecific"
+              class="flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors"
+              [class.border-primary]="form.get('permissionMode')?.value === 'specific'"
+              [class.ring-1]="form.get('permissionMode')?.value === 'specific'"
+              [class.ring-primary]="form.get('permissionMode')?.value === 'specific'"
+              [class.border-surface]="form.get('permissionMode')?.value !== 'specific'"
+            >
+              <p-radioButton inputId="permModeSpecific" name="permissionMode" value="specific" formControlName="permissionMode" />
+              <div class="leading-tight">
+                <div class="font-medium">Specific roles only</div>
+                <div class="text-sm text-color-secondary">Pick which roles' users they can reset.</div>
+              </div>
+            </label>
+
+            <!-- Full access -->
+            <label
+              for="permModeFull"
+              class="flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors"
+              [class.border-primary]="form.get('permissionMode')?.value === 'full'"
+              [class.ring-1]="form.get('permissionMode')?.value === 'full'"
+              [class.ring-primary]="form.get('permissionMode')?.value === 'full'"
+              [class.border-surface]="form.get('permissionMode')?.value !== 'full'"
+            >
+              <p-radioButton inputId="permModeFull" name="permissionMode" value="full" formControlName="permissionMode" />
+              <div class="leading-tight">
+                <div class="font-medium">Full access</div>
+                <div class="text-sm text-color-secondary">May reset passwords for any role's users.</div>
+              </div>
             </label>
           </div>
-          <small class="text-color-secondary block mt-1">
-            When unchecked, users in this role must contact an administrator to reset their password.
-          </small>
+
+          <!-- Allowed-roles picker, shown only for "Specific roles only" -->
+          @if (form.get('permissionMode')?.value === 'specific') {
+            <div class="mt-3 p-3 rounded-lg border border-surface bg-surface-50 dark:bg-surface-800">
+              <div class="text-sm text-color-secondary mb-2">
+                Allowed roles · {{ (form.get('canResetRoleIds')?.value?.length ?? 0) }} of {{ roleOptions.length }} selected
+              </div>
+              @if (roleOptions.length === 0) {
+                <div class="text-sm text-color-secondary">
+                  No other roles available yet. Create more roles first, then come back here to grant per-role permission.
+                </div>
+              } @else {
+                <p-multiSelect
+                  inputId="canResetRoleIds"
+                  formControlName="canResetRoleIds"
+                  [options]="roleOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  [filter]="true"
+                  [showToggleAll]="true"
+                  display="chip"
+                  placeholder="Add a role…"
+                  appendTo="body"
+                  styleClass="w-full"
+                />
+              }
+            </div>
+          }
+        </div>
+
+        <!-- Self-service password reset toggle row -->
+        <div class="flex items-start justify-between gap-4 pt-4 border-t border-surface">
+          <div class="leading-tight">
+            <div class="font-semibold">Self-service password reset</div>
+            <div class="text-sm text-color-secondary">
+              Members can use the "Forgot password" link on the login screen.
+              When off, an administrator must reset their password.
+            </div>
+          </div>
+          <p-toggleswitch formControlName="canSelfResetPassword" />
         </div>
       }
+
+      <!-- Footer buttons -->
+      <div class="flex justify-end items-center gap-2 pt-4 border-t border-surface">
+        @if (editingRoleId) {
+          <p-button label="Cancel" severity="secondary" [outlined]="true" type="button" (onClick)="onReset()" [disabled]="isSubmitting" />
+        } @else {
+          <p-button label="Cancel" severity="secondary" [outlined]="true" type="button" (onClick)="onReset()" [disabled]="isSubmitting || form.pristine" />
+        }
+        <p-button
+          [label]="editingRoleId ? 'Update role' : 'Add role'"
+          type="submit"
+          [loading]="isSubmitting"
+          [disabled]="form.invalid || isSubmitting"
+        />
+      </div>
     </form>
   </div>
 
@@ -123,7 +164,7 @@
           </td>
           <td>
             @if (role.canSelfResetPassword === false) {
-              <p-tag severity="danger" value="Admin only" pTooltip="Users in this role can't use Forgot Password — admin-assisted reset only" tooltipPosition="top" />
+              <p-tag severity="danger" value="Not Allow" pTooltip="Users in this role can't use Forgot Password — admin-assisted reset only" tooltipPosition="top" />
             } @else {
               <p-tag severity="success" value="Allowed" pTooltip="Users in this role can use the Forgot Password link" tooltipPosition="top" />
             }

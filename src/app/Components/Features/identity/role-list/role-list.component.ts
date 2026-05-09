@@ -7,7 +7,8 @@ import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { MultiSelectModule } from 'primeng/multiselect';
-import { CheckboxModule } from 'primeng/checkbox';
+import { RadioButtonModule } from 'primeng/radiobutton';
+import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { TagModule } from 'primeng/tag';
 import { Fluid } from 'primeng/fluid';
 import { Toast } from 'primeng/toast';
@@ -21,6 +22,8 @@ import type { ApplicationRole, CreateRoleModel, UpdateRoleModel } from '@/models
 
 const FULL_ACCESS_TOKEN = '*';
 
+type PermissionMode = 'deny' | 'specific' | 'full';
+
 @Component({
   selector: 'app-role-list',
   standalone: true,
@@ -31,7 +34,8 @@ const FULL_ACCESS_TOKEN = '*';
     ButtonModule,
     InputTextModule,
     MultiSelectModule,
-    CheckboxModule,
+    RadioButtonModule,
+    ToggleSwitchModule,
     TagModule,
     Fluid,
     Toast,
@@ -77,7 +81,7 @@ export class RoleListComponent implements OnInit {
   initForm(): void {
     this.form = this.fb.group({
       name: ['', Validators.required],
-      allowAll: [false],
+      permissionMode: ['deny' as PermissionMode],
       canResetRoleIds: [[] as string[]],
       canSelfResetPassword: [true]
     });
@@ -104,12 +108,18 @@ export class RoleListComponent implements OnInit {
 
   /**
    * Builds the wire-shape array for `canResetRoleIds` from the current form state.
-   * `allowAll` checked → `["*"]`; otherwise the picked role IDs (or `[]`).
+   * `full` → `["*"]`; `specific` → picked IDs; `deny` → `[]`.
    */
   private buildCanResetRoleIds(): string[] {
     const v = this.form.getRawValue();
-    if (v.allowAll) return [FULL_ACCESS_TOKEN];
-    return Array.isArray(v.canResetRoleIds) ? v.canResetRoleIds.filter((x: string) => !!x && x !== FULL_ACCESS_TOKEN) : [];
+    const mode = v.permissionMode as PermissionMode;
+    if (mode === 'full') return [FULL_ACCESS_TOKEN];
+    if (mode === 'specific') {
+      return Array.isArray(v.canResetRoleIds)
+        ? v.canResetRoleIds.filter((x: string) => !!x && x !== FULL_ACCESS_TOKEN)
+        : [];
+    }
+    return [];
   }
 
   onSubmit(): void {
@@ -165,11 +175,15 @@ export class RoleListComponent implements OnInit {
   onEdit(role: ApplicationRole): void {
     this.editingRoleId = role.id;
     const ids = role.canResetRoleIds ?? [];
-    const fullAccess = ids.includes(FULL_ACCESS_TOKEN);
+    const mode: PermissionMode = ids.includes(FULL_ACCESS_TOKEN)
+      ? 'full'
+      : ids.length === 0
+        ? 'deny'
+        : 'specific';
     this.form.patchValue({
       name: role.name,
-      allowAll: fullAccess,
-      canResetRoleIds: fullAccess ? [] : ids,
+      permissionMode: mode,
+      canResetRoleIds: mode === 'specific' ? ids : [],
       canSelfResetPassword: role.canSelfResetPassword ?? true
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -177,7 +191,7 @@ export class RoleListComponent implements OnInit {
 
   onReset(): void {
     this.editingRoleId = null;
-    this.form.reset({ name: '', allowAll: false, canResetRoleIds: [], canSelfResetPassword: true });
+    this.form.reset({ name: '', permissionMode: 'deny', canResetRoleIds: [], canSelfResetPassword: true });
     this.isSubmitting = false;
   }
 
