@@ -78,7 +78,8 @@ export class RoleListComponent implements OnInit {
     this.form = this.fb.group({
       name: ['', Validators.required],
       allowAll: [false],
-      canResetRoleIds: [[] as string[]]
+      canResetRoleIds: [[] as string[]],
+      canSelfResetPassword: [true]
     });
   }
 
@@ -119,10 +120,11 @@ export class RoleListComponent implements OnInit {
     const name = this.form.get('name')?.value?.trim();
     if (!name) return;
     const canResetRoleIds = this.buildCanResetRoleIds();
+    const canSelfResetPassword = !!this.form.get('canSelfResetPassword')?.value;
 
     this.isSubmitting = true;
     if (this.editingRoleId) {
-      const payload: UpdateRoleModel = { id: this.editingRoleId, name, canResetRoleIds };
+      const payload: UpdateRoleModel = { id: this.editingRoleId, name, canResetRoleIds, canSelfResetPassword };
       this.identityService.updateRole(payload).subscribe({
         next: (res) => {
           this.isSubmitting = false;
@@ -140,7 +142,7 @@ export class RoleListComponent implements OnInit {
         }
       });
     } else {
-      const payload: CreateRoleModel = { name, canResetRoleIds };
+      const payload: CreateRoleModel = { name, canResetRoleIds, canSelfResetPassword };
       this.identityService.createRole(payload).subscribe({
         next: (res) => {
           this.isSubmitting = false;
@@ -167,14 +169,15 @@ export class RoleListComponent implements OnInit {
     this.form.patchValue({
       name: role.name,
       allowAll: fullAccess,
-      canResetRoleIds: fullAccess ? [] : ids
+      canResetRoleIds: fullAccess ? [] : ids,
+      canSelfResetPassword: role.canSelfResetPassword ?? true
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   onReset(): void {
     this.editingRoleId = null;
-    this.form.reset({ name: '', allowAll: false, canResetRoleIds: [] });
+    this.form.reset({ name: '', allowAll: false, canResetRoleIds: [], canSelfResetPassword: true });
     this.isSubmitting = false;
   }
 

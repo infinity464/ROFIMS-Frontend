@@ -76,6 +76,22 @@
               </small>
             }
           }
+
+          <!-- Self-service "Forgot Password" gate -->
+          <div class="flex items-center gap-2 mt-4 pt-3 border-t border-surface">
+            <p-checkbox
+              inputId="canSelfResetPassword"
+              [binary]="true"
+              formControlName="canSelfResetPassword"
+            />
+            <label for="canSelfResetPassword" class="cursor-pointer">
+              Allow self-service password reset
+              <span class="text-color-secondary font-normal">— users in this role may use the "Forgot Password" link on login</span>
+            </label>
+          </div>
+          <small class="text-color-secondary block mt-1">
+            When unchecked, users in this role must contact an administrator to reset their password.
+          </small>
         </div>
       }
     </form>
@@ -89,6 +105,7 @@
           <th style="width: 5%">#</th>
           <th>Role Name</th>
           <th style="width: 18%">Reset Password Permission</th>
+          <th style="width: 12%">Self Reset</th>
           <th style="width: 12%">Action</th>
         </tr>
       </ng-template>
@@ -105,13 +122,20 @@
             />
           </td>
           <td>
+            @if (role.canSelfResetPassword === false) {
+              <p-tag severity="danger" value="Admin only" pTooltip="Users in this role can't use Forgot Password — admin-assisted reset only" tooltipPosition="top" />
+            } @else {
+              <p-tag severity="success" value="Allowed" pTooltip="Users in this role can use the Forgot Password link" tooltipPosition="top" />
+            }
+          </td>
+          <td>
             <button pButton icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" (click)="onEdit(role)" pTooltip="Edit"></button>
           </td>
         </tr>
       </ng-template>
       <ng-template pTemplate="emptymessage">
         <tr>
-          <td colspan="4">No roles found.</td>
+          <td colspan="5">No roles found.</td>
         </tr>
       </ng-template>
     </p-table>
