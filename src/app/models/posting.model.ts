@@ -35,6 +35,20 @@ export interface PostingMemberRemovalHistoryDto {
     createdDate: string;
 }
 
+/** Lightweight removal info returned by GetRemovalHistoryByEmployeeIds. */
+export interface EmployeeRemovalInfo {
+    employeeId: number;
+    postingOrderNo: string | null;
+    draftPostingNo: string | null;
+    removedDate: string;
+    isInterPosting: boolean;
+    postingOrderDate: string | null;
+    transferToUnitName: string | null;
+    transferFromUnitName: string | null;
+    removalRemark: string | null;
+    removalRemarkBN: string | null;
+}
+
 /** Status of a posting note-sheet. */
 export type PostingNoteSheetStatus = 'Draft' | 'PendingFinalized' | 'PendingApproval' | 'Approved' | 'Declined';
 

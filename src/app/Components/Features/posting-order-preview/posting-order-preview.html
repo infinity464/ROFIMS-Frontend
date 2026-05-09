@@ -463,10 +463,11 @@
 
     <!-- Empty state — order loaded but no employees yet -->
     <div *ngIf="!editing && !loading && !error && employees.length === 0" class="flex flex-column align-items-center justify-content-center gap-3 py-6 text-center">
-        <i class="pi pi-inbox text-6xl text-400"></i>
+        <i [class]="isApproved ? 'pi pi-users text-6xl text-orange-400' : 'pi pi-inbox text-6xl text-400'"></i>
         <span class="text-xl text-600 font-semibold">{{ postingOrderNo || 'Posting Order' }}</span>
-        <span class="text-500">No employees in this posting order yet.</span>
-        <p-button icon="pi pi-pencil" label="Edit to Add Employees" severity="primary" (onClick)="toggleEdit()"></p-button>
+        <span *ngIf="!isApproved" class="text-500">No employees in this posting order yet.</span>
+        <span *ngIf="isApproved" class="text-500">All members have been removed from this posting order.</span>
+        <p-button *ngIf="canEdit" icon="pi pi-pencil" label="Edit to Add Employees" severity="primary" (onClick)="toggleEdit()"></p-button>
     </div>
 
     <div class="legal-paper-container" *ngIf="!editing && !loading && !error && employees.length > 0">
@@ -565,7 +566,7 @@
                             <td *ngIf="showOwnDistrict" style="white-space: pre-line;">{{ empDistrict(emp) }}</td>
                             <td style="white-space: pre-line;">{{ empPrevWorkplace(emp) }}</td>
                             <td>{{ empTransferUnit(emp) }}</td>
-                            <td>{{ [emp.detailRemarks, getRemovalRemark(emp)].filter(s => s).join(', ') }}</td>
+                            <td style="white-space: pre-line; word-break: break-word; min-width: 150px;">{{ empCombinedRemarks(emp) }}</td>
                             <td *ngIf="isApproved" class="text-center no-print">
                                 <p-button
                                     [icon]="removingEmployeeId === emp.employeeId ? 'pi pi-spin pi-spinner' : 'pi pi-trash'"

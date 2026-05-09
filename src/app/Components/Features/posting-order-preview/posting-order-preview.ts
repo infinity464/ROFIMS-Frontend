@@ -22,7 +22,7 @@ import { OrgService } from '@/Components/basic-setup/org-tree/org.service';
 import { ServingMembersService } from '@/services/serving-members.service';
 import { EmpService } from '@/services/emp-service';
 import { EmployeeListService } from '@/services/employee-list.service';
-import { PostingOrderEmployeeRow } from '@/models/posting.model';
+import { PostingOrderEmployeeRow, EmployeeRemovalInfo } from '@/models/posting.model';
 import { EmployeeList } from '@/models/employee-list.model';
 import { NoteSheetType, IsSendingNotesheetStatus, ApprovalStatus } from '@/models/enums';
 import { HttpClient } from '@angular/common/http';
@@ -168,7 +168,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     removingEmployeeId: number | null = null;
 
     // ─── Removal history (shows previous posting order no in remarks) ──
-    removalHistoryMap: Record<number, string> = {};
+    removalHistoryMap: Record<number, EmployeeRemovalInfo> = {};
 
     get addMemberTransferUnitId(): number | null {
         return this.selectedAddUnitNode ? Number(this.selectedAddUnitNode.key) : null;
@@ -1140,10 +1140,8 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             next: (list) => {
                 this.removalHistoryMap = {};
                 for (const item of (list ?? [])) {
-                    if (item.postingOrderNo) {
-                        this.removalHistoryMap[item.employeeId] = item.postingOrderNo;
-                    } else if (item.draftPostingNo) {
-                        this.removalHistoryMap[item.employeeId] = item.draftPostingNo;
+                    if (item.postingOrderNo || item.draftPostingNo) {
+                        this.removalHistoryMap[item.employeeId] = item;
                     }
                 }
             },
@@ -1152,7 +1150,15 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     }
 
     getRemovalRemark(emp: PostingOrderEmployeeRow): string {
-        return this.removalHistoryMap[emp.employeeId] || '';
+        const history = this.removalHistoryMap[emp.employeeId];
+        if (!history) return '';
+        return this.isBangla
+            ? (history.removalRemarkBN || history.removalRemark || '')
+            : (history.removalRemark || '');
+    }
+
+    empCombinedRemarks(emp: PostingOrderEmployeeRow): string {
+        return [emp.detailRemarks, this.getRemovalRemark(emp)].filter(s => !!s).join(', ');
     }
 
     trackByIndex(index: number): number {
@@ -1363,9 +1369,10 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             : (bn ? ['ক্রমিক', 'ব্যক্তিগত নম্বর', 'পদবি', 'ট্রেড', 'নাম', ...(sd ? ['নিজ জেলা'] : []), 'পূর্ববতী কর্মস্থল', 'বদলিকৃত কর্মস্থল', 'র‌্যাব আইডি']
                    : ['Ser', 'Service ID', 'Rank', 'Trade', 'Name', ...(sd ? ['Own District'] : []), 'Previous Workplace', 'Transfer Unit', 'RAB ID']);
         // Column widths in DXA – must sum to full content width (page 12240 - margins 567*2 = 11106)
+        // Remarks column gets extra width to fit removal remark text
         const colW = isInter
-            ? (sd ? [550, 1150, 970, 2200, 1350, 1650, 1650, 1586]
-                  : [550, 1150, 970, 2550, 2000, 2000, 1886])
+            ? (sd ? [500, 1050, 900, 1800, 1200, 1500, 1500, 2656]
+                  : [500, 1050, 900, 2100, 1700, 1700, 3156])
             : (sd ? [580, 1100, 860, 924, 2474, 1260, 1374, 1374, 1160]
                   : [580, 1100, 860, 924, 2874, 1634, 1634, 1500]);
 
@@ -1383,7 +1390,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                     serial, this.empServiceId(emp), this.empRank(emp), this.empName(emp),
                     ...(sd ? [this.empDistrict(emp)] : []),
                     this.empPrevWorkplace(emp), this.empTransferUnit(emp),
-                    emp.detailRemarks || ''
+                    this.empCombinedRemarks(emp)
                 ]
                 : [
                     serial, this.empServiceId(emp), this.empRank(emp), this.empTrade(emp), this.empName(emp),

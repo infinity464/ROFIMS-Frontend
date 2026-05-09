@@ -21,7 +21,8 @@ import {
     ApprovedNoteSheetItem,
     PostingType,
     PostingNoteSheetStatus,
-    PostingMemberRemovalHistoryDto
+    PostingMemberRemovalHistoryDto,
+    EmployeeRemovalInfo
 } from '@/models/posting.model';
 
 /** Status for action button: None | PostingInProcess | NoteSheetInProcess */
@@ -188,8 +189,8 @@ export class PostingService {
     }
 
     /** Get the latest removal history for a list of employee IDs (across all postings). */
-    getRemovalHistoryByEmployeeIds(employeeIds: number[]): Observable<{ employeeId: number; postingOrderNo: string | null; draftPostingNo: string | null; removedDate: string }[]> {
-        return this.http.post<{ employeeId: number; postingOrderNo: string | null; draftPostingNo: string | null; removedDate: string }[]>(
+    getRemovalHistoryByEmployeeIds(employeeIds: number[]): Observable<EmployeeRemovalInfo[]> {
+        return this.http.post<EmployeeRemovalInfo[]>(
             `${API}/GetRemovalHistoryByEmployeeIds`, employeeIds
         );
     }
