@@ -324,7 +324,9 @@ export interface PendingPostingJoiningDto {
     noteSheetNo: string | null;
 
     transferRabUnitId: number | null;
+    transferToHierarchy: string | null;
     transferRabUnitName: string | null;
+    fromRabUnitName: string | null;
 
     serviceId: string | null;
     fullNameEN: string | null;
