@@ -202,6 +202,18 @@
   outline: none;
 }
 
+.members-col-label-input {
+  width: 100%;
+  min-width: 60px;
+  max-width: 140px;
+  padding: 0.15rem 0.35rem;
+  border: 1px solid var(--primary-color, #3b82f6);
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  outline: none;
+}
+
 .members-empty-hint {
   padding: 1rem;
   border: 1px dashed var(--surface-border, #dee2e6);

@@ -18,11 +18,11 @@ import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor
 import { CommonCode } from '@/Components/basic-setup/shared/models/common-code';
 import { environment } from '@/Core/Environments/environment';
 import { HttpClient } from '@angular/common/http';
-import { forkJoin } from 'rxjs';
+import { forkJoin, Subject } from 'rxjs';
+import { take } from 'rxjs/operators';
 import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/file-references-form/file-references-form';
 import { EmpService } from '@/services/emp-service';
 import { ActivatedRoute, Router } from '@angular/router';
-import { take } from 'rxjs/operators';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
 import { UserMenuService } from '@/services/user-menu.service';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
@@ -186,6 +186,7 @@ export class NotesheetGenerateComponent implements OnInit {
     selectedUnitNode: TreeNode | null = null;
     unitTreeLoading = false;
     private unitNodeMap: Record<number, TreeNode> = {};
+    private unitTreeReady$ = new Subject<void>();
 
     preparedByOptions: { label: string; value: number }[] = [];
     referenceEmployeeOptions: { label: string; labelBn: string | null; value: number }[] = [];
@@ -203,6 +204,10 @@ export class NotesheetGenerateComponent implements OnInit {
     editingMemberCellKey: string | null = null;
     editingMemberCellValue = '';
     readonly availableColumns = AVAILABLE_MEMBER_COLUMNS;
+
+    // Column label editing
+    editingColLabelKey: string | null = null;
+    editingColLabelValue = '';
 
     // Drag & drop column reorder
     dragColIndex: number | null = null;
@@ -332,6 +337,7 @@ export class NotesheetGenerateComponent implements OnInit {
                     .sort((a: any, b: any) => a.sortOrder - b.sortOrder)
                     .map((r: any) => this.toTreeNode(r, null));
                 this.unitTreeLoading = false;
+                this.unitTreeReady$.next();
             },
             error: () => { this.unitTreeLoading = false; }
         });
@@ -419,14 +425,23 @@ export class NotesheetGenerateComponent implements OnInit {
 
     /** In edit mode, expand the tree to show the deepest selected unit */
     private expandTreeToNode(nodeId: number): void {
-        this.masterBasicSetupService.getAncestorsOfCommonCode(nodeId).subscribe({
-            next: (ancestors) => {
-                const chain = Array.isArray(ancestors) ? ancestors : [];
-                if (chain.length === 0) return;
-                // Chain is root→...→leaf. Expand each level sequentially.
-                this.expandChain(chain, 0);
-            }
-        });
+        const doExpand = () => {
+            this.masterBasicSetupService.getAncestorsOfCommonCode(nodeId).subscribe({
+                next: (ancestors) => {
+                    const chain = Array.isArray(ancestors) ? ancestors : [];
+                    if (chain.length === 0) return;
+                    // Chain is root→...→leaf. Expand each level sequentially.
+                    this.expandChain(chain, 0);
+                }
+            });
+        };
+
+        // Wait for unit tree to be loaded before expanding
+        if (this.unitTreeNodes.length > 0) {
+            doExpand();
+        } else {
+            this.unitTreeReady$.pipe(take(1)).subscribe(() => doExpand());
+        }
     }
 
     private expandChain(chain: any[], index: number): void {
@@ -1008,6 +1023,27 @@ export class NotesheetGenerateComponent implements OnInit {
 
     removeColumn(colKey: string): void {
         this.membersData.columns = this.membersData.columns.filter(c => c.key !== colKey);
+    }
+
+    // Column label editing
+    startEditColLabel(colKey: string, currentLabel: string, event: Event): void {
+        event.stopPropagation();
+        this.editingColLabelKey = colKey;
+        this.editingColLabelValue = currentLabel;
+        setTimeout(() => {
+            const el = (event.target as HTMLElement)?.closest('th')?.querySelector('input');
+            el?.focus();
+            el?.select();
+        });
+    }
+
+    saveColLabel(colKey: string): void {
+        const trimmed = this.editingColLabelValue.trim();
+        if (trimmed) {
+            const col = this.membersData.columns.find(c => c.key === colKey);
+            if (col) col.label = trimmed;
+        }
+        this.editingColLabelKey = null;
     }
 
     // Inline cell editing (for custom columns or any editable cell)

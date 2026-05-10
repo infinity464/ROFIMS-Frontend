@@ -201,7 +201,18 @@
                         (drop)="onColDrop(ci, $event)"
                         (dragend)="onColDragEnd()">
                         <div class="members-table__custom-col-header">
-                          <span>{{ col.label }}</span>
+                          @if (editingColLabelKey === col.key) {
+                            <input
+                              type="text"
+                              class="members-col-label-input"
+                              [(ngModel)]="editingColLabelValue"
+                              [ngModelOptions]="{standalone: true}"
+                              (blur)="saveColLabel(col.key)"
+                              (keydown.enter)="saveColLabel(col.key)"
+                              (keydown.escape)="editingColLabelKey = null" />
+                          } @else {
+                            <span (dblclick)="startEditColLabel(col.key, col.label, $event)" title="Double-click to rename">{{ col.label }}</span>
+                          }
                           <button
                             type="button"
                             class="members-table__col-remove"
