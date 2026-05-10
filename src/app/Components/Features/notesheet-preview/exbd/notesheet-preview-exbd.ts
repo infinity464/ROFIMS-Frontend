@@ -614,7 +614,7 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
                 if (code === 200) {
                     this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Action completed.' });
                     this.showRemarkDialog = false;
-                    this.router.navigate(['/notesheet-list/pending']);
+                    this.router.navigate(['/notesheet-list/pending-ex-bd-leave']);
                 } else {
                     this.messageService.add({ severity: 'warn', summary: 'Notice', detail: msg || 'Action failed.' });
                 }

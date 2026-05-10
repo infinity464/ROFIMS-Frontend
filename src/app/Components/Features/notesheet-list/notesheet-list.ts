@@ -905,6 +905,7 @@ export class NotesheetListComponent implements OnInit {
         let route = '/notesheet-generate';
         if (noteSheetType === NoteSheetType.ExBDLeave) route = '/notesheet-ex-bd-leave';
         else if (noteSheetType === NoteSheetType.NewPosting) route = '/posting/notesheet-generate';
+        else if (noteSheetType === NoteSheetType.InterPosting) route = '/posting/inter-posting-notesheet-generate';
         this.router.navigate([route], { queryParams: { id: row.noteSheetId } });
       },
       error: (err: any) => {
@@ -1245,13 +1246,20 @@ export class NotesheetListComponent implements OnInit {
       this.loading = false;
     };
     const statusMap: Record<NoteSheetSection, string> = {
-      draft:    '',   // fetch all, filter client-side to show in-progress notesheets
-      pending:  '',   // fetch all, filter client-side to show all in-workflow items
-      approved: `?currentStatus=${NoteSheetCurrentStatus.FinalApproval}`,
-      declined: `?currentStatus=${NoteSheetCurrentStatus.Cancel}`,
+      draft:    '',
+      pending:  '',
+      approved: NoteSheetCurrentStatus.FinalApproval,
+      declined: NoteSheetCurrentStatus.Cancel,
       all: ''
     };
-    this.http.get<unknown>(`${base}${statusMap[this.section]}`).subscribe({
+    let params: Record<string, string> = {};
+    if (statusMap[this.section]) {
+      params['currentStatus'] = statusMap[this.section];
+    }
+    if (this.noteSheetTypeFilter) {
+      params['noteSheetType'] = this.noteSheetTypeFilter;
+    }
+    this.http.get<unknown>(base, { params }).subscribe({
       next: (data) => {
         const list = this.parseListResponse(data);
         this._fullList = list;
@@ -1311,7 +1319,7 @@ export class NotesheetListComponent implements OnInit {
     if (this.noteSheetTypeFilter) {
       list = list.filter(r => r.noteSheetType === this.noteSheetTypeFilter);
     } else {
-      list = list.filter(r => r.noteSheetType !== NoteSheetType.NewPosting && r.noteSheetType !== NoteSheetType.InterPosting);
+      list = list.filter(r => r.noteSheetType !== NoteSheetType.NewPosting && r.noteSheetType !== NoteSheetType.InterPosting && r.noteSheetType !== NoteSheetType.ExBDLeave);
     }
     switch (this.section) {
       case 'draft':

@@ -593,7 +593,18 @@ export abstract class NotesheetPreviewBase implements OnInit {
         return NoteSheetCurrentStatusOptions.find(o => o.value === status)?.label ?? status;
     }
 
-    goBack(): void { this.router.navigate(['/notesheet-list/draft']); }
+    goBack(): void {
+        const type = this.noteSheet?.noteSheetType;
+        if (type === NoteSheetType.ExBDLeave) {
+            this.router.navigate(['/notesheet-list/draft-ex-bd-leave']);
+        } else if (type === NoteSheetType.NewPosting) {
+            this.router.navigate(['/notesheet-list/pending-finalized-new-posting']);
+        } else if (type === NoteSheetType.InterPosting) {
+            this.router.navigate(['/notesheet-list/draft-inter-posting']);
+        } else {
+            this.router.navigate(['/notesheet-list/draft']);
+        }
+    }
 
     /**
      * Print via a clean new window so @page rules work

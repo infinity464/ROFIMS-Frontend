@@ -403,7 +403,7 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
                         });
                         this.isSubmitting = false;
                         if (this.editMode) {
-                            this.router.navigate(['/notesheet-list/draft']);
+                            this.router.navigate(['/notesheet-list/draft-inter-posting']);
                         } else {
                             this.resetForm();
                             this.loadDraftInterPostingMasters();

@@ -689,7 +689,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
                                 : 'Ex-BD Leave Note Sheet generated successfully.'
                         });
                         this.isSubmitting = false;
-                        if (this.editMode) this.router.navigate(['/notesheet-list/draft']);
+                        if (this.editMode) this.router.navigate(['/notesheet-list/draft-ex-bd-leave']);
                     },
                     error: (err) => {
                         const detail = err?.error?.message || err?.message || 'Failed to generate note sheet.';

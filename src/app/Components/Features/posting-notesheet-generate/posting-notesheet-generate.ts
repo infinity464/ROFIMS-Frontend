@@ -511,7 +511,7 @@ export class PostingNotesheetGenerateComponent implements OnInit {
                         if (savedId != null && savedId > 0) {
                             this.router.navigate(['/notesheet-preview/posting'], { queryParams: { id: savedId } });
                         } else if (this.editMode) {
-                            this.router.navigate(['/notesheet-list/draft']);
+                            this.router.navigate(['/notesheet-list/pending-finalized-new-posting']);
                         } else {
                             this.resetForm();
                             this.loadDraftPostingMasters();
