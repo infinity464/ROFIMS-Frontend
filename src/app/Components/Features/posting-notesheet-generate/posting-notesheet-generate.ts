@@ -414,9 +414,9 @@ export class PostingNotesheetGenerateComponent implements OnInit {
                 const month = String(now.getMonth() + 1).padStart(2, '0');
                 const yearStr = isBn ? BanglaNumerals.toBangla(String(year)) : String(year);
                 const monthStr = isBn ? BanglaNumerals.toBangla(month) : month;
-                pattern = `${prefix}-${yearStr}-${monthStr}-***`;
+                pattern = `${prefix}/${yearStr}/${monthStr}/***`;
             } else {
-                pattern = `${prefix}-***`;
+                pattern = `${prefix}/***`;
             }
             const label = memberLabel ? `${pattern}  (${memberLabel})` : pattern;
 
@@ -443,7 +443,7 @@ export class PostingNotesheetGenerateComponent implements OnInit {
 
         if (newTextType === 'bn') {
             // EN → BN: replace English prefix, convert digits to Bangla
-            if (this.noteSheetPrefixEN && currentNo.startsWith(this.noteSheetPrefixEN + '-')) {
+            if (this.noteSheetPrefixEN && currentNo.startsWith(this.noteSheetPrefixEN + '/')) {
                 const rest = currentNo.substring(this.noteSheetPrefixEN.length);
                 const bnPrefix = this.noteSheetPrefixBN || this.noteSheetPrefixEN;
                 transformed = bnPrefix + BanglaNumerals.toBangla(rest);
@@ -453,7 +453,7 @@ export class PostingNotesheetGenerateComponent implements OnInit {
             }
         } else {
             // BN → EN: replace Bangla prefix, convert digits to English
-            if (this.noteSheetPrefixBN && currentNo.startsWith(this.noteSheetPrefixBN + '-')) {
+            if (this.noteSheetPrefixBN && currentNo.startsWith(this.noteSheetPrefixBN + '/')) {
                 const rest = currentNo.substring(this.noteSheetPrefixBN.length);
                 transformed = this.noteSheetPrefixEN + this.toEnglishDigits(rest);
             } else {

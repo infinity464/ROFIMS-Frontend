@@ -6,13 +6,14 @@ import { MessageService } from 'primeng/api';
 import { SharedService } from '@/shared/services/shared-service';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule } from '@angular/forms';
+import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { FluidModule } from 'primeng/fluid';
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { DatePickerModule } from 'primeng/datepicker';
+import { AutoCompleteModule } from 'primeng/autocomplete';
 import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor';
 import { CommonCode } from '@/Components/basic-setup/shared/models/common-code';
 import { environment } from '@/Core/Environments/environment';
@@ -26,12 +27,116 @@ import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.serv
 import { UserMenuService } from '@/services/user-menu.service';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
 import { PostingService } from '@/services/posting.service';
-import { NoteSheetType, NoteSheetOperationTypeOptions, ApprovalStatus } from '@/models/enums';
+import { NoteSheetType, NoteSheetOperationTypeOptions, ApprovalStatus, CodeType } from '@/models/enums';
 import { NotesheetApproverSelectComponent } from '@/Components/Common/notesheet-approver-select/notesheet-approver-select';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import { TooltipModule } from 'primeng/tooltip';
 import { ToastModule } from 'primeng/toast';
 import { CheckboxModule } from 'primeng/checkbox';
+import { FieldsetModule } from 'primeng/fieldset';
+import { TreeSelectModule } from 'primeng/treeselect';
+import { TreeNode } from 'primeng/api';
+import { OrgService } from '@/Components/basic-setup/org-tree/org.service';
+import { DialogModule } from 'primeng/dialog';
+import { ServingMembersService } from '@/services/serving-members.service';
+import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
+import { FamilyInfoService, FamilyInfoByEmployeeView } from '@/services/family-info-service';
+
+/** Reference paragraph row (serial + text + optional file) */
+export interface ReferenceParagraph {
+    text: string;
+    fileRows: FileRowData[];
+}
+
+/** Available column definition for the Members table */
+export interface MemberColumnDef {
+    key: string;
+    label: string;
+    group: 'basic' | 'personal' | 'family' | 'custom' | 'merged';
+    /** Only for merged columns — stores source keys + separator */
+    mergedFrom?: { keys: string[]; separator: string };
+}
+
+/** One member row in the MembersJson table — stores all fetched data */
+export interface MemberRow {
+    employeeId: number;
+    values: Record<string, string>;
+}
+
+/** Shape stored in NoteSheetInfo.MembersJson */
+export interface MembersJsonData {
+    columns: MemberColumnDef[];
+    members: MemberRow[];
+}
+
+/** All available columns from Basic Info, Personal Info, Family Info */
+export const AVAILABLE_MEMBER_COLUMNS: MemberColumnDef[] = [
+    // Basic Info
+    { key: 'serviceId', label: 'Service ID', group: 'basic' },
+    { key: 'rabId', label: 'RAB ID', group: 'basic' },
+    { key: 'nameEnglish', label: 'Name (EN)', group: 'basic' },
+    { key: 'nameBN', label: 'Name (BN)', group: 'basic' },
+    { key: 'armyRank', label: 'Rank (EN)', group: 'basic' },
+    { key: 'armyRankBN', label: 'Rank (BN)', group: 'basic' },
+    { key: 'corps', label: 'Corps (EN)', group: 'basic' },
+    { key: 'corpsBN', label: 'Corps (BN)', group: 'basic' },
+    { key: 'trade', label: 'Trade (EN)', group: 'basic' },
+    { key: 'tradeBN', label: 'Trade (BN)', group: 'basic' },
+    { key: 'motherOrganization', label: 'Mother Organization (EN)', group: 'basic' },
+    { key: 'motherOrganizationBN', label: 'Mother Organization (BN)', group: 'basic' },
+    { key: 'motherUnit', label: 'Mother Unit (EN)', group: 'basic' },
+    { key: 'motherUnitBN', label: 'Mother Unit (BN)', group: 'basic' },
+    { key: 'memberType', label: 'Member Type (EN)', group: 'basic' },
+    { key: 'memberTypeBN', label: 'Member Type (BN)', group: 'basic' },
+    { key: 'appointment', label: 'Appointment (EN)', group: 'basic' },
+    { key: 'appointmentBN', label: 'Appointment (BN)', group: 'basic' },
+    { key: 'joiningDate', label: 'Joining Date in RAB', group: 'basic' },
+    { key: 'gender', label: 'Gender (EN)', group: 'basic' },
+    { key: 'genderBN', label: 'Gender (BN)', group: 'basic' },
+    { key: 'batch', label: 'Batch (EN)', group: 'basic' },
+    { key: 'batchBN', label: 'Batch (BN)', group: 'basic' },
+    { key: 'rabUnit', label: 'RAB Unit (EN)', group: 'basic' },
+    { key: 'rabUnitBN', label: 'RAB Unit (BN)', group: 'basic' },
+    { key: 'postingStatus', label: 'Posting Status', group: 'basic' },
+    { key: 'permanentDistrictTypeName', label: 'Permanent District (EN)', group: 'basic' },
+    { key: 'permanentDistrictTypeNameBN', label: 'Permanent District (BN)', group: 'basic' },
+    { key: 'prefix', label: 'Prefix (EN)', group: 'basic' },
+    { key: 'prefixBN', label: 'Prefix (BN)', group: 'basic' },
+    { key: 'tradeRemarks', label: 'Trade Remarks', group: 'basic' },
+    // Personal Info
+    { key: 'dateOfBirth', label: 'Date of Birth', group: 'personal' },
+    { key: 'bloodGroup', label: 'Blood Group', group: 'personal' },
+    { key: 'nid', label: 'NID', group: 'personal' },
+    { key: 'mobileNo', label: 'Mobile No (Personal)', group: 'personal' },
+    { key: 'mobileNoOfficial', label: 'Mobile No (Official)', group: 'personal' },
+    { key: 'emailAddress', label: 'Email Address', group: 'personal' },
+    { key: 'religion', label: 'Religion (EN)', group: 'personal' },
+    { key: 'religionBN', label: 'Religion (BN)', group: 'personal' },
+    { key: 'passportNo', label: 'Passport No', group: 'personal' },
+    { key: 'maritalStatus', label: 'Marital Status (EN)', group: 'personal' },
+    { key: 'maritalStatusBN', label: 'Marital Status (BN)', group: 'personal' },
+    { key: 'emergencyContactNo', label: 'Emergency Contact', group: 'personal' },
+    { key: 'dateOfCommission', label: 'Date of Commission', group: 'personal' },
+    { key: 'dateOfJoiningInServiceTraining', label: 'Date of Joining in Service', group: 'personal' },
+    { key: 'medicalCategory', label: 'Medical Category (EN)', group: 'personal' },
+    { key: 'medicalCategoryBN', label: 'Medical Category (BN)', group: 'personal' },
+    { key: 'educationQualification', label: 'Education Qualification (EN)', group: 'personal' },
+    { key: 'educationQualificationBN', label: 'Education Qualification (BN)', group: 'personal' },
+    { key: 'professionalQualification', label: 'Professional Qualification (EN)', group: 'personal' },
+    { key: 'professionalQualificationBN', label: 'Professional Qualification (BN)', group: 'personal' },
+    { key: 'personalQualification', label: 'Personal Qualification (EN)', group: 'personal' },
+    { key: 'personalQualificationBN', label: 'Personal Qualification (BN)', group: 'personal' },
+    { key: 'gallantryAwardsDecoration', label: 'Gallantry Awards (EN)', group: 'personal' },
+    { key: 'gallantryAwardsDecorationBN', label: 'Gallantry Awards (BN)', group: 'personal' },
+    { key: 'height', label: 'Height', group: 'personal' },
+    { key: 'weight', label: 'Weight', group: 'personal' },
+    { key: 'identificationMark', label: 'Identification Mark', group: 'personal' },
+    // Family Info
+    { key: 'family_spouse', label: 'Spouse Name', group: 'family' },
+    { key: 'family_father', label: 'Father Name', group: 'family' },
+    { key: 'family_mother', label: 'Mother Name', group: 'family' },
+    { key: 'family_members', label: 'Family Members (All)', group: 'family' },
+];
 
 @Component({
     selector: 'app-notesheet-generate',
@@ -39,17 +144,23 @@ import { CheckboxModule } from 'primeng/checkbox';
     imports: [
         CommonModule,
         ReactiveFormsModule,
+        FormsModule,
         FluidModule,
         InputTextModule,
         ButtonModule,
         SelectModule,
         MultiSelectModule,
         DatePickerModule, FlexibleDateDirective,
+        AutoCompleteModule,
         RichEditorComponent,
         FileReferencesFormComponent,
         TooltipModule,
         ToastModule,
         CheckboxModule,
+        FieldsetModule,
+        TreeSelectModule,
+        DialogModule,
+        EmployeeSearchComponent,
         NotesheetApproverSelectComponent
     ],
     templateUrl: './notesheet-generate.html',
@@ -57,36 +168,74 @@ import { CheckboxModule } from 'primeng/checkbox';
     styleUrl: './notesheet-generate.scss'
 })
 export class NotesheetGenerateComponent implements OnInit {
-    title = '1 (a) System Generated Note-Sheet (Approved by System)';
+    title = 'Generate NoteSheet';
     form!: FormGroup;
     isSubmitting = false;
-    /** Edit mode: load by id from query param and submit as UpdateAsyn */
     editMode = false;
     editId: number | null = null;
-    /** When editing, keep original preparer (CreatedBy) so draft→approved does not change it */
     originalCreatedBy: string | null = null;
-    /** Whether the logged-in user has an employee mapping (show readonly vs dropdown) */
     isPreparedByMapped = false;
     textTypeOptions = [
         { label: 'English', value: 'en' },
         { label: 'Bangla', value: 'bn' }
     ];
     readonly noteSheetOperationTypeOptions = NoteSheetOperationTypeOptions;
-    /** Options with both EN and BN labels; display getters pick by textType. */
-    unitOptions: { label: string; labelBn: string | null; value: number }[] = [];
-    wingOptions: { label: string; labelBn: string | null; value: number }[] = [];
-    branchOptions: { label: string; labelBn: string | null; value: number }[] = [];
+
+    // Unit hierarchy tree
+    unitTreeNodes: TreeNode[] = [];
+    selectedUnitNode: TreeNode | null = null;
+    unitTreeLoading = false;
+    private unitNodeMap: Record<number, TreeNode> = {};
+
     preparedByOptions: { label: string; value: number }[] = [];
-    /** Reference employees – stored in NoteSheetReferenceEmployee table (multi-select). */
     referenceEmployeeOptions: { label: string; labelBn: string | null; value: number }[] = [];
-    /** Supporting documents – stored in NoteSheetInfo.FilesReferences (JSON array of { FileId, fileName }). */
-    fileRows: FileRowData[] = [];
+
+    // Reference paragraphs (JSON array with serial + file)
+    referenceParagraphs: ReferenceParagraph[] = [{ text: '', fileRows: [] }];
+
+    // ── Members Table (MembersJson) ─────────────────────────────────────
+    membersData: MembersJsonData = { columns: [], members: [] };
+    memberAddLoading = false;
+    showAddColumnDialog = false;
+    addColumnMode: 'field' | 'custom' = 'field';
+    selectedColumnKey: string | null = null;
+    newCustomColumnName = '';
+    editingMemberCellKey: string | null = null;
+    editingMemberCellValue = '';
+    readonly availableColumns = AVAILABLE_MEMBER_COLUMNS;
+
+    // Drag & drop column reorder
+    dragColIndex: number | null = null;
+    dragOverColIndex: number | null = null;
+
+    // Merge columns
+    showMergeColumnDialog = false;
+    mergeSelectedColumns: MemberColumnDef[] = [];
+    mergeSeparator = ' ';
+    mergeCustomSeparator = '';
+    mergeLabel = '';
+    mergeSeparatorOptions = [
+        { label: 'Space', value: ' ' },
+        { label: 'Comma + Space', value: ', ' },
+        { label: 'Dash', value: '-' },
+        { label: 'Slash', value: '/' },
+        { label: 'Parentheses ( )', value: '()' },
+        { label: 'Custom', value: '__custom__' },
+    ];
+
+    // Subject autocomplete
+    subjectSuggestions: string[] = [];
+
+    // NoteSheet number config
+    allNoteSheetConfigs: any[] = [];
+    private memberTypeMap = new Map<number, { en: string; bn: string }>();
+    noteSheetConfigOptions: { label: string; value: number }[] = [];
+    private noteSheetPrefixEN = '';
+    private noteSheetPrefixBN = '';
+
     canInsert = true;
     canUpdate = true;
     canDelete = true;
-    /** Prefix config for notesheet number language swap */
-    private noteSheetPrefixEN = '';
-    private noteSheetPrefixBN = '';
 
     @ViewChild('fileReferencesForm') fileReferencesForm!: FileReferencesFormComponent;
 
@@ -103,26 +252,34 @@ export class NotesheetGenerateComponent implements OnInit {
         private noteSheetEditCache: NoteSheetEditCacheService,
         private identityMappingService: IdentityUserMappingService,
         private _userMenuService: UserMenuService,
-        private postingService: PostingService
+        private postingService: PostingService,
+        private orgService: OrgService,
+        private servingMembersService: ServingMembersService,
+        private familyInfoService: FamilyInfoService
     ) {
         this.form = this.fb.group({
             noteSheetTemplateId: [null as number | null],
-            textType: ['en'],
+            textType: ['bn'],
             noteSheetDate: [null as Date | null, Validators.required],
             unitId: [null as number | null],
             wingBattalionId: [null as number | null],
             branchId: [null as number | null],
-            referenceNumber: ['', Validators.required],
+            subBranchId: [null as number | null],
+            sectionId: [null as number | null],
+            subSectionId: [null as number | null],
             noteSheetNo: [''],
+            noteSheetNumberConfigId: [null as number | null, Validators.required],
             subject: ['', Validators.required],
-            mainText: [''], // Rich editor (HTML)
+            mainText: [''],
+            note: [''],
+            paragraphText: [''],
             preparedBy: [''],
             preparedByEmployeeId: [null as number | null],
             initiatorId: [null as number | null, Validators.required],
             recommenderIds: [[] as number[]],
             finalApproverId: [null as number | null, Validators.required],
             isSecret: [false],
-            noteSheetOperationType: [null as string | null, Validators.required],
+            noteSheetOperationType: ['manual', Validators.required],
             referenceEmployeeIds: [[] as number[]]
         });
     }
@@ -132,8 +289,7 @@ export class NotesheetGenerateComponent implements OnInit {
         this.canInsert = _perms.canInsert;
         this.canUpdate = _perms.canUpdate;
         this.canDelete = _perms.canDelete;
-        this.loadUnits();
-        this.loadBranches();
+        this.loadUnitTree();
         this.loadPreparedByOptions();
         this.loadReferenceEmployeeOptions();
         this.loadNoteSheetNumberConfig();
@@ -148,185 +304,337 @@ export class NotesheetGenerateComponent implements OnInit {
                     this.editId = numId;
                     this.editMode = true;
                     this.title = 'Update Draft Note-Sheet';
+                    this.form.get('noteSheetNumberConfigId')?.clearValidators();
+                    this.form.get('noteSheetNumberConfigId')?.updateValueAndValidity();
                     this.loadNoteSheetForEdit(numId);
                 }
             }
         });
 
-        // In edit mode, swap noteSheetNo prefix/digits when textType changes
         this.form.get('textType')?.valueChanges.subscribe((newType: string) => {
+            this.buildNoteSheetConfigOptions();
             if (this.editMode) {
                 this.transformNoteSheetNo(newType);
             }
         });
     }
 
-    /** Load single note-sheet and patch form (edit mode). Uses cache from draft list when available. */
-    private loadNoteSheetForEdit(noteSheetId: number): void {
-        const user = this.sharedService.getCurrentUser?.() ?? '';
-        const cached = this.noteSheetEditCache.get(noteSheetId);
-        if (cached != null && typeof cached === 'object') {
-            const d = cached;
-            if (d.noteSheetType === NoteSheetType.ExBDLeave || d.NoteSheetType === NoteSheetType.ExBDLeave) {
-                this.noteSheetEditCache.set(noteSheetId, d);
-                this.router.navigate(['/notesheet-ex-bd-leave'], { queryParams: { id: noteSheetId } });
-                return;
+    // ── Unit Hierarchy Tree ─────────────────────────────────────────────
+
+    private loadUnitTree(): void {
+        if (this.unitTreeNodes.length > 0) return;
+        this.unitTreeLoading = true;
+        this.orgService.getAll(0).subscribe({
+            next: (roots) => {
+                this.unitNodeMap = {};
+                this.unitTreeNodes = roots
+                    .filter((r: any) => r.status === 1)
+                    .sort((a: any, b: any) => a.sortOrder - b.sortOrder)
+                    .map((r: any) => this.toTreeNode(r, null));
+                this.unitTreeLoading = false;
+            },
+            error: () => { this.unitTreeLoading = false; }
+        });
+    }
+
+    private toTreeNode(node: any, parent: TreeNode | null): TreeNode {
+        const tn: TreeNode = {
+            key: String(node.id),
+            label: node.nameEN || node.nameBN || `ID ${node.id}`,
+            data: { id: node.id, nameEN: node.nameEN, nameBN: node.nameBN, codeType: node.codeType, parent },
+            leaf: false,
+            children: []
+        };
+        this.unitNodeMap[node.id] = tn;
+        return tn;
+    }
+
+    onUnitNodeExpand(event: any): void {
+        const node: TreeNode = event.node;
+        if (node.children && node.children.length > 0) return;
+        this.orgService.loadChildren(Number(node.key)).subscribe({
+            next: (children: any[]) => {
+                node.children = children
+                    .filter((c: any) => c.status === 1)
+                    .sort((a: any, b: any) => a.sortOrder - b.sortOrder)
+                    .map((c: any) => this.toTreeNode(c, node));
+                if (node.children!.length === 0) node.leaf = true;
+                this.unitTreeNodes = [...this.unitTreeNodes];
             }
-            this.applyCachedNoteSheetToForm(d, user);
+        });
+    }
+
+    onUnitNodeSelect(event: any): void {
+        this.selectedUnitNode = event.node;
+    }
+
+    onUnitNodeClear(): void {
+        this.selectedUnitNode = null;
+    }
+
+    getUnitFullPath(node: TreeNode | null): string {
+        if (!node) return '';
+        const parts: string[] = [];
+        let cur: TreeNode | null = node;
+        while (cur) {
+            parts.unshift(cur.label ?? '');
+            cur = cur.data?.parent ?? null;
+        }
+        return parts.join(' > ');
+    }
+
+    /** Map selected tree node's hierarchy to unitId/wingBattalionId/branchId/subBranchId/sectionId/subSectionId */
+    private getHierarchyIdsFromSelectedNode(): Record<string, number | null> {
+        const levels: { key: string; codeType: string }[] = [
+            { key: 'unitId', codeType: 'Unit' },
+            { key: 'wingBattalionId', codeType: 'Wing' },
+            { key: 'branchId', codeType: 'Branch' },
+            { key: 'subBranchId', codeType: 'Sub-Branch' },
+            { key: 'sectionId', codeType: 'Section' },
+            { key: 'subSectionId', codeType: 'Sub-Section' }
+        ];
+        const result: Record<string, number | null> = {};
+        levels.forEach(l => result[l.key] = null);
+
+        if (!this.selectedUnitNode) return result;
+
+        // Walk up from selected node to root, collecting each level
+        const chain: TreeNode[] = [];
+        let cur: TreeNode | null = this.selectedUnitNode;
+        while (cur) {
+            chain.unshift(cur);
+            cur = cur.data?.parent ?? null;
+        }
+
+        for (const node of chain) {
+            const ct = node.data?.codeType ?? '';
+            const match = levels.find(l => l.codeType === ct);
+            if (match) {
+                result[match.key] = Number(node.key);
+            }
+        }
+
+        return result;
+    }
+
+    /** In edit mode, expand the tree to show the deepest selected unit */
+    private expandTreeToNode(nodeId: number): void {
+        this.masterBasicSetupService.getAncestorsOfCommonCode(nodeId).subscribe({
+            next: (ancestors) => {
+                const chain = Array.isArray(ancestors) ? ancestors : [];
+                if (chain.length === 0) return;
+                // Chain is root→...→leaf. Expand each level sequentially.
+                this.expandChain(chain, 0);
+            }
+        });
+    }
+
+    private expandChain(chain: any[], index: number): void {
+        if (index >= chain.length) {
+            // All expanded, select the leaf node
+            const leafId = chain[chain.length - 1].codeId ?? chain[chain.length - 1].CodeId;
+            const leafNode = this.unitNodeMap[leafId];
+            if (leafNode) {
+                this.selectedUnitNode = leafNode;
+            }
             return;
         }
-        const api = `${environment.apis.core}/NoteSheetInfo`;
-        this.http.get<any>(`${api}/GetFilteredByKeysAsyn/${noteSheetId}`).subscribe({
-            next: (data) => {
-                const raw = data != null && typeof data === 'object' ? (data.data ?? data.value ?? data) : data;
-                const list = Array.isArray(raw) ? raw : raw != null && typeof raw === 'object' && !Array.isArray(raw) ? [raw] : [];
-                const row = list[0];
-                if (!row) return;
-                const d = row;
-                if (d.noteSheetType === NoteSheetType.ExBDLeave || d.NoteSheetType === NoteSheetType.ExBDLeave) {
-                    this.router.navigate(['/notesheet-ex-bd-leave'], { queryParams: { id: noteSheetId } });
-                    return;
-                }
-                this.applyCachedNoteSheetToForm(d, user);
-            },
-            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load note-sheet for edit.' })
-        });
-    }
 
-    private applyCachedNoteSheetToForm(d: any, user: string): void {
-        this.originalCreatedBy = d.createdBy ?? d.CreatedBy ?? d.lastUpdatedBy ?? d.LastUpdatedBy ?? user ?? null;
-        const noteSheetDate = (d.noteSheetDate ?? d.NoteSheetDate) != null ? this.parseDate(d.noteSheetDate ?? d.NoteSheetDate) : null;
-        let recommenderIds: number[] = [];
-        const recommendersJson = d.recommendersJson ?? d.RecommendersJson;
-        const recommenderIdsJson = d.recommenderIdsJson ?? d.RecommenderIdsJson;
-        const rawJson = recommendersJson ?? recommenderIdsJson;
-        if (rawJson && typeof rawJson === 'string') {
-            try {
-                const arr = JSON.parse(rawJson);
-                if (Array.isArray(arr) && arr.length > 0) {
-                    if (typeof arr[0] === 'object' && arr[0] !== null) {
-                        // New format: array of recommender objects
-                        recommenderIds = arr.map((r: any) => r.recomender_id ?? r.recomenderId ?? r.RecomenderId).filter(Boolean);
-                    } else {
-                        // Legacy format: plain array of IDs
-                        recommenderIds = arr.filter((x: any) => typeof x === 'number');
+        const item = chain[index];
+        const id = item.codeId ?? item.CodeId;
+        const existing = this.unitNodeMap[id];
+
+        if (existing) {
+            existing.expanded = true;
+            // If children not loaded yet, load them
+            if (!existing.children || existing.children.length === 0) {
+                this.orgService.loadChildren(id).subscribe({
+                    next: (children: any[]) => {
+                        existing.children = children
+                            .filter((c: any) => c.status === 1)
+                            .sort((a: any, b: any) => a.sortOrder - b.sortOrder)
+                            .map((c: any) => this.toTreeNode(c, existing));
+                        if (existing.children!.length === 0) existing.leaf = true;
+                        this.unitTreeNodes = [...this.unitTreeNodes];
+                        this.expandChain(chain, index + 1);
                     }
+                });
+            } else {
+                this.expandChain(chain, index + 1);
+            }
+        } else {
+            // Node not yet in tree, skip and continue
+            this.expandChain(chain, index + 1);
+        }
+    }
+
+    // ── Subject Autocomplete ─────────────────────────────────────────────
+
+    searchSubject(event: { query: string }): void {
+        const api = `${environment.apis.core}/NoteSheetInfo`;
+        this.http.get<string[]>(`${api}/SearchSubjects`, { params: { query: event.query } }).subscribe({
+            next: (results) => { this.subjectSuggestions = results ?? []; },
+            error: () => { this.subjectSuggestions = []; }
+        });
+    }
+
+    // ── Reference Paragraphs (Serial + File) ─────────────────────────────
+
+    addReferenceParagraph(): void {
+        this.referenceParagraphs.push({ text: '', fileRows: [] });
+    }
+
+    removeReferenceParagraph(index: number): void {
+        if (this.referenceParagraphs.length > 1) {
+            this.referenceParagraphs.splice(index, 1);
+        }
+    }
+
+    /** Get serial label based on textType: ক,খ,গ for Bangla, A,B,C for English */
+    getSerialLabel(index: number): string {
+        if (this.isBangla) {
+            const banglaLetters = ['ক', 'খ', 'গ', 'ঘ', 'ঙ', 'চ', 'ছ', 'জ', 'ঝ', 'ঞ', 'ট', 'ঠ', 'ড', 'ঢ', 'ণ', 'ত', 'থ', 'দ', 'ধ', 'ন'];
+            return (banglaLetters[index] ?? String(index + 1)) + '.';
+        } else {
+            return String.fromCharCode(65 + index) + '.';
+        }
+    }
+
+    onRefFileRowsChange(event: FileRowData[], index: number): void {
+        if (event && Array.isArray(event)) {
+            this.referenceParagraphs[index].fileRows = event;
+        }
+    }
+
+    onRefDownloadFile(payload: { fileId: number; fileName: string }): void {
+        this.empService.downloadFile(payload.fileId).subscribe({
+            next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file.' })
+        });
+    }
+
+    trackByIndex(index: number): number {
+        return index;
+    }
+
+    // ── NoteSheet Number Config ──────────────────────────────────────────
+
+    private loadNoteSheetNumberConfig(): void {
+        const configApi = `${environment.apis.core}/NoteSheetNumberConfig`;
+        forkJoin([
+            this.http.get<any[]>(`${configApi}/GetAll`),
+            this.masterBasicSetupService.getAllByType(CodeType.EmployeeType)
+        ]).subscribe({
+            next: ([configs, memberTypes]) => {
+                (memberTypes ?? []).forEach(mt => {
+                    this.memberTypeMap.set(mt.codeId, {
+                        en: mt.codeValueEN ?? '',
+                        bn: mt.codeValueBN ?? mt.codeValueEN ?? ''
+                    });
+                });
+
+                this.allNoteSheetConfigs = (configs ?? []).filter(
+                    (c: any) => (c.noteSheetType ?? c.NoteSheetType) === 'General'
+                        && (c.status ?? c.Status) !== false
+                );
+
+                const first = this.allNoteSheetConfigs[0];
+                if (first) {
+                    this.noteSheetPrefixEN = first.prefix ?? first.Prefix ?? '';
+                    this.noteSheetPrefixBN = first.prefixBN ?? first.PrefixBN ?? '';
                 }
-            } catch {}
-        }
-        this.form.patchValue({
-            noteSheetTemplateId: d.noteSheetTemplateId ?? d.NoteSheetTemplateId ?? null,
-            textType: (d.textType ?? d.TextType) === 1 ? 'bn' : 'en',
-            noteSheetDate,
-            unitId: d.unitId ?? d.UnitId ?? null,
-            wingBattalionId: d.wingBattalionId ?? d.WingBattalionId ?? null,
-            branchId: d.branchId ?? d.BranchId ?? null,
-            referenceNumber: String(d.referenceNumber ?? d.ReferenceNumber ?? ''),
-            noteSheetNo: String(d.noteSheetNo ?? d.NoteSheetNo ?? ''),
-            subject: String(d.subject ?? d.Subject ?? ''),
-            mainText: String(d.mainText ?? d.MainText ?? ''),
-            preparedBy: d.createdBy ?? d.CreatedBy ?? d.lastUpdatedBy ?? d.LastUpdatedBy ?? user,
-            preparedByEmployeeId: d.preparedByEmployeeId ?? d.PreparedByEmployeeId ?? null,
-            initiatorId: d.initiatorId ?? d.InitiatorId ?? null,
-            recommenderIds,
-            finalApproverId: d.finalApprovalId ?? d.FinalApprovalId ?? null,
-            isSecret: !!(d.isSecret ?? d.IsSecret ?? false),
-            noteSheetOperationType: d.noteSheetOperationType ?? d.NoteSheetOperationType ?? null
+
+                this.buildNoteSheetConfigOptions();
+            }
         });
-        if (d.createdBy ?? d.CreatedBy) this.form.get('preparedBy')?.setValue(d.createdBy ?? d.CreatedBy);
-        const unitId = d.unitId ?? d.UnitId;
-        if (unitId) {
-            this.masterBasicSetupService.getByParentId(unitId).subscribe({
-                next: (list) => {
-                    this.wingOptions = (Array.isArray(list) ? list : []).map((c: CommonCode) => ({
-                        label: c.codeValueEN || c.codeValueBN || String(c.codeId),
-                        labelBn: c.codeValueBN ?? null,
-                        value: c.codeId
-                    }));
-                    this.form.patchValue({ wingBattalionId: d.wingBattalionId ?? d.WingBattalionId ?? null });
-                },
-                error: (err: any) => {}
-            });
-        }
-        const filesReferences = d.filesReferences ?? d.FilesReferences;
-        if (filesReferences && typeof filesReferences === 'string') {
-            try {
-                const refs = JSON.parse(filesReferences) as { FileId?: number; fileId?: number; fileName?: string; FileName?: string }[];
-                this.fileRows = Array.isArray(refs)
-                    ? refs.map((r) => ({
-                          displayName: r.fileName ?? r.FileName ?? '',
-                          file: null,
-                          fileId: r.FileId ?? r.fileId
-                      }))
-                    : [];
-            } catch {}
-        }
-        // Load existing reference employees in edit mode
-        const noteSheetId = d.noteSheetId ?? d.NoteSheetId;
-        if (noteSheetId) {
-            const refApi = `${environment.apis.core}/NoteSheetReferenceEmployee`;
-            this.http.get<any[]>(`${refApi}/GetByNoteSheetId/${noteSheetId}`).subscribe({
-                next: (list) => {
-                    const ids = (Array.isArray(list) ? list : []).map((r: any) => r.employeeId ?? r.EmployeeId).filter(Boolean);
-                    this.form.patchValue({ referenceEmployeeIds: ids });
-                },
-                error: (err: any) => {}
-            });
+    }
+
+    private buildNoteSheetConfigOptions(): void {
+        const isBn = this.form.get('textType')?.value === 'bn';
+
+        this.noteSheetConfigOptions = this.allNoteSheetConfigs.map((c: any) => {
+            const configId = c.configId ?? c.ConfigId;
+            const prefix = isBn
+                ? (c.prefixBN ?? c.PrefixBN ?? c.prefix ?? c.Prefix ?? '')
+                : (c.prefix ?? c.Prefix ?? '');
+            const memberTypeId = c.memberTypeId ?? c.MemberTypeId;
+            const mt = this.memberTypeMap.get(memberTypeId);
+            const memberLabel = mt ? (isBn ? mt.bn : mt.en) : '';
+            const includeDate = c.includeDateInNumber ?? c.IncludeDateInNumber ?? false;
+
+            let pattern: string;
+            if (includeDate) {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const yearStr = isBn ? BanglaNumerals.toBangla(String(year)) : String(year);
+                const monthStr = isBn ? BanglaNumerals.toBangla(month) : month;
+                pattern = `${prefix}/${yearStr}/${monthStr}/***`;
+            } else {
+                pattern = `${prefix}/***`;
+            }
+            const label = memberLabel ? `${pattern}  (${memberLabel})` : pattern;
+            return { label, value: configId };
+        });
+
+        if (this.noteSheetConfigOptions.length === 1) {
+            this.form.get('noteSheetNumberConfigId')?.setValue(this.noteSheetConfigOptions[0].value);
         }
     }
 
-    private parseDate(value: string | Date): Date | null {
-        if (value instanceof Date) return value;
-        if (typeof value !== 'string') return null;
-        const dt = new Date(value);
-        return isNaN(dt.getTime()) ? null : dt;
+    // ── Misc ─────────────────────────────────────────────────────────────
+
+    get isBangla(): boolean {
+        return this.form?.get('textType')?.value === 'bn';
     }
 
-    loadUnits(): void {
-        this.masterBasicSetupService.getAllByType('RabUnit').subscribe({
+    get referenceEmployeeOptionsDisplay(): { label: string; value: number }[] {
+        return this.referenceEmployeeOptions.map((o) => ({ label: o.label, value: o.value }));
+    }
+
+    onTextTypeChange(): void {
+        // Language switch refreshes labels via getters.
+    }
+
+    onFileRowsChange(event: FileRowData[]): void {
+        if (event && Array.isArray(event)) {
+            // handled by fileReferencesForm viewchild
+        }
+    }
+
+    onDownloadFile(payload: { fileId: number; fileName: string }): void {
+        this.empService.downloadFile(payload.fileId).subscribe({
+            next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file.' })
+        });
+    }
+
+    private loadPreparedByOptions(): void {
+        this.postingService.getApprovalEmployees().subscribe({
+            next: (opts) => { this.preparedByOptions = opts ?? []; },
+            error: () => {}
+        });
+    }
+
+    loadReferenceEmployeeOptions(): void {
+        const api = `${environment.apis.core}/EmployeeInfo`;
+        this.http.get<any[]>(`${api}/GetBasicServiceInformationOfServingMember`).subscribe({
             next: (list) => {
-                this.unitOptions = (Array.isArray(list) ? list : []).map((c: CommonCode) => ({
-                    label: c.codeValueEN || c.codeValueBN || String(c.codeId),
-                    labelBn: c.codeValueBN ?? null,
-                    value: c.codeId
-                }));
-            },
-            error: (err: any) => {}
+                this.referenceEmployeeOptions = (Array.isArray(list) ? list : []).map((e: any) => {
+                    const name = e.nameEnglish || e.NameEnglish || '';
+                    const rabId = e.rabId || e.RabId || '';
+                    const serviceId = e.serviceId || e.ServiceId || '';
+                    const parts = [name, rabId ? `RAB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : ''].filter(Boolean);
+                    return {
+                        label: parts.join(' | ') || `ID ${e.employeeID ?? e.EmployeeID}`,
+                        labelBn: e.nameBN || e.NameBN || null,
+                        value: e.employeeID ?? e.EmployeeID
+                    };
+                });
+            }
         });
     }
 
-    onUnitChange(): void {
-        const unitId = this.form.get('unitId')?.value;
-        this.form.patchValue({ wingBattalionId: null });
-        this.wingOptions = [];
-        if (unitId) {
-            this.masterBasicSetupService.getByParentId(unitId).subscribe({
-                next: (list) => {
-                    this.wingOptions = (Array.isArray(list) ? list : []).map((c: CommonCode) => ({
-                        label: c.codeValueEN || c.codeValueBN || String(c.codeId),
-                        labelBn: c.codeValueBN ?? null,
-                        value: c.codeId
-                    }));
-                },
-                error: (err: any) => {}
-            });
-        }
-    }
-
-    loadBranches(): void {
-        this.masterBasicSetupService.getAllByType('RabBranch').subscribe({
-            next: (list) => {
-                this.branchOptions = (Array.isArray(list) ? list : []).map((c: CommonCode) => ({
-                    label: c.codeValueEN || c.codeValueBN || String(c.codeId),
-                    labelBn: c.codeValueBN ?? null,
-                    value: c.codeId
-                }));
-            },
-            error: (err: any) => {}
-        });
-    }
-
-    /** Check if logged-in user has an employee mapping. If yes, auto-set Prepared By (readonly). If not, show dropdown. */
     private resolvePreparedByMapping(): void {
         const userId = this.sharedService.getCurrentUserId?.();
         if (!userId) {
@@ -351,70 +659,162 @@ export class NotesheetGenerateComponent implements OnInit {
                     this.isPreparedByMapped = false;
                 }
             },
-            error: (err: any) => {
-                this.isPreparedByMapped = false;
+            error: () => { this.isPreparedByMapped = false; }
+        });
+    }
+
+    // ── Edit Mode ────────────────────────────────────────────────────────
+
+    private loadNoteSheetForEdit(noteSheetId: number): void {
+        const user = this.sharedService.getCurrentUser?.() ?? '';
+        const cached = this.noteSheetEditCache.get(noteSheetId);
+        if (cached != null && typeof cached === 'object') {
+            const d = cached;
+            if (d.noteSheetType === NoteSheetType.ExBDLeave || d.NoteSheetType === NoteSheetType.ExBDLeave) {
+                this.noteSheetEditCache.set(noteSheetId, d);
+                this.router.navigate(['/notesheet-ex-bd-leave'], { queryParams: { id: noteSheetId } });
+                return;
             }
-        });
-    }
-
-    private loadPreparedByOptions(): void {
-        this.postingService.getApprovalEmployees().subscribe({
-            next: (opts) => { this.preparedByOptions = opts ?? []; },
-            error: () => {}
-        });
-    }
-
-    /** Load presently serving employees for the Reference Employee multi-select. */
-    loadReferenceEmployeeOptions(): void {
-        const api = `${environment.apis.core}/EmployeeInfo`;
-        this.http.get<any[]>(`${api}/GetBasicServiceInformationOfServingMember`).subscribe({
-            next: (list) => {
-                this.referenceEmployeeOptions = (Array.isArray(list) ? list : []).map((e: any) => {
-                    const name = e.nameEnglish || e.NameEnglish || '';
-                    const rabId = e.rabId || e.RabId || '';
-                    const serviceId = e.serviceId || e.ServiceId || '';
-                    const parts = [name, rabId ? `RAB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : ''].filter(Boolean);
-                    return {
-                        label: parts.join(' | ') || `ID ${e.employeeID ?? e.EmployeeID}`,
-                        labelBn: e.nameBN || e.NameBN || null,
-                        value: e.employeeID ?? e.EmployeeID
-                    };
-                });
-            },
-            error: (err: any) => {}
-        });
-    }
-
-    /** Load NoteSheetNumberConfig for General type (prefix EN/BN for number generation). */
-    private loadNoteSheetNumberConfig(): void {
-        const api = `${environment.apis.core}/NoteSheetNumberConfig`;
-        this.http.get<any[]>(`${api}/GetAll`).subscribe({
-            next: (configs) => {
-                const config = (configs ?? []).find(
-                    (c: any) => (c.noteSheetType ?? c.NoteSheetType) === 'General'
-                );
-                if (config) {
-                    this.noteSheetPrefixEN = config.prefix ?? config.Prefix ?? '';
-                    this.noteSheetPrefixBN = config.prefixBN ?? config.PrefixBN ?? '';
+            this.applyCachedNoteSheetToForm(d, user);
+            return;
+        }
+        const api = `${environment.apis.core}/NoteSheetInfo`;
+        this.http.get<any>(`${api}/GetFilteredByKeysAsyn/${noteSheetId}`).subscribe({
+            next: (data) => {
+                const raw = data != null && typeof data === 'object' ? (data.data ?? data.value ?? data) : data;
+                const list = Array.isArray(raw) ? raw : raw != null && typeof raw === 'object' && !Array.isArray(raw) ? [raw] : [];
+                const row = list[0];
+                if (!row) return;
+                if (row.noteSheetType === NoteSheetType.ExBDLeave || row.NoteSheetType === NoteSheetType.ExBDLeave) {
+                    this.router.navigate(['/notesheet-ex-bd-leave'], { queryParams: { id: noteSheetId } });
+                    return;
                 }
-            }
+                this.applyCachedNoteSheetToForm(row, user);
+            },
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load note-sheet for edit.' })
         });
     }
 
-    /** Convert Bangla digits back to Western digits */
+    private applyCachedNoteSheetToForm(d: any, user: string): void {
+        this.originalCreatedBy = d.createdBy ?? d.CreatedBy ?? d.lastUpdatedBy ?? d.LastUpdatedBy ?? user ?? null;
+        const noteSheetDate = (d.noteSheetDate ?? d.NoteSheetDate) != null ? this.parseDate(d.noteSheetDate ?? d.NoteSheetDate) : null;
+        let recommenderIds: number[] = [];
+        const recommendersJson = d.recommendersJson ?? d.RecommendersJson;
+        const recommenderIdsJson = d.recommenderIdsJson ?? d.RecommenderIdsJson;
+        const rawJson = recommendersJson ?? recommenderIdsJson;
+        if (rawJson && typeof rawJson === 'string') {
+            try {
+                const arr = JSON.parse(rawJson);
+                if (Array.isArray(arr) && arr.length > 0) {
+                    if (typeof arr[0] === 'object' && arr[0] !== null) {
+                        recommenderIds = arr.map((r: any) => r.recomender_id ?? r.recomenderId ?? r.RecomenderId).filter(Boolean);
+                    } else {
+                        recommenderIds = arr.filter((x: any) => typeof x === 'number');
+                    }
+                }
+            } catch {}
+        }
+        this.form.patchValue({
+            noteSheetTemplateId: d.noteSheetTemplateId ?? d.NoteSheetTemplateId ?? null,
+            textType: (d.textType ?? d.TextType) === 1 ? 'bn' : 'en',
+            noteSheetDate,
+            unitId: d.unitId ?? d.UnitId ?? null,
+            wingBattalionId: d.wingBattalionId ?? d.WingBattalionId ?? null,
+            branchId: d.branchId ?? d.BranchId ?? null,
+            subBranchId: d.subBranchId ?? d.SubBranchId ?? null,
+            sectionId: d.sectionId ?? d.SectionId ?? null,
+            subSectionId: d.subSectionId ?? d.SubSectionId ?? null,
+            noteSheetNo: String(d.noteSheetNo ?? d.NoteSheetNo ?? ''),
+            subject: String(d.subject ?? d.Subject ?? ''),
+            mainText: String(d.mainText ?? d.MainText ?? ''),
+            note: String(d.note ?? d.Note ?? ''),
+            paragraphText: String(d.paragraphText ?? d.ParagraphText ?? ''),
+            preparedBy: d.createdBy ?? d.CreatedBy ?? d.lastUpdatedBy ?? d.LastUpdatedBy ?? user,
+            preparedByEmployeeId: d.preparedByEmployeeId ?? d.PreparedByEmployeeId ?? null,
+            initiatorId: d.initiatorId ?? d.InitiatorId ?? null,
+            recommenderIds,
+            finalApproverId: d.finalApprovalId ?? d.FinalApprovalId ?? null,
+            isSecret: !!(d.isSecret ?? d.IsSecret ?? false),
+            noteSheetOperationType: d.noteSheetOperationType ?? d.NoteSheetOperationType ?? null
+        });
+        if (d.createdBy ?? d.CreatedBy) this.form.get('preparedBy')?.setValue(d.createdBy ?? d.CreatedBy);
+
+        // Load reference number paragraphs
+        const refNumber = d.referenceNumber ?? d.ReferenceNumber;
+        if (refNumber && typeof refNumber === 'string') {
+            try {
+                const arr = JSON.parse(refNumber);
+                if (Array.isArray(arr) && arr.length > 0) {
+                    this.referenceParagraphs = arr.map((item: any) => ({
+                        text: item.text ?? item.Text ?? '',
+                        fileRows: (item.files ?? item.Files ?? []).map((f: any) => ({
+                            displayName: f.fileName ?? f.FileName ?? '',
+                            file: null,
+                            fileId: f.FileId ?? f.fileId
+                        }))
+                    }));
+                }
+            } catch {
+                // Legacy plain string - put in first paragraph
+                this.referenceParagraphs = [{ text: refNumber, fileRows: [] }];
+            }
+        }
+
+        // Expand tree to the deepest selected unit level in edit mode
+        const deepestId = d.subSectionId ?? d.SubSectionId
+            ?? d.sectionId ?? d.SectionId
+            ?? d.subBranchId ?? d.SubBranchId
+            ?? d.branchId ?? d.BranchId
+            ?? d.wingBattalionId ?? d.WingBattalionId
+            ?? d.unitId ?? d.UnitId;
+        if (deepestId) {
+            this.expandTreeToNode(deepestId);
+        }
+
+        // Load members from NoteSheetReferenceEmployee
+        const noteSheetId = d.noteSheetId ?? d.NoteSheetId;
+        if (noteSheetId) {
+            const refApi = `${environment.apis.core}/NoteSheetReferenceEmployee`;
+            this.http.get<any[]>(`${refApi}/GetByNoteSheetId/${noteSheetId}`).subscribe({
+                next: (list) => {
+                    const rows = (Array.isArray(list) ? list : []).filter(r => r.informationJson || r.InformationJson);
+                    if (rows.length > 0) {
+                        try {
+                            const firstParsed = JSON.parse(rows[0].informationJson || rows[0].InformationJson);
+                            const columns = Array.isArray(firstParsed.columns) ? firstParsed.columns : [];
+                            const members: MemberRow[] = rows.map(r => {
+                                const parsed = JSON.parse(r.informationJson || r.InformationJson);
+                                return {
+                                    employeeId: r.employeeId ?? r.EmployeeId,
+                                    values: parsed.values || {}
+                                };
+                            });
+                            this.membersData = { columns, members };
+                        } catch { /* malformed JSON — leave default */ }
+                    }
+                }
+            });
+        }
+    }
+
+    private parseDate(value: string | Date): Date | null {
+        if (value instanceof Date) return value;
+        if (typeof value !== 'string') return null;
+        const dt = new Date(value);
+        return isNaN(dt.getTime()) ? null : dt;
+    }
+
     private toEnglishDigits(str: string): string {
         return str.replace(/[\u09E6-\u09EF]/g, (c) => String(c.charCodeAt(0) - 0x09E6));
     }
 
-    /** Transform noteSheetNo when textType changes in edit mode (swap prefix + digits EN↔BN). */
     private transformNoteSheetNo(newTextType: string): void {
         const currentNo: string = this.form.get('noteSheetNo')?.value ?? '';
         if (!currentNo || (!this.noteSheetPrefixEN && !this.noteSheetPrefixBN)) return;
 
         let transformed: string;
-
         if (newTextType === 'bn') {
-            if (this.noteSheetPrefixEN && currentNo.startsWith(this.noteSheetPrefixEN + '-')) {
+            if (this.noteSheetPrefixEN && currentNo.startsWith(this.noteSheetPrefixEN + '/')) {
                 const rest = currentNo.substring(this.noteSheetPrefixEN.length);
                 const bnPrefix = this.noteSheetPrefixBN || this.noteSheetPrefixEN;
                 transformed = bnPrefix + BanglaNumerals.toBangla(rest);
@@ -422,53 +822,332 @@ export class NotesheetGenerateComponent implements OnInit {
                 transformed = BanglaNumerals.toBangla(currentNo);
             }
         } else {
-            if (this.noteSheetPrefixBN && currentNo.startsWith(this.noteSheetPrefixBN + '-')) {
+            if (this.noteSheetPrefixBN && currentNo.startsWith(this.noteSheetPrefixBN + '/')) {
                 const rest = currentNo.substring(this.noteSheetPrefixBN.length);
                 transformed = this.noteSheetPrefixEN + this.toEnglishDigits(rest);
             } else {
                 transformed = this.toEnglishDigits(currentNo);
             }
         }
-
         this.form.get('noteSheetNo')?.setValue(transformed, { emitEvent: false });
     }
 
-    /** Whether Note-Sheet Text Type is Bangla (show all labels/options in Bangla). */
-    get isBangla(): boolean {
-        return this.form?.get('textType')?.value === 'bn';
-    }
+    // ── Members Table (MembersJson) ─────────────────────────────────────
 
-    get unitOptionsDisplay(): { label: string; value: number }[] {
-        return this.unitOptions.map((o) => ({ label: o.label, value: o.value }));
-    }
-    get wingOptionsDisplay(): { label: string; value: number }[] {
-        return this.wingOptions.map((o) => ({ label: o.label, value: o.value }));
-    }
-    get branchOptionsDisplay(): { label: string; value: number }[] {
-        return this.branchOptions.map((o) => ({ label: o.label, value: o.value }));
-    }
-    get referenceEmployeeOptionsDisplay(): { label: string; value: number }[] {
-        return this.referenceEmployeeOptions.map((o) => ({ label: o.label, value: o.value }));
-    }
-
-    onTextTypeChange(): void {
-        // No template; main text is entered manually. Language switch refreshes labels via getters.
-    }
-
-    onFileRowsChange(event: FileRowData[]): void {
-        if (event && Array.isArray(event)) {
-            this.fileRows = event;
+    onMemberFound(emp: EmployeeBasicInfo): void {
+        if (this.membersData.members.some(m => m.employeeId === emp.employeeID)) {
+            this.messageService.add({ severity: 'warn', summary: 'Duplicate', detail: 'This member is already added.' });
+            return;
         }
-    }
 
-    onDownloadFile(payload: { fileId: number; fileName: string }): void {
-        this.empService.downloadFile(payload.fileId).subscribe({
-            next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
-            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file.' })
+        this.memberAddLoading = true;
+        // Fetch full profile to get all fields
+        forkJoin([
+            this.servingMembersService.getEmployeePersonalServiceOverview(emp.employeeID),
+            this.familyInfoService.getFamilyInfoByEmployeeView(emp.employeeID)
+        ]).subscribe({
+            next: ([profile, familyList]) => {
+                const values: Record<string, string> = {};
+
+                // Basic Info fields (EN + BN)
+                values['serviceId'] = profile.serviceId ?? '';
+                values['rabId'] = profile.rabId ?? '';
+                values['nameEnglish'] = profile.nameEnglish ?? '';
+                values['nameBN'] = profile.nameBN ?? '';
+                values['armyRank'] = profile.armyRank ?? '';
+                values['armyRankBN'] = profile.armyRankBN ?? '';
+                values['corps'] = profile.corps ?? '';
+                values['corpsBN'] = profile.corpsBN ?? '';
+                values['trade'] = profile.trade ?? '';
+                values['tradeBN'] = profile.tradeBN ?? '';
+                values['motherOrganization'] = profile.motherOrganization ?? '';
+                values['motherOrganizationBN'] = profile.motherOrganizationBN ?? '';
+                values['motherUnit'] = profile.motherUnit ?? '';
+                values['motherUnitBN'] = profile.motherUnitBN ?? '';
+                values['memberType'] = profile.memberType ?? '';
+                values['memberTypeBN'] = profile.memberTypeBN ?? '';
+                values['appointment'] = profile.appointment ?? '';
+                values['appointmentBN'] = profile.appointmentBN ?? '';
+                values['joiningDate'] = profile.joiningDate ?? '';
+                values['gender'] = profile.gender ?? '';
+                values['genderBN'] = profile.genderBN ?? '';
+                values['batch'] = profile.batch ?? '';
+                values['batchBN'] = profile.batchBN ?? '';
+                values['rabUnit'] = profile.rabUnit ?? '';
+                values['rabUnitBN'] = profile.rabUnitBN ?? '';
+                values['postingStatus'] = profile.postingStatus ?? '';
+                values['permanentDistrictTypeName'] = profile.permanentDistrictTypeName ?? '';
+                values['permanentDistrictTypeNameBN'] = profile.permanentDistrictTypeNameBN ?? '';
+                values['prefix'] = profile.prefix ?? '';
+                values['prefixBN'] = profile.prefixBN ?? '';
+                values['tradeRemarks'] = profile.tradeRemarks ?? '';
+
+                // Personal Info fields (EN + BN)
+                values['dateOfBirth'] = profile.dateOfBirth ?? '';
+                values['bloodGroup'] = profile.bloodGroup ?? '';
+                values['nid'] = profile.nid ?? '';
+                values['mobileNo'] = profile.mobileNo ?? '';
+                values['mobileNoOfficial'] = profile.mobileNoOfficial ?? '';
+                values['emailAddress'] = profile.emailAddress ?? '';
+                values['religion'] = profile.religion ?? '';
+                values['religionBN'] = profile.religionBN ?? '';
+                values['passportNo'] = profile.passportNo ?? '';
+                values['maritalStatus'] = profile.maritalStatus ?? '';
+                values['maritalStatusBN'] = profile.maritalStatusBN ?? '';
+                values['emergencyContactNo'] = profile.emergencyContactNo ?? '';
+                values['dateOfCommission'] = profile.dateOfCommission ?? '';
+                values['dateOfJoiningInServiceTraining'] = profile.dateOfJoiningInServiceTraining ?? '';
+                values['medicalCategory'] = profile.medicalCategory ?? '';
+                values['medicalCategoryBN'] = profile.medicalCategoryBN ?? '';
+                values['educationQualification'] = profile.educationQualification ?? '';
+                values['educationQualificationBN'] = profile.educationQualificationBN ?? '';
+                values['professionalQualification'] = profile.professionalQualification ?? '';
+                values['professionalQualificationBN'] = profile.professionalQualificationBN ?? '';
+                values['personalQualification'] = profile.personalQualification ?? '';
+                values['personalQualificationBN'] = profile.personalQualificationBN ?? '';
+                values['gallantryAwardsDecoration'] = profile.gallantryAwardsDecoration ?? '';
+                values['gallantryAwardsDecorationBN'] = profile.gallantryAwardsDecorationBN ?? '';
+                values['height'] = profile.height != null ? String(profile.height) : '';
+                values['weight'] = profile.weight != null ? String(profile.weight) : '';
+                values['identificationMark'] = profile.identificationMark ?? '';
+
+                // Family Info — extract specific relations
+                const family = Array.isArray(familyList) ? familyList : [];
+                const spouse = family.find(f => (f.relation ?? '').toLowerCase().includes('spouse') || (f.relation ?? '').toLowerCase().includes('wife') || (f.relation ?? '').toLowerCase().includes('husband'));
+                const father = family.find(f => (f.relation ?? '').toLowerCase().includes('father'));
+                const mother = family.find(f => (f.relation ?? '').toLowerCase().includes('mother'));
+                values['family_spouse'] = spouse?.name ?? '';
+                values['family_father'] = father?.name ?? '';
+                values['family_mother'] = mother?.name ?? '';
+                values['family_members'] = family.map(f => `${f.relation ?? ''}: ${f.name ?? ''}`).join('; ');
+
+                this.membersData.members.push({ employeeId: emp.employeeID, values });
+                this.memberAddLoading = false;
+                this.messageService.add({ severity: 'success', summary: 'Member Added', detail: `${profile.nameEnglish || emp.fullNameEN} added.` });
+            },
+            error: () => {
+                this.memberAddLoading = false;
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load member profile.' });
+            }
         });
     }
 
-    /** Reset form after successful save (create mode). */
+    onMemberSearchReset(): void {
+        // No action needed
+    }
+
+    removeMember(index: number): void {
+        this.membersData.members.splice(index, 1);
+    }
+
+    // Column management
+    get unusedColumns(): MemberColumnDef[] {
+        const usedKeys = new Set(this.membersData.columns.map(c => c.key));
+        return this.availableColumns.filter(c => !usedKeys.has(c.key));
+    }
+
+    get groupedUnusedColumns(): { label: string; value: string; items: { label: string; value: string }[] }[] {
+        const groups: Record<string, { label: string; value: string }[]> = {};
+        const groupLabels: Record<string, string> = {
+            basic: 'Basic Info',
+            personal: 'Personal Info',
+            family: 'Family Info'
+        };
+        for (const col of this.unusedColumns) {
+            const g = col.group;
+            if (!groups[g]) groups[g] = [];
+            groups[g].push({ label: col.label, value: col.key });
+        }
+        return Object.entries(groups).map(([key, items]) => ({
+            label: groupLabels[key] ?? key,
+            value: key,
+            items
+        }));
+    }
+
+    openAddColumnDialog(): void {
+        this.addColumnMode = 'field';
+        this.selectedColumnKey = null;
+        this.newCustomColumnName = '';
+        this.showAddColumnDialog = true;
+    }
+
+    closeAddColumnDialog(): void {
+        this.showAddColumnDialog = false;
+    }
+
+    confirmAddColumn(): void {
+        if (this.addColumnMode === 'field') {
+            if (!this.selectedColumnKey) {
+                this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select a field.' });
+                return;
+            }
+            const def = this.availableColumns.find(c => c.key === this.selectedColumnKey);
+            if (def && !this.membersData.columns.some(c => c.key === def.key)) {
+                this.membersData.columns.push({ ...def });
+            }
+        } else {
+            const name = this.newCustomColumnName.trim();
+            if (!name) {
+                this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Column name cannot be empty.' });
+                return;
+            }
+            const key = `custom_${name}`;
+            if (this.membersData.columns.some(c => c.key === key)) {
+                this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'A column with that name already exists.' });
+                return;
+            }
+            this.membersData.columns.push({ key, label: name, group: 'custom' });
+            // Initialize blank value for existing members
+            for (const member of this.membersData.members) {
+                member.values[key] = '';
+            }
+        }
+        this.closeAddColumnDialog();
+    }
+
+    removeColumn(colKey: string): void {
+        this.membersData.columns = this.membersData.columns.filter(c => c.key !== colKey);
+    }
+
+    // Inline cell editing (for custom columns or any editable cell)
+    isCustomColumn(col: MemberColumnDef): boolean {
+        return col.group === 'custom';
+    }
+
+    memberCellKey(rowIndex: number, colKey: string): string {
+        return `${rowIndex}_${colKey}`;
+    }
+
+    startEditMemberCell(rowIndex: number, colKey: string, event: Event): void {
+        this.editingMemberCellKey = this.memberCellKey(rowIndex, colKey);
+        this.editingMemberCellValue = this.membersData.members[rowIndex]?.values[colKey] ?? '';
+        setTimeout(() => {
+            const el = (event.target as HTMLElement)?.closest('td')?.querySelector('input');
+            el?.focus();
+            el?.select();
+        });
+    }
+
+    onMemberCellBlur(rowIndex: number, colKey: string): void {
+        if (this.editingMemberCellKey === this.memberCellKey(rowIndex, colKey)) {
+            this.saveMemberCell(rowIndex, colKey);
+        }
+    }
+
+    onMemberCellKeydown(event: KeyboardEvent, rowIndex: number, colKey: string): void {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            this.saveMemberCell(rowIndex, colKey);
+        } else if (event.key === 'Escape') {
+            this.editingMemberCellKey = null;
+        }
+    }
+
+    private saveMemberCell(rowIndex: number, colKey: string): void {
+        if (this.membersData.members[rowIndex]) {
+            this.membersData.members[rowIndex].values[colKey] = this.editingMemberCellValue;
+        }
+        this.editingMemberCellKey = null;
+    }
+
+    // ── Drag & Drop Column Reorder ───────────────────────────────────────
+
+    onColDragStart(index: number, event: DragEvent): void {
+        this.dragColIndex = index;
+        event.dataTransfer!.effectAllowed = 'move';
+        event.dataTransfer!.setData('text/plain', String(index));
+    }
+
+    onColDragOver(index: number, event: DragEvent): void {
+        event.preventDefault();
+        event.dataTransfer!.dropEffect = 'move';
+    }
+
+    onColDragEnter(index: number, event: DragEvent): void {
+        event.preventDefault();
+        this.dragOverColIndex = index;
+    }
+
+    onColDragLeave(event: DragEvent): void {
+        // handled by dragenter on next th
+    }
+
+    onColDrop(targetIndex: number, event: DragEvent): void {
+        event.preventDefault();
+        if (this.dragColIndex !== null && this.dragColIndex !== targetIndex) {
+            const cols = [...this.membersData.columns];
+            const [moved] = cols.splice(this.dragColIndex, 1);
+            cols.splice(targetIndex, 0, moved);
+            this.membersData.columns = cols;
+        }
+        this.dragColIndex = null;
+        this.dragOverColIndex = null;
+    }
+
+    onColDragEnd(): void {
+        this.dragColIndex = null;
+        this.dragOverColIndex = null;
+    }
+
+    // ── Merge Columns ─────────────────────────────────────────────────────
+
+    openMergeColumnDialog(): void {
+        this.mergeSelectedColumns = [];
+        this.mergeSeparator = ' ';
+        this.mergeCustomSeparator = '';
+        this.mergeLabel = '';
+        this.showMergeColumnDialog = true;
+    }
+
+    closeMergeColumnDialog(): void {
+        this.showMergeColumnDialog = false;
+    }
+
+    get mergePreview(): string {
+        if (this.mergeSelectedColumns.length < 2) return '';
+        const separator = this.mergeSeparator === '__custom__' ? this.mergeCustomSeparator : this.mergeSeparator;
+        const sampleValues = this.mergeSelectedColumns.map(c => c.label);
+        if (separator === '()') {
+            return `${sampleValues[0]} (${sampleValues.slice(1).join(', ')})`;
+        }
+        return sampleValues.join(separator);
+    }
+
+    confirmMergeColumns(): void {
+        if (this.mergeSelectedColumns.length < 2) {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Select at least 2 columns to merge.' });
+            return;
+        }
+        const keys = this.mergeSelectedColumns.map(c => c.key);
+        const separator = this.mergeSeparator === '__custom__' ? this.mergeCustomSeparator : this.mergeSeparator;
+        const mergedCol: MemberColumnDef = {
+            key: 'merged_' + keys.join('_'),
+            label: this.mergeLabel.trim() || this.mergeSelectedColumns.map(c => c.label).join(' + '),
+            group: 'merged',
+            mergedFrom: { keys, separator }
+        };
+
+        // Insert merged column at position of first source column, remove source columns
+        const firstIndex = Math.min(...keys.map(k => this.membersData.columns.findIndex(c => c.key === k)));
+        this.membersData.columns = this.membersData.columns.filter(c => !keys.includes(c.key));
+        this.membersData.columns.splice(firstIndex, 0, mergedCol);
+        this.closeMergeColumnDialog();
+    }
+
+    getMergedCellValue(member: MemberRow, col: MemberColumnDef): string {
+        if (!col.mergedFrom) return member.values[col.key] || '—';
+        const { keys, separator } = col.mergedFrom;
+        if (separator === '()') {
+            const parts = keys.map(k => member.values[k] || '').filter(Boolean);
+            if (parts.length <= 1) return parts[0] || '—';
+            return `${parts[0]} (${parts.slice(1).join(', ')})`;
+        }
+        return keys.map(k => member.values[k] || '').filter(Boolean).join(separator) || '—';
+    }
+
+    // ── Reset ────────────────────────────────────────────────────────────
+
     private resetForm(): void {
         const user = this.sharedService.getCurrentUser?.() ?? '';
         this.form.reset({
@@ -478,10 +1157,15 @@ export class NotesheetGenerateComponent implements OnInit {
             unitId: null,
             wingBattalionId: null,
             branchId: null,
-            referenceNumber: '',
+            subBranchId: null,
+            sectionId: null,
+            subSectionId: null,
             noteSheetNo: '',
+            noteSheetNumberConfigId: null,
             subject: '',
             mainText: '',
+            note: '',
+            paragraphText: '',
             preparedBy: user,
             preparedByEmployeeId: null,
             initiatorId: null,
@@ -491,9 +1175,13 @@ export class NotesheetGenerateComponent implements OnInit {
             noteSheetOperationType: null,
             referenceEmployeeIds: []
         });
-        this.fileRows = [];
+        this.referenceParagraphs = [{ text: '', fileRows: [] }];
+        this.membersData = { columns: [], members: [] };
+        this.selectedUnitNode = null;
         this.resolvePreparedByMapping();
     }
+
+    // ── Submit ───────────────────────────────────────────────────────────
 
     submit(): void {
         if (this.editMode ? !this.canUpdate : !this.canInsert) {
@@ -506,98 +1194,119 @@ export class NotesheetGenerateComponent implements OnInit {
             return;
         }
         this.isSubmitting = true;
-        const existingRefs = this.fileReferencesForm?.getExistingFileReferences() || [];
-        const filesToUpload = this.fileReferencesForm?.getFilesToUpload() || [];
 
-        const doSave = (filesReferencesJson: string | null) => {
-            try {
-                const payload = this.buildNoteSheetInfoPayload(filesReferencesJson);
-                if (this.editMode && this.editId != null) {
-                    (payload as any).noteSheetId = this.editId;
-                }
-                const api = `${environment.apis.core}/NoteSheetInfo`;
-                if (!api || api.endsWith('/')) {
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'API URL is not configured. Check environment.' });
-                    this.isSubmitting = false;
-                    return;
-                }
-                const endpoint = this.editMode && this.editId != null ? '/UpdateAsyn' : '/SaveAsyn';
-                this.http.post<any>(api + endpoint, payload).subscribe({
-                    next: (res) => {
-                        // Sync reference employees after notesheet is saved
-                        const refEmpIds: number[] = this.form.get('referenceEmployeeIds')?.value ?? [];
-                        const noteSheetId = this.editMode && this.editId != null
-                            ? this.editId
-                            : (res?.data?.noteSheetId ?? res?.data?.NoteSheetId ?? res?.Data?.NoteSheetId ?? null);
+        // First upload reference paragraph files, then main supporting docs
+        this.uploadReferenceParagraphFiles().then((refParagraphsJson) => {
+            const existingRefs = this.fileReferencesForm?.getExistingFileReferences() || [];
+            const filesToUpload = this.fileReferencesForm?.getFilesToUpload() || [];
 
-                        if (noteSheetId && refEmpIds.length > 0) {
-                            const refApi = `${environment.apis.core}/NoteSheetReferenceEmployee`;
-                            const syncPayload = {
-                                noteSheetId,
-                                employeeIds: refEmpIds,
-                                updatedBy: payload.createdBy ?? payload.lastUpdatedBy ?? 'system'
-                            };
-                            this.http.post(refApi + '/Sync', syncPayload).subscribe({
-                                error: (err: any) => this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Note Sheet saved but failed to sync reference employees.' })
+            const doSave = (filesReferencesJson: string | null) => {
+                try {
+                    const payload = this.buildNoteSheetInfoPayload(filesReferencesJson, refParagraphsJson);
+                    if (this.editMode && this.editId != null) {
+                        (payload as any).noteSheetId = this.editId;
+                    }
+                    const api = `${environment.apis.core}/NoteSheetInfo`;
+                    const endpoint = this.editMode && this.editId != null ? '/UpdateAsyn' : '/SaveAsyn';
+                    this.http.post<any>(api + endpoint, payload).subscribe({
+                        next: (res) => {
+                            const noteSheetId = this.editMode && this.editId != null
+                                ? this.editId
+                                : (res?.data?.noteSheetId ?? res?.data?.NoteSheetId ?? res?.Data?.NoteSheetId ?? null);
+
+                            // Sync members to NoteSheetReferenceEmployee with InformationJson
+                            if (noteSheetId) {
+                                const refApi = `${environment.apis.core}/NoteSheetReferenceEmployee`;
+                                const employees = this.membersData.members.map(m => ({
+                                    employeeId: m.employeeId,
+                                    informationJson: JSON.stringify({
+                                        columns: this.membersData.columns,
+                                        values: m.values
+                                    })
+                                }));
+                                const syncPayload = {
+                                    noteSheetId,
+                                    employees,
+                                    updatedBy: payload.createdBy ?? payload.lastUpdatedBy ?? 'system'
+                                };
+                                this.http.post(refApi + '/Sync', syncPayload).subscribe({
+                                    error: () => this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Saved but failed to sync members.' })
+                                });
+                            }
+
+                            this.messageService.add({
+                                severity: 'success',
+                                summary: 'Note Sheet',
+                                detail: this.editMode ? 'Note Sheet updated successfully.' : 'Note Sheet generated successfully.'
                             });
-                        } else if (noteSheetId && refEmpIds.length === 0 && this.editMode) {
-                            // Clear all reference employees on edit if none selected
-                            const refApi = `${environment.apis.core}/NoteSheetReferenceEmployee`;
-                            this.http.post(refApi + '/Sync', { noteSheetId, employeeIds: [], updatedBy: payload.lastUpdatedBy ?? 'system' }).subscribe();
+                            this.isSubmitting = false;
+                            if (this.editMode) {
+                                this.router.navigate(['/notesheet-list/draft']);
+                            } else {
+                                this.resetForm();
+                            }
+                        },
+                        error: (err) => {
+                            const detail = this.getApiErrorMessage(err);
+                            this.messageService.add({ severity: 'error', summary: 'Error', detail });
+                            this.isSubmitting = false;
                         }
+                    });
+                } catch (e) {
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: e instanceof Error ? e.message : 'Failed to build or send request.' });
+                    this.isSubmitting = false;
+                }
+            };
 
-                        this.messageService.add({
-                            severity: 'success',
-                            summary: 'Note Sheet',
-                            detail: this.editMode ? 'Note Sheet updated successfully.' : 'Note Sheet generated successfully.'
-                        });
-                        this.isSubmitting = false;
-                        if (this.editMode) {
-                            this.router.navigate(['/notesheet-list/draft']);
-                        } else {
-                            this.resetForm();
-                        }
+            if (filesToUpload.length > 0) {
+                const uploads = filesToUpload.map((r: FileRowData) =>
+                    this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
+                );
+                forkJoin(uploads).subscribe({
+                    next: (results: unknown) => {
+                        const resultsArray = Array.isArray(results) ? results : [];
+                        const newRefs = (resultsArray as { fileId: number; fileName: string }[]).map((r) => ({ FileId: r.fileId, fileName: r.fileName }));
+                        const allRefs: { FileId: number; fileName: string }[] = [
+                            ...existingRefs.map((r) => ({ FileId: r.FileId, fileName: r.fileName })),
+                            ...newRefs
+                        ];
+                        doSave(allRefs.length > 0 ? JSON.stringify(allRefs) : null);
                     },
-                    error: (err) => {
-                        if (err?.status === 400 || err?.status === 500) {
-                            console.error('NoteSheet API error:', err?.status, err?.error);
-                        }
-                        const detail = this.getApiErrorMessage(err);
-                        this.messageService.add({ severity: 'error', summary: 'Error', detail });
+                    error: (err: any) => {
+                        this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to upload one or more files.' });
                         this.isSubmitting = false;
                     }
                 });
-            } catch (e) {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: e instanceof Error ? e.message : 'Failed to build or send request.' });
-                this.isSubmitting = false;
+                return;
             }
-        };
 
-        if (filesToUpload.length > 0) {
-            const uploads = filesToUpload.map((r: FileRowData) =>
-                this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
-            );
-            forkJoin(uploads).subscribe({
-                next: (results: unknown) => {
-                    const resultsArray = Array.isArray(results) ? results : [];
-                    const newRefs = (resultsArray as { fileId: number; fileName: string }[]).map((r) => ({ FileId: r.fileId, fileName: r.fileName }));
-                    const allRefs: { FileId: number; fileName: string }[] = [
-                        ...existingRefs.map((r) => ({ FileId: r.FileId, fileName: r.fileName })),
-                        ...newRefs
-                    ];
-                    const filesReferencesJson = allRefs.length > 0 ? JSON.stringify(allRefs) : null;
-                    doSave(filesReferencesJson);
-                },
-                error: (err: any) => {
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to upload one or more files.' });
-                    this.isSubmitting = false;
-                }
-            });
-            return;
+            const filesReferencesJson = existingRefs.length > 0 ? JSON.stringify(existingRefs) : null;
+            doSave(filesReferencesJson);
+        }).catch(() => {
+            this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to upload reference files.' });
+            this.isSubmitting = false;
+        });
+    }
+
+    /** Upload files in reference paragraphs and return the final JSON string */
+    private async uploadReferenceParagraphFiles(): Promise<string> {
+        const result: { text: string; files: { FileId: number; fileName: string }[] }[] = [];
+
+        for (const para of this.referenceParagraphs) {
+            const existingFiles = para.fileRows.filter(r => r.fileId != null).map(r => ({ FileId: r.fileId!, fileName: r.displayName ?? '' }));
+            const newFiles = para.fileRows.filter(r => r.file != null);
+
+            if (newFiles.length > 0) {
+                const uploads = newFiles.map(r => this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name).toPromise());
+                const uploaded = await Promise.all(uploads);
+                const uploadedRefs = (uploaded as any[]).map(r => ({ FileId: r.fileId, fileName: r.fileName }));
+                result.push({ text: para.text, files: [...existingFiles, ...uploadedRefs] });
+            } else {
+                result.push({ text: para.text, files: existingFiles });
+            }
         }
 
-        const filesReferencesJson = existingRefs.length > 0 ? JSON.stringify(existingRefs) : null;
-        doSave(filesReferencesJson);
+        return JSON.stringify(result);
     }
 
     private getApiErrorMessage(err: any): string {
@@ -616,7 +1325,6 @@ export class NotesheetGenerateComponent implements OnInit {
         return body.title || 'Failed to generate Note Sheet.';
     }
 
-    /** Returns "yyyy-MM-dd" for backend DateOnly; never null (backend model is non-nullable). */
     private formatNoteSheetDate(value: Date | string | null | undefined): string {
         if (value instanceof Date) {
             const y = value.getFullYear(), m = value.getMonth(), d = value.getDate();
@@ -628,12 +1336,11 @@ export class NotesheetGenerateComponent implements OnInit {
         return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
     }
 
-    private buildNoteSheetInfoPayload(filesReferencesJson?: string | null): any {
+    private buildNoteSheetInfoPayload(filesReferencesJson?: string | null, referenceNumberJson?: string | null): any {
         const d = this.form.getRawValue();
         const dateStr = this.formatNoteSheetDate(d.noteSheetDate);
         const now = new Date().toISOString();
         const preparedBy = (d.preparedBy && String(d.preparedBy).trim()) || 'system';
-        // When editing, never change the original preparer (CreatedBy); only lastUpdatedBy reflects who saved
         const createdBy = this.editMode && this.originalCreatedBy ? this.originalCreatedBy : preparedBy;
         const lastUpdatedBy = preparedBy;
 
@@ -653,20 +1360,20 @@ export class NotesheetGenerateComponent implements OnInit {
             noteSheetId: 0,
             noteSheetType: NoteSheetType.General,
             noteSheetNo: this.editMode ? (d.noteSheetNo || 'AUTO') : 'AUTO',
+            noteSheetNumberConfigId: d.noteSheetNumberConfigId ?? null,
             noteSheetDate: dateStr,
             noteSheetTemplateId: d.noteSheetTemplateId ?? null,
-            referenceNumber: d.referenceNumber != null ? String(d.referenceNumber) : null,
+            referenceNumber: referenceNumberJson ?? null,
             subject: d.subject != null ? String(d.subject) : '',
             mainText: d.mainText != null ? String(d.mainText) : '',
-            note: null,
+            note: d.note != null ? String(d.note) : null,
+            paragraphText: d.paragraphText != null ? String(d.paragraphText) : null,
             textType: d.textType === 'bn' ? 1 : 0,
             isSecret: d.isSecret ?? false,
             noteSheetOperationType: d.noteSheetOperationType ?? null,
             employeeId: null,
             preparedByEmployeeId: d.preparedByEmployeeId ?? null,
-            unitId: d.unitId ?? null,
-            wingBattalionId: d.wingBattalionId ?? null,
-            branchId: d.branchId ?? null,
+            ...this.getHierarchyIdsFromSelectedNode(),
             initiatorId: d.initiatorId ?? 0,
             recommendersJson,
             finalApprovalId: d.finalApproverId ?? null,

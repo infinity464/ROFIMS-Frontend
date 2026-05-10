@@ -127,6 +127,8 @@ import { NoteSheetApproverConfigComponent } from '@/Components/basic-setup/notes
 import { PostingOrderNumberConfigComponent } from '@/Components/basic-setup/posting-order-number-config/posting-order-number-config';
 import { NotesheetGenerateComponent } from '@/Components/Features/notesheet-generate/notesheet-generate';
 import { NotesheetExBdLeaveComponent } from '@/Components/Features/notesheet-ex-bd-leave/notesheet-ex-bd-leave';
+import { ExBdLeaveApplyComponent } from '@/Components/Features/ex-bd-leave-application/ex-bd-leave-apply/ex-bd-leave-apply.component';
+import { ExBdLeaveListComponent } from '@/Components/Features/ex-bd-leave-application/ex-bd-leave-list/ex-bd-leave-list.component';
 import { NotesheetListComponent } from '@/Components/Features/notesheet-list/notesheet-list';
 import { NotesheetPreviewComponent } from '@/Components/Features/notesheet-preview/notesheet-preview';
 import { NotesheetPreviewGeneralComponent } from '@/Components/Features/notesheet-preview/general/notesheet-preview-general';
@@ -252,6 +254,9 @@ export const appRoutes: Routes = [
             { path: 'basic-setup/posting-order-number-config', component: PostingOrderNumberConfigComponent },
             { path: 'notesheet-generate', component: NotesheetGenerateComponent },
             { path: 'notesheet-ex-bd-leave', component: NotesheetExBdLeaveComponent },
+            { path: 'ex-bd-leave/apply', component: ExBdLeaveApplyComponent },
+            { path: 'ex-bd-leave/apply/:id', component: ExBdLeaveApplyComponent },
+            { path: 'ex-bd-leave/list', component: ExBdLeaveListComponent },
             { path: 'notesheet-list', redirectTo: 'notesheet-list/draft', pathMatch: 'full' },
             { path: 'notesheet-list/draft', component: NotesheetListComponent, data: { section: 'draft', noteSheetTypeFilter: 'General' } },
             { path: 'notesheet-list/pending', component: NotesheetListComponent, data: { section: 'pending', noteSheetTypeFilter: 'General' } },

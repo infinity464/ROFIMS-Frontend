@@ -1,200 +1,505 @@
+<p-toast position="top-center"></p-toast>
+
 <p-fluid>
-  <div class="card">
-    <div class="ns-gen-header">
-      <div class="ns-gen-title">{{ title }}</div>
+  <div class="form-card">
+    <div class="form-card-header">
+      <h3 class="form-card-title">{{ title }}</h3>
     </div>
 
     <form [formGroup]="form" (ngSubmit)="submit()">
-      <div class="ns-gen-grid">
-        <!-- Row 1: Text Type | Date | Note Sheet No -->
-        <div class="ns-gen-field">
-          <label class="ns-gen-label">Text Type</label>
-          <p-select
-            formControlName="textType"
-            [options]="textTypeOptions"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="Select Language"
-            (onChange)="onTextTypeChange()"
-            styleClass="w-full">
-          </p-select>
-        </div>
-
-        <div class="ns-gen-field">
-          <label class="ns-gen-label">Date <span class="ns-gen-req">*</span></label>
-          <p-datepicker formControlName="noteSheetDate" dateFormat="dd-mm-yy" styleClass="w-full" placeholder="Select date"></p-datepicker>
-        </div>
-
-        <div class="ns-gen-field">
-          <label class="ns-gen-label">Note Sheet No</label>
-          <input pInputText formControlName="noteSheetNo" placeholder="Auto generated" class="w-full" [readonly]="true" />
-        </div>
-
-        <!-- Row 2: Reference Number (full width) -->
-        <div class="ns-gen-field ns-gen-full">
-          <label class="ns-gen-label">Reference Number <span class="ns-gen-req">*</span></label>
-          <app-rich-editor formControlName="referenceNumber" height="80px" toolbar="minimal" placeholder="Enter reference number..."></app-rich-editor>
-          @if (form.get('referenceNumber')?.invalid && form.get('referenceNumber')?.touched) {
-            <small class="ns-gen-error">Reference Number is required</small>
-          }
-        </div>
-
-        <!-- Row 3: Unit | Wing/Battalion | Branch -->
-        <div class="ns-gen-field">
-          <label class="ns-gen-label">Unit</label>
-          <p-select
-            formControlName="unitId"
-            [options]="unitOptionsDisplay"
-            optionLabel="label"
-            optionValue="value"
-            [filter]="true"
-            filterBy="label"
-            [showClear]="true"
-            placeholder="Select Unit"
-            (onChange)="onUnitChange()"
-            styleClass="w-full">
-          </p-select>
-        </div>
-
-        <div class="ns-gen-field">
-          <label class="ns-gen-label">Wing/Battalion</label>
-          <p-select
-            formControlName="wingBattalionId"
-            [options]="wingOptionsDisplay"
-            optionLabel="label"
-            optionValue="value"
-            [filter]="true"
-            filterBy="label"
-            [showClear]="true"
-            placeholder="Select Wing"
-            styleClass="w-full">
-          </p-select>
-        </div>
-
-        <div class="ns-gen-field">
-          <label class="ns-gen-label">Branch</label>
-          <p-select
-            formControlName="branchId"
-            [options]="branchOptionsDisplay"
-            optionLabel="label"
-            optionValue="value"
-            [filter]="true"
-            filterBy="label"
-            [showClear]="true"
-            placeholder="Select Branch"
-            styleClass="w-full">
-          </p-select>
-        </div>
-
-        <!-- Row 4: Operation Type | Secret | Subject -->
-        <div class="ns-gen-field">
-          <label class="ns-gen-label">Operation Type <span class="ns-gen-req">*</span></label>
-          <p-select
-            formControlName="noteSheetOperationType"
-            [options]="noteSheetOperationTypeOptions"
-            optionLabel="label"
-            optionValue="value"
-            [showClear]="true"
-            placeholder="Select type"
-            styleClass="w-full">
-          </p-select>
-          @if (form.get('noteSheetOperationType')?.invalid && form.get('noteSheetOperationType')?.touched) {
-            <small class="ns-gen-error">Operation Type is required</small>
-          }
-        </div>
-
-        <div class="ns-gen-span-2 ns-gen-secret-subject">
-          <div class="ns-gen-field ns-gen-field--checkbox">
-            <label class="ns-gen-label">Secret</label>
-            <div class="ns-gen-checkbox-row">
-              <p-checkbox formControlName="isSecret" [binary]="true" inputId="isSecret"></p-checkbox>
-              <label for="isSecret" class="ns-gen-checkbox-label">Mark as Secret</label>
-            </div>
+      <div class="form-section">
+        <!-- Row 1: Operation Type, Text Type, Select Unit -->
+        <div class="form-row">
+          <div class="form-field">
+            <label class="form-label">Operation Type <span class="form-label-required">*</span></label>
+            <p-select
+              formControlName="noteSheetOperationType"
+              [options]="noteSheetOperationTypeOptions"
+              optionLabel="label"
+              optionValue="value"
+              [showClear]="true"
+              placeholder="Select type"
+              styleClass="w-full">
+            </p-select>
+            @if (form.get('noteSheetOperationType')?.invalid && form.get('noteSheetOperationType')?.touched) {
+              <small class="form-error">Operation Type is required</small>
+            }
           </div>
-
-          <div class="ns-gen-field">
-            <label class="ns-gen-label">Subject <span class="ns-gen-req">*</span></label>
-            <input pInputText formControlName="subject" placeholder="Enter subject" class="w-full" />
-            @if (form.get('subject')?.invalid && form.get('subject')?.touched) {
-              <small class="ns-gen-error">Subject is required</small>
+          <div class="form-field" style="flex: 0 0 140px; max-width: 140px;">
+            <label class="form-label">Text Type</label>
+            <p-select
+              formControlName="textType"
+              [options]="textTypeOptions"
+              optionLabel="label"
+              optionValue="value"
+              styleClass="w-full"
+              (onChange)="onTextTypeChange()">
+            </p-select>
+          </div>
+          <div class="form-field" style="flex: 2 1 0%;">
+            <label class="form-label">Select Unit</label>
+            @if (unitTreeLoading) {
+              <div class="text-500 text-xs p-2">
+                <i class="pi pi-spin pi-spinner mr-1"></i>Loading units...
+              </div>
+            } @else {
+              <p-treeSelect
+                [(ngModel)]="selectedUnitNode"
+                [ngModelOptions]="{standalone: true}"
+                [options]="unitTreeNodes"
+                placeholder="Select Unit / Wing / Branch / ..."
+                [filter]="true"
+                [filterInputAutoFocus]="true"
+                [showClear]="true"
+                selectionMode="single"
+                styleClass="w-full"
+                appendTo="body"
+                (onNodeExpand)="onUnitNodeExpand($event)"
+                (onNodeSelect)="onUnitNodeSelect($event)"
+                (onClear)="onUnitNodeClear()">
+                <ng-template pTemplate="value" let-node>
+                  <span style="display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                    {{ node ? getUnitFullPath(node) : 'Select Unit / Wing / Branch / ...' }}
+                  </span>
+                </ng-template>
+              </p-treeSelect>
             }
           </div>
         </div>
 
-        <!-- Main Text (full row) -->
-        <div class="ns-gen-field ns-gen-full">
-          <label class="ns-gen-label">Main Text</label>
-          <app-rich-editor formControlName="mainText" height="220px" placeholder="Write content here..."></app-rich-editor>
+        <!-- Date, Note Sheet No, Subject -->
+        <div class="form-row">
+          <div class="form-field" style="flex: 0 0 160px; max-width: 160px;">
+            <label class="form-label">Date <span class="form-label-required">*</span></label>
+            <p-datepicker formControlName="noteSheetDate" dateFormat="dd-mm-yy" styleClass="w-full" placeholder="Select date" appendTo="body"></p-datepicker>
+            @if (form.get('noteSheetDate')?.invalid && form.get('noteSheetDate')?.touched) {
+              <small class="form-error">Date is required</small>
+            }
+          </div>
+
+          <div class="form-field">
+            <label class="form-label">Note Sheet No <span class="form-label-required">*</span></label>
+            @if (editMode) {
+              <input pInputText formControlName="noteSheetNo" placeholder="Auto generated" class="w-full" [readonly]="true" />
+            } @else {
+              <p-select
+                formControlName="noteSheetNumberConfigId"
+                [options]="noteSheetConfigOptions"
+                optionLabel="label"
+                optionValue="value"
+                [filter]="true"
+                filterBy="label"
+                placeholder="Select Pattern"
+                [showClear]="true"
+                styleClass="w-full">
+              </p-select>
+              @if (form.get('noteSheetNumberConfigId')?.invalid && form.get('noteSheetNumberConfigId')?.touched) {
+                <small class="form-error">Note Sheet No is required</small>
+              }
+            }
+          </div>
+
+          <div class="form-field" style="flex: 2 1 0%;">
+            <label class="form-label">Subject <span class="form-label-required">*</span></label>
+            <p-autoComplete
+              formControlName="subject"
+              [suggestions]="subjectSuggestions"
+              (completeMethod)="searchSubject($event)"
+              [dropdown]="false"
+              [forceSelection]="false"
+              placeholder="Type to search..."
+              styleClass="w-full">
+            </p-autoComplete>
+            @if (form.get('subject')?.invalid && form.get('subject')?.touched) {
+              <small class="form-error">Subject is required</small>
+            }
+          </div>
         </div>
 
-        <!-- Prepared By / Initiator / Recommender / Final Approver -->
-        <div class="ns-gen-field ns-gen-full">
-          <app-notesheet-approver-select
-            [noteSheetType]="'General'"
-            [(initiatorId)]="form.controls['initiatorId'].value"
-            (initiatorIdChange)="form.controls['initiatorId'].setValue($event); form.controls['initiatorId'].markAsTouched()"
-            [(recommenderIds)]="form.controls['recommenderIds'].value"
-            (recommenderIdsChange)="form.controls['recommenderIds'].setValue($event)"
-            [(finalApproverId)]="form.controls['finalApproverId'].value"
-            (finalApproverIdChange)="form.controls['finalApproverId'].setValue($event); form.controls['finalApproverId'].markAsTouched()"
-            [showErrors]="!!(form.get('initiatorId')?.touched || form.get('finalApproverId')?.touched)">
-            <div class="form-field">
-              <label class="form-label">Prepared By</label>
-              @if (isPreparedByMapped) {
-                <input pInputText formControlName="preparedBy" readonly class="w-full" />
-              } @else {
-                <p-select
-                  formControlName="preparedByEmployeeId"
-                  [options]="preparedByOptions"
-                  optionLabel="label"
-                  optionValue="value"
-                  [filter]="true"
-                  filterBy="label"
-                  [showClear]="true"
-                  placeholder="Select Prepared By"
-                  styleClass="w-full">
-                </p-select>
+        <!-- Reference Number Paragraphs (collapsible) -->
+        <p-fieldset legend="Reference Number" [toggleable]="true" [collapsed]="true">
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <p-button icon="pi pi-plus" label="Add Reference" [rounded]="false" [text]="true" severity="success" size="small" (onClick)="addReferenceParagraph()" pTooltip="Add Reference"></p-button>
+          </div>
+          @for (para of referenceParagraphs; track trackByIndex($index)) {
+            <div class="ref-paragraph-row">
+              <span class="ref-serial">{{ getSerialLabel($index) }}</span>
+              <div class="ref-paragraph-content">
+                <textarea pInputText class="w-full" rows="2" [value]="referenceParagraphs[$index].text" (input)="referenceParagraphs[$index].text = $any($event.target).value" [placeholder]="'Reference ' + getSerialLabel($index)"></textarea>
+                <app-file-references-form
+                  [fileRows]="referenceParagraphs[$index].fileRows"
+                  [isViewMode]="false"
+                  title=""
+                  (fileRowsChange)="onRefFileRowsChange($event, $index)"
+                  (onDownloadFile)="onRefDownloadFile($event)">
+                </app-file-references-form>
+              </div>
+              @if (referenceParagraphs.length > 1) {
+                <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" (onClick)="removeReferenceParagraph($index)"></p-button>
               }
             </div>
-          </app-notesheet-approver-select>
+          }
+        </p-fieldset>
+
+        <!-- Main Text -->
+        <div class="form-row">
+          <div class="form-field" style="flex-basis: 100%">
+            <label class="form-label">Main Text</label>
+            <app-rich-editor formControlName="mainText" height="220px" placeholder="Write content here..."></app-rich-editor>
+          </div>
         </div>
 
-        <!-- Reference Employee(s) (full row) -->
-        <div class="ns-gen-field ns-gen-full">
-          <label class="ns-gen-label">Reference Employee(s)</label>
-          <p-multiselect
-            formControlName="referenceEmployeeIds"
-            [options]="referenceEmployeeOptionsDisplay"
-            optionLabel="label"
-            optionValue="value"
-            [filter]="true"
-            filterBy="label"
-            [showClear]="true"
-            placeholder="Select Reference Employee(s)"
-            styleClass="w-full">
-          </p-multiselect>
+        <!-- Members Table (collapsible) -->
+        <p-fieldset legend="Members" [toggleable]="true" [collapsed]="true">
+          <!-- Employee Search to add members -->
+          <div class="members-search-row">
+            <app-employee-search
+              (onEmployeeFound)="onMemberFound($event)"
+              (onSearchReset)="onMemberSearchReset()">
+            </app-employee-search>
+            @if (memberAddLoading) {
+              <span class="text-500 text-xs"><i class="pi pi-spin pi-spinner mr-1"></i>Loading profile...</span>
+            }
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap;">
+            <p-button
+              label="Add Column"
+              icon="pi pi-plus"
+              size="small"
+              severity="info"
+              [outlined]="true"
+              (onClick)="openAddColumnDialog()">
+            </p-button>
+            <p-button
+              label="Merge Columns"
+              icon="pi pi-link"
+              size="small"
+              severity="help"
+              [outlined]="true"
+              [disabled]="membersData.columns.length < 2"
+              (onClick)="openMergeColumnDialog()">
+            </p-button>
+          </div>
+
+          <!-- Members table (all columns dynamic) -->
+          @if (membersData.members.length > 0 && membersData.columns.length > 0) {
+            <div class="members-table-wrap">
+              <table class="members-table">
+                <thead>
+                  <tr>
+                    <th class="members-table__sl">SL</th>
+                    @for (col of membersData.columns; track col.key; let ci = $index) {
+                      <th
+                        draggable="true"
+                        [class.members-table__th-dragging]="dragColIndex === ci"
+                        [class.members-table__th-dragover]="dragOverColIndex === ci"
+                        (dragstart)="onColDragStart(ci, $event)"
+                        (dragover)="onColDragOver(ci, $event)"
+                        (dragenter)="onColDragEnter(ci, $event)"
+                        (dragleave)="onColDragLeave($event)"
+                        (drop)="onColDrop(ci, $event)"
+                        (dragend)="onColDragEnd()">
+                        <div class="members-table__custom-col-header">
+                          <span>{{ col.label }}</span>
+                          <button
+                            type="button"
+                            class="members-table__col-remove"
+                            (click)="removeColumn(col.key)"
+                            title="Remove column">
+                            <i class="pi pi-times"></i>
+                          </button>
+                        </div>
+                      </th>
+                    }
+                    <th class="members-table__action">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (member of membersData.members; track member.employeeId; let i = $index) {
+                    <tr>
+                      <td class="members-table__sl">{{ i + 1 }}</td>
+                      @for (col of membersData.columns; track col.key) {
+                        <td
+                          [class.members-table__custom-cell]="isCustomColumn(col)"
+                          [class.members-table__custom-cell--editable]="isCustomColumn(col)"
+                          (click)="isCustomColumn(col) ? startEditMemberCell(i, col.key, $event) : null">
+                          @if (col.mergedFrom) {
+                            {{ getMergedCellValue(member, col) }}
+                          } @else if (isCustomColumn(col) && editingMemberCellKey === memberCellKey(i, col.key)) {
+                            <input
+                              type="text"
+                              class="members-cell-input"
+                              [(ngModel)]="editingMemberCellValue"
+                              [ngModelOptions]="{standalone: true}"
+                              (blur)="onMemberCellBlur(i, col.key)"
+                              (keydown)="onMemberCellKeydown($event, i, col.key)" />
+                          } @else {
+                            {{ member.values[col.key] || '—' }}
+                          }
+                        </td>
+                      }
+                      <td class="members-table__action">
+                        <p-button
+                          icon="pi pi-trash"
+                          [rounded]="true"
+                          [text]="true"
+                          severity="danger"
+                          size="small"
+                          (onClick)="removeMember(i)">
+                        </p-button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else if (membersData.members.length > 0 && membersData.columns.length === 0) {
+            <div class="members-empty-hint">
+              {{ membersData.members.length }} member(s) added. Click "Add Column" to configure which fields to display.
+            </div>
+          } @else {
+            <div class="members-empty-hint">
+              No members added yet. Use the search above to find and add members.
+            </div>
+          }
+        </p-fieldset>
+
+        <!-- Note/Remarks -->
+        <div class="form-row">
+          <div class="form-field" style="flex-basis: 100%">
+            <label class="form-label">Note/Remarks</label>
+            <app-rich-editor formControlName="note" height="120px" placeholder="Enter note/remarks..."></app-rich-editor>
+          </div>
         </div>
 
-        <!-- Supporting Documents (full row) -->
-        <div class="ns-gen-field ns-gen-full">
-          <label class="ns-gen-label">Supporting Documents</label>
-          <app-file-references-form
-            #fileReferencesForm
-            [fileRows]="fileRows"
-            [isViewMode]="false"
-            title="Supporting Documents"
-            (fileRowsChange)="onFileRowsChange($event)"
-            (onDownloadFile)="onDownloadFile($event)">
-          </app-file-references-form>
+        <!-- Last Text -->
+        <div class="form-row">
+          <div class="form-field" style="flex-basis: 100%">
+            <label class="form-label">Last Text</label>
+            <app-rich-editor formControlName="paragraphText" height="160px" placeholder="Enter last text..."></app-rich-editor>
+          </div>
+        </div>
+
+        <!-- Prepared by / Initiator / Recommender / Final Approver -->
+        <app-notesheet-approver-select
+          [noteSheetType]="'General'"
+          [(initiatorId)]="form.controls['initiatorId'].value"
+          (initiatorIdChange)="form.controls['initiatorId'].setValue($event); form.controls['initiatorId'].markAsTouched()"
+          [(recommenderIds)]="form.controls['recommenderIds'].value"
+          (recommenderIdsChange)="form.controls['recommenderIds'].setValue($event)"
+          [(finalApproverId)]="form.controls['finalApproverId'].value"
+          (finalApproverIdChange)="form.controls['finalApproverId'].setValue($event); form.controls['finalApproverId'].markAsTouched()"
+          [showErrors]="!!(form.get('initiatorId')?.touched || form.get('finalApproverId')?.touched)">
+          <div class="form-field">
+            <label class="form-label">Prepared By</label>
+            @if (isPreparedByMapped) {
+              <input pInputText formControlName="preparedBy" readonly class="w-full" />
+            } @else {
+              <p-select
+                formControlName="preparedByEmployeeId"
+                [options]="preparedByOptions"
+                optionLabel="label"
+                optionValue="value"
+                [filter]="true"
+                filterBy="label"
+                [showClear]="true"
+                placeholder="Select Prepared By"
+                styleClass="w-full">
+              </p-select>
+            }
+          </div>
+        </app-notesheet-approver-select>
+
+        <!-- Secret -->
+        <div class="form-row">
+          <div class="form-field" style="flex: 0 0 auto;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; padding-top: 0.5rem;">
+              <p-checkbox formControlName="isSecret" [binary]="true" inputId="isSecret"></p-checkbox>
+              <label for="isSecret">Mark as Secret</label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Supporting Documents -->
+        <div class="form-row">
+          <div class="form-field" style="flex-basis: 100%">
+            <label class="form-label">Supporting Documents</label>
+            <app-file-references-form
+              #fileReferencesForm
+              [fileRows]="[]"
+              [isViewMode]="false"
+              title="Supporting Documents"
+              (onDownloadFile)="onDownloadFile($event)">
+            </app-file-references-form>
+          </div>
         </div>
       </div>
 
       <!-- Actions -->
-      <div class="ns-gen-actions">
-        <p-button type="submit" label="Generate Note Sheet" icon="pi pi-check" [loading]="isSubmitting" [disabled]="form.invalid" [class.perm-hidden]="editMode ? !canUpdate : !canInsert" />
+      <div class="form-actions">
+        <p-button type="submit" [label]="editMode ? 'Update Note Sheet' : 'Generate Note Sheet'" [icon]="editMode ? 'pi pi-check' : 'pi pi-file-edit'" [loading]="isSubmitting" [disabled]="form.invalid" [class.perm-hidden]="editMode ? !canUpdate : !canInsert" />
       </div>
     </form>
-  </div>
 
-  <p-toast position="top-center"></p-toast>
+    <!-- Add Column Dialog -->
+    <p-dialog
+      header="Add Table Column"
+      [(visible)]="showAddColumnDialog"
+      [modal]="true"
+      [style]="{ width: '500px' }"
+      [closable]="true"
+      [draggable]="false"
+      [resizable]="false"
+      (onHide)="closeAddColumnDialog()">
+
+      <div style="padding: 1rem 0; display: flex; flex-direction: column; gap: 1rem;">
+        <!-- Mode toggle -->
+        <div style="display: flex; gap: 1rem;">
+          <label style="display: flex; align-items: center; gap: 0.375rem; cursor: pointer;">
+            <input type="radio" name="addColMode" value="field" [(ngModel)]="addColumnMode" [ngModelOptions]="{standalone: true}" />
+            From Employee Fields
+          </label>
+          <label style="display: flex; align-items: center; gap: 0.375rem; cursor: pointer;">
+            <input type="radio" name="addColMode" value="custom" [(ngModel)]="addColumnMode" [ngModelOptions]="{standalone: true}" />
+            Custom Blank Column
+          </label>
+        </div>
+
+        @if (addColumnMode === 'field') {
+          <div>
+            <label class="form-label">Select Field</label>
+            <p-select
+              [(ngModel)]="selectedColumnKey"
+              [ngModelOptions]="{standalone: true}"
+              [options]="groupedUnusedColumns"
+              optionLabel="label"
+              optionValue="value"
+              optionGroupLabel="label"
+              optionGroupChildren="items"
+              [group]="true"
+              [filter]="true"
+              filterBy="label"
+              placeholder="Select a field..."
+              styleClass="w-full"
+              appendTo="body">
+            </p-select>
+          </div>
+        } @else {
+          <div>
+            <label class="form-label">Column Name <span class="form-label-required">*</span></label>
+            <input
+              pInputText
+              [(ngModel)]="newCustomColumnName"
+              [ngModelOptions]="{standalone: true}"
+              placeholder="e.g. Remarks, Note, Custom Field"
+              class="w-full"
+              style="margin-top: 0.5rem;"
+              (keydown.enter)="confirmAddColumn()" />
+          </div>
+        }
+      </div>
+
+      <ng-template pTemplate="footer">
+        <p-button
+          label="Cancel"
+          icon="pi pi-times"
+          severity="secondary"
+          [outlined]="true"
+          (onClick)="closeAddColumnDialog()">
+        </p-button>
+        <p-button
+          label="Add Column"
+          icon="pi pi-plus"
+          [disabled]="addColumnMode === 'field' ? !selectedColumnKey : !newCustomColumnName.trim()"
+          (onClick)="confirmAddColumn()">
+        </p-button>
+      </ng-template>
+    </p-dialog>
+
+    <!-- Merge Columns Dialog -->
+    <p-dialog
+      header="Merge Columns"
+      [(visible)]="showMergeColumnDialog"
+      [modal]="true"
+      [style]="{ width: '520px' }"
+      [closable]="true"
+      [draggable]="false"
+      [resizable]="false"
+      (onHide)="closeMergeColumnDialog()">
+
+      <div style="padding: 1rem 0; display: flex; flex-direction: column; gap: 1rem;">
+        <div>
+          <label class="form-label">Select Columns to Merge <span class="form-label-required">*</span></label>
+          <p-multiSelect
+            [(ngModel)]="mergeSelectedColumns"
+            [ngModelOptions]="{standalone: true}"
+            [options]="membersData.columns"
+            optionLabel="label"
+            placeholder="Pick 2 or more columns..."
+            styleClass="w-full"
+            appendTo="body"
+            [filter]="true"
+            filterBy="label">
+          </p-multiSelect>
+        </div>
+
+        <div>
+          <label class="form-label">Separator</label>
+          <p-select
+            [(ngModel)]="mergeSeparator"
+            [ngModelOptions]="{standalone: true}"
+            [options]="mergeSeparatorOptions"
+            optionLabel="label"
+            optionValue="value"
+            styleClass="w-full">
+          </p-select>
+        </div>
+
+        @if (mergeSeparator === '__custom__') {
+          <div>
+            <label class="form-label">Custom Separator</label>
+            <input
+              pInputText
+              [(ngModel)]="mergeCustomSeparator"
+              [ngModelOptions]="{standalone: true}"
+              placeholder="e.g. - or , or /"
+              class="w-full" />
+          </div>
+        }
+
+        <div>
+          <label class="form-label">Merged Column Label</label>
+          <input
+            pInputText
+            [(ngModel)]="mergeLabel"
+            [ngModelOptions]="{standalone: true}"
+            [placeholder]="mergeSelectedColumns.length >= 2 ? mergeSelectedColumns[0].label + ' + ' + mergeSelectedColumns[1].label : 'Auto-generated'"
+            class="w-full" />
+        </div>
+
+        @if (mergePreview) {
+          <div style="padding: 0.5rem 0.75rem; background: var(--surface-100, #f1f5f9); border-radius: 0.375rem; font-size: 0.8125rem;">
+            <strong>Preview:</strong> {{ mergePreview }}
+          </div>
+        }
+      </div>
+
+      <ng-template pTemplate="footer">
+        <p-button
+          label="Cancel"
+          icon="pi pi-times"
+          severity="secondary"
+          [outlined]="true"
+          (onClick)="closeMergeColumnDialog()">
+        </p-button>
+        <p-button
+          label="Merge"
+          icon="pi pi-link"
+          [disabled]="mergeSelectedColumns.length < 2"
+          (onClick)="confirmMergeColumns()">
+        </p-button>
+      </ng-template>
+    </p-dialog>
+  </div>
 </p-fluid>

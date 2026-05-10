@@ -327,6 +327,12 @@ export class EmployeeSearchComponent implements OnChanges {
             return;
         }
 
+        // Check for comma-separated Service IDs (bulk add)
+        if (this.searchServiceId && this.searchServiceId.includes(',')) {
+            this.searchBulkServiceIds();
+            return;
+        }
+
         // Clear any previous selection/picker state so the fresh search always starts clean.
         this.employeeFound = false;
         this.employeeInfo = null;
@@ -369,6 +375,65 @@ export class EmployeeSearchComponent implements OnChanges {
                 });
             }
         });
+    }
+
+    /** Handle comma-separated Service IDs — searches each and emits onEmployeeFound for every match */
+    private searchBulkServiceIds(): void {
+        const ids = this.searchServiceId.split(',').map(s => s.trim()).filter(Boolean);
+        if (ids.length === 0) return;
+
+        this.employeeFound = false;
+        this.employeeInfo = null;
+        this.isSearching = true;
+
+        let completed = 0;
+        let found = 0;
+        const notFound: string[] = [];
+
+        for (const sid of ids) {
+            this.empService.searchByRabIdOrServiceId(undefined, sid).subscribe({
+                next: (emp) => {
+                    if (emp && (emp.EmployeeID ?? (emp as any).employeeID)) {
+                        const employeeID = emp.EmployeeID ?? (emp as any).employeeID;
+                        const info: EmployeeBasicInfo = {
+                            employeeID,
+                            fullNameEN: emp.FullNameEN || (emp as any).fullNameEN || '',
+                            rabid: emp.RABID || (emp as any).rabid || '',
+                            serviceId: emp.ServiceId || (emp as any).serviceId || '',
+                            motherOrganization: (emp as any).LastMotherUnit ?? (emp as any).motherOrganization,
+                            rank: (emp as any).Rank ?? (emp as any).rank,
+                            trade: (emp as any).Trade ?? (emp as any).trade,
+                            branch: (emp as any).Branch ?? (emp as any).branch,
+                            memberType: (emp as any).MemberType ?? (emp as any).memberType
+                        };
+                        this.onEmployeeFound.emit(info);
+                        found++;
+                    } else {
+                        notFound.push(sid);
+                    }
+                    completed++;
+                    this.checkBulkComplete(completed, ids.length, found, notFound);
+                },
+                error: () => {
+                    notFound.push(sid);
+                    completed++;
+                    this.checkBulkComplete(completed, ids.length, found, notFound);
+                }
+            });
+        }
+    }
+
+    private checkBulkComplete(completed: number, total: number, found: number, notFound: string[]): void {
+        if (completed < total) return;
+        this.isSearching = false;
+        if (found > 0) {
+            this.messageService.add({ severity: 'success', summary: 'Bulk Add', detail: `${found} member(s) added.` });
+        }
+        if (notFound.length > 0) {
+            this.messageService.add({ severity: 'warn', summary: 'Not Found', detail: `Not found: ${notFound.join(', ')}` });
+        }
+        this.searchServiceId = '';
+        this.searchRabId = '';
     }
 
     private loadSelectedEmployee(employee: any): void {

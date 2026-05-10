@@ -1,0 +1,151 @@
+<p-fluid>
+  <div class="card">
+    <div class="ns-gen-header">
+      <div class="ns-gen-title">Apply for Ex-BD Leave</div>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <div class="ns-gen-grid">
+
+        <!-- Row 1: Select Applicant (full width - employee search or readonly in edit mode) -->
+        <div class="ns-gen-field ns-gen-full">
+          <label class="ns-gen-label">Select Applicant <span class="ns-gen-req">*</span></label>
+          @if (editMode) {
+            <input pInputText [value]="editApplicantDisplay" readonly class="w-full" />
+          } @else {
+            <app-employee-search
+              (onEmployeeFound)="onApplicantFound($event)"
+              (onSearchReset)="onApplicantReset()">
+            </app-employee-search>
+            @if (!selectedApplicant && form.get('applicantEmployeeId')?.touched) {
+              <small class="ns-gen-error">Applicant is required</small>
+            }
+          }
+        </div>
+
+        <!-- Row 2: Application Date | Purpose of Visit | Destination Country -->
+        <div class="ns-gen-field">
+          <label class="ns-gen-label">Date of Application <span class="ns-gen-req">*</span></label>
+          <p-datepicker formControlName="applicationDate" dateFormat="dd-mm-yy" styleClass="w-full" placeholder="Select date"></p-datepicker>
+        </div>
+
+        <div class="ns-gen-field">
+          <label class="ns-gen-label">Purpose of Visit <span class="ns-gen-req">*</span></label>
+          <div class="flex gap-1 align-items-center">
+            <p-select
+              formControlName="visitTypeId"
+              [options]="visitTypeOptions"
+              optionLabel="label"
+              optionValue="value"
+              [filter]="true"
+              filterBy="label"
+              [showClear]="true"
+              placeholder="Select Purpose"
+              styleClass="w-full">
+            </p-select>
+            <p-button icon="pi pi-plus" [rounded]="true" [text]="true" severity="success" (onClick)="showAddVisitTypeDialog()" pTooltip="Add new Visit Type" />
+          </div>
+          @if (form.get('visitTypeId')?.invalid && form.get('visitTypeId')?.touched) {
+            <small class="ns-gen-error">Purpose of Visit is required</small>
+          }
+        </div>
+
+        <div class="ns-gen-field">
+          <label class="ns-gen-label">Destination Country</label>
+          <p-multiselect
+            formControlName="destinationCountryIds"
+            [options]="countryOptions"
+            optionLabel="label"
+            optionValue="value"
+            [filter]="true"
+            filterBy="label"
+            [showClear]="true"
+            placeholder="Select Country (can add multiple)"
+            styleClass="w-full">
+          </p-multiselect>
+        </div>
+
+        <!-- Row 3: From | To | Total Days -->
+        <div class="ns-gen-field">
+          <label class="ns-gen-label">From <span class="ns-gen-req">*</span></label>
+          <p-datepicker formControlName="fromDate" dateFormat="dd-mm-yy" styleClass="w-full" placeholder="Select date"></p-datepicker>
+          @if (form.get('fromDate')?.invalid && form.get('fromDate')?.touched) {
+            <small class="ns-gen-error">From date is required</small>
+          }
+        </div>
+
+        <div class="ns-gen-field">
+          <label class="ns-gen-label">To <span class="ns-gen-req">*</span></label>
+          <p-datepicker formControlName="toDate" dateFormat="dd-mm-yy" styleClass="w-full" placeholder="Select date"></p-datepicker>
+          @if (form.get('toDate')?.invalid && form.get('toDate')?.touched) {
+            <small class="ns-gen-error">To date is required</small>
+          }
+        </div>
+
+        <div class="ns-gen-field">
+          <label class="ns-gen-label">Total Days</label>
+          <input pInputText formControlName="totalDays" type="number" readonly class="w-full" />
+        </div>
+
+        <!-- Row 4: Family Members | Remarks -->
+        <div class="ns-gen-field">
+          <label class="ns-gen-label">Select Family Member (If Applicable)</label>
+          <p-multiselect
+            formControlName="familyMemberIds"
+            [options]="familyMemberOptions"
+            optionLabel="label"
+            optionValue="value"
+            [filter]="true"
+            filterBy="label"
+            [showClear]="true"
+            placeholder="Select Family Members"
+            [disabled]="!form.get('applicantEmployeeId')?.value"
+            styleClass="w-full">
+          </p-multiselect>
+        </div>
+
+        <div class="ns-gen-field ns-gen-span-2">
+          <label class="ns-gen-label">Remarks</label>
+          <textarea pTextarea formControlName="remarks" rows="2" class="w-full" placeholder="Optional remarks..."></textarea>
+        </div>
+
+        <!-- Row 5: Supporting Documents (full) -->
+        <div class="ns-gen-field ns-gen-full">
+          <label class="ns-gen-label">Upload Supporting Document</label>
+          <app-file-references-form
+            [fileRows]="fileRows"
+            [isViewMode]="false"
+            title="Supporting Documents"
+            (fileRowsChange)="onFileRowsChange($event)"
+            (onDownloadFile)="onDownloadFile($event)">
+          </app-file-references-form>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="ns-gen-actions">
+        <p-button type="submit" label="Save Application" icon="pi pi-check" [loading]="isSubmitting" [disabled]="form.invalid" />
+      </div>
+    </form>
+  </div>
+
+  <p-toast position="top-center"></p-toast>
+
+  <!-- Add Visit Type Dialog -->
+  <p-dialog header="Add New Visit Type" [(visible)]="showVisitTypeDialog" [modal]="true" [style]="{ width: '450px' }" [closable]="true">
+    <div class="flex flex-column gap-3 pt-3">
+      <div class="flex flex-column gap-1">
+        <label class="ns-gen-label">Name (English) <span class="ns-gen-req">*</span></label>
+        <input pInputText [(ngModel)]="newVisitType.codeValueEN" [ngModelOptions]="{ standalone: true }" placeholder="Enter visit type name" class="w-full" />
+      </div>
+      <div class="flex flex-column gap-1">
+        <label class="ns-gen-label">Name (Bangla)</label>
+        <input pInputText [(ngModel)]="newVisitType.codeValueBN" [ngModelOptions]="{ standalone: true }" placeholder="Enter visit type name in Bangla" class="w-full" />
+      </div>
+    </div>
+    <ng-template #footer>
+      <p-button label="Cancel" icon="pi pi-times" [text]="true" (onClick)="showVisitTypeDialog = false" />
+      <p-button label="Save" icon="pi pi-check" (onClick)="saveNewVisitType()" [loading]="isSavingVisitType" [disabled]="!newVisitType.codeValueEN?.trim()" />
+    </ng-template>
+  </p-dialog>
+</p-fluid>

@@ -1,0 +1,104 @@
+<div class="card">
+  <div class="exbd-list-header">
+    <div class="exbd-list-title">Ex-BD Leave Applications</div>
+    <div class="flex align-items-center gap-2">
+      <p-datepicker
+        [(ngModel)]="filterFromDate"
+        placeholder="From Date"
+        dateFormat="dd-mm-yy"
+        [showIcon]="true"
+        styleClass="w-10rem"
+        (onSelect)="onDateFilterChange()"
+        (onClear)="onDateFilterChange()"
+        (onBlur)="onDateFilterChange()"
+        [showClear]="true">
+      </p-datepicker>
+      <p-datepicker
+        [(ngModel)]="filterToDate"
+        placeholder="To Date"
+        dateFormat="dd-mm-yy"
+        [showIcon]="true"
+        styleClass="w-10rem"
+        (onSelect)="onDateFilterChange()"
+        (onClear)="onDateFilterChange()"
+        (onBlur)="onDateFilterChange()"
+        [showClear]="true">
+      </p-datepicker>
+      <p-button label="Apply for Ex-BD Leave" icon="pi pi-plus" (onClick)="goToApply()"></p-button>
+    </div>
+  </div>
+
+  <p-table
+    [value]="applications"
+    [loading]="loading"
+    [paginator]="true"
+    [rows]="15"
+    [rowsPerPageOptions]="[10, 15, 25, 50]"
+    [showCurrentPageReport]="true"
+    currentPageReportTemplate="Showing {first} to {last} of {totalRecords} entries"
+    [tableStyle]="{ 'min-width': '80rem' }"
+    styleClass="p-datatable-sm p-datatable-gridlines">
+
+    <ng-template #header>
+      <tr>
+        <th style="width: 3rem">Ser</th>
+        <th>Name</th>
+        <th>Applicant Unit</th>
+        <th>Purpose of Visit</th>
+        <th>Country</th>
+        <th>From</th>
+        <th>To</th>
+        <th style="width: 5rem">Total Days</th>
+        <th>Family Members</th>
+        <th style="width: 5rem">Actions</th>
+      </tr>
+    </ng-template>
+
+    <ng-template #body let-app let-rowIndex="rowIndex">
+      <tr>
+        <td>{{ rowIndex + 1 }}</td>
+        <td>{{ app.applicantPrefix }}-{{ app.applicantServiceId }} {{ app.applicantName }}</td>
+        <td>{{ app.applicantPlacement || '—' }}</td>
+        <td>{{ app.visitTypeName || '—' }}</td>
+        <td>{{ app.destinationCountriesDisplay || '—' }}</td>
+        <td>{{ formatDate(app.fromDate) }}</td>
+        <td>{{ formatDate(app.toDate) }}</td>
+        <td class="text-center">{{ app.totalDays }}</td>
+        <td>{{ app.familyMembersDisplay || '—' }}</td>
+        <td>
+          <div class="flex gap-1">
+            <p-button
+              icon="pi pi-pencil"
+              [rounded]="true"
+              [text]="true"
+              severity="info"
+              size="small"
+              pTooltip="Edit"
+              (onClick)="editApplication(app)">
+            </p-button>
+            @if (app.applicationStatus === 'Received' || app.applicationStatus === 'Processing') {
+              <p-button
+                icon="pi pi-trash"
+                [rounded]="true"
+                [text]="true"
+                severity="danger"
+                size="small"
+                pTooltip="Delete"
+                (onClick)="deleteApplication(app)">
+              </p-button>
+            }
+          </div>
+        </td>
+      </tr>
+    </ng-template>
+
+    <ng-template #emptymessage>
+      <tr>
+        <td colspan="10" class="text-center p-4 text-500">No applications found.</td>
+      </tr>
+    </ng-template>
+  </p-table>
+</div>
+
+<p-toast position="top-center"></p-toast>
+<p-confirmDialog></p-confirmDialog>

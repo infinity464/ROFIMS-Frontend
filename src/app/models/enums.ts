@@ -216,6 +216,21 @@ export const DraftPostingStatusOptions = [
     { label: 'Decline', value: DraftPostingStatus.Decline }
 ];
 
+/** ExBdLeaveStatus – Ex-BD Leave Application workflow status. */
+export enum ExBdLeaveStatus {
+    Received   = 'Received',
+    Processing = 'Processing',
+    Approved   = 'Approved',
+    Cleared    = 'Cleared'
+}
+
+export const ExBdLeaveStatusOptions = [
+    { label: 'Received',   value: ExBdLeaveStatus.Received },
+    { label: 'Processing', value: ExBdLeaveStatus.Processing },
+    { label: 'Approved',   value: ExBdLeaveStatus.Approved },
+    { label: 'Cleared',    value: ExBdLeaveStatus.Cleared }
+];
+
 // Present Status Type
 export enum PresentStatusType {
     OnDuty = 'OnDuty',
@@ -300,6 +315,9 @@ export enum CodeType {
     PunishmentType = 'PunishmentType',
     RabBranch = 'RabBranch',
     RabId = 'RabId',
+    RabSection = 'RabSection',
+    RabSubBranch = 'RabSubBranch',
+    RabSubSection = 'RabSubSection',
     RabUnit = 'RabUnit',
     RabWing = 'RabWing',
     Relationship = 'Relationship',
