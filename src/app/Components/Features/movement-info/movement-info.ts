@@ -116,7 +116,10 @@ export class MovementInfoComponent implements OnInit {
     motherUnitOptions: { label: string; value: number }[] = [];
     rabUnitOptions: { label: string; value: number }[] = [];
     approverOptions: { label: string; value: number }[] = [];
-    letterRecipientOptions = Article47LetterRecipientOptions;
+
+    /** Free-form list of Article 47 letter recipients (one line each).
+     *  Pre-populated with the enum labels on Article 47 selection; editable thereafter. */
+    letterRecipientsList: string[] = [];
     joiningLeaveOptions = [
         { label: 'Yes', value: true },
         { label: 'No', value: false }
@@ -181,7 +184,6 @@ export class MovementInfoComponent implements OnInit {
             detailsInformation: [null],
             remarks: [null],
             finalApproverIds: [[] as number[]],
-            letterRecipients: [[] as number[]],
             status: [true]
         });
 
@@ -269,6 +271,15 @@ export class MovementInfoComponent implements OnInit {
                 severity: 'warn',
                 summary: 'Already added',
                 detail: `${emp.fullNameEN} is already in the list.`
+            });
+            return;
+        }
+        // Article 47 (Handover or Takeover) permits only one employee on the letter.
+        if (this.isArticle47Variant && this.selectedEmployees.length >= 1) {
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'Only one employee allowed',
+                detail: 'Article 47 movements support a single employee. Remove the current entry to add another.'
             });
             return;
         }
@@ -406,6 +417,9 @@ export class MovementInfoComponent implements OnInit {
     get isArticle47Takeover(): boolean {
         return this.form?.get('moveOrderType')!.value === MoveOrderType.Article47Takeover;
     }
+    get isArticle47Variant(): boolean {
+        return this.isArticle47Handover || this.isArticle47Takeover;
+    }
     /** Show Handover-of-charge field — Permanent + Article 47 (Handover). */
     get showHandover(): boolean {
         return this.isPermanent && this.isArticle47Handover;
@@ -439,10 +453,48 @@ export class MovementInfoComponent implements OnInit {
             this.form.patchValue({ takeoverDate: null });
             this.takeoverPerson = null;
         }
-        if (!this.showLetterRecipients) {
-            this.form.patchValue({ letterRecipients: [] });
+        // Article 47 supports only one employee — drop extras (keep the first) on switch in.
+        if (this.isArticle47Variant && this.selectedEmployees.length > 1) {
+            this.selectedEmployees = this.selectedEmployees.slice(0, 1);
+            this.syncCurrentUnitFromEmployees();
+            this.messageService.add({
+                severity: 'info',
+                summary: 'Trimmed to one employee',
+                detail: 'Article 47 movements support a single employee. Extra entries were removed.'
+            });
+        }
+        if (this.showLetterRecipients) {
+            if (this.letterRecipientsList.length === 0) {
+                // Pre-fill with the enum labels in sortOrder.
+                this.letterRecipientsList = Article47LetterRecipientOptions
+                    .slice()
+                    .sort((a, b) => a.sortOrder - b.sortOrder)
+                    .map((o) => o.label);
+            }
+        } else {
+            this.letterRecipientsList = [];
         }
     }
+
+    addLetterRecipient(): void {
+        this.letterRecipientsList.push('');
+    }
+
+    removeLetterRecipient(index: number): void {
+        if (index >= 0 && index < this.letterRecipientsList.length) {
+            this.letterRecipientsList.splice(index, 1);
+        }
+    }
+
+    /** Swap a recipient with its neighbour. direction = -1 (up) or +1 (down). */
+    moveLetterRecipient(index: number, direction: -1 | 1): void {
+        const target = index + direction;
+        if (target < 0 || target >= this.letterRecipientsList.length) return;
+        const list = this.letterRecipientsList;
+        [list[index], list[target]] = [list[target], list[index]];
+    }
+
+    trackByIndex = (index: number): number => index;
     private onIsJoiningLeaveChange(v: boolean) {
         if (!v) {
             this.form.patchValue({ joiningLeaveFrom: null, joiningLeaveTo: null });
@@ -489,7 +541,7 @@ export class MovementInfoComponent implements OnInit {
             letterDate: null,
             employeeIds: JSON.stringify(this.selectedEmployees.map((e) => e.employeeID)),
             finalApproverIds: finalApproverIds.length > 0 ? JSON.stringify(finalApproverIds) : null,
-            letterRecipients: this.serialiseLetterRecipients(v.letterRecipients),
+            letterRecipients: this.serialiseLetterRecipients(),
             movementType: v.movementType,
             moveOrderType: v.moveOrderType,
             movementReasonId: v.movementReasonId ?? null,
@@ -545,6 +597,7 @@ export class MovementInfoComponent implements OnInit {
         this.editingId = null;
         this.selectedEmployees = [];
         this.takeoverPerson = null;
+        this.letterRecipientsList = [];
         this.form.reset({
             movementType: null,
             moveOrderType: null,
@@ -568,13 +621,15 @@ export class MovementInfoComponent implements OnInit {
         });
     }
 
-    /** Serialise the letter-recipient picks as a JSON array sorted by enum int
-     * so the saved order matches the printed letter (1, 2, 3, 4, 7, 8). */
-    private serialiseLetterRecipients(value: number[] | null | undefined): string | null {
+    /** Serialise the letter-recipient list as a JSON array of trimmed, non-empty strings.
+     *  Order in the array == print order in the generated letter. */
+    private serialiseLetterRecipients(): string | null {
         if (!this.showLetterRecipients) return null;
-        const ids = Array.isArray(value) ? value.filter((n) => Number.isInteger(n)) : [];
-        if (ids.length === 0) return null;
-        return JSON.stringify([...ids].sort((a, b) => a - b));
+        const lines = (this.letterRecipientsList || [])
+            .map((s) => (s ?? '').trim())
+            .filter((s) => s.length > 0);
+        if (lines.length === 0) return null;
+        return JSON.stringify(lines);
     }
 
     private toIsoDate(d: Date | string | null | undefined): string | null {

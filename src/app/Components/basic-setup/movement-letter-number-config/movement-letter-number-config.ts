@@ -14,11 +14,12 @@ import { IconField } from 'primeng/iconfield';
 import { InputIcon } from 'primeng/inputicon';
 import { TableModule } from 'primeng/table';
 import { Select } from 'primeng/select';
+import { Checkbox } from 'primeng/checkbox';
 import { MoveOrderType, MoveOrderTypeOptions } from '@/models/enums';
 
 @Component({
     selector: 'app-movement-letter-number-config',
-    imports: [ReactiveFormsModule, TableModule, InputText, InputNumber, Fluid, ButtonModule, IconField, InputIcon, Select],
+    imports: [ReactiveFormsModule, TableModule, InputText, InputNumber, Fluid, ButtonModule, IconField, InputIcon, Select, Checkbox],
     templateUrl: './movement-letter-number-config.html',
     styleUrl: './movement-letter-number-config.scss'
 })
@@ -73,7 +74,8 @@ export class MovementLetterNumberConfigComponent implements OnInit {
             moveOrderType: [null as MoveOrderType | null, Validators.required],
             prefix: [null, Validators.required],
             prefixBN: [null, Validators.required],
-            startNumber: [null, [Validators.required, Validators.min(1)]]
+            startNumber: [null, [Validators.required, Validators.min(1)]],
+            includeDateInNumber: [false]
         });
     }
 
@@ -101,10 +103,14 @@ export class MovementLetterNumberConfigComponent implements OnInit {
     getPreview(): string {
         const prefix = this.configForm.get('prefix')?.value || 'PREFIX';
         const startNumber = this.configForm.get('startNumber')?.value || '10001';
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        return `${prefix}-${year}-${month}-${startNumber}`;
+        const sep = prefix.endsWith('/') || prefix.endsWith('-') ? '' : '-';
+        if (this.configForm.get('includeDateInNumber')?.value) {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            return `${prefix}${sep}${year}/${month}/${startNumber}`;
+        }
+        return `${prefix}${sep}${startNumber}`;
     }
 
     onSearch(event: Event) {
@@ -153,7 +159,8 @@ export class MovementLetterNumberConfigComponent implements OnInit {
             createdBy: this.currentUser,
             createdDate: currentDateTime,
             lastUpdatedBy: this.currentUser,
-            lastupdate: currentDateTime
+            lastupdate: currentDateTime,
+            includeDateInNumber: this.configForm.value.includeDateInNumber ?? false
         };
 
         this.masterBasicSetupService.createMovementLetterNumberConfig(payload).subscribe({
@@ -189,6 +196,7 @@ export class MovementLetterNumberConfigComponent implements OnInit {
             ...existing,
             prefix: formVal.prefix,
             prefixBN: formVal.prefixBN ?? '',
+            includeDateInNumber: formVal.includeDateInNumber ?? false,
             lastUpdatedBy: this.currentUser,
             lastupdate: currentDateTime
         };
@@ -223,9 +231,10 @@ export class MovementLetterNumberConfigComponent implements OnInit {
             moveOrderType: row.moveOrderType,
             prefix: row.prefix,
             prefixBN: row.prefixBN ?? '',
-            startNumber: row.startNumber
+            startNumber: row.startNumber,
+            includeDateInNumber: row.includeDateInNumber ?? false
         });
-        // Type + start-number locked after creation (matches PostingOrderNumberConfig)
+        // Type + start-number locked after creation (matches notesheet-number-config)
         this.configForm.get('moveOrderType')?.disable();
         this.configForm.get('startNumber')?.disable();
     }
@@ -236,7 +245,8 @@ export class MovementLetterNumberConfigComponent implements OnInit {
             moveOrderType: null,
             prefix: null,
             prefixBN: null,
-            startNumber: null
+            startNumber: null,
+            includeDateInNumber: false
         });
         this.configForm.get('moveOrderType')?.enable();
         this.configForm.get('startNumber')?.enable();

@@ -291,6 +291,59 @@
         </div>
     </section>
 
+    <!-- ── Letter Recipients (Article 47 only) ───────────────────────── -->
+    @if (showLetterRecipients) {
+        <section class="mv-card">
+            <header class="mv-card-header">
+                <i class="pi pi-list mv-card-icon"></i>
+                <span class="mv-card-title">Letter Recipients</span>
+                <button type="button" pButton
+                        icon="pi pi-plus"
+                        [rounded]="true" [text]="true"
+                        severity="success"
+                        size="small"
+                        pTooltip="Add recipient"
+                        (click)="addLetterRecipient()"
+                        style="margin-left:0.5rem;"></button>
+            </header>
+
+            @for (recipient of letterRecipientsList; track trackByIndex($index); let i = $index) {
+                <div style="display:flex; align-items:start; gap:0.25rem; margin-bottom:0.5rem;">
+                    <span style="min-width:1.75rem; padding-top:0.55rem; font-weight:600;">{{ i + 1 }}.</span>
+                    <input pInputText
+                           class="w-full"
+                           [(ngModel)]="letterRecipientsList[i]"
+                           [ngModelOptions]="{ standalone: true }"
+                           [placeholder]="'Recipient ' + (i + 1)" />
+                    <button type="button" pButton
+                            icon="pi pi-arrow-up"
+                            severity="secondary"
+                            [text]="true" [rounded]="true" size="small"
+                            pTooltip="Move up"
+                            [disabled]="i === 0"
+                            (click)="moveLetterRecipient(i, -1)"></button>
+                    <button type="button" pButton
+                            icon="pi pi-arrow-down"
+                            severity="secondary"
+                            [text]="true" [rounded]="true" size="small"
+                            pTooltip="Move down"
+                            [disabled]="i === letterRecipientsList.length - 1"
+                            (click)="moveLetterRecipient(i, 1)"></button>
+                    <button type="button" pButton
+                            icon="pi pi-trash"
+                            severity="danger"
+                            [text]="true" [rounded]="true" size="small"
+                            pTooltip="Remove"
+                            (click)="removeLetterRecipient(i)"></button>
+                </div>
+            }
+
+            @if (letterRecipientsList.length === 0) {
+                <small class="mv-hint">No recipients yet. Click + to add one.</small>
+            }
+        </section>
+    }
+
     <!-- ── Final Approvers ───────────────────────────────────────────── -->
     <section class="mv-card">
         <header class="mv-card-header">

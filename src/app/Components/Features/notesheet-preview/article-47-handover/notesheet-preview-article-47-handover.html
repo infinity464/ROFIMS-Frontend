@@ -1,0 +1,117 @@
+<p-toast></p-toast>
+
+<div class="preview-header">
+    <div class="preview-actions">
+        <button type="button" pButton label="Back" icon="pi pi-arrow-left"
+                severity="secondary" [outlined]="true" (click)="onBack()"></button>
+    </div>
+    <div class="preview-status-actions">
+        <button type="button" pButton label="Print" icon="pi pi-print"
+                [outlined]="true" (click)="onPrint()" [disabled]="loading || !!error"></button>
+    </div>
+</div>
+
+@if (loading) {
+    <div class="preview-loading">
+        <i class="pi pi-spin pi-spinner" style="font-size:2rem"></i>
+        <div>Loading…</div>
+    </div>
+}
+
+@if (error) {
+    <div class="preview-error">
+        <i class="pi pi-exclamation-triangle" style="font-size:2rem"></i>
+        <div>{{ error }}</div>
+    </div>
+}
+
+@if (!loading && !error && movement) {
+    <div class="a4-paper-container">
+        <div class="a4-paper">
+
+            <!-- Org header -->
+            <div style="font-size:10pt; margin-bottom:8pt;">
+                বাংলাদেশ ফরম নং-২৪০৩
+            </div>
+
+            <!-- Memo number + Date row -->
+            <div style="display:flex; justify-content:space-between; margin-top:18pt; font-size:10pt;">
+                <div>স্মারক নং-র‍্যাব হেঃ কোঃ/প্রশাঃ/{{ memoNoBn }}/</div>
+                <div>{{ letterDateBn }}</div>
+            </div>
+
+            <!-- প্রতি (To) block — comes BEFORE সূত্র in the Handover variant -->
+            <div style="margin-top:14pt; font-size:10pt;">
+                <div>প্রতি,</div>
+                <table style="margin-left:50pt; margin-top:4pt; border-collapse:collapse;">
+                    @for (line of recipientLines; track $index) {
+                        <tr>
+                            <td style="vertical-align:top; padding:1pt 8pt 1pt 0; white-space:nowrap;">
+                                {{ serialBn($index + 1) }}
+                            </td>
+                            <td style="vertical-align:top; padding:1pt 0;">{{ line }}</td>
+                        </tr>
+                    }
+                </table>
+            </div>
+
+            <!-- Reference line — sourced from MovementInfo.auth (rich text).
+                 min-width:50pt on the label aligns the body with the recipient numbers.
+                 margin-top:34pt = ~2 blank lines after the প্রতি block. -->
+            <div style="margin-top:34pt; font-size:10pt;">
+                <div style="display:flex; gap:0; align-items:flex-start;">
+                    <div style="min-width:50pt;">সূত্র:</div>
+                    <div class="mv-rich" [innerHTML]="movement.auth || '---'"></div>
+                </div>
+            </div>
+
+            <!-- Body — sourced from MovementInfo.remarks (rich text) -->
+            <div class="mv-rich" style="margin-top:18pt; font-size:10pt;"
+                 [innerHTML]="movement.remarks || ''"></div>
+
+            <!-- Static "অগ্রগামী করা হইল।" on its own left-aligned line, with a 2-line gap above. -->
+            <div style="margin-top:34pt; font-size:10pt;">
+                অগ্রগামী করা হইল।
+            </div>
+
+            <!-- Signature block (right-aligned) on the next line -->
+            <div style="margin-top:12pt; font-size:10pt; text-align:right;">
+                <div style="display:inline-block; text-align:center;">
+                    <div>অর্পণকারী কর্মকর্তা</div>
+                    <div style="margin-top:36pt; border-top:1px solid #000; min-width:220pt;"></div>
+                    <div style="margin-top:4pt;">{{ employeeIdLineBn }} {{ employeeRankBn }}</div>
+                    <div>{{ employeeNameBn }}{{ employeeCorpsBn ? ', ' + employeeCorpsBn : '' }}</div>
+                    <div>{{ employeeUnitBn }}</div>
+                    @if (employeeUnitLocationBn) {
+                        <div>{{ employeeUnitLocationBn }}</div>
+                    }
+                </div>
+            </div>
+
+            <!-- Witness / Rule 78 block -->
+            <div style="margin-top:28pt; font-size:10pt;">
+                <div>
+                    বেসামরিক হিসাব পদ্ধতির ৭৮ নং বিধি অনুযায়ী আমি (গ্রহণকারী কর্মকর্তা)
+                </div>
+                <div style="border-bottom:1px dotted #000; height:14pt; margin-top:6pt;"></div>
+                <div style="border-bottom:1px dotted #000; height:14pt; margin-top:14pt;"></div>
+                <div style="border-bottom:1px dotted #000; height:14pt; margin-top:14pt;"></div>
+                <div style="margin-top:8pt;">
+                    সমুদয় স্থায়ী অগ্রিম লেনদেনের টাকা গ্রহণের প্রাপ্তি স্বীকার দিলাম
+                    <span style="display:inline-block; border-bottom:1px dotted #000; min-width:160pt;"></span>
+                    <span style="margin-left:8pt;">জেলা</span>
+                </div>
+
+                <!-- Bottom signature stubs (স্বাক্ষরঃ starts at 70% from left) -->
+                <div style="display:flex; margin-top:8pt;">
+                    <div style="flex:0 0 70%;">
+                        জেলাঃ
+                    </div>
+                    <div style="flex:0 0 30%;">
+                        স্বাক্ষরঃ
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}

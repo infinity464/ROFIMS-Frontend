@@ -8,6 +8,7 @@ export interface MovementLetterNumberConfigModel {
     currentNumber: number;
     currentYear: number;
     currentMonth: number;
+    includeDateInNumber: boolean;
     status: boolean;
     createdBy: string;
     createdDate: string;
