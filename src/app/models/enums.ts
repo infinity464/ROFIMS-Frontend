@@ -344,3 +344,28 @@ export const LinkTargetOptions = [
     { label: 'Same Window (_self)', value: '_self' },
     { label: 'New Tab (_blank)', value: '_blank' }
 ];
+
+// MovementInfo: Movement Type (Permanent / Temporary)
+export enum MovementType {
+    Permanent = 1,
+    Temporary = 2
+}
+export const MovementTypeOptions = [
+    { label: 'Permanent', value: MovementType.Permanent },
+    { label: 'Temporary', value: MovementType.Temporary }
+];
+
+// MovementInfo: Move Order Type (CC / MO / Article 47 Handover / Article 47 Takeover)
+export enum MoveOrderType {
+    CC = 1,
+    MO = 2,
+    Article47Handover = 3,
+    Article47Takeover = 4
+}
+export const MoveOrderTypeOptions = [
+    { label: 'CC', value: MoveOrderType.CC },
+    { label: 'MO', value: MoveOrderType.MO },
+    { label: 'Article 47 (Handover)', value: MoveOrderType.Article47Handover },
+    { label: 'Article 47 (Takeover)', value: MoveOrderType.Article47Takeover }
+];
+

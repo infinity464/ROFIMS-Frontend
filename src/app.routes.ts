@@ -16,6 +16,8 @@ import { Division } from '@/Components/basic-setup/division/division';
 import { District } from '@/Components/basic-setup/district/district';
 import { Upazila } from '@/Components/basic-setup/upazila/upazila';
 import { BloodGroup } from '@/Components/basic-setup/blood-group/blood-group';
+import { MovementReason } from '@/Components/basic-setup/movement-reason/movement-reason';
+import { MovementInfoComponent } from '@/Components/Features/movement-info/movement-info';
 import { Relationship } from '@/Components/basic-setup/relationship/relationship';
 import { MaritalStatus } from '@/Components/basic-setup/marital-status/marital-status';
 import { Occupation } from '@/Components/basic-setup/occupation/occupation';
@@ -188,6 +190,8 @@ export const appRoutes: Routes = [
             { path: 'basic-setup/district', component: District },
             { path: 'basic-setup/upazila', component: Upazila },
             { path: 'basic-setup/blood-group', component: BloodGroup },
+            { path: 'basic-setup/movement-reason', component: MovementReason },
+            { path: 'movement-info', component: MovementInfoComponent },
             { path: 'basic-setup/relationship', component: Relationship },
             { path: 'basic-setup/marital-status', component: MaritalStatus },
             { path: 'basic-setup/occupation', component: Occupation },
