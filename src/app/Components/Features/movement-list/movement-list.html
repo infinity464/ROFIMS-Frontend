@@ -1,0 +1,133 @@
+<p-toast></p-toast>
+<p-confirmDialog></p-confirmDialog>
+
+<div class="card">
+    <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
+        <div class="font-semibold text-xl">{{ title }}</div>
+        @if (canInsert) {
+            <button type="button" pButton
+                    label="New Movement"
+                    icon="pi pi-plus"
+                    (click)="onCreate()"></button>
+        }
+    </div>
+
+    <!-- Filter bar -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+        <div>
+            <label class="block mb-2 text-sm font-medium">Search</label>
+            <p-iconfield iconPosition="left">
+                <p-inputicon><i class="pi pi-search"></i></p-inputicon>
+                <input pInputText type="text"
+                       class="w-full"
+                       placeholder="Letter No, Type..."
+                       (input)="onSearch($event)" />
+            </p-iconfield>
+        </div>
+        <div>
+            <label class="block mb-2 text-sm font-medium">Date from</label>
+            <p-datepicker
+                [(ngModel)]="filterDateFrom"
+                appendTo="body" dateFormat="dd/mm/yy"
+                [showIcon]="true" iconDisplay="input"
+                placeholder="dd/mm/yyyy" [inputStyle]="{ width: '100%' }"
+                class="w-full"
+                (onSelect)="onDateFilterChange()"
+                (onClear)="onDateFilterChange()"></p-datepicker>
+        </div>
+        <div>
+            <label class="block mb-2 text-sm font-medium">Date to</label>
+            <p-datepicker
+                [(ngModel)]="filterDateTo"
+                appendTo="body" dateFormat="dd/mm/yy"
+                [showIcon]="true" iconDisplay="input"
+                placeholder="dd/mm/yyyy" [inputStyle]="{ width: '100%' }"
+                class="w-full"
+                (onSelect)="onDateFilterChange()"
+                (onClear)="onDateFilterChange()"></p-datepicker>
+        </div>
+        <div class="flex items-end">
+            <button type="button" pButton
+                    label="Clear filters"
+                    icon="pi pi-times"
+                    severity="secondary"
+                    [outlined]="true"
+                    (click)="clearFilters()"></button>
+        </div>
+    </div>
+
+    <!-- List -->
+    <p-table
+        [value]="rows"
+        [paginator]="true"
+        [first]="first"
+        [rows]="pageSize"
+        [rowsPerPageOptions]="[10, 25, 50]"
+        [loading]="loading"
+        styleClass="p-datatable-sm"
+        responsiveLayout="scroll">
+
+        <ng-template pTemplate="header">
+            <tr>
+                <th style="width:60px">#</th>
+                <th>Letter No</th>
+                <th>Letter Date</th>
+                <th>Movement Type</th>
+                <th>Move Order Type</th>
+                <th style="width:120px">Employees</th>
+                <th style="width:160px">Actions</th>
+            </tr>
+        </ng-template>
+
+        <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+            <tr>
+                <td>{{ first + rowIndex + 1 }}</td>
+                <td>{{ row.letterNo || '—' }}</td>
+                <td>{{ row.letterDate || '—' }}</td>
+                <td>{{ movementTypeLabel(row.movementType) }}</td>
+                <td>{{ moveOrderTypeLabel(row.moveOrderType) }}</td>
+                <td>
+                    <p-tag [value]="employeeCount(row) + ''" severity="info"></p-tag>
+                </td>
+                <td>
+                    <div class="flex gap-1">
+                        <button type="button" pButton
+                                icon="pi pi-eye"
+                                severity="info"
+                                [text]="true" [rounded]="true" size="small"
+                                pTooltip="View"
+                                (click)="onView(row)"></button>
+                        @if (canUpdate) {
+                            <button type="button" pButton
+                                    icon="pi pi-pencil"
+                                    severity="warn"
+                                    [text]="true" [rounded]="true" size="small"
+                                    pTooltip="Edit"
+                                    (click)="onEdit(row)"></button>
+                        }
+                        @if (canDelete) {
+                            <button type="button" pButton
+                                    icon="pi pi-trash"
+                                    severity="danger"
+                                    [text]="true" [rounded]="true" size="small"
+                                    pTooltip="Delete"
+                                    (click)="onDelete(row, $event)"></button>
+                        }
+                    </div>
+                </td>
+            </tr>
+        </ng-template>
+
+        <ng-template pTemplate="emptymessage">
+            <tr>
+                <td colspan="7" class="text-center py-4">
+                    @if (loading) {
+                        Loading...
+                    } @else {
+                        No movements found.
+                    }
+                </td>
+            </tr>
+        </ng-template>
+    </p-table>
+</div>

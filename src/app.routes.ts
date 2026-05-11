@@ -18,7 +18,9 @@ import { Upazila } from '@/Components/basic-setup/upazila/upazila';
 import { BloodGroup } from '@/Components/basic-setup/blood-group/blood-group';
 import { MovementReason } from '@/Components/basic-setup/movement-reason/movement-reason';
 import { MovementInfoComponent } from '@/Components/Features/movement-info/movement-info';
+import { MovementListComponent } from '@/Components/Features/movement-list/movement-list';
 import { MovementLetterNumberConfigComponent } from '@/Components/basic-setup/movement-letter-number-config/movement-letter-number-config';
+import { MoveOrderType } from '@/models/enums';
 import { Relationship } from '@/Components/basic-setup/relationship/relationship';
 import { MaritalStatus } from '@/Components/basic-setup/marital-status/marital-status';
 import { Occupation } from '@/Components/basic-setup/occupation/occupation';
@@ -194,6 +196,11 @@ export const appRoutes: Routes = [
             { path: 'basic-setup/movement-reason', component: MovementReason },
             { path: 'basic-setup/movement-letter-number-config', component: MovementLetterNumberConfigComponent },
             { path: 'movement-info', component: MovementInfoComponent },
+            { path: 'movement-list', component: MovementListComponent },
+            { path: 'movement-list/cc', component: MovementListComponent, data: { moveOrderType: MoveOrderType.CC } },
+            { path: 'movement-list/mo', component: MovementListComponent, data: { moveOrderType: MoveOrderType.MO } },
+            { path: 'movement-list/article-47-handover', component: MovementListComponent, data: { moveOrderType: MoveOrderType.Article47Handover } },
+            { path: 'movement-list/article-47-takeover', component: MovementListComponent, data: { moveOrderType: MoveOrderType.Article47Takeover } },
             { path: 'basic-setup/relationship', component: Relationship },
             { path: 'basic-setup/marital-status', component: MaritalStatus },
             { path: 'basic-setup/occupation', component: Occupation },
