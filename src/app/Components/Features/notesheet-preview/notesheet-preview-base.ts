@@ -644,7 +644,6 @@ export abstract class NotesheetPreviewBase implements OnInit {
             `}\n` +
             `.ns-doc-box { display: table !important; width: 100% !important; table-layout: fixed !important; border-collapse: collapse !important; padding-top: 6mm !important; padding-bottom: 6mm !important; }\n` +
             `.ns-main-col { display: table-cell !important; vertical-align: top !important; border: 1.5px solid #000 !important; }\n` +
-            `.ns-sanglagni-col { display: table-cell !important; vertical-align: top !important; width: 60px !important; min-width: 60px !important; border: 1.5px solid #000 !important; }\n` +
             `.ns-approver-section { min-height: 50px !important; padding: 6px 16px 10px 20px !important; }\n` +
             `.ns-initiator-area { padding: 8px 16px 8px 20px !important; }\n` +
             `.no-print { display: none !important; }\n` +
@@ -940,7 +939,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
             extraHtml += `<table><thead><tr>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table>`;
         }
 
-        const noteText   = this.noteSheet.note ? `<p class="note"><strong>${bn?'নোট:':'Note:'}</strong> ${this.escapeHtml(this.noteSheet.note)}</p>` : '';
+        const noteText   = this.noteSheet.note ? `<div class="note">${this.fixBanglaWordBreaks(this.noteSheet.note)}</div>` : '';
         const closing    = bn ? 'আপনার সদয় অনুমোদনের জন্য উপস্থাপন করা হলো।' : 'Presented for your kind approval.';
         const sigHtml    = this.buildSignaturesHtml();
 
@@ -948,28 +947,27 @@ export abstract class NotesheetPreviewBase implements OnInit {
 <style>
     @page { size: A4 portrait; margin: 15mm; }
     * { box-sizing: border-box; }
-    body { font-family: ${fontFamily}; font-size: 10pt; margin: 0; padding: 0; color: #000; }
+    body { font-family: ${fontFamily}; font-size: 8pt; margin: 0; padding: 0; color: #000; }
     .a4-page { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 20mm; border: 2px solid #000; background: #fff; }
-    .title { font-size: 16pt; text-align: center; font-weight: bold; text-decoration: underline; margin: 0 0 4px; }
-    .title-bn { font-size: 12pt; text-align: center; text-decoration: underline; margin: 0 0 12px; }
+    .title { font-size: 9pt; text-align: center; font-weight: bold; text-decoration: underline; margin: 0 0 4px; }
+    .title-bn { font-size: 9pt; text-align: center; text-decoration: underline; margin: 0 0 12px; }
     .doc-box { border: 1.5px solid #000; }
     .box-header { display: flex; border-bottom: 1.5px solid #000; }
-    .box-subject { flex: 1; padding: 7px 12px; font-weight: bold; text-decoration: underline; font-size: 12pt; }
-    .box-sanglagni { border-left: 1.5px solid #000; padding: 6px 10px; text-align: center; min-width: 55px; font-size: 10pt; }
-    .ref-line { padding: 5px 12px; font-size: 11pt; border-bottom: 1px solid #ccc; }
-    .para { display: flex; gap: 8px; padding: 10px 12px; font-size: 11pt; line-height: 1.85; }
+    .box-subject { flex: 1; padding: 7px 12px; font-weight: bold; text-decoration: underline; font-size: 8pt; }
+    .ref-line { padding: 5px 12px; font-size: 8pt; border-bottom: 1px solid #ccc; }
+    .para { display: flex; gap: 8px; padding: 10px 12px; font-size: 8pt; line-height: 1.85; }
     .para-no { font-weight: 600; min-width: 28px; flex-shrink: 0; }
-    .exbd-info { padding: 6px 12px 10px 40px; font-size: 10pt; }
-    table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 9pt; }
-    th, td { border: 1px solid #000; padding: 5px 7px; text-align: left; }
-    th { font-weight: bold; background: #f5f5f5; font-size: 8pt; text-transform: uppercase; }
-    .note { padding: 6px 12px; font-size: 10pt; border-top: 1px dashed #aaa; }
-    .closing { margin-top: 14px; font-size: 11pt; text-indent: 2em; }
-    .initiator-sig { margin-top: 10px; text-align: left; display: flex; flex-direction: column; align-items: flex-end; padding-right: 12px; }
+    .exbd-info { padding: 6px 12px 10px 40px; font-size: 8pt; }
+    table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 7pt; }
+    th, td { border: 1px solid #000; padding: 5px 7px; text-align: center; }
+    th { font-weight: bold; background: #f5f5f5; font-size: 7pt; text-transform: uppercase; }
+    .note { padding: 6px 12px; font-size: 8pt; border-top: 1px dashed #aaa; }
+    .closing { margin-top: 14px; font-size: 8pt; text-indent: 2em; }
+    .initiator-sig { margin-top: 10px; text-align: left; display: flex; flex-direction: column; align-items: flex-start; margin-left: 80%; font-size: 9pt; }
     .initiator-sig > * { text-align: left; }
     .sig-img { max-width: 160px; max-height: 60px; object-fit: contain; display: block; margin-bottom: 4px; }
-    .approver-section { border-top: 1.5px solid #000; padding: 10px 12px 20px; min-height: 90px; }
-    .approver-role { text-decoration: underline; font-size: 11pt; margin-bottom: 6px; }
+    .approver-section { border-top: 1.5px solid #000; padding: 10px 12px 20px; min-height: 90px; font-size: 9pt; }
+    .approver-role { text-decoration: underline; font-size: 9pt; margin-bottom: 6px; }
     .signatures { display: flex; justify-content: space-between; margin-top: 20px; }
     .sig-block { text-align: center; width: 45%; }
     /* Custom ordered list types (suffix space to avoid extra 0) */
@@ -995,7 +993,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
     <div class="title">${this.escapeHtml(title)}</div>
     <div class="title-bn">মন্তব্য পত্র</div>
     <div class="doc-box">
-        <div class="box-header"><div class="box-subject">${this.escapeHtml(this.noteSheet.subject??'')}</div><div class="box-sanglagni">সংলগ্নী<br>নং</div></div>
+        <div class="box-header"><div class="box-subject">${this.escapeHtml(this.noteSheet.subject??'')}</div></div>
         <div class="ref-line"><strong>${bn?'সূত্রঃ':'Reference:'}</strong> ${this.escapeHtml(this.noteSheet.referenceNumber??'')} &nbsp;&nbsp; <strong>${bn?'তারিখঃ':'Date:'}</strong> ${this.escapeHtml(this.formatDate(this.noteSheet.noteSheetDate))}</div>
         <div class="para"><span class="para-no">১।</span><div>${this.fixBanglaWordBreaks(this.noteSheet.mainText??'')}</div></div>
         ${extraHtml}${noteText}
@@ -1018,7 +1016,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
             const showSig = detail.signatureDataUrl && this.shouldShowSignature(detail.step);
             const sigImg  = showSig && detail.signatureDataUrl ? `<img src="${detail.signatureDataUrl}" class="sig-img" />` : '';
             const dateStr = this.getApproverDate(detail.step);
-            const dateHtml = dateStr ? `<div style="font-size:10pt;text-align:center">${dateStr}</div>` : '';
+            const dateHtml = dateStr ? `<div style="font-size:9pt;text-align:center">${dateStr}</div>` : '';
             return `<div class="approver-section"><div class="approver-role">${this.translateStep(detail.step)}</div>${sigImg}${dateHtml}</div>`;
         };
         let html = '';

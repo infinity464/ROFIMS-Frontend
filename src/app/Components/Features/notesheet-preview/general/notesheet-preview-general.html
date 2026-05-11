@@ -79,8 +79,6 @@
                          *ngIf="getPageCoverHeight(i) > 0"
                          [style.height.px]="getPageCoverHeight(i)">
                     </div>
-                    <!-- Full-height sanglagni vertical divider -->
-                    <div class="ns-page-sanglagni-line"></div>
                 </div>
             </div>
         </div>
@@ -101,7 +99,7 @@
                         <div class="ns-title-bn">মন্তব্য পত্র</div>
                     </div>
 
-                    <div class="ns-org-header" style="text-align:center; padding:8px 16px 4px; font-weight:700; font-size:10pt; line-height:1.5;">
+                    <div class="ns-org-header" style="text-align:center; padding:8px 16px 4px; font-weight:700; font-size:9pt; line-height:1.5;">
                         <div>{{ getOrgHeaderLine1() }}</div>
                         <div style="border-bottom:1.5px solid #000; display:inline-block; padding-bottom:2px;">{{ getOrgHeaderLine2() }}</div>
                     </div>
@@ -187,48 +185,82 @@
                     <div class="ns-title-bn">মন্তব্য পত্র</div>
                 </div>
 
-                <div class="ns-org-header" style="text-align:center; padding:8px 16px 4px; font-weight:700; font-size:10pt; line-height:1.5;">
+                <div class="ns-org-header" style="text-align:center; padding:8px 16px 4px; font-weight:700; font-size:9pt; line-height:1.5;">
                     <div>{{ getOrgHeaderLine1() }}</div>
                     <div style="border-bottom:1.5px solid #000; display:inline-block; padding-bottom:2px;">{{ getOrgHeaderLine2() }}</div>
                 </div>
 
-                <div class="ns-notesheet-no" *ngIf="noteSheet.noteSheetNo" style="padding:4px 16px 2px; font-size:10pt;">
+                <div class="ns-notesheet-no" *ngIf="noteSheet.noteSheetNo" style="padding:4px 16px 2px; font-size:8pt;">
                     {{ noteSheet.noteSheetNo }}
                 </div>
 
                 <!-- ── Subject ── -->
-                <div *ngIf="noteSheet.subject" style="padding:2px 16px 4px; font-size:10pt;">
+                <div *ngIf="noteSheet.subject" style="padding:2px 16px 4px; font-size:8pt;">
                     <strong><u>{{ noteSheet.subject }}</u></strong>
                 </div>
 
                 <!-- ── Reference / Date ── -->
                 <div class="ns-cell-ref">
-                    <ng-container *ngIf="noteSheet.referenceNumber">
+                    <ng-container *ngIf="parsedReferences.length > 0">
                         <span class="ns-ref-key">{{ isEnglish() ? 'Reference:' : 'সূত্রঃ' }}</span>
-                        <div class="ns-ref-content" [innerHTML]="getReferenceNumberSafe()"></div>
+                        <div class="ns-ref-content">
+                            <ng-container *ngIf="parsedReferences.length === 1">
+                                {{ parsedReferences[0] }}
+                            </ng-container>
+                            <ng-container *ngIf="parsedReferences.length > 1">
+                                <div *ngFor="let ref of parsedReferences; let ri = index" class="ns-ref-item">
+                                    <span class="ns-ref-serial">{{ refSerialLabel(ri) }}</span> {{ ref }}
+                                </div>
+                            </ng-container>
+                        </div>
                     </ng-container>
-                    <ng-container *ngIf="!noteSheet.referenceNumber && noteSheet.noteSheetDate">
+                    <ng-container *ngIf="parsedReferences.length === 0 && noteSheet.noteSheetDate">
                         <span class="ns-ref-key">{{ isEnglish() ? 'Date:' : 'তারিখঃ' }}</span>
                         {{ formatDate(noteSheet.noteSheetDate) }}
                     </ng-container>
                 </div>
 
-                <!-- ── Main Text ── -->
+                <!-- ── ১। Main Text ── -->
                 <div class="ns-para">
                     <span class="ns-para-no">{{ serial(1) }}</span>
                     <div class="ns-para-text" [innerHTML]="getMainTextSafe()"></div>
                 </div>
 
-                <!-- ── Note ── -->
-                <div class="ns-note" *ngIf="noteSheet.note">
-                    <strong>{{ isEnglish() ? 'Note:' : 'নোটঃ' }}</strong> {{ noteSheet.note }}
+                <!-- ── ২। Members Table (if any) ── -->
+                <div class="ns-para" *ngIf="previewMembersRows.length > 0 && previewMembersColumns.length > 0">
+                    <span class="ns-para-no">{{ serial(membersSerial) }}</span>
+                    <div class="ns-para-text ns-members-preview-table-wrap">
+                        <table class="ns-members-preview-table">
+                            <thead>
+                                <tr>
+                                    <th *ngFor="let col of previewMembersColumns">{{ col.label }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let row of previewMembersRows; let ri = index">
+                                    <td *ngFor="let col of previewMembersColumns">
+                                        {{ formatMemberCell(row, col) }}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- ── Note (with serial) ── -->
+                <div class="ns-para" *ngIf="noteSheet.note">
+                    <span class="ns-para-no">{{ serial(noteSerial) }}</span>
+                    <div class="ns-para-text" [innerHTML]="getNoteSafe()"></div>
+                </div>
+
+                <!-- ── Last Text (with serial) ── -->
+                <div class="ns-para" *ngIf="noteSheet.paragraphText">
+                    <span class="ns-para-no">{{ serial(lastTextSerial) }}</span>
+                    <div class="ns-para-text" [innerHTML]="getLastTextSafe()"></div>
                 </div>
 
                 <!-- ── Initiator area ── -->
                 <div class="ns-initiator-area">
-                    <div class="ns-closing-text">
-                        {{ isEnglish() ? 'Presented for your kind approval.' : 'আপনার সদয় অনুমোদনের জন্য উপস্থাপন করা হলো।' }}
-                    </div>
                     <div class="ns-initiator-sig" *ngIf="initiatorDetails">
                         <img *ngIf="isInitiatorApproved() && shouldShowSignature(initiatorDetails.step) && initiatorDetails.signatureDataUrl"
                              [src]="initiatorDetails.signatureDataUrl" class="ns-sig-img" alt="Signature" />
@@ -252,7 +284,7 @@
                     </div>
                     <div class="ns-approver-body" [class.ns-approver-body--left]="i >= approversDetails.length - 2">
                         <div class="ns-approver-left">
-                            <span class="ns-para-no">{{ serial(i + 2) }}</span>
+                            <span class="ns-para-no">{{ serial(approverStartSerial + i) }}</span>
                             <span class="ns-approver-remark" *ngIf="getApproverRemark(approver.step)">{{ getApproverRemark(approver.step) }}</span>
                         </div>
                         <div class="ns-approver-sig-area">
@@ -264,12 +296,6 @@
                 </div>
 
             </div>
-
-            <div class="ns-sanglagni-col">
-                <ng-container *ngIf="isEnglish()">Encl.<br>No.</ng-container>
-                <ng-container *ngIf="!isEnglish()">সংলগ্নী<br>নং</ng-container>
-            </div>
-
         </div>
       </ng-container>
     </ng-template>

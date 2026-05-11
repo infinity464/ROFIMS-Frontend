@@ -102,6 +102,8 @@ export const AVAILABLE_MEMBER_COLUMNS: MemberColumnDef[] = [
     { key: 'permanentDistrictTypeNameBN', label: 'Permanent District (BN)', group: 'basic' },
     { key: 'prefix', label: 'Prefix (EN)', group: 'basic' },
     { key: 'prefixBN', label: 'Prefix (BN)', group: 'basic' },
+    { key: 'prefixWithServiceId', label: 'Prefix with Service ID (EN)', group: 'basic' },
+    { key: 'prefixWithServiceIdBN', label: 'Prefix with Service ID (BN)', group: 'basic' },
     { key: 'tradeRemarks', label: 'Trade Remarks', group: 'basic' },
     // Personal Info
     { key: 'dateOfBirth', label: 'Date of Birth', group: 'personal' },
@@ -799,9 +801,17 @@ export class NotesheetGenerateComponent implements OnInit {
                             const columns = Array.isArray(firstParsed.columns) ? firstParsed.columns : [];
                             const members: MemberRow[] = rows.map(r => {
                                 const parsed = JSON.parse(r.informationJson || r.InformationJson);
+                                const vals = parsed.values || {};
+                                // Recompute derived fields if missing
+                                if (!vals['prefixWithServiceId'] && (vals['prefix'] || vals['serviceId'])) {
+                                    vals['prefixWithServiceId'] = ((vals['prefix'] ?? '') + ' ' + (vals['serviceId'] ?? '')).trim();
+                                }
+                                if (!vals['prefixWithServiceIdBN'] && (vals['prefixBN'] || vals['serviceId'])) {
+                                    vals['prefixWithServiceIdBN'] = ((vals['prefixBN'] ?? '') + ' ' + (vals['serviceId'] ?? '')).trim();
+                                }
                                 return {
                                     employeeId: r.employeeId ?? r.EmployeeId,
-                                    values: parsed.values || {}
+                                    values: vals
                                 };
                             });
                             this.membersData = { columns, members };
@@ -895,6 +905,8 @@ export class NotesheetGenerateComponent implements OnInit {
                 values['permanentDistrictTypeNameBN'] = profile.permanentDistrictTypeNameBN ?? '';
                 values['prefix'] = profile.prefix ?? '';
                 values['prefixBN'] = profile.prefixBN ?? '';
+                values['prefixWithServiceId'] = ((profile.prefix ?? '') + ' ' + (profile.serviceId ?? '')).trim();
+                values['prefixWithServiceIdBN'] = ((profile.prefixBN ?? '') + ' ' + (profile.serviceId ?? '')).trim();
                 values['tradeRemarks'] = profile.tradeRemarks ?? '';
 
                 // Personal Info fields (EN + BN)

@@ -171,6 +171,7 @@
               [outlined]="true"
               (onClick)="openAddColumnDialog()">
             </p-button>
+            <!-- Merge Columns (disabled for now)
             <p-button
               label="Merge Columns"
               icon="pi pi-link"
@@ -180,6 +181,7 @@
               [disabled]="membersData.columns.length < 2"
               (onClick)="openMergeColumnDialog()">
             </p-button>
+            -->
           </div>
 
           <!-- Members table (all columns dynamic) -->
@@ -188,7 +190,6 @@
               <table class="members-table">
                 <thead>
                   <tr>
-                    <th class="members-table__sl">SL</th>
                     @for (col of membersData.columns; track col.key; let ci = $index) {
                       <th
                         draggable="true"
@@ -229,7 +230,6 @@
                 <tbody>
                   @for (member of membersData.members; track member.employeeId; let i = $index) {
                     <tr>
-                      <td class="members-table__sl">{{ i + 1 }}</td>
                       @for (col of membersData.columns; track col.key) {
                         <td
                           [class.members-table__custom-cell]="isCustomColumn(col)"
@@ -428,7 +428,8 @@
       </ng-template>
     </p-dialog>
 
-    <!-- Merge Columns Dialog -->
+    <!-- Merge Columns Dialog (disabled for now) -->
+    <!--
     <p-dialog
       header="Merge Columns"
       [(visible)]="showMergeColumnDialog"
@@ -512,5 +513,6 @@
         </p-button>
       </ng-template>
     </p-dialog>
+    -->
   </div>
 </p-fluid>

@@ -157,12 +157,12 @@
     padding: 8px 16px 4px;
 }
 .ns-title-en {
-    font-size: 11pt;
+    font-size: 9pt;
     font-weight: bold;
     letter-spacing: 2px;
 }
 .ns-title-bn {
-    font-size: 11pt;
+    font-size: 9pt;
     margin-top: 2px;
 }
 
@@ -198,7 +198,7 @@
     flex-direction: column;
 }
 
-/* Right column: সংলগ্নী নং — full height border */
+/* Right column: সংলগ্নী নং — full height border (kept for exbd/posting) */
 .ns-sanglagni-col {
     border-left: 1.5px solid #000;
     width: 60px;
@@ -207,6 +207,29 @@
     text-align: center;
     padding: 6px 12px;
     line-height: 1.4;
+}
+
+/* ── Members preview table inside ns-para ─── */
+.ns-members-preview-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+}
+.ns-members-preview-table {
+    width: calc(100% - 8px);
+    border-collapse: collapse;
+    font-size: 7pt;
+    margin: 4px 0 4px 8px;
+    th, td {
+        border: 1px solid #000;
+        padding: 4px 6px;
+        text-align: center;
+    }
+    th {
+        font-weight: 600;
+        background: #f5f5f5;
+        font-size: 7pt;
+        text-transform: uppercase;
+    }
 }
 
 /* Header rows (subject + reference) */
@@ -248,7 +271,7 @@
 
 .ns-cell-ref {
     padding: 5px 16px 5px 20px;
-    font-size: 10pt;
+    font-size: 8pt;
     display: flex;
     align-items: flex-start;
     flex-wrap: wrap;
@@ -262,6 +285,13 @@
 .ns-ref-key {
     font-weight: 700;
     margin-right: 4px;
+}
+.ns-ref-item {
+    padding-left: 8px;
+    .ns-ref-serial {
+        font-weight: 600;
+        margin-right: 4px;
+    }
 }
 
 /* Body paragraph (serial + text) */
@@ -397,8 +427,9 @@
     text-indent: 2em;
 }
 .ns-initiator-sig {
-    align-self: flex-end;
+    align-self: flex-start;
     text-align: left;
+    margin-left: 82%;
 }
 .ns-preparedby-sig {
     align-self: flex-start;
