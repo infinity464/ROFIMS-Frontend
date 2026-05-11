@@ -1,7 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
@@ -91,6 +91,7 @@ export class MovementInfoComponent implements OnInit {
     private confirmationService = inject(ConfirmationService);
     private userMenuService = inject(UserMenuService);
     private router = inject(Router);
+    private route = inject(ActivatedRoute);
 
     canInsert = true;
     canUpdate = true;
@@ -162,6 +163,160 @@ export class MovementInfoComponent implements OnInit {
 
         this.initForm();
         this.loadDropdowns();
+
+        // Edit mode: ?id=N in the URL → load that MovementInfo and patch the form.
+        const idParam = this.route.snapshot.queryParamMap.get('id');
+        const id = idParam ? Number(idParam) : NaN;
+        if (Number.isFinite(id) && id > 0) {
+            this.loadExistingMovement(id);
+        }
+    }
+
+    /** Load an existing MovementInfo row by id and patch every part of the form
+     *  (scalar fields, dates, selected employees, takeover person, letter recipients,
+     *  final approvers, destined-unit toggle). */
+    private loadExistingMovement(id: number): void {
+        this.editingId = id;
+        this.movementService.getById(id).subscribe({
+            next: (data) => {
+                const row: any = Array.isArray(data) ? data[0] : data;
+                if (!row || !row.movementId) {
+                    this.messageService.add({
+                        severity: 'warn',
+                        summary: 'Not found',
+                        detail: `Movement #${id} could not be loaded.`
+                    });
+                    this.editingId = null;
+                    return;
+                }
+                this.patchFromMovement(row);
+            },
+            error: (err) => {
+                console.error('Failed to load movement for edit', err);
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: err?.error?.message || 'Failed to load movement for edit.'
+                });
+                this.editingId = null;
+            }
+        });
+    }
+
+    private patchFromMovement(row: any): void {
+        // Choose which destined unit is in use based on whichever id is populated.
+        const target: 'mother' | 'rab' = row.destinedRABUnitId != null ? 'rab' : 'mother';
+
+        this.form.patchValue({
+            movementType: row.movementType ?? null,
+            moveOrderType: row.moveOrderType ?? null,
+            movementReasonId: row.movementReasonId ?? null,
+            currentUnitId: row.currentUnitId ?? null,
+            destinedUnitTarget: target,
+            destinedMotherUnitId: row.destinedMotherUnitId ?? null,
+            destinedRABUnitId: row.destinedRABUnitId ?? null,
+            dateOfRelease: this.toDate(row.dateOfRelease),
+            dateOfReduce: this.toDate(row.dateOfReduce),
+            takeoverDate: this.toDate(row.takeoverDate),
+            handoverDate: this.toDate(row.handoverDate),
+            isJoiningLeave: !!row.isJoiningLeave,
+            joiningLeaveFrom: this.toDate(row.joiningLeaveFrom),
+            joiningLeaveTo: this.toDate(row.joiningLeaveTo),
+            auth: row.auth ?? null,
+            detailsInformation: row.detailsInformation ?? null,
+            remarks: row.remarks ?? null,
+            finalApproverIds: this.parseIntJsonArray(row.finalApproverIds),
+            status: row.status ?? true
+        });
+
+        // Letter Recipients are stored as JSON array of strings.
+        this.letterRecipientsList = this.parseStringJsonArray(row.letterRecipients);
+
+        // Employees: rehydrate each row from EmployeeSearchInfo + EmpModel.
+        const empIds = this.parseIntJsonArray(row.employeeIds);
+        this.selectedEmployees = [];
+        for (const empId of empIds) {
+            this.hydrateEmployeeRow(empId);
+        }
+
+        // Takeover person if any.
+        if (row.takeoverPersonEmpId) {
+            this.hydrateTakeoverPerson(row.takeoverPersonEmpId);
+        }
+    }
+
+    private hydrateEmployeeRow(empId: number): void {
+        this.empService.getEmployeeSearchInfo(empId).subscribe({
+            next: (info: any) => {
+                if (!info) return;
+                if (this.selectedEmployees.some((e) => e.employeeID === empId)) return;
+                this.selectedEmployees = [
+                    ...this.selectedEmployees,
+                    {
+                        employeeID: empId,
+                        rabid: info.rabID ?? info.RABID ?? '',
+                        serviceId: info.serviceId ?? info.ServiceId ?? '',
+                        fullNameEN: info.fullNameEN ?? info.FullNameEN ?? '',
+                        rankDisplay: info.rank ?? info.Rank,
+                        corpsDisplay: info.corps ?? info.Corps,
+                        tradeDisplay: info.trade ?? info.Trade,
+                        motherOrganizationDisplay: info.motherOrganization ?? info.MotherOrganization,
+                        memberTypeDisplay: info.memberType ?? info.MemberType,
+                        unit: info.lastMotherUnitId ?? info.LastMotherUnitId ?? null
+                    }
+                ];
+                this.syncCurrentUnitFromEmployees();
+            }
+        });
+    }
+
+    private hydrateTakeoverPerson(empId: number): void {
+        this.empService.getEmployeeSearchInfo(empId).subscribe({
+            next: (info: any) => {
+                if (!info) return;
+                this.takeoverPerson = {
+                    employeeID: empId,
+                    rabid: info.rabID ?? info.RABID ?? '',
+                    serviceId: info.serviceId ?? info.ServiceId ?? '',
+                    fullNameEN: info.fullNameEN ?? info.FullNameEN ?? '',
+                    rankDisplay: info.rank ?? info.Rank,
+                    corpsDisplay: info.corps ?? info.Corps,
+                    tradeDisplay: info.trade ?? info.Trade,
+                    motherOrganizationDisplay: info.motherOrganization ?? info.MotherOrganization,
+                    memberTypeDisplay: info.memberType ?? info.MemberType,
+                    unit: info.lastMotherUnitId ?? info.LastMotherUnitId ?? null
+                } as EmployeeBasicInfo;
+            }
+        });
+    }
+
+    private parseIntJsonArray(json: string | null | undefined): number[] {
+        if (!json) return [];
+        try {
+            const arr = JSON.parse(json);
+            return Array.isArray(arr) ? arr.filter((n) => Number.isInteger(n)) : [];
+        } catch {
+            return [];
+        }
+    }
+
+    private parseStringJsonArray(json: string | null | undefined): string[] {
+        if (!json) return [];
+        try {
+            const arr = JSON.parse(json);
+            return Array.isArray(arr)
+                ? arr.map((s) => String(s ?? '').trim()).filter((s) => s.length > 0)
+                : [];
+        } catch {
+            return [];
+        }
+    }
+
+    private toDate(value: string | null | undefined): Date | null {
+        if (!value) return null;
+        // ISO yyyy-MM-dd or full ISO datetime — Date constructor handles both
+        const d = new Date(value);
+        return isNaN(d.getTime()) ? null : d;
     }
 
     private initForm() {

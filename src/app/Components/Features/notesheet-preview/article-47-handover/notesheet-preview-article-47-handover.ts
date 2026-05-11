@@ -300,6 +300,11 @@ export class NotesheetPreviewArticle47HandoverComponent implements OnInit {
         window.print();
     }
 
+    onEdit(): void {
+        if (!this.movement?.movementId) return;
+        this.router.navigate(['/movement-info'], { queryParams: { id: this.movement.movementId } });
+    }
+
     onBack(): void {
         this.router.navigate(['/movement-list']);
     }
