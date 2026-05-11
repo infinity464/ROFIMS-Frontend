@@ -291,6 +291,29 @@
         </div>
     </section>
 
+    <!-- ── Final Approvers ───────────────────────────────────────────── -->
+    <section class="mv-card">
+        <header class="mv-card-header">
+            <i class="pi pi-check-square mv-card-icon"></i>
+            <span class="mv-card-title">Final Approvers</span>
+        </header>
+
+        <div class="mv-field">
+            <label>Approvers</label>
+            <p-multiselect
+                formControlName="finalApproverIds"
+                [options]="approverOptions"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Select one or more final approvers (optional)"
+                styleClass="w-full"
+                [filter]="true"
+                display="chip"
+                appendTo="body"></p-multiselect>
+            <small class="mv-hint">Optional. Only employees with an Identity user account are shown.</small>
+        </div>
+    </section>
+
     <!-- ── Footer actions ───────────────────────────────────────────── -->
     <div class="flex justify-end gap-2 mt-3">
         <button type="button" pButton label="Reset" severity="secondary" [outlined]="true"

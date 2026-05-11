@@ -19,6 +19,7 @@ import { NoteSheetNumberConfigModel } from '../models/notesheet-number-config';
 import { NoteSheetApproverConfigModel } from '../models/notesheet-approver-config';
 import { RABUnitAORModel, ResultViewModel } from '../models/rab-unit-aor';
 import { PostingOrderNumberConfigModel } from '../models/posting-order-number-config';
+import { MovementLetterNumberConfigModel } from '../models/movement-letter-number-config';
 
 export interface AuthorizedCountItem {
     codeId: number;
@@ -44,6 +45,7 @@ export class MasterBasicSetupService {
     private apiUrlNoteSheetApproverConfig = `${environment.apis.core}/NoteSheetApproverConfig`;
     private apiUrlRABUnitAOR = `${environment.apis.core}/RABUnitAOR`;
     private apiUrlPostingOrderNumberConfig = `${environment.apis.core}/PostingOrderNumberConfig`;
+    private apiUrlMovementLetterNumberConfig = `${environment.apis.core}/MovementLetterNumberConfig`;
 
 
     getAllByType(codeType: string): Observable<CommonCode[]> {
@@ -392,5 +394,27 @@ export class MasterBasicSetupService {
 
     deletePostingOrderNumberConfig(id: number): Observable<any> {
         return this.http.delete(`${this.apiUrlPostingOrderNumberConfig}/DeleteAsyn/${id}`);
+    }
+
+    // MovementLetterNumberConfig CRUD
+
+    getAllMovementLetterNumberConfig(): Observable<MovementLetterNumberConfigModel[]> {
+        return this.http.get<MovementLetterNumberConfigModel[]>(`${this.apiUrlMovementLetterNumberConfig}/GetAll`);
+    }
+
+    getMovementLetterNumberConfigById(id: number): Observable<MovementLetterNumberConfigModel> {
+        return this.http.get<MovementLetterNumberConfigModel>(`${this.apiUrlMovementLetterNumberConfig}/GetFilteredByKeysAsyn/${id}`);
+    }
+
+    createMovementLetterNumberConfig(model: MovementLetterNumberConfigModel): Observable<any> {
+        return this.http.post(`${this.apiUrlMovementLetterNumberConfig}/SaveAsyn`, model);
+    }
+
+    updateMovementLetterNumberConfig(model: MovementLetterNumberConfigModel): Observable<any> {
+        return this.http.post(`${this.apiUrlMovementLetterNumberConfig}/UpdateAsyn`, model);
+    }
+
+    deleteMovementLetterNumberConfig(id: number): Observable<any> {
+        return this.http.delete(`${this.apiUrlMovementLetterNumberConfig}/DeleteAsyn/${id}`);
     }
 }

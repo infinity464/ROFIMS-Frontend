@@ -18,6 +18,7 @@ import { Upazila } from '@/Components/basic-setup/upazila/upazila';
 import { BloodGroup } from '@/Components/basic-setup/blood-group/blood-group';
 import { MovementReason } from '@/Components/basic-setup/movement-reason/movement-reason';
 import { MovementInfoComponent } from '@/Components/Features/movement-info/movement-info';
+import { MovementLetterNumberConfigComponent } from '@/Components/basic-setup/movement-letter-number-config/movement-letter-number-config';
 import { Relationship } from '@/Components/basic-setup/relationship/relationship';
 import { MaritalStatus } from '@/Components/basic-setup/marital-status/marital-status';
 import { Occupation } from '@/Components/basic-setup/occupation/occupation';
@@ -191,6 +192,7 @@ export const appRoutes: Routes = [
             { path: 'basic-setup/upazila', component: Upazila },
             { path: 'basic-setup/blood-group', component: BloodGroup },
             { path: 'basic-setup/movement-reason', component: MovementReason },
+            { path: 'basic-setup/movement-letter-number-config', component: MovementLetterNumberConfigComponent },
             { path: 'movement-info', component: MovementInfoComponent },
             { path: 'basic-setup/relationship', component: Relationship },
             { path: 'basic-setup/marital-status', component: MaritalStatus },

@@ -12,6 +12,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { AvatarModule } from 'primeng/avatar';
 import { DialogModule } from 'primeng/dialog';
+import { MultiSelectModule } from 'primeng/multiselect';
 import { Toast } from 'primeng/toast';
 import { ConfirmDialog } from 'primeng/confirmdialog';
 import { MessageService, ConfirmationService } from 'primeng/api';
@@ -25,12 +26,17 @@ import { MasterBasicSetupService } from '@/Components/basic-setup/shared/service
 import { OrganizationService } from '@/Components/basic-setup/organization-setup/services/organization-service';
 import { MovementInfoService } from '@/services/movement-info.service';
 import { EmpService } from '@/services/emp-service';
+import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
 import { SharedService } from '@/shared/services/shared-service';
 import { UserMenuService } from '@/services/user-menu.service';
 
 import { MovementInfoModel } from '@/models/movement-info.model';
 import { CommonCodeModel } from '@/models/common-code-model';
-import { MovementType, MovementTypeOptions, MoveOrderType, MoveOrderTypeOptions } from '@/models/enums';
+import {
+    MovementType, MovementTypeOptions,
+    MoveOrderType, MoveOrderTypeOptions,
+    Article47LetterRecipientOptions
+} from '@/models/enums';
 
 interface MovementEmployeeRow {
     employeeID: number;
@@ -61,6 +67,7 @@ interface MovementEmployeeRow {
         SelectButtonModule,
         AvatarModule,
         DialogModule,
+        MultiSelectModule,
         Toast,
         ConfirmDialog,
         EmployeeSearchComponent,
@@ -78,6 +85,7 @@ export class MovementInfoComponent implements OnInit {
     private masterBasicSetup = inject(MasterBasicSetupService);
     private organizationService = inject(OrganizationService);
     private empService = inject(EmpService);
+    private identityMappingService = inject(IdentityUserMappingService);
     private sharedService = inject(SharedService);
     private messageService = inject(MessageService);
     private confirmationService = inject(ConfirmationService);
@@ -107,6 +115,8 @@ export class MovementInfoComponent implements OnInit {
     movementReasonOptions: { label: string; value: number }[] = [];
     motherUnitOptions: { label: string; value: number }[] = [];
     rabUnitOptions: { label: string; value: number }[] = [];
+    approverOptions: { label: string; value: number }[] = [];
+    letterRecipientOptions = Article47LetterRecipientOptions;
     joiningLeaveOptions = [
         { label: 'Yes', value: true },
         { label: 'No', value: false }
@@ -170,6 +180,8 @@ export class MovementInfoComponent implements OnInit {
             auth: [null],
             detailsInformation: [null],
             remarks: [null],
+            finalApproverIds: [[] as number[]],
+            letterRecipients: [[] as number[]],
             status: [true]
         });
 
@@ -221,6 +233,30 @@ export class MovementInfoComponent implements OnInit {
                     label: r.codeValueEN,
                     value: r.codeId
                 }));
+            }
+        });
+
+        // Final Approver options = employees who have an Identity user account
+        // (mirrors the pattern in /leave-application/apply so the chosen approver
+        // can actually log in and act on the movement).
+        this.identityMappingService.getMappings().subscribe({
+            next: (list) => {
+                const arr = Array.isArray(list) ? list : [];
+                this.approverOptions = arr
+                    .map((m: any) => {
+                        const empId = m.employeeId ?? m.EmployeeId;
+                        if (!empId || empId <= 0) return null;
+                        const name = m.employeeName ?? m.EmployeeName ?? '';
+                        const rabId = m.rabID ?? m.RABID ?? '';
+                        const serviceId = m.serviceId ?? m.ServiceId ?? '';
+                        const parts = [name, rabId ? `RAB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : ''].filter(Boolean);
+                        return {
+                            label: parts.join(' | ') || `Employee #${empId}`,
+                            value: empId as number
+                        };
+                    })
+                    .filter((o): o is { label: string; value: number } => o !== null)
+                    .sort((a, b) => a.label.localeCompare(b.label));
             }
         });
     }
@@ -378,6 +414,10 @@ export class MovementInfoComponent implements OnInit {
     get showTakeover(): boolean {
         return this.isPermanent && this.isArticle47Takeover;
     }
+    /** Show the Letter Recipients picker for any Article 47 variant. */
+    get showLetterRecipients(): boolean {
+        return this.isArticle47Handover || this.isArticle47Takeover;
+    }
     get showDateOfReduce(): boolean {
         return this.isPermanent;
     }
@@ -398,6 +438,9 @@ export class MovementInfoComponent implements OnInit {
         if (!this.showTakeover) {
             this.form.patchValue({ takeoverDate: null });
             this.takeoverPerson = null;
+        }
+        if (!this.showLetterRecipients) {
+            this.form.patchValue({ letterRecipients: [] });
         }
     }
     private onIsJoiningLeaveChange(v: boolean) {
@@ -434,13 +477,19 @@ export class MovementInfoComponent implements OnInit {
             return;
         }
 
+        const finalApproverIds: number[] = (this.form.get('finalApproverIds')?.value as number[] | null) ?? [];
+
         const v = this.form.value;
         const currentUser = this.sharedService.getCurrentUser();
         const now = this.sharedService.getCurrentDateTime();
 
         const payload: MovementInfoModel = {
             movementId: this.editingId ?? 0,
+            letterNo: null,
+            letterDate: null,
             employeeIds: JSON.stringify(this.selectedEmployees.map((e) => e.employeeID)),
+            finalApproverIds: finalApproverIds.length > 0 ? JSON.stringify(finalApproverIds) : null,
+            letterRecipients: this.serialiseLetterRecipients(v.letterRecipients),
             movementType: v.movementType,
             moveOrderType: v.moveOrderType,
             movementReasonId: v.movementReasonId ?? null,
@@ -514,8 +563,18 @@ export class MovementInfoComponent implements OnInit {
             auth: null,
             detailsInformation: null,
             remarks: null,
+            finalApproverIds: [],
             status: true
         });
+    }
+
+    /** Serialise the letter-recipient picks as a JSON array sorted by enum int
+     * so the saved order matches the printed letter (1, 2, 3, 4, 7, 8). */
+    private serialiseLetterRecipients(value: number[] | null | undefined): string | null {
+        if (!this.showLetterRecipients) return null;
+        const ids = Array.isArray(value) ? value.filter((n) => Number.isInteger(n)) : [];
+        if (ids.length === 0) return null;
+        return JSON.stringify([...ids].sort((a, b) => a - b));
     }
 
     private toIsoDate(d: Date | string | null | undefined): string | null {

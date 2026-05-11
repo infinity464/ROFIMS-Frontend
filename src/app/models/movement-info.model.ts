@@ -2,8 +2,16 @@ import { MovementType, MoveOrderType } from './enums';
 
 export interface MovementInfoModel {
     movementId: number;
+    /** Generated letter number from MovementLetterNumberConfig (per MoveOrderType). */
+    letterNo: string | null;
+    /** ISO date string for the letter (yyyy-MM-dd). */
+    letterDate: string | null;
     /** JSON-serialised array of EmployeeIds (one or many) */
     employeeIds: string;
+    /** JSON-serialised array of Final Approver EmployeeIds (optional) */
+    finalApproverIds: string | null;
+    /** JSON-serialised array of Article47LetterRecipient enum ints (Article 47 only) */
+    letterRecipients: string | null;
     movementType: MovementType | number;
     moveOrderType: MoveOrderType | number;
     movementReasonId: number | null;

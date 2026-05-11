@@ -369,3 +369,24 @@ export const MoveOrderTypeOptions = [
     { label: 'Article 47 (Takeover)', value: MoveOrderType.Article47Takeover }
 ];
 
+// MovementInfo: Article 47 letter recipients (applies to both Handover & Takeover variants only).
+// sortOrder is the position among stored recipients only (1..6). The dynamic
+// entries (Adhinayak, RAB-<unit>; FC (Army) Pay-1, Dhaka Cantonment) are injected
+// at print time after this list, not numbered here.
+export enum Article47LetterRecipient {
+    InspectorGeneralBP = 1,
+    DirectorGeneralRAB = 2,
+    DIGAdminBP = 3,
+    ChiefAccountOfficerMOHA = 4,
+    PersonalCopy = 5,
+    OfficeCopy = 6
+}
+export const Article47LetterRecipientOptions = [
+    { label: 'ইন্সপেক্টর জেনারেল, বাংলাদেশ পুলিশ, পুলিশ হেডকোয়ার্টার্স, ঢাকা।',                value: Article47LetterRecipient.InspectorGeneralBP,      sortOrder: 1 },
+    { label: 'মহাপরিচালক, র‍্যাব ফোর্সেস হেডকোয়ার্টার্স, কুর্মিটোলা, ঢাকা।',                  value: Article47LetterRecipient.DirectorGeneralRAB,      sortOrder: 2 },
+    { label: 'ডিআইজি (প্রশাসন), বাংলাদেশ পুলিশ, পুলিশ হেডকোয়ার্টার্স, ঢাকা।',                value: Article47LetterRecipient.DIGAdminBP,              sortOrder: 3 },
+    { label: 'প্রধান হিসাব রক্ষক কর্মকর্তা, স্বরাষ্ট্র মন্ত্রণালয়, সেগুন বাগিচা, ঢাকা।',         value: Article47LetterRecipient.ChiefAccountOfficerMOHA, sortOrder: 4 },
+    { label: 'ব্যক্তিগত কপি।',                                                              value: Article47LetterRecipient.PersonalCopy,            sortOrder: 5 },
+    { label: 'অফিস কপি।',                                                                  value: Article47LetterRecipient.OfficeCopy,              sortOrder: 6 }
+];
+
