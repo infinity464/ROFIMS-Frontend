@@ -55,6 +55,13 @@
     gap: 2rem;
 }
 
+/* Force normal weight on rich-text content inside Article 47 previews so any
+   bold formatting baked into Auth / Remarks Quill HTML doesn't render bold. */
+.mv-rich,
+.mv-rich * {
+    font-weight: normal !important;
+}
+
 .a4-paper {
     width: 215.9mm;
     min-height: 355.6mm;

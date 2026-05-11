@@ -33,14 +33,22 @@
         <div class="a4-paper">
 
             <!-- Org header — matches notesheet-preview/posting's .ns-org-header style. -->
-            <div style="text-align:center; font-size:9pt; line-height:1.5; margin-bottom:8pt;">
-                <div>বিমান বাহিনী ফরম নং-২৪০৩</div>
+            <div style="font-size:9pt; line-height:1.5; margin-bottom:8pt;">
+                বাংলাদেশ ফরম নং-২৪০৩
             </div>
 
             <!-- Memo number + Date row -->
             <div style="display:flex; justify-content:space-between; margin-top:18pt; font-size:10pt;">
                 <div>স্মারক নং-র‍্যাব হেঃ কোঃ/প্রশাঃ/{{ memoNoBn }}।</div>
                 <div>{{ letterDateBn }}</div>
+            </div>
+
+            <!-- Reference line — sourced from MovementInfo.auth. Comes BEFORE প্রতি in the Takeover variant. -->
+            <div style="margin-top:14pt; font-size:10pt;">
+                <div style="display:flex; gap:0; align-items:flex-start;">
+                    <div style="min-width:50pt;">সূত্র:</div>
+                    <div class="mv-rich" [innerHTML]="movement.auth || '---'"></div>
+                </div>
             </div>
 
             <!-- প্রতি (To) block -->
@@ -58,14 +66,6 @@
                 </table>
             </div>
 
-            <!-- Reference line — sourced from MovementInfo.auth (rich text). -->
-            <div style="margin-top:34pt; font-size:10pt;">
-                <div style="display:flex; gap:0; align-items:flex-start;">
-                    <div style="min-width:50pt;">সূত্র:</div>
-                    <div class="mv-rich" [innerHTML]="movement.auth || '---'"></div>
-                </div>
-            </div>
-
             <!-- Body — sourced from MovementInfo.remarks (rich text) -->
             <div class="mv-rich" style="margin-top:18pt; font-size:10pt;"
                  [innerHTML]="movement.remarks || ''"></div>
@@ -75,8 +75,9 @@
                 অগ্রগামী করা হইল।
             </div>
 
-            <!-- Signature block (right-aligned) — Takeover variant title -->
-            <div style="margin-top:12pt; font-size:10pt; text-align:right;">
+            <!-- Signature block (right-aligned) on the next line — Takeover variant title.
+                 margin-top:30pt keeps a clear gap between the static line and the signature stack. -->
+            <div style="margin-top:30pt; font-size:10pt; text-align:right;">
                 <div style="display:inline-block; text-align:center;">
                     <div>গ্রহণকারী কর্মকর্তা</div>
                     <div style="margin-top:36pt; border-top:1px solid #000; min-width:220pt;"></div>
