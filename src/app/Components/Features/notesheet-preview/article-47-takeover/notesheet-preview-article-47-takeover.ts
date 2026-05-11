@@ -58,8 +58,6 @@ export class NotesheetPreviewArticle47TakeoverComponent implements OnInit {
     memoNoBn = '---';
     /** Date shown top-right (Bangla, derived from LetterDate or today). */
     letterDateBn = '';
-    /** Reference line under the org header. */
-    referenceLineBn = '---';
 
     ngOnInit(): void {
         this.loadRankLabels();
@@ -283,11 +281,6 @@ export class NotesheetPreviewArticle47TakeoverComponent implements OnInit {
 
         const d = this.movement?.letterDate ? new Date(this.movement.letterDate) : new Date();
         this.letterDateBn = `তারিখঃ ${this.formatBnDate(d)}।`;
-
-        // Reference line stays as a sample placeholder unless we wire a separate
-        // "reference letter" field on MovementInfo; the printed letter sources this
-        // from the originating order which lives outside this record today.
-        this.referenceLineBn = 'বিমান বাহিনী সদর দপ্তর, বিমান সচিব শাখা স্মারক নং --- ।';
     }
 
     /** Returns "DD MonthBn YYYY" in Bangla numerals. */
@@ -325,16 +318,13 @@ export class NotesheetPreviewArticle47TakeoverComponent implements OnInit {
         }
     }
 
-    /** Compute Bangla "takeover" line: "অদ্য DD Month YYYY তারিখে (পূর্বাহ্ণে) ..." */
-    get takeoverSentence(): string {
-        const d = this.movement?.takeoverDate
-            ? new Date(this.movement.takeoverDate)
-            : (this.movement?.letterDate ? new Date(this.movement.letterDate) : new Date());
-        return `বেসামরিক হিসাব পদ্ধতির ৪৭ নং অনুচ্ছেদের বিধি অনুযায়ী আমি নিম্নস্বাক্ষরকারী এই মর্মে বিবরণ দিতেছি যে, অদ্য ${this.formatBnDate(d)} তারিখে (পূর্বাহ্ণে) র‍্যাব ফোর্সেস সদর দপ্তর, কুর্মিটোলা, ঢাকায় উপপরিচালক হিসেবে কার্যভার গ্রহণ করিলাম।`;
-    }
-
     onPrint(): void {
         window.print();
+    }
+
+    onEdit(): void {
+        if (!this.movement?.movementId) return;
+        this.router.navigate(['/movement-info'], { queryParams: { id: this.movement.movementId } });
     }
 
     onBack(): void {

@@ -6,6 +6,9 @@
                 severity="secondary" [outlined]="true" (click)="onBack()"></button>
     </div>
     <div class="preview-status-actions">
+        <button type="button" pButton label="Edit" icon="pi pi-pencil"
+                severity="warn" [outlined]="true"
+                (click)="onEdit()" [disabled]="loading || !!error || !movement"></button>
         <button type="button" pButton label="Print" icon="pi pi-print"
                 [outlined]="true" (click)="onPrint()" [disabled]="loading || !!error"></button>
     </div>
@@ -29,33 +32,20 @@
     <div class="a4-paper-container">
         <div class="a4-paper">
 
-            <!-- Sample title (matches the SS top label) -->
-            <div style="font-weight:700; font-size:11pt; margin-bottom:10pt;">
-                TAKEOVER CHARGE (ARTICLE 47) – SAMPLE
-            </div>
-
             <!-- Org header — matches notesheet-preview/posting's .ns-org-header style. -->
-            <div style="text-align:center; font-weight:700; font-size:9pt; line-height:1.5; margin-bottom:8pt;">
+            <div style="text-align:center; font-size:9pt; line-height:1.5; margin-bottom:8pt;">
                 <div>বিমান বাহিনী ফরম নং-২৪০৩</div>
             </div>
 
             <!-- Memo number + Date row -->
             <div style="display:flex; justify-content:space-between; margin-top:18pt; font-size:10pt;">
-                <div><strong>স্মারক নং-র‍্যাব হেঃ কোঃ/প্রশাঃ/{{ memoNoBn }}।</strong></div>
-                <div><strong>{{ letterDateBn }}</strong></div>
-            </div>
-
-            <!-- Reference line — min-width:50pt aligns the body with the recipient numbers. -->
-            <div style="margin-top:16pt; font-size:10pt;">
-                <div style="display:flex; gap:0; align-items:flex-start;">
-                    <div style="font-weight:700; min-width:50pt;">সূত্র:</div>
-                    <div>{{ referenceLineBn }}</div>
-                </div>
+                <div>স্মারক নং-র‍্যাব হেঃ কোঃ/প্রশাঃ/{{ memoNoBn }}।</div>
+                <div>{{ letterDateBn }}</div>
             </div>
 
             <!-- প্রতি (To) block -->
             <div style="margin-top:14pt; font-size:10pt;">
-                <div style="font-weight:700;">প্রতি,</div>
+                <div>প্রতি,</div>
                 <table style="margin-left:50pt; margin-top:4pt; border-collapse:collapse;">
                     @for (line of recipientLines; track $index) {
                         <tr>
@@ -68,27 +58,29 @@
                 </table>
             </div>
 
-            <!-- Salutation — 2-line gap after the প্রতি block. -->
+            <!-- Reference line — sourced from MovementInfo.auth (rich text). -->
             <div style="margin-top:34pt; font-size:10pt;">
-                <div style="font-weight:700;">জনাব,</div>
-
-                <!-- Body paragraph (Article 47 takeover statement) -->
-                <p style="text-indent:36pt; text-align:justify; margin:8pt 0 0 0;">
-                    {{ takeoverSentence }}
-                </p>
-
-                <!-- Compliance line -->
-                <p style="text-indent:36pt; text-align:justify; margin:12pt 0 0 0;">
-                    অনুগামী করা হইল।
-                </p>
+                <div style="display:flex; gap:0; align-items:flex-start;">
+                    <div style="min-width:50pt;">সূত্র:</div>
+                    <div class="mv-rich" [innerHTML]="movement.auth || '---'"></div>
+                </div>
             </div>
 
-            <!-- Signature block (right-aligned) -->
-            <div style="margin-top:30pt; font-size:10pt; text-align:right;">
+            <!-- Body — sourced from MovementInfo.remarks (rich text) -->
+            <div class="mv-rich" style="margin-top:18pt; font-size:10pt;"
+                 [innerHTML]="movement.remarks || ''"></div>
+
+            <!-- Static "অগ্রগামী করা হইল।" on its own left-aligned line, with a 2-line gap above. -->
+            <div style="margin-top:34pt; font-size:10pt;">
+                অগ্রগামী করা হইল।
+            </div>
+
+            <!-- Signature block (right-aligned) — Takeover variant title -->
+            <div style="margin-top:12pt; font-size:10pt; text-align:right;">
                 <div style="display:inline-block; text-align:center;">
-                    <div style="font-weight:700;">গ্রহণকারী কর্মকর্তা</div>
+                    <div>গ্রহণকারী কর্মকর্তা</div>
                     <div style="margin-top:36pt; border-top:1px solid #000; min-width:220pt;"></div>
-                    <div style="font-weight:700; margin-top:4pt;">{{ employeeIdLineBn }} {{ employeeRankBn }}</div>
+                    <div style="margin-top:4pt;">{{ employeeIdLineBn }} {{ employeeRankBn }}</div>
                     <div>{{ employeeNameBn }}{{ employeeCorpsBn ? ', ' + employeeCorpsBn : '' }}</div>
                     <div>{{ employeeUnitBn }}</div>
                     @if (employeeUnitLocationBn) {
