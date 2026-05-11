@@ -43,6 +43,8 @@ export class NotesheetPreviewArticle47TakeoverComponent implements OnInit {
     private rankLabels = new Map<number, { en: string; bn: string }>();
     /** RabUnit id → labels map (English + Bangla). */
     private rabUnitLabels = new Map<number, { en: string; bn: string }>();
+    /** Corps id → labels map (English + Bangla). */
+    private corpsLabels = new Map<number, { en: string; bn: string }>();
     /** Battalion HQ location for the employee's RAB unit (English / Bangla). */
     battalionHqEn = '';
     battalionHqBn = '';
@@ -62,6 +64,7 @@ export class NotesheetPreviewArticle47TakeoverComponent implements OnInit {
     ngOnInit(): void {
         this.loadRankLabels();
         this.loadRabUnitLabels();
+        this.loadCorpsLabels();
         const idParam = this.route.snapshot.queryParamMap.get('id');
         const id = idParam ? Number(idParam) : NaN;
         if (!Number.isFinite(id) || id <= 0) {
@@ -150,6 +153,23 @@ export class NotesheetPreviewArticle47TakeoverComponent implements OnInit {
         });
     }
 
+    /** Cache Corps id → labels so we can render the corps name in Bangla. */
+    private loadCorpsLabels(): void {
+        this.masterBasicSetup.getAllByType('Corps').subscribe({
+            next: (rows: any[]) => {
+                this.corpsLabels.clear();
+                for (const r of rows || []) {
+                    const id = r.codeId ?? r.CodeId;
+                    if (id == null) continue;
+                    this.corpsLabels.set(id, {
+                        en: r.codeValueEN ?? r.CodeValueEN ?? '',
+                        bn: r.codeValueBN ?? r.CodeValueBN ?? ''
+                    });
+                }
+            }
+        });
+    }
+
     /** Cache RabUnit id → labels so we can render the unit name in Bangla. */
     private loadRabUnitLabels(): void {
         this.masterBasicSetup.getAllByType('RabUnit').subscribe({
@@ -210,8 +230,15 @@ export class NotesheetPreviewArticle47TakeoverComponent implements OnInit {
     }
     get employeeCorpsBn(): string {
         const e = this.employee as any;
-        if (!e) return '';
-        return (e.corps ?? e.Corps ?? '') as string;
+        const o = this.overview as any;
+        const corpsId: number | undefined =
+            o?.corpsId ?? o?.CorpsId ?? e?.branchId ?? e?.BranchId;
+        if (corpsId != null) {
+            const labels = this.corpsLabels.get(corpsId);
+            if (labels?.bn) return labels.bn;
+            if (labels?.en) return labels.en;
+        }
+        return (e?.corps ?? e?.Corps ?? o?.corps ?? o?.Corps ?? '') as string;
     }
     get employeeUnitBn(): string {
         const o = this.overview as any;
