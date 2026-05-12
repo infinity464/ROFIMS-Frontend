@@ -20,7 +20,7 @@ import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
     imports: [CommonModule, ButtonModule, Toast],
     providers: [MessageService],
     templateUrl: './notesheet-preview-article-47-handover.html',
-    styleUrl: '../notesheet-preview.scss'
+    styleUrls: ['../notesheet-preview.scss', '../notesheet-preview-toolbar-dark.scss']
 })
 export class NotesheetPreviewArticle47HandoverComponent implements OnInit {
     private route = inject(ActivatedRoute);

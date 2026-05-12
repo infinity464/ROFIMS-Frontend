@@ -7,7 +7,7 @@
     </div>
     <div class="preview-status-actions">
         <button type="button" pButton label="Edit" icon="pi pi-pencil"
-                severity="warn" [outlined]="true"
+                [outlined]="true"
                 (click)="onEdit()" [disabled]="loading || !!error || !movement"></button>
         <button type="button" pButton label="Print" icon="pi pi-print"
                 [outlined]="true" (click)="onPrint()" [disabled]="loading || !!error"></button>
