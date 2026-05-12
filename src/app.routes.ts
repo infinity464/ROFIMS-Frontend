@@ -21,6 +21,7 @@ import { MovementInfoComponent } from '@/Components/Features/movement-info/movem
 import { MovementListComponent } from '@/Components/Features/movement-list/movement-list';
 import { NotesheetPreviewArticle47TakeoverComponent } from '@/Components/Features/notesheet-preview/article-47-takeover/notesheet-preview-article-47-takeover';
 import { NotesheetPreviewArticle47HandoverComponent } from '@/Components/Features/notesheet-preview/article-47-handover/notesheet-preview-article-47-handover';
+import { NotesheetPreviewMOComponent } from '@/Components/Features/notesheet-preview/mo/notesheet-preview-mo';
 import { MovementLetterNumberConfigComponent } from '@/Components/basic-setup/movement-letter-number-config/movement-letter-number-config';
 import { MoveOrderType } from '@/models/enums';
 import { Relationship } from '@/Components/basic-setup/relationship/relationship';
@@ -205,6 +206,7 @@ export const appRoutes: Routes = [
             { path: 'movement-list/article-47-takeover', component: MovementListComponent, data: { moveOrderType: MoveOrderType.Article47Takeover } },
             { path: 'notesheet-preview/article-47-takeover', component: NotesheetPreviewArticle47TakeoverComponent },
             { path: 'notesheet-preview/article-47-handover', component: NotesheetPreviewArticle47HandoverComponent },
+            { path: 'notesheet-preview/mo', component: NotesheetPreviewMOComponent },
             { path: 'basic-setup/relationship', component: Relationship },
             { path: 'basic-setup/marital-status', component: MaritalStatus },
             { path: 'basic-setup/occupation', component: Occupation },

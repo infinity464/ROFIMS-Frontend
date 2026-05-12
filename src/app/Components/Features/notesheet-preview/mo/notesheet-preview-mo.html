@@ -1,0 +1,172 @@
+<p-toast></p-toast>
+
+<div class="preview-header">
+    <div class="preview-actions">
+        <button type="button" pButton label="Back" icon="pi pi-arrow-left"
+                severity="secondary" [outlined]="true" (click)="onBack()"></button>
+    </div>
+    <div class="preview-status-actions">
+        <button type="button" pButton label="Edit" icon="pi pi-pencil"
+                severity="warn" [outlined]="true"
+                (click)="onEdit()" [disabled]="loading || !!error || !movement"></button>
+        <button type="button" pButton label="Print" icon="pi pi-print"
+                [outlined]="true" (click)="onPrint()" [disabled]="loading || !!error"></button>
+    </div>
+</div>
+
+@if (loading) {
+    <div class="preview-loading">
+        <i class="pi pi-spin pi-spinner" style="font-size:2rem"></i>
+        <div>Loading…</div>
+    </div>
+}
+
+@if (error) {
+    <div class="preview-error">
+        <i class="pi pi-exclamation-triangle" style="font-size:2rem"></i>
+        <div>{{ error }}</div>
+    </div>
+}
+
+@if (!loading && !error && movement) {
+    <div class="a4-paper-container">
+        <div class="a4-paper">
+
+            <!-- Top-right reference label (e.g. "বিএএফটি-১৭৬২ এর পরিবর্তে") -->
+            <div style="text-align:right; font-size:10pt;">
+                {{ topRightLabelBn }}
+            </div>
+
+            <!-- Centered heading -->
+            <div style="text-align:center; font-size:12pt; font-weight:700; margin-top:6pt; margin-bottom:14pt;">
+                গমনাদেশ
+            </div>
+
+            <!-- Numbered rows (১। … ১০।) — label : value -->
+            <table style="width:100%; border-collapse:collapse; font-size:10pt;">
+                <tbody>
+                    <tr>
+                        <td style="vertical-align:top; padding:2pt 0; width:36pt; white-space:nowrap;">{{ serialBn(1) }}</td>
+                        <td style="vertical-align:top; padding:2pt 0; width:200pt;">ব্যক্তিগত নং, পদবী এবং নাম</td>
+                        <td style="vertical-align:top; padding:2pt 0; width:20pt;">ঃ</td>
+                        <td style="vertical-align:top; padding:2pt 0;">{{ employeeDisplayBn }}</td>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align:top; padding:2pt 0;">{{ serialBn(2) }}</td>
+                        <td style="vertical-align:top; padding:2pt 0;">গন্তব্যস্থল</td>
+                        <td style="vertical-align:top; padding:2pt 0;">ঃ</td>
+                        <td style="vertical-align:top; padding:2pt 0;">{{ destinationBn }}</td>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align:top; padding:2pt 0;">{{ serialBn(3) }}</td>
+                        <td style="vertical-align:top; padding:2pt 0;">রিপোর্ট করিবার ইউনিট/প্রতিষ্ঠান</td>
+                        <td style="vertical-align:top; padding:2pt 0;">ঃ</td>
+                        <td style="vertical-align:top; padding:2pt 0;">{{ reportingUnitBn }}</td>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align:top; padding:2pt 0;">{{ serialBn(4) }}</td>
+                        <td style="vertical-align:top; padding:2pt 0;">গমনের তারিখ ও সময়</td>
+                        <td style="vertical-align:top; padding:2pt 0;">ঃ</td>
+                        <td style="vertical-align:top; padding:2pt 0;">{{ departureDateBn }}</td>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align:top; padding:2pt 0;">{{ serialBn(5) }}</td>
+                        <td style="vertical-align:top; padding:2pt 0;">গমনের প্রাধিকার</td>
+                        <td style="vertical-align:top; padding:2pt 0;">ঃ</td>
+                        <td style="vertical-align:top; padding:2pt 0;">
+                            <div class="mv-rich" [innerHTML]="movement.auth || '---'"></div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align:top; padding:2pt 0;">{{ serialBn(6) }}</td>
+                        <td style="vertical-align:top; padding:2pt 0;">শেষ রসদ সনদপত্র</td>
+                        <td style="vertical-align:top; padding:2pt 0;">ঃ</td>
+                        <td style="vertical-align:top; padding:2pt 0;">প্রদান করা হয়েছে।</td>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align:top; padding:2pt 0;">{{ serialBn(7) }}</td>
+                        <td style="vertical-align:top; padding:2pt 0;">বেতন ও ভাতা</td>
+                        <td style="vertical-align:top; padding:2pt 0;">ঃ</td>
+                        <td style="vertical-align:top; padding:2pt 0;">এসপিসি মোতাবেক।</td>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align:top; padding:2pt 0;">{{ serialBn(8) }}</td>
+                        <td style="vertical-align:top; padding:2pt 0;">রেলওয়ে আজ্ঞাপত্র</td>
+                        <td style="vertical-align:top; padding:2pt 0;">ঃ</td>
+                        <td style="vertical-align:top; padding:2pt 0;">প্রদান করা হয় নাই।</td>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align:top; padding:2pt 0;">{{ serialBn(9) }}</td>
+                        <td style="vertical-align:top; padding:2pt 0;">অভ্যর্থনা</td>
+                        <td style="vertical-align:top; padding:2pt 0;">ঃ</td>
+                        <td style="vertical-align:top; padding:2pt 0;">{{ receptionUnitBn }}</td>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align:top; padding:2pt 0;">{{ serialBn(10) }}</td>
+                        <td style="vertical-align:top; padding:2pt 0;">মন্তব্য</td>
+                        <td style="vertical-align:top; padding:2pt 0;">ঃ</td>
+                        <td style="vertical-align:top; padding:2pt 0;">
+                            <div class="mv-rich" [innerHTML]="movement.remarks || '---'"></div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- Bottom metadata block (left) + signature stamp area (right) -->
+            <div style="display:flex; gap:18pt; margin-top:18pt; font-size:10pt;">
+                <div style="flex:1;">
+                    <table style="border-collapse:collapse;">
+                        <tbody>
+                            <tr>
+                                <td style="vertical-align:top; padding:2pt 0; width:80pt;">ইউনিট</td>
+                                <td style="vertical-align:top; padding:2pt 8pt;">ঃ</td>
+                                <td style="vertical-align:top; padding:2pt 0;">{{ rabUnitBn }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top; padding:2pt 0;">স্থান</td>
+                                <td style="vertical-align:top; padding:2pt 8pt;">ঃ</td>
+                                <td style="vertical-align:top; padding:2pt 0;">{{ rabUnitLocationBn || '---' }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top; padding:2pt 0;">তারসংখ্যা</td>
+                                <td style="vertical-align:top; padding:2pt 8pt;">ঃ</td>
+                                <td style="vertical-align:top; padding:2pt 0;"></td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top; padding:2pt 0;">নথি নং</td>
+                                <td style="vertical-align:top; padding:2pt 8pt;">ঃ</td>
+                                <td style="vertical-align:top; padding:2pt 0;">{{ topRightLabelBn }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top; padding:2pt 0;">তারিখ</td>
+                                <td style="vertical-align:top; padding:2pt 8pt;">ঃ</td>
+                                <td style="vertical-align:top; padding:2pt 0;">{{ letterDateBn }}</td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align:top; padding:2pt 0;">বিতরণ</td>
+                                <td style="vertical-align:top; padding:2pt 8pt;">ঃ</td>
+                                <td style="vertical-align:top; padding:2pt 0;"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Signature/stamp placeholder (right side) -->
+                <div style="flex:0 0 220pt; text-align:center;">
+                    <div style="margin-top:48pt; border-top:1px solid #000; min-width:200pt;"></div>
+                    <div style="margin-top:2pt;">নির্দিষ্ট কর্তৃক</div>
+                    <div>র‍্যাব ফোর্সেস সদর দপ্তর</div>
+                </div>
+            </div>
+
+            <!-- Recipient list at the bottom (flat, no serial numbers) -->
+            @if (recipientLines.length > 0) {
+                <div style="margin-top:18pt; font-size:10pt;">
+                    @for (line of recipientLines; track $index) {
+                        <div style="padding:1pt 0;">{{ line }}</div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+}

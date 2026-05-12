@@ -182,7 +182,6 @@ export class MovementListComponent implements OnInit {
 
     onView(row: MovementInfoModel) {
         // Route to the matching letter preview per MoveOrderType.
-        // Article 47 variants have dedicated sample previews; CC/MO fall back to the form in view mode.
         switch (row.moveOrderType) {
             case MoveOrderType.Article47Handover:
                 this.router.navigate(['/notesheet-preview/article-47-handover'], { queryParams: { id: row.movementId } });
@@ -190,7 +189,11 @@ export class MovementListComponent implements OnInit {
             case MoveOrderType.Article47Takeover:
                 this.router.navigate(['/notesheet-preview/article-47-takeover'], { queryParams: { id: row.movementId } });
                 return;
+            case MoveOrderType.MO:
+                this.router.navigate(['/notesheet-preview/mo'], { queryParams: { id: row.movementId } });
+                return;
             default:
+                // CC and unknown types fall back to the form in view mode.
                 this.router.navigate(['/movement-info'], { queryParams: { id: row.movementId, mode: 'view' } });
                 return;
         }

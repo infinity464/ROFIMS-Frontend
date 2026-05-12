@@ -390,3 +390,30 @@ export const Article47LetterRecipientOptions = [
     { label: 'অফিস কপি।',                                                                  value: Article47LetterRecipient.OfficeCopy,              sortOrder: 6 }
 ];
 
+// MovementInfo: MO (Move Order Type = 2) letter recipients.
+// sortOrder reflects the position in the printed letter (1..10).
+export enum MOLetterRecipient {
+    PersonalCopy = 1,
+    TrainingWing = 2,
+    PersonnelBranch = 3,
+    DOMSPersonnelBranch = 4,
+    RecordBranch = 5,
+    FinanceBranch = 6,
+    ForcesMessBranch = 7,
+    RationOffice = 8,
+    DailyOffice = 9,
+    OfficeCopy = 10
+}
+export const MOLetterRecipientOptions = [
+    { label: 'ব্যক্তিগত কপি।',                                                                            value: MOLetterRecipient.PersonalCopy,        sortOrder: 1 },
+    { label: 'ট্রেনিং উইং, র‍্যাব ফোর্সেস সদর দপ্তর।',                                                      value: MOLetterRecipient.TrainingWing,        sortOrder: 2 },
+    { label: 'পার্সোনেল শাখা, র‍্যাব ফোর্সেস সদর দপ্তর।',                                                   value: MOLetterRecipient.PersonnelBranch,     sortOrder: 3 },
+    { label: 'ডিওএমএস, প্রবৃত্তে পার্সোনেল শাখা, র‍্যাব ফোর্সেস সদর দপ্তর।',                                 value: MOLetterRecipient.DOMSPersonnelBranch, sortOrder: 4 },
+    { label: 'রেকর্ড শাখা, র‍্যাব ফোর্সেস সদর দপ্তর।',                                                      value: MOLetterRecipient.RecordBranch,        sortOrder: 5 },
+    { label: 'অর্থ শাখা, র‍্যাব ফোর্সেস সদর দপ্তর।',                                                        value: MOLetterRecipient.FinanceBranch,       sortOrder: 6 },
+    { label: 'ফোর্সেস মেস শাখা, র‍্যাব ফোর্সেস সদর দপ্তর।',                                                 value: MOLetterRecipient.ForcesMessBranch,    sortOrder: 7 },
+    { label: 'রেশন অফিস, র‍্যাব ফোর্সেস সদর দপ্তর।',                                                        value: MOLetterRecipient.RationOffice,        sortOrder: 8 },
+    { label: 'ডেইলি অফিস, র‍্যাব ফোর্সেস সদর দপ্তর।',                                                       value: MOLetterRecipient.DailyOffice,         sortOrder: 9 },
+    { label: 'অফিস কপি।',                                                                                value: MOLetterRecipient.OfficeCopy,          sortOrder: 10 }
+];
+

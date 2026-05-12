@@ -35,7 +35,8 @@ import { CommonCodeModel } from '@/models/common-code-model';
 import {
     MovementType, MovementTypeOptions,
     MoveOrderType, MoveOrderTypeOptions,
-    Article47LetterRecipientOptions
+    Article47LetterRecipientOptions,
+    MOLetterRecipientOptions
 } from '@/models/enums';
 
 interface MovementEmployeeRow {
@@ -586,9 +587,12 @@ export class MovementInfoComponent implements OnInit {
     get showTakeover(): boolean {
         return this.isPermanent && this.isArticle47Takeover;
     }
-    /** Show the Letter Recipients picker for any Article 47 variant. */
+    /** Show the Letter Recipients picker for MO and either Article 47 variant. */
     get showLetterRecipients(): boolean {
-        return this.isArticle47Handover || this.isArticle47Takeover;
+        const v = this.form?.get('moveOrderType')!.value;
+        return v === MoveOrderType.MO
+            || v === MoveOrderType.Article47Handover
+            || v === MoveOrderType.Article47Takeover;
     }
     get showDateOfReduce(): boolean {
         return this.isPermanent;
@@ -623,8 +627,12 @@ export class MovementInfoComponent implements OnInit {
         }
         if (this.showLetterRecipients) {
             if (this.letterRecipientsList.length === 0) {
-                // Pre-fill with the enum labels in sortOrder.
-                this.letterRecipientsList = Article47LetterRecipientOptions
+                // Pre-fill with the right enum's labels based on MoveOrderType.
+                const v = this.form.get('moveOrderType')!.value;
+                const source = v === MoveOrderType.MO
+                    ? MOLetterRecipientOptions
+                    : Article47LetterRecipientOptions;
+                this.letterRecipientsList = source
                     .slice()
                     .sort((a, b) => a.sortOrder - b.sortOrder)
                     .map((o) => o.label);
