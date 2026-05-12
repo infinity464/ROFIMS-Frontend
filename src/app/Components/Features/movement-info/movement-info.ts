@@ -226,6 +226,7 @@ export class MovementInfoComponent implements OnInit {
             detailsInformation: row.detailsInformation ?? null,
             remarks: row.remarks ?? null,
             finalApproverIds: this.parseIntJsonArray(row.finalApproverIds),
+            letterDate: this.toDate(row.letterDate) ?? new Date(),
             status: row.status ?? true
         });
 
@@ -339,6 +340,8 @@ export class MovementInfoComponent implements OnInit {
             detailsInformation: [null],
             remarks: [null],
             finalApproverIds: [[] as number[]],
+            // "Approval date" UI field — persisted to MovementInfo.letterDate. Defaults to today.
+            letterDate: [new Date()],
             status: [true]
         });
 
@@ -693,7 +696,7 @@ export class MovementInfoComponent implements OnInit {
         const payload: MovementInfoModel = {
             movementId: this.editingId ?? 0,
             letterNo: null,
-            letterDate: null,
+            letterDate: this.toIsoDate(v.letterDate),
             employeeIds: JSON.stringify(this.selectedEmployees.map((e) => e.employeeID)),
             finalApproverIds: finalApproverIds.length > 0 ? JSON.stringify(finalApproverIds) : null,
             letterRecipients: this.serialiseLetterRecipients(),
@@ -772,6 +775,7 @@ export class MovementInfoComponent implements OnInit {
             detailsInformation: null,
             remarks: null,
             finalApproverIds: [],
+            letterDate: new Date(),
             status: true
         });
     }

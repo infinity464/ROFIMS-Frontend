@@ -74,7 +74,6 @@
                 <th>Letter Date</th>
                 <th>Movement Type</th>
                 <th>Move Order Type</th>
-                <th style="width:120px">Employees</th>
                 <th style="width:160px">Actions</th>
             </tr>
         </ng-template>
@@ -86,9 +85,6 @@
                 <td>{{ row.letterDate || '—' }}</td>
                 <td>{{ movementTypeLabel(row.movementType) }}</td>
                 <td>{{ moveOrderTypeLabel(row.moveOrderType) }}</td>
-                <td>
-                    <p-tag [value]="employeeCount(row) + ''" severity="info"></p-tag>
-                </td>
                 <td>
                     <div class="flex gap-1">
                         <button type="button" pButton
@@ -120,7 +116,7 @@
 
         <ng-template pTemplate="emptymessage">
             <tr>
-                <td colspan="7" class="text-center py-4">
+                <td colspan="6" class="text-center py-4">
                     @if (loading) {
                         Loading...
                     } @else {

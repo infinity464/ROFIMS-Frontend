@@ -351,19 +351,32 @@
             <span class="mv-card-title">Final Approvers</span>
         </header>
 
-        <div class="mv-field">
-            <label>Approvers</label>
-            <p-multiselect
-                formControlName="finalApproverIds"
-                [options]="approverOptions"
-                optionLabel="label"
-                optionValue="value"
-                placeholder="Select one or more final approvers (optional)"
-                styleClass="w-full"
-                [filter]="true"
-                display="chip"
-                appendTo="body"></p-multiselect>
-            <small class="mv-hint">Optional. Only employees with an Identity user account are shown.</small>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="mv-field md:col-span-2">
+                <label>Approvers</label>
+                <p-multiselect
+                    formControlName="finalApproverIds"
+                    [options]="approverOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Select one or more final approvers (optional)"
+                    styleClass="w-full"
+                    [filter]="true"
+                    display="chip"
+                    appendTo="body"></p-multiselect>
+                <small class="mv-hint">Optional. Only employees with an Identity user account are shown.</small>
+            </div>
+
+            <div class="mv-field">
+                <label>Approval date</label>
+                <p-datepicker
+                    formControlName="letterDate"
+                    appendTo="body" dateFormat="dd/mm/yy"
+                    [showIcon]="true" iconDisplay="input"
+                    placeholder="dd/mm/yyyy" [inputStyle]="{ width: '100%' }"
+                    class="w-full"></p-datepicker>
+                <small class="mv-hint">Defaults to today; printed as the Letter Date.</small>
+            </div>
         </div>
     </section>
 
