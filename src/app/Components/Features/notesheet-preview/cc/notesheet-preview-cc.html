@@ -1,0 +1,148 @@
+<p-toast></p-toast>
+
+<div class="preview-header">
+    <div class="preview-actions">
+        <button type="button" pButton label="Back" icon="pi pi-arrow-left"
+                severity="secondary" [outlined]="true" (click)="onBack()"></button>
+    </div>
+    <div class="preview-status-actions">
+        <button type="button" pButton label="Edit" icon="pi pi-pencil"
+                [outlined]="true"
+                (click)="onEdit()" [disabled]="loading || !!error || !movement"></button>
+        <button type="button" pButton label="Print" icon="pi pi-print"
+                [outlined]="true" (click)="onPrint()" [disabled]="loading || !!error"></button>
+    </div>
+</div>
+
+@if (loading) {
+    <div class="preview-loading">
+        <i class="pi pi-spin pi-spinner" style="font-size:2rem"></i>
+        <div>Loading…</div>
+    </div>
+}
+
+@if (error) {
+    <div class="preview-error">
+        <i class="pi pi-exclamation-triangle" style="font-size:2rem"></i>
+        <div>{{ error }}</div>
+    </div>
+}
+
+@if (!loading && !error && movement) {
+    <div class="a4-paper-container">
+        <div class="a4-paper" style="padding:10mm 8mm;">
+
+            <!-- ── Header strip (above the bordered table) ──────────────── -->
+            <div style="display:flex; align-items:flex-start; gap:10pt; font-size:9pt;">
+                <!-- Left: form numbers -->
+                <div style="flex:0 0 22%; line-height:1.5;">
+                    <div>বি পি ফরম নং ১০</div>
+                    <div>বাংলাদেশ ফরম নং ৫৩৩৬</div>
+                </div>
+                <!-- Center: title -->
+                <div style="flex:1; text-align:center;">
+                    <div style="font-size:12pt; font-weight:700;">কর্তব্যে প্রেরিত পুলিশ অফিসার কর্তৃক বহনীয় হুকুমনামা</div>
+                    <div style="font-size:9pt; margin-top:3pt;">(নিয়ন্ত্রণ নং ১৬৩ এবং ৯০৯)</div>
+                </div>
+                <!-- Right: reference number -->
+                <div style="flex:0 0 22%; text-align:right; line-height:1.5;">
+                    <div style="font-family:'Libre Barcode 39','Free 3 of 9',monospace; font-size:22pt; letter-spacing:1px;">||||||||||||||||||</div>
+                    <div style="font-size:9pt;">{{ letterNoBn || '---' }}</div>
+                </div>
+            </div>
+
+            <!-- Second header row: M CC No (left)  +  Govt vehicle / date (right) -->
+            <div style="display:flex; align-items:flex-start; margin-top:8pt; font-size:9pt;">
+                <div style="flex:1;">এম সিসি নং: {{ letterNoBn }}</div>
+                <div style="flex:0 0 auto; text-align:right; line-height:1.6;">
+                    <div>সরকারী যানবাহন</div>
+                    <div>তারিখঃ {{ letterDateBn }}</div>
+                </div>
+            </div>
+
+            <!-- ── Main bordered grid ───────────────────────────────────── -->
+            <table class="cc-grid" style="width:100%; border-collapse:collapse; margin-top:6pt; font-size:9pt; table-layout:fixed;">
+                <colgroup>
+                    <col style="width:9%;">   <!-- জেলা / স্টেশন -->
+                    <col style="width:24%;">  <!-- বাহিনীর পূর্ণ বিবরণ ও নাম -->
+                    <col style="width:11%;">  <!-- গন্তব্যস্থল -->
+                    <col style="width:16%;">  <!-- কাজের বিবরণ -->
+                    <col style="width:10%;">  <!-- প্রস্থান -->
+                    <col style="width:10%;">  <!-- পৌঁছানোর -->
+                    <col style="width:14%;">  <!-- ফেরত আসার অনুমতি -->
+                    <col style="width:6%;">   <!-- মন্তব্য -->
+                </colgroup>
+
+                <thead>
+                    <!-- Row 1: top headers (col 5/6/7 span the time/date line) -->
+                    <tr>
+                        <th rowspan="3" class="cc-cell cc-th">জেলা <br/>এবং <br/>স্টেশন</th>
+                        <th rowspan="3" class="cc-cell cc-th">বাহিনীর পূর্ণ বিবরণ ও নাম</th>
+                        <th rowspan="3" class="cc-cell cc-th">গন্তব্যস্থল</th>
+                        <th rowspan="3" class="cc-cell cc-th">কাজের বিবরণ এবং যতজন চাওয়া হয়েছে</th>
+                        <th colspan="3" class="cc-cell cc-th" style="font-weight:normal;">{{ departureTimeAndDateBn }}</th>
+                        <th rowspan="3" class="cc-cell cc-th">মন্তব্য (ফেরার সময়, তারিখ ইত্যাদি লিখিতে হইবে)</th>
+                    </tr>
+                    <!-- Row 2: sub-headers under the time row -->
+                    <tr>
+                        <th class="cc-cell cc-th">প্রস্থান</th>
+                        <th class="cc-cell cc-th">পৌঁছানোর</th>
+                        <th class="cc-cell cc-th">ফেরত আসার অনুমতি<br/><span style="font-weight:normal; font-size:8pt;">(প্রদানকারী অফিসারের স্বাক্ষরসহ)</span></th>
+                    </tr>
+                    <tr><!-- spacer row so the rowspan=3 top headers sit cleanly --></tr>
+                </thead>
+
+                <tbody>
+                    <tr>
+                        <!-- Col 1: জেলা / স্টেশন -->
+                        <td class="cc-cell" style="vertical-align:top; padding:6pt;">
+                            {{ districtAndStationBn || '---' }}
+                        </td>
+
+                        <!-- Col 2: numbered employee list -->
+                        <td class="cc-cell" style="vertical-align:top; padding:6pt;">
+                            @for (line of employeeLines; track $index) {
+                                <div style="padding:1pt 0;">{{ line.serial }} {{ line.text }}</div>
+                            }
+                            @if (employeeLines.length === 0) { <div>---</div> }
+                        </td>
+
+                        <!-- Col 3: গন্তব্যস্থল -->
+                        <td class="cc-cell" style="vertical-align:top; padding:6pt;">
+                            {{ destinationBn || '---' }}
+                        </td>
+
+                        <!-- Col 4: কাজের বিবরণ (work description) — sutro + auth + remarks -->
+                        <td colspan="4" class="cc-cell" style="vertical-align:top; padding:6pt;">
+                            <div>সূত্রঃ {{ sutroBn || '---' }}</div>
+                            @if (movement.auth) {
+                                <div class="mv-rich" style="margin-top:2pt;" [innerHTML]="movement.auth"></div>
+                            }
+                            @if (movement.remarks) {
+                                <div class="mv-rich" style="margin-top:2pt;" [innerHTML]="movement.remarks"></div>
+                            }
+
+                            <!-- Signature block (bottom-right inside the work-description cell) -->
+                            <div style="margin-top:60pt; text-align:right;">
+                                <div style="display:inline-block; text-align:center; line-height:1.5;">
+                                    <div style="height:36pt;"></div>
+                                    <div>নির্বাহী কর্মকর্তা</div>
+                                    <div>র‍্যাব ফোর্সেস সদর দপ্তর</div>
+                                    <div>কুর্মিটোলা, ঢাকা।</div>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Col 8: মন্তব্য (left blank — filled in by hand) -->
+                        <td class="cc-cell" style="vertical-align:top;"></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- ── Footnote (inside the paper, directly below the table) ── -->
+            <div class="cc-footnote">
+                দ্রষ্টব্য - কোন বিলম্ব হইলে সঙ্গে সঙ্গে শেষ চার কলামের লিখিত বিবরণ খুঁজিয়া বাহির করিতে হইবে। বিলম্বকারীকে অভিযুক্ত করিতে হইবে। তদন্তকারী অফিসার তাহার কৈফিয়ত হুকুমনামার পর পৃষ্ঠায় লিখিবেন এবং সুপারের কাছে আদেশের জন্য পাঠাইবেন।
+            </div>
+        </div>
+    </div>
+}

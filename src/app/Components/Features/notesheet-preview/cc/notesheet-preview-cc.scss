@@ -1,0 +1,75 @@
+/* CC-specific overrides — landscape paper + bordered grid. */
+
+/* Host scrolls vertically; the paper is fluid on screen so it always fits
+   the viewport (no horizontal overflow at 100% zoom). True landscape size is
+   restored under @media print further down. */
+:host {
+    overflow-y: auto;
+
+    .a4-paper-container {
+        width: 100%;
+        align-items: center;
+    }
+
+    /* Landscape paper — fluid on screen, capped at ~80% of legal landscape
+       width so the form renders ~20% smaller without using `zoom` (which
+       can cause fractional-pixel rendering glitches in table cells).
+       `display: block` overrides the shared flex-column layout so the
+       table and footnote stack via normal block flow (flex column was
+       allowing the rightmost cell's border to visually drift past the
+       footnote on some browsers). */
+    .a4-paper {
+        display: block;
+        width: 100%;
+        max-width: 284.5mm; /* 355.6mm × 0.8 */
+        min-height: 0;
+        height: auto;
+        margin: 0 auto;
+        overflow: hidden;
+    }
+}
+
+.cc-grid {
+    border-collapse: collapse;
+    table-layout: fixed;
+    width: 100%;
+
+    .cc-cell {
+        border: 0.75pt solid #000;
+        padding: 4pt 6pt;
+        box-sizing: border-box;
+    }
+    .cc-th {
+        background: transparent;
+        font-weight: 700;
+        text-align: center;
+        vertical-align: middle;
+    }
+}
+
+/* Footnote — inside the paper, directly below the table, like the reference. */
+.cc-footnote {
+    margin-top: 6pt;
+    font-size: 9pt;
+    line-height: 1.5;
+}
+
+/* Print in landscape orientation. */
+@media print {
+    @page {
+        size: 355.6mm 215.9mm;
+        margin: 0;
+    }
+
+    :host {
+        overflow: visible !important;
+    }
+
+    :host .a4-paper {
+        width: 355.6mm !important;
+        max-width: none !important;
+        min-height: 215.9mm !important;
+        height: auto !important;
+        aspect-ratio: auto !important;
+    }
+}

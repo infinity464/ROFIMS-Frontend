@@ -212,8 +212,11 @@ export class MovementListComponent implements OnInit {
             case MoveOrderType.MO:
                 this.router.navigate(['/notesheet-preview/mo'], { queryParams: { id: row.movementId } });
                 return;
+            case MoveOrderType.CC:
+                this.router.navigate(['/notesheet-preview/cc'], { queryParams: { id: row.movementId } });
+                return;
             default:
-                // CC and unknown types fall back to the form in view mode.
+                // Unknown types fall back to the form in view mode.
                 this.router.navigate(['/movement-info'], { queryParams: { id: row.movementId, mode: 'view' } });
                 return;
         }
