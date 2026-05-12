@@ -49,6 +49,14 @@ export class NotesheetPreviewMOComponent implements OnInit {
     letterDateBn = '';
     /** "Destined" mother-unit display name (resolved from destinedMotherUnitId). */
     destinedMotherUnitName = '';
+    destinedMotherUnitNameBn = '';
+    /** District id of the destined mother unit (for Row 2 — গন্তব্যস্থল). */
+    destinedMotherUnitDistrictId: number | null = null;
+    /** Battalion HQ location of the destined RAB unit (for Row 2 when RAB unit destination). */
+    destinedRABUnitHqEn = '';
+    destinedRABUnitHqBn = '';
+    /** District id → labels map (CommonCode codeType='District'). */
+    private districtLabels = new Map<number, { en: string; bn: string }>();
     /** Battalion HQ location for the employee's RAB unit (Bangla preferred). */
     battalionHqEn = '';
     battalionHqBn = '';
@@ -56,11 +64,14 @@ export class NotesheetPreviewMOComponent implements OnInit {
     private rankLabels = new Map<number, { en: string; bn: string }>();
     private rabUnitLabels = new Map<number, { en: string; bn: string }>();
     private corpsLabels = new Map<number, { en: string; bn: string }>();
+    private prefixLabels = new Map<number, { en: string; bn: string }>();
 
     ngOnInit(): void {
         this.loadRankLabels();
         this.loadRabUnitLabels();
         this.loadCorpsLabels();
+        this.loadDistrictLabels();
+        this.loadPrefixLabels();
 
         const idParam = this.route.snapshot.queryParamMap.get('id');
         const id = idParam ? Number(idParam) : NaN;
@@ -83,6 +94,7 @@ export class NotesheetPreviewMOComponent implements OnInit {
                 this.buildHeaderLines();
                 this.loadEmployee();
                 this.loadDestinedMotherUnit();
+                this.loadDestinedRABUnitHq();
                 this.loading = false;
             },
             error: (err) => {
@@ -160,7 +172,42 @@ export class NotesheetPreviewMOComponent implements OnInit {
             next: (rows: any[]) => {
                 const hit = (rows || []).find((r) => (r.orgId ?? r.OrgId) === id);
                 if (hit) {
-                    this.destinedMotherUnitName = (hit.orgNameEN ?? hit.OrgNameEN ?? '') as string;
+                    this.destinedMotherUnitName        = (hit.orgNameEN ?? hit.OrgNameEN ?? '') as string;
+                    this.destinedMotherUnitNameBn      = (hit.orgNameBN ?? hit.OrgNameBN ?? '') as string;
+                    this.destinedMotherUnitDistrictId  = (hit.districtId ?? hit.DistrictId ?? null) as number | null;
+                }
+            }
+        });
+    }
+
+    /** Battalion HQ location of the **destined** RAB unit — drives Row 2 (গন্তব্যস্থল)
+     *  when DestinedRABUnitId is the destination. Source = basic-setup/rab-unit-aor. */
+    private loadDestinedRABUnitHq(): void {
+        const rabUnitId = this.movement?.destinedRABUnitId;
+        if (!rabUnitId) return;
+        this.masterBasicSetup.getRABUnitAORByRabUnit(rabUnitId).subscribe({
+            next: (rows: any[]) => {
+                if (!Array.isArray(rows) || rows.length === 0) return;
+                const firstEn = rows.find((r) => !!(r?.locationOfBattalionHQ ?? r?.LocationOfBattalionHQ));
+                if (firstEn) this.destinedRABUnitHqEn = String(firstEn.locationOfBattalionHQ ?? firstEn.LocationOfBattalionHQ ?? '');
+                const firstBn = rows.find((r) => !!(r?.locationOfBattalionHQBangla ?? r?.LocationOfBattalionHQBangla));
+                if (firstBn) this.destinedRABUnitHqBn = String(firstBn.locationOfBattalionHQBangla ?? firstBn.LocationOfBattalionHQBangla ?? '');
+            }
+        });
+    }
+
+    /** Cache District id → labels (CommonCode codeType='District'). */
+    private loadDistrictLabels(): void {
+        this.masterBasicSetup.getAllByType('District').subscribe({
+            next: (rows: any[]) => {
+                this.districtLabels.clear();
+                for (const r of rows || []) {
+                    const id = r.codeId ?? r.CodeId;
+                    if (id == null) continue;
+                    this.districtLabels.set(id, {
+                        en: r.codeValueEN ?? r.CodeValueEN ?? '',
+                        bn: r.codeValueBN ?? r.CodeValueBN ?? ''
+                    });
                 }
             }
         });
@@ -198,6 +245,22 @@ export class NotesheetPreviewMOComponent implements OnInit {
         });
     }
 
+    private loadPrefixLabels(): void {
+        this.masterBasicSetup.getAllByType('Prefix').subscribe({
+            next: (rows: any[]) => {
+                this.prefixLabels.clear();
+                for (const r of rows || []) {
+                    const id = r.codeId ?? r.CodeId;
+                    if (id == null) continue;
+                    this.prefixLabels.set(id, {
+                        en: r.codeValueEN ?? r.CodeValueEN ?? '',
+                        bn: r.codeValueBN ?? r.CodeValueBN ?? ''
+                    });
+                }
+            }
+        });
+    }
+
     private loadCorpsLabels(): void {
         this.masterBasicSetup.getAllByType('Corps').subscribe({
             next: (rows: any[]) => {
@@ -220,27 +283,54 @@ export class NotesheetPreviewMOComponent implements OnInit {
     get employeeDisplayBn(): string {
         const e: any = this.employee || {};
         const o: any = this.overview || {};
-        const id = e.serviceId ?? e.ServiceId ?? e.rabID ?? e.RABID ?? '---';
+        const id = e.serviceId ?? e.ServiceId ?? e.rabID ?? e.RABID ?? '';
+
+        // Prefix: Bangla label from CommonCode 'Prefix' keyed on overview.prefixId.
+        const prefixId: number | undefined = o.prefixId ?? o.PrefixId;
+        const prefix = (prefixId != null ? this.prefixLabels.get(prefixId)?.bn : '') ?? '';
+
         const rankId: number | undefined = o.armyRankId ?? o.ArmyRankId ?? e.rankId ?? e.RankId;
-        let rank = '';
-        if (rankId != null) {
-            const labels = this.rankLabels.get(rankId);
-            rank = labels?.bn || labels?.en || (e.rank ?? e.Rank ?? '');
-        } else {
-            rank = (e.rank ?? e.Rank ?? '') as string;
+        const rank = (rankId != null ? this.rankLabels.get(rankId)?.bn : '') ?? '';
+
+        const name = (e.fullNameBN ?? e.FullNameBN ?? e.fullNameEN ?? e.FullNameEN ?? '') as string;
+        return `${prefix}-${this.toBn(id)} ${rank} ${name}।`.trim();
+    }
+
+    /** Resolve the destination unit (either DestinedMotherUnitId or DestinedRABUnitId)
+     *  to a Bangla-first display name. Used by rows 2, 3 and 9. */
+    private resolveDestinationBn(): string {
+        // Prefer the destined mother unit (Bangla then English).
+        if (this.destinedMotherUnitNameBn) return this.destinedMotherUnitNameBn;
+        if (this.destinedMotherUnitName)   return this.destinedMotherUnitName;
+        // Fall back to the destined RAB unit (Bangla then English from CommonCode 'RabUnit').
+        const rabUnitId = this.movement?.destinedRABUnitId;
+        if (rabUnitId != null) {
+            const labels = this.rabUnitLabels.get(rabUnitId);
+            if (labels?.bn) return labels.bn;
+            if (labels?.en) return labels.en;
         }
-        const name = (e.fullNameBN ?? e.FullNameBN ?? e.fullNameEN ?? e.FullNameEN ?? '---') as string;
-        return `নং-${this.toBn(id)} ${rank} ${name}।`.trim();
+        return '---';
     }
 
-    /** Row 2: destination — destined mother unit name. */
+    /** Row 2: গন্তব্যস্থল — District (for Mother unit) or Battalion HQ Bangla (for RAB unit). */
     get destinationBn(): string {
-        return this.destinedMotherUnitName || '---';
+        // Mother unit destination → its district name (Bangla preferred).
+        if (this.movement?.destinedMotherUnitId && this.destinedMotherUnitDistrictId != null) {
+            const labels = this.districtLabels.get(this.destinedMotherUnitDistrictId);
+            if (labels?.bn) return labels.bn;
+            if (labels?.en) return labels.en;
+        }
+        // RAB unit destination → Location of Battalion HQ (Bangla preferred).
+        if (this.movement?.destinedRABUnitId) {
+            if (this.destinedRABUnitHqBn) return this.destinedRABUnitHqBn;
+            if (this.destinedRABUnitHqEn) return this.destinedRABUnitHqEn;
+        }
+        return '---';
     }
 
-    /** Row 3: reporting unit/establishment — uses destined mother unit name too. */
+    /** Row 3: reporting unit/establishment. */
     get reportingUnitBn(): string {
-        return this.destinedMotherUnitName || '---';
+        return this.resolveDestinationBn();
     }
 
     /** Row 4: date of release in Bangla. */
@@ -249,9 +339,9 @@ export class NotesheetPreviewMOComponent implements OnInit {
         return d ? this.formatBnDate(d) : '---';
     }
 
-    /** Row 9: reception unit — same as destination. */
+    /** Row 9: reception unit. */
     get receptionUnitBn(): string {
-        return this.destinedMotherUnitName || '---';
+        return this.resolveDestinationBn();
     }
 
     /** Bottom block — RAB Unit name. */

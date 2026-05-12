@@ -74,6 +74,7 @@
                 <th>Letter Date</th>
                 <th>Movement Type</th>
                 <th>Move Order Type</th>
+                <th>Reason</th>
                 <th style="width:160px">Actions</th>
             </tr>
         </ng-template>
@@ -85,6 +86,7 @@
                 <td>{{ row.letterDate || '—' }}</td>
                 <td>{{ movementTypeLabel(row.movementType) }}</td>
                 <td>{{ moveOrderTypeLabel(row.moveOrderType) }}</td>
+                <td>{{ movementReasonLabel(row.movementReasonId) }}</td>
                 <td>
                     <div class="flex gap-1">
                         <button type="button" pButton
@@ -116,7 +118,7 @@
 
         <ng-template pTemplate="emptymessage">
             <tr>
-                <td colspan="6" class="text-center py-4">
+                <td colspan="7" class="text-center py-4">
                     @if (loading) {
                         Loading...
                     } @else {

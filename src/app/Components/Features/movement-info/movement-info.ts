@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -19,7 +19,9 @@ import { MessageService, ConfirmationService } from 'primeng/api';
 
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor';
+import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/file-references-form/file-references-form';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
+import { forkJoin } from 'rxjs';
 
 import { CommonCodeService } from '@/services/common-code-service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
@@ -73,6 +75,7 @@ interface MovementEmployeeRow {
         ConfirmDialog,
         EmployeeSearchComponent,
         RichEditorComponent,
+        FileReferencesFormComponent,
         FlexibleDateDirective
     ],
     providers: [MessageService, ConfirmationService],
@@ -101,10 +104,29 @@ export class MovementInfoComponent implements OnInit {
 
     form!: FormGroup;
     editingId: number | null = null;
+    /** LetterNo loaded from the existing row during edit — preserved on update. */
+    private editingLetterNo: string | null = null;
 
     selectedEmployees: MovementEmployeeRow[] = [];
     showAllEmployees = false;
     takeoverPerson: EmployeeBasicInfo | null = null;
+
+    /** Attached-files state (multi-file uploader). */
+    @ViewChild('filesForm') filesForm!: FileReferencesFormComponent;
+    fileRows: FileRowData[] = [];
+    onFilesChange(rows: FileRowData[]): void {
+        this.fileRows = rows;
+    }
+    onDownloadFile(payload: { fileId: number; fileName: string }): void {
+        this.empService.downloadFile(payload.fileId).subscribe({
+            next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
+            error: (err: any) => this.messageService.add({
+                severity: 'error',
+                summary: 'Error',
+                detail: err?.error?.message || 'Failed to download file.'
+            })
+        });
+    }
 
     // Add Reason dialog state
     showAddReasonDialog = false;
@@ -205,6 +227,9 @@ export class MovementInfoComponent implements OnInit {
     }
 
     private patchFromMovement(row: any): void {
+        // Preserve the existing LetterNo so update doesn't wipe it.
+        this.editingLetterNo = (row.letterNo ?? null) as string | null;
+
         // Choose which destined unit is in use based on whichever id is populated.
         const target: 'mother' | 'rab' = row.destinedRABUnitId != null ? 'rab' : 'mother';
 
@@ -223,6 +248,9 @@ export class MovementInfoComponent implements OnInit {
             isJoiningLeave: !!row.isJoiningLeave,
             joiningLeaveFrom: this.toDate(row.joiningLeaveFrom),
             joiningLeaveTo: this.toDate(row.joiningLeaveTo),
+            lastRationCertificate: row.lastRationCertificate ?? null,
+            payAndAllowance:       row.payAndAllowance       ?? null,
+            railwayWarrant:        row.railwayWarrant        ?? null,
             auth: row.auth ?? null,
             detailsInformation: row.detailsInformation ?? null,
             remarks: row.remarks ?? null,
@@ -233,6 +261,9 @@ export class MovementInfoComponent implements OnInit {
 
         // Letter Recipients are stored as JSON array of strings.
         this.letterRecipientsList = this.parseStringJsonArray(row.letterRecipients);
+
+        // Files — JSON array of { fileId, fileName } → seed the FileReferencesForm rows.
+        this.fileRows = this.parseFileReferences(row.filesReferences);
 
         // Employees: rehydrate each row from EmployeeSearchInfo + EmpModel.
         const empIds = this.parseIntJsonArray(row.employeeIds);
@@ -314,6 +345,26 @@ export class MovementInfoComponent implements OnInit {
         }
     }
 
+    /** Parse a JSON array of { fileId, fileName } (any casing) into FileRowData rows
+     *  consumable by the FileReferencesFormComponent. */
+    private parseFileReferences(json: string | null | undefined): FileRowData[] {
+        if (!json) return [];
+        try {
+            const arr = JSON.parse(json);
+            if (!Array.isArray(arr)) return [];
+            return arr
+                .map((r: any) => {
+                    const fileId = r?.fileId ?? r?.FileId;
+                    const fileName = (r?.fileName ?? r?.FileName ?? '') as string;
+                    if (fileId == null) return null;
+                    return { displayName: fileName, file: null, fileId } as FileRowData;
+                })
+                .filter((row): row is FileRowData => row !== null);
+        } catch {
+            return [];
+        }
+    }
+
     private toDate(value: string | null | undefined): Date | null {
         if (!value) return null;
         // ISO yyyy-MM-dd or full ISO datetime — Date constructor handles both
@@ -337,6 +388,10 @@ export class MovementInfoComponent implements OnInit {
             isJoiningLeave: [false],
             joiningLeaveFrom: [null],
             joiningLeaveTo: [null],
+            // MO-only fields (free text).
+            lastRationCertificate: [null],
+            payAndAllowance: [null],
+            railwayWarrant: [null],
             auth: [null],
             detailsInformation: [null],
             remarks: [null],
@@ -373,7 +428,7 @@ export class MovementInfoComponent implements OnInit {
         this.commonCodeService.getAllActiveCommonCodesType('MovementReason').subscribe({
             next: (rows: CommonCodeModel[]) => {
                 this.movementReasonOptions = (rows || []).map((r) => ({
-                    label: r.codeValueEN,
+                    label: r.codeValueBN || r.codeValueEN,
                     value: r.codeId
                 }));
             }
@@ -533,12 +588,13 @@ export class MovementInfoComponent implements OnInit {
                 this.commonCodeService.getAllActiveCommonCodesType('MovementReason').subscribe({
                     next: (rows: CommonCodeModel[]) => {
                         this.movementReasonOptions = (rows || []).map((r) => ({
-                            label: r.codeValueEN,
+                            label: r.codeValueBN || r.codeValueEN,
                             value: r.codeId
                         }));
-                        const match = this.movementReasonOptions.find((o) => o.label === en);
-                        if (match) {
-                            this.form.patchValue({ movementReasonId: match.value });
+                        // Auto-select the row we just inserted, matched on the EN value the user typed.
+                        const matchRow = (rows || []).find((r) => r.codeValueEN === en);
+                        if (matchRow) {
+                            this.form.patchValue({ movementReasonId: matchRow.codeId });
                         }
                         this.isSavingReason = false;
                         this.showAddReasonDialog = false;
@@ -578,6 +634,9 @@ export class MovementInfoComponent implements OnInit {
     }
     get isArticle47Variant(): boolean {
         return this.isArticle47Handover || this.isArticle47Takeover;
+    }
+    get isMO(): boolean {
+        return this.form?.get('moveOrderType')!.value === MoveOrderType.MO;
     }
     /** Show Handover-of-charge field — Permanent + Article 47 (Handover). */
     get showHandover(): boolean {
@@ -701,9 +760,16 @@ export class MovementInfoComponent implements OnInit {
         const currentUser = this.sharedService.getCurrentUser();
         const now = this.sharedService.getCurrentDateTime();
 
-        const payload: MovementInfoModel = {
+        // ── File upload step ──────────────────────────────────────────
+        // New rows have a File but no fileId yet; existing rows already have fileId.
+        const newFileRows: FileRowData[] = this.filesForm?.getFilesToUpload() ?? [];
+        const existingRefs: any[] = this.filesForm?.getExistingFileReferences() ?? [];
+
+        const buildPayload = (filesJson: string | null): MovementInfoModel => ({
             movementId: this.editingId ?? 0,
-            letterNo: null,
+            // On update keep the previously assigned LetterNo; on insert send null so
+            // InsertMovementInfoHandler can mint a fresh one from MovementLetterNumberConfig.
+            letterNo: this.editingId ? this.editingLetterNo : null,
             letterDate: this.toIsoDate(v.letterDate),
             employeeIds: JSON.stringify(this.selectedEmployees.map((e) => e.employeeID)),
             finalApproverIds: finalApproverIds.length > 0 ? JSON.stringify(finalApproverIds) : null,
@@ -722,48 +788,80 @@ export class MovementInfoComponent implements OnInit {
             isJoiningLeave: !!v.isJoiningLeave,
             joiningLeaveFrom: this.toIsoDate(v.joiningLeaveFrom),
             joiningLeaveTo: this.toIsoDate(v.joiningLeaveTo),
+            // MO-only — persist only when moveOrderType is MO; otherwise null.
+            lastRationCertificate: this.isMO ? (v.lastRationCertificate ?? null) : null,
+            payAndAllowance:       this.isMO ? (v.payAndAllowance ?? null)       : null,
+            railwayWarrant:        this.isMO ? (v.railwayWarrant ?? null)        : null,
             auth: v.auth ?? null,
             detailsInformation: v.detailsInformation ?? null,
             remarks: v.remarks ?? null,
+            filesReferences: filesJson,
             status: v.status ?? true,
             createdBy: currentUser,
             createdDate: now,
             lastUpdatedBy: currentUser,
             lastupdate: now
+        });
+
+        const proceed = (uploaded: { fileId: number; fileName: string }[]) => {
+            const refs = [
+                ...existingRefs.map((r: any) => ({ fileId: r.FileId ?? r.fileId, fileName: r.fileName })),
+                ...uploaded
+            ];
+            const filesJson = refs.length ? JSON.stringify(refs) : null;
+            const payload = buildPayload(filesJson);
+
+            const call$ = this.editingId
+                ? this.movementService.update(payload)
+                : this.movementService.save(payload);
+
+            call$.subscribe({
+                next: () => {
+                    this.messageService.add({
+                        severity: 'success',
+                        summary: 'Saved',
+                        detail: 'Movement saved successfully.'
+                    });
+                    this.saving = false;
+                    this.resetForm();
+                },
+                error: (err) => {
+                    console.error('Movement save failed', err);
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'Error',
+                        detail: err?.error?.message || 'Failed to save movement.'
+                    });
+                    this.saving = false;
+                }
+            });
         };
 
         this.saving = true;
-        const call$ = this.editingId
-            ? this.movementService.update(payload)
-            : this.movementService.save(payload);
-
-        call$.subscribe({
-            next: () => {
-                this.messageService.add({
-                    severity: 'success',
-                    summary: 'Saved',
-                    detail: 'Movement saved successfully.'
-                });
-                this.saving = false;
-                this.resetForm();
-            },
-            error: (err) => {
-                console.error('Movement save failed', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: err?.error?.message || 'Failed to save movement.'
-                });
-                this.saving = false;
-            }
-        });
+        if (newFileRows.length > 0) {
+            forkJoin(newFileRows.map((r) => this.empService.uploadEmployeeFile(r.file!))).subscribe({
+                next: (results: any[]) => proceed(results as { fileId: number; fileName: string }[]),
+                error: () => {
+                    this.saving = false;
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'Upload',
+                        detail: 'File upload failed.'
+                    });
+                }
+            });
+        } else {
+            proceed([]);
+        }
     }
 
     resetForm() {
         this.editingId = null;
+        this.editingLetterNo = null;
         this.selectedEmployees = [];
         this.takeoverPerson = null;
         this.letterRecipientsList = [];
+        this.fileRows = [];
         this.form.reset({
             movementType: null,
             moveOrderType: null,
@@ -779,6 +877,9 @@ export class MovementInfoComponent implements OnInit {
             isJoiningLeave: false,
             joiningLeaveFrom: null,
             joiningLeaveTo: null,
+            lastRationCertificate: null,
+            payAndAllowance: null,
+            railwayWarrant: null,
             auth: null,
             detailsInformation: null,
             remarks: null,

@@ -265,6 +265,29 @@
                 </div>
             }
         </div>
+
+        <!-- ── MO-only fields ──────────────────────────────────────────── -->
+        @if (isMO) {
+            <div class="mv-subsection">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="mv-field">
+                        <label>শেষ রসদ সনদপত্র</label>
+                        <input pInputText class="w-full"
+                               formControlName="lastRationCertificate" />
+                    </div>
+                    <div class="mv-field">
+                        <label>বেতন ও ভাতা</label>
+                        <input pInputText class="w-full"
+                               formControlName="payAndAllowance" />
+                    </div>
+                    <div class="mv-field">
+                        <label>রেলওয়ে আজ্ঞাপত্র</label>
+                        <input pInputText class="w-full"
+                               formControlName="railwayWarrant" />
+                    </div>
+                </div>
+            </div>
+        }
     </section>
 
     <!-- ── Card 4: Additional details ────────────────────────────────── -->
@@ -343,6 +366,23 @@
             }
         </section>
     }
+
+    <!-- ── Files ─────────────────────────────────────────────────────── -->
+    <section class="mv-card">
+        <header class="mv-card-header">
+            <i class="pi pi-paperclip mv-card-icon"></i>
+            <span class="mv-card-title">Files</span>
+            <span class="mv-optional">Optional</span>
+        </header>
+
+        <app-file-references-form
+            #filesForm
+            [fileRows]="fileRows"
+            namePlaceholder="e.g. Posting order, Annexure"
+            (fileRowsChange)="onFilesChange($event)"
+            (onDownloadFile)="onDownloadFile($event)">
+        </app-file-references-form>
+    </section>
 
     <!-- ── Final Approvers ───────────────────────────────────────────── -->
     <section class="mv-card">

@@ -18,6 +18,8 @@ import { MessageService, ConfirmationService } from 'primeng/api';
 import { MovementInfoService } from '@/services/movement-info.service';
 import { MovementInfoModel } from '@/models/movement-info.model';
 import { UserMenuService } from '@/services/user-menu.service';
+import { CommonCodeService } from '@/services/common-code-service';
+import { CommonCodeModel } from '@/models/common-code-model';
 import { MoveOrderType, MoveOrderTypeOptions, MovementType, MovementTypeOptions } from '@/models/enums';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 
@@ -50,6 +52,7 @@ export class MovementListComponent implements OnInit {
     private messageService = inject(MessageService);
     private confirmationService = inject(ConfirmationService);
     private userMenuService = inject(UserMenuService);
+    private commonCodeService = inject(CommonCodeService);
 
     canInsert = true;
     canUpdate = true;
@@ -75,6 +78,8 @@ export class MovementListComponent implements OnInit {
     /** Maps for display */
     readonly moveOrderTypeMap = new Map<number, string>(MoveOrderTypeOptions.map((o) => [o.value, o.label]));
     readonly movementTypeMap = new Map<number, string>(MovementTypeOptions.map((o) => [o.value, o.label]));
+    /** MovementReason CommonCode id → display label. */
+    readonly movementReasonMap = new Map<number, string>();
 
     ngOnInit(): void {
         const perms = this.userMenuService.getPermissionsByRoute(this.router.url);
@@ -88,6 +93,17 @@ export class MovementListComponent implements OnInit {
         const titleSuffix =
             this.moveOrderTypeFilter != null ? this.moveOrderTypeMap.get(this.moveOrderTypeFilter) : null;
         this.title = titleSuffix ? `Movement List — ${titleSuffix}` : 'Movement List';
+
+        // Cache CommonCode 'MovementReason' for the Reason column.
+        this.commonCodeService.getAllActiveCommonCodesType('MovementReason').subscribe({
+            next: (rows: CommonCodeModel[]) => {
+                this.movementReasonMap.clear();
+                for (const r of rows || []) {
+                    if (r.codeId == null) continue;
+                    this.movementReasonMap.set(r.codeId, r.codeValueEN || '');
+                }
+            }
+        });
 
         this.loadList();
     }
@@ -174,6 +190,10 @@ export class MovementListComponent implements OnInit {
 
     movementTypeLabel(v: number | undefined | null): string {
         return v == null ? '-' : this.movementTypeMap.get(v) ?? '-';
+    }
+
+    movementReasonLabel(v: number | null | undefined): string {
+        return v == null ? '-' : this.movementReasonMap.get(v) ?? '-';
     }
 
     onCreate() {

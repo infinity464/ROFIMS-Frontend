@@ -26,9 +26,17 @@ export interface MovementInfoModel {
     isJoiningLeave: boolean;
     joiningLeaveFrom: string | null;
     joiningLeaveTo: string | null;
+    /** MO-only — "শেষ রসদ সনদপত্র" value (default: প্রদান করা হয়েছে।). */
+    lastRationCertificate: string | null;
+    /** MO-only — "বেতন ও ভাতা" value (default: এসপিসি মোতাবেক।). */
+    payAndAllowance: string | null;
+    /** MO-only — "রেলওয়ে আজ্ঞাপত্র" value (default: প্রদান করা হয় নাই।). */
+    railwayWarrant: string | null;
     auth: string | null;
     detailsInformation: string | null;
     remarks: string | null;
+    /** JSON-serialised array of { fileId, fileName } attached files (optional). */
+    filesReferences: string | null;
     status: boolean;
     createdBy: string;
     createdDate?: string;
