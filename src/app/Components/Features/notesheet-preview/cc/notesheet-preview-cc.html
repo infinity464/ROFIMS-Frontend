@@ -63,14 +63,14 @@
             <!-- ── Main bordered grid ───────────────────────────────────── -->
             <table class="cc-grid" style="width:100%; border-collapse:collapse; margin-top:6pt; font-size:12pt; table-layout:fixed;">
                 <colgroup>
-                    <col style="width:9%;">   <!-- জেলা / স্টেশন -->
+                    <col style="width:5%;">   <!-- জেলা / স্টেশন (cumulative -40% from original 9%) -->
                     <col style="width:24%;">  <!-- বাহিনীর পূর্ণ বিবরণ ও নাম -->
-                    <col style="width:11%;">  <!-- গন্তব্যস্থল -->
-                    <col style="width:16%;">  <!-- কাজের বিবরণ -->
+                    <col style="width:5%;">   <!-- গন্তব্যস্থল (cumulative ~55% narrower than original 11%) -->
+                    <col style="width:28%;">  <!-- কাজের বিবরণ -->
                     <col style="width:10%;">  <!-- প্রস্থান -->
                     <col style="width:10%;">  <!-- পৌঁছানোর -->
                     <col style="width:14%;">  <!-- ফেরত আসার অনুমতি -->
-                    <col style="width:6%;">   <!-- মন্তব্য -->
+                    <col style="width:4%;">   <!-- মন্তব্য (cumulative ~33% narrower than original 6%) -->
                 </colgroup>
 
                 <thead>
@@ -94,8 +94,8 @@
 
                 <tbody>
                     <tr>
-                        <!-- Col 1: জেলা / স্টেশন -->
-                        <td class="cc-cell" style="vertical-align:top; padding:6pt;">
+                        <!-- Col 1: জেলা / স্টেশন (centered) -->
+                        <td class="cc-cell" style="vertical-align:middle; text-align:center; padding:6pt;">
                             {{ districtAndStationBn || '---' }}
                         </td>
 
@@ -107,8 +107,8 @@
                             @if (employeeLines.length === 0) { <div>---</div> }
                         </td>
 
-                        <!-- Col 3: গন্তব্যস্থল -->
-                        <td class="cc-cell" style="vertical-align:top; padding:6pt;">
+                        <!-- Col 3: গন্তব্যস্থল (centered) -->
+                        <td class="cc-cell" style="vertical-align:middle; text-align:center; padding:6pt;">
                             {{ destinationBn || '---' }}
                         </td>
 
