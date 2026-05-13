@@ -1,11 +1,20 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { ButtonModule } from 'primeng/button';
+import { SelectModule } from 'primeng/select';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
-import { forkJoin, of } from 'rxjs';
+import { forkJoin, of, firstValueFrom } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
+import {
+    Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+    WidthType, BorderStyle, AlignmentType, PageOrientation, HeightRule
+} from 'docx';
+import { saveAs } from 'file-saver';
+import { environment } from '@/Core/Environments/environment';
 
 import { MovementInfoService } from '@/services/movement-info.service';
 import { MovementInfoModel } from '@/models/movement-info.model';
@@ -26,7 +35,7 @@ interface EmployeeLine {
 @Component({
     selector: 'app-notesheet-preview-cc',
     standalone: true,
-    imports: [CommonModule, ButtonModule, Toast],
+    imports: [CommonModule, FormsModule, ButtonModule, SelectModule, Toast],
     providers: [MessageService],
     templateUrl: './notesheet-preview-cc.html',
     styleUrls: [
@@ -44,10 +53,21 @@ export class NotesheetPreviewCCComponent implements OnInit {
     private masterBasicSetup = inject(MasterBasicSetupService);
     private organizationService = inject(OrganizationService);
     private messageService = inject(MessageService);
+    private http = inject(HttpClient);
 
     loading = true;
     error: string | null = null;
     movement: MovementInfoModel | null = null;
+
+    /** Export state. */
+    exportingPdf = false;
+    printingPreview = false;
+    pageSizeOptions = [
+        { label: 'Legal',     value: 'Legal'     },
+        { label: 'A4',        value: 'A4'        },
+        { label: 'Letter',    value: 'Letter'    }
+    ];
+    selectedPageSize: 'Legal' | 'A4' | 'Letter' = 'Legal';
 
     /** Numbered Bangla list of employees rendered in column 2 (বাহিনীর পূর্ণ বিবরণ ও নাম). */
     employeeLines: EmployeeLine[] = [];
@@ -396,5 +416,299 @@ export class NotesheetPreviewCCComponent implements OnInit {
 
     onBack(): void {
         this.router.navigate(['/movement-list']);
+    }
+
+    // ── Export ─────────────────────────────────────────────────────────────
+
+    async exportWord(): Promise<void> {
+        if (!this.movement) return;
+        try {
+            const doc = this.buildWordDocument();
+            const blob = await Packer.toBlob(doc);
+            saveAs(blob, `CC_${this.movement.movementId}.docx`);
+        } catch (err) {
+            console.error('Word export failed', err);
+            this.messageService.add({ severity: 'error', summary: 'Export Error', detail: 'Failed to generate Word document.' });
+        }
+    }
+
+    async exportPdf(): Promise<void> {
+        if (!this.movement) return;
+        this.exportingPdf = true;
+        try {
+            const doc = this.buildWordDocument();
+            const docxBlob = await Packer.toBlob(doc);
+            const pdfBlob = await this.convertDocxToPdf(docxBlob);
+            saveAs(pdfBlob, `CC_${this.movement.movementId}.pdf`);
+        } catch (err) {
+            console.error('PDF export failed', err);
+            this.messageService.add({ severity: 'error', summary: 'Export Error', detail: 'Failed to generate PDF.' });
+        } finally {
+            this.exportingPdf = false;
+        }
+    }
+
+    async printPreview(): Promise<void> {
+        if (!this.movement) return;
+        this.printingPreview = true;
+        try {
+            const doc = this.buildWordDocument();
+            const docxBlob = await Packer.toBlob(doc);
+            const pdfBlob = await this.convertDocxToPdf(docxBlob);
+            const url = URL.createObjectURL(pdfBlob);
+            window.open(url, '_blank');
+        } catch (err) {
+            console.error('Print preview failed', err);
+            this.messageService.add({ severity: 'error', summary: 'Preview Error', detail: 'Failed to generate print preview.' });
+        } finally {
+            this.printingPreview = false;
+        }
+    }
+
+    private async convertDocxToPdf(docxBlob: Blob): Promise<Blob> {
+        const form = new FormData();
+        form.append('file', docxBlob, 'document.docx');
+        return await firstValueFrom(
+            this.http.post(`${environment.apis.core}/Document/ConvertToPdf`, form, { responseType: 'blob' })
+        );
+    }
+
+    /** Twentieths of a point (twips) for the selected page size.
+     *  Returns *portrait* dimensions — docx swaps them when orientation = LANDSCAPE. */
+    private getPageDimensions(): { width: number; height: number } {
+        switch (this.selectedPageSize) {
+            case 'A4':     return { width: 11906, height: 16838 }; // 8.27" × 11.69"
+            case 'Letter': return { width: 12240, height: 15840 }; // 8.5"  × 11"
+            case 'Legal':
+            default:       return { width: 12240, height: 20160 }; // 8.5"  × 14"
+        }
+    }
+
+    /** Build the Word document (landscape, mirrors the on-screen CC layout). */
+    private buildWordDocument(): Document {
+        const m = this.movement!;
+        // Word-friendly Bangla font (Nirmala UI ships with Windows 10+);
+        // `cs` covers complex-script shaping needed for Bangla.
+        const font = { ascii: 'Nirmala UI', hAnsi: 'Nirmala UI', cs: 'Nirmala UI', hint: 'cs' as const };
+        const dims = this.getPageDimensions();
+        const bnVehicle = this.vehicleLabelBn;
+        const bnDate = this.letterDateBn;
+        const bnTimeDate = this.departureTimeAndDateBn;
+
+        // Font sizes in half-points (1pt = 2 half-points).
+        const SZ_TITLE  = 28; // 14pt — main title
+        const SZ_BODY   = 20; // 10pt — body text (posting +2pt)
+        const SZ_TABLE  = 18; //  9pt — table header & cells (posting +2pt)
+        const SZ_FOOTER = 16; //  8pt — footnote (unchanged)
+
+        const para = (text: string, opts: { bold?: boolean; size?: number; align?: (typeof AlignmentType)[keyof typeof AlignmentType] } = {}) =>
+            new Paragraph({
+                alignment: opts.align,
+                children: [new TextRun({
+                    text,
+                    bold: opts.bold,
+                    size: opts.size ?? SZ_BODY,
+                    font
+                })]
+            });
+
+        const noBorder = {
+            top:    { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+            bottom: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+            left:   { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+            right:  { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+        };
+
+        // Title + subtitle as full-page-width centered paragraphs
+        const titlePara = para('কর্তব্যে প্রেরিত পুলিশ অফিসার কর্তৃক বহনীয় হুকুমনামা',
+                               { size: SZ_TITLE, align: AlignmentType.CENTER });
+        const subtitlePara = para('(নিয়ন্ত্রণ নং ১৬৩ এবং ৯০৯)',
+                                  { size: SZ_BODY, align: AlignmentType.CENTER });
+
+        // Form-numbers strip — 2 columns: form numbers (left) / (blank right)
+        const formNumbersStrip = new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            borders: {
+                ...noBorder,
+                insideHorizontal: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+                insideVertical:   { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }
+            },
+            rows: [
+                new TableRow({
+                    children: [
+                        new TableCell({
+                            width: { size: 50, type: WidthType.PERCENTAGE },
+                            borders: noBorder,
+                            children: [
+                                para('বি পি ফরম নং ১০', { size: SZ_BODY }),
+                                para('বাংলাদেশ ফরম নং ৫৩৩৬', { size: SZ_BODY })
+                            ]
+                        }),
+                        new TableCell({
+                            width: { size: 50, type: WidthType.PERCENTAGE },
+                            borders: noBorder,
+                            children: [para('')]
+                        })
+                    ]
+                })
+            ]
+        });
+
+        // Second strip — M CC No (left) + vehicle / date (right)
+        const secondStrip = new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            borders: {
+                ...noBorder,
+                insideHorizontal: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+                insideVertical:   { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }
+            },
+            rows: [
+                new TableRow({
+                    children: [
+                        new TableCell({
+                            width: { size: 60, type: WidthType.PERCENTAGE },
+                            borders: noBorder,
+                            children: [para('এম সিসি নং ৪১৭০/২০২৬', { size: SZ_BODY })]
+                        }),
+                        new TableCell({
+                            width: { size: 40, type: WidthType.PERCENTAGE },
+                            borders: noBorder,
+                            children: [
+                                ...(bnVehicle ? [para(bnVehicle, { size: SZ_BODY, align: AlignmentType.RIGHT })] : []),
+                                para(`তারিখঃ ${bnDate}`, { size: SZ_BODY, align: AlignmentType.RIGHT })
+                            ]
+                        })
+                    ]
+                })
+            ]
+        });
+
+        const allBorder = {
+            top:    { style: BorderStyle.SINGLE, size: 6, color: '000000' },
+            bottom: { style: BorderStyle.SINGLE, size: 6, color: '000000' },
+            left:   { style: BorderStyle.SINGLE, size: 6, color: '000000' },
+            right:  { style: BorderStyle.SINGLE, size: 6, color: '000000' }
+        };
+
+        // Inner cell padding (twips: 1pt = 20). ~6pt all-round mirrors the
+        // 4pt 6pt padding used on the on-screen .cc-cell rule.
+        const cellMargins = { top: 120, bottom: 120, left: 120, right: 120 };
+
+        const th = (text: string, opts: { rowSpan?: number; columnSpan?: number; width?: number } = {}) =>
+            new TableCell({
+                rowSpan: opts.rowSpan,
+                columnSpan: opts.columnSpan,
+                width: opts.width != null ? { size: opts.width, type: WidthType.PERCENTAGE } : undefined,
+                borders: allBorder,
+                margins: cellMargins,
+                verticalAlign: 'center' as any,
+                children: [para(text, { size: SZ_TABLE, align: AlignmentType.CENTER })]
+            });
+
+        // Header rows of the bordered grid
+        const headerRow1 = new TableRow({
+            children: [
+                th('জেলা এবং স্টেশন',         { rowSpan: 2, width: 5 }),
+                th('বাহিনীর পূর্ণ বিবরণ ও নাম', { rowSpan: 2, width: 24 }),
+                th('গন্তব্যস্থল',               { rowSpan: 2, width: 5 }),
+                th('কাজের বিবরণ এবং যতজন চাওয়া হয়েছে', { rowSpan: 2, width: 28 }),
+                th(bnTimeDate,                 { columnSpan: 3 }),
+                th('মন্তব্য (ফেরার সময়, তারিখ ইত্যাদি লিখিতে হইবে)', { rowSpan: 2, width: 4 })
+            ]
+        });
+        const headerRow2 = new TableRow({
+            children: [
+                th('প্রস্থান',                            { width: 10 }),
+                th('পৌঁছানোর',                          { width: 10 }),
+                th('ফেরত আসার অনুমতি (প্রদানকারী অফিসারের স্বাক্ষরসহ)', { width: 14 })
+            ]
+        });
+
+        // Body row
+        const bodyParagraphs = (children: Paragraph[]) => children.length ? children : [para('')];
+        const employeeParas = this.employeeLines.map((l) => para(`${l.serial} ${l.text}`, { size: SZ_TABLE }));
+
+        // Strip HTML from auth/remarks for Word output (keeps things simple — rich
+        // formatting is preserved in the screen preview only).
+        const stripHtml = (html: string | null | undefined): string => {
+            if (!html) return '';
+            const div = document.createElement('div');
+            div.innerHTML = html;
+            return (div.textContent || div.innerText || '').trim();
+        };
+        const authText = stripHtml(m.auth);
+        const remarksText = stripHtml(m.remarks);
+
+        const workDescParas: Paragraph[] = [];
+        workDescParas.push(para(`সূত্রঃ ${authText}`, { size: SZ_TABLE }));
+        workDescParas.push(para(`স্মারক নং - ${this.letterNoBn} ${remarksText}`, { size: SZ_TABLE }));
+        workDescParas.push(para(''));
+        workDescParas.push(para(''));
+        workDescParas.push(para('নির্বাহী কর্মকর্তা',  { size: SZ_TABLE, align: AlignmentType.CENTER }));
+        workDescParas.push(para('র‍্যাব ফোর্সেস সদর দপ্তর', { size: SZ_TABLE, align: AlignmentType.CENTER }));
+        workDescParas.push(para('কুর্মিটোলা, ঢাকা।',    { size: SZ_TABLE, align: AlignmentType.CENTER }));
+
+        const bodyRow = new TableRow({
+            // Force a tall body row so the table fills the page even when there's
+            // little content (twips: 1pt = 20 → 5000 = 250pt ≈ 3.5"). `ATLEAST`
+            // means the row will grow further if content needs more space.
+            height: { value: 5000, rule: HeightRule.ATLEAST },
+            children: [
+                new TableCell({
+                    borders: allBorder,
+                    margins: cellMargins,
+                    verticalAlign: 'center' as any,
+                    children: [para(this.districtAndStationBn || '---', { size: SZ_TABLE, align: AlignmentType.CENTER })]
+                }),
+                new TableCell({
+                    borders: allBorder,
+                    margins: cellMargins,
+                    children: bodyParagraphs(employeeParas)
+                }),
+                new TableCell({
+                    borders: allBorder,
+                    margins: cellMargins,
+                    verticalAlign: 'center' as any,
+                    children: [para(this.destinationBn || '---', { size: SZ_TABLE, align: AlignmentType.CENTER })]
+                }),
+                new TableCell({
+                    borders: allBorder,
+                    margins: cellMargins,
+                    columnSpan: 4,
+                    children: workDescParas
+                }),
+                new TableCell({
+                    borders: allBorder,
+                    margins: cellMargins,
+                    children: [para('')]
+                })
+            ]
+        });
+
+        const grid = new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: [headerRow1, headerRow2, bodyRow]
+        });
+
+        const footnote = para(
+            'দ্রষ্টব্য - কোন বিলম্ব হইলে সঙ্গে সঙ্গে শেষ চার কলামের লিখিত বিবরণ খুঁজিয়া বাহির করিতে হইবে। বিলম্বকারীকে অভিযুক্ত করিতে হইবে। তদন্তকারী অফিসার তাহার কৈফিয়ত হুকুমনামার পর পৃষ্ঠায় লিখিবেন এবং সুপারের কাছে আদেশের জন্য পাঠাইবেন।',
+            { size: SZ_FOOTER }
+        );
+
+        return new Document({
+            sections: [{
+                properties: {
+                    page: {
+                        size: {
+                            width: dims.width,
+                            height: dims.height,
+                            orientation: PageOrientation.LANDSCAPE
+                        },
+                        margin: { top: 720, bottom: 720, left: 720, right: 720 } // 0.5"
+                    }
+                },
+                children: [titlePara, subtitlePara, formNumbersStrip, secondStrip, para(''), grid, footnote]
+            }]
+        });
     }
 }
