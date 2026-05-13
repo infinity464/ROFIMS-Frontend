@@ -9,10 +9,31 @@
         <button type="button" pButton label="Edit" icon="pi pi-pencil"
                 [outlined]="true"
                 (click)="onEdit()" [disabled]="loading || !!error || !movement"></button>
-        <button type="button" pButton label="Print" icon="pi pi-print"
-                [outlined]="true" (click)="onPrint()" [disabled]="loading || !!error"></button>
+        <button type="button" pButton label="Word" icon="pi pi-file-word"
+                [outlined]="true" (click)="exportWord()"
+                [disabled]="loading || !!error || !movement"></button>
+        <button type="button" pButton label="PDF" icon="pi pi-file-pdf"
+                [outlined]="true" (click)="exportPdf()"
+                [disabled]="loading || !!error || !movement || exportingPdf"
+                [loading]="exportingPdf"></button>
+        <button type="button" pButton label="Print Preview" icon="pi pi-print"
+                [outlined]="true" (click)="printPreview()"
+                [disabled]="loading || !!error || !movement || printingPreview"
+                [loading]="printingPreview"></button>
     </div>
 </div>
+
+@if (!loading && !error && movement) {
+    <div class="export-options-bar no-print"
+         style="display:flex; gap:0.75rem; align-items:center; padding:0.5rem 1rem; background:var(--surface-ground); border-radius:6px; margin:0.5rem 1rem;">
+        <span style="font-weight:600; font-size:0.85rem;">
+            <i class="pi pi-cog" style="margin-right:0.3rem;"></i>Export:
+        </span>
+        <p-select [options]="pageSizeOptions" [(ngModel)]="selectedPageSize"
+                  optionLabel="label" optionValue="value"
+                  [style]="{ width: '110px' }"></p-select>
+    </div>
+}
 
 @if (loading) {
     <div class="preview-loading">
@@ -53,66 +74,66 @@
                 </colgroup>
                 <tbody>
                     <tr>
-                        <td style="vertical-align:top; padding:2pt 0; white-space:nowrap;">{{ serialBn(1) }}</td>
-                        <td style="vertical-align:top; padding:2pt 0;">ব্যক্তিগত নং, পদবী এবং নাম</td>
-                        <td style="vertical-align:top; padding:2pt 0;">:</td>
-                        <td style="vertical-align:top; padding:2pt 0;">{{ employeeDisplayBn }}</td>
+                        <td style="vertical-align:top; padding:4pt 0; white-space:nowrap;">{{ serialBn(1) }}</td>
+                        <td style="vertical-align:top; padding:4pt 0;">ব্যক্তিগত নং, পদবী এবং নাম</td>
+                        <td style="vertical-align:top; padding:4pt 0;">:</td>
+                        <td style="vertical-align:top; padding:4pt 0;">{{ employeeDisplayBn }}</td>
                     </tr>
                     <tr>
-                        <td style="vertical-align:top; padding:2pt 0;">{{ serialBn(2) }}</td>
-                        <td style="vertical-align:top; padding:2pt 0;">গন্তব্যস্থল</td>
-                        <td style="vertical-align:top; padding:2pt 0;">:</td>
-                        <td style="vertical-align:top; padding:2pt 0;">{{ destinationBn }}</td>
+                        <td style="vertical-align:top; padding:4pt 0;">{{ serialBn(2) }}</td>
+                        <td style="vertical-align:top; padding:4pt 0;">গন্তব্যস্থল</td>
+                        <td style="vertical-align:top; padding:4pt 0;">:</td>
+                        <td style="vertical-align:top; padding:4pt 0;">{{ destinationBn }}</td>
                     </tr>
                     <tr>
-                        <td style="vertical-align:top; padding:2pt 0;">{{ serialBn(3) }}</td>
-                        <td style="vertical-align:top; padding:2pt 0;">রিপোর্ট করিবার ইউনিট/প্রতিষ্ঠান</td>
-                        <td style="vertical-align:top; padding:2pt 0;">:</td>
-                        <td style="vertical-align:top; padding:2pt 0;">{{ reportingUnitBn }}</td>
+                        <td style="vertical-align:top; padding:4pt 0;">{{ serialBn(3) }}</td>
+                        <td style="vertical-align:top; padding:4pt 0;">রিপোর্ট করিবার ইউনিট/প্রতিষ্ঠান</td>
+                        <td style="vertical-align:top; padding:4pt 0;">:</td>
+                        <td style="vertical-align:top; padding:4pt 0;">{{ reportingUnitBn }}</td>
                     </tr>
                     <tr>
-                        <td style="vertical-align:top; padding:2pt 0;">{{ serialBn(4) }}</td>
-                        <td style="vertical-align:top; padding:2pt 0;">গমনের তারিখ ও সময়</td>
-                        <td style="vertical-align:top; padding:2pt 0;">:</td>
-                        <td style="vertical-align:top; padding:2pt 0;">{{ departureDateBn }}</td>
+                        <td style="vertical-align:top; padding:4pt 0;">{{ serialBn(4) }}</td>
+                        <td style="vertical-align:top; padding:4pt 0;">গমনের তারিখ ও সময়</td>
+                        <td style="vertical-align:top; padding:4pt 0;">:</td>
+                        <td style="vertical-align:top; padding:4pt 0;">{{ departureDateBn }}</td>
                     </tr>
                     <tr>
-                        <td style="vertical-align:top; padding:2pt 0;">{{ serialBn(5) }}</td>
-                        <td style="vertical-align:top; padding:2pt 0;">গমনের প্রাধিকার</td>
-                        <td style="vertical-align:top; padding:2pt 0;">:</td>
-                        <td style="vertical-align:top; padding:2pt 0;">
+                        <td style="vertical-align:top; padding:4pt 0;">{{ serialBn(5) }}</td>
+                        <td style="vertical-align:top; padding:4pt 0;">গমনের প্রাধিকার</td>
+                        <td style="vertical-align:top; padding:4pt 0;">:</td>
+                        <td style="vertical-align:top; padding:4pt 0;">
                             <div class="mv-rich" [innerHTML]="movement.auth || '---'"></div>
                         </td>
                     </tr>
                     <tr>
-                        <td style="vertical-align:top; padding:2pt 0;">{{ serialBn(6) }}</td>
-                        <td style="vertical-align:top; padding:2pt 0;">শেষ রসদ সনদপত্র</td>
-                        <td style="vertical-align:top; padding:2pt 0;">:</td>
-                        <td style="vertical-align:top; padding:2pt 0;">{{ movement.lastRationCertificate || '' }}</td>
+                        <td style="vertical-align:top; padding:4pt 0;">{{ serialBn(6) }}</td>
+                        <td style="vertical-align:top; padding:4pt 0;">শেষ রসদ সনদপত্র</td>
+                        <td style="vertical-align:top; padding:4pt 0;">:</td>
+                        <td style="vertical-align:top; padding:4pt 0;">{{ movement.lastRationCertificate || '' }}</td>
                     </tr>
                     <tr>
-                        <td style="vertical-align:top; padding:2pt 0;">{{ serialBn(7) }}</td>
-                        <td style="vertical-align:top; padding:2pt 0;">বেতন ও ভাতা</td>
-                        <td style="vertical-align:top; padding:2pt 0;">:</td>
-                        <td style="vertical-align:top; padding:2pt 0;">{{ movement.payAndAllowance || '' }}</td>
+                        <td style="vertical-align:top; padding:4pt 0;">{{ serialBn(7) }}</td>
+                        <td style="vertical-align:top; padding:4pt 0;">বেতন ও ভাতা</td>
+                        <td style="vertical-align:top; padding:4pt 0;">:</td>
+                        <td style="vertical-align:top; padding:4pt 0;">{{ movement.payAndAllowance || '' }}</td>
                     </tr>
                     <tr>
-                        <td style="vertical-align:top; padding:2pt 0;">{{ serialBn(8) }}</td>
-                        <td style="vertical-align:top; padding:2pt 0;">রেলওয়ে আজ্ঞাপত্র</td>
-                        <td style="vertical-align:top; padding:2pt 0;">:</td>
-                        <td style="vertical-align:top; padding:2pt 0;">{{ movement.railwayWarrant || '' }}</td>
+                        <td style="vertical-align:top; padding:4pt 0;">{{ serialBn(8) }}</td>
+                        <td style="vertical-align:top; padding:4pt 0;">রেলওয়ে আজ্ঞাপত্র</td>
+                        <td style="vertical-align:top; padding:4pt 0;">:</td>
+                        <td style="vertical-align:top; padding:4pt 0;">{{ movement.railwayWarrant || '' }}</td>
                     </tr>
                     <tr>
-                        <td style="vertical-align:top; padding:2pt 0;">{{ serialBn(9) }}</td>
-                        <td style="vertical-align:top; padding:2pt 0;">অভ্যর্থনা</td>
-                        <td style="vertical-align:top; padding:2pt 0;">:</td>
-                        <td style="vertical-align:top; padding:2pt 0;">{{ receptionUnitBn }}</td>
+                        <td style="vertical-align:top; padding:4pt 0;">{{ serialBn(9) }}</td>
+                        <td style="vertical-align:top; padding:4pt 0;">অভ্যর্থনা</td>
+                        <td style="vertical-align:top; padding:4pt 0;">:</td>
+                        <td style="vertical-align:top; padding:4pt 0;">{{ receptionUnitBn }}</td>
                     </tr>
                     <tr>
-                        <td style="vertical-align:top; padding:2pt 0;">{{ serialBn(10) }}</td>
-                        <td style="vertical-align:top; padding:2pt 0;">মন্তব্য</td>
-                        <td style="vertical-align:top; padding:2pt 0;">:</td>
-                        <td style="vertical-align:top; padding:2pt 0;">
+                        <td style="vertical-align:top; padding:4pt 0;">{{ serialBn(10) }}</td>
+                        <td style="vertical-align:top; padding:4pt 0;">মন্তব্য</td>
+                        <td style="vertical-align:top; padding:4pt 0;">:</td>
+                        <td style="vertical-align:top; padding:4pt 0;">
                             <div class="mv-rich" [innerHTML]="movement.remarks || '---'"></div>
                         </td>
                     </tr>
@@ -125,34 +146,34 @@
                     <table style="border-collapse:collapse;">
                         <tbody>
                             <tr>
-                                <td style="vertical-align:top; padding:2pt 0; width:80pt;">ইউনিট</td>
-                                <td style="vertical-align:top; padding:2pt 8pt;">:</td>
-                                <td style="vertical-align:top; padding:2pt 0;">{{ rabUnitBn }}</td>
+                                <td style="vertical-align:top; padding:4pt 0; width:80pt;">ইউনিট</td>
+                                <td style="vertical-align:top; padding:4pt 8pt;">:</td>
+                                <td style="vertical-align:top; padding:4pt 0;">{{ rabUnitBn }}</td>
                             </tr>
                             <tr>
-                                <td style="vertical-align:top; padding:2pt 0;">স্থান</td>
-                                <td style="vertical-align:top; padding:2pt 8pt;">:</td>
-                                <td style="vertical-align:top; padding:2pt 0;">{{ rabUnitLocationBn || '---' }}</td>
+                                <td style="vertical-align:top; padding:4pt 0;">স্থান</td>
+                                <td style="vertical-align:top; padding:4pt 8pt;">:</td>
+                                <td style="vertical-align:top; padding:4pt 0;">{{ rabUnitLocationBn || '---' }}</td>
                             </tr>
                             <tr>
-                                <td style="vertical-align:top; padding:2pt 0;">তারালাপনী</td>
-                                <td style="vertical-align:top; padding:2pt 8pt;">:</td>
-                                <td style="vertical-align:top; padding:2pt 0;">৮৯৬৫৩১৫০ বর্ধিত ৩৫১১</td>
+                                <td style="vertical-align:top; padding:4pt 0;">তারালাপনী</td>
+                                <td style="vertical-align:top; padding:4pt 8pt;">:</td>
+                                <td style="vertical-align:top; padding:4pt 0;">৮৯৬৫৩১৫০ বর্ধিত ৩৫১১</td>
                             </tr>
                             <tr>
-                                <td style="vertical-align:top; padding:2pt 0;">নথি নং</td>
-                                <td style="vertical-align:top; padding:2pt 8pt;">:</td>
-                                <td style="vertical-align:top; padding:2pt 0;">{{ topRightLabelBn }}</td>
+                                <td style="vertical-align:top; padding:4pt 0;">নথি নং</td>
+                                <td style="vertical-align:top; padding:4pt 8pt;">:</td>
+                                <td style="vertical-align:top; padding:4pt 0;">{{ topRightLabelBn }}</td>
                             </tr>
                             <tr>
-                                <td style="vertical-align:top; padding:2pt 0;">তারিখ</td>
-                                <td style="vertical-align:top; padding:2pt 8pt;">:</td>
-                                <td style="vertical-align:top; padding:2pt 0;">{{ letterDateBn }}</td>
+                                <td style="vertical-align:top; padding:4pt 0;">তারিখ</td>
+                                <td style="vertical-align:top; padding:4pt 8pt;">:</td>
+                                <td style="vertical-align:top; padding:4pt 0;">{{ letterDateBn }}</td>
                             </tr>
                             <tr>
-                                <td style="vertical-align:top; padding:2pt 0;">বিতরণ</td>
-                                <td style="vertical-align:top; padding:2pt 8pt;">:</td>
-                                <td style="vertical-align:top; padding:2pt 0;">
+                                <td style="vertical-align:top; padding:4pt 0;">বিতরণ</td>
+                                <td style="vertical-align:top; padding:4pt 8pt;">:</td>
+                                <td style="vertical-align:top; padding:4pt 0;">
                                     <div class="mv-rich" [innerHTML]="movement.detailsInformation || ''"></div>
                                 </td>
                             </tr>
@@ -166,7 +187,7 @@
             @if (recipientLines.length > 0) {
                 <div style="margin-top:18pt; font-size:10pt;">
                     @for (line of recipientLines; track $index) {
-                        <div style="padding:1pt 0;">{{ line }}</div>
+                        <div style="padding:3pt 0;">{{ line }}</div>
                     }
                 </div>
             }
