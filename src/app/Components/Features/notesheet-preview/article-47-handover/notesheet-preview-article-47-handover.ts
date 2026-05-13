@@ -466,15 +466,10 @@ export class NotesheetPreviewArticle47HandoverComponent implements OnInit {
             });
         };
 
+        // Keep ZWJ/ZWNJ — words like "র‍্যাব" need ZWJ to render correctly.
+        // Only normalize Unicode (NFC) and turn NBSP into a regular space.
         const cleanText = (s: string): string =>
-            s.trim().normalize('NFC').replace(/[‌‍]/g, '').replace(/ /g, ' ');
-
-        const stripHtml = (html: string | null | undefined): string => {
-            if (!html) return '';
-            const div = document.createElement('div');
-            div.innerHTML = html;
-            return cleanText(div.textContent || div.innerText || '');
-        };
+            s.trim().normalize('NFC').replace(/ /g, ' ');
 
         /** Convert Quill HTML into docx Paragraphs, one per top-level <p>
          *  (preserves blank lines from `<p><br></p>` as empty paragraphs).
