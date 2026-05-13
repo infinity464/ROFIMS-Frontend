@@ -35,6 +35,7 @@ export interface EmployeeServiceOverview {
     status: boolean | null;
     postingStatus: string | null;
     isSendingNotesheetStatus: string | null;
+    interPostingRemark?: string | null;
     joiningDate: string | null;
     permanentDistrictType: number | null;
     permanentDistrictTypeName: string | null;

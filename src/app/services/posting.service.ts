@@ -20,7 +20,9 @@ import {
     PostingOrderEmployeeRow,
     ApprovedNoteSheetItem,
     PostingType,
-    PostingNoteSheetStatus
+    PostingNoteSheetStatus,
+    PostingMemberRemovalHistoryDto,
+    EmployeeRemovalInfo
 } from '@/models/posting.model';
 
 /** Status for action button: None | PostingInProcess | NoteSheetInProcess */
@@ -110,6 +112,25 @@ export class PostingService {
         return this.draftNewLists$.value;
     }
 
+    /** Add employees to an existing Draft Posting list (New or Inter). Employees must have IsSendingNotesheetStatus = 'draft'. */
+    addDraftPostingDetail(
+        draftPostingMasterId: number,
+        isInterPosting: boolean,
+        employeeIds: number[],
+        createdBy: string,
+        transferRabUnitId?: number | null,
+        remarks?: string | null
+    ): Observable<{ statusCode: number; description: string }> {
+        return this.http.post<{ statusCode: number; description: string }>(`${API}/AddDraftPostingDetail`, {
+            draftPostingMasterId,
+            isInterPosting,
+            employeeIds,
+            createdBy,
+            transferRabUnitId: transferRabUnitId ?? null,
+            remarks: remarks?.trim() || null
+        });
+    }
+
     /** Save Draft New Posting: creates master + details, sets IsSendingNotesheetStatus to draftPosting for selected employees. */
     saveDraftNewPosting(draftPostingNo: string, draftPostingDate: string, employeeIds: number[], createdBy: string): Observable<{ statusCode: number; description: string }> {
         return this.http.post<{ statusCode: number; description: string }>(`${API}/SaveDraftNewPosting`, {
@@ -140,9 +161,38 @@ export class PostingService {
         return this.http.post<{ statusCode: number; description: string }>(`${API}/UpdateDraftPostingDetails`, { items });
     }
 
-    /** Remove employees from a draft posting list and revert to supernumerary. */
-    removeDraftPostingDetails(draftPostingMasterId: number, detailIds: number[], isInterPosting: boolean): Observable<{ statusCode: number; description: string }> {
-        return this.http.post<{ statusCode: number; description: string }>(`${API}/RemoveDraftPostingDetails`, { draftPostingMasterId, detailIds, isInterPosting });
+    /** Remove employees from a draft posting list and revert to supernumerary.
+     *  Pass notesheet context so removal history is logged accurately. */
+    removeDraftPostingDetails(
+        draftPostingMasterId: number,
+        detailIds: number[],
+        isInterPosting: boolean,
+        noteSheetId?: number | null,
+        noteSheetNo?: string | null,
+        removedFromStep?: string | null
+    ): Observable<{ statusCode: number; description: string }> {
+        return this.http.post<{ statusCode: number; description: string }>(`${API}/RemoveDraftPostingDetails`, {
+            draftPostingMasterId,
+            detailIds,
+            isInterPosting,
+            noteSheetId: noteSheetId ?? null,
+            noteSheetNo: noteSheetNo ?? null,
+            removedFromStep: removedFromStep ?? null
+        });
+    }
+
+    /** Get the removal history log for a draft posting list. */
+    getPostingMemberRemovalHistory(draftPostingMasterId: number, isInterPosting: boolean): Observable<PostingMemberRemovalHistoryDto[]> {
+        return this.http.get<PostingMemberRemovalHistoryDto[]>(
+            `${API}/GetPostingMemberRemovalHistory?draftPostingMasterId=${draftPostingMasterId}&isInterPosting=${isInterPosting}`
+        );
+    }
+
+    /** Get the latest removal history for a list of employee IDs (across all postings). */
+    getRemovalHistoryByEmployeeIds(employeeIds: number[]): Observable<EmployeeRemovalInfo[]> {
+        return this.http.post<EmployeeRemovalInfo[]>(
+            `${API}/GetRemovalHistoryByEmployeeIds`, employeeIds
+        );
     }
 
     /** Update Draft New Posting master (DraftPostingNo, DraftPostingDate, DraftPostingStatus). */
@@ -538,14 +588,70 @@ export class PostingService {
         referenceNumber?: string | null;
         subject?: string | null;
         mainText?: string | null;
+        subText?: string | null;
         textType?: string | null;
         filesReferences?: string | null;
         remarks?: string | null;
         footerText?: string | null;
         employeeIds: number[];
         createdBy: string;
+        postingOrderNumberConfigId?: number | null;
+        approvalEmployeeId?: number | null;
     }): Observable<{ statusCode: number; description: string; data?: any }> {
         return this.http.post<{ statusCode: number; description: string; data?: any }>(`${API}/CreatePostingOrder`, body);
+    }
+
+    /** Approve a posting order. */
+    approvePostingOrder(id: number, approvalNote: string, approvedBy: string): Observable<{ statusCode: number; description: string }> {
+        return this.http.post<{ statusCode: number; description: string }>(`${API}/ApprovePostingOrder`, { id, approvalNote, approvedBy });
+    }
+
+    /** Cancel a posting order. */
+    cancelPostingOrder(id: number, cancelReason: string, cancelledBy: string): Observable<{ statusCode: number; description: string }> {
+        return this.http.post<{ statusCode: number; description: string }>(`${API}/CancelPostingOrder`, { id, cancelReason, cancelledBy });
+    }
+
+    /** Get employees for approval person dropdown. */
+    getApprovalEmployees(): Observable<{ value: number; label: string }[]> {
+        return this.http.get<{ value: number; label: string }[]>(`${API}/GetApprovalEmployees`);
+    }
+
+    /** Add a single employee directly to an existing Posting Order (immediate DB persist). */
+    addPostingOrderEmployee(
+        postingOrderMasterId: number,
+        employeeId: number,
+        transferRabUnitId: number | null,
+        addedBy: string,
+        draftPostingMasterId: number | null = null,
+        postingType: string | null = null,
+        remarks: string | null = null
+    ): Observable<{ statusCode: number; description: string }> {
+        return this.http.post<{ statusCode: number; description: string }>(`${API}/AddPostingOrderEmployee`, {
+            postingOrderMasterId,
+            employeeId,
+            transferRabUnitId: transferRabUnitId ?? null,
+            addedBy,
+            draftPostingMasterId: draftPostingMasterId ?? null,
+            postingType: postingType ?? null,
+            remarks: remarks?.trim() || null
+        });
+    }
+
+    /** Remove a single employee from an existing Posting Order (immediate DB persist + history). */
+    removePostingOrderEmployee(
+        postingOrderMasterId: number,
+        employeeId: number,
+        removedBy: string,
+        draftPostingMasterId: number | null = null,
+        postingType: string | null = null
+    ): Observable<{ statusCode: number; description: string }> {
+        return this.http.post<{ statusCode: number; description: string }>(`${API}/RemovePostingOrderEmployee`, {
+            postingOrderMasterId,
+            employeeId,
+            removedBy,
+            draftPostingMasterId: draftPostingMasterId ?? null,
+            postingType: postingType ?? null
+        });
     }
 
     /** Update an existing posting order. */
@@ -558,6 +664,7 @@ export class PostingService {
         referenceNumber?: string | null;
         subject?: string | null;
         mainText?: string | null;
+        subText?: string | null;
         textType?: string | null;
         filesReferences?: string | null;
         status?: string | null;
@@ -565,7 +672,18 @@ export class PostingService {
         footerText?: string | null;
         employeeIds: number[];
         updatedBy: string;
+        approvalEmployeeId?: number | null;
     }): Observable<{ statusCode: number; description: string }> {
         return this.http.post<{ statusCode: number; description: string }>(`${API}/UpdatePostingOrder`, body);
+    }
+
+    /** Set TransferRabUnitId on a draft detail row by DraftPostingMasterId + EmployeeId. */
+    setDraftDetailTransferUnit(draftPostingMasterId: number, isInterPosting: boolean, employeeId: number, transferRabUnitId: number | null): Observable<{ statusCode: number; description: string }> {
+        return this.http.post<{ statusCode: number; description: string }>(`${API}/SetDraftDetailTransferUnit`, {
+            draftPostingMasterId,
+            isInterPosting,
+            employeeId,
+            transferRabUnitId
+        });
     }
 }

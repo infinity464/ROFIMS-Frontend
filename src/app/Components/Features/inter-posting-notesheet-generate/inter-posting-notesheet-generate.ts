@@ -26,8 +26,10 @@ import { EmpService } from '@/services/emp-service';
 import { PostingService } from '@/services/posting.service';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
-import { NoteSheetType, NoteSheetOperationTypeOptions, ApprovalStatus, ApproverRoleType } from '@/models/enums';
+import { NoteSheetType, NoteSheetOperationTypeOptions, ApprovalStatus, CodeType } from '@/models/enums';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
+import { NotesheetApproverSelectComponent } from '@/Components/Common/notesheet-approver-select/notesheet-approver-select';
+import { NoteSheetNumberConfigModel } from '@/Components/basic-setup/shared/models/notesheet-number-config';
 
 @Component({
     selector: 'app-inter-posting-notesheet-generate',
@@ -45,7 +47,8 @@ import { MasterBasicSetupService } from '@/Components/basic-setup/shared/service
         TextareaModule,
         ToastModule,
         CheckboxModule,
-        FileReferencesFormComponent
+        FileReferencesFormComponent,
+        NotesheetApproverSelectComponent
     ],
     templateUrl: './inter-posting-notesheet-generate.html',
     providers: [MessageService],
@@ -72,11 +75,11 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
     draftPostingOptions: { label: string; value: number }[] = [];
     loadingDraftList = false;
     isPreparedByMapped = false;
-    initiatorOptions: { label: string; value: number }[] = [];
-    recommenderOptions: { label: string; value: number }[] = [];
-    finalApproverOptions: { label: string; value: number }[] = [];
     fileRows: FileRowData[] = [];
     readonly noteSheetOperationTypeOptions = NoteSheetOperationTypeOptions;
+    configOptions: { label: string; value: number }[] = [];
+    private _allConfigs: NoteSheetNumberConfigModel[] = [];
+    private _typeMap: Record<number, string> = {};
     /** Dynamic paragraphs */
     paragraphs: string[] = [''];
 
@@ -97,10 +100,11 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
     ) {
         this.form = this.fb.group({
             draftPostingMasterId: [null as number | null, Validators.required],
-            textType: ['en'],
+            textType: ['bn'],
             noteSheetDate: [null as Date | null, Validators.required],
             referenceNumber: [''],
             noteSheetNo: [''],
+            noteSheetNumberConfigId: [null as number | null, Validators.required],
             subject: [''],
             mainText: [''],
             note: [''],
@@ -109,7 +113,7 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
             initiatorId: [null as number | null, Validators.required],
             recommenderIds: [[] as number[]],
             finalApproverId: [null as number | null, Validators.required],
-            noteSheetOperationType: [null as string | null, Validators.required],
+            noteSheetOperationType: ['manual' as string | null, Validators.required],
             isSecret: [false]
         });
     }
@@ -121,8 +125,14 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
         this.canDelete = _perms.canDelete;
 
         this.loadDraftInterPostingMasters();
-        this.loadApproverOptions();
         this.resolvePreparedByMapping();
+        this.loadPreparedByOptions();
+        this.loadNoteSheetNumberConfigs();
+
+        this.form.get('textType')!.valueChanges.subscribe(() => {
+            this.form.get('noteSheetNumberConfigId')?.setValue(null);
+            this.rebuildConfigOptions();
+        });
 
         this.route.queryParams.pipe(take(1)).subscribe((params) => {
             const id = params['id'];
@@ -140,16 +150,6 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
 
     get isBangla(): boolean {
         return this.form?.get('textType')?.value === 'bn';
-    }
-
-    get initiatorOptionsDisplay(): { label: string; value: number }[] {
-        return this.initiatorOptions.map((o) => ({ label: o.label, value: o.value }));
-    }
-    get recommenderOptionsDisplay(): { label: string; value: number }[] {
-        return this.recommenderOptions.map((o) => ({ label: o.label, value: o.value }));
-    }
-    get finalApproverOptionsDisplay(): { label: string; value: number }[] {
-        return this.finalApproverOptions.map((o) => ({ label: o.label, value: o.value }));
     }
 
     loadDraftInterPostingMasters(): void {
@@ -172,44 +172,35 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
         });
     }
 
-    loadApproverOptions(): void {
-        const api = `${environment.apis.core}/EmployeeInfo`;
-        this.http.get<any[]>(`${api}/GetAll`).subscribe({
-            next: (list) => {
-                const allOpts = (Array.isArray(list) ? list : []).map((e: any) => {
-                    const name = e.fullNameEN || e.FullNameEN || '';
-                    const rabId = e.rabid || e.Rabid || e.RABID || '';
-                    const serviceId = e.serviceId || e.ServiceId || '';
-                    const parts = [name, rabId ? `RAB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : ''].filter(Boolean);
-                    return {
-                        label: parts.join(' | ') || `ID ${e.employeeID ?? e.EmployeeID}`,
-                        value: e.employeeID ?? e.EmployeeID
-                    };
-                });
-                this.masterBasicSetupService.getNoteSheetApproverConfigByType(NoteSheetType.InterPosting).subscribe({
-                    next: (configs) => {
-                        const cfg = Array.isArray(configs) ? configs[0] : configs;
-                        if (cfg?.details?.length) {
-                            const initIds = cfg.details.filter((d: any) => d.roleType === ApproverRoleType.Initiator).map((d: any) => d.employeeId);
-                            const recIds = cfg.details.filter((d: any) => d.roleType === ApproverRoleType.Recommender).map((d: any) => d.employeeId);
-                            const faIds = cfg.details.filter((d: any) => d.roleType === ApproverRoleType.FinalApprover).map((d: any) => d.employeeId);
-                            this.initiatorOptions = initIds.length > 0 ? allOpts.filter(o => initIds.includes(o.value)) : allOpts;
-                            this.recommenderOptions = recIds.length > 0 ? allOpts.filter(o => recIds.includes(o.value)) : allOpts;
-                            this.finalApproverOptions = faIds.length > 0 ? allOpts.filter(o => faIds.includes(o.value)) : allOpts;
-                        } else {
-                            this.initiatorOptions = allOpts;
-                            this.recommenderOptions = allOpts;
-                            this.finalApproverOptions = allOpts;
-                        }
-                    },
-                    error: (err: any) => {
-                        this.initiatorOptions = allOpts;
-                        this.recommenderOptions = allOpts;
-                        this.finalApproverOptions = allOpts;
-                    }
-                });
+    loadNoteSheetNumberConfigs(): void {
+        forkJoin({
+            configs: this.masterBasicSetupService.getAllNoteSheetNumberConfig(),
+            memberTypes: this.masterBasicSetupService.getAllByType(CodeType.EmployeeType)
+        }).subscribe({
+            next: ({ configs, memberTypes }) => {
+                this._typeMap = {};
+                (memberTypes ?? []).forEach((t) => { this._typeMap[t.codeId] = t.codeValueEN; });
+                this._allConfigs = (configs ?? []).filter((c) => c.noteSheetType === 'InterPosting' && c.status);
+                this.rebuildConfigOptions();
             },
-            error: (err: any) => {}
+            error: () => {}
+        });
+    }
+
+    private rebuildConfigOptions(): void {
+        const bangla = this.isBangla;
+        this.configOptions = this._allConfigs.map((c) => ({
+            label: `${(bangla && c.prefixBN) ? c.prefixBN : c.prefix}${this._typeMap[c.memberTypeId] ? ' — ' + this._typeMap[c.memberTypeId] : ''}`,
+            value: c.configId
+        }));
+    }
+
+    preparedByOptions: { label: string; value: number }[] = [];
+
+    private loadPreparedByOptions(): void {
+        this.postingService.getApprovalEmployees().subscribe({
+            next: (opts) => { this.preparedByOptions = opts ?? []; },
+            error: () => {}
         });
     }
 
@@ -350,8 +341,9 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
     private resetForm(): void {
         this.form.reset({
             draftPostingMasterId: null,
-            textType: 'en',
+            textType: 'bn',
             noteSheetNo: '',
+            noteSheetNumberConfigId: null,
             noteSheetDate: null,
             referenceNumber: '',
             subject: '',
@@ -362,7 +354,7 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
             initiatorId: null,
             recommenderIds: [],
             finalApproverId: null,
-            noteSheetOperationType: null,
+            noteSheetOperationType: 'manual',
             isSecret: false
         });
         this.fileRows = [];
@@ -497,6 +489,7 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
             noteSheetId: 0,
             noteSheetType: NoteSheetType.InterPosting,
             noteSheetNo,
+            noteSheetNumberConfigId: d.noteSheetNumberConfigId ?? null,
             noteSheetDate: dateStr,
             noteSheetTemplateId: null,
             referenceNumber: d.referenceNumber != null ? String(d.referenceNumber) : null,

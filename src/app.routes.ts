@@ -101,6 +101,7 @@ import { EmpPresentMemberCheckComponent } from '@/Components/Features/Emp/emp-pr
 import { RabIdAllocation } from '@/Components/Features/rab-id-allocation/rab-id-allocation';
 import { SupernumeraryList } from '@/Components/Features/supernumerary-list/supernumerary-list';
 import { SupernumeraryProfile } from '@/Components/Features/supernumerary-profile/supernumerary-profile';
+import { NewJoineeSendingNotesheet } from '@/Components/Features/new-joinee-sending-notesheet/new-joinee-sending-notesheet';
 import { AddDraftNewPostingComponent } from '@/Components/Features/add-draft-new-posting/add-draft-new-posting';
 import { PostingNotesheetGenerateComponent } from '@/Components/Features/posting-notesheet-generate/posting-notesheet-generate';
 import { PostingOrderReceiveComponent } from '@/Components/Features/posting-order-receive/posting-order-receive';
@@ -334,6 +335,7 @@ export const appRoutes: Routes = [
             { path: 'rab-id-allocation', component: RabIdAllocation },
             { path: 'supernumerary-list', component: SupernumeraryList },
             { path: 'supernumerary-profile/:id', component: SupernumeraryProfile },
+            { path: 'new-joinee-sending-notesheet', component: NewJoineeSendingNotesheet },
             { path: 'posting/permanent-posting-mo-record', component: PermanentPostingMORecordComponent },
             { path: 'posting/posted-out-person-list', component: PostedOutPersonListComponent },
             { path: 'posting/new-joining-person-list', component: NewJoiningPersonListComponent },
@@ -341,7 +343,8 @@ export const appRoutes: Routes = [
             { path: 'posting/notesheet-generate', component: PostingNotesheetGenerateComponent },
             { path: 'posting/add-draft-inter-posting', component: AddDraftInterPostingComponent },
             { path: 'posting/inter-posting-notesheet-generate', component: InterPostingNotesheetGenerateComponent },
-            { path: 'posting/posting-order-generate', component: PostingOrderGenerateComponent },
+            { path: 'posting/posting-order-generate', component: PostingOrderGenerateComponent, data: { postingType: 'NewPosting' } },
+            { path: 'posting/inter-posting-order-generate', component: PostingOrderGenerateComponent, data: { postingType: 'InterPosting' } },
             { path: 'posting/posting-order-receive', component: PostingOrderReceiveComponent },
             { path: 'posting/pending-posting-joining', component: PendingPostingJoiningComponent },
             { path: 'posting/pending-inter-posting-joining', component: PendingInterPostingJoiningComponent },
@@ -349,6 +352,7 @@ export const appRoutes: Routes = [
             { path: 'posting/posting-order-preview', component: PostingOrderPreviewPageComponent },
             { path: 'employee-signature-upload', component: EmployeeSignatureUploadComponent },
             { path: 'presently-serving-members', component: PresentlyServingMembers },
+            { path: 'serving-members-for-inter-posting', component: PresentlyServingMembers, data: { mode: 'interPosting' } },
             { path: 'presently-serving-members/organogram', component: OrgTreeServingComponent },
             { path: 'organogram', component: RabOrganogramComponent },
             { path: 'presently-serving-members/rab-organogram-members', component: RabOrganogramMembersComponent },

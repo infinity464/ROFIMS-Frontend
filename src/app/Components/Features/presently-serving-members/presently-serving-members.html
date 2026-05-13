@@ -2,8 +2,8 @@
 
 <div class="employee-reports-page">
     <div class="report-filter-card">
-        <div class="report-filter-card-title psm-header-row">
-            <h1 class="report-page-title">Presently Serving Members List</h1>
+        <div class="report-filter-card-title">
+            <h1 class="report-page-title">{{ pageTitle }}</h1>
         </div>
 
         <div class="report-filter-header" [class.open]="filterOpen" (click)="toggleFilter()" role="button" tabindex="0" (keydown.enter)="toggleFilter()" (keydown.space)="toggleFilter()">
@@ -188,6 +188,13 @@
             </p-button>
         </div>
 
+        @if (interPostingMode) {
+            <div class="px-3 py-2 mb-2" style="background: var(--blue-50); border-left: 3px solid var(--blue-400); border-radius: 4px;">
+                <i class="pi pi-info-circle text-blue-500 mr-2"></i>
+                <span class="text-700 text-sm">Select employees and optionally enter a remark per row before clicking <strong>Send Inter Posting</strong>.</span>
+            </div>
+        }
+
         <div class="report-table-wrap">
             <p-table
                 #dt
@@ -201,7 +208,8 @@
                 (onLazyLoad)="onLazyLoad($event)"
                 dataKey="employeeID"
                 [(selection)]="selectedRows"
-                [tableStyle]="{ 'min-width': '70rem' }"
+                [rowSelectable]="isRowSelectable.bind(this)"
+                [tableStyle]="{ 'min-width': '60rem' }"
                 styleClass="p-datatable-sm"
                 paginatorDropdownAppendTo="body"
                 currentPageReportTemplate="Showing {first} – {last} of {totalRecords}"
@@ -211,6 +219,7 @@
                         <th style="width: 44px"><p-tableHeaderCheckbox></p-tableHeaderCheckbox></th>
                         <th style="width: 4rem;">Ser</th>
                         <th>Service ID</th>
+                        <th>RAB ID</th>
                         <th>Rank</th>
                         <th>Corps</th>
                         <th>Trade</th>
@@ -219,6 +228,9 @@
                         <th>Joining Date in RAB</th>
                         <th>Home District (Permanent)</th>
                         <th>Status</th>
+                        @if (interPostingMode) {
+                            <th style="min-width: 180px">Remarks</th>
+                        }
                         <th>Action</th>
                     </tr>
                 </ng-template>
@@ -232,7 +244,8 @@
                             }
                         </td>
                         <td><span class="report-ser-num">{{ serialNumber(rowIndex) }}</span></td>
-                        <td><span class="font-semibold">{{ row.serviceId || '—' }}</span></td>
+                        <td><span class="font-semibold">{{ row.prefix ? row.prefix + ' - ' : '' }}{{ row.serviceId || '—' }}</span></td>
+                        <td>{{ row.rabID || '—' }}</td>
                         <td>{{ row.armyRank || '—' }}</td>
                         <td>
                             @if (row.corps) {
@@ -259,6 +272,18 @@
                                 <span class="report-dash">—</span>
                             }
                         </td>
+                        @if (interPostingMode) {
+                            <td>
+                                <input
+                                    pInputText
+                                    type="text"
+                                    [ngModel]="interPostingRemarks[row.employeeID] || ''"
+                                    (ngModelChange)="interPostingRemarks[row.employeeID] = $event"
+                                    placeholder="Enter remark..."
+                                    [disabled]="isInPostingProcess(row)"
+                                    style="width: 100%; min-width: 160px;" />
+                            </td>
+                        }
                         <td>
                             <a [routerLink]="['/members/profile', row.employeeID]" class="report-link-profile" title="View profile">
                                 <i class="pi pi-user"></i> Profile
@@ -268,7 +293,7 @@
                 </ng-template>
                 <ng-template pTemplate="emptymessage">
                     <tr>
-                        <td colspan="12" class="text-center p-4">No records found.</td>
+                        <td [attr.colspan]="interPostingMode ? 14 : 13" class="text-center p-4">No records found.</td>
                     </tr>
                 </ng-template>
             </p-table>

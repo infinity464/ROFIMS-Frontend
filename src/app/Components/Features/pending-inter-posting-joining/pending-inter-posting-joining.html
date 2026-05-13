@@ -117,7 +117,9 @@
                 'rankName',
                 'motherOrganization',
                 'motherUnitName',
-                'transferRabUnitName'
+                'fromRabUnitName',
+                'transferRabUnitName',
+                'transferToHierarchy'
             ]"
         >
             <ng-template pTemplate="caption">
@@ -154,7 +156,8 @@
                     <th style="min-width: 180px">Full Name</th>
                     <th style="min-width: 150px">Mother Organization</th>
                     <th style="min-width: 150px">Mother Unit</th>
-                    <th style="min-width: 150px">Transfer To</th>
+                    <th style="min-width: 150px">From RAB Unit</th>
+                    <th style="min-width: 200px">Transfer To</th>
                     <th style="width: 120px">Action</th>
                 </tr>
             </ng-template>
@@ -175,7 +178,8 @@
                     <td>{{ row.fullNameEN || '-' }}</td>
                     <td>{{ row.motherOrganization || '-' }}</td>
                     <td>{{ row.motherUnitName || '-' }}</td>
-                    <td>{{ row.transferRabUnitName || '-' }}</td>
+                    <td>{{ row.fromRabUnitName || '-' }}</td>
+                    <td>{{ row.transferToHierarchy || '-' }}</td>
                     <td>
                         <div class="flex gap-1">
                             <p-button
@@ -200,7 +204,7 @@
             </ng-template>
             <ng-template pTemplate="emptymessage">
                 <tr>
-                    <td colspan="13" class="text-center p-4">
+                    <td colspan="14" class="text-center p-4">
                         <div class="flex flex-column align-items-center gap-3 py-5">
                             <i class="pi pi-check-circle text-5xl text-400"></i>
                             <span class="text-lg text-500">

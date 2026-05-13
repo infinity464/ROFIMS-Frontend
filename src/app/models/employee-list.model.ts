@@ -36,6 +36,10 @@ export interface EmployeeList {
     rabUnit?: string | null;
     /** Remark entered when sending to new posting list. */
     sendingRemark?: string | null;
+    /** Remark entered when sending from Presently Serving Members to inter posting. */
+    interPostingRemark?: string | null;
+    /** Date the record was inserted into the database (EmployeeInfo.CreatedDate). */
+    createdDate?: string | null;
 }
 
 /** Request for AllocateRabId API. */

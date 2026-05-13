@@ -46,17 +46,36 @@
             }
           </div>
           <div class="form-field">
-            <label class="form-label">Note Sheet No</label>
-            <input pInputText formControlName="noteSheetNo" placeholder="Auto generated" class="w-full" [readonly]="true" />
+            <label class="form-label">Note Sheet No Config <span class="form-label-required">*</span></label>
+            <p-select formControlName="noteSheetNumberConfigId"
+              [options]="configOptions" optionLabel="label" optionValue="value"
+              placeholder="Select config" [showClear]="true" [filter]="true" filterBy="label"
+              styleClass="w-full" appendTo="body">
+            </p-select>
+            @if (form.get('noteSheetNumberConfigId')?.invalid && form.get('noteSheetNumberConfigId')?.touched) {
+              <small class="form-error">Note Sheet No Config is required</small>
+            }
           </div>
         </div>
 
-        <!-- Row 2: Reference Number, Prepared by, Initiator -->
+        <!-- Row 2: Reference Number (full width) -->
         <div class="form-row">
-          <div class="form-field">
+          <div class="form-field" style="flex-basis:100%">
             <label class="form-label">Reference Number</label>
-            <input pInputText class="w-full" formControlName="referenceNumber" placeholder="Auto / Manual" />
+            <app-rich-editor formControlName="referenceNumber" height="80px" toolbar="minimal" placeholder="Enter reference number..."></app-rich-editor>
           </div>
+        </div>
+
+        <!-- Prepared by / Initiator / Recommender / Final Approver -->
+        <app-notesheet-approver-select
+          [noteSheetType]="'InterPosting'"
+          [(initiatorId)]="form.controls['initiatorId'].value"
+          (initiatorIdChange)="form.controls['initiatorId'].setValue($event); form.controls['initiatorId'].markAsTouched()"
+          [(recommenderIds)]="form.controls['recommenderIds'].value"
+          (recommenderIdsChange)="form.controls['recommenderIds'].setValue($event)"
+          [(finalApproverId)]="form.controls['finalApproverId'].value"
+          (finalApproverIdChange)="form.controls['finalApproverId'].setValue($event); form.controls['finalApproverId'].markAsTouched()"
+          [showErrors]="!!(form.get('initiatorId')?.touched || form.get('finalApproverId')?.touched)">
           <div class="form-field">
             <label class="form-label">Prepared by</label>
             @if (isPreparedByMapped) {
@@ -64,7 +83,7 @@
             } @else {
               <p-select
                 formControlName="preparedByEmployeeId"
-                [options]="initiatorOptionsDisplay"
+                [options]="preparedByOptions"
                 optionLabel="label"
                 optionValue="value"
                 [filter]="true"
@@ -75,59 +94,7 @@
               </p-select>
             }
           </div>
-          <div class="form-field">
-            <label class="form-label">Select Initiator <span class="form-label-required">*</span></label>
-            <p-select
-              formControlName="initiatorId"
-              [options]="initiatorOptionsDisplay"
-              optionLabel="label"
-              optionValue="value"
-              [filter]="true"
-              filterBy="label"
-              placeholder="Search & Select"
-              [showClear]="true"
-              styleClass="w-full">
-            </p-select>
-            @if (form.get('initiatorId')?.invalid && form.get('initiatorId')?.touched) {
-              <small class="form-error">Initiator is required</small>
-            }
-          </div>
-        </div>
-
-        <!-- Row 3: Recommender's, Final Approver -->
-        <div class="form-row">
-          <div class="form-field">
-            <label class="form-label">Select Recommender's (If Applicable)</label>
-            <p-multiselect
-              formControlName="recommenderIds"
-              [options]="recommenderOptionsDisplay"
-              optionLabel="label"
-              optionValue="value"
-              [filter]="true"
-              filterBy="label"
-              placeholder="Search & Select"
-              [showClear]="true"
-              styleClass="w-full">
-            </p-multiselect>
-          </div>
-          <div class="form-field">
-            <label class="form-label">Select Final Approver <span class="form-label-required">*</span></label>
-            <p-select
-              formControlName="finalApproverId"
-              [options]="finalApproverOptionsDisplay"
-              optionLabel="label"
-              optionValue="value"
-              [filter]="true"
-              filterBy="label"
-              placeholder="Search & Select"
-              [showClear]="true"
-              styleClass="w-full">
-            </p-select>
-            @if (form.get('finalApproverId')?.invalid && form.get('finalApproverId')?.touched) {
-              <small class="form-error">Final Approver is required</small>
-            }
-          </div>
-        </div>
+        </app-notesheet-approver-select>
 
         <!-- Row 3b: Subject, Operation Type, Is Secret -->
         <div class="form-row">

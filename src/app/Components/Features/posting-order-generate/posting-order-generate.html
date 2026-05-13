@@ -4,14 +4,16 @@
 <div class="posting-order-generate">
     <div class="form-card">
         <div class="form-card-header">
-            <h3 class="form-card-title">Generate Posting Order</h3>
+            <h3 class="form-card-title">
+                {{ fixedPostingType === 'InterPosting' ? 'Generate Inter-Posting Order' : fixedPostingType === 'NewPosting' ? 'Generate New Posting Order' : 'Generate Posting Order' }}
+            </h3>
         </div>
 
         <!-- Row 1: Posting Type + NoteSheet -->
         <div class="draft-master-section mb-4 p-4 surface-50 border-round">
             <div class="flex flex-wrap gap-4 align-items-end">
-                <!-- Posting Type Dropdown -->
-                <div class="field min-w-200px">
+                <!-- Posting Type Dropdown (hidden when type is fixed by route) -->
+                <div class="field min-w-200px" *ngIf="!fixedPostingType">
                     <label class="font-semibold block mb-2 text-700">Posting Type <span class="text-red-500">*</span></label>
                     <p-select
                         [options]="postingTypeOptions"
@@ -42,10 +44,7 @@
                         (onChange)="onNoteSheetChange()"
                     ></p-select>
                 </div>
-            </div>
 
-            <!-- Row 2: Date + Text Type + Remarks -->
-            <div class="flex flex-wrap gap-4 align-items-end mt-3">
                 <!-- Posting Order Date -->
                 <div class="field min-w-200px">
                     <label class="font-semibold block mb-2 text-700">Posting Order Date <span class="text-red-500">*</span></label>
@@ -57,16 +56,54 @@
                     ></p-datepicker>
                 </div>
 
-                <!-- Remarks -->
-                <div class="field flex-1 min-w-300px">
-                    <label class="font-semibold block mb-2 text-700">Note</label>
-                    <input pInputText type="text" [(ngModel)]="remarks" placeholder="Enter remarks (optional)" class="w-full" />
+                <!-- Posting Order Number Config -->
+                <div class="field min-w-250px">
+                    <label class="font-semibold block mb-2 text-700">Order No Config <span class="text-red-500">*</span></label>
+                    <p-select
+                        [options]="configOptions"
+                        [(ngModel)]="postingOrderNumberConfigId"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Select config"
+                        [showClear]="true"
+                        [filter]="true"
+                        filterBy="label"
+                        styleClass="w-full"
+                        appendTo="body"
+                    ></p-select>
+                </div>
+
+                <!-- Approval Person Dropdown -->
+                <div class="field min-w-300px">
+                    <label class="font-semibold block mb-2 text-700">Approval Person <span class="text-red-500">*</span></label>
+                    <p-select
+                        [options]="approvalEmployees"
+                        [(ngModel)]="selectedApprovalEmployeeId"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="{{ loadingApprovalEmployees ? 'Loading...' : 'Select Approval Person' }}"
+                        [disabled]="loadingApprovalEmployees"
+                        [showClear]="true"
+                        [filter]="true"
+                        filterBy="label"
+                        styleClass="w-full"
+                        appendTo="body"
+                    ></p-select>
                 </div>
             </div>
+
         </div>
 
         <!-- Employee List Table -->
         <div *ngIf="selectedNoteSheetId">
+            <!-- Posting Text (pre-filled from notesheet main text) -->
+            <div class="posting-text-section mb-4 p-4 surface-50 border-round">
+                <div class="flex align-items-center gap-2 mb-2">
+                    <span class="font-semibold text-700">{{ isBangla ? 'পোস্টিং টেক্সট' : 'Posting Text' }}</span>
+                </div>
+                <p-editor [(ngModel)]="postingText" [style]="{ height: '120px' }"></p-editor>
+            </div>
+
             <!-- NoteSheet Info Bar -->
             <div class="flex flex-wrap gap-4 align-items-center mb-3">
                 <span class="font-semibold text-700">NoteSheet Employees</span>
@@ -97,7 +134,6 @@
                         <th style="min-width: 130px">{{ isBangla ? 'পূর্ববর্তী কর্মস্থল' : 'Previous Workplace' }}</th>
                         <th style="min-width: 100px">{{ isBangla ? 'বদলি ইউনিট' : 'Transfer Unit' }}</th>
                         <th style="min-width: 100px">{{ isBangla ? 'মন্তব্য' : 'Remarks' }}</th>
-                        <th style="width: 50px"></th>
                     </tr>
                 </ng-template>
                 <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
@@ -113,9 +149,6 @@
                         <td>{{ selectedPostingType === 'InterPosting' ? ((isBangla ? row.previousRabUnitsBN || row.previousRabUnits : row.previousRabUnits) || '-') : ((isBangla ? row.motherOrgLocationNameBN : row.motherOrgLocationName) || row.motherOrgLocationName || '-') }}</td>
                         <td>{{ (isBangla ? row.transferRabUnitNameBN || row.transferRabUnitName : row.transferRabUnitName) || '-' }}</td>
                         <td>{{ row.remarks || '-' }}</td>
-                        <td class="text-center">
-                            <p-button icon="pi pi-trash" [class.perm-hidden]="!canDelete" severity="danger" [rounded]="true" [text]="true" size="small" (onClick)="removeEmployee(row)"></p-button>
-                        </td>
                     </tr>
                 </ng-template>
                 <ng-template pTemplate="emptymessage">
@@ -130,19 +163,16 @@
                 </ng-template>
             </p-table>
 
-            <!-- Posting Text (single paragraph shown above Onulipi) -->
-            <div class="posting-text-section mt-4 p-4 surface-50 border-round">
-                <div class="flex align-items-center gap-2 mb-2">
-                    <span class="font-semibold text-700">{{ isBangla ? 'পোস্টিং টেক্সট' : 'Posting Text' }}</span>
-                </div>
-                <textarea
-                    pTextarea
-                    [(ngModel)]="postingText"
-                    rows="3"
-                    class="w-full"
-                    placeholder="{{ isBangla ? 'পোস্টিং টেক্সট লিখুন...' : 'Enter posting text...' }}"
-                    [autoResize]="true"
-                ></textarea>
+            <!-- Main Text (Rich Text) -->
+            <div class="field mt-4">
+                <label class="font-semibold block mb-2 text-700">{{ isBangla ? 'মূল বক্তব্য' : 'Main Text' }}</label>
+                <p-editor [(ngModel)]="remarks" [style]="{ height: '100px' }"></p-editor>
+            </div>
+
+            <!-- Sub Text (Rich Text) -->
+            <div class="field mt-4">
+                <label class="font-semibold block mb-2 text-700">{{ isBangla ? 'সাব টেক্সট' : 'Sub Text' }}</label>
+                <p-editor [(ngModel)]="subText" [style]="{ height: '120px' }"></p-editor>
             </div>
 
             <!-- Footer Text (dynamic paragraphs, each linked to a transfer unit) -->
@@ -219,7 +249,7 @@
             </div>
         </div>
 
-        <!-- ─── Generated Posting Orders (toggleable list) ─── -->
+        <!-- ─── Generated Posting Orders (toggleable list) ─���─ -->
         <div class="generated-list-section mt-5 pt-4 border-top-1 surface-border">
             <div class="flex align-items-center justify-content-between mb-3">
                 <h4 class="m-0 text-700">Generated Posting Orders</h4>
@@ -237,7 +267,7 @@
                     [value]="generatedOrders"
                     [loading]="loadingGeneratedOrders"
                     dataKey="id"
-                    [tableStyle]="{ 'min-width': '60rem' }"
+                    [tableStyle]="{ 'min-width': '80rem' }"
                     styleClass="p-datatable-striped p-datatable-gridlines p-datatable-sm"
                     [paginator]="true"
                     [rows]="10"
@@ -250,10 +280,13 @@
                             <th style="min-width: 130px">Order Date</th>
                             <th style="min-width: 130px">Posting Type</th>
                             <th style="min-width: 180px">NoteSheet No</th>
-                            <th style="min-width: 110px">Members</th>
+                            <th style="min-width: 80px">Members</th>
                             <th style="min-width: 110px">Status</th>
+                            <th style="min-width: 160px">Approver</th>
+                            <th style="min-width: 130px">Approval Status</th>
+                            <th style="min-width: 180px">Approval Remarks</th>
                             <th style="min-width: 150px">Created</th>
-                            <th style="width: 80px" class="text-center">Action</th>
+                            <th style="width: 140px" class="text-center">Action</th>
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
@@ -267,23 +300,38 @@
                             <td>
                                 <p-tag [value]="row.status || '-'" [severity]="statusSeverity(row.status)"></p-tag>
                             </td>
+                            <td>{{ row.approvalEmployeeName || '-' }}</td>
+                            <td>
+                                @if (row.approvalStatus) {
+                                    <p-tag [value]="approvalStatusLabel(row.approvalStatus)" [severity]="approvalStatusSeverity(row.approvalStatus)"></p-tag>
+                                } @else {
+                                    <span class="text-500">-</span>
+                                }
+                            </td>
+                            <td>
+                                <span [pTooltip]="row.approvalNote || row.cancelReason || ''" tooltipPosition="top">
+                                    {{ (row.approvalNote || row.cancelReason) ? ((row.approvalNote || row.cancelReason)!.length > 40 ? (row.approvalNote || row.cancelReason)!.slice(0, 40) + '...' : (row.approvalNote || row.cancelReason)) : '-' }}
+                                </span>
+                            </td>
                             <td>{{ formatDate(row.createdDate) }}</td>
                             <td class="text-center">
-                                <p-button
-                                    icon="pi pi-eye"
-                                    severity="info"
-                                    [rounded]="true"
-                                    [text]="true"
-                                    size="small"
-                                    pTooltip="Preview"
-                                    (onClick)="viewGeneratedOrder(row)"
-                                ></p-button>
+                                <div class="flex gap-1 justify-content-center">
+                                    <p-button
+                                        icon="pi pi-eye"
+                                        severity="info"
+                                        [rounded]="true"
+                                        [text]="true"
+                                        size="small"
+                                        pTooltip="Preview"
+                                        (onClick)="viewGeneratedOrder(row)"
+                                    ></p-button>
+                                </div>
                             </td>
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="emptymessage">
                         <tr>
-                            <td colspan="9" class="text-center p-4">
+                            <td colspan="12" class="text-center p-4">
                                 <div class="flex flex-column align-items-center gap-2 py-4">
                                     <i class="pi pi-inbox text-4xl text-400"></i>
                                     <span class="text-500">No posting orders generated yet.</span>
@@ -296,3 +344,69 @@
         </div>
     </div>
 </div>
+
+<!-- ─── Approval Modal ─── -->
+<p-dialog
+    header="Posting Order Approval"
+    [(visible)]="showApprovalModal"
+    [modal]="true"
+    [style]="{ width: '500px' }"
+    [closable]="true"
+>
+    @if (approvalModalOrder) {
+        <div class="mb-3">
+            <div class="flex gap-3 mb-2">
+                <span class="text-600">Order No:</span>
+                <strong>{{ approvalModalOrder.postingOrderNo }}</strong>
+            </div>
+            <div class="flex gap-3 mb-3">
+                <span class="text-600">Date:</span>
+                <strong>{{ formatDate(approvalModalOrder.postingOrderDate) }}</strong>
+            </div>
+
+            <!-- Action Selection -->
+            <div class="flex gap-2 mb-3">
+                <p-button
+                    label="Approve"
+                    icon="pi pi-check"
+                    severity="success"
+                    [outlined]="approvalModalAction !== ApprovalStatus.Approve"
+                    (onClick)="selectApprovalAction(ApprovalStatus.Approve)"
+                ></p-button>
+                <p-button
+                    label="Cancel"
+                    icon="pi pi-times"
+                    severity="danger"
+                    [outlined]="approvalModalAction !== ApprovalStatus.Cancel"
+                    (onClick)="selectApprovalAction(ApprovalStatus.Cancel)"
+                ></p-button>
+            </div>
+
+            <!-- Remarks textarea (shown when action is selected) -->
+            @if (approvalModalAction) {
+                <div class="field">
+                    <label class="font-semibold block mb-2 text-700">
+                        {{ approvalModalAction === ApprovalStatus.Approve ? 'Approval Note / অনুমোদন মন্তব্য' : 'Cancel Reason / বাতিলের কারণ' }}
+                    </label>
+                    <textarea
+                        pTextarea
+                        [(ngModel)]="approvalModalRemarks"
+                        rows="4"
+                        class="w-full"
+                        placeholder="{{ approvalModalAction === ApprovalStatus.Approve ? 'Enter approval note...' : 'Enter cancel reason...' }}"
+                        [autoResize]="true"
+                    ></textarea>
+                </div>
+
+                <div class="flex justify-content-end mt-3">
+                    <p-button
+                        label="Save"
+                        icon="pi pi-save"
+                        [loading]="savingApproval"
+                        (onClick)="saveApproval()"
+                    ></p-button>
+                </div>
+            }
+        </div>
+    }
+</p-dialog>

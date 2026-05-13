@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { FormConfig } from '../shared/models/formConfig';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MasterBasicSetupService } from '../shared/services/MasterBasicSetupService';
+import { CodeType } from '@/models/enums';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { DynamicFormComponent } from "../shared/componets/dynamic-form-component/dynamic-form";
 
@@ -175,7 +176,7 @@ export class OfficerType {
 
     // Load all employeeTypes for the dropdown
     loadEmployeeType() {
-        this.masterBasicSetupService.getAllByType('EmployeeType').subscribe({
+        this.masterBasicSetupService.getAllByType(CodeType.EmployeeType).subscribe({
             next: (employeeTypes) => {
                 const employeeTypeOptions = employeeTypes.map(d => ({
                     label: d.codeValueEN,

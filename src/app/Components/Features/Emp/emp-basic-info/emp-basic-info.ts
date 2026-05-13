@@ -676,14 +676,6 @@ export class EmpBasicInfo implements OnInit {
                     this.spousePermanentAddressConfig.employeeId = employeeId;
                     this.spousePresentAddressConfig.employeeId = employeeId;
 
-                    // Mark joinee detail as added in new joinee data entry
-                    if (!this.isEditMode && this.joineeRecord) {
-                        this.joineeDetailService.saveUpdate({
-                            ...this.joineeRecord,
-                            isAddedInNewJoineeDataEntry: true
-                        }).subscribe();
-                    }
-
                     // Step 1.5: If Married, save/update spouse in FamilyInfo first so we have FMID for spouse addresses
                     // Step 2: Then save addresses (spouse addresses will include spouse FMID in AddressInfo)
                     this.saveSpouseIfMarried(employeeId).pipe(
@@ -847,6 +839,14 @@ export class EmpBasicInfo implements OnInit {
                     summary: 'Success',
                     detail: this.isEditMode ? 'Employee and addresses updated successfully!' : 'Employee and addresses saved successfully!'
                 });
+
+                // Mark joinee detail as added — only after full save succeeds
+                if (!this.isEditMode && this.joineeRecord) {
+                    this.joineeDetailService.saveUpdate({
+                        ...this.joineeRecord,
+                        isAddedInNewJoineeDataEntry: true
+                    }).subscribe();
+                }
 
                 if (!this.isEditMode) {
                     this.resetForNewEntry();

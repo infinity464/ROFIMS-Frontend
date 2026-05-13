@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { FormConfig } from '../shared/models/formConfig';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MasterBasicSetupService } from '../shared/services/MasterBasicSetupService';
+import { CodeType } from '@/models/enums';
 import { OrganizationModel } from '../organization-setup/models/organization';
 import { CommonCode } from '../shared/models/common-code';
 import { ConfirmationService, MessageService } from 'primeng/api';
@@ -171,7 +172,7 @@ export class MotherOrgRank {
 
     // Load member types (EmployeeType common codes) for the dropdown
     loadMemberTypes() {
-        this.masterBasicSetupService.getAllByType('EmployeeType').subscribe({
+        this.masterBasicSetupService.getAllByType(CodeType.EmployeeType).subscribe({
             next: (res) => {
                 this.memberTypes = (res ?? []).filter(m => m.status);
                 const memberTypeOptions = this.memberTypes.map(m => ({

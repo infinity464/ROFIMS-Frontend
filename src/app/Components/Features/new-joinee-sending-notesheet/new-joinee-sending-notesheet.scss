@@ -1,0 +1,139 @@
+/**
+ * Supernumerary List – component-specific overrides.
+ * Uses .employee-reports-page from report-theme-common.scss.
+ */
+
+/* Collapsible filter: allow enough height for dropdowns + date row */
+.employee-reports-page .report-filter-card .report-filter-body.open {
+  max-height: 420px;
+}
+
+.employee-reports-page {
+  border-radius: 5px;
+}
+
+/* Date filter fields: same width as dropdowns (match report-fields-row flex) */
+.report-filter-field.report-filter-field-date {
+  display: flex;
+  flex-direction: column;
+}
+:host ::ng-deep .report-filter-field.report-filter-field-date p-datepicker,
+:host ::ng-deep .report-filter-field.report-filter-field-date .p-datepicker {
+  width: 100% !important;
+  min-width: 0;
+  display: block;
+}
+:host ::ng-deep .report-filter-field.report-filter-field-date .p-datepicker .p-inputtext,
+:host ::ng-deep .report-filter-field.report-filter-field-date .p-datepicker input {
+  width: 100% !important;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* Action-button color variants — picked by isSendingNotesheetStatus, not by text.
+ *   Ash  = DraftPosting (note-sheet processing)
+ *   Blue = anything else  (button reads "Send New Posting list" or "Posting in Process")
+ * Static colors, identical in light/dark mode. Wrapped under .employee-reports-page
+ * so specificity outranks the common theme's .report-btn-secondary[:hover] rules.
+ */
+.employee-reports-page .report-btn-secondary.report-btn-ash,
+.employee-reports-page .report-btn-secondary.report-btn-ash:hover,
+.employee-reports-page .report-btn-secondary.report-btn-ash:disabled {
+  background: #6b7280;
+  border-color: #4b5563;
+  color: #ffffff;
+}
+
+.employee-reports-page .report-btn-secondary.report-btn-blue,
+.employee-reports-page .report-btn-secondary.report-btn-blue:hover {
+  background: #2563eb;
+  border-color: #1e40af;
+  color: #ffffff;
+}
+.employee-reports-page .report-btn-secondary.report-btn-blue:hover:not(:disabled) {
+  background: #1d4ed8;
+  border-color: #1e3a8a;
+  color: #ffffff;
+}
+
+/* Bulk-send button in the results header – a touch taller so it reads as a primary CTA. */
+.employee-reports-page .report-btn-secondary.report-btn-send-selected {
+  height: 34px;
+  padding: 0 16px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+/* ── Column width tuning ──────────────────────────────────────────────────
+ * Compact padding + nowrap on most columns; allow Name to wrap.
+ * Action column is widened so the profile icon + button stay on one line.
+ */
+:host ::ng-deep .report-table-wrap .p-datatable table {
+  font-size: 0.79rem;
+}
+
+:host ::ng-deep .report-table-wrap .p-datatable th,
+:host ::ng-deep .report-table-wrap .p-datatable td {
+  padding: 5px 7px !important;
+  white-space: nowrap;
+}
+
+/* Ser */
+:host ::ng-deep .report-table-wrap .p-datatable th:nth-child(2),
+:host ::ng-deep .report-table-wrap .p-datatable td:nth-child(2) { width: 40px; }
+
+/* Service ID */
+:host ::ng-deep .report-table-wrap .p-datatable th:nth-child(3),
+:host ::ng-deep .report-table-wrap .p-datatable td:nth-child(3) { width: 110px; }
+
+/* Rank */
+:host ::ng-deep .report-table-wrap .p-datatable th:nth-child(4),
+:host ::ng-deep .report-table-wrap .p-datatable td:nth-child(4) { width: 110px; white-space: normal; }
+
+/* Corps */
+:host ::ng-deep .report-table-wrap .p-datatable th:nth-child(5),
+:host ::ng-deep .report-table-wrap .p-datatable td:nth-child(5) { width: 60px; }
+
+/* Trade */
+:host ::ng-deep .report-table-wrap .p-datatable th:nth-child(6),
+:host ::ng-deep .report-table-wrap .p-datatable td:nth-child(6) { width: 60px; }
+
+/* Name – allow wrap to save horizontal space */
+:host ::ng-deep .report-table-wrap .p-datatable th:nth-child(7),
+:host ::ng-deep .report-table-wrap .p-datatable td:nth-child(7) {
+  white-space: normal;
+  min-width: 140px;
+  max-width: 200px;
+}
+
+/* Mother Unit */
+:host ::ng-deep .report-table-wrap .p-datatable th:nth-child(8),
+:host ::ng-deep .report-table-wrap .p-datatable td:nth-child(8) { width: 90px; }
+
+/* Date of Join in RAB */
+:host ::ng-deep .report-table-wrap .p-datatable th:nth-child(9),
+:host ::ng-deep .report-table-wrap .p-datatable td:nth-child(9) { width: 100px; }
+
+/* RAB ID */
+:host ::ng-deep .report-table-wrap .p-datatable th:nth-child(10),
+:host ::ng-deep .report-table-wrap .p-datatable td:nth-child(10) { width: 70px; }
+
+/* Remark input */
+:host ::ng-deep .report-table-wrap .p-datatable th:nth-child(11),
+:host ::ng-deep .report-table-wrap .p-datatable td:nth-child(11) { width: 130px; }
+
+/* Action – wide enough for icon + button on one line */
+:host ::ng-deep .report-table-wrap .p-datatable th:nth-child(12),
+:host ::ng-deep .report-table-wrap .p-datatable td:nth-child(12) { width: 210px; min-width: 210px; }
+
+/* Native checkbox in the select column – sized to match the PrimeNG look. */
+.employee-reports-page .report-row-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--primary-color);
+}
+.employee-reports-page .report-row-checkbox:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}

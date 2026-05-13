@@ -8,7 +8,7 @@
       <h3 class="form-card-title">Draft Note-Sheet List</h3>
     </div>
     <p class="text-600 mt-0 mb-3">Submit for approval when ready. You can Update, Preview, Edit main text, then Submit for approval.</p>
-    <p-table #dt [value]="draftList" [loading]="loading" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" [globalFilterFields]="['noteSheetNo', 'remark']">
+    <p-table #dt [value]="draftList" [loading]="loading" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" [globalFilterFields]="['noteSheetNo', 'subject', 'referenceNumber', 'remark']">
       <ng-template pTemplate="caption">
         <div class="ns-filter-bar">
           <div class="ns-filter-group">
@@ -65,6 +65,7 @@
               <p-button type="button" icon="pi pi-list" [rounded]="true" [text]="true" size="small" severity="info" pTooltip="Approval Log" (onClick)="openApprovalLog(row)"></p-button>
               @if (row.draftPostingMasterId) {
                 <p-button type="button" icon="pi pi-users" [rounded]="true" [text]="true" size="small" pTooltip="View Employees" (onClick)="openEmployeesDialog(row)"></p-button>
+                <p-button type="button" icon="pi pi-history" [rounded]="true" [text]="true" size="small" severity="secondary" pTooltip="Removal History" (onClick)="openRemovalHistory(row)"></p-button>
               }
             </div>
           </td>
@@ -96,7 +97,7 @@
       <h3 class="form-card-title">Pending for Approval Note-Sheet List</h3>
     </div>
     <p class="text-600 mt-0 mb-3">Approve, Decline, or Back with remark as per workflow.</p>
-    <p-table #dt [value]="pendingList" [loading]="loading" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" [globalFilterFields]="['noteSheetNo']">
+    <p-table #dt [value]="pendingList" [loading]="loading" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" [globalFilterFields]="['noteSheetNo', 'subject', 'referenceNumber']">
       <ng-template pTemplate="caption">
         <div class="ns-filter-bar">
           <div class="ns-filter-group">
@@ -146,7 +147,10 @@
           <td>
             <div class="flex align-items-center gap-1">
               <p-button type="button" icon="pi pi-eye" [rounded]="true" [text]="true" size="small" pTooltip="Preview" (onClick)="openPreview(row)"></p-button>
-              <p-button type="button" icon="pi pi-users" [rounded]="true" [text]="true" size="small" severity="info" pTooltip="View Members" (onClick)="openViewMembers(row)"></p-button>
+              @if (row.draftPostingMasterId) {
+                <p-button type="button" icon="pi pi-users" [rounded]="true" [text]="true" size="small" severity="info" pTooltip="View Members" (onClick)="openEmployeesDialog(row)"></p-button>
+                <p-button type="button" icon="pi pi-history" [rounded]="true" [text]="true" size="small" severity="secondary" pTooltip="Removal History" (onClick)="openRemovalHistory(row)"></p-button>
+              }
               <p-button type="button" icon="pi pi-list" [rounded]="true" [text]="true" size="small" severity="info" pTooltip="Approval Log" (onClick)="openApprovalLog(row)"></p-button>
               <p-button type="button" icon="pi pi-check" [rounded]="true" [text]="true" size="small" severity="success" pTooltip="Approve" (onClick)="openRemarkDialog(row, NoteSheetRemarkAction.Approve)"></p-button>
               <p-button type="button" icon="pi pi-times" [rounded]="true" [text]="true" size="small" severity="danger" pTooltip="Decline" (onClick)="openRemarkDialog(row, NoteSheetRemarkAction.Decline)"></p-button>
@@ -168,7 +172,7 @@
       <h3 class="form-card-title">Approved Note-Sheet List</h3>
     </div>
     <p class="text-600 mt-0 mb-3">Note-sheets that have been approved.</p>
-    <p-table #dt [value]="approvedList" [loading]="loading" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" [globalFilterFields]="['noteSheetNo']">
+    <p-table #dt [value]="approvedList" [loading]="loading" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" [globalFilterFields]="['noteSheetNo', 'subject', 'referenceNumber']">
       <ng-template pTemplate="caption">
         <div class="ns-filter-bar">
           <div class="ns-filter-group">
@@ -215,6 +219,10 @@
           <td>
             <div class="flex align-items-center gap-1">
               <p-button type="button" icon="pi pi-eye" [rounded]="true" [text]="true" size="small" pTooltip="Preview" (onClick)="openPreview(row)"></p-button>
+              @if (row.draftPostingMasterId) {
+                <p-button type="button" icon="pi pi-users" [rounded]="true" [text]="true" size="small" severity="info" pTooltip="View Members" (onClick)="openEmployeesDialog(row)"></p-button>
+                <p-button type="button" icon="pi pi-history" [rounded]="true" [text]="true" size="small" severity="secondary" pTooltip="Removal History" (onClick)="openRemovalHistory(row)"></p-button>
+              }
               <p-button type="button" icon="pi pi-list" [rounded]="true" [text]="true" size="small" severity="info" pTooltip="Approval Log" (onClick)="openApprovalLog(row)"></p-button>
             </div>
           </td>
@@ -233,7 +241,7 @@
       <h3 class="form-card-title">Declined Note-Sheet List</h3>
     </div>
     <p class="text-600 mt-0 mb-3">Note-sheets that have been declined.</p>
-    <p-table #dt [value]="declinedList" [loading]="loading" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" [globalFilterFields]="['noteSheetNo']">
+    <p-table #dt [value]="declinedList" [loading]="loading" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" [globalFilterFields]="['noteSheetNo', 'subject', 'referenceNumber']">
       <ng-template pTemplate="caption">
         <div class="ns-filter-bar">
           <div class="ns-filter-group">
@@ -300,7 +308,7 @@
       <h3 class="form-card-title">All Note-Sheet</h3>
     </div>
     <p class="text-600 mt-0 mb-3">All note-sheets regardless of status.</p>
-    <p-table #dt [value]="allList" [loading]="loading" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" styleClass="p-datatable-striped p-datatable-gridlines" [globalFilterFields]="['noteSheetNo']">
+    <p-table #dt [value]="allList" [loading]="loading" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" styleClass="p-datatable-striped p-datatable-gridlines" [globalFilterFields]="['noteSheetNo', 'subject', 'referenceNumber']">
       <ng-template pTemplate="caption">
         <div class="ns-filter-bar">
           <div class="ns-filter-group">
@@ -562,9 +570,137 @@
     [modal]="true"
     [style]="{ width: '72rem', maxWidth: '95vw' }"
     [contentStyle]="{ overflow: 'auto', 'border-top': '2px solid var(--primary-color)' }"
-    (onHide)="employeesList = []; selectedEmployees = []"
+    (onHide)="employeesList = []; selectedEmployees = []; selectedAddEmployee = null; addMemberList = []; selectedAddUnitNode = null; addMemberRemarks = ''"
     [draggable]="false"
     [resizable]="true">
+    <!-- ── Add Member Section ── -->
+    @if (isDialogRowPosted) {
+      <div class="mb-3 p-3 flex align-items-center gap-2" style="background:var(--yellow-50); border-radius:8px; border:1px solid var(--yellow-300);">
+        <i class="pi pi-lock text-yellow-600"></i>
+        <span class="text-yellow-700 text-sm font-semibold">Posting Order already generated — member add/remove is locked.</span>
+      </div>
+    }
+    @if (canInsert && !isDialogRowPosted) {
+    <div class="mb-3 p-3" style="background:var(--surface-50); border-radius:8px; border:1px solid var(--surface-200);">
+      <div class="flex align-items-center gap-2 mb-2">
+        <i class="pi pi-user-plus text-primary" style="font-size:1rem"></i>
+        <span class="font-semibold text-sm text-900">Add Employee to Posting List</span>
+        <span class="text-400 text-xs">{{ isInterPostingDialog ? '(presently serving employees marked for inter posting)' : '(only employees with draft status are listed)' }}</span>
+      </div>
+      <div class="flex align-items-center gap-2">
+        <div style="flex:1; min-width:0;">
+          @if (addMemberLoading) {
+            <div class="flex align-items-center gap-2 text-500 text-sm p-2"><i class="pi pi-spin pi-spinner"></i> Loading employees...</div>
+          } @else {
+            <p-select
+              [(ngModel)]="selectedAddEmployee"
+              [options]="addMemberList"
+              optionLabel="serviceId"
+              [filter]="true"
+              filterBy="serviceId,fullNameEN,rankName,corpsName,tradeName,motherUnitName,RABID,rabID"
+              placeholder="Search by Service ID, Name, Rank, Corps..."
+              [style]="{ width: '100%' }"
+              appendTo="body"
+              [showClear]="true">
+              <ng-template let-emp pTemplate="selectedItem">
+                <span class="text-500 text-xs">Name&nbsp;:</span>
+                <span class="font-semibold text-900 ml-1 mr-3">{{ emp.fullNameEN }}</span>
+                <span class="text-500 text-xs">Service ID&nbsp;:</span>
+                <span class="font-semibold text-primary ml-1 mr-3">{{ emp.serviceId }}</span>
+                <span class="text-500 text-xs">Rank&nbsp;:</span>
+                <span class="font-medium text-700 ml-1 mr-3">{{ emp.rankName || '—' }}</span>
+                <span class="text-500 text-xs">Unit&nbsp;:</span>
+                <span class="font-medium text-700 ml-1 mr-3">{{ emp.motherUnitName || '—' }}</span>
+                <span class="text-500 text-xs">Remarks&nbsp;:</span>
+                <span class="font-medium text-700 ml-1">{{ (isInterPostingDialog ? emp.interPostingRemark : emp.sendingRemark) || '—' }}</span>
+              </ng-template>
+              <ng-template let-emp pTemplate="item">
+                <div class="flex flex-column gap-1 py-1">
+                  <div class="flex align-items-center flex-wrap gap-2">
+                    <span class="text-500 text-xs">Name&nbsp;:</span>
+                    <span class="font-semibold text-900 mr-2">{{ emp.fullNameEN }}</span>
+                    <span class="text-500 text-xs">Service ID&nbsp;:</span>
+                    <span class="font-semibold text-primary mr-2">{{ emp.serviceId }}</span>
+                    <span class="text-500 text-xs">Rank&nbsp;:</span>
+                    <span class="font-medium text-700 mr-2">{{ emp.rankName || '—' }}</span>
+                    <span class="text-500 text-xs">Unit&nbsp;:</span>
+                    <span class="font-medium text-700">{{ emp.motherUnitName || '—' }}</span>
+                  </div>
+                  <div class="flex align-items-center flex-wrap gap-2 text-xs text-500">
+                    <span class="text-400">Corps&nbsp;:</span>
+                    <span class="mr-2">{{ emp.corpsName || '—' }}</span>
+                    <span class="text-400">Trade&nbsp;:</span>
+                    <span class="mr-2">{{ emp.tradeName || '—' }}</span>
+                    <span class="text-400">Remarks&nbsp;:</span>
+                    <span class="text-700 mr-2">{{ (isInterPostingDialog ? emp.interPostingRemark : emp.sendingRemark) || '—' }}</span>
+                    <span class="text-400 ml-auto">{{ emp.RABID || emp.rabID || '' }}</span>
+                  </div>
+                </div>
+              </ng-template>
+            </p-select>
+          }
+        </div>
+        <p-button
+          icon="pi pi-plus"
+          label="Add Member"
+          severity="success"
+          size="small"
+          [loading]="addMemberSaving"
+          [disabled]="!selectedAddEmployee || (isApprovedPostingRoute && !addMemberTransferUnitId) || addMemberSaving"
+          (onClick)="addMemberToPosting()">
+        </p-button>
+      </div>
+
+      <!-- Transfer Unit + Remarks — required only on approved-new-posting route -->
+      @if (isApprovedPostingRoute) {
+      <div class="mt-3 pt-2" style="border-top: 1px dashed var(--surface-300);">
+        <div style="display:grid; grid-template-columns:2fr 1fr; gap:0.5rem; align-items:start;">
+          <!-- Transfer Unit -->
+          <div class="flex flex-column gap-1">
+            <label class="text-xs text-500">
+              <i class="pi pi-sitemap mr-1 text-orange-500"></i>Transfer Unit <span class="text-red-400">*</span>
+            </label>
+            @if (addMemberTreeLoading) {
+              <div class="text-500 text-xs p-1"><i class="pi pi-spin pi-spinner mr-1"></i>Loading...</div>
+            } @else {
+              <p-treeSelect
+                [(ngModel)]="selectedAddUnitNode"
+                [options]="addMemberUnitTreeNodes"
+                placeholder="Select Transfer Unit"
+                [filter]="true"
+                [filterInputAutoFocus]="true"
+                [showClear]="true"
+                selectionMode="single"
+                styleClass="w-full"
+                appendTo="body"
+                (onNodeExpand)="onAddMemberNodeExpand($event)"
+                (onNodeSelect)="onAddMemberNodeSelect($event)"
+                (onClear)="onAddMemberNodeClear()">
+                <ng-template pTemplate="value" let-node>
+                  {{ node ? getAddMemberUnitFullPath(node) : 'Select Transfer Unit' }}
+                </ng-template>
+              </p-treeSelect>
+            }
+          </div>
+          <!-- Remarks -->
+          <div class="flex flex-column gap-1">
+            <label class="text-xs text-500">
+              <i class="pi pi-comment mr-1"></i>Remarks
+            </label>
+            <textarea
+              pTextarea
+              [(ngModel)]="addMemberRemarks"
+              placeholder="Optional..."
+              rows="1"
+              style="width:100%; resize:none; font-size:0.8rem; line-height:1.4; min-height:2rem;">
+            </textarea>
+          </div>
+        </div>
+      </div>
+      }<!-- /isApprovedPostingRoute -->
+    </div>
+    }<!-- /canInsert -->
+
     @if (loadingEmployees) {
       <div class="flex align-items-center justify-content-center p-4"><i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i></div>
     } @else if (employeesList.length === 0) {
@@ -572,7 +708,7 @@
     } @else {
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
         <span class="text-500" style="font-size:0.85rem;">{{ employeesList.length }} employee(s) in posting list</span>
-        @if (selectedEmployees.length > 0) {
+        @if (selectedEmployees.length > 0 && !isDialogRowPosted) {
           <p-button icon="pi pi-trash" label="Remove Selected ({{ selectedEmployees.length }})"
                     severity="danger" [outlined]="true" size="small" [loading]="removingEmployees"
                     (onClick)="removeSelectedEmployees()"></p-button>
@@ -691,6 +827,87 @@
           </div>
         }
       </div>
+    }
+  </p-dialog>
+
+  <!-- ── Removal History Dialog ── -->
+  <p-dialog
+    [header]="removalHistoryTitle"
+    [(visible)]="showRemovalHistoryDialog"
+    [modal]="true"
+    [style]="{ width: '96vw', maxWidth: '1100px', maxHeight: '85vh' }"
+    [draggable]="false"
+    [resizable]="true"
+    [closable]="true"
+    (onHide)="removalHistoryList = []">
+
+    @if (removalHistoryLoading) {
+      <div class="flex justify-content-center align-items-center py-5">
+        <i class="pi pi-spin pi-spinner" style="font-size:1.5rem"></i>
+        <span class="ml-2">Loading history...</span>
+      </div>
+    }
+
+    @if (!removalHistoryLoading && removalHistoryList.length === 0) {
+      <div class="text-center text-500 py-4">No removal history found for this posting list.</div>
+    }
+
+    @if (!removalHistoryLoading && removalHistoryList.length > 0) {
+      <span class="text-500 text-sm block mb-2">{{ removalHistoryList.length }} removal record(s)</span>
+      <p-table
+        [value]="removalHistoryList"
+        [tableStyle]="{ 'min-width': '90rem' }"
+        styleClass="p-datatable-striped p-datatable-gridlines p-datatable-sm"
+        [paginator]="removalHistoryList.length > 10"
+        [rows]="10"
+        [rowsPerPageOptions]="[10, 25, 50]">
+        <ng-template pTemplate="header">
+          <tr>
+            <th style="width: 45px">Ser</th>
+            <th style="min-width: 110px">Posting No</th>
+            <th style="min-width: 100px">Service ID</th>
+            <th style="min-width: 100px">RAB ID</th>
+            <th style="min-width: 160px">Name</th>
+            <th style="min-width: 115px">Notesheet No</th>
+            <th style="min-width: 160px">Stage at Removal</th>
+            <th style="min-width: 140px">Transfer Unit</th>
+            <th style="min-width: 130px">Wing</th>
+            <th style="min-width: 130px">Branch</th>
+            <th style="min-width: 130px">Section</th>
+            <th style="min-width: 140px">Original Remarks</th>
+            <th style="min-width: 110px">Removed By</th>
+            <th style="min-width: 145px">Removed Date</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-h let-i="rowIndex">
+          <tr>
+            <td>{{ i + 1 }}</td>
+            <td><span class="font-semibold">{{ h.draftPostingNo || '-' }}</span></td>
+            <td>{{ h.serviceId || '-' }}</td>
+            <td>{{ h.rabId || '-' }}</td>
+            <td>{{ h.fullNameEN || '-' }}</td>
+            <td>{{ h.noteSheetNo || '-' }}</td>
+            <td>
+              <span class="ns-status-badge"
+                [ngClass]="{
+                  'ns-status-badge--initiator':   h.noteSheetStatusAtRemoval === 'Pending - Initiator',
+                  'ns-status-badge--recommender': h.noteSheetStatusAtRemoval === 'Pending - Recommender' || h.noteSheetStatusAtRemoval === 'Pending - Final Approval',
+                  'ns-status-badge--backed':      h.noteSheetStatusAtRemoval === 'Declined',
+                  'ns-status-badge--approved':    h.noteSheetStatusAtRemoval === 'Approved'
+                }">
+                {{ h.noteSheetStatusAtRemoval || '-' }}
+              </span>
+            </td>
+            <td>{{ h.originalTransferRabUnitName || '-' }}</td>
+            <td>{{ h.originalTransferWingName || '-' }}</td>
+            <td>{{ h.originalTransferBranchName || '-' }}</td>
+            <td>{{ h.originalTransferSectionName || '-' }}</td>
+            <td>{{ h.originalRemarks || '-' }}</td>
+            <td>{{ h.createdBy || '-' }}</td>
+            <td>{{ formatRemovalDate(h.createdDate) }}</td>
+          </tr>
+        </ng-template>
+      </p-table>
     }
   </p-dialog>
 

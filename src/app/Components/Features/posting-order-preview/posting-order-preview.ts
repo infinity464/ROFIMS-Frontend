@@ -1,29 +1,36 @@
-import { Component, OnInit, inject } from '@angular/core';
-import { UserMenuService } from '@/services/user-menu.service';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { Toast } from 'primeng/toast';
-import { MessageService, ConfirmationService } from 'primeng/api';
+import { MessageService, ConfirmationService, TreeNode } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { SelectModule } from 'primeng/select';
+import { TreeSelectModule } from 'primeng/treeselect';
 import { DatePickerModule } from 'primeng/datepicker';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { TableModule } from 'primeng/table';
+import { EditorModule } from 'primeng/editor';
+import { DialogModule } from 'primeng/dialog';
+import { TagModule } from 'primeng/tag';
+import { CheckboxModule } from 'primeng/checkbox';
 import { PostingService } from '@/services/posting.service';
+import { OrgService } from '@/Components/basic-setup/org-tree/org.service';
 import { ServingMembersService } from '@/services/serving-members.service';
 import { EmpService } from '@/services/emp-service';
-import { PostingOrderEmployeeRow } from '@/models/posting.model';
-import { NoteSheetType } from '@/models/enums';
+import { EmployeeListService } from '@/services/employee-list.service';
+import { PostingOrderEmployeeRow, EmployeeRemovalInfo } from '@/models/posting.model';
+import { EmployeeList } from '@/models/employee-list.model';
+import { NoteSheetType, IsSendingNotesheetStatus, ApprovalStatus } from '@/models/enums';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '@/Core/Environments/environment';
 import { firstValueFrom } from 'rxjs';
 import {
-    Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
-    WidthType, BorderStyle, AlignmentType, PageOrientation, TabStopType, TabStopPosition, TableLayoutType, VerticalMergeType
+    Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, ImageRun,
+    WidthType, BorderStyle, AlignmentType, PageOrientation, TabStopType, TabStopPosition, TableLayoutType
 } from 'docx';
 import { saveAs } from 'file-saver';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
@@ -51,22 +58,21 @@ interface TransferUnitOption {
         ConfirmDialogModule,
         TooltipModule,
         SelectModule,
+        TreeSelectModule,
         DatePickerModule, FlexibleDateDirective,
         InputTextModule,
         TextareaModule,
-        TableModule
+        TableModule,
+        EditorModule,
+        DialogModule,
+        TagModule,
+        CheckboxModule
     ],
     providers: [MessageService, ConfirmationService],
     templateUrl: './posting-order-preview.html',
     styleUrl: './posting-order-preview.scss'
 })
 export class PostingOrderPreviewPageComponent implements OnInit {
-    private _router = inject(Router);
-    private _userMenuService = inject(UserMenuService);
-    canInsert = true;
-    canUpdate = true;
-    canDelete = true;
-
     loading = false;
     error = false;
     exportingPdf = false;
@@ -89,6 +95,37 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     referenceNumber = '';
     footerParagraphs: FooterParagraph[] = [];
     postingText = '';
+    subText = '';
+
+    // ── Page size for export ──────────────────────────────────
+    pageSizeOptions = [
+        { label: 'A4', value: 'A4' },
+        { label: 'Legal', value: 'Legal' }
+    ];
+    selectedPageSize = 'A4';
+
+    // ── অনুলিপি paragraph checkboxes ────────────────────────
+    showOnulipiFilter = false;
+    paragraphChecked: boolean[] = [];
+
+    // ── পূর্ববতী কর্মস্থল unit visibility ───────────────────
+    showPrevWorkplaceFilter = false;
+    showPrevWorkplaceUnit = false;
+
+    // ── নিজ জেলা column visibility ───────────────────
+    showOwnDistrict = true;
+
+    private syncParagraphChecked(): void {
+        const paras = this.filteredFooterParagraphs;
+        if (this.paragraphChecked.length !== paras.length) {
+            this.paragraphChecked = paras.map((_, i) => this.paragraphChecked[i] ?? true);
+        }
+    }
+
+    get exportFooterParagraphs(): FooterParagraph[] {
+        this.syncParagraphChecked();
+        return this.filteredFooterParagraphs.filter((_, i) => this.paragraphChecked[i] !== false);
+    }
 
     /** Per-unit filter: null = "All units" (default), otherwise the transferRabUnitId to show. */
     selectedFilterUnitId: number | null = null;
@@ -103,14 +140,78 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     private currentOrderId: number | null = null;
     private rawFooterText: string | null = null;
 
+    draftPostingMasterId: number | null = null;
+
     // ─── Edit mode state ──────────────────────────────────
     editing = false;
     saving = false;
     editPostingOrderDate: Date | null = null;
     editRemarks = '';
     editPostingText = '';
+    editSubText = '';
     editFooterParagraphs: FooterParagraph[] = [];
     editEmployees: PostingOrderEmployeeRow[] = [];
+
+    // ─── Add member (inline dropdown) ��────────────────
+    addMemberList: EmployeeList[] = [];
+    addMemberLoading = false;
+    addMemberSaving = false;
+    selectedAddEmployee: EmployeeList | null = null;
+    selectedAddMemberTransferUnitId: number | null = null;
+    addMemberRemarks: string = '';
+    addMemberUnitTreeNodes: TreeNode[] = [];
+    selectedAddUnitNode: TreeNode | null = null;
+    addMemberTreeLoading = false;
+    private addMemberUnitNodeMap: Record<number, TreeNode> = {};
+
+    // ─── Remove member ──────────────────────────────────
+    removingEmployeeId: number | null = null;
+
+    // ─── Removal history (shows previous posting order no in remarks) ──
+    removalHistoryMap: Record<number, EmployeeRemovalInfo> = {};
+
+    get addMemberTransferUnitId(): number | null {
+        return this.selectedAddUnitNode ? Number(this.selectedAddUnitNode.key) : null;
+    }
+
+    getAddMemberUnitFullPath(node: TreeNode | null): string {
+        if (!node) return '';
+        const parts: string[] = [];
+        let cur: TreeNode | null = node;
+        while (cur) {
+            parts.unshift(cur.label ?? '');
+            cur = (cur.data?.parent) ?? null;
+        }
+        return parts.join(' > ');
+    }
+
+    // Expose enum to template
+    readonly ApprovalStatus = ApprovalStatus;
+
+    // ─── Posting Order Approval ──────────────────────────
+    approvalEmployeeId: number | null = null;
+    approvalEmployeeName: string | null = null;
+    approvalStatus: string | null = null;
+    approvalNote: string | null = null;
+    cancelReason: string | null = null;
+    approvalDate: string | null = null;
+    // Approval person full details (for bottom Onulipi signature)
+    approvalPersonName = '';
+    approvalPersonNameBN = '';
+    approvalPersonRank = '';
+    approvalPersonRankBN = '';
+    approvalPersonAppointment = '';
+    approvalPersonAppointmentBN = '';
+    approvalPersonSignatureUrl = '';
+    // Edit-mode approval person
+    editApprovalEmployeeId: number | null = null;
+    approvalEmployees: { value: number; label: string }[] = [];
+    loadingApprovalEmployees = false;
+    // Approval modal state
+    showApprovalModal = false;
+    approvalModalAction: ApprovalStatus.Approve | ApprovalStatus.Cancel | null = null;
+    approvalModalRemarks = '';
+    savingApproval = false;
 
     // Final approver info
     approverName = '';
@@ -142,19 +243,16 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         private route: ActivatedRoute,
         private router: Router,
         private postingService: PostingService,
+        private orgService: OrgService,
         private servingMembersService: ServingMembersService,
         private empService: EmpService,
+        private employeeListService: EmployeeListService,
         private http: HttpClient,
         private messageService: MessageService,
         private confirmationService: ConfirmationService
     ) {}
 
     ngOnInit(): void {
-        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
-        this.canInsert = _perms.canInsert;
-        this.canUpdate = _perms.canUpdate;
-        this.canDelete = _perms.canDelete;
-
         this.route.queryParams.subscribe(params => {
             const id = params['id'];
             if (id) {
@@ -186,7 +284,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                     this.textType = first.textType ?? '';
                     this.filesReferences = first.filesReferences ?? '';
                     this.status = first.status ?? '';
-                    this.masterRemarks = first.masterRemarks ?? '';
+                    this.masterRemarks = this.fixBanglaWordBreaks(first.masterRemarks ?? '');
                     this.noteSheetNo = first.noteSheetNo ?? '';
                     this.referenceNumber = first.referenceNumber ?? '';
                     this.isBangla = first.nsTextType === 1 || this.textType === 'bn' || this.textType === '1' || this.textType === 'Bangla';
@@ -215,7 +313,9 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                     } else {
                         this.postingText = '';
                     }
+                    this.postingText = this.fixBanglaWordBreaks(this.postingText);
 
+                    this.subText = this.fixBanglaWordBreaks(first.subText ?? '');
                     this.rawFooterText = first.footerText ?? null;
 
                     // Parse footer paragraphs into FooterParagraph objects (keeps unit linkage for per-unit filtering).
@@ -226,10 +326,132 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                     this.availableTransferUnits = this.computeTransferUnits(this.employees);
                     this.applyFilter();
 
+                    this.draftPostingMasterId = first.draftPostingMasterId ?? null;
+
+                    // Load removal history for মন্তব্য column
+                    this.loadRemovalHistory(this.employees);
+
+                    // Load approval fields from master DTO
+                    this.loadApprovalInfo(id);
+
                     // Load final approver info from notesheet
                     if (first.noteSheetId) {
                         this.loadApproverInfo(first.noteSheetId);
                     }
+
+                    // Keep edit table in sync when reloading during edit mode (e.g. after add/remove member).
+                    if (this.editing) this.editEmployees = [...this.employees];
+                } else {
+                    // View returned no rows — fall back to PostingOrderById to get master + details.
+                    // This populates header fields AND builds a minimal employee list from PostingOrderDetail
+                    // so the edit table and preview document are usable even if the SQL view hasn't been refreshed.
+                    this.postingService.getPostingOrderById(id).subscribe({
+                        next: (master) => {
+                            if (master) {
+                                this.postingOrderNo   = master.postingOrderNo ?? '';
+                                this.postingOrderDate = master.postingOrderDate ?? '';
+                                this.postingType      = master.postingType ?? '';
+                                this.subject          = master.subject ?? '';
+                                this.mainText         = master.mainText ?? '';
+                                this.textType         = master.textType ?? '';
+                                this.filesReferences  = master.filesReferences ?? '';
+                                this.status           = master.status ?? '';
+                                this.masterRemarks    = this.fixBanglaWordBreaks(master.remarks ?? '');
+                                this.noteSheetNo      = master.noteSheetNo ?? '';
+                                this.referenceNumber  = master.referenceNumber ?? '';
+                                this.isBangla         = this.textType === 'bn' || this.textType === '1' || this.textType === 'Bangla';
+                                this.postingText      = this.fixBanglaWordBreaks(master.mainText ?? '');
+                                this.subText          = this.fixBanglaWordBreaks(master.subText ?? '');
+                                this.rawFooterText    = master.footerText ?? null;
+                                this.footerParagraphs = this.parseFooterParagraphs(this.rawFooterText);
+
+                                // Map PostingOrderDetail rows → minimal PostingOrderEmployeeRow so the
+                                // edit table shows existing employees and the preview doc can render.
+                                if (master.details?.length) {
+                                    this.employees = master.details.map(d => ({
+                                        postingOrderMasterId: id,
+                                        postingOrderNo:  master.postingOrderNo ?? '',
+                                        postingOrderDate: master.postingOrderDate ?? '',
+                                        postingType:      master.postingType ?? '',
+                                        noteSheetId:      master.noteSheetId,
+                                        noteSheetNo:      master.noteSheetNo ?? null,
+                                        refPostingOrderMasterId: master.refPostingOrderMasterId ?? null,
+                                        referenceNumber:  master.referenceNumber ?? null,
+                                        subject:          master.subject ?? null,
+                                        mainText:         master.mainText ?? null,
+                                        subText:          master.subText ?? null,
+                                        textType:         master.textType ?? null,
+                                        filesReferences:  master.filesReferences ?? null,
+                                        status:           master.status ?? null,
+                                        masterRemarks:    master.remarks ?? null,
+                                        footerText:       null,
+                                        createdBy:        master.createdBy ?? '',
+                                        createdDate:      master.createdDate ?? '',
+                                        nsTextType:       null,
+                                        draftPostingMasterId: null,
+                                        postingOrderDetailId: d.id,
+                                        employeeId:       d.employeeId,
+                                        detailRemarks:    d.remarks ?? null,
+                                        noteSheetRemarks: null,
+                                        sendingRemark:    null,
+                                        transferRabUnitId:   null,
+                                        transferRabUnitName: null,
+                                        transferRabUnitNameBN: null,
+                                        serviceId:        d.serviceId ?? null,
+                                        prefixName:       null,
+                                        prefixNameBN:     null,
+                                        fullNameEN:       d.name ?? null,
+                                        fullNameBN:       null,
+                                        rabID:            null,
+                                        rankName:         d.rank ?? null,
+                                        rankNameBN:       null,
+                                        corpsName:        d.corps ?? null,
+                                        corpsNameBN:      null,
+                                        tradeName:        d.trade ?? null,
+                                        tradeNameBN:      null,
+                                        tradeRemarks:     null,
+                                        specialQualifications: null,
+                                        specialQualificationsBN: null,
+                                        motherUnitName:   d.motherUnit ?? null,
+                                        motherUnitNameBN: null,
+                                        joiningDateInRAB: d.rabJoingdate ?? null,
+                                        rankSortOrder:    null,
+                                        motherOrgSortOrder: null,
+                                        permanentDistrictName: null,
+                                        permanentDistrictNameBN: null,
+                                        presentDistrictName: null,
+                                        presentDistrictNameBN: null,
+                                        spousePresentDistrictName: null,
+                                        spousePresentDistrictNameBN: null,
+                                        motherOrgLocationName: null,
+                                        motherOrgLocationNameBN: null,
+                                        previousMotherOrgName: null,
+                                        previousMotherOrgNameBN: null,
+                                        previousRabUnits: null,
+                                        previousRabUnitsBN: null
+                                    } as PostingOrderEmployeeRow));
+
+                                    this.availableTransferUnits = this.computeTransferUnits(this.employees);
+                                    this.applyFilter();
+                                }
+
+                                // Set approval fields from master DTO
+                                this.approvalEmployeeId = master.approvalEmployeeId ?? null;
+                                this.approvalEmployeeName = master.approvalEmployeeName ?? null;
+                                this.approvalStatus = master.approvalStatus ?? null;
+                                this.approvalNote = master.approvalNote ?? null;
+                                this.cancelReason = master.cancelReason ?? null;
+                                this.approvalDate = master.approvalDate ?? null;
+
+                                if (master.noteSheetId) {
+                                    this.loadApproverInfo(master.noteSheetId);
+                                }
+                            }
+                            this.loading = false;
+                        },
+                        error: () => { this.loading = false; }
+                    });
+                    return; // loading = false handled in inner subscribe
                 }
                 this.loading = false;
             },
@@ -239,6 +461,147 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                 this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load posting order.' });
             }
         });
+    }
+
+    /** Fetch approval fields from master DTO and load approval person's full details. */
+    private loadApprovalInfo(orderId: number): void {
+        this.postingService.getPostingOrderById(orderId).subscribe({
+            next: (master) => {
+                if (master) {
+                    this.approvalEmployeeId = master.approvalEmployeeId ?? null;
+                    this.approvalEmployeeName = master.approvalEmployeeName ?? null;
+                    this.approvalStatus = master.approvalStatus ?? null;
+                    this.approvalNote = master.approvalNote ?? null;
+                    this.cancelReason = master.cancelReason ?? null;
+                    this.approvalDate = master.approvalDate ?? null;
+
+                    if (master.approvalEmployeeId) {
+                        this.servingMembersService.getEmployeePersonalServiceOverview(master.approvalEmployeeId).subscribe({
+                            next: (emp) => {
+                                if (emp) {
+                                    this.approvalPersonName = emp.nameEnglish ?? '';
+                                    this.approvalPersonNameBN = emp.nameBN ?? '';
+                                    this.approvalPersonRank = emp.armyRank ?? '';
+                                    this.approvalPersonRankBN = emp.armyRankBN ?? '';
+                                    this.approvalPersonAppointment = emp.appointment ?? '';
+                                    this.approvalPersonAppointmentBN = emp.appointmentBN ?? '';
+                                }
+                            }
+                        });
+                        this.empService.getSignatureBlob(master.approvalEmployeeId).subscribe({
+                            next: (blob) => {
+                                if (blob && blob.size > 0) {
+                                    const reader = new FileReader();
+                                    reader.onloadend = () => { this.approvalPersonSignatureUrl = reader.result as string; };
+                                    reader.readAsDataURL(blob);
+                                }
+                            },
+                            error: () => {}
+                        });
+                    }
+                }
+            },
+            error: () => {}
+        });
+    }
+
+    approvalStatusLabel(status: string | null | undefined): string {
+        const bn = this.isBangla;
+        switch (status) {
+            case ApprovalStatus.Approve: return 'Approved';
+            case ApprovalStatus.Cancel: return bn ? 'বাতিল' : 'Cancelled';
+            case ApprovalStatus.Pending:
+            default: return bn ? 'অপেক্ষমাণ' : 'Pending';
+        }
+    }
+
+    approvalStatusSeverity(status: string | null | undefined): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' {
+        switch (status) {
+            case ApprovalStatus.Approve: return 'success';
+            case ApprovalStatus.Cancel: return 'danger';
+            case ApprovalStatus.Pending:
+            default: return 'warn';
+        }
+    }
+
+    openApprovalModal(): void {
+        this.approvalModalAction = null;
+        this.approvalModalRemarks = '';
+        this.showApprovalModal = true;
+    }
+
+    selectApprovalAction(action: ApprovalStatus.Approve | ApprovalStatus.Cancel): void {
+        this.approvalModalAction = action;
+        this.approvalModalRemarks = '';
+    }
+
+    async saveApproval(): Promise<void> {
+        if (!this.currentOrderId || !this.approvalModalAction) return;
+
+        this.savingApproval = true;
+        const id = this.currentOrderId;
+        const bn = this.isBangla;
+
+        // If in edit mode, save edits first before approving/cancelling
+        if (this.editing) {
+            if (this.editEmployees.length === 0) {
+                this.savingApproval = false;
+                this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'At least one employee is required.' });
+                return;
+            }
+            try {
+                const saveRes = await firstValueFrom(this.postingService.updatePostingOrder(this.buildSavePayload()));
+                if (saveRes.statusCode !== 200) {
+                    this.savingApproval = false;
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: saveRes.description ?? 'Failed to save changes.' });
+                    return;
+                }
+            } catch (err: any) {
+                this.savingApproval = false;
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.description ?? 'Failed to save changes.' });
+                return;
+            }
+        }
+
+        if (this.approvalModalAction === ApprovalStatus.Approve) {
+            this.postingService.approvePostingOrder(id, this.approvalModalRemarks, 'system').subscribe({
+                next: (res) => {
+                    this.savingApproval = false;
+                    if (res.statusCode === 200) {
+                        this.messageService.add({ severity: 'success', summary: bn ? 'সফল' : 'Success', detail: bn ? 'পোস্টিং অর্ডার অনুমোদিত হয়েছে।' : 'Posting Order approved.' });
+                        this.showApprovalModal = false;
+                        this.editing = false;
+                        this.loadOrder(id);
+                        this.loadApprovalInfo(id);
+                    } else {
+                        this.messageService.add({ severity: 'error', summary: bn ? 'ত্রুটি' : 'Error', detail: res.description ?? (bn ? 'অনুমোদন ব্যর্থ হয়েছে।' : 'Failed to approve.') });
+                    }
+                },
+                error: (err) => {
+                    this.savingApproval = false;
+                    this.messageService.add({ severity: 'error', summary: bn ? 'ত্রুটি' : 'Error', detail: err?.error?.description ?? (bn ? 'অনুমোদন ব্যর্থ হয়েছে।' : 'Failed to approve.') });
+                }
+            });
+        } else {
+            this.postingService.cancelPostingOrder(id, this.approvalModalRemarks, 'system').subscribe({
+                next: (res) => {
+                    this.savingApproval = false;
+                    if (res.statusCode === 200) {
+                        this.messageService.add({ severity: 'success', summary: bn ? 'সফল' : 'Success', detail: bn ? 'পোস্টিং অর্ডার বাতিল হয়েছে।' : 'Posting Order cancelled.' });
+                        this.showApprovalModal = false;
+                        this.editing = false;
+                        this.loadOrder(id);
+                        this.loadApprovalInfo(id);
+                    } else {
+                        this.messageService.add({ severity: 'error', summary: bn ? 'ত্রুটি' : 'Error', detail: res.description ?? (bn ? 'বাতিল ব্যর্থ হয়েছে।' : 'Failed to cancel.') });
+                    }
+                },
+                error: (err) => {
+                    this.savingApproval = false;
+                    this.messageService.add({ severity: 'error', summary: bn ? 'ত্রুটি' : 'Error', detail: err?.error?.description ?? (bn ? 'বাতিল ব্যর্থ হয়েছে।' : 'Failed to cancel.') });
+                }
+            });
+        }
     }
 
     private loadApproverInfo(noteSheetId: number): void {
@@ -288,7 +651,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                                 this.approverRankBN = emp.armyRankBN ?? '';
                                 this.approverAppointment = emp.appointment ?? '';
                                 this.approverAppointmentBN = emp.appointmentBN ?? '';
-                                this.approverPhone = emp.mobileNo ?? '';
+                                this.approverPhone = emp.mobileNoOfficial ?? '';
                             }
                         }
                     });
@@ -329,6 +692,27 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             .trim();
     }
 
+    /** Replace &nbsp; / \u00A0 with regular spaces so Bangla text wraps at word boundaries. */
+    private fixBanglaWordBreaks(html: string): string {
+        if (!html) return html;
+        html = html.replace(/&nbsp;/gi, ' ');
+        html = html.replace(/&#160;/gi, ' ');
+        html = html.replace(/&#xa0;/gi, ' ');
+        html = html.replace(/&#x00a0;/gi, ' ');
+        const div = document.createElement('div');
+        div.innerHTML = html;
+        const walker = document.createTreeWalker(div, NodeFilter.SHOW_TEXT);
+        while (walker.nextNode()) {
+            const node = walker.currentNode as Text;
+            if (node.textContent) {
+                node.textContent = node.textContent
+                    .replace(/\u00A0/g, ' ')
+                    .replace(/\u200B/g, '');
+            }
+        }
+        return div.innerHTML;
+    }
+
     // ─── Display helpers ──────────────────────────────────
 
     get previewDate(): string {
@@ -336,6 +720,13 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         return this.isBangla
             ? this.formatDateBangla(this.postingOrderDate)
             : this.formatDate(this.postingOrderDate);
+    }
+
+    get noteSheetPrefix(): string {
+        const no = (this.noteSheetNo ?? '').trim();
+        if (!no) return '';
+        const lastSlash = no.lastIndexOf('/');
+        return lastSlash > 0 ? no.substring(0, lastSlash) : no;
     }
 
     /** NoteSheet number + final approval date, shown after the bold "সূত্রঃ / Reference:" label. */
@@ -395,11 +786,21 @@ export class PostingOrderPreviewPageComponent implements OnInit {
 
     empPrevWorkplace(emp: PostingOrderEmployeeRow): string {
         if (this.postingType === NoteSheetType.InterPosting) {
-            return (this.isBangla ? (emp.previousRabUnitsBN || emp.previousRabUnits) : emp.previousRabUnits) || '';
+            const bn = this.isBangla;
+            const parts = [
+                (bn ? (emp.motherUnitNameBN || emp.motherUnitName) : emp.motherUnitName) || '',
+                (bn ? (emp.presentRabUnitNameBN || emp.presentRabUnitName) : emp.presentRabUnitName) || '',
+                (bn ? (emp.presentRabWingNameBN || emp.presentRabWingName) : emp.presentRabWingName) || '',
+                (bn ? (emp.presentRabBranchNameBN || emp.presentRabBranchName) : emp.presentRabBranchName) || '',
+                (bn ? (emp.presentRabSubBranchNameBN || emp.presentRabSubBranchName) : emp.presentRabSubBranchName) || '',
+                (bn ? (emp.presentRabSectionNameBN || emp.presentRabSectionName) : emp.presentRabSectionName) || '',
+                (bn ? (emp.presentRabSubSectionNameBN || emp.presentRabSubSectionName) : emp.presentRabSubSectionName) || '',
+            ];
+            return parts.filter(p => p).join('/ ') || '';
         }
         const rabUnit = (this.isBangla ? (emp.motherOrgLocationNameBN || emp.motherOrgLocationName) : emp.motherOrgLocationName) || '';
         const motherOrg = (this.isBangla ? (emp.previousMotherOrgNameBN || emp.previousMotherOrgName) : emp.previousMotherOrgName) || '';
-        if (motherOrg && rabUnit) return motherOrg + '\n(' + rabUnit + ')';
+        if (motherOrg && rabUnit && this.showPrevWorkplaceUnit) return motherOrg + '\n(' + rabUnit + ')';
         if (motherOrg) return motherOrg;
         if (rabUnit) return rabUnit;
         return '';
@@ -439,14 +840,15 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         if (this.selectedFilterUnitId == null) {
             this.filteredEmployees = this.employees;
             this.filteredFooterParagraphs = this.footerParagraphs;
-            return;
+        } else {
+            const unitId = this.selectedFilterUnitId;
+            this.filteredEmployees = this.employees.filter(e => e.transferRabUnitId === unitId);
+            this.filteredFooterParagraphs = this.footerParagraphs.filter(p =>
+                p.transferRabUnitId == null || p.transferRabUnitId === unitId
+            );
         }
-        const unitId = this.selectedFilterUnitId;
-        this.filteredEmployees = this.employees.filter(e => e.transferRabUnitId === unitId);
-        // Paragraphs without a linked unit (`transferRabUnitId` null) are always shown.
-        this.filteredFooterParagraphs = this.footerParagraphs.filter(p =>
-            p.transferRabUnitId == null || p.transferRabUnitId === unitId
-        );
+        // Reset paragraph checkboxes when filter changes
+        this.paragraphChecked = this.filteredFooterParagraphs.map(() => true);
     }
 
     selectFilterUnit(unitId: number | null): void {
@@ -469,12 +871,20 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         return '_' + name.replace(/[^\p{L}\p{N}_-]+/gu, '_');
     }
 
+    // ─── Approved-mode removal ─────────────────────────────
+
+    get isApproved(): boolean {
+        return this.approvalStatus === ApprovalStatus.Approve;
+    }
+
+    isEmployeeReceived(emp: PostingOrderEmployeeRow): boolean {
+        return emp.receiveStatus === 'Received';
+    }
+
     // ─── Edit mode ────────────────────────────────────────
 
-    /** Can edit if status is Draft (or empty/unknown). */
     get canEdit(): boolean {
-        const s = (this.status ?? '').toLowerCase();
-        return s === '' || s === 'draft';
+        return this.approvalStatus !== ApprovalStatus.Approve;
     }
 
     /** Unique transfer (RAB) units from currently-loaded edit employees. */
@@ -493,12 +903,32 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         this.editPostingOrderDate = this.postingOrderDate ? new Date(this.postingOrderDate) : null;
         this.editRemarks = this.masterRemarks || '';
         this.editPostingText = this.postingText || '';
+        this.editSubText = this.subText || '';
         this.editEmployees = [...this.employees];
+        this.selectedAddEmployee = null;
+        this.selectedAddMemberTransferUnitId = null;
+        this.selectedAddUnitNode = null;
 
         // Re-parse the raw footerText into full FooterParagraph objects (with unit linkage).
         this.editFooterParagraphs = this.parseFooterParagraphs(this.rawFooterText);
 
+        this.editApprovalEmployeeId = this.approvalEmployeeId;
+        this.loadApprovalEmployees();
+        this.loadAddMemberList();
+        this.loadAddMemberUnitTree();
         this.editing = true;
+    }
+
+    private loadApprovalEmployees(): void {
+        if (this.approvalEmployees.length > 0) return;
+        this.loadingApprovalEmployees = true;
+        this.postingService.getApprovalEmployees().subscribe({
+            next: (list) => {
+                this.approvalEmployees = list ?? [];
+                this.loadingApprovalEmployees = false;
+            },
+            error: () => { this.loadingApprovalEmployees = false; }
+        });
     }
 
     cancelEdit(): void {
@@ -506,8 +936,116 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         this.editPostingOrderDate = null;
         this.editRemarks = '';
         this.editPostingText = '';
+        this.editSubText = '';
         this.editFooterParagraphs = [];
         this.editEmployees = [];
+        this.selectedAddEmployee = null;
+        this.selectedAddMemberTransferUnitId = null;
+        this.selectedAddUnitNode = null;
+        this.addMemberRemarks = '';
+        this.addMemberList = [];
+    }
+
+    private loadAddMemberUnitTree(): void {
+        if (this.addMemberUnitTreeNodes.length > 0) return;
+        this.addMemberTreeLoading = true;
+        this.orgService.getAll(0).subscribe({
+            next: (roots) => {
+                this.addMemberUnitNodeMap = {};
+                this.addMemberUnitTreeNodes = roots
+                    .filter((r: any) => r.status === 1)
+                    .sort((a: any, b: any) => a.sortOrder - b.sortOrder)
+                    .map((r: any) => this.toAddMemberTreeNode(r, null));
+                this.addMemberTreeLoading = false;
+            },
+            error: () => { this.addMemberTreeLoading = false; }
+        });
+    }
+
+    private toAddMemberTreeNode(node: any, parent: TreeNode | null): TreeNode {
+        const tn: TreeNode = {
+            key: String(node.id),
+            label: node.nameEN || node.nameBN || `ID ${node.id}`,
+            data: { id: node.id, nameEN: node.nameEN, nameBN: node.nameBN, parent },
+            leaf: false,
+            children: []
+        };
+        this.addMemberUnitNodeMap[node.id] = tn;
+        return tn;
+    }
+
+    onAddMemberNodeExpand(event: any): void {
+        const node: TreeNode = event.node;
+        if (node.children && node.children.length > 0) return;
+        this.orgService.loadChildren(Number(node.key)).subscribe({
+            next: (children: any[]) => {
+                node.children = children
+                    .filter((c: any) => c.status === 1)
+                    .sort((a: any, b: any) => a.sortOrder - b.sortOrder)
+                    .map((c: any) => this.toAddMemberTreeNode(c, node));
+                if (node.children.length === 0) node.leaf = true;
+                this.addMemberUnitTreeNodes = [...this.addMemberUnitTreeNodes];
+            },
+            error: () => {}
+        });
+    }
+
+    onAddMemberNodeSelect(event: any): void {
+        this.selectedAddUnitNode = event.node;
+        this.selectedAddMemberTransferUnitId = this.addMemberTransferUnitId;
+    }
+
+    onAddMemberNodeClear(): void {
+        this.selectedAddUnitNode = null;
+        this.selectedAddMemberTransferUnitId = null;
+    }
+
+    private loadAddMemberList(): void {
+        this.addMemberLoading = true;
+        const isInter = this.postingType === NoteSheetType.InterPosting;
+        const obs = isInter
+            ? this.employeeListService.getEmployeesMarkedForInterPosting()
+            : this.employeeListService.getEmployeesByIsSendingNotesheetStatus(IsSendingNotesheetStatus.Draft);
+        obs.subscribe({
+            next: (list) => { this.addMemberList = list ?? []; this.addMemberLoading = false; },
+            error: () => { this.addMemberLoading = false; }
+        });
+    }
+
+    addMemberToList(): void {
+        const emp = this.selectedAddEmployee;
+        if (!emp || !this.currentOrderId) return;
+        const empId = emp.employeeID;
+        if (this.addMemberSaving) return;
+
+        this.addMemberSaving = true;
+        this.postingService.addPostingOrderEmployee(
+            this.currentOrderId,
+            empId,
+            this.addMemberTransferUnitId,
+            'system',
+            this.draftPostingMasterId,
+            this.postingType || null,
+            this.addMemberRemarks || null
+        ).subscribe({
+            next: (res) => {
+                this.addMemberSaving = false;
+                if (res.statusCode === 200) {
+                    this.selectedAddEmployee = null;
+                    this.selectedAddUnitNode = null;
+                    this.selectedAddMemberTransferUnitId = null;
+                    this.addMemberRemarks = '';
+                    this.messageService.add({ severity: 'success', summary: 'Added', detail: `${emp.fullNameEN} added to posting order.` });
+                    this.loadOrder(this.currentOrderId!);
+                } else {
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: res.description ?? 'Failed to add employee.' });
+                }
+            },
+            error: (err) => {
+                this.addMemberSaving = false;
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.description ?? 'Failed to add employee.' });
+            }
+        });
     }
 
     /** Parse footerText JSON into full FooterParagraph objects for edit mode. */
@@ -567,9 +1105,60 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             acceptLabel: 'হ্যাঁ',
             rejectLabel: 'না',
             accept: () => {
-                this.editEmployees = this.editEmployees.filter(e => e.employeeId !== emp.employeeId);
+                if (!this.currentOrderId || this.removingEmployeeId) return;
+                this.removingEmployeeId = emp.employeeId;
+
+                this.postingService.removePostingOrderEmployee(
+                    this.currentOrderId,
+                    emp.employeeId,
+                    'system',
+                    this.draftPostingMasterId,
+                    this.postingType || null
+                ).subscribe({
+                    next: (res) => {
+                        this.removingEmployeeId = null;
+                        if (res.statusCode === 200) {
+                            this.messageService.add({ severity: 'success', summary: 'Removed', detail: `${name} removed from posting order.` });
+                            this.loadOrder(this.currentOrderId!);
+                        } else {
+                            this.messageService.add({ severity: 'error', summary: 'Error', detail: res.description ?? 'Failed to remove employee.' });
+                        }
+                    },
+                    error: (err) => {
+                        this.removingEmployeeId = null;
+                        this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.description ?? 'Failed to remove employee.' });
+                    }
+                });
             }
         });
+    }
+
+    private loadRemovalHistory(emps: PostingOrderEmployeeRow[]): void {
+        const ids = emps.map(e => e.employeeId).filter(Boolean);
+        if (ids.length === 0) return;
+        this.postingService.getRemovalHistoryByEmployeeIds(ids).subscribe({
+            next: (list) => {
+                this.removalHistoryMap = {};
+                for (const item of (list ?? [])) {
+                    if (item.postingOrderNo || item.draftPostingNo) {
+                        this.removalHistoryMap[item.employeeId] = item;
+                    }
+                }
+            },
+            error: () => {}
+        });
+    }
+
+    getRemovalRemark(emp: PostingOrderEmployeeRow): string {
+        const history = this.removalHistoryMap[emp.employeeId];
+        if (!history) return '';
+        return this.isBangla
+            ? (history.removalRemarkBN || history.removalRemark || '')
+            : (history.removalRemark || '');
+    }
+
+    empCombinedRemarks(emp: PostingOrderEmployeeRow): string {
+        return [emp.detailRemarks, this.getRemovalRemark(emp)].filter(s => !!s).join(', ');
     }
 
     trackByIndex(index: number): number {
@@ -585,6 +1174,42 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     }
 
+    private buildSavePayload() {
+        const nonEmptyFooter = this.editFooterParagraphs
+            .filter(p => p.text.trim().length > 0)
+            .map(p => ({
+                text: p.text.trim(),
+                transferRabUnitId: p.transferRabUnitId,
+                transferRabUnitName: p.transferRabUnitName
+            }));
+        const footerText = nonEmptyFooter.length > 0 ? JSON.stringify(nonEmptyFooter) : null;
+        const trimmedPostingText = this.editPostingText.trim();
+        const mainText = trimmedPostingText.length > 0 ? trimmedPostingText : null;
+        const trimmedSubText = this.editSubText.trim();
+        const subText = trimmedSubText.length > 0 ? trimmedSubText : null;
+        const postingOrderDateStr = this.editPostingOrderDate
+            ? this.formatDateToString(this.editPostingOrderDate)
+            : (this.postingOrderDate || this.formatDateToString(new Date()));
+
+        return {
+            id: this.currentOrderId!,
+            postingOrderNo: this.postingOrderNo,
+            postingOrderDate: postingOrderDateStr,
+            postingType: this.postingType,
+            referenceNumber: this.referenceNumber || null,
+            subject: this.subject || null,
+            mainText: mainText,
+            subText: subText,
+            textType: this.textType || (this.isBangla ? 'bn' : 'en'),
+            status: this.status || null,
+            remarks: this.editRemarks || null,
+            footerText: footerText,
+            employeeIds: this.editEmployees.map(e => e.employeeId),
+            updatedBy: 'system',
+            approvalEmployeeId: this.editApprovalEmployeeId ?? null
+        };
+    }
+
     saveChanges(): void {
         if (this.saving || !this.currentOrderId) return;
 
@@ -595,38 +1220,8 @@ export class PostingOrderPreviewPageComponent implements OnInit {
 
         this.saving = true;
 
-        const nonEmptyFooter = this.editFooterParagraphs
-            .filter(p => p.text.trim().length > 0)
-            .map(p => ({
-                text: p.text.trim(),
-                transferRabUnitId: p.transferRabUnitId,
-                transferRabUnitName: p.transferRabUnitName
-            }));
-        const footerText = nonEmptyFooter.length > 0 ? JSON.stringify(nonEmptyFooter) : null;
-
-        const trimmedPostingText = this.editPostingText.trim();
-        const mainText = trimmedPostingText.length > 0 ? trimmedPostingText : null;
-
-        const postingOrderDateStr = this.editPostingOrderDate
-            ? this.formatDateToString(this.editPostingOrderDate)
-            : (this.postingOrderDate || this.formatDateToString(new Date()));
-
-        this.postingService.updatePostingOrder({
-            id: this.currentOrderId,
-            postingOrderNo: this.postingOrderNo,
-            postingOrderDate: postingOrderDateStr,
-            postingType: this.postingType,
-            referenceNumber: this.referenceNumber || null,
-            subject: this.subject || null,
-            mainText: mainText,
-            textType: this.textType || (this.isBangla ? 'bn' : 'en'),
-            status: this.status || null,
-            remarks: this.editRemarks || null,
-            footerText: footerText,
-            employeeIds: this.editEmployees.map(e => e.employeeId),
-            updatedBy: 'system'
-        }).subscribe({
-            next: (res) => {
+        this.postingService.updatePostingOrder(this.buildSavePayload()).subscribe({
+            next: (res: { statusCode: number; description: string }) => {
                 this.saving = false;
                 if (res.statusCode === 200) {
                     this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Posting order updated successfully.' });
@@ -636,7 +1231,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                     this.messageService.add({ severity: 'error', summary: 'Error', detail: res.description ?? 'Failed to update.' });
                 }
             },
-            error: (err) => {
+            error: (err: any) => {
                 this.saving = false;
                 this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.description ?? 'Failed to update posting order.' });
             }
@@ -701,7 +1296,12 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         const font = bn
             ? { ascii: 'Nirmala UI', hAnsi: 'Nirmala UI', cs: 'Nirmala UI', hint: 'cs' as const }
             : 'Times New Roman';
-        const csSize = bn ? 20 : undefined;
+        const csSize = bn ? 16 : undefined;   // 8pt for order context
+        const hdrSize = 18;                     // 9pt for header
+        const hdrCsSize = bn ? 18 : undefined;
+        const tblSize = 14;                     // 7pt for table content
+        const tblCsSize = bn ? 14 : undefined;
+        const ctxSize = 16;                     // 8pt for order context
         const lang = bn ? { value: 'bn-BD', bidirectional: 'bn-BD' } : undefined;
         const thinBorder = { style: BorderStyle.SINGLE, size: 1, color: '000000' };
         const cellBorders = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
@@ -712,7 +1312,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             : ['Government of the Peoples Republic of Bangladesh', 'Bangladesh Police', 'RAB Forces Headquarters', 'Kurmitola, Dhaka'];
 
         const headerParas = headerLines.map(line => new Paragraph({
-            children: [new TextRun({ text: line, bold: true, size: 22, sizeComplexScript: bn ? 22 : undefined, font, language: lang })],
+            children: [new TextRun({ text: line, bold: true, size: hdrSize, sizeComplexScript: hdrCsSize, font, language: lang })],
             alignment: AlignmentType.CENTER,
             spacing: { after: 40 }
         }));
@@ -728,11 +1328,11 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         const orderLine = new Paragraph({
             tabStops: [{ type: TabStopType.RIGHT, position: TabStopPosition.MAX }],
             children: [
-                new TextRun({ text: bn ? 'ফোর্স অর্ডার নং: ' : 'Force Order No: ', bold: true, size: 20, sizeComplexScript: csSize, font, language: lang }),
-                new TextRun({ text: this.postingOrderNo, size: 20, sizeComplexScript: csSize, font, language: lang }),
+                new TextRun({ text: bn ? 'ফোর্স অর্ডার নং: ' : 'Force Order No: ', bold: true, size: ctxSize, sizeComplexScript: csSize, font, language: lang }),
+                new TextRun({ text: this.postingOrderNo, size: ctxSize, sizeComplexScript: csSize, font, language: lang }),
                 new TextRun({ text: '\t', font }),
-                new TextRun({ text: bn ? 'তারিখ: ' : 'Date: ', bold: true, size: 20, sizeComplexScript: csSize, font, language: lang }),
-                new TextRun({ text: this.previewDate, size: 20, sizeComplexScript: csSize, font, language: lang })
+                new TextRun({ text: bn ? 'তারিখ: ' : 'Date: ', bold: true, size: ctxSize, sizeComplexScript: csSize, font, language: lang }),
+                new TextRun({ text: this.previewDate, size: ctxSize, sizeComplexScript: csSize, font, language: lang })
             ],
             spacing: { after: 80 }
         });
@@ -740,8 +1340,8 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         // ── Reference / সূত্র : linked Note-Sheet No + final approval date ──
         const referenceParas: Paragraph[] = this.referenceLine ? [new Paragraph({
             children: [
-                new TextRun({ text: bn ? 'সূত্রঃ ' : 'Reference: ', bold: true, size: 20, sizeComplexScript: csSize, font, language: lang }),
-                new TextRun({ text: this.referenceLine, size: 20, sizeComplexScript: csSize, font, language: lang })
+                new TextRun({ text: bn ? 'সূত্রঃ ' : 'Reference: ', bold: true, size: ctxSize, sizeComplexScript: csSize, font, language: lang }),
+                new TextRun({ text: this.referenceLine, size: ctxSize, sizeComplexScript: csSize, font, language: lang })
             ],
             spacing: { after: 160 }
         })] : [];
@@ -753,7 +1353,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             .filter(t => t.length > 0)
             .map(block => new Paragraph({
                 children: block.split('\n').flatMap((line, idx) => {
-                    const run = new TextRun({ text: line, size: 20, sizeComplexScript: csSize, font, language: lang });
+                    const run = new TextRun({ text: line, size: ctxSize, sizeComplexScript: csSize, font, language: lang });
                     return idx === 0 ? [run] : [new TextRun({ text: '', break: 1, font }), run];
                 }),
                 alignment: AlignmentType.JUSTIFIED,
@@ -761,76 +1361,60 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             }));
 
         // ── Employee Table (header 8.5pt, data 9pt) ──
-        const cols = bn
-            ? ['ক্রমিক', 'ব্যক্তিগত নম্বর', 'পদবি', 'ট্রেড', 'নাম', 'নিজ জেলা', 'পূর্ববতী কর্মস্থল', 'বদলিকৃত কর্মস্থল', 'র‌্যাব আইডি', 'মন্তব্য']
-            : ['Ser', 'Service ID', 'Rank', 'Trade', 'Name', 'Own District', 'Previous Workplace', 'Transfer Unit', 'RAB ID', 'Remarks'];
+        const isInter = this.isInterPosting;
+        const sd = this.showOwnDistrict;
+        const cols = isInter
+            ? (bn ? ['ক্রমিক', 'ব্যক্তিগত নং', 'পদবি', 'নাম', ...(sd ? ['নিজ জেলা'] : []), 'পূর্ববতী কর্মস্থল', 'বদলিকৃত কর্মস্থল', 'মন্তব্য']
+                   : ['Ser', 'Service ID', 'Rank', 'Name', ...(sd ? ['Own District'] : []), 'Previous Workplace', 'Transfer Station', 'Remarks'])
+            : (bn ? ['ক্রমিক', 'ব্যক্তিগত নম্বর', 'পদবি', 'ট্রেড', 'নাম', ...(sd ? ['নিজ জেলা'] : []), 'পূর্ববতী কর্মস্থল', 'বদলিকৃত কর্মস্থল', 'র‌্যাব আইডি']
+                   : ['Ser', 'Service ID', 'Rank', 'Trade', 'Name', ...(sd ? ['Own District'] : []), 'Previous Workplace', 'Transfer Unit', 'RAB ID']);
         // Column widths in DXA – must sum to full content width (page 12240 - margins 567*2 = 11106)
-        //         Ser  SvcID  Rank  Trade  Name   OwnDist PrevWk TrUnit RabID Remarks
-        const colW = [580, 1100, 860, 924, 2174, 1060, 1174, 1174, 1030, 1030];
+        // Remarks column gets extra width to fit removal remark text
+        const colW = isInter
+            ? (sd ? [500, 1050, 900, 1800, 1200, 1500, 1500, 2656]
+                  : [500, 1050, 900, 2100, 1700, 1700, 3156])
+            : (sd ? [580, 1100, 860, 924, 2474, 1260, 1374, 1374, 1160]
+                  : [580, 1100, 860, 924, 2874, 1634, 1634, 1500]);
 
-        const hdrPara = (text: string) => new Paragraph({ children: [new TextRun({ text, bold: true, size: 17, sizeComplexScript: bn ? 17 : undefined, font, language: lang })], alignment: AlignmentType.CENTER });
+        const hdrPara = (text: string) => new Paragraph({ children: [new TextRun({ text, bold: true, size: tblSize, sizeComplexScript: tblCsSize, font, language: lang })], alignment: AlignmentType.CENTER });
         const hdrCell = (text: string, ci: number, extra?: Partial<ConstructorParameters<typeof TableCell>[0]>) => new TableCell({
             children: [hdrPara(text)], borders: cellBorders, width: { size: colW[ci], type: WidthType.DXA }, ...extra
         });
 
-        let headerRows: TableRow[];
-        if (this.isInterPosting) {
-            headerRows = [
-                new TableRow({ tableHeader: true, children: [
-                    ...cols.slice(0, 6).map((c, ci) => hdrCell(c, ci, { verticalMerge: VerticalMergeType.RESTART })),
-                    new TableCell({
-                        children: [hdrPara(bn ? 'বদলিকৃত কর্মস্থল' : 'Transfer Station')],
-                        columnSpan: 2, borders: cellBorders, width: { size: colW[6] + colW[7], type: WidthType.DXA }
-                    }),
-                    ...cols.slice(8).map((c, ci) => hdrCell(c, ci + 8, { verticalMerge: VerticalMergeType.RESTART }))
-                ]}),
-                new TableRow({ tableHeader: true, children: [
-                    ...[0,1,2,3,4,5].map(ci => new TableCell({ children: [new Paragraph({})], verticalMerge: VerticalMergeType.CONTINUE, borders: cellBorders, width: { size: colW[ci], type: WidthType.DXA } })),
-                    hdrCell(bn ? 'হইতে' : 'From', 6),
-                    hdrCell(bn ? 'প্রতি' : 'To', 7),
-                    ...[8,9].map(ci => new TableCell({ children: [new Paragraph({})], verticalMerge: VerticalMergeType.CONTINUE, borders: cellBorders, width: { size: colW[ci], type: WidthType.DXA } }))
-                ]})
-            ];
-        } else {
-            headerRows = [new TableRow({ tableHeader: true, children: cols.map((col, ci) => hdrCell(col, ci)) })];
-        }
+        const headerRows = [new TableRow({ tableHeader: true, children: cols.map((col, ci) => hdrCell(col, ci)) })];
 
-        const dataRows = this.filteredEmployees.map((emp, i) => new TableRow({
-            children: [
-                bn ? this.toBanglaDigits(String(i + 1)) : String(i + 1),
-                this.empServiceId(emp), this.empRank(emp), this.empTrade(emp), this.empName(emp),
-                this.empDistrict(emp), this.empPrevWorkplace(emp), this.empTransferUnit(emp),
-                this.empRabId(emp), emp.noteSheetRemarks ?? ''
-            ].map((val, ci) => {
-                const lines = val.split('\n');
-                const cellParas = lines.map(line => new Paragraph({
-                    children: [new TextRun({ text: line, size: 18, sizeComplexScript: bn ? 18 : undefined, font, language: lang })],
-                    alignment: ci === 9 ? AlignmentType.LEFT : AlignmentType.CENTER,
-                    spacing: { after: 20 }
-                }));
-                return new TableCell({
-                    children: cellParas,
-                    borders: cellBorders, width: { size: colW[ci], type: WidthType.DXA }
-                });
-            })
-        }));
+        const dataRows = this.filteredEmployees.map((emp, i) => {
+            const serial = bn ? this.toBanglaDigits(String(i + 1)) : String(i + 1);
+            const vals = isInter
+                ? [
+                    serial, this.empServiceId(emp), this.empRank(emp), this.empName(emp),
+                    ...(sd ? [this.empDistrict(emp)] : []),
+                    this.empPrevWorkplace(emp), this.empTransferUnit(emp),
+                    this.empCombinedRemarks(emp)
+                ]
+                : [
+                    serial, this.empServiceId(emp), this.empRank(emp), this.empTrade(emp), this.empName(emp),
+                    ...(sd ? [this.empDistrict(emp)] : []),
+                    this.empPrevWorkplace(emp), this.empTransferUnit(emp),
+                    this.empRabId(emp)
+                ];
+            return new TableRow({
+                children: vals.map((val, ci) => {
+                    const lines = val.split('\n');
+                    const cellParas = lines.map(line => new Paragraph({
+                        children: [new TextRun({ text: line, size: tblSize, sizeComplexScript: tblCsSize, font, language: lang })],
+                        alignment: AlignmentType.CENTER,
+                        spacing: { after: 20 }
+                    }));
+                    return new TableCell({
+                        children: cellParas,
+                        borders: cellBorders, width: { size: colW[ci], type: WidthType.DXA }
+                    });
+                })
+            });
+        });
 
-        // Master remarks row (spans all columns, left-aligned)
         const allRows = [...headerRows, ...dataRows];
-        if (this.masterRemarks) {
-            allRows.push(new TableRow({
-                children: [new TableCell({
-                    columnSpan: 10,
-                    borders: cellBorders,
-                    width: { size: 11106, type: WidthType.DXA },
-                    children: [new Paragraph({
-                        children: [new TextRun({ text: this.masterRemarks, size: 18, sizeComplexScript: bn ? 18 : undefined, font, language: lang })],
-                        alignment: AlignmentType.LEFT,
-                        spacing: { before: 40, after: 40 }
-                    })]
-                })]
-            }));
-        }
 
         const empTable = new Table({
             width: { size: 11106, type: WidthType.DXA },
@@ -840,16 +1424,100 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             columnWidths: colW
         });
 
-        // ── Posting Text (10pt, justified) – single paragraph (split on blank lines) ──
-        const postingTextParas = this.postingText
-            ? this.postingText.split(/\n{2,}/).filter(t => t.trim().length > 0).map(t => new Paragraph({
-                children: [new TextRun({ text: t, size: 20, sizeComplexScript: csSize, font, language: lang })],
-                alignment: AlignmentType.JUSTIFIED,
-                spacing: { before: 100, after: 100 }
-            }))
-            : [];
+        // Helper: rich HTML → Word paragraphs (preserves bold/italic/underline, bullets, line breaks)
+        const htmlToParas = (html: string): Paragraph[] => {
+            if (!html) return [];
+            html = this.fixBanglaWordBreaks(html);
+            const parsed = new DOMParser().parseFromString(html, 'text/html');
+            const result: Paragraph[] = [];
 
-        // ── Signature Block (right-aligned block using borderless table) ──
+            interface RunStyle { bold?: boolean; italic?: boolean; underline?: boolean; }
+
+            const extractRuns = (node: Node, style: RunStyle): TextRun[] => {
+                const runs: TextRun[] = [];
+                node.childNodes.forEach(child => {
+                    if (child.nodeType === Node.TEXT_NODE) {
+                        const text = child.textContent || '';
+                        if (text) {
+                            runs.push(new TextRun({
+                                text,
+                                size: ctxSize, sizeComplexScript: csSize, font, language: lang,
+                                bold: style.bold || undefined,
+                                italics: style.italic || undefined,
+                                underline: style.underline ? {} : undefined,
+                            }));
+                        }
+                    } else if (child.nodeType === Node.ELEMENT_NODE) {
+                        const el = child as HTMLElement;
+                        const tag = el.tagName.toLowerCase();
+                        if (tag === 'br') {
+                            runs.push(new TextRun({ break: 1, size: ctxSize, font, language: lang }));
+                        } else {
+                            const next: RunStyle = { ...style };
+                            if (tag === 'strong' || tag === 'b') next.bold = true;
+                            if (tag === 'em' || tag === 'i') next.italic = true;
+                            if (tag === 'u') next.underline = true;
+                            runs.push(...extractRuns(el, next));
+                        }
+                    }
+                });
+                return runs;
+            };
+
+            const processNode = (node: Node) => {
+                if (node.nodeType !== Node.ELEMENT_NODE) {
+                    const text = (node.textContent || '').trim();
+                    if (text) {
+                        result.push(new Paragraph({
+                            children: [new TextRun({ text, size: ctxSize, sizeComplexScript: csSize, font, language: lang })],
+                            spacing: { before: 50, after: 50 }
+                        }));
+                    }
+                    return;
+                }
+                const el = node as HTMLElement;
+                const tag = el.tagName.toLowerCase();
+
+                if (tag === 'ul' || tag === 'ol') {
+                    el.querySelectorAll(':scope > li').forEach(li => {
+                        const runs = extractRuns(li, {});
+                        result.push(new Paragraph({
+                            children: [
+                                new TextRun({ text: '• ', size: ctxSize, sizeComplexScript: csSize, font, language: lang }),
+                                ...runs
+                            ],
+                            spacing: { before: 50, after: 50 },
+                            indent: { left: 360 }
+                        }));
+                    });
+                } else if (tag === 'p' || tag === 'div' || /^h[1-6]$/.test(tag)) {
+                    const runs = extractRuns(el, {});
+                    const isEmpty = runs.length === 0 ||
+                        (el.innerHTML.trim() === '' || el.innerHTML.trim() === '<br>');
+                    if (isEmpty) {
+                        result.push(new Paragraph({ spacing: { before: 50, after: 50 } }));
+                    } else {
+                        result.push(new Paragraph({
+                            children: runs,
+                            alignment: AlignmentType.JUSTIFIED,
+                            spacing: { before: 50, after: 50 }
+                        }));
+                    }
+                } else {
+                    el.childNodes.forEach(c => processNode(c));
+                }
+            };
+
+            parsed.body.childNodes.forEach(n => processNode(n));
+            return result;
+        };
+
+        // ── Main Text (masterRemarks, after reference), Posting Text, Sub Text ──
+        const masterRemarksParas = this.masterRemarks ? htmlToParas(this.masterRemarks) : [];
+        const postingTextParas = this.postingText ? htmlToParas(this.postingText) : [];
+        const subTextParas     = this.subText ? htmlToParas(this.subText) : [];
+
+        // ── Standalone Signature Block (right-aligned, above অনুলিপি) ──
         const approverNameText = (bn ? this.approverNameBN : this.approverName) || this.approverName || '...................................';
         const approverRankText = (bn ? this.approverRankBN : this.approverRank) || this.approverRank || '............................';
         const approverApptText = (bn ? this.approverAppointmentBN : this.approverAppointment) || this.approverAppointment || '............................';
@@ -857,50 +1525,121 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         const noBorder = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
         const noBorders = { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder };
 
-        const sigCellChildren: Paragraph[] = [];
-        sigCellChildren.push(new Paragraph({
-            children: [new TextRun({ text: 'স্বাক্ষরিত/-', size: 20, sizeComplexScript: csSize, font, language: lang })],
-            spacing: { before: 200 }
+        const standaloneSigChildren: Paragraph[] = [
+            new Paragraph({ children: [new TextRun({ text: 'স্বাক্ষরিত/-', size: ctxSize, sizeComplexScript: csSize, font, language: lang })], keepNext: true, keepLines: true }),
+            new Paragraph({ children: [new TextRun({ text: approverNameText, size: ctxSize, sizeComplexScript: csSize, font, language: lang })], keepNext: true, keepLines: true }),
+            new Paragraph({ children: [new TextRun({ text: approverRankText, size: ctxSize, sizeComplexScript: csSize, font, language: lang })], keepNext: true, keepLines: true }),
+            new Paragraph({ children: [new TextRun({ text: approverApptText, size: ctxSize, sizeComplexScript: csSize, font, language: lang })], keepNext: true, keepLines: true }),
+            new Paragraph({ children: [new TextRun({ text: `${bn ? 'টেলিঃ' : 'Tel:'} ${approverPhoneText}`, size: ctxSize, sizeComplexScript: csSize, font, language: lang })], keepNext: true, keepLines: true }),
+            new Paragraph({ children: [new TextRun({ text: bn ? `তারিখঃ ${this.previewDate}` : `Date: ${this.previewDate}`, size: ctxSize, sizeComplexScript: csSize, font, language: lang })], spacing: { before: 100 }, keepLines: true })
+        ];
+        // DXA widths: both tables are identical 100%-wide structures → exact same column positions
+        // contentWidth = page width − left margin − right margin (DXA units)
+        const contentWidth = this.selectedPageSize === 'Legal' ? 11106 : 10772;
+        const sigWidth  = Math.round(contentWidth * 0.20);   // right 20%
+        const leftWidth = contentWidth - sigWidth;            // left  80%
+        const zeroMargins = { top: 0, bottom: 0, left: 0, right: 0 };
+        const sigCellMargins = { top: 0, bottom: 0, left: 250, right: 0 };
+        // Standalone sig: same 100% / 85-15 structure — empty left + sig right
+        const sigTable = new Table({
+            width: { size: contentWidth, type: WidthType.DXA },
+            layout: TableLayoutType.FIXED,
+            columnWidths: [leftWidth, sigWidth],
+            borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder, insideHorizontal: noBorder, insideVertical: noBorder },
+            rows: [new TableRow({ cantSplit: true, children: [
+                new TableCell({ borders: noBorders, width: { size: leftWidth, type: WidthType.DXA }, margins: zeroMargins, children: [new Paragraph({})] }),
+                new TableCell({ borders: noBorders, width: { size: sigWidth,  type: WidthType.DXA }, margins: sigCellMargins, children: standaloneSigChildren })
+            ] })]
+        });
+        const sigParas = [new Paragraph({ spacing: { before: 600 }, keepNext: true }), sigTable] as any[];
+
+        // ── Copy + Signature (two-column borderless table next to অনুলিপি) ──
+        // Left cell: notesheet prefix + অনুলিপি title + footer paragraphs
+        const leftCellChildren: Paragraph[] = [];
+        const nsPrefix = this.noteSheetPrefix;
+        if (nsPrefix) {
+            leftCellChildren.push(new Paragraph({
+                children: [new TextRun({ text: nsPrefix, size: ctxSize, sizeComplexScript: csSize, font, language: lang })],
+                spacing: { before: 200, after: 60 }
+            }));
+        }
+        leftCellChildren.push(new Paragraph({
+            children: [new TextRun({ text: bn ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নহে)' : 'Copy (not in order of seniority):', bold: true, size: ctxSize, sizeComplexScript: csSize, font, language: lang })],
+            spacing: { before: nsPrefix ? 0 : 200 }
         }));
+        this.exportFooterParagraphs.forEach((p, i) => {
+            leftCellChildren.push(new Paragraph({
+                children: [new TextRun({ text: `${bn ? this.toBanglaDigits(String(i + 1)) : (i + 1)}। ${p.text}`, size: ctxSize, sizeComplexScript: csSize, font, language: lang })],
+                spacing: { after: 100 }
+            }));
+        });
+
+        // Right cell: approval person's digital signature + name/rank/appointment
+        const approvalPersonNameText = (bn ? this.approvalPersonNameBN : this.approvalPersonName) || this.approvalPersonName || '...................................';
+        const approvalPersonRankText = (bn ? this.approvalPersonRankBN : this.approvalPersonRank) || this.approvalPersonRank || '............................';
+        const approvalPersonApptText = (bn ? this.approvalPersonAppointmentBN : this.approvalPersonAppointment) || this.approvalPersonAppointment || '............................';
+        const sigCellChildren: Paragraph[] = [];
+
+        // Embed approval person's digital signature image if available
+        if (this.approvalPersonSignatureUrl) {
+            try {
+                const base64Data = this.approvalPersonSignatureUrl.split(',')[1];
+                const binaryString = atob(base64Data);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let j = 0; j < binaryString.length; j++) {
+                    bytes[j] = binaryString.charCodeAt(j);
+                }
+                sigCellChildren.push(new Paragraph({
+                    children: [new ImageRun({ data: bytes, transformation: { width: 130, height: 40 }, type: 'png' })],
+                    keepNext: true, keepLines: true
+                }));
+            } catch (e) {
+                console.warn('Failed to embed approval person signature image in Word export', e);
+            }
+        }
+
         sigCellChildren.push(
-            new Paragraph({ children: [new TextRun({ text: approverNameText, size: 20, sizeComplexScript: csSize, font, language: lang })] }),
-            new Paragraph({ children: [new TextRun({ text: approverRankText, size: 20, sizeComplexScript: csSize, font, language: lang })] }),
-            new Paragraph({ children: [new TextRun({ text: approverApptText, size: 20, sizeComplexScript: csSize, font, language: lang })] }),
-            new Paragraph({ children: [new TextRun({ text: `${bn ? 'টেলিঃ' : 'Tel:'} ${approverPhoneText}`, size: 20, sizeComplexScript: csSize, font, language: lang })] }),
-            new Paragraph({ children: [new TextRun({ text: bn ? `তারিখঃ ${this.previewDate}` : `Date: ${this.previewDate}`, size: 20, sizeComplexScript: csSize, font, language: lang })], spacing: { before: 100 } })
+            new Paragraph({ children: [new TextRun({ text: approvalPersonNameText, size: ctxSize, sizeComplexScript: csSize, font, language: lang })], keepNext: true, keepLines: true }),
+            new Paragraph({ children: [new TextRun({ text: approvalPersonRankText, size: ctxSize, sizeComplexScript: csSize, font, language: lang })], keepNext: true, keepLines: true }),
+            new Paragraph({ children: [new TextRun({ text: approvalPersonApptText, size: ctxSize, sizeComplexScript: csSize, font, language: lang })], keepLines: true })
         );
 
-        const sigTable = new Table({
-            alignment: AlignmentType.RIGHT,
-            width: { size: 3500, type: WidthType.DXA },
+        const copySigTable = new Table({
+            width: { size: contentWidth, type: WidthType.DXA },
+            layout: TableLayoutType.FIXED,
+            columnWidths: [leftWidth, sigWidth],
             borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder, insideHorizontal: noBorder, insideVertical: noBorder },
-            rows: [new TableRow({ children: [new TableCell({ borders: noBorders, width: { size: 3500, type: WidthType.DXA }, children: sigCellChildren })] })]
-        });
-        const sigParas = [new Paragraph({ spacing: { before: 600 } }), sigTable] as any[];
-
-        // ── Copy Distribution (10pt, bold) ──
-        const copyPara = new Paragraph({
-            children: [new TextRun({ text: bn ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নহে)' : 'Copy (not in order of seniority):', bold: true, size: 20, sizeComplexScript: csSize, font, language: lang })],
-            spacing: { before: 300 }
+            rows: [new TableRow({ cantSplit: true, children: [
+                new TableCell({ borders: noBorders, width: { size: leftWidth, type: WidthType.DXA }, margins: zeroMargins, children: leftCellChildren }),
+                new TableCell({ borders: noBorders, width: { size: sigWidth,  type: WidthType.DXA }, margins: sigCellMargins, children: sigCellChildren })
+            ] })]
         });
 
-        // ── Footer paragraphs (10pt) – only those linked to the selected unit (or all if no filter) ──
-        const footerParas = this.filteredFooterParagraphs.map((p, i) => new Paragraph({
-            children: [new TextRun({ text: `${bn ? this.toBanglaDigits(String(i + 1)) : (i + 1)}। ${p.text}`, size: 20, sizeComplexScript: csSize, font, language: lang })],
-            spacing: { after: 100 }
-        }));
+        const pageWidth = this.selectedPageSize === 'Legal' ? 12240 : 11906;
+        const pageHeight = this.selectedPageSize === 'Legal' ? 20160 : 16838;
 
         return new Document({
             styles: bn ? { default: { document: { run: { language: { value: 'bn-BD', bidirectional: 'bn-BD' } } } } } : undefined,
             sections: [{
                 properties: {
                     page: {
-                        // A4 portrait: 11906 × 16838 DXA (210mm × 297mm)
-                        size: { orientation: PageOrientation.PORTRAIT, width: 11906, height: 16838 },
+                        size: { orientation: PageOrientation.PORTRAIT, width: pageWidth, height: pageHeight },
                         margin: { top: 567, right: 567, bottom: 567, left: 567 },
                     }
                 },
-                children: [...headerParas, titlePara, orderLine, ...referenceParas, ...bodyParas, empTable, ...postingTextParas, ...sigParas, copyPara, ...footerParas]
+                children: [
+                    ...headerParas, titlePara, orderLine, ...referenceParas,
+                    ...postingTextParas,
+                    new Paragraph({ spacing: { before: 100 } }),
+                    empTable,
+                    new Paragraph({ spacing: { before: 100 } }),
+                    ...masterRemarksParas,
+                    ...(masterRemarksParas.length > 0 && subTextParas.length > 0
+                        ? [new Paragraph({ spacing: { before: 100 } })]
+                        : []),
+                    ...subTextParas,
+                    ...sigParas, new Paragraph({ spacing: { before: 300 }, keepNext: true }), copySigTable
+                ]
             }]
         });
     }

@@ -3,22 +3,27 @@ import { UserMenuService } from '@/services/user-menu.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
+import { forkJoin } from 'rxjs';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
+import { EditorModule } from 'primeng/editor';
 import { Toast } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
+import { DialogModule } from 'primeng/dialog';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { environment } from '@/Core/Environments/environment';
 import { PostingService } from '@/services/posting.service';
+import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { ApprovedNoteSheetItem, PostingOrderMasterDto } from '@/models/posting.model';
-import { NoteSheetType } from '@/models/enums';
+import { PostingOrderNumberConfigModel } from '@/Components/basic-setup/shared/models/posting-order-number-config';
+import { NoteSheetType, CodeType, ApprovalStatus } from '@/models/enums';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 
 interface NoteSheetEmployee {
@@ -76,10 +81,12 @@ interface TransferUnitOption {
         DatePickerModule, FlexibleDateDirective,
         InputTextModule,
         TextareaModule,
+        EditorModule,
         Toast,
         ConfirmDialogModule,
         TagModule,
-        TooltipModule
+        TooltipModule,
+        DialogModule
     ],
     providers: [MessageService, ConfirmationService],
     templateUrl: './posting-order-generate.html',
@@ -99,6 +106,8 @@ export class PostingOrderGenerateComponent implements OnInit {
         { label: 'Inter Posting', value: NoteSheetType.InterPosting }
     ];
 
+    /** Fixed by route data — null means show the dropdown selector. */
+    fixedPostingType: string | null = null;
     selectedPostingType: string | null = null;
     approvedNoteSheets: ApprovedNoteSheetItem[] = [];
     selectedNoteSheetId: number | null = null;
@@ -107,10 +116,31 @@ export class PostingOrderGenerateComponent implements OnInit {
     loadingEmployees = false;
     saving = false;
 
+    // ─── Posting Order Number Config dropdown ────────────
+    configOptions: { label: string; value: number }[] = [];
+    postingOrderNumberConfigId: number | null = null;
+    private allConfigs: PostingOrderNumberConfigModel[] = [];
+    private memberTypeMap: Record<number, string> = {};
+
+    // Expose enum to template
+    readonly ApprovalStatus = ApprovalStatus;
+
+    // ─── Approval Person dropdown ─────────────────────────
+    approvalEmployees: { label: string; value: number }[] = [];
+    selectedApprovalEmployeeId: number | null = null;
+    loadingApprovalEmployees = false;
+
     // ─── Generated Posting Orders list (toggleable) ──────
     showGeneratedList = false;
     generatedOrders: PostingOrderMasterDto[] = [];
     loadingGeneratedOrders = false;
+
+    // ─── Approval Modal ──────────────────────────────────
+    showApprovalModal = false;
+    approvalModalOrder: PostingOrderMasterDto | null = null;
+    approvalModalAction: ApprovalStatus.Approve | ApprovalStatus.Cancel | null = null;
+    approvalModalRemarks = '';
+    savingApproval = false;
 
     /** NoteSheet info displayed above employee table. */
     selectedNoteSheetNo: string | null = null;
@@ -122,6 +152,7 @@ export class PostingOrderGenerateComponent implements OnInit {
     selectedTextType = 'en';
     /** Single plain-text paragraph that appears below the employee table and above the Onulipi section. */
     postingText = '';
+    subText = '';
     footerParagraphs: FooterParagraph[] = [];
 
     /** true = Bangla, false = English */
@@ -159,8 +190,10 @@ export class PostingOrderGenerateComponent implements OnInit {
 
     constructor(
         private postingService: PostingService,
+        private masterBasicSetupService: MasterBasicSetupService,
         private http: HttpClient,
         private router: Router,
+        private route: ActivatedRoute,
         private messageService: MessageService,
         private confirmationService: ConfirmationService
     ) {}
@@ -172,14 +205,44 @@ export class PostingOrderGenerateComponent implements OnInit {
         this.canDelete = _perms.canDelete;
 
         this.postingOrderDate = new Date();
+        this.loadApprovalEmployees();
+
+        // Lock posting type from route data if provided — must be set BEFORE loadPostingOrderNumberConfigs
+        const routePostingType = this.route.snapshot.data['postingType'] as string | undefined;
+        if (routePostingType) {
+            this.fixedPostingType = routePostingType;
+            this.selectedPostingType = routePostingType;
+        }
+
+        this.loadPostingOrderNumberConfigs();
+
+        if (this.fixedPostingType) {
+            this.onPostingTypeChange(false);
+        }
+    }
+
+    /** Load employees for the approval person dropdown (from backend Posting API). */
+    loadApprovalEmployees(): void {
+        this.loadingApprovalEmployees = true;
+        this.postingService.getApprovalEmployees().subscribe({
+            next: (list) => {
+                this.approvalEmployees = list ?? [];
+                this.loadingApprovalEmployees = false;
+            },
+            error: () => {
+                this.loadingApprovalEmployees = false;
+            }
+        });
     }
 
     /** When posting type dropdown changes, load approved notesheets of that type
      *  (backend already excludes notesheets with a generated Posting Order). */
-    onPostingTypeChange(): void {
+    onPostingTypeChange(showEmptyToast = true): void {
         this.approvedNoteSheets = [];
         this.selectedNoteSheetId = null;
         this.employees = [];
+        this.postingOrderNumberConfigId = null;
+        this.loadPostingOrderNumberConfigs();
 
         if (!this.selectedPostingType) return;
 
@@ -188,15 +251,55 @@ export class PostingOrderGenerateComponent implements OnInit {
             next: (notesheets) => {
                 this.approvedNoteSheets = notesheets ?? [];
                 this.loadingNoteSheets = false;
-                if (this.approvedNoteSheets.length === 0) {
-                    this.messageService.add({ severity: 'info', summary: 'Info', detail: 'No approved notesheets found for this type.' });
+                if (showEmptyToast && this.approvedNoteSheets.length === 0) {
+                    this.messageService.add({ severity: 'info', summary: this.isBangla ? 'তথ্য' : 'Info', detail: this.isBangla ? 'এই ধরনের জন্য কোনো অনুমোদিত নোটশীট পাওয়া যায়নি।' : 'No approved notesheets found for this type.' });
                 }
             },
             error: (err) => {
                 this.loadingNoteSheets = false;
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message ?? 'Failed to load notesheets.' });
+                this.messageService.add({ severity: 'error', summary: this.isBangla ? 'ত্রুটি' : 'Error', detail: err?.error?.message ?? (this.isBangla ? 'নোটশীট লোড ব্যর্থ হয়েছে।' : 'Failed to load notesheets.') });
             }
         });
+    }
+
+    loadPostingOrderNumberConfigs(): void {
+        forkJoin({
+            configs: this.masterBasicSetupService.getAllPostingOrderNumberConfig(),
+            memberTypes: this.masterBasicSetupService.getAllByType(CodeType.EmployeeType)
+        }).subscribe({
+            next: ({ configs, memberTypes }) => {
+                this.memberTypeMap = {};
+                (memberTypes ?? []).forEach((t) => { this.memberTypeMap[t.codeId] = t.codeValueEN; });
+                this.allConfigs = configs ?? [];
+                this.rebuildConfigOptions();
+            },
+            error: () => {}
+        });
+    }
+
+    private rebuildConfigOptions(): void {
+        const postingType = this.fixedPostingType ?? this.selectedPostingType;
+        const isBN = this.selectedTextType === 'bn';
+        const now = new Date();
+        const nowYear = now.getFullYear();
+        const nowMonth = now.getMonth() + 1;
+        this.configOptions = this.allConfigs
+            .filter((c) => (!postingType || c.postingType === postingType) && c.status)
+            .map((c) => {
+                const prefixLabel = isBN ? (c.prefixBN || c.prefix) : c.prefix;
+                const yearReset = c.currentYear !== nowYear || c.currentMonth !== nowMonth;
+                const nextNum = yearReset ? c.startNumber : c.currentNumber + 1;
+                const yearStr = String(nowYear);
+                const monthStr = String(nowMonth).padStart(2, '0');
+                const previewNo = c.includeDate
+                    ? `${prefixLabel}/${yearStr}/${monthStr}/${nextNum}`
+                    : `${prefixLabel}/${nextNum}`;
+                const memberTypeLabel = this.memberTypeMap[c.memberTypeId] ? ` — ${this.memberTypeMap[c.memberTypeId]}` : '';
+                return {
+                    label: `${previewNo}${memberTypeLabel}`,
+                    value: c.configId
+                };
+            });
     }
 
     /** Dropdown options for notesheet select. */
@@ -228,6 +331,8 @@ export class PostingOrderGenerateComponent implements OnInit {
                 this.selectedNoteSheetApprovedDate = ns.finalApprovalApprovedDate ?? ns.lastupdate;
                 // Set textType from notesheet (TextType: 1 = Bangla, else English)
                 this.selectedTextType = (ns.textType === 1 || ns.textType === '1') ? 'bn' : 'en';
+                this.postingOrderNumberConfigId = null;
+                this.rebuildConfigOptions();
 
                 const draftPostingMasterId = ns.draftPostingMasterId;
                 if (draftPostingMasterId) {
@@ -269,23 +374,24 @@ export class PostingOrderGenerateComponent implements OnInit {
                                 joiningDateInRAB: e.joiningDateInRAB
                             }));
                             this.loadingEmployees = false;
-                            // Reset footer paragraphs + posting text when a new notesheet is loaded
+                            // Reset footer paragraphs; pre-fill posting text from notesheet main text
                             this.footerParagraphs = [];
-                            this.postingText = '';
+                            this.postingText = ns.mainText ?? '';
+                            this.remarks = '';
                         },
                         error: (err: any) => {
                             this.loadingEmployees = false;
-                            this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load employees.' });
+                            this.messageService.add({ severity: 'error', summary: this.isBangla ? 'ত্রুটি' : 'Error', detail: err?.error?.message || (this.isBangla ? 'কর্মচারী লোড ব্যর্থ হয়েছে।' : 'Failed to load employees.') });
                         }
                     });
                 } else {
                     this.loadingEmployees = false;
-                    this.messageService.add({ severity: 'info', summary: 'Info', detail: 'No draft posting linked to this notesheet.' });
+                    this.messageService.add({ severity: 'info', summary: this.isBangla ? 'তথ্য' : 'Info', detail: this.isBangla ? 'এই নোটশীটের সাথে কোনো খসড়া পোস্টিং সংযুক্ত নেই।' : 'No draft posting linked to this notesheet.' });
                 }
             },
             error: (err: any) => {
                 this.loadingEmployees = false;
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load notesheet details.' });
+                this.messageService.add({ severity: 'error', summary: this.isBangla ? 'ত্রুটি' : 'Error', detail: err?.error?.message || (this.isBangla ? 'নোটশীট বিবরণ লোড ব্যর্থ হয়েছে।' : 'Failed to load notesheet details.') });
             }
         });
     }
@@ -347,7 +453,15 @@ export class PostingOrderGenerateComponent implements OnInit {
 
     onGeneratePostingOrder(): void {
         if (!this.selectedPostingType || !this.selectedNoteSheetId || this.employees.length === 0) {
-            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Select posting type, notesheet and ensure employees exist.' });
+            this.messageService.add({ severity: 'warn', summary: this.isBangla ? 'সতর্কতা' : 'Warning', detail: this.isBangla ? 'পোস্টিং ধরন, নোটশীট নির্বাচন করুন এবং কর্মচারী আছে কিনা নিশ্চিত করুন।' : 'Select posting type, notesheet and ensure employees exist.' });
+            return;
+        }
+        if (!this.postingOrderNumberConfigId) {
+            this.messageService.add({ severity: 'warn', summary: this.isBangla ? 'সতর্কতা' : 'Warning', detail: this.isBangla ? 'অর্ডার নম্বর কনফিগ নির্বাচন করুন।' : 'Please select an Order No Config.' });
+            return;
+        }
+        if (!this.selectedApprovalEmployeeId) {
+            this.messageService.add({ severity: 'warn', summary: this.isBangla ? 'সতর্কতা' : 'Warning', detail: this.isBangla ? 'অনুমোদনকারী নির্বাচন করুন।' : 'Please select an approval person.' });
             return;
         }
 
@@ -374,24 +488,30 @@ export class PostingOrderGenerateComponent implements OnInit {
             noteSheetId: this.selectedNoteSheetId,
             textType: this.selectedTextType === 'bn' ? 'bn' : 'en',
             mainText: mainText,
+            subText: this.subText.trim() || null,
             remarks: this.remarks || null,
             footerText: footerText,
             employeeIds: this.employees.map(e => e.employeeId),
-            createdBy: 'system'
+            createdBy: 'system',
+            postingOrderNumberConfigId: this.postingOrderNumberConfigId ?? null,
+            approvalEmployeeId: this.selectedApprovalEmployeeId ?? null
         }).subscribe({
             next: (res) => {
                 this.saving = false;
                 if (res.statusCode === 200) {
-                    this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Posting Order generated successfully.' });
+                    this.messageService.add({ severity: 'success', summary: this.isBangla ? 'সফল' : 'Success', detail: this.isBangla ? 'পোস্টিং অর্ডার সফলভাবে তৈরি হয়েছে।' : 'Posting Order generated successfully.' });
                     // Reset form
                     this.employees = [];
                     this.selectedNoteSheetId = null;
                     this.selectedNoteSheetNo = null;
                     this.selectedNoteSheetApprovedDate = null;
                     this.remarks = '';
+                    this.subText = '';
                     this.footerParagraphs = [];
                     this.postingText = '';
                     this.postingOrderDate = new Date();
+                    this.postingOrderNumberConfigId = null;
+                    this.selectedApprovalEmployeeId = null;
                     // Refresh the generated list if it's currently visible
                     if (this.showGeneratedList) {
                         this.loadGeneratedOrders();
@@ -402,12 +522,12 @@ export class PostingOrderGenerateComponent implements OnInit {
                         this.router.navigate(['/posting/posting-order-preview'], { queryParams: { id: newId } });
                     }
                 } else {
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: res.description ?? 'Failed to generate posting order.' });
+                    this.messageService.add({ severity: 'error', summary: this.isBangla ? 'ত্রুটি' : 'Error', detail: res.description ?? (this.isBangla ? 'পোস্টিং অর্ডার তৈরি ব্যর্থ হয়েছে।' : 'Failed to generate posting order.') });
                 }
             },
             error: (err) => {
                 this.saving = false;
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.description ?? 'Failed to generate posting order.' });
+                this.messageService.add({ severity: 'error', summary: this.isBangla ? 'ত্রুটি' : 'Error', detail: err?.error?.description ?? (this.isBangla ? 'পোস্টিং অর্ডার তৈরি ব্যর্থ হয়েছে।' : 'Failed to generate posting order.') });
             }
         });
     }
@@ -436,7 +556,9 @@ export class PostingOrderGenerateComponent implements OnInit {
         this.loadingGeneratedOrders = true;
         this.postingService.getPostingOrderMasters().subscribe({
             next: (data) => {
-                this.generatedOrders = (data ?? []).slice().sort((a, b) => {
+                const postingType = this.fixedPostingType ?? this.selectedPostingType;
+                const filtered = postingType ? (data ?? []).filter(o => o.postingType === postingType) : (data ?? []);
+                this.generatedOrders = filtered.slice().sort((a, b) => {
                     const ad = a.createdDate ? new Date(a.createdDate).getTime() : 0;
                     const bd = b.createdDate ? new Date(b.createdDate).getTime() : 0;
                     return bd - ad;
@@ -445,7 +567,7 @@ export class PostingOrderGenerateComponent implements OnInit {
             },
             error: (err: any) => {
                 this.loadingGeneratedOrders = false;
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load generated posting orders.' });
+                this.messageService.add({ severity: 'error', summary: this.isBangla ? 'ত্রুটি' : 'Error', detail: err?.error?.message || (this.isBangla ? 'তৈরিকৃত পোস্টিং অর্ডার লোড ব্যর্থ হয়েছে।' : 'Failed to load generated posting orders.') });
             }
         });
     }
@@ -469,6 +591,83 @@ export class PostingOrderGenerateComponent implements OnInit {
             case 'draft': return 'warn';
             case 'cancelled': return 'danger';
             default: return 'info';
+        }
+    }
+
+    approvalStatusSeverity(status: string | null | undefined): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' {
+        switch (status) {
+            case ApprovalStatus.Approve: return 'success';
+            case ApprovalStatus.Pending: return 'warn';
+            case ApprovalStatus.Cancel: return 'danger';
+            default: return 'secondary';
+        }
+    }
+
+    approvalStatusLabel(status: string | null | undefined): string {
+        const bn = this.isBangla;
+        switch (status) {
+            case ApprovalStatus.Approve: return bn ? 'অনুমোদিত' : 'Approved';
+            case ApprovalStatus.Pending: return bn ? 'অপেক্ষমাণ' : 'Pending';
+            case ApprovalStatus.Cancel: return bn ? 'বাতিল' : 'Cancelled';
+            default: return '-';
+        }
+    }
+
+    // ─── Approval Modal ──────────────────────────────────
+
+    openApprovalModal(order: PostingOrderMasterDto): void {
+        this.approvalModalOrder = order;
+        this.approvalModalAction = null;
+        this.approvalModalRemarks = '';
+        this.showApprovalModal = true;
+    }
+
+    selectApprovalAction(action: ApprovalStatus.Approve | ApprovalStatus.Cancel): void {
+        this.approvalModalAction = action;
+        this.approvalModalRemarks = '';
+    }
+
+    saveApproval(): void {
+        if (!this.approvalModalOrder || !this.approvalModalAction) return;
+
+        this.savingApproval = true;
+        const id = this.approvalModalOrder.id;
+        const bn = this.isBangla;
+
+        if (this.approvalModalAction === ApprovalStatus.Approve) {
+            this.postingService.approvePostingOrder(id, this.approvalModalRemarks, 'system').subscribe({
+                next: (res) => {
+                    this.savingApproval = false;
+                    if (res.statusCode === 200) {
+                        this.messageService.add({ severity: 'success', summary: bn ? 'সফল' : 'Success', detail: bn ? 'পোস্টিং অর্ডার অনুমোদিত হয়েছে।' : 'Posting Order approved.' });
+                        this.showApprovalModal = false;
+                        this.loadGeneratedOrders();
+                    } else {
+                        this.messageService.add({ severity: 'error', summary: bn ? 'ত্রুটি' : 'Error', detail: res.description ?? (bn ? 'অনুমোদন ব্যর্থ হয়েছে।' : 'Failed to approve.') });
+                    }
+                },
+                error: (err) => {
+                    this.savingApproval = false;
+                    this.messageService.add({ severity: 'error', summary: bn ? 'ত্রুটি' : 'Error', detail: err?.error?.description ?? (bn ? 'অনুমোদন ব্যর্থ হয়েছে।' : 'Failed to approve.') });
+                }
+            });
+        } else {
+            this.postingService.cancelPostingOrder(id, this.approvalModalRemarks, 'system').subscribe({
+                next: (res) => {
+                    this.savingApproval = false;
+                    if (res.statusCode === 200) {
+                        this.messageService.add({ severity: 'success', summary: bn ? 'সফল' : 'Success', detail: bn ? 'পোস্টিং অর্ডার বাতিল হয়েছে।' : 'Posting Order cancelled.' });
+                        this.showApprovalModal = false;
+                        this.loadGeneratedOrders();
+                    } else {
+                        this.messageService.add({ severity: 'error', summary: bn ? 'ত্রুটি' : 'Error', detail: res.description ?? (bn ? 'বাতিল ব্যর্থ হয়েছে।' : 'Failed to cancel.') });
+                    }
+                },
+                error: (err) => {
+                    this.savingApproval = false;
+                    this.messageService.add({ severity: 'error', summary: bn ? 'ত্রুটি' : 'Error', detail: err?.error?.description ?? (bn ? 'বাতিল ব্যর্থ হয়েছে।' : 'Failed to cancel.') });
+                }
+            });
         }
     }
 }

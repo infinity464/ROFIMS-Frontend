@@ -210,6 +210,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
             next: (list) => {
                 this.postingEmployees = list ?? [];
                 this.enrichEmployeePrefixes();
+                this.resolveTransferUnitNames();
                 this.loadingEmployees = false;
             },
             error: (err: any) => { this.loadingEmployees = false; }
@@ -244,10 +245,27 @@ export abstract class NotesheetPreviewBase implements OnInit {
                     draftPostingDetailId: e.draftInterPostingDetailId,
                     draftPostingMasterId: e.draftInterPostingMasterId,
                 }));
+                this.resolveTransferUnitNames();
                 this.loadingEmployees = false;
             },
             error: (err: any) => { this.loadingEmployees = false; }
         });
+    }
+
+    /** Resolve the full hierarchical path for each employee's transfer unit (e.g. "RAB HQ, Admin Wing, Section A"). */
+    private resolveTransferUnitNames(): void {
+        for (const emp of this.postingEmployees) {
+            if (!emp.transferRabUnitId) continue;
+            this.masterBasicSetup.getAncestorsOfCommonCode(emp.transferRabUnitId).subscribe({
+                next: (ancestors) => {
+                    if (!ancestors?.length) return;
+                    const sorted = [...ancestors].sort((a, b) => (a.level ?? 0) - (b.level ?? 0));
+                    const parts = sorted.map(a => (a.codeValueEN ?? '').trim()).filter(Boolean);
+                    if (parts.length > 0) emp.transferRabUnitName = parts.join(', ');
+                },
+                error: () => {}
+            });
+        }
     }
 
     protected loadApprovalChain(): void {

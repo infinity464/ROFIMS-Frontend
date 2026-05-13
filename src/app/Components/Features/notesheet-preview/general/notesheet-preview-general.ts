@@ -10,13 +10,14 @@ import { TooltipModule } from 'primeng/tooltip';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
-import { MultiSelectModule } from 'primeng/multiselect';
+
 import { DatePickerModule } from 'primeng/datepicker';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
 import { NotesheetSignatoryComponent } from '@/Components/Common/notesheet-signatory/notesheet-signatory';
 import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor';
 import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/file-references-form/file-references-form';
+import { NotesheetApproverSelectComponent } from '@/Components/Common/notesheet-approver-select/notesheet-approver-select';
 import { NotesheetPreviewBase } from '../notesheet-preview-base';
 import { NoteSheetCurrentStatus, NoteSheetCurrentStatusOptions, NoteSheetOperationTypeOptions, ApprovalStatus, NoteSheetRemarkAction, NoteSheetPreviewFrom, ApprovalLogAction, ApprovalLogActionOptions } from '@/models/enums';
 import { SharedService } from '@/shared/services/shared-service';
@@ -54,8 +55,8 @@ interface ApprovalLogEntry {
     standalone: true,
     imports: [
         CommonModule, FormsModule, ButtonModule, ToastModule, ConfirmDialogModule, DialogModule, TooltipModule,
-        InputTextModule, TextareaModule, SelectModule, MultiSelectModule, DatePickerModule, FlexibleDateDirective,
-        NotesheetSignatoryComponent, RichEditorComponent, FileReferencesFormComponent
+        InputTextModule, TextareaModule, SelectModule, DatePickerModule, FlexibleDateDirective,
+        NotesheetSignatoryComponent, RichEditorComponent, FileReferencesFormComponent, NotesheetApproverSelectComponent
     ],
     providers: [MessageService, ConfirmationService],
     templateUrl: './notesheet-preview-general.html',
@@ -114,9 +115,6 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
     titleBlockHeightPx = 0;
     private pageInsetPx = 0;
     private lastMeasuredHeight = 0;
-
-    // ── Employee dropdown options ────────────────────────────
-    employeeOptions: { label: string; value: number }[] = [];
 
     // ── Edit model fields ────────────────────────────────────
     editSubject = '';
@@ -206,9 +204,6 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         // Parse existing file references
         this.fileRows = this.parseFileReferences();
 
-        if (this.employeeOptions.length === 0) {
-            this.loadEmployeeOptions();
-        }
     }
 
     cancelEdit(): void {
@@ -231,27 +226,6 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         });
     }
 
-    // ── Load employee dropdown options ───────────────────────
-    loadEmployeeOptions(): void {
-        const api = `${environment.apis.core}/EmployeeInfo`;
-        this.http.get<any[]>(`${api}/GetAll`).subscribe({
-            next: (list) => {
-                this.employeeOptions = (Array.isArray(list) ? list : []).map((e: any) => {
-                    const name = e.fullNameEN || e.FullNameEN || '';
-                    const rabId = e.rabid || e.Rabid || e.RABID || '';
-                    const serviceId = e.serviceId || e.ServiceId || '';
-                    const parts = [name, rabId ? `RAB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : ''].filter(Boolean);
-                    return {
-                        label: parts.join(' | ') || `ID ${e.employeeID ?? e.EmployeeID}`,
-                        value: e.employeeID ?? e.EmployeeID
-                    };
-                });
-            },
-            error: (err: any) => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load employee list.' });
-            }
-        });
-    }
 
     // ── Save changes ─────────────────────────────────────────
     saveChanges(): void {

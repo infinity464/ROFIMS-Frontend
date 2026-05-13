@@ -8,6 +8,7 @@ export interface PostingOrderNumberConfigModel {
     currentNumber: number;
     currentYear: number;
     currentMonth: number;
+    includeDate: boolean;
     status: boolean;
     createdBy: string;
     createdDate: string;

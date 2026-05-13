@@ -6,6 +6,49 @@
 /** Posting type: New (from Supernumerary) or Inter (from Presently Serving). */
 export type PostingType = 'New' | 'Inter';
 
+/** Audit record for a member removal from a draft posting list. */
+export interface PostingMemberRemovalHistoryDto {
+    id: number;
+    draftPostingMasterId: number;
+    isInterPosting: boolean;
+    /** DraftPostingMaster.DraftPostingNo or DraftInterPostingMaster.DraftInterPostingNo at time of removal. */
+    draftPostingNo: string | null;
+    employeeId: number;
+    /** Live lookup from EmployeeInfo at query time. */
+    serviceId: string | null;
+    rabId: string | null;
+    fullNameEN: string | null;
+    originalTransferRabUnitId: number | null;
+    originalTransferRabUnitName: string | null;
+    originalTransferWingName: string | null;
+    originalTransferBranchName: string | null;
+    originalTransferSectionName: string | null;
+    originalRemarks: string | null;
+    noteSheetId: number | null;
+    noteSheetNo: string | null;
+    /**
+     * Precise stage computed by backend from NoteSheetInfo at time of removal:
+     * Draft | Pending - Initiator | Pending - Recommender | Pending - Final Approval | Approved | Declined
+     */
+    noteSheetStatusAtRemoval: string | null;
+    createdBy: string | null;
+    createdDate: string;
+}
+
+/** Lightweight removal info returned by GetRemovalHistoryByEmployeeIds. */
+export interface EmployeeRemovalInfo {
+    employeeId: number;
+    postingOrderNo: string | null;
+    draftPostingNo: string | null;
+    removedDate: string;
+    isInterPosting: boolean;
+    postingOrderDate: string | null;
+    transferToUnitName: string | null;
+    transferFromUnitName: string | null;
+    removalRemark: string | null;
+    removalRemarkBN: string | null;
+}
+
 /** Status of a posting note-sheet. */
 export type PostingNoteSheetStatus = 'Draft' | 'PendingFinalized' | 'PendingApproval' | 'Approved' | 'Declined';
 
@@ -175,6 +218,7 @@ export interface DraftPostingEmployeeRow {
     transferRabUnitNameBN?: string | null;
     remarks: string | null;
     sendingRemark: string | null;
+    interPostingRemark?: string | null;
     isSendingNotesheetStatus: string | null;
     serviceId: string | null;
     prefixName: string | null;
@@ -209,6 +253,20 @@ export interface DraftPostingEmployeeRow {
     /** Previous RAB service units (comma-separated). Inter-posting only. */
     previousRabUnits?: string | null;
     previousRabUnitsBN?: string | null;
+    /** Current RAB unit the employee is presently serving in. Inter-posting only. */
+    presentRabUnitId?: number | null;
+    presentRabUnitName?: string | null;
+    presentRabUnitNameBN?: string | null;
+    presentRabWingName?: string | null;
+    presentRabWingNameBN?: string | null;
+    presentRabBranchName?: string | null;
+    presentRabBranchNameBN?: string | null;
+    presentRabSubBranchName?: string | null;
+    presentRabSubBranchNameBN?: string | null;
+    presentRabSectionName?: string | null;
+    presentRabSectionNameBN?: string | null;
+    presentRabSubSectionName?: string | null;
+    presentRabSubSectionNameBN?: string | null;
     createdBy: string | null;
     createdDate: string | null;
 }
@@ -261,11 +319,14 @@ export interface PendingPostingJoiningDto {
     postingOrderNo: string;
     postingOrderDate: string;
     postingType: string;
+    approvalStatus: string | null;
 
     noteSheetNo: string | null;
 
     transferRabUnitId: number | null;
+    transferToHierarchy: string | null;
     transferRabUnitName: string | null;
+    fromRabUnitName: string | null;
 
     serviceId: string | null;
     fullNameEN: string | null;
@@ -294,6 +355,13 @@ export interface PostingOrderMasterDto {
     createdBy: string;
     createdDate: string;
     detailCount: number;
+    // Approval fields
+    approvalEmployeeId?: number | null;
+    approvalEmployeeName?: string | null;
+    approvalStatus?: string | null;
+    approvalNote?: string | null;
+    cancelReason?: string | null;
+    approvalDate?: string | null;
 }
 
 /** Posting Order detail row (employee). */
@@ -323,12 +391,21 @@ export interface PostingOrderMasterWithDetailsDto {
     referenceNumber: string | null;
     subject: string | null;
     mainText: string | null;
+    subText?: string | null;
     textType: string | null;
     filesReferences: string | null;
     status: string;
     remarks: string | null;
+    footerText?: string | null;
     createdBy: string;
     createdDate: string;
+    // Approval fields
+    approvalEmployeeId?: number | null;
+    approvalEmployeeName?: string | null;
+    approvalStatus?: string | null;
+    approvalNote?: string | null;
+    cancelReason?: string | null;
+    approvalDate?: string | null;
     details: PostingOrderDetailDto[];
 }
 
@@ -343,6 +420,7 @@ export interface PostingOrderEmployeeRow {
     referenceNumber: string | null;
     subject: string | null;
     mainText: string | null;
+    subText?: string | null;
     textType: string | null;
     filesReferences: string | null;
     noteSheetNo: string | null;
@@ -393,6 +471,20 @@ export interface PostingOrderEmployeeRow {
     previousMotherOrgNameBN: string | null;
     previousRabUnits: string | null;
     previousRabUnitsBN: string | null;
+    presentRabUnitId?: number | null;
+    presentRabUnitName?: string | null;
+    presentRabUnitNameBN?: string | null;
+    presentRabWingName?: string | null;
+    presentRabWingNameBN?: string | null;
+    presentRabBranchName?: string | null;
+    presentRabBranchNameBN?: string | null;
+    presentRabSubBranchName?: string | null;
+    presentRabSubBranchNameBN?: string | null;
+    presentRabSectionName?: string | null;
+    presentRabSectionNameBN?: string | null;
+    presentRabSubSectionName?: string | null;
+    presentRabSubSectionNameBN?: string | null;
+    receiveStatus?: string | null;
 }
 
 /** Approved NoteSheet row for dropdown. */
