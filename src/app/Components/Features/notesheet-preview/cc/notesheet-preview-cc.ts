@@ -456,12 +456,22 @@ export class NotesheetPreviewCCComponent implements OnInit {
 
     // ── Export ─────────────────────────────────────────────────────────────
 
+    /** Filename stem from the LetterNo (e.g. "CC-2026/05/10001" → "CC-2026_05_10001"),
+     *  falling back to the movement ID for legacy rows without a letter no. */
+    private exportFileStem(): string {
+        const raw = this.movement?.letterNo;
+        if (raw && raw.trim()) {
+            return raw.replace(/[\\/:*?"<>|]+/g, '_').trim();
+        }
+        return `CC_${this.movement?.movementId ?? 'export'}`;
+    }
+
     async exportWord(): Promise<void> {
         if (!this.movement) return;
         try {
             const doc = this.buildWordDocument();
             const blob = await Packer.toBlob(doc);
-            saveAs(blob, `CC_${this.movement.movementId}.docx`);
+            saveAs(blob, `${this.exportFileStem()}.docx`);
         } catch (err) {
             console.error('Word export failed', err);
             this.messageService.add({ severity: 'error', summary: 'Export Error', detail: 'Failed to generate Word document.' });
@@ -475,7 +485,7 @@ export class NotesheetPreviewCCComponent implements OnInit {
             const doc = this.buildWordDocument();
             const docxBlob = await Packer.toBlob(doc);
             const pdfBlob = await this.convertDocxToPdf(docxBlob);
-            saveAs(pdfBlob, `CC_${this.movement.movementId}.pdf`);
+            saveAs(pdfBlob, `${this.exportFileStem()}.pdf`);
         } catch (err) {
             console.error('PDF export failed', err);
             this.messageService.add({ severity: 'error', summary: 'Export Error', detail: 'Failed to generate PDF.' });
