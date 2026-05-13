@@ -5,7 +5,7 @@
 
     <div class="preview-header no-print">
         <div class="preview-actions" *ngIf="noteSheet && !loading && !error">
-            <p-button *ngIf="showEdit && canEdit && !editing" icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" label="Edit" (onClick)="toggleEdit()" styleClass="p-button-outlined p-button-warning"></p-button>
+            <p-button *ngIf="showEdit && canEdit && !editing" icon="pi pi-pencil" label="Edit" (onClick)="toggleEdit()" styleClass="p-button-outlined p-button-warning"></p-button>
             <p-button *ngIf="editing" icon="pi pi-times" label="Cancel" (onClick)="cancelEdit()" styleClass="p-button-outlined p-button-secondary"></p-button>
             <p-button *ngIf="editing" icon="pi pi-check" label="Save" (onClick)="saveChanges()" [loading]="saving" styleClass="p-button-success"></p-button>
             <p-button *ngIf="showWord && !editing" icon="pi pi-file-word" label="Word"  (onClick)="exportWord()" styleClass="p-button-outlined"></p-button>
@@ -109,10 +109,30 @@
                         <input pInputText [(ngModel)]="editSubject" placeholder="Subject" class="w-full" />
                     </div>
 
-                    <div class="ns-edit-field">
-                        <label class="ns-edit-label">Reference Number</label>
-                        <app-rich-editor [(ngModel)]="editReferenceNumber" [hideTable]="true" height="120px"></app-rich-editor>
-                    </div>
+                    <!-- ── Reference Number Paragraphs ── -->
+                    <p-fieldset legend="Reference Number" [toggleable]="true" [collapsed]="true">
+                        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
+                            <p-button icon="pi pi-plus" label="Add Reference" [rounded]="false" [text]="true" severity="success" size="small" (onClick)="addReferenceParagraph()" pTooltip="Add Reference"></p-button>
+                        </div>
+                        @for (para of editReferenceParagraphs; track $index) {
+                            <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;align-items:flex-start;">
+                                <span style="font-weight:600;min-width:24px;padding-top:6px;">{{ getRefSerialLabel($index) }}</span>
+                                <div style="flex:1;">
+                                    <app-rich-editor [(ngModel)]="editReferenceParagraphs[$index].text" [hideTable]="true" height="80px"></app-rich-editor>
+                                    <app-file-references-form
+                                        [fileRows]="editReferenceParagraphs[$index].fileRows"
+                                        [isViewMode]="false"
+                                        title=""
+                                        (fileRowsChange)="onRefFileRowsChange($event, $index)"
+                                        (onDownloadFile)="onRefDownloadFile($event)">
+                                    </app-file-references-form>
+                                </div>
+                                @if (editReferenceParagraphs.length > 1) {
+                                    <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" (onClick)="removeReferenceParagraph($index)"></p-button>
+                                }
+                            </div>
+                        }
+                    </p-fieldset>
                     <div class="ns-edit-field ns-edit-row">
                         <div class="ns-edit-col">
                             <label class="ns-edit-label">Date</label>
@@ -136,9 +156,106 @@
                         <app-rich-editor [(ngModel)]="editMainText"></app-rich-editor>
                     </div>
 
+                    <!-- ── Members Table (Edit) ── -->
+                    <p-fieldset legend="Members" [toggleable]="true" [collapsed]="editMembersData.members.length === 0">
+                        <div class="members-search-row" style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
+                            <app-employee-search
+                                (onEmployeeFound)="onMemberFound($event)">
+                            </app-employee-search>
+                            @if (memberAddLoading) {
+                                <span class="text-500 text-xs"><i class="pi pi-spin pi-spinner mr-1"></i>Loading profile...</span>
+                            }
+                        </div>
+
+                        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;flex-wrap:wrap;">
+                            <p-button label="Add Column" icon="pi pi-plus" size="small" severity="info" [outlined]="true" (onClick)="openAddColumnDialog()"></p-button>
+                        </div>
+
+                        @if (editMembersData.members.length > 0 && editMembersData.columns.length > 0) {
+                            <div style="overflow-x:auto;max-width:100%;">
+                                <table class="ns-members-preview-table" style="font-size:8pt;text-align:left;">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:40px;text-align:center;padding:4px 6px;background:#f8f9fa;border:1px solid #dee2e6;font-size:7pt;">{{ editTextType === 'bn' ? 'ক্রমিক' : 'SL' }}</th>
+                                            @for (col of editMembersData.columns; track col.key; let ci = $index) {
+                                                <th draggable="true"
+                                                    [class.members-table__th-dragging]="dragColIndex === ci"
+                                                    [class.members-table__th-dragover]="dragOverColIndex === ci"
+                                                    (dragstart)="onColDragStart(ci, $event)"
+                                                    (dragover)="onColDragOver(ci, $event)"
+                                                    (dragenter)="onColDragEnter(ci, $event)"
+                                                    (dragleave)="onColDragLeave($event)"
+                                                    (drop)="onColDrop(ci, $event)"
+                                                    (dragend)="onColDragEnd()"
+                                                    style="cursor:grab;white-space:nowrap;padding:4px 6px;background:#f8f9fa;border:1px solid #dee2e6;">
+                                                    <div style="display:flex;align-items:center;gap:4px;">
+                                                        @if (editingColLabelKey === col.key) {
+                                                            <input type="text" style="width:80px;font-size:7pt;padding:1px 3px;"
+                                                                [(ngModel)]="editingColLabelValue"
+                                                                [ngModelOptions]="{standalone:true}"
+                                                                (blur)="saveColLabel(col.key)"
+                                                                (keydown.enter)="saveColLabel(col.key)"
+                                                                (keydown.escape)="editingColLabelKey = null" />
+                                                        } @else {
+                                                            <span (dblclick)="startEditColLabel(col.key, col.label, $event)" title="Double-click to rename" style="font-size:7pt;">{{ col.label }}</span>
+                                                        }
+                                                        <button type="button" style="border:none;background:none;cursor:pointer;color:#e74c3c;padding:0;font-size:10px;" (click)="removeColumn(col.key)" title="Remove column">
+                                                            <i class="pi pi-times"></i>
+                                                        </button>
+                                                    </div>
+                                                </th>
+                                            }
+                                            <th style="padding:4px 6px;background:#f8f9fa;border:1px solid #dee2e6;font-size:7pt;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @for (member of editMembersData.members; track member.employeeId; let i = $index) {
+                                            <tr>
+                                                <td style="padding:3px 5px;border:1px solid #dee2e6;font-size:7pt;text-align:center;">{{ memberSerial(i) }}</td>
+                                                @for (col of editMembersData.columns; track col.key) {
+                                                    <td style="padding:3px 5px;border:1px solid #dee2e6;font-size:7pt;white-space:nowrap;"
+                                                        [style.cursor]="isCustomColumn(col) ? 'pointer' : 'default'"
+                                                        (click)="isCustomColumn(col) ? startEditMemberCell(i, col.key, $event) : null">
+                                                        @if (col.mergedFrom) {
+                                                            {{ getMergedCellValue(member, col) }}
+                                                        } @else if (isCustomColumn(col) && editingMemberCellKey === memberCellKey(i, col.key)) {
+                                                            <input type="text" style="width:80px;font-size:7pt;padding:1px 3px;"
+                                                                [(ngModel)]="editingMemberCellValue"
+                                                                [ngModelOptions]="{standalone:true}"
+                                                                (blur)="onMemberCellBlur(i, col.key)"
+                                                                (keydown)="onMemberCellKeydown($event, i, col.key)" />
+                                                        } @else {
+                                                            {{ member.values[col.key] || '—' }}
+                                                        }
+                                                    </td>
+                                                }
+                                                <td style="padding:3px 5px;border:1px solid #dee2e6;text-align:center;">
+                                                    <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" size="small" (onClick)="removeMember(i)"></p-button>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        } @else if (editMembersData.members.length > 0 && editMembersData.columns.length === 0) {
+                            <div style="color:#6c757d;font-size:8pt;padding:0.5rem 0;">
+                                {{ editMembersData.members.length }} member(s) added. Click "Add Column" to configure which fields to display.
+                            </div>
+                        } @else {
+                            <div style="color:#6c757d;font-size:8pt;padding:0.5rem 0;">
+                                No members added yet. Use the search above to find and add members.
+                            </div>
+                        }
+                    </p-fieldset>
+
                     <div class="ns-edit-field">
                         <label class="ns-edit-label">{{ isEnglish() ? 'Note' : 'নোট' }}</label>
-                        <textarea pTextarea [(ngModel)]="editNote" rows="3" class="w-full" placeholder="{{ isEnglish() ? 'Note' : 'নোট' }}"></textarea>
+                        <app-rich-editor [(ngModel)]="editNote" height="120px"></app-rich-editor>
+                    </div>
+
+                    <div class="ns-edit-field">
+                        <label class="ns-edit-label">{{ isEnglish() ? 'Last Text' : 'শেষ লেখা' }}</label>
+                        <app-rich-editor [(ngModel)]="editParagraphText" height="120px"></app-rich-editor>
                     </div>
 
                     <!-- ── Supporting Documents ── -->
@@ -220,30 +337,29 @@
                     </ng-container>
                 </div>
 
-                <!-- ── ১। Main Text ── -->
+                <!-- ── ১। Main Text + Members Table ── -->
                 <div class="ns-para">
                     <span class="ns-para-no">{{ serial(1) }}</span>
-                    <div class="ns-para-text" [innerHTML]="getMainTextSafe()"></div>
-                </div>
-
-                <!-- ── ২। Members Table (if any) ── -->
-                <div class="ns-para" *ngIf="previewMembersRows.length > 0 && previewMembersColumns.length > 0">
-                    <span class="ns-para-no">{{ serial(membersSerial) }}</span>
-                    <div class="ns-para-text ns-members-preview-table-wrap">
-                        <table class="ns-members-preview-table">
-                            <thead>
-                                <tr>
-                                    <th *ngFor="let col of previewMembersColumns">{{ col.label }}</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr *ngFor="let row of previewMembersRows; let ri = index">
-                                    <td *ngFor="let col of previewMembersColumns">
-                                        {{ formatMemberCell(row, col) }}
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    <div class="ns-para-text">
+                        <div [innerHTML]="getMainTextSafe()"></div>
+                        <div *ngIf="previewMembersRows.length > 0 && previewMembersColumns.length > 0" class="ns-members-preview-table-wrap">
+                            <table class="ns-members-preview-table">
+                                <thead>
+                                    <tr>
+                                        <th style="text-align:center;">{{ isEnglish() ? 'SL' : 'ক্রমিক' }}</th>
+                                        <th *ngFor="let col of previewMembersColumns">{{ col.label }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr *ngFor="let row of previewMembersRows; let ri = index">
+                                        <td style="text-align:center;">{{ memberSerial(ri) }}</td>
+                                        <td *ngFor="let col of previewMembersColumns">
+                                            {{ formatMemberCell(row, col) }}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
@@ -413,4 +529,67 @@
             }
         </div>
     }
+</p-dialog>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- Add Column Dialog                                          -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<p-dialog
+    header="Add Table Column"
+    [(visible)]="showAddColumnDialog"
+    [modal]="true"
+    [style]="{ width: '500px' }"
+    [closable]="true"
+    [draggable]="false"
+    [resizable]="false"
+    (onHide)="closeAddColumnDialog()">
+    <div style="padding:1rem 0;display:flex;flex-direction:column;gap:1rem;">
+        <div style="display:flex;gap:1rem;">
+            <label style="display:flex;align-items:center;gap:0.375rem;cursor:pointer;">
+                <input type="radio" name="addColModePreview" value="field" [(ngModel)]="addColumnMode" [ngModelOptions]="{standalone:true}" />
+                From Employee Fields
+            </label>
+            <label style="display:flex;align-items:center;gap:0.375rem;cursor:pointer;">
+                <input type="radio" name="addColModePreview" value="custom" [(ngModel)]="addColumnMode" [ngModelOptions]="{standalone:true}" />
+                Custom Blank Column
+            </label>
+        </div>
+        @if (addColumnMode === 'field') {
+            <div>
+                <label style="font-weight:600;font-size:0.875rem;">Select Field</label>
+                <p-select
+                    [(ngModel)]="selectedColumnKey"
+                    [ngModelOptions]="{standalone:true}"
+                    [options]="groupedUnusedColumns"
+                    optionLabel="label"
+                    optionValue="value"
+                    optionGroupLabel="label"
+                    optionGroupChildren="items"
+                    [group]="true"
+                    [filter]="true"
+                    filterBy="label"
+                    placeholder="Select a field..."
+                    styleClass="w-full"
+                    appendTo="body">
+                </p-select>
+            </div>
+        } @else {
+            <div>
+                <label style="font-weight:600;font-size:0.875rem;">Column Name <span style="color:red;">*</span></label>
+                <input pInputText
+                    [(ngModel)]="newCustomColumnName"
+                    [ngModelOptions]="{standalone:true}"
+                    placeholder="e.g. Remarks, Note, Custom Field"
+                    class="w-full"
+                    style="margin-top:0.5rem;"
+                    (keydown.enter)="confirmAddColumn()" />
+            </div>
+        }
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="closeAddColumnDialog()"></p-button>
+        <p-button label="Add Column" icon="pi pi-plus"
+            [disabled]="addColumnMode === 'field' ? !selectedColumnKey : !newCustomColumnName.trim()"
+            (onClick)="confirmAddColumn()"></p-button>
+    </ng-template>
 </p-dialog>

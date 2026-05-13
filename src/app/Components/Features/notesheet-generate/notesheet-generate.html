@@ -190,6 +190,7 @@
               <table class="members-table">
                 <thead>
                   <tr>
+                    <th style="width:40px;text-align:center;">{{ isBangla ? 'ক্রমিক' : 'SL' }}</th>
                     @for (col of membersData.columns; track col.key; let ci = $index) {
                       <th
                         draggable="true"
@@ -230,6 +231,7 @@
                 <tbody>
                   @for (member of membersData.members; track member.employeeId; let i = $index) {
                     <tr>
+                      <td style="text-align:center;">{{ memberSerial(i) }}</td>
                       @for (col of membersData.columns; track col.key) {
                         <td
                           [class.members-table__custom-cell]="isCustomColumn(col)"

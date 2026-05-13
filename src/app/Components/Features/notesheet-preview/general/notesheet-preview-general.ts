@@ -1,7 +1,5 @@
 import { AfterViewChecked, ChangeDetectorRef, Component, ElementRef, Input, ViewChild, inject } from '@angular/core';
 import { SafeHtml } from '@angular/platform-browser';
-import { UserMenuService } from '@/services/user-menu.service';
-import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ConfirmationService, MessageService } from 'primeng/api';
@@ -11,6 +9,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
+import { FieldsetModule } from 'primeng/fieldset';
 
 import { DatePickerModule } from 'primeng/datepicker';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
@@ -19,13 +18,16 @@ import { NotesheetSignatoryComponent } from '@/Components/Common/notesheet-signa
 import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor';
 import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/file-references-form/file-references-form';
 import { NotesheetApproverSelectComponent } from '@/Components/Common/notesheet-approver-select/notesheet-approver-select';
+import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 import { NotesheetPreviewBase } from '../notesheet-preview-base';
+import { MemberColumnDef, MemberRow, MembersJsonData, AVAILABLE_MEMBER_COLUMNS, ReferenceParagraph } from '../../notesheet-generate/notesheet-generate';
 import { NoteSheetCurrentStatus, NoteSheetCurrentStatusOptions, NoteSheetOperationTypeOptions, ApprovalStatus, NoteSheetRemarkAction, NoteSheetPreviewFrom, ApprovalLogAction, ApprovalLogActionOptions } from '@/models/enums';
 import { SharedService } from '@/shared/services/shared-service';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 import { environment } from '@/Core/Environments/environment';
 import { forkJoin, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
+import { FamilyInfoService } from '@/services/family-info-service';
 import {
     Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
     WidthType, BorderStyle, AlignmentType, PageOrientation, ImageRun,
@@ -56,16 +58,15 @@ interface ApprovalLogEntry {
     standalone: true,
     imports: [
         CommonModule, FormsModule, ButtonModule, ToastModule, ConfirmDialogModule, DialogModule, TooltipModule,
-        InputTextModule, TextareaModule, SelectModule, DatePickerModule, FlexibleDateDirective,
-        NotesheetSignatoryComponent, RichEditorComponent, FileReferencesFormComponent, NotesheetApproverSelectComponent
+        InputTextModule, TextareaModule, SelectModule, DatePickerModule, FlexibleDateDirective, FieldsetModule,
+        NotesheetSignatoryComponent, RichEditorComponent, FileReferencesFormComponent, NotesheetApproverSelectComponent,
+        EmployeeSearchComponent
     ],
     providers: [MessageService, ConfirmationService],
     templateUrl: './notesheet-preview-general.html',
     styleUrl: '../notesheet-preview.scss'
 })
 export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase implements AfterViewChecked {
-    private _router = inject(Router);
-    private _userMenuService = inject(UserMenuService);
     canInsert = true;
     canUpdate = true;
     canDelete = true;
@@ -78,6 +79,7 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
     private cdr = inject(ChangeDetectorRef);
     private confirmationService = inject(ConfirmationService);
     private sharedService = inject(SharedService);
+    private familyInfoService = inject(FamilyInfoService);
 
     // ── Button visibility (configurable by parent) ───────────
     @Input() showEdit = true;
@@ -119,7 +121,7 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
 
     // ── Edit model fields ────────────────────────────────────
     editSubject = '';
-    editReferenceNumber = '';
+    editReferenceParagraphs: ReferenceParagraph[] = [{ text: '', fileRows: [] }];
     editMainText = '';
     editNote = '';
     editParagraphText = '';
@@ -129,6 +131,21 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
     editFinalApproverId: number | null = null;
     editTextType: string = 'en';
     editOperationType: string | null = null;
+
+    // ── Members edit state ────────────────────────────────────
+    editMembersData: MembersJsonData = { columns: [], members: [] };
+    memberAddLoading = false;
+    showAddColumnDialog = false;
+    addColumnMode: 'field' | 'custom' = 'field';
+    selectedColumnKey: string | null = null;
+    newCustomColumnName = '';
+    editingMemberCellKey: string | null = null;
+    editingMemberCellValue = '';
+    readonly availableColumns = AVAILABLE_MEMBER_COLUMNS;
+    editingColLabelKey: string | null = null;
+    editingColLabelValue = '';
+    dragColIndex: number | null = null;
+    dragOverColIndex: number | null = null;
 
     // ── Dropdown options ─────────────────────────────────────
     textTypeOptions = [
@@ -143,6 +160,7 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
     // ── Members table data (loaded from NoteSheetReferenceEmployee) ──
     previewMembersColumns: { key: string; label: string; mergedFrom?: string[] }[] = [];
     previewMembersRows: Record<string, string>[] = [];
+    private loadedMemberEmployeeIds: number[] = [];
 
     // ── Computed ─────────────────────────────────────────────
     get canEdit(): boolean {
@@ -194,7 +212,29 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         if (!this.noteSheet) return;
         this.editing = true;
         this.editSubject = this.noteSheet.subject ?? '';
-        this.editReferenceNumber = this.noteSheet.referenceNumber ?? '';
+        // Parse reference number into paragraphs
+        const refNumber = this.noteSheet.referenceNumber;
+        if (refNumber && typeof refNumber === 'string') {
+            try {
+                const arr = JSON.parse(refNumber);
+                if (Array.isArray(arr) && arr.length > 0) {
+                    this.editReferenceParagraphs = arr.map((item: any) => ({
+                        text: item.text ?? item.Text ?? '',
+                        fileRows: (item.files ?? item.Files ?? []).map((f: any) => ({
+                            displayName: f.fileName ?? f.FileName ?? '',
+                            file: null,
+                            fileId: f.FileId ?? f.fileId
+                        }))
+                    }));
+                } else {
+                    this.editReferenceParagraphs = [{ text: '', fileRows: [] }];
+                }
+            } catch {
+                this.editReferenceParagraphs = [{ text: refNumber, fileRows: [] }];
+            }
+        } else {
+            this.editReferenceParagraphs = [{ text: '', fileRows: [] }];
+        }
         this.editMainText = this.noteSheet.mainText ?? '';
         this.editNote = this.noteSheet.note ?? '';
         this.editParagraphText = this.noteSheet.paragraphText ?? '';
@@ -211,11 +251,24 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         // Parse existing file references
         this.fileRows = this.parseFileReferences();
 
+        // Load existing members into edit model
+        const cols: MemberColumnDef[] = this.previewMembersColumns.map(c => ({
+            key: c.key,
+            label: c.label,
+            group: (c as any).group ?? 'basic',
+            ...(c.mergedFrom ? { mergedFrom: (c as any).mergedFrom } : {})
+        }));
+        const members: MemberRow[] = this.previewMembersRows.map((row, i) => ({
+            employeeId: this.loadedMemberEmployeeIds[i] ?? 0,
+            values: { ...row }
+        }));
+        this.editMembersData = { columns: cols, members };
     }
 
     cancelEdit(): void {
         this.editing = false;
         this.fileRows = [];
+        this.editMembersData = { columns: [], members: [] };
         this.lastMeasuredHeight = 0;
     }
 
@@ -233,6 +286,54 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         });
     }
 
+    // ── Reference Paragraphs ──────────────────────────────────
+    addReferenceParagraph(): void {
+        this.editReferenceParagraphs.push({ text: '', fileRows: [] });
+    }
+
+    removeReferenceParagraph(index: number): void {
+        if (this.editReferenceParagraphs.length > 1) {
+            this.editReferenceParagraphs.splice(index, 1);
+        }
+    }
+
+    getRefSerialLabel(index: number): string {
+        if (this.editTextType === 'bn') {
+            const banglaLetters = ['ক', 'খ', 'গ', 'ঘ', 'ঙ', 'চ', 'ছ', 'জ', 'ঝ', 'ঞ', 'ট', 'ঠ', 'ড', 'ঢ', 'ণ', 'ত', 'থ', 'দ', 'ধ', 'ন'];
+            return (banglaLetters[index] ?? String(index + 1)) + '.';
+        }
+        return String.fromCharCode(65 + index) + '.';
+    }
+
+    onRefFileRowsChange(event: FileRowData[], index: number): void {
+        if (event && Array.isArray(event)) {
+            this.editReferenceParagraphs[index].fileRows = event;
+        }
+    }
+
+    onRefDownloadFile(payload: { fileId: number; fileName: string }): void {
+        this.empService.downloadFile(payload.fileId).subscribe({
+            next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file.' })
+        });
+    }
+
+    private async uploadEditReferenceParagraphFiles(): Promise<string> {
+        const result: { text: string; files: { FileId: number; fileName: string }[] }[] = [];
+        for (const para of this.editReferenceParagraphs) {
+            const existingFiles = para.fileRows.filter(r => r.fileId != null).map(r => ({ FileId: r.fileId!, fileName: r.displayName ?? '' }));
+            const newFiles = para.fileRows.filter(r => r.file != null);
+            if (newFiles.length > 0) {
+                const uploads = newFiles.map(r => this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name).toPromise());
+                const uploaded = await Promise.all(uploads);
+                const uploadedRefs = (uploaded as any[]).map(r => ({ FileId: r.fileId, fileName: r.fileName }));
+                result.push({ text: para.text, files: [...existingFiles, ...uploadedRefs] });
+            } else {
+                result.push({ text: para.text, files: existingFiles });
+            }
+        }
+        return JSON.stringify(result);
+    }
 
     // ── Save changes ─────────────────────────────────────────
     saveChanges(): void {
@@ -242,16 +343,17 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         const existingRefs = this.fileReferencesForm?.getExistingFileReferences() || [];
         const filesToUpload = this.fileReferencesForm?.getFilesToUpload() || [];
 
-        const doSave = (filesReferencesJson: string | null) => {
+        const doSave = (filesReferencesJson: string | null, referenceNumberJson: string | null) => {
             const recommendersJson = this.buildRecommendersJson();
             const now = new Date().toISOString();
 
             const payload: Record<string, unknown> = {
                 ...this.noteSheet,
                 subject: this.editSubject,
-                referenceNumber: this.editReferenceNumber,
+                referenceNumber: referenceNumberJson,
                 mainText: this.editMainText,
                 note: this.editNote || null,
+                paragraphText: this.editParagraphText || null,
                 textType: this.editTextType === 'bn' ? 1 : 0,
                 noteSheetOperationType: this.editOperationType,
                 noteSheetDate: this.editNoteSheetDate ? this.formatDateOnly(this.editNoteSheetDate) : this.noteSheet!.noteSheetDate,
@@ -268,6 +370,26 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
 
             this.http.post(`${this.api}/UpdateAsyn`, payload).subscribe({
                 next: () => {
+                    // Sync members to NoteSheetReferenceEmployee
+                    const noteSheetId = this.noteSheet!.noteSheetId ?? (this.noteSheet as any).NoteSheetId;
+                    if (noteSheetId) {
+                        const refApi = `${environment.apis.core}/NoteSheetReferenceEmployee`;
+                        const employees = this.editMembersData.members.map(m => ({
+                            employeeId: m.employeeId,
+                            informationJson: JSON.stringify({
+                                columns: this.editMembersData.columns,
+                                values: m.values
+                            })
+                        }));
+                        const syncPayload = {
+                            noteSheetId,
+                            employees,
+                            updatedBy: payload['lastUpdatedBy'] ?? 'system'
+                        };
+                        this.http.post(refApi + '/Sync', syncPayload).subscribe({
+                            error: () => this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Saved but failed to sync members.' })
+                        });
+                    }
                     this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Note-sheet updated successfully.' });
                     this.editing = false;
                     this.saving = false;
@@ -282,31 +404,36 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
             });
         };
 
-        // Upload new files first, then save
-        if (filesToUpload.length > 0) {
-            const uploads = filesToUpload.map((r: FileRowData) =>
-                this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
-            );
-            forkJoin(uploads).subscribe({
-                next: (results: unknown) => {
-                    const resultsArray = Array.isArray(results) ? results : [];
-                    const newRefs = (resultsArray as { fileId: number; fileName: string }[]).map(r => ({ FileId: r.fileId, fileName: r.fileName }));
-                    const allRefs = [
-                        ...existingRefs.map(r => ({ FileId: r.FileId, fileName: r.fileName })),
-                        ...newRefs
-                    ];
-                    doSave(allRefs.length > 0 ? JSON.stringify(allRefs) : null);
-                },
-                error: (err: any) => {
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to upload files.' });
-                    this.saving = false;
-                }
-            });
-            return;
-        }
+        // Build reference paragraphs JSON, then upload files, then save
+        this.uploadEditReferenceParagraphFiles().then((refNumberJson) => {
+            if (filesToUpload.length > 0) {
+                const uploads = filesToUpload.map((r: FileRowData) =>
+                    this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
+                );
+                forkJoin(uploads).subscribe({
+                    next: (results: unknown) => {
+                        const resultsArray = Array.isArray(results) ? results : [];
+                        const newRefs = (resultsArray as { fileId: number; fileName: string }[]).map(r => ({ FileId: r.fileId, fileName: r.fileName }));
+                        const allRefs = [
+                            ...existingRefs.map(r => ({ FileId: r.FileId, fileName: r.fileName })),
+                            ...newRefs
+                        ];
+                        doSave(allRefs.length > 0 ? JSON.stringify(allRefs) : null, refNumberJson);
+                    },
+                    error: (err: any) => {
+                        this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to upload files.' });
+                        this.saving = false;
+                    }
+                });
+                return;
+            }
 
-        const filesReferencesJson = existingRefs.length > 0 ? JSON.stringify(existingRefs) : null;
-        doSave(filesReferencesJson);
+            const filesReferencesJson = existingRefs.length > 0 ? JSON.stringify(existingRefs) : null;
+            doSave(filesReferencesJson, refNumberJson);
+        }).catch(() => {
+            this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to upload reference files.' });
+            this.saving = false;
+        });
     }
 
     // ── Reload notesheet after save ──────────────────────────
@@ -386,11 +513,6 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
 
     // ── Lifecycle: detect pending mode, resolve current user ──
     override ngOnInit(): void {
-        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
-        this.canInsert = _perms.canInsert;
-        this.canUpdate = _perms.canUpdate;
-        this.canDelete = _perms.canDelete;
-
         super.ngOnInit();
         this.route.queryParams.subscribe(params => {
             this.fromPending = (params['from'] ?? '').toString().toLowerCase() === NoteSheetPreviewFrom.Pending;
@@ -424,31 +546,32 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
                                 const parsed = JSON.parse(r.informationJson || r.InformationJson);
                                 return parsed.values ?? {};
                             });
+                            this.loadedMemberEmployeeIds = rows.map(r => r.employeeId ?? r.EmployeeId ?? 0);
                         } catch {
                             this.previewMembersColumns = [];
                             this.previewMembersRows = [];
+                            this.loadedMemberEmployeeIds = [];
                         }
+                    } else {
+                        this.previewMembersColumns = [];
+                        this.previewMembersRows = [];
+                        this.loadedMemberEmployeeIds = [];
                     }
                 }
             });
         }
     }
 
-    // ── Serial computation: accounts for mainText, members, note, lastText ──
+    // ── Serial computation: mainText(+members table) = 1, note, lastText ──
     get contentSerialCount(): number {
-        let count = 1; // ১। Main Text always present
-        if (this.previewMembersRows.length > 0) count++;
+        let count = 1; // ১। Main Text (+ members table, no separate serial)
         if (this.noteSheet?.note) count++;
         if (this.noteSheet?.paragraphText) count++;
         return count;
     }
 
-    /** Get serial number for members section (if present) */
-    get membersSerial(): number { return 2; }
     /** Get serial number for note section */
-    get noteSerial(): number {
-        return 2 + (this.previewMembersRows.length > 0 ? 1 : 0);
-    }
+    get noteSerial(): number { return 2; }
     /** Get serial number for last text section */
     get lastTextSerial(): number {
         return this.noteSerial + (this.noteSheet?.note ? 1 : 0);
@@ -456,6 +579,275 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
     /** Get starting serial for approver sections */
     get approverStartSerial(): number {
         return 1 + this.contentSerialCount;
+    }
+
+    // ── Members edit methods ────────────────────────────────────
+
+    onMemberFound(emp: EmployeeBasicInfo): void {
+        if (this.editMembersData.members.some(m => m.employeeId === emp.employeeID)) {
+            this.messageService.add({ severity: 'warn', summary: 'Duplicate', detail: 'This member is already added.' });
+            return;
+        }
+        this.memberAddLoading = true;
+        forkJoin([
+            this.servingMembersService.getEmployeePersonalServiceOverview(emp.employeeID),
+            this.familyInfoService.getFamilyInfoByEmployeeView(emp.employeeID)
+        ]).subscribe({
+            next: ([profile, familyList]: [any, any]) => {
+                const values: Record<string, string> = {};
+                values['serviceId'] = profile.serviceId ?? '';
+                values['rabId'] = profile.rabId ?? '';
+                values['nameEnglish'] = profile.nameEnglish ?? '';
+                values['nameBN'] = profile.nameBN ?? '';
+                values['armyRank'] = profile.armyRank ?? '';
+                values['armyRankBN'] = profile.armyRankBN ?? '';
+                values['corps'] = profile.corps ?? '';
+                values['corpsBN'] = profile.corpsBN ?? '';
+                values['trade'] = profile.trade ?? '';
+                values['tradeBN'] = profile.tradeBN ?? '';
+                values['motherOrganization'] = profile.motherOrganization ?? '';
+                values['motherOrganizationBN'] = profile.motherOrganizationBN ?? '';
+                values['motherUnit'] = profile.motherUnit ?? '';
+                values['motherUnitBN'] = profile.motherUnitBN ?? '';
+                values['memberType'] = profile.memberType ?? '';
+                values['memberTypeBN'] = profile.memberTypeBN ?? '';
+                values['appointment'] = profile.appointment ?? '';
+                values['appointmentBN'] = profile.appointmentBN ?? '';
+                values['joiningDate'] = profile.joiningDate ?? '';
+                values['gender'] = profile.gender ?? '';
+                values['genderBN'] = profile.genderBN ?? '';
+                values['batch'] = profile.batch ?? '';
+                values['batchBN'] = profile.batchBN ?? '';
+                values['rabUnit'] = profile.rabUnit ?? '';
+                values['rabUnitBN'] = profile.rabUnitBN ?? '';
+                values['postingStatus'] = profile.postingStatus ?? '';
+                values['permanentDistrictTypeName'] = profile.permanentDistrictTypeName ?? '';
+                values['permanentDistrictTypeNameBN'] = profile.permanentDistrictTypeNameBN ?? '';
+                values['prefix'] = profile.prefix ?? '';
+                values['prefixBN'] = profile.prefixBN ?? '';
+                values['prefixWithServiceId'] = ((profile.prefix ?? '') + ' ' + (profile.serviceId ?? '')).trim();
+                values['prefixWithServiceIdBN'] = ((profile.prefixBN ?? '') + ' ' + (profile.serviceId ?? '')).trim();
+                values['tradeRemarks'] = profile.tradeRemarks ?? '';
+                values['dateOfBirth'] = profile.dateOfBirth ?? '';
+                values['bloodGroup'] = profile.bloodGroup ?? '';
+                values['nid'] = profile.nid ?? '';
+                values['mobileNo'] = profile.mobileNo ?? '';
+                values['mobileNoOfficial'] = profile.mobileNoOfficial ?? '';
+                values['emailAddress'] = profile.emailAddress ?? '';
+                values['religion'] = profile.religion ?? '';
+                values['religionBN'] = profile.religionBN ?? '';
+                values['passportNo'] = profile.passportNo ?? '';
+                values['maritalStatus'] = profile.maritalStatus ?? '';
+                values['maritalStatusBN'] = profile.maritalStatusBN ?? '';
+                values['emergencyContactNo'] = profile.emergencyContactNo ?? '';
+                values['dateOfCommission'] = profile.dateOfCommission ?? '';
+                values['dateOfJoiningInServiceTraining'] = profile.dateOfJoiningInServiceTraining ?? '';
+                values['medicalCategory'] = profile.medicalCategory ?? '';
+                values['medicalCategoryBN'] = profile.medicalCategoryBN ?? '';
+                values['educationQualification'] = profile.educationQualification ?? '';
+                values['educationQualificationBN'] = profile.educationQualificationBN ?? '';
+                values['professionalQualification'] = profile.professionalQualification ?? '';
+                values['professionalQualificationBN'] = profile.professionalQualificationBN ?? '';
+                values['personalQualification'] = profile.personalQualification ?? '';
+                values['personalQualificationBN'] = profile.personalQualificationBN ?? '';
+                values['gallantryAwardsDecoration'] = profile.gallantryAwardsDecoration ?? '';
+                values['gallantryAwardsDecorationBN'] = profile.gallantryAwardsDecorationBN ?? '';
+                values['height'] = profile.height != null ? String(profile.height) : '';
+                values['weight'] = profile.weight != null ? String(profile.weight) : '';
+                values['identificationMark'] = profile.identificationMark ?? '';
+                const family = Array.isArray(familyList) ? familyList : [];
+                const spouse = family.find((f: any) => (f.relation ?? '').toLowerCase().includes('spouse') || (f.relation ?? '').toLowerCase().includes('wife') || (f.relation ?? '').toLowerCase().includes('husband'));
+                const father = family.find((f: any) => (f.relation ?? '').toLowerCase().includes('father'));
+                const mother = family.find((f: any) => (f.relation ?? '').toLowerCase().includes('mother'));
+                values['family_spouse'] = spouse?.name ?? '';
+                values['family_father'] = father?.name ?? '';
+                values['family_mother'] = mother?.name ?? '';
+                values['family_members'] = family.map((f: any) => `${f.relation ?? ''}: ${f.name ?? ''}`).join('; ');
+                this.editMembersData.members.push({ employeeId: emp.employeeID, values });
+                this.memberAddLoading = false;
+                this.messageService.add({ severity: 'success', summary: 'Member Added', detail: `${profile.nameEnglish || emp.fullNameEN} added.` });
+            },
+            error: () => {
+                this.memberAddLoading = false;
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load member profile.' });
+            }
+        });
+    }
+
+    removeMember(index: number): void {
+        this.editMembersData.members.splice(index, 1);
+    }
+
+    get unusedColumns(): MemberColumnDef[] {
+        const usedKeys = new Set(this.editMembersData.columns.map(c => c.key));
+        return this.availableColumns.filter(c => !usedKeys.has(c.key));
+    }
+
+    get groupedUnusedColumns(): { label: string; value: string; items: { label: string; value: string }[] }[] {
+        const groups: Record<string, { label: string; value: string }[]> = {};
+        const groupLabels: Record<string, string> = { basic: 'Basic Info', personal: 'Personal Info', family: 'Family Info' };
+        for (const col of this.unusedColumns) {
+            const g = col.group;
+            if (!groups[g]) groups[g] = [];
+            groups[g].push({ label: col.label, value: col.key });
+        }
+        return Object.entries(groups).map(([key, items]) => ({
+            label: groupLabels[key] ?? key, value: key, items
+        }));
+    }
+
+    openAddColumnDialog(): void {
+        this.addColumnMode = 'field';
+        this.selectedColumnKey = null;
+        this.newCustomColumnName = '';
+        this.showAddColumnDialog = true;
+    }
+
+    closeAddColumnDialog(): void {
+        this.showAddColumnDialog = false;
+    }
+
+    confirmAddColumn(): void {
+        if (this.addColumnMode === 'field') {
+            if (!this.selectedColumnKey) {
+                this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select a field.' });
+                return;
+            }
+            const def = this.availableColumns.find(c => c.key === this.selectedColumnKey);
+            if (def && !this.editMembersData.columns.some(c => c.key === def.key)) {
+                this.editMembersData.columns.push({ ...def });
+            }
+        } else {
+            const name = this.newCustomColumnName.trim();
+            if (!name) {
+                this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Column name cannot be empty.' });
+                return;
+            }
+            const key = `custom_${name}`;
+            if (this.editMembersData.columns.some(c => c.key === key)) {
+                this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'A column with that name already exists.' });
+                return;
+            }
+            this.editMembersData.columns.push({ key, label: name, group: 'custom' });
+            for (const member of this.editMembersData.members) {
+                member.values[key] = '';
+            }
+        }
+        this.closeAddColumnDialog();
+    }
+
+    removeColumn(colKey: string): void {
+        this.editMembersData.columns = this.editMembersData.columns.filter(c => c.key !== colKey);
+    }
+
+    isCustomColumn(col: MemberColumnDef): boolean {
+        return col.group === 'custom';
+    }
+
+    memberCellKey(rowIndex: number, colKey: string): string {
+        return `${rowIndex}_${colKey}`;
+    }
+
+    startEditMemberCell(rowIndex: number, colKey: string, event: Event): void {
+        this.editingMemberCellKey = this.memberCellKey(rowIndex, colKey);
+        this.editingMemberCellValue = this.editMembersData.members[rowIndex]?.values[colKey] ?? '';
+        setTimeout(() => {
+            const el = (event.target as HTMLElement)?.closest('td')?.querySelector('input');
+            el?.focus();
+            el?.select();
+        });
+    }
+
+    onMemberCellBlur(rowIndex: number, colKey: string): void {
+        if (this.editingMemberCellKey === this.memberCellKey(rowIndex, colKey)) {
+            this.saveMemberCell(rowIndex, colKey);
+        }
+    }
+
+    onMemberCellKeydown(event: KeyboardEvent, rowIndex: number, colKey: string): void {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            this.saveMemberCell(rowIndex, colKey);
+        } else if (event.key === 'Escape') {
+            this.editingMemberCellKey = null;
+        }
+    }
+
+    private saveMemberCell(rowIndex: number, colKey: string): void {
+        if (this.editMembersData.members[rowIndex]) {
+            this.editMembersData.members[rowIndex].values[colKey] = this.editingMemberCellValue;
+        }
+        this.editingMemberCellKey = null;
+    }
+
+    startEditColLabel(colKey: string, currentLabel: string, event: Event): void {
+        event.stopPropagation();
+        this.editingColLabelKey = colKey;
+        this.editingColLabelValue = currentLabel;
+        setTimeout(() => {
+            const el = (event.target as HTMLElement)?.closest('th')?.querySelector('input');
+            el?.focus();
+            el?.select();
+        });
+    }
+
+    saveColLabel(colKey: string): void {
+        const trimmed = this.editingColLabelValue.trim();
+        if (trimmed) {
+            const col = this.editMembersData.columns.find(c => c.key === colKey);
+            if (col) col.label = trimmed;
+        }
+        this.editingColLabelKey = null;
+    }
+
+    getMergedCellValue(member: MemberRow, col: MemberColumnDef): string {
+        if (!col.mergedFrom) return member.values[col.key] || '—';
+        const { keys, separator } = col.mergedFrom;
+        if (separator === '()') {
+            const parts = keys.map(k => member.values[k] || '').filter(Boolean);
+            if (parts.length <= 1) return parts[0] || '—';
+            return `${parts[0]} (${parts.slice(1).join(', ')})`;
+        }
+        return keys.map(k => member.values[k] || '').filter(Boolean).join(separator) || '—';
+    }
+
+    // Drag & drop column reorder
+    onColDragStart(index: number, event: DragEvent): void {
+        this.dragColIndex = index;
+        event.dataTransfer!.effectAllowed = 'move';
+        event.dataTransfer!.setData('text/plain', String(index));
+    }
+    onColDragOver(index: number, event: DragEvent): void {
+        event.preventDefault();
+        event.dataTransfer!.dropEffect = 'move';
+    }
+    onColDragEnter(index: number, event: DragEvent): void {
+        event.preventDefault();
+        this.dragOverColIndex = index;
+    }
+    onColDragLeave(event: DragEvent): void {}
+    onColDrop(targetIndex: number, event: DragEvent): void {
+        event.preventDefault();
+        if (this.dragColIndex !== null && this.dragColIndex !== targetIndex) {
+            const cols = [...this.editMembersData.columns];
+            const [moved] = cols.splice(this.dragColIndex, 1);
+            cols.splice(targetIndex, 0, moved);
+            this.editMembersData.columns = cols;
+        }
+        this.dragColIndex = null;
+        this.dragOverColIndex = null;
+    }
+    onColDragEnd(): void {
+        this.dragColIndex = null;
+        this.dragOverColIndex = null;
+    }
+
+    /** Auto serial for members table rows: Bangla numerals when Bangla, English otherwise */
+    memberSerial(index: number): string {
+        const n = index + 1;
+        if (this.isEnglish()) return String(n);
+        const bn = ['০','১','২','৩','৪','৫','৬','৭','৮','৯'];
+        return String(n).replace(/\d/g, d => bn[+d]);
     }
 
     /** Get cell value for preview members table — handles merged columns + Bangla numeral conversion */
@@ -829,7 +1221,6 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         if (this.previewMembersRows.length > 0 && this.previewMembersColumns.length > 0) {
             (model as any).membersColumns = this.previewMembersColumns;
             (model as any).membersRows = this.previewMembersRows;
-            (model as any).membersSerial = this.serial(this.membersSerial);
         }
         // Add last text / paragraphText
         if (this.noteSheet.paragraphText) {
@@ -1119,30 +1510,47 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         // Members table (if any)
         const mModel = model as any;
         if (mModel.membersColumns?.length > 0 && mModel.membersRows?.length > 0) {
-            mainChildren.push(new Paragraph({
-                children: [new TextRun({ text: mModel.membersSerial, bold: true, size: bodySize, sizeComplexScript: csBody, font, language: lang })],
-                indent: { left: 240 }, spacing: { before: 160, after: 40 }
-            }));
             const thinBorder = { style: BorderStyle.SINGLE, size: 4, color: '000000' } as const;
             const cols = mModel.membersColumns as { key: string; label: string; mergedFrom?: string[] }[];
-            const headerRow = new TableRow({
-                children: cols.map(c => new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: c.label, bold: true, size: tblSize, sizeComplexScript: csTbl, font, language: lang })], alignment: AlignmentType.CENTER })], borders: { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder } }))
-            });
+            const slLabel = bn ? 'ক্রমিক' : 'SL';
             const bnDigits = ['০','১','২','৩','৪','৫','৬','৭','৮','৯'];
             const convertDigits = (s: string) => bn && /\d/.test(s) ? s.replace(/\d/g, d => bnDigits[+d]) : s;
-            const dataRows = (mModel.membersRows as Record<string, string>[]).map((row: Record<string, string>) =>
-                new TableRow({
-                    children: cols.map(c => {
+            const rows = mModel.membersRows as Record<string, string>[];
+
+            // Calculate max content length per column for proportional widths
+            const colMaxLens = cols.map(c => {
+                let max = c.label.length;
+                for (const row of rows) {
+                    const val = c.mergedFrom ? c.mergedFrom.map((k: string) => row[k] || '').filter(Boolean).join(' ') : (row[c.key] || '');
+                    if (val.length > max) max = val.length;
+                }
+                return Math.max(max, 2);
+            });
+            const slMaxLen = Math.max(slLabel.length, String(rows.length).length, 2);
+            const totalLen = slMaxLen + colMaxLens.reduce((a, b) => a + b, 0);
+            const slPct = Math.round((slMaxLen / totalLen) * 100);
+            const colPcts = colMaxLens.map(l => Math.round((l / totalLen) * 100));
+
+            const mkWidth = (pct: number) => ({ size: pct, type: WidthType.PERCENTAGE });
+            const slHeaderCell = new TableCell({ width: mkWidth(slPct), children: [new Paragraph({ children: [new TextRun({ text: slLabel, bold: true, size: tblSize, sizeComplexScript: csTbl, font, language: lang })], alignment: AlignmentType.CENTER })], borders: { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder } });
+            const headerRow = new TableRow({
+                children: [slHeaderCell, ...cols.map((c, ci) => new TableCell({ width: mkWidth(colPcts[ci]), children: [new Paragraph({ children: [new TextRun({ text: c.label, bold: true, size: tblSize, sizeComplexScript: csTbl, font, language: lang })], alignment: AlignmentType.CENTER })], borders: { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder } }))]
+            });
+            const dataRows = rows.map((row: Record<string, string>, ri: number) => {
+                const slVal = bn ? String(ri + 1).replace(/\d/g, d => bnDigits[+d]) : String(ri + 1);
+                const slCell = new TableCell({ width: mkWidth(slPct), children: [new Paragraph({ children: [new TextRun({ text: slVal, size: tblSize, sizeComplexScript: csTbl, font, language: lang })], alignment: AlignmentType.CENTER })], borders: { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder } });
+                return new TableRow({
+                    children: [slCell, ...cols.map((c, ci) => {
                         let val = c.mergedFrom ? c.mergedFrom.map((k: string) => row[k] || '').filter(Boolean).join(' ') : (row[c.key] || '');
                         val = convertDigits(val);
-                        return new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: val, size: tblSize, sizeComplexScript: csTbl, font, language: lang })], alignment: AlignmentType.CENTER })], borders: { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder } });
-                    })
-                })
-            );
+                        return new TableCell({ width: mkWidth(colPcts[ci]), children: [new Paragraph({ children: [new TextRun({ text: val, size: tblSize, sizeComplexScript: csTbl, font, language: lang })], alignment: AlignmentType.CENTER })], borders: { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder } });
+                    })]
+                });
+            });
             mainChildren.push(new Table({
                 layout: TableLayoutType.FIXED,
                 indent: { size: 240, type: WidthType.DXA },
-                width: { size: 95, type: WidthType.PERCENTAGE },
+                width: { size: 97, type: WidthType.PERCENTAGE },
                 rows: [headerRow, ...dataRows]
             }));
         }

@@ -594,8 +594,13 @@ export class NotesheetGenerateComponent implements OnInit {
             return { label, value: configId };
         });
 
+        const ctrl = this.form.get('noteSheetNumberConfigId');
+        const currentVal = ctrl?.value;
         if (this.noteSheetConfigOptions.length === 1) {
-            this.form.get('noteSheetNumberConfigId')?.setValue(this.noteSheetConfigOptions[0].value);
+            ctrl?.setValue(this.noteSheetConfigOptions[0].value);
+        } else if (currentVal != null && this.noteSheetConfigOptions.some(o => o.value === currentVal)) {
+            // Force PrimeNG p-select to refresh displayed label after options rebuild
+            ctrl?.setValue(currentVal);
         }
     }
 
@@ -603,6 +608,11 @@ export class NotesheetGenerateComponent implements OnInit {
 
     get isBangla(): boolean {
         return this.form?.get('textType')?.value === 'bn';
+    }
+
+    memberSerial(index: number): string {
+        const n = index + 1;
+        return this.isBangla ? BanglaNumerals.toBangla(String(n)) : String(n);
     }
 
     get referenceEmployeeOptionsDisplay(): { label: string; value: number }[] {
