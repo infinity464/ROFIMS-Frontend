@@ -58,14 +58,14 @@
                 বাংলাদেশ ফরম নং-২৪০৩
             </div>
 
-            <!-- Memo number + Date row -->
-            <div style="display:flex; justify-content:space-between; margin-top:18pt; font-size:10pt;">
+            <!-- Memo number + Date row — 2-line gap above the form header. -->
+            <div style="display:flex; justify-content:space-between; margin-top:36pt; font-size:10pt;">
                 <div>স্মারক নং- {{ memoNoBn }}</div>
                 <div>{{ letterDateBn }}</div>
             </div>
 
-            <!-- Reference line — sourced from MovementInfo.auth. Comes BEFORE প্রতি in the Takeover variant. -->
-            <div style="margin-top:14pt; font-size:10pt;">
+            <!-- Reference line — 2 empty lines above and below সূত্র. -->
+            <div style="margin-top:36pt; font-size:10pt;">
                 <div style="display:flex; gap:0; align-items:flex-start;">
                     <div style="min-width:50pt;">সূত্র:</div>
                     <div class="mv-rich" [innerHTML]="movement.auth || '---'"></div>
@@ -73,7 +73,7 @@
             </div>
 
             <!-- প্রতি (To) block -->
-            <div style="margin-top:14pt; font-size:10pt;">
+            <div style="margin-top:36pt; font-size:10pt;">
                 <div>প্রতি,</div>
                 <table style="margin-left:50pt; margin-top:4pt; border-collapse:collapse;">
                     @for (line of recipientLines; track $index) {

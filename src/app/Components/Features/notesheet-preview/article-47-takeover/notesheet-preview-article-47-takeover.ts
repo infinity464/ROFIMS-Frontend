@@ -508,14 +508,28 @@ export class NotesheetPreviewArticle47TakeoverComponent implements OnInit {
         const remarksText = stripHtml(m.remarks);
         const remarksPara = remarksText ? para(remarksText, { lineTwips: 280 }) : null;
         const ogragami = para('অগ্রগামী করা হইল।', { spacingBefore: 480 });
-        const sigParas: Paragraph[] = [];
-        // Takeover variant title
-        sigParas.push(para('গ্রহণকারী কর্মকর্তা', { align: AlignmentType.CENTER, spacingBefore: 240 }));
-        sigParas.push(para('________________________', { align: AlignmentType.CENTER, spacingBefore: 720 }));
-        sigParas.push(para(`${this.employeeIdLineBn} ${this.employeeRankBn}`.trim(), { align: AlignmentType.CENTER }));
-        sigParas.push(para(`${this.employeeNameBn}${this.employeeCorpsBn ? ', ' + this.employeeCorpsBn : ''}`, { align: AlignmentType.CENTER }));
-        sigParas.push(para(this.employeeUnitBn, { align: AlignmentType.CENTER }));
-        if (this.employeeUnitLocationBn) sigParas.push(para(this.employeeUnitLocationBn, { align: AlignmentType.CENTER }));
+
+        // Signature block — right-side nested table so the content sits on the
+        // right with its lines centered inside (mirrors the web layout).
+        const sigLeftW = Math.round(contentWidth * 0.6);
+        const sigRightW = contentWidth - sigLeftW;
+        const sigInnerParas: Paragraph[] = [];
+        sigInnerParas.push(para('গ্রহণকারী কর্মকর্তা', { align: AlignmentType.CENTER, spacingBefore: 240 }));
+        sigInnerParas.push(para('________________________', { align: AlignmentType.CENTER, spacingBefore: 720 }));
+        sigInnerParas.push(para(`${this.employeeIdLineBn} ${this.employeeRankBn}`.trim(), { align: AlignmentType.CENTER }));
+        sigInnerParas.push(para(`${this.employeeNameBn}${this.employeeCorpsBn ? ', ' + this.employeeCorpsBn : ''}`, { align: AlignmentType.CENTER }));
+        sigInnerParas.push(para(this.employeeUnitBn, { align: AlignmentType.CENTER }));
+        if (this.employeeUnitLocationBn) sigInnerParas.push(para(this.employeeUnitLocationBn, { align: AlignmentType.CENTER }));
+        const sigRow = new Table({
+            width: { size: contentWidth, type: WidthType.DXA },
+            columnWidths: [sigLeftW, sigRightW],
+            layout: TableLayoutType.FIXED,
+            borders: { ...noBorder, insideHorizontal: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }, insideVertical: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' } },
+            rows: [new TableRow({ children: [
+                new TableCell({ width: { size: sigLeftW, type: WidthType.DXA }, borders: noBorder, children: [para('')] }),
+                new TableCell({ width: { size: sigRightW, type: WidthType.DXA }, borders: noBorder, children: sigInnerParas })
+            ] })]
+        });
 
         // Witness / Rule 78
         const witnessParas: Paragraph[] = [];
@@ -540,16 +554,22 @@ export class NotesheetPreviewArticle47TakeoverComponent implements OnInit {
 
         const children: (Paragraph | Table)[] = [
             formHeader,
-            memoRow,
+            // 2-line gap between form header and স্মারক নং / তারিখ row.
             para(''),
-            // Takeover variant — সূত্র before প্রতি
+            para(''),
+            memoRow,
+            // 2 empty lines above সূত্র.
+            para(''),
+            para(''),
             sutroPara,
+            // 2 empty lines below সূত্র.
+            para(''),
             para(''),
             para('প্রতি,'),
             ...(recipientTable ? [recipientTable] : []),
             ...(remarksPara ? [remarksPara] : []),
             ogragami,
-            ...sigParas,
+            sigRow,
             ...witnessParas,
             tailRow
         ];

@@ -514,15 +514,31 @@ export class NotesheetPreviewArticle47HandoverComponent implements OnInit {
         const remarksText = stripHtml(m.remarks);
         const remarksPara = remarksText ? para(remarksText, { lineTwips: 280 }) : null;
 
-        // অগ্রগামী + signature block
+        // অগ্রগামী
         const ogragami = para('অগ্রগামী করা হইল।', { spacingBefore: 480 });
-        const sigParas: Paragraph[] = [];
-        sigParas.push(para('অর্পণকারী কর্মকর্তা', { align: AlignmentType.CENTER, spacingBefore: 240 }));
-        sigParas.push(para('________________________', { align: AlignmentType.CENTER, spacingBefore: 720 }));
-        sigParas.push(para(`${this.employeeIdLineBn} ${this.employeeRankBn}`.trim(), { align: AlignmentType.CENTER }));
-        sigParas.push(para(`${this.employeeNameBn}${this.employeeCorpsBn ? ', ' + this.employeeCorpsBn : ''}`, { align: AlignmentType.CENTER }));
-        sigParas.push(para(this.employeeUnitBn, { align: AlignmentType.CENTER }));
-        if (this.employeeUnitLocationBn) sigParas.push(para(this.employeeUnitLocationBn, { align: AlignmentType.CENTER }));
+
+        // Signature block — sits on the right side of the page (empty left
+        // column takes ~60% width), with its lines centered within the right
+        // column. Matches the on-screen `text-align:right > inline-block` pattern.
+        const sigLeftW = Math.round(contentWidth * 0.6);
+        const sigRightW = contentWidth - sigLeftW;
+        const sigInnerParas: Paragraph[] = [];
+        sigInnerParas.push(para('অর্পণকারী কর্মকর্তা', { align: AlignmentType.CENTER, spacingBefore: 240 }));
+        sigInnerParas.push(para('________________________', { align: AlignmentType.CENTER, spacingBefore: 720 }));
+        sigInnerParas.push(para(`${this.employeeIdLineBn} ${this.employeeRankBn}`.trim(), { align: AlignmentType.CENTER }));
+        sigInnerParas.push(para(`${this.employeeNameBn}${this.employeeCorpsBn ? ', ' + this.employeeCorpsBn : ''}`, { align: AlignmentType.CENTER }));
+        sigInnerParas.push(para(this.employeeUnitBn, { align: AlignmentType.CENTER }));
+        if (this.employeeUnitLocationBn) sigInnerParas.push(para(this.employeeUnitLocationBn, { align: AlignmentType.CENTER }));
+        const sigRow = new Table({
+            width: { size: contentWidth, type: WidthType.DXA },
+            columnWidths: [sigLeftW, sigRightW],
+            layout: TableLayoutType.FIXED,
+            borders: { ...noBorder, insideHorizontal: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }, insideVertical: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' } },
+            rows: [new TableRow({ children: [
+                new TableCell({ width: { size: sigLeftW, type: WidthType.DXA }, borders: noBorder, children: [para('')] }),
+                new TableCell({ width: { size: sigRightW, type: WidthType.DXA }, borders: noBorder, children: sigInnerParas })
+            ] })]
+        });
 
         // Witness / Rule 78 block
         const witnessParas: Paragraph[] = [];
@@ -547,16 +563,24 @@ export class NotesheetPreviewArticle47HandoverComponent implements OnInit {
 
         const children: (Paragraph | Table)[] = [
             formHeader,
+            // 2-line gap between form header and স্মারক নং / তারিখ row.
+            para(''),
+            para(''),
             memoRow,
             para(''),
             // Handover variant — প্রতি before সূত্র
             para('প্রতি,'),
             ...(recipientTable ? [recipientTable] : []),
+            // 2 empty lines above সূত্র.
+            para(''),
             para(''),
             sutroPara,
+            // 2 empty lines below সূত্র.
+            para(''),
+            para(''),
             ...(remarksPara ? [remarksPara] : []),
             ogragami,
-            ...sigParas,
+            sigRow,
             ...witnessParas,
             tailRow
         ];

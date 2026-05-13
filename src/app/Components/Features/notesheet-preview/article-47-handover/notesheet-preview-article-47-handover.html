@@ -58,8 +58,8 @@
                 বাংলাদেশ ফরম নং-২৪০৩
             </div>
 
-            <!-- Memo number + Date row -->
-            <div style="display:flex; justify-content:space-between; margin-top:18pt; font-size:10pt;">
+            <!-- Memo number + Date row — 2-line gap above the form header. -->
+            <div style="display:flex; justify-content:space-between; margin-top:36pt; font-size:10pt;">
                 <div>স্মারক নং- {{ memoNoBn }}</div>
                 <div>{{ letterDateBn }}</div>
             </div>
@@ -79,10 +79,8 @@
                 </table>
             </div>
 
-            <!-- Reference line — sourced from MovementInfo.auth (rich text).
-                 min-width:50pt on the label aligns the body with the recipient numbers.
-                 margin-top:34pt = ~2 blank lines after the প্রতি block. -->
-            <div style="margin-top:34pt; font-size:10pt;">
+            <!-- Reference line — 2 empty lines above and below সূত্র. -->
+            <div style="margin-top:36pt; font-size:10pt;">
                 <div style="display:flex; gap:0; align-items:flex-start;">
                     <div style="min-width:50pt;">সূত্র:</div>
                     <div class="mv-rich" [innerHTML]="movement.auth || '---'"></div>
@@ -90,7 +88,7 @@
             </div>
 
             <!-- Body — sourced from MovementInfo.remarks (rich text) -->
-            <div class="mv-rich" style="margin-top:18pt; font-size:10pt;"
+            <div class="mv-rich" style="margin-top:36pt; font-size:10pt;"
                  [innerHTML]="movement.remarks || ''"></div>
 
             <!-- Static "অগ্রগামী করা হইল।" on its own left-aligned line, with a 2-line gap above. -->
