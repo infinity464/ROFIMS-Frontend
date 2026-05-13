@@ -23,6 +23,10 @@ export interface MovementInfoModel {
     takeoverDate: string | null;
     handoverDate: string | null;
     takeoverPersonEmpId: number | null;
+    /** CC-only — free-form time string (e.g. "09:30"). */
+    releaseTime: string | null;
+    /** CC-only — MovementVehicle enum int (1 = Government, 2 = Non-Government). */
+    vehicle: number | null;
     isJoiningLeave: boolean;
     joiningLeaveFrom: string | null;
     joiningLeaveTo: string | null;

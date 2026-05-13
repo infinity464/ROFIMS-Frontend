@@ -369,6 +369,16 @@ export const MoveOrderTypeOptions = [
     { label: 'Article 47 (Takeover)', value: MoveOrderType.Article47Takeover }
 ];
 
+// MovementInfo: Vehicle type for CC orders (printed on the CC letter).
+export enum MovementVehicle {
+    Government = 1,
+    NonGovernment = 2
+}
+export const MovementVehicleOptions = [
+    { label: 'সরকারী যানবাহন',   value: MovementVehicle.Government },
+    { label: 'বেসরকারী যানবাহন', value: MovementVehicle.NonGovernment }
+];
+
 // MovementInfo: Article 47 letter recipients (applies to both Handover & Takeover variants only).
 // sortOrder is the position among stored recipients only (1..6). The dynamic
 // entries (Adhinayak, RAB-<unit>; FC (Army) Pay-1, Dhaka Cantonment) are injected

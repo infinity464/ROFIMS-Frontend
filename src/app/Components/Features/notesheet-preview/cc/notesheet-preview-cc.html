@@ -53,7 +53,9 @@
             <div style="display:flex; align-items:flex-start; margin-top:8pt; font-size:12pt;">
                 <div style="flex:1;">এম সিসি নং ৪১৭০/২০২৬</div>
                 <div style="flex:0 0 auto; text-align:right; line-height:1.6;">
-                    <div>সরকারী যানবাহন</div>
+                    @if (vehicleLabelBn) {
+                        <div>{{ vehicleLabelBn }}</div>
+                    }
                     <div>তারিখঃ {{ letterDateBn }}</div>
                 </div>
             </div>

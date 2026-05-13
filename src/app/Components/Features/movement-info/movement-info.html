@@ -228,6 +228,29 @@
             </div>
         }
 
+        <!-- ── CC-only: Release Time + Vehicle ─────────────────────────── -->
+        @if (isCC) {
+            <div class="mv-subsection">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="mv-field">
+                        <label>Release time</label>
+                        <input type="time" pInputText class="w-full"
+                               formControlName="releaseTime" />
+                    </div>
+                    <div class="mv-field">
+                        <label>Vehicle</label>
+                        <p-select formControlName="vehicle"
+                                  [options]="movementVehicleOptions"
+                                  optionLabel="label" optionValue="value"
+                                  placeholder="Select vehicle"
+                                  [showClear]="true"
+                                  appendTo="body"
+                                  styleClass="w-full"></p-select>
+                    </div>
+                </div>
+            </div>
+        }
+
         <!-- ── Joining leave ──────────────────────────────────────────── -->
         <div class="mv-subsection">
             <h3 class="mv-subsection-title">Joining leave</h3>

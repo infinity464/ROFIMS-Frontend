@@ -16,6 +16,7 @@ import { EmployeeServiceOverview } from '@/models/employee-service-overview.mode
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { OrganizationService } from '@/Components/basic-setup/organization-setup/services/organization-service';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
+import { MovementVehicle, MovementVehicleOptions } from '@/models/enums';
 
 interface EmployeeLine {
     serial: string;          // ১। ২। … in Bangla
@@ -63,6 +64,7 @@ export class NotesheetPreviewCCComponent implements OnInit {
     letterNoBn = '';
     letterDateBn = '';
     departureTimeAndDateBn = '';   // "০৯:৩০ ঘটিকা সময় ও তারিখ ০৬/০৫/২০২৬"
+    vehicleLabelBn = '';           // "সরকারী যানবাহন" / "বেসরকারী যানবাহন"
     districtAndStationBn = '';     // Col 1: জেলা এবং স্টেশন
     destinationBn = '';            // Col 3: গন্তব্যস্থল
     sutroBn = '';                  // সূত্র: <current RAB unit / সদর দপ্তর>
@@ -128,7 +130,16 @@ export class NotesheetPreviewCCComponent implements OnInit {
         const departureDate = this.movement?.dateOfRelease
             ? new Date(this.movement.dateOfRelease)
             : d;
-        this.departureTimeAndDateBn = `${this.toBn('09:30')} ঘটিকা সময় ও তারিখ ${this.formatBnDateShort(departureDate)}`;
+        // Release time from MovementInfo.ReleaseTime (free-form, e.g. "09:30"). No fallback.
+        const releaseTimeBn = this.movement?.releaseTime ? this.toBn(this.movement.releaseTime) : '';
+        const timePrefix = releaseTimeBn ? `${releaseTimeBn} ঘটিকা সময় ও তারিখ ` : '';
+        this.departureTimeAndDateBn = `${timePrefix}${this.formatBnDateShort(departureDate)}`;
+
+        // Vehicle label from MovementInfo.Vehicle enum (1 = সরকারী, 2 = বেসরকারী).
+        const v = this.movement?.vehicle;
+        this.vehicleLabelBn = v != null
+            ? (MovementVehicleOptions.find((o) => o.value === v)?.label ?? '')
+            : '';
     }
 
     /** Resolve every selected employee in parallel and render as a numbered Bangla list. */

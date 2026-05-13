@@ -38,7 +38,8 @@ import {
     MovementType, MovementTypeOptions,
     MoveOrderType, MoveOrderTypeOptions,
     Article47LetterRecipientOptions,
-    MOLetterRecipientOptions
+    MOLetterRecipientOptions,
+    MovementVehicleOptions
 } from '@/models/enums';
 
 interface MovementEmployeeRow {
@@ -136,6 +137,7 @@ export class MovementInfoComponent implements OnInit {
 
     movementTypeOptions = MovementTypeOptions;
     moveOrderTypeOptions = MoveOrderTypeOptions;
+    movementVehicleOptions = MovementVehicleOptions;
     movementReasonOptions: { label: string; value: number }[] = [];
     motherUnitOptions: { label: string; value: number }[] = [];
     rabUnitOptions: { label: string; value: number }[] = [];
@@ -251,6 +253,8 @@ export class MovementInfoComponent implements OnInit {
             lastRationCertificate: row.lastRationCertificate ?? null,
             payAndAllowance:       row.payAndAllowance       ?? null,
             railwayWarrant:        row.railwayWarrant        ?? null,
+            releaseTime:           row.releaseTime           ?? null,
+            vehicle:               row.vehicle               ?? null,
             auth: row.auth ?? null,
             detailsInformation: row.detailsInformation ?? null,
             remarks: row.remarks ?? null,
@@ -392,6 +396,9 @@ export class MovementInfoComponent implements OnInit {
             lastRationCertificate: [null],
             payAndAllowance: [null],
             railwayWarrant: [null],
+            // CC-only fields.
+            releaseTime: [null],
+            vehicle: [null],
             auth: [null],
             detailsInformation: [null],
             remarks: [null],
@@ -638,6 +645,9 @@ export class MovementInfoComponent implements OnInit {
     get isMO(): boolean {
         return this.form?.get('moveOrderType')!.value === MoveOrderType.MO;
     }
+    get isCC(): boolean {
+        return this.form?.get('moveOrderType')!.value === MoveOrderType.CC;
+    }
     /** Show Handover-of-charge field — Permanent + Article 47 (Handover). */
     get showHandover(): boolean {
         return this.isPermanent && this.isArticle47Handover;
@@ -792,6 +802,9 @@ export class MovementInfoComponent implements OnInit {
             lastRationCertificate: this.isMO ? (v.lastRationCertificate ?? null) : null,
             payAndAllowance:       this.isMO ? (v.payAndAllowance ?? null)       : null,
             railwayWarrant:        this.isMO ? (v.railwayWarrant ?? null)        : null,
+            // CC-only — persist only when moveOrderType is CC; otherwise null.
+            releaseTime:           this.isCC ? (v.releaseTime ?? null)           : null,
+            vehicle:               this.isCC ? (v.vehicle ?? null)                : null,
             auth: v.auth ?? null,
             detailsInformation: v.detailsInformation ?? null,
             remarks: v.remarks ?? null,
@@ -880,6 +893,8 @@ export class MovementInfoComponent implements OnInit {
             lastRationCertificate: null,
             payAndAllowance: null,
             railwayWarrant: null,
+            releaseTime: null,
+            vehicle: null,
             auth: null,
             detailsInformation: null,
             remarks: null,
