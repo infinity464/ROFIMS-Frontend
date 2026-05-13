@@ -54,6 +54,11 @@ export class NotesheetPreviewCCComponent implements OnInit {
     /** First employee's overview — used to resolve current unit / district / station. */
     private firstOverview: EmployeeServiceOverview | null = null;
 
+    /** Battalion HQ location (Bangla preferred) for the first employee's RAB unit.
+     *  Drives Col 1 (জেলা এবং স্টেশন). Source: basic-setup/rab-unit-aor. */
+    private battalionHqBn = '';
+    private battalionHqEn = '';
+
     /** Header / column values. */
     letterNoBn = '';
     letterDateBn = '';
@@ -219,18 +224,44 @@ export class NotesheetPreviewCCComponent implements OnInit {
         return idBn ? `${body} (${idBn})` : body;
     }
 
-    /** Column 1 (জেলা এবং স্টেশন) and সূত্র — derive from first employee's RAB unit. */
+    /** Column 1 (জেলা এবং স্টেশন) and সূত্র — derive from first employee's RAB unit.
+     *  জেলা এবং স্টেশন = Battalion HQ Bangla location (from basic-setup/rab-unit-aor).
+     *  সূত্র = the RAB unit's Bangla name from CommonCode 'RabUnit'. */
     private resolveStationAndSutro(): void {
         const o: any = this.firstOverview || {};
         const rabUnitId: number | undefined = o.rabUnitId ?? o.RabUnitId;
 
-        // RAB unit Bangla name (e.g. "র‍্যাব সদর দপ্তর") + location ("কুর্মিটোলা, ঢাকা").
         const rabUnitBn = (rabUnitId != null ? this.rabUnitLabels.get(rabUnitId)?.bn : '')
             ?? (o.rabUnit ?? o.RabUnit ?? '');
-        const location = (o.location ?? o.Location ?? '') as string;
-
-        this.districtAndStationBn = [rabUnitBn, location].filter(Boolean).join(', ');
         this.sutroBn = rabUnitBn || 'র‍্যাব সদর দপ্তর';
+
+        // Col 1: prefer the Battalion HQ Bangla location once loaded.
+        this.applyDistrictAndStation();
+
+        // Kick off the rab-unit-aor lookup if we have a RAB unit but no HQ yet.
+        if (rabUnitId != null && !this.battalionHqBn && !this.battalionHqEn) {
+            this.loadBattalionHq(rabUnitId);
+        }
+    }
+
+    /** Fetch the Battalion HQ location for a RAB unit (Bangla preferred). */
+    private loadBattalionHq(rabUnitId: number): void {
+        this.masterBasicSetup.getRABUnitAORByRabUnit(rabUnitId).subscribe({
+            next: (rows: any[]) => {
+                if (!Array.isArray(rows) || rows.length === 0) return;
+                const firstEn = rows.find((r) => !!(r?.locationOfBattalionHQ ?? r?.LocationOfBattalionHQ));
+                if (firstEn) this.battalionHqEn = String(firstEn.locationOfBattalionHQ ?? firstEn.LocationOfBattalionHQ ?? '');
+                const firstBn = rows.find((r) => !!(r?.locationOfBattalionHQBangla ?? r?.LocationOfBattalionHQBangla));
+                if (firstBn) this.battalionHqBn = String(firstBn.locationOfBattalionHQBangla ?? firstBn.LocationOfBattalionHQBangla ?? '');
+                this.applyDistrictAndStation();
+            }
+        });
+    }
+
+    /** Resolve the final district/station label: <RAB unit name>, <Battalion HQ location>. */
+    private applyDistrictAndStation(): void {
+        const hq = this.battalionHqBn || this.battalionHqEn || '';
+        this.districtAndStationBn = [this.sutroBn, hq].filter(Boolean).join(', ');
     }
 
     private loadDestinedMotherUnit(): void {

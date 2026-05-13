@@ -11,21 +11,33 @@
         align-items: center;
     }
 
-    /* Landscape paper — fluid on screen, capped at ~80% of legal landscape
-       width so the form renders ~20% smaller without using `zoom` (which
-       can cause fractional-pixel rendering glitches in table cells).
+    /* Landscape paper — full legal-landscape width on screen.
        `display: block` overrides the shared flex-column layout so the
-       table and footnote stack via normal block flow (flex column was
-       allowing the rightmost cell's border to visually drift past the
-       footnote on some browsers). */
+       table and footnote stack via normal block flow. */
     .a4-paper {
         display: block;
         width: 100%;
-        max-width: 284.5mm; /* 355.6mm × 0.8 */
+        max-width: 355.6mm;
         min-height: 0;
         height: auto;
         margin: 0 auto;
         overflow: hidden;
+    }
+}
+
+/* Shrink only the inner content (header + table + footnote) by 30% on screen.
+   The paper stays at its full landscape size, while everything inside renders
+   visually smaller. zoom is fine here because it's applied to a plain wrapper
+   div, not to the .a4-paper-container (which previously caused fractional-pixel
+   issues during table cell layout). */
+.cc-content-scale {
+    zoom: 0.7;
+
+    /* Force normal weight everywhere — no bold letters in this preview. */
+    &,
+    *,
+    ::ng-deep * {
+        font-weight: normal !important;
     }
 }
 
@@ -41,17 +53,34 @@
     }
     .cc-th {
         background: transparent;
-        font-weight: 700;
+        font-weight: normal;
         text-align: center;
         vertical-align: middle;
+    }
+    /* Grow the body row ~50% taller (cumulative: 10% + 20% + 20%) by adding
+       bottom padding to body cells (overrides the inline `padding:6pt`). */
+    tbody .cc-cell {
+        padding-bottom: 150pt !important;
     }
 }
 
 /* Footnote — inside the paper, directly below the table, like the reference. */
 .cc-footnote {
     margin-top: 6pt;
-    font-size: 9pt;
+    font-size: 12pt;
     line-height: 1.5;
+}
+
+/* Render the স্মারক নং line as a single flowing paragraph — Quill remarks HTML
+   would otherwise break onto its own line because Quill wraps content in <p>. */
+.cc-smarak-line {
+    .mv-rich,
+    ::ng-deep .mv-rich p,
+    ::ng-deep .mv-rich div {
+        display: inline;
+        margin: 0;
+    }
+    ::ng-deep .mv-rich * { display: inline; }
 }
 
 /* Print in landscape orientation. */
@@ -63,6 +92,10 @@
 
     :host {
         overflow: visible !important;
+    }
+
+    .cc-content-scale {
+        zoom: 1 !important;
     }
 
     :host .a4-paper {
