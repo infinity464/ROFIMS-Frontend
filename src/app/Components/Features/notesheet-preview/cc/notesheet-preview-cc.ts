@@ -34,6 +34,10 @@ interface EmployeeLine {
     text: string;            // "এসআই, মোঃ আলী হাসান (৮৬০৭১২২৩৩১)"
 }
 
+interface ApproverBlock {
+    name: string;            // "মেজর মোঃ শাহরিয়ার কবির"
+}
+
 @Component({
     selector: 'app-notesheet-preview-cc',
     standalone: true,
@@ -77,6 +81,11 @@ export class NotesheetPreviewCCComponent implements OnInit {
 
     /** Numbered Bangla list of employees rendered in column 2 (বাহিনীর পূর্ণ বিবরণ ও নাম). */
     employeeLines: EmployeeLine[] = [];
+
+    /** One signature block per Final Approver (name + own unit/HQ).
+     *  Empty when no approver is set — UI falls back to a single
+     *  default block using the requesting unit. */
+    approverBlocks: ApproverBlock[] = [];
 
     /** First employee's overview — used to resolve current unit / district / station. */
     private firstOverview: EmployeeServiceOverview | null = null;
@@ -131,6 +140,7 @@ export class NotesheetPreviewCCComponent implements OnInit {
             this.loadEmployees();
             this.loadDestinedMotherUnit();
             this.loadDestinedRABUnitHq();
+            this.loadApprovers();
         };
 
         const onError = (err: any) => {
@@ -246,6 +256,44 @@ export class NotesheetPreviewCCComponent implements OnInit {
         });
     }
 
+    /** Load every approver from movement.finalApproverIds and build one
+     *  signature block per approver. Uses GetEmployeePersonalServiceOverview
+     *  (direct lookup by employeeId) so the rank + name reliably resolve.
+     *  The trailing lines under "নির্বাহী কর্মকর্তা" are the shared
+     *  জেলা এবং স্টেশন lines (requesting unit), not per-approver. */
+    private loadApprovers(): void {
+        const ids = this.parseIntArray(this.movement?.finalApproverIds);
+        if (ids.length === 0) return;
+
+        const profileTasks = ids.map((id) =>
+            this.servingMembersService.getEmployeePersonalServiceOverview(id).pipe(
+                map((p) => p ?? null),
+                catchError(() => of<any | null>(null))
+            )
+        );
+
+        forkJoin(profileTasks).subscribe({
+            next: (profiles) => {
+                this.approverBlocks = profiles.map((profile) => ({
+                    name: this.formatApproverLineFromProfile(profile)
+                }));
+            }
+        });
+    }
+
+    /** Format "<rank> <name>" (Bangla preferred) from a personal-service-overview row. */
+    private formatApproverLineFromProfile(profile: any): string {
+        if (!profile) return '';
+        const rankBn = (profile.armyRankBN as string | null)
+            || (profile.armyRankId != null ? this.rankLabels.get(profile.armyRankId)?.bn : '')
+            || (profile.armyRank as string | null)
+            || '';
+        const nameBn = (profile.nameBN as string | null)
+            || (profile.nameEnglish as string | null)
+            || '';
+        return [rankBn, nameBn].filter(Boolean).join(' ').trim();
+    }
+
     private fetchOverview(info: EmployeeSearchInfoModel | null) {
         const e: any = info || {};
         const rabId: string = e.rabID ?? e.RABID ?? '';
@@ -329,6 +377,15 @@ export class NotesheetPreviewCCComponent implements OnInit {
     private applyDistrictAndStation(): void {
         const hq = this.battalionHqBn || this.battalionHqEn || '';
         this.districtAndStationBn = [this.sutroBn, hq].filter(Boolean).join(', ');
+    }
+
+    /** Comma-separated districtAndStationBn split into individual lines —
+     *  reused as the signature block at the bottom of the work-description cell. */
+    get districtAndStationLines(): string[] {
+        return (this.districtAndStationBn || '')
+            .split(',')
+            .map((l) => l.trim())
+            .filter((l) => l.length > 0);
     }
 
     private loadDestinedMotherUnit(): void {
@@ -537,26 +594,40 @@ export class NotesheetPreviewCCComponent implements OnInit {
         // `cs` covers complex-script shaping needed for Bangla.
         const font = { ascii: 'Nirmala UI', hAnsi: 'Nirmala UI', cs: 'Nirmala UI', hint: 'cs' as const };
         const dims = this.getPageDimensions();
+        // Printable width in landscape = page-height twips minus 2 × 0.5" margins (1440 twips).
+        // getPageDimensions() returns *portrait* dims, so `height` is the longer side.
+        const contentWidth = dims.height - 1440;
         const bnVehicle = this.vehicleLabelBn;
         const bnDate = this.letterDateBn;
         const bnTimeDate = this.departureTimeAndDateBn;
 
-        // Font sizes in half-points (1pt = 2 half-points).
-        const SZ_TITLE  = 28; // 14pt — main title
-        const SZ_BODY   = 20; // 10pt — body text (posting +2pt)
-        const SZ_TABLE  = 18; //  9pt — table header & cells (posting +2pt)
-        const SZ_FOOTER = 16; //  8pt — footnote (unchanged)
+        // Font sizes in half-points (1pt = 2 half-points). Cumulative −2pt vs. earlier.
+        const SZ_TITLE  = 24; // 12pt — main title
+        const SZ_BODY   = 16; //  8pt — body text
+        const SZ_TABLE  = 16; //  8pt — table header & cells (+1pt)
+        const SZ_FOOTER = 16; //  8pt — footnote (+2pt)
 
-        const para = (text: string, opts: { bold?: boolean; size?: number; align?: (typeof AlignmentType)[keyof typeof AlignmentType] } = {}) =>
-            new Paragraph({
+        // Bangla language tags on every run so LibreOffice / Word use the
+        // complex-script shaper. Without these, Bengali conjuncts render as
+        // empty boxes in the LibreOffice → PDF pipeline even though the same
+        // font renders them correctly in Word.
+        const bnLang = { value: 'bn-BD', bidirectional: 'bn-BD' } as any;
+
+        const para = (text: string, opts: { bold?: boolean; size?: number; align?: (typeof AlignmentType)[keyof typeof AlignmentType]; indentRight?: number } = {}) => {
+            const sz = opts.size ?? SZ_BODY;
+            return new Paragraph({
                 alignment: opts.align,
+                indent: opts.indentRight != null ? { right: opts.indentRight } : undefined,
                 children: [new TextRun({
                     text,
                     bold: opts.bold,
-                    size: opts.size ?? SZ_BODY,
-                    font
+                    size: sz,
+                    sizeComplexScript: sz,
+                    font,
+                    language: bnLang
                 })]
             });
+        };
 
         const noBorder = {
             top:    { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
@@ -660,11 +731,22 @@ export class NotesheetPreviewCCComponent implements OnInit {
         // 4pt 6pt padding used on the on-screen .cc-cell rule.
         const cellMargins = { top: 120, bottom: 120, left: 120, right: 120 };
 
-        const th = (text: string, opts: { rowSpan?: number; columnSpan?: number; width?: number } = {}) =>
+        // Compute explicit twip widths for each of the 8 grid columns. Using
+        // percentages alone isn't respected by LibreOffice during PDF rendering;
+        // explicit DXA widths + `columnWidths` on the Table guarantee the same
+        // layout in Word and the PDF/Print Preview pipeline.
+        // `contentWidth` already accounts for landscape page + 0.5" margins.
+        const colPctGrid = [5, 24, 6, 27, 10, 10, 14, 4]; // sums to 100
+        const colWidths = colPctGrid.map((p) => Math.round((contentWidth * p) / 100));
+        // Fix any rounding drift so the columns add up exactly to contentWidth.
+        const widthSum = colWidths.reduce((a, b) => a + b, 0);
+        colWidths[colWidths.length - 1] += (contentWidth - widthSum);
+
+        const th = (text: string, opts: { rowSpan?: number; columnSpan?: number; widthTwips?: number } = {}) =>
             new TableCell({
                 rowSpan: opts.rowSpan,
                 columnSpan: opts.columnSpan,
-                width: opts.width != null ? { size: opts.width, type: WidthType.PERCENTAGE } : undefined,
+                width: opts.widthTwips != null ? { size: opts.widthTwips, type: WidthType.DXA } : undefined,
                 borders: allBorder,
                 margins: cellMargins,
                 verticalAlign: 'center' as any,
@@ -674,19 +756,19 @@ export class NotesheetPreviewCCComponent implements OnInit {
         // Header rows of the bordered grid
         const headerRow1 = new TableRow({
             children: [
-                th('জেলা এবং স্টেশন',         { rowSpan: 2, width: 5 }),
-                th('বাহিনীর পূর্ণ বিবরণ ও নাম', { rowSpan: 2, width: 24 }),
-                th('গন্তব্যস্থল',               { rowSpan: 2, width: 5 }),
-                th('কাজের বিবরণ এবং যতজন চাওয়া হয়েছে', { rowSpan: 2, width: 28 }),
-                th(bnTimeDate,                 { columnSpan: 3 }),
-                th('মন্তব্য (ফেরার সময়, তারিখ ইত্যাদি লিখিতে হইবে)', { rowSpan: 2, width: 4 })
+                th('জেলা এবং স্টেশন',                              { rowSpan: 2, widthTwips: colWidths[0] }),
+                th('বাহিনীর পূর্ণ বিবরণ ও নাম',                      { rowSpan: 2, widthTwips: colWidths[1] }),
+                th('গন্তব্যস্থল',                                  { rowSpan: 2, widthTwips: colWidths[2] }),
+                th('কাজের বিবরণ এবং যতজন চাওয়া হয়েছে',          { rowSpan: 2, widthTwips: colWidths[3] }),
+                th(bnTimeDate, { columnSpan: 3, widthTwips: colWidths[4] + colWidths[5] + colWidths[6] }),
+                th('মন্তব্য (ফেরার সময়, তারিখ ইত্যাদি লিখিতে হইবে)', { rowSpan: 2, widthTwips: colWidths[7] })
             ]
         });
         const headerRow2 = new TableRow({
             children: [
-                th('প্রস্থান',                            { width: 10 }),
-                th('পৌঁছানোর',                          { width: 10 }),
-                th('ফেরত আসার অনুমতি (প্রদানকারী অফিসারের স্বাক্ষরসহ)', { width: 14 })
+                th('প্রস্থান',                                                 { widthTwips: colWidths[4] }),
+                th('পৌঁছানোর',                                                { widthTwips: colWidths[5] }),
+                th('ফেরত আসার অনুমতি (প্রদানকারী অফিসারের স্বাক্ষরসহ)', { widthTwips: colWidths[6] })
             ]
         });
 
@@ -695,24 +777,77 @@ export class NotesheetPreviewCCComponent implements OnInit {
         const employeeParas = this.employeeLines.map((l) => para(`${l.serial} ${l.text}`, { size: SZ_TABLE }));
 
         // Strip HTML from auth/remarks for Word output (keeps things simple — rich
-        // formatting is preserved in the screen preview only).
+        // formatting is preserved in the screen preview only). The text is then
+        // normalized to NFC and cleaned of zero-width joiners: Quill emits
+        // Bengali in decomposed form with stray ZWJ/ZWNJ marks, which causes
+        // LibreOffice's complex-script shaper to draw conjuncts as empty boxes
+        // in the PDF/Print Preview pipeline.
         const stripHtml = (html: string | null | undefined): string => {
             if (!html) return '';
             const div = document.createElement('div');
             div.innerHTML = html;
-            return (div.textContent || div.innerText || '').trim();
+            let s = (div.textContent || div.innerText || '').trim();
+            // Canonical composition — orders combining marks the way the
+            // OpenType GSUB tables in Nirmala UI / SolaimanLipi expect.
+            s = s.normalize('NFC');
+            // Strip ZWJ / ZWNJ and replace non-breaking space with a plain space.
+            s = s.replace(/[‌‍]/g, '').replace(/ /g, ' ');
+            return s;
         };
         const authText = stripHtml(m.auth);
         const remarksText = stripHtml(m.remarks);
 
-        const workDescParas: Paragraph[] = [];
-        workDescParas.push(para(`সূত্রঃ ${authText}`, { size: SZ_TABLE }));
-        workDescParas.push(para(`স্মারক নং - ${this.letterNoBn} ${remarksText}`, { size: SZ_TABLE }));
-        workDescParas.push(para(''));
-        workDescParas.push(para(''));
-        workDescParas.push(para('নির্বাহী কর্মকর্তা',  { size: SZ_TABLE, align: AlignmentType.CENTER }));
-        workDescParas.push(para('র‍্যাব ফোর্সেস সদর দপ্তর', { size: SZ_TABLE, align: AlignmentType.CENTER }));
-        workDescParas.push(para('কুর্মিটোলা, ঢাকা।',    { size: SZ_TABLE, align: AlignmentType.CENTER }));
+        // The work-description cell mixes Paragraphs (sutro / smarak) with a
+        // nested Table (the signature row). Side-by-side approver columns
+        // mirror the on-screen `inline-block` layout.
+        const workDescChildren: (Paragraph | Table)[] = [];
+        workDescChildren.push(para(`সূত্রঃ ${authText}`, { size: SZ_TABLE }));
+        workDescChildren.push(para(`স্মারক নং - ${this.letterNoBn} ${remarksText}`, { size: SZ_TABLE }));
+        // Larger top gap before the signature row.
+        for (let i = 0; i < 6; i++) workDescChildren.push(para(''));
+
+        // Build one cell per approver (or a single default cell when none).
+        const sigCellParas = (name: string, unitLines: string[]): Paragraph[] => {
+            const out: Paragraph[] = [];
+            if (name) {
+                out.push(para(name, { size: SZ_TABLE, align: AlignmentType.CENTER }));
+            }
+            out.push(para('নির্বাহী কর্মকর্তা', { size: SZ_TABLE, align: AlignmentType.CENTER }));
+            for (const line of unitLines) {
+                out.push(para(line, { size: SZ_TABLE, align: AlignmentType.CENTER }));
+            }
+            return out;
+        };
+
+        // Each signature column gets a fixed width; the whole sub-table is
+        // right-aligned within the work-description cell so the blocks sit
+        // on the right side instead of spreading across the full cell width.
+        const SIG_COL_TWIPS = 3000; // ~150pt — enough for the longest expected name
+        const sigCells: TableCell[] = [];
+        const sigBlocks = this.approverBlocks.length > 0
+            ? this.approverBlocks.map((b) => ({ name: b.name }))
+            : [{ name: '' }];
+        for (const block of sigBlocks) {
+            sigCells.push(new TableCell({
+                width: { size: SIG_COL_TWIPS, type: WidthType.DXA },
+                borders: noBorder,
+                margins: cellMargins,
+                verticalAlign: 'top' as any,
+                children: sigCellParas(block.name, this.districtAndStationLines)
+            }));
+        }
+
+        workDescChildren.push(new Table({
+            width: { size: SIG_COL_TWIPS * sigCells.length, type: WidthType.DXA },
+            columnWidths: sigCells.map(() => SIG_COL_TWIPS),
+            alignment: AlignmentType.RIGHT,
+            borders: {
+                ...noBorder,
+                insideHorizontal: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+                insideVertical:   { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }
+            },
+            rows: [new TableRow({ children: sigCells })]
+        }));
 
         const bodyRow = new TableRow({
             // Force a tall body row so the table fills the page even when there's
@@ -721,29 +856,34 @@ export class NotesheetPreviewCCComponent implements OnInit {
             height: { value: 5000, rule: HeightRule.ATLEAST },
             children: [
                 new TableCell({
+                    width: { size: colWidths[0], type: WidthType.DXA },
                     borders: allBorder,
                     margins: cellMargins,
                     verticalAlign: 'center' as any,
                     children: [para(this.districtAndStationBn || '---', { size: SZ_TABLE, align: AlignmentType.CENTER })]
                 }),
                 new TableCell({
+                    width: { size: colWidths[1], type: WidthType.DXA },
                     borders: allBorder,
                     margins: cellMargins,
                     children: bodyParagraphs(employeeParas)
                 }),
                 new TableCell({
+                    width: { size: colWidths[2], type: WidthType.DXA },
                     borders: allBorder,
                     margins: cellMargins,
                     verticalAlign: 'center' as any,
                     children: [para(this.destinationBn || '---', { size: SZ_TABLE, align: AlignmentType.CENTER })]
                 }),
                 new TableCell({
+                    width: { size: colWidths[3] + colWidths[4] + colWidths[5] + colWidths[6], type: WidthType.DXA },
                     borders: allBorder,
                     margins: cellMargins,
                     columnSpan: 4,
-                    children: workDescParas
+                    children: workDescChildren
                 }),
                 new TableCell({
+                    width: { size: colWidths[7], type: WidthType.DXA },
                     borders: allBorder,
                     margins: cellMargins,
                     children: [para('')]
@@ -752,7 +892,8 @@ export class NotesheetPreviewCCComponent implements OnInit {
         });
 
         const grid = new Table({
-            width: { size: 100, type: WidthType.PERCENTAGE },
+            width: { size: contentWidth, type: WidthType.DXA },
+            columnWidths: colWidths,
             rows: [headerRow1, headerRow2, bodyRow]
         });
 
@@ -762,6 +903,16 @@ export class NotesheetPreviewCCComponent implements OnInit {
         );
 
         return new Document({
+            styles: {
+                default: {
+                    document: {
+                        run: {
+                            font,
+                            language: bnLang
+                        }
+                    }
+                }
+            },
             sections: [{
                 properties: {
                     page: {
