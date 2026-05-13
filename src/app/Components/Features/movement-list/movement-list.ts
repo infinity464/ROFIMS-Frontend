@@ -1,7 +1,7 @@
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { Router } from '@angular/router';
 import { Subject, Subscription } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
 
@@ -50,7 +50,6 @@ import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directi
     styleUrl: './movement-list.scss'
 })
 export class MovementListComponent implements OnInit, OnDestroy {
-    private route = inject(ActivatedRoute);
     private router = inject(Router);
     private movementService = inject(MovementInfoService);
     private messageService = inject(MessageService);
@@ -62,8 +61,6 @@ export class MovementListComponent implements OnInit, OnDestroy {
     canUpdate = true;
     canDelete = true;
 
-    /** Optional filter from route data: when set, scopes the list to one MoveOrderType. */
-    moveOrderTypeFilter: MoveOrderType | null = null;
     title = 'Movement List';
 
     loading = false;
@@ -99,12 +96,6 @@ export class MovementListComponent implements OnInit, OnDestroy {
         this.canUpdate = perms.canUpdate;
         this.canDelete = perms.canDelete;
 
-        const data = this.route.snapshot.data ?? {};
-        this.moveOrderTypeFilter = (data['moveOrderType'] as MoveOrderType | undefined) ?? null;
-        const titleSuffix =
-            this.moveOrderTypeFilter != null ? this.moveOrderTypeMap.get(this.moveOrderTypeFilter) : null;
-        this.title = titleSuffix ? `Movement List — ${titleSuffix}` : 'Movement List';
-
         this.commonCodeService.getAllActiveCommonCodesType('MovementReason').subscribe({
             next: (rows: CommonCodeModel[]) => {
                 this.movementReasonMap.clear();
@@ -135,11 +126,9 @@ export class MovementListComponent implements OnInit, OnDestroy {
     private buildFilter(): MovementInfoFilterRequest {
         const toDateOnly = (d: Date | null): string | null =>
             d ? new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10) : null;
-        // Route-level scoping is enforced server-side via moveOrderType when set; otherwise the dropdown wins.
-        const moveOrderType = this.moveOrderTypeFilter ?? this.selectedMoveOrderType;
         return {
             searchText: this.searchText?.trim() || undefined,
-            moveOrderType: moveOrderType ?? undefined,
+            moveOrderType: this.selectedMoveOrderType ?? undefined,
             dateFrom: toDateOnly(this.filterDateFrom),
             dateTo: toDateOnly(this.filterDateTo)
         };
