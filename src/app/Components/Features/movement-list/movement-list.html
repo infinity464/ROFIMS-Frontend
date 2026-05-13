@@ -13,16 +13,30 @@
     </div>
 
     <!-- Filter bar -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
         <div>
             <label class="block mb-2 text-sm font-medium">Search</label>
             <p-iconfield iconPosition="left">
                 <p-inputicon><i class="pi pi-search"></i></p-inputicon>
                 <input pInputText type="text"
                        class="w-full"
-                       placeholder="Letter No, Type..."
+                       placeholder="Movement No, Type..."
                        (input)="onSearch($event)" />
             </p-iconfield>
+        </div>
+        <div>
+            <label class="block mb-2 text-sm font-medium">Move Order Type</label>
+            <p-select
+                [options]="moveOrderTypeOptions"
+                [(ngModel)]="selectedMoveOrderType"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="All"
+                [showClear]="true"
+                appendTo="body"
+                styleClass="w-full"
+                (onChange)="onFilterChange()"
+                (onClear)="onFilterChange()"></p-select>
         </div>
         <div>
             <label class="block mb-2 text-sm font-medium">Date from</label>
@@ -32,8 +46,8 @@
                 [showIcon]="true" iconDisplay="input"
                 placeholder="dd/mm/yyyy" [inputStyle]="{ width: '100%' }"
                 class="w-full"
-                (onSelect)="onDateFilterChange()"
-                (onClear)="onDateFilterChange()"></p-datepicker>
+                (onSelect)="onFilterChange()"
+                (onClear)="onFilterChange()"></p-datepicker>
         </div>
         <div>
             <label class="block mb-2 text-sm font-medium">Date to</label>
@@ -43,8 +57,8 @@
                 [showIcon]="true" iconDisplay="input"
                 placeholder="dd/mm/yyyy" [inputStyle]="{ width: '100%' }"
                 class="w-full"
-                (onSelect)="onDateFilterChange()"
-                (onClear)="onDateFilterChange()"></p-datepicker>
+                (onSelect)="onFilterChange()"
+                (onClear)="onFilterChange()"></p-datepicker>
         </div>
         <div class="flex items-end">
             <button type="button" pButton
@@ -59,9 +73,12 @@
     <!-- List -->
     <p-table
         [value]="rows"
+        [lazy]="true"
+        (onLazyLoad)="onLazyLoad($event)"
         [paginator]="true"
         [first]="first"
         [rows]="pageSize"
+        [totalRecords]="totalRecords"
         [rowsPerPageOptions]="[10, 25, 50]"
         [loading]="loading"
         styleClass="p-datatable-sm"
@@ -70,8 +87,8 @@
         <ng-template pTemplate="header">
             <tr>
                 <th style="width:60px">#</th>
-                <th>Letter No</th>
-                <th>Letter Date</th>
+                <th>Movement No</th>
+                <th>Date</th>
                 <th>Movement Type</th>
                 <th>Move Order Type</th>
                 <th>Reason</th>

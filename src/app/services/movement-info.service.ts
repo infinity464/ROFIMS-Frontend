@@ -3,6 +3,21 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '@/Core/Environments/environment';
 import { MovementInfoModel } from '@/models/movement-info.model';
+import { PagedResponse } from '@/Core/Models/Pagination';
+
+export interface MovementInfoFilterRequest {
+    searchText?: string;
+    moveOrderType?: number | null;
+    /** ISO date (yyyy-MM-dd). */
+    dateFrom?: string | null;
+    /** ISO date (yyyy-MM-dd). */
+    dateTo?: string | null;
+}
+
+export interface MovementInfoPaginatedFilterRequest {
+    pagination: { page_no: number; row_per_page: number };
+    filter: MovementInfoFilterRequest;
+}
 
 @Injectable({ providedIn: 'root' })
 export class MovementInfoService {
@@ -11,6 +26,10 @@ export class MovementInfoService {
 
     getAll(): Observable<MovementInfoModel[]> {
         return this.http.get<MovementInfoModel[]>(`${this.baseUrl}/GetAll`);
+    }
+
+    getPaginatedFiltered(request: MovementInfoPaginatedFilterRequest): Observable<PagedResponse<MovementInfoModel>> {
+        return this.http.post<PagedResponse<MovementInfoModel>>(`${this.baseUrl}/GetPaginatedFiltered`, request);
     }
 
     getById(movementId: number): Observable<MovementInfoModel> {

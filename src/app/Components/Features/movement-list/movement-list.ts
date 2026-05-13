@@ -1,21 +1,24 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Subject, Subscription } from 'rxjs';
+import { debounceTime } from 'rxjs/operators';
 
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
-import { TableModule } from 'primeng/table';
+import { TableModule, TableLazyLoadEvent } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
 import { DatePickerModule } from 'primeng/datepicker';
+import { SelectModule } from 'primeng/select';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { Toast } from 'primeng/toast';
 import { ConfirmDialog } from 'primeng/confirmdialog';
 import { MessageService, ConfirmationService } from 'primeng/api';
 
-import { MovementInfoService } from '@/services/movement-info.service';
+import { MovementInfoService, MovementInfoFilterRequest } from '@/services/movement-info.service';
 import { MovementInfoModel } from '@/models/movement-info.model';
 import { UserMenuService } from '@/services/user-menu.service';
 import { CommonCodeService } from '@/services/common-code-service';
@@ -35,6 +38,7 @@ import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directi
         TagModule,
         TooltipModule,
         DatePickerModule,
+        SelectModule,
         IconFieldModule,
         InputIconModule,
         Toast,
@@ -45,7 +49,7 @@ import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directi
     templateUrl: './movement-list.html',
     styleUrl: './movement-list.scss'
 })
-export class MovementListComponent implements OnInit {
+export class MovementListComponent implements OnInit, OnDestroy {
     private route = inject(ActivatedRoute);
     private router = inject(Router);
     private movementService = inject(MovementInfoService);
@@ -58,28 +62,36 @@ export class MovementListComponent implements OnInit {
     canUpdate = true;
     canDelete = true;
 
-    /** Optional filter from route data: when set, only rows with this MoveOrderType are shown. */
+    /** Optional filter from route data: when set, scopes the list to one MoveOrderType. */
     moveOrderTypeFilter: MoveOrderType | null = null;
     title = 'Movement List';
 
     loading = false;
-    private _fullList: MovementInfoModel[] = [];
     rows: MovementInfoModel[] = [];
+    totalRecords = 0;
 
     /** Filters */
     searchText = '';
     filterDateFrom: Date | null = null;
     filterDateTo: Date | null = null;
+    selectedMoveOrderType: number | null = null;
+    readonly moveOrderTypeOptions = MoveOrderTypeOptions;
 
     /** Pagination */
     first = 0;
     pageSize = 10;
+    pageNumber = 1;
 
     /** Maps for display */
     readonly moveOrderTypeMap = new Map<number, string>(MoveOrderTypeOptions.map((o) => [o.value, o.label]));
     readonly movementTypeMap = new Map<number, string>(MovementTypeOptions.map((o) => [o.value, o.label]));
-    /** MovementReason CommonCode id → display label. */
+    /** MovementReason CommonCode id → display label (Bangla preferred). */
     readonly movementReasonMap = new Map<number, string>();
+
+    private searchSubject = new Subject<string>();
+    private searchSub?: Subscription;
+    /** Initial p-table lazy event fires on first load; suppress our manual call to avoid a duplicate request. */
+    private firstLazyLoadHandled = false;
 
     ngOnInit(): void {
         const perms = this.userMenuService.getPermissionsByRoute(this.router.url);
@@ -87,91 +99,104 @@ export class MovementListComponent implements OnInit {
         this.canUpdate = perms.canUpdate;
         this.canDelete = perms.canDelete;
 
-        // Read route data — undefined = no filter (full list)
         const data = this.route.snapshot.data ?? {};
         this.moveOrderTypeFilter = (data['moveOrderType'] as MoveOrderType | undefined) ?? null;
         const titleSuffix =
             this.moveOrderTypeFilter != null ? this.moveOrderTypeMap.get(this.moveOrderTypeFilter) : null;
         this.title = titleSuffix ? `Movement List — ${titleSuffix}` : 'Movement List';
 
-        // Cache CommonCode 'MovementReason' for the Reason column.
         this.commonCodeService.getAllActiveCommonCodesType('MovementReason').subscribe({
             next: (rows: CommonCodeModel[]) => {
                 this.movementReasonMap.clear();
                 for (const r of rows || []) {
                     if (r.codeId == null) continue;
-                    this.movementReasonMap.set(r.codeId, r.codeValueEN || '');
+                    this.movementReasonMap.set(r.codeId, r.codeValueBN || r.codeValueEN || '');
                 }
             }
         });
 
+        this.searchSub = this.searchSubject.pipe(debounceTime(300)).subscribe(() => this.reload());
+    }
+
+    ngOnDestroy(): void {
+        this.searchSub?.unsubscribe();
+    }
+
+    onLazyLoad(event: TableLazyLoadEvent): void {
+        const rows = event.rows ?? this.pageSize;
+        const first = event.first ?? 0;
+        this.pageSize = rows;
+        this.first = first;
+        this.pageNumber = Math.floor(first / rows) + 1;
+        this.firstLazyLoadHandled = true;
         this.loadList();
     }
 
-    loadList() {
+    private buildFilter(): MovementInfoFilterRequest {
+        const toDateOnly = (d: Date | null): string | null =>
+            d ? new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10) : null;
+        // Route-level scoping is enforced server-side via moveOrderType when set; otherwise the dropdown wins.
+        const moveOrderType = this.moveOrderTypeFilter ?? this.selectedMoveOrderType;
+        return {
+            searchText: this.searchText?.trim() || undefined,
+            moveOrderType: moveOrderType ?? undefined,
+            dateFrom: toDateOnly(this.filterDateFrom),
+            dateTo: toDateOnly(this.filterDateTo)
+        };
+    }
+
+    private loadList(): void {
         this.loading = true;
-        this.movementService.getAll().subscribe({
-            next: (data) => {
-                const all = Array.isArray(data) ? data : [];
-                this._fullList = this.moveOrderTypeFilter != null
-                    ? all.filter((r) => r.moveOrderType === this.moveOrderTypeFilter)
-                    : all;
-                this.applyFilters();
-                this.loading = false;
-            },
-            error: (err) => {
-                console.error('Failed to load movements', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: err?.error?.message || 'Failed to load movements'
-                });
-                this._fullList = [];
-                this.rows = [];
-                this.loading = false;
-            }
-        });
+        this.movementService
+            .getPaginatedFiltered({
+                pagination: { page_no: this.pageNumber, row_per_page: this.pageSize },
+                filter: this.buildFilter()
+            })
+            .subscribe({
+                next: (res) => {
+                    this.rows = res.datalist ?? [];
+                    this.totalRecords = res.pages?.rows ?? 0;
+                    this.loading = false;
+                },
+                error: (err) => {
+                    console.error('Failed to load movements', err);
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'Error',
+                        detail: err?.error?.message || 'Failed to load movements'
+                    });
+                    this.rows = [];
+                    this.totalRecords = 0;
+                    this.loading = false;
+                }
+            });
     }
 
-    applyFilters() {
-        const term = (this.searchText || '').toLowerCase().trim();
-        const from = this.filterDateFrom ? this.toIsoDate(this.filterDateFrom) : null;
-        const to = this.filterDateTo ? this.toIsoDate(this.filterDateTo) : null;
-
-        this.rows = this._fullList.filter((r) => {
-            // Text search: Letter No, Move Order Type label, Movement Type label
-            if (term) {
-                const haystack = [
-                    r.letterNo ?? '',
-                    this.moveOrderTypeMap.get(r.moveOrderType as number) ?? '',
-                    this.movementTypeMap.get(r.movementType as number) ?? ''
-                ].join(' ').toLowerCase();
-                if (!haystack.includes(term)) return false;
-            }
-            // Date range — match against letterDate, fallback to createdDate
-            const rowDateStr = (r.letterDate ?? r.createdDate ?? '').slice(0, 10);
-            if (from && rowDateStr && rowDateStr < from) return false;
-            if (to && rowDateStr && rowDateStr > to) return false;
-            return true;
-        });
+    /** Reset to first page and reload — called when any filter changes. */
+    private reload(): void {
+        this.pageNumber = 1;
         this.first = 0;
+        // If the table hasn't fired its initial lazy load yet, skip — it'll trigger the first request.
+        if (!this.firstLazyLoadHandled) return;
+        this.loadList();
     }
 
-    onSearch(event: Event) {
+    onSearch(event: Event): void {
         const target = event.target as HTMLInputElement;
         this.searchText = target.value || '';
-        this.applyFilters();
+        this.searchSubject.next(this.searchText);
     }
 
-    onDateFilterChange() {
-        this.applyFilters();
+    onFilterChange(): void {
+        this.reload();
     }
 
-    clearFilters() {
+    clearFilters(): void {
         this.searchText = '';
         this.filterDateFrom = null;
         this.filterDateTo = null;
-        this.applyFilters();
+        this.selectedMoveOrderType = null;
+        this.reload();
     }
 
     employeeCount(row: MovementInfoModel): number {
@@ -201,7 +226,6 @@ export class MovementListComponent implements OnInit {
     }
 
     onView(row: MovementInfoModel) {
-        // Route to the matching letter preview per MoveOrderType.
         switch (row.moveOrderType) {
             case MoveOrderType.Article47Handover:
                 this.router.navigate(['/notesheet-preview/article-47-handover'], { queryParams: { id: row.movementId } });
@@ -216,7 +240,6 @@ export class MovementListComponent implements OnInit {
                 this.router.navigate(['/notesheet-preview/cc'], { queryParams: { id: row.movementId } });
                 return;
             default:
-                // Unknown types fall back to the form in view mode.
                 this.router.navigate(['/movement-info'], { queryParams: { id: row.movementId, mode: 'view' } });
                 return;
         }
@@ -255,12 +278,5 @@ export class MovementListComponent implements OnInit {
                 });
             }
         });
-    }
-
-    private toIsoDate(d: Date): string {
-        const yyyy = d.getFullYear();
-        const mm = `${d.getMonth() + 1}`.padStart(2, '0');
-        const dd = `${d.getDate()}`.padStart(2, '0');
-        return `${yyyy}-${mm}-${dd}`;
     }
 }
