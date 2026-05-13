@@ -613,11 +613,12 @@ export class NotesheetPreviewCCComponent implements OnInit {
         // font renders them correctly in Word.
         const bnLang = { value: 'bn-BD', bidirectional: 'bn-BD' } as any;
 
-        const para = (text: string, opts: { bold?: boolean; size?: number; align?: (typeof AlignmentType)[keyof typeof AlignmentType]; indentRight?: number } = {}) => {
+        const para = (text: string, opts: { bold?: boolean; size?: number; align?: (typeof AlignmentType)[keyof typeof AlignmentType]; indentRight?: number; spacingBefore?: number } = {}) => {
             const sz = opts.size ?? SZ_BODY;
             return new Paragraph({
                 alignment: opts.align,
                 indent: opts.indentRight != null ? { right: opts.indentRight } : undefined,
+                spacing: opts.spacingBefore != null ? { before: opts.spacingBefore } : undefined,
                 children: [new TextRun({
                     text,
                     bold: opts.bold,
@@ -899,7 +900,8 @@ export class NotesheetPreviewCCComponent implements OnInit {
 
         const footnote = para(
             'দ্রষ্টব্য - কোন বিলম্ব হইলে সঙ্গে সঙ্গে শেষ চার কলামের লিখিত বিবরণ খুঁজিয়া বাহির করিতে হইবে। বিলম্বকারীকে অভিযুক্ত করিতে হইবে। তদন্তকারী অফিসার তাহার কৈফিয়ত হুকুমনামার পর পৃষ্ঠায় লিখিবেন এবং সুপারের কাছে আদেশের জন্য পাঠাইবেন।',
-            { size: SZ_FOOTER }
+            // 4px top margin at 96 DPI ≈ 60 twips.
+            { size: SZ_FOOTER, spacingBefore: 60 }
         );
 
         return new Document({
