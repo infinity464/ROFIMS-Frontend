@@ -107,6 +107,9 @@ export class MovementInfoComponent implements OnInit {
     editingId: number | null = null;
     /** LetterNo loaded from the existing row during edit — preserved on update. */
     private editingLetterNo: string | null = null;
+    /** PublicToken loaded from the existing row during edit — preserved on update;
+     *  backend generates a fresh token on insert when this is null. */
+    private editingPublicToken: string | null = null;
 
     selectedEmployees: MovementEmployeeRow[] = [];
     showAllEmployees = false;
@@ -231,6 +234,8 @@ export class MovementInfoComponent implements OnInit {
     private patchFromMovement(row: any): void {
         // Preserve the existing LetterNo so update doesn't wipe it.
         this.editingLetterNo = (row.letterNo ?? null) as string | null;
+        // Preserve the existing PublicToken so the QR-code URL stays stable on update.
+        this.editingPublicToken = (row.publicToken ?? null) as string | null;
 
         // Choose which destined unit is in use based on whichever id is populated.
         const target: 'mother' | 'rab' = row.destinedRABUnitId != null ? 'rab' : 'mother';
@@ -780,6 +785,7 @@ export class MovementInfoComponent implements OnInit {
             // On update keep the previously assigned LetterNo; on insert send null so
             // InsertMovementInfoHandler can mint a fresh one from MovementLetterNumberConfig.
             letterNo: this.editingId ? this.editingLetterNo : null,
+            publicToken: this.editingId ? this.editingPublicToken : null,
             letterDate: this.toIsoDate(v.letterDate),
             employeeIds: JSON.stringify(this.selectedEmployees.map((e) => e.employeeID)),
             finalApproverIds: finalApproverIds.length > 0 ? JSON.stringify(finalApproverIds) : null,
@@ -871,6 +877,7 @@ export class MovementInfoComponent implements OnInit {
     resetForm() {
         this.editingId = null;
         this.editingLetterNo = null;
+        this.editingPublicToken = null;
         this.selectedEmployees = [];
         this.takeoverPerson = null;
         this.letterRecipientsList = [];

@@ -67,8 +67,13 @@
                     <div style="font-size:19pt;">কর্তব্যে প্রেরিত পুলিশ অফিসার কর্তৃক বহনীয় হুকুমনামা</div>
                     <div style="font-size:12pt; margin-top:3pt;">(নিয়ন্ত্রণ নং ১৬৩ এবং ৯০৯)</div>
                 </div>
-                <!-- Right: (reference number removed) -->
-                <div style="flex:0 0 22%;"></div>
+                <!-- Right: QR code (encodes the URL to this preview) -->
+                <div style="flex:0 0 22%; text-align:right;">
+                    @if (qrDataUrl) {
+                        <img [src]="qrDataUrl" alt="QR"
+                             style="width:80pt; height:80pt; display:inline-block;" />
+                    }
+                </div>
             </div>
 
             <!-- Second header row: M CC No (left)  +  Govt vehicle / date (right) -->

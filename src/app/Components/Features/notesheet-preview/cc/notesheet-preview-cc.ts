@@ -11,9 +11,11 @@ import { forkJoin, of, firstValueFrom } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import {
     Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
-    WidthType, BorderStyle, AlignmentType, PageOrientation, HeightRule
+    WidthType, BorderStyle, AlignmentType, PageOrientation, HeightRule,
+    ImageRun
 } from 'docx';
 import { saveAs } from 'file-saver';
+import * as QRCode from 'qrcode';
 import { environment } from '@/Core/Environments/environment';
 
 import { MovementInfoService } from '@/services/movement-info.service';
@@ -25,7 +27,7 @@ import { EmployeeServiceOverview } from '@/models/employee-service-overview.mode
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { OrganizationService } from '@/Components/basic-setup/organization-setup/services/organization-service';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
-import { MovementVehicle, MovementVehicleOptions } from '@/models/enums';
+import { MovementVehicleOptions } from '@/models/enums';
 
 interface EmployeeLine {
     serial: string;          // ১। ২। … in Bangla
@@ -58,6 +60,10 @@ export class NotesheetPreviewCCComponent implements OnInit {
     loading = true;
     error: string | null = null;
     movement: MovementInfoModel | null = null;
+
+    /** QR code (data URL, PNG) — encodes the absolute URL of this preview.
+     *  Rendered top-right on screen and embedded in the Word export. */
+    qrDataUrl: string | null = null;
 
     /** Export state. */
     exportingPdf = false;
@@ -107,39 +113,69 @@ export class NotesheetPreviewCCComponent implements OnInit {
         this.loadDistrictLabels();
         this.loadPrefixLabels();
 
+        // Accept either an opaque PublicToken in the path (`/cc/:token` — used by
+        // the QR code) or a legacy numeric `?id=N` query param (used internally
+        // from the movement list).
+        const tokenParam = this.route.snapshot.paramMap.get('token');
         const idParam = this.route.snapshot.queryParamMap.get('id');
-        const id = idParam ? Number(idParam) : NaN;
-        if (!Number.isFinite(id) || id <= 0) {
-            this.error = 'Missing or invalid movement id (?id=N).';
+
+        const onLoaded = (row: any, label: string) => {
+            if (!row || !row.movementId) {
+                this.error = `Movement ${label} not found.`;
+                this.loading = false;
+                return;
+            }
+            this.movement = row as MovementInfoModel;
+            this.buildHeaderLines();
+            this.generateQrCode();
+            this.loadEmployees();
+            this.loadDestinedMotherUnit();
+            this.loadDestinedRABUnitHq();
+        };
+
+        const onError = (err: any) => {
+            console.error('Failed to load movement', err);
+            this.error = err?.error?.message || 'Failed to load movement.';
             this.loading = false;
+            this.messageService.add({
+                severity: 'error',
+                summary: 'Error',
+                detail: this.error || 'Failed to load movement.'
+            });
+        };
+
+        if (tokenParam) {
+            this.movementService.getByPublicToken(tokenParam).subscribe({
+                next: (data) => onLoaded(Array.isArray(data) ? data[0] : data, `token=${tokenParam}`),
+                error: onError
+            });
             return;
         }
 
+        const id = idParam ? Number(idParam) : NaN;
+        if (!Number.isFinite(id) || id <= 0) {
+            this.error = 'Missing or invalid movement id (?id=N or /:token).';
+            this.loading = false;
+            return;
+        }
         this.movementService.getById(id).subscribe({
-            next: (data) => {
-                const row: any = Array.isArray(data) ? data[0] : data;
-                if (!row || !row.movementId) {
-                    this.error = `Movement #${id} not found.`;
-                    this.loading = false;
-                    return;
-                }
-                this.movement = row as MovementInfoModel;
-                this.buildHeaderLines();
-                this.loadEmployees();
-                this.loadDestinedMotherUnit();
-                this.loadDestinedRABUnitHq();
-            },
-            error: (err) => {
-                console.error('Failed to load movement', err);
-                this.error = err?.error?.message || 'Failed to load movement.';
-                this.loading = false;
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: this.error || 'Failed to load movement.'
-                });
-            }
+            next: (data) => onLoaded(Array.isArray(data) ? data[0] : data, `#${id}`),
+            error: onError
         });
+    }
+
+    /** Generate a QR code (PNG data URL) that encodes the absolute URL of this
+     *  CC preview. Prefers the opaque PublicToken so external scanners cannot
+     *  enumerate movements by sequential ID; falls back to `?id=` if no token. */
+    private generateQrCode(): void {
+        if (!this.movement?.movementId) return;
+        const path = this.movement.publicToken
+            ? `/notesheet-preview/cc/${this.movement.publicToken}`
+            : `/notesheet-preview/cc?id=${this.movement.movementId}`;
+        const url = new URL(path, window.location.origin).toString();
+        QRCode.toDataURL(url, { width: 160, margin: 1 })
+            .then((dataUrl) => { this.qrDataUrl = dataUrl; })
+            .catch((err) => { console.error('QR code generation failed', err); });
     }
 
     private buildHeaderLines(): void {
@@ -525,7 +561,27 @@ export class NotesheetPreviewCCComponent implements OnInit {
         const subtitlePara = para('(নিয়ন্ত্রণ নং ১৬৩ এবং ৯০৯)',
                                   { size: SZ_BODY, align: AlignmentType.CENTER });
 
-        // Form-numbers strip — 2 columns: form numbers (left) / (blank right)
+        // Right-side QR image paragraph (if available).
+        // docx v9+ requires the `type` discriminator on ImageRun (otherwise the
+        // generated .docx is rejected by Word with "we found a problem with its
+        // contents"). The data URL we produced via qrcode is PNG.
+        const qrParagraphs: Paragraph[] = [];
+        if (this.qrDataUrl) {
+            const base64 = this.qrDataUrl.split(',')[1] ?? '';
+            const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+            qrParagraphs.push(new Paragraph({
+                alignment: AlignmentType.RIGHT,
+                children: [new ImageRun({
+                    type: 'png',
+                    data: bytes,
+                    transformation: { width: 80, height: 80 }
+                })]
+            }));
+        } else {
+            qrParagraphs.push(para(''));
+        }
+
+        // Form-numbers strip — 2 columns: form numbers (left) / QR (right)
         const formNumbersStrip = new Table({
             width: { size: 100, type: WidthType.PERCENTAGE },
             borders: {
@@ -547,7 +603,7 @@ export class NotesheetPreviewCCComponent implements OnInit {
                         new TableCell({
                             width: { size: 50, type: WidthType.PERCENTAGE },
                             borders: noBorder,
-                            children: [para('')]
+                            children: qrParagraphs
                         })
                     ]
                 })

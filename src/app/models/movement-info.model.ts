@@ -4,6 +4,8 @@ export interface MovementInfoModel {
     movementId: number;
     /** Generated letter number from MovementLetterNumberConfig (per MoveOrderType). */
     letterNo: string | null;
+    /** Opaque, URL-safe random token used in the QR code (set on insert by the API). */
+    publicToken: string | null;
     /** ISO date string for the letter (yyyy-MM-dd). */
     letterDate: string | null;
     /** JSON-serialised array of EmployeeIds (one or many) */

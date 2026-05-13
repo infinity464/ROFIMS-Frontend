@@ -17,6 +17,13 @@ export class MovementInfoService {
         return this.http.get<MovementInfoModel>(`${this.baseUrl}/GetFilteredByKeysAsyn/${movementId}`);
     }
 
+    /** Lookup a movement by opaque PublicToken (used by the QR-code URL). */
+    getByPublicToken(token: string): Observable<MovementInfoModel | MovementInfoModel[]> {
+        return this.http.get<MovementInfoModel | MovementInfoModel[]>(
+            `${this.baseUrl}/GetByPublicToken/${encodeURIComponent(token)}`
+        );
+    }
+
     save(model: MovementInfoModel): Observable<any> {
         return this.http.post(`${this.baseUrl}/SaveAsyn`, model);
     }

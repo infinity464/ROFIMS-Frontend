@@ -209,6 +209,7 @@ export const appRoutes: Routes = [
             { path: 'notesheet-preview/article-47-handover', component: NotesheetPreviewArticle47HandoverComponent },
             { path: 'notesheet-preview/mo', component: NotesheetPreviewMOComponent },
             { path: 'notesheet-preview/cc', component: NotesheetPreviewCCComponent },
+            { path: 'notesheet-preview/cc/:token', component: NotesheetPreviewCCComponent },
             { path: 'basic-setup/relationship', component: Relationship },
             { path: 'basic-setup/marital-status', component: MaritalStatus },
             { path: 'basic-setup/occupation', component: Occupation },
