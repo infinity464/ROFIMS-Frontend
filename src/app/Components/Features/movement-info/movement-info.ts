@@ -440,7 +440,7 @@ export class MovementInfoComponent implements OnInit {
         this.commonCodeService.getAllActiveCommonCodesType('MovementReason').subscribe({
             next: (rows: CommonCodeModel[]) => {
                 this.movementReasonOptions = (rows || []).map((r) => ({
-                    label: r.codeValueBN || r.codeValueEN,
+                    label: r.codeValueBN || '',
                     value: r.codeId
                 }));
             }
@@ -568,10 +568,11 @@ export class MovementInfoComponent implements OnInit {
     }
 
     saveNewReason() {
-        const en = (this.newReasonNameEN || '').trim();
-        if (!en) return;
-
         const bn = (this.newReasonNameBN || '').trim();
+        if (!bn) return;
+
+        // Bangla-only flow: backend CommonCode row requires an EN value, so mirror BN into EN.
+        const en = bn;
         const currentUser = this.sharedService.getCurrentUser();
         const now = this.sharedService.getCurrentDateTime();
 
@@ -580,7 +581,7 @@ export class MovementInfoComponent implements OnInit {
             codeId: 0,
             codeType: 'MovementReason',
             codeValueEN: en,
-            codeValueBN: bn || null,
+            codeValueBN: bn,
             commCode: null,
             displayCodeValueEN: null,
             displayCodeValueBN: null,
@@ -600,11 +601,11 @@ export class MovementInfoComponent implements OnInit {
                 this.commonCodeService.getAllActiveCommonCodesType('MovementReason').subscribe({
                     next: (rows: CommonCodeModel[]) => {
                         this.movementReasonOptions = (rows || []).map((r) => ({
-                            label: r.codeValueBN || r.codeValueEN,
+                            label: r.codeValueBN || '',
                             value: r.codeId
                         }));
-                        // Auto-select the row we just inserted, matched on the EN value the user typed.
-                        const matchRow = (rows || []).find((r) => r.codeValueEN === en);
+                        // Auto-select the row we just inserted, matched on the BN value the user typed.
+                        const matchRow = (rows || []).find((r) => r.codeValueBN === bn);
                         if (matchRow) {
                             this.form.patchValue({ movementReasonId: matchRow.codeId });
                         }

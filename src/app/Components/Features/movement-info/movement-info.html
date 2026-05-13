@@ -463,18 +463,12 @@
           [closable]="true"
           [style]="{ width: '520px' }"
           appendTo="body">
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+    <div class="mt-2">
         <div class="mv-field">
-            <label>Reason (English) <span class="p-error">*</span></label>
-            <input pInputText class="w-full"
-                   [(ngModel)]="newReasonNameEN"
-                   placeholder="Enter reason in English" />
-        </div>
-        <div class="mv-field">
-            <label>Reason (Bangla)</label>
+            <label>Reason <span class="p-error">*</span></label>
             <input pInputText class="w-full"
                    [(ngModel)]="newReasonNameBN"
-                   placeholder="Enter reason in Bangla" />
+                   placeholder="Enter reason" />
         </div>
     </div>
     <ng-template pTemplate="footer">
@@ -486,7 +480,7 @@
         <p-button label="Save"
                   icon="pi pi-check"
                   [loading]="isSavingReason"
-                  [disabled]="!newReasonNameEN?.trim()"
+                  [disabled]="!newReasonNameBN?.trim()"
                   (onClick)="saveNewReason()"></p-button>
     </ng-template>
 </p-dialog>
