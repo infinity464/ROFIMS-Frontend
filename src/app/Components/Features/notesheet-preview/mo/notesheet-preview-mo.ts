@@ -535,14 +535,24 @@ export class NotesheetPreviewMOComponent implements OnInit {
             right:  { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
         };
 
-        const para = (text: string, opts: { bold?: boolean; size?: number; align?: (typeof AlignmentType)[keyof typeof AlignmentType]; spacingBefore?: number; spacingAfter?: number } = {}) => {
+        const para = (text: string, opts: { bold?: boolean; size?: number; align?: (typeof AlignmentType)[keyof typeof AlignmentType]; spacingBefore?: number; spacingAfter?: number; lineTwips?: number } = {}) => {
             const sz = opts.size ?? SZ_BODY;
-            const hasSpacing = opts.spacingBefore != null || opts.spacingAfter != null;
+            const hasSpacing = opts.spacingBefore != null || opts.spacingAfter != null || opts.lineTwips != null;
+            // `line` in twips with `lineRule: 'atLeast'` sets the minimum line
+            // height — used to give multi-line cell content extra inter-line
+            // breathing room without affecting single-line rows.
+            const spacing: any = hasSpacing ? {} : undefined;
+            if (hasSpacing) {
+                if (opts.spacingBefore != null) spacing.before = opts.spacingBefore;
+                if (opts.spacingAfter != null)  spacing.after  = opts.spacingAfter;
+                if (opts.lineTwips != null) {
+                    spacing.line = opts.lineTwips;
+                    spacing.lineRule = 'atLeast';
+                }
+            }
             return new Paragraph({
                 alignment: opts.align,
-                spacing: hasSpacing
-                    ? { before: opts.spacingBefore ?? 0, after: opts.spacingAfter ?? 0 }
-                    : undefined,
+                spacing,
                 children: [new TextRun({
                     text, bold: opts.bold, size: sz, sizeComplexScript: sz, font, language: bnLang
                 })]
@@ -575,6 +585,10 @@ export class NotesheetPreviewMOComponent implements OnInit {
         const COLON_W  = 280;
         const VALUE_W  = contentWidth - SERIAL_W - LABEL_W - COLON_W;
 
+        // Line height for body cells: 10pt text × (240 + 40 twips) ≈ 14pt
+        // single-line height (+ 2pt vs the default 12pt). Used for multi-line
+        // values so wrapped lines (e.g. মন্তব্য, গমনের প্রাধিকার) breathe.
+        const CELL_LINE = 280;
         const rowCell = (text: string | Paragraph[], widthTwips: number): TableCell => new TableCell({
             width: { size: widthTwips, type: WidthType.DXA },
             borders: noBorder,
@@ -582,7 +596,7 @@ export class NotesheetPreviewMOComponent implements OnInit {
             // `padding:4pt 0` rule and gives ~2pt extra line gap per row.
             margins: { top: 80, bottom: 80, left: 0, right: 0 },
             verticalAlign: 'top' as any,
-            children: typeof text === 'string' ? [para(text)] : text
+            children: typeof text === 'string' ? [para(text, { lineTwips: CELL_LINE })] : text
         });
         const dataRow = (serial: number, label: string, value: string): TableRow => new TableRow({
             children: [
@@ -642,9 +656,9 @@ export class NotesheetPreviewMOComponent implements OnInit {
             ]
         });
 
-        // 7pt before + 7pt after each line (140 twips = 7pt). +2pt vs previous.
+        // 8pt before + 8pt after each line (160 twips = 8pt). +1pt vs previous.
         const recipientParas = this.recipientLines.length > 0
-            ? this.recipientLines.map((l) => para(l, { size: SZ_FOOTER, spacingBefore: 140, spacingAfter: 140 }))
+            ? this.recipientLines.map((l) => para(l, { size: SZ_FOOTER, spacingBefore: 160, spacingAfter: 160 }))
             : [];
 
         return new Document({

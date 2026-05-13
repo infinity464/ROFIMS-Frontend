@@ -9,10 +9,31 @@
         <button type="button" pButton label="Edit" icon="pi pi-pencil"
                 [outlined]="true"
                 (click)="onEdit()" [disabled]="loading || !!error || !movement"></button>
-        <button type="button" pButton label="Print" icon="pi pi-print"
-                [outlined]="true" (click)="onPrint()" [disabled]="loading || !!error"></button>
+        <button type="button" pButton label="Word" icon="pi pi-file-word"
+                [outlined]="true" (click)="exportWord()"
+                [disabled]="loading || !!error || !movement"></button>
+        <button type="button" pButton label="PDF" icon="pi pi-file-pdf"
+                [outlined]="true" (click)="exportPdf()"
+                [disabled]="loading || !!error || !movement || exportingPdf"
+                [loading]="exportingPdf"></button>
+        <button type="button" pButton label="Print Preview" icon="pi pi-print"
+                [outlined]="true" (click)="printPreview()"
+                [disabled]="loading || !!error || !movement || printingPreview"
+                [loading]="printingPreview"></button>
     </div>
 </div>
+
+@if (!loading && !error && movement) {
+    <div class="export-options-bar no-print"
+         style="display:flex; gap:0.75rem; align-items:center; padding:0.5rem 1rem; background:var(--surface-ground); border-radius:6px; margin:0.5rem 1rem;">
+        <span style="font-weight:600; font-size:0.85rem;">
+            <i class="pi pi-cog" style="margin-right:0.3rem;"></i>Export:
+        </span>
+        <p-select [options]="pageSizeOptions" [(ngModel)]="selectedPageSize"
+                  optionLabel="label" optionValue="value"
+                  [style]="{ width: '110px' }"></p-select>
+    </div>
+}
 
 @if (loading) {
     <div class="preview-loading">
@@ -39,7 +60,7 @@
 
             <!-- Memo number + Date row -->
             <div style="display:flex; justify-content:space-between; margin-top:18pt; font-size:10pt;">
-                <div>স্মারক নং-র‍্যাব হেঃ কোঃ/প্রশাঃ/{{ memoNoBn }}।</div>
+                <div>স্মারক নং- {{ memoNoBn }}</div>
                 <div>{{ letterDateBn }}</div>
             </div>
 

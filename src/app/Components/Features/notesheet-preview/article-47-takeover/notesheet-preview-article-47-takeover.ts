@@ -1,9 +1,19 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { ButtonModule } from 'primeng/button';
+import { SelectModule } from 'primeng/select';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
+import { firstValueFrom } from 'rxjs';
+import {
+    Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+    WidthType, BorderStyle, AlignmentType, PageOrientation, TableLayoutType
+} from 'docx';
+import { saveAs } from 'file-saver';
+import { environment } from '@/Core/Environments/environment';
 
 import { MovementInfoService } from '@/services/movement-info.service';
 import { MovementInfoModel } from '@/models/movement-info.model';
@@ -17,7 +27,7 @@ import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 @Component({
     selector: 'app-notesheet-preview-article-47-takeover',
     standalone: true,
-    imports: [CommonModule, ButtonModule, Toast],
+    imports: [CommonModule, FormsModule, ButtonModule, SelectModule, Toast],
     providers: [MessageService],
     templateUrl: './notesheet-preview-article-47-takeover.html',
     styleUrls: ['../notesheet-preview.scss', '../notesheet-preview-toolbar-dark.scss']
@@ -30,6 +40,17 @@ export class NotesheetPreviewArticle47TakeoverComponent implements OnInit {
     private servingMembersService = inject(ServingMembersService);
     private masterBasicSetup = inject(MasterBasicSetupService);
     private messageService = inject(MessageService);
+    private http = inject(HttpClient);
+
+    /** Export state. */
+    exportingPdf = false;
+    printingPreview = false;
+    pageSizeOptions = [
+        { label: 'Legal',  value: 'Legal'  },
+        { label: 'A4',     value: 'A4'     },
+        { label: 'Letter', value: 'Letter' }
+    ];
+    selectedPageSize: 'Legal' | 'A4' | 'Letter' = 'Legal';
 
     loading = true;
     error: string | null = null;
@@ -329,5 +350,221 @@ export class NotesheetPreviewArticle47TakeoverComponent implements OnInit {
 
     onBack(): void {
         this.router.navigate(['/movement-list']);
+    }
+
+    // ── Export ─────────────────────────────────────────────────────────────
+
+    private exportFileStem(): string {
+        const raw = this.movement?.letterNo;
+        if (raw && raw.trim()) return raw.replace(/[\\/:*?"<>|]+/g, '_').trim();
+        return `Article47_Takeover_${this.movement?.movementId ?? 'export'}`;
+    }
+
+    async exportWord(): Promise<void> {
+        if (!this.movement) return;
+        try {
+            const doc = this.buildWordDocument();
+            const blob = await Packer.toBlob(doc);
+            saveAs(blob, `${this.exportFileStem()}.docx`);
+        } catch (err) {
+            console.error('Word export failed', err);
+            this.messageService.add({ severity: 'error', summary: 'Export Error', detail: 'Failed to generate Word document.' });
+        }
+    }
+
+    async exportPdf(): Promise<void> {
+        if (!this.movement) return;
+        this.exportingPdf = true;
+        try {
+            const doc = this.buildWordDocument();
+            const docxBlob = await Packer.toBlob(doc);
+            const pdfBlob = await this.convertDocxToPdf(docxBlob);
+            saveAs(pdfBlob, `${this.exportFileStem()}.pdf`);
+        } catch (err) {
+            console.error('PDF export failed', err);
+            this.messageService.add({ severity: 'error', summary: 'Export Error', detail: 'Failed to generate PDF.' });
+        } finally {
+            this.exportingPdf = false;
+        }
+    }
+
+    async printPreview(): Promise<void> {
+        if (!this.movement) return;
+        this.printingPreview = true;
+        try {
+            const doc = this.buildWordDocument();
+            const docxBlob = await Packer.toBlob(doc);
+            const pdfBlob = await this.convertDocxToPdf(docxBlob);
+            const url = URL.createObjectURL(pdfBlob);
+            window.open(url, '_blank');
+        } catch (err) {
+            console.error('Print preview failed', err);
+            this.messageService.add({ severity: 'error', summary: 'Preview Error', detail: 'Failed to generate print preview.' });
+        } finally {
+            this.printingPreview = false;
+        }
+    }
+
+    private async convertDocxToPdf(docxBlob: Blob): Promise<Blob> {
+        const form = new FormData();
+        form.append('file', docxBlob, 'document.docx');
+        return await firstValueFrom(
+            this.http.post(`${environment.apis.core}/Document/ConvertToPdf`, form, { responseType: 'blob' })
+        );
+    }
+
+    private getPageDimensions(): { width: number; height: number } {
+        switch (this.selectedPageSize) {
+            case 'A4':     return { width: 11906, height: 16838 };
+            case 'Letter': return { width: 12240, height: 15840 };
+            case 'Legal':
+            default:       return { width: 12240, height: 20160 };
+        }
+    }
+
+    /** Build the Article 47 Takeover Word document (portrait). */
+    private buildWordDocument(): Document {
+        const m = this.movement!;
+        const font = { ascii: 'Nirmala UI', hAnsi: 'Nirmala UI', cs: 'Nirmala UI', hint: 'cs' as const };
+        const bnLang = { value: 'bn-BD', bidirectional: 'bn-BD' } as any;
+        const dims = this.getPageDimensions();
+        const contentWidth = dims.width - 1440;
+
+        const SZ_BODY = 20;
+        const SZ_ORG  = 18;
+
+        const noBorder = {
+            top:    { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+            bottom: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+            left:   { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+            right:  { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+        };
+
+        const para = (text: string, opts: { bold?: boolean; size?: number; align?: (typeof AlignmentType)[keyof typeof AlignmentType]; spacingBefore?: number; lineTwips?: number } = {}) => {
+            const sz = opts.size ?? SZ_BODY;
+            const hasSpacing = opts.spacingBefore != null || opts.lineTwips != null;
+            const spacing: any = hasSpacing ? {} : undefined;
+            if (hasSpacing) {
+                if (opts.spacingBefore != null) spacing.before = opts.spacingBefore;
+                if (opts.lineTwips != null) {
+                    spacing.line = opts.lineTwips;
+                    spacing.lineRule = 'atLeast';
+                }
+            }
+            return new Paragraph({
+                alignment: opts.align,
+                spacing,
+                children: [new TextRun({ text, bold: opts.bold, size: sz, sizeComplexScript: sz, font, language: bnLang })]
+            });
+        };
+
+        const stripHtml = (html: string | null | undefined): string => {
+            if (!html) return '';
+            const div = document.createElement('div');
+            div.innerHTML = html;
+            let s = (div.textContent || div.innerText || '').trim();
+            s = s.normalize('NFC');
+            s = s.replace(/[‌‍]/g, '').replace(/ /g, ' ');
+            return s;
+        };
+
+        const formHeader = para('বাংলাদেশ ফরম নং-২৪০৩', { size: SZ_ORG });
+
+        // Memo + date row
+        const memoLeftW = Math.round(contentWidth * 0.65);
+        const memoRightW = contentWidth - memoLeftW;
+        const memoRow = new Table({
+            width: { size: contentWidth, type: WidthType.DXA },
+            columnWidths: [memoLeftW, memoRightW],
+            layout: TableLayoutType.FIXED,
+            borders: { ...noBorder, insideHorizontal: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }, insideVertical: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' } },
+            rows: [new TableRow({ children: [
+                new TableCell({ width: { size: memoLeftW, type: WidthType.DXA }, borders: noBorder, children: [para(`স্মারক নং- ${this.memoNoBn}`)] }),
+                new TableCell({ width: { size: memoRightW, type: WidthType.DXA }, borders: noBorder, children: [para(this.letterDateBn, { align: AlignmentType.RIGHT })] })
+            ] })]
+        });
+
+        // সূত্র (Takeover — BEFORE প্রতি)
+        const sutroPara = para(`সূত্র: ${stripHtml(m.auth) || '---'}`, { lineTwips: 280 });
+
+        // প্রতি block
+        const recipientCellW = contentWidth - 1000;
+        const recipientRows = this.recipientLines.map((line, idx) => new TableRow({ children: [
+            new TableCell({ width: { size: 600, type: WidthType.DXA }, borders: noBorder, margins: { top: 20, bottom: 20, left: 0, right: 0 }, children: [para(this.serialBn(idx + 1))] }),
+            new TableCell({ width: { size: recipientCellW - 600, type: WidthType.DXA }, borders: noBorder, margins: { top: 20, bottom: 20, left: 0, right: 0 }, children: [para(line)] })
+        ] }));
+        const recipientTable = recipientRows.length > 0
+            ? new Table({
+                width: { size: recipientCellW, type: WidthType.DXA },
+                columnWidths: [600, recipientCellW - 600],
+                layout: TableLayoutType.FIXED,
+                indent: { size: 1000, type: WidthType.DXA },
+                borders: { ...noBorder, insideHorizontal: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }, insideVertical: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' } },
+                rows: recipientRows
+            })
+            : null;
+
+        // Remarks + signature
+        const remarksText = stripHtml(m.remarks);
+        const remarksPara = remarksText ? para(remarksText, { lineTwips: 280 }) : null;
+        const ogragami = para('অগ্রগামী করা হইল।', { spacingBefore: 480 });
+        const sigParas: Paragraph[] = [];
+        // Takeover variant title
+        sigParas.push(para('গ্রহণকারী কর্মকর্তা', { align: AlignmentType.CENTER, spacingBefore: 240 }));
+        sigParas.push(para('________________________', { align: AlignmentType.CENTER, spacingBefore: 720 }));
+        sigParas.push(para(`${this.employeeIdLineBn} ${this.employeeRankBn}`.trim(), { align: AlignmentType.CENTER }));
+        sigParas.push(para(`${this.employeeNameBn}${this.employeeCorpsBn ? ', ' + this.employeeCorpsBn : ''}`, { align: AlignmentType.CENTER }));
+        sigParas.push(para(this.employeeUnitBn, { align: AlignmentType.CENTER }));
+        if (this.employeeUnitLocationBn) sigParas.push(para(this.employeeUnitLocationBn, { align: AlignmentType.CENTER }));
+
+        // Witness / Rule 78
+        const witnessParas: Paragraph[] = [];
+        witnessParas.push(para('বেসামরিক হিসাব পদ্ধতির ৭৮ নং বিধি অনুযায়ী আমি (গ্রহণকারী কর্মকর্তা)', { spacingBefore: 480 }));
+        witnessParas.push(para('________________________________________________________________', { spacingBefore: 120 }));
+        witnessParas.push(para('________________________________________________________________', { spacingBefore: 120 }));
+        witnessParas.push(para('________________________________________________________________', { spacingBefore: 120 }));
+        witnessParas.push(para('সমুদয় স্থায়ী অগ্রিম লেনদেনের টাকা গ্রহণের প্রাপ্তি স্বীকার দিলাম ____________________________ জেলা', { spacingBefore: 120 }));
+
+        const tailLeftW = Math.round(contentWidth * 0.7);
+        const tailRightW = contentWidth - tailLeftW;
+        const tailRow = new Table({
+            width: { size: contentWidth, type: WidthType.DXA },
+            columnWidths: [tailLeftW, tailRightW],
+            layout: TableLayoutType.FIXED,
+            borders: { ...noBorder, insideHorizontal: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }, insideVertical: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' } },
+            rows: [new TableRow({ children: [
+                new TableCell({ width: { size: tailLeftW, type: WidthType.DXA }, borders: noBorder, children: [para('জেলাঃ', { spacingBefore: 120 })] }),
+                new TableCell({ width: { size: tailRightW, type: WidthType.DXA }, borders: noBorder, children: [para('স্বাক্ষরঃ', { spacingBefore: 120 })] })
+            ] })]
+        });
+
+        const children: (Paragraph | Table)[] = [
+            formHeader,
+            memoRow,
+            para(''),
+            // Takeover variant — সূত্র before প্রতি
+            sutroPara,
+            para(''),
+            para('প্রতি,'),
+            ...(recipientTable ? [recipientTable] : []),
+            ...(remarksPara ? [remarksPara] : []),
+            ogragami,
+            ...sigParas,
+            ...witnessParas,
+            tailRow
+        ];
+
+        return new Document({
+            styles: { default: { document: { run: { font, language: bnLang } } } },
+            sections: [{
+                properties: {
+                    page: {
+                        size: { width: dims.width, height: dims.height, orientation: PageOrientation.PORTRAIT },
+                        margin: { top: 720, bottom: 720, left: 720, right: 720 }
+                    }
+                },
+                children
+            }]
+        });
     }
 }
