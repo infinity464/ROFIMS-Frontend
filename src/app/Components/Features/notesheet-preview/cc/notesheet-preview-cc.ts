@@ -12,7 +12,7 @@ import { catchError, map } from 'rxjs/operators';
 import {
     Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
     WidthType, BorderStyle, AlignmentType, PageOrientation, HeightRule,
-    ImageRun
+    ImageRun, TableLayoutType
 } from 'docx';
 import { saveAs } from 'file-saver';
 import * as QRCode from 'qrcode';
@@ -637,16 +637,7 @@ export class NotesheetPreviewCCComponent implements OnInit {
             right:  { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
         };
 
-        // Title + subtitle as full-page-width centered paragraphs
-        const titlePara = para('কর্তব্যে প্রেরিত পুলিশ অফিসার কর্তৃক বহনীয় হুকুমনামা',
-                               { size: SZ_TITLE, align: AlignmentType.CENTER });
-        const subtitlePara = para('(নিয়ন্ত্রণ নং ১৬৩ এবং ৯০৯)',
-                                  { size: SZ_BODY, align: AlignmentType.CENTER });
-
-        // Right-side QR image paragraph (if available).
-        // docx v9+ requires the `type` discriminator on ImageRun (otherwise the
-        // generated .docx is rejected by Word with "we found a problem with its
-        // contents"). The data URL we produced via qrcode is PNG.
+        // QR image paragraph (PNG, right-aligned in its own cell).
         const qrParagraphs: Paragraph[] = [];
         if (this.qrDataUrl) {
             const base64 = this.qrDataUrl.split(',')[1] ?? '';
@@ -663,9 +654,15 @@ export class NotesheetPreviewCCComponent implements OnInit {
             qrParagraphs.push(para(''));
         }
 
-        // Form-numbers strip — 2 columns: form numbers (left) / QR (right)
-        const formNumbersStrip = new Table({
-            width: { size: 100, type: WidthType.PERCENTAGE },
+        // 3-column top row: form-numbers (15%) / title + subtitle (70%) / QR (15%).
+        // Wider center column ensures the title fits on one line in both Word
+        // and LibreOffice. FIXED layout prevents either renderer from rebalancing.
+        const sideColW = Math.round(contentWidth * 0.15);
+        const centerColW = contentWidth - 2 * sideColW;
+        const topHeaderStrip = new Table({
+            width: { size: contentWidth, type: WidthType.DXA },
+            columnWidths: [sideColW, centerColW, sideColW],
+            layout: TableLayoutType.FIXED,
             borders: {
                 ...noBorder,
                 insideHorizontal: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
@@ -675,16 +672,32 @@ export class NotesheetPreviewCCComponent implements OnInit {
                 new TableRow({
                     children: [
                         new TableCell({
-                            width: { size: 50, type: WidthType.PERCENTAGE },
+                            width: { size: sideColW, type: WidthType.DXA },
                             borders: noBorder,
+                            verticalAlign: 'top' as any,
                             children: [
+                                // Blank line at top so the form numbers sit on the
+                                // 2nd line (aligned with the title's subtitle).
+                                para(''),
                                 para('বি পি ফরম নং ১০', { size: SZ_BODY }),
                                 para('বাংলাদেশ ফরম নং ৫৩৩৬', { size: SZ_BODY })
                             ]
                         }),
                         new TableCell({
-                            width: { size: 50, type: WidthType.PERCENTAGE },
+                            width: { size: centerColW, type: WidthType.DXA },
                             borders: noBorder,
+                            verticalAlign: 'top' as any,
+                            children: [
+                                para('কর্তব্যে প্রেরিত পুলিশ অফিসার কর্তৃক বহনীয় হুকুমনামা',
+                                     { size: SZ_TITLE, align: AlignmentType.CENTER }),
+                                para('(নিয়ন্ত্রণ নং ১৬৩ এবং ৯০৯)',
+                                     { size: SZ_BODY, align: AlignmentType.CENTER })
+                            ]
+                        }),
+                        new TableCell({
+                            width: { size: sideColW, type: WidthType.DXA },
+                            borders: noBorder,
+                            verticalAlign: 'top' as any,
                             children: qrParagraphs
                         })
                     ]
@@ -692,9 +705,15 @@ export class NotesheetPreviewCCComponent implements OnInit {
             ]
         });
 
-        // Second strip — M CC No (left) + vehicle / date (right)
+        // Second strip — M CC No (left, 60%) + vehicle / date (right, 40%).
+        // Explicit DXA + FIXED layout so Word doesn't shrink the cells to
+        // character-width (same auto-fit issue as the top header).
+        const secondLeftW = Math.round(contentWidth * 0.6);
+        const secondRightW = contentWidth - secondLeftW;
         const secondStrip = new Table({
-            width: { size: 100, type: WidthType.PERCENTAGE },
+            width: { size: contentWidth, type: WidthType.DXA },
+            columnWidths: [secondLeftW, secondRightW],
+            layout: TableLayoutType.FIXED,
             borders: {
                 ...noBorder,
                 insideHorizontal: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
@@ -704,12 +723,12 @@ export class NotesheetPreviewCCComponent implements OnInit {
                 new TableRow({
                     children: [
                         new TableCell({
-                            width: { size: 60, type: WidthType.PERCENTAGE },
+                            width: { size: secondLeftW, type: WidthType.DXA },
                             borders: noBorder,
                             children: [para('এম সিসি নং ৪১৭০/২০২৬', { size: SZ_BODY })]
                         }),
                         new TableCell({
-                            width: { size: 40, type: WidthType.PERCENTAGE },
+                            width: { size: secondRightW, type: WidthType.DXA },
                             borders: noBorder,
                             children: [
                                 ...(bnVehicle ? [para(bnVehicle, { size: SZ_BODY, align: AlignmentType.RIGHT })] : []),
@@ -926,7 +945,7 @@ export class NotesheetPreviewCCComponent implements OnInit {
                         margin: { top: 720, bottom: 720, left: 720, right: 720 } // 0.5"
                     }
                 },
-                children: [titlePara, subtitlePara, formNumbersStrip, secondStrip, para(''), grid, footnote]
+                children: [topHeaderStrip, secondStrip, para(''), grid, footnote]
             }]
         });
     }
