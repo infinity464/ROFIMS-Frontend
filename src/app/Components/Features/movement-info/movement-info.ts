@@ -760,14 +760,7 @@ export class MovementInfoComponent implements OnInit {
             });
             return;
         }
-        if (this.showTakeover && !this.takeoverPerson) {
-            this.messageService.add({
-                severity: 'error',
-                summary: 'Takeover Person',
-                detail: 'Article 47 (Takeover) permanent movements require a Takeover Person.'
-            });
-            return;
-        }
+
 
         const finalApproverIds: number[] = (this.form.get('finalApproverIds')?.value as number[] | null) ?? [];
 

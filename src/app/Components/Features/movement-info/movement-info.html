@@ -205,7 +205,7 @@
         <!-- ── Takeover person (only when Permanent + Article 47 Takeover) ─ -->
         @if (showTakeover) {
             <div class="mv-subsection">
-                <h3 class="mv-subsection-title">Takeover person</h3>
+                <h3 class="mv-subsection-title">Takeover person (optional)</h3>
 
                 <app-employee-search (onEmployeeFound)="onTakeoverPersonSelected($event)"></app-employee-search>
                 @if (takeoverPerson) {

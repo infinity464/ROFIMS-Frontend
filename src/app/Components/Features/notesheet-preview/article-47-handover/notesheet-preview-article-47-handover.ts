@@ -10,7 +10,8 @@ import { MessageService } from 'primeng/api';
 import { firstValueFrom } from 'rxjs';
 import {
     Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
-    WidthType, BorderStyle, AlignmentType, PageOrientation, TableLayoutType
+    WidthType, BorderStyle, AlignmentType, PageOrientation, TableLayoutType,
+    HeightRule
 } from 'docx';
 import { saveAs } from 'file-saver';
 import { environment } from '@/Core/Environments/environment';
@@ -465,14 +466,31 @@ export class NotesheetPreviewArticle47HandoverComponent implements OnInit {
             });
         };
 
+        const cleanText = (s: string): string =>
+            s.trim().normalize('NFC').replace(/[‌‍]/g, '').replace(/ /g, ' ');
+
         const stripHtml = (html: string | null | undefined): string => {
             if (!html) return '';
             const div = document.createElement('div');
             div.innerHTML = html;
-            let s = (div.textContent || div.innerText || '').trim();
-            s = s.normalize('NFC');
-            s = s.replace(/[‌‍]/g, '').replace(/ /g, ' ');
-            return s;
+            return cleanText(div.textContent || div.innerText || '');
+        };
+
+        /** Convert Quill HTML into docx Paragraphs, one per top-level <p>
+         *  (preserves blank lines from `<p><br></p>` as empty paragraphs).
+         *  Falls back to a single paragraph when no <p> tags are present. */
+        const htmlToParagraphs = (html: string | null | undefined, opts: { size?: number; lineTwips?: number; firstPrefix?: string } = {}): Paragraph[] => {
+            if (!html) return [];
+            const div = document.createElement('div');
+            div.innerHTML = html;
+            const blocks = Array.from(div.querySelectorAll('p, div'));
+            const sourceTexts = blocks.length > 0
+                ? blocks.map((el) => cleanText(el.textContent || ''))
+                : [cleanText(div.textContent || '')];
+            return sourceTexts.map((t, idx) => {
+                const prefix = idx === 0 && opts.firstPrefix ? opts.firstPrefix : '';
+                return para(prefix + t, { size: opts.size, lineTwips: opts.lineTwips });
+            });
         };
 
         // Form number header
@@ -509,10 +527,13 @@ export class NotesheetPreviewArticle47HandoverComponent implements OnInit {
             })
             : null;
 
-        // সূত্র + remarks
-        const sutroPara = para(`সূত্র: ${stripHtml(m.auth) || '---'}`, { lineTwips: 280 });
-        const remarksText = stripHtml(m.remarks);
-        const remarksPara = remarksText ? para(remarksText, { lineTwips: 280 }) : null;
+        // সূত্র + remarks — convert Quill HTML into one Paragraph per <p>
+        // so paragraph breaks from the rich editor render correctly in Word
+        // (matches the on-screen `[innerHTML]` rendering).
+        const sutroParas = m.auth
+            ? htmlToParagraphs(m.auth, { lineTwips: 280, firstPrefix: 'সূত্র: ' })
+            : [para('সূত্র: ---', { lineTwips: 280 })];
+        const remarksParas = htmlToParagraphs(m.remarks, { lineTwips: 280 });
 
         // অগ্রগামী
         const ogragami = para('অগ্রগামী করা হইল।', { spacingBefore: 480 });
@@ -540,13 +561,52 @@ export class NotesheetPreviewArticle47HandoverComponent implements OnInit {
             ] })]
         });
 
-        // Witness / Rule 78 block
-        const witnessParas: Paragraph[] = [];
+        // Witness / Rule 78 block — three blank ruled lines + one inline-filled line.
+        const witnessParas: (Paragraph | Table)[] = [];
         witnessParas.push(para('বেসামরিক হিসাব পদ্ধতির ৭৮ নং বিধি অনুযায়ী আমি (গ্রহণকারী কর্মকর্তা)', { spacingBefore: 480 }));
-        witnessParas.push(para('________________________________________________________________', { spacingBefore: 120 }));
-        witnessParas.push(para('________________________________________________________________', { spacingBefore: 120 }));
-        witnessParas.push(para('________________________________________________________________', { spacingBefore: 120 }));
-        witnessParas.push(para('সমুদয় স্থায়ী অগ্রিম লেনদেনের টাকা গ্রহণের প্রাপ্তি স্বীকার দিলাম ____________________________ জেলা', { spacingBefore: 120 }));
+
+        // Three blank dotted ruled lines — built as a Table with 3 rows so
+        // each row's bottom border renders distinctly. Adjacent
+        // Paragraph-with-border-bottom were collapsing into one line in Word.
+        const ruledCellBorder = {
+            top:    { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+            bottom: { style: BorderStyle.DOTTED, size: 6, color: '000000' },
+            left:   { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+            right:  { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }
+        };
+        const ruledRow = () => new TableRow({
+            height: { value: 360, rule: HeightRule.ATLEAST }, // 18pt per row
+            children: [new TableCell({
+                width: { size: contentWidth, type: WidthType.DXA },
+                borders: ruledCellBorder,
+                margins: { top: 0, bottom: 0, left: 0, right: 0 },
+                children: [para(' ')]
+            })]
+        });
+        witnessParas.push(new Table({
+            width: { size: contentWidth, type: WidthType.DXA },
+            columnWidths: [contentWidth],
+            layout: TableLayoutType.FIXED,
+            borders: {
+                top:              { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+                bottom:           { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+                left:             { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+                right:            { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+                insideHorizontal: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+                insideVertical:   { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }
+            },
+            rows: [ruledRow(), ruledRow(), ruledRow()]
+        }));
+        // "সমুদয় ... দিলাম <dotted-fill> জেলা" — single paragraph with three runs.
+        // The middle run uses single-dotted underline as the fill line.
+        witnessParas.push(new Paragraph({
+            spacing: { before: 180, line: 280, lineRule: 'atLeast' as any },
+            children: [
+                new TextRun({ text: 'সমুদয় স্থায়ী অগ্রিম লেনদেনের টাকা গ্রহণের প্রাপ্তি স্বীকার দিলাম ', size: SZ_BODY, sizeComplexScript: SZ_BODY, font, language: bnLang }),
+                new TextRun({ text: ' '.repeat(40), underline: { type: 'dotted' as any }, size: SZ_BODY, font, language: bnLang }),
+                new TextRun({ text: '  জেলা', size: SZ_BODY, sizeComplexScript: SZ_BODY, font, language: bnLang })
+            ]
+        }));
         // Final districts/signature line
         const tailLeftW = Math.round(contentWidth * 0.7);
         const tailRightW = contentWidth - tailLeftW;
@@ -574,11 +634,11 @@ export class NotesheetPreviewArticle47HandoverComponent implements OnInit {
             // 2 empty lines above সূত্র.
             para(''),
             para(''),
-            sutroPara,
+            ...sutroParas,
             // 2 empty lines below সূত্র.
             para(''),
             para(''),
-            ...(remarksPara ? [remarksPara] : []),
+            ...remarksParas,
             ogragami,
             sigRow,
             ...witnessParas,

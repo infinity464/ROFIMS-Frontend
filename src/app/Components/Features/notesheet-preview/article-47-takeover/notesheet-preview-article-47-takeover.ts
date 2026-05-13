@@ -531,13 +531,25 @@ export class NotesheetPreviewArticle47TakeoverComponent implements OnInit {
             ] })]
         });
 
-        // Witness / Rule 78
+        // Witness / Rule 78 — three blank ruled lines + one inline-filled line.
         const witnessParas: Paragraph[] = [];
         witnessParas.push(para('বেসামরিক হিসাব পদ্ধতির ৭৮ নং বিধি অনুযায়ী আমি (গ্রহণকারী কর্মকর্তা)', { spacingBefore: 480 }));
-        witnessParas.push(para('________________________________________________________________', { spacingBefore: 120 }));
-        witnessParas.push(para('________________________________________________________________', { spacingBefore: 120 }));
-        witnessParas.push(para('________________________________________________________________', { spacingBefore: 120 }));
-        witnessParas.push(para('সমুদয় স্থায়ী অগ্রিম লেনদেনের টাকা গ্রহণের প্রাপ্তি স্বীকার দিলাম ____________________________ জেলা', { spacingBefore: 120 }));
+        const ruledLine = () => new Paragraph({
+            spacing: { before: 240, after: 60, line: 280, lineRule: 'atLeast' as any },
+            border: { bottom: { style: BorderStyle.DOTTED, size: 6, color: '000000', space: 1 } },
+            children: [new TextRun({ text: ' ', size: SZ_BODY, font, language: bnLang })]
+        });
+        witnessParas.push(ruledLine());
+        witnessParas.push(ruledLine());
+        witnessParas.push(ruledLine());
+        witnessParas.push(new Paragraph({
+            spacing: { before: 180, line: 280, lineRule: 'atLeast' as any },
+            children: [
+                new TextRun({ text: 'সমুদয় স্থায়ী অগ্রিম লেনদেনের টাকা গ্রহণের প্রাপ্তি স্বীকার দিলাম ', size: SZ_BODY, sizeComplexScript: SZ_BODY, font, language: bnLang }),
+                new TextRun({ text: ' '.repeat(40), underline: { type: 'dotted' as any }, size: SZ_BODY, font, language: bnLang }),
+                new TextRun({ text: '  জেলা', size: SZ_BODY, sizeComplexScript: SZ_BODY, font, language: bnLang })
+            ]
+        }));
 
         const tailLeftW = Math.round(contentWidth * 0.7);
         const tailRightW = contentWidth - tailLeftW;
