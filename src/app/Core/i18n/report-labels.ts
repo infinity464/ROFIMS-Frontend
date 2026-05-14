@@ -22,6 +22,7 @@ export const REPORT_LABELS = {
         'report.title.officerType': 'Officer Type',
         'report.title.rabUnit': 'RAB Unit',
         'report.title.wings': 'Wings',
+        'report.title.bloodGroup': 'Blood Group',
 
         'report.search.createList': 'Search',
         'report.search.motherOrg': 'Mother Organization',
@@ -61,6 +62,8 @@ export const REPORT_LABELS = {
         'report.table.courseBatch': 'Course/Batch',
         'report.table.higherEducationQualification': 'Higher Education Qualification',
         'report.table.subject': 'Subject',
+        'report.table.bloodGroup': 'Blood Group',
+        'report.search.bloodGroup': 'Blood Group',
 
         'report.title.familyOccupation': 'Family Member Occupation Report',
         'report.search.relationType': 'Relation Type',
@@ -112,6 +115,7 @@ export const REPORT_LABELS = {
         'report.title.officerType': 'অফিসার ধরণ',
         'report.title.rabUnit': 'র‍্যাব ইউনিট',
         'report.title.wings': 'উইং',
+        'report.title.bloodGroup': 'রক্তের গ্রুপ',
 
         'report.search.createList': 'অনুসন্ধান',
         'report.search.motherOrg': 'মাতৃ সংস্থা',
@@ -151,6 +155,8 @@ export const REPORT_LABELS = {
         'report.table.courseBatch': 'ব্যাচ/কোর্স',
         'report.table.higherEducationQualification': 'শিক্ষাগত যোগ্যতা',
         'report.table.subject': 'বিষয়',
+        'report.table.bloodGroup': 'রক্তের গ্রুপ',
+        'report.search.bloodGroup': 'রক্তের গ্রুপ',
 
         'report.title.familyOccupation': 'পরিবারের সদস্যের পেশা প্রতিবেদন',
         'report.search.relationType': 'সম্পর্কের ধরণ',

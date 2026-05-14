@@ -10,6 +10,7 @@ import { ReportMotherOrgComponent } from './report-mother-org/report-mother-org.
 import { ReportOfficerTypeComponent } from './report-officer-type/report-officer-type.component';
 import { ReportRabUnitComponent } from './report-rab-unit/report-rab-unit.component';
 import { ReportWingsComponent } from './report-wings/report-wings.component';
+import { ReportBloodGroupComponent } from './report-blood-group/report-blood-group.component';
 import { SelectModule } from 'primeng/select';
 import { REPORT_LABELS, type ReportLang } from '@/Core/i18n/report-labels';
 import { CommonCodeService } from '@/services/common-code-service';
@@ -24,7 +25,8 @@ export type ReportType =
     | 'motherOrg'
     | 'officerType'
     | 'rabUnit'
-    | 'wings';
+    | 'wings'
+    | 'bloodGroup';
 
 /** Common code type name per report type (for dropdown options). */
 const COMMON_CODE_TYPE_BY_REPORT: Record<ReportType, string> = {
@@ -35,7 +37,23 @@ const COMMON_CODE_TYPE_BY_REPORT: Record<ReportType, string> = {
     officerType: 'OfficerType',
     rabUnit: 'RabUnit',
     wings: 'Wing',
+    bloodGroup: '', // Blood Group options are hardcoded standard values, not a CommonCode type.
 };
+
+/**
+ * Standard blood group dropdown options. Stored as free-text strings on PersonalInfo.BloodGroup,
+ * so the parent passes the literal string value to the child via commonCodeLabel.
+ */
+const BLOOD_GROUP_OPTIONS: { label: string; labelBn: string; value: number }[] = [
+    { label: 'A+',  labelBn: 'A+',  value: 1 },
+    { label: 'A-',  labelBn: 'A-',  value: 2 },
+    { label: 'B+',  labelBn: 'B+',  value: 3 },
+    { label: 'B-',  labelBn: 'B-',  value: 4 },
+    { label: 'O+',  labelBn: 'O+',  value: 5 },
+    { label: 'O-',  labelBn: 'O-',  value: 6 },
+    { label: 'AB+', labelBn: 'AB+', value: 7 },
+    { label: 'AB-', labelBn: 'AB-', value: 8 },
+];
 
 @Component({
     selector: 'app-employee-reports',
@@ -52,6 +70,7 @@ const COMMON_CODE_TYPE_BY_REPORT: Record<ReportType, string> = {
         ReportOfficerTypeComponent,
         ReportRabUnitComponent,
         ReportWingsComponent,
+        ReportBloodGroupComponent,
     ],
     templateUrl: './employee-reports.component.html',
     styleUrls: ['./employee-reports.component.scss', './report-theme.scss'],
@@ -73,6 +92,7 @@ export class EmployeeReportsComponent implements OnInit {
         { label: 'Officer Type', labelBn: 'অফিসার ধরণ', value: 'officerType' },
         { label: 'RAB UNIT', labelBn: 'র‍্যাব ইউনিট', value: 'rabUnit' },
         { label: 'Wings', labelBn: 'উইং', value: 'wings' },
+        { label: 'Blood Group', labelBn: 'রক্তের গ্রুপ', value: 'bloodGroup' },
     ];
 
     /** Common code options for the selected report type. When user selects one, filter fires. */
@@ -122,6 +142,11 @@ export class EmployeeReportsComponent implements OnInit {
                     this.commonCodeOptions = [];
                 },
             });
+            return;
+        }
+        if (this.reportType === 'bloodGroup') {
+            // Blood groups are free-text values on PersonalInfo, not CommonCodes — use a fixed list.
+            this.commonCodeOptions = [...BLOOD_GROUP_OPTIONS];
             return;
         }
         const codeType = COMMON_CODE_TYPE_BY_REPORT[this.reportType];

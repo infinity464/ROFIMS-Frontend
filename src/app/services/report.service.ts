@@ -12,6 +12,8 @@ import type {
   EducationReportRow,
   GenericReportParams,
   GenericReportRow,
+  BloodGroupReportParams,
+  BloodGroupReportRow,
   FamilyOccupationReportParams,
   FamilyOccupationReportRow,
   AddressLocationReportParams,
@@ -109,6 +111,17 @@ export class ReportService {
     return this.http
       .post<ReportPagedResponse<GenericReportRow>>(
         `${this.apiUrl}/GetWingsReport`,
+        params
+      )
+      .pipe(map(normalizePages));
+  }
+
+  getBloodGroupReport(
+    params: BloodGroupReportParams
+  ): Observable<PagedResponse<BloodGroupReportRow>> {
+    return this.http
+      .post<ReportPagedResponse<BloodGroupReportRow>>(
+        `${this.apiUrl}/GetBloodGroupReport`,
         params
       )
       .pipe(map(normalizePages));

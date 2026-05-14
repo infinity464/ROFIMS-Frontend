@@ -96,6 +96,25 @@ export interface GenericReportParams {
   pagination: ReportPagination;
 }
 
+/** Report: Blood Group – same base shape as the generic report, plus blood group column. */
+export interface BloodGroupReportRow extends ReportRowBase {
+  bloodGroup?: string | null;
+  rmks?: string | null;
+}
+
+/**
+ * Request for Blood Group report. PersonalInfo.BloodGroup is a free-text column (e.g. "A+"),
+ * so the filter is a string rather than a CommonCode CodeId.
+ */
+export interface BloodGroupReportParams {
+  orgId?: number | null;
+  rankId?: number | null;
+  tradeId?: number | null;
+  bloodGroup?: string | null;
+  postingStatus?: string | null;
+  pagination: ReportPagination;
+}
+
 /** Report: Family Member Occupation – family member details. */
 export interface FamilyOccupationReportRow {
   ser?: number;
