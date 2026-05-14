@@ -40,7 +40,9 @@ export class PostingOrderNumberConfigComponent implements OnInit {
 
     postingTypeOptions = [
         { label: 'New Posting', value: 'NewPosting' },
-        { label: 'Inter Posting', value: 'InterPosting' }
+        { label: 'Inter Posting', value: 'InterPosting' },
+        { label: 'General', value: 'General' },
+        { label: 'Ex-BD Leave', value: 'ExBdLeave' }
     ];
 
     memberTypeOptions: { label: string; value: number }[] = [];

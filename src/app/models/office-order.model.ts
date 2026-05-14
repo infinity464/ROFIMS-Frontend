@@ -31,7 +31,6 @@ export interface GeneralNotesheetOfficeOrderWithDetailsDto {
     addressTo: string | null;       // Rich text HTML
     referenceNo: string | null;     // JSON string
     body: string | null;            // Rich text HTML
-    attachment: string | null;      // JSON string
     onulipi: string | null;         // JSON string
     textType: string | null;
     filesReferences: string | null;
@@ -51,12 +50,6 @@ export interface GeneralNotesheetOfficeOrderWithDetailsDto {
 /** Reference No entry (with serial). */
 export interface ReferenceNoEntry {
     serial: string;  // "ক", "খ", "গ" for Bangla; "A", "B", "C" for English
-    text: string;
-}
-
-/** Attachment entry (with numeric serial). */
-export interface AttachmentEntry {
-    serial: number;  // 1, 2, 3
     text: string;
 }
 

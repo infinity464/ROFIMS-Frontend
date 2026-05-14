@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, ViewChild, inject } from '@angular/core';
 import { UserMenuService } from '@/services/user-menu.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -22,16 +22,12 @@ import { ApprovedNoteSheetItem } from '@/models/posting.model';
 import { PostingOrderNumberConfigModel } from '@/Components/basic-setup/shared/models/posting-order-number-config';
 import { CodeType } from '@/models/enums';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
+import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/file-references-form/file-references-form';
+import { EmpService } from '@/services/emp-service';
 
 /** Reference No paragraph entry. */
 interface ReferenceNoEntry {
     serial: string;
-    text: string;
-}
-
-/** Attachment paragraph entry. */
-interface AttachmentEntry {
-    serial: number;
     text: string;
 }
 
@@ -56,13 +52,16 @@ interface OnulipiParagraph {
         EditorModule,
         Toast,
         ConfirmDialogModule,
-        TooltipModule
+        TooltipModule,
+        FileReferencesFormComponent
     ],
     providers: [MessageService, ConfirmationService],
     templateUrl: './office-order-generate.html',
     styleUrl: './office-order-generate.scss'
 })
 export class OfficeOrderGenerateComponent implements OnInit {
+    @ViewChild('fileReferencesForm') fileReferencesForm!: FileReferencesFormComponent;
+
     private _router = inject(Router);
     private _userMenuService = inject(UserMenuService);
     canInsert = true;
@@ -97,7 +96,7 @@ export class OfficeOrderGenerateComponent implements OnInit {
     addressTo = '';  // Rich text HTML
     referenceEntries: ReferenceNoEntry[] = [];
     bodyText = '';
-    attachmentEntries: AttachmentEntry[] = [];
+    fileRows: FileRowData[] = [];
     onulipiParagraphs: OnulipiParagraph[] = [];
     remarks = '';
     saving = false;
@@ -122,6 +121,7 @@ export class OfficeOrderGenerateComponent implements OnInit {
     constructor(
         private officeOrderService: OfficeOrderService,
         private masterBasicSetupService: MasterBasicSetupService,
+        private empService: EmpService,
         private http: HttpClient,
         private router: Router,
         private messageService: MessageService,
@@ -186,22 +186,35 @@ export class OfficeOrderGenerateComponent implements OnInit {
         const nowYear = now.getFullYear();
         const nowMonth = now.getMonth() + 1;
         this.configOptions = this.allConfigs
-            .filter((c) => c.postingType === 'OfficeOrder' && c.status)
+            .filter((c) => c.postingType === 'General' && c.status)
             .map((c) => {
                 const prefixLabel = isBN ? (c.prefixBN || c.prefix) : c.prefix;
                 const yearReset = c.currentYear !== nowYear || c.currentMonth !== nowMonth;
                 const nextNum = yearReset ? c.startNumber : c.currentNumber + 1;
-                const yearStr = String(nowYear);
-                const monthStr = String(nowMonth).padStart(2, '0');
+                let yearStr = String(nowYear);
+                let monthStr = String(nowMonth).padStart(2, '0');
+                let numStr = String(nextNum);
+                if (isBN) {
+                    yearStr = this.toBanglaDigits(yearStr);
+                    monthStr = this.toBanglaDigits(monthStr);
+                    numStr = this.toBanglaDigits(numStr);
+                }
                 const previewNo = c.includeDate
-                    ? `${prefixLabel}/${yearStr}/${monthStr}/${nextNum}`
-                    : `${prefixLabel}/${nextNum}`;
+                    ? `${prefixLabel}/${yearStr}/${monthStr}/${numStr}`
+                    : `${prefixLabel}/${numStr}`;
                 const memberTypeLabel = this.memberTypeMap[c.memberTypeId] ? ` — ${this.memberTypeMap[c.memberTypeId]}` : '';
                 return {
                     label: `${previewNo}${memberTypeLabel}`,
                     value: c.configId
                 };
             });
+        // Auto-select if only one config; force refresh display if already selected
+        const currentVal = this.postingOrderNumberConfigId;
+        if (this.configOptions.length === 1) {
+            this.postingOrderNumberConfigId = this.configOptions[0].value;
+        } else if (currentVal != null && this.configOptions.some(o => o.value === currentVal)) {
+            this.postingOrderNumberConfigId = currentVal;
+        }
     }
 
     get noteSheetDropdownOptions() {
@@ -227,6 +240,7 @@ export class OfficeOrderGenerateComponent implements OnInit {
                 this.selectedNoteSheetApprovedDate = ns.finalApprovalApprovedDate ?? ns.lastupdate;
                 this.selectedTextType = (ns.textType === 1 || ns.textType === '1') ? 'bn' : 'en';
                 this.subject = ns.subject ?? '';
+                this.bodyText = ns.mainText ?? ns.MainText ?? '';
                 this.postingOrderNumberConfigId = null;
                 this.rebuildConfigOptions();
             },
@@ -250,14 +264,18 @@ export class OfficeOrderGenerateComponent implements OnInit {
         });
     }
 
-    // ─── Attachment entries ─────────────────────────────
-    addAttachmentEntry(): void {
-        this.attachmentEntries.push({ serial: this.attachmentEntries.length + 1, text: '' });
+    // ─── File References ─────────────────────────────────
+    onFileRowsChange(event: FileRowData[]): void {
+        if (event && Array.isArray(event)) {
+            this.fileRows = event;
+        }
     }
 
-    removeAttachmentEntry(index: number): void {
-        this.attachmentEntries.splice(index, 1);
-        this.attachmentEntries.forEach((e, i) => { e.serial = i + 1; });
+    onDownloadFile(payload: { fileId: number; fileName: string }): void {
+        this.empService.downloadFile(payload.fileId).subscribe({
+            next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file.' })
+        });
     }
 
     // ─── Onulipi paragraphs ────────────────────────────
@@ -285,78 +303,109 @@ export class OfficeOrderGenerateComponent implements OnInit {
 
     onGenerate(): void {
         if (!this.selectedNoteSheetId) {
-            this.messageService.add({ severity: 'warn', summary: this.isBangla ? 'সতর্কতা' : 'Warning', detail: this.isBangla ? 'নোটশীট নির্বাচন করুন।' : 'Please select a notesheet.' });
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Please select a notesheet.' });
+            return;
+        }
+        if (!this.postingOrderNumberConfigId) {
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Please select a Letter No pattern.' });
             return;
         }
         if (!this.selectedApprovalEmployeeId) {
-            this.messageService.add({ severity: 'warn', summary: this.isBangla ? 'সতর্কতা' : 'Warning', detail: this.isBangla ? 'অনুমোদনকারী নির্বাচন করুন।' : 'Please select an approval person.' });
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Please select an approval person.' });
             return;
         }
 
         this.saving = true;
 
-        const refJson = this.referenceEntries.filter(e => e.text.trim()).length > 0
-            ? JSON.stringify(this.referenceEntries.filter(e => e.text.trim()))
-            : null;
-        const attachJson = this.attachmentEntries.filter(e => e.text.trim()).length > 0
-            ? JSON.stringify(this.attachmentEntries.filter(e => e.text.trim()))
-            : null;
-        const onulipiJson = this.onulipiParagraphs.filter(p => p.text.trim()).length > 0
-            ? JSON.stringify(this.onulipiParagraphs.filter(p => p.text.trim()).map(p => ({
-                text: p.text.trim(),
-                transferRabUnitId: p.transferRabUnitId,
-                transferRabUnitName: p.transferRabUnitName
-            })))
-            : null;
+        const existingRefs = this.fileReferencesForm?.getExistingFileReferences() || [];
+        const filesToUpload = this.fileReferencesForm?.getFilesToUpload() || [];
 
-        this.officeOrderService.createOfficeOrder({
-            letterNo: this.manualLetterNo.trim(),
-            letterDate: this.formatDateToString(this.letterDate),
-            noteSheetId: this.selectedNoteSheetId,
-            subject: this.subject || null,
-            addressTo: this.addressTo?.trim() || null,
-            referenceNo: refJson,
-            body: this.bodyText?.trim() || null,
-            attachment: attachJson,
-            onulipi: onulipiJson,
-            textType: this.selectedTextType === 'bn' ? 'bn' : 'en',
-            remarks: this.remarks || null,
-            createdBy: 'system',
-            postingOrderNumberConfigId: this.postingOrderNumberConfigId ?? null,
-            approvalEmployeeId: this.selectedApprovalEmployeeId ?? null
-        }).subscribe({
-            next: (res) => {
-                this.saving = false;
-                if (res.statusCode === 200) {
-                    this.messageService.add({ severity: 'success', summary: this.isBangla ? 'সফল' : 'Success', detail: this.isBangla ? 'অফিস আদেশ সফলভাবে তৈরি হয়েছে।' : 'Office Order generated successfully.' });
-                    // Reset form
-                    this.manualLetterNo = '';
-                    this.selectedNoteSheetId = null;
-                    this.selectedNoteSheetNo = null;
-                    this.selectedNoteSheetApprovedDate = null;
-                    this.subject = '';
-                    this.addressTo = '';
-                    this.referenceEntries = [];
-                    this.bodyText = '';
-                    this.attachmentEntries = [];
-                    this.onulipiParagraphs = [];
-                    this.remarks = '';
-                    this.letterDate = new Date();
-                    this.postingOrderNumberConfigId = null;
-                    this.selectedApprovalEmployeeId = null;
-                    const newId = (res as any)?.data;
-                    if (newId != null) {
-                        this.router.navigate(['/office-order/preview'], { queryParams: { id: newId } });
+        const doSave = (filesReferencesJson: string | null) => {
+            const refJson = this.referenceEntries.filter(e => e.text.trim()).length > 0
+                ? JSON.stringify(this.referenceEntries.filter(e => e.text.trim()))
+                : null;
+            const onulipiJson = this.onulipiParagraphs.filter(p => p.text.trim()).length > 0
+                ? JSON.stringify(this.onulipiParagraphs.filter(p => p.text.trim()).map(p => ({
+                    text: p.text.trim(),
+                    transferRabUnitId: p.transferRabUnitId,
+                    transferRabUnitName: p.transferRabUnitName
+                })))
+                : null;
+
+            this.officeOrderService.createOfficeOrder({
+                letterNo: '',
+                letterDate: this.formatDateToString(this.letterDate),
+                noteSheetId: this.selectedNoteSheetId!,
+                subject: this.subject || null,
+                addressTo: this.addressTo?.trim() || null,
+                referenceNo: refJson,
+                body: this.bodyText?.trim() || null,
+                onulipi: onulipiJson,
+                textType: this.selectedTextType === 'bn' ? 'bn' : 'en',
+                filesReferences: filesReferencesJson,
+                remarks: this.remarks || null,
+                createdBy: 'system',
+                postingOrderNumberConfigId: this.postingOrderNumberConfigId ?? null,
+                approvalEmployeeId: this.selectedApprovalEmployeeId ?? null
+            }).subscribe({
+                next: (res) => {
+                    this.saving = false;
+                    if (res.statusCode === 200) {
+                        this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Office Order generated successfully.' });
+                        // Reset form
+                        this.manualLetterNo = '';
+                        this.selectedNoteSheetId = null;
+                        this.selectedNoteSheetNo = null;
+                        this.selectedNoteSheetApprovedDate = null;
+                        this.subject = '';
+                        this.addressTo = '';
+                        this.referenceEntries = [];
+                        this.bodyText = '';
+                        this.fileRows = [];
+                        this.onulipiParagraphs = [];
+                        this.remarks = '';
+                        this.letterDate = new Date();
+                        this.postingOrderNumberConfigId = null;
+                        this.selectedApprovalEmployeeId = null;
+                        const newId = (res as any)?.data;
+                        if (newId != null) {
+                            this.router.navigate(['/office-order/preview'], { queryParams: { id: newId } });
+                        }
+                    } else {
+                        this.messageService.add({ severity: 'error', summary: 'Error', detail: res.description ?? 'Failed to generate office order.' });
                     }
-                } else {
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: res.description ?? 'Failed to generate office order.' });
+                },
+                error: (err) => {
+                    this.saving = false;
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.description ?? 'Failed to generate office order.' });
                 }
-            },
-            error: (err) => {
-                this.saving = false;
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.description ?? 'Failed to generate office order.' });
-            }
-        });
+            });
+        };
+
+        if (filesToUpload.length > 0) {
+            const uploads = filesToUpload.map((r: FileRowData) =>
+                this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
+            );
+            forkJoin(uploads).subscribe({
+                next: (results: unknown) => {
+                    const resultsArray = Array.isArray(results) ? results : [];
+                    const newRefs = (resultsArray as { fileId: number; fileName: string }[]).map((r) => ({ FileId: r.fileId, fileName: r.fileName }));
+                    const allRefs = [
+                        ...existingRefs.map((r) => ({ FileId: r.FileId, fileName: r.fileName })),
+                        ...newRefs
+                    ];
+                    doSave(allRefs.length > 0 ? JSON.stringify(allRefs) : null);
+                },
+                error: (err: any) => {
+                    this.saving = false;
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to upload one or more files.' });
+                }
+            });
+            return;
+        }
+
+        const filesReferencesJson = existingRefs.length > 0 ? JSON.stringify(existingRefs) : null;
+        doSave(filesReferencesJson);
     }
 
     formatDate(value: string | null | undefined): string {

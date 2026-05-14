@@ -107,16 +107,6 @@
                     <div class="oo-doc-rich-content" [innerHTML]="order.body"></div>
                 </div>
 
-                <!-- Attachment -->
-                <div class="oo-doc-section" *ngIf="attachmentEntries.length > 0">
-                    <div class="oo-doc-section-label">{{ isBangla ? 'সংযুক্তি:' : 'Attachment:' }}</div>
-                    <div class="oo-doc-list">
-                        <p *ngFor="let att of attachmentEntries">
-                            {{ isBangla ? toBanglaDigits('' + att.serial) : att.serial }}। {{ att.text }}
-                        </p>
-                    </div>
-                </div>
-
                 <!-- Onulipi (Copy Distribution) -->
                 <div class="oo-doc-section" *ngIf="onulipiEntries.length > 0">
                     <div class="oo-doc-section-label">{{ isBangla ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নহে):' : 'Copy (not in order of seniority):' }}</div>

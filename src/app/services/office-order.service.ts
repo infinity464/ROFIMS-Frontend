@@ -35,7 +35,6 @@ export class OfficeOrderService {
         addressTo?: string | null;
         referenceNo?: string | null;
         body?: string | null;
-        attachment?: string | null;
         onulipi?: string | null;
         textType?: string | null;
         filesReferences?: string | null;
@@ -56,7 +55,6 @@ export class OfficeOrderService {
         addressTo?: string | null;
         referenceNo?: string | null;
         body?: string | null;
-        attachment?: string | null;
         onulipi?: string | null;
         textType?: string | null;
         filesReferences?: string | null;

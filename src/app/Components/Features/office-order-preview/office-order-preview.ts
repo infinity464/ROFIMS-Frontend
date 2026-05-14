@@ -12,7 +12,7 @@ import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { environment } from '@/Core/Environments/environment';
 import { OfficeOrderService } from '@/services/office-order.service';
-import { GeneralNotesheetOfficeOrderWithDetailsDto, ReferenceNoEntry, AttachmentEntry, OnulipiEntry } from '@/models/office-order.model';
+import { GeneralNotesheetOfficeOrderWithDetailsDto, ReferenceNoEntry, OnulipiEntry } from '@/models/office-order.model';
 import { ApprovalStatus } from '@/models/enums';
 import { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, HeadingLevel } from 'docx';
 import { saveAs } from 'file-saver';
@@ -50,7 +50,6 @@ export class OfficeOrderPreviewComponent implements OnInit {
 
     // Parsed JSON fields
     referenceEntries: ReferenceNoEntry[] = [];
-    attachmentEntries: AttachmentEntry[] = [];
     onulipiEntries: OnulipiEntry[] = [];
 
     // Export states
@@ -107,7 +106,6 @@ export class OfficeOrderPreviewComponent implements OnInit {
     private parseJsonFields(): void {
         if (!this.order) return;
         try { this.referenceEntries = this.order.referenceNo ? JSON.parse(this.order.referenceNo) : []; } catch { this.referenceEntries = []; }
-        try { this.attachmentEntries = this.order.attachment ? JSON.parse(this.order.attachment) : []; } catch { this.attachmentEntries = []; }
         try { this.onulipiEntries = this.order.onulipi ? JSON.parse(this.order.onulipi) : []; } catch { this.onulipiEntries = []; }
     }
 
@@ -221,22 +219,6 @@ export class OfficeOrderPreviewComponent implements OnInit {
                     }));
                 }
             }
-        }
-
-        // Attachment
-        if (this.attachmentEntries.length > 0) {
-            paragraphs.push(new Paragraph({
-                children: [new TextRun({ text: this.isBangla ? 'সংযুক্তি:' : 'Attachment:', font, size: 24, bold: true })],
-                spacing: { before: 200 }
-            }));
-            for (const att of this.attachmentEntries) {
-                const ser = this.isBangla ? this.toBanglaDigits(String(att.serial)) : String(att.serial);
-                paragraphs.push(new Paragraph({
-                    children: [new TextRun({ text: `${ser}. ${att.text}`, font, size: 22 })],
-                    indent: { left: 360 }
-                }));
-            }
-            paragraphs.push(new Paragraph({ text: '' }));
         }
 
         // Onulipi
