@@ -23,7 +23,7 @@ import type { CommonCodeModel } from '@/models/common-code-model';
     imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, Toast],
     providers: [MessageService],
     templateUrl: './report-special-qualification.component.html',
-    styleUrls: ['./report-special-qualification.component.scss', '../report-theme.scss'],
+    styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-special-qualification.component.scss'],
 })
 export class ReportSpecialQualificationComponent implements OnInit, OnChanges {
     L = REPORT_LABELS;

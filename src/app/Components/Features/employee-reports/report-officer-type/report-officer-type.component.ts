@@ -23,7 +23,7 @@ import type { CommonCodeModel } from '@/models/common-code-model';
     imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, Toast],
     providers: [MessageService],
     templateUrl: './report-officer-type.component.html',
-    styleUrls: ['./report-officer-type.component.scss', '../report-theme.scss'],
+    styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-officer-type.component.scss'],
 })
 export class ReportOfficerTypeComponent implements OnInit, OnChanges {
     L = REPORT_LABELS;

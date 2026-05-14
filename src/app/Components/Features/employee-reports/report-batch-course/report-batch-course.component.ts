@@ -23,7 +23,7 @@ import type { CommonCodeModel } from '@/models/common-code-model';
     imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, Toast],
     providers: [MessageService],
     templateUrl: './report-batch-course.component.html',
-    styleUrls: ['./report-batch-course.component.scss', '../report-theme.scss'],
+    styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-batch-course.component.scss'],
 })
 export class ReportBatchCourseComponent implements OnInit, OnChanges {
     L = REPORT_LABELS;

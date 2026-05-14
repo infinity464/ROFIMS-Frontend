@@ -19,7 +19,7 @@ import type { BloodGroupReportRow } from '@/models/report.model';
     imports: [CommonModule, FormsModule, TableModule, ButtonModule, Toast],
     providers: [MessageService],
     templateUrl: './report-blood-group.component.html',
-    styleUrls: ['./report-blood-group.component.scss', '../report-theme.scss'],
+    styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-blood-group.component.scss'],
 })
 export class ReportBloodGroupComponent implements OnInit, OnChanges {
     L = REPORT_LABELS;
