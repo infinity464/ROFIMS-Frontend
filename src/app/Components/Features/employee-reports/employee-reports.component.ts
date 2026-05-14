@@ -11,6 +11,8 @@ import { ReportOfficerTypeComponent } from './report-officer-type/report-officer
 import { ReportRabUnitComponent } from './report-rab-unit/report-rab-unit.component';
 import { ReportWingsComponent } from './report-wings/report-wings.component';
 import { ReportBloodGroupComponent } from './report-blood-group/report-blood-group.component';
+import { ReportPersonalQualificationComponent } from './report-personal-qualification/report-personal-qualification.component';
+import { ReportProfessionalQualificationComponent } from './report-professional-qualification/report-professional-qualification.component';
 import { SelectModule } from 'primeng/select';
 import { REPORT_LABELS, type ReportLang } from '@/Core/i18n/report-labels';
 import { CommonCodeService } from '@/services/common-code-service';
@@ -26,7 +28,9 @@ export type ReportType =
     | 'officerType'
     | 'rabUnit'
     | 'wings'
-    | 'bloodGroup';
+    | 'bloodGroup'
+    | 'personalQualification'
+    | 'professionalQualification';
 
 /** Common code type name per report type (for dropdown options). */
 const COMMON_CODE_TYPE_BY_REPORT: Record<ReportType, string> = {
@@ -38,6 +42,8 @@ const COMMON_CODE_TYPE_BY_REPORT: Record<ReportType, string> = {
     rabUnit: 'RabUnit',
     wings: 'Wing',
     bloodGroup: '', // Blood Group options are hardcoded standard values, not a CommonCode type.
+    personalQualification: 'PersonalQualification',
+    professionalQualification: 'ProfessionalQualification',
 };
 
 /**
@@ -71,6 +77,8 @@ const BLOOD_GROUP_OPTIONS: { label: string; labelBn: string; value: number }[] =
         ReportRabUnitComponent,
         ReportWingsComponent,
         ReportBloodGroupComponent,
+        ReportPersonalQualificationComponent,
+        ReportProfessionalQualificationComponent,
     ],
     templateUrl: './employee-reports.component.html',
     styleUrls: ['./employee-reports.component.scss', './report-theme.scss'],
@@ -93,6 +101,8 @@ export class EmployeeReportsComponent implements OnInit {
         { label: 'RAB UNIT', labelBn: 'র‍্যাব ইউনিট', value: 'rabUnit' },
         { label: 'Wings', labelBn: 'উইং', value: 'wings' },
         { label: 'Blood Group', labelBn: 'রক্তের গ্রুপ', value: 'bloodGroup' },
+        { label: 'Personal Qualification', labelBn: 'ব্যক্তিগত যোগ্যতা', value: 'personalQualification' },
+        { label: 'Professional Qualification', labelBn: 'পেশাগত যোগ্যতা', value: 'professionalQualification' },
     ];
 
     /** Common code options for the selected report type. When user selects one, filter fires. */

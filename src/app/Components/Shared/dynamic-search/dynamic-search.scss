@@ -335,7 +335,7 @@
     white-space: nowrap;
 }
 
-/* Filter body: remove fixed max-height, use auto scroll so all fields + buttons are always visible */
+/* Filter body: remove fixed max-height cap from shared theme so all selected fields + buttons remain visible */
 :host ::ng-deep .report-filter-body.open {
     max-height: none;
     overflow: visible;

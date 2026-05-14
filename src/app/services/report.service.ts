@@ -116,6 +116,28 @@ export class ReportService {
       .pipe(map(normalizePages));
   }
 
+  getPersonalQualificationReport(
+    params: GenericReportParams
+  ): Observable<PagedResponse<GenericReportRow>> {
+    return this.http
+      .post<ReportPagedResponse<GenericReportRow>>(
+        `${this.apiUrl}/GetPersonalQualificationReport`,
+        params
+      )
+      .pipe(map(normalizePages));
+  }
+
+  getProfessionalQualificationReport(
+    params: GenericReportParams
+  ): Observable<PagedResponse<GenericReportRow>> {
+    return this.http
+      .post<ReportPagedResponse<GenericReportRow>>(
+        `${this.apiUrl}/GetProfessionalQualificationReport`,
+        params
+      )
+      .pipe(map(normalizePages));
+  }
+
   getBloodGroupReport(
     params: BloodGroupReportParams
   ): Observable<PagedResponse<BloodGroupReportRow>> {
