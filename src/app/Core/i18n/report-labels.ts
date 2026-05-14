@@ -81,6 +81,11 @@ export const REPORT_LABELS = {
         'report.table.motherOrg': 'Mother Org',
 
         'report.pageTitle.memberTypeServing': 'Report On Member Type',
+        'report.title.pendingInterPosting': 'List of pending inter-posting list as per Battalion/wing',
+        'report.search.postedUnit': 'Posted Bn/Wg',
+        'report.table.presentBnWg': 'Present Bn/Wg',
+        'report.table.postedBnWg': 'Posted Bn/Wg',
+        'report.table.interPostingDate': 'Inter posting Date',
         'report.title.memberTypeServing': 'Member Type Report by RAB Unit & Wing',
         'report.search.memberType': 'Member Type',
         'report.search.wing': 'Wing',
@@ -188,6 +193,11 @@ export const REPORT_LABELS = {
         'report.table.motherOrg': 'মাতৃ সংস্থা',
 
         'report.pageTitle.memberTypeServing': 'সদস্যের ধরণ বিষয়ক প্রতিবেদন',
+        'report.title.pendingInterPosting': 'ব্যাটালিয়ন/উইং অনুযায়ী বিচারাধীন আন্তঃ-বদলির তালিকা',
+        'report.search.postedUnit': 'বদলিকৃত ইউনিট',
+        'report.table.presentBnWg': 'বর্তমান ইউনিট',
+        'report.table.postedBnWg': 'বদলিকৃত ইউনিট',
+        'report.table.interPostingDate': 'আন্তঃ বদলির তারিখ',
         'report.title.memberTypeServing': 'র‍্যাব ইউনিট ও উইং অনুযায়ী সদস্যের ধরণ প্রতিবেদন',
         'report.search.memberType': 'সদস্যের ধরণ',
         'report.search.wing': 'উইং',
