@@ -13,6 +13,7 @@ import { ReportWingsComponent } from './report-wings/report-wings.component';
 import { ReportBloodGroupComponent } from './report-blood-group/report-blood-group.component';
 import { ReportPersonalQualificationComponent } from './report-personal-qualification/report-personal-qualification.component';
 import { ReportProfessionalQualificationComponent } from './report-professional-qualification/report-professional-qualification.component';
+import { ReportSpecialQualificationComponent } from './report-special-qualification/report-special-qualification.component';
 import { SelectModule } from 'primeng/select';
 import { REPORT_LABELS, type ReportLang } from '@/Core/i18n/report-labels';
 import { CommonCodeService } from '@/services/common-code-service';
@@ -30,7 +31,8 @@ export type ReportType =
     | 'wings'
     | 'bloodGroup'
     | 'personalQualification'
-    | 'professionalQualification';
+    | 'professionalQualification'
+    | 'specialQualification';
 
 /** Common code type name per report type (for dropdown options). */
 const COMMON_CODE_TYPE_BY_REPORT: Record<ReportType, string> = {
@@ -44,6 +46,7 @@ const COMMON_CODE_TYPE_BY_REPORT: Record<ReportType, string> = {
     bloodGroup: '', // Blood Group options are hardcoded standard values, not a CommonCode type.
     personalQualification: 'PersonalQualification',
     professionalQualification: 'ProfessionalQualification',
+    specialQualification: 'SpecialQualification',
 };
 
 /**
@@ -79,6 +82,7 @@ const BLOOD_GROUP_OPTIONS: { label: string; labelBn: string; value: number }[] =
         ReportBloodGroupComponent,
         ReportPersonalQualificationComponent,
         ReportProfessionalQualificationComponent,
+        ReportSpecialQualificationComponent,
     ],
     templateUrl: './employee-reports.component.html',
     styleUrls: ['./employee-reports.component.scss', './report-theme.scss'],
@@ -103,6 +107,7 @@ export class EmployeeReportsComponent implements OnInit {
         { label: 'Blood Group', labelBn: 'রক্তের গ্রুপ', value: 'bloodGroup' },
         { label: 'Personal Qualification', labelBn: 'ব্যক্তিগত যোগ্যতা', value: 'personalQualification' },
         { label: 'Professional Qualification', labelBn: 'পেশাগত যোগ্যতা', value: 'professionalQualification' },
+        { label: 'Special Qualification', labelBn: 'বিশেষ যোগ্যতা', value: 'specialQualification' },
     ];
 
     /** Common code options for the selected report type. When user selects one, filter fires. */

@@ -25,6 +25,7 @@ export const REPORT_LABELS = {
         'report.title.bloodGroup': 'Blood Group',
         'report.title.personalQualification': 'Personal Qualification',
         'report.title.professionalQualification': 'Professional Qualification',
+        'report.title.specialQualification': 'Special Qualification',
 
         'report.search.createList': 'Search',
         'report.search.motherOrg': 'Mother Organization',
@@ -131,6 +132,7 @@ export const REPORT_LABELS = {
         'report.title.bloodGroup': 'রক্তের গ্রুপ',
         'report.title.personalQualification': 'ব্যক্তিগত যোগ্যতা',
         'report.title.professionalQualification': 'পেশাগত যোগ্যতা',
+        'report.title.specialQualification': 'বিশেষ যোগ্যতা',
 
         'report.search.createList': 'অনুসন্ধান',
         'report.search.motherOrg': 'মাতৃ সংস্থা',

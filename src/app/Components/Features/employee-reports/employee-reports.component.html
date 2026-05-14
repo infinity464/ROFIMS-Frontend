@@ -84,6 +84,9 @@
                 @case ('professionalQualification') {
                     <app-report-professional-qualification [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" [reportTypeLabel]="selectedReportTypeLabel" [commonCodeLabel]="selectedCommonCodeLabel" [postingStatus]="selectedPostingStatus" [statusLabel]="selectedStatusLabel" [statusLabelBn]="selectedStatusLabelBn" (langToggle)="toggleReportLang()" />
                 }
+                @case ('specialQualification') {
+                    <app-report-special-qualification [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" [reportTypeLabel]="selectedReportTypeLabel" [commonCodeLabel]="selectedCommonCodeLabel" [postingStatus]="selectedPostingStatus" [statusLabel]="selectedStatusLabel" [statusLabelBn]="selectedStatusLabelBn" (langToggle)="toggleReportLang()" />
+                }
             }
         </div>
     }
