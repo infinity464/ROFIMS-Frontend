@@ -79,6 +79,16 @@ export const REPORT_LABELS = {
         'report.table.rabId': 'RAB ID',
         'report.table.motherOrg': 'Mother Org',
 
+        'report.title.memberTypeServing': 'List of Officers/DAD/ORs by Member Type, RAB Unit & Wing',
+        'report.search.memberType': 'Member Type',
+        'report.search.wing': 'Wing',
+        'report.search.joiningInRabFrom': 'Joining in RAB From',
+        'report.search.joiningInRabTo': 'Joining in RAB To',
+        'report.search.serviceHistoryFrom': 'Service History From',
+        'report.search.serviceHistoryTo': 'Service History To',
+        'report.table.dateOfJoinInPresentUnit': 'Date of Join in Present Unit',
+        'report.table.joiningInRab': 'Joining in RAB',
+
         'report.title.addressLocation': 'Employee Address Location Report',
         'report.search.division': 'Division',
         'report.search.district': 'District',
@@ -173,6 +183,16 @@ export const REPORT_LABELS = {
         'report.table.rabMemberName': 'র‍্যাব সদস্যের নাম',
         'report.table.rabId': 'র‍্যাব আইডি',
         'report.table.motherOrg': 'মাতৃ সংস্থা',
+
+        'report.title.memberTypeServing': 'সদস্যের ধরণ, র‍্যাব ইউনিট ও উইং অনুযায়ী অফিসার/DAD/OR-দের তালিকা',
+        'report.search.memberType': 'সদস্যের ধরণ',
+        'report.search.wing': 'উইং',
+        'report.search.joiningInRabFrom': 'র‍্যাবে যোগদানের তারিখ থেকে',
+        'report.search.joiningInRabTo': 'র‍্যাবে যোগদানের তারিখ পর্যন্ত',
+        'report.search.serviceHistoryFrom': 'সার্ভিস ইতিহাস থেকে',
+        'report.search.serviceHistoryTo': 'সার্ভিস ইতিহাস পর্যন্ত',
+        'report.table.dateOfJoinInPresentUnit': 'বর্তমান ইউনিটে যোগদানের তারিখ',
+        'report.table.joiningInRab': 'র‍্যাবে যোগদানের তারিখ',
 
         'report.title.addressLocation': 'কর্মচারীর ঠিকানার অবস্থান প্রতিবেদন',
         'report.search.division': 'বিভাগ',

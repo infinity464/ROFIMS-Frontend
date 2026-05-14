@@ -181,6 +181,30 @@ export interface AddressLocationReportParams {
   pagination: ReportPagination;
 }
 
+/**
+ * Combined "Member Type Serving" report. Cascaded filter MemberTypeId → RabUnitId → RabWingId,
+ * plus OrgId/RankId and two date ranges. PostingStatus defaults to "Servings" server-side.
+ */
+export interface MemberTypeServingReportParams {
+  memberTypeId?: number | null;
+  rabUnitId?: number | null;
+  rabWingId?: number | null;
+  orgId?: number | null;
+  rankId?: number | null;
+  joiningInRabFrom?: string | null;
+  joiningInRabTo?: string | null;
+  serviceHistoryFrom?: string | null;
+  serviceHistoryTo?: string | null;
+  postingStatus?: string | null;
+  pagination: ReportPagination;
+}
+
+export interface MemberTypeServingReportRow extends ReportRowBase {
+  joiningInRab?: string | null;
+  dateOfJoinInPresentUnit?: string | null;
+  rmks?: string | null;
+}
+
 /** Backend paged response (may use Rows/TotalPages). */
 export interface ReportPagedResponse<T> {
   datalist: T[];

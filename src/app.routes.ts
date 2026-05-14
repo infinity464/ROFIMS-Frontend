@@ -162,6 +162,7 @@ import { SessionPolicyComponent } from '@/Components/Features/settings/session-p
 import { EmployeeReportsComponent } from '@/Components/Features/employee-reports/employee-reports.component';
 import { ReportFamilyOccupationComponent } from '@/Components/Features/employee-reports/report-family-occupation/report-family-occupation.component';
 import { ReportAddressLocationComponent } from '@/Components/Features/employee-reports/report-address-location/report-address-location.component';
+import { ReportMemberTypeServingComponent } from '@/Components/Features/employee-reports/report-member-type-serving/report-member-type-serving.component';
 import { RabUnitAor } from '@/Components/basic-setup/rab-unit-aor/rab-unit-aor';
 import { RabUnitAorMap } from '@/Components/basic-setup/rab-unit-aor-map/rab-unit-aor-map';
 import { ManpowerSummaryComponent } from '@/Components/Features/statistics/manpower-summary/manpower-summary';
@@ -361,6 +362,7 @@ export const appRoutes: Routes = [
             { path: 'employee-reports', component: EmployeeReportsComponent },
             { path: 'report-family-occupation', component: ReportFamilyOccupationComponent },
             { path: 'report-address-location', component: ReportAddressLocationComponent },
+            { path: 'member-type-reporting', component: ReportMemberTypeServingComponent },
 
             // Statistics
             { path: 'statistics/manpower-summary', component: ManpowerSummaryComponent },

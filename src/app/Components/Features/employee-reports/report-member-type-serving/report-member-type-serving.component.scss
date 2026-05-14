@@ -1,0 +1,13 @@
+:host {
+    display: block;
+}
+
+:host ::ng-deep .report-fields-row .report-filter-field p-datepicker,
+:host ::ng-deep .report-fields-row .report-filter-field .p-datepicker {
+    display: block;
+    width: 100%;
+}
+
+:host ::ng-deep .report-fields-row .report-filter-field .p-datepicker .p-inputtext {
+    width: 100%;
+}
