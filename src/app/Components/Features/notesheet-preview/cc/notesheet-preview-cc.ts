@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+﻿import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -796,33 +796,36 @@ export class NotesheetPreviewCCComponent implements OnInit {
         const bodyParagraphs = (children: Paragraph[]) => children.length ? children : [para('')];
         const employeeParas = this.employeeLines.map((l) => para(`${l.serial} ${l.text}`, { size: SZ_TABLE }));
 
-        // Strip HTML from auth/remarks for Word output (keeps things simple — rich
-        // formatting is preserved in the screen preview only). The text is then
-        // normalized to NFC and cleaned of zero-width joiners: Quill emits
-        // Bengali in decomposed form with stray ZWJ/ZWNJ marks, which causes
-        // LibreOffice's complex-script shaper to draw conjuncts as empty boxes
-        // in the PDF/Print Preview pipeline.
-        const stripHtml = (html: string | null | undefined): string => {
-            if (!html) return '';
+        // Quill HTML → docx Paragraphs (one per top-level <p>/<div>). ZWJ/ZWNJ
+        // are preserved so words like "র‍্যাব" render correctly.
+        const cleanText = (s: string): string =>
+            s.trim().normalize('NFC').replace(/ /g, ' ');
+        const htmlToParagraphs = (html: string | null | undefined, opts: { size?: number; firstPrefix?: string } = {}): Paragraph[] => {
+            if (!html) return [];
             const div = document.createElement('div');
             div.innerHTML = html;
-            let s = (div.textContent || div.innerText || '').trim();
-            // Canonical composition — orders combining marks the way the
-            // OpenType GSUB tables in Nirmala UI / SolaimanLipi expect.
-            s = s.normalize('NFC');
-            // Strip ZWJ / ZWNJ and replace non-breaking space with a plain space.
-            s = s.replace(/[‌‍]/g, '').replace(/ /g, ' ');
-            return s;
+            const blocks = Array.from(div.querySelectorAll('p, div'));
+            const sourceTexts = blocks.length > 0
+                ? blocks.map((el) => cleanText(el.textContent || ''))
+                : [cleanText(div.textContent || '')];
+            return sourceTexts.map((t, idx) => {
+                const prefix = idx === 0 && opts.firstPrefix ? opts.firstPrefix : '';
+                return para(prefix + t, { size: opts.size });
+            });
         };
-        const authText = stripHtml(m.auth);
-        const remarksText = stripHtml(m.remarks);
+        const sutroParas = m.auth
+            ? htmlToParagraphs(m.auth, { firstPrefix: 'সূত্রঃ ', size: SZ_TABLE })
+            : [para('সূত্রঃ', { size: SZ_TABLE })];
+        const smarakParas = m.remarks
+            ? htmlToParagraphs(m.remarks, { firstPrefix: `স্মারক নং - ${this.letterNoBn} `, size: SZ_TABLE })
+            : [para(`স্মারক নং - ${this.letterNoBn}`, { size: SZ_TABLE })];
 
         // The work-description cell mixes Paragraphs (sutro / smarak) with a
         // nested Table (the signature row). Side-by-side approver columns
         // mirror the on-screen `inline-block` layout.
         const workDescChildren: (Paragraph | Table)[] = [];
-        workDescChildren.push(para(`সূত্রঃ ${authText}`, { size: SZ_TABLE }));
-        workDescChildren.push(para(`স্মারক নং - ${this.letterNoBn} ${remarksText}`, { size: SZ_TABLE }));
+        workDescChildren.push(...sutroParas);
+        workDescChildren.push(...smarakParas);
         // Larger top gap before the signature row.
         for (let i = 0; i < 6; i++) workDescChildren.push(para(''));
 

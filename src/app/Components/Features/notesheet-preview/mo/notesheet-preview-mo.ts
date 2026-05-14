@@ -559,14 +559,23 @@ export class NotesheetPreviewMOComponent implements OnInit {
             });
         };
 
-        const stripHtml = (html: string | null | undefined): string => {
-            if (!html) return '';
+        // Keep ZWJ/ZWNJ — words like "র‍্যাব" need ZWJ to render correctly.
+        // Only normalize Unicode (NFC) and turn NBSP into a regular space.
+        const cleanText = (s: string): string =>
+            s.trim().normalize('NFC').replace(/ /g, ' ');
+
+        /** Convert Quill HTML into Paragraphs, one per top-level <p>/<div>,
+         *  joining them with `\n` for use inside a single table cell.
+         *  When the cell needs multiple paragraphs, callers use the array form. */
+        const htmlToParagraphs = (html: string | null | undefined, opts: { size?: number; lineTwips?: number; align?: (typeof AlignmentType)[keyof typeof AlignmentType] } = {}): Paragraph[] => {
+            if (!html) return [];
             const div = document.createElement('div');
             div.innerHTML = html;
-            let s = (div.textContent || div.innerText || '').trim();
-            s = s.normalize('NFC');
-            s = s.replace(/[‌‍]/g, '').replace(/ /g, ' ');
-            return s;
+            const blocks = Array.from(div.querySelectorAll('p, div'));
+            const sourceTexts = blocks.length > 0
+                ? blocks.map((el) => cleanText(el.textContent || ''))
+                : [cleanText(div.textContent || '')];
+            return sourceTexts.map((t) => para(t, { size: opts.size, lineTwips: opts.lineTwips, align: opts.align }));
         };
 
         const topRightLabel = new Paragraph({
@@ -598,7 +607,7 @@ export class NotesheetPreviewMOComponent implements OnInit {
             verticalAlign: 'top' as any,
             children: typeof text === 'string' ? [para(text, { lineTwips: CELL_LINE })] : text
         });
-        const dataRow = (serial: number, label: string, value: string): TableRow => new TableRow({
+        const dataRow = (serial: number, label: string, value: string | Paragraph[]): TableRow => new TableRow({
             children: [
                 rowCell(this.serialBn(serial), SERIAL_W),
                 rowCell(label, LABEL_W),
@@ -607,8 +616,13 @@ export class NotesheetPreviewMOComponent implements OnInit {
             ]
         });
 
-        const authText = stripHtml(m.auth) || '---';
-        const remarksText = stripHtml(m.remarks) || '---';
+        // Rich-text cells (auth/remarks/details) now preserve Quill paragraph
+        // structure — one docx Paragraph per top-level <p> — instead of being
+        // flattened to a single line.
+        const authParas = htmlToParagraphs(m.auth, { lineTwips: CELL_LINE });
+        const authValue: string | Paragraph[] = authParas.length > 0 ? authParas : '---';
+        const remarksParas = htmlToParagraphs(m.remarks, { lineTwips: CELL_LINE });
+        const remarksValue: string | Paragraph[] = remarksParas.length > 0 ? remarksParas : '---';
 
         const numberedTable = new Table({
             width: { size: contentWidth, type: WidthType.DXA },
@@ -620,12 +634,12 @@ export class NotesheetPreviewMOComponent implements OnInit {
                 dataRow(2,  'গন্তব্যস্থল',                  this.destinationBn),
                 dataRow(3,  'রিপোর্ট করিবার ইউনিট/প্রতিষ্ঠান', this.reportingUnitBn),
                 dataRow(4,  'গমনের তারিখ ও সময়',         this.departureDateBn),
-                dataRow(5,  'গমনের প্রাধিকার',             authText),
+                dataRow(5,  'গমনের প্রাধিকার',             authValue),
                 dataRow(6,  'শেষ রসদ সনদপত্র',             m.lastRationCertificate || ''),
                 dataRow(7,  'বেতন ও ভাতা',                 m.payAndAllowance || ''),
                 dataRow(8,  'রেলওয়ে আজ্ঞাপত্র',          m.railwayWarrant || ''),
                 dataRow(9,  'অভ্যর্থনা',                    this.receptionUnitBn),
-                dataRow(10, 'মন্তব্য',                       remarksText)
+                dataRow(10, 'মন্তব্য',                       remarksValue)
             ]
         });
 
@@ -633,14 +647,15 @@ export class NotesheetPreviewMOComponent implements OnInit {
         const metaLabelW = 1600;
         const metaColonW = 280;
         const metaValueW = contentWidth - metaLabelW - metaColonW;
-        const metaRow = (label: string, value: string): TableRow => new TableRow({
+        const metaRow = (label: string, value: string | Paragraph[]): TableRow => new TableRow({
             children: [
                 rowCell(label, metaLabelW),
                 rowCell(':', metaColonW),
                 rowCell(value, metaValueW)
             ]
         });
-        const detailsText = stripHtml(m.detailsInformation) || '';
+        const detailsParas = htmlToParagraphs(m.detailsInformation, { lineTwips: CELL_LINE });
+        const detailsValue: string | Paragraph[] = detailsParas.length > 0 ? detailsParas : '';
         const metaTable = new Table({
             width: { size: contentWidth, type: WidthType.DXA },
             columnWidths: [metaLabelW, metaColonW, metaValueW],
@@ -652,7 +667,7 @@ export class NotesheetPreviewMOComponent implements OnInit {
                 metaRow('তারালাপনী', '৮৯৬৫৩১৫০ বর্ধিত ৩৫১১'),
                 metaRow('নথি নং',   this.topRightLabelBn),
                 metaRow('তারিখ',    this.letterDateBn),
-                metaRow('বিতরণ',    detailsText)
+                metaRow('বিতরণ',    detailsValue)
             ]
         });
 
