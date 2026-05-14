@@ -79,7 +79,8 @@ export const REPORT_LABELS = {
         'report.table.rabId': 'RAB ID',
         'report.table.motherOrg': 'Mother Org',
 
-        'report.title.memberTypeServing': 'List of Officers/DAD/ORs by Member Type, RAB Unit & Wing',
+        'report.pageTitle.memberTypeServing': 'Report On Member Type',
+        'report.title.memberTypeServing': 'Member Type Report by RAB Unit & Wing',
         'report.search.memberType': 'Member Type',
         'report.search.wing': 'Wing',
         'report.search.joiningInRabFrom': 'Joining in RAB From',
@@ -184,7 +185,8 @@ export const REPORT_LABELS = {
         'report.table.rabId': 'র‍্যাব আইডি',
         'report.table.motherOrg': 'মাতৃ সংস্থা',
 
-        'report.title.memberTypeServing': 'সদস্যের ধরণ, র‍্যাব ইউনিট ও উইং অনুযায়ী অফিসার/DAD/OR-দের তালিকা',
+        'report.pageTitle.memberTypeServing': 'সদস্যের ধরণ বিষয়ক প্রতিবেদন',
+        'report.title.memberTypeServing': 'র‍্যাব ইউনিট ও উইং অনুযায়ী সদস্যের ধরণ প্রতিবেদন',
         'report.search.memberType': 'সদস্যের ধরণ',
         'report.search.wing': 'উইং',
         'report.search.joiningInRabFrom': 'র‍্যাবে যোগদানের তারিখ থেকে',
