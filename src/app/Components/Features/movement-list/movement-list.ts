@@ -217,16 +217,16 @@ export class MovementListComponent implements OnInit, OnDestroy {
     onView(row: MovementInfoModel) {
         switch (row.moveOrderType) {
             case MoveOrderType.Article47Handover:
-                this.router.navigate(['/notesheet-preview/article-47-handover'], { queryParams: { id: row.movementId } });
+                this.router.navigate(['/movement-preview/article-47-handover'], { queryParams: { id: row.movementId } });
                 return;
             case MoveOrderType.Article47Takeover:
-                this.router.navigate(['/notesheet-preview/article-47-takeover'], { queryParams: { id: row.movementId } });
+                this.router.navigate(['/movement-preview/article-47-takeover'], { queryParams: { id: row.movementId } });
                 return;
             case MoveOrderType.MO:
-                this.router.navigate(['/notesheet-preview/mo'], { queryParams: { id: row.movementId } });
+                this.router.navigate(['/movement-preview/mo'], { queryParams: { id: row.movementId } });
                 return;
             case MoveOrderType.CC:
-                this.router.navigate(['/notesheet-preview/cc'], { queryParams: { id: row.movementId } });
+                this.router.navigate(['/movement-preview/cc'], { queryParams: { id: row.movementId } });
                 return;
             default:
                 this.router.navigate(['/movement-info'], { queryParams: { id: row.movementId, mode: 'view' } });

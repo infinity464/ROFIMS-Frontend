@@ -180,8 +180,8 @@ export class NotesheetPreviewCCComponent implements OnInit {
     private generateQrCode(): void {
         if (!this.movement?.movementId) return;
         const path = this.movement.publicToken
-            ? `/notesheet-preview/cc/${this.movement.publicToken}`
-            : `/notesheet-preview/cc?id=${this.movement.movementId}`;
+            ? `/movement-preview/cc/${this.movement.publicToken}`
+            : `/movement-preview/cc?id=${this.movement.movementId}`;
         const url = new URL(path, window.location.origin).toString();
         QRCode.toDataURL(url, { width: 160, margin: 1 })
             .then((dataUrl) => { this.qrDataUrl = dataUrl; })
