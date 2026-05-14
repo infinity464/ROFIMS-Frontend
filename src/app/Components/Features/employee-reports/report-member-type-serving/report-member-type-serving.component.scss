@@ -45,26 +45,24 @@
     color: var(--text-color);
 }
 
-/* ----- Collapsible filter header ----- */
+/* ----- Collapsible filter header (borderless: blends into outer card) ----- */
 .report-filter-header {
-    border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.08));
+    border: none;
     border-radius: 0.5rem;
     background: var(--surface-ground, rgba(0, 0, 0, 0.15));
     padding: 0.75rem 1rem;
-    margin-top: 0.25rem;
+    margin-top: 1rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
     cursor: pointer;
-    transition: border-color 0.18s, background 0.18s;
+    transition: background 0.18s;
 
     &:hover {
         background: var(--surface-hover, rgba(255, 255, 255, 0.05));
     }
 
     &.open {
-        border-color: var(--p-primary-color, #10b981);
-        border-bottom-color: transparent;
         border-bottom-left-radius: 0;
         border-bottom-right-radius: 0;
     }
@@ -135,17 +133,12 @@
     }
 }
 
-/* ----- Filter body ----- */
+/* ----- Filter body (no border; sits as one surface with the header) ----- */
 .report-filter-body {
     background: var(--surface-ground, rgba(0, 0, 0, 0.1));
-    border: 1px solid var(--p-primary-color, #10b981);
-    border-top: none;
+    border: none;
     border-bottom-left-radius: 0.5rem;
     border-bottom-right-radius: 0.5rem;
-
-    &:not(.open) {
-        border-color: transparent;
-    }
 }
 
 .report-filter-body-inner {

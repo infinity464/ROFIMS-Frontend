@@ -16,8 +16,8 @@
                     </svg>
                 </div>
                 <div>
-                    <div class="report-filter-title">{{ L['en']['report.search.createList'] }}</div>
-                    <div class="report-filter-subtitle">{{ filterSubtitle() }}</div>
+                    <div class="report-filter-title">Search &amp; filter</div>
+                    <div class="report-filter-subtitle">{{ activeFilterCount > 0 ? filterSubtitle() : 'Select fields to search on' }}</div>
                 </div>
             </div>
             <div class="report-filter-header-right">

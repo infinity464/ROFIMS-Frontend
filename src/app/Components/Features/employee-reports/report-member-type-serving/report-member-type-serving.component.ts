@@ -24,7 +24,7 @@ import type { CommonCodeModel } from '@/models/common-code-model';
     imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, DatePickerModule, Toast],
     providers: [MessageService],
     templateUrl: './report-member-type-serving.component.html',
-    styleUrls: ['./report-member-type-serving.component.scss', '../report-theme.scss'],
+    styleUrls: ['../report-theme.scss', './report-member-type-serving.component.scss'],
 })
 export class ReportMemberTypeServingComponent implements OnInit {
     canInsert = true;
