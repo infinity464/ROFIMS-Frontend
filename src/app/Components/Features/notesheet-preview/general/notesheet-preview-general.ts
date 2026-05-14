@@ -158,7 +158,7 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
     fileRows: FileRowData[] = [];
 
     // ── Members table data (loaded from NoteSheetReferenceEmployee) ──
-    previewMembersColumns: { key: string; label: string; mergedFrom?: string[] }[] = [];
+    previewMembersColumns: { key: string; label: string; mergedFrom?: string[]; width?: number }[] = [];
     previewMembersRows: Record<string, string>[] = [];
     private loadedMemberEmployeeIds: number[] = [];
 
@@ -256,7 +256,8 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
             key: c.key,
             label: c.label,
             group: (c as any).group ?? 'basic',
-            ...(c.mergedFrom ? { mergedFrom: (c as any).mergedFrom } : {})
+            ...(c.mergedFrom ? { mergedFrom: (c as any).mergedFrom } : {}),
+            ...(c.width != null ? { width: c.width } : {})
         }));
         const members: MemberRow[] = this.previewMembersRows.map((row, i) => ({
             employeeId: this.loadedMemberEmployeeIds[i] ?? 0,
@@ -840,6 +841,55 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
     onColDragEnd(): void {
         this.dragColIndex = null;
         this.dragOverColIndex = null;
+    }
+
+    // ── Column Resize (edit mode) ────────────────────────────────────────
+
+    private resizeColIndex: number | null = null;
+    private resizeStartX = 0;
+    private resizeStartWidth = 0;
+    private resizeTableWidth = 0;
+    private resizeBoundMove = this.onResizeMove.bind(this);
+    private resizeBoundUp = this.onResizeUp.bind(this);
+
+    onResizeStart(colIndex: number, event: MouseEvent): void {
+        event.preventDefault();
+        event.stopPropagation();
+        this.resizeColIndex = colIndex;
+        this.resizeStartX = event.clientX;
+        const th = (event.target as HTMLElement).closest('th');
+        const table = th?.closest('table');
+        this.resizeTableWidth = table?.offsetWidth ?? 800;
+        this.resizeStartWidth = this.editMembersData.columns[colIndex]?.width ?? this.getDefaultColWidth(this.editMembersData.columns.length);
+        document.addEventListener('mousemove', this.resizeBoundMove);
+        document.addEventListener('mouseup', this.resizeBoundUp);
+    }
+
+    private onResizeMove(event: MouseEvent): void {
+        if (this.resizeColIndex === null) return;
+        const dx = event.clientX - this.resizeStartX;
+        const dPct = (dx / this.resizeTableWidth) * 100;
+        const newWidth = Math.max(3, Math.min(80, this.resizeStartWidth + dPct));
+        this.editMembersData.columns[this.resizeColIndex].width = Math.round(newWidth * 10) / 10;
+    }
+
+    private onResizeUp(): void {
+        this.resizeColIndex = null;
+        document.removeEventListener('mousemove', this.resizeBoundMove);
+        document.removeEventListener('mouseup', this.resizeBoundUp);
+    }
+
+    getDefaultColWidth(colCount: number): number {
+        if (colCount === 0) return 100;
+        return Math.round(((100 - 10) / colCount) * 10) / 10;
+    }
+
+    getEditColWidth(col: MemberColumnDef): number {
+        return col.width ?? this.getDefaultColWidth(this.editMembersData.columns.length);
+    }
+
+    getPreviewColWidth(col: { width?: number }): number {
+        return col.width ?? this.getDefaultColWidth(this.previewMembersColumns.length);
     }
 
     /** Auto serial for members table rows: Bangla numerals when Bangla, English otherwise */
@@ -1517,19 +1567,28 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
             const convertDigits = (s: string) => bn && /\d/.test(s) ? s.replace(/\d/g, d => bnDigits[+d]) : s;
             const rows = mModel.membersRows as Record<string, string>[];
 
-            // Calculate max content length per column for proportional widths
-            const colMaxLens = cols.map(c => {
-                let max = c.label.length;
-                for (const row of rows) {
-                    const val = c.mergedFrom ? c.mergedFrom.map((k: string) => row[k] || '').filter(Boolean).join(' ') : (row[c.key] || '');
-                    if (val.length > max) max = val.length;
-                }
-                return Math.max(max, 2);
-            });
-            const slMaxLen = Math.max(slLabel.length, String(rows.length).length, 2);
-            const totalLen = slMaxLen + colMaxLens.reduce((a, b) => a + b, 0);
-            const slPct = Math.round((slMaxLen / totalLen) * 100);
-            const colPcts = colMaxLens.map(l => Math.round((l / totalLen) * 100));
+            // Use saved width% from JSON if available; otherwise distribute proportionally by content
+            const hasCustomWidths = cols.some((c: any) => c.width != null);
+            let slPct: number;
+            let colPcts: number[];
+            if (hasCustomWidths) {
+                const defaultPct = Math.round(((100 - 5) / cols.length) * 10) / 10;
+                slPct = 5;
+                colPcts = cols.map((c: any) => c.width ?? defaultPct);
+            } else {
+                const colMaxLens = cols.map(c => {
+                    let max = c.label.length;
+                    for (const row of rows) {
+                        const val = c.mergedFrom ? c.mergedFrom.map((k: string) => row[k] || '').filter(Boolean).join(' ') : (row[c.key] || '');
+                        if (val.length > max) max = val.length;
+                    }
+                    return Math.max(max, 2);
+                });
+                const slMaxLen = Math.max(slLabel.length, String(rows.length).length, 2);
+                const totalLen = slMaxLen + colMaxLens.reduce((a, b) => a + b, 0);
+                slPct = Math.round((slMaxLen / totalLen) * 100);
+                colPcts = colMaxLens.map(l => Math.round((l / totalLen) * 100));
+            }
 
             const mkWidth = (pct: number) => ({ size: pct, type: WidthType.PERCENTAGE });
             const slHeaderCell = new TableCell({ width: mkWidth(slPct), children: [new Paragraph({ children: [new TextRun({ text: slLabel, bold: true, size: tblSize, sizeComplexScript: csTbl, font, language: lang })], alignment: AlignmentType.CENTER })], borders: { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder } });

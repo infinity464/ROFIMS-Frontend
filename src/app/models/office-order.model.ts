@@ -1,0 +1,68 @@
+/** Office Order master row for list. */
+export interface GeneralNotesheetOfficeOrderDto {
+    id: number;
+    letterNo: string;
+    letterDate: string;
+    noteSheetId: number;
+    noteSheetNo: string | null;
+    subject: string | null;
+    textType: string | null;
+    status: string;
+    remarks: string | null;
+    createdBy: string;
+    createdDate: string;
+    // Approval
+    approvalEmployeeId?: number | null;
+    approvalEmployeeName?: string | null;
+    approvalStatus?: string | null;
+    approvalNote?: string | null;
+    cancelReason?: string | null;
+    approvalDate?: string | null;
+}
+
+/** Office Order full detail (for preview/edit). */
+export interface GeneralNotesheetOfficeOrderWithDetailsDto {
+    id: number;
+    letterNo: string;
+    letterDate: string;
+    noteSheetId: number;
+    noteSheetNo: string | null;
+    subject: string | null;
+    addressTo: string | null;       // Rich text HTML
+    referenceNo: string | null;     // JSON string
+    body: string | null;            // Rich text HTML
+    attachment: string | null;      // JSON string
+    onulipi: string | null;         // JSON string
+    textType: string | null;
+    filesReferences: string | null;
+    status: string;
+    remarks: string | null;
+    createdBy: string;
+    createdDate: string;
+    // Approval
+    approvalEmployeeId?: number | null;
+    approvalEmployeeName?: string | null;
+    approvalStatus?: string | null;
+    approvalNote?: string | null;
+    cancelReason?: string | null;
+    approvalDate?: string | null;
+}
+
+/** Reference No entry (with serial). */
+export interface ReferenceNoEntry {
+    serial: string;  // "ক", "খ", "গ" for Bangla; "A", "B", "C" for English
+    text: string;
+}
+
+/** Attachment entry (with numeric serial). */
+export interface AttachmentEntry {
+    serial: number;  // 1, 2, 3
+    text: string;
+}
+
+/** Onulipi/footer paragraph entry (same structure as PostingOrder FooterText). */
+export interface OnulipiEntry {
+    text: string;
+    transferRabUnitId: number | null;
+    transferRabUnitName: string | null;
+}

@@ -55,6 +55,8 @@ export interface MemberColumnDef {
     group: 'basic' | 'personal' | 'family' | 'custom' | 'merged';
     /** Only for merged columns — stores source keys + separator */
     mergedFrom?: { keys: string[]; separator: string };
+    /** Column width as percentage (auto-distributed if omitted) */
+    width?: number;
 }
 
 /** One member row in the MembersJson table — stores all fetched data */
@@ -1146,6 +1148,53 @@ export class NotesheetGenerateComponent implements OnInit {
     onColDragEnd(): void {
         this.dragColIndex = null;
         this.dragOverColIndex = null;
+    }
+
+    // ── Column Resize ────────────────────────────────────────────────────
+
+    private resizeColIndex: number | null = null;
+    private resizeStartX = 0;
+    private resizeStartWidth = 0;
+    private resizeTableWidth = 0;
+    private resizeBoundMove = this.onResizeMove.bind(this);
+    private resizeBoundUp = this.onResizeUp.bind(this);
+
+    onResizeStart(colIndex: number, event: MouseEvent): void {
+        event.preventDefault();
+        event.stopPropagation();
+        this.resizeColIndex = colIndex;
+        this.resizeStartX = event.clientX;
+        const th = (event.target as HTMLElement).closest('th');
+        const table = th?.closest('table');
+        this.resizeTableWidth = table?.offsetWidth ?? 800;
+        this.resizeStartWidth = this.membersData.columns[colIndex]?.width ?? this.getDefaultColWidth();
+        document.addEventListener('mousemove', this.resizeBoundMove);
+        document.addEventListener('mouseup', this.resizeBoundUp);
+    }
+
+    private onResizeMove(event: MouseEvent): void {
+        if (this.resizeColIndex === null) return;
+        const dx = event.clientX - this.resizeStartX;
+        const dPct = (dx / this.resizeTableWidth) * 100;
+        const newWidth = Math.max(3, Math.min(80, this.resizeStartWidth + dPct));
+        this.membersData.columns[this.resizeColIndex].width = Math.round(newWidth * 10) / 10;
+    }
+
+    private onResizeUp(): void {
+        this.resizeColIndex = null;
+        document.removeEventListener('mousemove', this.resizeBoundMove);
+        document.removeEventListener('mouseup', this.resizeBoundUp);
+    }
+
+    getDefaultColWidth(): number {
+        const colCount = this.membersData.columns.length;
+        if (colCount === 0) return 100;
+        // Reserve ~5% for SL and ~5% for Action
+        return Math.round(((100 - 10) / colCount) * 10) / 10;
+    }
+
+    getColWidth(col: MemberColumnDef): number {
+        return col.width ?? this.getDefaultColWidth();
     }
 
     // ── Merge Columns ─────────────────────────────────────────────────────

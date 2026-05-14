@@ -1,0 +1,233 @@
+:host {
+    display: block;
+    min-height: 100vh;
+    background: #d8d8d8;
+}
+
+/* ── Toolbar ──────────────────────────────────────── */
+.preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 1.5rem;
+    background: #fff;
+    border-bottom: 1px solid var(--surface-border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.preview-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.approval-header-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+/* ── Loading / Error ──────────────────────────────── */
+.preview-loading,
+.preview-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    gap: 1rem;
+    color: var(--text-color-secondary);
+}
+
+/* ── Legal Paper Container ────────────────────────── */
+.legal-paper-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem;
+    min-height: calc(100vh - 60px);
+    gap: 2rem;
+}
+
+.legal-paper {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 14mm 10mm 20mm;
+    background: #fff;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+    box-sizing: border-box;
+    font-family: 'Times New Roman', 'Noto Sans Bengali', 'SolaimanLipi', Times, serif;
+    font-size: 10pt;
+    color: #000;
+    line-height: 1.7;
+    position: relative;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── Document Box ─────────────────────────────────── */
+.oo-doc-box {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 10px 16px 18px 20px;
+    max-width: 100%;
+    overflow: hidden;
+    word-break: normal;
+}
+
+/* ── Document Styles ──────────────────────────────── */
+.oo-doc-header {
+    text-align: center;
+    margin-bottom: 4px;
+}
+
+.oo-doc-header-line {
+    font-weight: 700;
+    font-size: 11pt;
+    line-height: 1.5;
+}
+
+.oo-doc-title {
+    text-align: center;
+    font-size: 14pt;
+    font-weight: 700;
+    text-decoration: underline;
+    margin: 12px 0;
+}
+
+.oo-doc-meta {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    font-size: 10pt;
+}
+
+.oo-doc-reference {
+    margin-bottom: 10px;
+    font-size: 10pt;
+    font-style: italic;
+
+    .oo-doc-reference-label {
+        font-weight: 700;
+        margin-right: 4px;
+        font-style: normal;
+    }
+}
+
+/* ── Sections (Address To, Reference No, Attachment, Onulipi) ── */
+.oo-doc-section {
+    margin: 10px 0;
+    font-size: 10pt;
+}
+
+.oo-doc-section-label {
+    font-weight: 700;
+    margin-bottom: 4px;
+    font-size: 10pt;
+}
+
+.oo-doc-list {
+    padding-left: 16px;
+    line-height: 2;
+
+    p {
+        margin: 2px 0;
+    }
+}
+
+/* ── Subject ──────────────────────────────────────── */
+.oo-doc-subject {
+    margin: 10px 0;
+    font-size: 10pt;
+}
+
+.oo-doc-subject-label {
+    font-weight: 700;
+}
+
+.oo-doc-subject-text {
+    font-weight: 700;
+    text-decoration: underline;
+}
+
+/* ── Body ─────────────────────────────────────────── */
+.oo-doc-body {
+    margin: 12px 0;
+    line-height: 1.8;
+    text-align: justify;
+    font-size: 10pt;
+}
+
+/* ── Rich HTML sections (innerHTML) ── */
+:host ::ng-deep {
+    .oo-doc-rich-content {
+        font-size: 10pt;
+        line-height: 1.8;
+        width: 100%;
+        max-width: 100%;
+        text-align: justify;
+        word-break: normal;
+        overflow-wrap: break-word;
+
+        p { margin: 4px 0; text-align: justify; }
+        ul, ol { padding-left: 24px !important; margin: 4px 0; list-style-type: disc !important; }
+        li { display: list-item !important; list-style-type: disc !important; }
+        strong { font-weight: 700; }
+        em { font-style: italic; }
+        u { text-decoration: underline; }
+        s { text-decoration: line-through; }
+        blockquote { border-left: 4px solid #ccc; margin: 4px 0; padding-left: 16px; }
+    }
+}
+
+/* ── Print ────────────────────────────────────────── */
+@page {
+    size: A4;
+    margin: 0;
+}
+
+@media print {
+    .no-print {
+        display: none !important;
+    }
+
+    :host {
+        background: #fff !important;
+        min-height: auto !important;
+    }
+
+    .legal-paper-container {
+        padding: 0 !important;
+        min-height: auto !important;
+    }
+
+    .legal-paper {
+        width: 210mm !important;
+        box-shadow: none !important;
+        margin: 0 !important;
+        page-break-after: always;
+        break-after: page;
+    }
+
+    .legal-paper:last-child {
+        page-break-after: auto;
+        break-after: auto;
+    }
+}
+
+/* ── Responsive ───────────────────────────────────── */
+@media screen and (max-width: 1200px) {
+    .legal-paper-container {
+        padding: 1rem;
+    }
+
+    .legal-paper {
+        width: 100%;
+        min-height: auto;
+        padding: 12mm 8mm;
+    }
+}

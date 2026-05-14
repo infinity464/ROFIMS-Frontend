@@ -118,8 +118,9 @@
   th, td {
     padding: 0.5rem 0.75rem;
     border-bottom: 1px solid var(--surface-border, #dee2e6);
-    white-space: nowrap;
     text-align: left;
+    word-break: break-word;
+    overflow-wrap: break-word;
   }
 
   th {
@@ -177,6 +178,22 @@
     transition: opacity 0.15s;
 
     &:hover { opacity: 1; }
+  }
+
+  &__col-resize {
+    position: absolute;
+    top: 0;
+    right: -2px;
+    bottom: 0;
+    width: 5px;
+    cursor: col-resize;
+    z-index: 1;
+
+    &:hover,
+    &:active {
+      background: var(--primary-color, #3b82f6);
+      opacity: 0.4;
+    }
   }
 
   &__custom-cell {

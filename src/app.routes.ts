@@ -165,6 +165,8 @@ import { CorpsWiseManpowerComponent } from '@/Components/Features/statistics/cor
 import { TradeWiseManpowerComponent } from '@/Components/Features/statistics/trade-wise-manpower/trade-wise-manpower';
 import { UnitWiseBarChartComponent } from '@/Components/Features/statistics/unit-wise-bar-chart/unit-wise-bar-chart';
 import { SystemMonitoringComponent } from '@/Components/Features/system-monitoring/system-monitoring';
+import { OfficeOrderGenerateComponent } from '@/Components/Features/office-order-generate/office-order-generate';
+import { OfficeOrderPreviewComponent } from '@/Components/Features/office-order-preview/office-order-preview';
 
 export const appRoutes: Routes = [
     // Public routes
@@ -337,6 +339,8 @@ export const appRoutes: Routes = [
             { path: 'posting/pending-inter-posting-joining', component: PendingInterPostingJoiningComponent },
             { path: 'posting/posting-order-list', component: PostingOrderListComponent },
             { path: 'posting/posting-order-preview', component: PostingOrderPreviewPageComponent },
+            { path: 'office-order/generate', component: OfficeOrderGenerateComponent },
+            { path: 'office-order/preview', component: OfficeOrderPreviewComponent },
             { path: 'employee-signature-upload', component: EmployeeSignatureUploadComponent },
             { path: 'presently-serving-members', component: PresentlyServingMembers },
             { path: 'serving-members-for-inter-posting', component: PresentlyServingMembers, data: { mode: 'interPosting' } },

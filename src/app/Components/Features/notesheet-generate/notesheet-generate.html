@@ -187,13 +187,14 @@
           <!-- Members table (all columns dynamic) -->
           @if (membersData.members.length > 0 && membersData.columns.length > 0) {
             <div class="members-table-wrap">
-              <table class="members-table">
+              <table class="members-table" style="table-layout:fixed;width:100%;">
                 <thead>
                   <tr>
-                    <th style="width:40px;text-align:center;">{{ isBangla ? 'ক্রমিক' : 'SL' }}</th>
+                    <th class="members-table__sl">{{ isBangla ? 'ক্রমিক' : 'SL' }}</th>
                     @for (col of membersData.columns; track col.key; let ci = $index) {
                       <th
                         draggable="true"
+                        [style.width.%]="getColWidth(col)"
                         [class.members-table__th-dragging]="dragColIndex === ci"
                         [class.members-table__th-dragover]="dragOverColIndex === ci"
                         (dragstart)="onColDragStart(ci, $event)"
@@ -201,7 +202,8 @@
                         (dragenter)="onColDragEnter(ci, $event)"
                         (dragleave)="onColDragLeave($event)"
                         (drop)="onColDrop(ci, $event)"
-                        (dragend)="onColDragEnd()">
+                        (dragend)="onColDragEnd()"
+                        style="position:relative;">
                         <div class="members-table__custom-col-header">
                           @if (editingColLabelKey === col.key) {
                             <input
@@ -223,6 +225,7 @@
                             <i class="pi pi-times"></i>
                           </button>
                         </div>
+                        <span class="members-table__col-resize" (mousedown)="onResizeStart(ci, $event)"></span>
                       </th>
                     }
                     <th class="members-table__action">Action</th>
