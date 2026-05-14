@@ -82,6 +82,7 @@ export const REPORT_LABELS = {
 
         'report.pageTitle.memberTypeServing': 'Report On Member Type',
         'report.title.pendingInterPosting': 'List of pending inter-posting list as per Battalion/wing',
+        'report.title.supernumerary': 'List of members in Supernumerary Post as per Mother Organization',
         'report.search.postedUnit': 'Posted Bn/Wg',
         'report.table.presentBnWg': 'Present Bn/Wg',
         'report.table.postedBnWg': 'Posted Bn/Wg',
@@ -194,6 +195,7 @@ export const REPORT_LABELS = {
 
         'report.pageTitle.memberTypeServing': 'সদস্যের ধরণ বিষয়ক প্রতিবেদন',
         'report.title.pendingInterPosting': 'ব্যাটালিয়ন/উইং অনুযায়ী বিচারাধীন আন্তঃ-বদলির তালিকা',
+        'report.title.supernumerary': 'মাতৃ সংস্থা অনুযায়ী সুপারনিউমারারি পোস্টের সদস্যদের তালিকা',
         'report.search.postedUnit': 'বদলিকৃত ইউনিট',
         'report.table.presentBnWg': 'বর্তমান ইউনিট',
         'report.table.postedBnWg': 'বদলিকৃত ইউনিট',

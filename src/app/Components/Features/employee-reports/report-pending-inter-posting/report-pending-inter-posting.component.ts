@@ -47,7 +47,6 @@ export class ReportPendingInterPostingComponent implements OnInit {
     /** RAB Unit filter is matched by codeId against PendingPostingJoiningDto.transferRabUnitId. */
     selectedTransferUnitId: number | null = null;
 
-    first = 0;
     rows = 20;
 
     exportDropdownOpen = false;
@@ -162,12 +161,6 @@ export class ReportPendingInterPostingComponent implements OnInit {
     clearFilters(): void {
         this.selectedMotherOrg = null;
         this.selectedTransferUnitId = null;
-        this.first = 0;
-    }
-
-    onPage(event: { first: number; rows: number }): void {
-        this.first = event.first;
-        this.rows = event.rows;
     }
 
     toggleLang(): void {
@@ -179,21 +172,11 @@ export class ReportPendingInterPostingComponent implements OnInit {
     search(): void {
         this.searched = true;
         this.appliedFilterLines = this.buildFilterLines();
-        this.first = 0;
         this.list = this.allRows.filter((r) => {
             if (this.selectedMotherOrg && r.motherOrganization !== this.selectedMotherOrg) return false;
             if (this.selectedTransferUnitId != null && r.transferRabUnitId !== this.selectedTransferUnitId) return false;
             return true;
         });
-    }
-
-    get totalRecords(): number {
-        return this.list.length;
-    }
-
-    /** Page slice for the table (lazy=false but using internal paging to mirror member-type style). */
-    get pageRows(): PendingPostingJoiningDto[] {
-        return this.list.slice(this.first, this.first + this.rows);
     }
 
     toggleExportDropdown(event: Event): void {

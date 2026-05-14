@@ -164,6 +164,7 @@ import { ReportFamilyOccupationComponent } from '@/Components/Features/employee-
 import { ReportAddressLocationComponent } from '@/Components/Features/employee-reports/report-address-location/report-address-location.component';
 import { ReportMemberTypeServingComponent } from '@/Components/Features/employee-reports/report-member-type-serving/report-member-type-serving.component';
 import { ReportPendingInterPostingComponent } from '@/Components/Features/employee-reports/report-pending-inter-posting/report-pending-inter-posting.component';
+import { ReportSupernumeraryComponent } from '@/Components/Features/employee-reports/report-supernumerary/report-supernumerary.component';
 import { RabUnitAor } from '@/Components/basic-setup/rab-unit-aor/rab-unit-aor';
 import { RabUnitAorMap } from '@/Components/basic-setup/rab-unit-aor-map/rab-unit-aor-map';
 import { ManpowerSummaryComponent } from '@/Components/Features/statistics/manpower-summary/manpower-summary';
@@ -365,6 +366,7 @@ export const appRoutes: Routes = [
             { path: 'report-address-location', component: ReportAddressLocationComponent },
             { path: 'member-type-reporting', component: ReportMemberTypeServingComponent },
             { path: 'report-pending-inter-posting', component: ReportPendingInterPostingComponent },
+            { path: 'report-supernumerary', component: ReportSupernumeraryComponent },
 
             // Statistics
             { path: 'statistics/manpower-summary', component: ManpowerSummaryComponent },
