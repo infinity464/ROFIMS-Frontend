@@ -1,18 +1,63 @@
+:host {
+    display: block;
+}
+
 /* =============================================
-   Dynamic Search – Design System
+   Dynamic Search – re-skinned to match
+   leave-application / pending-approval design.
+   Card style, font sizes, primary-green accents.
    ============================================= */
 
-/* ----- Category Tabs ----- */
+.employee-reports-page {
+    background: transparent;
+    color: var(--text-color, inherit);
+    font-family: inherit;
+    margin: 0 auto;
+    padding: 0 0 1.5rem 0;
+}
+
+/* ----- Section cards (filter + results) ----- */
+.report-filter-card,
+.report-results-card {
+    background: var(--surface-card, rgba(255, 255, 255, 0.03));
+    border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.08));
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+    overflow: visible;
+}
+
+.report-filter-card-title {
+    padding: 0 0 0.75rem 0;
+    margin: 0 0 1.25rem 0;
+    border-bottom: 1px solid var(--surface-border, rgba(255, 255, 255, 0.08));
+}
+
+.report-page-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-color, #fff);
+    margin: 0;
+    letter-spacing: 0;
+}
+
+:host-context(.app-dark) .report-page-title {
+    color: var(--text-color);
+}
+
+/* ----- Category tabs ----- */
 .ds-category-bar {
-    padding: 12px 20px 4px;
+    padding: 0;
+    margin: 0 0 1rem 0;
 }
 
 .ds-category-tabs {
     display: inline-flex;
     gap: 0;
-    background: var(--surface, #f7f9fc);
-    border: 1px solid var(--border, #e4e9f2);
-    border-radius: 10px;
+    background: var(--surface-ground, rgba(0, 0, 0, 0.15));
+    border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.08));
+    border-radius: 0.5rem;
     padding: 3px;
 }
 
@@ -20,15 +65,15 @@
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    padding: 8px 20px;
+    padding: 7px 18px;
     border: none;
-    border-radius: 8px;
+    border-radius: 0.4rem;
     background: transparent;
-    font-size: 0.84rem;
+    font-size: 0.85rem;
     font-weight: 500;
-    color: var(--muted, #8a96b0);
+    color: var(--text-color-secondary, rgba(255, 255, 255, 0.6));
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.18s ease;
     white-space: nowrap;
 
     i {
@@ -36,15 +81,15 @@
     }
 
     &:hover:not(.ds-tab--active) {
-        color: var(--text, #1a2744);
-        background: rgba(0, 0, 0, 0.03);
+        color: var(--text-color, #fff);
+        background: var(--surface-hover, rgba(255, 255, 255, 0.05));
     }
 
     &--active {
-        background: var(--primary-color);
-        color: var(--primary-contrast-color, #fff);
+        background: var(--p-primary-color, #10b981);
+        color: var(--p-primary-contrast-color, #fff);
         font-weight: 600;
-        box-shadow: 0 2px 8px color-mix(in srgb, var(--primary-color) 30%, transparent);
+        box-shadow: 0 1px 3px rgba(16, 185, 129, 0.3);
 
         i {
             color: inherit;
@@ -52,12 +97,126 @@
     }
 }
 
-/* ----- Top Row: Search Fields + Member Status side by side ----- */
+/* ----- Collapsible filter header ----- */
+.report-filter-header {
+    border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.08));
+    border-radius: 0.5rem;
+    background: var(--surface-ground, rgba(0, 0, 0, 0.15));
+    padding: 0.75rem 1rem;
+    margin-top: 0.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: border-color 0.18s, background 0.18s;
+
+    &:hover {
+        background: var(--surface-hover, rgba(255, 255, 255, 0.05));
+    }
+
+    &.open {
+        border-color: var(--p-primary-color, #10b981);
+        border-bottom-color: transparent;
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+}
+
+.report-filter-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.report-filter-header-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.report-filter-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 0.5rem;
+    background: rgba(16, 185, 129, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    svg path {
+        stroke: var(--p-primary-color, #10b981);
+    }
+}
+
+.report-filter-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-color, #fff);
+}
+
+:host-context(.app-dark) .report-filter-title {
+    color: var(--text-color);
+}
+
+.report-filter-subtitle {
+    font-size: 0.78rem;
+    color: var(--text-color-secondary, rgba(255, 255, 255, 0.6));
+    margin-top: 1px;
+}
+
+.report-chevron {
+    width: 28px;
+    height: 28px;
+    border-radius: 0.5rem;
+    border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.1));
+    background: var(--surface-card, rgba(255, 255, 255, 0.03));
+    color: var(--text-color-secondary, rgba(255, 255, 255, 0.6));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s, border-color 0.18s, background 0.18s;
+}
+
+.report-filter-header.open .report-chevron {
+    border-color: var(--p-primary-color, #10b981);
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--p-primary-color, #10b981);
+
+    svg {
+        transform: rotate(180deg);
+    }
+}
+
+/* ----- Filter body (overrides theme-common max-height cap) ----- */
+.report-filter-body {
+    background: var(--surface-ground, rgba(0, 0, 0, 0.1));
+    border: 1px solid var(--p-primary-color, #10b981);
+    border-top: none;
+    border-bottom-left-radius: 0.5rem;
+    border-bottom-right-radius: 0.5rem;
+
+    &:not(.open) {
+        border-color: transparent;
+    }
+}
+
+.report-filter-body-inner {
+    padding: 1.25rem;
+}
+
+/* Lift the 500px cap from report-theme-common so all selected fields
+ * and action buttons remain visible. */
+:host ::ng-deep .report-filter-body.open {
+    max-height: none;
+    overflow: visible;
+}
+
+/* ----- Top row: search-field multiselect + member status ----- */
 .ds-top-row {
     display: flex;
-    gap: 16px;
+    gap: 1rem;
     align-items: flex-end;
-    margin-bottom: 16px;
+    margin-bottom: 1rem;
 }
 
 .ds-field-selector {
@@ -76,55 +235,52 @@
     }
 }
 
-/* ----- Field Selector ----- */
 .ds-field-selector-header {
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 6px;
+    gap: 0.5rem;
+    margin-bottom: 0.4rem;
 }
 
 .ds-label {
-    font-size: 0.78rem;
-    font-weight: 700;
-    color: var(--text, #1a2744);
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-color, #fff);
+    text-transform: none;
+    letter-spacing: 0;
 }
 
 .ds-field-count {
-    font-size: 0.72rem;
+    font-size: 0.7rem;
     font-weight: 600;
-    color: var(--primary-color);
-    background: var(--report-accent-bg, rgba(0, 0, 0, 0.05));
-    padding: 2px 10px;
-    border-radius: 10px;
-    border: 1px solid color-mix(in srgb, var(--primary-color) 20%, transparent);
+    color: var(--p-primary-contrast-color, #fff);
+    background: var(--p-primary-color, #10b981);
+    padding: 2px 9px;
+    border-radius: 999px;
 }
 
-/* ----- Criteria Section ----- */
+/* ----- Criteria grouping ----- */
 .ds-criteria-section {
-    margin-bottom: 4px;
+    margin-bottom: 0.5rem;
 }
 
-/* ----- Field Group with Divider ----- */
 .ds-field-group {
     &:not(:last-child) {
-        margin-bottom: 18px;
+        margin-bottom: 1rem;
     }
 }
 
 .ds-group-divider {
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin-bottom: 12px;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
 }
 
 .ds-group-label {
-    font-size: 0.7rem;
+    font-size: 0.72rem;
     font-weight: 700;
-    color: var(--primary-color);
+    color: var(--p-primary-color, #10b981);
     letter-spacing: 0.08em;
     text-transform: uppercase;
     white-space: nowrap;
@@ -133,14 +289,14 @@
 .ds-group-line {
     flex: 1;
     height: 1px;
-    background: linear-gradient(to right, color-mix(in srgb, var(--primary-color) 20%, transparent), transparent);
+    background: linear-gradient(to right, color-mix(in srgb, var(--p-primary-color, #10b981) 25%, transparent), transparent);
 }
 
-/* ----- Criteria Grid ----- */
+/* ----- Criteria grid ----- */
 .ds-criteria-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 14px 16px;
+    gap: 0.85rem 1rem;
 
     @media (max-width: 1024px) {
         grid-template-columns: repeat(2, 1fr);
@@ -151,166 +307,241 @@
     }
 }
 
-/* ----- Field ----- */
 .ds-field {
     display: flex;
     flex-direction: column;
-    gap: 5px;
-    min-width: 0; // prevent grid blowout
+    gap: 0.4rem;
+    min-width: 0;
 }
 
 .ds-field-label {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--navy, #0f1f3d);
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
-}
-
-/* ----- Unified Input Styling ----- */
-/* Use CSS vars so dark mode inherits naturally */
-.ds-input {
-    height: 38px;
-    border: 1px solid var(--border, #e4e9f2);
-    border-radius: 9px;
     font-size: 0.85rem;
-    color: var(--text, #1a2744);
-    background: var(--white, #fff);
-    transition: border-color 0.2s, box-shadow 0.2s;
+    font-weight: 600;
+    color: var(--text-color, #fff);
+    text-transform: none;
+    letter-spacing: 0;
 }
 
-:host ::ng-deep .ds-field {
+:host-context(.app-dark) .ds-field-label,
+:host-context(.app-dark) .ds-label {
+    color: var(--text-color);
+}
+
+/* ----- Unified PrimeNG inputs (mirrors pending-approval) ----- */
+:host ::ng-deep .employee-reports-page .report-filter-body-inner,
+:host ::ng-deep .employee-reports-page .ds-field-selector {
+    --filter-input-h: 34px;
+    --filter-input-bg: var(--surface-card, rgba(255, 255, 255, 0.03));
+    --filter-input-border: var(--surface-border, rgba(255, 255, 255, 0.18));
+
+    p-select,
+    p-datepicker,
+    p-multiselect {
+        display: block;
+        width: 100%;
+    }
+
     .p-select,
+    .p-datepicker,
     .p-multiselect {
         width: 100%;
+        height: var(--filter-input-h);
+        box-sizing: border-box;
+        border: 1px solid var(--filter-input-border);
+        border-radius: 0.5rem;
+        background: var(--filter-input-bg);
+        display: inline-flex;
+        align-items: center;
+        overflow: hidden;
     }
 
-    .p-select .p-select-label {
-        height: 38px;
-        border-radius: 9px;
-        font-size: 0.85rem;
-    }
-
-    .p-inputtext {
-        height: 38px;
-        border-radius: 9px;
-        font-size: 0.85rem;
-    }
-
-    /* Datepicker: match same height */
-    .p-datepicker {
+    input.p-inputtext {
+        height: var(--filter-input-h);
+        line-height: calc(var(--filter-input-h) - 2px);
+        box-sizing: border-box;
+        border: 1px solid var(--filter-input-border);
+        border-radius: 0.5rem;
+        padding: 0 12px;
+        font-size: 0.9rem;
+        color: var(--text-color, #fff);
+        background: var(--filter-input-bg);
         width: 100%;
     }
 
-    .p-datepicker input,
-    .p-datepicker .p-inputtext {
-        height: 38px;
-        border-radius: 9px;
-        font-size: 0.85rem;
-        width: 100%;
+    .p-select .p-select-label,
+    .p-multiselect .p-multiselect-label {
+        border: none;
+        background: transparent;
+        height: 100%;
+        line-height: calc(var(--filter-input-h) - 2px);
+        padding: 0 12px;
+        font-size: 0.9rem;
+        color: var(--text-color, #fff);
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .p-datepicker input.p-inputtext {
+        flex: 1 1 auto;
+        min-width: 0;
+        height: 100%;
+        border: none;
+        background: transparent;
+        border-radius: 0;
+        padding: 0 12px;
+        box-shadow: none;
+    }
+
+    .p-datepicker .p-datepicker-dropdown,
+    .p-datepicker .p-datepicker-dropdown.p-button,
+    .p-select .p-select-dropdown,
+    .p-select .p-select-dropdown.p-button,
+    .p-multiselect .p-multiselect-trigger {
+        &,
+        &:hover,
+        &:focus,
+        &:active,
+        &:focus-visible,
+        &:enabled:hover,
+        &:enabled:focus,
+        &:enabled:active {
+            border: none !important;
+            background: transparent !important;
+            background-color: transparent !important;
+            background-image: none !important;
+            box-shadow: none !important;
+            outline: none !important;
+        }
+
+        color: var(--text-color-secondary, rgba(255, 255, 255, 0.55));
+        width: var(--filter-input-h);
+        height: var(--filter-input-h);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        padding: 0;
+        margin: 0;
+        cursor: pointer;
+        transition: color 0.15s ease;
+
+        &:hover {
+            color: var(--text-color, #fff);
+        }
+
+        .p-button-label {
+            display: none;
+        }
+    }
+
+    .p-datepicker .p-datepicker-dropdown,
+    .p-select .p-select-dropdown,
+    .p-multiselect .p-multiselect-trigger {
+        .p-icon,
+        svg {
+            width: 14px;
+            height: 14px;
+            color: inherit;
+            fill: currentColor;
+            stroke: currentColor;
+        }
+
+        i,
+        i.pi {
+            font-size: 14px;
+            line-height: 1;
+            color: inherit;
+        }
+    }
+
+    .p-select:focus-within,
+    .p-multiselect:focus-within,
+    .p-datepicker:focus-within,
+    input.p-inputtext:focus {
+        border-color: var(--p-primary-color, #10b981);
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18);
+        outline: none;
     }
 }
 
-/* Focus state: accent glow matching Search button */
-.ds-input:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 15%, transparent);
-    outline: none;
+/* Dark-mode safety net for input bg/border */
+:host-context(.app-dark) ::ng-deep .employee-reports-page .report-filter-body-inner,
+:host-context(.app-dark) ::ng-deep .employee-reports-page .ds-field-selector {
+    --filter-input-bg: var(--surface-card);
+    --filter-input-border: var(--surface-border);
 }
 
-:host ::ng-deep .ds-field {
-    .p-select:focus-within .p-select-label {
-        border-color: var(--primary-color);
-        box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 15%, transparent);
-    }
-
-    .p-inputtext:focus {
-        border-color: var(--primary-color);
-        box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 15%, transparent);
-    }
-
-    .p-datepicker input:focus,
-    .p-datepicker .p-inputtext:focus {
-        border-color: var(--primary-color);
-        box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 15%, transparent);
-    }
-}
-
-/* ----- Date Range — equal sizing ----- */
+/* ----- Date-range row inside a field ----- */
 .ds-date-range {
     display: flex;
-    gap: 6px;
+    gap: 0.5rem;
     align-items: center;
     min-width: 0;
 }
 
-:host ::ng-deep .ds-date-range {
-    p-datepicker {
-        flex: 1;
-        min-width: 0;
-    }
+:host ::ng-deep .ds-date-range p-datepicker {
+    flex: 1;
+    min-width: 0;
 }
 
 .ds-date-separator {
-    font-size: 0.72rem;
+    font-size: 0.78rem;
     font-weight: 500;
-    color: var(--muted, #8a96b0);
+    color: var(--text-color-secondary, rgba(255, 255, 255, 0.6));
     flex-shrink: 0;
 }
 
-/* ----- Action Buttons ----- */
+/* ----- Action buttons (Clear + Search) — mirror pending-approval ----- */
 .ds-actions {
     display: flex;
     justify-content: flex-end;
-    gap: 10px;
-    border-top: 1px solid var(--border-light, #f0f3f9);
-    padding-top: 16px;
-    margin-top: 6px;
+    gap: 0.5rem;
+    border-top: 1px solid var(--surface-border, rgba(255, 255, 255, 0.08));
+    padding-top: 1rem;
+    margin-top: 1rem;
 }
 
-/* Clear: ghost — subtle secondary action */
 .ds-btn-clear {
-    height: 38px;
-    padding: 0 18px;
-    border-radius: 9px;
-    border: 1px solid transparent;
-    background: transparent;
-    font-size: 0.82rem;
+    height: 36px;
+    padding: 0 16px;
+    border-radius: 0.5rem;
+    border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.18));
+    background: var(--surface-card, rgba(255, 255, 255, 0.03));
+    color: var(--text-color-secondary, rgba(255, 255, 255, 0.7));
+    font-size: 0.85rem;
     font-weight: 500;
-    color: var(--muted, #8a96b0);
     cursor: pointer;
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    transition: all 0.18s;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
 
     i {
-        font-size: 0.7rem;
+        font-size: 0.75rem;
     }
 
     &:hover {
-        color: #e05252;
-        background: rgba(224, 82, 82, 0.06);
-        border-color: rgba(224, 82, 82, 0.15);
+        border-color: var(--p-primary-color, #10b981);
+        color: var(--p-primary-color, #10b981);
+        background: rgba(16, 185, 129, 0.08);
     }
 }
 
-/* Search: primary action — prominent */
 .ds-btn-search {
-    height: 38px;
-    padding: 0 28px;
-    border-radius: 9px;
+    height: 36px;
+    padding: 0 22px;
+    border-radius: 0.5rem;
     border: none;
-    background: var(--primary-color);
+    background: var(--p-primary-color, #10b981);
+    color: var(--p-primary-contrast-color, #fff);
     font-size: 0.85rem;
     font-weight: 600;
-    color: var(--primary-contrast-color, #fff);
     cursor: pointer;
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    box-shadow: 0 3px 12px color-mix(in srgb, var(--primary-color) 30%, transparent);
-    transition: all 0.2s;
+    gap: 6px;
+    box-shadow: 0 1px 3px rgba(16, 185, 129, 0.3);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
 
     i {
         font-size: 0.8rem;
@@ -318,7 +549,11 @@
 
     &:hover:not(:disabled) {
         transform: translateY(-1px);
-        box-shadow: 0 5px 18px color-mix(in srgb, var(--primary-color) 40%, transparent);
+        box-shadow: 0 3px 10px rgba(16, 185, 129, 0.4);
+    }
+
+    &:active {
+        transform: none;
     }
 
     &:disabled {
@@ -328,109 +563,133 @@
     }
 }
 
-/* ----- Misc ----- */
+/* ----- Results card ----- */
+.report-results-card {
+    margin-top: 0.5rem;
+}
+
+.report-results-header {
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.report-results-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-color, #fff);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    &::before {
+        content: '';
+        display: inline-block;
+        width: 4px;
+        height: 1.1rem;
+        border-radius: 2px;
+        background: var(--p-primary-color, #10b981);
+    }
+}
+
+.report-results-count {
+    font-size: 0.85rem;
+    font-weight: 400;
+    color: var(--text-color-secondary, rgba(255, 255, 255, 0.6));
+    margin-left: 0.5rem;
+}
+
+.report-table-wrap {
+    overflow-x: auto;
+}
+
+/* ----- PrimeNG data table (mirrors pending-approval) ----- */
+:host ::ng-deep .p-datatable .p-datatable-thead > tr > th {
+    background: var(--surface-ground, rgba(0, 0, 0, 0.2));
+    color: var(--text-color-secondary, rgba(255, 255, 255, 0.6));
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.65rem 0.75rem;
+    border-bottom: 1px solid var(--surface-border, rgba(255, 255, 255, 0.1));
+}
+
+:host ::ng-deep .p-datatable .p-datatable-tbody > tr > td {
+    padding: 0.6rem 0.75rem;
+    font-size: 0.85rem;
+    color: var(--text-color, inherit);
+    border-bottom: 1px solid var(--surface-border, rgba(255, 255, 255, 0.06));
+}
+
+:host ::ng-deep .p-datatable .p-datatable-tbody > tr:hover {
+    background: rgba(16, 185, 129, 0.06);
+}
+
+:host ::ng-deep .p-paginator {
+    padding: 0.75rem 1rem;
+    background: transparent;
+    border-top: 1px solid var(--surface-border, rgba(255, 255, 255, 0.08));
+}
+
+/* ----- Placeholders ----- */
+:host ::ng-deep {
+    .p-select .p-select-label.p-placeholder,
+    .p-multiselect .p-multiselect-label.p-placeholder,
+    .p-datepicker-input::placeholder,
+    input::placeholder {
+        color: var(--text-color-secondary, rgba(255, 255, 255, 0.55)) !important;
+        opacity: 1;
+    }
+}
+
+/* ----- Result-row badges / cell helpers ----- */
+.report-badge-corps {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--p-primary-color, #10b981);
+    font-size: 0.78rem;
+    font-weight: 500;
+}
+
+.report-badge-unit {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--surface-ground, rgba(0, 0, 0, 0.2));
+    color: var(--text-color-secondary, rgba(255, 255, 255, 0.7));
+    font-size: 0.78rem;
+    font-weight: 500;
+}
+
+.report-link-profile {
+    color: var(--p-primary-color, #10b981);
+    text-decoration: none;
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+
+    &:hover {
+        text-decoration: underline;
+    }
+}
+
+.report-ser-num {
+    color: var(--text-color-secondary, rgba(255, 255, 255, 0.7));
+    font-weight: 500;
+}
+
+.report-dash {
+    color: var(--text-color-secondary, rgba(255, 255, 255, 0.4));
+}
+
 .text-truncate {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-}
-
-/* Filter body: remove fixed max-height cap from shared theme so all selected fields + buttons remain visible */
-:host ::ng-deep .report-filter-body.open {
-    max-height: none;
-    overflow: visible;
-}
-
-/* ----- Dark Mode Overrides ----- */
-:host-context(.app-dark) {
-    .ds-category-tabs {
-        background: var(--surface-ground);
-        border-color: var(--surface-border);
-    }
-
-    .ds-tab {
-        color: var(--text-color-secondary);
-
-        &:hover:not(.ds-tab--active) {
-            color: var(--text-color);
-            background: rgba(255, 255, 255, 0.04);
-        }
-
-        &--active {
-            background: var(--primary-color);
-            color: var(--primary-contrast-color);
-        }
-    }
-
-    .ds-label,
-    .ds-field-label {
-        color: var(--text-color);
-    }
-
-    .ds-group-label {
-        color: var(--primary-color);
-    }
-
-    .ds-group-line {
-        background: linear-gradient(to right, color-mix(in srgb, var(--primary-color) 25%, transparent), transparent);
-    }
-
-    .ds-field-count {
-        color: var(--primary-color);
-        background: var(--report-accent-bg);
-        border-color: color-mix(in srgb, var(--primary-color) 25%, transparent);
-    }
-
-    .ds-btn-clear {
-        color: var(--text-color-secondary);
-        &:hover {
-            color: #e05252;
-            background: rgba(224, 82, 82, 0.1);
-        }
-    }
-
-    .ds-btn-search {
-        color: var(--primary-contrast-color) !important;
-    }
-
-    /* Input fields: dark mode colors */
-    .ds-input {
-        background: var(--surface-card);
-        color: var(--text-color);
-        border-color: var(--surface-border);
-    }
-}
-
-/* Dark mode inputs via ::ng-deep (PrimeNG components) */
-:host-context(.app-dark) ::ng-deep .ds-field {
-    .p-select .p-select-label,
-    .p-inputtext,
-    .p-datepicker input,
-    .p-datepicker .p-inputtext {
-        background: var(--surface-card) !important;
-        color: var(--text-color) !important;
-        border-color: var(--surface-border) !important;
-    }
-
-    .p-select:focus-within .p-select-label,
-    .p-inputtext:focus,
-    .p-datepicker input:focus,
-    .p-datepicker .p-inputtext:focus {
-        border-color: var(--primary-color) !important;
-        box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 20%, transparent) !important;
-    }
-}
-
-/* Dark mode: multiselect in field selector */
-:host-context(.app-dark) ::ng-deep .ds-field-selector {
-    .p-multiselect .p-multiselect-label {
-        background: var(--surface-card);
-        color: var(--text-color);
-        border-color: var(--surface-border);
-    }
-}
-
-/* Dark mode: actions divider */
-:host-context(.app-dark) .ds-actions {
-    border-top-color: var(--surface-border);
 }
