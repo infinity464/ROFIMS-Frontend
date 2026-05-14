@@ -185,6 +185,7 @@
 .report-table {
     width: 100%;
     border-collapse: collapse;
+    table-layout: fixed;
     font-size: 0.875rem;
     color: var(--text-color, #1e293b);
 

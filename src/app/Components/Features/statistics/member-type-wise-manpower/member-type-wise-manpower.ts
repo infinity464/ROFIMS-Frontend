@@ -121,21 +121,52 @@ export class MemberTypeWiseManpowerComponent implements OnInit {
             this.exportPrintPopup();
             return;
         }
-        const { columns, rows } = this.getFlatExportData();
         const scope = this.scopeLine;
-        const config = {
+        const sectionedConfig = {
             title: this.titleLabel,
             lang: this.lang,
-            columns,
-            rows,
+            columns: this.colHeaders,
+            sections: this.filteredOrgs.map(org => ({
+                title: this.orgLabel(org),
+                rows: org.rows.map((row, i) => [
+                    this.fmt(i + 1),
+                    this.memberTypeLabel(row),
+                    this.fmt(row.auth),
+                    this.fmt(row.held),
+                    this.fmt(row.def),
+                    this.fmt(row.sur),
+                    this.fmt(row.postedOut),
+                    row.remarks ?? ''
+                ]),
+                subtotalRow: [
+                    '',
+                    this.subtotalLabel,
+                    this.fmt(org.subtotal.auth),
+                    this.fmt(org.subtotal.held),
+                    this.fmt(org.subtotal.def),
+                    this.fmt(org.subtotal.sur),
+                    this.fmt(org.subtotal.postedOut),
+                    ''
+                ]
+            })),
+            grandTotalRow: [
+                '',
+                this.grandTotalLabel,
+                this.fmt(this.grandTotal.auth),
+                this.fmt(this.grandTotal.held),
+                this.fmt(this.grandTotal.def),
+                this.fmt(this.grandTotal.sur),
+                this.fmt(this.grandTotal.postedOut),
+                ''
+            ],
             showPageNumbers: true,
-            filename: 'org-employee-type-wise-manpower',
+            filename: 'org-member-type-wise-manpower',
             filterLines: scope ? [scope] : undefined
         };
         if (type === 'word') {
-            await this.exportService.exportWord(config);
+            await this.exportService.exportWordSectioned(sectionedConfig);
         } else {
-            this.exportService.exportExcel(config);
+            this.exportService.exportExcelSectioned(sectionedConfig);
         }
     }
 
@@ -199,56 +230,6 @@ export class MemberTypeWiseManpowerComponent implements OnInit {
             memberTypeId: 0, memberTypeName: '', memberTypeNameBN: '',
             auth, held, def, sur, postedOut, remarks: ''
         };
-    }
-
-    // ── Flat export data for Word / Excel ─────────────────────────────────────
-
-    getFlatExportData(): { columns: string[]; rows: string[][] } {
-        const cols = this.colHeaders;
-        const empty = ['', '', '', '', '', '', '', ''];
-        const dataRows: string[][] = [];
-
-        this.filteredOrgs.forEach((org, orgIndex) => {
-            dataRows.push(['', this.orgLabel(org), '', '', '', '', '', '']);
-            org.rows.forEach((row, i) => {
-                dataRows.push([
-                    this.fmt(i + 1),
-                    this.memberTypeLabel(row),
-                    this.fmt(row.auth),
-                    this.fmt(row.held),
-                    this.fmt(row.def),
-                    this.fmt(row.sur),
-                    this.fmt(row.postedOut),
-                    row.remarks ?? ''
-                ]);
-            });
-            dataRows.push([
-                '',
-                this.subtotalLabel,
-                this.fmt(org.subtotal.auth),
-                this.fmt(org.subtotal.held),
-                this.fmt(org.subtotal.def),
-                this.fmt(org.subtotal.sur),
-                this.fmt(org.subtotal.postedOut),
-                ''
-            ]);
-            if (orgIndex < this.filteredOrgs.length - 1) {
-                dataRows.push(empty);
-            }
-        });
-
-        dataRows.push([
-            '',
-            this.grandTotalLabel,
-            this.fmt(this.grandTotal.auth),
-            this.fmt(this.grandTotal.held),
-            this.fmt(this.grandTotal.def),
-            this.fmt(this.grandTotal.sur),
-            this.fmt(this.grandTotal.postedOut),
-            ''
-        ]);
-
-        return { columns: cols, rows: dataRows };
     }
 
     // ── Custom PDF popup (multi-table layout) ─────────────────────────────────

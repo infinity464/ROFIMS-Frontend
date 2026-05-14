@@ -11,6 +11,7 @@ import {
     BorderStyle,
     AlignmentType,
     ImageRun,
+    TableLayoutType,
 } from 'docx';
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
@@ -31,6 +32,23 @@ export interface ReportConfig {
     landscape?: boolean;
     /** Page margin in mm (default 20). */
     marginMm?: number;
+}
+
+/** One section in a sectioned report: org-style heading + its own table. */
+export interface ReportSection {
+    /** Heading text rendered above the section's table (e.g. "Army"). */
+    title: string;
+    /** Data rows inside this section's table. */
+    rows: string[][];
+    /** Optional trailing row inside the table (subtotal). */
+    subtotalRow?: string[];
+}
+
+/** Config for sectioned exports: one table per section, each with its own heading. */
+export interface SectionedReportConfig extends Omit<ReportConfig, 'rows'> {
+    sections: ReportSection[];
+    /** Optional final row rendered after all sections (e.g. Grand Total). */
+    grandTotalRow?: string[];
 }
 
 /** One section in a profile export: heading + table (same as web view). */
@@ -312,6 +330,165 @@ export class ExportService {
         const base = config.filename ?? 'report';
         const filename = `${base}_${config.lang}.xlsx`;
         XLSX.writeFile(wb, filename);
+    }
+
+    /**
+     * Word export with one table per section. Each section gets a heading paragraph
+     * (e.g. "Army") above its own table. Optional final grand-total row after all sections.
+     */
+    async exportWordSectioned(config: SectionedReportConfig): Promise<void> {
+        const dateStr = new Date().toLocaleDateString(config.lang === 'bn' ? 'bn-BD' : 'en-US', {
+            year: 'numeric', month: 'long', day: 'numeric',
+        });
+        const font = config.lang === 'bn' ? 'Nirmala UI' : 'Times New Roman';
+        const columns = config.columns;
+        const colCount = Math.max(columns.length, 1);
+        // Total table width = ~9000 DXA (≈ A4 portrait usable width). Equal split across columns
+        // and fixed layout ensures every table renders with the SAME column widths regardless of
+        // cell-content length.
+        const totalDxa = 9000;
+        const cellWidth = Math.floor(totalDxa / colCount);
+        const colWidths = Array.from({ length: colCount }, (_, i) =>
+            i === colCount - 1 ? totalDxa - cellWidth * (colCount - 1) : cellWidth
+        );
+        const sizePageHeader = 28;
+        const sizeSectionHeader = 24;
+        const sizeTableHeader = 20;
+        const sizeTableContent = config.lang === 'bn' ? 16 : 22;
+        const borders = {
+            top:    { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
+            bottom: { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
+            left:   { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
+            right:  { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
+        };
+
+        const makeHeaderRow = () => new TableRow({
+            tableHeader: true,
+            children: columns.map((col, i) => new TableCell({
+                children: [new Paragraph({
+                    children: [new TextRun({ text: col, bold: true, font, size: sizeTableHeader })],
+                    alignment: AlignmentType.LEFT,
+                    spacing: { after: 100 },
+                })],
+                borders,
+                width: { size: colWidths[i], type: WidthType.DXA },
+            })),
+        });
+
+        const makeBodyRow = (row: string[], bold = false) => {
+            const cells = row.slice(0, colCount);
+            while (cells.length < colCount) cells.push('');
+            return new TableRow({
+                children: cells.map((cell, i) => new TableCell({
+                    children: [new Paragraph({
+                        children: [new TextRun({ text: cell, font, size: sizeTableContent, bold })],
+                        spacing: { after: 100 },
+                    })],
+                    borders,
+                    width: { size: colWidths[i], type: WidthType.DXA },
+                })),
+            });
+        };
+
+        const makeTable = (rows: TableRow[]) => new Table({
+            width: { size: totalDxa, type: WidthType.DXA },
+            layout: TableLayoutType.FIXED,
+            columnWidths: colWidths,
+            rows,
+        });
+
+        const children: (Paragraph | Table)[] = [
+            new Paragraph({
+                children: [new TextRun({ text: config.title, bold: true, size: sizePageHeader, color: '1e3a5f', font })],
+                alignment: AlignmentType.CENTER,
+                spacing: { after: 200 },
+            }),
+            new Paragraph({
+                children: [new TextRun({ text: dateStr, size: sizePageHeader, color: '666666', font })],
+                alignment: AlignmentType.CENTER,
+                spacing: { after: (config.filterLines?.length) ? 150 : 300 },
+            }),
+            ...(config.filterLines?.length ? [new Paragraph({
+                children: config.filterLines.map((line, i) => new TextRun({
+                    text: (i > 0 ? '  |  ' : '') + line, size: 20, color: '333333', font,
+                })),
+                alignment: AlignmentType.CENTER,
+                spacing: { after: 300 },
+            })] : []),
+        ];
+
+        config.sections.forEach((sec, idx) => {
+            children.push(new Paragraph({
+                children: [new TextRun({ text: sec.title, bold: true, size: sizeSectionHeader, font })],
+                spacing: { before: idx > 0 ? 200 : 0, after: 120 },
+                keepNext: true,
+            }));
+            const tableRows: TableRow[] = [makeHeaderRow()];
+            sec.rows.forEach(r => tableRows.push(makeBodyRow(r)));
+            if (sec.subtotalRow) tableRows.push(makeBodyRow(sec.subtotalRow, true));
+            children.push(makeTable(tableRows));
+        });
+
+        if (config.grandTotalRow) {
+            children.push(new Paragraph({ children: [new TextRun({ text: '', font, size: sizeTableContent })], spacing: { before: 200, after: 80 } }));
+            children.push(makeTable([makeBodyRow(config.grandTotalRow, true)]));
+        }
+
+        const doc = new Document({ sections: [{ children }] });
+        const blob = await Packer.toBlob(doc);
+        const base = config.filename ?? 'report';
+        saveAs(blob, `${base}_${config.lang}.docx`);
+    }
+
+    /**
+     * Excel export with one table per section. Each section is preceded by a merged row
+     * containing the section title; the table header repeats per section so it's readable
+     * when each section is treated as its own block.
+     */
+    exportExcelSectioned(config: SectionedReportConfig): void {
+        const dateStr = new Date().toLocaleDateString(config.lang === 'bn' ? 'bn-BD' : 'en-US', {
+            year: 'numeric', month: 'long', day: 'numeric',
+        });
+        const filterLine = config.filterLines?.length ? config.filterLines.join('  |  ') : '';
+        const colCount = config.columns.length;
+
+        const data: unknown[][] = [
+            [config.title],
+            [dateStr],
+            ...(filterLine ? [[filterLine]] : []),
+            [],
+        ];
+        const merges: { s: { r: number; c: number }; e: { r: number; c: number } }[] = [
+            { s: { r: 0, c: 0 }, e: { r: 0, c: colCount - 1 } },
+            { s: { r: 1, c: 0 }, e: { r: 1, c: colCount - 1 } },
+        ];
+        if (filterLine) {
+            merges.push({ s: { r: 2, c: 0 }, e: { r: 2, c: colCount - 1 } });
+        }
+
+        config.sections.forEach((sec) => {
+            const sectionTitleRowIdx = data.length;
+            data.push([sec.title]);
+            merges.push({ s: { r: sectionTitleRowIdx, c: 0 }, e: { r: sectionTitleRowIdx, c: colCount - 1 } });
+            data.push(config.columns);
+            sec.rows.forEach(r => data.push(r));
+            if (sec.subtotalRow) data.push(sec.subtotalRow);
+            data.push([]);
+        });
+
+        if (config.grandTotalRow) {
+            data.push(config.grandTotalRow);
+        }
+
+        const ws = XLSX.utils.aoa_to_sheet(data);
+        ws['!cols'] = config.columns.map(() => ({ wch: 22 }));
+        ws['!merges'] = merges;
+
+        const wb = XLSX.utils.book_new();
+        const sheetName = config.lang === 'bn' ? 'প্রতিবেদন' : 'Report';
+        XLSX.utils.book_append_sheet(wb, ws, sheetName);
+        const base = config.filename ?? 'report';
+        XLSX.writeFile(wb, `${base}_${config.lang}.xlsx`);
     }
 
     exportProfilePDF(config: ProfileExportConfig): void {

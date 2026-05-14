@@ -3,6 +3,8 @@ import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MultiSelectModule } from 'primeng/multiselect';
+import { CheckboxModule } from 'primeng/checkbox';
+import { forkJoin } from 'rxjs';
 import { ExportService } from '@/services/export.service';
 import { UserMenuService } from '@/services/user-menu.service';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
@@ -12,13 +14,14 @@ import {
     type RankWiseRankRow,
     type RankWiseManpowerResponse
 } from '@/services/statistics.service';
+import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 
 type Lang = 'en' | 'bn';
 
 @Component({
     selector: 'app-rank-wise-manpower',
     standalone: true,
-    imports: [CommonModule, FormsModule, MultiSelectModule],
+    imports: [CommonModule, FormsModule, MultiSelectModule, CheckboxModule],
     templateUrl: './rank-wise-manpower.html',
     styleUrl: './rank-wise-manpower.scss'
 })
@@ -44,6 +47,12 @@ export class RankWiseManpowerComponent implements OnInit {
     /** Currently selected org IDs (empty = show all) */
     selectedOrgIds: number[] = [];
 
+    /** When true, the equivalent-name (basic-setup/rank-equivalent) is appended in parens after each rank name. */
+    showEquivalentRanks = false;
+
+    /** rankId -> equivalent-name label(s) it maps to (EN + BN). */
+    private equivalentNamesByRankId: Map<number, { en: string; bn: string }[]> = new Map();
+
     private static readonly EN_MONTHS = [
         'JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE',
         'JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'
@@ -57,7 +66,8 @@ export class RankWiseManpowerComponent implements OnInit {
         private _router: Router,
         private _userMenuService: UserMenuService,
         private statisticsService: StatisticsService,
-        private exportService: ExportService
+        private exportService: ExportService,
+        private masterBasicSetup: MasterBasicSetupService
     ) {}
 
     @HostListener('document:click')
@@ -70,6 +80,41 @@ export class RankWiseManpowerComponent implements OnInit {
         this.canDelete = _perms.canDelete;
 
         this.loadData();
+        this.loadEquivalentRanks();
+    }
+
+    /**
+     * Builds rankId -> equivalent-name label(s) by joining the rank-equivalent table with the
+     * `EquivalentName` CommonCode set. E.g. rank "Lt Col" (Army) maps to equivalent-name
+     * "Director/CO", so the report can render "Lt Col (Director/CO)".
+     */
+    private loadEquivalentRanks(): void {
+        forkJoin({
+            equivalents: this.masterBasicSetup.getAllRankEquivalents(),
+            equivalentNames: this.masterBasicSetup.getAllByType('EquivalentName')
+        }).subscribe({
+            next: ({ equivalents, equivalentNames }) => {
+                const nameById = new Map<number, { en: string; bn: string }>();
+                (equivalentNames ?? []).forEach(c => {
+                    nameById.set(c.codeId, {
+                        en: c.codeValueEN ?? '',
+                        bn: c.codeValueBN ?? ''
+                    });
+                });
+
+                const map = new Map<number, { en: string; bn: string }[]>();
+                (equivalents ?? []).forEach(eq => {
+                    const label = nameById.get(eq.equivalentNameID);
+                    if (!label) return;
+                    const existing = map.get(eq.motherOrgRankId) ?? [];
+                    if (!existing.some(p => p.en === label.en)) existing.push(label);
+                    map.set(eq.motherOrgRankId, existing);
+                });
+
+                this.equivalentNamesByRankId = map;
+            },
+            error: () => { /* silent — checkbox just won't append anything */ }
+        });
     }
 
     loadData(): void {
@@ -122,21 +167,49 @@ export class RankWiseManpowerComponent implements OnInit {
             this.exportPrintPopup();
             return;
         }
-        const { columns, rows } = this.getFlatExportData();
         const scope = this.scopeLine;
-        const config = {
+        const sectionedConfig = {
             title: this.titleLabel,
             lang: this.lang,
-            columns,
-            rows,
+            columns: this.colHeaders,
+            sections: this.filteredOrgs.map(org => ({
+                title: this.orgLabel(org),
+                rows: org.rows.map((row, i) => [
+                    this.fmt(i + 1),
+                    this.rankLabel(row),
+                    this.fmt(row.auth),
+                    this.fmt(row.held),
+                    this.fmt(row.def),
+                    this.fmt(row.sur),
+                    this.fmtPct(row.defPct)
+                ]),
+                subtotalRow: [
+                    '',
+                    this.subtotalLabel,
+                    this.fmt(org.subtotal.auth),
+                    this.fmt(org.subtotal.held),
+                    this.fmt(org.subtotal.def),
+                    this.fmt(org.subtotal.sur),
+                    this.fmtPct(org.subtotal.defPct)
+                ]
+            })),
+            grandTotalRow: [
+                '',
+                this.grandTotalLabel,
+                this.fmt(this.grandTotal.auth),
+                this.fmt(this.grandTotal.held),
+                this.fmt(this.grandTotal.def),
+                this.fmt(this.grandTotal.sur),
+                this.fmtPct(this.grandTotal.defPct)
+            ],
             showPageNumbers: true,
             filename: 'rank-wise-manpower',
             filterLines: scope ? [scope] : undefined
         };
         if (type === 'word') {
-            await this.exportService.exportWord(config);
+            await this.exportService.exportWordSectioned(sectionedConfig);
         } else {
-            this.exportService.exportExcel(config);
+            this.exportService.exportExcelSectioned(sectionedConfig);
         }
     }
 
@@ -173,7 +246,13 @@ export class RankWiseManpowerComponent implements OnInit {
     }
 
     rankLabel(row: RankWiseRankRow): string {
-        return this.lang === 'en' ? row.rankName : (row.rankNameBN || row.rankName);
+        const base = this.lang === 'en' ? row.rankName : (row.rankNameBN || row.rankName);
+        if (!this.showEquivalentRanks) return base;
+        const equivNames = this.equivalentNamesByRankId.get(row.rankId);
+        if (!equivNames || equivNames.length === 0) return base;
+        const names = equivNames.map(p => this.lang === 'en' ? p.en : (p.bn || p.en)).filter(n => !!n);
+        if (names.length === 0) return base;
+        return `${base} (${names.join(', ')})`;
     }
 
     fmt(n: number | undefined | null): string {
@@ -203,58 +282,6 @@ export class RankWiseManpowerComponent implements OnInit {
             auth, held, def, sur,
             defPct: auth > 0 ? Math.round(def / auth * 1000) / 10 : 0
         };
-    }
-
-    // ── Flat export data for Word / Excel ─────────────────────────────────────
-
-    getFlatExportData(): { columns: string[]; rows: string[][] } {
-        const cols = this.colHeaders;
-        const empty = ['', '', '', '', '', '', ''];
-        const dataRows: string[][] = [];
-
-        this.filteredOrgs.forEach((org, orgIndex) => {
-            // Org header row
-            dataRows.push(['', this.orgLabel(org), '', '', '', '', '']);
-            // Rank rows
-            org.rows.forEach((row, i) => {
-                dataRows.push([
-                    this.fmt(i + 1),
-                    this.rankLabel(row),
-                    this.fmt(row.auth),
-                    this.fmt(row.held),
-                    this.fmt(row.def),
-                    this.fmt(row.sur),
-                    this.fmtPct(row.defPct)
-                ]);
-            });
-            // Subtotal row
-            dataRows.push([
-                '',
-                this.subtotalLabel,
-                this.fmt(org.subtotal.auth),
-                this.fmt(org.subtotal.held),
-                this.fmt(org.subtotal.def),
-                this.fmt(org.subtotal.sur),
-                this.fmtPct(org.subtotal.defPct)
-            ]);
-            // Empty gap row between orgs (not after the last one)
-            if (orgIndex < this.filteredOrgs.length - 1) {
-                dataRows.push(empty);
-            }
-        });
-
-        // Grand total
-        dataRows.push([
-            '',
-            this.grandTotalLabel,
-            this.fmt(this.grandTotal.auth),
-            this.fmt(this.grandTotal.held),
-            this.fmt(this.grandTotal.def),
-            this.fmt(this.grandTotal.sur),
-            this.fmtPct(this.grandTotal.defPct)
-        ]);
-
-        return { columns: cols, rows: dataRows };
     }
 
     // ── Custom PDF popup (multi-table layout) ─────────────────────────────────
