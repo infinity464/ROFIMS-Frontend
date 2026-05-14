@@ -155,6 +155,35 @@ export interface UnitWiseBarChartResponse {
     accessibleRabUnitNamesBN?: string[] | null;
 }
 
+export interface MemberTypeWiseRow {
+    memberTypeId: number;
+    memberTypeName: string;
+    memberTypeNameBN: string;
+    auth: number;
+    held: number;
+    def: number;
+    sur: number;
+    postedOut: number;
+    remarks?: string;
+}
+
+export interface MemberTypeWiseOrgBlock {
+    orgId: number;
+    orgName: string;
+    orgNameBN: string;
+    rows: MemberTypeWiseRow[];
+    subtotal: MemberTypeWiseRow;
+}
+
+export interface MemberTypeWiseManpowerResponse {
+    orgs: MemberTypeWiseOrgBlock[];
+    grandTotal: MemberTypeWiseRow;
+    /** Names (EN) of the RAB Units the current user is restricted to. null = unrestricted. */
+    accessibleRabUnitNames?: string[] | null;
+    /** Bangla names paired with accessibleRabUnitNames. */
+    accessibleRabUnitNamesBN?: string[] | null;
+}
+
 export interface CorpsWiseManpowerResponse {
     orgId: number;
     orgName: string;
@@ -211,6 +240,10 @@ export class StatisticsService {
         return this.http.get<TradeWiseManpowerResponse>(
             `${this.apiUrl}/GetTradeWiseManpower`, { params }
         );
+    }
+
+    getMemberTypeWiseManpower(): Observable<MemberTypeWiseManpowerResponse> {
+        return this.http.get<MemberTypeWiseManpowerResponse>(`${this.apiUrl}/GetMemberTypeWiseManpower`);
     }
 
     getUnitWiseBarChart(memberTypeId?: number): Observable<UnitWiseBarChartResponse> {
