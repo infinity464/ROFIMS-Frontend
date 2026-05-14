@@ -85,7 +85,7 @@ const BLOOD_GROUP_OPTIONS: { label: string; labelBn: string; value: number }[] =
         ReportSpecialQualificationComponent,
     ],
     templateUrl: './employee-reports.component.html',
-    styleUrls: ['./employee-reports.component.scss', './report-theme.scss'],
+    styleUrls: ['./report-theme.scss', './employee-reports.component.scss'],
 })
 export class EmployeeReportsComponent implements OnInit {
     canInsert = true;
