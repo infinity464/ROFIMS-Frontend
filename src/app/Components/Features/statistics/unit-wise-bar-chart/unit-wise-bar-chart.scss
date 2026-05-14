@@ -28,9 +28,9 @@
 }
 
 .filter-wrap {
-    min-width: 220px;
-    max-width: 340px;
-    flex: 1;
+    min-width: 180px;
+    max-width: 280px;
+    flex: 1 1 200px;
 }
 
 ::ng-deep .filter-select {
@@ -136,6 +136,29 @@
     font-weight: 500;
     color: var(--text-color-secondary, #475569);
     margin-top: 0.15rem;
+}
+
+/* Active-filter chips rendered below the title — mirrors the sample report layout */
+.chart-filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.4rem;
+    margin-top: 0.5rem;
+}
+
+.chart-filter-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.7rem;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: #0f766e;
+    background: rgba(20, 184, 166, 0.10);
+    border: 1px solid rgba(20, 184, 166, 0.35);
+    border-radius: 9999px;
+    line-height: 1.3;
+    white-space: nowrap;
 }
 
 /* Skeleton */

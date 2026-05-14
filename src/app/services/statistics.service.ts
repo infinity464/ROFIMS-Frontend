@@ -138,6 +138,22 @@ export interface MemberTypeOption {
     memberTypeNameBN: string;
 }
 
+export interface UnitWiseRankOption {
+    rankId: number;
+    rankName: string;
+    rankNameBN: string;
+    orgId: number;
+    orgName: string;
+    orgNameBN: string;
+    memberTypeId: number | null;
+}
+
+export interface UnitWiseTradeOption {
+    tradeId: number;
+    tradeName: string;
+    tradeNameBN: string;
+}
+
 export interface UnitBarItem {
     unitId: number;
     unitName: string;
@@ -146,7 +162,10 @@ export interface UnitBarItem {
 }
 
 export interface UnitWiseBarChartResponse {
+    orgs: MotherUnitOrgOption[];
     memberTypes: MemberTypeOption[];
+    ranks: UnitWiseRankOption[];
+    trades: UnitWiseTradeOption[];
     units: UnitBarItem[];
     total: number;
     /** Names (EN) of the RAB Units the current user is restricted to. null = unrestricted. */
@@ -246,9 +265,17 @@ export class StatisticsService {
         return this.http.get<MemberTypeWiseManpowerResponse>(`${this.apiUrl}/GetMemberTypeWiseManpower`);
     }
 
-    getUnitWiseBarChart(memberTypeId?: number): Observable<UnitWiseBarChartResponse> {
+    getUnitWiseBarChart(
+        orgId?: number,
+        memberTypeId?: number,
+        rankId?: number,
+        tradeId?: number
+    ): Observable<UnitWiseBarChartResponse> {
         const params: any = {};
+        if (orgId != null)        params.orgId        = orgId;
         if (memberTypeId != null) params.memberTypeId = memberTypeId;
+        if (rankId != null)       params.rankId       = rankId;
+        if (tradeId != null)      params.tradeId      = tradeId;
         return this.http.get<UnitWiseBarChartResponse>(
             `${this.apiUrl}/GetUnitWiseBarChart`, { params }
         );
