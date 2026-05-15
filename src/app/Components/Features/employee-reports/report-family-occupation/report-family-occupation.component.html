@@ -194,6 +194,7 @@
                     <tr>
                         <th>{{ L[lang]['report.table.ser'] }}</th>
                         <th>{{ L[lang]['report.table.familyMemberName'] }}</th>
+                        <th>{{ L[lang]['report.table.relation'] }}</th>
                         <th>{{ L[lang]['report.table.occupation'] }}</th>
                         <th>{{ L[lang]['report.table.occupationDetails'] }}</th>
                         <th>{{ L[lang]['report.table.rabMemberName'] }}</th>
@@ -207,6 +208,7 @@
                     <tr>
                         <td><span class="report-ser-num">{{ displayNum(row.ser) }}</span></td>
                         <td>{{ codeValue(row.familyMemberName, row.familyMemberNameBN) }}</td>
+                        <td>{{ codeValue(row.relation, row.relationBN) }}</td>
                         <td>{{ codeValue(row.occupation, row.occupationBN) }}</td>
                         <td>{{ row.occupationDetails ?? '\u2014' }}</td>
                         <td>{{ codeValue(row.name, row.nameBN) }}</td>
@@ -218,7 +220,7 @@
                 </ng-template>
                 <ng-template pTemplate="emptymessage">
                     <tr>
-                        <td colspan="9" class="text-center p-4">{{ L['en']['report.empty'] }}</td>
+                        <td colspan="10" class="text-center p-4">{{ L['en']['report.empty'] }}</td>
                     </tr>
                 </ng-template>
             </p-table>

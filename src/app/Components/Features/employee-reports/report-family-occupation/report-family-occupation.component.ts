@@ -121,6 +121,7 @@ export class ReportFamilyOccupationComponent implements OnInit {
         const columns = [
             L['report.table.ser'],
             L['report.table.familyMemberName'],
+            L['report.table.relation'],
             L['report.table.occupation'],
             L['report.table.occupationDetails'],
             L['report.table.rabMemberName'],
@@ -132,6 +133,7 @@ export class ReportFamilyOccupationComponent implements OnInit {
         const rows = this.list.map((row) => [
             this.displayNum(row.ser),
             this.codeValue(row.familyMemberName, row.familyMemberNameBN),
+            this.codeValue(row.relation, row.relationBN),
             this.codeValue(row.occupation, row.occupationBN),
             row.occupationDetails ?? '—',
             this.codeValue(row.name, row.nameBN),

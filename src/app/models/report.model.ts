@@ -120,6 +120,9 @@ export interface FamilyOccupationReportRow {
   ser?: number;
   familyMemberName?: string | null;
   familyMemberNameBN?: string | null;
+  /** Relation type label (e.g. "Father", "Mother"), resolved from CommonCode of CodeType "Relationship". */
+  relation?: string | null;
+  relationBN?: string | null;
   occupation?: string | null;
   occupationBN?: string | null;
   occupationDetails?: string | null;
