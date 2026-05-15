@@ -207,7 +207,13 @@ $pill-text:        #1e293b;
         background-color: $auth-held-bg;
     }
 
-    .total-col { background-color: $header-teal-dark; }
+    thead .total-col { background-color: $header-teal-dark; }
+    tbody td.total-col,
+    tfoot td.total-col {
+        background-color: rgba(22, 118, 106, 0.08);
+        color: var(--text-color, #1e293b);
+        font-weight: 700;
+    }
 }
 
 /* Rank name + abbreviation pill */
@@ -239,11 +245,6 @@ $pill-text:        #1e293b;
 /* ── Cell types ──────────────────────────────────────────────────────── */
 .num-cell  { text-align: center; font-variant-numeric: tabular-nums; }
 .unit-name { text-align: left; font-weight: 600; min-width: 110px; }
-
-td.total-col {
-    background-color: rgba(79, 70, 229, 0.06);
-    font-weight: 600;
-}
 
 /* ── Totals row ──────────────────────────────────────────────────────── */
 .totals-row {
@@ -280,7 +281,11 @@ td.total-col {
         background-color: var(--surface-ground) !important;
         td { border-top-color: var(--surface-border); }
     }
-    td.total-col { background-color: rgba(99, 102, 241, 0.12); }
+    tbody td.total-col,
+    tfoot td.total-col {
+        background-color: rgba(22, 118, 106, 0.18);
+        color: var(--text-color);
+    }
 }
 
 /* ── Empty state ─────────────────────────────────────────────────────── */
