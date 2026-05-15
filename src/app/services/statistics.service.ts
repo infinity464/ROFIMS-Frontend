@@ -203,6 +203,36 @@ export interface MemberTypeWiseManpowerResponse {
     accessibleRabUnitNamesBN?: string[] | null;
 }
 
+export interface UnitRankColumn {
+    equivalentNameId: number;
+    equivalentNameEN: string;
+    equivalentNameBN: string;
+    /** Short abbreviation rendered as a pill under the rank name (e.g. "DG", "AD"). */
+    abbreviation: string;
+}
+
+export interface UnitRankCell {
+    auth: number;
+    held: number;
+}
+
+export interface UnitRankRow {
+    unitId: number;
+    unitNameEN: string;
+    unitNameBN: string;
+    cells: Record<number, UnitRankCell>;
+    total: UnitRankCell;
+}
+
+export interface UnitRankWiseManpowerResponse {
+    ranks: UnitRankColumn[];
+    units: UnitRankRow[];
+    columnTotals: Record<number, UnitRankCell>;
+    grandTotal: UnitRankCell;
+    accessibleRabUnitNames?: string[] | null;
+    accessibleRabUnitNamesBN?: string[] | null;
+}
+
 export interface CorpsWiseManpowerResponse {
     orgId: number;
     orgName: string;
@@ -263,6 +293,14 @@ export class StatisticsService {
 
     getMemberTypeWiseManpower(): Observable<MemberTypeWiseManpowerResponse> {
         return this.http.get<MemberTypeWiseManpowerResponse>(`${this.apiUrl}/GetMemberTypeWiseManpower`);
+    }
+
+    getUnitRankWiseManpower(excludeEquivalentNames?: string): Observable<UnitRankWiseManpowerResponse> {
+        const params: any = {};
+        if (excludeEquivalentNames != null) params.excludeEquivalentNames = excludeEquivalentNames;
+        return this.http.get<UnitRankWiseManpowerResponse>(
+            `${this.apiUrl}/GetUnitRankWiseManpower`, { params }
+        );
     }
 
     getUnitWiseBarChart(

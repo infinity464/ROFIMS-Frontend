@@ -175,6 +175,7 @@ import { CorpsWiseManpowerComponent } from '@/Components/Features/statistics/cor
 import { TradeWiseManpowerComponent } from '@/Components/Features/statistics/trade-wise-manpower/trade-wise-manpower';
 import { MemberTypeWiseManpowerComponent } from '@/Components/Features/statistics/member-type-wise-manpower/member-type-wise-manpower';
 import { UnitWiseBarChartComponent } from '@/Components/Features/statistics/unit-wise-bar-chart/unit-wise-bar-chart';
+import { UnitRankWiseManpowerComponent } from '@/Components/Features/statistics/unit-rank-wise-manpower/unit-rank-wise-manpower';
 import { SystemMonitoringComponent } from '@/Components/Features/system-monitoring/system-monitoring';
 
 export const appRoutes: Routes = [
@@ -377,6 +378,7 @@ export const appRoutes: Routes = [
             { path: 'statistics/trade-wise-manpower', component: TradeWiseManpowerComponent },
             { path: 'statistics/member-type-wise-manpower', component: MemberTypeWiseManpowerComponent },
             { path: 'statistics/unit-wise-bar-chart', component: UnitWiseBarChartComponent },
+            { path: 'statistics/unit-rank-wise-manpower', component: UnitRankWiseManpowerComponent },
 
             // Dynamic Search
             { path: 'dynamic-search', component: DynamicSearchComponent },
