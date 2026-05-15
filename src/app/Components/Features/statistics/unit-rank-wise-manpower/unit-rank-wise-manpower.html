@@ -5,6 +5,19 @@
     <div class="report-results-header">
 
         <div class="report-toolbar-row">
+            <div class="report-filter-block">
+                <label class="filter-label">{{ lang === 'en' ? 'RAB Unit:' : 'র‍্যাব ইউনিট:' }}</label>
+                <p-select
+                    [options]="rabUnitOptions"
+                    [(ngModel)]="selectedRabUnitId"
+                    optionLabel="label"
+                    optionValue="value"
+                    [showClear]="false"
+                    appendTo="body"
+                    styleClass="rab-unit-select"
+                    (onChange)="onRabUnitChange()">
+                </p-select>
+            </div>
             <div class="report-results-actions">
                 <button type="button" class="report-lang-toggle" (click)="toggleLang()">
                     {{ lang === 'en' ? 'বাংলা' : 'English' }}

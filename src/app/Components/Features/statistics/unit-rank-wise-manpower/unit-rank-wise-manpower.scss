@@ -21,7 +21,31 @@
     gap: 0.5rem;
 }
 
-.report-toolbar-row { display: flex; justify-content: flex-end; }
+.report-toolbar-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.report-filter-block {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.filter-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-color, #1e293b);
+}
+
+::ng-deep .rab-unit-select {
+    min-width: 200px;
+    .p-select { height: 32px; border-radius: 7px; }
+    .p-select-label { padding: 4px 10px; font-size: 0.82rem; }
+}
 .report-header-title-block { width: 100%; text-align: center; }
 
 .report-main-title {

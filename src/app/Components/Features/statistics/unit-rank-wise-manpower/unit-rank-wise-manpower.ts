@@ -1,9 +1,13 @@
 import { Component, HostListener, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { SelectModule } from 'primeng/select';
 import { ExportService } from '@/services/export.service';
 import { UserMenuService } from '@/services/user-menu.service';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
+import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
+import { CommonCode } from '@/Components/basic-setup/shared/models/common-code';
 import {
     StatisticsService,
     type UnitRankColumn,
@@ -21,7 +25,7 @@ const EMPTY_CELL: UnitRankCell = { auth: 0, held: 0 };
 @Component({
     selector: 'app-unit-rank-wise-manpower',
     standalone: true,
-    imports: [CommonModule],
+    imports: [CommonModule, FormsModule, SelectModule],
     templateUrl: './unit-rank-wise-manpower.html',
     styleUrl: './unit-rank-wise-manpower.scss'
 })
@@ -46,11 +50,17 @@ export class UnitRankWiseManpowerComponent implements OnInit {
     /** Comma-separated EquivalentName.codeValueEN list to drop from the columns. */
     private readonly excludeRanks = 'Officer,DAD';
 
+    /** RAB Unit drill-down: null = top-level RAB Units; a CodeId = wings under that unit. */
+    selectedRabUnitId: number | null = null;
+    rabUnitOptions: { label: string; value: number | null }[] = [];
+    private rabUnits: CommonCode[] = [];
+
     constructor(
         private _router: Router,
         private _userMenuService: UserMenuService,
         private statisticsService: StatisticsService,
-        private exportService: ExportService
+        private exportService: ExportService,
+        private masterBasicSetup: MasterBasicSetupService
     ) {}
 
     @HostListener('document:click')
@@ -64,12 +74,42 @@ export class UnitRankWiseManpowerComponent implements OnInit {
         this.canUpdate = _perms.canUpdate;
         this.canDelete = _perms.canDelete;
 
+        this.loadRabUnitOptions();
+        this.loadData();
+    }
+
+    private loadRabUnitOptions(): void {
+        this.masterBasicSetup.getAllByType('RabUnit').subscribe({
+            next: (res) => {
+                this.rabUnits = (Array.isArray(res) ? res : [])
+                    .filter(u => u.status !== false && u.parentCodeId == null);
+                this.rabUnits.sort((a, b) =>
+                    (a.sortOrder ?? Number.MAX_SAFE_INTEGER) - (b.sortOrder ?? Number.MAX_SAFE_INTEGER)
+                );
+                this.rebuildRabUnitOptions();
+            },
+            error: () => { this.rabUnits = []; this.rebuildRabUnitOptions(); }
+        });
+    }
+
+    private rebuildRabUnitOptions(): void {
+        const allLabel = this.lang === 'en' ? 'All RAB Units' : 'সকল র‍্যাব ইউনিট';
+        this.rabUnitOptions = [
+            { label: allLabel, value: null },
+            ...this.rabUnits.map(u => ({
+                label: this.lang === 'en' ? (u.codeValueEN ?? '') : (u.codeValueBN || u.codeValueEN || ''),
+                value: u.codeId
+            }))
+        ];
+    }
+
+    onRabUnitChange(): void {
         this.loadData();
     }
 
     loadData(): void {
         this.loading = true;
-        this.statisticsService.getUnitRankWiseManpower(this.excludeRanks).subscribe({
+        this.statisticsService.getUnitRankWiseManpower(this.excludeRanks, this.selectedRabUnitId).subscribe({
             next: (res: UnitRankWiseManpowerResponse) => {
                 this.ranks        = res.ranks ?? [];
                 this.units        = res.units ?? [];
@@ -94,6 +134,13 @@ export class UnitRankWiseManpowerComponent implements OnInit {
 
     toggleLang(): void {
         this.lang = this.lang === 'en' ? 'bn' : 'en';
+        this.rebuildRabUnitOptions();
+    }
+
+    private get selectedRabUnit(): CommonCode | undefined {
+        return this.selectedRabUnitId == null
+            ? undefined
+            : this.rabUnits.find(u => u.codeId === this.selectedRabUnitId);
     }
 
     toggleExportDropdown(event: Event): void {
@@ -132,9 +179,21 @@ export class UnitRankWiseManpowerComponent implements OnInit {
     ];
 
     get titleLabel(): string {
+        const sel = this.selectedRabUnit;
+        if (sel) {
+            const name = this.lang === 'en' ? (sel.codeValueEN ?? '') : (sel.codeValueBN || sel.codeValueEN || '');
+            return this.lang === 'en'
+                ? `WING-WISE MANPOWER STATE BY RAB RANK — ${name.toUpperCase()}`
+                : `উইং অনুযায়ী র‍্যাব পদবী ভিত্তিক জনবলের পরিসংখ্যান — ${name}`;
+        }
         return this.lang === 'en'
             ? 'UNIT-WISE MANPOWER STATE BY RAB RANK'
             : 'ইউনিট অনুযায়ী র‍্যাব পদবী ভিত্তিক জনবলের পরিসংখ্যান';
+    }
+
+    get unitHeader(): string {
+        if (this.selectedRabUnit) return this.lang === 'en' ? 'Wing' : 'উইং';
+        return this.lang === 'en' ? 'Unit' : 'ইউনিট';
     }
 
     get dateLine(): string {
@@ -150,7 +209,6 @@ export class UnitRankWiseManpowerComponent implements OnInit {
         return `${dayBN} ${UnitRankWiseManpowerComponent.BN_MONTHS[mon]} ${yearBN}`;
     }
 
-    get unitHeader(): string { return this.lang === 'en' ? 'Unit' : 'ইউনিট'; }
     get authHeader(): string { return this.lang === 'en' ? 'Auth' : 'প্রাধিকার'; }
     get heldHeader(): string { return this.lang === 'en' ? 'Held' : 'বিদ্যমান'; }
     get totalHeader(): string { return this.lang === 'en' ? 'Total' : 'মোট'; }
