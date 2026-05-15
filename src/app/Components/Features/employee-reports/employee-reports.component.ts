@@ -14,6 +14,7 @@ import { ReportBloodGroupComponent } from './report-blood-group/report-blood-gro
 import { ReportPersonalQualificationComponent } from './report-personal-qualification/report-personal-qualification.component';
 import { ReportProfessionalQualificationComponent } from './report-professional-qualification/report-professional-qualification.component';
 import { ReportSpecialQualificationComponent } from './report-special-qualification/report-special-qualification.component';
+import { ReportRabRankComponent } from './report-rab-rank/report-rab-rank.component';
 import { SelectModule } from 'primeng/select';
 import { REPORT_LABELS, type ReportLang } from '@/Core/i18n/report-labels';
 import { CommonCodeService } from '@/services/common-code-service';
@@ -32,7 +33,8 @@ export type ReportType =
     | 'bloodGroup'
     | 'personalQualification'
     | 'professionalQualification'
-    | 'specialQualification';
+    | 'specialQualification'
+    | 'rabRank';
 
 /** Common code type name per report type (for dropdown options). */
 const COMMON_CODE_TYPE_BY_REPORT: Record<ReportType, string> = {
@@ -47,6 +49,7 @@ const COMMON_CODE_TYPE_BY_REPORT: Record<ReportType, string> = {
     personalQualification: 'PersonalQualification',
     professionalQualification: 'ProfessionalQualification',
     specialQualification: 'SpecialQualification',
+    rabRank: 'EquivalentName',
 };
 
 /**
@@ -83,6 +86,7 @@ const BLOOD_GROUP_OPTIONS: { label: string; labelBn: string; value: number }[] =
         ReportPersonalQualificationComponent,
         ReportProfessionalQualificationComponent,
         ReportSpecialQualificationComponent,
+        ReportRabRankComponent,
     ],
     templateUrl: './employee-reports.component.html',
     styleUrls: ['./report-theme.scss', './employee-reports.component.scss'],
@@ -108,6 +112,7 @@ export class EmployeeReportsComponent implements OnInit {
         { label: 'Personal Qualification', labelBn: 'ব্যক্তিগত যোগ্যতা', value: 'personalQualification' },
         { label: 'Professional Qualification', labelBn: 'পেশাগত যোগ্যতা', value: 'professionalQualification' },
         { label: 'Special Qualification', labelBn: 'বিশেষ যোগ্যতা', value: 'specialQualification' },
+        { label: 'RAB Rank', labelBn: 'র‍্যাব পদবি', value: 'rabRank' },
     ];
 
     /** Common code options for the selected report type. When user selects one, filter fires. */

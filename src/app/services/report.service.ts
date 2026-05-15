@@ -151,6 +151,17 @@ export class ReportService {
       .pipe(map(normalizePages));
   }
 
+  getRabRankReport(
+    params: GenericReportParams
+  ): Observable<PagedResponse<GenericReportRow>> {
+    return this.http
+      .post<ReportPagedResponse<GenericReportRow>>(
+        `${this.apiUrl}/GetRabRankReport`,
+        params
+      )
+      .pipe(map(normalizePages));
+  }
+
   getBloodGroupReport(
     params: BloodGroupReportParams
   ): Observable<PagedResponse<BloodGroupReportRow>> {
