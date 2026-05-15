@@ -23,7 +23,7 @@ import type { CommonCodeModel } from '@/models/common-code-model';
     imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, InputTextModule, Toast],
     providers: [MessageService],
     templateUrl: './report-family-occupation.component.html',
-    styleUrls: ['./report-family-occupation.component.scss', '../report-theme.scss'],
+    styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-family-occupation.component.scss'],
 })
 export class ReportFamilyOccupationComponent implements OnInit {
     canInsert = true;

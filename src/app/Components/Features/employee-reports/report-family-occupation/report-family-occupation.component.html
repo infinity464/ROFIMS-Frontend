@@ -2,82 +2,118 @@
 
 <div class="employee-reports-page">
     <div class="report-filter-card">
-        <div class="report-page-header" style="padding: 1rem 1.25rem 0;">
+        <div class="report-filter-card-title">
             <h1 class="report-page-title">{{ L['en']['report.title.familyOccupation'] }}</h1>
         </div>
 
-        <div class="report-filter-body open">
-            <div class="report-filter-body-inner">
-                <div class="report-fields-row">
-                    <div class="report-filter-field">
-                        <label>Relation Type</label>
-                        <p-select
-                            [options]="relationOptions"
-                            [(ngModel)]="selectedRelationId"
-                            optionLabel="label"
-                            optionValue="value"
-                            placeholder="Select Relation"
-                            styleClass="w-full"
-                            [filter]="true"
-                            [showClear]="true"
-                            appendTo="body">
-                        </p-select>
-                    </div>
-                    <div class="report-filter-field">
-                        <label>Occupation</label>
-                        <p-select
-                            [options]="occupationOptions"
-                            [(ngModel)]="selectedOccupationId"
-                            optionLabel="label"
-                            optionValue="value"
-                            placeholder="Select Occupation"
-                            styleClass="w-full"
-                            [filter]="true"
-                            [showClear]="true"
-                            appendTo="body">
-                        </p-select>
-                    </div>
-                    <div class="report-filter-field">
-                        <label>RAB Member Status</label>
-                        <p-select
-                            [options]="statusOptions"
-                            [(ngModel)]="selectedPostingStatus"
-                            optionLabel="label"
-                            optionValue="value"
-                            placeholder="Select Status"
-                            styleClass="w-full"
-                            [showClear]="true"
-                            appendTo="body">
-                        </p-select>
-                    </div>
+        <div class="report-filter-header" [class.open]="filterOpen" (click)="toggleFilter()" role="button" tabindex="0" (keydown.enter)="toggleFilter()" (keydown.space)="toggleFilter()">
+            <div class="report-filter-header-left">
+                <div class="report-filter-icon">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M2 4h12M4 8h8M6 12h4" stroke="var(--primary-color)" stroke-width="1.8" stroke-linecap="round"/>
+                    </svg>
                 </div>
-                <div class="report-fields-row">
-                    <div class="report-filter-field">
-                        <label>RAB ID</label>
-                        <input pInputText type="text" [(ngModel)]="searchRabId" placeholder="Enter RAB ID" class="w-full" />
+                <div>
+                    <div class="report-filter-title">Search &amp; filter</div>
+                    <div class="report-filter-subtitle">{{ filterSubtitle() }}</div>
+                </div>
+            </div>
+            <div class="report-filter-header-right">
+                @if (activeFilterCount > 0) {
+                    <span class="ds-field-count">{{ activeFilterCount }} active</span>
+                }
+                <div class="report-chevron">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                        <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <div class="report-filter-body" [class.open]="filterOpen">
+            <div class="report-filter-body-inner">
+                <div class="ds-criteria-section">
+                    <!-- Group 1: Family & Status -->
+                    <div class="ds-field-group">
+                        <div class="ds-group-divider">
+                            <span class="ds-group-label">Family &amp; Status</span>
+                            <span class="ds-group-line"></span>
+                        </div>
+                        <div class="ds-criteria-grid">
+                            <div class="ds-field">
+                                <label class="ds-field-label">Relation Type</label>
+                                <p-select
+                                    [options]="relationOptions"
+                                    [(ngModel)]="selectedRelationId"
+                                    optionLabel="label"
+                                    optionValue="value"
+                                    placeholder="Select Relation"
+                                    styleClass="w-full"
+                                    [filter]="true"
+                                    [showClear]="true"
+                                    appendTo="body">
+                                </p-select>
+                            </div>
+                            <div class="ds-field">
+                                <label class="ds-field-label">Occupation</label>
+                                <p-select
+                                    [options]="occupationOptions"
+                                    [(ngModel)]="selectedOccupationId"
+                                    optionLabel="label"
+                                    optionValue="value"
+                                    placeholder="Select Occupation"
+                                    styleClass="w-full"
+                                    [filter]="true"
+                                    [showClear]="true"
+                                    appendTo="body">
+                                </p-select>
+                            </div>
+                            <div class="ds-field">
+                                <label class="ds-field-label">RAB Member Status</label>
+                                <p-select
+                                    [options]="statusOptions"
+                                    [(ngModel)]="selectedPostingStatus"
+                                    optionLabel="label"
+                                    optionValue="value"
+                                    placeholder="Select Status"
+                                    styleClass="w-full"
+                                    [showClear]="true"
+                                    appendTo="body">
+                                </p-select>
+                            </div>
+                        </div>
                     </div>
-                    <div class="report-filter-field">
-                        <label>Service ID</label>
-                        <input pInputText type="text" [(ngModel)]="searchServiceId" placeholder="Enter Service ID" class="w-full" />
-                    </div>
-                    <div class="report-filter-field">
-                        <label>NID</label>
-                        <input pInputText type="text" [(ngModel)]="searchNid" placeholder="Enter NID" class="w-full" />
+
+                    <!-- Group 2: Identification -->
+                    <div class="ds-field-group">
+                        <div class="ds-group-divider">
+                            <span class="ds-group-label">Identification</span>
+                            <span class="ds-group-line"></span>
+                        </div>
+                        <div class="ds-criteria-grid">
+                            <div class="ds-field">
+                                <label class="ds-field-label">RAB ID</label>
+                                <input pInputText type="text" [(ngModel)]="searchRabId" placeholder="Enter RAB ID" class="w-full" />
+                            </div>
+                            <div class="ds-field">
+                                <label class="ds-field-label">Service ID</label>
+                                <input pInputText type="text" [(ngModel)]="searchServiceId" placeholder="Enter Service ID" class="w-full" />
+                            </div>
+                            <div class="ds-field">
+                                <label class="ds-field-label">NID</label>
+                                <input pInputText type="text" [(ngModel)]="searchNid" placeholder="Enter NID" class="w-full" />
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="report-filter-actions">
-                    <button type="button" class="report-btn-clear" (click)="clearFilters()">
-                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                            <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-                        </svg>
-                        Clear
+                <div class="ds-actions">
+                    <button type="button" class="ds-btn-clear" (click)="clearFilters()">
+                        <i class="pi pi-times"></i>
+                        Clear All
                     </button>
-                    <button type="button" class="report-btn-search" (click)="first = 0; load()">
-                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                            <circle cx="6" cy="6" r="4.5" stroke="white" stroke-width="1.6"/>
-                            <path d="M10 10l2.5 2.5" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
-                        </svg>
+                    <button type="button" class="ds-btn-search" (click)="first = 0; load()" [disabled]="loading">
+                        <i class="pi pi-search"></i>
                         Search
                     </button>
                 </div>

@@ -23,7 +23,7 @@ import type { CommonCodeModel } from '@/models/common-code-model';
     imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, InputTextModule, Toast],
     providers: [MessageService],
     templateUrl: './report-address-location.component.html',
-    styleUrls: ['./report-address-location.component.scss', '../report-theme.scss'],
+    styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-address-location.component.scss'],
 })
 export class ReportAddressLocationComponent implements OnInit {
     canInsert = true;
