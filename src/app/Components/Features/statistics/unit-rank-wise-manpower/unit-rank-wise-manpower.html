@@ -18,17 +18,20 @@
                     (onChange)="onRabUnitChange()">
                 </p-select>
 
-                <label class="filter-label">{{ lang === 'en' ? 'Group by:' : 'গ্রুপিং:' }}</label>
-                <p-select
-                    [options]="groupByOptions"
-                    [(ngModel)]="groupBy"
+                <label class="filter-label">{{ lang === 'en' ? 'Merge:' : 'একত্রীকরণ:' }}</label>
+                <p-multiSelect
+                    [options]="memberTypeOptions"
+                    [(ngModel)]="selectedMergeMemberTypeIds"
                     optionLabel="label"
                     optionValue="value"
-                    [showClear]="false"
+                    [placeholder]="lang === 'en' ? 'Member types to merge' : 'একত্রিত করার সদস্য ধরন'"
+                    [showClear]="true"
+                    [filter]="true"
                     appendTo="body"
-                    styleClass="rab-unit-select"
-                    (onChange)="onGroupByChange()">
-                </p-select>
+                    styleClass="rab-unit-select merge-multiselect"
+                    (onChange)="onMergeMemberTypesChange()"
+                    (onClear)="onMergeMemberTypesChange()">
+                </p-multiSelect>
             </div>
             <div class="report-results-actions">
                 <button type="button" class="report-lang-toggle" (click)="toggleLang()">

@@ -298,12 +298,14 @@ export class StatisticsService {
     getUnitRankWiseManpower(
         excludeEquivalentNames?: string,
         rabUnitId?: number | null,
-        groupBy?: 'rank' | 'memberType'
+        mergeMemberTypeIds?: number[] | null
     ): Observable<UnitRankWiseManpowerResponse> {
         const params: any = {};
         if (excludeEquivalentNames != null) params.excludeEquivalentNames = excludeEquivalentNames;
         if (rabUnitId != null) params.rabUnitId = rabUnitId;
-        if (groupBy) params.groupBy = groupBy;
+        if (mergeMemberTypeIds && mergeMemberTypeIds.length > 0) {
+            params.mergeMemberTypeIds = mergeMemberTypeIds.join(',');
+        }
         return this.http.get<UnitRankWiseManpowerResponse>(
             `${this.apiUrl}/GetUnitRankWiseManpower`, { params }
         );
