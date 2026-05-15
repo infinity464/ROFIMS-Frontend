@@ -17,6 +17,18 @@
                     styleClass="rab-unit-select"
                     (onChange)="onRabUnitChange()">
                 </p-select>
+
+                <label class="filter-label">{{ lang === 'en' ? 'Group by:' : 'গ্রুপিং:' }}</label>
+                <p-select
+                    [options]="groupByOptions"
+                    [(ngModel)]="groupBy"
+                    optionLabel="label"
+                    optionValue="value"
+                    [showClear]="false"
+                    appendTo="body"
+                    styleClass="rab-unit-select"
+                    (onChange)="onGroupByChange()">
+                </p-select>
             </div>
             <div class="report-results-actions">
                 <button type="button" class="report-lang-toggle" (click)="toggleLang()">

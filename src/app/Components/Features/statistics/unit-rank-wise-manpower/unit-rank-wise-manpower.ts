@@ -55,6 +55,10 @@ export class UnitRankWiseManpowerComponent implements OnInit {
     rabUnitOptions: { label: string; value: number | null }[] = [];
     private rabUnits: CommonCode[] = [];
 
+    /** Column-grouping mode: 'rank' = EquivalentName columns, 'memberType' = EmployeeType columns. */
+    groupBy: 'rank' | 'memberType' = 'rank';
+    groupByOptions: { label: string; value: 'rank' | 'memberType' }[] = [];
+
     constructor(
         private _router: Router,
         private _userMenuService: UserMenuService,
@@ -74,7 +78,24 @@ export class UnitRankWiseManpowerComponent implements OnInit {
         this.canUpdate = _perms.canUpdate;
         this.canDelete = _perms.canDelete;
 
+        this.rebuildGroupByOptions();
         this.loadRabUnitOptions();
+        this.loadData();
+    }
+
+    private rebuildGroupByOptions(): void {
+        this.groupByOptions = this.lang === 'en'
+            ? [
+                { label: 'By Rank',        value: 'rank'       },
+                { label: 'By Member Type', value: 'memberType' }
+            ]
+            : [
+                { label: 'পদবী অনুযায়ী',     value: 'rank'       },
+                { label: 'সদস্য ধরন অনুযায়ী', value: 'memberType' }
+            ];
+    }
+
+    onGroupByChange(): void {
         this.loadData();
     }
 
@@ -109,7 +130,7 @@ export class UnitRankWiseManpowerComponent implements OnInit {
 
     loadData(): void {
         this.loading = true;
-        this.statisticsService.getUnitRankWiseManpower(this.excludeRanks, this.selectedRabUnitId).subscribe({
+        this.statisticsService.getUnitRankWiseManpower(this.excludeRanks, this.selectedRabUnitId, this.groupBy).subscribe({
             next: (res: UnitRankWiseManpowerResponse) => {
                 this.ranks        = res.ranks ?? [];
                 this.units        = res.units ?? [];
@@ -135,6 +156,7 @@ export class UnitRankWiseManpowerComponent implements OnInit {
     toggleLang(): void {
         this.lang = this.lang === 'en' ? 'bn' : 'en';
         this.rebuildRabUnitOptions();
+        this.rebuildGroupByOptions();
     }
 
     private get selectedRabUnit(): CommonCode | undefined {
@@ -180,15 +202,18 @@ export class UnitRankWiseManpowerComponent implements OnInit {
 
     get titleLabel(): string {
         const sel = this.selectedRabUnit;
-        if (sel) {
-            const name = this.lang === 'en' ? (sel.codeValueEN ?? '') : (sel.codeValueBN || sel.codeValueEN || '');
-            return this.lang === 'en'
-                ? `WING-WISE MANPOWER STATE BY RAB RANK — ${name.toUpperCase()}`
-                : `উইং অনুযায়ী র‍্যাব পদবী ভিত্তিক জনবলের পরিসংখ্যান — ${name}`;
-        }
+        const rowEN = sel ? 'WING' : 'UNIT';
+        const rowBN = sel ? 'উইং'   : 'ইউনিট';
+        const dimEN = this.groupBy === 'memberType' ? 'MEMBER TYPE' : 'RAB RANK';
+        const dimBN = this.groupBy === 'memberType' ? 'সদস্য ধরন'    : 'র‍্যাব পদবী';
+        const suffix = sel
+            ? (this.lang === 'en'
+                ? ` — ${(sel.codeValueEN ?? '').toUpperCase()}`
+                : ` — ${sel.codeValueBN || sel.codeValueEN || ''}`)
+            : '';
         return this.lang === 'en'
-            ? 'UNIT-WISE MANPOWER STATE BY RAB RANK'
-            : 'ইউনিট অনুযায়ী র‍্যাব পদবী ভিত্তিক জনবলের পরিসংখ্যান';
+            ? `${rowEN}-WISE MANPOWER STATE BY ${dimEN}${suffix}`
+            : `${rowBN} অনুযায়ী ${dimBN} ভিত্তিক জনবলের পরিসংখ্যান${suffix}`;
     }
 
     get unitHeader(): string {

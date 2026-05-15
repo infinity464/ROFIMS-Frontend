@@ -295,10 +295,15 @@ export class StatisticsService {
         return this.http.get<MemberTypeWiseManpowerResponse>(`${this.apiUrl}/GetMemberTypeWiseManpower`);
     }
 
-    getUnitRankWiseManpower(excludeEquivalentNames?: string, rabUnitId?: number | null): Observable<UnitRankWiseManpowerResponse> {
+    getUnitRankWiseManpower(
+        excludeEquivalentNames?: string,
+        rabUnitId?: number | null,
+        groupBy?: 'rank' | 'memberType'
+    ): Observable<UnitRankWiseManpowerResponse> {
         const params: any = {};
         if (excludeEquivalentNames != null) params.excludeEquivalentNames = excludeEquivalentNames;
         if (rabUnitId != null) params.rabUnitId = rabUnitId;
+        if (groupBy) params.groupBy = groupBy;
         return this.http.get<UnitRankWiseManpowerResponse>(
             `${this.apiUrl}/GetUnitRankWiseManpower`, { params }
         );
