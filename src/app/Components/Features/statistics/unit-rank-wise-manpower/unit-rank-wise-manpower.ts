@@ -260,38 +260,26 @@ export class UnitRankWiseManpowerComponent implements OnInit {
             this.exportPrintPopup();
             return;
         }
-        const { columns, rows } = this.getExportData();
         const scope = this.scopeLine;
-        const config = {
+        const matrixConfig = {
             title: this.titleLabel,
             lang: this.lang,
-            columns,
-            rows,
-            showPageNumbers: true,
+            leadingColumns: [this.unitHeader],
+            groupColumns: [...this.ranks.map(c => this.rankLabel(c)), this.totalHeader],
+            subHeaders: [this.authHeader, this.heldHeader],
+            rows: this.getMatrixRows(),
             filename: 'unit-rank-wise-manpower',
             filterLines: scope ? [scope] : undefined
         };
         if (type === 'word') {
-            await this.exportService.exportWord(config);
+            await this.exportService.exportWordMatrix({ ...matrixConfig, landscape: true });
         } else {
-            this.exportService.exportExcel(config);
+            this.exportService.exportExcelMatrix(matrixConfig);
         }
     }
 
-    /**
-     * Flat-column dump for the Word/Excel exporters which expect a single header row.
-     * Each rank becomes two columns (Auth / Held) — the rank name is folded into the column label.
-     */
-    getExportData(): { columns: string[]; rows: string[][] } {
-        const columns: string[] = [this.unitHeader];
-        for (const col of this.ranks) {
-            const label = this.rankLabel(col);
-            columns.push(`${label} - ${this.authHeader}`);
-            columns.push(`${label} - ${this.heldHeader}`);
-        }
-        columns.push(`${this.totalHeader} - ${this.authHeader}`);
-        columns.push(`${this.totalHeader} - ${this.heldHeader}`);
-
+    /** Matrix-shaped rows used by the Excel exporter — one row per unit + a totals row. */
+    private getMatrixRows(): string[][] {
         const dataRows: string[][] = this.units.map(row => {
             const cells: string[] = [this.unitLabel(row)];
             for (const col of this.ranks) {
@@ -304,7 +292,6 @@ export class UnitRankWiseManpowerComponent implements OnInit {
             return cells;
         });
 
-        // Totals row
         const totalRow: string[] = [this.totalHeader];
         for (const col of this.ranks) {
             const t = this.colTotal(col.equivalentNameId);
@@ -315,7 +302,7 @@ export class UnitRankWiseManpowerComponent implements OnInit {
         totalRow.push(this.fmt(this.grandTotal.held));
         dataRows.push(totalRow);
 
-        return { columns, rows: dataRows };
+        return dataRows;
     }
 
     /** Common renderer for the PDF + Print HTML — keeps the two paths in sync. */
