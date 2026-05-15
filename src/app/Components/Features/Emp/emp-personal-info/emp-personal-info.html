@@ -2,29 +2,12 @@
     <div class="form-card">
         @if (!hideTitle) {
             <div class="form-card-header">
-                <h3 class="form-card-title">
-                    Employee Personal Info
-                    @if (mode === 'view') {
-                        <span class="text-500 text-base font-normal">(View Mode)</span>
-                    }
-                    @if (mode === 'edit') {
-                        <span class="text-primary text-base font-normal">(Edit Mode)</span>
-                    }
-                </h3>
-                @if (mode === 'view') {
-                    <div class="form-card-actions">
-                        <p-button
-                            label="Edit"
-                            icon="pi pi-pencil" [class.perm-hidden]="!canUpdate"
-                            (onClick)="enableEditMode()">
-                        </p-button>
-                    </div>
-                }
+                <h3 class="form-card-title">Employee Personal Info</h3>
             </div>
         }
 
-        <!-- Employee Search Section - Only show in search mode (form-section for same left align as form) -->
-        @if (mode === 'search') {
+        <!-- Employee Search Section - hidden only when embedded in another page/tab -->
+        @if (!embedMode && !hideTitle) {
             <div class="form-section">
                 <app-employee-search
                     (onEmployeeFound)="onEmployeeSearchFound($event)"
@@ -33,22 +16,20 @@
             </div>
         }
 
-        <!-- Top Edit button for tab/embedded view (header is hidden via hideTitle) -->
-        @if (hideTitle && employeeFound && mode === 'view') {
-            <div class="flex justify-end mb-3">
-                <p-button
-                    label="Edit"
-                    icon="pi pi-pencil"
-                    [class.perm-hidden]="!canUpdate"
-                    (onClick)="enableEditMode()">
-                </p-button>
-            </div>
-        }
-
         <!-- Personal Information Form -->
         @if (employeeFound) {
             <form [formGroup]="personalInfoForm">
                 <div class="form-section">
+                    @if (mode === 'view') {
+                        <div class="flex justify-end mb-3">
+                            <p-button
+                                label="Edit"
+                                icon="pi pi-pencil"
+                                [class.perm-hidden]="!canUpdate"
+                                (onClick)="enableEditMode()">
+                            </p-button>
+                        </div>
+                    }
                     <!-- Row 1: Blood Group, NID Old, New NID, Mobile No Personal, Mobile No Official, Email Address -->
                     <div class="form-row">
                         <div class="form-field">
