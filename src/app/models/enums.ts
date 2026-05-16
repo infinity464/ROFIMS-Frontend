@@ -329,6 +329,14 @@ export enum CodeType {
     VisitType = 'VisitType'
 }
 
+// Posting types for PostingOrderNumberConfig
+export enum PostingType {
+    NewPosting = 'NewPosting',
+    InterPosting = 'InterPosting',
+    General = 'General',
+    ExBdLeave = 'ExBdLeave'
+}
+
 // Menu Type (matches backend TINYINT: 0=Header/Group, 1=AngularRoute, 2=ExternalLink, 3=Action)
 export enum MenuType {
     Header = 0,

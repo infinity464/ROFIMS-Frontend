@@ -17,6 +17,8 @@ import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import { CheckboxModule } from 'primeng/checkbox';
+import { DialogModule } from 'primeng/dialog';
+import { FieldsetModule } from 'primeng/fieldset';
 import { CommonCode } from '@/Components/basic-setup/shared/models/common-code';
 import { environment } from '@/Core/Environments/environment';
 import { HttpClient } from '@angular/common/http';
@@ -31,7 +33,9 @@ import { RouterLink } from '@angular/router';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
 import { PostingService } from '@/services/posting.service';
-import { NoteSheetType, NoteSheetCurrentStatus, ApprovalStatus, NoteSheetOperationTypeOptions } from '@/models/enums';
+import { ExBdLeaveApplicationService, ExBdLeaveApplicationListViewModel } from '@/services/ex-bd-leave-application.service';
+import { NoteSheetType, NoteSheetCurrentStatus, ApprovalStatus, NoteSheetOperationTypeOptions, CodeType } from '@/models/enums';
+import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import { NotesheetApproverSelectComponent } from '@/Components/Common/notesheet-approver-select/notesheet-approver-select';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { NotesheetSignatoryComponent, SignatoryDetail } from '@/Components/Common/notesheet-signatory/notesheet-signatory';
@@ -42,6 +46,12 @@ import {
 import { saveAs } from 'file-saver';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+
+/** Reference paragraph row (serial + text + optional file) */
+interface ReferenceParagraph {
+    text: string;
+    fileRows: FileRowData[];
+}
 
 @Component({
     selector: 'app-notesheet-ex-bd-leave',
@@ -63,7 +73,9 @@ import html2canvas from 'html2canvas';
         RouterLink,
         NotesheetSignatoryComponent,
         CheckboxModule,
-        NotesheetApproverSelectComponent
+        NotesheetApproverSelectComponent,
+        DialogModule,
+        FieldsetModule
     ],
     templateUrl: './notesheet-ex-bd-leave.html',
     providers: [MessageService],
@@ -76,7 +88,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
     canUpdate = true;
     canDelete = true;
 
-    title = 'a(3) Note-Sheet for Ex-BD Leave';
+    title = 'Generate Ex-Bd Leave NoteSheet';
     form!: FormGroup;
     isSubmitting = false;
     editMode = false;
@@ -88,6 +100,17 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         { label: 'Bangla', value: 'bn' }
     ];
     readonly noteSheetOperationTypeOptions = NoteSheetOperationTypeOptions;
+    /** Ex-BD Leave Application selector */
+    exBdLeaveAppOptions: { label: string; value: number }[] = [];
+    allExBdLeaveApps: ExBdLeaveApplicationListViewModel[] = [];
+    selectedExBdLeaveAppId: number | null = null;
+
+    /** NoteSheet Number Config */
+    allNoteSheetConfigs: any[] = [];
+    noteSheetConfigOptions: { label: string; value: number }[] = [];
+    memberTypeMap = new Map<number, { en: string; bn: string }>();
+    noteSheetPrefixEN = '';
+    noteSheetPrefixBN = '';
     unitOptions: { label: string; labelBn: string | null; value: number }[] = [];
     wingOptions: { label: string; labelBn: string | null; value: number }[] = [];
     branchOptions: { label: string; labelBn: string | null; value: number }[] = [];
@@ -97,6 +120,10 @@ export class NotesheetExBdLeaveComponent implements OnInit {
     familyMemberOptions: { label: string; labelBn?: string; value: number; fmid: number; employeeId: number; relationLabel?: string }[] = [];
     relationshipOptions: { label: string; labelBn: string | null; value: number }[] = [];
     subjectTypeOptions: { label: string; value: number }[] = [];
+    showSubjectDialog = false;
+    newSubject: Partial<CommonCode> = { codeValueEN: '', codeValueBN: '' };
+    isSavingSubject = false;
+    referenceParagraphs: ReferenceParagraph[] = [{ text: '', fileRows: [] }];
     fileRows: FileRowData[] = [];
     /** Selected employee from RAB dropdown (auto-fill wing, branch, etc.) */
     selectedEmployee: any = null;
@@ -146,15 +173,18 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         private sanitizer: DomSanitizer,
         private identityMappingService: IdentityUserMappingService,
         private commonCodeService: CommonCodeService,
-        private postingService: PostingService
+        private postingService: PostingService,
+        private exBdLeaveAppService: ExBdLeaveApplicationService
     ) {
         this.form = this.fb.group({
-            textType: ['en'],
+            exBdLeaveApplicationId: [null as number | null, Validators.required],
+            textType: ['bn'],
             noteSheetDate: [null as Date | null, Validators.required],
+            noteSheetNumberConfigId: [null as number | null, Validators.required],
             unitId: [null as number | null],
             wingBattalionId: [null as number | null],
             branchId: [null as number | null],
-            referenceNumber: ['', Validators.required],
+            referenceNumber: [''],
             noteSheetNo: [''],
             noteSheetOperationType: [null as string | null, Validators.required],
             isSecret: [false],
@@ -162,7 +192,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             subject: [''],
             exBdLeaveSubjectId: [null as number | null, Validators.required],
             purposeOfExBdLeaveId: [null as number | null, Validators.required],
-            destinationCountryId: [null as number | null, Validators.required],
+            destinationCountryIds: [[] as number[], Validators.required],
             dateOfVisitFrom: [null as Date | null, Validators.required],
             dateOfVisitTo: [null as Date | null, Validators.required],
             totalDays: [0],
@@ -224,12 +254,17 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             this.loadPurposeOfLeave();
             this.loadCountries();
             this.loadSubjectTypes();
+            this.loadNoteSheetNumberConfig();
+            this.loadExBdLeaveApplications();
             this.loadApproverOptions();
             const user = this.sharedService.getCurrentUser?.() ?? '';
             this.form.get('preparedBy')?.setValue(user);
             this.resolvePreparedByMapping();
             this.form.get('dateOfVisitFrom')?.valueChanges.subscribe(() => this.calculateTotalDays());
             this.form.get('dateOfVisitTo')?.valueChanges.subscribe(() => this.calculateTotalDays());
+            this.form.get('textType')?.valueChanges.subscribe(() => {
+                this.buildNoteSheetConfigOptions();
+            });
             this.form.get('unitId')?.valueChanges.subscribe(() => {
                 this.onUnitChange();
             });
@@ -293,7 +328,19 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         const fromDate = d.dateOfVisitFrom ?? d.FromDate ?? d.fromDate;
         const toDate = d.dateOfVisitTo ?? d.ToDate ?? d.toDate;
         const purposeId = this.toNum(d.purposeOfExBdLeaveId ?? d.PurposeId ?? d.purposeId);
-        const destCountryId = this.toNum(d.destinationCountryId ?? d.DestinationCountryId);
+        // Destination countries: may come as single id or JSON array
+        let destCountryIds: number[] = [];
+        const rawDestCountryId = this.toNum(d.destinationCountryId ?? d.DestinationCountryId);
+        if (rawDestCountryId && rawDestCountryId > 0) destCountryIds = [rawDestCountryId];
+        try {
+            const dcJson = d.destinationCountriesJson ?? d.DestinationCountriesJson;
+            if (dcJson && typeof dcJson === 'string') {
+                const arr = JSON.parse(dcJson) as { countryId?: number; CountryId?: number }[];
+                if (Array.isArray(arr) && arr.length > 0) {
+                    destCountryIds = arr.map((c) => c.countryId ?? c.CountryId ?? 0).filter((id) => id > 0);
+                }
+            }
+        } catch { /* ignore */ }
         let totalDays = this.toNum(d.totalDays ?? d.TotalDays) ?? 0;
         if (totalDays === 0 && fromDate && toDate) {
             const from = this.parseDate(fromDate);
@@ -307,14 +354,33 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         const initiatorIdVal = this.toNum(d.initiatorId ?? d.InitiatorId);
         const finalApproverIdVal = this.toNum(d.finalApprovalId ?? d.FinalApprovalId ?? d.finalApproverId ?? d.FinalApproverId);
         const refNum = d.referenceNumber ?? d.ReferenceNumber;
+        // Parse reference number: JSON array of paragraphs or legacy plain string
+        if (refNum) {
+            try {
+                const arr = JSON.parse(refNum);
+                if (Array.isArray(arr) && arr.length > 0) {
+                    this.referenceParagraphs = arr.map((item: any) => ({
+                        text: item.text ?? item.Text ?? '',
+                        fileRows: (item.files ?? item.Files ?? []).map((f: any) => ({
+                            displayName: f.fileName ?? f.FileName ?? '',
+                            fileId: f.FileId ?? f.fileId ?? null,
+                            file: null
+                        }))
+                    }));
+                }
+            } catch {
+                this.referenceParagraphs = [{ text: String(refNum), fileRows: [] }];
+            }
+        }
         const noteNo = d.noteSheetNo ?? d.NoteSheetNo;
         this.form.patchValue({
+            exBdLeaveApplicationId: this.toNum(d.exBdLeaveApplicationId ?? d.ExBdLeaveApplicationId),
             textType: (d.textType ?? d.TextType) === 1 ? 'bn' : 'en',
             noteSheetDate: this.parseDate(noteSheetDate),
+            noteSheetNumberConfigId: this.toNum(d.noteSheetNumberConfigId ?? d.NoteSheetNumberConfigId),
             unitId: unitIdVal,
             wingBattalionId: wingId,
             branchId: branchIdVal,
-            referenceNumber: refNum != null ? String(refNum) : '',
             noteSheetNo: noteNo != null ? String(noteNo) : '',
             noteSheetOperationType: d.noteSheetOperationType ?? d.NoteSheetOperationType ?? null,
             isSecret: !!(d.isSecret ?? d.IsSecret ?? false),
@@ -322,7 +388,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             subject: String(d.subject ?? d.Subject ?? ''),
             exBdLeaveSubjectId: d.exBdLeaveSubjectId ?? d.ExBdLeaveSubjectId ?? null,
             purposeOfExBdLeaveId: purposeId,
-            destinationCountryId: destCountryId,
+            destinationCountryIds: destCountryIds,
             dateOfVisitFrom: this.parseDate(fromDate),
             dateOfVisitTo: this.parseDate(toDate),
             totalDays,
@@ -504,6 +570,204 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         });
     }
 
+    showAddSubjectDialog(): void {
+        this.newSubject = { codeValueEN: '', codeValueBN: '' };
+        this.showSubjectDialog = true;
+    }
+
+    saveNewSubject(): void {
+        if (!this.newSubject.codeValueEN?.trim()) return;
+
+        this.isSavingSubject = true;
+        const data: any = {
+            codeId: 0,
+            codeType: 'SubjectType',
+            codeValueEN: this.newSubject.codeValueEN!.trim(),
+            codeValueBN: this.newSubject.codeValueBN?.trim() || null,
+            status: true,
+            createdBy: this.sharedService.getCurrentUser(),
+            createdDate: this.sharedService.getCurrentDateTime()
+        };
+
+        this.masterBasicSetupService.create(data).subscribe({
+            next: () => {
+                this.isSavingSubject = false;
+                this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Subject added successfully.' });
+                this.showSubjectDialog = false;
+                // Reload subjects and auto-select the new one
+                this.commonCodeService.getAllActiveCommonCodesType('SubjectType').subscribe((list: any) => {
+                    this.subjectTypeOptions = (Array.isArray(list) ? list : []).map((c: any) => ({
+                        label: c.codeValueEN || c.displayCodeValueEN || String(c.codeId),
+                        value: c.codeId
+                    }));
+                    // Auto-select the newly added entry (highest codeId)
+                    const newest = this.subjectTypeOptions.reduce((max, opt) => opt.value > max.value ? opt : max, this.subjectTypeOptions[0]);
+                    if (newest) {
+                        this.form.patchValue({ exBdLeaveSubjectId: newest.value });
+                    }
+                });
+            },
+            error: () => {
+                this.isSavingSubject = false;
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to save subject.' });
+            }
+        });
+    }
+
+    /** Load Ex-BD Leave applications that don't have a notesheet yet */
+    private loadExBdLeaveApplications(): void {
+        this.exBdLeaveAppService.getListView().subscribe({
+            next: (list) => {
+                this.allExBdLeaveApps = (list ?? []).filter(
+                    (app) => !app.noteSheetId && !app.isDeleted
+                );
+                this.exBdLeaveAppOptions = this.allExBdLeaveApps.map((app) => {
+                    const parts = [
+                        app.applicantName || '',
+                        app.rabid ? `RAB: ${app.rabid}` : '',
+                        app.visitTypeName || '',
+                        app.destinationCountriesDisplay || '',
+                        `${app.fromDate?.slice(0, 10) ?? ''} ~ ${app.toDate?.slice(0, 10) ?? ''}`
+                    ].filter(Boolean);
+                    return { label: parts.join(' | '), value: app.exBdLeaveApplicationId };
+                });
+            },
+            error: () => {}
+        });
+    }
+
+    /** When an Ex-BD Leave application is selected, auto-fill the form */
+    onExBdLeaveAppChange(appId: number | null): void {
+        this.selectedExBdLeaveAppId = appId;
+        if (!appId) return;
+
+        const app = this.allExBdLeaveApps.find((a) => a.exBdLeaveApplicationId === appId);
+        if (!app) return;
+
+        // Auto-fill RAB Employee
+        this.selectedEmployeeId = app.applicantEmployeeId;
+        this.form.patchValue({ rabIdEmployeeId: app.applicantEmployeeId });
+
+        // Auto-fill purpose (visitTypeId)
+        if (app.visitTypeId) {
+            this.form.patchValue({ purposeOfExBdLeaveId: app.visitTypeId });
+        }
+
+        // Auto-fill destination countries (all from JSON array)
+        try {
+            if (app.destinationCountriesJson) {
+                const countries = JSON.parse(app.destinationCountriesJson) as { countryId?: number; CountryId?: number }[];
+                if (Array.isArray(countries) && countries.length > 0) {
+                    const countryIds = countries
+                        .map((c) => c.countryId ?? c.CountryId ?? 0)
+                        .filter((id) => id > 0);
+                    if (countryIds.length) this.form.patchValue({ destinationCountryIds: countryIds });
+                }
+            }
+        } catch { /* ignore */ }
+
+        // Auto-fill dates and total days
+        this.form.patchValue({
+            dateOfVisitFrom: this.parseDate(app.fromDate),
+            dateOfVisitTo: this.parseDate(app.toDate),
+            totalDays: app.totalDays ?? 0
+        });
+
+        // Auto-fill family members
+        try {
+            if (app.familyMembersJson) {
+                const members = JSON.parse(app.familyMembersJson) as { fmid?: number; FMID?: number; employeeId?: number }[];
+                if (Array.isArray(members) && members.length > 0) {
+                    const fmids = members.map((m) => m.fmid ?? m.FMID ?? 0).filter((id) => id > 0);
+                    this.loadFamilyMembersForEmployee(app.applicantEmployeeId, fmids);
+                } else {
+                    this.loadFamilyMembersForEmployee(app.applicantEmployeeId);
+                }
+            } else {
+                this.loadFamilyMembersForEmployee(app.applicantEmployeeId);
+            }
+        } catch {
+            this.loadFamilyMembersForEmployee(app.applicantEmployeeId);
+        }
+
+        // Auto-fill unit/wing from employee lookup
+        const emp = this.allEmployees.find((e: any) => (e.employeeID ?? e.EmployeeID) === app.applicantEmployeeId);
+        if (emp) {
+            this.form.patchValue({
+                wingBattalionId: emp.unit ?? emp.Unit ?? null,
+                branchId: emp.branch ?? emp.Branch ?? null
+            });
+        }
+    }
+
+    /** Load NoteSheet Number Config for ExBDLeave type (same pattern as notesheet-generate) */
+    private loadNoteSheetNumberConfig(): void {
+        const configApi = `${environment.apis.core}/NoteSheetNumberConfig`;
+        forkJoin([
+            this.http.get<any[]>(`${configApi}/GetAll`),
+            this.masterBasicSetupService.getAllByType(CodeType.EmployeeType)
+        ]).subscribe({
+            next: ([configs, memberTypes]) => {
+                (memberTypes ?? []).forEach((mt: any) => {
+                    this.memberTypeMap.set(mt.codeId, {
+                        en: mt.codeValueEN ?? '',
+                        bn: mt.codeValueBN ?? mt.codeValueEN ?? ''
+                    });
+                });
+
+                this.allNoteSheetConfigs = (configs ?? []).filter(
+                    (c: any) => (c.noteSheetType ?? c.NoteSheetType) === 'ExBDLeave'
+                        && (c.status ?? c.Status) !== false
+                );
+
+                const first = this.allNoteSheetConfigs[0];
+                if (first) {
+                    this.noteSheetPrefixEN = first.prefix ?? first.Prefix ?? '';
+                    this.noteSheetPrefixBN = first.prefixBN ?? first.PrefixBN ?? '';
+                }
+
+                this.buildNoteSheetConfigOptions();
+            }
+        });
+    }
+
+    private buildNoteSheetConfigOptions(): void {
+        const isBn = this.form.get('textType')?.value === 'bn';
+
+        this.noteSheetConfigOptions = this.allNoteSheetConfigs.map((c: any) => {
+            const configId = c.configId ?? c.ConfigId;
+            const prefix = isBn
+                ? (c.prefixBN ?? c.PrefixBN ?? c.prefix ?? c.Prefix ?? '')
+                : (c.prefix ?? c.Prefix ?? '');
+            const memberTypeId = c.memberTypeId ?? c.MemberTypeId;
+            const mt = this.memberTypeMap.get(memberTypeId);
+            const memberLabel = mt ? (isBn ? mt.bn : mt.en) : '';
+            const includeDate = c.includeDateInNumber ?? c.IncludeDateInNumber ?? false;
+
+            let pattern: string;
+            if (includeDate) {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const yearStr = isBn ? BanglaNumerals.toBangla(String(year)) : String(year);
+                const monthStr = isBn ? BanglaNumerals.toBangla(month) : month;
+                pattern = `${prefix}/${yearStr}/${monthStr}/***`;
+            } else {
+                pattern = `${prefix}/***`;
+            }
+            const label = memberLabel ? `${pattern}  (${memberLabel})` : pattern;
+            return { label, value: configId };
+        });
+
+        const ctrl = this.form.get('noteSheetNumberConfigId');
+        const currentVal = ctrl?.value;
+        if (this.noteSheetConfigOptions.length === 1) {
+            ctrl?.setValue(this.noteSheetConfigOptions[0].value);
+        } else if (currentVal != null && this.noteSheetConfigOptions.some(o => o.value === currentVal)) {
+            ctrl?.setValue(currentVal);
+        }
+    }
+
     /** Raw employee list from API, kept for lookup when RAB dropdown changes */
     private allEmployees: any[] = [];
 
@@ -664,63 +928,63 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         });
     }
 
-    submit(): void {
+    async submit(): Promise<void> {
         if (this.form.invalid) {
             this.form.markAllAsTouched();
             this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please fill required fields.' });
             return;
         }
         this.isSubmitting = true;
-        const existingRefs = this.fileReferencesForm?.getExistingFileReferences() || [];
-        const filesToUpload = this.fileReferencesForm?.getFilesToUpload() || [];
-        const doSave = (filesReferencesJson: string | null) => {
-            try {
-                const payload = this.buildPayload(filesReferencesJson);
-                if (this.editMode && this.editId != null) (payload as any).noteSheetId = this.editId;
-                const api = `${environment.apis.core}/NoteSheetInfo`;
-                const endpoint = this.editMode && this.editId != null ? '/UpdateAsyn' : '/SaveAsyn';
-                this.http.post(api + endpoint, payload).subscribe({
-                    next: () => {
-                        this.messageService.add({
-                            severity: 'success',
-                            summary: 'Note Sheet',
-                            detail: this.editMode
-                                ? 'Note Sheet updated successfully.'
-                                : 'Ex-BD Leave Note Sheet generated successfully.'
-                        });
-                        this.isSubmitting = false;
-                        if (this.editMode) this.router.navigate(['/notesheet-list/draft-ex-bd-leave']);
-                    },
-                    error: (err) => {
-                        const detail = err?.error?.message || err?.message || 'Failed to generate note sheet.';
-                        this.messageService.add({ severity: 'error', summary: 'Error', detail });
-                        this.isSubmitting = false;
-                    }
-                });
-            } catch (e) {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: e instanceof Error ? e.message : 'Failed.' });
-                this.isSubmitting = false;
+        try {
+            // Upload reference paragraph files and get JSON
+            const referenceNumberJson = await this.uploadReferenceParagraphFiles();
+
+            // Upload general file references
+            const existingRefs = this.fileReferencesForm?.getExistingFileReferences() || [];
+            const filesToUpload = this.fileReferencesForm?.getFilesToUpload() || [];
+            let filesReferencesJson: string | null = null;
+            if (filesToUpload.length > 0) {
+                const uploads = filesToUpload.map((r: FileRowData) =>
+                    this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
+                );
+                const results = await forkJoin(uploads).toPromise();
+                const arr = Array.isArray(results) ? results : [];
+                const newRefs = (arr as { fileId: number; fileName: string }[]).map((r) => ({ FileId: r.fileId, fileName: r.fileName }));
+                const allRefs = [...existingRefs.map((r) => ({ FileId: r.FileId, fileName: r.fileName })), ...newRefs];
+                filesReferencesJson = JSON.stringify(allRefs);
+            } else if (existingRefs.length > 0) {
+                filesReferencesJson = JSON.stringify(existingRefs);
             }
-        };
-        if (filesToUpload.length > 0) {
-            const uploads = filesToUpload.map((r: FileRowData) =>
-                this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
-            );
-            forkJoin(uploads).subscribe({
-                next: (results: unknown) => {
-                    const arr = Array.isArray(results) ? results : [];
-                    const newRefs = (arr as { fileId: number; fileName: string }[]).map((r) => ({ FileId: r.fileId, fileName: r.fileName }));
-                    const allRefs = [...existingRefs.map((r) => ({ FileId: r.FileId, fileName: r.fileName })), ...newRefs];
-                    doSave(JSON.stringify(allRefs));
+
+            // Set reference number from paragraphs
+            this.form.patchValue({ referenceNumber: referenceNumberJson });
+
+            const payload = this.buildPayload(filesReferencesJson);
+            if (this.editMode && this.editId != null) (payload as any).noteSheetId = this.editId;
+            const api = `${environment.apis.core}/NoteSheetInfo`;
+            const endpoint = this.editMode && this.editId != null ? '/UpdateAsyn' : '/SaveAsyn';
+            this.http.post(api + endpoint, payload).subscribe({
+                next: () => {
+                    this.messageService.add({
+                        severity: 'success',
+                        summary: 'Note Sheet',
+                        detail: this.editMode
+                            ? 'Note Sheet updated successfully.'
+                            : 'Ex-BD Leave Note Sheet generated successfully.'
+                    });
+                    this.isSubmitting = false;
+                    if (this.editMode) this.router.navigate(['/notesheet-list/draft-ex-bd-leave']);
                 },
-                error: (err: any) => {
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to upload files.' });
+                error: (err) => {
+                    const detail = err?.error?.message || err?.message || 'Failed to generate note sheet.';
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail });
                     this.isSubmitting = false;
                 }
             });
-            return;
+        } catch (e) {
+            this.messageService.add({ severity: 'error', summary: 'Error', detail: e instanceof Error ? e.message : 'Failed.' });
+            this.isSubmitting = false;
         }
-        doSave(existingRefs.length > 0 ? JSON.stringify(existingRefs) : null);
     }
 
     private formatDate(value: Date | string | null | undefined): string {
@@ -758,8 +1022,10 @@ export class NotesheetExBdLeaveComponent implements OnInit {
 
         const payload: Record<string, unknown> = {
             noteSheetId: 0,
+            exBdLeaveApplicationId: d.exBdLeaveApplicationId ?? null,
             noteSheetType: NoteSheetType.ExBDLeave,
-            noteSheetNo: 'AUTO',
+            noteSheetNo: this.editMode ? (d.noteSheetNo || 'AUTO') : 'AUTO',
+            noteSheetNumberConfigId: d.noteSheetNumberConfigId ?? null,
             noteSheetDate: this.formatDate(d.noteSheetDate),
             noteSheetTemplateId: null,
             referenceNumber: d.referenceNumber != null ? String(d.referenceNumber) : null,
@@ -780,7 +1046,10 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             finalApprovalId: d.finalApproverId ?? null,
             familyInfoJson,
             purposeId: d.purposeOfExBdLeaveId ?? null,
-            destinationCountryId: d.destinationCountryId ?? null,
+            destinationCountryId: Array.isArray(d.destinationCountryIds) && d.destinationCountryIds.length > 0 ? d.destinationCountryIds[0] : null,
+            destinationCountriesJson: Array.isArray(d.destinationCountryIds) && d.destinationCountryIds.length > 0
+                ? JSON.stringify(d.destinationCountryIds.map((id: number) => ({ countryId: id })))
+                : null,
             fromDate: this.formatDate(d.dateOfVisitFrom),
             toDate: this.formatDate(d.dateOfVisitTo),
             createdBy: preparedBy,
@@ -1006,6 +1275,94 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         if (id == null) return '';
         const o = this.subjectTypeOptions.find((opt) => opt.value === id);
         return o ? o.label : '';
+    }
+
+    get isBangla(): boolean {
+        return this.form?.get('textType')?.value === 'bn';
+    }
+
+    /** Display name for selected RAB Employee */
+    getEmployeeDisplayName(): string {
+        const id = this.form?.get('rabIdEmployeeId')?.value;
+        if (id == null) return '—';
+        const o = this.preparedByOptions.find((opt) => opt.value === id);
+        return o ? o.label : String(id);
+    }
+
+    /** Comma-separated country labels for selected destination countries */
+    getCountryLabels(): string {
+        const ids = this.form?.get('destinationCountryIds')?.value as number[] | null;
+        if (!Array.isArray(ids) || ids.length === 0) return '—';
+        return ids.map((id) => {
+            const o = this.countryOptions.find((opt) => opt.value === id);
+            return o ? o.label : String(id);
+        }).join(', ');
+    }
+
+    /** Comma-separated family member labels */
+    getFamilyMemberDisplayNames(): string {
+        const ids = this.form?.get('familyMemberIds')?.value as number[] | null;
+        if (!Array.isArray(ids) || ids.length === 0) return '';
+        return ids.map((id) => {
+            const o = this.familyMemberOptions.find((opt) => opt.value === id);
+            return o ? o.label : String(id);
+        }).join(', ');
+    }
+
+    // ── Reference Paragraphs ────────────────────────────────────────────
+
+    addReferenceParagraph(): void {
+        this.referenceParagraphs.push({ text: '', fileRows: [] });
+    }
+
+    removeReferenceParagraph(index: number): void {
+        if (this.referenceParagraphs.length > 1) {
+            this.referenceParagraphs.splice(index, 1);
+        }
+    }
+
+    getSerialLabel(index: number): string {
+        if (this.isBangla) {
+            const banglaLetters = ['ক', 'খ', 'গ', 'ঘ', 'ঙ', 'চ', 'ছ', 'জ', 'ঝ', 'ঞ', 'ট', 'ঠ', 'ড', 'ঢ', 'ণ', 'ত', 'থ', 'দ', 'ধ', 'ন'];
+            return (banglaLetters[index] ?? String(index + 1)) + '.';
+        } else {
+            return String.fromCharCode(65 + index) + '.';
+        }
+    }
+
+    trackByIndex(index: number): number {
+        return index;
+    }
+
+    onRefFileRowsChange(event: FileRowData[], index: number): void {
+        if (event && Array.isArray(event)) {
+            this.referenceParagraphs[index].fileRows = event;
+        }
+    }
+
+    onRefDownloadFile(payload: { fileId: number; fileName: string }): void {
+        this.empService.downloadFile(payload.fileId).subscribe({
+            next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file.' })
+        });
+    }
+
+    /** Upload files in reference paragraphs and return the final JSON string */
+    private async uploadReferenceParagraphFiles(): Promise<string> {
+        const result: { text: string; files: { FileId: number; fileName: string }[] }[] = [];
+        for (const para of this.referenceParagraphs) {
+            const existingFiles = para.fileRows.filter(r => r.fileId != null).map(r => ({ FileId: r.fileId!, fileName: r.displayName ?? '' }));
+            const newFiles = para.fileRows.filter(r => r.file != null);
+            if (newFiles.length > 0) {
+                const uploads = newFiles.map(r => this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name).toPromise());
+                const uploaded = await Promise.all(uploads);
+                const uploadedRefs = (uploaded as any[]).map(r => ({ FileId: r.fileId, fileName: r.fileName }));
+                result.push({ text: para.text, files: [...existingFiles, ...uploadedRefs] });
+            } else {
+                result.push({ text: para.text, files: existingFiles });
+            }
+        }
+        return JSON.stringify(result);
     }
 
     saveViewChanges(): void {

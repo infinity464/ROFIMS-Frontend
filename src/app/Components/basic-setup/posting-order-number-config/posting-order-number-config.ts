@@ -8,7 +8,7 @@ import { PostingOrderNumberConfigModel } from '../shared/models/posting-order-nu
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { SharedService } from '@/shared/services/shared-service';
 import { MasterBasicSetupService } from '../shared/services/MasterBasicSetupService';
-import { CodeType } from '@/models/enums';
+import { CodeType, PostingType } from '@/models/enums';
 import { InputText } from 'primeng/inputtext';
 import { InputNumber } from 'primeng/inputnumber';
 import { IconField } from 'primeng/iconfield';
@@ -39,10 +39,10 @@ export class PostingOrderNumberConfigComponent implements OnInit {
     filteredConfigs: PostingOrderNumberConfigModel[] = [];
 
     postingTypeOptions = [
-        { label: 'New Posting', value: 'NewPosting' },
-        { label: 'Inter Posting', value: 'InterPosting' },
-        { label: 'General', value: 'General' },
-        { label: 'Ex-BD Leave', value: 'ExBdLeave' }
+        { label: 'New Posting', value: PostingType.NewPosting },
+        { label: 'Inter Posting', value: PostingType.InterPosting },
+        { label: 'General', value: PostingType.General },
+        { label: 'Ex-BD Leave', value: PostingType.ExBdLeave }
     ];
 
     memberTypeOptions: { label: string; value: number }[] = [];

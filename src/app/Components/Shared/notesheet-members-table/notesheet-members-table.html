@@ -1,0 +1,16 @@
+<div class="members-table-wrap" *ngIf="rows.length > 0 && columns.length > 0">
+    <table class="members-table">
+        <thead>
+            <tr>
+                <th style="text-align:center;width:30px;">{{ isBangla ? 'ক্রমিক' : 'SL' }}</th>
+                <th *ngFor="let col of columns" [style.width.%]="getColWidth(col)">{{ col.label }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr *ngFor="let row of rows; let ri = index">
+                <td style="text-align:center;">{{ memberSerial(ri) }}</td>
+                <td *ngFor="let col of columns">{{ formatCell(row, col) }}</td>
+            </tr>
+        </tbody>
+    </table>
+</div>

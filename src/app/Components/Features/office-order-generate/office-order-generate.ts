@@ -3,7 +3,7 @@ import { UserMenuService } from '@/services/user-menu.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
@@ -20,7 +20,7 @@ import { OfficeOrderService } from '@/services/office-order.service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { ApprovedNoteSheetItem } from '@/models/posting.model';
 import { PostingOrderNumberConfigModel } from '@/Components/basic-setup/shared/models/posting-order-number-config';
-import { CodeType } from '@/models/enums';
+import { CodeType, PostingType } from '@/models/enums';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/file-references-form/file-references-form';
 import { EmpService } from '@/services/emp-service';
@@ -68,7 +68,12 @@ export class OfficeOrderGenerateComponent implements OnInit {
     canUpdate = true;
     canDelete = true;
 
+    private route = inject(ActivatedRoute);
     private noteSheetApi = `${environment.apis.core}/NoteSheetInfo`;
+
+    // ─── Edit mode ────────────────────────────────────────
+    editMode = false;
+    editId: number | null = null;
 
     // ─── NoteSheet selection ──────────────────────────────
     approvedNoteSheets: ApprovedNoteSheetItem[] = [];
@@ -138,6 +143,64 @@ export class OfficeOrderGenerateComponent implements OnInit {
         this.loadApprovalEmployees();
         this.loadNumberConfigs();
         this.loadApprovedNoteSheets();
+
+        const id = Number(this.route.snapshot.queryParamMap.get('id'));
+        if (id) {
+            this.editMode = true;
+            this.editId = id;
+            this.loadOrderForEdit(id);
+        }
+    }
+
+    private loadOrderForEdit(id: number): void {
+        this.officeOrderService.getOfficeOrderById(id).subscribe({
+            next: (data) => {
+                if (!data) return;
+                this.selectedTextType = data.textType === 'bn' ? 'bn' : 'en';
+                this.letterDate = data.letterDate ? new Date(data.letterDate) : new Date();
+                this.manualLetterNo = data.letterNo ?? '';
+                this.subject = data.subject ?? '';
+                this.addressTo = data.addressTo ?? '';
+                this.bodyText = data.body ?? '';
+                this.remarks = data.remarks ?? '';
+                this.selectedApprovalEmployeeId = data.approvalEmployeeId ?? null;
+
+                // NoteSheet — add to dropdown if not already present, then select
+                if (data.noteSheetId) {
+                    this.selectedNoteSheetId = data.noteSheetId;
+                    this.selectedNoteSheetNo = data.noteSheetNo ?? null;
+                    const existing = this.approvedNoteSheets.find(ns => ns.noteSheetId === data.noteSheetId);
+                    if (!existing) {
+                        this.approvedNoteSheets = [
+                            { noteSheetId: data.noteSheetId, noteSheetNo: data.noteSheetNo ?? `#${data.noteSheetId}` } as ApprovedNoteSheetItem,
+                            ...this.approvedNoteSheets
+                        ];
+                    }
+                }
+
+                // Reference entries
+                try { this.referenceEntries = data.referenceNo ? JSON.parse(data.referenceNo) : []; } catch { this.referenceEntries = []; }
+
+                // Onulipi
+                try { this.onulipiParagraphs = data.onulipi ? JSON.parse(data.onulipi) : []; } catch { this.onulipiParagraphs = []; }
+
+                // File references
+                try {
+                    const files = data.filesReferences ? JSON.parse(data.filesReferences) : [];
+                    this.fileRows = files.map((f: any) => ({
+                        fileId: f.FileId ?? f.fileId,
+                        fileName: f.fileName ?? f.FileName ?? '',
+                        displayName: f.fileName ?? f.FileName ?? '',
+                        file: null
+                    }));
+                } catch { this.fileRows = []; }
+
+                this.rebuildConfigOptions();
+            },
+            error: () => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load office order for editing.' });
+            }
+        });
     }
 
     loadApprovalEmployees(): void {
@@ -186,7 +249,7 @@ export class OfficeOrderGenerateComponent implements OnInit {
         const nowYear = now.getFullYear();
         const nowMonth = now.getMonth() + 1;
         this.configOptions = this.allConfigs
-            .filter((c) => c.postingType === 'General' && c.status)
+            .filter((c) => c.postingType === PostingType.General && c.status)
             .map((c) => {
                 const prefixLabel = isBN ? (c.prefixBN || c.prefix) : c.prefix;
                 const yearReset = c.currentYear !== nowYear || c.currentMonth !== nowMonth;
@@ -306,7 +369,7 @@ export class OfficeOrderGenerateComponent implements OnInit {
             this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Please select a notesheet.' });
             return;
         }
-        if (!this.postingOrderNumberConfigId) {
+        if (!this.editMode && !this.postingOrderNumberConfigId) {
             this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Please select a Letter No pattern.' });
             return;
         }
@@ -332,52 +395,52 @@ export class OfficeOrderGenerateComponent implements OnInit {
                 })))
                 : null;
 
-            this.officeOrderService.createOfficeOrder({
-                letterNo: '',
-                letterDate: this.formatDateToString(this.letterDate),
-                noteSheetId: this.selectedNoteSheetId!,
-                subject: this.subject || null,
-                addressTo: this.addressTo?.trim() || null,
-                referenceNo: refJson,
-                body: this.bodyText?.trim() || null,
-                onulipi: onulipiJson,
-                textType: this.selectedTextType === 'bn' ? 'bn' : 'en',
-                filesReferences: filesReferencesJson,
-                remarks: this.remarks || null,
-                createdBy: 'system',
-                postingOrderNumberConfigId: this.postingOrderNumberConfigId ?? null,
-                approvalEmployeeId: this.selectedApprovalEmployeeId ?? null
-            }).subscribe({
+            const saveObs = this.editMode && this.editId
+                ? this.officeOrderService.updateOfficeOrder({
+                    id: this.editId,
+                    letterNo: this.manualLetterNo || '',
+                    letterDate: this.formatDateToString(this.letterDate),
+                    subject: this.subject || null,
+                    addressTo: this.addressTo?.trim() || null,
+                    referenceNo: refJson,
+                    body: this.bodyText?.trim() || null,
+                    onulipi: onulipiJson,
+                    textType: this.selectedTextType === 'bn' ? 'bn' : 'en',
+                    filesReferences: filesReferencesJson,
+                    remarks: this.remarks || null,
+                    updatedBy: 'system',
+                    approvalEmployeeId: this.selectedApprovalEmployeeId ?? null
+                })
+                : this.officeOrderService.createOfficeOrder({
+                    letterNo: '',
+                    letterDate: this.formatDateToString(this.letterDate),
+                    noteSheetId: this.selectedNoteSheetId!,
+                    subject: this.subject || null,
+                    addressTo: this.addressTo?.trim() || null,
+                    referenceNo: refJson,
+                    body: this.bodyText?.trim() || null,
+                    onulipi: onulipiJson,
+                    textType: this.selectedTextType === 'bn' ? 'bn' : 'en',
+                    filesReferences: filesReferencesJson,
+                    remarks: this.remarks || null,
+                    createdBy: 'system',
+                    postingOrderNumberConfigId: this.postingOrderNumberConfigId ?? null,
+                    approvalEmployeeId: this.selectedApprovalEmployeeId ?? null
+                });
+
+            saveObs.subscribe({
                 next: (res) => {
                     this.saving = false;
                     if (res.statusCode === 200) {
-                        this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Office Order generated successfully.' });
-                        // Reset form
-                        this.manualLetterNo = '';
-                        this.selectedNoteSheetId = null;
-                        this.selectedNoteSheetNo = null;
-                        this.selectedNoteSheetApprovedDate = null;
-                        this.subject = '';
-                        this.addressTo = '';
-                        this.referenceEntries = [];
-                        this.bodyText = '';
-                        this.fileRows = [];
-                        this.onulipiParagraphs = [];
-                        this.remarks = '';
-                        this.letterDate = new Date();
-                        this.postingOrderNumberConfigId = null;
-                        this.selectedApprovalEmployeeId = null;
-                        const newId = (res as any)?.data;
-                        if (newId != null) {
-                            this.router.navigate(['/office-order/preview'], { queryParams: { id: newId } });
-                        }
+                        this.messageService.add({ severity: 'success', summary: 'Success', detail: this.editMode ? 'Office Order updated successfully.' : 'Office Order generated successfully.' });
+                        this.router.navigate(['/office-order/preview']);
                     } else {
-                        this.messageService.add({ severity: 'error', summary: 'Error', detail: res.description ?? 'Failed to generate office order.' });
+                        this.messageService.add({ severity: 'error', summary: 'Error', detail: res.description ?? 'Failed.' });
                     }
                 },
                 error: (err) => {
                     this.saving = false;
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.description ?? 'Failed to generate office order.' });
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.description ?? 'Failed.' });
                 }
             });
         };

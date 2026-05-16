@@ -45,6 +45,18 @@ export interface GeneralNotesheetOfficeOrderWithDetailsDto {
     approvalNote?: string | null;
     cancelReason?: string | null;
     approvalDate?: string | null;
+    // NoteSheet content (from view)
+    nsMainText?: string | null;
+    nsNote?: string | null;
+    nsParagraphText?: string | null;
+    // Approval person details (from view)
+    approvalEmployeeNameBN?: string | null;
+    approvalEmployeeRank?: string | null;
+    approvalEmployeeRankBN?: string | null;
+    approvalEmployeeAppointment?: string | null;
+    approvalEmployeeAppointmentBN?: string | null;
+    approvalEmployeeRabUnit?: string | null;
+    approvalEmployeeRabUnitBN?: string | null;
 }
 
 /** Reference No entry (with serial). */

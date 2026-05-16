@@ -1,7 +1,29 @@
 :host {
     display: block;
     min-height: 100vh;
-    background: #d8d8d8;
+    background: #f4f4f4;
+}
+
+/* ── List Mode ───────────────────────────────────── */
+.office-order-list {
+    padding: 1.5rem;
+
+    .form-card {
+        background: #fff;
+        border-radius: 8px;
+        padding: 1.5rem;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .form-card-header {
+        margin-bottom: 1rem;
+    }
+
+    .form-card-title {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 600;
+    }
 }
 
 /* ── Toolbar ──────────────────────────────────────── */
@@ -20,6 +42,19 @@
 .preview-actions {
     display: flex;
     gap: 0.5rem;
+    align-items: center;
+}
+
+.page-size-select {
+    padding: 0.4rem 0.6rem;
+    border: 1px solid var(--surface-border, #dee2e6);
+    border-radius: 6px;
+    font-size: 0.875rem;
+    background: var(--surface-card, #fff);
+    color: var(--text-color, #1e293b);
+    cursor: pointer;
+    outline: none;
+    &:focus { border-color: var(--primary-color, #3b82f6); }
 }
 
 .approval-header-right {
@@ -154,12 +189,64 @@
     text-decoration: underline;
 }
 
+/* ── Numbered Paragraphs (from notesheet) ─────────── */
+.oo-doc-para {
+    display: flex;
+    gap: 8px;
+    margin: 10px 0;
+    font-size: 10pt;
+    line-height: 1.8;
+}
+
+.oo-doc-para-no {
+    font-weight: 700;
+    min-width: 28px;
+    flex-shrink: 0;
+}
+
+.oo-doc-para-text {
+    flex: 1;
+    text-align: justify;
+}
+
 /* ── Body ─────────────────────────────────────────── */
 .oo-doc-body {
     margin: 12px 0;
     line-height: 1.8;
     text-align: justify;
     font-size: 10pt;
+}
+
+/* ── Signature Area ──────────────────────────────── */
+.oo-doc-signature-area {
+    display: flex;
+    justify-content: flex-end;
+    margin: 40px 0 20px;
+}
+
+.oo-doc-signature-block {
+    text-align: center;
+    min-width: 200px;
+}
+
+.oo-doc-sig-name {
+    font-weight: 700;
+    font-size: 10pt;
+    border-top: 1px solid transparent;
+    padding-top: 4px;
+}
+
+.oo-doc-sig-rank,
+.oo-doc-sig-appointment,
+.oo-doc-sig-unit {
+    font-size: 9pt;
+    line-height: 1.5;
+}
+
+/* ── Onulipi spacing ─────────────────────────────── */
+.oo-doc-onulipi {
+    margin-top: 30px;
+    padding-top: 10px;
 }
 
 /* ── Rich HTML sections (innerHTML) ── */

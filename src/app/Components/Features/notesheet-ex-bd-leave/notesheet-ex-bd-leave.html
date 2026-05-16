@@ -231,6 +231,26 @@
 
       <form [formGroup]="form" (ngSubmit)="submit()">
         <div class="ns-gen-grid">
+          <!-- Row 0: Select Ex-BD Leave Application (full width) -->
+          <div class="ns-gen-field ns-gen-full">
+            <label class="ns-gen-label">Select Ex-BD Leave Application <span class="ns-gen-req">*</span></label>
+            <p-select
+              formControlName="exBdLeaveApplicationId"
+              [options]="exBdLeaveAppOptions"
+              optionLabel="label"
+              optionValue="value"
+              [filter]="true"
+              filterBy="label"
+              [showClear]="true"
+              placeholder="Search & Select Application"
+              styleClass="w-full"
+              (onChange)="onExBdLeaveAppChange($event.value)">
+            </p-select>
+            @if (form.get('exBdLeaveApplicationId')?.invalid && form.get('exBdLeaveApplicationId')?.touched) {
+              <small class="ns-gen-error">Ex-BD Leave Application is required</small>
+            }
+          </div>
+
           <!-- Row 1: Text Type | Date | Note Sheet No -->
           <div class="ns-gen-field">
             <label class="ns-gen-label">Text Type</label>
@@ -250,138 +270,103 @@
           </div>
 
           <div class="ns-gen-field">
-            <label class="ns-gen-label">Note Sheet No</label>
-            <input pInputText formControlName="noteSheetNo" placeholder="Auto generated" class="w-full" [readonly]="true" />
-          </div>
-
-          <!-- Row 2: Operation Type | Secret + Subject -->
-          <!-- Row 3: Reference Number (full - rich editor) -->
-          <div class="ns-gen-field ns-gen-full">
-            <label class="ns-gen-label">Reference Number <span class="ns-gen-req">*</span></label>
-            <app-rich-editor formControlName="referenceNumber" height="80px" toolbar="minimal" placeholder="Enter reference number..."></app-rich-editor>
-            @if (form.get('referenceNumber')?.invalid && form.get('referenceNumber')?.touched) {
-              <small class="ns-gen-error">Reference Number is required</small>
-            }
-          </div>
-
-          <!-- Row 3: RAB Employee | Subject (span 2) -->
-          <div class="ns-gen-field">
-            <label class="ns-gen-label">RAB Employee <span class="ns-gen-req">*</span></label>
+            <label class="ns-gen-label">Note Sheet No <span class="ns-gen-req">*</span></label>
             <p-select
-              formControlName="rabIdEmployeeId"
-              [options]="rabEmployeeOptionsDisplay"
+              formControlName="noteSheetNumberConfigId"
+              [options]="noteSheetConfigOptions"
               optionLabel="label"
               optionValue="value"
-              [filter]="true"
-              filterBy="label"
-              [showClear]="true"
-              placeholder="Select Employee"
-              styleClass="w-full"
-              (onChange)="onRabEmployeeChange($event.value)">
-            </p-select>
-            @if (form.get('rabIdEmployeeId')?.invalid && form.get('rabIdEmployeeId')?.touched) {
-              <small class="ns-gen-error">RAB Employee is required</small>
-            }
-          </div>
-
-          <div class="ns-gen-field ns-gen-span-2">
-            <label class="ns-gen-label">Subject <span class="ns-gen-req">*</span></label>
-            <p-select
-              formControlName="exBdLeaveSubjectId"
-              [options]="subjectTypeOptions"
-              optionLabel="label"
-              optionValue="value"
-              [filter]="true"
-              filterBy="label"
-              [showClear]="true"
-              placeholder="Select Subject"
+              placeholder="Select NoteSheet Number"
               styleClass="w-full">
             </p-select>
+            @if (form.get('noteSheetNumberConfigId')?.invalid && form.get('noteSheetNumberConfigId')?.touched) {
+              <small class="ns-gen-error">Note Sheet No is required</small>
+            }
+          </div>
+
+          <!-- Application Info Panel (flat text, shown when app selected) -->
+          @if (selectedExBdLeaveAppId) {
+            <div class="ns-gen-full ns-app-info-panel">
+              <div class="ns-app-info-grid">
+                <div class="ns-app-info-item">
+                  <span class="ns-app-info-label">RAB Employee</span>
+                  <span class="ns-app-info-value">{{ getEmployeeDisplayName() }}</span>
+                </div>
+                <div class="ns-app-info-item">
+                  <span class="ns-app-info-label">Purpose of Ex-BD Leave</span>
+                  <span class="ns-app-info-value">{{ getPurposeLabel(form.get('purposeOfExBdLeaveId')?.value) }}</span>
+                </div>
+                <div class="ns-app-info-item">
+                  <span class="ns-app-info-label">Destination Country</span>
+                  <span class="ns-app-info-value">{{ getCountryLabels() }}</span>
+                </div>
+                <div class="ns-app-info-item">
+                  <span class="ns-app-info-label">Total Days</span>
+                  <span class="ns-app-info-value">{{ form.get('totalDays')?.value || '—' }}</span>
+                </div>
+                <div class="ns-app-info-item">
+                  <span class="ns-app-info-label">Date of Visit (From)</span>
+                  <span class="ns-app-info-value">{{ formatDateView(form.get('dateOfVisitFrom')?.value) }}</span>
+                </div>
+                <div class="ns-app-info-item">
+                  <span class="ns-app-info-label">Date of Visit (To)</span>
+                  <span class="ns-app-info-value">{{ formatDateView(form.get('dateOfVisitTo')?.value) }}</span>
+                </div>
+                <div class="ns-app-info-item ns-app-info-full">
+                  <span class="ns-app-info-label">Family Members</span>
+                  <span class="ns-app-info-value">{{ getFamilyMemberDisplayNames() || '—' }}</span>
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- Subject -->
+          <div class="ns-gen-field ns-gen-span-2">
+            <label class="ns-gen-label">Subject <span class="ns-gen-req">*</span></label>
+            <div class="flex align-items-center gap-1">
+              <p-select
+                formControlName="exBdLeaveSubjectId"
+                [options]="subjectTypeOptions"
+                optionLabel="label"
+                optionValue="value"
+                [filter]="true"
+                filterBy="label"
+                [showClear]="true"
+                placeholder="Select Subject"
+                styleClass="w-full">
+              </p-select>
+              <p-button icon="pi pi-plus" [rounded]="true" [text]="true" severity="success" (onClick)="showAddSubjectDialog()" pTooltip="Add new Subject" />
+            </div>
             @if (form.get('exBdLeaveSubjectId')?.invalid && form.get('exBdLeaveSubjectId')?.touched) {
               <small class="ns-gen-error">Subject is required</small>
             }
           </div>
 
-          <!-- Row 5: Purpose | Destination Country | Total Days -->
-          <div class="ns-gen-field">
-            <label class="ns-gen-label">Purpose of Ex-BD Leave <span class="ns-gen-req">*</span></label>
-            <p-select
-              formControlName="purposeOfExBdLeaveId"
-              [options]="purposeOptionsDisplay"
-              optionLabel="label"
-              optionValue="value"
-              [filter]="true"
-              filterBy="label"
-              [showClear]="true"
-              placeholder="Select Purpose"
-              styleClass="w-full">
-            </p-select>
-            @if (form.get('purposeOfExBdLeaveId')?.invalid && form.get('purposeOfExBdLeaveId')?.touched) {
-              <small class="ns-gen-error">Purpose is required</small>
-            }
-          </div>
-
-          <div class="ns-gen-field">
-            <label class="ns-gen-label">Destination Country <span class="ns-gen-req">*</span></label>
-            <p-select
-              formControlName="destinationCountryId"
-              [options]="countryOptionsDisplay"
-              optionLabel="label"
-              optionValue="value"
-              [filter]="true"
-              filterBy="label"
-              [showClear]="true"
-              placeholder="Select Country"
-              styleClass="w-full">
-            </p-select>
-            @if (form.get('destinationCountryId')?.invalid && form.get('destinationCountryId')?.touched) {
-              <small class="ns-gen-error">Destination Country is required</small>
-            }
-          </div>
-
-          <div class="ns-gen-field">
-            <label class="ns-gen-label">Total Days</label>
-            <input pInputText formControlName="totalDays" type="number" readonly class="w-full" />
-          </div>
-
-          <!-- Row 6: Date of Visit From | Date of Visit To | Family Members -->
-          <div class="ns-gen-field">
-            <label class="ns-gen-label">Date of Visit (From) <span class="ns-gen-req">*</span></label>
-            <p-datepicker formControlName="dateOfVisitFrom" dateFormat="dd-mm-yy" styleClass="w-full" placeholder="Select date"></p-datepicker>
-            @if (form.get('dateOfVisitFrom')?.invalid && form.get('dateOfVisitFrom')?.touched) {
-              <small class="ns-gen-error">Date of Visit (From) is required</small>
-            }
-          </div>
-
-          <div class="ns-gen-field">
-            <label class="ns-gen-label">Date of Visit (To) <span class="ns-gen-req">*</span></label>
-            <p-datepicker formControlName="dateOfVisitTo" dateFormat="dd-mm-yy" styleClass="w-full" placeholder="Select date"></p-datepicker>
-            @if (form.get('dateOfVisitTo')?.invalid && form.get('dateOfVisitTo')?.touched) {
-              <small class="ns-gen-error">Date of Visit (To) is required</small>
-            }
-          </div>
-
-          <div class="ns-gen-field">
-            <label class="ns-gen-label">Family Members</label>
-            <p-multiselect
-              formControlName="familyMemberIds"
-              [options]="familyMemberOptions"
-              optionLabel="label"
-              optionValue="value"
-              [filter]="true"
-              filterBy="label"
-              [showClear]="true"
-              placeholder="Select Family Members"
-              [disabled]="!selectedEmployeeId"
-              styleClass="w-full">
-            </p-multiselect>
-            @if (getSelectedFamilyMemberLabels().length > 0) {
-              <div class="ns-gen-chips">
-                @for (item of getSelectedFamilyMemberLabels(); track item) {
-                  <span class="ns-gen-chip">{{ item }}</span>
-                }
+          <!-- Reference Number Paragraphs -->
+          <div class="ns-gen-full">
+            <p-fieldset legend="Reference Number" [toggleable]="true" [collapsed]="false">
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                <p-button icon="pi pi-plus" label="Add Reference" [rounded]="false" [text]="true" severity="success" size="small" (onClick)="addReferenceParagraph()" pTooltip="Add Reference"></p-button>
               </div>
-            }
+              @for (para of referenceParagraphs; track trackByIndex($index)) {
+                <div class="ref-paragraph-row">
+                  <span class="ref-serial">{{ getSerialLabel($index) }}</span>
+                  <div class="ref-paragraph-content">
+                    <textarea pInputText class="w-full" rows="2" [value]="referenceParagraphs[$index].text" (input)="referenceParagraphs[$index].text = $any($event.target).value" [placeholder]="'Reference ' + getSerialLabel($index)"></textarea>
+                    <app-file-references-form
+                      [fileRows]="referenceParagraphs[$index].fileRows"
+                      [isViewMode]="false"
+                      title=""
+                      (fileRowsChange)="onRefFileRowsChange($event, $index)"
+                      (onDownloadFile)="onRefDownloadFile($event)">
+                    </app-file-references-form>
+                  </div>
+                  @if (referenceParagraphs.length > 1) {
+                    <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" (onClick)="removeReferenceParagraph($index)"></p-button>
+                  }
+                </div>
+              }
+            </p-fieldset>
           </div>
 
           <div class="ns-gen-field">
@@ -418,6 +403,7 @@
           <div class="ns-gen-field ns-gen-full">
             <app-notesheet-approver-select
               [noteSheetType]="'ExBDLeave'"
+              [useUserList]="true"
               [(initiatorId)]="form.controls['initiatorId'].value"
               (initiatorIdChange)="form.controls['initiatorId'].setValue($event); form.controls['initiatorId'].markAsTouched()"
               [(recommenderIds)]="form.controls['recommenderIds'].value"
@@ -470,4 +456,21 @@
   </div>
 
   <p-toast position="top-center"></p-toast>
+
+  <!-- Add Subject Dialog -->
+  <p-dialog header="Add New Subject" [(visible)]="showSubjectDialog" [modal]="true" [style]="{ width: '450px' }" [closable]="true">
+    <div style="padding: 1rem 0; display: flex; flex-direction: column; gap: 1rem;">
+      <div>
+        <label class="ns-gen-label">Subject (English) <span class="ns-gen-req">*</span></label>
+        <input pInputText [(ngModel)]="newSubject.codeValueEN" [ngModelOptions]="{ standalone: true }" placeholder="Enter subject name" class="w-full" />
+      </div>
+      <div>
+        <label class="ns-gen-label">Subject (Bangla)</label>
+        <input pInputText [(ngModel)]="newSubject.codeValueBN" [ngModelOptions]="{ standalone: true }" placeholder="Enter subject name in Bangla" class="w-full" />
+      </div>
+    </div>
+    <ng-template pTemplate="footer">
+      <p-button label="Save" icon="pi pi-check" (onClick)="saveNewSubject()" [loading]="isSavingSubject" [disabled]="!newSubject.codeValueEN?.trim()" />
+    </ng-template>
+  </p-dialog>
 </p-fluid>
