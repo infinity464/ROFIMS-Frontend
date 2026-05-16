@@ -53,6 +53,10 @@ export class ManpowerSummaryComponent implements OnInit {
     rows: ManpowerSummaryRow[] = [];
     totals: ManpowerSummaryTotals = { auth: 0, held: 0, def: 0, sur: 0, postingIn: 0, postingOut: 0 };
 
+    /** Names of the RAB Units the user is restricted to. null/empty = full access (no scope line shown). */
+    accessibleRabUnitNames: string[] | null = null;
+    accessibleRabUnitNamesBN: string[] | null = null;
+
     readonly columns = COLUMNS;
 
     constructor(
@@ -82,10 +86,21 @@ export class ManpowerSummaryComponent implements OnInit {
             next: (res: ManpowerSummaryResponse) => {
                 this.rows   = res.rows ?? [];
                 this.totals = res.totals ?? { auth: 0, held: 0, def: 0, sur: 0, postingIn: 0, postingOut: 0 };
+                this.accessibleRabUnitNames   = res.accessibleRabUnitNames ?? null;
+                this.accessibleRabUnitNamesBN = res.accessibleRabUnitNamesBN ?? null;
                 this.loading = false;
             },
             error: () => { this.loading = false; }
         });
+    }
+
+    /** Returns the comma-separated unit-scope line shown under the report title, or null when unrestricted. */
+    get scopeLine(): string | null {
+        const names = this.lang === 'bn'
+            ? (this.accessibleRabUnitNamesBN ?? this.accessibleRabUnitNames)
+            : this.accessibleRabUnitNames;
+        if (!names || names.length === 0) return null;
+        return names.join(', ');
     }
 
     toggleLang(): void {
@@ -109,13 +124,15 @@ export class ManpowerSummaryComponent implements OnInit {
             return;
         }
         const { columns, rows } = this.getExportData();
+        const scope = this.scopeLine;
         const config = {
             title: this.titleLabel,
             lang: this.lang,
             columns,
             rows,
             showPageNumbers: true,
-            filename: 'manpower-summary'
+            filename: 'manpower-summary',
+            filterLines: scope ? [scope] : undefined
         };
         if (type === 'word') {
             await this.exportService.exportWord(config);
@@ -239,11 +256,16 @@ export class ManpowerSummaryComponent implements OnInit {
             <td></td>
         </tr>`;
 
+        const scope = this.scopeLine;
+        const scopeHtml = scope
+            ? `<div style="font-size:10pt;font-weight:600;text-align:center;margin:2px 0 6px 0;color:#1e3a5f">${esc(scope)}</div>`
+            : '';
         const container = document.createElement('div');
         container.style.cssText = 'position:absolute;left:-9999px;top:0;width:760px;padding:30px;background:#fff;z-index:-1;overflow:visible;box-sizing:border-box';
         container.innerHTML = `
             <div style="font-family:${fontFamily};font-size:9pt;color:#000;line-height:1.4;width:100%">
                 <h1 style="font-size:14pt;font-weight:700;text-align:center;margin:0 0 3px 0">${esc(this.titleLabel)}</h1>
+                ${scopeHtml}
                 <div style="font-size:9pt;text-align:center;margin-bottom:14px">${esc(dateStr)}</div>
                 <table style="width:100%;border-collapse:collapse;font-family:${fontFamily}">
                     <thead><tr>${headerCells}</tr></thead>
@@ -362,12 +384,15 @@ export class ManpowerSummaryComponent implements OnInit {
             <td></td>
         </tr>`;
 
+        const scope = this.scopeLine;
+        const scopeHtml = scope ? `<div class="scope">${esc(scope)}</div>` : '';
         const html = `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><title>${esc(this.titleLabel)}</title>
 <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: ${fontFamily}; font-size: 9pt; color: #000; background: #fff; padding: 16px; }
     h1 { font-size: 14pt; font-weight: 700; text-align: center; margin-bottom: 3px; }
+    .scope { font-size: 10pt; font-weight: 600; text-align: center; margin: 2px 0 6px 0; color: #1e3a5f; }
     .date { font-size: 9pt; text-align: center; margin-bottom: 14px; }
     table { width: 100%; border-collapse: collapse; font-family: ${fontFamily}; }
     th { padding: 5px 8px; text-align: center; font-size: 9pt; font-weight: 700;
@@ -387,6 +412,7 @@ export class ManpowerSummaryComponent implements OnInit {
     }
 </style></head><body>
     <h1>${esc(this.titleLabel)}</h1>
+    ${scopeHtml}
     <div class="date">${esc(dateStr)}</div>
     <table>
         <thead><tr>${headerCells}</tr></thead>

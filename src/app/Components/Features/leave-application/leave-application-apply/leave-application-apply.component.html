@@ -142,7 +142,7 @@
               <tbody>
                 @for (row of leaveDetails.controls; track row) {
                   <tr [formGroupName]="$index">
-                    <td>
+                    <td class="cell-type" data-label="Leave type">
                       <p-select
                         formControlName="leaveTypeId"
                         [options]="leaveTypeOptions"
@@ -153,13 +153,13 @@
                         appendTo="body">
                       </p-select>
                     </td>
-                    <td>
+                    <td class="cell-from" data-label="From">
                       <p-datepicker formControlName="fromDate" dateFormat="dd-mm-yy" [showIcon]="true" styleClass="w-full" placeholder="Pick date" appendTo="body"></p-datepicker>
                     </td>
-                    <td>
+                    <td class="cell-to" data-label="To">
                       <p-datepicker formControlName="toDate" dateFormat="dd-mm-yy" [showIcon]="true" styleClass="w-full" placeholder="Pick date" appendTo="body"></p-datepicker>
                     </td>
-                    <td class="days-cell">
+                    <td class="days-cell" data-label="Duration">
                       @if (leaveDetailRowDays($index) !== null) {
                         <span class="days-badge">{{ leaveDetailRowDays($index) }} {{ (leaveDetailRowDays($index) ?? 0) === 1 ? 'day' : 'days' }}</span>
                       } @else {

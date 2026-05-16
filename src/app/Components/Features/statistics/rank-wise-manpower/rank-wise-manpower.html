@@ -26,6 +26,11 @@
 
             <!-- Lang + Export -->
             <div class="report-results-actions">
+                <label class="equiv-toggle">
+                    <p-checkbox [(ngModel)]="showEquivalentRanks" [binary]="true" inputId="showEquivRanks"></p-checkbox>
+                    <span>{{ lang === 'en' ? 'Show equivalent ranks' : 'সমতুল্য পদবী দেখান' }}</span>
+                </label>
+
                 <button type="button" class="report-lang-toggle" (click)="toggleLang()">
                     {{ lang === 'en' ? 'বাংলা' : 'English' }}
                 </button>
@@ -69,6 +74,9 @@
         <!-- Row 2: centered title -->
         <div class="report-header-title-block">
             <div class="report-main-title">{{ titleLabel }}</div>
+            @if (scopeLine) {
+                <div class="report-scope-line">{{ scopeLine }}</div>
+            }
             <div class="report-date-line">{{ dateLine }}</div>
         </div>
 
@@ -96,6 +104,15 @@
 
             <div class="report-table-wrap">
                 <table class="report-table">
+                    <colgroup>
+                        <col style="width: 6%">
+                        <col style="width: 30%">
+                        <col style="width: 12%">
+                        <col style="width: 12%">
+                        <col style="width: 12%">
+                        <col style="width: 12%">
+                        <col style="width: 16%">
+                    </colgroup>
                     <thead>
                         <tr>
                             <th *ngFor="let h of colHeaders">{{ h }}</th>
@@ -131,6 +148,15 @@
         <div class="grand-total-section" *ngIf="filteredOrgs.length > 0">
             <div class="report-table-wrap">
                 <table class="report-table">
+                    <colgroup>
+                        <col style="width: 6%">
+                        <col style="width: 30%">
+                        <col style="width: 12%">
+                        <col style="width: 12%">
+                        <col style="width: 12%">
+                        <col style="width: 12%">
+                        <col style="width: 16%">
+                    </colgroup>
                     <tbody>
                         <tr class="grand-total-row">
                             <td class="num-cell"></td>

@@ -33,7 +33,7 @@ import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directi
     ],
     providers: [MessageService],
     templateUrl: './report-member-appointment.component.html',
-    styleUrls: ['./report-member-appointment.component.scss', '../report-theme.scss'],
+    styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-member-appointment.component.scss'],
 })
 export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
     L = REPORT_LABELS;

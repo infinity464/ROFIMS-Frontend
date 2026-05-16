@@ -1,0 +1,656 @@
+import { Component, OnInit, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
+import { ButtonModule } from 'primeng/button';
+import { SelectModule } from 'primeng/select';
+import { Toast } from 'primeng/toast';
+import { MessageService } from 'primeng/api';
+import { firstValueFrom } from 'rxjs';
+import {
+    Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+    WidthType, BorderStyle, AlignmentType, PageOrientation, TableLayoutType,
+    HeightRule
+} from 'docx';
+import { saveAs } from 'file-saver';
+import { environment } from '@/Core/Environments/environment';
+
+import { MovementInfoService } from '@/services/movement-info.service';
+import { MovementInfoModel } from '@/models/movement-info.model';
+import { EmpService } from '@/services/emp-service';
+import { EmployeeSearchInfoModel } from '@/models/EmpModel';
+import { ServingMembersService } from '@/services/serving-members.service';
+import { EmployeeServiceOverview } from '@/models/employee-service-overview.model';
+import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
+import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
+
+@Component({
+    selector: 'app-notesheet-preview-article-47-handover',
+    standalone: true,
+    imports: [CommonModule, FormsModule, ButtonModule, SelectModule, Toast],
+    providers: [MessageService],
+    templateUrl: './notesheet-preview-article-47-handover.html',
+    styleUrls: ['../notesheet-preview.scss', '../notesheet-preview-toolbar-dark.scss']
+})
+export class NotesheetPreviewArticle47HandoverComponent implements OnInit {
+    private route = inject(ActivatedRoute);
+    private router = inject(Router);
+    private movementService = inject(MovementInfoService);
+    private empService = inject(EmpService);
+    private servingMembersService = inject(ServingMembersService);
+    private masterBasicSetup = inject(MasterBasicSetupService);
+    private messageService = inject(MessageService);
+    private http = inject(HttpClient);
+
+    /** Export state. */
+    exportingPdf = false;
+    printingPreview = false;
+    pageSizeOptions = [
+        { label: 'Legal',  value: 'Legal'  },
+        { label: 'A4',     value: 'A4'     },
+        { label: 'Letter', value: 'Letter' }
+    ];
+    selectedPageSize: 'Legal' | 'A4' | 'Letter' = 'Legal';
+
+    loading = true;
+    error: string | null = null;
+    movement: MovementInfoModel | null = null;
+
+    /** First (and only, for Article 47) employee on the movement — used in the signature block. */
+    employee: EmployeeSearchInfoModel | null = null;
+    /** EmployeeServiceOverview row — same source as /presently-serving-members.
+     *  Used to pull the RAB unit display name. */
+    overview: EmployeeServiceOverview | null = null;
+    /** MotherOrgRank id → label map (English + Bangla). */
+    private rankLabels = new Map<number, { en: string; bn: string }>();
+    /** RabUnit id → label map (English + Bangla). */
+    private rabUnitLabels = new Map<number, { en: string; bn: string }>();
+    /** Corps id → label map (English + Bangla). */
+    private corpsLabels = new Map<number, { en: string; bn: string }>();
+    /** Battalion HQ location for the employee's RAB unit (English / Bangla). */
+    battalionHqEn = '';
+    battalionHqBn = '';
+
+    /** Final recipient list — same positioning rule as Takeover. */
+    recipientLines: string[] = [];
+
+    memoNoBn = '---';
+    letterDateBn = '';
+
+    ngOnInit(): void {
+        // Load rank + RAB-unit + corps labels once for Bangla rendering of the signature block.
+        this.loadRankLabels();
+        this.loadRabUnitLabels();
+        this.loadCorpsLabels();
+
+        const idParam = this.route.snapshot.queryParamMap.get('id');
+        const id = idParam ? Number(idParam) : NaN;
+        if (!Number.isFinite(id) || id <= 0) {
+            this.error = 'Missing or invalid movement id (?id=N).';
+            this.loading = false;
+            return;
+        }
+
+        this.movementService.getById(id).subscribe({
+            next: (data) => {
+                const row: any = Array.isArray(data) ? data[0] : data;
+                if (!row || !row.movementId) {
+                    this.error = `Movement #${id} not found.`;
+                    this.loading = false;
+                    return;
+                }
+                this.movement = row as MovementInfoModel;
+                this.buildRecipientList();
+                this.buildHeaderLines();
+                this.loadEmployee();
+                this.loading = false;
+            },
+            error: (err) => {
+                console.error('Failed to load movement', err);
+                this.error = err?.error?.message || 'Failed to load movement.';
+                this.loading = false;
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: this.error || 'Failed to load movement.'
+                });
+            }
+        });
+    }
+
+    /** Pull the first employee id from EmployeeIds JSON and load search info for it,
+     *  then chain a serving-members overview lookup so we get the RAB unit name. */
+    private loadEmployee(): void {
+        const ids = this.parseIntArray(this.movement?.employeeIds);
+        const firstId = ids.length > 0 ? ids[0] : 0;
+        if (!firstId) return;
+        this.empService.getEmployeeSearchInfo(firstId).subscribe({
+            next: (info) => {
+                this.employee = info ?? null;
+                this.loadOverview();
+            },
+            error: () => { this.employee = null; }
+        });
+    }
+
+    /** Load the EmployeeServiceOverview row for the employee (matches /presently-serving-members
+     *  data) so we can pull the RAB unit name. Filters by RAB ID or Service ID. */
+    private loadOverview(): void {
+        const e: any = this.employee || {};
+        const rabId: string = e.rabID ?? e.RABID ?? '';
+        const serviceId: string = e.serviceId ?? e.ServiceId ?? '';
+        if (!rabId && !serviceId) return;
+
+        this.servingMembersService.getPresentlyServingMembersPaginatedFiltered({
+            pagination: { page_no: 1, row_per_page: 5 },
+            filter: rabId ? { rabId } : { serviceId }
+        }).subscribe({
+            next: (res: any) => {
+                const list: EmployeeServiceOverview[] =
+                    (res?.datalist ?? res?.data ?? res ?? []) as EmployeeServiceOverview[];
+                this.overview = Array.isArray(list) && list.length ? list[0] : null;
+                this.loadBattalionHq();
+            },
+            error: () => { this.overview = null; }
+        });
+    }
+
+    /** Look up the Battalion HQ location for the employee's RAB unit — same source
+     *  the leave card uses (RABUnitAOR.locationOfBattalionHQ[Bangla]). */
+    private loadBattalionHq(): void {
+        const rabUnitId = (this.overview as any)?.rabUnitId ?? (this.overview as any)?.RabUnitId;
+        if (!rabUnitId) return;
+        this.masterBasicSetup.getRABUnitAORByRabUnit(rabUnitId).subscribe({
+            next: (rows: any[]) => {
+                if (!Array.isArray(rows) || rows.length === 0) return;
+                const firstEn = rows.find((r) => !!(r?.locationOfBattalionHQ ?? r?.LocationOfBattalionHQ));
+                if (firstEn) this.battalionHqEn = String(firstEn.locationOfBattalionHQ ?? firstEn.LocationOfBattalionHQ ?? '');
+                const firstBn = rows.find((r) => !!(r?.locationOfBattalionHQBangla ?? r?.LocationOfBattalionHQBangla));
+                if (firstBn) this.battalionHqBn = String(firstBn.locationOfBattalionHQBangla ?? firstBn.LocationOfBattalionHQBangla ?? '');
+            }
+        });
+    }
+
+    /** Cache Corps id → labels so we can render the corps name in Bangla. */
+    private loadCorpsLabels(): void {
+        this.masterBasicSetup.getAllByType('Corps').subscribe({
+            next: (rows: any[]) => {
+                this.corpsLabels.clear();
+                for (const r of rows || []) {
+                    const id = r.codeId ?? r.CodeId;
+                    if (id == null) continue;
+                    this.corpsLabels.set(id, {
+                        en: r.codeValueEN ?? r.CodeValueEN ?? '',
+                        bn: r.codeValueBN ?? r.CodeValueBN ?? ''
+                    });
+                }
+            }
+        });
+    }
+
+    /** Cache RabUnit id → labels so we can render the unit name in Bangla. */
+    private loadRabUnitLabels(): void {
+        this.masterBasicSetup.getAllByType('RabUnit').subscribe({
+            next: (rows: any[]) => {
+                this.rabUnitLabels.clear();
+                for (const r of rows || []) {
+                    const id = r.codeId ?? r.CodeId;
+                    if (id == null) continue;
+                    this.rabUnitLabels.set(id, {
+                        en: r.codeValueEN ?? r.CodeValueEN ?? '',
+                        bn: r.codeValueBN ?? r.CodeValueBN ?? ''
+                    });
+                }
+            }
+        });
+    }
+
+    /** Cache MotherOrgRank id → labels so we can render the rank in Bangla. */
+    private loadRankLabels(): void {
+        this.masterBasicSetup.getAllByType('MotherOrgRank').subscribe({
+            next: (rows: any[]) => {
+                this.rankLabels.clear();
+                for (const r of rows || []) {
+                    const id = r.codeId ?? r.CodeId;
+                    if (id == null) continue;
+                    this.rankLabels.set(id, {
+                        en: r.codeValueEN ?? r.CodeValueEN ?? '',
+                        bn: r.codeValueBN ?? r.CodeValueBN ?? ''
+                    });
+                }
+            }
+        });
+    }
+
+    /** Field accessors for the signature block. Fall back to '---' / '—' when empty. */
+    get employeeIdLineBn(): string {
+        const e = this.employee as any;
+        if (!e) return 'বিএ-----';
+        const id = e.rabID ?? e.RABID ?? e.serviceId ?? e.ServiceId ?? '';
+        return id ? `বিএ-${this.toBn(id)}` : 'বিএ-----';
+    }
+    get employeeRankBn(): string {
+        const e = this.employee as any;
+        const o = this.overview as any;
+        // Prefer overview.armyRankId (matches /presently-serving-members);
+        // fall back to search-info rankId. Look up Bangla label from the rank map.
+        const rankId: number | undefined =
+            o?.armyRankId ?? o?.ArmyRankId ?? e?.rankId ?? e?.RankId;
+        if (rankId != null) {
+            const labels = this.rankLabels.get(rankId);
+            if (labels?.bn) return labels.bn;
+            if (labels?.en) return labels.en;
+        }
+        // Last-resort: whatever English rank the API returned.
+        return (e?.rank ?? e?.Rank ?? o?.armyRank ?? o?.ArmyRank ?? 'ক্যাপ্টেন') as string;
+    }
+    get employeeNameBn(): string {
+        const e = this.employee as any;
+        if (!e) return '-- -- --';
+        return (e.fullNameBN ?? e.FullNameBN ?? e.fullNameEN ?? e.FullNameEN ?? '-- -- --') as string;
+    }
+    get employeeCorpsBn(): string {
+        const e = this.employee as any;
+        const o = this.overview as any;
+        // Prefer overview.corpsId (matches /presently-serving-members);
+        // search-info exposes the same id under `branchId`.
+        const corpsId: number | undefined =
+            o?.corpsId ?? o?.CorpsId ?? e?.branchId ?? e?.BranchId;
+        if (corpsId != null) {
+            const labels = this.corpsLabels.get(corpsId);
+            if (labels?.bn) return labels.bn;
+            if (labels?.en) return labels.en;
+        }
+        return (e?.corps ?? e?.Corps ?? o?.corps ?? o?.Corps ?? '') as string;
+    }
+    get employeeUnitBn(): string {
+        // Same lookup chain the leave card uses for the unit name:
+        // 1) CommonCode 'RabUnit' Bangla label by rabUnitId from overview
+        // 2) overview.rabUnit (whatever the view returns)
+        // 3) RabUnit English label as a final fallback
+        const o = this.overview as any;
+        const rabUnitId: number | undefined = o?.rabUnitId ?? o?.RabUnitId;
+        if (rabUnitId != null) {
+            const labels = this.rabUnitLabels.get(rabUnitId);
+            if (labels?.bn) return labels.bn;
+            if (labels?.en) return labels.en;
+        }
+        const rabUnit = (o?.rabUnit ?? o?.RabUnit ?? '') as string;
+        return rabUnit || 'র‍্যাব ফোর্সেস সদর দপ্তর';
+    }
+
+    /** Second signature line under the RAB Unit — Battalion HQ location
+     *  (same source as the leave card: RABUnitAOR for the employee's RAB unit). */
+    get employeeUnitLocationBn(): string {
+        if (this.battalionHqBn) return this.battalionHqBn;
+        if (this.battalionHqEn) return this.battalionHqEn;
+        // Final fallback to whatever the overview row carries.
+        const o = this.overview as any;
+        return (o?.location ?? o?.Location ?? '') as string;
+    }
+
+    private parseIntArray(json: string | null | undefined): number[] {
+        if (!json) return [];
+        try {
+            const arr = JSON.parse(json);
+            return Array.isArray(arr) ? arr.filter((n) => Number.isInteger(n)) : [];
+        } catch {
+            return [];
+        }
+    }
+
+    private buildRecipientList(): void {
+        // The MovementInfo form now stores a free-form JSON array of strings
+        // (one line per recipient, in print order). Render verbatim.
+        this.recipientLines = this.parseStringArray(this.movement?.letterRecipients);
+    }
+
+    private buildHeaderLines(): void {
+        this.memoNoBn = this.movement?.letterNo
+            ? this.toBn(this.movement.letterNo)
+            : '---';
+
+        const d = this.movement?.letterDate ? new Date(this.movement.letterDate) : new Date();
+        this.letterDateBn = `তারিখঃ ${this.formatBnDate(d)}।`;
+    }
+
+    private formatBnDate(d: Date): string {
+        const months = [
+            'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন',
+            'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'
+        ];
+        const day = BanglaNumerals.toBangla(String(d.getDate()).padStart(2, '0'));
+        const month = months[d.getMonth()];
+        const year = BanglaNumerals.toBangla(String(d.getFullYear()));
+        return `${day} ${month} ${year}`;
+    }
+
+    toBn(input: string | number | null | undefined): string {
+        if (input == null) return '';
+        return BanglaNumerals.toBangla(String(input));
+    }
+
+    serialBn(n: number): string {
+        return `${BanglaNumerals.toBangla(String(n))}।`;
+    }
+
+    private parseStringArray(json: string | null | undefined): string[] {
+        if (!json) return [];
+        try {
+            const arr = JSON.parse(json);
+            return Array.isArray(arr)
+                ? arr.map((s) => String(s ?? '').trim()).filter((s) => s.length > 0)
+                : [];
+        } catch {
+            return [];
+        }
+    }
+
+    onPrint(): void {
+        window.print();
+    }
+
+    onEdit(): void {
+        if (!this.movement?.movementId) return;
+        this.router.navigate(['/movement-info'], { queryParams: { id: this.movement.movementId } });
+    }
+
+    onBack(): void {
+        this.router.navigate(['/movement-list']);
+    }
+
+    // ── Export ─────────────────────────────────────────────────────────────
+
+    private exportFileStem(): string {
+        const raw = this.movement?.letterNo;
+        if (raw && raw.trim()) return raw.replace(/[\\/:*?"<>|]+/g, '_').trim();
+        return `Article47_Handover_${this.movement?.movementId ?? 'export'}`;
+    }
+
+    async exportWord(): Promise<void> {
+        if (!this.movement) return;
+        try {
+            const doc = this.buildWordDocument();
+            const blob = await Packer.toBlob(doc);
+            saveAs(blob, `${this.exportFileStem()}.docx`);
+        } catch (err) {
+            console.error('Word export failed', err);
+            this.messageService.add({ severity: 'error', summary: 'Export Error', detail: 'Failed to generate Word document.' });
+        }
+    }
+
+    async exportPdf(): Promise<void> {
+        if (!this.movement) return;
+        this.exportingPdf = true;
+        try {
+            const doc = this.buildWordDocument();
+            const docxBlob = await Packer.toBlob(doc);
+            const pdfBlob = await this.convertDocxToPdf(docxBlob);
+            saveAs(pdfBlob, `${this.exportFileStem()}.pdf`);
+        } catch (err) {
+            console.error('PDF export failed', err);
+            this.messageService.add({ severity: 'error', summary: 'Export Error', detail: 'Failed to generate PDF.' });
+        } finally {
+            this.exportingPdf = false;
+        }
+    }
+
+    async printPreview(): Promise<void> {
+        if (!this.movement) return;
+        this.printingPreview = true;
+        try {
+            const doc = this.buildWordDocument();
+            const docxBlob = await Packer.toBlob(doc);
+            const pdfBlob = await this.convertDocxToPdf(docxBlob);
+            const url = URL.createObjectURL(pdfBlob);
+            window.open(url, '_blank');
+        } catch (err) {
+            console.error('Print preview failed', err);
+            this.messageService.add({ severity: 'error', summary: 'Preview Error', detail: 'Failed to generate print preview.' });
+        } finally {
+            this.printingPreview = false;
+        }
+    }
+
+    private async convertDocxToPdf(docxBlob: Blob): Promise<Blob> {
+        const form = new FormData();
+        form.append('file', docxBlob, 'document.docx');
+        return await firstValueFrom(
+            this.http.post(`${environment.apis.core}/Document/ConvertToPdf`, form, { responseType: 'blob' })
+        );
+    }
+
+    private getPageDimensions(): { width: number; height: number } {
+        switch (this.selectedPageSize) {
+            case 'A4':     return { width: 11906, height: 16838 };
+            case 'Letter': return { width: 12240, height: 15840 };
+            case 'Legal':
+            default:       return { width: 12240, height: 20160 };
+        }
+    }
+
+    /** Build the Article 47 Handover Word document (portrait). */
+    private buildWordDocument(): Document {
+        const m = this.movement!;
+        const font = { ascii: 'Nirmala UI', hAnsi: 'Nirmala UI', cs: 'Nirmala UI', hint: 'cs' as const };
+        const bnLang = { value: 'bn-BD', bidirectional: 'bn-BD' } as any;
+        const dims = this.getPageDimensions();
+        const contentWidth = dims.width - 1440;
+
+        const SZ_BODY  = 20; // 10pt
+        const SZ_ORG   = 18; //  9pt — form number header
+
+        const noBorder = {
+            top:    { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+            bottom: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+            left:   { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+            right:  { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+        };
+
+        const para = (text: string, opts: { bold?: boolean; size?: number; align?: (typeof AlignmentType)[keyof typeof AlignmentType]; spacingBefore?: number; lineTwips?: number } = {}) => {
+            const sz = opts.size ?? SZ_BODY;
+            const hasSpacing = opts.spacingBefore != null || opts.lineTwips != null;
+            const spacing: any = hasSpacing ? {} : undefined;
+            if (hasSpacing) {
+                if (opts.spacingBefore != null) spacing.before = opts.spacingBefore;
+                if (opts.lineTwips != null) {
+                    spacing.line = opts.lineTwips;
+                    spacing.lineRule = 'atLeast';
+                }
+            }
+            return new Paragraph({
+                alignment: opts.align,
+                spacing,
+                children: [new TextRun({ text, bold: opts.bold, size: sz, sizeComplexScript: sz, font, language: bnLang })]
+            });
+        };
+
+        // Keep ZWJ/ZWNJ — words like "র‍্যাব" need ZWJ to render correctly.
+        // Only normalize Unicode (NFC) and turn NBSP into a regular space.
+        const cleanText = (s: string): string =>
+            s.trim().normalize('NFC').replace(/ /g, ' ');
+
+        /** Convert Quill HTML into docx Paragraphs, one per top-level <p>
+         *  (preserves blank lines from `<p><br></p>` as empty paragraphs).
+         *  Falls back to a single paragraph when no <p> tags are present. */
+        const htmlToParagraphs = (html: string | null | undefined, opts: { size?: number; lineTwips?: number; firstPrefix?: string } = {}): Paragraph[] => {
+            if (!html) return [];
+            const div = document.createElement('div');
+            div.innerHTML = html;
+            const blocks = Array.from(div.querySelectorAll('p, div'));
+            const sourceTexts = blocks.length > 0
+                ? blocks.map((el) => cleanText(el.textContent || ''))
+                : [cleanText(div.textContent || '')];
+            return sourceTexts.map((t, idx) => {
+                const prefix = idx === 0 && opts.firstPrefix ? opts.firstPrefix : '';
+                return para(prefix + t, { size: opts.size, lineTwips: opts.lineTwips });
+            });
+        };
+
+        // Form number header
+        const formHeader = para('বাংলাদেশ ফরম নং-২৪০৩', { size: SZ_ORG });
+
+        // Memo + date row (2-column table for left/right alignment)
+        const memoLeftW = Math.round(contentWidth * 0.65);
+        const memoRightW = contentWidth - memoLeftW;
+        const memoRow = new Table({
+            width: { size: contentWidth, type: WidthType.DXA },
+            columnWidths: [memoLeftW, memoRightW],
+            layout: TableLayoutType.FIXED,
+            borders: { ...noBorder, insideHorizontal: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }, insideVertical: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' } },
+            rows: [new TableRow({ children: [
+                new TableCell({ width: { size: memoLeftW, type: WidthType.DXA }, borders: noBorder, children: [para(`স্মারক নং- ${this.memoNoBn}`)] }),
+                new TableCell({ width: { size: memoRightW, type: WidthType.DXA }, borders: noBorder, children: [para(this.letterDateBn, { align: AlignmentType.RIGHT })] })
+            ] })]
+        });
+
+        // প্রতি block (Handover — comes BEFORE সূত্র)
+        const recipientCellW = contentWidth - 1000; // leave room for the left margin offset
+        const recipientRows = this.recipientLines.map((line, idx) => new TableRow({ children: [
+            new TableCell({ width: { size: 600, type: WidthType.DXA }, borders: noBorder, margins: { top: 20, bottom: 20, left: 0, right: 0 }, children: [para(this.serialBn(idx + 1))] }),
+            new TableCell({ width: { size: recipientCellW - 600, type: WidthType.DXA }, borders: noBorder, margins: { top: 20, bottom: 20, left: 0, right: 0 }, children: [para(line)] })
+        ] }));
+        const recipientTable = recipientRows.length > 0
+            ? new Table({
+                width: { size: recipientCellW, type: WidthType.DXA },
+                columnWidths: [600, recipientCellW - 600],
+                layout: TableLayoutType.FIXED,
+                indent: { size: 1000, type: WidthType.DXA },
+                borders: { ...noBorder, insideHorizontal: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }, insideVertical: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' } },
+                rows: recipientRows
+            })
+            : null;
+
+        // সূত্র + remarks — convert Quill HTML into one Paragraph per <p>
+        // so paragraph breaks from the rich editor render correctly in Word
+        // (matches the on-screen `[innerHTML]` rendering).
+        const sutroParas = m.auth
+            ? htmlToParagraphs(m.auth, { lineTwips: 280, firstPrefix: 'সূত্র: ' })
+            : [para('সূত্র: ---', { lineTwips: 280 })];
+        const remarksParas = htmlToParagraphs(m.remarks, { lineTwips: 280 });
+
+        // অগ্রগামী
+        const ogragami = para('অগ্রগামী করা হইল।', { spacingBefore: 480 });
+
+        // Signature block — sits on the right side of the page (empty left
+        // column takes ~60% width), with its lines centered within the right
+        // column. Matches the on-screen `text-align:right > inline-block` pattern.
+        const sigLeftW = Math.round(contentWidth * 0.6);
+        const sigRightW = contentWidth - sigLeftW;
+        const sigInnerParas: Paragraph[] = [];
+        sigInnerParas.push(para('অর্পণকারী কর্মকর্তা', { align: AlignmentType.CENTER, spacingBefore: 240 }));
+        sigInnerParas.push(para('________________________', { align: AlignmentType.CENTER, spacingBefore: 720 }));
+        sigInnerParas.push(para(`${this.employeeIdLineBn} ${this.employeeRankBn}`.trim(), { align: AlignmentType.CENTER }));
+        sigInnerParas.push(para(`${this.employeeNameBn}${this.employeeCorpsBn ? ', ' + this.employeeCorpsBn : ''}`, { align: AlignmentType.CENTER }));
+        sigInnerParas.push(para(this.employeeUnitBn, { align: AlignmentType.CENTER }));
+        if (this.employeeUnitLocationBn) sigInnerParas.push(para(this.employeeUnitLocationBn, { align: AlignmentType.CENTER }));
+        const sigRow = new Table({
+            width: { size: contentWidth, type: WidthType.DXA },
+            columnWidths: [sigLeftW, sigRightW],
+            layout: TableLayoutType.FIXED,
+            borders: { ...noBorder, insideHorizontal: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }, insideVertical: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' } },
+            rows: [new TableRow({ children: [
+                new TableCell({ width: { size: sigLeftW, type: WidthType.DXA }, borders: noBorder, children: [para('')] }),
+                new TableCell({ width: { size: sigRightW, type: WidthType.DXA }, borders: noBorder, children: sigInnerParas })
+            ] })]
+        });
+
+        // Witness / Rule 78 block — three blank ruled lines + one inline-filled line.
+        const witnessParas: (Paragraph | Table)[] = [];
+        witnessParas.push(para('বেসামরিক হিসাব পদ্ধতির ৭৮ নং বিধি অনুযায়ী আমি (গ্রহণকারী কর্মকর্তা)', { spacingBefore: 480 }));
+
+        // Three blank dotted ruled lines — built as a Table with 3 rows so
+        // each row's bottom border renders distinctly. Adjacent
+        // Paragraph-with-border-bottom were collapsing into one line in Word.
+        const ruledCellBorder = {
+            top:    { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+            bottom: { style: BorderStyle.DOTTED, size: 6, color: '000000' },
+            left:   { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+            right:  { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }
+        };
+        const ruledRow = () => new TableRow({
+            height: { value: 360, rule: HeightRule.ATLEAST }, // 18pt per row
+            children: [new TableCell({
+                width: { size: contentWidth, type: WidthType.DXA },
+                borders: ruledCellBorder,
+                margins: { top: 0, bottom: 0, left: 0, right: 0 },
+                children: [para(' ')]
+            })]
+        });
+        witnessParas.push(new Table({
+            width: { size: contentWidth, type: WidthType.DXA },
+            columnWidths: [contentWidth],
+            layout: TableLayoutType.FIXED,
+            borders: {
+                top:              { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+                bottom:           { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+                left:             { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+                right:            { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+                insideHorizontal: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+                insideVertical:   { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }
+            },
+            rows: [ruledRow(), ruledRow(), ruledRow()]
+        }));
+        // "সমুদয় ... দিলাম <dotted-fill> জেলা" — single paragraph with three runs.
+        // The middle run uses single-dotted underline as the fill line.
+        witnessParas.push(new Paragraph({
+            spacing: { before: 180, line: 280, lineRule: 'atLeast' as any },
+            children: [
+                new TextRun({ text: 'সমুদয় স্থায়ী অগ্রিম লেনদেনের টাকা গ্রহণের প্রাপ্তি স্বীকার দিলাম ', size: SZ_BODY, sizeComplexScript: SZ_BODY, font, language: bnLang }),
+                new TextRun({ text: ' '.repeat(40), underline: { type: 'dotted' as any }, size: SZ_BODY, font, language: bnLang }),
+                new TextRun({ text: '  জেলা', size: SZ_BODY, sizeComplexScript: SZ_BODY, font, language: bnLang })
+            ]
+        }));
+        // Final districts/signature line
+        const tailLeftW = Math.round(contentWidth * 0.7);
+        const tailRightW = contentWidth - tailLeftW;
+        const tailRow = new Table({
+            width: { size: contentWidth, type: WidthType.DXA },
+            columnWidths: [tailLeftW, tailRightW],
+            layout: TableLayoutType.FIXED,
+            borders: { ...noBorder, insideHorizontal: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }, insideVertical: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' } },
+            rows: [new TableRow({ children: [
+                new TableCell({ width: { size: tailLeftW, type: WidthType.DXA }, borders: noBorder, children: [para('জেলাঃ', { spacingBefore: 120 })] }),
+                new TableCell({ width: { size: tailRightW, type: WidthType.DXA }, borders: noBorder, children: [para('স্বাক্ষরঃ', { spacingBefore: 120 })] })
+            ] })]
+        });
+
+        const children: (Paragraph | Table)[] = [
+            formHeader,
+            // 2-line gap between form header and স্মারক নং / তারিখ row.
+            para(''),
+            para(''),
+            memoRow,
+            para(''),
+            // Handover variant — প্রতি before সূত্র
+            para('প্রতি,'),
+            ...(recipientTable ? [recipientTable] : []),
+            // 2 empty lines above সূত্র.
+            para(''),
+            para(''),
+            ...sutroParas,
+            // 2 empty lines below সূত্র.
+            para(''),
+            para(''),
+            ...remarksParas,
+            ogragami,
+            sigRow,
+            ...witnessParas,
+            tailRow
+        ];
+
+        return new Document({
+            styles: { default: { document: { run: { font, language: bnLang } } } },
+            sections: [{
+                properties: {
+                    page: {
+                        size: { width: dims.width, height: dims.height, orientation: PageOrientation.PORTRAIT },
+                        margin: { top: 720, bottom: 720, left: 720, right: 720 }
+                    }
+                },
+                children
+            }]
+        });
+    }
+}

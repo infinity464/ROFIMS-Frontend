@@ -11,15 +11,6 @@
                         <span class="text-primary text-base font-normal">(Edit Mode)</span>
                     }
                 </h3>
-                @if (mode === 'view') {
-                    <div class="form-card-actions">
-                        <p-button
-                            label="Edit"
-                            icon="pi pi-pencil" [class.perm-hidden]="!canUpdate"
-                            (onClick)="enableEditMode()">
-                        </p-button>
-                    </div>
-                }
             </div>
         }
 
@@ -33,22 +24,20 @@
             </div>
         }
 
-        <!-- Top Edit button for tab/embedded view (header is hidden via hideTitle) -->
-        @if (hideTitle && employeeFound && mode === 'view') {
-            <div class="flex justify-end mb-3">
-                <p-button
-                    label="Edit"
-                    icon="pi pi-pencil"
-                    [class.perm-hidden]="!canUpdate"
-                    (onClick)="enableEditMode()">
-                </p-button>
-            </div>
-        }
-
         <!-- Address Forms -->
         @if (employeeFound) {
             <!-- Permanent Address (showInnerWrapper false so title/fields align with RAB ID section) -->
             <div class="form-section">
+                @if (mode === 'view' || (mode === 'search' && isReadonly)) {
+                    <div class="flex justify-end mb-3">
+                        <p-button
+                            label="Edit"
+                            icon="pi pi-pencil"
+                            [class.perm-hidden]="!canUpdate"
+                            (onClick)="mode === 'search' ? enableSearchEditMode() : enableEditMode()">
+                        </p-button>
+                    </div>
+                }
                 <app-address-form
                     #permanentAddressForm
                     [config]="permanentAddressConfig"
@@ -90,26 +79,6 @@
                         icon="pi pi-check"
                         styleClass="form-btn-primary"
                         (onClick)="saveAllAddresses()">
-                    </p-button>
-                </div>
-            }
-            @if (mode === 'search' && isReadonly) {
-                <div class="form-actions">
-                    <!-- <p-button
-                        type="button"
-                        label="Reset"
-                        icon="pi pi-refresh"
-                        severity="secondary"
-                        [outlined]="true"
-                        styleClass="form-btn-secondary"
-                        (onClick)="resetForm()">
-                    </p-button> -->
-                    <p-button
-                        type="button"
-                        label="Edit"
-                        icon="pi pi-pencil" [class.perm-hidden]="!canUpdate"
-                        styleClass="form-btn-primary"
-                        (onClick)="enableSearchEditMode()">
                     </p-button>
                 </div>
             }

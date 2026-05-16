@@ -86,7 +86,7 @@ export class FloatingChatWidgetComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     try {
-      const auth = JSON.parse(localStorage.getItem('auth') || '{}');
+      const auth = JSON.parse(sessionStorage.getItem('auth') ?? localStorage.getItem('auth') ?? '{}');
       this.currentUserId = auth?.userId ?? '';
       this.isLoggedIn = !!this.currentUserId;
     } catch {

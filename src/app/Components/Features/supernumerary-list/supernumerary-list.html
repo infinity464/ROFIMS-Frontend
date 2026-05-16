@@ -1,11 +1,11 @@
 <p-toast position="top-center"></p-toast>
 
 <div class="employee-reports-page">
-    <!-- Title + filter in same card -->
-    <div class="report-type-card">
-        <div class="report-page-header">
+    <div class="report-filter-card">
+        <div class="report-filter-card-title sup-header-row">
             <h1 class="report-page-title">Supernumerary List</h1>
         </div>
+
         <div class="report-filter-header" [class.open]="filterOpen" (click)="toggleFilter()" role="button" tabindex="0" (keydown.enter)="toggleFilter()" (keydown.space)="toggleFilter()">
             <div class="report-filter-header-left">
                 <div class="report-filter-icon">
@@ -98,10 +98,10 @@
                             [(ngModel)]="joiningDateFrom"
                             (ngModelChange)="onFilterChange()"
                             dateFormat="dd-mm-yy"
+                            [showIcon]="true"
                             placeholder="dd-mm-yyyy"
                             appendTo="body"
-                            class="w-full"
-                            [inputStyle]="{'width':'100%'}">
+                            styleClass="w-full">
                         </p-datepicker>
                     </div>
                     <div class="report-filter-field report-filter-field-date">
@@ -110,10 +110,10 @@
                             [(ngModel)]="joiningDateTo"
                             (ngModelChange)="onFilterChange()"
                             dateFormat="dd-mm-yy"
+                            [showIcon]="true"
                             placeholder="dd-mm-yyyy"
                             appendTo="body"
-                            class="w-full"
-                            [inputStyle]="{'width':'100%'}">
+                            styleClass="w-full">
                         </p-datepicker>
                     </div>
                     <div class="report-filter-field report-filter-field-date">
@@ -158,33 +158,19 @@
                 </div>
 
                 <div class="report-filter-actions">
-                    <button type="button" class="report-btn-clear" (click)="clearFilters()">
-                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                            <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-                        </svg>
-                        Clear
-                    </button>
-                    <button type="button" class="report-btn-search" (click)="loadData()" [disabled]="loading">
-                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                            <circle cx="6" cy="6" r="4.5" stroke="white" stroke-width="1.6"/>
-                            <path d="M10 10l2.5 2.5" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
-                        </svg>
-                        Search
-                    </button>
+                    <button type="button" class="report-btn-secondary" (click)="clearFilters()"><i class="pi pi-times mr-1"></i>Clear</button>
+                    <button type="button" class="report-btn-primary" (click)="loadData()" [disabled]="loading"><i class="pi pi-search mr-1"></i>Search</button>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Results card -->
-    <div class="report-results-card">
-        <div class="report-results-header">
-            <div class="report-results-title">
-                Results
-                <span class="report-results-count">{{ filteredList.length }} record(s)</span>
-            </div>
-            <div class="report-results-actions">
-                @if (selectedCount > 0) {
+    <div class="report-filter-card">
+        <div class="sup-results-header">
+            <h3 class="report-panel-title">Supernumerary Members ({{ filteredList.length }})</h3>
+            @if (selectedCount > 0) {
+                <div class="sup-header-actions">
                     <button type="button"
                         class="report-btn-secondary report-btn-blue report-btn-send-selected"
                         [disabled]="isSendingSelection"
@@ -199,19 +185,19 @@
                         (click)="clearSelection()">
                         Clear
                     </button>
-                }
-                <div class="report-search-wrap">
-                    <span class="report-search-icon">
-                        <i class="pi pi-search"></i>
-                    </span>
-                    <input
-                        pInputText
-                        type="text"
-                        placeholder="Search by Service ID / RAB ID / Name"
-                        [(ngModel)]="searchText"
-                        (ngModelChange)="onSearchChange()"
-                        class="report-search-input" />
                 </div>
+            }
+            <div class="report-search-wrap">
+                <span class="report-search-icon">
+                    <i class="pi pi-search"></i>
+                </span>
+                <input
+                    pInputText
+                    type="text"
+                    placeholder="Search by Service ID / RAB ID / Name"
+                    [(ngModel)]="searchText"
+                    (ngModelChange)="onSearchChange()"
+                    class="report-search-input" />
             </div>
         </div>
 
@@ -229,11 +215,12 @@
                 [tableStyle]="{ 'min-width': '72rem' }"
                 styleClass="p-datatable-sm"
                 paginatorDropdownAppendTo="body"
-                [showCurrentPageReport]="false">
+                currentPageReportTemplate="Showing {first} – {last} of {totalRecords}"
+                [showCurrentPageReport]="true">
                 <ng-template pTemplate="header">
                     <tr>
                         <th style="width: 2.5rem"></th>
-                        <th>Ser</th>
+                        <th style="width: 4rem;">Ser</th>
                         <th>Service ID</th>
                         <th>Rank</th>
                         <th>Corps</th>

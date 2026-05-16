@@ -370,3 +370,86 @@ export const LinkTargetOptions = [
     { label: 'Same Window (_self)', value: '_self' },
     { label: 'New Tab (_blank)', value: '_blank' }
 ];
+
+// MovementInfo: Movement Type (Permanent / Temporary)
+export enum MovementType {
+    Permanent = 1,
+    Temporary = 2
+}
+export const MovementTypeOptions = [
+    { label: 'Permanent', value: MovementType.Permanent },
+    { label: 'Temporary', value: MovementType.Temporary }
+];
+
+// MovementInfo: Move Order Type (CC / MO / Article 47 Handover / Article 47 Takeover)
+export enum MoveOrderType {
+    CC = 1,
+    MO = 2,
+    Article47Handover = 3,
+    Article47Takeover = 4
+}
+export const MoveOrderTypeOptions = [
+    { label: 'CC', value: MoveOrderType.CC },
+    { label: 'MO', value: MoveOrderType.MO },
+    { label: 'Article 47 (Handover)', value: MoveOrderType.Article47Handover },
+    { label: 'Article 47 (Takeover)', value: MoveOrderType.Article47Takeover }
+];
+
+// MovementInfo: Vehicle type for CC orders (printed on the CC letter).
+export enum MovementVehicle {
+    Government = 1,
+    NonGovernment = 2
+}
+export const MovementVehicleOptions = [
+    { label: 'সরকারী যানবাহন',   value: MovementVehicle.Government },
+    { label: 'বেসরকারী যানবাহন', value: MovementVehicle.NonGovernment }
+];
+
+// MovementInfo: Article 47 letter recipients (applies to both Handover & Takeover variants only).
+// sortOrder is the position among stored recipients only (1..6). The dynamic
+// entries (Adhinayak, RAB-<unit>; FC (Army) Pay-1, Dhaka Cantonment) are injected
+// at print time after this list, not numbered here.
+export enum Article47LetterRecipient {
+    InspectorGeneralBP = 1,
+    DirectorGeneralRAB = 2,
+    DIGAdminBP = 3,
+    ChiefAccountOfficerMOHA = 4,
+    PersonalCopy = 5,
+    OfficeCopy = 6
+}
+export const Article47LetterRecipientOptions = [
+    { label: 'ইন্সপেক্টর জেনারেল, বাংলাদেশ পুলিশ, পুলিশ হেডকোয়ার্টার্স, ঢাকা।',                value: Article47LetterRecipient.InspectorGeneralBP,      sortOrder: 1 },
+    { label: 'মহাপরিচালক, র‍্যাব ফোর্সেস হেডকোয়ার্টার্স, কুর্মিটোলা, ঢাকা।',                  value: Article47LetterRecipient.DirectorGeneralRAB,      sortOrder: 2 },
+    { label: 'ডিআইজি (প্রশাসন), বাংলাদেশ পুলিশ, পুলিশ হেডকোয়ার্টার্স, ঢাকা।',                value: Article47LetterRecipient.DIGAdminBP,              sortOrder: 3 },
+    { label: 'প্রধান হিসাব রক্ষক কর্মকর্তা, স্বরাষ্ট্র মন্ত্রণালয়, সেগুন বাগিচা, ঢাকা।',         value: Article47LetterRecipient.ChiefAccountOfficerMOHA, sortOrder: 4 },
+    { label: 'ব্যক্তিগত কপি।',                                                              value: Article47LetterRecipient.PersonalCopy,            sortOrder: 5 },
+    { label: 'অফিস কপি।',                                                                  value: Article47LetterRecipient.OfficeCopy,              sortOrder: 6 }
+];
+
+// MovementInfo: MO (Move Order Type = 2) letter recipients.
+// sortOrder reflects the position in the printed letter (1..10).
+export enum MOLetterRecipient {
+    PersonalCopy = 1,
+    TrainingWing = 2,
+    PersonnelBranch = 3,
+    DOMSPersonnelBranch = 4,
+    RecordBranch = 5,
+    FinanceBranch = 6,
+    ForcesMessBranch = 7,
+    RationOffice = 8,
+    DailyOffice = 9,
+    OfficeCopy = 10
+}
+export const MOLetterRecipientOptions = [
+    { label: 'ব্যক্তিগত কপি।',                                                                            value: MOLetterRecipient.PersonalCopy,        sortOrder: 1 },
+    { label: 'ট্রেনিং উইং, র‍্যাব ফোর্সেস সদর দপ্তর।',                                                      value: MOLetterRecipient.TrainingWing,        sortOrder: 2 },
+    { label: 'পার্সোনেল শাখা, র‍্যাব ফোর্সেস সদর দপ্তর।',                                                   value: MOLetterRecipient.PersonnelBranch,     sortOrder: 3 },
+    { label: 'ডিওএমএস, প্রবৃত্তে পার্সোনেল শাখা, র‍্যাব ফোর্সেস সদর দপ্তর।',                                 value: MOLetterRecipient.DOMSPersonnelBranch, sortOrder: 4 },
+    { label: 'রেকর্ড শাখা, র‍্যাব ফোর্সেস সদর দপ্তর।',                                                      value: MOLetterRecipient.RecordBranch,        sortOrder: 5 },
+    { label: 'অর্থ শাখা, র‍্যাব ফোর্সেস সদর দপ্তর।',                                                        value: MOLetterRecipient.FinanceBranch,       sortOrder: 6 },
+    { label: 'ফোর্সেস মেস শাখা, র‍্যাব ফোর্সেস সদর দপ্তর।',                                                 value: MOLetterRecipient.ForcesMessBranch,    sortOrder: 7 },
+    { label: 'রেশন অফিস, র‍্যাব ফোর্সেস সদর দপ্তর।',                                                        value: MOLetterRecipient.RationOffice,        sortOrder: 8 },
+    { label: 'ডেইলি অফিস, র‍্যাব ফোর্সেস সদর দপ্তর।',                                                       value: MOLetterRecipient.DailyOffice,         sortOrder: 9 },
+    { label: 'অফিস কপি।',                                                                                value: MOLetterRecipient.OfficeCopy,          sortOrder: 10 }
+];
+

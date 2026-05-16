@@ -12,10 +12,14 @@ import type {
   EducationReportRow,
   GenericReportParams,
   GenericReportRow,
+  BloodGroupReportParams,
+  BloodGroupReportRow,
   FamilyOccupationReportParams,
   FamilyOccupationReportRow,
   AddressLocationReportParams,
   AddressLocationReportRow,
+  MemberTypeServingReportParams,
+  MemberTypeServingReportRow,
   ReportPagedResponse,
 } from '@/models/report.model';
 import type { PagedResponse } from '@/Core/Models/Pagination';
@@ -114,6 +118,61 @@ export class ReportService {
       .pipe(map(normalizePages));
   }
 
+  getPersonalQualificationReport(
+    params: GenericReportParams
+  ): Observable<PagedResponse<GenericReportRow>> {
+    return this.http
+      .post<ReportPagedResponse<GenericReportRow>>(
+        `${this.apiUrl}/GetPersonalQualificationReport`,
+        params
+      )
+      .pipe(map(normalizePages));
+  }
+
+  getProfessionalQualificationReport(
+    params: GenericReportParams
+  ): Observable<PagedResponse<GenericReportRow>> {
+    return this.http
+      .post<ReportPagedResponse<GenericReportRow>>(
+        `${this.apiUrl}/GetProfessionalQualificationReport`,
+        params
+      )
+      .pipe(map(normalizePages));
+  }
+
+  getSpecialQualificationReport(
+    params: GenericReportParams
+  ): Observable<PagedResponse<GenericReportRow>> {
+    return this.http
+      .post<ReportPagedResponse<GenericReportRow>>(
+        `${this.apiUrl}/GetSpecialQualificationReport`,
+        params
+      )
+      .pipe(map(normalizePages));
+  }
+
+  getRabRankReport(
+    params: GenericReportParams
+  ): Observable<PagedResponse<GenericReportRow>> {
+    return this.http
+      .post<ReportPagedResponse<GenericReportRow>>(
+        `${this.apiUrl}/GetRabRankReport`,
+        params
+      )
+      .pipe(map(normalizePages));
+  }
+
+  getBloodGroupReport(
+    params: BloodGroupReportParams
+  ): Observable<PagedResponse<BloodGroupReportRow>> {
+    return this.http
+      .post<ReportPagedResponse<BloodGroupReportRow>>(
+        `${this.apiUrl}/GetBloodGroupReport`,
+        params
+      )
+      .pipe(map(normalizePages));
+  }
+
   getFamilyOccupationReport(
     params: FamilyOccupationReportParams
   ): Observable<PagedResponse<FamilyOccupationReportRow>> {
@@ -131,6 +190,17 @@ export class ReportService {
     return this.http
       .post<ReportPagedResponse<AddressLocationReportRow>>(
         `${this.apiUrl}/GetAddressLocationReport`,
+        params
+      )
+      .pipe(map(normalizePages));
+  }
+
+  getMemberTypeServingReport(
+    params: MemberTypeServingReportParams
+  ): Observable<PagedResponse<MemberTypeServingReportRow>> {
+    return this.http
+      .post<ReportPagedResponse<MemberTypeServingReportRow>>(
+        `${this.apiUrl}/GetMemberTypeServingReport`,
         params
       )
       .pipe(map(normalizePages));

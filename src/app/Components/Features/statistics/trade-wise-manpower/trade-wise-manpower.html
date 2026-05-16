@@ -92,6 +92,9 @@
         <!-- Row 2: centered title (only when org selected) -->
         <div class="report-header-title-block" *ngIf="selectedOrgId">
             <div class="report-main-title">{{ titleLabel }}</div>
+            @if (scopeLine) {
+                <div class="report-scope-line">{{ scopeLine }}</div>
+            }
             <div class="report-date-line">{{ dateLine }}</div>
         </div>
 

@@ -28,6 +28,10 @@ export interface ManpowerSummaryTotals {
 export interface ManpowerSummaryResponse {
     rows: ManpowerSummaryRow[];
     totals: ManpowerSummaryTotals;
+    /** Names (EN) of the RAB Units the current user is restricted to. null = unrestricted. */
+    accessibleRabUnitNames?: string[] | null;
+    /** Bangla names paired with accessibleRabUnitNames. */
+    accessibleRabUnitNamesBN?: string[] | null;
 }
 
 export interface RankWiseRankRow {
@@ -52,6 +56,10 @@ export interface RankWiseOrgBlock {
 export interface RankWiseManpowerResponse {
     orgs: RankWiseOrgBlock[];
     grandTotal: RankWiseRankRow;
+    /** Names (EN) of the RAB Units the current user is restricted to. null = unrestricted. */
+    accessibleRabUnitNames?: string[] | null;
+    /** Bangla names paired with accessibleRabUnitNames. */
+    accessibleRabUnitNamesBN?: string[] | null;
 }
 
 export interface MotherUnitOrgOption {
@@ -82,6 +90,10 @@ export interface MotherUnitWiseManpowerResponse {
     units: MotherUnitRow[];
     totals: Record<number, number>;
     grandTotal: number;
+    /** Names (EN) of the RAB Units the current user is restricted to. null = unrestricted. */
+    accessibleRabUnitNames?: string[] | null;
+    /** Bangla names paired with accessibleRabUnitNames. */
+    accessibleRabUnitNamesBN?: string[] | null;
 }
 
 export interface CorpsRow {
@@ -114,12 +126,32 @@ export interface TradeWiseManpowerResponse {
     trades: TradeRow[];
     totals: Record<number, number>;
     grandTotal: number;
+    /** Names (EN) of the RAB Units the current user is restricted to. null = unrestricted. */
+    accessibleRabUnitNames?: string[] | null;
+    /** Bangla names paired with accessibleRabUnitNames. */
+    accessibleRabUnitNamesBN?: string[] | null;
 }
 
 export interface MemberTypeOption {
     memberTypeId: number;
     memberTypeName: string;
     memberTypeNameBN: string;
+}
+
+export interface UnitWiseRankOption {
+    rankId: number;
+    rankName: string;
+    rankNameBN: string;
+    orgId: number;
+    orgName: string;
+    orgNameBN: string;
+    memberTypeId: number | null;
+}
+
+export interface UnitWiseTradeOption {
+    tradeId: number;
+    tradeName: string;
+    tradeNameBN: string;
 }
 
 export interface UnitBarItem {
@@ -130,9 +162,75 @@ export interface UnitBarItem {
 }
 
 export interface UnitWiseBarChartResponse {
+    orgs: MotherUnitOrgOption[];
     memberTypes: MemberTypeOption[];
+    ranks: UnitWiseRankOption[];
+    trades: UnitWiseTradeOption[];
     units: UnitBarItem[];
     total: number;
+    /** Names (EN) of the RAB Units the current user is restricted to. null = unrestricted. */
+    accessibleRabUnitNames?: string[] | null;
+    /** Bangla names paired with accessibleRabUnitNames. */
+    accessibleRabUnitNamesBN?: string[] | null;
+}
+
+export interface MemberTypeWiseRow {
+    memberTypeId: number;
+    memberTypeName: string;
+    memberTypeNameBN: string;
+    auth: number;
+    held: number;
+    def: number;
+    sur: number;
+    postedOut: number;
+    remarks?: string;
+}
+
+export interface MemberTypeWiseOrgBlock {
+    orgId: number;
+    orgName: string;
+    orgNameBN: string;
+    rows: MemberTypeWiseRow[];
+    subtotal: MemberTypeWiseRow;
+}
+
+export interface MemberTypeWiseManpowerResponse {
+    orgs: MemberTypeWiseOrgBlock[];
+    grandTotal: MemberTypeWiseRow;
+    /** Names (EN) of the RAB Units the current user is restricted to. null = unrestricted. */
+    accessibleRabUnitNames?: string[] | null;
+    /** Bangla names paired with accessibleRabUnitNames. */
+    accessibleRabUnitNamesBN?: string[] | null;
+}
+
+export interface UnitRankColumn {
+    equivalentNameId: number;
+    equivalentNameEN: string;
+    equivalentNameBN: string;
+    /** Short abbreviation rendered as a pill under the rank name (e.g. "DG", "AD"). */
+    abbreviation: string;
+}
+
+export interface UnitRankCell {
+    auth: number;
+    held: number;
+}
+
+export interface UnitRankRow {
+    unitId: number;
+    unitNameEN: string;
+    unitNameBN: string;
+    cells: Record<number, UnitRankCell>;
+    total: UnitRankCell;
+}
+
+export interface UnitRankWiseManpowerResponse {
+    ranks: UnitRankColumn[];
+    units: UnitRankRow[];
+    columnTotals: Record<number, UnitRankCell>;
+    grandTotal: UnitRankCell;
+    accessibleRabUnitNames?: string[] | null;
+    accessibleRabUnitNamesBN?: string[] | null;
 }
 
 export interface CorpsWiseManpowerResponse {
@@ -143,6 +241,10 @@ export interface CorpsWiseManpowerResponse {
     corps: CorpsRow[];
     totals: Record<number, number>;
     grandTotal: number;
+    /** Names (EN) of the RAB Units the current user is restricted to. null = unrestricted. */
+    accessibleRabUnitNames?: string[] | null;
+    /** Bangla names paired with accessibleRabUnitNames. */
+    accessibleRabUnitNamesBN?: string[] | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -189,9 +291,37 @@ export class StatisticsService {
         );
     }
 
-    getUnitWiseBarChart(memberTypeId?: number): Observable<UnitWiseBarChartResponse> {
+    getMemberTypeWiseManpower(): Observable<MemberTypeWiseManpowerResponse> {
+        return this.http.get<MemberTypeWiseManpowerResponse>(`${this.apiUrl}/GetMemberTypeWiseManpower`);
+    }
+
+    getUnitRankWiseManpower(
+        excludeEquivalentNames?: string,
+        rabUnitId?: number | null,
+        mergeMemberTypeIds?: number[] | null
+    ): Observable<UnitRankWiseManpowerResponse> {
         const params: any = {};
+        if (excludeEquivalentNames != null) params.excludeEquivalentNames = excludeEquivalentNames;
+        if (rabUnitId != null) params.rabUnitId = rabUnitId;
+        if (mergeMemberTypeIds && mergeMemberTypeIds.length > 0) {
+            params.mergeMemberTypeIds = mergeMemberTypeIds.join(',');
+        }
+        return this.http.get<UnitRankWiseManpowerResponse>(
+            `${this.apiUrl}/GetUnitRankWiseManpower`, { params }
+        );
+    }
+
+    getUnitWiseBarChart(
+        orgId?: number,
+        memberTypeId?: number,
+        rankId?: number,
+        tradeId?: number
+    ): Observable<UnitWiseBarChartResponse> {
+        const params: any = {};
+        if (orgId != null)        params.orgId        = orgId;
         if (memberTypeId != null) params.memberTypeId = memberTypeId;
+        if (rankId != null)       params.rankId       = rankId;
+        if (tradeId != null)      params.tradeId      = tradeId;
         return this.http.get<UnitWiseBarChartResponse>(
             `${this.apiUrl}/GetUnitWiseBarChart`, { params }
         );

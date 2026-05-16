@@ -1,9 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { UserMenuService } from '@/services/user-menu.service';
-import { TableModule, TableLazyLoadEvent } from 'primeng/table';
+import { Table, TableModule, TableLazyLoadEvent } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
@@ -40,16 +40,16 @@ export interface FilterModel {
     imports: [CommonModule, FormsModule, RouterModule, TableModule, ButtonModule, InputTextModule, SelectModule, DatePickerModule, FlexibleDateDirective, Toast, CheckboxModule, TagModule],
     providers: [MessageService],
     templateUrl: './presently-serving-members.html',
-    styleUrls: ['./presently-serving-members.scss', '../employee-reports/report-theme.scss'],
+    styleUrls: ['../employee-reports/report-theme-common.scss', './presently-serving-members.scss'],
 })
 export class PresentlyServingMembers implements OnInit {
+    @ViewChild('dt') table?: Table;
+
     list: EmployeeServiceOverview[] = [];
     loading = false;
     totalRecords = 0;
-    first = 0;
-    rows = 10;
-    /** Client-side search: filters current page by Service ID or RAB ID (partial, case-insensitive). */
-    searchText = '';
+    pageNumber = 1;
+    pageSize = 10;
 
     filter: FilterModel = {
         rabId: '',
@@ -110,7 +110,7 @@ export class PresentlyServingMembers implements OnInit {
         this.canUpdate = _perms.canUpdate;
         this.canDelete = _perms.canDelete;
         this.loadFilterOptions();
-        this.onLazyLoad({ first: 0, rows: this.rows });
+        this.loadList(this.pageNumber, this.pageSize);
     }
 
     get pageTitle(): string {
@@ -148,11 +148,19 @@ export class PresentlyServingMembers implements OnInit {
     }
 
     onLazyLoad(event: TableLazyLoadEvent): void {
-        const pageNo = event.first != null && event.rows != null ? Math.floor(event.first / event.rows) + 1 : 1;
-        const rowPerPage = event.rows ?? this.rows;
-        this.loadList(pageNo, rowPerPage);
-        this.first = event.first ?? 0;
-        this.rows = rowPerPage;
+        const rows = event.rows ?? this.pageSize;
+        const first = event.first ?? 0;
+        const newPage = Math.floor(first / rows) + 1;
+        const sizeChanged = rows !== this.pageSize;
+        const pageChanged = newPage !== this.pageNumber;
+        if (!sizeChanged && !pageChanged) return;
+        this.pageSize = rows;
+        this.pageNumber = newPage;
+        this.loadList(this.pageNumber, this.pageSize);
+    }
+
+    serialNumber(rowIndexOnPage: number): number {
+        return (this.pageNumber - 1) * this.pageSize + rowIndexOnPage + 1;
     }
 
     private prefillRemarks(): void {
@@ -165,7 +173,7 @@ export class PresentlyServingMembers implements OnInit {
     }
 
     loadList(pageNo = 1, rowPerPage?: number): void {
-        const rows = rowPerPage ?? this.rows;
+        const rows = rowPerPage ?? this.pageSize;
         this.loading = true;
         if (this.useFilter) {
             const filterReq = this.buildFilterRequest();
@@ -234,8 +242,8 @@ export class PresentlyServingMembers implements OnInit {
 
     search(): void {
         this.useFilter = true;
-        this.first = 0;
-        this.loadList(1, this.rows);
+        this.resetToFirstPage();
+        this.loadList(this.pageNumber, this.pageSize);
     }
 
     clearFilter(): void {
@@ -256,32 +264,22 @@ export class PresentlyServingMembers implements OnInit {
             appointment: null
         };
         this.useFilter = false;
-        this.first = 0;
-        this.loadList(1, this.rows);
+        this.resetToFirstPage();
+        this.loadList(this.pageNumber, this.pageSize);
     }
 
     refresh(): void {
-        this.first = 0;
-        this.loadList(1, this.rows);
+        this.resetToFirstPage();
+        this.loadList(this.pageNumber, this.pageSize);
+    }
+
+    private resetToFirstPage(): void {
+        this.pageNumber = 1;
+        if (this.table) this.table.first = 0;
     }
 
     toggleFilter(): void {
         this.filterOpen = !this.filterOpen;
-    }
-
-    /** Current page rows filtered by searchText (Service ID / RAB ID). */
-    get filteredList(): EmployeeServiceOverview[] {
-        const q = this.searchText?.trim()?.toLowerCase();
-        if (!q) return this.list;
-        return this.list.filter(
-            (r) =>
-                (r.serviceId ?? '').toLowerCase().includes(q) ||
-                (r.rabID ?? '').toLowerCase().includes(q)
-        );
-    }
-
-    onSearchChange(): void {
-        // filteredList getter handles display; no-op for optional side effects
     }
 
     /** Number of filter criteria currently set (for badge). */
@@ -358,7 +356,7 @@ export class PresentlyServingMembers implements OnInit {
                     this.messageService.add({ severity: 'success', summary: 'Success', detail: res.description || 'Employees marked for inter posting.' });
                     this.selectedRows = [];
                     this.interPostingRemarks = {};
-                    this.loadList(1, this.rows);
+                    this.loadList(1, this.pageSize);
                 } else {
                     this.messageService.add({ severity: 'error', summary: 'Error', detail: res.description || 'Failed to update status.' });
                 }

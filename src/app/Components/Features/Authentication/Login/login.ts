@@ -15,6 +15,8 @@ import { MessageService } from 'primeng/api';
 import { AuthenticationService } from '../Service/authentication';
 import { UserMenuService } from '@/services/user-menu.service';
 import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
+import { IdentityUserRabUnitAccessService } from '@/services/identity-user-rab-unit-access.service';
+import { SessionPolicyService } from '@/shared/services/session-policy.service';
 import { AppFloatingConfigurator } from '@/layout/component/app.floatingconfigurator';
 
 @Component({
@@ -51,13 +53,17 @@ export class Login implements OnInit {
   forgotConfirmPassword = '';
   forgotLoading = false;
   forgotRequestSent = false;
+  /** Set when the backend refuses self-service reset (role's `canSelfResetPassword === false`). */
+  forgotDenialMessage = '';
 
   constructor(
     private auth: AuthenticationService,
     private router: Router,
     private messageService: MessageService,
     private userMenuService: UserMenuService,
-    private memberTypeAccess: IdentityUserMemberTypeAccessService
+    private memberTypeAccess: IdentityUserMemberTypeAccessService,
+    private rabUnitAccess: IdentityUserRabUnitAccessService,
+    private sessionPolicy: SessionPolicyService
   ) {}
 
   ngOnInit(): void {
@@ -90,11 +96,15 @@ export class Login implements OnInit {
           this.auth.setRememberMeEmail(null);
         }
 
-        // Cache this user's allowed member-type IDs so other screens don't refetch.
-        // Fire-and-forget: errors are swallowed inside the service; navigation proceeds regardless.
+        // Cache this user's allowed member-type and RAB-unit IDs so other screens don't refetch.
+        // Fire-and-forget: errors are swallowed inside the services; navigation proceeds regardless.
         if (res.userId) {
           this.memberTypeAccess.cacheForUser(res.userId).subscribe();
+          this.rabUnitAccess.cacheForUser(res.userId).subscribe();
         }
+
+        // Refresh session policy so the idle-timeout watcher and storage-tier choice are current.
+        this.sessionPolicy.load().subscribe({ error: () => { /* policy stays at last cached / default */ } });
 
         // Load user menus based on role, then navigate
         this.userMenuService.loadUserMenus(res.roleId).subscribe({
@@ -150,6 +160,7 @@ export class Login implements OnInit {
     this.forgotNewPassword = '';
     this.forgotConfirmPassword = '';
     this.forgotRequestSent = false;
+    this.forgotDenialMessage = '';
   }
 
   onForgotRequestSubmit(): void {
@@ -158,18 +169,31 @@ export class Login implements OnInit {
       this.messageService.add({ severity: 'warn', summary: 'Email required', detail: 'Please enter your email address.', life: 3000 });
       return;
     }
+    this.forgotDenialMessage = '';
     this.forgotLoading = true;
     this.auth.requestForgotPasswordToken(email).subscribe({
       next: (res) => {
         this.forgotLoading = false;
-        this.forgotRequestSent = true;
-        this.messageService.add({
-          severity: res.isSuccess ? 'success' : 'info',
-          summary: 'Check your email',
-          detail: res.isSuccess ? 'If an account exists, you will receive reset instructions by email.' : (res.message || 'Request sent.'),
-          life: 5000
-        });
-        this.forgotStep = 'reset';
+        if (res.isSuccess) {
+          this.forgotRequestSent = true;
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Check your email',
+            detail: 'If an account exists, you will receive reset instructions by email.',
+            life: 5000
+          });
+          this.forgotStep = 'reset';
+        } else {
+          // Backend refused (most commonly: role's CanSelfResetPassword is false).
+          // Stay on step 1 and surface a clear in-modal banner.
+          this.forgotDenialMessage = res.message || 'Self-service password reset isn\'t available for this account. Please contact your administrator.';
+          this.messageService.add({
+            severity: 'warn',
+            summary: 'Reset not available',
+            detail: this.forgotDenialMessage,
+            life: 8000
+          });
+        }
       },
       error: (err: { message?: string }) => {
         this.forgotLoading = false;
@@ -230,5 +254,6 @@ export class Login implements OnInit {
     this.forgotPasswordVisible = false;
     this.forgotStep = 'request';
     this.forgotRequestSent = false;
+    this.forgotDenialMessage = '';
   }
 }

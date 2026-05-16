@@ -7,6 +7,23 @@
         <!-- Row 1: filter left | buttons right -->
         <div class="chart-toolbar-row">
 
+            <!-- Organization filter -->
+            <div class="filter-wrap">
+                <p-select
+                    [(ngModel)]="selectedOrgId"
+                    [options]="orgOptions"
+                    optionLabel="orgName"
+                    optionValue="orgId"
+                    [placeholder]="lang === 'en' ? 'All Organizations' : 'সকল বাহিনী'"
+                    [showClear]="true"
+                    [filter]="true"
+                    filterBy="orgName"
+                    (onChange)="onOrgChange()"
+                    styleClass="filter-select"
+                    [disabled]="loading">
+                </p-select>
+            </div>
+
             <!-- Member Type filter -->
             <div class="filter-wrap">
                 <p-select
@@ -19,6 +36,40 @@
                     [filter]="true"
                     filterBy="memberTypeName"
                     (onChange)="onMemberTypeChange()"
+                    styleClass="filter-select"
+                    [disabled]="loading">
+                </p-select>
+            </div>
+
+            <!-- Rank filter (cascades from Member Type if one is selected) -->
+            <div class="filter-wrap">
+                <p-select
+                    [(ngModel)]="selectedRankId"
+                    [options]="rankOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    [placeholder]="lang === 'en' ? 'All Ranks' : 'সকল পদবী'"
+                    [showClear]="true"
+                    [filter]="true"
+                    filterBy="label"
+                    (onChange)="onRankChange()"
+                    styleClass="filter-select"
+                    [disabled]="loading">
+                </p-select>
+            </div>
+
+            <!-- Trade filter -->
+            <div class="filter-wrap">
+                <p-select
+                    [(ngModel)]="selectedTradeId"
+                    [options]="tradeOptions"
+                    optionLabel="tradeName"
+                    optionValue="tradeId"
+                    [placeholder]="lang === 'en' ? 'All Trades' : 'সকল ট্রেড'"
+                    [showClear]="true"
+                    [filter]="true"
+                    filterBy="tradeName"
+                    (onChange)="onTradeChange()"
                     styleClass="filter-select"
                     [disabled]="loading">
                 </p-select>
@@ -42,7 +93,17 @@
         <!-- Row 2: centered title -->
         <div class="chart-header-title-block">
             <div class="chart-main-title">{{ titleLabel }}</div>
+            @if (scopeLine) {
+                <div class="chart-scope-line">{{ scopeLine }}</div>
+            }
             <div class="chart-date-line">{{ dateLine }}</div>
+            @if (filterChips.length > 0) {
+                <div class="chart-filter-chips">
+                    <span *ngFor="let c of filterChips" class="chart-filter-chip">
+                        {{ c.label }}: {{ c.value }}
+                    </span>
+                </div>
+            }
         </div>
 
     </div>

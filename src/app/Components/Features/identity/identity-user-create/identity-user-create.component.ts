@@ -12,7 +12,8 @@ import {
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
-import { CheckboxModule } from 'primeng/checkbox';
+import { MultiSelectModule } from 'primeng/multiselect';
+import { RadioButtonModule } from 'primeng/radiobutton';
 import { PasswordModule } from 'primeng/password';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
@@ -35,7 +36,12 @@ import {
   IdentityUserMemberTypeAccessService,
   UserMemberTypeAccessDto
 } from '@/services/identity-user-member-type-access.service';
+import {
+  IdentityUserRabUnitAccessService,
+  UserRabUnitAccessDto
+} from '@/services/identity-user-rab-unit-access.service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
+import { SharedService } from '@/shared/services/shared-service';
 import type { ApplicationRole, ApplicationUser } from '@/models/identity.model';
 
 interface UserRow extends ApplicationUser {
@@ -43,13 +49,21 @@ interface UserRow extends ApplicationUser {
   employeeDisplay?: string;
   employeeName?: string | null;
   employeeMeta?: string | null;
+  serviceId?: string | null;
   isActive?: boolean;
   memberTypeNames?: string[];
   /** flattened form used by p-table global + column filtering */
   memberTypeNamesJoined?: string;
+  rabUnitNames?: string[];
+  rabUnitNamesJoined?: string;
 }
 
 interface MemberTypeOption {
+  label: string;
+  value: number;
+}
+
+interface RabUnitOption {
   label: string;
   value: number;
 }
@@ -66,7 +80,8 @@ const USERNAME_PATTERN = /^[A-Za-z0-9._@-]+$/;
     InputTextModule,
     ButtonModule,
     SelectModule,
-    CheckboxModule,
+    MultiSelectModule,
+    RadioButtonModule,
     PasswordModule,
     IconFieldModule,
     InputIconModule,
@@ -92,16 +107,22 @@ export class IdentityUserCreateComponent implements OnInit {
   private identityService = inject(IdentityService);
   private mappingService = inject(IdentityUserMappingService);
   private accessService = inject(IdentityUserMemberTypeAccessService);
+  private rabUnitAccessService = inject(IdentityUserRabUnitAccessService);
   private masterBasicSetupService = inject(MasterBasicSetupService);
   private messageService = inject(MessageService);
+  private sharedService = inject(SharedService);
 
   form!: FormGroup;
   roles: ApplicationRole[] = [];
+  /** Role IDs whose users the current caller may reset passwords for. `['*']` = any. */
+  private currentResetRoleIds: string[] = [];
   users: UserRow[] = [];
   employees: EmployeeDropdownDto[] = [];
   memberTypes: MemberTypeOption[] = [];
+  rabUnits: RabUnitOption[] = [];
   private mappings: IdentityUserMappingDto[] = [];
   private memberTypeAccesses: UserMemberTypeAccessDto[] = [];
+  private rabUnitAccesses: UserRabUnitAccessDto[] = [];
   editingUser: UserRow | null = null;
   isSubmitting = false;
 
@@ -112,6 +133,7 @@ export class IdentityUserCreateComponent implements OnInit {
   resetSubmitting = false;
 
   togglingUserId: string | null = null;
+  forceLogoutUserId: string | null = null;
 
   ngOnInit(): void {
         const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
@@ -119,11 +141,28 @@ export class IdentityUserCreateComponent implements OnInit {
         this.canUpdate = _perms.canUpdate;
         this.canDelete = _perms.canDelete;
 
+    this.currentResetRoleIds = this.sharedService.getCurrentResetRoleIds();
+
     this.initForm();
     this.loadRoles();
     this.loadEmployees();
     this.loadMemberTypes();
+    this.loadRabUnits();
     this.loadUsersAndMappings();
+  }
+
+  loadRabUnits(): void {
+    this.masterBasicSetupService.getAllByType('RabUnit').subscribe({
+      next: (list) => {
+        const arr = Array.isArray(list) ? list : [];
+        this.rabUnits = arr
+          .filter((u) => u.status !== false && u.codeId > 0)
+          .map((u) => ({ label: u.codeValueEN ?? '', value: u.codeId }));
+      },
+      error: (err: any) => {
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load RAB units' });
+      }
+    });
   }
 
   loadMemberTypes(): void {
@@ -144,11 +183,13 @@ export class IdentityUserCreateComponent implements OnInit {
     forkJoin({
       users: this.identityService.getAllUsers(),
       mappings: this.mappingService.getMappings(),
-      accesses: this.accessService.getAllByUser()
+      accesses: this.accessService.getAllByUser(),
+      rabAccesses: this.rabUnitAccessService.getAllByUser()
     }).subscribe({
-      next: ({ users, mappings, accesses }) => {
+      next: ({ users, mappings, accesses, rabAccesses }) => {
         this.mappings = Array.isArray(mappings) ? this.normMappings(mappings) : [];
         this.memberTypeAccesses = Array.isArray(accesses) ? accesses : [];
+        this.rabUnitAccesses = Array.isArray(rabAccesses) ? rabAccesses : [];
         const arr = Array.isArray(users) ? users : [];
         this.users = arr.map((u) => this.buildUserRow(u));
       },
@@ -187,15 +228,19 @@ export class IdentityUserCreateComponent implements OnInit {
       ? this.buildEmployeeLabel(mapping.employeeName, mapping.rabID ?? null, mapping.serviceId ?? null)
       : '-';
     const access = this.memberTypeAccesses.find((a) => a.userId === base.id);
+    const rabAccess = this.rabUnitAccesses.find((a) => a.userId === base.id);
     return {
       ...base,
       employeeId: mapping?.employeeId ?? null,
       employeeDisplay: display,
       employeeName: mapping?.employeeName ?? null,
       employeeMeta: this.buildEmployeeMeta(mapping?.rabID ?? null, mapping?.serviceId ?? null),
+      serviceId: mapping?.serviceId ?? null,
       isActive,
       memberTypeNames: access?.memberTypeNames ?? [],
-      memberTypeNamesJoined: (access?.memberTypeNames ?? []).join(' | ')
+      memberTypeNamesJoined: (access?.memberTypeNames ?? []).join(' | '),
+      rabUnitNames: rabAccess?.rabUnitNames ?? [],
+      rabUnitNamesJoined: (rabAccess?.rabUnitNames ?? []).join(' | ')
     };
   }
 
@@ -256,6 +301,8 @@ export class IdentityUserCreateComponent implements OnInit {
       roleName: ['', Validators.required],
       employeeId: [null as number | null, Validators.required],
       memberTypeIds: [[] as number[]],
+      rabUnitMode: ['all' as 'all' | 'specific'],
+      rabUnitIds: [[] as number[]],
       confirmUrl: [confirmUrl, Validators.required]
     });
   }
@@ -351,6 +398,7 @@ export class IdentityUserCreateComponent implements OnInit {
     if (this.editingUser) {
       const editingUserId = this.editingUser.id;
       const memberTypeIds: number[] = Array.isArray(value.memberTypeIds) ? value.memberTypeIds : [];
+      const rabUnitIds: number[] = this.buildRabUnitIds();
       this.identityService
         .updateUser({
           email: value.email,
@@ -366,16 +414,23 @@ export class IdentityUserCreateComponent implements OnInit {
               this.messageService.add({ severity: 'error', summary: 'Error', detail: res.message ?? 'Update failed' });
               return;
             }
-            this.accessService.setAccesses({ userId: editingUserId, memberTypeIds }).subscribe({
-              next: (accessRes) => {
+            forkJoin({
+              memberAccess: this.accessService.setAccesses({ userId: editingUserId, memberTypeIds }),
+              rabAccess: this.rabUnitAccessService.setAccesses({ userId: editingUserId, rabUnitIds })
+            }).subscribe({
+              next: ({ memberAccess, rabAccess }) => {
                 this.isSubmitting = false;
-                if (accessRes.statusCode === 200) {
+                const memberOk = memberAccess.statusCode === 200;
+                const rabOk = rabAccess.statusCode === 200;
+                if (memberOk && rabOk) {
                   this.messageService.add({ severity: 'success', summary: 'Success', detail: res.message ?? 'User updated.' });
                 } else {
                   this.messageService.add({
                     severity: 'warn',
                     summary: 'Partial Update',
-                    detail: accessRes.description ?? 'User updated but member-type access save failed.'
+                    detail: !memberOk
+                      ? (memberAccess.description ?? 'User updated but member-type access save failed.')
+                      : (rabAccess.description ?? 'User updated but RAB Unit access save failed.')
                   });
                 }
                 this.onReset();
@@ -386,7 +441,7 @@ export class IdentityUserCreateComponent implements OnInit {
                 this.messageService.add({
                   severity: 'warn',
                   summary: 'Partial Update',
-                  detail: 'User updated but member-type access save failed.'
+                  detail: 'User updated but access save failed.'
                 });
                 this.onReset();
                 this.loadUsersAndMappings();
@@ -404,6 +459,7 @@ export class IdentityUserCreateComponent implements OnInit {
 
     const employeeId: number = value.employeeId;
     const memberTypeIds: number[] = Array.isArray(value.memberTypeIds) ? value.memberTypeIds : [];
+    const rabUnitIds: number[] = this.buildRabUnitIds();
     const createdEmail: string = value.email;
 
     this.identityService
@@ -426,7 +482,7 @@ export class IdentityUserCreateComponent implements OnInit {
             });
             return;
           }
-          this.mapNewUser(createdEmail, employeeId, memberTypeIds, res.message, value.confirmUrl);
+          this.mapNewUser(createdEmail, employeeId, memberTypeIds, rabUnitIds, res.message, value.confirmUrl);
         },
         error: (err) => {
           this.isSubmitting = false;
@@ -442,6 +498,7 @@ export class IdentityUserCreateComponent implements OnInit {
     email: string,
     employeeId: number,
     memberTypeIds: number[],
+    rabUnitIds: number[],
     createMsg: string | undefined,
     confirmUrl: string
   ): void {
@@ -468,23 +525,33 @@ export class IdentityUserCreateComponent implements OnInit {
         this.mappingService.setMapping({ userId: newUserId, employeeId }).subscribe({
           next: (mapRes) => {
             const mappingOk = mapRes.statusCode === 200;
-            this.accessService.setAccesses({ userId: newUserId, memberTypeIds }).subscribe({
-              next: (accessRes) => {
+            forkJoin({
+              memberAccess: this.accessService.setAccesses({ userId: newUserId, memberTypeIds }),
+              rabAccess: this.rabUnitAccessService.setAccesses({ userId: newUserId, rabUnitIds })
+            }).subscribe({
+              next: ({ memberAccess, rabAccess }) => {
                 this.isSubmitting = false;
-                const accessOk = accessRes.statusCode === 200;
-                if (mappingOk && accessOk) {
+                const memberOk = memberAccess.statusCode === 200;
+                const rabOk = rabAccess.statusCode === 200;
+                if (mappingOk && memberOk && rabOk) {
                   this.messageService.add({
                     severity: 'success',
                     summary: 'Success',
                     detail: createMsg ?? 'User created.'
                   });
                 } else {
+                  let detail: string | undefined;
+                  if (!mappingOk) {
+                    detail = mapRes.description ?? 'User created but employee mapping failed.';
+                  } else if (!memberOk) {
+                    detail = memberAccess.description ?? 'User created but member-type access save failed.';
+                  } else {
+                    detail = rabAccess.description ?? 'User created but RAB Unit access save failed.';
+                  }
                   this.messageService.add({
                     severity: 'warn',
                     summary: 'Partial Success',
-                    detail: !mappingOk
-                      ? (mapRes.description ?? 'User created but employee mapping failed.')
-                      : (accessRes.description ?? 'User created but member-type access save failed.')
+                    detail
                   });
                 }
                 this.resetFormAfterCreate(confirmUrl);
@@ -495,7 +562,7 @@ export class IdentityUserCreateComponent implements OnInit {
                 this.messageService.add({
                   severity: 'warn',
                   summary: 'Partial Success',
-                  detail: 'User created but member-type access save failed.'
+                  detail: 'User created but access save failed.'
                 });
                 this.resetFormAfterCreate(confirmUrl);
                 this.loadUsersAndMappings();
@@ -535,6 +602,8 @@ export class IdentityUserCreateComponent implements OnInit {
       roleName: '',
       employeeId: null,
       memberTypeIds: [],
+      rabUnitMode: 'all',
+      rabUnitIds: [],
       confirmUrl
     });
   }
@@ -548,7 +617,8 @@ export class IdentityUserCreateComponent implements OnInit {
       roleName: user.roleName ?? '',
       password: '',
       employeeId: user.employeeId ?? null,
-      memberTypeIds: []
+      memberTypeIds: [],
+      rabUnitIds: []
     });
     this.form.get('userName')?.disable();
     this.form.get('password')?.clearValidators();
@@ -558,15 +628,23 @@ export class IdentityUserCreateComponent implements OnInit {
     this.form.get('employeeId')?.updateValueAndValidity();
 
     if (user.id) {
-      this.accessService.getByUserId(user.id).subscribe({
-        next: (ids) => {
-          this.form.patchValue({ memberTypeIds: Array.isArray(ids) ? ids : [] });
+      forkJoin({
+        memberTypeIds: this.accessService.getByUserId(user.id),
+        rabUnitIds: this.rabUnitAccessService.getByUserId(user.id)
+      }).subscribe({
+        next: ({ memberTypeIds, rabUnitIds }) => {
+          const ids = Array.isArray(rabUnitIds) ? rabUnitIds : [];
+          this.form.patchValue({
+            memberTypeIds: Array.isArray(memberTypeIds) ? memberTypeIds : [],
+            rabUnitMode: ids.length === 0 ? 'all' : 'specific',
+            rabUnitIds: ids
+          });
         },
         error: (err: any) => {
           this.messageService.add({
             severity: 'warn',
             summary: 'Warning',
-            detail: "Couldn't load member-type access for this user."
+            detail: "Couldn't load access settings for this user."
           });
         }
       });
@@ -596,11 +674,40 @@ export class IdentityUserCreateComponent implements OnInit {
       roleName: '',
       employeeId: null,
       memberTypeIds: [],
+      rabUnitMode: 'all',
+      rabUnitIds: [],
       confirmUrl: confirmUrl ?? ''
     });
   }
 
+  /**
+   * Whether the current caller may manage users of `roleName` — gates create, update,
+   * disable, and password reset. Backed by the same `canResetRoleIds` allowlist.
+   * Resolves role ID from the loaded `roles` list so target's role ID isn't needed in the user payload.
+   * Match is case-insensitive + trimmed to defend against legacy data.
+   */
+  canManageRole(roleName: string | null | undefined): boolean {
+    const allow = this.currentResetRoleIds;
+    if (!allow?.length) return false;
+    if (allow.includes('*')) return true;
+    const needle = (roleName ?? '').trim().toLowerCase();
+    if (!needle) return false;
+    const targetRoleId = this.roles.find((r) => (r.name ?? '').trim().toLowerCase() === needle)?.id;
+    return !!targetRoleId && allow.includes(targetRoleId);
+  }
+
+  /** Roles the caller is allowed to assign — used to filter the role dropdown. */
+  get manageableRoles(): ApplicationRole[] {
+    return this.roles.filter((r) => this.canManageRole(r.name));
+  }
+
+  /** True when the caller can manage at least one role (i.e. the create/edit form is usable). */
+  get hasAnyManagePermission(): boolean {
+    return this.currentResetRoleIds.length > 0;
+  }
+
   openResetPassword(user: UserRow): void {
+    if (!this.canManageRole(user.roleName)) return;
     this.resetTargetUser = user;
     this.resetNewPassword = '';
     this.resetConfirmPassword = '';
@@ -613,6 +720,35 @@ export class IdentityUserCreateComponent implements OnInit {
     this.resetTargetUser = null;
     this.resetNewPassword = '';
     this.resetConfirmPassword = '';
+  }
+
+  /**
+   * Force-logout: rotates the target's SecurityStamp on the server, which invalidates every
+   * JWT issued for them. Their next API call returns 401 and they're redirected to login.
+   */
+  forceLogoutUser(user: UserRow): void {
+    if (!user?.id || !user.email || this.forceLogoutUserId) return;
+    if (!this.canManageRole(user.roleName)) return;
+    if (typeof window !== 'undefined' &&
+        !window.confirm(`Force-logout ${user.email}? They'll be signed out from every device immediately.`)) {
+      return;
+    }
+    this.forceLogoutUserId = user.id;
+    this.identityService.forceLogoutUser({ email: user.email }).subscribe({
+      next: (res) => {
+        this.forceLogoutUserId = null;
+        this.messageService.add({
+          severity: res.isSuccess ? 'success' : 'error',
+          summary: res.isSuccess ? 'Logged out' : 'Force logout failed',
+          detail: res.message ?? (res.isSuccess ? 'User signed out from all devices.' : 'Could not force-logout user.')
+        });
+      },
+      error: (err) => {
+        this.forceLogoutUserId = null;
+        const msg = err?.error?.message ?? (typeof err?.message === 'string' ? err.message : 'Could not force-logout user.');
+        this.messageService.add({ severity: 'error', summary: 'Force logout failed', detail: msg });
+      }
+    });
   }
 
   toggleUserActive(user: UserRow): void {
@@ -701,19 +837,105 @@ export class IdentityUserCreateComponent implements OnInit {
       });
   }
 
-  get allMemberTypesSelected(): boolean {
-    const ids: number[] = this.form?.get('memberTypeIds')?.value ?? [];
-    return this.memberTypes.length > 0 && ids.length === this.memberTypes.length;
-  }
-
-  get someMemberTypesSelected(): boolean {
-    const ids: number[] = this.form?.get('memberTypeIds')?.value ?? [];
-    return ids.length > 0 && ids.length < this.memberTypes.length;
-  }
-
   toggleAllMemberTypes(checked: boolean): void {
     const ids = checked ? this.memberTypes.map((m) => m.value) : [];
     this.form.get('memberTypeIds')?.setValue(ids);
     this.form.get('memberTypeIds')?.markAsDirty();
+  }
+
+  /** Whether a given member-type chip is currently selected. */
+  isMemberTypeSelected(id: number): boolean {
+    const ids: number[] = this.form?.get('memberTypeIds')?.value ?? [];
+    return ids.includes(id);
+  }
+
+  /** Toggle a single member-type chip in/out of the selection. */
+  toggleMemberType(id: number): void {
+    const ids: number[] = this.form.get('memberTypeIds')?.value ?? [];
+    const next = ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id];
+    this.form.get('memberTypeIds')?.setValue(next);
+    this.form.get('memberTypeIds')?.markAsDirty();
+  }
+
+  /** Clear all selected member-type chips. */
+  clearMemberTypes(): void {
+    this.form.get('memberTypeIds')?.setValue([]);
+    this.form.get('memberTypeIds')?.markAsDirty();
+  }
+
+  /**
+   * Builds the wire-shape array for `rabUnitIds` from the current form state.
+   * `all` mode → `[]` (backend treats empty as "all units, no restriction").
+   * `specific` mode → the picked IDs.
+   */
+  private buildRabUnitIds(): number[] {
+    const v = this.form.getRawValue();
+    if (v.rabUnitMode === 'all') return [];
+    return Array.isArray(v.rabUnitIds) ? v.rabUnitIds : [];
+  }
+
+  // --- Password live-checklist getters (drive the requirement chips under the password input) ---
+  private get pwValue(): string {
+    return this.form?.get('password')?.value ?? '';
+  }
+  get pwHasMinLength(): boolean { return this.pwValue.length >= 6 && this.pwValue.length <= 20; }
+  get pwHasLower(): boolean { return /[a-z]/.test(this.pwValue); }
+  get pwHasUpper(): boolean { return /[A-Z]/.test(this.pwValue); }
+  get pwHasNumber(): boolean { return /\d/.test(this.pwValue); }
+  get pwHasSymbol(): boolean { return /[^\da-zA-Z]/.test(this.pwValue); }
+
+  // --- User-list cell helpers ---
+
+  private static AVATAR_PALETTE: ReadonlyArray<{ bg: string; fg: string }> = [
+    { bg: 'bg-purple-100 dark:bg-purple-900/40', fg: 'text-purple-700 dark:text-purple-200' },
+    { bg: 'bg-teal-100 dark:bg-teal-900/40',     fg: 'text-teal-700 dark:text-teal-200' },
+    { bg: 'bg-pink-100 dark:bg-pink-900/40',     fg: 'text-pink-700 dark:text-pink-200' },
+    { bg: 'bg-amber-100 dark:bg-amber-900/40',   fg: 'text-amber-700 dark:text-amber-200' },
+    { bg: 'bg-blue-100 dark:bg-blue-900/40',     fg: 'text-blue-700 dark:text-blue-200' },
+    { bg: 'bg-emerald-100 dark:bg-emerald-900/40', fg: 'text-emerald-700 dark:text-emerald-200' },
+    { bg: 'bg-rose-100 dark:bg-rose-900/40',     fg: 'text-rose-700 dark:text-rose-200' },
+    { bg: 'bg-indigo-100 dark:bg-indigo-900/40', fg: 'text-indigo-700 dark:text-indigo-200' }
+  ];
+
+  getInitials(user: UserRow): string {
+    const source = (user.employeeName?.trim() || user.userName?.trim() || user.email?.trim() || '?');
+    const parts = source.split(/[\s._@-]+/).filter(Boolean);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return source.substring(0, 2).toUpperCase();
+  }
+
+  getAvatarClass(user: UserRow): string {
+    const key = user.id ?? user.email ?? user.userName ?? '';
+    let hash = 0;
+    for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
+    const pal = IdentityUserCreateComponent.AVATAR_PALETTE[hash % IdentityUserCreateComponent.AVATAR_PALETTE.length];
+    return `${pal.bg} ${pal.fg}`;
+  }
+
+  getRolePillClass(roleName: string | null | undefined): string {
+    const role = (roleName ?? '').toLowerCase();
+    if (role === 'admin') return 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300';
+    if (role === 'user')  return 'bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300';
+    return 'bg-surface-100 text-surface-700 dark:bg-surface-800 dark:text-surface-300';
+  }
+
+  /** Returns label for member-type access. Empty selection = "no access" → "—". */
+  getMemberAccessSummary(user: UserRow): { text: string; partial: boolean } {
+    const sel = user.memberTypeNames?.length ?? 0;
+    const total = this.memberTypes.length;
+    if (sel === 0) return { text: '—', partial: false };
+    if (total > 0 && sel === total) return { text: `All · ${total}`, partial: false };
+    return { text: `${sel} of ${total}`, partial: true };
+  }
+
+  /** Returns label for RAB-Unit access. Empty selection = "all units" (no restriction). */
+  getRabAccessSummary(user: UserRow): { text: string; partial: boolean } {
+    const sel = user.rabUnitNames?.length ?? 0;
+    const total = this.rabUnits.length;
+    if (sel === 0) return { text: total > 0 ? `All · ${total}` : '—', partial: false };
+    if (total > 0 && sel === total) return { text: `All · ${total}`, partial: false };
+    return { text: `${sel} of ${total}`, partial: true };
   }
 }
