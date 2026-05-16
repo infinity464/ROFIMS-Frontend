@@ -376,6 +376,8 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
                 }
             } catch { /* ignore */ }
         }
+        const totalDaysBN = bn ? this.toBanglaDigits(totalDays) : String(totalDays);
+
         let text = '';
         if (bn) {
             text = 'র‍্যাব প্রেষণে নিয়োজিত বর্তমানে';
@@ -383,6 +385,9 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
             text += ` এ কর্মরত ${rabId} ${rank} ${empName}`;
             if (purpose) text += ` এর নিজের ${purpose}র জন্য`;
             if (familyText) text += ` নিজ এবং পরিবারবর্গ (${familyText})`;
+            if (fromDate && toDate) text += ` আগামী ${fromDate} হতে ${toDate} তারিখ পর্যন্ত`;
+            if (totalDays > 0) text += ` ${totalDaysBN} দিন অথবা উল্লিখিত সময়ের মধ্যে যাত্রার তারিখ হতে ${totalDaysBN} দিন`;
+            if (country) text += ` ${country} গমনের জন্য`;
         } else {
             text = `Currently, working at the ${unitName}`;
             if (wing) text += `, ${wing}`;
