@@ -184,8 +184,8 @@ export class NotesheetPreviewCCComponent implements OnInit {
             : `/movement-preview/cc?id=${this.movement.movementId}`;
         const url = new URL(path, window.location.origin).toString();
         QRCode.toDataURL(url, { width: 160, margin: 1 })
-            .then((dataUrl) => { this.qrDataUrl = dataUrl; })
-            .catch((err) => { console.error('QR code generation failed', err); });
+            .then((dataUrl: string) => { this.qrDataUrl = dataUrl; })
+            .catch((err: unknown) => { console.error('QR code generation failed', err); });
     }
 
     private buildHeaderLines(): void {

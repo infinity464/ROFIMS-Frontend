@@ -355,7 +355,7 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
             const parts = this.familyMembers.map(f => {
                 const rel = bn ? (f.relationBN || f.relation) : f.relation;
                 const name = bn ? (f.nameBN || f.name) : f.name;
-                return rel && name ? `${rel} ${name}` : (name || rel || '');
+                return rel && name ? `${rel}-${name}` : (name || rel || '');
             }).filter(Boolean);
             familyText = parts.join(', ');
         }
@@ -376,21 +376,13 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
                 }
             } catch { /* ignore */ }
         }
-        const totalDaysDisplay = bn ? this.toBanglaDigits(totalDays) : String(totalDays);
-
         let text = '';
         if (bn) {
-            text = 'র‍্যাব প্রেষণে নিয়োজিত, বর্তমানে';
+            text = 'র‍্যাব প্রেষণে নিয়োজিত বর্তমানে';
             if (unitName) text += ` ${unitName}`;
-            if (wing) text += `, ${wing}`;
-            text += `-এ কর্মরত, ${rabId} ${rank} ${empName}`;
-            if (familyText) text += `, তাঁর পরিবারের সদস্য ${familyText}-এর`;
-            if (country) text += ` ${country}-তে`;
-            if (purpose) text += ` ${purpose}-এর জন্য`;
-            text += ' নিরাপত্তা ছাড়পত্রের আবেদন জমা দিয়েছেন';
-            if (fromDate && toDate) text += ` ${fromDate} থেকে ${toDate} পর্যন্ত`;
-            if (totalDays > 0) text += `, অথবা ভ্রমণের তারিখ থেকে ${totalDaysDisplay} দিনের মধ্যে`;
-            text += '।';
+            text += ` এ কর্মরত ${rabId} ${rank} ${empName}`;
+            if (purpose) text += ` এর নিজের ${purpose}র জন্য`;
+            if (familyText) text += ` নিজ এবং পরিবারবর্গ (${familyText})`;
         } else {
             text = `Currently, working at the ${unitName}`;
             if (wing) text += `, ${wing}`;
