@@ -93,6 +93,57 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
     wingNameBN = '';
     familyMembers: FamilyInfoByEmployeeView[] = [];
 
+    // ── Parsed references (from JSON) ────────────────────────
+    get parsedReferences(): string[] {
+        const raw = this.noteSheet?.referenceNumber;
+        if (!raw) return [];
+        try {
+            const arr = JSON.parse(raw);
+            if (Array.isArray(arr)) {
+                return arr.map((item: any) => (item.text ?? item.Text ?? '')).filter((t: string) => t.trim());
+            }
+            return [];
+        } catch {
+            return raw.trim() ? [raw] : [];
+        }
+    }
+
+    get parsedReferenceFiles(): { fileId: number; fileName: string }[][] {
+        const raw = this.noteSheet?.referenceNumber;
+        if (!raw) return [];
+        try {
+            const arr = JSON.parse(raw);
+            if (Array.isArray(arr)) {
+                return arr.map((item: any) => {
+                    const files = item.files ?? item.Files ?? [];
+                    return files.map((f: any) => ({
+                        fileId: f.FileId ?? f.fileId ?? 0,
+                        fileName: f.fileName ?? f.FileName ?? 'File'
+                    })).filter((f: any) => f.fileId);
+                });
+            }
+            return [];
+        } catch { return []; }
+    }
+
+    refSerialLabel(index: number): string {
+        if (!this.isEnglish()) {
+            const banglaLetters = ['ক', 'খ', 'গ', 'ঘ', 'ঙ', 'চ', 'ছ', 'জ', 'ঝ', 'ঞ', 'ট', 'ঠ', 'ড', 'ঢ', 'ণ', 'ত', 'থ', 'দ', 'ধ', 'ন'];
+            return (banglaLetters[index] ?? String(index + 1)) + '।';
+        }
+        return String.fromCharCode(97 + index) + '.';
+    }
+
+    get approverStartSerial(): number {
+        return this.noteSheet?.note ? 3 : 2;
+    }
+
+    downloadRefFile(_file: { fileId: number; fileName: string }): void {
+        if (this.noteSheet?.employeeId) {
+            this.router.navigate(['/members/profile', this.noteSheet.employeeId]);
+        }
+    }
+
     // ── Edit state ─────────────────────────────────────────────
     editing = false;
     saving = false;
@@ -292,8 +343,10 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
             ? ((bn ? (emp.rabUnitBN || emp.rabUnit) : emp.rabUnit) || unitFromMap || '')
             : '';
         const wing = bn ? (this.wingNameBN || this.wingName) : this.wingName;
-        const rawRabId = emp?.rabId || '';
-        const rabId = bn ? this.toBanglaDigits(rawRabId) : rawRabId;
+        const rawServiceId = emp?.serviceId || '';
+        const prefixStr = emp ? (bn ? (emp.prefixBN || emp.prefix) : emp.prefix) || '' : '';
+        const serviceIdDisplay = bn ? this.toBanglaDigits(rawServiceId) : rawServiceId;
+        const rabId = prefixStr && serviceIdDisplay ? `${prefixStr}-${serviceIdDisplay}` : (serviceIdDisplay || '');
         const empName = emp ? (bn ? (emp.nameBN || emp.nameEnglish) : emp.nameEnglish) || '' : '';
         const rank = emp ? (bn ? (emp.armyRankBN || emp.armyRank) : emp.armyRank) || '' : '';
 
@@ -327,10 +380,10 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
 
         let text = '';
         if (bn) {
-            text = 'বর্তমানে';
+            text = 'র‍্যাব প্রেষণে নিয়োজিত, বর্তমানে';
             if (unitName) text += ` ${unitName}`;
             if (wing) text += `, ${wing}`;
-            text += `-এ কর্মরত, ${rabId}: ${rank} ${empName}`;
+            text += `-এ কর্মরত, ${rabId} ${rank} ${empName}`;
             if (familyText) text += `, তাঁর পরিবারের সদস্য ${familyText}-এর`;
             if (country) text += ` ${country}-তে`;
             if (purpose) text += ` ${purpose}-এর জন্য`;

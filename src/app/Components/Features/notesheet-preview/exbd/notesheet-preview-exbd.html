@@ -79,8 +79,6 @@
                          *ngIf="getPageCoverHeight(i) > 0"
                          [style.height.px]="getPageCoverHeight(i)">
                     </div>
-                    <!-- Full-height sanglagni vertical divider -->
-                    <div class="ns-page-sanglagni-line"></div>
                 </div>
             </div>
         </div>
@@ -225,8 +223,11 @@
                     <div style="border-bottom:1.5px solid #000; display:inline-block; padding-bottom:2px;">{{ getOrgHeaderLine2() }}</div>
                 </div>
 
-                <div class="ns-notesheet-no" *ngIf="noteSheet.noteSheetNo" style="padding:4px 16px 2px; font-size:10pt;">
-                    {{ noteSheet.noteSheetNo }}
+                <!-- ── Notesheet No & Date ── -->
+                <div style="display:flex; justify-content:space-between; padding:4px 16px 2px; font-size:10pt;">
+                    <span *ngIf="noteSheet.noteSheetNo">{{ noteSheet.noteSheetNo }}</span>
+                    <span *ngIf="!noteSheet.noteSheetNo"></span>
+                    <span *ngIf="noteSheet.noteSheetDate">{{ isEnglish() ? 'Date:' : 'তারিখ :' }} {{ formatDate(noteSheet.noteSheetDate) }}</span>
                 </div>
 
                 <!-- ── Subject ── -->
@@ -234,27 +235,39 @@
                     <strong><u>{{ getSubjectLabel(noteSheet.exBdLeaveSubjectId) || noteSheet.subject }}</u></strong>
                 </div>
 
-                <!-- ── Reference / Date ── -->
-                <div class="ns-cell-ref">
-                    <ng-container *ngIf="noteSheet.referenceNumber">
-                        <span class="ns-ref-key">{{ isEnglish() ? 'Reference:' : 'সূত্রঃ' }}</span>
-                        <div class="ns-ref-content" [innerHTML]="getReferenceNumberSafe()"></div>
-                    </ng-container>
-                    <ng-container *ngIf="!noteSheet.referenceNumber && noteSheet.noteSheetDate">
-                        <span class="ns-ref-key">{{ isEnglish() ? 'Date:' : 'তারিখঃ' }}</span>
-                        {{ formatDate(noteSheet.noteSheetDate) }}
-                    </ng-container>
+                <!-- ── Reference ── -->
+                <div class="ns-cell-ref" *ngIf="parsedReferences.length > 0">
+                    <span class="ns-ref-key">{{ isEnglish() ? 'Reference:' : 'সূত্রঃ' }}</span>
+                    <div class="ns-ref-content">
+                        <ng-container *ngIf="parsedReferences.length === 1 && !parsedReferenceFiles[0]?.length">
+                            {{ parsedReferences[0] }}
+                        </ng-container>
+                        <ng-container *ngIf="parsedReferences.length > 1 || parsedReferenceFiles[0]?.length">
+                            <div *ngFor="let ref of parsedReferences; let ri = index" class="ns-ref-item" style="display:flex; align-items:center; gap:6px;">
+                                <span><span class="ns-ref-serial">{{ refSerialLabel(ri) }}</span> {{ ref }}</span>
+                                <ng-container *ngIf="parsedReferenceFiles[ri]?.length">
+                                    <button *ngFor="let file of parsedReferenceFiles[ri]"
+                                            class="ns-ref-file-btn no-print"
+                                            (click)="downloadRefFile(file)"
+                                            pTooltip="{{ file.fileName }}">
+                                        <i class="pi pi-eye"></i> View
+                                    </button>
+                                </ng-container>
+                            </div>
+                        </ng-container>
+                    </div>
                 </div>
 
-                <!-- ── Ex-BD Leave: formatted paragraph ── -->
+                <!-- ── ১। Main Text (formatted paragraph) ── -->
                 <div class="ns-para">
                     <span class="ns-para-no">{{ serial(1) }}</span>
                     <div class="ns-para-text" [innerHTML]="getFormattedParagraphHtml()"></div>
                 </div>
 
-                <!-- ── Note ── -->
-                <div class="ns-note" *ngIf="noteSheet.note">
-                    <strong>{{ isEnglish() ? 'Note:' : 'নোটঃ' }}</strong> {{ noteSheet.note }}
+                <!-- ── ২। Note (numbered paragraph) ── -->
+                <div class="ns-para" *ngIf="noteSheet.note">
+                    <span class="ns-para-no">{{ serial(2) }}</span>
+                    <div class="ns-para-text">{{ noteSheet.note }}</div>
                 </div>
 
                 <!-- ── Initiator area ── -->
@@ -282,7 +295,7 @@
                     </div>
                     <div class="ns-approver-body" [class.ns-approver-body--left]="i >= approversDetails.length - 2">
                         <div class="ns-approver-left">
-                            <span class="ns-para-no">{{ serial(i + 2) }}</span>
+                            <span class="ns-para-no">{{ serial(approverStartSerial + i) }}</span>
                             <span class="ns-approver-remark" *ngIf="getApproverRemark(approver.step)">{{ getApproverRemark(approver.step) }}</span>
                         </div>
                         <div class="ns-approver-sig-area">
@@ -293,11 +306,6 @@
                     </div>
                 </div>
 
-            </div>
-
-            <div class="ns-sanglagni-col">
-                <ng-container *ngIf="isEnglish()">Encl.<br>No.</ng-container>
-                <ng-container *ngIf="!isEnglish()">সংলগ্নী<br>নং</ng-container>
             </div>
 
         </div>

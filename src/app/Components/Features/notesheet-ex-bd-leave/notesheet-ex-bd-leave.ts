@@ -656,10 +656,10 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         // Auto-fill destination countries (all from JSON array)
         try {
             if (app.destinationCountriesJson) {
-                const countries = JSON.parse(app.destinationCountriesJson) as { countryId?: number; CountryId?: number }[];
+                const countries = JSON.parse(app.destinationCountriesJson) as any[];
                 if (Array.isArray(countries) && countries.length > 0) {
                     const countryIds = countries
-                        .map((c) => c.countryId ?? c.CountryId ?? 0)
+                        .map((c) => typeof c === 'number' ? c : (c.countryId ?? c.CountryId ?? 0))
                         .filter((id) => id > 0);
                     if (countryIds.length) this.form.patchValue({ destinationCountryIds: countryIds });
                 }
@@ -676,9 +676,11 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         // Auto-fill family members
         try {
             if (app.familyMembersJson) {
-                const members = JSON.parse(app.familyMembersJson) as { fmid?: number; FMID?: number; employeeId?: number }[];
+                const members = JSON.parse(app.familyMembersJson) as any[];
                 if (Array.isArray(members) && members.length > 0) {
-                    const fmids = members.map((m) => m.fmid ?? m.FMID ?? 0).filter((id) => id > 0);
+                    const fmids = members
+                        .map((m) => typeof m === 'number' ? m : (m.fmid ?? m.FMID ?? 0))
+                        .filter((id) => id > 0);
                     this.loadFamilyMembersForEmployee(app.applicantEmployeeId, fmids);
                 } else {
                     this.loadFamilyMembersForEmployee(app.applicantEmployeeId);
