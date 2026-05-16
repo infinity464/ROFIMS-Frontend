@@ -686,7 +686,7 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
     this.canUpdate = _perms.canUpdate;
     this.canDelete = _perms.canDelete;
 
-    const auth = JSON.parse(localStorage.getItem('auth') || '{}');
+    const auth = JSON.parse(sessionStorage.getItem('auth') ?? localStorage.getItem('auth') ?? '{}');
     this.currentUserId = auth.userId || '';
     this.chatService.setSelectedConversation(null);
 

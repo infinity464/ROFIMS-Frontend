@@ -40,7 +40,7 @@ interface CriterionValue {
     ],
     providers: [MessageService],
     templateUrl: './dynamic-search.html',
-    styleUrls: ['./dynamic-search.scss', '../../../Components/Features/employee-reports/report-theme.scss']
+    styleUrls: ['../../../Components/Features/employee-reports/report-theme.scss', './dynamic-search.scss']
 })
 export class DynamicSearchComponent implements OnInit {
     canInsert = true;

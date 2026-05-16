@@ -55,6 +55,13 @@
     gap: 2rem;
 }
 
+/* Force normal weight on rich-text content inside Article 47 previews so any
+   bold formatting baked into Auth / Remarks Quill HTML doesn't render bold. */
+.mv-rich,
+.mv-rich * {
+    font-weight: normal !important;
+}
+
 .a4-paper {
     width: 215.9mm;
     min-height: 355.6mm;
@@ -62,7 +69,10 @@
     background: #fff;
     box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
     box-sizing: border-box;
-    font-family: 'Times New Roman', Times, serif;
+    /* Bangla-friendly fallback list ensures Bangla glyphs render consistently
+       across previews. Times New Roman remains the primary for Latin text. */
+    font-family: 'Times New Roman', 'SolaimanLipi', 'Noto Sans Bengali',
+                 'Nirmala UI', 'Vrinda', 'Shonar Bangla', Times, serif;
     font-size: 10pt;
     color: #000;
     line-height: 1.7;

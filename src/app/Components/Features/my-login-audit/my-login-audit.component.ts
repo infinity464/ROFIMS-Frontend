@@ -66,7 +66,7 @@ export class MyLoginAuditComponent implements OnInit {
     this.canUpdate = _perms.canUpdate;
     this.canDelete = _perms.canDelete;
 
-    const auth = localStorage.getItem('auth');
+    const auth = sessionStorage.getItem('auth') ?? localStorage.getItem('auth');
     if (auth) {
       const parsed = JSON.parse(auth);
       this.userId = parsed.userId || '';

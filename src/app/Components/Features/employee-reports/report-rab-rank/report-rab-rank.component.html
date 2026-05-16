@@ -1,0 +1,192 @@
+<p-toast position="top-center"></p-toast>
+
+<div class="report-filter-card">
+    <div class="report-filter-header" [class.open]="filterOpen" (click)="toggleFilter()" role="button" tabindex="0" (keydown.enter)="toggleFilter()" (keydown.space)="toggleFilter()">
+        <div class="report-filter-header-left">
+            <div class="report-filter-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M2 4h12M4 8h8M6 12h4" stroke="var(--primary-color)" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+            </div>
+            <div>
+                <div class="report-filter-title">{{ L['en']['report.search.createList'] }}</div>
+                <div class="report-filter-subtitle">{{ filterSubtitle() }}</div>
+            </div>
+        </div>
+        <div class="report-filter-header-right">
+            <span class="report-filters-badge" [class.show]="activeFilterCount > 0">{{ activeFilterCount }} active</span>
+            <div class="report-chevron">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <div class="report-filter-body" [class.open]="filterOpen">
+        <div class="report-filter-body-inner">
+            <div class="report-fields-row">
+                <div class="report-filter-field">
+                    <label>{{ L['en']['report.search.motherOrg'] }}</label>
+                    <p-select
+                        [options]="orgOptions"
+                        [(ngModel)]="selectedOrgId"
+                        (ngModelChange)="onOrgChange()"
+                        optionLabel="orgNameEN"
+                        optionValue="orgId"
+                        placeholder="Select"
+                        styleClass="w-full"
+                        [filter]="true"
+                        appendTo="body">
+                    </p-select>
+                </div>
+                <div class="report-filter-field">
+                    <label>{{ L['en']['report.search.trade'] }}</label>
+                    <p-select
+                        [options]="tradeOptions"
+                        [(ngModel)]="selectedTradeId"
+                        (ngModelChange)="onFilterChange()"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Select"
+                        styleClass="w-full"
+                        [disabled]="selectedOrgId == null"
+                        appendTo="body">
+                    </p-select>
+                </div>
+            </div>
+
+            <div class="report-filter-actions">
+                <button type="button" class="report-btn-clear" (click)="clearFilters()">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                        <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                    </svg>
+                    {{ L['en']['report.search.clear'] }}
+                </button>
+                <button type="button" class="report-btn-search" (click)="load()">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                        <circle cx="6" cy="6" r="4.5" stroke="white" stroke-width="1.6"/>
+                        <path d="M10 10l2.5 2.5" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
+                    </svg>
+                    {{ L['en']['report.search.search'] }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="report-results-card">
+    <div class="report-results-header">
+        <div class="report-toolbar-row">
+            <div class="report-results-actions">
+                <button type="button" class="report-lang-toggle" (click)="langToggle.emit()">
+                    {{ lang === 'en' ? 'বাংলা' : 'English' }}
+                </button>
+                <div class="report-export-wrap">
+                    <button type="button" class="report-btn-export"
+                            (click)="toggleExportDropdown($event)"
+                            [disabled]="loading || exporting || list.length === 0">
+                        @if (exporting) {
+                            <i class="pi pi-spin pi-spinner" style="font-size:13px"></i>
+                            Generating...
+                        } @else {
+                            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                                <path d="M6.5 1v7M3.5 5.5l3 3 3-3M1.5 10.5h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            {{ L['en']['report.search.export'] }}
+                        }
+                    </button>
+                    @if (exportDropdownOpen) {
+                    <div class="report-export-dropdown" (click)="$event.stopPropagation()">
+                        <button type="button" class="report-export-item report-export-print" (click)="exportAs('print')">
+                            <i class="pi pi-print" style="font-size:0.75rem"></i> Print
+                        </button>
+                        <button type="button" class="report-export-item report-export-pdf" (click)="exportAs('pdf')">
+                            <span class="report-export-icon">⬇</span> PDF
+                        </button>
+                        <button type="button" class="report-export-item report-export-word" (click)="exportAs('word')">
+                            <span class="report-export-icon">⬇</span> Word
+                        </button>
+                        <button type="button" class="report-export-item report-export-excel" (click)="exportAs('excel')">
+                            <span class="report-export-icon">⬇</span> Excel
+                        </button>
+                    </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="report-header-title-block">
+            <div class="report-main-title">{{ reportTitle }}</div>
+            <div class="report-date-line">{{ dateLine }}</div>
+            @if (appliedFilterLines.length > 0) {
+                <div class="report-filter-summary">
+                    @for (line of appliedFilterLines; track line) {
+                        <span class="report-filter-tag">{{ line }}</span>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="report-table-wrap">
+        <p-table
+            [value]="list"
+            [loading]="loading"
+            [lazy]="true"
+            [first]="first"
+            [rows]="rows"
+            [totalRecords]="totalRecords"
+            [paginator]="true"
+            (onPage)="onPage($event)"
+            [rowsPerPageOptions]="[20, 50, 100]"
+            paginatorDropdownAppendTo="body"
+            [tableStyle]="{ 'min-width': '60rem' }"
+            styleClass="p-datatable-sm"
+            [showCurrentPageReport]="false">
+            <ng-template pTemplate="header">
+                <tr>
+                    <th>{{ L[lang]['report.table.ser'] }}</th>
+                    <th>{{ L[lang]['report.table.orgName'] }}</th>
+                    <th>{{ L[lang]['report.table.serviceId'] }}</th>
+                    <th>{{ L[lang]['report.table.rank'] }}</th>
+                    <th>{{ L[lang]['report.table.corps'] }}</th>
+                    <th>{{ L[lang]['report.table.trade'] }}</th>
+                    <th>{{ L[lang]['report.table.name'] }}</th>
+                    <th>{{ L[lang]['report.table.presentUnit'] }}</th>
+                    <th>{{ L[lang]['report.table.rmks'] }}</th>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-row>
+                <tr>
+                    <td><span class="report-ser-num">{{ displayNum(row.ser) }}</span></td>
+                    <td>{{ codeValue(row.orgName, row.orgNameBN) }}</td>
+                    <td>{{ displayNum(row.serviceId) }}</td>
+                    <td>{{ codeValue(row.rank, row.rankBN) }}</td>
+                    <td>
+                        @if (codeValue(row.corps, row.corpsBN) !== '—') {
+                            <span class="report-badge-corps">{{ codeValue(row.corps, row.corpsBN) }}</span>
+                        } @else {
+                            <span class="report-dash">—</span>
+                        }
+                    </td>
+                    <td>{{ codeValue(row.trade, row.tradeBN) }}</td>
+                    <td>{{ codeValue(row.name, row.nameBN) }}</td>
+                    <td>
+                        @if (codeValue(row.presentUnit, row.presentUnitBN) !== '—') {
+                            <span class="report-badge-unit">{{ codeValue(row.presentUnit, row.presentUnitBN) }}</span>
+                        } @else {
+                            <span class="report-dash">—</span>
+                        }
+                    </td>
+                    <td><span class="report-dash">{{ row.rmks ?? '—' }}</span></td>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td colspan="9" class="text-center p-4">{{ L['en']['report.empty'] }}</td>
+                </tr>
+            </ng-template>
+        </p-table>
+    </div>
+</div>

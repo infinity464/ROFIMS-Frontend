@@ -96,11 +96,33 @@ export interface GenericReportParams {
   pagination: ReportPagination;
 }
 
+/** Report: Blood Group – same base shape as the generic report, plus blood group column. */
+export interface BloodGroupReportRow extends ReportRowBase {
+  bloodGroup?: string | null;
+  rmks?: string | null;
+}
+
+/**
+ * Request for Blood Group report. PersonalInfo.BloodGroup is a free-text column (e.g. "A+"),
+ * so the filter is a string rather than a CommonCode CodeId.
+ */
+export interface BloodGroupReportParams {
+  orgId?: number | null;
+  rankId?: number | null;
+  tradeId?: number | null;
+  bloodGroup?: string | null;
+  postingStatus?: string | null;
+  pagination: ReportPagination;
+}
+
 /** Report: Family Member Occupation – family member details. */
 export interface FamilyOccupationReportRow {
   ser?: number;
   familyMemberName?: string | null;
   familyMemberNameBN?: string | null;
+  /** Relation type label (e.g. "Father", "Mother"), resolved from CommonCode of CodeType "Relationship". */
+  relation?: string | null;
+  relationBN?: string | null;
   occupation?: string | null;
   occupationBN?: string | null;
   occupationDetails?: string | null;
@@ -160,6 +182,30 @@ export interface AddressLocationReportParams {
   locationType?: string | null;
   addressOwner?: string | null;
   pagination: ReportPagination;
+}
+
+/**
+ * Combined "Member Type Serving" report. Cascaded filter MemberTypeId → RabUnitId → RabWingId,
+ * plus OrgId/RankId and two date ranges. PostingStatus defaults to "Servings" server-side.
+ */
+export interface MemberTypeServingReportParams {
+  memberTypeId?: number | null;
+  rabUnitId?: number | null;
+  rabWingId?: number | null;
+  orgId?: number | null;
+  rankId?: number | null;
+  joiningInRabFrom?: string | null;
+  joiningInRabTo?: string | null;
+  serviceHistoryFrom?: string | null;
+  serviceHistoryTo?: string | null;
+  postingStatus?: string | null;
+  pagination: ReportPagination;
+}
+
+export interface MemberTypeServingReportRow extends ReportRowBase {
+  joiningInRab?: string | null;
+  dateOfJoinInPresentUnit?: string | null;
+  rmks?: string | null;
 }
 
 /** Backend paged response (may use Rows/TotalPages). */

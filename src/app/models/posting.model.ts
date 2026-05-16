@@ -330,8 +330,14 @@ export interface PendingPostingJoiningDto {
 
     serviceId: string | null;
     fullNameEN: string | null;
+    fullNameBN?: string | null;
     rabID: string | null;
     rankName: string | null;
+    rankNameBN?: string | null;
+    corps?: string | null;
+    corpsBN?: string | null;
+    trade?: string | null;
+    tradeBN?: string | null;
     motherOrganization: string | null;
     motherUnitName: string | null;
 }

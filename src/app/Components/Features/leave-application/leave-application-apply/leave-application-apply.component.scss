@@ -3,7 +3,6 @@
 }
 
 .leave-apply-page {
-  max-width: 1100px;
   margin: 0 auto;
   padding-bottom: 5.5rem; // leaves room for the sticky action bar
 }
@@ -413,6 +412,198 @@
     color: var(--text-color, inherit);
     line-height: 1.45;
     white-space: pre-line;
+}
+
+// ───────── Mobile responsive (≤ 768px) ─────────
+// Desktop layout above is unchanged; this block tightens spacing and converts
+// the leave-entries <table> into stacked cards so it fits on a phone.
+@media (max-width: 768px) {
+  .leave-apply-page {
+    padding-bottom: 4rem;
+  }
+
+  .page-header {
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+  }
+
+  .page-title { font-size: 1.25rem; }
+  .page-subtitle { font-size: 0.82rem; }
+
+  .form-section {
+    padding: 1rem;
+    border-radius: 0.625rem;
+    margin-bottom: 1rem;
+  }
+
+  .section-header {
+    margin-bottom: 1rem;
+    padding-bottom: 0.6rem;
+  }
+
+  .section-title { font-size: 1rem; }
+  .section-hint { font-size: 0.78rem; }
+
+  // Apply-for toggle: span full width on phones.
+  .apply-for-toggle { max-width: 100%; }
+  .toggle-btn {
+    padding: 0.55rem 0.6rem;
+    font-size: 0.85rem;
+  }
+
+  // Subsection header: stack title + "Add Leave" button so the button can go full width.
+  .subsection-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.6rem;
+
+    :host ::ng-deep & p-button > .p-button,
+    & ::ng-deep p-button > .p-button {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+
+  // Entries table → card layout. Each <tr> becomes a card; cells stack with their data-label.
+  .entries-table-wrap {
+    border: none;
+    overflow: visible;
+    background: transparent;
+  }
+
+  .entries-table {
+    display: block;
+
+    thead { display: none; }
+
+    tbody {
+      counter-reset: entry-row;
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+
+    tbody tr {
+      counter-increment: entry-row;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      grid-template-areas:
+        "head action"
+        "type type"
+        "from to"
+        "days days";
+      gap: 0.6rem 0.75rem;
+      padding: 0.85rem;
+      border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.12));
+      border-radius: 0.55rem;
+      background: var(--surface-card, rgba(255, 255, 255, 0.03));
+
+      &::before {
+        content: 'ENTRY ' counter(entry-row);
+        grid-area: head;
+        align-self: center;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        color: var(--text-color-secondary, rgba(255, 255, 255, 0.55));
+      }
+    }
+
+    tbody td {
+      display: block;
+      padding: 0;
+      border: none;
+      vertical-align: initial;
+
+      &::before {
+        content: attr(data-label);
+        display: block;
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: var(--text-color, rgba(255, 255, 255, 0.85));
+        margin-bottom: 0.35rem;
+      }
+    }
+
+    tbody td.cell-type { grid-area: type; }
+    tbody td.cell-from { grid-area: from; }
+    tbody td.cell-to   { grid-area: to; }
+    tbody td.days-cell { grid-area: days; }
+
+    tbody td.action-cell {
+      grid-area: action;
+      align-self: center;
+      justify-self: end;
+      text-align: right;
+
+      &::before { display: none; }
+    }
+
+    // Width hints for desktop columns are no-ops on mobile.
+    .col-type, .col-date, .col-days, .col-action {
+      min-width: 0;
+      width: auto;
+    }
+
+    // Footer: "Total" row becomes a strip below the cards.
+    tfoot { display: block; }
+
+    tfoot tr {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.7rem 0.85rem;
+      margin-top: 0.6rem;
+      border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.12));
+      border-radius: 0.55rem;
+      background: var(--surface-ground, rgba(0, 0, 0, 0.18));
+    }
+
+    tfoot td {
+      display: block;
+      padding: 0;
+      border: none;
+      background: transparent;
+    }
+
+    tfoot td.total-label {
+      flex: 1;
+      text-align: left;
+    }
+
+    // The trailing empty <td> in the footer would otherwise add a blank gap.
+    tfoot td:last-child:empty { display: none; }
+  }
+
+  // Reliever block — tighter padding on phones.
+  .reliever-block { padding: 0.85rem; }
+
+  // Action bar — full-width submit button reads better on a phone.
+  .form-action-bar {
+    padding: 0.85rem 1rem;
+    border-radius: 0.625rem;
+    margin-top: 1rem;
+  }
+
+  .submit-row {
+    .spacer { display: none; }
+
+    :host ::ng-deep & p-button,
+    & ::ng-deep p-button,
+    & p-button { width: 100%; }
+
+    :host ::ng-deep & p-button > .p-button,
+    & ::ng-deep p-button > .p-button {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+
+  .submit-summary-table {
+    font-size: 0.78rem;
+
+    th, td { padding: 0.4rem 0.45rem; }
+  }
 }
 
 // Make placeholder text in inputs more readable.

@@ -162,6 +162,7 @@ export class EquivalentName {
         if (status != null) list = list.filter((r) => r.status === status);
         const q = (this.searchValue ?? '').toLowerCase().trim();
         if (q) list = list.filter((r) => r.codeValueEN?.toLowerCase().includes(q) || r.codeValueBN?.toLowerCase().includes(q));
+        list.sort((a, b) => (a.sortOrder ?? Number.MAX_SAFE_INTEGER) - (b.sortOrder ?? Number.MAX_SAFE_INTEGER));
         this.commonCodeData = list;
         this.totalRecords = list.length;
         this.first = 0;

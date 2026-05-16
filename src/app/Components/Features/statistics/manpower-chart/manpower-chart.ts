@@ -76,6 +76,9 @@ export class ManpowerChartComponent implements OnInit {
     showAuth = true;
     showHeld = true;
 
+    /** Names of the RAB Units the user is restricted to. null/empty = full access. */
+    accessibleRabUnitNames: string[] | null = null;
+
     authData: any = null;
     heldData: any = null;
     chartOptions: any = null;
@@ -100,6 +103,7 @@ export class ManpowerChartComponent implements OnInit {
         this.statisticsService.getManpowerSummary().subscribe({
             next: (res: ManpowerSummaryResponse) => {
                 this.rows   = res.rows ?? [];
+                this.accessibleRabUnitNames = res.accessibleRabUnitNames ?? null;
                 this.buildCharts();
                 this.loading = false;
             },
@@ -160,6 +164,13 @@ export class ManpowerChartComponent implements OnInit {
     toggleAuth(): void { this.showAuth = !this.showAuth; }
     toggleHeld(): void { this.showHeld = !this.showHeld; }
 
+    /** Comma-separated unit-scope line shown under the report title; null when unrestricted. */
+    get scopeLine(): string | null {
+        const names = this.accessibleRabUnitNames;
+        if (!names || names.length === 0) return null;
+        return names.join(', ');
+    }
+
     printCharts(): void {
         const canvases = document.querySelectorAll<HTMLCanvasElement>('app-manpower-chart canvas');
         const images: { title: string; src: string }[] = [];
@@ -183,6 +194,11 @@ export class ManpowerChartComponent implements OnInit {
             </div>
         `).join('');
 
+        const scope = this.scopeLine;
+        const escScope = (s: string) => s
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
         const html = `<!DOCTYPE html>
 <html>
 <head>
@@ -192,6 +208,7 @@ export class ManpowerChartComponent implements OnInit {
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Times New Roman', serif; background: #fff; color: #1e293b; padding: 20mm; }
         h1 { font-size: 16pt; font-weight: 700; text-align: center; margin-bottom: 4px; }
+        .scope { font-size: 11pt; font-weight: 600; text-align: center; margin: 2px 0 6px 0; color: #1e3a5f; }
         .date { font-size: 11pt; text-align: center; color: #555; margin-bottom: 24px; }
         .charts-row { display: flex; gap: 32px; justify-content: center; flex-wrap: wrap; }
         .chart-block { flex: 1 1 300px; max-width: 420px; text-align: center; }
@@ -202,6 +219,7 @@ export class ManpowerChartComponent implements OnInit {
 </head>
 <body>
     <h1>OVERALL MANPOWER SUMMARY</h1>
+    ${scope ? `<div class="scope">${escScope(scope)}</div>` : ''}
     <div class="date">${dateStr}</div>
     <div class="charts-row">${imgBlocks}</div>
 </body>

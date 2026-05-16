@@ -34,6 +34,9 @@
         <!-- Row 2: centered title -->
         <div class="chart-header-title-block">
             <div class="chart-main-title">MANPOWER DISTRIBUTION CHARTS</div>
+            @if (scopeLine) {
+                <div class="chart-scope-line">{{ scopeLine }}</div>
+            }
             <div class="chart-date-line">OVERALL MANPOWER SUMMARY</div>
         </div>
     </div>

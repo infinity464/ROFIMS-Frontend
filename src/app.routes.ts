@@ -16,6 +16,14 @@ import { Division } from '@/Components/basic-setup/division/division';
 import { District } from '@/Components/basic-setup/district/district';
 import { Upazila } from '@/Components/basic-setup/upazila/upazila';
 import { BloodGroup } from '@/Components/basic-setup/blood-group/blood-group';
+import { MovementReason } from '@/Components/basic-setup/movement-reason/movement-reason';
+import { MovementInfoComponent } from '@/Components/Features/movement-info/movement-info';
+import { MovementListComponent } from '@/Components/Features/movement-list/movement-list';
+import { NotesheetPreviewArticle47TakeoverComponent } from '@/Components/Features/notesheet-preview/article-47-takeover/notesheet-preview-article-47-takeover';
+import { NotesheetPreviewArticle47HandoverComponent } from '@/Components/Features/notesheet-preview/article-47-handover/notesheet-preview-article-47-handover';
+import { NotesheetPreviewMOComponent } from '@/Components/Features/notesheet-preview/mo/notesheet-preview-mo';
+import { NotesheetPreviewCCComponent } from '@/Components/Features/notesheet-preview/cc/notesheet-preview-cc';
+import { MovementLetterNumberConfigComponent } from '@/Components/basic-setup/movement-letter-number-config/movement-letter-number-config';
 import { Relationship } from '@/Components/basic-setup/relationship/relationship';
 import { MaritalStatus } from '@/Components/basic-setup/marital-status/marital-status';
 import { Occupation } from '@/Components/basic-setup/occupation/occupation';
@@ -150,9 +158,13 @@ import { MenuManagement } from '@/Components/Features/menu-management/menu-manag
 import { RoleMenuPermission } from '@/Components/Features/role-menu-permission/role-menu-permission';
 import { LoginAuditComponent } from '@/Components/Features/login-audit/login-audit.component';
 import { MyLoginAuditComponent } from '@/Components/Features/my-login-audit/my-login-audit.component';
+import { SessionPolicyComponent } from '@/Components/Features/settings/session-policy/session-policy.component';
 import { EmployeeReportsComponent } from '@/Components/Features/employee-reports/employee-reports.component';
 import { ReportFamilyOccupationComponent } from '@/Components/Features/employee-reports/report-family-occupation/report-family-occupation.component';
 import { ReportAddressLocationComponent } from '@/Components/Features/employee-reports/report-address-location/report-address-location.component';
+import { ReportMemberTypeServingComponent } from '@/Components/Features/employee-reports/report-member-type-serving/report-member-type-serving.component';
+import { ReportPendingInterPostingComponent } from '@/Components/Features/employee-reports/report-pending-inter-posting/report-pending-inter-posting.component';
+import { ReportSupernumeraryComponent } from '@/Components/Features/employee-reports/report-supernumerary/report-supernumerary.component';
 import { RabUnitAor } from '@/Components/basic-setup/rab-unit-aor/rab-unit-aor';
 import { RabUnitAorMap } from '@/Components/basic-setup/rab-unit-aor-map/rab-unit-aor-map';
 import { ManpowerSummaryComponent } from '@/Components/Features/statistics/manpower-summary/manpower-summary';
@@ -161,7 +173,9 @@ import { RankWiseManpowerComponent } from '@/Components/Features/statistics/rank
 import { MotherUnitWiseManpowerComponent } from '@/Components/Features/statistics/mother-unit-wise-manpower/mother-unit-wise-manpower';
 import { CorpsWiseManpowerComponent } from '@/Components/Features/statistics/corps-wise-manpower/corps-wise-manpower';
 import { TradeWiseManpowerComponent } from '@/Components/Features/statistics/trade-wise-manpower/trade-wise-manpower';
+import { MemberTypeWiseManpowerComponent } from '@/Components/Features/statistics/member-type-wise-manpower/member-type-wise-manpower';
 import { UnitWiseBarChartComponent } from '@/Components/Features/statistics/unit-wise-bar-chart/unit-wise-bar-chart';
+import { UnitRankWiseManpowerComponent } from '@/Components/Features/statistics/unit-rank-wise-manpower/unit-rank-wise-manpower';
 import { SystemMonitoringComponent } from '@/Components/Features/system-monitoring/system-monitoring';
 
 export const appRoutes: Routes = [
@@ -188,6 +202,15 @@ export const appRoutes: Routes = [
             { path: 'basic-setup/district', component: District },
             { path: 'basic-setup/upazila', component: Upazila },
             { path: 'basic-setup/blood-group', component: BloodGroup },
+            { path: 'basic-setup/movement-reason', component: MovementReason },
+            { path: 'basic-setup/movement-letter-number-config', component: MovementLetterNumberConfigComponent },
+            { path: 'movement-info', component: MovementInfoComponent },
+            { path: 'movement-list', component: MovementListComponent },
+            { path: 'movement-preview/article-47-takeover', component: NotesheetPreviewArticle47TakeoverComponent },
+            { path: 'movement-preview/article-47-handover', component: NotesheetPreviewArticle47HandoverComponent },
+            { path: 'movement-preview/mo', component: NotesheetPreviewMOComponent },
+            { path: 'movement-preview/cc', component: NotesheetPreviewCCComponent },
+            { path: 'movement-preview/cc/:token', component: NotesheetPreviewCCComponent },
             { path: 'basic-setup/relationship', component: Relationship },
             { path: 'basic-setup/marital-status', component: MaritalStatus },
             { path: 'basic-setup/occupation', component: Occupation },
@@ -342,6 +365,9 @@ export const appRoutes: Routes = [
             { path: 'employee-reports', component: EmployeeReportsComponent },
             { path: 'report-family-occupation', component: ReportFamilyOccupationComponent },
             { path: 'report-address-location', component: ReportAddressLocationComponent },
+            { path: 'member-type-reporting', component: ReportMemberTypeServingComponent },
+            { path: 'report-pending-inter-posting', component: ReportPendingInterPostingComponent },
+            { path: 'report-supernumerary', component: ReportSupernumeraryComponent },
 
             // Statistics
             { path: 'statistics/manpower-summary', component: ManpowerSummaryComponent },
@@ -350,7 +376,9 @@ export const appRoutes: Routes = [
             { path: 'statistics/mother-unit-wise-manpower', component: MotherUnitWiseManpowerComponent },
             { path: 'statistics/corps-wise-manpower', component: CorpsWiseManpowerComponent },
             { path: 'statistics/trade-wise-manpower', component: TradeWiseManpowerComponent },
+            { path: 'statistics/member-type-wise-manpower', component: MemberTypeWiseManpowerComponent },
             { path: 'statistics/unit-wise-bar-chart', component: UnitWiseBarChartComponent },
+            { path: 'statistics/unit-rank-wise-manpower', component: UnitRankWiseManpowerComponent },
 
             // Dynamic Search
             { path: 'dynamic-search', component: DynamicSearchComponent },
@@ -370,6 +398,9 @@ export const appRoutes: Routes = [
 
             // Change Password
             { path: 'change-password', component: ChangePassword },
+
+            // Settings
+            { path: 'settings/session-policy', component: SessionPolicyComponent },
 
             { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
             { path: 'documentation', component: Documentation },

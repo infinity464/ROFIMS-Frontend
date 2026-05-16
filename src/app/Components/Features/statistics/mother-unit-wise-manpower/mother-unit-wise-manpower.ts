@@ -47,6 +47,10 @@ export class MotherUnitWiseManpowerComponent implements OnInit {
     selectedOrgName = '';
     selectedOrgNameBN = '';
 
+    /** Names of the RAB Units the user is restricted to. null/empty = full access. */
+    accessibleRabUnitNames: string[] | null = null;
+    accessibleRabUnitNamesBN: string[] | null = null;
+
     private static readonly EN_MONTHS = [
         'JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE',
         'JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'
@@ -100,10 +104,21 @@ export class MotherUnitWiseManpowerComponent implements OnInit {
                 this.grandTotal = res.grandTotal ?? 0;
                 this.selectedOrgName = res.orgName ?? '';
                 this.selectedOrgNameBN = res.orgNameBN ?? '';
+                this.accessibleRabUnitNames   = res.accessibleRabUnitNames ?? null;
+                this.accessibleRabUnitNamesBN = res.accessibleRabUnitNamesBN ?? null;
                 this.loading = false;
             },
             error: () => { this.loading = false; }
         });
+    }
+
+    /** Comma-separated unit-scope line shown under the report title; null when unrestricted. */
+    get scopeLine(): string | null {
+        const names = this.lang === 'bn'
+            ? (this.accessibleRabUnitNamesBN ?? this.accessibleRabUnitNames)
+            : this.accessibleRabUnitNames;
+        if (!names || names.length === 0) return null;
+        return names.join(', ');
     }
 
     toggleLang(): void { this.lang = this.lang === 'en' ? 'bn' : 'en'; }
@@ -125,13 +140,15 @@ export class MotherUnitWiseManpowerComponent implements OnInit {
             return;
         }
         const { columns, rows } = this.getFlatExportData();
+        const scope = this.scopeLine;
         const config = {
             title: this.titleLabel,
             lang: this.lang,
             columns,
             rows,
             showPageNumbers: true,
-            filename: 'mother-unit-wise-manpower'
+            filename: 'mother-unit-wise-manpower',
+            filterLines: scope ? [scope] : undefined
         };
         if (type === 'word') {
             await this.exportService.exportWord(config);
@@ -201,6 +218,8 @@ export class MotherUnitWiseManpowerComponent implements OnInit {
         this.grandTotal = 0;
         this.selectedOrgName = '';
         this.selectedOrgNameBN = '';
+        this.accessibleRabUnitNames = null;
+        this.accessibleRabUnitNamesBN = null;
     }
 
     // ── Flat export data for Word / Excel ────────────────────────────────
@@ -278,12 +297,17 @@ export class MotherUnitWiseManpowerComponent implements OnInit {
             .map(r => `<td class="num">${esc(this.fmt(this.columnTotal(r.rankId)))}</td>`)
             .join('');
 
+        const scope = this.scopeLine;
+        const scopeHtml = scope
+            ? `<div style="font-size:${baseFontPt + 1}pt;font-weight:600;text-align:center;margin:2px 0 6px 0;color:#1e3a5f">${esc(scope)}</div>`
+            : '';
         // Offscreen container rendered at landscape A4 width (~1045px at 96dpi)
         const container = document.createElement('div');
         container.style.cssText = 'position:absolute;left:-9999px;top:0;width:1045px;padding:30px;background:#fff;z-index:-1;overflow:visible;box-sizing:border-box';
         container.innerHTML = `
             <div style="font-family:${fontFamily};font-size:${baseFontPt}pt;color:#000;line-height:1.4;width:100%">
                 <h1 style="font-size:${titleFontPt}pt;font-weight:700;text-align:center;margin:0 0 3px 0">${esc(this.titleLabel)}</h1>
+                ${scopeHtml}
                 <div style="font-size:${baseFontPt}pt;text-align:center;margin-bottom:14px">${esc(dateStr)}</div>
                 <table style="width:100%;border-collapse:collapse;font-family:${fontFamily}">
                     <thead><tr>${`<th>${esc(this.serLabel)}</th><th>${esc(this.unitLabel)}</th>${rankHeaders}<th>${esc(this.totalLabel)}</th>`}</tr></thead>
@@ -449,6 +473,7 @@ export class MotherUnitWiseManpowerComponent implements OnInit {
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: ${fontFamily}; font-size: ${baseFontPt}pt; color: #000; background: #fff; padding: 16px; }
     h1 { font-size: ${titleFontPt}pt; font-weight: 700; text-align: center; margin-bottom: 3px; }
+    .scope { font-size: ${baseFontPt + 1}pt; font-weight: 600; text-align: center; margin: 2px 0 6px 0; color: #1e3a5f; }
     .date { font-size: ${baseFontPt}pt; text-align: center; margin-bottom: 14px; }
     table { width: 100%; border-collapse: collapse; font-family: ${fontFamily}; table-layout: auto; }
     th { padding: ${cellPad}; text-align: center; font-size: ${headFontPt}pt; font-weight: 700;
@@ -470,6 +495,7 @@ export class MotherUnitWiseManpowerComponent implements OnInit {
     }
 </style></head><body>
     <h1>${esc(this.titleLabel)}</h1>
+    ${this.scopeLine ? `<div class="scope">${esc(this.scopeLine)}</div>` : ''}
     <div class="date">${esc(dateStr)}</div>
     <table>
         <thead><tr>

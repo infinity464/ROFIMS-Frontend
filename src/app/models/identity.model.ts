@@ -13,6 +13,16 @@ export interface ApplicationRole {
   id: string;
   name: string;
   normalizedName?: string;
+  /** Role IDs this role may reset passwords for. `["*"]` = any. Empty/undefined = none. */
+  canResetRoleIds?: string[];
+  /** When false, users in this role can't use the "Forgot Password" self-service flow. Default true. */
+  canSelfResetPassword?: boolean;
+}
+
+export interface CreateRoleModel {
+  name: string;
+  canResetRoleIds?: string[];
+  canSelfResetPassword?: boolean;
 }
 
 export interface UserModel {
@@ -37,6 +47,8 @@ export interface SetUserActiveModel {
 export interface UpdateRoleModel {
   id: string;
   name: string;
+  canResetRoleIds?: string[];
+  canSelfResetPassword?: boolean;
 }
 
 export interface Responses {

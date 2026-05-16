@@ -148,10 +148,14 @@ export class MenuManagement implements OnInit {
 
     loadMenus(): void {
         this.loading = true;
+        const expandedIds = this.collectExpandedIds(this.filteredTreeData);
         this.menuService.getAll().subscribe({
             next: (data) => {
                 this.flatMenus = data;
                 this.treeData = this.buildPrimeTreeNodes(data);
+                if (expandedIds.size > 0) {
+                    this.applyExpandedState(this.treeData, expandedIds);
+                }
                 this.buildParentOptions(data);
                 this.applyFilters();
                 this.loading = false;
@@ -173,7 +177,7 @@ export class MenuManagement implements OnInit {
         return {
             data: node.data,
             children: node.children.map((c) => this.toPrimeTreeNode(c)),
-            expanded: true
+            expanded: false
         };
     }
 
@@ -271,6 +275,27 @@ export class MenuManagement implements OnInit {
             expanded,
             children: node.children ? this.setExpandedState(node.children, expanded) : []
         }));
+    }
+
+    private collectExpandedIds(nodes: TreeNode[]): Set<number> {
+        const ids = new Set<number>();
+        const walk = (list: TreeNode[]) => {
+            for (const n of list) {
+                const id = (n.data as MenuModel)?.id;
+                if (n.expanded && id != null) ids.add(id);
+                if (n.children?.length) walk(n.children);
+            }
+        };
+        walk(nodes);
+        return ids;
+    }
+
+    private applyExpandedState(nodes: TreeNode[], expandedIds: Set<number>): void {
+        for (const n of nodes) {
+            const id = (n.data as MenuModel)?.id;
+            if (id != null && expandedIds.has(id)) n.expanded = true;
+            if (n.children?.length) this.applyExpandedState(n.children, expandedIds);
+        }
     }
 
     // Icon class helper

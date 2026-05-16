@@ -11,6 +11,8 @@ import {
     BorderStyle,
     AlignmentType,
     ImageRun,
+    TableLayoutType,
+    PageOrientation,
 } from 'docx';
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
@@ -31,6 +33,46 @@ export interface ReportConfig {
     landscape?: boolean;
     /** Page margin in mm (default 20). */
     marginMm?: number;
+}
+
+/** One section in a sectioned report: org-style heading + its own table. */
+export interface ReportSection {
+    /** Heading text rendered above the section's table (e.g. "Army"). */
+    title: string;
+    /** Data rows inside this section's table. */
+    rows: string[][];
+    /** Optional trailing row inside the table (subtotal). */
+    subtotalRow?: string[];
+}
+
+/** Config for sectioned exports: one table per section, each with its own heading. */
+export interface SectionedReportConfig extends Omit<ReportConfig, 'rows'> {
+    sections: ReportSection[];
+    /** Optional final row rendered after all sections (e.g. Grand Total). */
+    grandTotalRow?: string[];
+}
+
+/**
+ * Two-row header export (e.g. unit × rank pivot tables): leading columns are merged
+ * vertically across both header rows, each group column is merged horizontally across
+ * its sub-headers. Each data row must have leadingColumns.length +
+ * groupColumns.length × subHeaders.length cells.
+ */
+export interface MatrixReportConfig {
+    title: string;
+    lang: 'en' | 'bn';
+    /** Columns shown at the start that get rowspan=2 in the header (e.g. ['Unit']). */
+    leadingColumns: string[];
+    /** Top-level group labels — each spans subHeaders.length sub-columns. */
+    groupColumns: string[];
+    /** Sub-header row repeated under each group (e.g. ['Auth', 'Held']). */
+    subHeaders: string[];
+    /** Data rows. */
+    rows: string[][];
+    filename?: string;
+    filterLines?: string[];
+    /** Use landscape orientation in Word (default false). */
+    landscape?: boolean;
 }
 
 /** One section in a profile export: heading + table (same as web view). */
@@ -227,6 +269,9 @@ export class ExportService {
         const doc = new Document({
             sections: [
                 {
+                    properties: config.landscape ? {
+                        page: { size: { orientation: PageOrientation.LANDSCAPE } },
+                    } : undefined,
                     children: [
                         new Paragraph({
                             children: [
@@ -312,6 +357,372 @@ export class ExportService {
         const base = config.filename ?? 'report';
         const filename = `${base}_${config.lang}.xlsx`;
         XLSX.writeFile(wb, filename);
+    }
+
+    /**
+     * Word export with a two-row header. Leading columns merge vertically (rowSpan=2);
+     * each group column merges horizontally across its sub-headers (columnSpan=subCount).
+     * Mirrors exportExcelMatrix so pivot tables look the same in both formats.
+     */
+    async exportWordMatrix(config: MatrixReportConfig): Promise<void> {
+        const dateStr = new Date().toLocaleDateString(config.lang === 'bn' ? 'bn-BD' : 'en-US', {
+            year: 'numeric', month: 'long', day: 'numeric',
+        });
+        const font = config.lang === 'bn' ? 'Nirmala UI' : 'Times New Roman';
+        const sizePageHeader = 28;
+        const sizeTableHeader = 20;
+        const sizeTableContent = config.lang === 'bn' ? 16 : 22;
+
+        const leadCount = config.leadingColumns.length;
+        const subCount = Math.max(config.subHeaders.length, 1);
+        const groupCount = config.groupColumns.length;
+        const totalCols = leadCount + groupCount * subCount;
+        // A4 landscape ≈ 297mm, portrait ≈ 210mm. After ~1" margins the usable width in DXA
+        // (1/20 pt; 1440 DXA = 1 inch) is ~13900 (landscape) / ~9000 (portrait).
+        const totalDxa = config.landscape ? 13900 : 9000;
+
+        // Per-column widths. Leading columns get a wider share (twice a sub-column), the rest
+        // is split evenly across the group sub-columns. Last column absorbs the rounding diff
+        // so the row sums to totalDxa exactly — Word's FIXED layout is unforgiving here.
+        const leadShare = 2;
+        const subShare = 1;
+        const totalShares = leadCount * leadShare + groupCount * subCount * subShare;
+        const unit = totalDxa / totalShares;
+        const colWidths: number[] = [];
+        for (let i = 0; i < leadCount; i++) colWidths.push(Math.floor(unit * leadShare));
+        for (let i = 0; i < groupCount * subCount; i++) colWidths.push(Math.floor(unit * subShare));
+        const widthSum = colWidths.reduce((a, b) => a + b, 0);
+        if (widthSum < totalDxa) colWidths[colWidths.length - 1] += (totalDxa - widthSum);
+
+        const borders = {
+            top:    { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
+            bottom: { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
+            left:   { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
+            right:  { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
+        };
+
+        const headerCell = (text: string, opts: { rowSpan?: number; columnSpan?: number; width: number }) =>
+            new TableCell({
+                children: [new Paragraph({
+                    children: [new TextRun({ text, bold: true, font, size: sizeTableHeader })],
+                    alignment: AlignmentType.CENTER,
+                    spacing: { after: 80 },
+                })],
+                borders,
+                rowSpan: opts.rowSpan,
+                columnSpan: opts.columnSpan,
+                width: { size: opts.width, type: WidthType.DXA },
+            });
+
+        // Row 1: leading columns (rowSpan=2) + each group label (columnSpan=subCount).
+        const headerRow1 = new TableRow({
+            tableHeader: true,
+            children: [
+                ...config.leadingColumns.map((c, i) =>
+                    headerCell(c, { rowSpan: 2, width: colWidths[i] })),
+                ...config.groupColumns.map((g, gi) => {
+                    const startCol = leadCount + gi * subCount;
+                    const groupWidth = colWidths.slice(startCol, startCol + subCount).reduce((a, b) => a + b, 0);
+                    return headerCell(g, { columnSpan: subCount, width: groupWidth });
+                }),
+            ],
+        });
+        // Row 2: sub-headers under every group (leading columns are already covered by rowSpan).
+        const headerRow2 = new TableRow({
+            tableHeader: true,
+            children: Array.from({ length: groupCount * subCount }, (_, idx) => {
+                const sub = config.subHeaders[idx % subCount];
+                return headerCell(sub, { width: colWidths[leadCount + idx] });
+            }),
+        });
+
+        const dataRows = config.rows.map(row => {
+            const cells = row.slice(0, totalCols);
+            while (cells.length < totalCols) cells.push('');
+            return new TableRow({
+                children: cells.map((cell, i) => new TableCell({
+                    children: [new Paragraph({
+                        children: [new TextRun({ text: cell, font, size: sizeTableContent })],
+                        alignment: i < leadCount ? AlignmentType.LEFT : AlignmentType.CENTER,
+                        spacing: { after: 80 },
+                    })],
+                    borders,
+                    width: { size: colWidths[i], type: WidthType.DXA },
+                })),
+            });
+        });
+
+        const table = new Table({
+            width: { size: totalDxa, type: WidthType.DXA },
+            layout: TableLayoutType.FIXED,
+            columnWidths: colWidths,
+            rows: [headerRow1, headerRow2, ...dataRows],
+        });
+
+        const filterPara = config.filterLines?.length ? [new Paragraph({
+            children: config.filterLines.map((line, i) => new TextRun({
+                text: (i > 0 ? '  |  ' : '') + line, size: 20, color: '333333', font,
+            })),
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 300 },
+        })] : [];
+
+        const doc = new Document({
+            sections: [{
+                properties: config.landscape ? {
+                    page: { size: { orientation: PageOrientation.LANDSCAPE } },
+                } : undefined,
+                children: [
+                    new Paragraph({
+                        children: [new TextRun({ text: config.title, bold: true, size: sizePageHeader, color: '1e3a5f', font })],
+                        alignment: AlignmentType.CENTER,
+                        spacing: { after: 200 },
+                    }),
+                    new Paragraph({
+                        children: [new TextRun({ text: dateStr, size: sizePageHeader, color: '666666', font })],
+                        alignment: AlignmentType.CENTER,
+                        spacing: { after: filterPara.length ? 150 : 300 },
+                    }),
+                    ...filterPara,
+                    table,
+                ],
+            }],
+        });
+
+        const blob = await Packer.toBlob(doc);
+        const base = config.filename ?? 'report';
+        saveAs(blob, `${base}_${config.lang}.docx`);
+    }
+
+    /**
+     * Excel export with a two-row header. Leading columns merge vertically across both
+     * header rows; each group column merges horizontally across its sub-headers.
+     * Use for unit × rank pivot tables where a flat header would lose the grouping.
+     */
+    exportExcelMatrix(config: MatrixReportConfig): void {
+        const dateStr = new Date().toLocaleDateString(config.lang === 'bn' ? 'bn-BD' : 'en-US', {
+            year: 'numeric', month: 'long', day: 'numeric',
+        });
+
+        const filterLine = config.filterLines?.length ? config.filterLines.join('  |  ') : '';
+        const leadCount = config.leadingColumns.length;
+        const subCount = Math.max(config.subHeaders.length, 1);
+        const groupCount = config.groupColumns.length;
+        const totalCols = leadCount + groupCount * subCount;
+
+        // Header row 1: leading labels, then each group label followed by (subCount-1) blanks.
+        const headerRow1: string[] = [...config.leadingColumns];
+        for (const g of config.groupColumns) {
+            headerRow1.push(g);
+            for (let i = 1; i < subCount; i++) headerRow1.push('');
+        }
+        // Header row 2: blank under leading columns, sub-headers repeated per group.
+        const headerRow2: string[] = config.leadingColumns.map(() => '');
+        for (let g = 0; g < groupCount; g++) {
+            for (const sub of config.subHeaders) headerRow2.push(sub);
+        }
+
+        const data: unknown[][] = [
+            [config.title],
+            [dateStr],
+            ...(filterLine ? [[filterLine]] : []),
+            [],
+            headerRow1,
+            headerRow2,
+            ...config.rows,
+        ];
+
+        const ws = XLSX.utils.aoa_to_sheet(data);
+        ws['!cols'] = Array.from({ length: totalCols }, (_, i) => ({ wch: i < leadCount ? 22 : 12 }));
+
+        const merges: { s: { r: number; c: number }; e: { r: number; c: number } }[] = [
+            { s: { r: 0, c: 0 }, e: { r: 0, c: totalCols - 1 } },
+            { s: { r: 1, c: 0 }, e: { r: 1, c: totalCols - 1 } },
+        ];
+        // Track the row index where the two header rows live (after title/date/filter/blank).
+        const h1Row = filterLine ? 4 : 3;
+        const h2Row = h1Row + 1;
+        if (filterLine) {
+            merges.push({ s: { r: 2, c: 0 }, e: { r: 2, c: totalCols - 1 } });
+        }
+        // Leading columns: merge vertically (rowspan=2).
+        for (let c = 0; c < leadCount; c++) {
+            merges.push({ s: { r: h1Row, c }, e: { r: h2Row, c } });
+        }
+        // Group columns: merge horizontally across their sub-headers.
+        if (subCount > 1) {
+            for (let g = 0; g < groupCount; g++) {
+                const startCol = leadCount + g * subCount;
+                merges.push({ s: { r: h1Row, c: startCol }, e: { r: h1Row, c: startCol + subCount - 1 } });
+            }
+        }
+        ws['!merges'] = merges;
+
+        const wb = XLSX.utils.book_new();
+        const sheetName = config.lang === 'bn' ? 'প্রতিবেদন' : 'Report';
+        XLSX.utils.book_append_sheet(wb, ws, sheetName);
+
+        const base = config.filename ?? 'report';
+        XLSX.writeFile(wb, `${base}_${config.lang}.xlsx`);
+    }
+
+    /**
+     * Word export with one table per section. Each section gets a heading paragraph
+     * (e.g. "Army") above its own table. Optional final grand-total row after all sections.
+     */
+    async exportWordSectioned(config: SectionedReportConfig): Promise<void> {
+        const dateStr = new Date().toLocaleDateString(config.lang === 'bn' ? 'bn-BD' : 'en-US', {
+            year: 'numeric', month: 'long', day: 'numeric',
+        });
+        const font = config.lang === 'bn' ? 'Nirmala UI' : 'Times New Roman';
+        const columns = config.columns;
+        const colCount = Math.max(columns.length, 1);
+        // Total table width = ~9000 DXA (≈ A4 portrait usable width). Equal split across columns
+        // and fixed layout ensures every table renders with the SAME column widths regardless of
+        // cell-content length.
+        const totalDxa = 9000;
+        const cellWidth = Math.floor(totalDxa / colCount);
+        const colWidths = Array.from({ length: colCount }, (_, i) =>
+            i === colCount - 1 ? totalDxa - cellWidth * (colCount - 1) : cellWidth
+        );
+        const sizePageHeader = 28;
+        const sizeSectionHeader = 24;
+        const sizeTableHeader = 20;
+        const sizeTableContent = config.lang === 'bn' ? 16 : 22;
+        const borders = {
+            top:    { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
+            bottom: { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
+            left:   { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
+            right:  { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
+        };
+
+        const makeHeaderRow = () => new TableRow({
+            tableHeader: true,
+            children: columns.map((col, i) => new TableCell({
+                children: [new Paragraph({
+                    children: [new TextRun({ text: col, bold: true, font, size: sizeTableHeader })],
+                    alignment: AlignmentType.LEFT,
+                    spacing: { after: 100 },
+                })],
+                borders,
+                width: { size: colWidths[i], type: WidthType.DXA },
+            })),
+        });
+
+        const makeBodyRow = (row: string[], bold = false) => {
+            const cells = row.slice(0, colCount);
+            while (cells.length < colCount) cells.push('');
+            return new TableRow({
+                children: cells.map((cell, i) => new TableCell({
+                    children: [new Paragraph({
+                        children: [new TextRun({ text: cell, font, size: sizeTableContent, bold })],
+                        spacing: { after: 100 },
+                    })],
+                    borders,
+                    width: { size: colWidths[i], type: WidthType.DXA },
+                })),
+            });
+        };
+
+        const makeTable = (rows: TableRow[]) => new Table({
+            width: { size: totalDxa, type: WidthType.DXA },
+            layout: TableLayoutType.FIXED,
+            columnWidths: colWidths,
+            rows,
+        });
+
+        const children: (Paragraph | Table)[] = [
+            new Paragraph({
+                children: [new TextRun({ text: config.title, bold: true, size: sizePageHeader, color: '1e3a5f', font })],
+                alignment: AlignmentType.CENTER,
+                spacing: { after: 200 },
+            }),
+            new Paragraph({
+                children: [new TextRun({ text: dateStr, size: sizePageHeader, color: '666666', font })],
+                alignment: AlignmentType.CENTER,
+                spacing: { after: (config.filterLines?.length) ? 150 : 300 },
+            }),
+            ...(config.filterLines?.length ? [new Paragraph({
+                children: config.filterLines.map((line, i) => new TextRun({
+                    text: (i > 0 ? '  |  ' : '') + line, size: 20, color: '333333', font,
+                })),
+                alignment: AlignmentType.CENTER,
+                spacing: { after: 300 },
+            })] : []),
+        ];
+
+        config.sections.forEach((sec, idx) => {
+            children.push(new Paragraph({
+                children: [new TextRun({ text: sec.title, bold: true, size: sizeSectionHeader, font })],
+                spacing: { before: idx > 0 ? 200 : 0, after: 120 },
+                keepNext: true,
+            }));
+            const tableRows: TableRow[] = [makeHeaderRow()];
+            sec.rows.forEach(r => tableRows.push(makeBodyRow(r)));
+            if (sec.subtotalRow) tableRows.push(makeBodyRow(sec.subtotalRow, true));
+            children.push(makeTable(tableRows));
+        });
+
+        if (config.grandTotalRow) {
+            children.push(new Paragraph({ children: [new TextRun({ text: '', font, size: sizeTableContent })], spacing: { before: 200, after: 80 } }));
+            children.push(makeTable([makeBodyRow(config.grandTotalRow, true)]));
+        }
+
+        const doc = new Document({ sections: [{ children }] });
+        const blob = await Packer.toBlob(doc);
+        const base = config.filename ?? 'report';
+        saveAs(blob, `${base}_${config.lang}.docx`);
+    }
+
+    /**
+     * Excel export with one table per section. Each section is preceded by a merged row
+     * containing the section title; the table header repeats per section so it's readable
+     * when each section is treated as its own block.
+     */
+    exportExcelSectioned(config: SectionedReportConfig): void {
+        const dateStr = new Date().toLocaleDateString(config.lang === 'bn' ? 'bn-BD' : 'en-US', {
+            year: 'numeric', month: 'long', day: 'numeric',
+        });
+        const filterLine = config.filterLines?.length ? config.filterLines.join('  |  ') : '';
+        const colCount = config.columns.length;
+
+        const data: unknown[][] = [
+            [config.title],
+            [dateStr],
+            ...(filterLine ? [[filterLine]] : []),
+            [],
+        ];
+        const merges: { s: { r: number; c: number }; e: { r: number; c: number } }[] = [
+            { s: { r: 0, c: 0 }, e: { r: 0, c: colCount - 1 } },
+            { s: { r: 1, c: 0 }, e: { r: 1, c: colCount - 1 } },
+        ];
+        if (filterLine) {
+            merges.push({ s: { r: 2, c: 0 }, e: { r: 2, c: colCount - 1 } });
+        }
+
+        config.sections.forEach((sec) => {
+            const sectionTitleRowIdx = data.length;
+            data.push([sec.title]);
+            merges.push({ s: { r: sectionTitleRowIdx, c: 0 }, e: { r: sectionTitleRowIdx, c: colCount - 1 } });
+            data.push(config.columns);
+            sec.rows.forEach(r => data.push(r));
+            if (sec.subtotalRow) data.push(sec.subtotalRow);
+            data.push([]);
+        });
+
+        if (config.grandTotalRow) {
+            data.push(config.grandTotalRow);
+        }
+
+        const ws = XLSX.utils.aoa_to_sheet(data);
+        ws['!cols'] = config.columns.map(() => ({ wch: 22 }));
+        ws['!merges'] = merges;
+
+        const wb = XLSX.utils.book_new();
+        const sheetName = config.lang === 'bn' ? 'প্রতিবেদন' : 'Report';
+        XLSX.utils.book_append_sheet(wb, ws, sheetName);
+        const base = config.filename ?? 'report';
+        XLSX.writeFile(wb, `${base}_${config.lang}.xlsx`);
     }
 
     exportProfilePDF(config: ProfileExportConfig): void {

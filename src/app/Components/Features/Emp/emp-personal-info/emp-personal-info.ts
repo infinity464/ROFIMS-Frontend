@@ -149,6 +149,7 @@ export class EmpPersonalInfo implements OnInit {
             this.mode = 'edit';
             this.isReadonly = false;
             this.selectedEmployeeId = this.externalEmployeeId;
+            this._lastLoadedEmployeeId = this.externalEmployeeId;
             this.employeeFound = true;
             this.loadEmployeeById(this.externalEmployeeId);
             return;
@@ -379,6 +380,7 @@ export class EmpPersonalInfo implements OnInit {
     onEmployeeSearchFound(employee: EmployeeBasicInfo): void {
         this.employeeFound = true;
         this.selectedEmployeeId = employee.employeeID;
+        this._lastLoadedEmployeeId = employee.employeeID;
         this.employeeBasicInfo = employee;
 
         // Load personal info if exists
