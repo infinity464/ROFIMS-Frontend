@@ -9,6 +9,7 @@ import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
 import { DialogModule } from 'primeng/dialog';
 import { TextareaModule } from 'primeng/textarea';
+import { CheckboxModule } from 'primeng/checkbox';
 import { Toast } from 'primeng/toast';
 import { TableModule } from 'primeng/table';
 import { IconField as IconFieldModule } from 'primeng/iconfield';
@@ -36,6 +37,7 @@ import { firstValueFrom } from 'rxjs';
         TooltipModule,
         DialogModule,
         TextareaModule,
+        CheckboxModule,
         Toast,
         TableModule,
         IconFieldModule,
@@ -73,6 +75,17 @@ export class OfficeOrderPreviewComponent implements OnInit {
     // Parsed JSON fields
     referenceEntries: ReferenceNoEntry[] = [];
     onulipiEntries: OnulipiEntry[] = [];
+
+    // Onulipi show/hide filter
+    showOnulipiFilter = false;
+    onulipiChecked: boolean[] = [];
+
+    get exportOnulipiEntries(): OnulipiEntry[] {
+        if (this.onulipiChecked.length !== this.onulipiEntries.length) {
+            this.onulipiChecked = this.onulipiEntries.map((_, i) => this.onulipiChecked[i] ?? true);
+        }
+        return this.onulipiEntries.filter((_, i) => this.onulipiChecked[i] !== false);
+    }
 
     // Page size for export
     selectedPageSize: 'a4' | 'letter' = 'a4';
@@ -199,6 +212,7 @@ export class OfficeOrderPreviewComponent implements OnInit {
         if (!this.order) return;
         try { this.referenceEntries = this.order.referenceNo ? JSON.parse(this.order.referenceNo) : []; } catch { this.referenceEntries = []; }
         try { this.onulipiEntries = this.order.onulipi ? JSON.parse(this.order.onulipi) : []; } catch { this.onulipiEntries = []; }
+        this.onulipiChecked = this.onulipiEntries.map(() => true);
     }
 
     private parseNoteSheetFields(): void {
@@ -431,7 +445,8 @@ export class OfficeOrderPreviewComponent implements OnInit {
             borders,
             rows: [new TableRow({ children: headerCells, tableHeader: true }), ...dataRows],
             width: { size: totalWidth, type: WidthType.DXA },
-            layout: TableLayoutType.FIXED
+            layout: TableLayoutType.FIXED,
+            columnWidths: colWidths
         });
     }
 
@@ -590,41 +605,47 @@ export class OfficeOrderPreviewComponent implements OnInit {
             }
         }
 
-        // ── Approval Signature (8pt, right aligned) ──
+        // ── Approval Signature (8pt, left-aligned but indented to right side) ──
         if (this.order.approvalEmployeeName) {
+            const sigIndent = 8500; // twips indent from left to push signature block further right
             children.push(new Paragraph({ text: '', spacing: { before: 400 } }));
             const sigName = this.isBangla
                 ? (this.order.approvalEmployeeNameBN || this.order.approvalEmployeeName)
                 : this.order.approvalEmployeeName;
             children.push(new Paragraph({
                 children: [new TextRun({ text: sigName, font, size: contentSize, bold: true })],
-                alignment: AlignmentType.RIGHT
+                alignment: AlignmentType.LEFT,
+                indent: { left: sigIndent }
             }));
             if (this.order.approvalEmployeeRank) {
                 const rank = this.isBangla ? (this.order.approvalEmployeeRankBN || this.order.approvalEmployeeRank) : this.order.approvalEmployeeRank;
                 children.push(new Paragraph({
                     children: [new TextRun({ text: rank, font, size: contentSize })],
-                    alignment: AlignmentType.RIGHT
+                    alignment: AlignmentType.LEFT,
+                    indent: { left: sigIndent }
                 }));
             }
             if (this.order.approvalEmployeeAppointment) {
                 const appt = this.isBangla ? (this.order.approvalEmployeeAppointmentBN || this.order.approvalEmployeeAppointment) : this.order.approvalEmployeeAppointment;
                 children.push(new Paragraph({
                     children: [new TextRun({ text: appt, font, size: contentSize })],
-                    alignment: AlignmentType.RIGHT
+                    alignment: AlignmentType.LEFT,
+                    indent: { left: sigIndent }
                 }));
             }
             if (this.order.approvalEmployeeRabUnit) {
                 const unit = this.isBangla ? (this.order.approvalEmployeeRabUnitBN || this.order.approvalEmployeeRabUnit) : this.order.approvalEmployeeRabUnit;
                 children.push(new Paragraph({
                     children: [new TextRun({ text: unit, font, size: contentSize })],
-                    alignment: AlignmentType.RIGHT
+                    alignment: AlignmentType.LEFT,
+                    indent: { left: sigIndent }
                 }));
             }
         }
 
-        // ── Onulipi (8pt) ──
-        if (this.onulipiEntries.length > 0) {
+        // ── Onulipi (8pt) — only checked entries ──
+        const exportOnulipi = this.exportOnulipiEntries;
+        if (exportOnulipi.length > 0) {
             children.push(new Paragraph({
                 children: [new TextRun({
                     text: this.isBangla ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নহে):' : 'Copy (not in order of seniority):',
@@ -632,7 +653,7 @@ export class OfficeOrderPreviewComponent implements OnInit {
                 })],
                 spacing: { before: 300 }
             }));
-            this.onulipiEntries.forEach((entry, idx) => {
+            exportOnulipi.forEach((entry, idx) => {
                 const ser = this.isBangla ? this.toBanglaDigits(String(idx + 1)) : String(idx + 1);
                 children.push(new Paragraph({
                     children: [new TextRun({ text: `${ser}। ${entry.text}`, font, size: contentSize })],

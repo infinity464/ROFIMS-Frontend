@@ -76,6 +76,51 @@
     color: var(--text-color-secondary);
 }
 
+/* ── Onulipi Filter ──────────────────────────────── */
+.oo-onulipi-filter {
+    max-width: 210mm;
+    margin: 0 auto;
+    padding: 12px 24px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    margin-top: 1rem;
+
+    .oo-onulipi-filter-toggle {
+        font-weight: 600;
+        font-size: 0.85rem;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        user-select: none;
+        color: #374151;
+
+        i { font-size: 0.75rem; }
+    }
+
+    .oo-onulipi-filter-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        margin-top: 0.5rem;
+        padding-left: 0.2rem;
+    }
+
+    .oo-onulipi-filter-item {
+        display: inline-flex;
+        align-items: flex-start;
+        gap: 0.5rem;
+        font-size: 0.82rem;
+        line-height: 1.5;
+
+        label {
+            cursor: pointer;
+            color: #1e293b;
+        }
+    }
+}
+
 /* ── Legal Paper Container ────────────────────────── */
 .legal-paper-container {
     display: flex;

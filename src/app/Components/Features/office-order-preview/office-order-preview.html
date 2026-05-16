@@ -129,6 +129,20 @@
         <p-button label="Go Back" icon="pi pi-arrow-left" (onClick)="goBack()"></p-button>
     </div>
 
+    <!-- ─── Onulipi Filter ─── -->
+    <div class="oo-onulipi-filter no-print" *ngIf="!loading && !error && order && onulipiEntries.length > 0">
+        <span class="oo-onulipi-filter-toggle" (click)="showOnulipiFilter = !showOnulipiFilter">
+            <i class="pi" [ngClass]="showOnulipiFilter ? 'pi-chevron-down' : 'pi-chevron-right'"></i>
+            {{ isBangla ? 'অনুলিপি ফিল্টার' : 'Copy Filter' }}
+        </span>
+        <div class="oo-onulipi-filter-list" *ngIf="showOnulipiFilter">
+            <div *ngFor="let entry of onulipiEntries; let i = index" class="oo-onulipi-filter-item">
+                <p-checkbox [(ngModel)]="onulipiChecked[i]" [binary]="true" [inputId]="'onulipiChk' + i"></p-checkbox>
+                <label [for]="'onulipiChk' + i">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}। {{ entry.text }}</label>
+            </div>
+        </div>
+    </div>
+
     <!-- ─── A4 Paper Preview ─── -->
     <div class="legal-paper-container" *ngIf="!loading && !error && order">
         <div class="legal-paper">
@@ -236,10 +250,10 @@
                 </div>
 
                 <!-- ═══ Onulipi (Copy Distribution) ═══ -->
-                <div class="oo-doc-section oo-doc-onulipi" *ngIf="onulipiEntries.length > 0">
+                <div class="oo-doc-section oo-doc-onulipi" *ngIf="exportOnulipiEntries.length > 0">
                     <div class="oo-doc-section-label">{{ isBangla ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নহে):' : 'Copy (not in order of seniority):' }}</div>
                     <div class="oo-doc-list">
-                        <p *ngFor="let entry of onulipiEntries; let i = index">
+                        <p *ngFor="let entry of exportOnulipiEntries; let i = index">
                             {{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}। {{ entry.text }}
                         </p>
                     </div>
