@@ -157,6 +157,21 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
     // ── File references ──────────────────────────────────────
     fileRows: FileRowData[] = [];
 
+    // ── View-mode file attachments ─────────────────────────
+    get viewFileAttachments(): { fileId: number; fileName: string }[] {
+        const json = this.noteSheet?.filesReferences;
+        if (!json || typeof json !== 'string') return [];
+        try {
+            const refs = JSON.parse(json) as { FileId?: number; fileId?: number; fileName?: string; FileName?: string }[];
+            return Array.isArray(refs)
+                ? refs.filter(r => (r.FileId ?? r.fileId)).map(r => ({
+                    fileId: r.FileId ?? r.fileId ?? 0,
+                    fileName: r.fileName ?? r.FileName ?? 'File'
+                }))
+                : [];
+        } catch { return []; }
+    }
+
     // ── Members table data (loaded from NoteSheetReferenceEmployee) ──
     previewMembersColumns: { key: string; label: string; mergedFrom?: string[]; width?: number }[] = [];
     previewMembersRows: Record<string, string>[] = [];

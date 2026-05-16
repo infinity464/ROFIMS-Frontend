@@ -771,3 +771,70 @@
     .ns-back-from { color: #fca5a5; }
     .ns-back-to   { color: #93c5fd; }
 }
+
+/* ── File Attachments (view mode, outside page) ──────── */
+.ns-file-attachments {
+    width: 210mm;
+    max-width: 100%;
+    margin: 1.5rem auto 0;
+    padding: 16px 24px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+
+    .ns-file-attachments-label {
+        font-weight: 600;
+        font-size: 10pt;
+        margin-bottom: 10px;
+        color: #374151;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+
+        i { font-size: 1rem; }
+    }
+
+    .ns-file-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .ns-file-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 12px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        font-size: 9pt;
+
+        > i.pi-file {
+            color: #64748b;
+            font-size: 1rem;
+        }
+
+        .ns-file-name {
+            flex: 1;
+            color: #1e293b;
+            word-break: break-word;
+        }
+
+        .ns-file-download-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #3b82f6;
+            padding: 6px 8px;
+            border-radius: 4px;
+            transition: background 0.15s;
+
+            &:hover {
+                background: #eff6ff;
+            }
+
+            i { font-size: 0.9rem; }
+        }
+    }
+}

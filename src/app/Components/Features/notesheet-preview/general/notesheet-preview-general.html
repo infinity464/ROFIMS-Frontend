@@ -82,6 +82,23 @@
                 </div>
             </div>
         </div>
+
+        <!-- ── File Attachments (outside page border) ── -->
+        <div class="ns-file-attachments" *ngIf="viewFileAttachments.length > 0">
+            <div class="ns-file-attachments-label">
+                <i class="pi pi-paperclip"></i>
+                {{ isEnglish() ? 'Attachments' : 'সংযুক্তি' }} ({{ viewFileAttachments.length }})
+            </div>
+            <div class="ns-file-list">
+                <div class="ns-file-item" *ngFor="let file of viewFileAttachments; let fi = index">
+                    <i class="pi pi-file"></i>
+                    <span class="ns-file-name">{{ fi + 1 }}. {{ file.fileName }}</span>
+                    <button class="ns-file-download-btn" (click)="onDownloadFile(file)" pTooltip="Download">
+                        <i class="pi pi-download"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
     </ng-container>
 
     <!-- ══════════════════════════════════════════════════════════ -->

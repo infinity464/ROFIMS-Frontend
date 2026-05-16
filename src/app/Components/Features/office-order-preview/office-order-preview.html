@@ -247,6 +247,23 @@
 
             </div><!-- /oo-doc-box -->
         </div>
+
+        <!-- ═══ File Attachments ═══ -->
+        <div class="oo-file-attachments" *ngIf="viewFileAttachments.length > 0">
+            <div class="oo-file-attachments-label">
+                <i class="pi pi-paperclip"></i>
+                {{ isBangla ? 'সংযুক্তি' : 'Attachments' }} ({{ viewFileAttachments.length }})
+            </div>
+            <div class="oo-file-list">
+                <div class="oo-file-item" *ngFor="let file of viewFileAttachments; let fi = index">
+                    <i class="pi pi-file"></i>
+                    <span class="oo-file-name">{{ fi + 1 }}. {{ file.fileName }}</span>
+                    <button class="oo-file-download-btn" (click)="downloadAttachment(file)" pTooltip="Download">
+                        <i class="pi pi-download"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
 </div>

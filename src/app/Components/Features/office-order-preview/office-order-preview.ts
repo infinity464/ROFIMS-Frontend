@@ -17,10 +17,11 @@ import { InputTextModule } from 'primeng/inputtext';
 import { MessageService } from 'primeng/api';
 import { environment } from '@/Core/Environments/environment';
 import { OfficeOrderService } from '@/services/office-order.service';
+import { EmpService } from '@/services/emp-service';
 import { GeneralNotesheetOfficeOrderDto, GeneralNotesheetOfficeOrderWithDetailsDto, ReferenceNoEntry, OnulipiEntry } from '@/models/office-order.model';
 import { ApprovalStatus } from '@/models/enums';
 import { NotesheetMembersTableComponent } from '@/Components/Shared/notesheet-members-table/notesheet-members-table';
-import { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, HeadingLevel, Table, TableRow, TableCell, WidthType, VerticalAlign } from 'docx';
+import { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, HeadingLevel, Table, TableRow, TableCell, WidthType, VerticalAlign, TableLayoutType } from 'docx';
 import { saveAs } from 'file-saver';
 import { firstValueFrom } from 'rxjs';
 
@@ -51,6 +52,7 @@ export class OfficeOrderPreviewComponent implements OnInit {
     private router = inject(Router);
     private http = inject(HttpClient);
     private officeOrderService = inject(OfficeOrderService);
+    private empService = inject(EmpService);
     private messageService = inject(MessageService);
     private sanitizer = inject(DomSanitizer);
 
@@ -100,6 +102,27 @@ export class OfficeOrderPreviewComponent implements OnInit {
 
     get isPending(): boolean {
         return this.order?.approvalStatus === ApprovalStatus.Pending;
+    }
+
+    get viewFileAttachments(): { fileId: number; fileName: string }[] {
+        const json = this.order?.filesReferences;
+        if (!json || typeof json !== 'string') return [];
+        try {
+            const refs = JSON.parse(json) as { FileId?: number; fileId?: number; fileName?: string; FileName?: string }[];
+            return Array.isArray(refs)
+                ? refs.filter(r => (r.FileId ?? r.fileId)).map(r => ({
+                    fileId: r.FileId ?? r.fileId ?? 0,
+                    fileName: r.fileName ?? r.FileName ?? 'File'
+                }))
+                : [];
+        } catch { return []; }
+    }
+
+    downloadAttachment(file: { fileId: number; fileName: string }): void {
+        this.empService.downloadFile(file.fileId).subscribe({
+            next: (blob) => this.empService.triggerFileDownload(blob, file.fileName || 'download'),
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file.' })
+        });
     }
 
     goBack(): void {
@@ -305,6 +328,51 @@ export class OfficeOrderPreviewComponent implements OnInit {
         return { columns: [], rows: [] };
     }
 
+    /** Calculate dynamic column widths in twips (DXA) based on content */
+    private calcColumnWidthsDxa(columns: any[], rows: Record<string, string>[]): number[] {
+        // Total usable width in twips: page width - left margin - right margin
+        const pageWidth = this.selectedPageSize === 'letter' ? 12240 : 11906;
+        const totalWidth = pageWidth - 720 - 720; // margins are 720 twips each
+
+        const slHeader = this.isBangla ? 'ক্রমিক' : 'SL';
+        const slMaxLen = Math.max(slHeader.length, String(rows.length).length);
+
+        // Calculate max text length per column
+        const colMaxLens = columns.map((col: any) => {
+            const headerLen = (col.label || col.key || '').length;
+            let maxContentLen = 0;
+            for (const row of rows) {
+                let val = '';
+                if (col.mergedFrom?.keys?.length) {
+                    val = col.mergedFrom.keys.map((k: string) => row[k] || '').filter(Boolean).join(col.mergedFrom.separator ?? ' ');
+                } else {
+                    val = row[col.key] || '';
+                }
+                if (val.length > maxContentLen) maxContentLen = val.length;
+            }
+            return Math.max(headerLen, maxContentLen, 3);
+        });
+
+        // All lengths including SL column
+        const allLens = [slMaxLen, ...colMaxLens];
+        const totalLen = allLens.reduce((sum, l) => sum + l, 0);
+
+        // Convert to twips proportionally (minimum 600 twips for SL)
+        let widths = allLens.map((l, i) => {
+            const w = Math.round((l / totalLen) * totalWidth);
+            return i === 0 ? Math.max(w, 600) : Math.max(w, 800);
+        });
+
+        // Normalize to exactly match totalWidth
+        const currentSum = widths.reduce((s, w) => s + w, 0);
+        const diff = totalWidth - currentSum;
+        // Distribute remainder to largest column
+        const maxIdx = widths.indexOf(Math.max(...widths));
+        widths[maxIdx] += diff;
+
+        return widths;
+    }
+
     /** Build members table as docx Table */
     private buildMembersTable(columns: any[], rows: Record<string, string>[], font: string): Table {
         const tableFontSize = 14; // 7pt in half-points
@@ -314,15 +382,20 @@ export class OfficeOrderPreviewComponent implements OnInit {
             insideHorizontal: borderStyle, insideVertical: borderStyle
         };
 
+        // Calculate dynamic widths in twips
+        const colWidths = this.calcColumnWidthsDxa(columns, rows);
+        const totalWidth = colWidths.reduce((s, w) => s + w, 0);
+
         // Header row
         const headerCells = [
             new TableCell({
                 children: [new Paragraph({ children: [new TextRun({ text: this.isBangla ? 'ক্রমিক' : 'SL', font, size: tableFontSize, bold: true })], alignment: AlignmentType.CENTER })],
-                width: { size: 8, type: WidthType.PERCENTAGE },
+                width: { size: colWidths[0], type: WidthType.DXA },
                 verticalAlign: VerticalAlign.CENTER
             }),
-            ...columns.map((col: any) => new TableCell({
+            ...columns.map((col: any, ci: number) => new TableCell({
                 children: [new Paragraph({ children: [new TextRun({ text: col.label || col.key, font, size: tableFontSize, bold: true })], alignment: AlignmentType.CENTER })],
+                width: { size: colWidths[ci + 1], type: WidthType.DXA },
                 verticalAlign: VerticalAlign.CENTER
             }))
         ];
@@ -333,9 +406,10 @@ export class OfficeOrderPreviewComponent implements OnInit {
             const cells = [
                 new TableCell({
                     children: [new Paragraph({ children: [new TextRun({ text: ser, font, size: tableFontSize })], alignment: AlignmentType.CENTER })],
+                    width: { size: colWidths[0], type: WidthType.DXA },
                     verticalAlign: VerticalAlign.CENTER
                 }),
-                ...columns.map((col: any) => {
+                ...columns.map((col: any, ci: number) => {
                     let val = '';
                     if (col.mergedFrom?.keys?.length) {
                         val = col.mergedFrom.keys.map((k: string) => row[k] || '').filter(Boolean).join(col.mergedFrom.separator ?? ' ');
@@ -345,6 +419,7 @@ export class OfficeOrderPreviewComponent implements OnInit {
                     if (this.isBangla && /\d/.test(val)) val = this.toBanglaDigits(val);
                     return new TableCell({
                         children: [new Paragraph({ children: [new TextRun({ text: val, font, size: tableFontSize })] })],
+                        width: { size: colWidths[ci + 1], type: WidthType.DXA },
                         verticalAlign: VerticalAlign.CENTER
                     });
                 })
@@ -355,7 +430,8 @@ export class OfficeOrderPreviewComponent implements OnInit {
         return new Table({
             borders,
             rows: [new TableRow({ children: headerCells, tableHeader: true }), ...dataRows],
-            width: { size: 100, type: WidthType.PERCENTAGE }
+            width: { size: totalWidth, type: WidthType.DXA },
+            layout: TableLayoutType.FIXED
         });
     }
 
@@ -391,14 +467,22 @@ export class OfficeOrderPreviewComponent implements OnInit {
             spacing: { before: 160, after: 160 }
         }));
 
-        // ── Letter No & Date (8pt) ──
+        // ── Letter No (left) ──
         children.push(new Paragraph({
             children: [
                 new TextRun({ text: `${this.isBangla ? 'স্মারক নং: ' : 'Letter No: '}`, font, size: contentSize, bold: true }),
-                new TextRun({ text: this.order.letterNo || '.............', font, size: contentSize }),
-                new TextRun({ text: `\t\t\t${this.isBangla ? 'তারিখ: ' : 'Date: '}`, font, size: contentSize, bold: true }),
+                new TextRun({ text: this.order.letterNo || '.............', font, size: contentSize })
+            ],
+            spacing: { after: 40 }
+        }));
+
+        // ── Date (right aligned) ──
+        children.push(new Paragraph({
+            children: [
+                new TextRun({ text: `${this.isBangla ? 'তারিখ: ' : 'Date: '}`, font, size: contentSize, bold: true }),
                 new TextRun({ text: this.formatDate(this.order.letterDate), font, size: contentSize })
             ],
+            alignment: AlignmentType.RIGHT,
             spacing: { after: 100 }
         }));
 
