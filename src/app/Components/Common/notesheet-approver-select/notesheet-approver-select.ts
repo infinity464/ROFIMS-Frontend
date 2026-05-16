@@ -175,7 +175,8 @@ export class NotesheetApproverSelectComponent implements OnInit, OnChanges {
                         const mapping = mappingList.find((m: any) => ((m as any).userId ?? (m as any).UserId) === u.id);
                         const empName = (mapping as any)?.employeeName ?? null;
                         const rabId = (mapping as any)?.rabID ?? null;
-                        const parts = [u.userName, empName, rabId ? `RAB: ${rabId}` : ''].filter(Boolean);
+                        const serviceId = (mapping as any)?.serviceId ?? null;
+                        const parts = [empName || u.userName, rabId ? `RAB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : ''].filter(Boolean);
                         opts.push({ label: parts.join(' | '), value: empId });
                     } else {
                         // User without employee mapping — still show with negative id placeholder

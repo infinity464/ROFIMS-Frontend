@@ -18,8 +18,9 @@ import { NotesheetSignatoryComponent } from '@/Components/Common/notesheet-signa
 import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor';
 import { NotesheetApproverSelectComponent } from '@/Components/Common/notesheet-approver-select/notesheet-approver-select';
 import { NotesheetPreviewBase } from '../notesheet-preview-base';
-import { FamilyInfoService, FamilyInfoByEmployeeView } from '@/services/family-info-service';
+import { FamilyInfoService } from '@/services/family-info-service';
 import { CommonCodeService } from '@/services/common-code-service';
+import { ExBdLeaveApplicationService, ExBdLeaveApplicationModel, DestinationCountryItem, FamilyMemberItem } from '@/services/ex-bd-leave-application.service';
 import { EmployeePersonalServiceOverview } from '@/models/employee-personal-service-overview.model';
 import {
     NoteSheetCurrentStatus, NoteSheetCurrentStatusOptions, NoteSheetOperationTypeOptions,
@@ -78,6 +79,7 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
     private readonly commonCodeService = inject(CommonCodeService);
     private readonly confirmationService = inject(ConfirmationService);
     private readonly sharedService = inject(SharedService);
+    private readonly exBdLeaveAppService = inject(ExBdLeaveApplicationService);
     private cdr = inject(ChangeDetectorRef);
 
     // ── Pagination ────────────────────────────────────────────
@@ -91,7 +93,11 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
     leaveEmployee: EmployeePersonalServiceOverview | null = null;
     wingName = '';
     wingNameBN = '';
-    familyMembers: FamilyInfoByEmployeeView[] = [];
+    exBdApplication: ExBdLeaveApplicationModel | null = null;
+    appCountries: DestinationCountryItem[] = [];
+    appFamilyMembers: FamilyMemberItem[] = [];
+    /** Pre-resolved data from vw_NoteSheetExBdLeavePreview */
+    previewData: any = null;
 
     // ── Parsed references (from JSON) ────────────────────────
     get parsedReferences(): string[] {
@@ -138,10 +144,11 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
         return this.noteSheet?.note ? 3 : 2;
     }
 
-    downloadRefFile(_file: { fileId: number; fileName: string }): void {
-        if (this.noteSheet?.employeeId) {
-            this.router.navigate(['/members/profile', this.noteSheet.employeeId]);
-        }
+    downloadRefFile(file: { fileId: number; fileName: string }): void {
+        this.empService.downloadFile(file.fileId).subscribe({
+            next: (blob) => this.empService.triggerFileDownload(blob, file.fileName),
+            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file.' })
+        });
     }
 
     // ── Edit state ─────────────────────────────────────────────
@@ -280,17 +287,89 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
 
         this.loadSubjectTypeOptions();
 
-        if (ns.employeeId && ns.employeeId > 0) {
+        // Load all preview data from the combined view in one call
+        const noteSheetId = ns.noteSheetId ?? (ns as any).NoteSheetId;
+        if (noteSheetId) {
+            this.loadPreviewFromView(noteSheetId);
+        } else {
+            // Fallback: load employee separately
+            this.loadEmployeeFallback(ns);
+        }
+    }
+
+    private loadPreviewFromView(noteSheetId: number): void {
+        const api = `${environment.apis.core}/NoteSheetInfo/GetExBdLeavePreview/${noteSheetId}`;
+        this.http.get<any>(api).pipe(catchError(() => of(null))).subscribe(data => {
+            if (!data) {
+                // Fallback to individual calls
+                this.loadEmployeeFallback(this.noteSheet);
+                return;
+            }
+            this.previewData = data;
+
+            // Populate employee-like data from view
+            if (!this.leaveEmployee && data.empServiceId) {
+                this.leaveEmployee = {
+                    serviceId: data.empServiceId,
+                    rabId: data.empRABID,
+                    nameEnglish: data.empNameEN,
+                    nameBN: data.empNameBN,
+                    prefix: data.empPrefix,
+                    prefixBN: data.empPrefixBN,
+                    armyRank: data.empRank,
+                    armyRankBN: data.empRankBN,
+                    rabUnit: data.empRABUnit,
+                    rabUnitBN: data.empRABUnitBN
+                } as any;
+            }
+
+            // Wing name from view
+            if (data.empWingName) this.wingName = data.empWingName;
+            if (data.empWingNameBN) this.wingNameBN = data.empWingNameBN;
+
+            // Application data from view
+            if (data.appFromDate) {
+                this.exBdApplication = {
+                    visitTypeId: data.appVisitTypeId,
+                    fromDate: data.appFromDate,
+                    toDate: data.appToDate,
+                    totalDays: data.appTotalDays ?? 0,
+                    destinationCountriesJson: data.appDestinationCountriesJson,
+                    familyMembersJson: data.appFamilyMembersJson
+                } as any;
+            }
+
+            // Use pre-resolved display strings from the view
+            this._viewCountriesDisplay = data.appCountriesDisplay || '';
+            this._viewCountriesDisplayBN = data.appCountriesDisplayBN || '';
+            this._viewFamilyDisplay = data.appFamilyMembersDisplay || '';
+            this._viewPurposeName = data.appVisitTypeName || '';
+            this._viewPurposeNameBN = data.appVisitTypeNameBN || '';
+
+            this._paraCache = null;
+            this.cdr.detectChanges();
+        });
+    }
+
+    /** Pre-resolved display strings from the view */
+    _viewCountriesDisplay = '';
+    _viewCountriesDisplayBN = '';
+    _viewFamilyDisplay = '';
+    _viewPurposeName = '';
+    _viewPurposeNameBN = '';
+
+    private loadEmployeeFallback(ns: any): void {
+        if (ns?.employeeId && ns.employeeId > 0) {
             this.servingMembersService.getEmployeePersonalServiceOverview(ns.employeeId)
                 .pipe(catchError(() => of(null)))
                 .subscribe(emp => { this.leaveEmployee = emp; });
         }
 
-        if (ns.wingBattalionId && ns.wingBattalionId > 0 && ns.unitId && ns.unitId > 0) {
+        if (ns?.wingBattalionId && ns.wingBattalionId > 0 && ns.unitId && ns.unitId > 0) {
             this.masterBasicSetup.getByParentId(ns.unitId)
                 .pipe(catchError(() => of([])))
                 .subscribe(list => {
-                    const found = (list ?? []).find(c => c.codeId === ns.wingBattalionId);
+                    const found = (list ?? []).find((c: any) => c.codeId === ns.wingBattalionId);
                     if (found) {
                         this.wingName = found.codeValueEN || '';
                         this.wingNameBN = found.codeValueBN || '';
@@ -298,18 +377,19 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
                 });
         }
 
-        if (ns.employeeId && ns.employeeId > 0 && ns.familyInfoJson) {
-            try {
-                const famIds = JSON.parse(ns.familyInfoJson) as { employeeId?: number; familyMemberId?: number; FamilyMemberId?: number }[];
-                if (Array.isArray(famIds) && famIds.length > 0) {
-                    this.familyInfoService.getFamilyInfoByEmployeeView(ns.employeeId)
-                        .pipe(catchError(() => of([])))
-                        .subscribe(allFam => {
-                            const selectedIds = famIds.map(f => f.familyMemberId ?? f.FamilyMemberId ?? 0);
-                            this.familyMembers = (allFam ?? []).filter(f => selectedIds.includes(f.ser));
-                        });
-                }
-            } catch { /* ignore */ }
+        // Load ExBdLeaveApplication separately
+        const noteSheetId = ns?.noteSheetId ?? (ns as any)?.NoteSheetId;
+        if (noteSheetId) {
+            this.exBdLeaveAppService.getByNoteSheetId(noteSheetId)
+                .pipe(catchError(() => of(null)))
+                .subscribe(app => {
+                    if (!app) return;
+                    this.exBdApplication = app;
+                    this.appCountries = ExBdLeaveApplicationService.parseCountries(app.destinationCountriesJson);
+                    this.appFamilyMembers = ExBdLeaveApplicationService.parseFamilyMembers(app.familyMembersJson);
+                    this._paraCache = null;
+                    this.cdr.detectChanges();
+                });
         }
     }
 
@@ -350,24 +430,33 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
         const empName = emp ? (bn ? (emp.nameBN || emp.nameEnglish) : emp.nameEnglish) || '' : '';
         const rank = emp ? (bn ? (emp.armyRankBN || emp.armyRank) : emp.armyRank) || '' : '';
 
-        let familyText = '';
-        if (this.familyMembers.length > 0) {
-            const parts = this.familyMembers.map(f => {
-                const rel = bn ? (f.relationBN || f.relation) : f.relation;
-                const name = bn ? (f.nameBN || f.name) : f.name;
-                return rel && name ? `${rel}-${name}` : (name || rel || '');
-            }).filter(Boolean);
-            familyText = parts.join(', ');
-        }
+        // ── Data from ExBdLeaveApplication (prefer pre-resolved view data) ──
+        const app = this.exBdApplication;
 
-        const country = ns.destinationCountryId != null ? this.getCountryLabel(ns.destinationCountryId) : '';
-        const purposeId = ns.purposeOfExBdLeaveId ?? (ns as any).purposeId ?? null;
-        const purpose = purposeId != null ? this.getPurposeLabel(purposeId) : '';
-        const visitFrom = ns.dateOfVisitFrom ?? (ns as any).fromDate ?? null;
-        const visitTo = ns.dateOfVisitTo ?? (ns as any).toDate ?? null;
+        // Family: prefer pre-resolved from view
+        const familyText = this._viewFamilyDisplay
+            || this.appFamilyMembers.map(f => {
+                const rel = f.relation || '';
+                const name = f.nameEN || '';
+                return rel && name ? `${rel}-${name}` : (name || rel || '');
+            }).filter(Boolean).join(', ');
+
+        // Countries: prefer pre-resolved from view
+        const countryText = bn
+            ? (this._viewCountriesDisplayBN || this._viewCountriesDisplay || this.appCountries.map(c => c.countryName).filter(Boolean).join(', '))
+            : (this._viewCountriesDisplay || this.appCountries.map(c => c.countryName).filter(Boolean).join(', '));
+
+        // Purpose: prefer pre-resolved from view
+        const purpose = bn
+            ? (this._viewPurposeNameBN || this._viewPurposeName || (app?.visitTypeId != null ? this.getPurposeLabel(app.visitTypeId) : ''))
+            : (this._viewPurposeName || (app?.visitTypeId != null ? this.getPurposeLabel(app.visitTypeId) : ''));
+
+        // Dates from application
+        const visitFrom = app?.fromDate ?? null;
+        const visitTo = app?.toDate ?? null;
         const fromDate = visitFrom ? this.formatMonthYear(visitFrom) : '';
         const toDate = visitTo ? this.formatMonthYear(visitTo) : '';
-        let totalDays = ns.totalDays ?? (ns as any).totalDays ?? 0;
+        let totalDays = app?.totalDays ?? 0;
         if (!totalDays && visitFrom && visitTo) {
             try {
                 const f = new Date(visitFrom), t = new Date(visitTo);
@@ -377,24 +466,29 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
             } catch { /* ignore */ }
         }
         const totalDaysBN = bn ? this.toBanglaDigits(totalDays) : String(totalDays);
+        const totalDaysWord = bn ? this.numberToBanglaWord(totalDays) : '';
 
         let text = '';
         if (bn) {
             text = 'র‍্যাব প্রেষণে নিয়োজিত বর্তমানে';
             if (unitName) text += ` ${unitName}`;
-            text += ` এ কর্মরত ${rabId} ${rank} ${empName}`;
+            text += ` এ কর্মরত ${rabId} ${empName}`;
             if (purpose) text += ` এর নিজের ${purpose}র জন্য`;
             if (familyText) text += ` নিজ এবং পরিবারবর্গ (${familyText})`;
             if (fromDate && toDate) text += ` আগামী ${fromDate} হতে ${toDate} তারিখ পর্যন্ত`;
-            if (totalDays > 0) text += ` ${totalDaysBN} দিন অথবা উল্লিখিত সময়ের মধ্যে যাত্রার তারিখ হতে ${totalDaysBN} দিন`;
-            if (country) text += ` ${country} গমনের জন্য`;
+            if (totalDays > 0) {
+                const daysDisplay = totalDaysWord ? `${totalDaysBN} (${totalDaysWord})` : totalDaysBN;
+                text += ` ${daysDisplay} দিন অথবা উল্লিখিত সময়ের মধ্যে যাত্রার তারিখ হতে ${daysDisplay} দিন`;
+            }
+            if (countryText) text += ` ${countryText} গমনের জন্য`;
+            text += ' অর্জিত';
         } else {
             text = `Currently, working at the ${unitName}`;
             if (wing) text += `, ${wing}`;
             text += `, ${rabId}: ${rank} ${empName}`;
             text += `, has submitted a request for a security clearance`;
             if (familyText) text += ` for his family ${familyText}`;
-            if (country) text += ` to travel to ${country}`;
+            if (countryText) text += ` to travel to ${countryText}`;
             if (purpose) text += ` for ${purpose}`;
             if (fromDate && toDate) text += ` from ${fromDate} to ${toDate}`;
             if (totalDays > 0) text += `, or within ${totalDays} days from the date of travel`;
@@ -431,15 +525,17 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
             ? ns.finalApprovalId
             : (ns.finalApproverId && ns.finalApproverId > 0 ? ns.finalApproverId : null);
 
-        // ExBD-specific fields
+        // ExBD-specific fields (from application)
         this.editEmployeeId = ns.employeeId ?? null;
-        this.editPurposeId = ns.purposeOfExBdLeaveId ?? (ns as any).purposeId ?? null;
-        this.editCountryId = ns.destinationCountryId ?? (ns as any).DestinationCountryId ?? null;
-        const rawFrom = ns.dateOfVisitFrom ?? (ns as any).fromDate ?? null;
-        const rawTo = ns.dateOfVisitTo ?? (ns as any).toDate ?? null;
+        const app = this.exBdApplication;
+        this.editPurposeId = app?.visitTypeId ?? null;
+        const appCountryIds = this.appCountries.map(c => c.countryId).filter(Boolean);
+        this.editCountryId = appCountryIds.length > 0 ? appCountryIds[0] : null;
+        const rawFrom = app?.fromDate ?? null;
+        const rawTo = app?.toDate ?? null;
         this.editDateFrom = rawFrom ? new Date(rawFrom) : null;
         this.editDateTo = rawTo ? new Date(rawTo) : null;
-        this.editFamilyMemberIds = this.parseFamilyMemberIds();
+        this.editFamilyMemberIds = this.appFamilyMembers.map(f => f.fmid).filter(Boolean);
 
         if (this.employeeOptions.length === 0) this.loadEmployeeOptions();
         this.loadPurposeOptions();
@@ -524,9 +620,6 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
         this.saving = true;
 
         const recommendersJson = this.buildRecommendersJson();
-        const familyInfoJson = this.editFamilyMemberIds.length > 0
-            ? JSON.stringify(this.editFamilyMemberIds.map(id => ({ employeeId: this.editEmployeeId, familyMemberId: id })))
-            : null;
         const now = new Date().toISOString();
 
         const resolvedSubject = this.getSubjectLabel(this.editExBdLeaveSubjectId) || this.editSubject;
@@ -544,11 +637,7 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
             recommendersJson,
             finalApprovalId: this.editFinalApproverId ?? null,
             employeeId: this.editEmployeeId ?? null,
-            purposeId: this.editPurposeId ?? null,
-            destinationCountryId: this.editCountryId ?? null,
-            fromDate: this.editDateFrom ? this.formatDateOnly(this.editDateFrom) : null,
-            toDate: this.editDateTo ? this.formatDateOnly(this.editDateTo) : null,
-            familyInfoJson,
+            exBdLeaveApplicationId: this.exBdApplication?.exBdLeaveApplicationId ?? this.noteSheet.exBdLeaveApplicationId ?? null,
             lastUpdatedBy: this.noteSheet.lastUpdatedBy ?? this.noteSheet.createdBy ?? 'system',
             lastupdate: now
         };
@@ -573,7 +662,9 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
         this.approversDetails = [];
         this.preparedByDetails = null;
         this.leaveEmployee = null;
-        this.familyMembers = [];
+        this.exBdApplication = null;
+        this.appCountries = [];
+        this.appFamilyMembers = [];
         this._paraCache = null;
         this.lastMeasuredHeight = 0;
         this.pageOffsets = [0];
@@ -876,14 +967,6 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
                 recomender_approved_date: existing?.recomender_approved_date ?? null
             };
         }));
-    }
-
-    private parseFamilyMemberIds(): number[] {
-        if (!this.noteSheet?.familyInfoJson) return [];
-        try {
-            const arr = JSON.parse(this.noteSheet.familyInfoJson) as any[];
-            return Array.isArray(arr) ? arr.map(f => f.familyMemberId ?? f.FamilyMemberId ?? 0).filter(Boolean) : [];
-        } catch { return []; }
     }
 
     private formatDateOnly(d: Date): string {

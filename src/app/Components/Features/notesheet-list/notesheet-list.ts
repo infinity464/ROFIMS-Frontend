@@ -42,6 +42,7 @@ import { EmployeeList } from '@/models/employee-list.model';
 import { EmployeeListService } from '@/services/employee-list.service';
 import { IsSendingNotesheetStatus } from '@/models/enums';
 import { ForeignVisitInfoService } from '@/services/foreign-visit-info.service';
+import { ExBdLeaveApplicationService } from '@/services/ex-bd-leave-application.service';
 import { PostingOrderPreviewComponent } from './posting-order-preview/posting-order-preview';
 import { NotesheetSignatoryComponent } from '@/Components/Common/notesheet-signatory/notesheet-signatory';
 import {
@@ -109,19 +110,14 @@ export interface NoteSheetInfoFull extends NoteSheetInfoRow {
   finalApprovalCancelRemark?: string;
   finalApprovalApprovedDate?: string;
   // ── Other ──────────────────────────────────────────────
-  familyInfoJson?: string;
   filesReferences?: string;
   createdBy?: string;
   lastUpdatedBy?: string;
   createdDate?: string;
   lastupdate?: string;
   /** Ex-BD Leave specific */
+  exBdLeaveApplicationId?: number | null;
   exBdLeaveSubjectId?: number | null;
-  purposeOfExBdLeaveId?: number | null;
-  destinationCountryId?: number | null;
-  dateOfVisitFrom?: string | null;
-  dateOfVisitTo?: string | null;
-  totalDays?: number | null;
   /** New Posting specific */
   draftPostingMasterId?: number | null;
   note?: string | null;
@@ -310,6 +306,7 @@ export class NotesheetListComponent implements OnInit {
     private commonCodeService: CommonCodeService,
     private servingMembersService: ServingMembersService,
     private foreignVisitService: ForeignVisitInfoService,
+    private exBdLeaveApplicationService: ExBdLeaveApplicationService,
     private employeeListService: EmployeeListService
   ) {}
 
@@ -764,17 +761,6 @@ export class NotesheetListComponent implements OnInit {
     if (this.isPreviewNewPosting())
       return en ? 'Posting Order Note-Sheet – Preview' : 'পোস্টিং অর্ডার মন্তব্যপত্র – প্রাকদর্শন';
     return en ? 'Note Sheet – Preview' : 'মন্তব্যপত্র – প্রাকদর্শন';
-  }
-
-  /** Short summary of family members for Ex-BD preview (e.g. "2 member(s)" or empty). */
-  getPreviewExBdFamilySummary(): string {
-    const json = this.previewNoteSheet?.familyInfoJson;
-    if (!json || typeof json !== 'string') return '';
-    try {
-      const arr = JSON.parse(json) as unknown[];
-      if (Array.isArray(arr) && arr.length > 0) return `${arr.length} member(s)`;
-    } catch { /* ignore */ }
-    return '';
   }
 
   /** Sanitized main text for preview (formal doc uses same content). */
@@ -1602,62 +1588,69 @@ export class NotesheetListComponent implements OnInit {
           return;
         }
 
-        const currentUser = this.sharedService.getCurrentUser?.() ?? 'system';
-        const familyIds = this.parseFamilyIds(ns.familyInfoJson);
-        const d = ns as any;
-
-        this.foreignVisitService.saveVisit({
-          employeeId: ns.employeeId,
-          foreignVisitId: 0,
-          subjectId: ns.exBdLeaveSubjectId ?? d.ExBdLeaveSubjectId ?? null,
-          destinationCountryId: ns.destinationCountryId ?? d.DestinationCountryId ?? null,
-          visitId: ns.purposeOfExBdLeaveId ?? d.PurposeId ?? d.purposeId ?? null,
-          fromDate: ns.dateOfVisitFrom ?? d.FromDate ?? d.fromDate ?? null,
-          toDate: ns.dateOfVisitTo ?? d.ToDate ?? d.toDate ?? null,
-          withFamily: familyIds.length > 0,
-          auth: ns.noteSheetNo ?? null,
-          remarks: ns.note ?? null,
-          fileName: null,
-          filesReferences: ns.filesReferences ?? null,
-          createdBy: currentUser,
-          lastUpdatedBy: currentUser
-        }).subscribe({
-          next: (res: any) => {
-            const entity = res?.data ?? res?.Data ?? res;
-            const newVisitId = entity?.foreignVisitId ?? entity?.ForeignVisitId
-              ?? (Array.isArray(entity) ? entity[0]?.foreignVisitId ?? entity[0]?.ForeignVisitId : null);
-
-            if (familyIds.length > 0 && newVisitId != null) {
-              familyIds.forEach(familyId => {
-                this.foreignVisitService.saveFamilyMember({
-                  employeeId: ns.employeeId!,
-                  foreignVisitFamilyId: 0,
-                  foreignVisitId: newVisitId,
-                  familyId,
-                  remarks: null,
-                  createdBy: currentUser,
-                  lastUpdatedBy: currentUser
-                }).subscribe({
-                  next: () => {},
-                  error: (err: any) => this.messageService.add({ severity: 'warn', summary: 'Warning', detail: err?.error?.message || 'Failed to add family member to foreign visit record.' })
-                });
-              });
+        this.exBdLeaveApplicationService.getByNoteSheetId(ns.noteSheetId).pipe(
+          catchError(() => of(null))
+        ).subscribe({
+          next: (app) => {
+            if (!app) {
+              this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Failed to load Ex-BD leave application for foreign visit creation.' });
+              return;
             }
-          },
-          error: (err: any) => this.messageService.add({ severity: 'warn', summary: 'Warning', detail: err?.error?.message || 'Failed to create foreign visit entry from ExBD Leave notesheet.' })
+
+            const currentUser = this.sharedService.getCurrentUser?.() ?? 'system';
+            const familyIds = ExBdLeaveApplicationService
+              .parseFamilyMembers(app.familyMembersJson)
+              .map(f => f.fmid)
+              .filter(id => id > 0);
+            const countryIds = ExBdLeaveApplicationService
+              .parseCountries(app.destinationCountriesJson)
+              .map(c => c.countryId)
+              .filter(id => id > 0);
+
+            this.foreignVisitService.saveVisit({
+              employeeId: app.applicantEmployeeId || ns.employeeId,
+              foreignVisitId: 0,
+              subjectId: ns.exBdLeaveSubjectId ?? null,
+              destinationCountryId: countryIds.length > 0 ? countryIds[0] : null,
+              visitId: app.visitTypeId ?? null,
+              fromDate: app.fromDate ?? null,
+              toDate: app.toDate ?? null,
+              withFamily: familyIds.length > 0,
+              auth: ns.noteSheetNo ?? null,
+              remarks: ns.note ?? app.remarks ?? null,
+              fileName: null,
+              filesReferences: app.filesReferencesJson ?? ns.filesReferences ?? null,
+              createdBy: currentUser,
+              lastUpdatedBy: currentUser
+            }).subscribe({
+              next: (res: any) => {
+                const entity = res?.data ?? res?.Data ?? res;
+                const newVisitId = entity?.foreignVisitId ?? entity?.ForeignVisitId
+                  ?? (Array.isArray(entity) ? entity[0]?.foreignVisitId ?? entity[0]?.ForeignVisitId : null);
+
+                if (familyIds.length > 0 && newVisitId != null) {
+                  familyIds.forEach(familyId => {
+                    this.foreignVisitService.saveFamilyMember({
+                      employeeId: app.applicantEmployeeId || ns.employeeId!,
+                      foreignVisitFamilyId: 0,
+                      foreignVisitId: newVisitId,
+                      familyId,
+                      remarks: null,
+                      createdBy: currentUser,
+                      lastUpdatedBy: currentUser
+                    }).subscribe({
+                      next: () => {},
+                      error: (err: any) => this.messageService.add({ severity: 'warn', summary: 'Warning', detail: err?.error?.message || 'Failed to add family member to foreign visit record.' })
+                    });
+                  });
+                }
+              },
+              error: (err: any) => this.messageService.add({ severity: 'warn', summary: 'Warning', detail: err?.error?.message || 'Failed to create foreign visit entry from ExBD Leave application.' })
+            });
+          }
         });
       }
     });
-  }
-
-  private parseFamilyIds(familyInfoJson?: string | null): number[] {
-    if (!familyInfoJson || typeof familyInfoJson !== 'string') return [];
-    try {
-      const arr = JSON.parse(familyInfoJson) as any[];
-      return Array.isArray(arr)
-        ? arr.map((f: any) => f.familyMemberId ?? f.FamilyMemberId ?? 0).filter((id: number) => id > 0)
-        : [];
-    } catch { return []; }
   }
 
   submitForApproval(row: NoteSheetInfoRow): void {

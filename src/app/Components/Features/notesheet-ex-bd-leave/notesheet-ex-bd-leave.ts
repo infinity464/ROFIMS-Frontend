@@ -34,7 +34,7 @@ import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.serv
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
 import { PostingService } from '@/services/posting.service';
 import { ExBdLeaveApplicationService, ExBdLeaveApplicationListViewModel } from '@/services/ex-bd-leave-application.service';
-import { NoteSheetType, NoteSheetCurrentStatus, ApprovalStatus, NoteSheetOperationTypeOptions, CodeType } from '@/models/enums';
+import { NoteSheetType, NoteSheetCurrentStatus, ApprovalStatus, NoteSheetOperationType, NoteSheetOperationTypeOptions, CodeType } from '@/models/enums';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import { NotesheetApproverSelectComponent } from '@/Components/Common/notesheet-approver-select/notesheet-approver-select';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
@@ -145,11 +145,6 @@ export class NotesheetExBdLeaveComponent implements OnInit {
     editExBdLeaveSubjectId: number | null = null;
     editMainText = '';
     editReferenceNumber = '';
-    editPurposeId: number | null = null;
-    editDestinationCountryId: number | null = null;
-    editDateOfVisitFrom: Date | null = null;
-    editDateOfVisitTo: Date | null = null;
-    editTotalDays = 0;
 
     private readonly stepTranslations: Record<string, string> = {
         'Prepared by': 'প্রস্তুতকারী',
@@ -186,7 +181,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             branchId: [null as number | null],
             referenceNumber: [''],
             noteSheetNo: [''],
-            noteSheetOperationType: [null as string | null, Validators.required],
+            noteSheetOperationType: [NoteSheetOperationType.Manual as string | null, Validators.required],
             isSecret: [false],
             rabIdEmployeeId: [null as number | null, Validators.required], // employee ID when RAB ID selected
             subject: [''],
@@ -1003,10 +998,6 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         const d = this.form.getRawValue();
         const now = new Date().toISOString();
         const preparedBy = (d.preparedBy && String(d.preparedBy).trim()) || 'system';
-        const familyIds = (d.familyMemberIds as number[]) || [];
-        const familyInfoJson = familyIds.length && this.selectedEmployeeId
-            ? JSON.stringify(familyIds.map((fmid) => ({ employeeId: this.selectedEmployeeId, familyMemberId: fmid })))
-            : null;
         const recommenderIds: number[] = Array.isArray(d.recommenderIds) ? d.recommenderIds : [];
         const recommendersJson = recommenderIds.length
             ? JSON.stringify(recommenderIds.map((id: number, idx: number) => ({
@@ -1046,14 +1037,6 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             initiatorId: d.initiatorId ?? 0,
             recommendersJson,
             finalApprovalId: d.finalApproverId ?? null,
-            familyInfoJson,
-            purposeId: d.purposeOfExBdLeaveId ?? null,
-            destinationCountryId: Array.isArray(d.destinationCountryIds) && d.destinationCountryIds.length > 0 ? d.destinationCountryIds[0] : null,
-            destinationCountriesJson: Array.isArray(d.destinationCountryIds) && d.destinationCountryIds.length > 0
-                ? JSON.stringify(d.destinationCountryIds.map((id: number) => ({ countryId: id })))
-                : null,
-            fromDate: this.formatDate(d.dateOfVisitFrom),
-            toDate: this.formatDate(d.dateOfVisitTo),
             createdBy: preparedBy,
             lastUpdatedBy: preparedBy,
             createdDate: now,
@@ -1202,16 +1185,6 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         } catch { return []; }
     }
 
-    getViewFamilySummary(): string {
-        const json = this.viewNoteSheet?.familyInfoJson;
-        if (!json || typeof json !== 'string') return '';
-        try {
-            const arr = JSON.parse(json) as unknown[];
-            if (Array.isArray(arr) && arr.length > 0) return `${arr.length} member(s)`;
-        } catch { /* ignore */ }
-        return '';
-    }
-
     onViewDownloadDoc(fileId: number, fileName: string): void {
         this.empService.downloadFile(fileId).subscribe({
             next: (blob) => this.empService.triggerFileDownload(blob, fileName),
@@ -1238,26 +1211,11 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         this.editExBdLeaveSubjectId = ns?.exBdLeaveSubjectId ?? null;
         this.editMainText = ns?.mainText ?? '';
         this.editReferenceNumber = ns?.referenceNumber ?? '';
-        this.editPurposeId = ns?.purposeId ?? ns?.purposeOfExBdLeaveId ?? null;
-        this.editDestinationCountryId = ns?.destinationCountryId ?? null;
-        this.editDateOfVisitFrom = this.parseDate(ns?.fromDate ?? ns?.dateOfVisitFrom);
-        this.editDateOfVisitTo = this.parseDate(ns?.toDate ?? ns?.dateOfVisitTo);
-        this.editTotalDays = ns?.totalDays ?? 0;
         this.viewEditing = true;
     }
 
     cancelViewEdit(): void {
         this.viewEditing = false;
-    }
-
-    calculateEditTotalDays(): void {
-        if (this.editDateOfVisitFrom && this.editDateOfVisitTo) {
-            const from = this.editDateOfVisitFrom.getTime();
-            const to = this.editDateOfVisitTo.getTime();
-            this.editTotalDays = Math.max(0, Math.ceil((to - from) / (1000 * 60 * 60 * 24)) + 1);
-        } else {
-            this.editTotalDays = 0;
-        }
     }
 
     /** Resolve a codeId to its label from dropdown options */
@@ -1376,13 +1334,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             subject: resolvedSubject,
             exBdLeaveSubjectId: this.editExBdLeaveSubjectId,
             mainText: this.editMainText,
-            referenceNumber: this.editReferenceNumber,
-            purposeId: this.editPurposeId,
-            purposeOfExBdLeaveId: this.editPurposeId,
-            destinationCountryId: this.editDestinationCountryId,
-            fromDate: this.formatDate(this.editDateOfVisitFrom),
-            toDate: this.formatDate(this.editDateOfVisitTo),
-            totalDays: this.editTotalDays
+            referenceNumber: this.editReferenceNumber
         };
         const api = `${environment.apis.core}/NoteSheetInfo`;
         this.http.post<{ statusCode?: number }>(`${api}/UpdateAsyn`, payload).subscribe({
@@ -1393,12 +1345,6 @@ export class NotesheetExBdLeaveComponent implements OnInit {
                     this.viewNoteSheet.exBdLeaveSubjectId = this.editExBdLeaveSubjectId;
                     this.viewNoteSheet.mainText = this.editMainText;
                     this.viewNoteSheet.referenceNumber = this.editReferenceNumber;
-                    this.viewNoteSheet.purposeId = this.editPurposeId;
-                    this.viewNoteSheet.purposeOfExBdLeaveId = this.editPurposeId;
-                    this.viewNoteSheet.destinationCountryId = this.editDestinationCountryId;
-                    this.viewNoteSheet.fromDate = this.formatDate(this.editDateOfVisitFrom);
-                    this.viewNoteSheet.toDate = this.formatDate(this.editDateOfVisitTo);
-                    this.viewNoteSheet.totalDays = this.editTotalDays;
                     this.viewEditing = false;
                     this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Note sheet updated.' });
                 } else {

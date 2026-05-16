@@ -54,7 +54,6 @@ export interface NoteSheetInfoFull {
     // ── Workflow state ─────────────────────────────────────────────────
     currentStatus?: string;
     // ── Audit ──────────────────────────────────────────────────────────
-    familyInfoJson?: string;
     createdBy?: string;
     lastUpdatedBy?: string;
     createdDate?: string;
@@ -62,12 +61,8 @@ export interface NoteSheetInfoFull {
     isDeleted?: boolean;
     deletedBy?: string;
     // ── Leave (ExBD) ───────────────────────────────────────────────────
+    exBdLeaveApplicationId?: number | null;
     exBdLeaveSubjectId?: number | null;
-    purposeOfExBdLeaveId?: number | null;
-    destinationCountryId?: number | null;
-    dateOfVisitFrom?: string | null;
-    dateOfVisitTo?: string | null;
-    totalDays?: number | null;
     note?: string | null;
     preparedByEmployeeId?: number | null;
     // ── Legacy (kept for old cached data) ─────────────────────────────
@@ -470,6 +465,34 @@ export abstract class NotesheetPreviewBase implements OnInit {
         return String(input).replace(/[0-9]/g, (d) => map[d] ?? d);
     }
 
+    /** Convert a number (1-99) to Bangla word. E.g. 10 → দশ, 15 → পনেরো */
+    numberToBanglaWord(n: number): string {
+        if (n <= 0 || n > 99) return '';
+        const words: Record<number, string> = {
+            1: 'এক', 2: 'দুই', 3: 'তিন', 4: 'চার', 5: 'পা���চ',
+            6: 'ছয়', 7: 'সাত', 8: 'আট', 9: 'নয়', 10: 'দশ',
+            11: 'এগারো', 12: 'বারো', 13: 'তেরো', 14: 'চৌদ্দ', 15: 'পনেরো',
+            16: 'ষোলো', 17: 'সতেরো', 18: 'আঠারো', 19: 'উনিশ', 20: 'বিশ',
+            21: 'একুশ', 22: 'বাইশ', 23: 'তেইশ', 24: 'চব্বিশ', 25: 'পঁচিশ',
+            26: 'ছাব্বিশ', 27: 'সাতাশ', 28: 'আঠাশ', 29: 'উনত্রিশ', 30: 'ত্রিশ',
+            31: 'একত্রিশ', 32: 'বত্রিশ', 33: 'তেত্রিশ', 34: 'চৌত্রিশ', 35: 'পঁয়ত্রিশ',
+            36: 'ছত্রিশ', 37: 'সাতত্রিশ', 38: 'আটত্রিশ', 39: 'উনচল্লিশ', 40: 'চল্লিশ',
+            41: 'একচল্লিশ', 42: 'ব��য়াল্লিশ', 43: 'তেতাল্লিশ', 44: 'চুয়াল্লিশ', 45: 'পঁয়তাল্লিশ',
+            46: 'ছেচল্লিশ', 47: 'সাতচল্লিশ', 48: 'আটচল্লিশ', 49: 'উনপঞ্চাশ', 50: 'পঞ্চাশ',
+            51: 'একান্ন', 52: 'বায়ান্ন', 53: 'তিপান্ন', 54: 'চুয়ান্ন', 55: 'পঞ্চান্ন',
+            56: 'ছাপান্ন', 57: 'সাতান্ন', 58: 'আটান্ন', 59: 'উনষাট', 60: 'ষাট',
+            61: 'একষট্টি', 62: 'বাষট্টি', 63: 'তেষট্টি', 64: 'চৌষট্টি', 65: 'পঁয়ষট্টি',
+            66: 'ছেষট্টি', 67: 'সাতষট্টি', 68: 'আটষট্টি', 69: 'উনসত্তর', 70: 'সত্তর',
+            71: 'একাত্তর', 72: 'বাহাত্তর', 73: 'তিয়াত্তর', 74: 'চুয়াত্তর', 75: 'পঁচাত্তর',
+            76: 'ছিয়াত্তর', 77: 'সাতাত্তর', 78: 'আটাত্তর', 79: 'উনআশি', 80: 'আশি',
+            81: 'একাশি', 82: 'বিরাশি', 83: 'তিরাশি', 84: 'চুরাশি', 85: 'পঁচাশি',
+            86: 'ছিয়াশি', 87: 'সাতাশি', 88: 'আটাশি', 89: 'উননব্বই', 90: 'নব্বই',
+            91: 'একানব্বই', 92: 'বিরানব্বই', 93: 'তিরানব্বই', 94: 'চুরানব্বই', 95: 'পঁচানব্বই',
+            96: 'ছিয়ানব্বই', 97: 'সাতানব্বই', 98: 'আটানব্বই', 99: 'নিরানব্বই'
+        };
+        return words[n] ?? '';
+    }
+
     getMainTextSafe(): SafeHtml {
         const raw = this.noteSheet?.mainText ?? '';
         if (this._mainTextCache?.raw === raw) return this._mainTextCache.safe;
@@ -530,16 +553,6 @@ export abstract class NotesheetPreviewBase implements OnInit {
         if (id == null) return '';
         if (!this.isEnglish()) return this.countryLabelMapBN[id] || this.countryLabelMap[id] || '';
         return this.countryLabelMap[id] ?? '';
-    }
-
-    getFamilySummary(): string {
-        const json = this.noteSheet?.familyInfoJson;
-        if (!json || typeof json !== 'string') return '';
-        try {
-            const arr = JSON.parse(json) as unknown[];
-            if (Array.isArray(arr) && arr.length > 0) return `${arr.length} member(s)`;
-        } catch { /* ignore */ }
-        return '';
     }
 
     shouldShowSignature(step: string): boolean {
@@ -793,16 +806,6 @@ export abstract class NotesheetPreviewBase implements OnInit {
         const mainTables = htmlToTables(this.noteSheet.mainText ?? '');
         for (const t of mainTables) children.push(t);
 
-        // ExBD leave info
-        if (this.isExBdLeave()) {
-            const parts: string[] = [];
-            if (this.noteSheet.purposeOfExBdLeaveId != null) parts.push(`${bn ? 'উদ্দেশ্য:' : 'Purpose:'} ${this.getPurposeLabel(this.noteSheet.purposeOfExBdLeaveId)}`);
-            if (this.noteSheet.destinationCountryId  != null) parts.push(`${bn ? 'গন্তব্য দেশ:' : 'Destination:'} ${this.getCountryLabel(this.noteSheet.destinationCountryId)}`);
-            if (this.noteSheet.dateOfVisitFrom || this.noteSheet.dateOfVisitTo) parts.push(`${bn ? 'সফরকাল:' : 'Visit:'} ${this.formatDate(this.noteSheet.dateOfVisitFrom)} - ${this.formatDate(this.noteSheet.dateOfVisitTo)}`);
-            if (this.noteSheet.totalDays && this.noteSheet.totalDays > 0) parts.push(`${bn ? 'মোট দিন:' : 'Total Days:'} ${this.noteSheet.totalDays}`);
-            if (parts.length) children.push(new Paragraph({ children: [new TextRun({ text: parts.join(' | '), ...runProps, size: 20 })], spacing: { after: 200 } }));
-        }
-
         // Posting table
         if (this.isNewPosting() && this.postingEmployees.length > 0) {
             const cols = bn
@@ -918,15 +921,6 @@ export abstract class NotesheetPreviewBase implements OnInit {
         if (this.noteSheet.referenceNumber) metaParts.push(`<strong>${bn ? 'সুত্র:' : 'Reference:'}</strong> ${this.escapeHtml(this.noteSheet.referenceNumber)}`);
 
         let extraHtml = '';
-        if (this.isExBdLeave()) {
-            const parts: string[] = [];
-            if (this.noteSheet.purposeOfExBdLeaveId != null) parts.push(`${bn ? 'উদ্দেশ্য:' : 'Purpose:'} ${this.getPurposeLabel(this.noteSheet.purposeOfExBdLeaveId)}`);
-            if (this.noteSheet.destinationCountryId  != null) parts.push(`${bn ? 'গন্তব্য দেশ:' : 'Destination:'} ${this.getCountryLabel(this.noteSheet.destinationCountryId)}`);
-            if (this.noteSheet.dateOfVisitFrom || this.noteSheet.dateOfVisitTo) parts.push(`${bn ? 'সফরকাল:' : 'Visit:'} ${this.formatDate(this.noteSheet.dateOfVisitFrom)} - ${this.formatDate(this.noteSheet.dateOfVisitTo)}`);
-            if (this.noteSheet.totalDays && this.noteSheet.totalDays > 0) parts.push(`${bn ? 'মোট দিন:' : 'Total Days:'} ${this.noteSheet.totalDays}`);
-            if (parts.length > 0) extraHtml = `<div class="exbd-info">${parts.join(' | ')}</div>`;
-        }
-
         if (this.isNewPosting() && this.postingEmployees.length > 0) {
             const cols = bn
                 ? ['ক্রমিক','ব্যক্তিগত নম্বর','পদবি','ট্রেড','নাম','নিজ জেলা (দায়িত্বপূর্ণ এলাকা)','স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)','পূর্ববতী কর্মস্থল (দায়িত্বপূর্ণ এলাকা)','বদলি কর্মস্থল','মন্তব্য']

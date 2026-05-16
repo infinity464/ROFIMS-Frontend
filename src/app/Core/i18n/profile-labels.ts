@@ -41,6 +41,7 @@ export const PROFILE_LABELS = {
     'section.discipline': 'Discipline Information:',
     'section.bankAccount': 'Bank Account Information:',
     'section.additionalRemarks': 'Additional Remarks:',
+    'section.approvedNoteSheets': 'Approved Note Sheets',
     'section.documents': 'Documents',
 
     // Field labels (detail-label)
@@ -158,6 +159,12 @@ export const PROFILE_LABELS = {
     'table.action': 'Action',
     'table.hash': '#',
     'table.count': 'Count',
+    'table.noteSheetNo': 'NoteSheet No',
+    'table.noteSheetDate': 'NoteSheet Date',
+    'table.subject': 'Subject',
+    'table.approvedDate': 'Approved Date',
+    'table.officeOrderNo': 'Office Order No',
+    'table.officeOrderStatus': 'Office Order Status',
 
     // Empty / no-data messages
     'empty.noOwnAddress': 'No own address records.',
@@ -177,6 +184,7 @@ export const PROFILE_LABELS = {
     'empty.noDisciplineRecords': 'No discipline records.',
     'empty.noBankAccountRecords': 'No bank account records.',
     'empty.noAdditionalRemarks': 'No additional remarks.',
+    'empty.noApprovedNoteSheets': 'No approved note sheets.',
     'empty.noDocuments': 'No documents.',
     'empty.noProfileData': 'No profile data available.',
     'empty.noLeavePreviousYear': 'No leave records for previous year.',
@@ -231,6 +239,7 @@ export const PROFILE_LABELS = {
     'section.discipline': 'শৃঙ্খলা সংক্রান্ত তথ্য:',
     'section.bankAccount': 'ব্যাংক অ্যাকাউন্ট তথ্য:',
     'section.additionalRemarks': 'অতিরিক্ত মন্তব্য:',
+    'section.approvedNoteSheets': 'অনুমোদিত নোটশীট',
     'section.documents': 'নথিপত্র',
 
     'field.serviceId': 'সার্ভিস আইডি',
@@ -344,6 +353,12 @@ export const PROFILE_LABELS = {
     'table.action': 'কার্যক্রম',
     'table.hash': '#',
     'table.count': 'সংখ্যা',
+    'table.noteSheetNo': 'নোটশীট নং',
+    'table.noteSheetDate': 'নোটশীট তারিখ',
+    'table.subject': 'বিষয়',
+    'table.approvedDate': 'অনুমোদনের তারিখ',
+    'table.officeOrderNo': 'অফিস আদেশ নং',
+    'table.officeOrderStatus': 'অফিস আদেশ অবস্থা',
 
     'empty.noOwnAddress': 'নিজের ঠিকানার কোন রেকর্ড নেই।',
     'empty.noSpouseAddress': 'স্ত্রী/পতির ঠিকানার কোন রেকর্ড নেই।',
@@ -362,6 +377,7 @@ export const PROFILE_LABELS = {
     'empty.noDisciplineRecords': 'শৃঙ্খলা সংক্রান্ত কোন রেকর্ড নেই।',
     'empty.noBankAccountRecords': 'ব্যাংক অ্যাকাউন্টের কোন রেকর্ড নেই।',
     'empty.noAdditionalRemarks': 'অতিরিক্ত মন্তব্য নেই।',
+    'empty.noApprovedNoteSheets': 'অনুমোদিত নোটশীট নেই।',
     'empty.noDocuments': 'কোন নথি নেই।',
     'empty.noProfileData': 'প্রোফাইল ডেটা উপলব্ধ নয়।',
     'empty.noLeavePreviousYear': 'গত বছরের ছুটির কোন রেকর্ড নেই।',

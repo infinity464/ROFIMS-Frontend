@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
+import { SelectModule } from 'primeng/select';
 import { TagModule } from 'primeng/tag';
 import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
@@ -25,6 +26,7 @@ import {
         TableModule,
         ButtonModule,
         DatePickerModule,
+        SelectModule,
         FlexibleDateDirective,
         TagModule,
         ToastModule,
@@ -45,6 +47,12 @@ export class ExBdLeaveListComponent implements OnInit {
     loading = true;
     filterFromDate: Date | null = null;
     filterToDate: Date | null = null;
+    noteSheetStatusFilter = 'NotGenerated';
+    noteSheetStatusOptions = [
+        { label: 'Notesheet Not Generated', value: 'NotGenerated' },
+        { label: 'Notesheet Generated', value: 'Generated' },
+        { label: 'All', value: '' }
+    ];
 
     ngOnInit(): void {
         this.loadApplications();
@@ -54,7 +62,8 @@ export class ExBdLeaveListComponent implements OnInit {
         this.loading = true;
         const from = this.filterFromDate ? this.toDateString(this.filterFromDate) : undefined;
         const to = this.filterToDate ? this.toDateString(this.filterToDate) : undefined;
-        this.exBdLeaveService.getListView(from, to).subscribe({
+        const nsStatus = this.noteSheetStatusFilter || undefined;
+        this.exBdLeaveService.getListView(from, to, nsStatus).subscribe({
             next: (data) => {
                 this.applications = data;
                 this.loading = false;

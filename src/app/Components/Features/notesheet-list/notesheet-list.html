@@ -458,28 +458,6 @@
         } @else if (previewNoteSheet.subject) {
           <div class="ns-preview-subject">{{ previewNoteSheet.subject }}</div>
         }
-        @if (isPreviewExBdLeave()) {
-          <div class="ns-preview-exbd">
-            <strong class="block mb-1">{{ isPreviewEnglish() ? 'Ex-BD Leave Details' : 'এক্স-বিডি ছুটির বিবরণ' }}</strong>
-            <div class="flex flex-wrap gap-3 mt-1">
-              @if (previewNoteSheet.purposeOfExBdLeaveId != null) {
-                <span>{{ isPreviewEnglish() ? 'Purpose:' : 'উদ্দেশ্য:' }} {{ getPurposeLabel(previewNoteSheet.purposeOfExBdLeaveId) }}</span>
-              }
-              @if (previewNoteSheet.destinationCountryId != null) {
-                <span>{{ isPreviewEnglish() ? 'Destination Country:' : 'গন্তব্য দেশ:' }} {{ getCountryLabel(previewNoteSheet.destinationCountryId) }}</span>
-              }
-              @if (previewNoteSheet.dateOfVisitFrom || previewNoteSheet.dateOfVisitTo) {
-                <span>{{ isPreviewEnglish() ? 'Visit:' : 'সফর:' }} {{ formatDate(previewNoteSheet.dateOfVisitFrom) }} – {{ formatDate(previewNoteSheet.dateOfVisitTo) }}</span>
-              }
-              @if (previewNoteSheet.totalDays != null && previewNoteSheet.totalDays > 0) {
-                <span>{{ isPreviewEnglish() ? 'Total Days:' : 'মোট দিন:' }} {{ previewNoteSheet.totalDays }}</span>
-              }
-              @if (getPreviewExBdFamilySummary()) {
-                <span>{{ isPreviewEnglish() ? 'Family:' : 'পরিবার:' }} {{ getPreviewExBdFamilySummary() }}</span>
-              }
-            </div>
-          </div>
-        }
         <!-- Main text body -->
         <div class="ns-preview-body-section">
           <div class="ns-preview-body-label">{{ isPreviewEnglish() ? 'Content' : 'বিষয়বস্তু' }}</div>

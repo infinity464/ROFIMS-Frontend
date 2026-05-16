@@ -1,7 +1,9 @@
 import { Component, HostListener, OnDestroy, OnInit , inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { UserMenuService } from '@/services/user-menu.service';
 import { CommonModule, Location } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { environment } from '@/Core/Environments/environment';
 import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { MessageService } from 'primeng/api';
@@ -47,6 +49,18 @@ import { EmpAdditionalRemarks } from '@/Components/Features/Emp/emp-additional-r
 import { ExportService, type ProfileExportConfig, type ProfileExportSection } from '@/services/export.service';
 import { PartialDatePipe } from '@/shared/pipes/partial-date.pipe';
 import { formatPartialDate } from '@/shared/utils/partial-date.util';
+
+export interface EmployeeApprovedNoteSheetRow {
+    noteSheetId: number;
+    noteSheetNo: string;
+    noteSheetDate: string;
+    subject: string;
+    finalApprovalApprovedDate: string | null;
+    officeOrderId: number | null;
+    officeOrderLetterNo: string | null;
+    officeOrderLetterDate: string | null;
+    officeOrderStatus: string | null;
+}
 
 @Component({
     selector: 'app-ex-member-profile',
@@ -102,6 +116,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
     rftsTrainingList: RftsTrainingRow[] = [];
     promotionList: PromotionInfoByEmployeeView[] = [];
     documentList: EmployeeDocumentReferenceItem[] = [];
+    approvedNoteSheetList: EmployeeApprovedNoteSheetRow[] = [];
     previousYearSummary: LeaveInfoSummaryItem[] = [];
     previousYearSummaryDialogVisible = false;
     previousYearSummaryLoading = false;
@@ -135,7 +150,8 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         private messageService: MessageService,
         private empService: EmpService,
         private exportService: ExportService,
-        private presentStatusInfoService: PresentStatusInfoService
+        private presentStatusInfoService: PresentStatusInfoService,
+        private http: HttpClient
     ) {}
 
     @HostListener('document:click')
@@ -402,6 +418,19 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         if (remRows.length === 0) remRows.push([L['empty.noAdditionalRemarks']]);
         addSection(L['section.additionalRemarks'], [L['table.ser'], L['table.additionalRemarks']], remRows);
 
+        // Approved Note Sheets
+        const nsRows = this.approvedNoteSheetList.map((row, i) => [
+            this.rowNum(i) + '.',
+            row.noteSheetNo || '—',
+            this.formatDateOnly(row.noteSheetDate),
+            row.subject || '—',
+            this.formatDateOnly(row.finalApprovalApprovedDate),
+            row.officeOrderLetterNo || '—',
+            row.officeOrderStatus || '—',
+        ]);
+        if (nsRows.length === 0) nsRows.push([L['empty.noApprovedNoteSheets']]);
+        addSection(L['section.approvedNoteSheets'], [L['table.ser'], L['table.noteSheetNo'], L['table.noteSheetDate'], L['table.subject'], L['table.approvedDate'], L['table.officeOrderNo'], L['table.officeOrderStatus']], nsRows);
+
         // Documents
         const docRows = this.documentList.map((row, i) => [this.rowNum(i) + '.', this.getDocumentSourceLabel(row), this.getDocumentFileName(row)]);
         if (docRows.length === 0) docRows.push([L['empty.noDocuments']]);
@@ -592,9 +621,10 @@ export class ExMemberProfile implements OnInit, OnDestroy {
             promotion: this.promotionInfoService.getViewByEmployeeId(id),
             documents: this.empService.getEmployeeDocumentReferences(id).pipe(catchError(() => of([]))),
             rftsTraining: this.draftCourseService.getRftsTrainingByEmployeeId(id).pipe(catchError(() => of([]))),
-            presentStatus: this.presentStatusInfoService.getAllByEmployeeId(id).pipe(catchError(() => of([])))
+            presentStatus: this.presentStatusInfoService.getAllByEmployeeId(id).pipe(catchError(() => of([]))),
+            approvedNoteSheets: this.http.get<EmployeeApprovedNoteSheetRow[]>(`${environment.apis.core}/NoteSheetReferenceEmployee/GetApprovedNoteSheetsByEmployeeId/${id}`).pipe(catchError(() => of([])))
         }).subscribe({
-            next: ({ profile, family, previousRab, bankAcc, education, foreignVisit, leaveCurrentYear, additionalRemarks, address, moServHistory, discipline, course, promotion, documents, rftsTraining, presentStatus }) => {
+            next: ({ profile, family, previousRab, bankAcc, education, foreignVisit, leaveCurrentYear, additionalRemarks, address, moServHistory, discipline, course, promotion, documents, rftsTraining, presentStatus, approvedNoteSheets }) => {
                 this.profile = profile;
                 this.familyList = family ?? [];
                 this.loadProfileImage(profile);
@@ -610,6 +640,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
                 this.courseList = course ?? [];
                 this.promotionList = promotion ?? [];
                 this.documentList = documents ?? [];
+                this.approvedNoteSheetList = Array.isArray(approvedNoteSheets) ? approvedNoteSheets : [];
                 this.rftsTrainingList = rftsTraining ?? [];
                 const activeRecord = (presentStatus ?? []).find((r: any) => (r.IsActive ?? r.isActive));
                 if (activeRecord) {

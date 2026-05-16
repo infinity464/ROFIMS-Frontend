@@ -76,28 +76,6 @@
                         <span class="ns-para-no">১।</span>
                         <div class="ns-para-text" [innerHTML]="getMainTextSafe()"></div>
                     </div>
-                    <div class="ns-exbd-info">
-                        <div class="ns-exbd-row" *ngIf="noteSheet.purposeOfExBdLeaveId != null">
-                            <span class="ns-exbd-label">{{ isEnglish() ? 'Purpose:' : 'উদ্দেশ্য:' }}</span>
-                            <span>{{ getPurposeLabel(noteSheet.purposeOfExBdLeaveId) }}</span>
-                        </div>
-                        <div class="ns-exbd-row" *ngIf="noteSheet.destinationCountryId != null">
-                            <span class="ns-exbd-label">{{ isEnglish() ? 'Destination Country:' : 'গন্তব্য দেশ:' }}</span>
-                            <span>{{ getCountryLabel(noteSheet.destinationCountryId) }}</span>
-                        </div>
-                        <div class="ns-exbd-row" *ngIf="noteSheet.dateOfVisitFrom || noteSheet.dateOfVisitTo">
-                            <span class="ns-exbd-label">{{ isEnglish() ? 'Visit Period:' : 'সফরকাল:' }}</span>
-                            <span>{{ formatDate(noteSheet.dateOfVisitFrom) }} – {{ formatDate(noteSheet.dateOfVisitTo) }}</span>
-                        </div>
-                        <div class="ns-exbd-row" *ngIf="noteSheet.totalDays && noteSheet.totalDays > 0">
-                            <span class="ns-exbd-label">{{ isEnglish() ? 'Total Days:' : 'মোট দিন:' }}</span>
-                            <span>{{ noteSheet.totalDays }}</span>
-                        </div>
-                        <div class="ns-exbd-row" *ngIf="getFamilySummary()">
-                            <span class="ns-exbd-label">{{ isEnglish() ? 'Family Members:' : 'পরিবারের সদস্য:' }}</span>
-                            <span>{{ getFamilySummary() }}</span>
-                        </div>
-                    </div>
                 </ng-container>
 
                 <!-- ── New Posting body ─────────────────────────── -->

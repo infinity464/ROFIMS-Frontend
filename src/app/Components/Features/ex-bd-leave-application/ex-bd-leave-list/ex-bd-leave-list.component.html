@@ -2,6 +2,14 @@
   <div class="exbd-list-header">
     <div class="exbd-list-title">Ex-BD Leave Applications</div>
     <div class="flex align-items-center gap-2">
+      <p-select
+        [(ngModel)]="noteSheetStatusFilter"
+        [options]="noteSheetStatusOptions"
+        optionLabel="label"
+        optionValue="value"
+        styleClass="w-14rem"
+        (onChange)="onDateFilterChange()">
+      </p-select>
       <p-datepicker
         [(ngModel)]="filterFromDate"
         placeholder="From Date"
@@ -67,16 +75,18 @@
         <td>{{ app.familyMembersDisplay || '—' }}</td>
         <td>
           <div class="flex gap-1">
-            <p-button
-              icon="pi pi-pencil"
-              [rounded]="true"
-              [text]="true"
-              severity="info"
-              size="small"
-              pTooltip="Edit"
-              (onClick)="editApplication(app)">
-            </p-button>
-            @if (app.applicationStatus === 'Received' || app.applicationStatus === 'Processing') {
+            @if (!app.noteSheetId) {
+              <p-button
+                icon="pi pi-pencil"
+                [rounded]="true"
+                [text]="true"
+                severity="info"
+                size="small"
+                pTooltip="Edit"
+                (onClick)="editApplication(app)">
+              </p-button>
+            }
+            @if (!app.noteSheetId && (app.applicationStatus === 'Received' || app.applicationStatus === 'Processing')) {
               <p-button
                 icon="pi pi-trash"
                 [rounded]="true"

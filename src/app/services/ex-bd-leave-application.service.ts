@@ -92,6 +92,15 @@ export class ExBdLeaveApplicationService {
         );
     }
 
+    getByNoteSheetId(noteSheetId: number): Observable<ExBdLeaveApplicationModel | null> {
+        return this.http.get<any>(`${this.baseUrl}/GetByNoteSheetId/${noteSheetId}`).pipe(
+            map((res: any) => {
+                const arr = Array.isArray(res) ? res : res ? [res] : [];
+                return arr.length ? arr[0] : null;
+            })
+        );
+    }
+
     getByApplicant(employeeId: number): Observable<ExBdLeaveApplicationModel[]> {
         return this.http.get<ExBdLeaveApplicationModel[]>(`${this.baseUrl}/GetByApplicant/${employeeId}`).pipe(
             map((res: any) => (Array.isArray(res) ? res : []))
@@ -106,10 +115,11 @@ export class ExBdLeaveApplicationService {
         );
     }
 
-    getListView(fromDate?: string, toDate?: string): Observable<ExBdLeaveApplicationListViewModel[]> {
+    getListView(fromDate?: string, toDate?: string, noteSheetStatus?: string): Observable<ExBdLeaveApplicationListViewModel[]> {
         const params: any = {};
         if (fromDate) params.fromDate = fromDate;
         if (toDate) params.toDate = toDate;
+        if (noteSheetStatus) params.noteSheetStatus = noteSheetStatus;
         return this.http.get<ExBdLeaveApplicationListViewModel[]>(`${this.baseUrl}/GetListView`, { params }).pipe(
             map((res: any) => (Array.isArray(res) ? res : []))
         );
