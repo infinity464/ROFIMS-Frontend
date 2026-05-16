@@ -1,6 +1,4 @@
 import { AfterViewChecked, ChangeDetectorRef, Component, ElementRef, ViewChild, inject } from '@angular/core';
-import { UserMenuService } from '@/services/user-menu.service';
-import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ConfirmationService, MessageService } from 'primeng/api';
@@ -10,15 +8,15 @@ import { TooltipModule } from 'primeng/tooltip';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
-import { MultiSelectModule } from 'primeng/multiselect';
 import { DatePickerModule } from 'primeng/datepicker';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
 import { NotesheetSignatoryComponent } from '@/Components/Common/notesheet-signatory/notesheet-signatory';
 import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor';
 import { NotesheetApproverSelectComponent } from '@/Components/Common/notesheet-approver-select/notesheet-approver-select';
+import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/file-references-form/file-references-form';
+import { FieldsetModule } from 'primeng/fieldset';
 import { NotesheetPreviewBase } from '../notesheet-preview-base';
-import { FamilyInfoService } from '@/services/family-info-service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { ExBdLeaveApplicationService, ExBdLeaveApplicationModel, DestinationCountryItem, FamilyMemberItem } from '@/services/ex-bd-leave-application.service';
 import { EmployeePersonalServiceOverview } from '@/models/employee-personal-service-overview.model';
@@ -30,7 +28,7 @@ import {
 import { SharedService } from '@/shared/services/shared-service';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 import { environment } from '@/Core/Environments/environment';
-import { forkJoin, of } from 'rxjs';
+import { forkJoin, of, firstValueFrom } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { SafeHtml } from '@angular/platform-browser';
 import {
@@ -57,25 +55,19 @@ interface ApprovalLogEntry {
     standalone: true,
     imports: [
         CommonModule, FormsModule, ButtonModule, ToastModule, ConfirmDialogModule, DialogModule, TooltipModule,
-        InputTextModule, TextareaModule, SelectModule, MultiSelectModule, DatePickerModule, FlexibleDateDirective,
-        NotesheetSignatoryComponent, RichEditorComponent, NotesheetApproverSelectComponent
+        InputTextModule, TextareaModule, SelectModule, DatePickerModule, FlexibleDateDirective, FieldsetModule,
+        NotesheetSignatoryComponent, RichEditorComponent, NotesheetApproverSelectComponent, FileReferencesFormComponent
     ],
     providers: [MessageService, ConfirmationService],
     templateUrl: './notesheet-preview-exbd.html',
     styleUrl: '../notesheet-preview.scss'
 })
 export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implements AfterViewChecked {
-    private _router = inject(Router);
-    private _userMenuService = inject(UserMenuService);
-    canInsert = true;
-    canUpdate = true;
-    canDelete = true;
 
 
     @ViewChild('contentMeasure') contentMeasure!: ElementRef<HTMLDivElement>;
     @ViewChild('pagesContainer') pagesContainer!: ElementRef<HTMLDivElement>;
 
-    private readonly familyInfoService = inject(FamilyInfoService);
     private readonly commonCodeService = inject(CommonCodeService);
     private readonly confirmationService = inject(ConfirmationService);
     private readonly sharedService = inject(SharedService);
@@ -154,11 +146,7 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
     // ── Edit state ─────────────────────────────────────────────
     editing = false;
     saving = false;
-    employeeOptions: { label: string; value: number }[] = [];
-    purposeOptions: { label: string; value: number }[] = [];
-    countryOptions: { label: string; value: number }[] = [];
     subjectTypeOptions: { label: string; labelBN: string; value: number }[] = [];
-    familyMemberEditOptions: { label: string; value: number }[] = [];
 
     // ── Submit for approval state ─────────────────────────────
     submitting = false;
@@ -185,7 +173,7 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
     // ── Edit model fields ──────────────────────────────────────
     editSubject = '';
     editExBdLeaveSubjectId: number | null = null;
-    editReferenceNumber = '';
+    editReferenceParagraphs: { text: string; fileRows: FileRowData[] }[] = [{ text: '', fileRows: [] }];
     editMainText = '';
     editNote = '';
     editNoteSheetDate: Date | null = null;
@@ -194,12 +182,6 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
     editFinalApproverId: number | null = null;
     editTextType: string = 'en';
     editOperationType: string | null = null;
-    editEmployeeId: number | null = null;
-    editPurposeId: number | null = null;
-    editCountryId: number | null = null;
-    editDateFrom: Date | null = null;
-    editDateTo: Date | null = null;
-    editFamilyMemberIds: number[] = [];
 
     // ── Dropdown options ───────────────────────────────────────
     textTypeOptions = [
@@ -254,11 +236,6 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
 
     // ── Lifecycle: detect pending mode, resolve current user ──
     override ngOnInit(): void {
-        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
-        this.canInsert = _perms.canInsert;
-        this.canUpdate = _perms.canUpdate;
-        this.canDelete = _perms.canDelete;
-
         super.ngOnInit();
         this.route.queryParams.subscribe(params => {
             this.fromPending = (params['from'] ?? '').toString().toLowerCase() === NoteSheetPreviewFrom.Pending;
@@ -504,6 +481,43 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
         return text;
     }
 
+    // ── Edit info panel display helpers ────────────────────────
+    getEditEmployeeDisplay(): string {
+        const emp = this.leaveEmployee;
+        if (!emp) return '—';
+        const name = emp.nameEnglish || emp.nameBN || '';
+        const rabId = emp.rabId || emp.serviceId || '';
+        return [name, rabId ? `(${rabId})` : ''].filter(Boolean).join(' ') || '—';
+    }
+
+    getEditPurposeDisplay(): string {
+        return this._viewPurposeName || this._viewPurposeNameBN || '—';
+    }
+
+    getEditCountryDisplay(): string {
+        return this._viewCountriesDisplay || this._viewCountriesDisplayBN
+            || this.appCountries.map(c => c.countryName).filter(Boolean).join(', ')
+            || '—';
+    }
+
+    getEditFamilyDisplay(): string {
+        return this._viewFamilyDisplay
+            || this.appFamilyMembers.map(f => {
+                const rel = f.relation || '';
+                const name = f.nameEN || '';
+                return rel && name ? `${rel}-${name}` : (name || rel || '');
+            }).filter(Boolean).join(', ');
+    }
+
+    formatDateView(date: any): string {
+        if (!date) return '—';
+        try {
+            const d = new Date(date);
+            if (isNaN(d.getTime())) return '—';
+            return d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        } catch { return '—'; }
+    }
+
     // ── Toggle edit mode ──────────────────────────────────────
     toggleEdit(): void {
         if (!this.noteSheet) return;
@@ -512,7 +526,7 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
 
         this.editSubject = ns.subject ?? '';
         this.editExBdLeaveSubjectId = ns.exBdLeaveSubjectId ?? null;
-        this.editReferenceNumber = ns.referenceNumber ?? '';
+        this.editReferenceParagraphs = this.parseReferenceParagraphs(ns.referenceNumber);
         this.editMainText = ns.mainText ?? '';
         this.editNote = ns.note ?? '';
         this.editNoteSheetDate = ns.noteSheetDate ? new Date(ns.noteSheetDate) : null;
@@ -525,22 +539,6 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
             ? ns.finalApprovalId
             : (ns.finalApproverId && ns.finalApproverId > 0 ? ns.finalApproverId : null);
 
-        // ExBD-specific fields (from application)
-        this.editEmployeeId = ns.employeeId ?? null;
-        const app = this.exBdApplication;
-        this.editPurposeId = app?.visitTypeId ?? null;
-        const appCountryIds = this.appCountries.map(c => c.countryId).filter(Boolean);
-        this.editCountryId = appCountryIds.length > 0 ? appCountryIds[0] : null;
-        const rawFrom = app?.fromDate ?? null;
-        const rawTo = app?.toDate ?? null;
-        this.editDateFrom = rawFrom ? new Date(rawFrom) : null;
-        this.editDateTo = rawTo ? new Date(rawTo) : null;
-        this.editFamilyMemberIds = this.appFamilyMembers.map(f => f.fmid).filter(Boolean);
-
-        if (this.employeeOptions.length === 0) this.loadEmployeeOptions();
-        this.loadPurposeOptions();
-        this.loadCountryOptions();
-        if (this.editEmployeeId) this.loadFamilyMemberOptions(this.editEmployeeId);
     }
 
     cancelEdit(): void {
@@ -549,33 +547,6 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
     }
 
     // ── Load dropdown options ─────────────────────────────────
-    private loadEmployeeOptions(): void {
-        const api = `${environment.apis.core}/EmployeeInfo`;
-        this.http.get<any[]>(`${api}/GetAll`).subscribe({
-            next: (list) => {
-                this.employeeOptions = (Array.isArray(list) ? list : []).map((e: any) => {
-                    const name = e.fullNameEN || e.FullNameEN || '';
-                    const rabId = e.rabid || e.Rabid || e.RABID || '';
-                    const serviceId = e.serviceId || e.ServiceId || '';
-                    const parts = [name, rabId ? `RAB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : ''].filter(Boolean);
-                    return {
-                        label: parts.join(' | ') || `ID ${e.employeeID ?? e.EmployeeID}`,
-                        value: e.employeeID ?? e.EmployeeID
-                    };
-                });
-            },
-            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load employee list.' })
-        });
-    }
-
-    private loadPurposeOptions(): void {
-        this.commonCodeService.getAllActiveCommonCodesType('VisitType')
-            .pipe(catchError(() => of([])))
-            .subscribe(list => {
-                this.purposeOptions = (list ?? []).map((c: any) => ({ label: c.codeValueEN || c.displayCodeValueEN || '', value: c.codeId }));
-            });
-    }
-
     private loadSubjectTypeOptions(): void {
         this.commonCodeService.getAllActiveCommonCodesType('SubjectType')
             .pipe(catchError(() => of([])))
@@ -595,39 +566,74 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
         return this.isEnglish() ? o.label : (o.labelBN || o.label);
     }
 
-    private loadCountryOptions(): void {
-        this.commonCodeService.getAllActiveCommonCodesType('Country')
-            .pipe(catchError(() => of([])))
-            .subscribe(list => {
-                this.countryOptions = (list ?? []).map((c: any) => ({ label: c.codeValueEN || c.displayCodeValueEN || '', value: c.codeId }));
-            });
-    }
-
-    private loadFamilyMemberOptions(employeeId: number): void {
-        this.familyInfoService.getFamilyInfoByEmployeeView(employeeId)
-            .pipe(catchError(() => of([])))
-            .subscribe(list => {
-                this.familyMemberEditOptions = (list ?? []).map(f => ({
-                    label: `${f.relation || ''} - ${f.name || ''}`.trim(),
-                    value: f.ser
+    // ── Reference Paragraph helpers ──────────────────────────
+    private parseReferenceParagraphs(raw: string | null | undefined): { text: string; fileRows: FileRowData[] }[] {
+        if (!raw) return [{ text: '', fileRows: [] }];
+        try {
+            const arr = JSON.parse(raw);
+            if (Array.isArray(arr) && arr.length > 0) {
+                return arr.map((item: any) => ({
+                    text: item.text ?? item.Text ?? '',
+                    fileRows: (item.files ?? item.Files ?? []).map((f: any) => ({
+                        displayName: f.fileName ?? f.FileName ?? '',
+                        fileId: f.FileId ?? f.fileId ?? null,
+                        file: null
+                    }))
                 }));
-            });
+            }
+            return [{ text: '', fileRows: [] }];
+        } catch {
+            return [{ text: String(raw), fileRows: [] }];
+        }
     }
 
-    // ── Save changes ──────────────────────────────────────────
-    saveChanges(): void {
+    addEditReferenceParagraph(): void {
+        this.editReferenceParagraphs.push({ text: '', fileRows: [] });
+    }
+
+    removeEditReferenceParagraph(index: number): void {
+        if (this.editReferenceParagraphs.length > 1) {
+            this.editReferenceParagraphs.splice(index, 1);
+        }
+    }
+
+    getEditSerialLabel(index: number): string {
+        if (!this.isEnglish()) {
+            const banglaLetters = ['ক', 'খ', 'গ', 'ঘ', 'ঙ', 'চ', 'ছ', 'জ', 'ঝ', 'ঞ', 'ট', 'ঠ', 'ড', 'ঢ', 'ণ', 'ত', 'থ', 'দ', 'ধ', 'ন'];
+            return (banglaLetters[index] ?? String(index + 1)) + '.';
+        }
+        return String.fromCharCode(65 + index) + '.';
+    }
+
+    onEditRefFileRowsChange(event: FileRowData[], index: number): void {
+        if (event && Array.isArray(event)) {
+            this.editReferenceParagraphs[index].fileRows = event;
+        }
+    }
+
+    onEditRefDownloadFile(payload: { fileId: number; fileName: string }): void {
+        this.empService.downloadFile(payload.fileId).subscribe({
+            next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
+            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file.' })
+        });
+    }
+
+    // ── Save changes ──────��────────────────────────────────��──
+    async saveChanges(): Promise<void> {
         if (!this.noteSheet || this.saving) return;
         this.saving = true;
 
         const recommendersJson = this.buildRecommendersJson();
         const now = new Date().toISOString();
 
+        const referenceNumberJson = await this.uploadReferenceParagraphFiles();
+
         const resolvedSubject = this.getSubjectLabel(this.editExBdLeaveSubjectId) || this.editSubject;
         const payload: Record<string, unknown> = {
             ...this.noteSheet,
             subject: resolvedSubject,
             exBdLeaveSubjectId: this.editExBdLeaveSubjectId,
-            referenceNumber: this.editReferenceNumber,
+            referenceNumber: referenceNumberJson,
             mainText: this.editMainText,
             note: this.editNote || null,
             textType: this.editTextType === 'bn' ? 1 : 0,
@@ -636,7 +642,7 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
             initiatorId: this.editInitiatorId ?? 0,
             recommendersJson,
             finalApprovalId: this.editFinalApproverId ?? null,
-            employeeId: this.editEmployeeId ?? null,
+            employeeId: this.noteSheet.employeeId ?? null,
             exBdLeaveApplicationId: this.exBdApplication?.exBdLeaveApplicationId ?? this.noteSheet.exBdLeaveApplicationId ?? null,
             lastUpdatedBy: this.noteSheet.lastUpdatedBy ?? this.noteSheet.createdBy ?? 'system',
             lastupdate: now
@@ -654,6 +660,23 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
                 this.saving = false;
             }
         });
+    }
+
+    private async uploadReferenceParagraphFiles(): Promise<string> {
+        const result: { text: string; files: { FileId: number; fileName: string }[] }[] = [];
+        for (const para of this.editReferenceParagraphs) {
+            const existingFiles = para.fileRows.filter(r => r.fileId != null).map(r => ({ FileId: r.fileId!, fileName: r.displayName ?? '' }));
+            const newFiles = para.fileRows.filter(r => r.file != null);
+            if (newFiles.length > 0) {
+                const uploads = newFiles.map(r => firstValueFrom(this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)));
+                const uploaded = await Promise.all(uploads);
+                const uploadedRefs = (uploaded as any[]).map(r => ({ FileId: r.fileId, fileName: r.fileName }));
+                result.push({ text: para.text, files: [...existingFiles, ...uploadedRefs] });
+            } else {
+                result.push({ text: para.text, files: existingFiles });
+            }
+        }
+        return JSON.stringify(result);
     }
 
     private reloadNoteSheet(): void {

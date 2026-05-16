@@ -181,6 +181,8 @@ import { UnitRankWiseManpowerComponent } from '@/Components/Features/statistics/
 import { SystemMonitoringComponent } from '@/Components/Features/system-monitoring/system-monitoring';
 import { OfficeOrderGenerateComponent } from '@/Components/Features/office-order-generate/office-order-generate';
 import { OfficeOrderPreviewComponent } from '@/Components/Features/office-order-preview/office-order-preview';
+import { OfficeOrderExBdLeaveGenerateComponent } from '@/Components/Features/office-order-ex-bd-leave-generate/office-order-ex-bd-leave-generate';
+import { OfficeOrderExBdLeavePreviewComponent } from '@/Components/Features/office-order-ex-bd-leave-preview/office-order-ex-bd-leave-preview';
 
 export const appRoutes: Routes = [
     // Public routes
@@ -364,6 +366,9 @@ export const appRoutes: Routes = [
             { path: 'posting/posting-order-preview', component: PostingOrderPreviewPageComponent },
             { path: 'office-order/generate', component: OfficeOrderGenerateComponent },
             { path: 'office-order/preview', component: OfficeOrderPreviewComponent },
+            { path: 'office-order-ex-bd-leave/generate', component: OfficeOrderExBdLeaveGenerateComponent },
+            { path: 'office-order-ex-bd-leave/list', component: OfficeOrderExBdLeavePreviewComponent },
+            { path: 'office-order-ex-bd-leave/preview', component: OfficeOrderExBdLeavePreviewComponent },
             { path: 'employee-signature-upload', component: EmployeeSignatureUploadComponent },
             { path: 'presently-serving-members', component: PresentlyServingMembers },
             { path: 'serving-members-for-inter-posting', component: PresentlyServingMembers, data: { mode: 'interPosting' } },

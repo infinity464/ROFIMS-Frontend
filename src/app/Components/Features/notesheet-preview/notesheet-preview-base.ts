@@ -6,6 +6,7 @@ import { MessageService } from 'primeng/api';
 import { catchError, firstValueFrom, forkJoin, of } from 'rxjs';
 import { environment } from '@/Core/Environments/environment';
 import { EmpService } from '@/services/emp-service';
+import { UserMenuService } from '@/services/user-menu.service';
 import { NoteSheetType, NoteSheetCurrentStatus, NoteSheetCurrentStatusOptions, ApprovalStatus, ApprovalStep } from '@/models/enums';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { SignatoryDetail } from '@/Components/Common/notesheet-signatory/notesheet-signatory';
@@ -99,6 +100,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
     protected readonly masterBasicSetup    = inject(MasterBasicSetupService);
     protected readonly postingService      = inject(PostingService);
     protected readonly servingMembersService = inject(ServingMembersService);
+    protected readonly userMenuService     = inject(UserMenuService);
 
     protected readonly api = `${environment.apis.core}/NoteSheetInfo`;
 
@@ -135,6 +137,11 @@ export abstract class NotesheetPreviewBase implements OnInit {
     unitLabelMap: Record<number, string> = {};
     unitLabelMapBN: Record<number, string> = {};
 
+    /** Permissions resolved from the parent list/generation route */
+    canInsert = false;
+    canUpdate = false;
+    canDelete = false;
+
     ngOnInit(): void {
         this.loadLookups();
         this.route.queryParams.subscribe(params => {
@@ -147,6 +154,35 @@ export abstract class NotesheetPreviewBase implements OnInit {
                 this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No note-sheet ID provided.' });
             }
         });
+    }
+
+    /** Resolve permissions from the parent route based on notesheet type */
+    protected resolvePermissions(): void {
+        const type = this.noteSheet?.noteSheetType;
+        const parentRoutes = this.getParentRoutes(type);
+        for (const route of parentRoutes) {
+            const perms = this.userMenuService.getPermissionsByRoute(route);
+            if (perms.canView || perms.canInsert || perms.canUpdate || perms.canDelete) {
+                this.canInsert = perms.canInsert;
+                this.canUpdate = perms.canUpdate;
+                this.canDelete = perms.canDelete;
+                return;
+            }
+        }
+    }
+
+    /** Map notesheet type to possible parent routes that control permissions */
+    private getParentRoutes(type: string | undefined): string[] {
+        switch (type) {
+            case NoteSheetType.ExBDLeave:
+                return ['notesheet-ex-bd-leave', 'notesheet-list/draft-ex-bd-leave'];
+            case NoteSheetType.NewPosting:
+                return ['notesheet-posting', 'notesheet-list/draft-posting'];
+            case NoteSheetType.InterPosting:
+                return ['notesheet-inter-posting', 'notesheet-list/draft-inter-posting'];
+            default:
+                return ['notesheet-general', 'notesheet-list/draft'];
+        }
     }
 
     private loadLookups(): void {
@@ -178,6 +214,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
                 const list = Array.isArray(data) ? data : [];
                 this.noteSheet = list[0] ?? null;
                 if (this.noteSheet) {
+                    this.resolvePermissions();
                     this.loadApprovalChain();
                     this.loadBackHistory();
                     if (this.isNewPosting() && this.noteSheet.draftPostingMasterId) {

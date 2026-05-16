@@ -31,6 +31,7 @@ import { forkJoin } from 'rxjs';
                     placeholder="Search & Select"
                     [showClear]="true"
                     [disabled]="disableInitiator"
+                    appendTo="body"
                     styleClass="w-full">
                 </p-select>
                 @if (showErrors && !initiatorId) {
@@ -51,6 +52,7 @@ import { forkJoin } from 'rxjs';
                     filterBy="label"
                     placeholder="Search & Select"
                     [showClear]="true"
+                    appendTo="body"
                     styleClass="w-full">
                 </p-multiselect>
             </div>
@@ -66,6 +68,7 @@ import { forkJoin } from 'rxjs';
                     filterBy="label"
                     placeholder="Search & Select"
                     [showClear]="true"
+                    appendTo="body"
                     styleClass="w-full">
                 </p-select>
                 @if (showErrors && !finalApproverId) {

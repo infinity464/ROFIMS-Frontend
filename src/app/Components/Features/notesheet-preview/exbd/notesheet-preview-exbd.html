@@ -115,13 +115,35 @@
                             filterBy="label"
                             [showClear]="true"
                             placeholder="Select Subject"
+                            appendTo="body"
                             styleClass="w-full">
                         </p-select>
                     </div>
 
                     <div class="ns-edit-field">
-                        <label class="ns-edit-label">Reference Number</label>
-                        <app-rich-editor [(ngModel)]="editReferenceNumber" [hideTable]="true" height="120px"></app-rich-editor>
+                        <p-fieldset legend="Reference Number" [toggleable]="true" [collapsed]="false">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                <p-button icon="pi pi-plus" label="Add Reference" [rounded]="false" [text]="true" severity="success" size="small" (onClick)="addEditReferenceParagraph()" pTooltip="Add Reference"></p-button>
+                            </div>
+                            @for (para of editReferenceParagraphs; track trackByIndex($index)) {
+                                <div class="ref-paragraph-row">
+                                    <span class="ref-serial">{{ getEditSerialLabel($index) }}</span>
+                                    <div class="ref-paragraph-content">
+                                        <textarea pInputText class="w-full" rows="2" [value]="editReferenceParagraphs[$index].text" (input)="editReferenceParagraphs[$index].text = $any($event.target).value" [placeholder]="'Reference ' + getEditSerialLabel($index)"></textarea>
+                                        <app-file-references-form
+                                            [fileRows]="editReferenceParagraphs[$index].fileRows"
+                                            [isViewMode]="false"
+                                            title=""
+                                            (fileRowsChange)="onEditRefFileRowsChange($event, $index)"
+                                            (onDownloadFile)="onEditRefDownloadFile($event)">
+                                        </app-file-references-form>
+                                    </div>
+                                    @if (editReferenceParagraphs.length > 1) {
+                                        <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" (onClick)="removeEditReferenceParagraph($index)"></p-button>
+                                    }
+                                </div>
+                            }
+                        </p-fieldset>
                     </div>
                     <div class="ns-edit-field ns-edit-row">
                         <div class="ns-edit-col">
@@ -141,38 +163,37 @@
                         </div>
                     </div>
 
-                    <!-- ── Ex-BD Leave: editable fields ── -->
-                    <div class="ns-edit-field ns-edit-row">
-                        <div class="ns-edit-col">
-                            <label class="ns-edit-label">RAB Employee</label>
-                            <p-select [(ngModel)]="editEmployeeId" [options]="employeeOptions" optionLabel="label" optionValue="value"
-                                      placeholder="Select Employee" [filter]="true" filterBy="label" [showClear]="true" styleClass="w-full" appendTo="body"></p-select>
-                        </div>
-                        <div class="ns-edit-col">
-                            <label class="ns-edit-label">Purpose</label>
-                            <p-select [(ngModel)]="editPurposeId" [options]="purposeOptions" optionLabel="label" optionValue="value"
-                                      placeholder="Select Purpose" [filter]="true" filterBy="label" [showClear]="true" styleClass="w-full" appendTo="body"></p-select>
-                        </div>
-                        <div class="ns-edit-col">
-                            <label class="ns-edit-label">Destination Country</label>
-                            <p-select [(ngModel)]="editCountryId" [options]="countryOptions" optionLabel="label" optionValue="value"
-                                      placeholder="Select Country" [filter]="true" filterBy="label" [showClear]="true" styleClass="w-full" appendTo="body"></p-select>
-                        </div>
-                    </div>
-                    <div class="ns-edit-field ns-edit-row">
-                        <div class="ns-edit-col">
-                            <label class="ns-edit-label">Date of Visit (From)</label>
-                            <p-datepicker [(ngModel)]="editDateFrom" dateFormat="dd-mm-yy" [showIcon]="true" styleClass="w-full" appendTo="body"></p-datepicker>
-                        </div>
-                        <div class="ns-edit-col">
-                            <label class="ns-edit-label">Date of Visit (To)</label>
-                            <p-datepicker [(ngModel)]="editDateTo" dateFormat="dd-mm-yy" [showIcon]="true" styleClass="w-full" appendTo="body"></p-datepicker>
-                        </div>
-                        <div class="ns-edit-col">
-                            <label class="ns-edit-label">Family Members</label>
-                            <p-multiselect [(ngModel)]="editFamilyMemberIds" [options]="familyMemberEditOptions" optionLabel="label" optionValue="value"
-                                           placeholder="Select Family Members" [filter]="true" filterBy="label" [showClear]="true" styleClass="w-full"
-                                           display="chip" appendTo="body"></p-multiselect>
+                    <!-- ── Ex-BD Leave: Application Info Panel (read-only) ── -->
+                    <div class="ns-edit-field ns-app-info-panel">
+                        <div class="ns-app-info-grid">
+                            <div class="ns-app-info-item">
+                                <span class="ns-app-info-label">RAB Employee</span>
+                                <span class="ns-app-info-value">{{ getEditEmployeeDisplay() }}</span>
+                            </div>
+                            <div class="ns-app-info-item">
+                                <span class="ns-app-info-label">Purpose of Ex-BD Leave</span>
+                                <span class="ns-app-info-value">{{ getEditPurposeDisplay() }}</span>
+                            </div>
+                            <div class="ns-app-info-item">
+                                <span class="ns-app-info-label">Destination Country</span>
+                                <span class="ns-app-info-value">{{ getEditCountryDisplay() }}</span>
+                            </div>
+                            <div class="ns-app-info-item">
+                                <span class="ns-app-info-label">Total Days</span>
+                                <span class="ns-app-info-value">{{ exBdApplication?.totalDays || '—' }}</span>
+                            </div>
+                            <div class="ns-app-info-item">
+                                <span class="ns-app-info-label">Date of Visit (From)</span>
+                                <span class="ns-app-info-value">{{ formatDateView(exBdApplication?.fromDate) }}</span>
+                            </div>
+                            <div class="ns-app-info-item">
+                                <span class="ns-app-info-label">Date of Visit (To)</span>
+                                <span class="ns-app-info-value">{{ formatDateView(exBdApplication?.toDate) }}</span>
+                            </div>
+                            <div class="ns-app-info-item ns-app-info-full">
+                                <span class="ns-app-info-label">Family Members</span>
+                                <span class="ns-app-info-value">{{ getEditFamilyDisplay() || '—' }}</span>
+                            </div>
                         </div>
                     </div>
 
@@ -181,16 +202,12 @@
                         <app-rich-editor [(ngModel)]="editMainText"></app-rich-editor>
                     </div>
 
-                    <div class="ns-edit-field">
-                        <label class="ns-edit-label">{{ isEnglish() ? 'Note' : 'নোট' }}</label>
-                        <textarea pTextarea [(ngModel)]="editNote" rows="3" class="w-full" placeholder="{{ isEnglish() ? 'Note' : 'নোট' }}"></textarea>
-                    </div>
-
                     <!-- ── Approval Chain Edit ── -->
                     <div class="ns-approval-edit">
                         <h4 class="ns-approval-edit-title">Approval Chain</h4>
                         <app-notesheet-approver-select
                             [noteSheetType]="'ExBDLeave'"
+                            [useUserList]="true"
                             [(initiatorId)]="editInitiatorId"
                             [(recommenderIds)]="editRecommenderIds"
                             [(finalApproverId)]="editFinalApproverId"

@@ -67,9 +67,6 @@ interface ApprovalLogEntry {
     styleUrl: '../notesheet-preview.scss'
 })
 export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase implements AfterViewChecked {
-    canInsert = true;
-    canUpdate = true;
-    canDelete = true;
 
 
     @ViewChild('fileReferencesForm') fileReferencesForm!: FileReferencesFormComponent;
