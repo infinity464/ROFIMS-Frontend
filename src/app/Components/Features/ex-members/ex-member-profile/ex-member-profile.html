@@ -734,7 +734,7 @@
                                 <td>{{ codeValue(row.countriesDisplay, row.countriesDisplayBN) }}</td>
                                 <td>{{ formatDateOnly(row.fromDate) }}</td>
                                 <td>{{ formatDateOnly(row.toDate) }}</td>
-                                <td style="text-align: center">{{ row.totalDays }}</td>
+                                <td style="text-align: center">{{ valDisplay(row.totalDays) }}</td>
                                 <td>{{ codeValue(row.familyMembersDisplay, row.familyMembersDisplayBN) }}</td>
                                 <td>
                                     <span class="sp-status-badge sp-status-{{ getProgressStatusSeverity(row.progressStatus) }}">
