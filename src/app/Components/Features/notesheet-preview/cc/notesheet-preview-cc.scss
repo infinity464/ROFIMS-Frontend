@@ -41,6 +41,16 @@
     }
 }
 
+/* Responsive: progressively zoom out on smaller viewports so the
+   legal-landscape content doesn't overflow horizontally. Large devices
+   keep the original 0.7 (design is perfect there). */
+@media (max-width: 1400px) { .cc-content-scale { zoom: 0.60; } }
+@media (max-width: 1200px) { .cc-content-scale { zoom: 0.50; } }
+@media (max-width:  992px) { .cc-content-scale { zoom: 0.42; } }
+@media (max-width:  768px) { .cc-content-scale { zoom: 0.34; } }
+@media (max-width:  576px) { .cc-content-scale { zoom: 0.28; } }
+@media (max-width:  420px) { .cc-content-scale { zoom: 0.22; } }
+
 .cc-grid {
     border-collapse: collapse;
     table-layout: fixed;
