@@ -96,15 +96,15 @@
     </section>
 
     <!-- Districts -->
-    <section class="aor-card__group" [class.aor-card__group--disabled]="data.divisions.length === 0">
+    <section class="aor-card__group">
         <div class="aor-card__group-label">
             <span>
                 Districts
                 <span class="aor-card__count">· {{ visibleDistricts().length }}@if (focusedDivisionId != null && data.districts.length !== visibleDistricts().length) { / {{ data.districts.length }} }</span>
             </span>
             <button type="button" class="aor-card__add-btn"
-                    [disabled]="!canUpdate || focusedDivisionId == null || districtsForPicker().length === 0"
-                    [title]="focusedDivisionId == null ? 'Click a division chip first' : 'Add district'"
+                    [disabled]="!canUpdate || districtsForPicker().length === 0"
+                    title="Add district"
                     (click)="distPopover.toggle($event)">
                 <i class="pi pi-plus"></i>
             </button>
@@ -131,25 +131,14 @@
                     @for (opt of filtered(districtsForPicker(), distFilter); track opt.id) {
                         <li class="aor-card__picker-item"
                             [class.aor-card__picker-item--checked]="distPicked.has(opt.id)"
-                            [class.aor-card__picker-item--locked]="distPicked.has(opt.id) && !canUncheckDistrict(opt.id)"
-                            [title]="distPicked.has(opt.id) && !canUncheckDistrict(opt.id) ? 'Remove its upazilas first' : ''"
                             (click)="toggleDistPick(opt.id)">
                             <i class="pi"
                                [class.pi-check-square]="distPicked.has(opt.id)"
                                [class.pi-stop]="!distPicked.has(opt.id)"></i>
                             <span>{{ opt.name }}</span>
-                            @if (distPicked.has(opt.id) && !canUncheckDistrict(opt.id)) {
-                                <i class="pi pi-lock aor-card__picker-lock"></i>
-                            }
                         </li>
                     } @empty {
-                        <li class="aor-card__picker-empty">
-                            @if (data.divisions.length === 0) {
-                                Add a division first
-                            } @else {
-                                No options
-                            }
-                        </li>
+                        <li class="aor-card__picker-empty">No options</li>
                     }
                 </ul>
                 <div class="aor-card__picker-footer">
@@ -163,15 +152,15 @@
     </section>
 
     <!-- Upazilas -->
-    <section class="aor-card__group" [class.aor-card__group--disabled]="data.districts.length === 0">
+    <section class="aor-card__group">
         <div class="aor-card__group-label">
             <span>
                 Upazilas
                 <span class="aor-card__count">· {{ visibleUpazilas().length }}@if ((focusedDivisionId != null || focusedDistrictId != null) && data.upazilas.length !== visibleUpazilas().length) { / {{ data.upazilas.length }} }</span>
             </span>
             <button type="button" class="aor-card__add-btn"
-                    [disabled]="!canUpdate || focusedDistrictId == null || upazilasForPicker().length === 0"
-                    [title]="focusedDistrictId == null ? 'Click a district chip first' : 'Add upazila'"
+                    [disabled]="!canUpdate || upazilasForPicker().length === 0"
+                    title="Add upazila"
                     (click)="upaPopover.toggle($event)">
                 <i class="pi pi-plus"></i>
             </button>
@@ -205,13 +194,7 @@
                             }
                         </li>
                     } @empty {
-                        <li class="aor-card__picker-empty">
-                            @if (data.districts.length === 0) {
-                                Add a district first
-                            } @else {
-                                No options
-                            }
-                        </li>
+                        <li class="aor-card__picker-empty">No options</li>
                     }
                 </ul>
                 <div class="aor-card__picker-footer">

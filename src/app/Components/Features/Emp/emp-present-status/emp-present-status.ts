@@ -23,6 +23,7 @@ import { ToastModule } from 'primeng/toast';
 import { EmpService } from '@/services/emp-service';
 import { PresentStatusInfoService } from '@/services/present-status-info.service';
 import { CommonCodeService } from '@/services/common-code-service';
+import { OrganizationService } from '@/Components/basic-setup/organization-setup/services/organization-service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 import { FileReferencesFormComponent, FileRowData } from '@components/Common/file-references-form/file-references-form';
 import { PresentStatusType, PresentStatusTypeOptions } from '@/models/enums';
@@ -95,6 +96,7 @@ export class EmpPresentStatus implements OnInit {
     // Dropdown options
     statusTypes: any[] = PresentStatusTypeOptions;
     transferredUnits: any[] = [];
+    motherOrgUnits: any[] = [];
     absentTypes: any[] = [];
 
     constructor(
@@ -102,6 +104,7 @@ export class EmpPresentStatus implements OnInit {
         private empService: EmpService,
         private presentStatusService: PresentStatusInfoService,
         private commonCodeService: CommonCodeService,
+        private organizationService: OrganizationService,
         private messageService: MessageService,
         private confirmationService: ConfirmationService,
         private route: ActivatedRoute,
@@ -259,10 +262,16 @@ export class EmpPresentStatus implements OnInit {
             error: (err) => console.error('Failed to load absent types', err)
         });
 
-        // Load RAB Units for Transferred Unit dropdown
+        // Load RAB Units for Transferred Unit dropdown (used by RTU on Discipline Issue)
         this.commonCodeService.getAllActiveCommonCodesType('RabUnit').subscribe({
             next: (data) => (this.transferredUnits = data.map((d) => ({ label: d.codeValueEN, value: d.codeId }))),
             error: (err) => console.error('Failed to load RAB units', err)
+        });
+
+        // Load Mother-Org Units (basic-setup/mother-org child rows) for the Regular Posting Out dropdown
+        this.organizationService.GetAllOrgUnit().subscribe({
+            next: (data) => (this.motherOrgUnits = (data || []).map((d: any) => ({ label: d.orgNameEN ?? d.OrgNameEN, value: d.orgId ?? d.OrgId }))),
+            error: (err) => console.error('Failed to load mother-org units', err)
         });
     }
 
@@ -296,6 +305,7 @@ export class EmpPresentStatus implements OnInit {
                     dated: d.Dated ?? d.dated,
                     profileShift: d.ProfileShift ?? d.profileShift ?? false,
                     transferredUnitID: d.TransferredUnitID ?? d.transferredUnitID,
+                    motherOrgTransferredUnitID: d.MotherOrgTransferredUnitID ?? d.motherOrgTransferredUnitID,
                     dateOfRelease: d.DateOfRelease ?? d.dateOfRelease,
                     reduceFromRABStrength: d.ReduceFromRABStrength ?? d.reduceFromRABStrength,
                     rtuCause: d.RTUCause ?? d.rtuCause,
@@ -358,7 +368,9 @@ export class EmpPresentStatus implements OnInit {
         // Map backend unified fields to per-type form fields
         if (st === PresentStatusType.RegularPostingOut) {
             formValues.rpoDate = dated;
-            formValues.transferredUnit = record.transferredUnitID;
+            // Regular Posting Out destination lives in MotherOrgTransferredUnitID;
+            // fall back to legacy TransferredUnitID for rows saved before the schema change.
+            formValues.transferredUnit = record.motherOrgTransferredUnitID ?? record.transferredUnitID;
             formValues.dateOfRelease = record.dateOfRelease ? new Date(record.dateOfRelease) : null;
             formValues.dateOfReduceFromRabStrength = record.reduceFromRABStrength ? new Date(record.reduceFromRABStrength) : null;
             formValues.rpoProfileShift = record.profileShift;
@@ -497,9 +509,11 @@ export class EmpPresentStatus implements OnInit {
         else if (st === PresentStatusType.Absent) profileShift = f.absentProfileShift || false;
         else if (st === PresentStatusType.Arrested) profileShift = f.arrestedProfileShift || false;
 
-        // Pick transferred unit ID
+        // Regular Posting Out destination → MotherOrgTransferredUnitID (mother-org unit).
+        // RTU on Discipline Issue destination → TransferredUnitID (RAB unit).
         let transferredUnitID: number | null = null;
-        if (st === PresentStatusType.RegularPostingOut) transferredUnitID = f.transferredUnit;
+        let motherOrgTransferredUnitID: number | null = null;
+        if (st === PresentStatusType.RegularPostingOut) motherOrgTransferredUnitID = f.transferredUnit;
         else if (st === PresentStatusType.RTUOnDisciplineIssue) transferredUnitID = f.rtuTransferredUnit;
 
         // Pick inquiry report
@@ -513,6 +527,7 @@ export class EmpPresentStatus implements OnInit {
             Dated: dated,
             ProfileShift: profileShift,
             TransferredUnitID: transferredUnitID,
+            MotherOrgTransferredUnitID: motherOrgTransferredUnitID,
             DateOfRelease: toDateStr(f.dateOfRelease),
             ReduceFromRABStrength: toDateStr(f.dateOfReduceFromRabStrength),
             RTUCause: f.rtuCause || null,

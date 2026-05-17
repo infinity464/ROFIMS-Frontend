@@ -2,7 +2,9 @@ import { Component, HostListener, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { SelectModule } from 'primeng/select';
+import { MultiSelectModule } from 'primeng/multiselect';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { ExportService } from '@/services/export.service';
 import { UserMenuService } from '@/services/user-menu.service';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
@@ -18,10 +20,13 @@ import html2canvas from 'html2canvas';
 
 type Lang = 'en' | 'bn';
 
+/** One mother org's data block; alias of the per-org backend response for clarity. */
+type CorpsOrgBlock = CorpsWiseManpowerResponse;
+
 @Component({
     selector: 'app-corps-wise-manpower',
     standalone: true,
-    imports: [CommonModule, FormsModule, SelectModule],
+    imports: [CommonModule, FormsModule, MultiSelectModule],
     templateUrl: './corps-wise-manpower.html',
     styleUrl: './corps-wise-manpower.scss'
 })
@@ -36,16 +41,16 @@ export class CorpsWiseManpowerComponent implements OnInit {
     exporting = false;
     exportDropdownOpen = false;
 
+    /** All mother orgs available to the user (raw dropdown options). */
     orgOptions: MotherUnitOrgOption[] = [];
-    selectedOrgId: number | null = null;
+    /** Multi-select binding: empty array = nothing loaded yet (shows empty state). */
+    selectedOrgIds: number[] = [];
 
-    ranks: MotherUnitRankColumn[] = [];
-    corps: CorpsRow[] = [];
-    totals: Record<number, number> = {};
+    /** Currently displayed blocks — only orgs the user explicitly selected. */
+    filteredOrgs: CorpsOrgBlock[] = [];
+
+    /** Sum of every filtered org's grandTotal — single number because rank columns vary per org. */
     grandTotal = 0;
-
-    selectedOrgName = '';
-    selectedOrgNameBN = '';
 
     /** Names of the RAB Units the user is restricted to. null/empty = full access. */
     accessibleRabUnitNames: string[] | null = null;
@@ -79,31 +84,60 @@ export class CorpsWiseManpowerComponent implements OnInit {
         this.loadOrgOptions();
     }
 
-    loadOrgOptions(): void {
+    /** Loads the dropdown options only — data is fetched on-demand when the user selects orgs. */
+    private loadOrgOptions(): void {
         this.loadingOrgs = true;
         this.statisticsService.getMotherOrgOptions().subscribe({
-            next: (opts) => { this.orgOptions = opts; this.loadingOrgs = false; },
+            next: (opts) => {
+                this.orgOptions = opts ?? [];
+                this.loadingOrgs = false;
+            },
             error: () => { this.loadingOrgs = false; }
         });
     }
 
-    onOrgChange(): void {
-        if (!this.selectedOrgId) { this.clearData(); return; }
+    /**
+     * Multi-select changed: fetch data only for the currently selected orgs.
+     * Empty selection clears the report (no auto-load-all).
+     */
+    onOrgFilterChange(): void {
+        const ids = this.selectedOrgIds ?? [];
+        if (ids.length === 0) {
+            this.filteredOrgs = [];
+            this.grandTotal = 0;
+            this.accessibleRabUnitNames = null;
+            this.accessibleRabUnitNamesBN = null;
+            return;
+        }
         this.loading = true;
-        this.statisticsService.getCorpsWiseManpower(this.selectedOrgId).subscribe({
-            next: (res: CorpsWiseManpowerResponse) => {
-                this.ranks = res.ranks ?? [];
-                this.corps = res.corps ?? [];
-                this.totals = res.totals ?? {};
-                this.grandTotal = res.grandTotal ?? 0;
-                this.selectedOrgName = res.orgName ?? '';
-                this.selectedOrgNameBN = res.orgNameBN ?? '';
-                this.accessibleRabUnitNames   = res.accessibleRabUnitNames ?? null;
-                this.accessibleRabUnitNamesBN = res.accessibleRabUnitNamesBN ?? null;
+        forkJoin(
+            ids.map(id =>
+                this.statisticsService.getCorpsWiseManpower(id).pipe(
+                    catchError(() => of(null as CorpsWiseManpowerResponse | null))
+                )
+            )
+        ).subscribe({
+            next: (results) => {
+                this.filteredOrgs = (results ?? [])
+                    .filter((r): r is CorpsWiseManpowerResponse => r != null);
+                // RAB-unit scope is the same across calls — take it from the first non-null response.
+                const first = this.filteredOrgs[0];
+                this.accessibleRabUnitNames   = first?.accessibleRabUnitNames   ?? null;
+                this.accessibleRabUnitNamesBN = first?.accessibleRabUnitNamesBN ?? null;
+                this.grandTotal = this.filteredOrgs.reduce((sum, o) => sum + (o.grandTotal ?? 0), 0);
                 this.loading = false;
             },
             error: () => { this.loading = false; }
         });
+    }
+
+    /** Comma-separated unit-scope line shown under the report title; null when unrestricted. */
+    get scopeLine(): string | null {
+        const names = this.lang === 'bn'
+            ? (this.accessibleRabUnitNamesBN ?? this.accessibleRabUnitNames)
+            : this.accessibleRabUnitNames;
+        if (!names || names.length === 0) return null;
+        return names.join(', ');
     }
 
     toggleLang(): void { this.lang = this.lang === 'en' ? 'bn' : 'en'; }
@@ -120,32 +154,65 @@ export class CorpsWiseManpowerComponent implements OnInit {
             try { await this.exportPdfPopup(); } finally { this.exporting = false; }
             return;
         }
-        if (type === 'print') { this.exportPrintPopup(); return; }
-        const { columns, rows } = this.getFlatExportData();
+        if (type === 'print') {
+            this.exportPrintPopup();
+            return;
+        }
         const scope = this.scopeLine;
-        const config = { title: this.titleLabel, lang: this.lang, columns, rows, showPageNumbers: true, filename: 'corps-wise-manpower', filterLines: scope ? [scope] : undefined };
-        if (type === 'word') { await this.exportService.exportWord(config); }
-        else { this.exportService.exportExcel(config); }
-    }
-
-    /** Comma-separated unit-scope line shown under the report title; null when unrestricted. */
-    get scopeLine(): string | null {
-        const names = this.lang === 'bn'
-            ? (this.accessibleRabUnitNamesBN ?? this.accessibleRabUnitNames)
-            : this.accessibleRabUnitNames;
-        if (!names || names.length === 0) return null;
-        return names.join(', ');
+        const sectionedConfig = {
+            title: this.titleLabel,
+            lang: this.lang,
+            columns: [],
+            sections: this.filteredOrgs.map(org => ({
+                title: this.orgLabel(org),
+                columns: [
+                    this.serLabel,
+                    this.corpsColLabel,
+                    ...org.ranks.map(r => this.rankLabel(r)),
+                    this.totalLabel
+                ],
+                rows: org.corps.map((c, i) => [
+                    this.fmt(i + 1),
+                    this.corpsNameLabel(c),
+                    ...org.ranks.map(r => this.fmt(this.cellValue(c, r.rankId))),
+                    this.fmt(c.total)
+                ]),
+                subtotalRow: [
+                    '',
+                    this.totalLabel,
+                    ...org.ranks.map(r => this.fmt(this.columnTotal(org, r.rankId))),
+                    this.fmt(org.grandTotal)
+                ]
+            })),
+            grandTotalRow: ['', this.grandTotalLabel, this.fmt(this.grandTotal)],
+            showPageNumbers: true,
+            filename: 'corps-wise-manpower',
+            filterLines: scope ? [scope] : undefined,
+            landscape: true
+        };
+        if (type === 'word') {
+            const svc: any = this.exportService;
+            if (typeof svc.exportWordSectioned === 'function') {
+                await svc.exportWordSectioned(sectionedConfig);
+            } else {
+                await this.exportService.exportWord(sectionedConfig as any);
+            }
+        } else {
+            const svc: any = this.exportService;
+            if (typeof svc.exportExcelSectioned === 'function') {
+                svc.exportExcelSectioned(sectionedConfig);
+            } else {
+                this.exportService.exportExcel(sectionedConfig as any);
+            }
+        }
     }
 
     // ── Computed labels ──────────────────────────────────────────────────
 
     get titleLabel(): string {
-        const orgName = this.lang === 'en'
-            ? this.selectedOrgName.toUpperCase()
-            : (this.selectedOrgNameBN || this.selectedOrgName);
         return this.lang === 'en'
-            ? `REGIMENT & RANK WISE MANPOWER STATE - ${orgName}`
-            : `রেজিমেন্ট ভিত্তিক জনবলের সারাংশ - ${orgName}`;
+            ? 'REGIMENT & RANK WISE MANPOWER STATE'
+            : 'রেজিমেন্ট ভিত্তিক জনবলের সারাংশ';
     }
 
     get dateLine(): string {
@@ -158,7 +225,7 @@ export class CorpsWiseManpowerComponent implements OnInit {
     get serLabel(): string { return this.lang === 'en' ? 'Ser' : 'ক্রমিক'; }
     get corpsColLabel(): string { return this.lang === 'en' ? 'Regiment / Corps' : 'রেজিমেন্ট / কোর'; }
     get totalLabel(): string { return this.lang === 'en' ? 'Total' : 'মোট'; }
-    get grandTotalLabel(): string { return this.lang === 'en' ? 'TOTAL' : 'সর্ব মোট'; }
+    get grandTotalLabel(): string { return this.lang === 'en' ? 'GRAND TOTAL' : 'সর্ব মোট'; }
 
     rankLabel(rank: MotherUnitRankColumn): string {
         return this.lang === 'en' ? rank.rankName : (rank.rankNameBN || rank.rankName);
@@ -168,165 +235,223 @@ export class CorpsWiseManpowerComponent implements OnInit {
         return this.lang === 'en' ? c.corpsName : (c.corpsNameBN || c.corpsName);
     }
 
+    orgLabel(org: CorpsOrgBlock): string {
+        return this.lang === 'en'
+            ? org.orgName.toUpperCase()
+            : (org.orgNameBN || org.orgName);
+    }
+
     cellValue(c: CorpsRow, rankId: number): number { return c.rankCounts?.[rankId] ?? 0; }
-    columnTotal(rankId: number): number { return this.totals?.[rankId] ?? 0; }
+    columnTotal(org: CorpsOrgBlock, rankId: number): number { return org.totals?.[rankId] ?? 0; }
 
     fmt(n: number | undefined | null): string {
         const s = String(n ?? 0);
         return this.lang === 'bn' ? BanglaNumerals.toBangla(s) : s;
     }
 
-    private clearData(): void {
-        this.ranks = []; this.corps = []; this.totals = {}; this.grandTotal = 0;
-        this.selectedOrgName = ''; this.selectedOrgNameBN = '';
-        this.accessibleRabUnitNames = null; this.accessibleRabUnitNamesBN = null;
+    /** Common renderer for the PDF + Print HTML — mirrors unit-rank-wise's pattern so
+     *  the two export paths stay in sync. */
+    private buildReportHtml(): { orgTablesHtml: string; grandTotalHtml: string } {
+        const esc = (s: string) => s
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+        const orgTablesHtml = this.filteredOrgs.map(org => {
+            const rankHeaders = org.ranks.map(r => `<th>${esc(this.rankLabel(r))}</th>`).join('');
+            const bodyRows = org.corps.map((c, i) => {
+                const cells = org.ranks
+                    .map(r => `<td class="num">${esc(this.fmt(this.cellValue(c, r.rankId)))}</td>`)
+                    .join('');
+                return `<tr>
+                    <td class="num">${esc(this.fmt(i + 1))}</td>
+                    <td class="name">${esc(this.corpsNameLabel(c))}</td>
+                    ${cells}
+                    <td class="num total-col">${esc(this.fmt(c.total))}</td>
+                </tr>`;
+            }).join('');
+            const totalCells = org.ranks
+                .map(r => `<td class="num">${esc(this.fmt(this.columnTotal(org, r.rankId)))}</td>`)
+                .join('');
+            return `
+            <div class="org-block">
+                <div class="org-title">${esc(this.orgLabel(org))}</div>
+                <table>
+                    <thead><tr>
+                        <th>${esc(this.serLabel)}</th>
+                        <th>${esc(this.corpsColLabel)}</th>
+                        ${rankHeaders}
+                        <th>${esc(this.totalLabel)}</th>
+                    </tr></thead>
+                    <tbody>${bodyRows}</tbody>
+                    <tfoot><tr class="total-row">
+                        <td></td>
+                        <td class="name" style="font-weight:700;text-align:right">${esc(this.totalLabel)}</td>
+                        ${totalCells}
+                        <td class="num" style="font-weight:700">${esc(this.fmt(org.grandTotal))}</td>
+                    </tr></tfoot>
+                </table>
+            </div>`;
+        }).join('');
+
+        const grandTotalHtml = `
+            <div class="grand-total-block">${esc(this.grandTotalLabel)}: ${esc(this.fmt(this.grandTotal))}</div>`;
+
+        return { orgTablesHtml, grandTotalHtml };
     }
 
-    // ── Flat export data for Word / Excel ────────────────────────────────
-
-    getFlatExportData(): { columns: string[]; rows: string[][] } {
-        const cols = [this.serLabel, this.corpsColLabel, ...this.ranks.map(r => this.rankLabel(r)), this.totalLabel];
-        const dataRows: string[][] = [];
-        this.corps.forEach((c, i) => {
-            dataRows.push([this.fmt(i + 1), this.corpsNameLabel(c), ...this.ranks.map(r => this.fmt(this.cellValue(c, r.rankId))), this.fmt(c.total)]);
-        });
-        dataRows.push(['', this.grandTotalLabel, ...this.ranks.map(r => this.fmt(this.columnTotal(r.rankId))), this.fmt(this.grandTotal)]);
-        return { columns: cols, rows: dataRows };
-    }
-
-    // ── PDF export (html2canvas + jsPDF → opens in browser PDF viewer) ──
+    // ── PDF popup (one table per org + grand total) ──────────────────────
 
     private async exportPdfPopup(): Promise<void> {
-        const fontFamily = this.lang === 'bn' ? "'Noto Sans Bengali', 'Nirmala UI', sans-serif" : "'Times New Roman', serif";
-        const dateStr = new Date().toLocaleDateString(this.lang === 'bn' ? 'bn-BD' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-        const colCount = this.ranks.length + 3;
-        let baseFontPt = 8, headFontPt = 8, titleFontPt = 13, cellPad = '4px 6px';
-        if (colCount > 12) { baseFontPt = 7; headFontPt = 7; titleFontPt = 11; cellPad = '3px 4px'; }
-        if (colCount > 16) { baseFontPt = 5; headFontPt = 5; titleFontPt = 10; cellPad = '2px 2px'; }
-        if (colCount > 20) { baseFontPt = 4.5; headFontPt = 4.5; titleFontPt = 9; cellPad = '1px 2px'; }
+        const fontFamily = this.lang === 'bn'
+            ? "'Noto Sans Bengali', 'Nirmala UI', sans-serif"
+            : "'Times New Roman', serif";
+        const dateStr = new Date().toLocaleDateString(this.lang === 'bn' ? 'bn-BD' : 'en-US', {
+            year: 'numeric', month: 'long', day: 'numeric'
+        });
 
-        const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-        const rankHeaders = this.ranks.map(r => `<th>${esc(this.rankLabel(r))}</th>`).join('');
-        const bodyRows = this.corps.map((c, i) => {
-            const cells = this.ranks.map(r => `<td class="num">${esc(this.fmt(this.cellValue(c, r.rankId)))}</td>`).join('');
-            return `<tr><td class="num">${esc(this.fmt(i + 1))}</td><td class="name">${esc(this.corpsNameLabel(c))}</td>${cells}<td class="num total-col">${esc(this.fmt(c.total))}</td></tr>`;
-        }).join('');
-        const totalCells = this.ranks.map(r => `<td class="num">${esc(this.fmt(this.columnTotal(r.rankId)))}</td>`).join('');
+        const esc = (s: string) => s
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+        const { orgTablesHtml, grandTotalHtml } = this.buildReportHtml();
 
         const scope = this.scopeLine;
-        const scopeHtml = scope
-            ? `<div style="font-size:${baseFontPt + 1}pt;font-weight:600;text-align:center;margin:2px 0 6px 0;color:#1e3a5f">${esc(scope)}</div>`
-            : '';
         const container = document.createElement('div');
         container.style.cssText = 'position:absolute;left:-9999px;top:0;width:1045px;padding:30px;background:#fff;z-index:-1;overflow:visible;box-sizing:border-box';
         container.innerHTML = `
-            <div style="font-family:${fontFamily};font-size:${baseFontPt}pt;color:#000;line-height:1.4;width:100%">
-                <h1 style="font-size:${titleFontPt}pt;font-weight:700;text-align:center;margin:0 0 3px 0">${esc(this.titleLabel)}</h1>
-                ${scopeHtml}
-                <div style="font-size:${baseFontPt}pt;text-align:center;margin-bottom:14px">${esc(dateStr)}</div>
-                <table style="width:100%;border-collapse:collapse;font-family:${fontFamily}">
-                    <thead><tr><th>${esc(this.serLabel)}</th><th>${esc(this.corpsColLabel)}</th>${rankHeaders}<th>${esc(this.totalLabel)}</th></tr></thead>
-                    <tbody>${bodyRows}</tbody>
-                    <tfoot><tr class="total-row"><td></td><td class="name" style="font-weight:700;text-align:right">${esc(this.grandTotalLabel)}</td>${totalCells}<td class="num" style="font-weight:700">${esc(this.fmt(this.grandTotal))}</td></tr></tfoot>
-                </table>
+            <div style="font-family:${fontFamily};font-size:7pt;color:#000;line-height:1.4;width:100%">
+                <h1 style="font-size:12pt;font-weight:700;text-align:center;margin:0 0 3px 0">${esc(this.titleLabel)}</h1>
+                ${scope ? `<div style="font-size:8pt;font-weight:600;text-align:center;margin:2px 0 6px 0;color:#1e3a5f">${esc(scope)}</div>` : ''}
+                <div style="font-size:7pt;text-align:center;margin-bottom:14px">${esc(dateStr)}</div>
+                ${orgTablesHtml}
+                ${grandTotalHtml}
             </div>`;
-        container.querySelectorAll('th').forEach((el: any) => { el.style.cssText = `padding:${cellPad};text-align:center;font-size:${headFontPt}pt;font-weight:700;border:1px solid #000;white-space:nowrap;background:#fff;color:#000`; });
-        container.querySelectorAll('td').forEach((el: any) => { el.style.cssText += `;padding:${cellPad};border:1px solid #000;font-size:${baseFontPt}pt;color:#000`; });
-        container.querySelectorAll('td.num').forEach((el: any) => { el.style.textAlign = 'center'; });
-        container.querySelectorAll('td.name').forEach((el: any) => { el.style.textAlign = 'left'; el.style.whiteSpace = 'nowrap'; });
-        container.querySelectorAll('.total-row td').forEach((el: any) => { el.style.fontWeight = '700'; el.style.borderTop = '2px solid #000'; });
+        container.querySelectorAll<HTMLElement>('table').forEach(t => {
+            t.style.cssText = 'width:100%;border-collapse:collapse;margin-bottom:14px';
+        });
+        container.querySelectorAll<HTMLElement>('.org-title').forEach(t => {
+            t.style.cssText = 'font-size:9pt;font-weight:700;padding:4px 0;border-bottom:2px solid #000;margin:8px 0 4px 0';
+        });
+        container.querySelectorAll<HTMLElement>('th').forEach(el => {
+            el.style.cssText = 'padding:4px 6px;text-align:center;font-size:7pt;font-weight:700;border:1px solid #000;white-space:nowrap;background:#fff;color:#000';
+        });
+        container.querySelectorAll<HTMLElement>('td').forEach(el => {
+            el.style.cssText += ';padding:4px 6px;border:1px solid #000;font-size:7pt;color:#000';
+        });
+        container.querySelectorAll<HTMLElement>('td.num').forEach(el => { el.style.textAlign = 'center'; });
+        container.querySelectorAll<HTMLElement>('td.name').forEach(el => { el.style.textAlign = 'left'; });
+        container.querySelectorAll<HTMLElement>('.total-row td').forEach(el => { el.style.fontWeight = '700'; el.style.borderTop = '2px solid #000'; });
+        container.querySelectorAll<HTMLElement>('.grand-total-block').forEach(el => {
+            el.style.cssText = 'margin-top:6px;padding:8px 10px;border:2px solid #000;font-weight:700;font-size:9pt;text-align:right';
+        });
         document.body.appendChild(container);
 
         try {
             await new Promise(resolve => setTimeout(resolve, 300));
             const scale = 2;
-            const canvas = await html2canvas(container, { scale, useCORS: true, backgroundColor: '#ffffff', logging: false, scrollY: -window.scrollY, height: container.scrollHeight, windowHeight: container.scrollHeight });
+            const canvas = await html2canvas(container, {
+                scale, useCORS: true, backgroundColor: '#ffffff',
+                logging: false, scrollY: -window.scrollY,
+                height: container.scrollHeight, windowHeight: container.scrollHeight
+            });
             const imgWidth = canvas.width;
             const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
             const pdfWidth = pdf.internal.pageSize.getWidth() - 16;
             const pdfPageHeight = pdf.internal.pageSize.getHeight() - 16;
             const ratio = pdfWidth / imgWidth;
-
-            const tableEl = container.querySelector('table')!;
-            const theadEl = tableEl.querySelector('thead')!;
-            const containerTop = container.getBoundingClientRect().top;
-            const theadBottom = Math.round((theadEl.getBoundingClientRect().bottom - containerTop) * scale);
-            const headerCanvas = document.createElement('canvas');
-            headerCanvas.width = imgWidth; headerCanvas.height = theadBottom;
-            headerCanvas.getContext('2d')!.drawImage(canvas, 0, 0, imgWidth, theadBottom, 0, 0, imgWidth, theadBottom);
-            const headerImgData = headerCanvas.toDataURL('image/jpeg', 0.92);
-            const headerPdfH = theadBottom * ratio;
-
-            const allRows = tableEl.querySelectorAll('tbody tr, tfoot tr');
-            const rowBottoms: number[] = [];
-            allRows.forEach((tr: Element) => { rowBottoms.push(Math.round((tr.getBoundingClientRect().bottom - containerTop) * scale)); });
-
             const maxSlicePx = Math.floor(pdfPageHeight / ratio);
-            let srcY = 0, page = 0;
+
+            // Row-aware slicing: collect bottom Y of every <tr> across all tables
+            // (and the grand-total block) so page breaks never cut through a row.
+            const containerTop = container.getBoundingClientRect().top;
+            const breakPoints: number[] = [];
+            container.querySelectorAll<HTMLElement>('tr, .grand-total-block').forEach((el) => {
+                const rect = el.getBoundingClientRect();
+                breakPoints.push(Math.round((rect.bottom - containerTop) * scale));
+            });
+            breakPoints.sort((a, b) => a - b);
+
+            let srcY = 0;
+            let page = 0;
             while (srcY < canvas.height) {
-                const isFirstPage = page === 0;
-                const availableSlicePx = isFirstPage ? maxSlicePx : Math.floor((pdfPageHeight - headerPdfH) / ratio);
-                let cutY = Math.min(srcY + availableSlicePx, canvas.height);
-                if (cutY < canvas.height) { let bestCut = srcY; for (const rb of rowBottoms) { if (rb <= cutY && rb > srcY) bestCut = rb; } if (bestCut > srcY) cutY = bestCut; }
-                const sliceH = cutY - srcY; if (sliceH <= 0) break;
+                let cutY = Math.min(srcY + maxSlicePx, canvas.height);
+                if (cutY < canvas.height) {
+                    // Largest row-boundary that still fits within this page.
+                    let bestCut = srcY;
+                    for (const rb of breakPoints) {
+                        if (rb > srcY && rb <= cutY) bestCut = rb;
+                    }
+                    // Fallback: if no row fits (a single row taller than the page),
+                    // accept a hard cut so the loop progresses.
+                    if (bestCut > srcY) cutY = bestCut;
+                }
+                const sliceH = cutY - srcY;
+                if (sliceH <= 0) break;
+
                 if (page > 0) pdf.addPage();
-                let yOffset = 8;
-                if (!isFirstPage) { pdf.addImage(headerImgData, 'JPEG', 8, yOffset, pdfWidth, headerPdfH); yOffset += headerPdfH; }
-                const sliceCanvas = document.createElement('canvas'); sliceCanvas.width = imgWidth; sliceCanvas.height = sliceH;
+                const sliceCanvas = document.createElement('canvas');
+                sliceCanvas.width = imgWidth;
+                sliceCanvas.height = sliceH;
                 sliceCanvas.getContext('2d')!.drawImage(canvas, 0, srcY, imgWidth, sliceH, 0, 0, imgWidth, sliceH);
-                pdf.addImage(sliceCanvas.toDataURL('image/jpeg', 0.92), 'JPEG', 8, yOffset, pdfWidth, sliceH * ratio);
-                srcY = cutY; page++;
+                const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.92);
+                pdf.addImage(sliceData, 'JPEG', 8, 8, pdfWidth, sliceH * ratio);
+                srcY = cutY;
+                page++;
             }
             const pdfBlob = pdf.output('blob');
             window.open(URL.createObjectURL(pdfBlob), '_blank');
-        } finally { document.body.removeChild(container); }
+        } finally {
+            document.body.removeChild(container);
+        }
     }
 
-    // ── Print popup ─────────────────────────────────────────────────────
+    // ── Print popup ──────────────────────────────────────────────────────
 
     private exportPrintPopup(): void {
-        const fontFamily = this.lang === 'bn' ? "'Noto Sans Bengali', 'Nirmala UI', sans-serif" : "'Times New Roman', serif";
-        const dateStr = new Date().toLocaleDateString(this.lang === 'bn' ? 'bn-BD' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-        const colCount = this.ranks.length + 3;
-        let baseFontPt = 8, headFontPt = 8, titleFontPt = 13, cellPad = '4px 6px';
-        if (colCount > 12) { baseFontPt = 7; headFontPt = 7; titleFontPt = 11; cellPad = '3px 4px'; }
-        if (colCount > 16) { baseFontPt = 5; headFontPt = 5; titleFontPt = 10; cellPad = '2px 2px'; }
-        if (colCount > 20) { baseFontPt = 4.5; headFontPt = 4.5; titleFontPt = 9; cellPad = '1px 2px'; }
+        const fontFamily = this.lang === 'bn' ? "'Nirmala UI', serif" : "'Times New Roman', serif";
+        const dateStr = new Date().toLocaleDateString(this.lang === 'bn' ? 'bn-BD' : 'en-US', {
+            year: 'numeric', month: 'long', day: 'numeric'
+        });
 
-        const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-        const rankHeaders = this.ranks.map(r => `<th>${esc(this.rankLabel(r))}</th>`).join('');
-        const bodyRows = this.corps.map((c, i) => {
-            const cells = this.ranks.map(r => `<td class="num">${esc(this.fmt(this.cellValue(c, r.rankId)))}</td>`).join('');
-            return `<tr><td class="num">${esc(this.fmt(i + 1))}</td><td class="name">${esc(this.corpsNameLabel(c))}</td>${cells}<td class="num total-col">${esc(this.fmt(c.total))}</td></tr>`;
-        }).join('');
-        const totalCells = this.ranks.map(r => `<td class="num">${esc(this.fmt(this.columnTotal(r.rankId)))}</td>`).join('');
+        const esc = (s: string) => s
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+        const { orgTablesHtml, grandTotalHtml } = this.buildReportHtml();
 
         const html = `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><title>${esc(this.titleLabel)}</title>
 <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: ${fontFamily}; font-size: ${baseFontPt}pt; color: #000; background: #fff; padding: 16px; }
-    h1 { font-size: ${titleFontPt}pt; font-weight: 700; text-align: center; margin-bottom: 3px; }
-    .scope { font-size: ${baseFontPt + 1}pt; font-weight: 600; text-align: center; margin: 2px 0 6px 0; color: #1e3a5f; }
-    .date { font-size: ${baseFontPt}pt; text-align: center; margin-bottom: 14px; }
-    table { width: 100%; border-collapse: collapse; font-family: ${fontFamily}; table-layout: auto; }
-    th { padding: ${cellPad}; text-align: center; font-size: ${headFontPt}pt; font-weight: 700; border: 1px solid #000; white-space: nowrap; }
-    td { padding: ${cellPad}; border: 1px solid #000; font-size: ${baseFontPt}pt; }
-    td.num { text-align: center; } td.name { text-align: left; white-space: nowrap; } td.total-col { font-weight: 600; }
+    body { font-family: ${fontFamily}; font-size: 7pt; color: #000; background: #fff; padding: 15mm; }
+    h1 { font-size: 12pt; font-weight: 700; text-align: center; margin-bottom: 3px; }
+    .scope { font-size: 8pt; font-weight: 600; text-align: center; margin: 2px 0 6px 0; color: #1e3a5f; }
+    .date { font-size: 7pt; text-align: center; margin-bottom: 18px; }
+    .org-block { margin-bottom: 18px; page-break-inside: avoid; }
+    .org-title { font-size: 9pt; font-weight: 700; padding: 4px 0; border-bottom: 2px solid #000; margin-bottom: 4px; }
+    table { width: 100%; border-collapse: collapse; }
+    th { padding: 4px 6px; text-align: center; font-size: 7pt; font-weight: 700;
+         border: 1px solid #000; white-space: nowrap; background: #fff; color: #000; }
+    td { padding: 4px 6px; border: 1px solid #000; font-size: 7pt;
+         background: #fff; color: #000; }
+    td.num { text-align: center; }
+    td.name { text-align: left; }
     .total-row td { font-weight: 700; border-top: 2px solid #000; }
+    .grand-total-block { margin-top: 8px; padding: 8px 12px; border: 2px solid #000;
+        font-weight: 700; font-size: 9pt; text-align: right; }
     @page { size: landscape; margin: 8mm 8mm 14mm 8mm;
-        @bottom-center { content: "Page " counter(page) " of " counter(pages); font-family: ${fontFamily}; font-size: 7pt; color: #555; }
+        @bottom-center { content: "Page " counter(page) " of " counter(pages); font-family: ${fontFamily}; font-size: 5pt; color: #555; }
     }
-    @media print { body { padding: 0; } table { page-break-inside: auto; } tr { page-break-inside: avoid; } thead { display: table-header-group; } }
+    @media print {
+        body { padding: 0; }
+        .org-block { page-break-inside: avoid; }
+    }
 </style></head><body>
     <h1>${esc(this.titleLabel)}</h1>
     ${this.scopeLine ? `<div class="scope">${esc(this.scopeLine)}</div>` : ''}
     <div class="date">${esc(dateStr)}</div>
-    <table>
-        <thead><tr><th>${esc(this.serLabel)}</th><th>${esc(this.corpsColLabel)}</th>${rankHeaders}<th>${esc(this.totalLabel)}</th></tr></thead>
-        <tbody>${bodyRows}</tbody>
-        <tfoot><tr class="total-row"><td></td><td class="name" style="font-weight:700;text-align:right">${esc(this.grandTotalLabel)}</td>${totalCells}<td class="num" style="font-weight:700">${esc(this.fmt(this.grandTotal))}</td></tr></tfoot>
-    </table>
+    ${orgTablesHtml}
+    ${grandTotalHtml}
 </body></html>`;
 
         const win = window.open('', '_blank', 'width=1100,height=700');

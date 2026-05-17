@@ -114,22 +114,33 @@ export class AorCardComponent {
         return this.availableDivisions ?? [];
     }
 
-    /** Districts shown in the picker: only those whose parent division is in the AOR. */
+    /** Districts shown in the picker. Narrowed only when a division chip is focused (drill-down). */
     districtsForPicker(): AorChipWithParent[] {
-        const allowedParents = this.focusedDivisionId != null
-            ? new Set([this.focusedDivisionId])
-            : new Set(this.data.divisions.map((d) => d.id));
-        if (allowedParents.size === 0) return [];
-        return (this.availableDistricts ?? []).filter((d) => allowedParents.has(d.parentId));
+        if (this.focusedDivisionId != null) {
+            return (this.availableDistricts ?? []).filter((d) => d.parentId === this.focusedDivisionId);
+        }
+        return this.availableDistricts ?? [];
     }
 
-    /** Upazilas shown in the picker: only those whose parent district is in the AOR. */
+    /**
+     * Upazilas shown in the picker.
+     * - District focused → only that district's upazilas.
+     * - Division focused (no district) → all grand-children: upazilas under any district of that division.
+     * - Nothing focused → all available upazilas.
+     */
     upazilasForPicker(): AorChipWithParent[] {
-        const allowedParents = this.focusedDistrictId != null
-            ? new Set([this.focusedDistrictId])
-            : new Set(this.data.districts.map((d) => d.id));
-        if (allowedParents.size === 0) return [];
-        return (this.availableUpazilas ?? []).filter((u) => allowedParents.has(u.parentId));
+        if (this.focusedDistrictId != null) {
+            return (this.availableUpazilas ?? []).filter((u) => u.parentId === this.focusedDistrictId);
+        }
+        if (this.focusedDivisionId != null) {
+            const distIdsInDiv = new Set(
+                (this.availableDistricts ?? [])
+                    .filter((d) => d.parentId === this.focusedDivisionId)
+                    .map((d) => d.id)
+            );
+            return (this.availableUpazilas ?? []).filter((u) => distIdsInDiv.has(u.parentId));
+        }
+        return this.availableUpazilas ?? [];
     }
 
     /**
@@ -139,9 +150,6 @@ export class AorCardComponent {
      */
     canUncheckDivision(id: number): boolean {
         return !this.data.districts.some((d) => d.parentId === id);
-    }
-    canUncheckDistrict(id: number): boolean {
-        return !this.data.upazilas.some((u) => u.parentId === id);
     }
 
     /** Districts shown in the chip list - filtered by focused division when set. */
@@ -156,8 +164,12 @@ export class AorCardComponent {
             return this.data.upazilas.filter((u) => u.parentId === this.focusedDistrictId);
         }
         if (this.focusedDivisionId != null) {
+            // Resolve grand-children via the FULL district pool, because the AOR can hold an
+            // upazila directly without its parent district being in `data.districts`.
             const distIdsInDiv = new Set(
-                this.data.districts.filter((d) => d.parentId === this.focusedDivisionId).map((d) => d.id)
+                (this.availableDistricts ?? [])
+                    .filter((d) => d.parentId === this.focusedDivisionId)
+                    .map((d) => d.id)
             );
             return this.data.upazilas.filter((u) => distIdsInDiv.has(u.parentId));
         }
@@ -221,12 +233,8 @@ export class AorCardComponent {
         }
     }
     toggleDistPick(id: number): void {
-        if (this.distPicked.has(id)) {
-            if (!this.canUncheckDistrict(id)) return; // has upazilas under it
-            this.distPicked.delete(id);
-        } else {
-            this.distPicked.add(id);
-        }
+        if (this.distPicked.has(id)) this.distPicked.delete(id);
+        else this.distPicked.add(id);
     }
     isUpaLocked(id: number): boolean {
         // An upazila that's already part of THIS AOR can never be "locked" - it must be removable

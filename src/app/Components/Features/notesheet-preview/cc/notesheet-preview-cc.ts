@@ -756,7 +756,7 @@ export class NotesheetPreviewCCComponent implements OnInit {
         // explicit DXA widths + `columnWidths` on the Table guarantee the same
         // layout in Word and the PDF/Print Preview pipeline.
         // `contentWidth` already accounts for landscape page + 0.5" margins.
-        const colPctGrid = [5, 24, 6, 27, 10, 10, 14, 4]; // sums to 100
+        const colPctGrid = [5, 24, 6, 26, 10, 10, 14, 5]; // sums to 100
         const colWidths = colPctGrid.map((p) => Math.round((contentWidth * p) / 100));
         // Fix any rounding drift so the columns add up exactly to contentWidth.
         const widthSum = colWidths.reduce((a, b) => a + b, 0);

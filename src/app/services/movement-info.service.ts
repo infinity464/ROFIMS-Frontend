@@ -19,6 +19,30 @@ export interface MovementInfoPaginatedFilterRequest {
     filter: MovementInfoFilterRequest;
 }
 
+/** Flat row returned by GetByEmployeeId — display strings are pre-joined on the server. */
+export interface MovementInfoByEmployeeDto {
+    movementId: number;
+    letterNo: string | null;
+    letterDate: string | null;
+    /** 1 = Permanent, 2 = Temporary. */
+    movementType: number;
+    /** 1 = CC, 2 = MO, 3 = Article47Handover, 4 = Article47Takeover. */
+    moveOrderType: number;
+    movementReasonId: number | null;
+    movementReason: string | null;
+    movementReasonBN: string | null;
+    destinedMotherUnitId: number | null;
+    destinedMotherUnit: string | null;
+    destinedMotherUnitBN: string | null;
+    destinedRABUnitId: number | null;
+    destinedRABUnit: string | null;
+    destinedRABUnitBN: string | null;
+    dateOfRelease: string | null;
+    dateOfReduce: string | null;
+    handoverDate: string | null;
+    takeoverDate: string | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class MovementInfoService {
     private http = inject(HttpClient);
@@ -34,6 +58,11 @@ export class MovementInfoService {
 
     getById(movementId: number): Observable<MovementInfoModel> {
         return this.http.get<MovementInfoModel>(`${this.baseUrl}/GetFilteredByKeysAsyn/${movementId}`);
+    }
+
+    /** All movements in which the employee appears, joined with reason / destined-unit names. */
+    getByEmployeeId(employeeId: number): Observable<MovementInfoByEmployeeDto[]> {
+        return this.http.get<MovementInfoByEmployeeDto[]>(`${this.baseUrl}/GetByEmployeeId/${employeeId}`);
     }
 
     /** Lookup a movement by opaque PublicToken (used by the QR-code URL). */

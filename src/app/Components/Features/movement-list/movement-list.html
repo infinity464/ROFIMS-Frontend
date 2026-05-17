@@ -89,6 +89,7 @@
                 <th style="width:60px">#</th>
                 <th>Movement No</th>
                 <th>Date</th>
+                <th>Employee(s)</th>
                 <th>Movement Type</th>
                 <th>Move Order Type</th>
                 <th>Reason</th>
@@ -100,7 +101,8 @@
             <tr>
                 <td>{{ first + rowIndex + 1 }}</td>
                 <td>{{ row.letterNo || '—' }}</td>
-                <td>{{ row.letterDate || '—' }}</td>
+                <td>{{ (row.letterDate | date: 'dd-MM-yyyy') || '—' }}</td>
+                <td style="white-space:pre-line">{{ getEmployeesDisplay(row.employeeIds) }}</td>
                 <td>{{ movementTypeLabel(row.movementType) }}</td>
                 <td>{{ moveOrderTypeLabel(row.moveOrderType) }}</td>
                 <td>{{ movementReasonLabel(row.movementReasonId) }}</td>
@@ -135,7 +137,7 @@
 
         <ng-template pTemplate="emptymessage">
             <tr>
-                <td colspan="7" class="text-center py-4">
+                <td colspan="8" class="text-center py-4">
                     @if (loading) {
                         Loading...
                     } @else {

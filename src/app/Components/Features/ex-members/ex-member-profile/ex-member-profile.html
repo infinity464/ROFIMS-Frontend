@@ -420,6 +420,86 @@
             }
         </div>
 
+        <!-- Permanent Movement History -->
+        <div class="sp-section">
+            <div class="sp-section-header">
+                <span class="sp-section-heading">Permanent Movement History</span>
+            </div>
+            <div class="sp-table-wrap">
+                <p-table
+                    [value]="permanentMovementList"
+                    [tableStyle]="{ 'min-width': '50rem' }"
+                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
+                >
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 5%">{{ L['table.ser'] }}</th>
+                            <th style="width: 17%">Order Type</th>
+                            <th style="width: 20%">Destined Unit</th>
+                            <th style="width: 28%">Reason</th>
+                            <th style="width: 15%">Date of Release</th>
+                            <th style="width: 15%">Date of Reduce from RAB Strength</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                        <tr>
+                            <td>{{ rowNum(rowIndex) }}.</td>
+                            <td>{{ moveOrderTypeLabel(row.moveOrderType) }}</td>
+                            <td>{{ movementDestination(row) }}</td>
+                            <td>{{ val(row.movementReasonBN) }}</td>
+                            <td>{{ formatDateOnly(row.dateOfRelease) }}</td>
+                            <td>{{ formatDateOnly(row.dateOfReduce) }}</td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="6" class="text-center text-500 py-3">No permanent movement records.</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
+
+        <!-- Temporary Movement History -->
+        <div class="sp-section">
+            <div class="sp-section-header">
+                <span class="sp-section-heading">Temporary Movement History</span>
+            </div>
+            <div class="sp-table-wrap">
+                <p-table
+                    [value]="temporaryMovementList"
+                    [tableStyle]="{ 'min-width': '50rem' }"
+                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
+                >
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 5%">{{ L['table.ser'] }}</th>
+                            <th style="width: 17%">Order Type</th>
+                            <th style="width: 20%">Destined Unit</th>
+                            <th style="width: 28%">Reason</th>
+                            <th style="width: 15%">Date of Release</th>
+                            <th style="width: 15%">Date of Reduce from RAB Strength</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                        <tr>
+                            <td>{{ rowNum(rowIndex) }}.</td>
+                            <td>{{ moveOrderTypeLabel(row.moveOrderType) }}</td>
+                            <td>{{ movementDestination(row) }}</td>
+                            <td>{{ val(row.movementReasonBN) }}</td>
+                            <td>{{ formatDateOnly(row.dateOfRelease) }}</td>
+                            <td>{{ formatDateOnly(row.dateOfReduce) }}</td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="6" class="text-center text-500 py-3">No temporary movement records.</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
+
          <!-- Service History (Mother Organization) -->
          <div class="sp-section">
             <div class="sp-section-header">

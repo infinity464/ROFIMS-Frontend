@@ -25,6 +25,7 @@ import { CommonCodeService } from '@/services/common-code-service';
 import { CommonCodeModel } from '@/models/common-code-model';
 import { MoveOrderType, MoveOrderTypeOptions, MovementType, MovementTypeOptions } from '@/models/enums';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
+import { LeaveListLookupsService } from '@/Components/Features/leave-application/shared/leave-list-lookups.service';
 
 @Component({
     selector: 'app-movement-list',
@@ -56,6 +57,8 @@ export class MovementListComponent implements OnInit, OnDestroy {
     private confirmationService = inject(ConfirmationService);
     private userMenuService = inject(UserMenuService);
     private commonCodeService = inject(CommonCodeService);
+    /** Shared employee/prefix/rank cache; getApplicantName() composes the BJO-62827 WO Md Mehedi Hasan string. */
+    private empLookups = inject(LeaveListLookupsService);
 
     canInsert = true;
     canUpdate = true;
@@ -107,6 +110,23 @@ export class MovementListComponent implements OnInit, OnDestroy {
         });
 
         this.searchSub = this.searchSubject.pipe(debounceTime(300)).subscribe(() => this.reload());
+
+        // Warm the employee/prefix/rank lookup caches; idempotent across the app session.
+        this.empLookups.loadAll();
+    }
+
+    /** Renders the JSON-array employeeIds as one "BJO-62827 WO Md Mehedi Hasan" line per employee. */
+    getEmployeesDisplay(employeeIdsJson: string | null | undefined): string {
+        if (!employeeIdsJson) return '—';
+        let ids: number[];
+        try {
+            const parsed = JSON.parse(employeeIdsJson);
+            ids = Array.isArray(parsed) ? parsed.filter((n) => Number.isInteger(n)) : [];
+        } catch {
+            return '—';
+        }
+        if (ids.length === 0) return '—';
+        return ids.map((id) => this.empLookups.getApplicantName(id)).join('\n');
     }
 
     ngOnDestroy(): void {
