@@ -224,6 +224,10 @@
                 <p-button type="button" icon="pi pi-history" [rounded]="true" [text]="true" size="small" severity="secondary" pTooltip="Removal History" (onClick)="openRemovalHistory(row)"></p-button>
               }
               <p-button type="button" icon="pi pi-list" [rounded]="true" [text]="true" size="small" severity="info" pTooltip="Approval Log" (onClick)="openApprovalLog(row)"></p-button>
+              @if (noteSheetTypeFilter === 'ExBDLeave') {
+                <p-button type="button" icon="pi pi-check-circle" [rounded]="true" [text]="true" size="small" severity="success" pTooltip="Leave Avail" (onClick)="openLeaveAvail(row)"></p-button>
+                <p-button type="button" icon="pi pi-times-circle" [rounded]="true" [text]="true" size="small" severity="danger" pTooltip="Leave Not Avail" (onClick)="openLeaveNotAvail(row)"></p-button>
+              }
             </div>
           </td>
         </tr>
@@ -942,6 +946,49 @@
         </ng-template>
       </p-table>
     }
+  </p-dialog>
+
+  <!-- ═══ Leave Avail Dialog ═══ -->
+  <p-dialog header="Leave Avail" [(visible)]="showLeaveAvailDialog" [modal]="true" [style]="{ width: '500px' }" [closable]="true" [draggable]="false">
+    @if (leaveAvailLoading) {
+      <div class="text-center py-4"><i class="pi pi-spinner pi-spin" style="font-size:1.5rem"></i><p class="mt-2">Loading...</p></div>
+    } @else if (leaveAvailApp) {
+      <div style="display:flex; flex-direction:column; gap:1rem;">
+        <div style="display:flex; flex-direction:column; gap:0.25rem;">
+          <label class="font-semibold">From Date</label>
+          <p-datepicker [(ngModel)]="leaveAvailFromDate" dateFormat="dd-mm-yy" [showIcon]="true" appendTo="body" [style]="{ width: '100%' }"></p-datepicker>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:0.25rem;">
+          <label class="font-semibold">To Date</label>
+          <p-datepicker [(ngModel)]="leaveAvailToDate" dateFormat="dd-mm-yy" [showIcon]="true" appendTo="body" [style]="{ width: '100%' }"></p-datepicker>
+        </div>
+        @if (leaveAvailFromDate && leaveAvailToDate) {
+          <div style="font-size:0.9rem; color:#555;">
+            <span class="font-semibold">Total Days:</span> {{ getLeaveAvailTotalDays() }}
+          </div>
+        }
+        <div style="display:flex; justify-content:flex-end; gap:0.5rem; margin-top:0.5rem;">
+          <p-button label="Cancel" severity="secondary" [outlined]="true" (onClick)="showLeaveAvailDialog = false"></p-button>
+          <p-button label="Submit" severity="success" icon="pi pi-check" [loading]="leaveAvailSaving" (onClick)="submitLeaveAvail()"></p-button>
+        </div>
+      </div>
+    } @else {
+      <p class="text-red-500">Failed to load application data.</p>
+    }
+  </p-dialog>
+
+  <!-- ═══ Leave Not Avail Dialog ═══ -->
+  <p-dialog header="Leave Not Availed" [(visible)]="showLeaveNotAvailDialog" [modal]="true" [style]="{ width: '450px' }" [closable]="true" [draggable]="false">
+    <div class="flex flex-column gap-3">
+      <div class="flex flex-column gap-1">
+        <label class="font-semibold">Reason for not availing leave</label>
+        <textarea pTextarea [(ngModel)]="leaveNotAvailReason" rows="4" placeholder="Enter reason..." class="w-full"></textarea>
+      </div>
+      <div class="flex justify-content-end gap-2 mt-3">
+        <p-button label="Cancel" severity="secondary" [outlined]="true" (onClick)="showLeaveNotAvailDialog = false"></p-button>
+        <p-button label="Submit" severity="danger" icon="pi pi-times" [loading]="leaveNotAvailSaving" (onClick)="submitLeaveNotAvail()"></p-button>
+      </div>
+    </div>
   </p-dialog>
 </p-fluid>
 

@@ -16,6 +16,9 @@ export interface ExBdLeaveApplicationModel {
     familyMembersJson: string | null;
     filesReferencesJson: string | null;
     applicationStatus: string;
+    availStatus: string | null;
+    availStartDate: string | null;
+    availEndDate: string | null;
     noteSheetId: number | null;
     remarks: string | null;
     createdBy: string | null;
@@ -148,6 +151,10 @@ export class ExBdLeaveApplicationService {
         return this.http.get<any>(`${this.baseUrl}/CheckEligibility/${employeeId}`, { params });
     }
 
+    availLeave(payload: { exBdLeaveApplicationId: number; availStatus: string; availStartDate?: string; availEndDate?: string; remarks?: string; currentUser?: string }): Observable<any> {
+        return this.http.post(`${this.baseUrl}/AvailLeave`, payload);
+    }
+
     // ── JSON helpers ───────────────────────────────────────────────────
 
     static parseCountries(json: string | null): DestinationCountryItem[] {
@@ -164,4 +171,43 @@ export class ExBdLeaveApplicationService {
         if (!json) return [];
         try { return JSON.parse(json); } catch { return []; }
     }
+
+    // ── Progress view ────────────────────────────────────────────────
+
+    getProgressByEmployee(employeeId: number): Observable<ExBdLeaveApplicationProgressView[]> {
+        return this.http.get<ExBdLeaveApplicationProgressView[]>(`${this.baseUrl}/GetProgressByEmployee/${employeeId}`).pipe(
+            map((res: any) => (Array.isArray(res) ? res : []))
+        );
+    }
+}
+
+export interface ExBdLeaveApplicationProgressView {
+    exBdLeaveApplicationId: number;
+    applicationDate: string;
+    applicantEmployeeId: number;
+    visitTypeId: number | null;
+    visitTypeName: string | null;
+    visitTypeNameBN: string | null;
+    destinationCountriesJson: string | null;
+    countriesDisplay: string | null;
+    countriesDisplayBN: string | null;
+    fromDate: string;
+    toDate: string;
+    totalDays: number;
+    familyMembersJson: string | null;
+    familyMembersDisplay: string | null;
+    familyMembersDisplayBN: string | null;
+    applicationStatus: string;
+    availStatus: string | null;
+    noteSheetId: number | null;
+    noteSheetNo: string | null;
+    noteSheetCurrentStatus: string | null;
+    nsInitiatorStatus: string | null;
+    nsFinalApprovalStatus: string | null;
+    officeOrderId: number | null;
+    officeOrderLetterNo: string | null;
+    officeOrderStatus: string | null;
+    officeOrderApprovalStatus: string | null;
+    progressStatus: string;
+    isDeleted: boolean;
 }

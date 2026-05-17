@@ -215,6 +215,7 @@
 .oo-doc-signature-block { text-align: center; min-width: 200px; }
 .oo-doc-sig-name { font-weight: 700; font-size: 10pt; border-top: 1px solid transparent; padding-top: 4px; }
 .oo-doc-sig-rank, .oo-doc-sig-appointment, .oo-doc-sig-unit { font-size: 9pt; line-height: 1.5; }
+.oo-doc-sig-date { font-size: 9pt; line-height: 1.5; margin-top: 4px; }
 
 /* ── Attachments inside document ─────────────────── */
 .oo-doc-attachments { margin-top: 20px; }
@@ -223,7 +224,6 @@
 .oo-doc-onulipi {
     margin-top: 30px;
     padding-top: 10px;
-    border-top: 1px solid #e5e7eb;
 }
 
 .oo-doc-onulipi-header {

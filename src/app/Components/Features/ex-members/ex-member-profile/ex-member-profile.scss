@@ -506,3 +506,38 @@ $section-margin: 1rem;
         gap: 0.25rem;
     }
 }
+
+// ── ExBD Leave Status Badges ──────────────────────────────────────
+.sp-status-badge {
+    display: inline-block;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.sp-status-success {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.sp-status-info {
+    background-color: #d1ecf1;
+    color: #0c5460;
+}
+
+.sp-status-warn {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.sp-status-danger {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.sp-status-secondary {
+    background-color: #e2e3e5;
+    color: #383d41;
+}

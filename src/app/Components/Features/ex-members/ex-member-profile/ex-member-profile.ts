@@ -26,6 +26,7 @@ import { CourseInfoService, CourseInfoByEmployeeView } from '@/services/course-i
 import { DraftCourseService } from '@/services/draft-course.service';
 import { RftsTrainingRow } from '@/models/draft-course.model';
 import { PromotionInfoService, PromotionInfoByEmployeeView } from '@/services/promotion-info.service';
+import { ExBdLeaveApplicationService, ExBdLeaveApplicationProgressView } from '@/services/ex-bd-leave-application.service';
 import { EmployeePersonalServiceOverview } from '@/models/employee-personal-service-overview.model';
 import { LocationType } from '@/models/enums';
 import { PresentStatusInfoService } from '@/services/present-status-info.service';
@@ -117,6 +118,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
     promotionList: PromotionInfoByEmployeeView[] = [];
     documentList: EmployeeDocumentReferenceItem[] = [];
     approvedNoteSheetList: EmployeeApprovedNoteSheetRow[] = [];
+    exBdLeaveProgressList: ExBdLeaveApplicationProgressView[] = [];
     previousYearSummary: LeaveInfoSummaryItem[] = [];
     previousYearSummaryDialogVisible = false;
     previousYearSummaryLoading = false;
@@ -151,6 +153,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         private empService: EmpService,
         private exportService: ExportService,
         private presentStatusInfoService: PresentStatusInfoService,
+        private exBdLeaveAppService: ExBdLeaveApplicationService,
         private http: HttpClient
     ) {}
 
@@ -580,6 +583,47 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         return this.foreignVisitList.filter((v) => (v.visitType ?? '').toString().trim().toLowerCase() !== 'official');
     }
 
+    private readonly progressStatusMap: Record<string, { en: string; bn: string }> = {
+        'ApplicationReceived': { en: 'Application Received', bn: 'আবেদন গৃহীত' },
+        'NoteSheetDraft': { en: 'Notesheet Draft', bn: 'নোটশিট খসড়া' },
+        'Submitted': { en: 'Submitted (Initiator)', bn: 'জমা দেওয়া হয়েছে (উদ্যোক্তা)' },
+        'UnderRecommendation': { en: 'Under Recommendation', bn: 'সুপারিশাধীন' },
+        'FinalApprovalPending': { en: 'Final Approval Pending', bn: 'চূড়ান্ত অনুমোদন মুলতুবি' },
+        'NoteSheetApproved': { en: 'Notesheet Approved', bn: 'নোটশিট অনুমোদিত' },
+        'OfficeOrderGenerated': { en: 'Office Order Generated', bn: 'অফিস আদেশ তৈরি' },
+        'OfficeOrderApproved': { en: 'Office Order Approved', bn: 'অফিস আদেশ অনুমোদিত' },
+        'Cancelled': { en: 'Cancelled', bn: 'বাতিল' },
+    };
+
+    private readonly availStatusMap: Record<string, { en: string; bn: string }> = {
+        'Availed': { en: 'Availed', bn: 'গ্রহণকৃত' },
+        'NotAvailed': { en: 'Not Availed', bn: 'গ্রহণ করা হয়নি' },
+    };
+
+    getProgressStatusLabel(status: string): string {
+        const entry = this.progressStatusMap[status];
+        return entry ? entry[this.profileLang] : (status ?? '-');
+    }
+
+    getAvailStatusLabel(status: string | null): string {
+        if (!status) return '';
+        const entry = this.availStatusMap[status];
+        return entry ? entry[this.profileLang] : status;
+    }
+
+    getProgressStatusSeverity(status: string): string {
+        switch (status) {
+            case 'OfficeOrderApproved': return 'success';
+            case 'NoteSheetApproved':
+            case 'OfficeOrderGenerated': return 'info';
+            case 'Submitted':
+            case 'UnderRecommendation':
+            case 'FinalApprovalPending': return 'warn';
+            case 'Cancelled': return 'danger';
+            default: return 'secondary';
+        }
+    }
+
     get previousYear(): number {
         return this.currentYear - 1;
     }
@@ -622,9 +666,10 @@ export class ExMemberProfile implements OnInit, OnDestroy {
             documents: this.empService.getEmployeeDocumentReferences(id).pipe(catchError(() => of([]))),
             rftsTraining: this.draftCourseService.getRftsTrainingByEmployeeId(id).pipe(catchError(() => of([]))),
             presentStatus: this.presentStatusInfoService.getAllByEmployeeId(id).pipe(catchError(() => of([]))),
-            approvedNoteSheets: this.http.get<EmployeeApprovedNoteSheetRow[]>(`${environment.apis.core}/NoteSheetReferenceEmployee/GetApprovedNoteSheetsByEmployeeId/${id}`).pipe(catchError(() => of([])))
+            approvedNoteSheets: this.http.get<EmployeeApprovedNoteSheetRow[]>(`${environment.apis.core}/NoteSheetReferenceEmployee/GetApprovedNoteSheetsByEmployeeId/${id}`).pipe(catchError(() => of([]))),
+            exBdLeaveProgress: this.exBdLeaveAppService.getProgressByEmployee(id).pipe(catchError(() => of([])))
         }).subscribe({
-            next: ({ profile, family, previousRab, bankAcc, education, foreignVisit, leaveCurrentYear, additionalRemarks, address, moServHistory, discipline, course, promotion, documents, rftsTraining, presentStatus, approvedNoteSheets }) => {
+            next: ({ profile, family, previousRab, bankAcc, education, foreignVisit, leaveCurrentYear, additionalRemarks, address, moServHistory, discipline, course, promotion, documents, rftsTraining, presentStatus, approvedNoteSheets, exBdLeaveProgress }) => {
                 this.profile = profile;
                 this.familyList = family ?? [];
                 this.loadProfileImage(profile);
@@ -641,6 +686,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
                 this.promotionList = promotion ?? [];
                 this.documentList = documents ?? [];
                 this.approvedNoteSheetList = Array.isArray(approvedNoteSheets) ? approvedNoteSheets : [];
+                this.exBdLeaveProgressList = Array.isArray(exBdLeaveProgress) ? exBdLeaveProgress : [];
                 this.rftsTrainingList = rftsTraining ?? [];
                 const activeRecord = (presentStatus ?? []).find((r: any) => (r.IsActive ?? r.isActive));
                 if (activeRecord) {

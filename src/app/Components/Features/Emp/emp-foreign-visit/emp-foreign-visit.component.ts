@@ -159,7 +159,7 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
         this.visitForm = this.fb.group({
             subjectId: [null, Validators.required],
             visitId: [null, Validators.required],
-            destinationCountryId: [null, Validators.required],
+            destinationCountryIds: [[] as number[], Validators.required],
             fromDate: [null, Validators.required],
             toDate: [null],
             withFamily: [false],
@@ -274,6 +274,7 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
                     foreignVisitId: x.foreignVisitId ?? x.ForeignVisitId,
                     subjectId: x.subjectId ?? x.SubjectId ?? null,
                     destinationCountryId: x.destinationCountryId ?? x.DestinationCountryId ?? null,
+                    destinationCountries: x.destinationCountries ?? x.DestinationCountries ?? null,
                     visitId: x.visitId ?? x.VisitId ?? null,
                     fromDate: x.fromDate ?? x.FromDate ?? null,
                     toDate: x.toDate ?? x.ToDate ?? null,
@@ -396,6 +397,23 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
         return o ? o.label : 'N/A';
     }
 
+    getCountryDisplay(row: ForeignVisitInfoModel): string {
+        const ids = this.parseCountryIds(row);
+        if (ids.length === 0) return 'N/A';
+        return ids.map(id => this.getOptionLabel(this.destinationCountryOptions, id)).join(', ');
+    }
+
+    parseCountryIds(row: ForeignVisitInfoModel): number[] {
+        if (row.destinationCountries) {
+            try {
+                const arr = JSON.parse(row.destinationCountries);
+                if (Array.isArray(arr)) return arr;
+            } catch {}
+        }
+        // Fallback to single country
+        return row.destinationCountryId != null ? [row.destinationCountryId] : [];
+    }
+
     getFamilyName(familyId: number): string {
         const f = this.familyMasterList.find((x: any) => (x.fmid ?? x.FMID) === familyId);
         return f ? ((f as any).nameEN || (f as any).NameEN || '') : String(familyId);
@@ -438,7 +456,7 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
         this.visitForm.reset({
             subjectId: null,
             visitId: null,
-            destinationCountryId: null,
+            destinationCountryIds: [],
             fromDate: null,
             toDate: null,
             withFamily: false,
@@ -464,7 +482,7 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
         this.visitForm.patchValue({
             subjectId: row.subjectId,
             visitId: row.visitId,
-            destinationCountryId: row.destinationCountryId,
+            destinationCountryIds: this.parseCountryIds(row),
             fromDate: from,
             toDate: to,
             withFamily: row.withFamily ?? false,
@@ -504,11 +522,15 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
                 const x = new Date(d);
                 return isNaN(x.getTime()) ? null : x.toISOString();
             };
+            const countryIds: number[] = v.destinationCountryIds ?? [];
+            const countriesJson = countryIds.length > 0 ? JSON.stringify(countryIds) : null;
+
             const payload: Partial<ForeignVisitInfoModel> = {
                 employeeId: this.selectedEmployeeId!,
                 foreignVisitId: this.isEditMode ? (this.editingVisitId ?? 0) : 0,
                 subjectId: v.subjectId ?? null,
-                destinationCountryId: v.destinationCountryId ?? null,
+                destinationCountryId: countryIds.length > 0 ? countryIds[0] : null,
+                destinationCountries: countriesJson,
                 visitId: v.visitId ?? null,
                 fromDate: toDateStr(v.fromDate),
                 toDate: toDateStr(v.toDate),
@@ -527,35 +549,23 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
                 : this.foreignVisitService.saveVisit(payload);
 
             req.subscribe({
-            next: (res: any) => {
-                const entity = res?.data ?? res?.Data ?? res;
-                const newVisitId = entity?.foreignVisitId ?? entity?.ForeignVisitId ?? (Array.isArray(entity) ? entity[0]?.foreignVisitId ?? entity[0]?.ForeignVisitId : null);
-                if (!this.isEditMode && this.pendingFamilyIds.length > 0 && this.selectedEmployeeId && newVisitId != null) {
-                    this.addPendingFamilyMembers(newVisitId);
-                } else {
-                    if (!this.isEditMode && this.pendingFamilyIds.length > 0 && newVisitId == null) {
-                        this.messageService.add({
-                            severity: 'warn',
-                            summary: 'Visit saved',
-                            detail: 'Please edit the visit to add family members.'
-                        });
+                next: (res: any) => {
+                    const entity = res?.data ?? res?.Data ?? res;
+                    const newVisitId = entity?.foreignVisitId ?? entity?.ForeignVisitId ?? (Array.isArray(entity) ? entity[0]?.foreignVisitId ?? entity[0]?.ForeignVisitId : null);
+                    if (!this.isEditMode && this.pendingFamilyIds.length > 0 && this.selectedEmployeeId && newVisitId != null) {
+                        this.addPendingFamilyMembers(newVisitId);
                     } else {
-                        this.messageService.add({
-                            severity: 'success',
-                            summary: 'Success',
-                            detail: this.isEditMode ? 'Foreign visit updated.' : 'Foreign visit added.'
-                        });
+                        this.messageService.add({ severity: 'success', summary: 'Success', detail: this.isEditMode ? 'Foreign visit updated.' : 'Foreign visit added.' });
+                        this.showInlineForm = false;
+                        this.loadVisitList();
+                        this.isSaving = false;
                     }
-                    this.showInlineForm = false;
-                    this.loadVisitList();
+                },
+                error: (err: any) => {
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to save foreign visit' });
                     this.isSaving = false;
                 }
-            },
-            error: (err: any) => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to save foreign visit' });
-                this.isSaving = false;
-            }
-        });
+            });
         };
 
         if (filesToUpload.length > 0) {

@@ -25,6 +25,8 @@ export interface ForeignVisitInfoModel {
     foreignVisitId: number;
     subjectId: number | null;
     destinationCountryId: number | null;
+    /** JSON array of country IDs for multiple destinations, e.g. [10, 20] */
+    destinationCountries?: string | null;
     visitId: number | null;
     fromDate: string | null;
     toDate: string | null;

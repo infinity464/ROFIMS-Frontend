@@ -77,14 +77,15 @@
                                 </div>
                                 <div>
                                     <label class="font-semibold block mb-2 text-700">Destination Country <span class="text-red-500">*</span></label>
-                                    <p-select
-                                        formControlName="destinationCountryId"
+                                    <p-multiselect
+                                        formControlName="destinationCountryIds"
                                         [options]="destinationCountryOptions"
                                         optionLabel="label"
                                         optionValue="value"
-                                        placeholder="Select Destination Country"
+                                        placeholder="Select Destination Countries"
                                         styleClass="w-full"
-                                        [filter]="true"></p-select>
+                                        [filter]="true"
+                                        display="chip"></p-multiselect>
                                 </div>
                                 <div>
                                     <label class="font-semibold block mb-2 text-700">Date of Visit -- From <span class="text-red-500">*</span></label>
@@ -205,7 +206,7 @@
                         <tr>
                             <td>{{ getOptionLabel(subjectOptions, row.subjectId) }}</td>
                             <td>{{ getOptionLabel(purposeOfVisitOptions, row.visitId) }}</td>
-                            <td>{{ getOptionLabel(destinationCountryOptions, row.destinationCountryId) }}</td>
+                            <td>{{ getCountryDisplay(row) }}</td>
                             <td>{{ formatDate(row.fromDate) }}</td>
                             <td>{{ formatDate(row.toDate) }}</td>
                             <td>{{ getTotalDaysForRow(row) }}</td>
