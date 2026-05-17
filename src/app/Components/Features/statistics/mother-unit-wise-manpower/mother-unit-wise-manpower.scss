@@ -227,6 +227,32 @@
 
 .cell-zero { color: var(--text-color-secondary, #94a3b8); }
 
+/* ── Org section banner (one per selected mother org) ──────────────────── */
+.org-section { margin-bottom: 0; }
+
+.org-banner {
+    padding: 0.55rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #fff;
+    background: var(--primary-color, #4f46e5);
+    letter-spacing: 0.02em;
+    border-top: 1px solid var(--surface-border, #e2e8f0);
+}
+
+/* ── Per-org subtotal row ──────────────────────────────────────────────── */
+.subtotals-row {
+    background-color: var(--surface-section, #eef2ff) !important;
+    font-weight: 600;
+
+    td { border-top: 2px solid var(--surface-border, #c7d2fe); }
+}
+
+/* ── Cross-org grand total section ─────────────────────────────────────── */
+.grand-total-section {
+    border-top: 3px solid var(--primary-color, #4f46e5);
+}
+
 /* ── Grand total row ─────────────────────────────────────────────────── */
 .grand-total-row {
     background-color: var(--primary-color, #4f46e5) !important;
@@ -284,6 +310,12 @@
 
     .report-table th {
         color: var(--text-color);
+    }
+
+    /* Per-org subtotal row: the light-blue fallback collides with dark surfaces. */
+    .subtotals-row {
+        background-color: var(--surface-ground) !important;
+        td { border-top-color: var(--surface-border); }
     }
 }
 

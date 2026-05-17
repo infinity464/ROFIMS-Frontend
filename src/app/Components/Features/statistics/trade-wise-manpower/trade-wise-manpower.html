@@ -4,42 +4,25 @@
     <!-- Header -->
     <div class="report-results-header">
 
-        <!-- Row 1: dropdowns left | buttons right -->
+        <!-- Row 1: multiselect left | buttons right -->
         <div class="report-toolbar-row">
 
-            <div class="filter-group">
-                <!-- Mother Org dropdown -->
-                <div class="org-filter-wrap">
-                    <p-select
-                        [(ngModel)]="selectedOrgId"
-                        [options]="orgOptions"
-                        optionLabel="orgName"
-                        optionValue="orgId"
-                        placeholder="{{ lang === 'en' ? 'Select Mother Organization' : 'মাতৃ সংগঠন নির্বাচন করুন' }}"
-                        [showClear]="true"
-                        [filter]="true"
-                        filterBy="orgName,orgNameBN"
-                        (onChange)="onOrgChange()"
-                        styleClass="org-filter-select"
-                        [disabled]="loadingOrgs">
-                    </p-select>
-                </div>
-
-                <!-- Corps filter dropdown (optional) -->
-                <div class="corps-filter-wrap" *ngIf="selectedOrgId && corpsOptions.length > 0">
-                    <p-select
-                        [(ngModel)]="selectedCorpsId"
-                        [options]="corpsOptions"
-                        optionLabel="corpsName"
-                        optionValue="corpsId"
-                        placeholder="{{ lang === 'en' ? 'All Corps' : 'সকল কোর' }}"
-                        [showClear]="true"
-                        [filter]="true"
-                        filterBy="corpsName,corpsNameBN"
-                        (onChange)="onCorpsChange()"
-                        styleClass="org-filter-select">
-                    </p-select>
-                </div>
+            <!-- Mother Org multi-select -->
+            <div class="org-filter-wrap">
+                <p-multiselect
+                    [(ngModel)]="selectedOrgIds"
+                    [options]="orgOptions"
+                    optionLabel="orgName"
+                    optionValue="orgId"
+                    placeholder="All Organizations"
+                    [showClear]="true"
+                    [filter]="true"
+                    filterBy="orgName,orgNameBN"
+                    display="chip"
+                    (onChange)="onOrgFilterChange()"
+                    styleClass="org-filter-select"
+                    [disabled]="loadingOrgs || loading">
+                </p-multiselect>
             </div>
 
             <!-- Lang + Export -->
@@ -51,7 +34,7 @@
                 <div class="report-export-wrap">
                     <button type="button" class="report-btn-export"
                             (click)="toggleExportDropdown($event)"
-                            [disabled]="loading || exporting || trades.length === 0">
+                            [disabled]="loading || exporting || filteredOrgs.length === 0">
                         @if (exporting) {
                             <i class="pi pi-spin pi-spinner" style="font-size:13px"></i>
                             Generating...
@@ -89,8 +72,8 @@
             </div>
         </div>
 
-        <!-- Row 2: centered title (only when org selected) -->
-        <div class="report-header-title-block" *ngIf="selectedOrgId">
+        <!-- Row 2: centered title -->
+        <div class="report-header-title-block">
             <div class="report-main-title">{{ titleLabel }}</div>
             @if (scopeLine) {
                 <div class="report-scope-line">{{ scopeLine }}</div>
@@ -105,54 +88,74 @@
         <div *ngFor="let i of [1,2,3,4,5,6,7,8]" class="skeleton-row"></div>
     </div>
 
-    <!-- No org selected -->
-    <div *ngIf="!loading && !selectedOrgId" class="empty-state">
-        <i class="pi pi-filter"></i>
-        <p>{{ lang === 'en' ? 'Please select a Mother Organization.' : 'অনুগ্রহ করে একটি মাতৃ সংগঠন নির্বাচন করুন।' }}</p>
-    </div>
-
     <!-- Report body -->
-    <div class="report-body" *ngIf="!loading && selectedOrgId">
+    <div class="report-body" *ngIf="!loading">
 
-        <!-- Empty state -->
-        <div *ngIf="trades.length === 0" class="empty-state">
-            <i class="pi pi-inbox"></i>
-            <p>{{ lang === 'en' ? 'No data found.' : 'কোনো তথ্য পাওয়া যায়নি।' }}</p>
+        <!-- Empty state: nothing selected yet -->
+        <div *ngIf="selectedOrgIds.length === 0" class="empty-state">
+            <i class="pi pi-filter"></i>
+            <p>Please select one or more Mother Organizations.</p>
         </div>
 
-        <!-- Pivot table -->
-        <div *ngIf="trades.length > 0" class="report-table-wrap">
-            <table class="report-table">
-                <thead>
-                    <tr>
-                        <th class="col-ser">{{ serLabel }}</th>
-                        <th class="col-unit">{{ tradeColLabel }}</th>
-                        <th *ngFor="let rank of ranks">{{ rankLabel(rank) }}</th>
-                        <th class="col-total">{{ totalLabel }}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr *ngFor="let t of trades; let i = index">
-                        <td class="num-cell">{{ fmt(i + 1) }}</td>
-                        <td class="unit-name">{{ tradeNameLabel(t) }}</td>
-                        <td *ngFor="let rank of ranks" class="num-cell"
-                            [class.cell-zero]="cellValue(t, rank.rankId) === 0">
-                            {{ fmt(cellValue(t, rank.rankId)) }}
-                        </td>
-                        <td class="num-cell col-total-cell">{{ fmt(t.total) }}</td>
-                    </tr>
-                </tbody>
-                <tfoot>
-                    <tr class="grand-total-row">
-                        <td></td>
-                        <td class="totals-label">{{ grandTotalLabel }}</td>
-                        <td *ngFor="let rank of ranks" class="num-cell">
-                            {{ fmt(columnTotal(rank.rankId)) }}
-                        </td>
-                        <td class="num-cell col-total-cell">{{ fmt(grandTotal) }}</td>
-                    </tr>
-                </tfoot>
-            </table>
+        <!-- Empty state: selection made but no data -->
+        <div *ngIf="selectedOrgIds.length > 0 && filteredOrgs.length === 0" class="empty-state">
+            <i class="pi pi-inbox"></i>
+            <p>No data found.</p>
+        </div>
+
+        <!-- One table per mother org -->
+        <div *ngFor="let org of filteredOrgs" class="org-section">
+
+            <!-- Org name banner -->
+            <div class="org-banner">{{ orgLabel(org) }}</div>
+
+            <div class="report-table-wrap">
+                <table class="report-table">
+                    <thead>
+                        <tr>
+                            <th class="col-ser">{{ serLabel }}</th>
+                            <th class="col-unit">{{ tradeColLabel }}</th>
+                            <th *ngFor="let rank of org.ranks">{{ rankLabel(rank) }}</th>
+                            <th class="col-total">{{ totalLabel }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let t of org.trades; let i = index">
+                            <td class="num-cell">{{ fmt(i + 1) }}</td>
+                            <td class="unit-name">{{ tradeNameLabel(t) }}</td>
+                            <td *ngFor="let rank of org.ranks" class="num-cell"
+                                [class.cell-zero]="cellValue(t, rank.rankId) === 0">
+                                {{ fmt(cellValue(t, rank.rankId)) }}
+                            </td>
+                            <td class="num-cell col-total-cell">{{ fmt(t.total) }}</td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr class="subtotals-row">
+                            <td></td>
+                            <td class="totals-label">{{ totalLabel }}</td>
+                            <td *ngFor="let rank of org.ranks" class="num-cell">
+                                {{ fmt(columnTotal(org, rank.rankId)) }}
+                            </td>
+                            <td class="num-cell col-total-cell">{{ fmt(org.grandTotal) }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- Grand total across all filtered orgs -->
+        <div class="grand-total-section" *ngIf="filteredOrgs.length > 0">
+            <div class="report-table-wrap">
+                <table class="report-table">
+                    <tbody>
+                        <tr class="grand-total-row">
+                            <td class="totals-label">{{ grandTotalLabel }}</td>
+                            <td class="num-cell col-total-cell">{{ fmt(grandTotal) }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
     </div>
