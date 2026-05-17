@@ -4,7 +4,6 @@ import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { firstValueFrom } from 'rxjs';
 import { Packer } from 'docx';
-import { saveAs } from 'file-saver';
 import { ExportService } from '@/services/export.service';
 import { UserMenuService } from '@/services/user-menu.service';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
@@ -146,14 +145,16 @@ export class ManpowerSummaryComponent implements OnInit {
                     break;
                 case 'pdf':
                 case 'print': {
+                    // PDF opens as a preview tab; Print opens a popup with the PDF
+                    // in an iframe and auto-triggers the browser's print dialog.
                     const doc = this.exportService.buildWordDoc(config);
                     const docxBlob = await Packer.toBlob(doc);
                     const pdfBlob = await this.convertDocxToPdf(docxBlob);
-                    const filename = `${config.filename}_${this.lang}.pdf`;
+                    const pdfUrl = URL.createObjectURL(pdfBlob);
                     if (type === 'pdf') {
-                        saveAs(pdfBlob, filename);
+                        window.open(pdfUrl, '_blank');
                     } else {
-                        window.open(URL.createObjectURL(pdfBlob), '_blank');
+                        this.exportService.openPdfPrintPopup(pdfUrl);
                     }
                     break;
                 }

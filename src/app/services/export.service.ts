@@ -88,6 +88,8 @@ export interface MatrixReportConfig {
     filterLines?: string[];
     /** Use landscape orientation in Word (default false). */
     landscape?: boolean;
+    /** When true, render "Page X of Y" centred in the Word footer. */
+    showPageNumbers?: boolean;
 }
 
 /** One section in a profile export: heading + table (same as web view). */
@@ -422,18 +424,19 @@ export class ExportService {
     }
 
     /**
-     * Word export with a two-row header. Leading columns merge vertically (rowSpan=2);
-     * each group column merges horizontally across its sub-headers (columnSpan=subCount).
-     * Mirrors exportExcelMatrix so pivot tables look the same in both formats.
+     * Builds the matrix Word <see cref="Document"/> in memory without saving it —
+     * the same two-row-header layout as <c>exportWordMatrix</c>. Used by consumers
+     * that want to pack the docx → blob → server PDF conversion themselves.
      */
-    async exportWordMatrix(config: MatrixReportConfig): Promise<void> {
+    buildMatrixWordDoc(config: MatrixReportConfig): Document {
         const dateStr = new Date().toLocaleDateString(config.lang === 'bn' ? 'bn-BD' : 'en-US', {
             year: 'numeric', month: 'long', day: 'numeric',
         });
         const font = config.lang === 'bn' ? 'Nirmala UI' : 'Times New Roman';
-        const sizePageHeader = 28;
-        const sizeTableHeader = 20;
-        const sizeTableContent = config.lang === 'bn' ? 16 : 22;
+        // Sizes in half-points: 24 = 12pt, 16 = 8pt, 18 = 9pt, 12 = 6pt.
+        const sizePageHeader = 24;
+        const sizeTableHeader = 16;
+        const sizeTableContent = config.lang === 'bn' ? 12 : 18;
 
         const leadCount = config.leadingColumns.length;
         const subCount = Math.max(config.subHeaders.length, 1);
@@ -463,12 +466,15 @@ export class ExportService {
             right:  { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
         };
 
+        // keepNext on header paragraphs makes the two-row header stick with the
+        // first data row so it can't orphan at the bottom of a page.
         const headerCell = (text: string, opts: { rowSpan?: number; columnSpan?: number; width: number }) =>
             new TableCell({
                 children: [new Paragraph({
                     children: [new TextRun({ text, bold: true, font, size: sizeTableHeader })],
                     alignment: AlignmentType.CENTER,
                     spacing: { after: 80 },
+                    keepNext: true,
                 })],
                 borders,
                 rowSpan: opts.rowSpan,
@@ -479,6 +485,7 @@ export class ExportService {
         // Row 1: leading columns (rowSpan=2) + each group label (columnSpan=subCount).
         const headerRow1 = new TableRow({
             tableHeader: true,
+            cantSplit: true,
             children: [
                 ...config.leadingColumns.map((c, i) =>
                     headerCell(c, { rowSpan: 2, width: colWidths[i] })),
@@ -492,16 +499,19 @@ export class ExportService {
         // Row 2: sub-headers under every group (leading columns are already covered by rowSpan).
         const headerRow2 = new TableRow({
             tableHeader: true,
+            cantSplit: true,
             children: Array.from({ length: groupCount * subCount }, (_, idx) => {
                 const sub = config.subHeaders[idx % subCount];
                 return headerCell(sub, { width: colWidths[leadCount + idx] });
             }),
         });
 
+        // cantSplit prevents a row's own content from breaking across pages.
         const dataRows = config.rows.map(row => {
             const cells = row.slice(0, totalCols);
             while (cells.length < totalCols) cells.push('');
             return new TableRow({
+                cantSplit: true,
                 children: cells.map((cell, i) => new TableCell({
                     children: [new Paragraph({
                         children: [new TextRun({ text: cell, font, size: sizeTableContent })],
@@ -529,11 +539,25 @@ export class ExportService {
             spacing: { after: 300 },
         })] : [];
 
-        const doc = new Document({
+        // "Page X of Y" centred footer — only when explicitly requested.
+        const footers = config.showPageNumbers ? {
+            default: new Footer({
+                children: [new Paragraph({
+                    alignment: AlignmentType.CENTER,
+                    children: [
+                        new TextRun({ children: ['Page ', PageNumber.CURRENT], font, size: 16, color: '555555' }),
+                        new TextRun({ children: [' of ', PageNumber.TOTAL_PAGES], font, size: 16, color: '555555' }),
+                    ],
+                })],
+            }),
+        } : undefined;
+
+        return new Document({
             sections: [{
                 properties: config.landscape ? {
                     page: { size: { orientation: PageOrientation.LANDSCAPE } },
                 } : undefined,
+                footers,
                 children: [
                     new Paragraph({
                         children: [new TextRun({ text: config.title, bold: true, size: sizePageHeader, color: '1e3a5f', font })],
@@ -550,7 +574,15 @@ export class ExportService {
                 ],
             }],
         });
+    }
 
+    /**
+     * Word export with a two-row header. Leading columns merge vertically (rowSpan=2);
+     * each group column merges horizontally across its sub-headers (columnSpan=subCount).
+     * Mirrors exportExcelMatrix so pivot tables look the same in both formats.
+     */
+    async exportWordMatrix(config: MatrixReportConfig): Promise<void> {
+        const doc = this.buildMatrixWordDoc(config);
         const blob = await Packer.toBlob(doc);
         const base = config.filename ?? 'report';
         saveAs(blob, `${base}_${config.lang}.docx`);
@@ -730,6 +762,7 @@ export class ExportService {
             })] : []),
         ];
 
+        const lastSectionIdx = config.sections.length - 1;
         config.sections.forEach((sec, idx) => {
             children.push(new Paragraph({
                 children: [new TextRun({ text: sec.title, bold: true, size: sizeSectionHeader, font })],
@@ -748,7 +781,13 @@ export class ExportService {
                 const keepWithNext = sec.subtotalRow != null && ri === lastBodyIdx;
                 tableRows.push(makeBodyRow(r, false, keepWithNext));
             });
-            if (sec.subtotalRow) tableRows.push(makeBodyRow(sec.subtotalRow, true));
+            if (sec.subtotalRow) {
+                // For the FINAL section, glue the subtotal row to the spacer + grand-total
+                // table that follows so the cross-org grand total can't orphan onto a new page.
+                const isLastSection = idx === lastSectionIdx;
+                const keepWithNext = isLastSection && config.grandTotalRow != null;
+                tableRows.push(makeBodyRow(sec.subtotalRow, true, keepWithNext));
+            }
             children.push(makeTable(tableRows));
         });
 
@@ -756,7 +795,14 @@ export class ExportService {
             // Grand-total table renders against the grandTotalRow's own column count.
             const gtCols = config.grandTotalRow.map(() => '');
             const { makeBodyRow, makeTable } = makeHelpers(gtCols);
-            children.push(new Paragraph({ children: [new TextRun({ text: '', font, size: sizeTableContent })], spacing: { before: 200, after: 80 } }));
+            // Minimal spacer so the grand total sits tight against the previous table.
+            // Less vertical padding = better chance of fitting at the bottom of the
+            // page where the last section ended (instead of being pushed onto a new page).
+            children.push(new Paragraph({
+                children: [new TextRun({ text: '', font, size: sizeTableContent })],
+                spacing: { before: 60, after: 0 },
+                keepNext: true,
+            }));
             children.push(makeTable([makeBodyRow(config.grandTotalRow, true)]));
         }
 
@@ -794,6 +840,46 @@ export class ExportService {
         const blob = await Packer.toBlob(doc);
         const base = config.filename ?? 'report';
         saveAs(blob, `${base}_${config.lang}.docx`);
+    }
+
+    /**
+     * Opens a popup window that embeds the supplied PDF blob URL in a full-window
+     * iframe and auto-triggers the browser's print dialog once the PDF has rendered.
+     * Mirrors unit-rank-wise-manpower's print-button UX but works against the
+     * Word-derived PDF so the printed output matches the PDF / Word file exactly.
+     */
+    openPdfPrintPopup(pdfUrl: string): void {
+        const win = window.open('', '_blank', 'width=1100,height=800');
+        if (!win) return;
+        const html = `<!DOCTYPE html>
+<html>
+<head><title>Print Preview</title>
+<style>html,body{margin:0;padding:0;height:100%;background:#525659}</style>
+</head>
+<body>
+<iframe id="pdfFrame" src="${pdfUrl}" style="width:100vw;height:100vh;border:0"></iframe>
+<script>
+  (function(){
+    var f = document.getElementById('pdfFrame');
+    var printed = false;
+    var doPrint = function() {
+      if (printed) return;
+      printed = true;
+      // 600ms gives the in-browser PDF viewer time to lay out the first page.
+      setTimeout(function() {
+        try { f.contentWindow.print(); }
+        catch (e) { try { window.print(); } catch (_) {} }
+      }, 600);
+    };
+    f.addEventListener('load', doPrint);
+    // Safety net for browsers whose PDF plugin doesn't dispatch 'load'.
+    setTimeout(doPrint, 2500);
+  })();
+</script>
+</body></html>`;
+        win.document.open();
+        win.document.write(html);
+        win.document.close();
     }
 
     /**
