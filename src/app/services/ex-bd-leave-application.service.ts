@@ -16,6 +16,9 @@ export interface ExBdLeaveApplicationModel {
     familyMembersJson: string | null;
     filesReferencesJson: string | null;
     applicationStatus: string;
+    availStatus: string | null;
+    availStartDate: string | null;
+    availEndDate: string | null;
     noteSheetId: number | null;
     remarks: string | null;
     createdBy: string | null;
@@ -146,6 +149,10 @@ export class ExBdLeaveApplicationService {
         if (fromDate) params.fromDate = fromDate;
         if (toDate) params.toDate = toDate;
         return this.http.get<any>(`${this.baseUrl}/CheckEligibility/${employeeId}`, { params });
+    }
+
+    availLeave(payload: { exBdLeaveApplicationId: number; availStatus: string; availStartDate?: string; availEndDate?: string; remarks?: string; currentUser?: string }): Observable<any> {
+        return this.http.post(`${this.baseUrl}/AvailLeave`, payload);
     }
 
     // ── JSON helpers ───────────────────────────────────────────────────

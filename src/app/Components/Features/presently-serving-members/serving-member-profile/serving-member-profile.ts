@@ -308,7 +308,7 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
             this.formatDateOnly(row.durationFrom),
             this.formatDateOnly(row.durationTo),
             this.codeValue(row.reasonForVisiting, row.reasonForVisitingBN),
-            this.val(row.relatedDocuments),
+            this.formatRelatedDocuments(row.relatedDocuments),
         ]);
         if (offFvRows.length === 0) offFvRows.push([L['empty.noOfficialForeignVisit']]);
         addSection(L['section.officialForeignVisit'], [L['table.ser'], L['table.country'], L['table.durationFrom'], L['table.durationTo'], L['table.reasonForVisiting'], L['table.relatedDocuments']], offFvRows);
@@ -320,7 +320,7 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
             this.formatDateOnly(row.durationFrom),
             this.formatDateOnly(row.durationTo),
             this.codeValue(row.reasonForVisiting, row.reasonForVisitingBN),
-            this.val(row.relatedDocuments),
+            this.formatRelatedDocuments(row.relatedDocuments),
         ]);
         if (unoffFvRows.length === 0) unoffFvRows.push([L['empty.noUnofficialForeignVisit']]);
         addSection(L['section.unofficialForeignVisit'], [L['table.ser'], L['table.country'], L['table.durationFrom'], L['table.durationTo'], L['table.reasonForVisiting'], L['table.relatedDocuments']], unoffFvRows);
@@ -660,6 +660,31 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
         return String(v);
     }
 
+    formatRelatedDocuments(v: string | null | undefined): string {
+        if (!v || v === '[]') return '-';
+        try {
+            const arr = JSON.parse(v);
+            if (!Array.isArray(arr) || arr.length === 0) return '-';
+            return arr.map((f: any) => f.fileName || f.FileName || f.name || '').filter(Boolean).join(', ') || '-';
+        } catch {
+            return '-';
+        }
+    }
+
+    parseFilesJson(v: string | null | undefined): { fileId: number; fileName: string }[] {
+        if (!v || v === '[]') return [];
+        try {
+            const arr = JSON.parse(v);
+            if (!Array.isArray(arr)) return [];
+            return arr.map((f: any) => ({
+                fileId: f.fileId ?? f.FileId ?? f.FileID ?? 0,
+                fileName: f.fileName ?? f.FileName ?? 'file'
+            })).filter((f: any) => f.fileId > 0);
+        } catch {
+            return [];
+        }
+    }
+
     tradeDisplay(p: EmployeePersonalServiceOverview | null): string {
         if (!p) return '-';
         const t = this.isBn ? (p.tradeBN ?? p.trade)?.trim() : p.trade?.trim();
@@ -771,6 +796,14 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
         if (fileId == null) return;
         this.empService.downloadFile(fileId).subscribe({
             next: (blob) => this.empService.triggerFileDownload(blob, fileName),
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file.' })
+        });
+    }
+
+    downloadFileById(file: { fileId: number; fileName: string }): void {
+        if (!file.fileId) return;
+        this.empService.downloadFile(file.fileId).subscribe({
+            next: (blob) => this.empService.triggerFileDownload(blob, file.fileName),
             error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file.' })
         });
     }

@@ -42,7 +42,7 @@ import { EmployeeList } from '@/models/employee-list.model';
 import { EmployeeListService } from '@/services/employee-list.service';
 import { IsSendingNotesheetStatus } from '@/models/enums';
 import { ForeignVisitInfoService } from '@/services/foreign-visit-info.service';
-import { ExBdLeaveApplicationService } from '@/services/ex-bd-leave-application.service';
+import { ExBdLeaveApplicationService, ExBdLeaveApplicationModel } from '@/services/ex-bd-leave-application.service';
 import { PostingOrderPreviewComponent } from './posting-order-preview/posting-order-preview';
 import { NotesheetSignatoryComponent } from '@/Components/Common/notesheet-signatory/notesheet-signatory';
 import {
@@ -277,6 +277,20 @@ export class NotesheetListComponent implements OnInit {
   removalHistoryLoading = false;
   removalHistoryList: PostingMemberRemovalHistoryDto[] = [];
   removalHistoryTitle = '';
+
+  /** Leave Avail dialog */
+  showLeaveAvailDialog = false;
+  leaveAvailLoading = false;
+  leaveAvailSaving = false;
+  leaveAvailFromDate: Date | null = null;
+  leaveAvailToDate: Date | null = null;
+  leaveAvailApp: ExBdLeaveApplicationModel | null = null;
+
+  /** Leave Not Avail dialog */
+  showLeaveNotAvailDialog = false;
+  leaveNotAvailReason = '';
+  leaveNotAvailSaving = false;
+  leaveNotAvailApp: ExBdLeaveApplicationModel | null = null;
 
   readonly statusLabels: Record<string, string> = {
     [NoteSheetCurrentStatus.Draft]:         'Draft',
@@ -1525,11 +1539,6 @@ export class NotesheetListComponent implements OnInit {
             this.onPostingFinalApproval(row);
           }
 
-          // After final approval of an ExBD Leave notesheet: create ForeignVisitInfo entry
-          if (isFinalApproval && isExBdLeaveNoteSheet) {
-            this.onExBdLeaveFinalApproval(row);
-          }
-
           this.loadAll();
         } else {
           this.messageService.add({ severity: 'warn', summary: 'Notice', detail: msg || 'Action failed.' });
@@ -1576,79 +1585,138 @@ export class NotesheetListComponent implements OnInit {
     });
   }
 
-  /** After final approval of an ExBD Leave notesheet, auto-create a ForeignVisitInfo entry (+ family members). */
-  private onExBdLeaveFinalApproval(row: NoteSheetInfoRow): void {
-    this.http.get<NoteSheetInfoFull[]>(`${this.api}/GetFilteredByKeysAsyn/${row.noteSheetId}`).pipe(
-      map(data => (Array.isArray(data) ? data[0] : null) as NoteSheetInfoFull | null),
-      catchError(() => of(null as NoteSheetInfoFull | null))
-    ).subscribe({
-      next: (ns) => {
-        if (!ns || !ns.employeeId) {
-          this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Failed to load notesheet details for foreign visit creation.' });
+  // ── Leave Avail / Not Avail ─────────────────────────────────────────────
+
+  openLeaveAvail(row: NoteSheetInfoRow): void {
+    const appId = (row as NoteSheetInfoFull).exBdLeaveApplicationId;
+    if (!appId) {
+      this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'No leave application linked to this notesheet.' });
+      return;
+    }
+    this.leaveAvailApp = null;
+    this.leaveAvailFromDate = null;
+    this.leaveAvailToDate = null;
+    this.leaveAvailLoading = true;
+    this.showLeaveAvailDialog = true;
+
+    this.exBdLeaveApplicationService.getById(appId).subscribe({
+      next: (app) => {
+        if (!app) {
+          this.leaveAvailLoading = false;
+          this.showLeaveAvailDialog = false;
+          this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'No leave application found.' });
           return;
         }
+        this.leaveAvailApp = app;
+        if (app.availStatus) {
+          this.leaveAvailLoading = false;
+          this.showLeaveAvailDialog = false;
+          this.messageService.add({ severity: 'info', summary: 'Info', detail: `This leave is already marked as "${app.availStatus}".` });
+          return;
+        }
+        this.leaveAvailFromDate = app.fromDate ? new Date(app.fromDate) : null;
+        this.leaveAvailToDate = app.toDate ? new Date(app.toDate) : null;
+        this.leaveAvailLoading = false;
+      },
+      error: () => {
+        this.leaveAvailLoading = false;
+        this.showLeaveAvailDialog = false;
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load application data.' });
+      }
+    });
+  }
 
-        this.exBdLeaveApplicationService.getByNoteSheetId(ns.noteSheetId).pipe(
-          catchError(() => of(null))
-        ).subscribe({
-          next: (app) => {
-            if (!app) {
-              this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Failed to load Ex-BD leave application for foreign visit creation.' });
-              return;
-            }
+  getLeaveAvailTotalDays(): number {
+    if (!this.leaveAvailFromDate || !this.leaveAvailToDate) return 0;
+    const from = new Date(this.leaveAvailFromDate.getFullYear(), this.leaveAvailFromDate.getMonth(), this.leaveAvailFromDate.getDate());
+    const to = new Date(this.leaveAvailToDate.getFullYear(), this.leaveAvailToDate.getMonth(), this.leaveAvailToDate.getDate());
+    return Math.round((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  }
 
-            const currentUser = this.sharedService.getCurrentUser?.() ?? 'system';
-            const familyIds = ExBdLeaveApplicationService
-              .parseFamilyMembers(app.familyMembersJson)
-              .map(f => f.fmid)
-              .filter(id => id > 0);
-            const countryIds = ExBdLeaveApplicationService
-              .parseCountries(app.destinationCountriesJson)
-              .map(c => c.countryId)
-              .filter(id => id > 0);
+  submitLeaveAvail(): void {
+    if (!this.leaveAvailApp || !this.leaveAvailFromDate || !this.leaveAvailToDate) return;
+    this.leaveAvailSaving = true;
+    const currentUser = this.sharedService.getCurrentUser?.() ?? 'system';
+    const startDate = this.leaveAvailFromDate.toISOString().split('T')[0];
+    const endDate = this.leaveAvailToDate.toISOString().split('T')[0];
 
-            this.foreignVisitService.saveVisit({
-              employeeId: app.applicantEmployeeId || ns.employeeId,
-              foreignVisitId: 0,
-              subjectId: ns.exBdLeaveSubjectId ?? null,
-              destinationCountryId: countryIds.length > 0 ? countryIds[0] : null,
-              visitId: app.visitTypeId ?? null,
-              fromDate: app.fromDate ?? null,
-              toDate: app.toDate ?? null,
-              withFamily: familyIds.length > 0,
-              auth: ns.noteSheetNo ?? null,
-              remarks: ns.note ?? app.remarks ?? null,
-              fileName: null,
-              filesReferences: app.filesReferencesJson ?? ns.filesReferences ?? null,
-              createdBy: currentUser,
-              lastUpdatedBy: currentUser
-            }).subscribe({
-              next: (res: any) => {
-                const entity = res?.data ?? res?.Data ?? res;
-                const newVisitId = entity?.foreignVisitId ?? entity?.ForeignVisitId
-                  ?? (Array.isArray(entity) ? entity[0]?.foreignVisitId ?? entity[0]?.ForeignVisitId : null);
+    this.exBdLeaveApplicationService.availLeave({
+      exBdLeaveApplicationId: this.leaveAvailApp.exBdLeaveApplicationId,
+      availStatus: 'Availed',
+      availStartDate: startDate,
+      availEndDate: endDate,
+      currentUser
+    }).subscribe({
+      next: (res: any) => {
+        this.leaveAvailSaving = false;
+        if (res?.statusCode === 200) {
+          this.showLeaveAvailDialog = false;
+          this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Leave availed successfully. Foreign visit record created.' });
+          this.loadAll();
+        } else {
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: res?.description || 'Failed.' });
+        }
+      },
+      error: (err: any) => {
+        this.leaveAvailSaving = false;
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.description || 'Failed to avail leave.' });
+      }
+    });
+  }
 
-                if (familyIds.length > 0 && newVisitId != null) {
-                  familyIds.forEach(familyId => {
-                    this.foreignVisitService.saveFamilyMember({
-                      employeeId: app.applicantEmployeeId || ns.employeeId!,
-                      foreignVisitFamilyId: 0,
-                      foreignVisitId: newVisitId,
-                      familyId,
-                      remarks: null,
-                      createdBy: currentUser,
-                      lastUpdatedBy: currentUser
-                    }).subscribe({
-                      next: () => {},
-                      error: (err: any) => this.messageService.add({ severity: 'warn', summary: 'Warning', detail: err?.error?.message || 'Failed to add family member to foreign visit record.' })
-                    });
-                  });
-                }
-              },
-              error: (err: any) => this.messageService.add({ severity: 'warn', summary: 'Warning', detail: err?.error?.message || 'Failed to create foreign visit entry from ExBD Leave application.' })
-            });
-          }
-        });
+  openLeaveNotAvail(row: NoteSheetInfoRow): void {
+    const appId = (row as NoteSheetInfoFull).exBdLeaveApplicationId;
+    if (!appId) {
+      this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'No leave application linked to this notesheet.' });
+      return;
+    }
+    this.leaveNotAvailApp = null;
+    this.leaveNotAvailReason = '';
+    this.leaveNotAvailSaving = false;
+
+    this.exBdLeaveApplicationService.getById(appId).subscribe({
+      next: (app) => {
+        if (!app) {
+          this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'No leave application found.' });
+          return;
+        }
+        if (app.availStatus) {
+          this.messageService.add({ severity: 'info', summary: 'Info', detail: `This leave is already marked as "${app.availStatus}".` });
+          return;
+        }
+        this.leaveNotAvailApp = app;
+        this.showLeaveNotAvailDialog = true;
+      },
+      error: () => {
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load application data.' });
+      }
+    });
+  }
+
+  submitLeaveNotAvail(): void {
+    if (!this.leaveNotAvailApp) return;
+    this.leaveNotAvailSaving = true;
+    const currentUser = this.sharedService.getCurrentUser?.() ?? 'system';
+
+    this.exBdLeaveApplicationService.availLeave({
+      exBdLeaveApplicationId: this.leaveNotAvailApp.exBdLeaveApplicationId,
+      availStatus: 'NotAvailed',
+      remarks: this.leaveNotAvailReason || undefined,
+      currentUser
+    }).subscribe({
+      next: (res: any) => {
+        this.leaveNotAvailSaving = false;
+        if (res?.statusCode === 200) {
+          this.showLeaveNotAvailDialog = false;
+          this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Leave marked as not availed.' });
+          this.loadAll();
+        } else {
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: res?.description || 'Failed.' });
+        }
+      },
+      error: (err: any) => {
+        this.leaveNotAvailSaving = false;
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.description || 'Failed to update status.' });
       }
     });
   }

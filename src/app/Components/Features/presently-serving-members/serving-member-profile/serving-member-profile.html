@@ -552,7 +552,13 @@
                                 <td>{{ formatDateOnly(row.durationFrom) }}</td>
                                 <td>{{ formatDateOnly(row.durationTo) }}</td>
                                 <td>{{ codeValue(row.reasonForVisiting, row.reasonForVisitingBN) }}</td>
-                                <td>{{ val(row.relatedDocuments) }}</td>
+                                <td>
+                                    @for (file of parseFilesJson(row.relatedDocuments); track file.fileId) {
+                                        <p-button [rounded]="true" [text]="true" size="small" icon="pi pi-download" [pTooltip]="file.fileName" (onClick)="downloadFileById(file)"></p-button>
+                                    } @empty {
+                                        -
+                                    }
+                                </td>
                             </tr>
                         </ng-template>
                         <ng-template pTemplate="emptymessage">
@@ -590,7 +596,13 @@
                                 <td>{{ formatDateOnly(row.durationFrom) }}</td>
                                 <td>{{ formatDateOnly(row.durationTo) }}</td>
                                 <td>{{ codeValue(row.reasonForVisiting, row.reasonForVisitingBN) }}</td>
-                                <td>{{ val(row.relatedDocuments) }}</td>
+                                <td>
+                                    @for (file of parseFilesJson(row.relatedDocuments); track file.fileId) {
+                                        <p-button [rounded]="true" [text]="true" size="small" icon="pi pi-download" [pTooltip]="file.fileName" (onClick)="downloadFileById(file)"></p-button>
+                                    } @empty {
+                                        -
+                                    }
+                                </td>
                             </tr>
                         </ng-template>
                         <ng-template pTemplate="emptymessage">
