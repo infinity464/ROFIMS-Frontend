@@ -52,6 +52,21 @@ export interface ExBdLeaveOfficeOrderWithDetailsDto {
     nsMainText: string;
     nsNote: string;
     nsParagraphText: string;
+    // Application info (from ExBdLeaveApplication via NoteSheet)
+    appEmployeeName: string | null;
+    appEmployeeNameBN: string | null;
+    appEmployeeRabId: string | null;
+    appEmployeeServiceId: string | null;
+    appEmployeeRank: string | null;
+    appEmployeeRankBN: string | null;
+    appVisitTypeName: string | null;
+    appVisitTypeNameBN: string | null;
+    appFromDate: string | null;
+    appToDate: string | null;
+    appTotalDays: number | null;
+    appCountriesDisplay: string | null;
+    appCountriesDisplayBN: string | null;
+    appFamilyMembersDisplay: string | null;
     approvalEmployeeNameBN: string;
     approvalEmployeeRank: string;
     approvalEmployeeRankBN: string;

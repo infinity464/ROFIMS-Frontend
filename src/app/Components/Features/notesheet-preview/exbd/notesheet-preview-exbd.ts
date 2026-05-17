@@ -124,6 +124,11 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
         } catch { return []; }
     }
 
+    /** Flat list of all reference files for the "Supporting Documents" section */
+    get allReferenceFiles(): { fileId: number; fileName: string }[] {
+        return this.parsedReferenceFiles.reduce((acc, files) => acc.concat(files), []);
+    }
+
     refSerialLabel(index: number): string {
         if (!this.isEnglish()) {
             const banglaLetters = ['ক', 'খ', 'গ', 'ঘ', 'ঙ', 'চ', 'ছ', 'জ', 'ঝ', 'ঞ', 'ট', 'ঠ', 'ড', 'ঢ', 'ণ', 'ত', 'থ', 'দ', 'ধ', 'ন'];
@@ -1036,8 +1041,30 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
         if (!this.noteSheet) throw new Error('No noteSheet');
         const bn = !this.isEnglish();
 
-        const refHtml = this.fixBanglaWordBreaks(this.noteSheet.referenceNumber ?? '');
-        const refBlocks = refHtml ? this.parseHtmlToContentBlocks(refHtml) : [];
+        // Parse reference paragraphs from JSON array format
+        const refBlocks: ContentBlock[] = [];
+        const rawRef = this.noteSheet.referenceNumber ?? '';
+        if (rawRef.trim()) {
+            try {
+                const refArr = JSON.parse(rawRef);
+                if (Array.isArray(refArr) && refArr.length > 0) {
+                    for (let i = 0; i < refArr.length; i++) {
+                        const item = refArr[i];
+                        const text = (item.text ?? item.Text ?? '').trim();
+                        if (text) {
+                            const serial = this.refSerialLabel(i);
+                            refBlocks.push({ type: 'paragraph', text: `${serial} ${text}`, runs: [{ text: `${serial} ${text}` }], indent: 'normal', alignment: 'justify' });
+                        }
+                    }
+                }
+            } catch {
+                // Not JSON — treat as plain text
+                const plain = this.stripHtml(rawRef);
+                if (plain.trim()) {
+                    refBlocks.push({ type: 'paragraph', text: plain, runs: [{ text: plain }], indent: 'normal', alignment: 'justify' });
+                }
+            }
+        }
 
         // For ExBD, the main content is the formatted paragraph (plain text)
         const paraText = this.buildParagraphText();
@@ -1056,8 +1083,8 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
             mainBlocks,
             closingText: '',
             approvers: [],
-            enclLabel: bn ? 'সংলগ্নী' : 'Encl.',
-            enclNoLabel: bn ? 'নং' : 'No.'
+            enclLabel: '',
+            enclNoLabel: ''
         };
         if (this.noteSheet.note) model.note = this.noteSheet.note;
 
@@ -1140,7 +1167,12 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
         const font = bn
             ? { ascii: 'Nirmala UI', hAnsi: 'Nirmala UI', cs: 'Nirmala UI', hint: 'cs' as const }
             : 'Times New Roman';
-        const csSize = bn ? 20 : undefined;
+        // Font sizes (half-points): Header=10pt, Content=8pt, Signature=9pt
+        const hdrSize = 20;        // 10pt - org header, title
+        const contentSize = 16;    // 8pt  - body content
+        const sigSize = 18;        // 9pt  - signature/approver block
+        const csContent = bn ? contentSize : undefined;
+        const csSig = bn ? sigSize : undefined;
         const lang = bn ? { value: 'bn-BD', bidirectional: 'bn-BD' } : undefined;
 
         const mainChildren: (Paragraph | Table)[] = [];
@@ -1159,7 +1191,7 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
         if (this.noteSheet?.noteSheetNo) {
             mainChildren.push(new Paragraph({
                 children: [
-                    new TextRun({ text: this.noteSheet.noteSheetNo, size: 20, sizeComplexScript: 20, font, language: lang })
+                    new TextRun({ text: this.noteSheet.noteSheetNo, size: contentSize, sizeComplexScript: csContent, font, language: lang })
                 ],
                 indent: { left: 240 }, spacing: { before: 60, after: 40 }
             }));
@@ -1168,7 +1200,7 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
         // Subject
         if (model.subject) {
             mainChildren.push(new Paragraph({
-                children: [new TextRun({ text: model.subject, bold: true, underline: {}, size: 20, sizeComplexScript: csSize, font, language: lang })],
+                children: [new TextRun({ text: model.subject, bold: true, underline: {}, size: contentSize, sizeComplexScript: csContent, font, language: lang })],
                 spacing: { before: 20, after: 60 },
                 indent: { left: 240 }
             }));
@@ -1176,7 +1208,7 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
 
         // Reference / Date — label + first content block merged inline
         if (model.referenceBlocks.length > 0) {
-            const labelRun = new TextRun({ text: `${model.referenceLabel} `, bold: true, size: 20, sizeComplexScript: csSize, font, language: lang });
+            const labelRun = new TextRun({ text: `${model.referenceLabel} `, bold: true, size: contentSize, sizeComplexScript: csContent, font, language: lang });
             const firstRefBlock = model.referenceBlocks[0];
             if (firstRefBlock.type === 'paragraph' && (firstRefBlock.text || (firstRefBlock.runs && firstRefBlock.runs.length > 0))) {
                 const contentRuns = (firstRefBlock.runs && firstRefBlock.runs.length > 0)
@@ -1186,11 +1218,11 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
                         italics: r.italic,
                         underline: r.underline ? {} : undefined,
                         size: 20,
-                        sizeComplexScript: csSize,
+                        sizeComplexScript: csContent,
                         font,
                         language: lang
                     }))
-                    : [new TextRun({ text: firstRefBlock.text!, bold: firstRefBlock.bold, italics: firstRefBlock.italic, size: 20, sizeComplexScript: csSize, font, language: lang })];
+                    : [new TextRun({ text: firstRefBlock.text!, bold: firstRefBlock.bold, italics: firstRefBlock.italic, size: contentSize, sizeComplexScript: csContent, font, language: lang })];
                 mainChildren.push(new Paragraph({
                     children: [labelRun, ...contentRuns],
                     indent: { left: 240 }, spacing: { after: 80 }, alignment: AlignmentType.JUSTIFIED
@@ -1209,16 +1241,16 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
             const plain = this.stripHtml(this.noteSheet.referenceNumber ?? '');
             mainChildren.push(new Paragraph({
                 children: [
-                    new TextRun({ text: `${model.referenceLabel} `, bold: true, size: 20, sizeComplexScript: csSize, font, language: lang }),
-                    new TextRun({ text: plain, size: 20, sizeComplexScript: csSize, font, language: lang })
+                    new TextRun({ text: `${model.referenceLabel} `, bold: true, size: contentSize, sizeComplexScript: csContent, font, language: lang }),
+                    new TextRun({ text: plain, size: contentSize, sizeComplexScript: csContent, font, language: lang })
                 ],
                 indent: { left: 240 }, spacing: { after: 80 }, alignment: AlignmentType.JUSTIFIED
             }));
         } else if (this.noteSheet?.noteSheetDate) {
             mainChildren.push(new Paragraph({
                 children: [
-                    new TextRun({ text: model.dateLabel, bold: true, size: 20, sizeComplexScript: csSize, font, language: lang }),
-                    new TextRun({ text: model.dateValue, size: 20, sizeComplexScript: csSize, font, language: lang })
+                    new TextRun({ text: model.dateLabel, bold: true, size: contentSize, sizeComplexScript: csContent, font, language: lang }),
+                    new TextRun({ text: model.dateValue, size: contentSize, sizeComplexScript: csContent, font, language: lang })
                 ],
                 indent: { left: 240 }, spacing: { after: 80 }
             }));
@@ -1227,7 +1259,7 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
         // Merge serial (১।) with first text block so they appear inline
         if (model.mainBlocks.length > 0 && model.mainBlocks[0].type === 'paragraph' && model.mainBlocks[0].text) {
             const firstBlock = model.mainBlocks[0];
-            const serialRun = new TextRun({ text: `${model.mainSerialText}  `, bold: true, size: 20, sizeComplexScript: csSize, font, language: lang });
+            const serialRun = new TextRun({ text: `${model.mainSerialText}  `, bold: true, size: contentSize, sizeComplexScript: csContent, font, language: lang });
             const contentRuns = (firstBlock.runs && firstBlock.runs.length > 0)
                 ? firstBlock.runs.map(r => new TextRun({
                     text: r.text,
@@ -1235,11 +1267,11 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
                     italics: r.italic,
                     underline: r.underline ? {} : undefined,
                     size: 20,
-                    sizeComplexScript: csSize,
+                    sizeComplexScript: csContent,
                     font,
                     language: lang
                 }))
-                : [new TextRun({ text: firstBlock.text!, bold: firstBlock.bold, italics: firstBlock.italic, size: 20, sizeComplexScript: csSize, font, language: lang })];
+                : [new TextRun({ text: firstBlock.text!, bold: firstBlock.bold, italics: firstBlock.italic, size: contentSize, sizeComplexScript: csContent, font, language: lang })];
             mainChildren.push(new Paragraph({
                 children: [serialRun, ...contentRuns],
                 indent: { left: 240 }, spacing: { before: 160, after: 80 }, alignment: AlignmentType.JUSTIFIED
@@ -1249,7 +1281,7 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
             }
         } else {
             mainChildren.push(new Paragraph({
-                children: [new TextRun({ text: model.mainSerialText, bold: true, size: 20, sizeComplexScript: csSize, font, language: lang })],
+                children: [new TextRun({ text: model.mainSerialText, bold: true, size: contentSize, sizeComplexScript: csContent, font, language: lang })],
                 indent: { left: 240 }, spacing: { before: 160, after: 40 }
             }));
             mainChildren.push(...this.contentBlocksToDocx(model.mainBlocks, font, bn));
@@ -1259,8 +1291,8 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
         if (model.note) {
             mainChildren.push(new Paragraph({
                 children: [
-                    new TextRun({ text: bn ? 'নোটঃ ' : 'Note: ', bold: true, size: 20, sizeComplexScript: csSize, font, language: lang }),
-                    new TextRun({ text: model.note, size: 20, sizeComplexScript: csSize, font, language: lang })
+                    new TextRun({ text: bn ? 'নোটঃ ' : 'Note: ', bold: true, size: contentSize, sizeComplexScript: csContent, font, language: lang }),
+                    new TextRun({ text: model.note, size: contentSize, sizeComplexScript: csContent, font, language: lang })
                 ],
                 indent: { left: 240 }, spacing: { before: 80, after: 80 }
             }));
@@ -1269,14 +1301,14 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
         // Closing text
         if (model.closingText) {
             mainChildren.push(new Paragraph({
-                children: [new TextRun({ text: model.closingText, size: 20, sizeComplexScript: csSize, font, language: lang })],
+                children: [new TextRun({ text: model.closingText, size: contentSize, sizeComplexScript: csContent, font, language: lang })],
                 indent: { left: 240, firstLine: 480 }, spacing: { before: 200 }
             }));
         }
 
         // Initiator — right-positioned via left indent, keep block together
         if (model.initiator) {
-            const initIndent = { left: 5500 };
+            const initIndent = { left: 7000 };
             if (model.initiator.signatureDataUrl) {
                 try {
                     mainChildren.push(new Paragraph({
@@ -1293,27 +1325,27 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
             }
 
             mainChildren.push(new Paragraph({
-                children: [new TextRun({ text: model.initiator.nameLine, size: 22, sizeComplexScript: csSize, font, language: lang })],
+                children: [new TextRun({ text: model.initiator.nameLine, size: sigSize, sizeComplexScript: csSig, font, language: lang })],
                 alignment: AlignmentType.LEFT, indent: initIndent, keepNext: true
             }));
 
             if (model.initiator.rankLine) {
                 mainChildren.push(new Paragraph({
-                    children: [new TextRun({ text: model.initiator.rankLine, size: 22, sizeComplexScript: csSize, font, language: lang })],
+                    children: [new TextRun({ text: model.initiator.rankLine, size: sigSize, sizeComplexScript: csSig, font, language: lang })],
                     alignment: AlignmentType.LEFT, indent: initIndent, keepNext: true
                 }));
             }
 
             if (model.initiator.appointment) {
                 mainChildren.push(new Paragraph({
-                    children: [new TextRun({ text: model.initiator.appointment, size: 22, sizeComplexScript: csSize, font, language: lang })],
+                    children: [new TextRun({ text: model.initiator.appointment, size: sigSize, sizeComplexScript: csSig, font, language: lang })],
                     alignment: AlignmentType.LEFT, indent: initIndent, keepNext: true
                 }));
             }
 
             if (model.initiator.date) {
                 mainChildren.push(new Paragraph({
-                    children: [new TextRun({ text: model.initiator.date, size: 22, sizeComplexScript: csSize, font, language: lang })],
+                    children: [new TextRun({ text: model.initiator.date, size: sigSize, sizeComplexScript: csSig, font, language: lang })],
                     alignment: AlignmentType.LEFT, indent: initIndent, spacing: { before: 400 }
                 }));
             }
@@ -1322,11 +1354,11 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
         // Approvers — keep each approver block together
         for (const ap of model.approvers) {
             mainChildren.push(new Paragraph({
-                children: [new TextRun({ text: ap.role, underline: {}, size: 20, sizeComplexScript: csSize, font, language: lang })],
+                children: [new TextRun({ text: ap.role, underline: {}, size: sigSize, sizeComplexScript: csSig, font, language: lang })],
                 indent: { left: 240 }, spacing: { before: 280 }, keepNext: true, keepLines: true
             }));
-            const runs: TextRun[] = [new TextRun({ text: ap.serialText, bold: true, size: 20, sizeComplexScript: csSize, font, language: lang })];
-            if (ap.remark) runs.push(new TextRun({ text: ` ${ap.remark}`, size: 20, sizeComplexScript: csSize, font, language: lang }));
+            const runs: TextRun[] = [new TextRun({ text: ap.serialText, bold: true, size: sigSize, sizeComplexScript: csSig, font, language: lang })];
+            if (ap.remark) runs.push(new TextRun({ text: ` ${ap.remark}`, size: sigSize, sizeComplexScript: csSig, font, language: lang }));
             mainChildren.push(new Paragraph({ children: runs, indent: { left: 240 }, keepNext: true }));
             if (ap.signatureDataUrl) {
                 try {
@@ -1345,7 +1377,7 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
             }
             if (ap.date) {
                 mainChildren.push(new Paragraph({
-                    children: [new TextRun({ text: ap.date, size: 20, sizeComplexScript: csSize, font, language: lang })],
+                    children: [new TextRun({ text: ap.date, size: sigSize, sizeComplexScript: csSig, font, language: lang })],
                     alignment: AlignmentType.CENTER
                 }));
             }
@@ -1354,63 +1386,33 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
         // Title paragraphs — placed at top of the main cell, INSIDE the outer border
         const titleChildren: Paragraph[] = [
             new Paragraph({
-                children: [new TextRun({ text: 'NOTE SHEET', bold: true, underline: {}, size: 24, font: 'Times New Roman' })],
+                children: [new TextRun({ text: 'NOTE SHEET', bold: true, underline: {}, size: hdrSize, font: 'Times New Roman' })],
                 alignment: AlignmentType.CENTER, spacing: { before: 80, after: 40 }, keepNext: true
             }),
             new Paragraph({
-                children: [new TextRun({ text: 'মন্তব্য পত্র', underline: {}, size: 24, font: 'Nirmala UI' })],
+                children: [new TextRun({ text: 'মন্তব্য পত্র', underline: {}, size: hdrSize, font: 'Nirmala UI' })],
                 alignment: AlignmentType.CENTER, spacing: { after: 100 }, keepNext: true
             }),
         ];
 
-        // Sanglagni (right narrow column) header content
-        const sanglagniChildren: Paragraph[] = bn
-            ? [
-                new Paragraph({
-                    children: [new TextRun({ text: 'সংলগ্নী', size: 20, sizeComplexScript: csSize, font, language: lang })],
-                    alignment: AlignmentType.CENTER, spacing: { before: 120, after: 0 }
-                }),
-                new Paragraph({
-                    children: [new TextRun({ text: 'নং', size: 20, sizeComplexScript: csSize, font, language: lang })],
-                    alignment: AlignmentType.CENTER, spacing: { before: 0, after: 0 }
-                })
-            ]
-            : [
-                new Paragraph({
-                    children: [new TextRun({ text: 'Encl.', size: 20, font: 'Times New Roman' })],
-                    alignment: AlignmentType.CENTER, spacing: { before: 120, after: 0 }
-                }),
-                new Paragraph({
-                    children: [new TextRun({ text: 'No.', size: 20, font: 'Times New Roman' })],
-                    alignment: AlignmentType.CENTER, spacing: { before: 0, after: 0 }
-                })
-            ];
-
-        // Outer bordered table: main cell (wide) | sanglagni cell (narrow)
-        const noBorder = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' } as const;
+        // Outer bordered table: single column (no সংলগ্নী নং column)
         const thickBorder = { style: BorderStyle.SINGLE, size: 12, color: '000000' } as const;
         const rowHeight = 19200;
 
         const outerTable = new Table({
             layout: TableLayoutType.FIXED,
             width: { size: 100, type: WidthType.PERCENTAGE },
-            columnWidths: [10640, 800],
+            columnWidths: [11440],
             rows: [new TableRow({
                 cantSplit: false,
                 height: { value: rowHeight, rule: HeightRule.ATLEAST },
                 children: [
                     new TableCell({
-                        width: { size: 10640, type: WidthType.DXA },
-                        borders: { top: thickBorder, bottom: thickBorder, left: thickBorder, right: noBorder },
+                        width: { size: 11440, type: WidthType.DXA },
+                        borders: { top: thickBorder, bottom: thickBorder, left: thickBorder, right: thickBorder },
                         margins: { top: 60, bottom: 60, left: 120, right: 120 },
                         verticalAlign: VerticalAlign.TOP,
                         children: [...titleChildren, ...mainChildren]
-                    }),
-                    new TableCell({
-                        width: { size: 800, type: WidthType.DXA },
-                        borders: { top: thickBorder, bottom: thickBorder, left: thickBorder, right: thickBorder },
-                        verticalAlign: VerticalAlign.TOP,
-                        children: sanglagniChildren
                     })
                 ]
             })]
@@ -1437,7 +1439,8 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
         const thinBorder = { style: BorderStyle.SINGLE, size: 1, color: '000000' };
         const cellBorders = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
         const lang = bn ? { value: 'bn-BD', bidirectional: 'bn-BD' } : undefined;
-        const csSize = bn ? 20 : undefined;
+        const contentSize = 16; // 8pt
+        const csContent = bn ? 16 : undefined;
 
         for (const b of blocks) {
             if (b.type === 'table' && b.rows?.length) {
@@ -1447,8 +1450,8 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
                             children: [new TextRun({
                                 text: cell,
                                 bold: rowIdx === 0,
-                                size: 22,
-                                sizeComplexScript: bn ? 22 : undefined,
+                                size: contentSize,
+                                sizeComplexScript: csContent,
                                 font,
                                 language: lang
                             })]
@@ -1470,12 +1473,12 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
                         bold: r.bold,
                         italics: r.italic,
                         underline: r.underline ? {} : undefined,
-                        size: 20,
-                        sizeComplexScript: csSize,
+                        size: contentSize,
+                        sizeComplexScript: csContent,
                         font,
                         language: lang
                     }))
-                    : [new TextRun({ text: b.text, bold: b.bold, italics: b.italic, size: 20, sizeComplexScript: csSize, font, language: lang })];
+                    : [new TextRun({ text: b.text, bold: b.bold, italics: b.italic, size: contentSize, sizeComplexScript: csContent, font, language: lang })];
                 result.push(new Paragraph({
                     children,
                     indent,

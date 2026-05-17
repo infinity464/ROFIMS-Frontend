@@ -85,6 +85,19 @@ export enum IsSendingNotesheetStatus {
     DraftNotesheet = 'draftNotesheet'
 }
 
+/** NoteSheetGenerationStatus – filter for whether a notesheet has been generated for an application. */
+export enum NoteSheetGenerationStatus {
+    NotGenerated = 'NotGenerated',
+    Generated    = 'Generated',
+    All          = ''
+}
+
+export const NoteSheetGenerationStatusOptions = [
+    { label: 'Notesheet Not Generated', value: NoteSheetGenerationStatus.NotGenerated },
+    { label: 'Notesheet Generated',     value: NoteSheetGenerationStatus.Generated },
+    { label: 'All',                      value: NoteSheetGenerationStatus.All }
+];
+
 /** NoteSheetType – type of note-sheet (General, ExBDLeave, NewPosting, InterPosting). */
 export enum NoteSheetType {
     General      = 'General',

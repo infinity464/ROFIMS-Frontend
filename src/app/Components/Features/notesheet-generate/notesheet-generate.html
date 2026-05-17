@@ -300,6 +300,7 @@
         <!-- Prepared by / Initiator / Recommender / Final Approver -->
         <app-notesheet-approver-select
           [noteSheetType]="'General'"
+          [useUserList]="true"
           [(initiatorId)]="form.controls['initiatorId'].value"
           (initiatorIdChange)="form.controls['initiatorId'].setValue($event); form.controls['initiatorId'].markAsTouched()"
           [(recommenderIds)]="form.controls['recommenderIds'].value"

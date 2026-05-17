@@ -346,6 +346,18 @@
         </div>
     </div>
 
+    <!-- ── Supporting Documents (attached files from references) ── -->
+    <div class="ns-supporting-docs no-print" *ngIf="allReferenceFiles.length > 0">
+        <h3><i class="pi pi-paperclip"></i> Supporting Documents</h3>
+        <div class="ns-docs-list">
+            <div class="ns-doc-item" *ngFor="let file of allReferenceFiles">
+                <i class="pi pi-file"></i>
+                <span class="ns-doc-name">{{ file.fileName }}</span>
+                <p-button icon="pi pi-download" [rounded]="true" [text]="true" size="small" pTooltip="Download" (onClick)="downloadRefFile(file)"></p-button>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <!-- ══════════════════════════════════════════════════════════ -->

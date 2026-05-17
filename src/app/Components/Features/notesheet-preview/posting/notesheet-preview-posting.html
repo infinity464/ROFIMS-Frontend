@@ -311,6 +311,7 @@
                         <h4 class="ns-approval-edit-title">Approval Chain</h4>
                         <app-notesheet-approver-select
                             [noteSheetType]="noteSheet.noteSheetType || 'NewPosting'"
+                            [useUserList]="true"
                             [(initiatorId)]="editInitiatorId"
                             [(recommenderIds)]="editRecommenderIds"
                             [(finalApproverId)]="editFinalApproverId"

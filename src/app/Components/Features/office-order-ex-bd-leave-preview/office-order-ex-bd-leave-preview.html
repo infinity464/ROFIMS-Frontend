@@ -147,36 +147,14 @@
         <div class="legal-paper">
             <div class="oo-doc-box">
 
-                <!-- Government Header -->
-                <div class="oo-doc-header">
-                    <ng-container *ngIf="isBangla">
-                        <div class="oo-doc-header-line">গণপ্রজাতন্ত্রী বাংলাদেশ সরকার</div>
-                        <div class="oo-doc-header-line">বাংলাদেশ পুলিশ</div>
-                        <div class="oo-doc-header-line">র‌্যাব ফোর্সেস সদর দপ্তর</div>
-                        <div class="oo-doc-header-line">কুর্মিটোলা, ঢাকা</div>
-                        <div class="oo-doc-header-web">www.rab.gov.bd</div>
-                    </ng-container>
-                    <ng-container *ngIf="!isBangla">
-                        <div class="oo-doc-header-line">Government of the People's Republic of Bangladesh</div>
-                        <div class="oo-doc-header-line">Bangladesh Police</div>
-                        <div class="oo-doc-header-line">RAB Forces Headquarters</div>
-                        <div class="oo-doc-header-line">Kurmitola, Dhaka</div>
-                        <div class="oo-doc-header-web">www.rab.gov.bd</div>
-                    </ng-container>
-                </div>
-
-                <!-- Title (Red) -->
-                <div class="oo-doc-title oo-doc-title--red">{{ isBangla ? 'অফিস আদেশ' : 'OFFICE ORDER' }}</div>
-
                 <!-- Letter No & Date -->
                 <div class="oo-doc-meta">
                     <span><strong>{{ isBangla ? 'স্মারক নং' : 'Letter No' }}:</strong> {{ order.letterNo || '.............' }}</span>
                     <span><strong>{{ isBangla ? 'তারিখ' : 'Date' }}:</strong> {{ formatDate(order.letterDate) }}</span>
                 </div>
 
-                <!-- প্রতি (To / Address To) -->
+                <!-- Address To -->
                 <div class="oo-doc-section" *ngIf="order.addressTo">
-                    <div class="oo-doc-section-label">{{ isBangla ? 'প্রতি:' : 'To:' }}</div>
                     <div class="oo-doc-rich-content" [innerHTML]="order.addressTo"></div>
                 </div>
 
@@ -245,24 +223,10 @@
                     </div>
                 </div>
 
-                <!-- ═══ সংযুক্তঃ (Attachments inside document) ═══ -->
-                <div class="oo-doc-section oo-doc-attachments" *ngIf="viewFileAttachments.length > 0">
-                    <div class="oo-doc-section-label">{{ isBangla ? 'সংযুক্তঃ' : 'Enclosure:' }}</div>
-                    <div class="oo-doc-list">
-                        <p *ngFor="let file of viewFileAttachments; let fi = index">
-                            {{ isBangla ? toBanglaDigits('' + (fi + 1)) : (fi + 1) }}। {{ file.fileName }}
-                        </p>
-                    </div>
-                </div>
-
                 <!-- ═══ Onulipi (Copy Distribution) ═══ -->
                 <div class="oo-doc-section oo-doc-onulipi" *ngIf="exportOnulipiEntries.length > 0">
                     <div class="oo-doc-onulipi-header">
                         <div class="oo-doc-section-label">{{ isBangla ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নহে):' : 'Copy (not in order of seniority):' }}</div>
-                        <div class="oo-doc-onulipi-meta">
-                            <span>{{ isBangla ? 'স্মারক নং' : 'Letter No' }}: {{ order.letterNo || '.............' }}</span>
-                            <span class="oo-doc-onulipi-date">{{ isBangla ? 'তারিখ' : 'Date' }}: {{ formatDate(order.letterDate) }}</span>
-                        </div>
                     </div>
                     <div class="oo-doc-list">
                         <p *ngFor="let entry of exportOnulipiEntries; let i = index">

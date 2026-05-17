@@ -188,7 +188,10 @@ export class NotesheetApproverSelectComponent implements OnInit, OnChanges {
                     }
                 }
                 opts.sort((a, b) => a.label.localeCompare(b.label));
-                this.applyApproverConfig(opts);
+                // When using user list, show all mapped users without config filtering
+                this.initiatorOptions = opts;
+                this.recommenderOptions = opts;
+                this.finalApproverOptions = opts;
             },
             error: () => {
                 // Fallback to employee list

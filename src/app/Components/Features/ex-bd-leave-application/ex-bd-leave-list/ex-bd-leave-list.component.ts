@@ -16,6 +16,7 @@ import {
     ExBdLeaveApplicationService,
     ExBdLeaveApplicationListViewModel
 } from '@/services/ex-bd-leave-application.service';
+import { NoteSheetGenerationStatus, NoteSheetGenerationStatusOptions } from '@/models/enums';
 
 @Component({
     selector: 'app-ex-bd-leave-list',
@@ -47,12 +48,8 @@ export class ExBdLeaveListComponent implements OnInit {
     loading = true;
     filterFromDate: Date | null = null;
     filterToDate: Date | null = null;
-    noteSheetStatusFilter = 'NotGenerated';
-    noteSheetStatusOptions = [
-        { label: 'Notesheet Not Generated', value: 'NotGenerated' },
-        { label: 'Notesheet Generated', value: 'Generated' },
-        { label: 'All', value: '' }
-    ];
+    noteSheetStatusFilter: string = NoteSheetGenerationStatus.NotGenerated;
+    noteSheetStatusOptions = NoteSheetGenerationStatusOptions;
 
     ngOnInit(): void {
         this.loadApplications();
@@ -65,7 +62,14 @@ export class ExBdLeaveListComponent implements OnInit {
         const nsStatus = this.noteSheetStatusFilter || undefined;
         this.exBdLeaveService.getListView(from, to, nsStatus).subscribe({
             next: (data) => {
-                this.applications = data;
+                // Client-side filter to ensure consistency with notesheet status
+                if (this.noteSheetStatusFilter === NoteSheetGenerationStatus.NotGenerated) {
+                    this.applications = data.filter(a => !a.noteSheetId);
+                } else if (this.noteSheetStatusFilter === NoteSheetGenerationStatus.Generated) {
+                    this.applications = data.filter(a => !!a.noteSheetId);
+                } else {
+                    this.applications = data;
+                }
                 this.loading = false;
             },
             error: () => {
