@@ -1,13 +1,16 @@
-import { Component, HostListener, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { CheckboxModule } from 'primeng/checkbox';
-import { forkJoin } from 'rxjs';
+import { forkJoin, firstValueFrom } from 'rxjs';
+import { Packer } from 'docx';
 import { ExportService } from '@/services/export.service';
 import { UserMenuService } from '@/services/user-menu.service';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
+import { environment } from '@/Core/Environments/environment';
 import {
     StatisticsService,
     type RankWiseOrgBlock,
@@ -33,6 +36,7 @@ export class RankWiseManpowerComponent implements OnInit {
     lang: Lang = 'en';
     loading = false;
     exportDropdownOpen = false;
+    exporting = false;
 
     allOrgs: RankWiseOrgBlock[] = [];
     filteredOrgs: RankWiseOrgBlock[] = [];
@@ -61,6 +65,8 @@ export class RankWiseManpowerComponent implements OnInit {
         'জানুয়ারি','ফেব্রুয়ারি','মার্চ','এপ্রিল','মে','জুন',
         'জুলাই','আগস্ট','সেপ্টেম্বর','অক্টোবর','নভেম্বর','ডিসেম্বর'
     ];
+
+    private http = inject(HttpClient);
 
     constructor(
         private _router: Router,
@@ -163,10 +169,7 @@ export class RankWiseManpowerComponent implements OnInit {
 
     async exportAs(type: 'pdf' | 'print' | 'word' | 'excel'): Promise<void> {
         this.exportDropdownOpen = false;
-        if (type === 'pdf' || type === 'print') {
-            this.exportPrintPopup();
-            return;
-        }
+
         const scope = this.scopeLine;
         const sectionedConfig = {
             title: this.titleLabel,
@@ -206,11 +209,46 @@ export class RankWiseManpowerComponent implements OnInit {
             filename: 'rank-wise-manpower',
             filterLines: scope ? [scope] : undefined
         };
-        if (type === 'word') {
-            await this.exportService.exportWordSectioned(sectionedConfig);
-        } else {
-            this.exportService.exportExcelSectioned(sectionedConfig);
+
+        try {
+            this.exporting = true;
+            switch (type) {
+                case 'word':
+                    await this.exportService.exportWordSectioned(sectionedConfig);
+                    break;
+                case 'excel':
+                    this.exportService.exportExcelSectioned(sectionedConfig);
+                    break;
+                case 'pdf':
+                case 'print': {
+                    // PDF opens as a preview tab; Print opens a popup with the PDF
+                    // in an iframe and auto-triggers the browser's print dialog.
+                    const doc = this.exportService.buildSectionedWordDoc(sectionedConfig);
+                    const docxBlob = await Packer.toBlob(doc);
+                    const pdfBlob = await this.convertDocxToPdf(docxBlob);
+                    const pdfUrl = URL.createObjectURL(pdfBlob);
+                    if (type === 'pdf') {
+                        window.open(pdfUrl, '_blank');
+                    } else {
+                        this.exportService.openPdfPrintPopup(pdfUrl);
+                    }
+                    break;
+                }
+            }
+        } catch (err) {
+            console.error(`${type} export failed`, err);
+        } finally {
+            this.exporting = false;
         }
+    }
+
+    /** POST the in-memory docx to the backend's LibreOffice-based conversion endpoint. */
+    private async convertDocxToPdf(docxBlob: Blob): Promise<Blob> {
+        const form = new FormData();
+        form.append('file', docxBlob, 'document.docx');
+        return await firstValueFrom(
+            this.http.post(`${environment.apis.core}/Document/ConvertToPdf`, form, { responseType: 'blob' })
+        );
     }
 
     // ── Computed labels ───────────────────────────────────────────────────────
@@ -284,123 +322,4 @@ export class RankWiseManpowerComponent implements OnInit {
         };
     }
 
-    // ── Custom PDF popup (multi-table layout) ─────────────────────────────────
-
-    private exportPrintPopup(): void {
-        const fontFamily = this.lang === 'bn' ? "'Nirmala UI', serif" : "'Times New Roman', serif";
-        const now = new Date();
-        const dateStr = now.toLocaleDateString(this.lang === 'bn' ? 'bn-BD' : 'en-US', {
-            year: 'numeric', month: 'long', day: 'numeric'
-        });
-
-        const esc = (s: string) => s
-            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-
-        const headerCells = this.colHeaders
-            .map(h => `<th>${esc(h)}</th>`).join('');
-
-        const orgTables = this.filteredOrgs.map(org => {
-            const rowsHtml = org.rows.map((row, i) => `
-                <tr>
-                    <td class="num">${esc(this.fmt(i + 1))}</td>
-                    <td class="name">${esc(this.rankLabel(row))}</td>
-                    <td class="num">${esc(this.fmt(row.auth))}</td>
-                    <td class="num">${esc(this.fmt(row.held))}</td>
-                    <td class="num def">${esc(this.fmt(row.def))}</td>
-                    <td class="num sur">${esc(this.fmt(row.sur))}</td>
-                    <td class="num def">${esc(this.fmtPct(row.defPct))}</td>
-                </tr>`).join('');
-
-            return `
-            <div class="org-block">
-                <div class="org-title">${esc(this.orgLabel(org))}</div>
-                <table>
-                    <thead><tr>${headerCells}</tr></thead>
-                    <tbody>
-                        ${rowsHtml}
-                    </tbody>
-                    <tfoot>
-                        <tr class="subtotal-row">
-                            <td></td>
-                            <td class="total-label">${esc(this.subtotalLabel)}</td>
-                            <td class="num">${esc(this.fmt(org.subtotal.auth))}</td>
-                            <td class="num">${esc(this.fmt(org.subtotal.held))}</td>
-                            <td class="num">${esc(this.fmt(org.subtotal.def))}</td>
-                            <td class="num">${esc(this.fmt(org.subtotal.sur))}</td>
-                            <td class="num">${esc(this.fmtPct(org.subtotal.defPct))}</td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>`;
-        }).join('');
-
-        const grandRow = `
-            <div class="grand-total-block">
-                <table>
-                    <tbody>
-                        <tr class="grand-row">
-                            <td></td>
-                            <td class="total-label">${esc(this.grandTotalLabel)}</td>
-                            <td class="num">${esc(this.fmt(this.grandTotal.auth))}</td>
-                            <td class="num">${esc(this.fmt(this.grandTotal.held))}</td>
-                            <td class="num">${esc(this.fmt(this.grandTotal.def))}</td>
-                            <td class="num">${esc(this.fmt(this.grandTotal.sur))}</td>
-                            <td class="num">${esc(this.fmtPct(this.grandTotal.defPct))}</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>`;
-
-        const html = `<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>rank-wise-manpower_${this.lang}</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: ${fontFamily}; font-size: 10pt; color: #000; background: #fff; padding: 15mm; }
-        h1 { font-size: 14pt; font-weight: 700; text-align: center; margin-bottom: 3px; }
-        .scope { font-size: 10pt; font-weight: 600; text-align: center; margin: 2px 0 6px 0; color: #1e3a5f; }
-        .date { font-size: 10pt; text-align: center; margin-bottom: 18px; }
-        .org-block { margin-bottom: 18px; page-break-inside: avoid; }
-        .org-title { font-size: 11pt; font-weight: 700; padding: 4px 0; border-bottom: 2px solid #000; margin-bottom: 2px; }
-        table { width: 100%; border-collapse: collapse; font-family: ${fontFamily}; }
-        th { padding: 5px 8px; text-align: center; font-size: 9pt; font-weight: 700;
-             border: 1px solid #000; white-space: nowrap; background: #fff; color: #000; }
-        td { padding: 4px 8px; border: 1px solid #000; font-size: 9pt;
-             background: #fff; color: #000; }
-        td.num { text-align: center; }
-        td.name { text-align: left; }
-        td.total-label { text-align: right; font-weight: 700; }
-        td.def { font-weight: 600; }
-        td.sur { font-weight: 600; }
-        .subtotal-row td { font-weight: 700; border-top: 2px solid #000; }
-        .grand-total-block { margin-top: 8px; }
-        .grand-row td { font-weight: 700; border: 2px solid #000; font-size: 10pt; }
-        @page { size: A4; margin: 15mm 15mm 18mm 15mm;
-            @bottom-center { content: "Page " counter(page) " of " counter(pages);
-                font-family: ${fontFamily}; font-size: 8pt; color: #555; }
-        }
-        @media print {
-            body { padding: 0; }
-            .org-block { page-break-inside: avoid; }
-        }
-    </style>
-</head>
-<body>
-    <h1>${esc(this.titleLabel)}</h1>
-    ${this.scopeLine ? `<div class="scope">${esc(this.scopeLine)}</div>` : ''}
-    <div class="date">${esc(dateStr)}</div>
-    ${orgTables}
-    ${grandRow}
-</body>
-</html>`;
-
-        const win = window.open('', '_blank', 'width=900,height=700');
-        if (!win) return;
-        win.document.write(html);
-        win.document.close();
-        setTimeout(() => { win.print(); }, 600);
-    }
 }

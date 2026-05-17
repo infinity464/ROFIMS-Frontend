@@ -7,16 +7,20 @@
         <div class="report-toolbar-row">
             <div class="report-filter-block">
                 <label class="filter-label">{{ lang === 'en' ? 'RAB Unit:' : 'র‍্যাব ইউনিট:' }}</label>
-                <p-select
+                <p-multiSelect
                     [options]="rabUnitOptions"
-                    [(ngModel)]="selectedRabUnitId"
+                    [(ngModel)]="selectedRabUnitIds"
                     optionLabel="label"
                     optionValue="value"
-                    [showClear]="false"
+                    [placeholder]="lang === 'en' ? 'All RAB Units (top-level)' : 'সকল র‍্যাব ইউনিট'"
+                    [showClear]="true"
+                    [filter]="true"
+                    display="chip"
                     appendTo="body"
                     styleClass="rab-unit-select"
-                    (onChange)="onRabUnitChange()">
-                </p-select>
+                    (onChange)="onRabUnitChange()"
+                    (onClear)="onRabUnitChange()">
+                </p-multiSelect>
 
                 <label class="filter-label">{{ lang === 'en' ? 'Merge:' : 'একত্রীকরণ:' }}</label>
                 <p-multiSelect
@@ -41,7 +45,7 @@
                 <div class="report-export-wrap">
                     <button type="button" class="report-btn-export"
                             (click)="toggleExportDropdown($event)"
-                            [disabled]="loading || exporting || units.length === 0 || ranks.length === 0">
+                            [disabled]="loading || exporting || !hasAnyData || ranks.length === 0">
                         @if (exporting) {
                             <i class="pi pi-spin pi-spinner" style="font-size:13px"></i>
                             Generating...
@@ -93,60 +97,66 @@
         <div *ngFor="let i of [1,2,3,4,5]" class="skeleton-row"></div>
     </div>
 
-    <!-- Table -->
-    <div class="report-table-wrap" *ngIf="!loading">
-        <table class="report-table matrix-table">
-            <thead>
-                <tr>
-                    <th rowspan="2" class="unit-col">{{ unitHeader }}</th>
-                    <th *ngFor="let col of ranks" colspan="2" class="rank-col">
-                        <div class="rank-head">
-                            <span class="rank-name">{{ rankLabel(col) }}</span>
-                            <span class="rank-abbr" *ngIf="col.abbreviation">{{ col.abbreviation }}</span>
-                        </div>
-                    </th>
-                    <th colspan="2" class="rank-col total-col">
-                        <div class="rank-head">
-                            <span class="rank-name">{{ totalHeader }}</span>
-                        </div>
-                    </th>
-                </tr>
-                <tr>
-                    <ng-container *ngFor="let col of ranks">
-                        <th class="sub-col">{{ authHeader }}</th>
-                        <th class="sub-col">{{ heldHeader }}</th>
-                    </ng-container>
-                    <th class="sub-col total-col">{{ authHeader }}</th>
-                    <th class="sub-col total-col">{{ heldHeader }}</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr *ngFor="let row of units">
-                    <td class="unit-name">{{ unitLabel(row) }}</td>
-                    <ng-container *ngFor="let col of ranks">
-                        <td class="num-cell">{{ fmt(cell(row, col.equivalentNameId).auth) }}</td>
-                        <td class="num-cell">{{ fmt(cell(row, col.equivalentNameId).held) }}</td>
-                    </ng-container>
-                    <td class="num-cell total-col">{{ fmt(row.total.auth) }}</td>
-                    <td class="num-cell total-col">{{ fmt(row.total.held) }}</td>
-                </tr>
-            </tbody>
-            <tfoot>
-                <tr class="totals-row">
-                    <td class="totals-label">{{ totalHeader }}</td>
-                    <ng-container *ngFor="let col of ranks">
-                        <td class="num-cell">{{ fmt(colTotal(col.equivalentNameId).auth) }}</td>
-                        <td class="num-cell">{{ fmt(colTotal(col.equivalentNameId).held) }}</td>
-                    </ng-container>
-                    <td class="num-cell total-col">{{ fmt(grandTotal.auth) }}</td>
-                    <td class="num-cell total-col">{{ fmt(grandTotal.held) }}</td>
-                </tr>
-            </tfoot>
-        </table>
+    <!-- Tables: one per drill-down section (or one anonymous section when nothing is selected) -->
+    <div *ngIf="!loading">
+        <div *ngFor="let section of sections" class="section-block">
+            <div class="section-banner" *ngIf="section.titleEN">{{ sectionTitle(section) }}</div>
 
-        <div *ngIf="units.length === 0 || ranks.length === 0" class="empty-state">
-            <i class="pi pi-inbox"></i>
-            <p>No data found.</p>
+            <div class="report-table-wrap">
+                <table class="report-table matrix-table">
+                    <thead>
+                        <tr>
+                            <th rowspan="2" class="unit-col">{{ unitHeader }}</th>
+                            <th *ngFor="let col of ranks" colspan="2" class="rank-col">
+                                <div class="rank-head">
+                                    <span class="rank-name">{{ rankLabel(col) }}</span>
+                                    <span class="rank-abbr" *ngIf="col.abbreviation">{{ col.abbreviation }}</span>
+                                </div>
+                            </th>
+                            <th colspan="2" class="rank-col total-col">
+                                <div class="rank-head">
+                                    <span class="rank-name">{{ totalHeader }}</span>
+                                </div>
+                            </th>
+                        </tr>
+                        <tr>
+                            <ng-container *ngFor="let col of ranks">
+                                <th class="sub-col">{{ authHeader }}</th>
+                                <th class="sub-col">{{ heldHeader }}</th>
+                            </ng-container>
+                            <th class="sub-col total-col">{{ authHeader }}</th>
+                            <th class="sub-col total-col">{{ heldHeader }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let row of section.units">
+                            <td class="unit-name">{{ unitLabel(row) }}</td>
+                            <ng-container *ngFor="let col of ranks">
+                                <td class="num-cell">{{ fmt(cell(row, col.equivalentNameId).auth) }}</td>
+                                <td class="num-cell">{{ fmt(cell(row, col.equivalentNameId).held) }}</td>
+                            </ng-container>
+                            <td class="num-cell total-col">{{ fmt(row.total.auth) }}</td>
+                            <td class="num-cell total-col">{{ fmt(row.total.held) }}</td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr class="totals-row">
+                            <td class="totals-label">{{ totalHeader }}</td>
+                            <ng-container *ngFor="let col of ranks">
+                                <td class="num-cell">{{ fmt(colTotal(section, col.equivalentNameId).auth) }}</td>
+                                <td class="num-cell">{{ fmt(colTotal(section, col.equivalentNameId).held) }}</td>
+                            </ng-container>
+                            <td class="num-cell total-col">{{ fmt(section.grandTotal.auth) }}</td>
+                            <td class="num-cell total-col">{{ fmt(section.grandTotal.held) }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+
+                <div *ngIf="section.units.length === 0 || ranks.length === 0" class="empty-state">
+                    <i class="pi pi-inbox"></i>
+                    <p>No data found.</p>
+                </div>
+            </div>
         </div>
     </div>
 
