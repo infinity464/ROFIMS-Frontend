@@ -26,6 +26,7 @@ import { CourseInfoService, CourseInfoByEmployeeView } from '@/services/course-i
 import { DraftCourseService } from '@/services/draft-course.service';
 import { RftsTrainingRow } from '@/models/draft-course.model';
 import { PromotionInfoService, PromotionInfoByEmployeeView } from '@/services/promotion-info.service';
+import { ExBdLeaveApplicationService, ExBdLeaveApplicationProgressView } from '@/services/ex-bd-leave-application.service';
 import { EmployeePersonalServiceOverview } from '@/models/employee-personal-service-overview.model';
 import { LocationType } from '@/models/enums';
 import { PresentStatusInfoService } from '@/services/present-status-info.service';
@@ -117,6 +118,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
     promotionList: PromotionInfoByEmployeeView[] = [];
     documentList: EmployeeDocumentReferenceItem[] = [];
     approvedNoteSheetList: EmployeeApprovedNoteSheetRow[] = [];
+    exBdLeaveProgressList: ExBdLeaveApplicationProgressView[] = [];
     previousYearSummary: LeaveInfoSummaryItem[] = [];
     previousYearSummaryDialogVisible = false;
     previousYearSummaryLoading = false;
@@ -151,6 +153,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         private empService: EmpService,
         private exportService: ExportService,
         private presentStatusInfoService: PresentStatusInfoService,
+        private exBdLeaveAppService: ExBdLeaveApplicationService,
         private http: HttpClient
     ) {}
 
@@ -580,6 +583,34 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         return this.foreignVisitList.filter((v) => (v.visitType ?? '').toString().trim().toLowerCase() !== 'official');
     }
 
+    getProgressStatusLabel(status: string): string {
+        const map: Record<string, string> = {
+            'ApplicationReceived': 'Application Received',
+            'NoteSheetDraft': 'Notesheet Draft',
+            'Submitted': 'Submitted (Initiator)',
+            'UnderRecommendation': 'Under Recommendation',
+            'FinalApprovalPending': 'Final Approval Pending',
+            'NoteSheetApproved': 'Notesheet Approved',
+            'OfficeOrderGenerated': 'Office Order Generated',
+            'OfficeOrderApproved': 'Office Order Approved',
+            'Cancelled': 'Cancelled'
+        };
+        return map[status] ?? status ?? '-';
+    }
+
+    getProgressStatusSeverity(status: string): string {
+        switch (status) {
+            case 'OfficeOrderApproved': return 'success';
+            case 'NoteSheetApproved':
+            case 'OfficeOrderGenerated': return 'info';
+            case 'Submitted':
+            case 'UnderRecommendation':
+            case 'FinalApprovalPending': return 'warn';
+            case 'Cancelled': return 'danger';
+            default: return 'secondary';
+        }
+    }
+
     get previousYear(): number {
         return this.currentYear - 1;
     }
@@ -622,9 +653,10 @@ export class ExMemberProfile implements OnInit, OnDestroy {
             documents: this.empService.getEmployeeDocumentReferences(id).pipe(catchError(() => of([]))),
             rftsTraining: this.draftCourseService.getRftsTrainingByEmployeeId(id).pipe(catchError(() => of([]))),
             presentStatus: this.presentStatusInfoService.getAllByEmployeeId(id).pipe(catchError(() => of([]))),
-            approvedNoteSheets: this.http.get<EmployeeApprovedNoteSheetRow[]>(`${environment.apis.core}/NoteSheetReferenceEmployee/GetApprovedNoteSheetsByEmployeeId/${id}`).pipe(catchError(() => of([])))
+            approvedNoteSheets: this.http.get<EmployeeApprovedNoteSheetRow[]>(`${environment.apis.core}/NoteSheetReferenceEmployee/GetApprovedNoteSheetsByEmployeeId/${id}`).pipe(catchError(() => of([]))),
+            exBdLeaveProgress: this.exBdLeaveAppService.getProgressByEmployee(id).pipe(catchError(() => of([])))
         }).subscribe({
-            next: ({ profile, family, previousRab, bankAcc, education, foreignVisit, leaveCurrentYear, additionalRemarks, address, moServHistory, discipline, course, promotion, documents, rftsTraining, presentStatus, approvedNoteSheets }) => {
+            next: ({ profile, family, previousRab, bankAcc, education, foreignVisit, leaveCurrentYear, additionalRemarks, address, moServHistory, discipline, course, promotion, documents, rftsTraining, presentStatus, approvedNoteSheets, exBdLeaveProgress }) => {
                 this.profile = profile;
                 this.familyList = family ?? [];
                 this.loadProfileImage(profile);
@@ -641,6 +673,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
                 this.promotionList = promotion ?? [];
                 this.documentList = documents ?? [];
                 this.approvedNoteSheetList = Array.isArray(approvedNoteSheets) ? approvedNoteSheets : [];
+                this.exBdLeaveProgressList = Array.isArray(exBdLeaveProgress) ? exBdLeaveProgress : [];
                 this.rftsTrainingList = rftsTraining ?? [];
                 const activeRecord = (presentStatus ?? []).find((r: any) => (r.IsActive ?? r.isActive));
                 if (activeRecord) {

@@ -281,11 +281,12 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
             text += '.';
         }
 
-        // Append MainText (same as notesheet)
+        // Append MainText HTML (preserve rich editor formatting: line breaks, paragraphs)
         const mainText = (this.nsMainText || '').trim();
         if (mainText) {
-            const plain = this.htmlToPlainText(mainText);
-            text += ' ' + plain;
+            // Strip outer <p> wrapper to inline with paragraph, keep inner HTML
+            const inline = mainText.replace(/^<p[^>]*>/i, '').replace(/<\/p>\s*$/i, '');
+            text += ' ' + inline;
         }
 
         return text;
@@ -494,13 +495,16 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
             ? { width: 12240, height: 15840 }
             : { width: 11906, height: 16838 };
 
+        // Government Header
         const headerLines = this.isBangla
-            ? ['গণপ্রজাতন্ত্রী বাংলাদেশ সরকার', 'বাংলাদেশ পুলিশ', 'র‌্যাব ফোর্সেস সদর দপ্তর', 'কুর্মিটোলা, ঢাকা']
-            : ["Government of the People's Republic of Bangladesh", 'Bangladesh Police', 'RAB Forces Headquarters', 'Kurmitola, Dhaka'];
+            ? ['গণপ্রজাতন্ত্রী বাংলাদেশ সরকার', 'বাংলাদেশ পুলিশ', 'র‍্যাব ফোর্সেস সদর দপ্তর', 'কুর্মিটোলা, ঢাকা।']
+            : ["People's Republic of Bangladesh", 'Bangladesh Police', 'RAB Forces Headquarters', 'Kurmitola, Dhaka.'];
         for (const line of headerLines) {
             children.push(new Paragraph({ children: [new TextRun({ text: line, font, size: titleSize, bold: true })], alignment: AlignmentType.CENTER, spacing: { after: 20 } }));
         }
-        children.push(new Paragraph({ children: [new TextRun({ text: this.isBangla ? 'অফিস আদেশ' : 'OFFICE ORDER', font, size: titleSize, bold: true, underline: {} })], alignment: AlignmentType.CENTER, spacing: { before: 160, after: 160 } }));
+        children.push(new Paragraph({ text: '', spacing: { after: 100 } }));
+
+        // Letter No & Date
         children.push(new Paragraph({ children: [new TextRun({ text: `${this.isBangla ? 'স্মারক নং: ' : 'Letter No: '}`, font, size: contentSize, bold: true }), new TextRun({ text: this.order.letterNo || '.............', font, size: contentSize })], spacing: { after: 40 } }));
         children.push(new Paragraph({ children: [new TextRun({ text: `${this.isBangla ? 'তারিখ: ' : 'Date: '}`, font, size: contentSize, bold: true }), new TextRun({ text: this.formatDate(this.order.letterDate), font, size: contentSize })], alignment: AlignmentType.RIGHT, spacing: { after: 100 } }));
 
@@ -527,15 +531,19 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
         }
 
         if (this.order.appEmployeeName || this.hasNoteSheetContent) {
-            // Main paragraph (dynamically built like notesheet)
-            const mainPara = this.buildMainParagraph();
-            if (mainPara) {
-                children.push(new Paragraph({ children: [new TextRun({ text: `${this.serial(1)} `, font, size: contentSize, bold: true }), new TextRun({ text: mainPara, font, size: contentSize })], alignment: AlignmentType.JUSTIFIED, spacing: { after: 80 } }));
+            // Main paragraph (dynamically built like notesheet) - strip HTML for Word
+            const mainParaHtml = this.buildMainParagraph();
+            const mainParaPlain = this.htmlToPlainText(mainParaHtml);
+            if (mainParaPlain) {
+                const lines = mainParaPlain.split('\n').filter(l => l.trim());
+                for (const line of lines) {
+                    children.push(new Paragraph({ children: [new TextRun({ text: line, font, size: contentSize })], alignment: AlignmentType.JUSTIFIED, spacing: { after: 80 } }));
+                }
             }
             for (let pi = 0; pi < this.nsParagraphs.length; pi++) {
                 const plainPara = this.htmlToPlainText(this.nsParagraphs[pi]);
                 if (plainPara) {
-                    children.push(new Paragraph({ children: [new TextRun({ text: `${this.serial(2 + pi)} `, font, size: contentSize, bold: true }), new TextRun({ text: plainPara, font, size: contentSize })], alignment: AlignmentType.JUSTIFIED, spacing: { after: 80 } }));
+                    children.push(new Paragraph({ children: [new TextRun({ text: plainPara, font, size: contentSize })], alignment: AlignmentType.JUSTIFIED, spacing: { after: 80 } }));
                 }
             }
         } else if (this.order.body) {
@@ -564,11 +572,18 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
                 const unit = this.isBangla ? (this.order.approvalEmployeeRabUnitBN || this.order.approvalEmployeeRabUnit) : this.order.approvalEmployeeRabUnit;
                 children.push(new Paragraph({ children: [new TextRun({ text: unit, font, size: contentSize })], alignment: AlignmentType.LEFT, indent: { left: sigIndent } }));
             }
+            if (this.isApproved && this.order.approvalDate) {
+                const dateLabel = this.isBangla ? 'তারিখ: ' : 'Date: ';
+                children.push(new Paragraph({ children: [new TextRun({ text: `${dateLabel}${this.formatDate(this.order.approvalDate)}`, font, size: contentSize })], alignment: AlignmentType.LEFT, indent: { left: sigIndent }, spacing: { before: 40 } }));
+            }
         }
 
         const exportOnulipi = this.exportOnulipiEntries;
         if (exportOnulipi.length > 0) {
-            children.push(new Paragraph({ children: [new TextRun({ text: this.isBangla ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নহে):' : 'Copy (not in order of seniority):', font, size: contentSize, bold: true })], spacing: { before: 300 } }));
+            if (this.order.noteSheetNo) {
+                children.push(new Paragraph({ children: [new TextRun({ text: this.order.noteSheetNo, font, size: contentSize })], spacing: { before: 300 } }));
+            }
+            children.push(new Paragraph({ children: [new TextRun({ text: this.isBangla ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নহে):' : 'Copy (not in order of seniority):', font, size: contentSize, bold: true })], spacing: { before: this.order.noteSheetNo ? 80 : 300 } }));
             exportOnulipi.forEach((entry, idx) => {
                 const ser = this.isBangla ? this.toBanglaDigits(String(idx + 1)) : String(idx + 1);
                 children.push(new Paragraph({ children: [new TextRun({ text: `${ser}। ${entry.text}`, font, size: contentSize })], indent: { left: 360 }, spacing: { after: 20 } }));

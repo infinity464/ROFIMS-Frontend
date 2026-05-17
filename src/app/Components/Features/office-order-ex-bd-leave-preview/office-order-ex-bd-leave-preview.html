@@ -147,6 +147,14 @@
         <div class="legal-paper">
             <div class="oo-doc-box">
 
+                <!-- Government Header -->
+                <div class="oo-doc-header">
+                    <div class="oo-doc-header-line">{{ isBangla ? 'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার' : "People's Republic of Bangladesh" }}</div>
+                    <div class="oo-doc-header-line">{{ isBangla ? 'বাংলাদেশ পুলিশ' : 'Bangladesh Police' }}</div>
+                    <div class="oo-doc-header-line">{{ isBangla ? 'র‍্যাব ফোর্সেস সদর দপ্তর' : 'RAB Forces Headquarters' }}</div>
+                    <div class="oo-doc-header-line">{{ isBangla ? 'কুর্মিটোলা, ঢাকা।' : 'Kurmitola, Dhaka.' }}</div>
+                </div>
+
                 <!-- Letter No & Date -->
                 <div class="oo-doc-meta">
                     <span><strong>{{ isBangla ? 'স্মারক নং' : 'Letter No' }}:</strong> {{ order.letterNo || '.............' }}</span>
@@ -174,16 +182,12 @@
 
                 <!-- ═══ Main Paragraph (built like notesheet preview) ═══ -->
                 <ng-container *ngIf="order!.appEmployeeName || hasNoteSheetContent">
-                    <div class="oo-doc-para">
-                        <span class="oo-doc-para-no">{{ serial(1) }}</span>
-                        <div class="oo-doc-para-text">{{ buildMainParagraph() }}</div>
+                    <div class="oo-doc-body">
+                        <div class="oo-doc-rich-content" [innerHTML]="getMainParagraphSafe()"></div>
                     </div>
-                    <ng-container *ngFor="let para of nsParagraphs; let pi = index">
-                        <div class="oo-doc-para">
-                            <span class="oo-doc-para-no">{{ serial(2 + pi) }}</span>
-                            <div class="oo-doc-para-text">
-                                <div class="oo-doc-rich-content" [innerHTML]="getParagraphSafe(para)"></div>
-                            </div>
+                    <ng-container *ngFor="let para of nsParagraphs">
+                        <div class="oo-doc-body">
+                            <div class="oo-doc-rich-content" [innerHTML]="getParagraphSafe(para)"></div>
                         </div>
                     </ng-container>
                 </ng-container>
@@ -208,12 +212,16 @@
                         <div class="oo-doc-sig-unit" *ngIf="order.approvalEmployeeRabUnit">
                             {{ isBangla ? (order.approvalEmployeeRabUnitBN || order.approvalEmployeeRabUnit) : order.approvalEmployeeRabUnit }}
                         </div>
+                        <div class="oo-doc-sig-date" *ngIf="isApproved && order.approvalDate">
+                            {{ isBangla ? 'তারিখ: ' : 'Date: ' }}{{ formatDate(order.approvalDate) }}
+                        </div>
                     </div>
                 </div>
 
                 <!-- ═══ Onulipi (Copy Distribution) ═══ -->
                 <div class="oo-doc-section oo-doc-onulipi" *ngIf="exportOnulipiEntries.length > 0">
                     <div class="oo-doc-onulipi-header">
+                        <div class="oo-doc-onulipi-ns-no" *ngIf="order.noteSheetNo">{{ order.noteSheetNo }}</div>
                         <div class="oo-doc-section-label">{{ isBangla ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নহে):' : 'Copy (not in order of seniority):' }}</div>
                     </div>
                     <div class="oo-doc-list">
