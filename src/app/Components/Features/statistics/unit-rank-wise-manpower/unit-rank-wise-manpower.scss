@@ -335,3 +335,16 @@ $pill-text:        #1e293b;
     i { font-size: 3rem; margin-bottom: 0.75rem; }
     p { margin: 0; font-size: 0.9rem; }
 }
+
+/* ── Drill-down section: one block per selected RAB Unit ───────────────── */
+.section-block { margin-bottom: 0; }
+
+.section-banner {
+    padding: 0.55rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #fff;
+    background: var(--primary-color, #4f46e5);
+    letter-spacing: 0.02em;
+    border-top: 1px solid var(--surface-border, #e2e8f0);
+}

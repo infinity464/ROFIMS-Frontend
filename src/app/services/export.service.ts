@@ -82,8 +82,15 @@ export interface MatrixReportConfig {
     groupColumns: string[];
     /** Sub-header row repeated under each group (e.g. ['Auth', 'Held']). */
     subHeaders: string[];
-    /** Data rows. */
+    /** Data rows for the single-table mode (ignored when `sections` is provided). */
     rows: string[][];
+    /**
+     * Optional: render one matrix table per section, each with an optional banner above.
+     * Every section shares the same `groupColumns` + `subHeaders` (column structure is
+     * uniform); only `rows` and the banner differ. Used by unit-rank-wise when multiple
+     * RAB Units are drilled into.
+     */
+    sections?: { title?: string; rows: string[][] }[];
     filename?: string;
     filterLines?: string[];
     /** Use landscape orientation in Word (default false). */
@@ -483,7 +490,8 @@ export class ExportService {
             });
 
         // Row 1: leading columns (rowSpan=2) + each group label (columnSpan=subCount).
-        const headerRow1 = new TableRow({
+        // Built via a factory so we can emit a fresh copy per section in sectioned mode.
+        const headerRow1Factory = () => new TableRow({
             tableHeader: true,
             cantSplit: true,
             children: [
@@ -497,7 +505,7 @@ export class ExportService {
             ],
         });
         // Row 2: sub-headers under every group (leading columns are already covered by rowSpan).
-        const headerRow2 = new TableRow({
+        const headerRow2Factory = () => new TableRow({
             tableHeader: true,
             cantSplit: true,
             children: Array.from({ length: groupCount * subCount }, (_, idx) => {
@@ -507,7 +515,7 @@ export class ExportService {
         });
 
         // cantSplit prevents a row's own content from breaking across pages.
-        const dataRows = config.rows.map(row => {
+        const buildDataRows = (rows: string[][]): TableRow[] => rows.map(row => {
             const cells = row.slice(0, totalCols);
             while (cells.length < totalCols) cells.push('');
             return new TableRow({
@@ -524,11 +532,18 @@ export class ExportService {
             });
         });
 
-        const table = new Table({
+        // Each rendered matrix table re-emits its own two-row header so the
+        // header repeats above every section (e.g. one per drilled-into RAB Unit).
+        const buildTable = (rows: string[][]): Table => new Table({
             width: { size: totalDxa, type: WidthType.DXA },
             layout: TableLayoutType.FIXED,
             columnWidths: colWidths,
-            rows: [headerRow1, headerRow2, ...dataRows],
+            rows: [
+                // Each call to headerCell returns a fresh TableCell, so it's safe to
+                // re-clone the header rows per section.
+                headerRow1Factory(), headerRow2Factory(),
+                ...buildDataRows(rows),
+            ],
         });
 
         const filterPara = config.filterLines?.length ? [new Paragraph({
@@ -552,6 +567,26 @@ export class ExportService {
             }),
         } : undefined;
 
+        // Sectioned mode: one banner + matrix table per section. Fallback: single matrix
+        // table from top-level `rows` (backwards-compatible with the original signature).
+        const sectionBlocks: (Paragraph | Table)[] = [];
+        if (config.sections && config.sections.length > 0) {
+            const sizeSectionHeader = 20;
+            config.sections.forEach((sec, idx) => {
+                if (sec.title) {
+                    sectionBlocks.push(new Paragraph({
+                        children: [new TextRun({ text: sec.title, bold: true, size: sizeSectionHeader, font })],
+                        spacing: { before: idx > 0 ? 240 : 0, after: 120 },
+                        keepNext: true,
+                        keepLines: true,
+                    }));
+                }
+                sectionBlocks.push(buildTable(sec.rows));
+            });
+        } else {
+            sectionBlocks.push(buildTable(config.rows));
+        }
+
         return new Document({
             sections: [{
                 properties: config.landscape ? {
@@ -570,7 +605,7 @@ export class ExportService {
                         spacing: { after: filterPara.length ? 150 : 300 },
                     }),
                     ...filterPara,
-                    table,
+                    ...sectionBlocks,
                 ],
             }],
         });
@@ -621,35 +656,48 @@ export class ExportService {
             [dateStr],
             ...(filterLine ? [[filterLine]] : []),
             [],
-            headerRow1,
-            headerRow2,
-            ...config.rows,
         ];
-
-        const ws = XLSX.utils.aoa_to_sheet(data);
-        ws['!cols'] = Array.from({ length: totalCols }, (_, i) => ({ wch: i < leadCount ? 22 : 12 }));
-
         const merges: { s: { r: number; c: number }; e: { r: number; c: number } }[] = [
             { s: { r: 0, c: 0 }, e: { r: 0, c: totalCols - 1 } },
             { s: { r: 1, c: 0 }, e: { r: 1, c: totalCols - 1 } },
         ];
-        // Track the row index where the two header rows live (after title/date/filter/blank).
-        const h1Row = filterLine ? 4 : 3;
-        const h2Row = h1Row + 1;
         if (filterLine) {
             merges.push({ s: { r: 2, c: 0 }, e: { r: 2, c: totalCols - 1 } });
         }
-        // Leading columns: merge vertically (rowspan=2).
-        for (let c = 0; c < leadCount; c++) {
-            merges.push({ s: { r: h1Row, c }, e: { r: h2Row, c } });
-        }
-        // Group columns: merge horizontally across their sub-headers.
-        if (subCount > 1) {
-            for (let g = 0; g < groupCount; g++) {
-                const startCol = leadCount + g * subCount;
-                merges.push({ s: { r: h1Row, c: startCol }, e: { r: h1Row, c: startCol + subCount - 1 } });
+
+        // Sectioned mode: banner row + repeated two-row header + rows, per section.
+        // Single-table mode: top-level rows with one header block.
+        const sections = config.sections && config.sections.length > 0
+            ? config.sections
+            : [{ title: undefined as string | undefined, rows: config.rows }];
+
+        for (const sec of sections) {
+            if (sec.title) {
+                const titleRowIdx = data.length;
+                data.push([sec.title]);
+                merges.push({ s: { r: titleRowIdx, c: 0 }, e: { r: titleRowIdx, c: totalCols - 1 } });
             }
+            const h1Row = data.length;
+            const h2Row = h1Row + 1;
+            data.push(headerRow1);
+            data.push(headerRow2);
+            // Leading columns: merge vertically (rowspan=2).
+            for (let c = 0; c < leadCount; c++) {
+                merges.push({ s: { r: h1Row, c }, e: { r: h2Row, c } });
+            }
+            // Group columns: merge horizontally across their sub-headers.
+            if (subCount > 1) {
+                for (let g = 0; g < groupCount; g++) {
+                    const startCol = leadCount + g * subCount;
+                    merges.push({ s: { r: h1Row, c: startCol }, e: { r: h1Row, c: startCol + subCount - 1 } });
+                }
+            }
+            for (const r of sec.rows) data.push(r);
+            data.push([]);  // blank row between sections
         }
+
+        const ws = XLSX.utils.aoa_to_sheet(data);
+        ws['!cols'] = Array.from({ length: totalCols }, (_, i) => ({ wch: i < leadCount ? 22 : 12 }));
         ws['!merges'] = merges;
 
         const wb = XLSX.utils.book_new();

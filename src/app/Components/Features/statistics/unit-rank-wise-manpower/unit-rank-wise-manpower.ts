@@ -3,9 +3,9 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { SelectModule } from 'primeng/select';
 import { MultiSelectModule } from 'primeng/multiselect';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { Packer } from 'docx';
 import { ExportService } from '@/services/export.service';
 import { UserMenuService } from '@/services/user-menu.service';
@@ -21,6 +21,17 @@ import {
     type UnitRankWiseManpowerResponse
 } from '@/services/statistics.service';
 
+/** One block in the report — wings of a selected RAB Unit, or top-level units
+ *  when nothing is selected. The banner is rendered only when titleEN is non-empty. */
+interface UnitRankSection {
+    /** Banner text shown above the table; empty for the "no-selection / top-level" block. */
+    titleEN: string;
+    titleBN: string;
+    units: UnitRankRow[];
+    columnTotals: Record<number, UnitRankCell>;
+    grandTotal: UnitRankCell;
+}
+
 type Lang = 'en' | 'bn';
 
 const EMPTY_CELL: UnitRankCell = { auth: 0, held: 0 };
@@ -28,7 +39,7 @@ const EMPTY_CELL: UnitRankCell = { auth: 0, held: 0 };
 @Component({
     selector: 'app-unit-rank-wise-manpower',
     standalone: true,
-    imports: [CommonModule, FormsModule, SelectModule, MultiSelectModule],
+    imports: [CommonModule, FormsModule, MultiSelectModule],
     templateUrl: './unit-rank-wise-manpower.html',
     styleUrl: './unit-rank-wise-manpower.scss'
 })
@@ -42,10 +53,14 @@ export class UnitRankWiseManpowerComponent implements OnInit {
     exporting = false;
     exportDropdownOpen = false;
 
+    /** Rank columns — shared across every section. Picked from the first response. */
     ranks: UnitRankColumn[] = [];
-    units: UnitRankRow[] = [];
-    columnTotals: Record<number, UnitRankCell> = {};
-    grandTotal: UnitRankCell = { auth: 0, held: 0 };
+
+    /**
+     * One block per drill-down target. Empty selection → one section (top-level RAB Units, no banner).
+     * Selected N units → N sections, each banner = unit name, table = that unit's wings.
+     */
+    sections: UnitRankSection[] = [];
 
     accessibleRabUnitNames: string[] | null = null;
     accessibleRabUnitNamesBN: string[] | null = null;
@@ -53,9 +68,9 @@ export class UnitRankWiseManpowerComponent implements OnInit {
     /** Comma-separated EquivalentName.codeValueEN list to drop from the columns. */
     private readonly excludeRanks = 'Officer,DAD';
 
-    /** RAB Unit drill-down: null = top-level RAB Units; a CodeId = wings under that unit. */
-    selectedRabUnitId: number | null = null;
-    rabUnitOptions: { label: string; value: number | null }[] = [];
+    /** Multi-select drill-down. Empty array = show top-level RAB Units in a single section. */
+    selectedRabUnitIds: number[] = [];
+    rabUnitOptions: { label: string; value: number }[] = [];
     private rabUnits: CommonCode[] = [];
 
     /** Member-type CodeIds the user picked to MERGE. Default = empty = every rank shown as its
@@ -129,14 +144,10 @@ export class UnitRankWiseManpowerComponent implements OnInit {
     }
 
     private rebuildRabUnitOptions(): void {
-        const allLabel = this.lang === 'en' ? 'All RAB Units' : 'সকল র‍্যাব ইউনিট';
-        this.rabUnitOptions = [
-            { label: allLabel, value: null },
-            ...this.rabUnits.map(u => ({
-                label: this.lang === 'en' ? (u.codeValueEN ?? '') : (u.codeValueBN || u.codeValueEN || ''),
-                value: u.codeId
-            }))
-        ];
+        this.rabUnitOptions = this.rabUnits.map(u => ({
+            label: this.lang === 'en' ? (u.codeValueEN ?? '') : (u.codeValueBN || u.codeValueEN || ''),
+            value: u.codeId
+        }));
     }
 
     onRabUnitChange(): void {
@@ -145,16 +156,62 @@ export class UnitRankWiseManpowerComponent implements OnInit {
 
     loadData(): void {
         this.loading = true;
-        this.statisticsService
-            .getUnitRankWiseManpower(this.excludeRanks, this.selectedRabUnitId, this.selectedMergeMemberTypeIds)
-            .subscribe({
-            next: (res: UnitRankWiseManpowerResponse) => {
-                this.ranks        = res.ranks ?? [];
-                this.units        = res.units ?? [];
-                this.columnTotals = res.columnTotals ?? {};
-                this.grandTotal   = res.grandTotal ?? { auth: 0, held: 0 };
-                this.accessibleRabUnitNames   = res.accessibleRabUnitNames ?? null;
-                this.accessibleRabUnitNamesBN = res.accessibleRabUnitNamesBN ?? null;
+        const ids = this.selectedRabUnitIds ?? [];
+
+        if (ids.length === 0) {
+            // No selection → single anonymous section (top-level RAB Units).
+            this.statisticsService
+                .getUnitRankWiseManpower(this.excludeRanks, null, this.selectedMergeMemberTypeIds)
+                .subscribe({
+                    next: (res: UnitRankWiseManpowerResponse) => {
+                        this.ranks = res.ranks ?? [];
+                        this.sections = [{
+                            titleEN: '',
+                            titleBN: '',
+                            units: res.units ?? [],
+                            columnTotals: res.columnTotals ?? {},
+                            grandTotal: res.grandTotal ?? { auth: 0, held: 0 }
+                        }];
+                        this.accessibleRabUnitNames   = res.accessibleRabUnitNames ?? null;
+                        this.accessibleRabUnitNamesBN = res.accessibleRabUnitNamesBN ?? null;
+                        this.loading = false;
+                    },
+                    error: () => { this.loading = false; }
+                });
+            return;
+        }
+
+        // 1+ units selected → one section per unit (wings of that unit, with banner).
+        forkJoin(
+            ids.map(id =>
+                this.statisticsService
+                    .getUnitRankWiseManpower(this.excludeRanks, id, this.selectedMergeMemberTypeIds)
+                    .pipe(catchError(() => of(null as UnitRankWiseManpowerResponse | null)))
+            )
+        ).subscribe({
+            next: (results) => {
+                const built: UnitRankSection[] = [];
+                let firstRanks: UnitRankColumn[] = [];
+                let scopeEN: string[] | null = null;
+                let scopeBN: string[] | null = null;
+                results.forEach((res, i) => {
+                    if (!res) return;
+                    if (firstRanks.length === 0) firstRanks = res.ranks ?? [];
+                    if (scopeEN == null) scopeEN = res.accessibleRabUnitNames   ?? null;
+                    if (scopeBN == null) scopeBN = res.accessibleRabUnitNamesBN ?? null;
+                    const unit = this.rabUnits.find(u => u.codeId === ids[i]);
+                    built.push({
+                        titleEN: unit?.codeValueEN ?? `Unit ${ids[i]}`,
+                        titleBN: unit?.codeValueBN || unit?.codeValueEN || `Unit ${ids[i]}`,
+                        units: res.units ?? [],
+                        columnTotals: res.columnTotals ?? {},
+                        grandTotal: res.grandTotal ?? { auth: 0, held: 0 }
+                    });
+                });
+                this.ranks = firstRanks;
+                this.sections = built;
+                this.accessibleRabUnitNames   = scopeEN;
+                this.accessibleRabUnitNamesBN = scopeBN;
                 this.loading = false;
             },
             error: () => { this.loading = false; }
@@ -176,12 +233,6 @@ export class UnitRankWiseManpowerComponent implements OnInit {
         this.rebuildMemberTypeOptions();
     }
 
-    private get selectedRabUnit(): CommonCode | undefined {
-        return this.selectedRabUnitId == null
-            ? undefined
-            : this.rabUnits.find(u => u.codeId === this.selectedRabUnitId);
-    }
-
     toggleExportDropdown(event: Event): void {
         event.stopPropagation();
         this.exportDropdownOpen = !this.exportDropdownOpen;
@@ -191,8 +242,22 @@ export class UnitRankWiseManpowerComponent implements OnInit {
         return row.cells?.[eqId] ?? EMPTY_CELL;
     }
 
-    colTotal(eqId: number): UnitRankCell {
-        return this.columnTotals?.[eqId] ?? EMPTY_CELL;
+    colTotal(section: UnitRankSection, eqId: number): UnitRankCell {
+        return section.columnTotals?.[eqId] ?? EMPTY_CELL;
+    }
+
+    sectionTitle(section: UnitRankSection): string {
+        return this.lang === 'en' ? section.titleEN : (section.titleBN || section.titleEN);
+    }
+
+    /** True when at least one section has a banner (i.e. at least one drill-down was selected). */
+    get hasSectionBanners(): boolean {
+        return this.sections.some(s => !!s.titleEN);
+    }
+
+    /** True iff any section has at least one row — gates the Export button. */
+    get hasAnyData(): boolean {
+        return this.sections.some(s => s.units.length > 0);
     }
 
     unitLabel(row: UnitRankRow): string {
@@ -218,21 +283,17 @@ export class UnitRankWiseManpowerComponent implements OnInit {
     ];
 
     get titleLabel(): string {
-        const sel = this.selectedRabUnit;
-        const rowEN = sel ? 'WING' : 'UNIT';
-        const rowBN = sel ? 'উইং'   : 'ইউনিট';
-        const suffix = sel
-            ? (this.lang === 'en'
-                ? ` — ${(sel.codeValueEN ?? '').toUpperCase()}`
-                : ` — ${sel.codeValueBN || sel.codeValueEN || ''}`)
-            : '';
+        // 0 selected = listing top-level units; 1+ selected = listing wings (per unit).
+        const isWingMode = this.selectedRabUnitIds.length > 0;
+        const rowEN = isWingMode ? 'WING' : 'UNIT';
+        const rowBN = isWingMode ? 'উইং'   : 'ইউনিট';
         return this.lang === 'en'
-            ? `${rowEN}-WISE MANPOWER STATE BY RAB RANK${suffix}`
-            : `${rowBN} অনুযায়ী র‍্যাব পদবী ভিত্তিক জনবলের পরিসংখ্যান${suffix}`;
+            ? `${rowEN}-WISE MANPOWER STATE BY RAB RANK`
+            : `${rowBN} অনুযায়ী র‍্যাব পদবী ভিত্তিক জনবলের পরিসংখ্যান`;
     }
 
     get unitHeader(): string {
-        if (this.selectedRabUnit) return this.lang === 'en' ? 'Wing' : 'উইং';
+        if (this.selectedRabUnitIds.length > 0) return this.lang === 'en' ? 'Wing' : 'উইং';
         return this.lang === 'en' ? 'Unit' : 'ইউনিট';
     }
 
@@ -259,13 +320,22 @@ export class UnitRankWiseManpowerComponent implements OnInit {
         // All four formats share one source-of-truth: the same matrix-Word config.
         // PDF + Print build the docx and convert server-side via /Document/ConvertToPdf.
         const scope = this.scopeLine;
+        // Build one matrix section per drill-down block. The 0-selection case
+        // produces a single section with no banner; 1+ selections produce N sections
+        // each with a banner = unit name (matches the on-screen layout).
+        const matrixSections = this.sections.map(sec => ({
+            title: this.sectionTitle(sec),
+            rows: this.getMatrixRowsForSection(sec)
+        }));
         const matrixConfig = {
             title: this.titleLabel,
             lang: this.lang,
             leadingColumns: [this.unitHeader],
             groupColumns: [...this.ranks.map(c => this.rankLabel(c)), this.totalHeader],
             subHeaders: [this.authHeader, this.heldHeader],
-            rows: this.getMatrixRows(),
+            // Top-level rows is the fallback path; the exporter prefers `sections` when set.
+            rows: matrixSections.length === 1 ? matrixSections[0].rows : [],
+            sections: matrixSections.length > 1 ? matrixSections : undefined,
             filename: 'unit-rank-wise-manpower',
             filterLines: scope ? [scope] : undefined,
             landscape: true,
@@ -313,9 +383,9 @@ export class UnitRankWiseManpowerComponent implements OnInit {
         );
     }
 
-    /** Matrix-shaped rows used by the Excel exporter — one row per unit + a totals row. */
-    private getMatrixRows(): string[][] {
-        const dataRows: string[][] = this.units.map(row => {
+    /** Matrix-shaped rows for one section: one row per unit/wing + a trailing totals row. */
+    private getMatrixRowsForSection(section: UnitRankSection): string[][] {
+        const dataRows: string[][] = section.units.map(row => {
             const cells: string[] = [this.unitLabel(row)];
             for (const col of this.ranks) {
                 const c = this.cell(row, col.equivalentNameId);
@@ -329,12 +399,12 @@ export class UnitRankWiseManpowerComponent implements OnInit {
 
         const totalRow: string[] = [this.totalHeader];
         for (const col of this.ranks) {
-            const t = this.colTotal(col.equivalentNameId);
+            const t = this.colTotal(section, col.equivalentNameId);
             totalRow.push(this.fmt(t.auth));
             totalRow.push(this.fmt(t.held));
         }
-        totalRow.push(this.fmt(this.grandTotal.auth));
-        totalRow.push(this.fmt(this.grandTotal.held));
+        totalRow.push(this.fmt(section.grandTotal.auth));
+        totalRow.push(this.fmt(section.grandTotal.held));
         dataRows.push(totalRow);
 
         return dataRows;
