@@ -131,16 +131,11 @@
                     @for (opt of filtered(districtsForPicker(), distFilter); track opt.id) {
                         <li class="aor-card__picker-item"
                             [class.aor-card__picker-item--checked]="distPicked.has(opt.id)"
-                            [class.aor-card__picker-item--locked]="distPicked.has(opt.id) && !canUncheckDistrict(opt.id)"
-                            [title]="distPicked.has(opt.id) && !canUncheckDistrict(opt.id) ? 'Remove its upazilas first' : ''"
                             (click)="toggleDistPick(opt.id)">
                             <i class="pi"
                                [class.pi-check-square]="distPicked.has(opt.id)"
                                [class.pi-stop]="!distPicked.has(opt.id)"></i>
                             <span>{{ opt.name }}</span>
-                            @if (distPicked.has(opt.id) && !canUncheckDistrict(opt.id)) {
-                                <i class="pi pi-lock aor-card__picker-lock"></i>
-                            }
                         </li>
                     } @empty {
                         <li class="aor-card__picker-empty">No options</li>
