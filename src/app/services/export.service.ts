@@ -39,6 +39,13 @@ export interface ReportConfig {
 export interface ReportSection {
     /** Heading text rendered above the section's table (e.g. "Army"). */
     title: string;
+    /**
+     * Optional per-section column headers. When present, this section's table uses
+     * its own columns instead of the top-level `SectionedReportConfig.columns`.
+     * Used by reports where each section has a different column set (e.g. mother-org-wise
+     * manpower where rank columns vary per organisation).
+     */
+    columns?: string[];
     /** Data rows inside this section's table. */
     rows: string[][];
     /** Optional trailing row inside the table (subtotal). */
@@ -567,28 +574,24 @@ export class ExportService {
     }
 
     /**
-     * Word export with one table per section. Each section gets a heading paragraph
-     * (e.g. "Army") above its own table. Optional final grand-total row after all sections.
+     * Builds the sectioned Word <see cref="Document"/> in memory without saving it.
+     * Used by <c>exportWordSectioned</c> as well as by consumers that want to
+     * pack the docx → blob → server PDF conversion themselves (e.g. mother-unit-wise
+     * report's "PDF via Word" path, mirroring notesheet-preview).
      */
-    async exportWordSectioned(config: SectionedReportConfig): Promise<void> {
+    buildSectionedWordDoc(config: SectionedReportConfig): Document {
         const dateStr = new Date().toLocaleDateString(config.lang === 'bn' ? 'bn-BD' : 'en-US', {
             year: 'numeric', month: 'long', day: 'numeric',
         });
         const font = config.lang === 'bn' ? 'Nirmala UI' : 'Times New Roman';
-        const columns = config.columns;
-        const colCount = Math.max(columns.length, 1);
-        // Total table width = ~9000 DXA (≈ A4 portrait usable width). Equal split across columns
-        // and fixed layout ensures every table renders with the SAME column widths regardless of
-        // cell-content length.
-        const totalDxa = 9000;
-        const cellWidth = Math.floor(totalDxa / colCount);
-        const colWidths = Array.from({ length: colCount }, (_, i) =>
-            i === colCount - 1 ? totalDxa - cellWidth * (colCount - 1) : cellWidth
-        );
-        const sizePageHeader = 28;
-        const sizeSectionHeader = 24;
-        const sizeTableHeader = 20;
-        const sizeTableContent = config.lang === 'bn' ? 16 : 22;
+        // A4 landscape ≈ 297mm, portrait ≈ 210mm. After ~1" margins the usable width in DXA
+        // (1/20 pt; 1440 DXA = 1 inch) is ~13900 (landscape) / ~9000 (portrait).
+        const totalDxa = config.landscape ? 13900 : 9000;
+        // Sizes are in half-points: 24 = 12pt, 20 = 10pt, 16 = 8pt, 18 = 9pt, 12 = 6pt.
+        const sizePageHeader = 24;
+        const sizeSectionHeader = 20;
+        const sizeTableHeader = 16;
+        const sizeTableContent = config.lang === 'bn' ? 12 : 18;
         const borders = {
             top:    { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
             bottom: { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
@@ -596,40 +599,52 @@ export class ExportService {
             right:  { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
         };
 
-        const makeHeaderRow = () => new TableRow({
-            tableHeader: true,
-            children: columns.map((col, i) => new TableCell({
-                children: [new Paragraph({
-                    children: [new TextRun({ text: col, bold: true, font, size: sizeTableHeader })],
-                    alignment: AlignmentType.LEFT,
-                    spacing: { after: 100 },
-                })],
-                borders,
-                width: { size: colWidths[i], type: WidthType.DXA },
-            })),
-        });
+        // Per-section helper factory: lets each section use its own column set
+        // (e.g. mother-org reports where rank columns vary per org).
+        const makeHelpers = (cols: string[]) => {
+            const colCount = Math.max(cols.length, 1);
+            const cellWidth = Math.floor(totalDxa / colCount);
+            const colWidths = Array.from({ length: colCount }, (_, i) =>
+                i === colCount - 1 ? totalDxa - cellWidth * (colCount - 1) : cellWidth
+            );
 
-        const makeBodyRow = (row: string[], bold = false) => {
-            const cells = row.slice(0, colCount);
-            while (cells.length < colCount) cells.push('');
-            return new TableRow({
-                children: cells.map((cell, i) => new TableCell({
+            const makeHeaderRow = () => new TableRow({
+                tableHeader: true,
+                children: cols.map((col, i) => new TableCell({
                     children: [new Paragraph({
-                        children: [new TextRun({ text: cell, font, size: sizeTableContent, bold })],
+                        children: [new TextRun({ text: col, bold: true, font, size: sizeTableHeader })],
+                        alignment: AlignmentType.LEFT,
                         spacing: { after: 100 },
                     })],
                     borders,
                     width: { size: colWidths[i], type: WidthType.DXA },
                 })),
             });
-        };
 
-        const makeTable = (rows: TableRow[]) => new Table({
-            width: { size: totalDxa, type: WidthType.DXA },
-            layout: TableLayoutType.FIXED,
-            columnWidths: colWidths,
-            rows,
-        });
+            const makeBodyRow = (row: string[], bold = false) => {
+                const cells = row.slice(0, colCount);
+                while (cells.length < colCount) cells.push('');
+                return new TableRow({
+                    children: cells.map((cell, i) => new TableCell({
+                        children: [new Paragraph({
+                            children: [new TextRun({ text: cell, font, size: sizeTableContent, bold })],
+                            spacing: { after: 100 },
+                        })],
+                        borders,
+                        width: { size: colWidths[i], type: WidthType.DXA },
+                    })),
+                });
+            };
+
+            const makeTable = (rows: TableRow[]) => new Table({
+                width: { size: totalDxa, type: WidthType.DXA },
+                layout: TableLayoutType.FIXED,
+                columnWidths: colWidths,
+                rows,
+            });
+
+            return { makeHeaderRow, makeBodyRow, makeTable };
+        };
 
         const children: (Paragraph | Table)[] = [
             new Paragraph({
@@ -657,6 +672,9 @@ export class ExportService {
                 spacing: { before: idx > 0 ? 200 : 0, after: 120 },
                 keepNext: true,
             }));
+            // Section-level columns override top-level columns when present.
+            const cols = sec.columns ?? config.columns;
+            const { makeHeaderRow, makeBodyRow, makeTable } = makeHelpers(cols);
             const tableRows: TableRow[] = [makeHeaderRow()];
             sec.rows.forEach(r => tableRows.push(makeBodyRow(r)));
             if (sec.subtotalRow) tableRows.push(makeBodyRow(sec.subtotalRow, true));
@@ -664,11 +682,29 @@ export class ExportService {
         });
 
         if (config.grandTotalRow) {
+            // Grand-total table renders against the grandTotalRow's own column count.
+            const gtCols = config.grandTotalRow.map(() => '');
+            const { makeBodyRow, makeTable } = makeHelpers(gtCols);
             children.push(new Paragraph({ children: [new TextRun({ text: '', font, size: sizeTableContent })], spacing: { before: 200, after: 80 } }));
             children.push(makeTable([makeBodyRow(config.grandTotalRow, true)]));
         }
 
-        const doc = new Document({ sections: [{ children }] });
+        return new Document({
+            sections: [{
+                properties: config.landscape ? {
+                    page: { size: { orientation: PageOrientation.LANDSCAPE } },
+                } : undefined,
+                children,
+            }],
+        });
+    }
+
+    /**
+     * Word export with one table per section. Each section gets a heading paragraph
+     * (e.g. "Army") above its own table. Optional final grand-total row after all sections.
+     */
+    async exportWordSectioned(config: SectionedReportConfig): Promise<void> {
+        const doc = this.buildSectionedWordDoc(config);
         const blob = await Packer.toBlob(doc);
         const base = config.filename ?? 'report';
         saveAs(blob, `${base}_${config.lang}.docx`);
@@ -684,7 +720,17 @@ export class ExportService {
             year: 'numeric', month: 'long', day: 'numeric',
         });
         const filterLine = config.filterLines?.length ? config.filterLines.join('  |  ') : '';
-        const colCount = config.columns.length;
+
+        // Per-section column resolution: section.columns overrides config.columns.
+        // Sheet width spans the widest section so title / date / section-title rows
+        // can merge cleanly across every column.
+        const sectionColumns = (sec: ReportSection): string[] => sec.columns ?? config.columns;
+        const maxColCount = Math.max(
+            config.columns.length,
+            ...config.sections.map(s => sectionColumns(s).length),
+            config.grandTotalRow?.length ?? 0,
+            1,
+        );
 
         const data: unknown[][] = [
             [config.title],
@@ -693,18 +739,19 @@ export class ExportService {
             [],
         ];
         const merges: { s: { r: number; c: number }; e: { r: number; c: number } }[] = [
-            { s: { r: 0, c: 0 }, e: { r: 0, c: colCount - 1 } },
-            { s: { r: 1, c: 0 }, e: { r: 1, c: colCount - 1 } },
+            { s: { r: 0, c: 0 }, e: { r: 0, c: maxColCount - 1 } },
+            { s: { r: 1, c: 0 }, e: { r: 1, c: maxColCount - 1 } },
         ];
         if (filterLine) {
-            merges.push({ s: { r: 2, c: 0 }, e: { r: 2, c: colCount - 1 } });
+            merges.push({ s: { r: 2, c: 0 }, e: { r: 2, c: maxColCount - 1 } });
         }
 
         config.sections.forEach((sec) => {
+            const cols = sectionColumns(sec);
             const sectionTitleRowIdx = data.length;
             data.push([sec.title]);
-            merges.push({ s: { r: sectionTitleRowIdx, c: 0 }, e: { r: sectionTitleRowIdx, c: colCount - 1 } });
-            data.push(config.columns);
+            merges.push({ s: { r: sectionTitleRowIdx, c: 0 }, e: { r: sectionTitleRowIdx, c: maxColCount - 1 } });
+            data.push(cols);
             sec.rows.forEach(r => data.push(r));
             if (sec.subtotalRow) data.push(sec.subtotalRow);
             data.push([]);
@@ -715,7 +762,7 @@ export class ExportService {
         }
 
         const ws = XLSX.utils.aoa_to_sheet(data);
-        ws['!cols'] = config.columns.map(() => ({ wch: 22 }));
+        ws['!cols'] = Array.from({ length: maxColCount }, () => ({ wch: 22 }));
         ws['!merges'] = merges;
 
         const wb = XLSX.utils.book_new();
