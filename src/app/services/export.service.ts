@@ -13,6 +13,8 @@ import {
     ImageRun,
     TableLayoutType,
     PageOrientation,
+    Footer,
+    PageNumber,
 } from 'docx';
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
@@ -24,6 +26,12 @@ export interface ReportConfig {
     lang: 'en' | 'bn';
     columns: string[];
     rows: string[][];
+    /**
+     * Optional final row rendered after `rows` (e.g. "Total" line). When supplied,
+     * the last data row is glued to it via keep-with-next so the totals can't
+     * orphan onto a new page.
+     */
+    subtotalRow?: string[];
     showPageNumbers: boolean;
     /** Optional base filename (without extension). Falls back to 'report_en/bn'. */
     filename?: string;
@@ -203,7 +211,13 @@ export class ExportService {
         }, 800);
     }
 
-    async exportWord(config: ReportConfig): Promise<void> {
+    /**
+     * Builds the flat Word <see cref="Document"/> in memory without saving it.
+     * Used by <c>exportWord</c> as well as by consumers that want to pack the
+     * docx → blob → server PDF conversion themselves (mirroring the mother-org
+     * reports' "PDF via Word" path).
+     */
+    buildWordDoc(config: ReportConfig): Document {
         const dateStr = new Date().toLocaleDateString(config.lang === 'bn' ? 'bn-BD' : 'en-US', {
             year: 'numeric',
             month: 'long',
@@ -215,14 +229,25 @@ export class ExportService {
         const dateText = dateStr;
         const columns = config.columns;
         const rows = config.rows;
-        const cellWidth = Math.floor(9000 / Math.max(config.columns.length, 1));
-        // Font sizes in half-points: page header 14pt=28, table header 10pt=20, content bn 8pt=16 / en 11pt=22
-        const sizePageHeader = 28;
-        const sizeTableHeader = 20;
-        const sizeTableContent = config.lang === 'bn' ? 16 : 22;
+        // A4 landscape ≈ 297mm, portrait ≈ 210mm. After ~1" margins the usable width in DXA
+        // (1/20 pt; 1440 DXA = 1 inch) is ~13900 (landscape) / ~9000 (portrait).
+        const totalDxa = config.landscape ? 13900 : 9000;
+        const cellWidth = Math.floor(totalDxa / Math.max(config.columns.length, 1));
+        // Sizes are in half-points: 24 = 12pt, 20 = 10pt, 18 = 9pt, 12 = 6pt.
+        const sizePageHeader = 24;
+        const sizeTableHeader = 16;
+        const sizeTableContent = config.lang === 'bn' ? 12 : 18;
+        const borders = {
+            top:    { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
+            bottom: { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
+            left:   { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
+            right:  { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
+        };
 
+        // tableHeader + keepNext: the header repeats on every page and sticks to the first body row.
         const headerRow = new TableRow({
             tableHeader: true,
+            cantSplit: true,
             children: columns.map(
                 (col) =>
                     new TableCell({
@@ -231,54 +256,81 @@ export class ExportService {
                                 children: [new TextRun({ text: col, bold: true, font, size: sizeTableHeader })],
                                 alignment: AlignmentType.LEFT,
                                 spacing: { after: 100 },
+                                keepNext: true,
                             }),
                         ],
-                        borders: {
-                            top: { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
-                            bottom: { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
-                            left: { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
-                            right: { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
-                        },
+                        borders,
                         width: { size: cellWidth, type: WidthType.DXA },
                     })
             ),
         });
 
-        const dataRows = rows.map(
-            (row) =>
-                new TableRow({
-                    children: row.map(
-                        (cell) =>
-                            new TableCell({
-                                children: [
-                                    new Paragraph({
-                                        children: [new TextRun({ text: cell, font, size: sizeTableContent })],
-                                        spacing: { after: 100 },
-                                    }),
-                                ],
-                                borders: {
-                                    top: { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
-                                    bottom: { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
-                                    left: { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
-                                    right: { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
-                                },
-                                width: { size: cellWidth, type: WidthType.DXA },
-                            })
-                    ),
-                })
-        );
+        const lastDataIdx = rows.length - 1;
+        const dataRows = rows.map((row, ri) => {
+            // Glue the last data row to the subtotal row (when one is supplied)
+            // so the totals line can't orphan onto a new page.
+            const keepWithNext = config.subtotalRow != null && ri === lastDataIdx;
+            return new TableRow({
+                cantSplit: true,
+                children: row.map(
+                    (cell) =>
+                        new TableCell({
+                            children: [
+                                new Paragraph({
+                                    children: [new TextRun({ text: cell, font, size: sizeTableContent })],
+                                    spacing: { after: 100 },
+                                    keepNext: keepWithNext,
+                                }),
+                            ],
+                            borders,
+                            width: { size: cellWidth, type: WidthType.DXA },
+                        })
+                ),
+            });
+        });
+
+        const subtotalRow = config.subtotalRow ? new TableRow({
+            cantSplit: true,
+            children: config.subtotalRow.map(
+                (cell) =>
+                    new TableCell({
+                        children: [
+                            new Paragraph({
+                                children: [new TextRun({ text: cell, font, size: sizeTableContent, bold: true })],
+                                spacing: { after: 100 },
+                            }),
+                        ],
+                        borders,
+                        width: { size: cellWidth, type: WidthType.DXA },
+                    })
+            ),
+        }) : null;
 
         const table = new Table({
             width: { size: 100, type: WidthType.PERCENTAGE },
-            rows: [headerRow, ...dataRows],
+            rows: subtotalRow ? [headerRow, ...dataRows, subtotalRow] : [headerRow, ...dataRows],
         });
 
-        const doc = new Document({
+        // "Page X of Y" centred footer — only when explicitly requested.
+        const footers = config.showPageNumbers ? {
+            default: new Footer({
+                children: [new Paragraph({
+                    alignment: AlignmentType.CENTER,
+                    children: [
+                        new TextRun({ children: ['Page ', PageNumber.CURRENT], font, size: 16, color: '555555' }),
+                        new TextRun({ children: [' of ', PageNumber.TOTAL_PAGES], font, size: 16, color: '555555' }),
+                    ],
+                })],
+            }),
+        } : undefined;
+
+        return new Document({
             sections: [
                 {
                     properties: config.landscape ? {
                         page: { size: { orientation: PageOrientation.LANDSCAPE } },
                     } : undefined,
+                    footers,
                     children: [
                         new Paragraph({
                             children: [
@@ -308,7 +360,7 @@ export class ExportService {
                         ...(config.filterLines?.length ? [new Paragraph({
                             children: config.filterLines.map((line, i) => new TextRun({
                                 text: (i > 0 ? '  |  ' : '') + line,
-                                size: 20,
+                                size: 16,
                                 color: '333333',
                                 font,
                             })),
@@ -320,11 +372,13 @@ export class ExportService {
                 },
             ],
         });
+    }
 
+    async exportWord(config: ReportConfig): Promise<void> {
+        const doc = this.buildWordDoc(config);
         const blob = await Packer.toBlob(doc);
         const base = config.filename ?? 'report';
-        const filename = `${base}_${config.lang}.docx`;
-        saveAs(blob, filename);
+        saveAs(blob, `${base}_${config.lang}.docx`);
     }
 
     exportExcel(config: ReportConfig): void {
@@ -342,6 +396,7 @@ export class ExportService {
             [],
             config.columns,
             ...config.rows,
+            ...(config.subtotalRow ? [config.subtotalRow] : []),
         ];
 
         const ws = XLSX.utils.aoa_to_sheet(data);
@@ -608,27 +663,36 @@ export class ExportService {
                 i === colCount - 1 ? totalDxa - cellWidth * (colCount - 1) : cellWidth
             );
 
+            // tableHeader: header repeats on each page if the table spans multiple pages.
+            // keepNext on the header paragraphs makes the header stick with the first body row,
+            // so a section title + header row never orphan above the first data row.
             const makeHeaderRow = () => new TableRow({
                 tableHeader: true,
+                cantSplit: true,
                 children: cols.map((col, i) => new TableCell({
                     children: [new Paragraph({
                         children: [new TextRun({ text: col, bold: true, font, size: sizeTableHeader })],
                         alignment: AlignmentType.LEFT,
                         spacing: { after: 100 },
+                        keepNext: true,
                     })],
                     borders,
                     width: { size: colWidths[i], type: WidthType.DXA },
                 })),
             });
 
-            const makeBodyRow = (row: string[], bold = false) => {
+            // keepWithNext on a body row makes it stick with the following row. Used for
+            // the last body row in a section so the subtotal can't orphan onto a new page.
+            const makeBodyRow = (row: string[], bold = false, keepWithNext = false) => {
                 const cells = row.slice(0, colCount);
                 while (cells.length < colCount) cells.push('');
                 return new TableRow({
+                    cantSplit: true,
                     children: cells.map((cell, i) => new TableCell({
                         children: [new Paragraph({
                             children: [new TextRun({ text: cell, font, size: sizeTableContent, bold })],
                             spacing: { after: 100 },
+                            keepNext: keepWithNext,
                         })],
                         borders,
                         width: { size: colWidths[i], type: WidthType.DXA },
@@ -671,12 +735,19 @@ export class ExportService {
                 children: [new TextRun({ text: sec.title, bold: true, size: sizeSectionHeader, font })],
                 spacing: { before: idx > 0 ? 200 : 0, after: 120 },
                 keepNext: true,
+                keepLines: true,
             }));
             // Section-level columns override top-level columns when present.
             const cols = sec.columns ?? config.columns;
             const { makeHeaderRow, makeBodyRow, makeTable } = makeHelpers(cols);
             const tableRows: TableRow[] = [makeHeaderRow()];
-            sec.rows.forEach(r => tableRows.push(makeBodyRow(r)));
+            const lastBodyIdx = sec.rows.length - 1;
+            sec.rows.forEach((r, ri) => {
+                // Last body row sticks to the subtotal (if any) so the totals row
+                // can't end up alone on the next page.
+                const keepWithNext = sec.subtotalRow != null && ri === lastBodyIdx;
+                tableRows.push(makeBodyRow(r, false, keepWithNext));
+            });
             if (sec.subtotalRow) tableRows.push(makeBodyRow(sec.subtotalRow, true));
             children.push(makeTable(tableRows));
         });
@@ -689,11 +760,26 @@ export class ExportService {
             children.push(makeTable([makeBodyRow(config.grandTotalRow, true)]));
         }
 
+        // "Page X of Y" centred footer — only emitted when explicitly requested,
+        // so callers that don't care (e.g. embedded snapshots) stay clean.
+        const footers = config.showPageNumbers ? {
+            default: new Footer({
+                children: [new Paragraph({
+                    alignment: AlignmentType.CENTER,
+                    children: [
+                        new TextRun({ children: ['Page ', PageNumber.CURRENT], font, size: 16, color: '555555' }),
+                        new TextRun({ children: [' of ', PageNumber.TOTAL_PAGES], font, size: 16, color: '555555' }),
+                    ],
+                })],
+            }),
+        } : undefined;
+
         return new Document({
             sections: [{
                 properties: config.landscape ? {
                     page: { size: { orientation: PageOrientation.LANDSCAPE } },
                 } : undefined,
+                footers,
                 children,
             }],
         });
