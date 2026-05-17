@@ -27,6 +27,8 @@ import { DraftCourseService } from '@/services/draft-course.service';
 import { RftsTrainingRow } from '@/models/draft-course.model';
 import { PromotionInfoService, PromotionInfoByEmployeeView } from '@/services/promotion-info.service';
 import { ExBdLeaveApplicationService, ExBdLeaveApplicationProgressView } from '@/services/ex-bd-leave-application.service';
+import { MovementInfoService, MovementInfoByEmployeeDto } from '@/services/movement-info.service';
+import { MovementType, MoveOrderType } from '@/models/enums';
 import { EmployeePersonalServiceOverview } from '@/models/employee-personal-service-overview.model';
 import { LocationType } from '@/models/enums';
 import { PresentStatusInfoService } from '@/services/present-status-info.service';
@@ -119,6 +121,8 @@ export class ExMemberProfile implements OnInit, OnDestroy {
     documentList: EmployeeDocumentReferenceItem[] = [];
     approvedNoteSheetList: EmployeeApprovedNoteSheetRow[] = [];
     exBdLeaveProgressList: ExBdLeaveApplicationProgressView[] = [];
+    permanentMovementList: MovementInfoByEmployeeDto[] = [];
+    temporaryMovementList: MovementInfoByEmployeeDto[] = [];
     previousYearSummary: LeaveInfoSummaryItem[] = [];
     previousYearSummaryDialogVisible = false;
     previousYearSummaryLoading = false;
@@ -154,6 +158,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         private exportService: ExportService,
         private presentStatusInfoService: PresentStatusInfoService,
         private exBdLeaveAppService: ExBdLeaveApplicationService,
+        private movementInfoService: MovementInfoService,
         private http: HttpClient
     ) {}
 
@@ -515,6 +520,28 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         return this.isBn ? BanglaNumerals.toBangla(String(i + 1)) : String(i + 1);
     }
 
+    /** Label for MoveOrderType (1=CC, 2=MO, 3=Article47Handover, 4=Article47Takeover). */
+    moveOrderTypeLabel(value: number | null | undefined): string {
+        switch (value) {
+            case MoveOrderType.CC: return 'CC';
+            case MoveOrderType.MO: return 'MO';
+            case MoveOrderType.Article47Handover: return 'Article 47 (Handover)';
+            case MoveOrderType.Article47Takeover: return 'Article 47 (Takeover)';
+            default: return '—';
+        }
+    }
+
+    /** Movement destination is either a Mother Unit (org) or a RAB unit (CommonCode). */
+    movementDestination(m: MovementInfoByEmployeeDto): string {
+        if (m.destinedMotherUnitId != null) {
+            return this.codeValue(m.destinedMotherUnit, m.destinedMotherUnitBN);
+        }
+        if (m.destinedRABUnitId != null) {
+            return this.codeValue(m.destinedRABUnit, m.destinedRABUnitBN);
+        }
+        return '—';
+    }
+
     /** RAB Unit for ex-member: Top 1 from previousServiceInfo ORDER BY durationFrom (serviceFrom) DESC. Uses BN when profileLang is bn. */
     get displayRabUnit(): string {
         if (!this.previousRabList?.length) return this.codeValue(this.profile?.rabUnit ?? null, this.profile?.rabUnitBN ?? null);
@@ -667,9 +694,10 @@ export class ExMemberProfile implements OnInit, OnDestroy {
             rftsTraining: this.draftCourseService.getRftsTrainingByEmployeeId(id).pipe(catchError(() => of([]))),
             presentStatus: this.presentStatusInfoService.getAllByEmployeeId(id).pipe(catchError(() => of([]))),
             approvedNoteSheets: this.http.get<EmployeeApprovedNoteSheetRow[]>(`${environment.apis.core}/NoteSheetReferenceEmployee/GetApprovedNoteSheetsByEmployeeId/${id}`).pipe(catchError(() => of([]))),
-            exBdLeaveProgress: this.exBdLeaveAppService.getProgressByEmployee(id).pipe(catchError(() => of([])))
+            exBdLeaveProgress: this.exBdLeaveAppService.getProgressByEmployee(id).pipe(catchError(() => of([]))),
+            movements: this.movementInfoService.getByEmployeeId(id).pipe(catchError(() => of([] as MovementInfoByEmployeeDto[])))
         }).subscribe({
-            next: ({ profile, family, previousRab, bankAcc, education, foreignVisit, leaveCurrentYear, additionalRemarks, address, moServHistory, discipline, course, promotion, documents, rftsTraining, presentStatus, approvedNoteSheets, exBdLeaveProgress }) => {
+            next: ({ profile, family, previousRab, bankAcc, education, foreignVisit, leaveCurrentYear, additionalRemarks, address, moServHistory, discipline, course, promotion, documents, rftsTraining, presentStatus, approvedNoteSheets, exBdLeaveProgress, movements }) => {
                 this.profile = profile;
                 this.familyList = family ?? [];
                 this.loadProfileImage(profile);
@@ -688,6 +716,9 @@ export class ExMemberProfile implements OnInit, OnDestroy {
                 this.approvedNoteSheetList = Array.isArray(approvedNoteSheets) ? approvedNoteSheets : [];
                 this.exBdLeaveProgressList = Array.isArray(exBdLeaveProgress) ? exBdLeaveProgress : [];
                 this.rftsTrainingList = rftsTraining ?? [];
+                const movementsArr = Array.isArray(movements) ? movements : [];
+                this.permanentMovementList = movementsArr.filter((m) => m.movementType === MovementType.Permanent);
+                this.temporaryMovementList = movementsArr.filter((m) => m.movementType === MovementType.Temporary);
                 const activeRecord = (presentStatus ?? []).find((r: any) => (r.IsActive ?? r.isActive));
                 if (activeRecord) {
                     const statusValue = activeRecord.PresentStatusType ?? activeRecord.presentStatusType;
