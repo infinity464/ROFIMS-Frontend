@@ -29,6 +29,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { PROFILE_LABELS, type ProfileLang } from '@/Core/i18n/profile-labels';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import { ExportService, type ProfileExportConfig, type ProfileExportSection } from '@/services/export.service';
+import { ExBdLeaveApplicationService, ExBdLeaveApplicationProgressView } from '@/services/ex-bd-leave-application.service';
 import { PartialDatePipe } from '@/shared/pipes/partial-date.pipe';
 import { formatPartialDate } from '@/shared/utils/partial-date.util';
 
@@ -62,6 +63,7 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
     courseList: CourseInfoByEmployeeView[] = [];
     promotionList: PromotionInfoByEmployeeView[] = [];
     documentList: EmployeeDocumentReferenceItem[] = [];
+    exBdLeaveProgressList: ExBdLeaveApplicationProgressView[] = [];
     previousYearSummary: LeaveInfoSummaryItem[] = [];
     previousYearSummaryDialogVisible = false;
     previousYearSummaryLoading = false;
@@ -89,6 +91,7 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
         private messageService: MessageService,
         private empService: EmpService,
         private exportService: ExportService,
+        private exBdLeaveService: ExBdLeaveApplicationService,
         private _userMenuService: UserMenuService
     ) {}
 
@@ -563,9 +566,10 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
             discipline: this.disciplineInfoService.getViewByEmployeeId(id),
             course: this.courseInfoService.getViewByEmployeeId(id),
             promotion: this.promotionInfoService.getViewByEmployeeId(id),
-            documents: this.empService.getEmployeeDocumentReferences(id).pipe(catchError(() => of([])))
+            documents: this.empService.getEmployeeDocumentReferences(id).pipe(catchError(() => of([]))),
+            exBdLeaveProgress: this.exBdLeaveService.getProgressByEmployee(id).pipe(catchError(() => of([])))
         }).subscribe({
-            next: ({ profile, family, previousRab, bankAcc, education, foreignVisit, leaveCurrentYear, additionalRemarks, address, moServHistory, discipline, course, promotion, documents }) => {
+            next: ({ profile, family, previousRab, bankAcc, education, foreignVisit, leaveCurrentYear, additionalRemarks, address, moServHistory, discipline, course, promotion, documents, exBdLeaveProgress }) => {
                 this.profile = profile;
                 this.familyList = family ?? [];
                 this.loadProfileImage(profile);
@@ -581,6 +585,7 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
                 this.courseList = course ?? [];
                 this.promotionList = promotion ?? [];
                 this.documentList = documents ?? [];
+                this.exBdLeaveProgressList = exBdLeaveProgress ?? [];
                 this.loading = false;
             },
             error: (err) => {

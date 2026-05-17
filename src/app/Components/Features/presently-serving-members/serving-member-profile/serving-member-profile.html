@@ -615,6 +615,52 @@
             </div>
         </div>
 
+        <!-- Ex-BD Leave Application Status -->
+        @if (exBdLeaveProgressList.length > 0) {
+        <div class="content-section text-900 border-top-1 surface-border">
+            <div class="section-heading">Ex-BD Leave Application Status</div>
+            <div class="family-table-wrapper">
+                <p-table
+                    [value]="exBdLeaveProgressList"
+                    [tableStyle]="{ 'min-width': '50rem' }"
+                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
+                >
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 3rem">Ser</th>
+                            <th>Purpose of Visit</th>
+                            <th>Country</th>
+                            <th>From</th>
+                            <th>To</th>
+                            <th>Days</th>
+                            <th>Family Members</th>
+                            <th>Status</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                        <tr>
+                            <td>{{ rowIndex + 1 }}.</td>
+                            <td>{{ row.visitTypeName || '-' }}</td>
+                            <td>{{ row.countriesDisplay || '-' }}</td>
+                            <td>{{ formatDateOnly(row.fromDate) }}</td>
+                            <td>{{ formatDateOnly(row.toDate) }}</td>
+                            <td>{{ row.totalDays }}</td>
+                            <td>{{ row.familyMembersDisplay || '-' }}</td>
+                            <td>
+                                {{ row.progressStatus }}
+                                @if (row.availStatus === 'Availed') {
+                                    , <span class="text-green-600 font-semibold">Availed</span>
+                                } @else if (row.availStatus === 'NotAvailed') {
+                                    , <span class="text-red-600 font-semibold">Not Availed</span>
+                                }
+                            </td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
+        }
+
         <!-- Leave (Current Year) -->
         <div class="content-section text-900 border-top-1 surface-border">
             <div class="section-heading flex align-items-center gap-2">

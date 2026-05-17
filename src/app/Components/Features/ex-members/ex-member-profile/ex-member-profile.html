@@ -740,6 +740,11 @@
                                     <span class="sp-status-badge sp-status-{{ getProgressStatusSeverity(row.progressStatus) }}">
                                         {{ getProgressStatusLabel(row.progressStatus) }}
                                     </span>
+                                    @if (row.availStatus === 'Availed') {
+                                        , <span class="text-green-600 font-semibold">{{ getAvailStatusLabel(row.availStatus) }}</span>
+                                    } @else if (row.availStatus === 'NotAvailed') {
+                                        , <span class="text-red-600 font-semibold">{{ getAvailStatusLabel(row.availStatus) }}</span>
+                                    }
                                 </td>
                             </tr>
                         </ng-template>

@@ -583,19 +583,32 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         return this.foreignVisitList.filter((v) => (v.visitType ?? '').toString().trim().toLowerCase() !== 'official');
     }
 
+    private readonly progressStatusMap: Record<string, { en: string; bn: string }> = {
+        'ApplicationReceived': { en: 'Application Received', bn: 'আবেদন গৃহীত' },
+        'NoteSheetDraft': { en: 'Notesheet Draft', bn: 'নোটশিট খসড়া' },
+        'Submitted': { en: 'Submitted (Initiator)', bn: 'জমা দেওয়া হয়েছে (উদ্যোক্তা)' },
+        'UnderRecommendation': { en: 'Under Recommendation', bn: 'সুপারিশাধীন' },
+        'FinalApprovalPending': { en: 'Final Approval Pending', bn: 'চূড়ান্ত অনুমোদন মুলতুবি' },
+        'NoteSheetApproved': { en: 'Notesheet Approved', bn: 'নোটশিট অনুমোদিত' },
+        'OfficeOrderGenerated': { en: 'Office Order Generated', bn: 'অফিস আদেশ তৈরি' },
+        'OfficeOrderApproved': { en: 'Office Order Approved', bn: 'অফিস আদেশ অনুমোদিত' },
+        'Cancelled': { en: 'Cancelled', bn: 'বাতিল' },
+    };
+
+    private readonly availStatusMap: Record<string, { en: string; bn: string }> = {
+        'Availed': { en: 'Availed', bn: 'গ্রহণকৃত' },
+        'NotAvailed': { en: 'Not Availed', bn: 'গ্রহণ করা হয়নি' },
+    };
+
     getProgressStatusLabel(status: string): string {
-        const map: Record<string, string> = {
-            'ApplicationReceived': 'Application Received',
-            'NoteSheetDraft': 'Notesheet Draft',
-            'Submitted': 'Submitted (Initiator)',
-            'UnderRecommendation': 'Under Recommendation',
-            'FinalApprovalPending': 'Final Approval Pending',
-            'NoteSheetApproved': 'Notesheet Approved',
-            'OfficeOrderGenerated': 'Office Order Generated',
-            'OfficeOrderApproved': 'Office Order Approved',
-            'Cancelled': 'Cancelled'
-        };
-        return map[status] ?? status ?? '-';
+        const entry = this.progressStatusMap[status];
+        return entry ? entry[this.profileLang] : (status ?? '-');
+    }
+
+    getAvailStatusLabel(status: string | null): string {
+        if (!status) return '';
+        const entry = this.availStatusMap[status];
+        return entry ? entry[this.profileLang] : status;
     }
 
     getProgressStatusSeverity(status: string): string {

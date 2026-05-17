@@ -198,6 +198,7 @@ export interface ExBdLeaveApplicationProgressView {
     familyMembersDisplay: string | null;
     familyMembersDisplayBN: string | null;
     applicationStatus: string;
+    availStatus: string | null;
     noteSheetId: number | null;
     noteSheetNo: string | null;
     noteSheetCurrentStatus: string | null;
