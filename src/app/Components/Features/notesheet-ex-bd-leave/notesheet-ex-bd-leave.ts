@@ -146,6 +146,21 @@ export class NotesheetExBdLeaveComponent implements OnInit {
     editMainText = '';
     editReferenceNumber = '';
 
+    private readonly defaultMainTextBN =
+        'ছুটি মঞ্জুরের নিমিত্তে সিনিয়র সচিব, জননিরাপত্তা বিভাগ, স্বরাষ্ট্র মন্ত্রণালয়, বাংলাদেশ সচিবালয়, ঢাকা বরাবর আবেদন করেছেন। তার স্বাক্ষ্যায়িত আবেদন সংশ্লিষ্ট নথিপত্র সূত্র স্মারক মোতাবেক অত্র কার্যালয়ে গৃহীত হয়েছে।' +
+        '<br><br>' +
+        'এমতাবস্থায়, উল্লিখিত পুলিশ কর্মকর্তার স্বাক্ষ্যায়িত আবেদনপত্র এবং সংশ্লিষ্ট নথিপত্র পুলিশ হেডকোয়ার্টার্স, ঢাকা বরাবর প্রেরণ করা যেতে পারে।' +
+        '<br>' +
+        'সদয় অনুমোদনের জন্য উপস্থাপন করা হলো।';
+
+    private readonly defaultMainTextEN =
+        'Has applied to the Senior Secretary, Public Security Division, Ministry of Home Affairs, Bangladesh Secretariat, Dhaka, for the grant of leave. ' +
+        'His/Her attested application, along with the relevant documents, has been received in this office in accordance with the reference memo.' +
+        '<br><br>' +
+        'In these circumstances, the attested application and relevant documents of the aforementioned police officer may be forwarded to the Police Headquarters, Dhaka.' +
+        '<br>' +
+        'Presented for kind approval.';
+
     private readonly stepTranslations: Record<string, string> = {
         'Prepared by': 'প্রস্তুতকারী',
         'Initiator': 'সূচনাকারী',
@@ -271,7 +286,20 @@ export class NotesheetExBdLeaveComponent implements OnInit {
                     this.title = 'Update Draft Note-Sheet (Ex-BD Leave)';
                     this.loadNoteSheetForEdit(numId);
                 }
+            } else {
+                // New notesheet: set default main text based on textType
+                const textType = this.form.get('textType')?.value;
+                this.form.patchValue({ mainText: textType === 'en' ? this.defaultMainTextEN : this.defaultMainTextBN });
             }
+            // Update default main text when textType changes (only for new notesheets)
+            this.form.get('textType')?.valueChanges.subscribe((val) => {
+                if (!this.editMode) {
+                    const currentText = this.form.get('mainText')?.value ?? '';
+                    if (!currentText || currentText === this.defaultMainTextBN || currentText === this.defaultMainTextEN) {
+                        this.form.patchValue({ mainText: val === 'en' ? this.defaultMainTextEN : this.defaultMainTextBN });
+                    }
+                }
+            });
         });
     }
 

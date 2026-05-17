@@ -325,6 +325,7 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
             this._viewCountriesDisplay = data.appCountriesDisplay || '';
             this._viewCountriesDisplayBN = data.appCountriesDisplayBN || '';
             this._viewFamilyDisplay = data.appFamilyMembersDisplay || '';
+            this._viewFamilyDisplayBN = data.appFamilyMembersDisplayBN || '';
             this._viewPurposeName = data.appVisitTypeName || '';
             this._viewPurposeNameBN = data.appVisitTypeNameBN || '';
 
@@ -337,6 +338,7 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
     _viewCountriesDisplay = '';
     _viewCountriesDisplayBN = '';
     _viewFamilyDisplay = '';
+    _viewFamilyDisplayBN = '';
     _viewPurposeName = '';
     _viewPurposeNameBN = '';
 
@@ -415,13 +417,20 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
         // ── Data from ExBdLeaveApplication (prefer pre-resolved view data) ──
         const app = this.exBdApplication;
 
-        // Family: prefer pre-resolved from view
-        const familyText = this._viewFamilyDisplay
-            || this.appFamilyMembers.map(f => {
-                const rel = f.relation || '';
-                const name = f.nameEN || '';
-                return rel && name ? `${rel}-${name}` : (name || rel || '');
-            }).filter(Boolean).join(', ');
+        // Family: prefer pre-resolved from view (language-aware)
+        const familyText = bn
+            ? (this._viewFamilyDisplayBN || this._viewFamilyDisplay
+                || this.appFamilyMembers.map(f => {
+                    const rel = f.relation || '';
+                    const name = f.nameEN || '';
+                    return rel && name ? `${rel}-${name}` : (name || rel || '');
+                }).filter(Boolean).join(', '))
+            : (this._viewFamilyDisplay
+                || this.appFamilyMembers.map(f => {
+                    const rel = f.relation || '';
+                    const name = f.nameEN || '';
+                    return rel && name ? `${rel}-${name}` : (name || rel || '');
+                }).filter(Boolean).join(', '));
 
         // Countries: prefer pre-resolved from view
         const countryText = bn
@@ -465,13 +474,13 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
             if (countryText) text += ` ${countryText} গমনের জন্য`;
             text += ' অর্জিত';
         } else {
-            text = `Currently, working at the ${unitName}`;
+            text = `Currently serving at ${unitName}`;
             if (wing) text += `, ${wing}`;
             text += `, ${rabId}: ${rank} ${empName}`;
-            text += `, has submitted a request for a security clearance`;
-            if (familyText) text += ` for his family ${familyText}`;
+            text += `, has submitted a request for security clearance`;
+            if (familyText) text += ` along with family member(s) (${familyText})`;
             if (countryText) text += ` to travel to ${countryText}`;
-            if (purpose) text += ` for ${purpose}`;
+            if (purpose) text += ` for ${purpose.toLowerCase()} purpose`;
             if (fromDate && toDate) text += ` from ${fromDate} to ${toDate}`;
             if (totalDays > 0) text += `, or within ${totalDays} days from the date of travel`;
             text += '.';
@@ -1217,7 +1226,7 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
                         bold: r.bold,
                         italics: r.italic,
                         underline: r.underline ? {} : undefined,
-                        size: 20,
+                        size: contentSize,
                         sizeComplexScript: csContent,
                         font,
                         language: lang
@@ -1266,7 +1275,7 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
                     bold: r.bold,
                     italics: r.italic,
                     underline: r.underline ? {} : undefined,
-                    size: 20,
+                    size: contentSize,
                     sizeComplexScript: csContent,
                     font,
                     language: lang
