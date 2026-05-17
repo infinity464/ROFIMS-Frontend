@@ -67,6 +67,8 @@ export interface ExBdLeaveOfficeOrderWithDetailsDto {
     appCountriesDisplay: string | null;
     appCountriesDisplayBN: string | null;
     appFamilyMembersDisplay: string | null;
+    appEmployeeRabUnit: string | null;
+    appEmployeeRabUnitBN: string | null;
     approvalEmployeeNameBN: string;
     approvalEmployeeRank: string;
     approvalEmployeeRankBN: string;

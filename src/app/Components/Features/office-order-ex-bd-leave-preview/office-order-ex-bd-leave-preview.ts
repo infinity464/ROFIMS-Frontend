@@ -236,6 +236,79 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
         return !!(this.nsMainText || this.nsNote || this.nsParagraphs.length > 0);
     }
 
+    /** Build main paragraph text like the notesheet preview does */
+    buildMainParagraph(): string {
+        if (!this.order) return this.nsMainText || '';
+        const bn = this.isBangla;
+        const o = this.order;
+
+        const unitName = bn ? (o.appEmployeeRabUnitBN || o.appEmployeeRabUnit || '') : (o.appEmployeeRabUnit || '');
+        const rabId = o.appEmployeeRabId ? (bn ? this.toBanglaDigits(String(o.appEmployeeRabId)) : String(o.appEmployeeRabId)) : '';
+        const empName = bn ? (o.appEmployeeNameBN || o.appEmployeeName || '') : (o.appEmployeeName || '');
+        const purpose = bn ? (o.appVisitTypeNameBN || o.appVisitTypeName || '') : (o.appVisitTypeName || '');
+        const countryText = bn ? (o.appCountriesDisplayBN || o.appCountriesDisplay || '') : (o.appCountriesDisplay || '');
+        const familyText = o.appFamilyMembersDisplay || '';
+
+        const fromDate = o.appFromDate ? this.formatDate(o.appFromDate) : '';
+        const toDate = o.appToDate ? this.formatDate(o.appToDate) : '';
+        const totalDays = o.appTotalDays ?? 0;
+        const totalDaysBN = bn ? this.toBanglaDigits(String(totalDays)) : String(totalDays);
+        const totalDaysWord = bn ? this.numberToBanglaWord(totalDays) : '';
+
+        let text = '';
+        if (bn) {
+            text = 'র‍্যাব প্রেষণে নিয়োজিত বর্তমানে';
+            if (unitName) text += ` ${unitName}`;
+            text += ` এ কর্মরত নং-${rabId} ${empName}`;
+            if (purpose) text += ` এর নিজের ${purpose}র জন্য`;
+            if (familyText) text += ` নিজ এবং পরিবারবর্গ (${familyText})`;
+            if (fromDate && toDate) text += ` আগামী ${fromDate} হতে ${toDate} তারিখ পর্যন্ত`;
+            if (totalDays > 0) {
+                const daysDisplay = totalDaysWord ? `${totalDaysBN} (${totalDaysWord})` : totalDaysBN;
+                text += ` ${daysDisplay} দিন অথবা উল্লিখিত সময়ের মধ্যে যাত্রার তারিখ হতে ${daysDisplay} দিন`;
+            }
+            if (countryText) text += ` ${countryText} গমনের জন্য`;
+            text += ' অর্জিত';
+        } else {
+            text = `Currently, working at the ${unitName}`;
+            text += `, ${rabId}: ${empName}`;
+            text += `, has submitted a request for a security clearance`;
+            if (familyText) text += ` for family ${familyText}`;
+            if (countryText) text += ` to travel to ${countryText}`;
+            if (purpose) text += ` for ${purpose}`;
+            if (fromDate && toDate) text += ` from ${fromDate} to ${toDate}`;
+            if (totalDays > 0) text += `, or within ${totalDays} days from the date of travel`;
+            text += '.';
+        }
+
+        // Append MainText (same as notesheet)
+        const mainText = (this.nsMainText || '').trim();
+        if (mainText) {
+            const plain = this.htmlToPlainText(mainText);
+            text += ' ' + plain;
+        }
+
+        return text;
+    }
+
+    getMainParagraphSafe(): SafeHtml {
+        return this.sanitizer.bypassSecurityTrustHtml(this.buildMainParagraph());
+    }
+
+    private numberToBanglaWord(n: number): string {
+        const words: Record<number, string> = {
+            1: 'এক', 2: 'দুই', 3: 'তিন', 4: 'চার', 5: 'পাঁচ',
+            6: 'ছয়', 7: 'সাত', 8: 'আট', 9: 'নয়', 10: 'দশ',
+            11: 'এগারো', 12: 'বারো', 13: 'তেরো', 14: 'চৌদ্দ', 15: 'পনেরো',
+            16: 'ষোলো', 17: 'সতেরো', 18: 'আঠারো', 19: 'উনিশ', 20: 'বিশ',
+            21: 'একুশ', 22: 'বাইশ', 23: 'তেইশ', 24: 'চব্বিশ', 25: 'পঁচিশ',
+            26: 'ছাব্বিশ', 27: 'সাতাশ', 28: 'আটাশ', 29: 'ঊনত্রিশ', 30: 'ত্রিশ',
+            31: 'একত্রিশ', 45: 'পঁয়তাল্লিশ', 60: 'ষাট', 90: 'নব্বই',
+            180: 'একশত আশি', 365: 'তিনশত পঁয়ষট্টি'
+        };
+        return words[n] || '';
+    }
+
     serial(n: number): string {
         if (!this.isBangla) return `${n}.`;
         const bn = ['০','১','২','৩','৪','৫','৬','৭','৮','৯'];
@@ -453,24 +526,16 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
             children.push(new Paragraph({ text: '', spacing: { after: 60 } }));
         }
 
-        if (this.hasNoteSheetContent) {
-            if (this.nsMainText) {
-                const plainMain = this.htmlToPlainText(this.nsMainText);
-                children.push(new Paragraph({ children: [new TextRun({ text: `${this.serial(1)} `, font, size: contentSize, bold: true }), new TextRun({ text: plainMain, font, size: contentSize })], alignment: AlignmentType.JUSTIFIED, spacing: { after: 80 } }));
-                const { columns, rows } = await this.loadMembersForExport();
-                if (columns.length > 0 && rows.length > 0) {
-                    children.push(this.buildMembersTable(columns, rows, font));
-                    children.push(new Paragraph({ text: '', spacing: { after: 80 } }));
-                }
-            }
-            if (this.nsNote) {
-                const plainNote = this.htmlToPlainText(this.nsNote);
-                children.push(new Paragraph({ children: [new TextRun({ text: `${this.serial(this.noteSerial)} `, font, size: contentSize, bold: true }), new TextRun({ text: plainNote, font, size: contentSize })], alignment: AlignmentType.JUSTIFIED, spacing: { after: 80 } }));
+        if (this.order.appEmployeeName || this.hasNoteSheetContent) {
+            // Main paragraph (dynamically built like notesheet)
+            const mainPara = this.buildMainParagraph();
+            if (mainPara) {
+                children.push(new Paragraph({ children: [new TextRun({ text: `${this.serial(1)} `, font, size: contentSize, bold: true }), new TextRun({ text: mainPara, font, size: contentSize })], alignment: AlignmentType.JUSTIFIED, spacing: { after: 80 } }));
             }
             for (let pi = 0; pi < this.nsParagraphs.length; pi++) {
                 const plainPara = this.htmlToPlainText(this.nsParagraphs[pi]);
                 if (plainPara) {
-                    children.push(new Paragraph({ children: [new TextRun({ text: `${this.serial(this.lastTextStartSerial + pi)} `, font, size: contentSize, bold: true }), new TextRun({ text: plainPara, font, size: contentSize })], alignment: AlignmentType.JUSTIFIED, spacing: { after: 80 } }));
+                    children.push(new Paragraph({ children: [new TextRun({ text: `${this.serial(2 + pi)} `, font, size: contentSize, bold: true }), new TextRun({ text: plainPara, font, size: contentSize })], alignment: AlignmentType.JUSTIFIED, spacing: { after: 80 } }));
                 }
             }
         } else if (this.order.body) {

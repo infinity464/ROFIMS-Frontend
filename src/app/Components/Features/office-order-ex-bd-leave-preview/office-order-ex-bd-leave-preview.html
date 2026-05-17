@@ -172,27 +172,15 @@
                     </div>
                 </div>
 
-                <!-- ═══ Notesheet Paragraphs (from DTO) ═══ -->
-                <ng-container *ngIf="hasNoteSheetContent">
-                    <div class="oo-doc-para" *ngIf="nsMainText">
+                <!-- ═══ Main Paragraph (built like notesheet preview) ═══ -->
+                <ng-container *ngIf="order!.appEmployeeName || hasNoteSheetContent">
+                    <div class="oo-doc-para">
                         <span class="oo-doc-para-no">{{ serial(1) }}</span>
-                        <div class="oo-doc-para-text">
-                            <div class="oo-doc-rich-content" [innerHTML]="getMainTextSafe()"></div>
-                            <app-notesheet-members-table
-                                [noteSheetId]="order!.noteSheetId"
-                                [isBangla]="isBangla"
-                            ></app-notesheet-members-table>
-                        </div>
-                    </div>
-                    <div class="oo-doc-para" *ngIf="nsNote">
-                        <span class="oo-doc-para-no">{{ serial(noteSerial) }}</span>
-                        <div class="oo-doc-para-text">
-                            <div class="oo-doc-rich-content" [innerHTML]="getNoteSafe()"></div>
-                        </div>
+                        <div class="oo-doc-para-text">{{ buildMainParagraph() }}</div>
                     </div>
                     <ng-container *ngFor="let para of nsParagraphs; let pi = index">
                         <div class="oo-doc-para">
-                            <span class="oo-doc-para-no">{{ serial(lastTextStartSerial + pi) }}</span>
+                            <span class="oo-doc-para-no">{{ serial(2 + pi) }}</span>
                             <div class="oo-doc-para-text">
                                 <div class="oo-doc-rich-content" [innerHTML]="getParagraphSafe(para)"></div>
                             </div>
