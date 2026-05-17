@@ -66,6 +66,46 @@
                     <span class="profile-id-label">RAB ID</span>
                     <span class="profile-id-value">{{ profile.rabId || '-' }}</span>
                 </div>
+                @if (postingProcessingStatus?.newPostingStep && !postingProcessingStatus!.newPostingOrderReceived) {
+                    <div class="sp-posting-status-group">
+                        <div class="sp-posting-status-badge sp-status-info">
+                            <i class="pi pi-arrows-h"></i> New Posting: {{ getPostingStepLabel(postingProcessingStatus!.newPostingStep!) }}
+                        </div>
+                        @if (postingProcessingStatus!.newPostingForceOrderGenerated) {
+                            <div class="sp-posting-flags">
+                                <span class="sp-flag sp-flag-yes">Force Order: Generated</span>
+                                @if (!postingProcessingStatus!.newPostingOrderReceived) {
+                                    <span class="sp-flag" [class.sp-flag-yes]="postingProcessingStatus!.newPostingForceOrderApproved" [class.sp-flag-no]="!postingProcessingStatus!.newPostingForceOrderApproved">
+                                        {{ postingProcessingStatus!.newPostingForceOrderApproved ? 'Approved' : 'Not Approved' }}
+                                    </span>
+                                }
+                                <span class="sp-flag" [class.sp-flag-yes]="postingProcessingStatus!.newPostingOrderReceived" [class.sp-flag-no]="!postingProcessingStatus!.newPostingOrderReceived">
+                                    {{ postingProcessingStatus!.newPostingOrderReceived ? 'Received' : 'Not Received' }}
+                                </span>
+                            </div>
+                        }
+                    </div>
+                }
+                @if (postingProcessingStatus?.interPostingStep && !postingProcessingStatus!.interPostingOrderReceived) {
+                    <div class="sp-posting-status-group">
+                        <div class="sp-posting-status-badge sp-status-warn">
+                            <i class="pi pi-arrows-h"></i> Inter Posting: {{ getPostingStepLabel(postingProcessingStatus!.interPostingStep!) }}
+                        </div>
+                        @if (postingProcessingStatus!.interPostingForceOrderGenerated) {
+                            <div class="sp-posting-flags">
+                                <span class="sp-flag sp-flag-yes">Force Order: Generated</span>
+                                @if (!postingProcessingStatus!.interPostingOrderReceived) {
+                                    <span class="sp-flag" [class.sp-flag-yes]="postingProcessingStatus!.interPostingForceOrderApproved" [class.sp-flag-no]="!postingProcessingStatus!.interPostingForceOrderApproved">
+                                        {{ postingProcessingStatus!.interPostingForceOrderApproved ? 'Approved' : 'Not Approved' }}
+                                    </span>
+                                }
+                                <span class="sp-flag" [class.sp-flag-yes]="postingProcessingStatus!.interPostingOrderReceived" [class.sp-flag-no]="!postingProcessingStatus!.interPostingOrderReceived">
+                                    {{ postingProcessingStatus!.interPostingOrderReceived ? 'Received' : 'Not Received' }}
+                                </span>
+                            </div>
+                        }
+                    </div>
+                }
             </div>
         </div>
 

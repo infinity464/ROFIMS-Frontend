@@ -205,6 +205,24 @@ export const PROFILE_LABELS = {
     'presentStatus.Deceased': 'Deceased',
     'presentStatus.Absent': 'Absent',
     'presentStatus.Arrested': 'Arrested',
+
+    // Posting Processing Status
+    'posting.newPosting': 'New Posting',
+    'posting.interPosting': 'Inter Posting',
+    'posting.step.DraftPosting': 'Draft Posting',
+    'posting.step.DraftInterPosting': 'Draft Inter Posting',
+    'posting.step.NoteSheetDraft': 'Notesheet - Draft',
+    'posting.step.NoteSheetInitiator': 'Notesheet - Pending Initiator',
+    'posting.step.NoteSheetRecommender': 'Notesheet - Pending Recommender',
+    'posting.step.NoteSheetFinalApproval': 'Notesheet - Pending Final Approval',
+    'posting.step.NoteSheetApproved': 'Notesheet Approved',
+    'posting.step.PostingOrderGenerated': 'Posting Order Generated',
+    'posting.step.PostingOrderApproved': 'Posting Order Approved',
+    'posting.forceOrderGenerated': 'Force Order: Generated',
+    'posting.approved': 'Approved',
+    'posting.notApproved': 'Not Approved',
+    'posting.received': 'Received',
+    'posting.notReceived': 'Not Received',
   } as const,
 
   bn: {
@@ -396,6 +414,24 @@ export const PROFILE_LABELS = {
     'presentStatus.Deceased': 'মৃত',
     'presentStatus.Absent': 'অনুপস্থিত',
     'presentStatus.Arrested': 'গ্রেফতার',
+
+    // Posting Processing Status
+    'posting.newPosting': 'নতুন পোস্টিং',
+    'posting.interPosting': 'আন্তঃ পোস্টিং',
+    'posting.step.DraftPosting': 'খসড়া পোস্টিং',
+    'posting.step.DraftInterPosting': 'খসড়া আন্তঃ পোস্টিং',
+    'posting.step.NoteSheetDraft': 'নোটশিট - খসড়া',
+    'posting.step.NoteSheetInitiator': 'নোটশিট - উদ্যোক্তার অনুমোদন মুলতুবি',
+    'posting.step.NoteSheetRecommender': 'নোটশিট - সুপারিশকারীর অনুমোদন মুলতুবি',
+    'posting.step.NoteSheetFinalApproval': 'নোটশিট - চূড়ান্ত অনুমোদন মুলতুবি',
+    'posting.step.NoteSheetApproved': 'নোটশিট অনুমোদিত',
+    'posting.step.PostingOrderGenerated': 'পোস্টিং অর্ডার তৈরি হয়েছে',
+    'posting.step.PostingOrderApproved': 'পোস্টিং অর্ডার অনুমোদিত',
+    'posting.forceOrderGenerated': 'ফোর্স অর্ডার: তৈরি হয়েছে',
+    'posting.approved': 'অনুমোদিত',
+    'posting.notApproved': 'অনুমোদিত নয়',
+    'posting.received': 'গৃহীত',
+    'posting.notReceived': 'গৃহীত নয়',
   } as const,
 } as const;
 

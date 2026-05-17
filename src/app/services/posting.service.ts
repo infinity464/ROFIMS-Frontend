@@ -22,7 +22,8 @@ import {
     PostingType,
     PostingNoteSheetStatus,
     PostingMemberRemovalHistoryDto,
-    EmployeeRemovalInfo
+    EmployeeRemovalInfo,
+    EmployeePostingProcessingStatusDto
 } from '@/models/posting.model';
 
 /** Status for action button: None | PostingInProcess | NoteSheetInProcess */
@@ -685,5 +686,10 @@ export class PostingService {
             employeeId,
             transferRabUnitId
         });
+    }
+
+    /** Get detailed posting processing status (New + Inter) for a single employee. */
+    getEmployeePostingProcessingStatus(employeeId: number): Observable<EmployeePostingProcessingStatusDto> {
+        return this.http.get<EmployeePostingProcessingStatusDto>(`${API}/GetEmployeePostingProcessingStatus/${employeeId}`);
     }
 }

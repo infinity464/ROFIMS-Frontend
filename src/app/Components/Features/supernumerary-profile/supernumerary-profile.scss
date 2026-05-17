@@ -302,3 +302,57 @@ $field-gap: 1.25rem;
         grid-template-columns: 135px 1fr;
     }
 }
+
+/* ── Posting Processing Status Badges ── */
+.sp-posting-status-group {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.sp-posting-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+    i { font-size: 0.68rem; }
+}
+
+.sp-status-info {
+    background: #e3f2fd;
+    color: #1565c0;
+}
+
+.sp-status-warn {
+    background: #fff3e0;
+    color: #e65100;
+}
+
+.sp-posting-flags {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.sp-flag {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    font-size: 0.65rem;
+    font-weight: 500;
+    white-space: nowrap;
+
+    &.sp-flag-yes {
+        background: #e6f4ea;
+        color: #1e7e34;
+    }
+    &.sp-flag-no {
+        background: #fdecea;
+        color: #c62828;
+    }
+}

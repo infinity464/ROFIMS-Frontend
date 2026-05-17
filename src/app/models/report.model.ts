@@ -213,3 +213,39 @@ export interface ReportPagedResponse<T> {
   datalist: T[];
   pages: { rows?: number; totalPages?: number; Rows?: number; TotalPages?: number };
 }
+
+// ── Present Status by Mother Org monthly pivot report ───────────────────
+
+/** One dynamic column (mother org) for the monthly pivot report. */
+export interface PresentStatusMotherOrgColumn {
+  orgId: number;
+  orgNameEN: string;
+  orgNameBN: string;
+}
+
+/** One row (a month) in the Present Status × Mother Org monthly pivot report. */
+export interface PresentStatusByMotherOrgRow {
+  monthNumber: number;
+  year: number;
+  monthLabelEN: string;
+  monthLabelBN: string;
+  /** Counts keyed by orgId. Missing key = 0. */
+  counts: Record<number, number>;
+  total: number;
+}
+
+/** Full response for the monthly pivot report. */
+export interface PresentStatusByMotherOrgReportResponse {
+  columns: PresentStatusMotherOrgColumn[];
+  rows: PresentStatusByMotherOrgRow[];
+  columnTotals: Record<number, number>;
+  grandTotal: number;
+}
+
+/** Request for the monthly pivot report. */
+export interface PresentStatusByMotherOrgReportParams {
+  fromDate?: string | null;
+  toDate?: string | null;
+  postingStatus?: string | null;
+  presentStatusType?: string | null;
+}

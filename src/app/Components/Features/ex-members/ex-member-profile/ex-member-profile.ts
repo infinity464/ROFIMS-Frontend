@@ -28,6 +28,8 @@ import { RftsTrainingRow } from '@/models/draft-course.model';
 import { PromotionInfoService, PromotionInfoByEmployeeView } from '@/services/promotion-info.service';
 import { ExBdLeaveApplicationService, ExBdLeaveApplicationProgressView } from '@/services/ex-bd-leave-application.service';
 import { MovementInfoService, MovementInfoByEmployeeDto } from '@/services/movement-info.service';
+import { PostingService } from '@/services/posting.service';
+import { EmployeePostingProcessingStatusDto } from '@/models/posting.model';
 import { MovementType, MoveOrderType } from '@/models/enums';
 import { EmployeePersonalServiceOverview } from '@/models/employee-personal-service-overview.model';
 import { LocationType } from '@/models/enums';
@@ -128,6 +130,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
     previousYearSummaryLoading = false;
     loading = false;
     activePresentStatus: string | null = null;
+    postingProcessingStatus: EmployeePostingProcessingStatusDto | null = null;
 
     /** Which section is in edit mode; null = all view. Only one section at a time. */
     editingSection: string | null = null;
@@ -159,6 +162,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         private presentStatusInfoService: PresentStatusInfoService,
         private exBdLeaveAppService: ExBdLeaveApplicationService,
         private movementInfoService: MovementInfoService,
+        private postingService: PostingService,
         private http: HttpClient
     ) {}
 
@@ -202,6 +206,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
             kv(L['field.rabUnitLastPosting'], this.displayRabUnit),
             kv(L['field.joiningDate'], this.formatDateDisplay(p.joiningDate)),
             kv(L['field.maritalStatus'], this.codeValue(p.maritalStatus, p.maritalStatusBN)),
+            ...this.getPostingStatusExportRows(L),
         ], true);
 
         // Own Address (label-value; one block per address)
@@ -695,9 +700,10 @@ export class ExMemberProfile implements OnInit, OnDestroy {
             presentStatus: this.presentStatusInfoService.getAllByEmployeeId(id).pipe(catchError(() => of([]))),
             approvedNoteSheets: this.http.get<EmployeeApprovedNoteSheetRow[]>(`${environment.apis.core}/NoteSheetReferenceEmployee/GetApprovedNoteSheetsByEmployeeId/${id}`).pipe(catchError(() => of([]))),
             exBdLeaveProgress: this.exBdLeaveAppService.getProgressByEmployee(id).pipe(catchError(() => of([]))),
-            movements: this.movementInfoService.getByEmployeeId(id).pipe(catchError(() => of([] as MovementInfoByEmployeeDto[])))
+            movements: this.movementInfoService.getByEmployeeId(id).pipe(catchError(() => of([] as MovementInfoByEmployeeDto[]))),
+            postingStatus: this.postingService.getEmployeePostingProcessingStatus(id).pipe(catchError(() => of(null as EmployeePostingProcessingStatusDto | null)))
         }).subscribe({
-            next: ({ profile, family, previousRab, bankAcc, education, foreignVisit, leaveCurrentYear, additionalRemarks, address, moServHistory, discipline, course, promotion, documents, rftsTraining, presentStatus, approvedNoteSheets, exBdLeaveProgress, movements }) => {
+            next: ({ profile, family, previousRab, bankAcc, education, foreignVisit, leaveCurrentYear, additionalRemarks, address, moServHistory, discipline, course, promotion, documents, rftsTraining, presentStatus, approvedNoteSheets, exBdLeaveProgress, movements, postingStatus }) => {
                 this.profile = profile;
                 this.familyList = family ?? [];
                 this.loadProfileImage(profile);
@@ -726,6 +732,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
                 } else {
                     this.activePresentStatus = null;
                 }
+                this.postingProcessingStatus = postingStatus ?? null;
                 this.loading = false;
                 onComplete?.();
             },
@@ -744,6 +751,36 @@ export class ExMemberProfile implements OnInit, OnDestroy {
 
     goBack(): void {
         this.location.back();
+    }
+
+    getPostingStepLabel(step: string): string {
+        const key = `posting.step.${step}` as any;
+        return (this.L as any)[key] ?? step;
+    }
+
+    private getPostingStatusExportRows(L: any): string[][] {
+        const rows: string[][] = [];
+        const s = this.postingProcessingStatus;
+        if (!s) return rows;
+        if (s.newPostingStep && !s.newPostingOrderReceived) {
+            let val = this.getPostingStepLabel(s.newPostingStep);
+            if (s.newPostingForceOrderGenerated) {
+                val += ` | ${L['posting.forceOrderGenerated']}`;
+                if (!s.newPostingOrderReceived) val += ` · ${s.newPostingForceOrderApproved ? L['posting.approved'] : L['posting.notApproved']}`;
+                val += ` · ${s.newPostingOrderReceived ? L['posting.received'] : L['posting.notReceived']}`;
+            }
+            rows.push([L['posting.newPosting'], val]);
+        }
+        if (s.interPostingStep && !s.interPostingOrderReceived) {
+            let val = this.getPostingStepLabel(s.interPostingStep);
+            if (s.interPostingForceOrderGenerated) {
+                val += ` | ${L['posting.forceOrderGenerated']}`;
+                if (!s.interPostingOrderReceived) val += ` · ${s.interPostingForceOrderApproved ? L['posting.approved'] : L['posting.notApproved']}`;
+                val += ` · ${s.interPostingOrderReceived ? L['posting.received'] : L['posting.notReceived']}`;
+            }
+            rows.push([L['posting.interPosting'], val]);
+        }
+        return rows;
     }
 
     setEditingSection(section: string | null): void {

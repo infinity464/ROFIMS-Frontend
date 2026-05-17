@@ -21,6 +21,8 @@ import type {
   MemberTypeServingReportParams,
   MemberTypeServingReportRow,
   ReportPagedResponse,
+  PresentStatusByMotherOrgReportParams,
+  PresentStatusByMotherOrgReportResponse,
 } from '@/models/report.model';
 import type { PagedResponse } from '@/Core/Models/Pagination';
 
@@ -204,5 +206,14 @@ export class ReportService {
         params
       )
       .pipe(map(normalizePages));
+  }
+
+  getPresentStatusByMotherOrgReport(
+    params: PresentStatusByMotherOrgReportParams
+  ): Observable<PresentStatusByMotherOrgReportResponse> {
+    return this.http.post<PresentStatusByMotherOrgReportResponse>(
+      `${this.apiUrl}/GetPresentStatusByMotherOrgReport`,
+      params
+    );
   }
 }

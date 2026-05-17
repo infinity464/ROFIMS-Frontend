@@ -16,6 +16,8 @@ import { SupernumeraryEmpProfile, AddressBlock, RelieverRow } from '@/models/emp
 import { EmployeePersonalServiceOverview } from '@/models/employee-personal-service-overview.model';
 import { TooltipModule } from 'primeng/tooltip';
 import { ExportService, type ProfileExportConfig, type ProfileExportSection } from '@/services/export.service';
+import { PostingService } from '@/services/posting.service';
+import { EmployeePostingProcessingStatusDto } from '@/models/posting.model';
 
 @Component({
     selector: 'app-supernumerary-profile',
@@ -44,6 +46,8 @@ export class SupernumeraryProfile implements OnInit, OnDestroy {
     /** Joining date from GetEmployeePersonalServiceOverview (same source as ex-member profile). */
     serviceOverview: EmployeePersonalServiceOverview | null = null;
 
+    postingProcessingStatus: EmployeePostingProcessingStatusDto | null = null;
+
     exportDropdownOpen = false;
 
     constructor(
@@ -54,7 +58,8 @@ export class SupernumeraryProfile implements OnInit, OnDestroy {
         private messageService: MessageService,
         private empService: EmpService,
         private exportService: ExportService,
-        private _userMenuService: UserMenuService
+        private _userMenuService: UserMenuService,
+        private postingService: PostingService
     ) {}
 
     @HostListener('document:click')
@@ -208,11 +213,15 @@ export class SupernumeraryProfile implements OnInit, OnDestroy {
             profile: this.employeeListService.getSupernumeraryEmpProfile(id),
             overview: this.servingMembersService.getEmployeePersonalServiceOverview(id).pipe(
                 catchError(() => of(null))
+            ),
+            postingStatus: this.postingService.getEmployeePostingProcessingStatus(id).pipe(
+                catchError(() => of(null as EmployeePostingProcessingStatusDto | null))
             )
         }).subscribe({
-            next: ({ profile, overview }) => {
+            next: ({ profile, overview, postingStatus }) => {
                 this.profile = profile ?? null;
                 this.serviceOverview = overview ?? null;
+                this.postingProcessingStatus = postingStatus ?? null;
                 this.loadProfileImage(this.profile);
                 this.relieverTableRows = this.buildRelieverTableRows(this.profile);
                 this.loadDocuments();
@@ -472,5 +481,20 @@ export class SupernumeraryProfile implements OnInit, OnDestroy {
             }
         }
         return rows;
+    }
+
+    getPostingStepLabel(step: string): string {
+        switch (step) {
+            case 'DraftPosting': return 'Draft Posting';
+            case 'DraftInterPosting': return 'Draft Inter Posting';
+            case 'NoteSheetDraft': return 'Notesheet - Draft';
+            case 'NoteSheetInitiator': return 'Notesheet - Pending Initiator';
+            case 'NoteSheetRecommender': return 'Notesheet - Pending Recommender';
+            case 'NoteSheetFinalApproval': return 'Notesheet - Pending Final Approval';
+            case 'NoteSheetApproved': return 'Notesheet Approved';
+            case 'PostingOrderGenerated': return 'Posting Order Generated';
+            case 'PostingOrderApproved': return 'Posting Order Approved';
+            default: return step;
+        }
     }
 }

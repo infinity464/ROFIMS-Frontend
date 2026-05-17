@@ -52,6 +52,36 @@
                 @if (activePresentStatus) {
                     <div style="font-size: 0.95rem; font-weight: 500; margin-top: 0.25rem; color: var(--text-color-secondary);">{{ L['field.presentStatus'] }}: {{ translatedPresentStatus }}</div>
                 }
+                @if (postingProcessingStatus?.newPostingStep && !postingProcessingStatus!.newPostingOrderReceived) {
+                    <div class="sp-posting-status-line">
+                        <span>{{ L['posting.newPosting'] }}: {{ getPostingStepLabel(postingProcessingStatus!.newPostingStep!) }}</span>
+                        @if (postingProcessingStatus!.newPostingForceOrderGenerated) {
+                            <span class="sp-posting-sep">|</span>
+                            <span>{{ L['posting.forceOrderGenerated'] }}</span>
+                            @if (!postingProcessingStatus!.newPostingOrderReceived) {
+                                <span class="sp-posting-sep">·</span>
+                                <span>{{ postingProcessingStatus!.newPostingForceOrderApproved ? L['posting.approved'] : L['posting.notApproved'] }}</span>
+                            }
+                            <span class="sp-posting-sep">·</span>
+                            <span>{{ postingProcessingStatus!.newPostingOrderReceived ? L['posting.received'] : L['posting.notReceived'] }}</span>
+                        }
+                    </div>
+                }
+                @if (postingProcessingStatus?.interPostingStep && !postingProcessingStatus!.interPostingOrderReceived) {
+                    <div class="sp-posting-status-line">
+                        <span>{{ L['posting.interPosting'] }}: {{ getPostingStepLabel(postingProcessingStatus!.interPostingStep!) }}</span>
+                        @if (postingProcessingStatus!.interPostingForceOrderGenerated) {
+                            <span class="sp-posting-sep">|</span>
+                            <span>{{ L['posting.forceOrderGenerated'] }}</span>
+                            @if (!postingProcessingStatus!.interPostingOrderReceived) {
+                                <span class="sp-posting-sep">·</span>
+                                <span>{{ postingProcessingStatus!.interPostingForceOrderApproved ? L['posting.approved'] : L['posting.notApproved'] }}</span>
+                            }
+                            <span class="sp-posting-sep">·</span>
+                            <span>{{ postingProcessingStatus!.interPostingOrderReceived ? L['posting.received'] : L['posting.notReceived'] }}</span>
+                        }
+                    </div>
+                }
             </div>
             <div class="sp-hero-ids">
                 <div class="sp-id-block">

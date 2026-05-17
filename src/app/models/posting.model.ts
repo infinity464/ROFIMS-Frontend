@@ -524,3 +524,20 @@ export interface PendingJoiningItem {
     ccMoArticle47No: string | null;
     ccMoArticle47FileId: number | null;
 }
+
+/** Detailed posting processing status per employee (New + Inter). NULL step = not in flow or complete. */
+export interface EmployeePostingProcessingStatusDto {
+    employeeId: number;
+    newPostingStep: string | null;
+    newPostingNoteSheetNo: string | null;
+    newPostingNoteSheetStatus: string | null;
+    newPostingForceOrderGenerated: boolean;
+    newPostingForceOrderApproved: boolean;
+    newPostingOrderReceived: boolean;
+    interPostingStep: string | null;
+    interPostingNoteSheetNo: string | null;
+    interPostingNoteSheetStatus: string | null;
+    interPostingForceOrderGenerated: boolean;
+    interPostingForceOrderApproved: boolean;
+    interPostingOrderReceived: boolean;
+}
