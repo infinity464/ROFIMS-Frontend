@@ -13,6 +13,8 @@ import {
     ImageRun,
     TableLayoutType,
     PageOrientation,
+    Footer,
+    PageNumber,
 } from 'docx';
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
@@ -24,6 +26,12 @@ export interface ReportConfig {
     lang: 'en' | 'bn';
     columns: string[];
     rows: string[][];
+    /**
+     * Optional final row rendered after `rows` (e.g. "Total" line). When supplied,
+     * the last data row is glued to it via keep-with-next so the totals can't
+     * orphan onto a new page.
+     */
+    subtotalRow?: string[];
     showPageNumbers: boolean;
     /** Optional base filename (without extension). Falls back to 'report_en/bn'. */
     filename?: string;
@@ -74,12 +82,21 @@ export interface MatrixReportConfig {
     groupColumns: string[];
     /** Sub-header row repeated under each group (e.g. ['Auth', 'Held']). */
     subHeaders: string[];
-    /** Data rows. */
+    /** Data rows for the single-table mode (ignored when `sections` is provided). */
     rows: string[][];
+    /**
+     * Optional: render one matrix table per section, each with an optional banner above.
+     * Every section shares the same `groupColumns` + `subHeaders` (column structure is
+     * uniform); only `rows` and the banner differ. Used by unit-rank-wise when multiple
+     * RAB Units are drilled into.
+     */
+    sections?: { title?: string; rows: string[][] }[];
     filename?: string;
     filterLines?: string[];
     /** Use landscape orientation in Word (default false). */
     landscape?: boolean;
+    /** When true, render "Page X of Y" centred in the Word footer. */
+    showPageNumbers?: boolean;
 }
 
 /** One section in a profile export: heading + table (same as web view). */
@@ -203,7 +220,13 @@ export class ExportService {
         }, 800);
     }
 
-    async exportWord(config: ReportConfig): Promise<void> {
+    /**
+     * Builds the flat Word <see cref="Document"/> in memory without saving it.
+     * Used by <c>exportWord</c> as well as by consumers that want to pack the
+     * docx → blob → server PDF conversion themselves (mirroring the mother-org
+     * reports' "PDF via Word" path).
+     */
+    buildWordDoc(config: ReportConfig): Document {
         const dateStr = new Date().toLocaleDateString(config.lang === 'bn' ? 'bn-BD' : 'en-US', {
             year: 'numeric',
             month: 'long',
@@ -215,14 +238,25 @@ export class ExportService {
         const dateText = dateStr;
         const columns = config.columns;
         const rows = config.rows;
-        const cellWidth = Math.floor(9000 / Math.max(config.columns.length, 1));
-        // Font sizes in half-points: page header 14pt=28, table header 10pt=20, content bn 8pt=16 / en 11pt=22
-        const sizePageHeader = 28;
-        const sizeTableHeader = 20;
-        const sizeTableContent = config.lang === 'bn' ? 16 : 22;
+        // A4 landscape ≈ 297mm, portrait ≈ 210mm. After ~1" margins the usable width in DXA
+        // (1/20 pt; 1440 DXA = 1 inch) is ~13900 (landscape) / ~9000 (portrait).
+        const totalDxa = config.landscape ? 13900 : 9000;
+        const cellWidth = Math.floor(totalDxa / Math.max(config.columns.length, 1));
+        // Sizes are in half-points: 24 = 12pt, 20 = 10pt, 18 = 9pt, 12 = 6pt.
+        const sizePageHeader = 24;
+        const sizeTableHeader = 16;
+        const sizeTableContent = config.lang === 'bn' ? 12 : 18;
+        const borders = {
+            top:    { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
+            bottom: { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
+            left:   { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
+            right:  { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
+        };
 
+        // tableHeader + keepNext: the header repeats on every page and sticks to the first body row.
         const headerRow = new TableRow({
             tableHeader: true,
+            cantSplit: true,
             children: columns.map(
                 (col) =>
                     new TableCell({
@@ -231,54 +265,81 @@ export class ExportService {
                                 children: [new TextRun({ text: col, bold: true, font, size: sizeTableHeader })],
                                 alignment: AlignmentType.LEFT,
                                 spacing: { after: 100 },
+                                keepNext: true,
                             }),
                         ],
-                        borders: {
-                            top: { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
-                            bottom: { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
-                            left: { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
-                            right: { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
-                        },
+                        borders,
                         width: { size: cellWidth, type: WidthType.DXA },
                     })
             ),
         });
 
-        const dataRows = rows.map(
-            (row) =>
-                new TableRow({
-                    children: row.map(
-                        (cell) =>
-                            new TableCell({
-                                children: [
-                                    new Paragraph({
-                                        children: [new TextRun({ text: cell, font, size: sizeTableContent })],
-                                        spacing: { after: 100 },
-                                    }),
-                                ],
-                                borders: {
-                                    top: { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
-                                    bottom: { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
-                                    left: { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
-                                    right: { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
-                                },
-                                width: { size: cellWidth, type: WidthType.DXA },
-                            })
-                    ),
-                })
-        );
+        const lastDataIdx = rows.length - 1;
+        const dataRows = rows.map((row, ri) => {
+            // Glue the last data row to the subtotal row (when one is supplied)
+            // so the totals line can't orphan onto a new page.
+            const keepWithNext = config.subtotalRow != null && ri === lastDataIdx;
+            return new TableRow({
+                cantSplit: true,
+                children: row.map(
+                    (cell) =>
+                        new TableCell({
+                            children: [
+                                new Paragraph({
+                                    children: [new TextRun({ text: cell, font, size: sizeTableContent })],
+                                    spacing: { after: 100 },
+                                    keepNext: keepWithNext,
+                                }),
+                            ],
+                            borders,
+                            width: { size: cellWidth, type: WidthType.DXA },
+                        })
+                ),
+            });
+        });
+
+        const subtotalRow = config.subtotalRow ? new TableRow({
+            cantSplit: true,
+            children: config.subtotalRow.map(
+                (cell) =>
+                    new TableCell({
+                        children: [
+                            new Paragraph({
+                                children: [new TextRun({ text: cell, font, size: sizeTableContent, bold: true })],
+                                spacing: { after: 100 },
+                            }),
+                        ],
+                        borders,
+                        width: { size: cellWidth, type: WidthType.DXA },
+                    })
+            ),
+        }) : null;
 
         const table = new Table({
             width: { size: 100, type: WidthType.PERCENTAGE },
-            rows: [headerRow, ...dataRows],
+            rows: subtotalRow ? [headerRow, ...dataRows, subtotalRow] : [headerRow, ...dataRows],
         });
 
-        const doc = new Document({
+        // "Page X of Y" centred footer — only when explicitly requested.
+        const footers = config.showPageNumbers ? {
+            default: new Footer({
+                children: [new Paragraph({
+                    alignment: AlignmentType.CENTER,
+                    children: [
+                        new TextRun({ children: ['Page ', PageNumber.CURRENT], font, size: 16, color: '555555' }),
+                        new TextRun({ children: [' of ', PageNumber.TOTAL_PAGES], font, size: 16, color: '555555' }),
+                    ],
+                })],
+            }),
+        } : undefined;
+
+        return new Document({
             sections: [
                 {
                     properties: config.landscape ? {
                         page: { size: { orientation: PageOrientation.LANDSCAPE } },
                     } : undefined,
+                    footers,
                     children: [
                         new Paragraph({
                             children: [
@@ -308,7 +369,7 @@ export class ExportService {
                         ...(config.filterLines?.length ? [new Paragraph({
                             children: config.filterLines.map((line, i) => new TextRun({
                                 text: (i > 0 ? '  |  ' : '') + line,
-                                size: 20,
+                                size: 16,
                                 color: '333333',
                                 font,
                             })),
@@ -320,11 +381,13 @@ export class ExportService {
                 },
             ],
         });
+    }
 
+    async exportWord(config: ReportConfig): Promise<void> {
+        const doc = this.buildWordDoc(config);
         const blob = await Packer.toBlob(doc);
         const base = config.filename ?? 'report';
-        const filename = `${base}_${config.lang}.docx`;
-        saveAs(blob, filename);
+        saveAs(blob, `${base}_${config.lang}.docx`);
     }
 
     exportExcel(config: ReportConfig): void {
@@ -342,6 +405,7 @@ export class ExportService {
             [],
             config.columns,
             ...config.rows,
+            ...(config.subtotalRow ? [config.subtotalRow] : []),
         ];
 
         const ws = XLSX.utils.aoa_to_sheet(data);
@@ -367,18 +431,19 @@ export class ExportService {
     }
 
     /**
-     * Word export with a two-row header. Leading columns merge vertically (rowSpan=2);
-     * each group column merges horizontally across its sub-headers (columnSpan=subCount).
-     * Mirrors exportExcelMatrix so pivot tables look the same in both formats.
+     * Builds the matrix Word <see cref="Document"/> in memory without saving it —
+     * the same two-row-header layout as <c>exportWordMatrix</c>. Used by consumers
+     * that want to pack the docx → blob → server PDF conversion themselves.
      */
-    async exportWordMatrix(config: MatrixReportConfig): Promise<void> {
+    buildMatrixWordDoc(config: MatrixReportConfig): Document {
         const dateStr = new Date().toLocaleDateString(config.lang === 'bn' ? 'bn-BD' : 'en-US', {
             year: 'numeric', month: 'long', day: 'numeric',
         });
         const font = config.lang === 'bn' ? 'Nirmala UI' : 'Times New Roman';
-        const sizePageHeader = 28;
-        const sizeTableHeader = 20;
-        const sizeTableContent = config.lang === 'bn' ? 16 : 22;
+        // Sizes in half-points: 24 = 12pt, 16 = 8pt, 18 = 9pt, 12 = 6pt.
+        const sizePageHeader = 24;
+        const sizeTableHeader = 16;
+        const sizeTableContent = config.lang === 'bn' ? 12 : 18;
 
         const leadCount = config.leadingColumns.length;
         const subCount = Math.max(config.subHeaders.length, 1);
@@ -408,12 +473,15 @@ export class ExportService {
             right:  { style: BorderStyle.SINGLE, size: 1, color: 'cccccc' },
         };
 
+        // keepNext on header paragraphs makes the two-row header stick with the
+        // first data row so it can't orphan at the bottom of a page.
         const headerCell = (text: string, opts: { rowSpan?: number; columnSpan?: number; width: number }) =>
             new TableCell({
                 children: [new Paragraph({
                     children: [new TextRun({ text, bold: true, font, size: sizeTableHeader })],
                     alignment: AlignmentType.CENTER,
                     spacing: { after: 80 },
+                    keepNext: true,
                 })],
                 borders,
                 rowSpan: opts.rowSpan,
@@ -422,8 +490,10 @@ export class ExportService {
             });
 
         // Row 1: leading columns (rowSpan=2) + each group label (columnSpan=subCount).
-        const headerRow1 = new TableRow({
+        // Built via a factory so we can emit a fresh copy per section in sectioned mode.
+        const headerRow1Factory = () => new TableRow({
             tableHeader: true,
+            cantSplit: true,
             children: [
                 ...config.leadingColumns.map((c, i) =>
                     headerCell(c, { rowSpan: 2, width: colWidths[i] })),
@@ -435,18 +505,21 @@ export class ExportService {
             ],
         });
         // Row 2: sub-headers under every group (leading columns are already covered by rowSpan).
-        const headerRow2 = new TableRow({
+        const headerRow2Factory = () => new TableRow({
             tableHeader: true,
+            cantSplit: true,
             children: Array.from({ length: groupCount * subCount }, (_, idx) => {
                 const sub = config.subHeaders[idx % subCount];
                 return headerCell(sub, { width: colWidths[leadCount + idx] });
             }),
         });
 
-        const dataRows = config.rows.map(row => {
+        // cantSplit prevents a row's own content from breaking across pages.
+        const buildDataRows = (rows: string[][]): TableRow[] => rows.map(row => {
             const cells = row.slice(0, totalCols);
             while (cells.length < totalCols) cells.push('');
             return new TableRow({
+                cantSplit: true,
                 children: cells.map((cell, i) => new TableCell({
                     children: [new Paragraph({
                         children: [new TextRun({ text: cell, font, size: sizeTableContent })],
@@ -459,11 +532,18 @@ export class ExportService {
             });
         });
 
-        const table = new Table({
+        // Each rendered matrix table re-emits its own two-row header so the
+        // header repeats above every section (e.g. one per drilled-into RAB Unit).
+        const buildTable = (rows: string[][]): Table => new Table({
             width: { size: totalDxa, type: WidthType.DXA },
             layout: TableLayoutType.FIXED,
             columnWidths: colWidths,
-            rows: [headerRow1, headerRow2, ...dataRows],
+            rows: [
+                // Each call to headerCell returns a fresh TableCell, so it's safe to
+                // re-clone the header rows per section.
+                headerRow1Factory(), headerRow2Factory(),
+                ...buildDataRows(rows),
+            ],
         });
 
         const filterPara = config.filterLines?.length ? [new Paragraph({
@@ -474,11 +554,45 @@ export class ExportService {
             spacing: { after: 300 },
         })] : [];
 
-        const doc = new Document({
+        // "Page X of Y" centred footer — only when explicitly requested.
+        const footers = config.showPageNumbers ? {
+            default: new Footer({
+                children: [new Paragraph({
+                    alignment: AlignmentType.CENTER,
+                    children: [
+                        new TextRun({ children: ['Page ', PageNumber.CURRENT], font, size: 16, color: '555555' }),
+                        new TextRun({ children: [' of ', PageNumber.TOTAL_PAGES], font, size: 16, color: '555555' }),
+                    ],
+                })],
+            }),
+        } : undefined;
+
+        // Sectioned mode: one banner + matrix table per section. Fallback: single matrix
+        // table from top-level `rows` (backwards-compatible with the original signature).
+        const sectionBlocks: (Paragraph | Table)[] = [];
+        if (config.sections && config.sections.length > 0) {
+            const sizeSectionHeader = 20;
+            config.sections.forEach((sec, idx) => {
+                if (sec.title) {
+                    sectionBlocks.push(new Paragraph({
+                        children: [new TextRun({ text: sec.title, bold: true, size: sizeSectionHeader, font })],
+                        spacing: { before: idx > 0 ? 240 : 0, after: 120 },
+                        keepNext: true,
+                        keepLines: true,
+                    }));
+                }
+                sectionBlocks.push(buildTable(sec.rows));
+            });
+        } else {
+            sectionBlocks.push(buildTable(config.rows));
+        }
+
+        return new Document({
             sections: [{
                 properties: config.landscape ? {
                     page: { size: { orientation: PageOrientation.LANDSCAPE } },
                 } : undefined,
+                footers,
                 children: [
                     new Paragraph({
                         children: [new TextRun({ text: config.title, bold: true, size: sizePageHeader, color: '1e3a5f', font })],
@@ -491,11 +605,19 @@ export class ExportService {
                         spacing: { after: filterPara.length ? 150 : 300 },
                     }),
                     ...filterPara,
-                    table,
+                    ...sectionBlocks,
                 ],
             }],
         });
+    }
 
+    /**
+     * Word export with a two-row header. Leading columns merge vertically (rowSpan=2);
+     * each group column merges horizontally across its sub-headers (columnSpan=subCount).
+     * Mirrors exportExcelMatrix so pivot tables look the same in both formats.
+     */
+    async exportWordMatrix(config: MatrixReportConfig): Promise<void> {
+        const doc = this.buildMatrixWordDoc(config);
         const blob = await Packer.toBlob(doc);
         const base = config.filename ?? 'report';
         saveAs(blob, `${base}_${config.lang}.docx`);
@@ -534,35 +656,48 @@ export class ExportService {
             [dateStr],
             ...(filterLine ? [[filterLine]] : []),
             [],
-            headerRow1,
-            headerRow2,
-            ...config.rows,
         ];
-
-        const ws = XLSX.utils.aoa_to_sheet(data);
-        ws['!cols'] = Array.from({ length: totalCols }, (_, i) => ({ wch: i < leadCount ? 22 : 12 }));
-
         const merges: { s: { r: number; c: number }; e: { r: number; c: number } }[] = [
             { s: { r: 0, c: 0 }, e: { r: 0, c: totalCols - 1 } },
             { s: { r: 1, c: 0 }, e: { r: 1, c: totalCols - 1 } },
         ];
-        // Track the row index where the two header rows live (after title/date/filter/blank).
-        const h1Row = filterLine ? 4 : 3;
-        const h2Row = h1Row + 1;
         if (filterLine) {
             merges.push({ s: { r: 2, c: 0 }, e: { r: 2, c: totalCols - 1 } });
         }
-        // Leading columns: merge vertically (rowspan=2).
-        for (let c = 0; c < leadCount; c++) {
-            merges.push({ s: { r: h1Row, c }, e: { r: h2Row, c } });
-        }
-        // Group columns: merge horizontally across their sub-headers.
-        if (subCount > 1) {
-            for (let g = 0; g < groupCount; g++) {
-                const startCol = leadCount + g * subCount;
-                merges.push({ s: { r: h1Row, c: startCol }, e: { r: h1Row, c: startCol + subCount - 1 } });
+
+        // Sectioned mode: banner row + repeated two-row header + rows, per section.
+        // Single-table mode: top-level rows with one header block.
+        const sections = config.sections && config.sections.length > 0
+            ? config.sections
+            : [{ title: undefined as string | undefined, rows: config.rows }];
+
+        for (const sec of sections) {
+            if (sec.title) {
+                const titleRowIdx = data.length;
+                data.push([sec.title]);
+                merges.push({ s: { r: titleRowIdx, c: 0 }, e: { r: titleRowIdx, c: totalCols - 1 } });
             }
+            const h1Row = data.length;
+            const h2Row = h1Row + 1;
+            data.push(headerRow1);
+            data.push(headerRow2);
+            // Leading columns: merge vertically (rowspan=2).
+            for (let c = 0; c < leadCount; c++) {
+                merges.push({ s: { r: h1Row, c }, e: { r: h2Row, c } });
+            }
+            // Group columns: merge horizontally across their sub-headers.
+            if (subCount > 1) {
+                for (let g = 0; g < groupCount; g++) {
+                    const startCol = leadCount + g * subCount;
+                    merges.push({ s: { r: h1Row, c: startCol }, e: { r: h1Row, c: startCol + subCount - 1 } });
+                }
+            }
+            for (const r of sec.rows) data.push(r);
+            data.push([]);  // blank row between sections
         }
+
+        const ws = XLSX.utils.aoa_to_sheet(data);
+        ws['!cols'] = Array.from({ length: totalCols }, (_, i) => ({ wch: i < leadCount ? 22 : 12 }));
         ws['!merges'] = merges;
 
         const wb = XLSX.utils.book_new();
@@ -608,27 +743,36 @@ export class ExportService {
                 i === colCount - 1 ? totalDxa - cellWidth * (colCount - 1) : cellWidth
             );
 
+            // tableHeader: header repeats on each page if the table spans multiple pages.
+            // keepNext on the header paragraphs makes the header stick with the first body row,
+            // so a section title + header row never orphan above the first data row.
             const makeHeaderRow = () => new TableRow({
                 tableHeader: true,
+                cantSplit: true,
                 children: cols.map((col, i) => new TableCell({
                     children: [new Paragraph({
                         children: [new TextRun({ text: col, bold: true, font, size: sizeTableHeader })],
                         alignment: AlignmentType.LEFT,
                         spacing: { after: 100 },
+                        keepNext: true,
                     })],
                     borders,
                     width: { size: colWidths[i], type: WidthType.DXA },
                 })),
             });
 
-            const makeBodyRow = (row: string[], bold = false) => {
+            // keepWithNext on a body row makes it stick with the following row. Used for
+            // the last body row in a section so the subtotal can't orphan onto a new page.
+            const makeBodyRow = (row: string[], bold = false, keepWithNext = false) => {
                 const cells = row.slice(0, colCount);
                 while (cells.length < colCount) cells.push('');
                 return new TableRow({
+                    cantSplit: true,
                     children: cells.map((cell, i) => new TableCell({
                         children: [new Paragraph({
                             children: [new TextRun({ text: cell, font, size: sizeTableContent, bold })],
                             spacing: { after: 100 },
+                            keepNext: keepWithNext,
                         })],
                         borders,
                         width: { size: colWidths[i], type: WidthType.DXA },
@@ -666,18 +810,32 @@ export class ExportService {
             })] : []),
         ];
 
+        const lastSectionIdx = config.sections.length - 1;
         config.sections.forEach((sec, idx) => {
             children.push(new Paragraph({
                 children: [new TextRun({ text: sec.title, bold: true, size: sizeSectionHeader, font })],
                 spacing: { before: idx > 0 ? 200 : 0, after: 120 },
                 keepNext: true,
+                keepLines: true,
             }));
             // Section-level columns override top-level columns when present.
             const cols = sec.columns ?? config.columns;
             const { makeHeaderRow, makeBodyRow, makeTable } = makeHelpers(cols);
             const tableRows: TableRow[] = [makeHeaderRow()];
-            sec.rows.forEach(r => tableRows.push(makeBodyRow(r)));
-            if (sec.subtotalRow) tableRows.push(makeBodyRow(sec.subtotalRow, true));
+            const lastBodyIdx = sec.rows.length - 1;
+            sec.rows.forEach((r, ri) => {
+                // Last body row sticks to the subtotal (if any) so the totals row
+                // can't end up alone on the next page.
+                const keepWithNext = sec.subtotalRow != null && ri === lastBodyIdx;
+                tableRows.push(makeBodyRow(r, false, keepWithNext));
+            });
+            if (sec.subtotalRow) {
+                // For the FINAL section, glue the subtotal row to the spacer + grand-total
+                // table that follows so the cross-org grand total can't orphan onto a new page.
+                const isLastSection = idx === lastSectionIdx;
+                const keepWithNext = isLastSection && config.grandTotalRow != null;
+                tableRows.push(makeBodyRow(sec.subtotalRow, true, keepWithNext));
+            }
             children.push(makeTable(tableRows));
         });
 
@@ -685,15 +843,37 @@ export class ExportService {
             // Grand-total table renders against the grandTotalRow's own column count.
             const gtCols = config.grandTotalRow.map(() => '');
             const { makeBodyRow, makeTable } = makeHelpers(gtCols);
-            children.push(new Paragraph({ children: [new TextRun({ text: '', font, size: sizeTableContent })], spacing: { before: 200, after: 80 } }));
+            // Minimal spacer so the grand total sits tight against the previous table.
+            // Less vertical padding = better chance of fitting at the bottom of the
+            // page where the last section ended (instead of being pushed onto a new page).
+            children.push(new Paragraph({
+                children: [new TextRun({ text: '', font, size: sizeTableContent })],
+                spacing: { before: 60, after: 0 },
+                keepNext: true,
+            }));
             children.push(makeTable([makeBodyRow(config.grandTotalRow, true)]));
         }
+
+        // "Page X of Y" centred footer — only emitted when explicitly requested,
+        // so callers that don't care (e.g. embedded snapshots) stay clean.
+        const footers = config.showPageNumbers ? {
+            default: new Footer({
+                children: [new Paragraph({
+                    alignment: AlignmentType.CENTER,
+                    children: [
+                        new TextRun({ children: ['Page ', PageNumber.CURRENT], font, size: 16, color: '555555' }),
+                        new TextRun({ children: [' of ', PageNumber.TOTAL_PAGES], font, size: 16, color: '555555' }),
+                    ],
+                })],
+            }),
+        } : undefined;
 
         return new Document({
             sections: [{
                 properties: config.landscape ? {
                     page: { size: { orientation: PageOrientation.LANDSCAPE } },
                 } : undefined,
+                footers,
                 children,
             }],
         });
@@ -708,6 +888,46 @@ export class ExportService {
         const blob = await Packer.toBlob(doc);
         const base = config.filename ?? 'report';
         saveAs(blob, `${base}_${config.lang}.docx`);
+    }
+
+    /**
+     * Opens a popup window that embeds the supplied PDF blob URL in a full-window
+     * iframe and auto-triggers the browser's print dialog once the PDF has rendered.
+     * Mirrors unit-rank-wise-manpower's print-button UX but works against the
+     * Word-derived PDF so the printed output matches the PDF / Word file exactly.
+     */
+    openPdfPrintPopup(pdfUrl: string): void {
+        const win = window.open('', '_blank', 'width=1100,height=800');
+        if (!win) return;
+        const html = `<!DOCTYPE html>
+<html>
+<head><title>Print Preview</title>
+<style>html,body{margin:0;padding:0;height:100%;background:#525659}</style>
+</head>
+<body>
+<iframe id="pdfFrame" src="${pdfUrl}" style="width:100vw;height:100vh;border:0"></iframe>
+<script>
+  (function(){
+    var f = document.getElementById('pdfFrame');
+    var printed = false;
+    var doPrint = function() {
+      if (printed) return;
+      printed = true;
+      // 600ms gives the in-browser PDF viewer time to lay out the first page.
+      setTimeout(function() {
+        try { f.contentWindow.print(); }
+        catch (e) { try { window.print(); } catch (_) {} }
+      }, 600);
+    };
+    f.addEventListener('load', doPrint);
+    // Safety net for browsers whose PDF plugin doesn't dispatch 'load'.
+    setTimeout(doPrint, 2500);
+  })();
+</script>
+</body></html>`;
+        win.document.open();
+        win.document.write(html);
+        win.document.close();
     }
 
     /**
