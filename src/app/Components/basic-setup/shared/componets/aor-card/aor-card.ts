@@ -114,22 +114,20 @@ export class AorCardComponent {
         return this.availableDivisions ?? [];
     }
 
-    /** Districts shown in the picker: only those whose parent division is in the AOR. */
+    /** Districts shown in the picker. Narrowed only when a division chip is focused (drill-down). */
     districtsForPicker(): AorChipWithParent[] {
-        const allowedParents = this.focusedDivisionId != null
-            ? new Set([this.focusedDivisionId])
-            : new Set(this.data.divisions.map((d) => d.id));
-        if (allowedParents.size === 0) return [];
-        return (this.availableDistricts ?? []).filter((d) => allowedParents.has(d.parentId));
+        if (this.focusedDivisionId != null) {
+            return (this.availableDistricts ?? []).filter((d) => d.parentId === this.focusedDivisionId);
+        }
+        return this.availableDistricts ?? [];
     }
 
-    /** Upazilas shown in the picker: only those whose parent district is in the AOR. */
+    /** Upazilas shown in the picker. Narrowed only when a district chip is focused (drill-down). */
     upazilasForPicker(): AorChipWithParent[] {
-        const allowedParents = this.focusedDistrictId != null
-            ? new Set([this.focusedDistrictId])
-            : new Set(this.data.districts.map((d) => d.id));
-        if (allowedParents.size === 0) return [];
-        return (this.availableUpazilas ?? []).filter((u) => allowedParents.has(u.parentId));
+        if (this.focusedDistrictId != null) {
+            return (this.availableUpazilas ?? []).filter((u) => u.parentId === this.focusedDistrictId);
+        }
+        return this.availableUpazilas ?? [];
     }
 
     /**
