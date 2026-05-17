@@ -249,3 +249,40 @@ export interface PresentStatusByMotherOrgReportParams {
   postingStatus?: string | null;
   presentStatusType?: string | null;
 }
+
+// ── Present Status Unit Wise monthly pivot report ───────────────────────
+
+/** Request for Present Status Unit Wise report. */
+export interface PresentStatusUnitWiseReportParams {
+  fromDate?: string | null;
+  toDate?: string | null;
+  postingStatus?: string | null;
+  presentStatusType?: string | null;
+}
+
+/** One dynamic column (a month) in the Present Status Unit Wise pivot report. */
+export interface PresentStatusUnitWiseMonthColumn {
+  monthNumber: number;
+  year: number;
+  labelEN: string;
+  labelBN: string;
+}
+
+/** One row (a wing/battalion) in the Present Status Unit Wise report. */
+export interface PresentStatusUnitWiseRow {
+  unitId: number;
+  unitNameEN: string;
+  unitNameBN: string;
+  unitType: string;
+  /** Counts keyed by monthNumber. Missing key = 0. */
+  counts: Record<number, number>;
+  total: number;
+}
+
+/** Full response for Present Status Unit Wise report. */
+export interface PresentStatusUnitWiseReportResponse {
+  monthColumns: PresentStatusUnitWiseMonthColumn[];
+  rows: PresentStatusUnitWiseRow[];
+  monthTotals: Record<number, number>;
+  grandTotal: number;
+}

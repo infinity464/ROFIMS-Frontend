@@ -23,6 +23,8 @@ import type {
   ReportPagedResponse,
   PresentStatusByMotherOrgReportParams,
   PresentStatusByMotherOrgReportResponse,
+  PresentStatusUnitWiseReportParams,
+  PresentStatusUnitWiseReportResponse,
 } from '@/models/report.model';
 import type { PagedResponse } from '@/Core/Models/Pagination';
 
@@ -213,6 +215,15 @@ export class ReportService {
   ): Observable<PresentStatusByMotherOrgReportResponse> {
     return this.http.post<PresentStatusByMotherOrgReportResponse>(
       `${this.apiUrl}/GetPresentStatusByMotherOrgReport`,
+      params
+    );
+  }
+
+  getPresentStatusUnitWiseReport(
+    params: PresentStatusUnitWiseReportParams
+  ): Observable<PresentStatusUnitWiseReportResponse> {
+    return this.http.post<PresentStatusUnitWiseReportResponse>(
+      `${this.apiUrl}/GetPresentStatusUnitWiseReport`,
       params
     );
   }
