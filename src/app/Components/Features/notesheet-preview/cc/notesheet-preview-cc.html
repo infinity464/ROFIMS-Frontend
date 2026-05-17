@@ -195,4 +195,18 @@
           </div>
         </div>
     </div>
+
+    <!-- Floating PDF button for mobile QR-scan view — visible only on
+         small screens where the top toolbar is hidden. -->
+    <button type="button" class="mobile-download-fab no-print"
+            (click)="exportPdf()"
+            [disabled]="exportingPdf"
+            aria-label="Download PDF">
+        @if (exportingPdf) {
+            <i class="pi pi-spin pi-spinner"></i>
+        } @else {
+            <i class="pi pi-download"></i>
+        }
+        <span>PDF</span>
+    </button>
 }
