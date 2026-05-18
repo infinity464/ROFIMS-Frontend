@@ -1297,7 +1297,7 @@ export class EmpBasicInfo implements OnInit {
             lastMotherUnit: [null, Validators.required],
             memberType: [null, Validators.required],
             batch: [null],
-            appointment: [null, Validators.required],
+            appointment: [null],
             joiningDate: [null, Validators.required],
             rank: [null, Validators.required],
             branch: [null, Validators.required],

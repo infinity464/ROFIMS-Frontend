@@ -168,11 +168,11 @@
 
                     <div class="form-field">
                         <label class="form-label">
-                            Appointment <span class="form-label-required">*</span>
+                            Appointment
                         </label>
                         <p-select [options]="appointments" optionLabel="codeValueEN" optionValue="codeId"
                             placeholder="Select Appointment" styleClass="w-full" formControlName="appointment"
-                            [filter]="true" filterPlaceholder="Search">
+                            [filter]="true" filterPlaceholder="Search" [showClear]="true">
                         </p-select>
                         @if (isFieldInvalid('appointment')) {
                         <small class="form-error">{{ getErrorMessage('appointment') }}</small>
