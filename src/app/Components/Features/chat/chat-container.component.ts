@@ -6,46 +6,36 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { UserMenuService } from '@/services/user-menu.service';
 import { ConfirmationService } from 'primeng/api';
 import { ChatService } from '@/services/chat.service';
-import { ChatUserDto, DirectConversation, DirectMessageDto, GroupDto, GroupMessageDto } from '@/models/chat.model';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
+import { ServingMembersService } from '@/services/serving-members.service';
+import { EmpService } from '@/services/emp-service';
+import { DialogModule } from 'primeng/dialog';
+import { ChatUserDto, DirectConversation, DirectMessageDto, DirectMessageSearchResult, GroupDto, GroupMessageDto } from '@/models/chat.model';
+import { Subject, of } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, switchMap, takeUntil } from 'rxjs/operators';
 
 @Component({
   selector: 'app-chat-container',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, ConfirmDialogModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, ConfirmDialogModule, DialogModule],
   providers: [ConfirmationService],
   template: `
     <div class="chat-container flex h-[calc(100vh-80px)] bg-surface-0 dark:bg-surface-900">
       <!-- Sidebar - Conversations List -->
-      <div class="w-80 border-r border-surface-200 dark:border-surface-700 bg-surface-0 dark:bg-surface-900 flex flex-col">
-        <!-- Header -->
-        <div class="p-4 border-b border-surface-200 dark:border-surface-700">
-          <h2 class="text-xl font-bold text-surface-900 dark:text-surface-0">Messages</h2>
-          <div class="mt-3 flex gap-2">
-            <button
-              (click)="onSelectUserChat()"
-              class="flex-1 px-3 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 dark:hover:bg-indigo-500 transition font-medium text-sm">
-              Direct
-            </button>
-            <button
-              (click)="showCreateGroupModal()"
-              class="flex-1 px-3 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 dark:hover:bg-emerald-500 transition font-medium text-sm">
-              New group
-            </button>
-          </div>
-          <!-- Tabs: Direct | Groups -->
-          <div class="flex mt-2 rounded-lg bg-surface-100 dark:bg-surface-800 p-0.5">
+      <div class="w-[300px] border-r border-surface-200 dark:border-surface-700 bg-surface-0 dark:bg-surface-900 flex flex-col">
+        <!-- Tabs: Direct | Groups -->
+        <div class="p-4">
+          <div class="flex rounded-full bg-surface-100 dark:bg-surface-800 p-1">
             <button
               type="button"
               (click)="setViewMode('direct')"
               [class.bg-white]="viewMode === 'direct'"
               [class.dark:!bg-surface-700]="viewMode === 'direct'"
-              [class.shadow]="viewMode === 'direct'"
+              [class.shadow-sm]="viewMode === 'direct'"
               [class.text-surface-900]="viewMode === 'direct'"
               [class.dark:!text-surface-0]="viewMode === 'direct'"
               [class.text-surface-600]="viewMode !== 'direct'"
-              class="flex-1 py-1.5 rounded-md text-sm font-medium transition">
+              class="flex-1 py-2 rounded-full text-sm font-semibold transition">
               Direct
             </button>
             <button
@@ -53,74 +43,199 @@ import { takeUntil } from 'rxjs/operators';
               (click)="setViewMode('groups')"
               [class.bg-white]="viewMode === 'groups'"
               [class.dark:!bg-surface-700]="viewMode === 'groups'"
-              [class.shadow]="viewMode === 'groups'"
+              [class.shadow-sm]="viewMode === 'groups'"
               [class.text-surface-900]="viewMode === 'groups'"
               [class.dark:!text-surface-0]="viewMode === 'groups'"
               [class.text-surface-600]="viewMode !== 'groups'"
-              class="flex-1 py-1.5 rounded-md text-sm font-medium transition">
+              class="flex-1 py-2 rounded-full text-sm font-semibold transition">
               Groups
             </button>
           </div>
         </div>
 
         <!-- Search (direct only) -->
-        <div *ngIf="viewMode === 'direct'" class="p-3 border-b border-surface-200 dark:border-surface-700">
-          <input
-            type="text"
-            placeholder="Search conversations..."
-            [(ngModel)]="searchText"
-            (ngModelChange)="filterDirectConversations()"
-            class="w-full px-3 py-2 border border-surface-300 dark:border-surface-600 rounded-lg bg-surface-0 dark:bg-surface-800 text-surface-900 dark:text-surface-0 placeholder:text-surface-500 dark:placeholder:text-surface-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400">
+        <div *ngIf="viewMode === 'direct'" class="px-4 pb-3">
+          <div class="relative">
+            <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-surface-400 text-sm"></i>
+            <input
+              type="text"
+              placeholder="Search conversations..."
+              [(ngModel)]="searchText"
+              (ngModelChange)="filterDirectConversations()"
+              class="w-full pl-9 pr-3 py-2.5 border border-surface-200 dark:border-surface-600 rounded-full bg-surface-50 dark:bg-surface-800 text-sm text-surface-900 dark:text-surface-0 placeholder:text-surface-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/30 focus:border-indigo-400 focus:bg-surface-0 dark:focus:bg-surface-800">
+          </div>
+        </div>
+
+        <!-- CONVERSATIONS / + New row (direct only) -->
+        <div *ngIf="viewMode === 'direct'" class="flex items-center justify-between px-4 pb-2">
+          <span class="text-[11px] font-bold tracking-[0.12em] text-surface-500 dark:text-surface-400">CONVERSATIONS</span>
+          <button
+            type="button"
+            (click)="onSelectUserChat()"
+            class="flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/15 hover:bg-indigo-100 dark:hover:bg-indigo-500/25 px-2.5 py-1 rounded-full transition">
+            <i class="pi pi-plus text-[10px]"></i>
+            <span>New</span>
+          </button>
+        </div>
+
+        <!-- GROUPS / + New row (groups only) -->
+        <div *ngIf="viewMode === 'groups'" class="flex items-center justify-between px-4 pb-2 pt-1">
+          <span class="text-[11px] font-bold tracking-[0.12em] text-surface-500 dark:text-surface-400">GROUPS</span>
+          <button
+            type="button"
+            (click)="showCreateGroupModal()"
+            class="flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/15 hover:bg-emerald-100 dark:hover:bg-emerald-500/25 px-2.5 py-1 rounded-full transition">
+            <i class="pi pi-plus text-[10px]"></i>
+            <span>New</span>
+          </button>
         </div>
 
         <!-- Direct conversations list -->
-        <div *ngIf="viewMode === 'direct'" class="flex-1 overflow-y-auto">
-          <div *ngIf="filteredDirectConversations.length === 0" class="p-4 text-center text-surface-500 dark:text-surface-400">
-            No conversations
+        <div *ngIf="viewMode === 'direct'" class="flex-1 overflow-y-auto px-2 pb-2">
+          <div *ngIf="filteredDirectConversations.length === 0 && searchResultUsers().length === 0 && messageSearchResults.length === 0 && !messageSearchLoading" class="p-4 text-center text-sm text-surface-500 dark:text-surface-400">
+            {{ searchText.trim() ? 'No matches for "' + searchText + '"' : 'No conversations' }}
           </div>
           <div *ngFor="let conv of filteredDirectConversations"
                (click)="selectConversation(conv)"
-               [class.bg-blue-50]="selectedOtherUserId === conv.otherUserId && !selectedGroupId"
-               [class.dark:!bg-surface-700]="selectedOtherUserId === conv.otherUserId && !selectedGroupId"
-               class="p-4 border-b border-surface-200 dark:border-surface-700 cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-800 transition">
-            <div class="flex justify-between items-start">
-              <h3 class="font-semibold text-surface-900 dark:text-surface-0 flex-1">{{ getDisplayName(conv.otherUserId) }}</h3>
-              <span *ngIf="conv.unreadCount > 0" class="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                {{ conv.unreadCount }}
-              </span>
+               [class.bg-indigo-50]="selectedOtherUserId === conv.otherUserId && !selectedGroupId"
+               [class.dark:!bg-indigo-500/10]="selectedOtherUserId === conv.otherUserId && !selectedGroupId"
+               [class.shadow-sm]="selectedOtherUserId === conv.otherUserId && !selectedGroupId"
+               [class.bg-indigo-50\/60]="getUnreadCount(conv) > 0 && selectedOtherUserId !== conv.otherUserId"
+               [class.dark:!bg-indigo-500\/5]="getUnreadCount(conv) > 0 && selectedOtherUserId !== conv.otherUserId"
+               class="relative flex items-start gap-3 px-3 py-2.5 mb-1 rounded-xl cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-800 transition">
+            <!-- Selected accent stripe -->
+            <span *ngIf="selectedOtherUserId === conv.otherUserId && !selectedGroupId"
+                  class="absolute left-0 top-2 bottom-2 w-[3px] rounded-full bg-indigo-500"></span>
+            <!-- Unread accent stripe (only when not currently selected) -->
+            <span *ngIf="getUnreadCount(conv) > 0 && (selectedOtherUserId !== conv.otherUserId || selectedGroupId)"
+                  class="absolute left-0 top-2 bottom-2 w-[3px] rounded-full bg-indigo-400"></span>
+            <!-- Avatar -->
+            <div class="relative shrink-0">
+              <div class="w-11 h-11 rounded-xl flex items-center justify-center text-white font-semibold text-sm"
+                   [style.background]="getAvatarColor(conv.otherUserId)">
+                {{ getInitials(getDisplayName(conv.otherUserId)) }}
+              </div>
+              <span *ngIf="isOnline(conv.otherUserId)"
+                    title="Online"
+                    class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-surface-0 dark:border-surface-900"></span>
             </div>
-            <p class="text-sm text-surface-600 dark:text-surface-300 truncate mt-1">{{ conv.lastMessage || 'No messages yet' }}</p>
-            <p class="text-xs text-surface-500 dark:text-surface-400 mt-1">{{ getConversationDate(conv.lastMessageDate) }}</p>
+            <!-- Body -->
+            <div class="flex-1 min-w-0">
+              <div class="flex items-baseline justify-between gap-2">
+                <div class="text-[13px] leading-tight text-surface-900 dark:text-surface-0 truncate"
+                     [class.font-bold]="getUnreadCount(conv) > 0"
+                     [class.font-semibold]="getUnreadCount(conv) === 0">{{ getRankAndName(conv.otherUserId) }}</div>
+                <span class="text-[11px] shrink-0"
+                      [class.text-indigo-600]="getUnreadCount(conv) > 0"
+                      [class.dark:!text-indigo-400]="getUnreadCount(conv) > 0"
+                      [class.font-semibold]="getUnreadCount(conv) > 0"
+                      [class.text-surface-500]="getUnreadCount(conv) === 0"
+                      [class.dark:!text-surface-400]="getUnreadCount(conv) === 0">{{ getConversationTime(conv.lastMessageDate) }}</span>
+              </div>
+              <p class="text-[10px] text-surface-500 dark:text-surface-400 truncate leading-tight">{{ getChatUserName(conv.otherUserId) }}</p>
+              <div class="flex items-center justify-between gap-2 mt-0.5">
+                <p class="text-xs truncate"
+                   [class.text-surface-900]="getUnreadCount(conv) > 0"
+                   [class.dark:!text-surface-0]="getUnreadCount(conv) > 0"
+                   [class.font-semibold]="getUnreadCount(conv) > 0"
+                   [class.text-surface-600]="getUnreadCount(conv) === 0"
+                   [class.dark:!text-surface-400]="getUnreadCount(conv) === 0">{{ conv.lastMessage || 'No messages yet' }}</p>
+                <span *ngIf="getUnreadCount(conv) > 0"
+                      class="shrink-0 bg-indigo-600 text-white text-[10px] font-bold rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center shadow-sm shadow-indigo-500/30">
+                  {{ getUnreadCount(conv) }}
+                </span>
+              </div>
+            </div>
           </div>
+
+          <!-- Other users matching the search (start a new chat) -->
+          <ng-container *ngIf="searchText.trim() && searchResultUsers().length > 0">
+            <div class="px-3 pt-3 pb-1 text-[10px] font-bold tracking-[0.12em] text-surface-500 dark:text-surface-400">START A NEW CHAT</div>
+            <div *ngFor="let u of searchResultUsers()"
+                 (click)="startChatWithUser(u)"
+                 class="flex items-start gap-3 px-3 py-2.5 mb-1 rounded-xl cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-800 transition">
+              <div class="relative shrink-0">
+                <div class="w-11 h-11 rounded-xl flex items-center justify-center text-white font-semibold text-sm"
+                     [style.background]="getAvatarColor(u.userId)">
+                  {{ getInitials(getRankAndName(u.userId)) }}
+                </div>
+                <span *ngIf="isOnline(u.userId)"
+                      title="Online"
+                      class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-surface-0 dark:border-surface-900"></span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="font-semibold text-[13px] leading-tight text-surface-900 dark:text-surface-0 truncate">{{ getRankAndName(u.userId) }}</div>
+                <div class="text-[10px] text-surface-500 dark:text-surface-400 truncate leading-tight mt-0.5">{{ u.userName || u.userId }}</div>
+              </div>
+              <i class="pi pi-plus text-indigo-500 text-xs mt-3"></i>
+            </div>
+          </ng-container>
+
+          <!-- Backend message-content search results -->
+          <ng-container *ngIf="searchText.trim()">
+            <div *ngIf="messageSearchLoading" class="px-3 pt-3 pb-1 text-[10px] font-bold tracking-[0.12em] text-surface-500 dark:text-surface-400 flex items-center gap-2">
+              <i class="pi pi-spin pi-spinner text-[10px]"></i>
+              SEARCHING MESSAGES...
+            </div>
+            <ng-container *ngIf="!messageSearchLoading && messageSearchResults.length > 0">
+              <div class="px-3 pt-3 pb-1 text-[10px] font-bold tracking-[0.12em] text-surface-500 dark:text-surface-400">MESSAGES</div>
+              <div *ngFor="let r of messageSearchResults"
+                   (click)="openSearchResult(r)"
+                   class="flex items-start gap-3 px-3 py-2.5 mb-1 rounded-xl cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-800 transition">
+                <div class="w-11 h-11 rounded-xl flex items-center justify-center text-white font-semibold text-sm shrink-0"
+                     [style.background]="getAvatarColor(r.otherUserId)">
+                  {{ getInitials(getRankAndName(r.otherUserId)) }}
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-baseline justify-between gap-2">
+                    <div class="font-semibold text-[13px] leading-tight text-surface-900 dark:text-surface-0 truncate">{{ getRankAndName(r.otherUserId) }}</div>
+                    <span class="text-[11px] text-surface-500 dark:text-surface-400 shrink-0">{{ getConversationTime(r.sentTime) }}</span>
+                  </div>
+                  <p class="text-xs text-surface-600 dark:text-surface-400 truncate mt-0.5">
+                    <span class="text-surface-500 dark:text-surface-500">{{ r.senderUserId === currentUserId ? 'You: ' : '' }}</span>{{ r.messageContent }}
+                  </p>
+                </div>
+              </div>
+            </ng-container>
+          </ng-container>
         </div>
 
         <!-- Groups list -->
-        <div *ngIf="viewMode === 'groups'" class="flex-1 overflow-y-auto">
-          <div *ngIf="loadingGroups" class="p-4 text-center text-surface-500 dark:text-surface-400">Loading groups...</div>
-          <div *ngIf="!loadingGroups && userGroups.length === 0" class="p-4 text-center text-surface-500 dark:text-surface-400">
-            No groups. Create one with "New group".
+        <div *ngIf="viewMode === 'groups'" class="flex-1 overflow-y-auto px-2 pb-2">
+          <div *ngIf="loadingGroups" class="p-4 text-center text-sm text-surface-500 dark:text-surface-400">Loading groups...</div>
+          <div *ngIf="!loadingGroups && userGroups.length === 0" class="p-4 text-center text-sm text-surface-500 dark:text-surface-400">
+            No groups. Create one with "New".
           </div>
           <div *ngFor="let g of userGroups"
                (click)="selectGroup(g)"
                [class.bg-emerald-50]="selectedGroupId === g.groupId"
-               [class.dark:!bg-surface-700]="selectedGroupId === g.groupId"
-               class="p-4 border-b border-surface-200 dark:border-surface-700 cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-800 transition">
-            <div class="flex justify-between items-start">
-              <h3 class="font-semibold text-surface-900 dark:text-surface-0 flex-1">{{ g.groupName }}</h3>
-              <span class="text-xs text-surface-500 dark:text-surface-400">{{ g.memberCount }} members</span>
+               [class.dark:!bg-emerald-500/10]="selectedGroupId === g.groupId"
+               [class.shadow-sm]="selectedGroupId === g.groupId"
+               class="relative flex items-start gap-3 px-3 py-2.5 mb-1 rounded-xl cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-800 transition">
+            <span *ngIf="selectedGroupId === g.groupId"
+                  class="absolute left-0 top-2 bottom-2 w-[3px] rounded-full bg-emerald-500"></span>
+            <div class="w-11 h-11 rounded-xl bg-emerald-500 flex items-center justify-center text-white shrink-0">
+              <i class="pi pi-users text-base"></i>
             </div>
-            <p class="text-sm text-surface-600 dark:text-surface-300 truncate mt-1">{{ g.lastMessagePreview || 'No messages yet' }}</p>
-            <p class="text-xs text-surface-500 dark:text-surface-400 mt-1">{{ g.lastMessageAt ? getConversationDate(g.lastMessageAt) : '—' }}</p>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-baseline justify-between gap-2">
+                <div class="font-semibold text-[13px] leading-tight text-surface-900 dark:text-surface-0 truncate">{{ g.groupName }}</div>
+                <span class="text-[11px] text-surface-500 dark:text-surface-400 shrink-0">{{ g.lastMessageAt ? getConversationTime(g.lastMessageAt) : '' }}</span>
+              </div>
+              <div class="flex items-center justify-between gap-2 mt-0.5">
+                <p class="text-xs text-surface-600 dark:text-surface-400 truncate">{{ g.lastMessagePreview || 'No messages yet' }}</p>
+                <span class="text-[10px] text-surface-500 dark:text-surface-400 shrink-0">{{ g.memberCount }}</span>
+              </div>
+            </div>
           </div>
         </div>
 
         <!-- Connection Status -->
-        <div class="p-3 border-t border-surface-200 dark:border-surface-700 text-xs text-center text-surface-700 dark:text-surface-300"
-             [class.text-green-600]="isConnected"
-             [class.dark:!text-green-400]="isConnected"
-             [class.text-red-600]="!isConnected"
-             [class.dark:!text-red-400]="!isConnected">
-          {{ isConnected ? '✓ Connected' : '✗ Disconnected' }}
+        <div class="px-4 py-3 border-t border-surface-200 dark:border-surface-700 flex items-center gap-2 text-xs">
+          <span class="w-2 h-2 rounded-full"
+                [class.bg-emerald-500]="isConnected"
+                [class.bg-red-500]="!isConnected"></span>
+          <span class="text-surface-700 dark:text-surface-300 font-medium">{{ isConnected ? 'Connected' : 'Disconnected' }}</span>
         </div>
       </div>
 
@@ -128,26 +243,57 @@ import { takeUntil } from 'rxjs/operators';
       <div class="flex-1 flex flex-col bg-surface-0 dark:bg-surface-900">
         <ng-container *ngIf="selectedOtherUserId || selectedGroupId; else noSelection">
           <!-- Direct chat header -->
-          <div *ngIf="selectedOtherUserId && !selectedGroupId" class="px-5 py-4 border-b border-surface-200 dark:border-surface-700 bg-surface-0 dark:bg-surface-900 shadow-sm">
-            <div class="flex justify-between items-center">
-              <div>
-                <h2 class="text-lg font-semibold text-surface-900 dark:text-surface-0">{{ getDisplayName(selectedOtherUserId!) }}</h2>
-                <p class="text-xs text-surface-500 dark:text-surface-400 mt-0.5">Direct message</p>
+          <div *ngIf="selectedOtherUserId && !selectedGroupId" class="px-5 py-3.5 border-b border-surface-200 dark:border-surface-700 bg-surface-0 dark:bg-surface-900">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3 min-w-0">
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white font-semibold text-sm shrink-0"
+                     [style.background]="getAvatarColor(selectedOtherUserId!)">
+                  {{ getInitials(getRankAndName(selectedOtherUserId!)) }}
+                </div>
+                <div class="min-w-0">
+                  <div class="text-sm font-semibold leading-tight text-surface-900 dark:text-surface-0 truncate">{{ getRankAndName(selectedOtherUserId!) }}</div>
+                  <div class="flex items-center gap-2 mt-0.5">
+                    <span class="text-[10px] text-surface-500 dark:text-surface-400 truncate">{{ getChatUserName(selectedOtherUserId!) }}</span>
+                    <span *ngIf="isOnline(selectedOtherUserId!)" class="flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400">
+                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                      <span class="font-medium">Active now</span>
+                    </span>
+                    <span *ngIf="!isOnline(selectedOtherUserId!)" class="text-[11px] text-surface-400">Offline</span>
+                  </div>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <button type="button"
+                        (click)="openProfileInfo(selectedOtherUserId)"
+                        class="w-9 h-9 rounded-full flex items-center justify-center text-surface-600 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-800 transition"
+                        title="View user info">
+                  <i class="pi pi-info-circle"></i>
+                </button>
               </div>
             </div>
           </div>
           <!-- Group chat header -->
-          <div *ngIf="selectedGroupId && selectedGroup" class="px-5 py-4 border-b border-surface-200 dark:border-surface-700 bg-surface-0 dark:bg-surface-900 shadow-sm">
-            <div class="flex justify-between items-center">
-              <div>
-                <h2 class="text-lg font-semibold text-surface-900 dark:text-surface-0">{{ selectedGroup.groupName }}</h2>
-                <p class="text-xs text-surface-500 dark:text-surface-400 mt-0.5">{{ selectedGroup.memberCount }} members · {{ selectedGroup.myRole }}</p>
+          <div *ngIf="selectedGroupId && selectedGroup" class="px-5 py-3.5 border-b border-surface-200 dark:border-surface-700 bg-surface-0 dark:bg-surface-900">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3 min-w-0">
+                <div class="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center text-white shrink-0">
+                  <i class="pi pi-users"></i>
+                </div>
+                <div class="min-w-0">
+                  <div class="text-sm font-semibold leading-tight text-surface-900 dark:text-surface-0 truncate">{{ selectedGroup.groupName }}</div>
+                  <p class="text-xs text-surface-500 dark:text-surface-400 mt-0.5">{{ selectedGroup.memberCount }} members · {{ selectedGroup.myRole }}</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <button type="button" class="w-9 h-9 rounded-full flex items-center justify-center text-surface-600 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-800 transition" title="Group info">
+                  <i class="pi pi-info-circle"></i>
+                </button>
               </div>
             </div>
           </div>
 
           <!-- Direct messages area -->
-          <div *ngIf="selectedOtherUserId && !selectedGroupId" class="flex-1 overflow-y-auto px-4 py-3 flex flex-col messages-area messages-area-dark" #messagesContainer
+          <div *ngIf="selectedOtherUserId && !selectedGroupId" class="flex-1 overflow-y-auto px-6 py-4 flex flex-col messages-area messages-area-dark" #messagesContainer
                (scroll)="onMessagesScroll($event)">
             <div *ngIf="hasMoreOlder && !loadingOlder" class="flex justify-center py-3">
               <button type="button" (click)="loadOlderMessages()"
@@ -158,23 +304,23 @@ import { takeUntil } from 'rxjs/operators';
             <div *ngIf="loadingOlder" class="text-center py-3 text-surface-500 dark:text-surface-400 text-sm">Loading...</div>
             <p *ngIf="!messagesLoading && messages.length === 0" class="text-sm text-surface-500 dark:text-surface-400 text-center py-8">No messages yet. Start the conversation.</p>
             <p *ngIf="messagesLoading && messages.length === 0" class="text-sm text-surface-500 dark:text-surface-400 text-center py-8">Loading...</p>
-            <ng-container *ngFor="let message of messages">
+            <ng-container *ngFor="let message of messages; let i = index">
+              <!-- Date separator -->
+              <div *ngIf="shouldShowDateSeparator(messages, i)" class="flex items-center gap-3 my-3">
+                <div class="flex-1 h-px bg-surface-200 dark:bg-surface-700"></div>
+                <span class="text-[11px] font-semibold tracking-[0.18em] text-surface-500 dark:text-surface-400 uppercase">{{ getDateLabel(message.sentTime) }}</span>
+                <div class="flex-1 h-px bg-surface-200 dark:bg-surface-700"></div>
+              </div>
+
               <div *ngIf="!message.isDeleted"
+                   [attr.data-message-id]="message.messageId"
                    [class.justify-end]="message.senderUserId === currentUserId"
                    [class.justify-start]="message.senderUserId !== currentUserId"
-                   class="flex mb-3 items-end gap-1.5">
-                <!-- Receiver: small simple circle icon (user id) -->
-                <div *ngIf="message.senderUserId !== currentUserId"
-                     class="w-4 h-4 rounded-full bg-surface-300 dark:bg-surface-500 flex-shrink-0 flex items-center justify-center"
-                     title="{{ message.senderUserId }}">
-                  <span class="text-[7px] font-medium text-surface-600 dark:text-surface-200 leading-none">{{ getShortUserId(message.senderUserId) }}</span>
-                </div>
+                   class="chat-message-row flex mb-2 items-end gap-2 rounded-xl px-1 py-0.5 -mx-1 transition-colors">
                 <div [class.items-end]="message.senderUserId === currentUserId"
                      [class.items-start]="message.senderUserId !== currentUserId"
-                     class="flex flex-col max-w-[75%] min-w-0"
-                     [class.max-w-[320px]]="message.senderUserId !== currentUserId">
+                     class="flex flex-col max-w-[70%] min-w-0">
                   <div
-                    [class.bg-indigo-600]="message.senderUserId === currentUserId"
                     [class.text-white]="message.senderUserId === currentUserId"
                     [class.rounded-br-md]="message.senderUserId === currentUserId"
                     [class.rounded-bl-md]="message.senderUserId !== currentUserId"
@@ -182,28 +328,27 @@ import { takeUntil } from 'rxjs/operators';
                     [class.dark:!bg-surface-800]="message.senderUserId !== currentUserId"
                     [class.text-surface-900]="message.senderUserId !== currentUserId"
                     [class.dark:!text-surface-0]="message.senderUserId !== currentUserId"
-                    [class.border]="message.senderUserId !== currentUserId"
-                    [class.border-surface-200]="message.senderUserId !== currentUserId"
-                    [class.dark:!border-surface-600]="message.senderUserId !== currentUserId"
-                    [class.shadow-sm]="message.senderUserId !== currentUserId"
-                    class="px-4 py-2.5 rounded-2xl break-words shadow-md dark:shadow-none">
-                    <span *ngIf="message.senderUserId !== currentUserId && message.senderName" class="block text-xs font-medium text-surface-500 dark:text-surface-400 mb-1">{{ message.senderName }}</span>
-                    <p class="text-[15px] leading-snug break-words max-w-full">{{ message.messageContent }}</p>
+                    [class.shadow]="message.senderUserId !== currentUserId"
+                    [style.background]="message.senderUserId === currentUserId ? 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)' : null"
+                    class="px-4 py-2.5 rounded-2xl break-words">
+                    <span *ngIf="message.senderUserId !== currentUserId && message.senderName" class="block text-xs font-semibold text-indigo-500 dark:text-indigo-300 mb-0.5">{{ message.senderName }}</span>
+                    <p class="text-[14px] leading-snug break-words max-w-full">{{ message.messageContent }}</p>
                   </div>
-                  <div class="flex items-center gap-2 mt-1 px-1 flex-wrap"
+                  <div class="flex items-center gap-1.5 mt-1 px-1"
                        [class.flex-row-reverse]="message.senderUserId === currentUserId">
                     <span class="text-[11px] text-surface-500 dark:text-surface-400">{{ message.sentTime | date:'shortTime' }}</span>
-                    <span *ngIf="message.senderUserId === currentUserId" class="text-[11px]"
-                          [class.text-indigo-500]="message.isSeen"
-                          [class.dark:!text-indigo-400]="message.isSeen"
-                          [class.text-surface-500]="!message.isSeen"
-                          [class.dark:!text-surface-400]="!message.isSeen">
-                      {{ message.isSeen ? 'Seen' : 'Unseen' }}
-                    </span>
+                    <i *ngIf="message.senderUserId === currentUserId"
+                       class="pi text-[12px]"
+                       [class.pi-check-circle]="message.isSeen"
+                       [class.pi-check]="!message.isSeen"
+                       [class.text-indigo-500]="message.isSeen"
+                       [class.dark:!text-indigo-400]="message.isSeen"
+                       [class.text-surface-400]="!message.isSeen"
+                       [title]="message.isSeen ? 'Seen' : 'Sent'"></i>
                     <button *ngIf="message.senderUserId === currentUserId && !message.isSeen"
                             type="button"
                             (click)="deleteMessage(message.messageId)"
-                            class="text-[11px] text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:underline">
+                            class="text-[11px] text-red-500 dark:text-red-400 hover:underline">
                       Delete
                     </button>
                   </div>
@@ -217,26 +362,34 @@ import { takeUntil } from 'rxjs/operators';
           </div>
 
           <!-- Direct message input -->
-          <div *ngIf="selectedOtherUserId && !selectedGroupId" class="p-4 border-t border-surface-200 dark:border-surface-700 bg-surface-0 dark:bg-surface-900">
-            <form [formGroup]="messageForm" (ngSubmit)="sendMessage()" class="flex gap-3">
+          <div *ngIf="selectedOtherUserId && !selectedGroupId" class="px-5 py-4 border-t border-surface-200 dark:border-surface-700 bg-surface-0 dark:bg-surface-900">
+            <form [formGroup]="messageForm" (ngSubmit)="sendMessage()" class="flex items-center gap-3">
+              <button type="button"
+                      class="w-10 h-10 rounded-full flex items-center justify-center text-surface-500 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-800 transition shrink-0"
+                      title="Attach">
+                <i class="pi pi-paperclip"></i>
+              </button>
               <input
                 type="text"
                 formControlName="messageContent"
                 placeholder="Type a message..."
                 (keyup.enter)="sendMessage()"
                 [disabled]="!isConnected || isSending"
-                class="flex-1 px-4 py-2.5 border border-surface-200 dark:border-surface-600 rounded-xl bg-surface-0 dark:bg-surface-800 text-surface-900 dark:text-surface-0 placeholder:text-surface-500 dark:placeholder:text-surface-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent disabled:opacity-60 disabled:cursor-not-allowed">
+                class="flex-1 px-5 py-3 border border-surface-200 dark:border-surface-600 rounded-full bg-surface-50 dark:bg-surface-800 text-sm text-surface-900 dark:text-surface-0 placeholder:text-surface-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/30 focus:border-indigo-400 focus:bg-surface-0 dark:focus:bg-surface-800 disabled:opacity-60 disabled:cursor-not-allowed">
               <button
                 type="submit"
                 [disabled]="!isConnected || isSending || !messageForm.valid"
-                class="px-5 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 dark:hover:bg-indigo-500 disabled:bg-surface-300 dark:disabled:bg-surface-600 disabled:cursor-not-allowed transition font-medium">
-                {{ isSending ? 'Sending...' : 'Send' }}
+                style="background: linear-gradient(135deg, #6366f1 0%, #818cf8 100%);"
+                class="w-11 h-11 rounded-full text-white shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center shrink-0"
+                title="Send">
+                <i class="pi pi-send text-sm" *ngIf="!isSending"></i>
+                <i class="pi pi-spin pi-spinner text-sm" *ngIf="isSending"></i>
               </button>
             </form>
           </div>
 
           <!-- Group messages area -->
-          <div *ngIf="selectedGroupId" class="flex-1 overflow-y-auto px-4 py-3 flex flex-col messages-area messages-area-dark" #groupMessagesContainer
+          <div *ngIf="selectedGroupId" class="flex-1 overflow-y-auto px-6 py-4 flex flex-col messages-area messages-area-dark" #groupMessagesContainer
                (scroll)="onGroupMessagesScroll($event)">
             <div *ngIf="groupHasMoreOlder && !groupLoadingOlder" class="flex justify-center py-3">
               <button type="button" (click)="loadOlderGroupMessages()"
@@ -247,22 +400,22 @@ import { takeUntil } from 'rxjs/operators';
             <div *ngIf="groupLoadingOlder" class="text-center py-3 text-surface-500 dark:text-surface-400 text-sm">Loading...</div>
             <p *ngIf="!groupMessagesLoading && groupMessages.length === 0" class="text-sm text-surface-500 dark:text-surface-400 text-center py-8">No messages yet. Start the conversation.</p>
             <p *ngIf="groupMessagesLoading && groupMessages.length === 0" class="text-sm text-surface-500 dark:text-surface-400 text-center py-8">Loading...</p>
-            <ng-container *ngFor="let message of groupMessages">
+            <ng-container *ngFor="let message of groupMessages; let i = index">
+              <div *ngIf="shouldShowGroupDateSeparator(groupMessages, i)" class="flex items-center gap-3 my-3">
+                <div class="flex-1 h-px bg-surface-200 dark:bg-surface-700"></div>
+                <span class="text-[11px] font-semibold tracking-[0.18em] text-surface-500 dark:text-surface-400 uppercase">{{ getDateLabel(message.sentTime) }}</span>
+                <div class="flex-1 h-px bg-surface-200 dark:bg-surface-700"></div>
+              </div>
+
               <div *ngIf="!message.isDeleted"
+                   [attr.data-message-id]="message.messageId"
                    [class.justify-end]="message.senderUserId === currentUserId"
                    [class.justify-start]="message.senderUserId !== currentUserId"
-                   class="flex mb-3 items-end gap-1.5">
-                <div *ngIf="message.senderUserId !== currentUserId"
-                     class="w-4 h-4 rounded-full bg-surface-300 dark:bg-surface-500 flex-shrink-0 flex items-center justify-center"
-                     [title]="message.senderUserId">
-                  <span class="text-[7px] font-medium text-surface-600 dark:text-surface-200 leading-none">{{ getShortUserId(message.senderUserId) }}</span>
-                </div>
+                   class="chat-message-row flex mb-2 items-end gap-2 rounded-xl px-1 py-0.5 -mx-1 transition-colors">
                 <div [class.items-end]="message.senderUserId === currentUserId"
                      [class.items-start]="message.senderUserId !== currentUserId"
-                     class="flex flex-col max-w-[75%] min-w-0"
-                     [class.max-w-[320px]]="message.senderUserId !== currentUserId">
+                     class="flex flex-col max-w-[70%] min-w-0">
                   <div
-                    [class.bg-emerald-600]="message.senderUserId === currentUserId"
                     [class.text-white]="message.senderUserId === currentUserId"
                     [class.rounded-br-md]="message.senderUserId === currentUserId"
                     [class.rounded-bl-md]="message.senderUserId !== currentUserId"
@@ -270,28 +423,27 @@ import { takeUntil } from 'rxjs/operators';
                     [class.dark:!bg-surface-800]="message.senderUserId !== currentUserId"
                     [class.text-surface-900]="message.senderUserId !== currentUserId"
                     [class.dark:!text-surface-0]="message.senderUserId !== currentUserId"
-                    [class.border]="message.senderUserId !== currentUserId"
-                    [class.border-surface-200]="message.senderUserId !== currentUserId"
-                    [class.dark:!border-surface-600]="message.senderUserId !== currentUserId"
-                    [class.shadow-sm]="message.senderUserId !== currentUserId"
-                    class="px-4 py-2.5 rounded-2xl break-words shadow-md dark:shadow-none">
-                    <span *ngIf="message.senderUserId !== currentUserId && message.senderUserName" class="block text-xs font-medium text-surface-500 dark:text-surface-400 mb-1">{{ message.senderUserName }}</span>
-                    <p class="text-[15px] leading-snug break-words max-w-full">{{ message.messageContent }}</p>
+                    [class.shadow]="message.senderUserId !== currentUserId"
+                    [style.background]="message.senderUserId === currentUserId ? 'linear-gradient(135deg, #059669 0%, #34d399 100%)' : null"
+                    class="px-4 py-2.5 rounded-2xl break-words">
+                    <span *ngIf="message.senderUserId !== currentUserId && message.senderUserName" class="block text-xs font-semibold text-emerald-600 dark:text-emerald-300 mb-0.5">{{ message.senderUserName }}</span>
+                    <p class="text-[14px] leading-snug break-words max-w-full">{{ message.messageContent }}</p>
                   </div>
-                  <div class="flex items-center gap-2 mt-1 px-1 flex-wrap"
+                  <div class="flex items-center gap-1.5 mt-1 px-1"
                        [class.flex-row-reverse]="message.senderUserId === currentUserId">
                     <span class="text-[11px] text-surface-500 dark:text-surface-400">{{ message.sentTime | date:'shortTime' }}</span>
-                    <span *ngIf="message.senderUserId === currentUserId" class="text-[11px]"
-                          [class.text-emerald-500]="message.isSeen"
-                          [class.dark:!text-emerald-400]="message.isSeen"
-                          [class.text-surface-500]="!message.isSeen"
-                          [class.dark:!text-surface-400]="!message.isSeen">
-                      {{ message.isSeen ? 'Seen' : 'Unseen' }}
-                    </span>
+                    <i *ngIf="message.senderUserId === currentUserId"
+                       class="pi text-[12px]"
+                       [class.pi-check-circle]="message.isSeen"
+                       [class.pi-check]="!message.isSeen"
+                       [class.text-emerald-500]="message.isSeen"
+                       [class.dark:!text-emerald-400]="message.isSeen"
+                       [class.text-surface-400]="!message.isSeen"
+                       [title]="message.isSeen ? 'Seen' : 'Sent'"></i>
                     <button *ngIf="message.senderUserId === currentUserId && !message.isSeen"
                             type="button"
                             (click)="deleteGroupMessage(message.messageId)"
-                            class="text-[11px] text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:underline">
+                            class="text-[11px] text-red-500 dark:text-red-400 hover:underline">
                       Delete
                     </button>
                   </div>
@@ -304,20 +456,28 @@ import { takeUntil } from 'rxjs/operators';
           </div>
 
           <!-- Group message input -->
-          <div *ngIf="selectedGroupId" class="p-4 border-t border-surface-200 dark:border-surface-700 bg-surface-0 dark:bg-surface-900">
-            <form [formGroup]="groupMessageForm" (ngSubmit)="sendGroupMessage()" class="flex gap-3">
+          <div *ngIf="selectedGroupId" class="px-5 py-4 border-t border-surface-200 dark:border-surface-700 bg-surface-0 dark:bg-surface-900">
+            <form [formGroup]="groupMessageForm" (ngSubmit)="sendGroupMessage()" class="flex items-center gap-3">
+              <button type="button"
+                      class="w-10 h-10 rounded-full flex items-center justify-center text-surface-500 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-800 transition shrink-0"
+                      title="Attach">
+                <i class="pi pi-paperclip"></i>
+              </button>
               <input
                 type="text"
                 formControlName="messageContent"
                 placeholder="Type a message to the group..."
                 (keyup.enter)="sendGroupMessage()"
                 [disabled]="!isConnected || isSendingGroup"
-                class="flex-1 px-4 py-2.5 border border-surface-200 dark:border-surface-600 rounded-xl bg-surface-0 dark:bg-surface-800 text-surface-900 dark:text-surface-0 placeholder:text-surface-500 dark:placeholder:text-surface-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent disabled:opacity-60 disabled:cursor-not-allowed">
+                class="flex-1 px-5 py-3 border border-surface-200 dark:border-surface-600 rounded-full bg-surface-50 dark:bg-surface-800 text-sm text-surface-900 dark:text-surface-0 placeholder:text-surface-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/30 focus:border-emerald-400 focus:bg-surface-0 dark:focus:bg-surface-800 disabled:opacity-60 disabled:cursor-not-allowed">
               <button
                 type="submit"
                 [disabled]="!isConnected || isSendingGroup || !groupMessageForm.valid"
-                class="px-5 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 dark:hover:bg-emerald-500 disabled:bg-surface-300 dark:disabled:bg-surface-600 disabled:cursor-not-allowed transition font-medium">
-                {{ isSendingGroup ? 'Sending...' : 'Send' }}
+                style="background: linear-gradient(135deg, #059669 0%, #34d399 100%);"
+                class="w-11 h-11 rounded-full text-white shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center shrink-0"
+                title="Send">
+                <i class="pi pi-send text-sm" *ngIf="!isSendingGroup"></i>
+                <i class="pi pi-spin pi-spinner text-sm" *ngIf="isSendingGroup"></i>
               </button>
             </form>
           </div>
@@ -325,9 +485,13 @@ import { takeUntil } from 'rxjs/operators';
 
         <!-- No Selection State -->
         <ng-template #noSelection>
-          <div class="flex-1 flex items-center justify-center">
-            <div class="text-center">
-              <p class="text-surface-500 dark:text-surface-400 text-lg">Select a conversation to start chatting</p>
+          <div class="flex-1 flex items-center justify-center messages-area messages-area-dark">
+            <div class="text-center px-6">
+              <div class="w-16 h-16 mx-auto rounded-2xl bg-indigo-100 dark:bg-indigo-500/15 flex items-center justify-center text-indigo-500">
+                <i class="pi pi-comments text-2xl"></i>
+              </div>
+              <p class="mt-3 text-surface-700 dark:text-surface-200 font-semibold">Your messages</p>
+              <p class="mt-1 text-sm text-surface-500 dark:text-surface-400">Select a conversation to start chatting.</p>
             </div>
           </div>
         </ng-template>
@@ -335,23 +499,45 @@ import { takeUntil } from 'rxjs/operators';
 
       <!-- Select User to Chat Modal -->
       <div *ngIf="showSelectUserModal" class="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50">
-        <div class="bg-surface-0 dark:bg-surface-900 rounded-lg shadow-xl border border-surface-200 dark:border-surface-700 p-6 w-full max-w-md mx-4 max-h-[80vh] flex flex-col">
-          <h3 class="text-lg font-bold text-surface-900 dark:text-surface-0 mb-4">Chat with a user</h3>
+        <div class="bg-surface-0 dark:bg-surface-900 rounded-2xl shadow-xl border border-surface-200 dark:border-surface-700 p-6 w-full max-w-md mx-4 max-h-[80vh] flex flex-col">
+          <div class="font-bold text-lg text-surface-900 dark:text-surface-0 mb-1">Chat with a user</div>
           <p class="text-sm text-surface-500 dark:text-surface-400 mb-3">Select a user to start a private conversation.</p>
+          <div class="relative mb-3">
+            <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-surface-400 text-sm"></i>
+            <input
+              type="text"
+              [(ngModel)]="chatUsersSearch"
+              placeholder="Search by name, rank or username..."
+              class="w-full pl-9 pr-3 py-2.5 border border-surface-200 dark:border-surface-600 rounded-full bg-surface-50 dark:bg-surface-800 text-sm text-surface-900 dark:text-surface-0 placeholder:text-surface-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/30 focus:border-indigo-400 focus:bg-surface-0 dark:focus:bg-surface-800">
+          </div>
           <div *ngIf="loadingChatUsers" class="flex justify-center py-8">
             <span class="text-surface-500 dark:text-surface-400">Loading users...</span>
           </div>
           <div *ngIf="!loadingChatUsers && chatUsers.length === 0" class="py-6 text-center text-surface-500 dark:text-surface-400">
             No other users found.
           </div>
-          <div *ngIf="!loadingChatUsers && chatUsers.length > 0" class="flex-1 overflow-y-auto space-y-1">
+          <div *ngIf="!loadingChatUsers && chatUsers.length > 0 && filteredChatUsers().length === 0" class="py-6 text-center text-surface-500 dark:text-surface-400 text-sm">
+            No users match "{{ chatUsersSearch }}".
+          </div>
+          <div *ngIf="!loadingChatUsers && filteredChatUsers().length > 0" class="flex-1 overflow-y-auto pr-1 space-y-1">
             <button
-              *ngFor="let user of chatUsers"
+              *ngFor="let user of filteredChatUsers()"
               (click)="startChatWithUser(user)"
               type="button"
-              class="w-full text-left px-4 py-3 rounded-lg border border-surface-200 dark:border-surface-600 hover:bg-surface-100 dark:hover:bg-surface-800 transition">
-              <span class="font-medium text-surface-900 dark:text-surface-0">{{ user.userName || user.email }}</span>
-              <span *ngIf="user.email && user.userName" class="text-surface-500 dark:text-surface-400 text-sm block">{{ user.email }}</span>
+              class="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl border border-surface-200 dark:border-surface-600 hover:bg-surface-100 dark:hover:bg-surface-800 transition">
+              <div class="relative shrink-0">
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white font-semibold text-sm"
+                     [style.background]="getAvatarColor(user.userId)">
+                  {{ getInitials(getRankAndName(user.userId)) }}
+                </div>
+                <span *ngIf="isOnline(user.userId)"
+                      title="Online"
+                      class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-surface-0 dark:border-surface-900"></span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="font-semibold text-[13px] leading-tight text-surface-900 dark:text-surface-0 truncate">{{ getRankAndName(user.userId) }}</div>
+                <div class="text-[10px] text-surface-500 dark:text-surface-400 truncate leading-tight mt-0.5">{{ user.userName || user.userId }}</div>
+              </div>
             </button>
           </div>
           <div class="mt-4 pt-4 border-t border-surface-200 dark:border-surface-700">
@@ -407,6 +593,68 @@ import { takeUntil } from 'rxjs/operators';
           </div>
         </div>
       </div>
+      <!-- User profile info modal (info icon in chat header) -->
+      <p-dialog
+        [(visible)]="showProfileInfoModal"
+        [modal]="true"
+        [draggable]="false"
+        [resizable]="false"
+        [dismissableMask]="true"
+        [closeOnEscape]="true"
+        [style]="{ width: '92vw', maxWidth: '420px', maxHeight: '90vh' }"
+        [contentStyle]="{ padding: '0', maxHeight: '75vh', overflowY: 'auto' }"
+        styleClass="chat-profile-info-dialog">
+        <ng-template pTemplate="header">
+          <div class="text-base font-bold text-surface-900 dark:text-surface-0">User info</div>
+        </ng-template>
+        <ng-container *ngIf="getUserProfile(profileInfoUserId) as p; else loadingProfile">
+          <div class="relative px-5 pt-5 pb-4 bg-gradient-to-br from-indigo-500 to-indigo-400 text-white text-center">
+            <ng-container *ngIf="p.profileImageUrl; else letterAvatar">
+              <img [src]="p.profileImageUrl" alt="Profile"
+                   class="w-16 h-16 rounded-full object-cover mx-auto ring-2 ring-white/40 shadow" />
+            </ng-container>
+            <ng-template #letterAvatar>
+              <div class="w-16 h-16 rounded-full mx-auto ring-2 ring-white/40 shadow flex items-center justify-center text-xl font-bold bg-white/15">
+                {{ getInitials(getRankAndName(profileInfoUserId!)) }}
+              </div>
+            </ng-template>
+            <div class="mt-2 text-base font-semibold leading-tight">{{ p.rank || '' }} {{ p.fullName || getChatUserName(profileInfoUserId!) }}</div>
+            <div class="text-[11px] opacity-90 leading-tight">{{ getChatUserName(profileInfoUserId!) }}</div>
+          </div>
+          <div class="px-5 py-3 bg-surface-0 dark:bg-surface-900">
+            <div class="flex justify-between items-center text-[13px] py-1.5">
+              <span class="text-surface-500 dark:text-surface-400">Rank</span>
+              <span class="font-semibold text-surface-900 dark:text-surface-0 text-right">{{ p.rank || '—' }}</span>
+            </div>
+            <div class="border-t border-surface-200 dark:border-surface-700"></div>
+            <div class="flex justify-between items-center text-[13px] py-1.5">
+              <span class="text-surface-500 dark:text-surface-400">Name</span>
+              <span class="font-semibold text-surface-900 dark:text-surface-0 text-right">{{ p.fullName || '—' }}</span>
+            </div>
+            <div class="border-t border-surface-200 dark:border-surface-700"></div>
+            <div class="flex justify-between items-center text-[13px] py-1.5">
+              <span class="text-surface-500 dark:text-surface-400">Service ID</span>
+              <span class="font-mono font-semibold text-surface-900 dark:text-surface-0 text-right">{{ p.serviceId || '—' }}</span>
+            </div>
+            <div class="border-t border-surface-200 dark:border-surface-700"></div>
+            <div class="flex justify-between items-center text-[13px] py-1.5">
+              <span class="text-surface-500 dark:text-surface-400">RAB ID</span>
+              <span class="font-mono font-semibold text-surface-900 dark:text-surface-0 text-right">{{ p.rabId || '—' }}</span>
+            </div>
+            <div class="border-t border-surface-200 dark:border-surface-700"></div>
+            <div class="flex justify-between items-center text-[13px] py-1.5">
+              <span class="text-surface-500 dark:text-surface-400">Present Unit</span>
+              <span class="font-semibold text-surface-900 dark:text-surface-0 text-right">{{ p.rabUnit || '—' }}</span>
+            </div>
+          </div>
+        </ng-container>
+        <ng-template #loadingProfile>
+          <div class="px-6 py-10 text-center text-sm text-surface-500 dark:text-surface-400">
+            <i class="pi pi-spin pi-spinner mr-2"></i>Loading profile...
+          </div>
+        </ng-template>
+      </p-dialog>
+
       <p-confirmDialog />
     </div>
   `,
@@ -419,6 +667,15 @@ import { takeUntil } from 'rxjs/operators';
     }
     :host-context(.app-dark) .messages-area {
       background: linear-gradient(180deg, var(--p-surface-900, #0f172a) 0%, var(--p-surface-800, #1e293b) 100%);
+    }
+    :host ::ng-deep .chat-profile-info-dialog .p-dialog-content { padding: 0; }
+    :host ::ng-deep .chat-profile-info-dialog .p-dialog-header { padding: 0.85rem 1.25rem; border-bottom: 1px solid var(--p-surface-200, #e5e7eb); }
+    :host-context(.app-dark) ::ng-deep .chat-profile-info-dialog .p-dialog-header { border-bottom-color: var(--p-surface-700, #334155); }
+    .chat-message-row.chat-message-highlight { animation: chatMessageHighlight 2.2s ease; }
+    @keyframes chatMessageHighlight {
+      0%   { background-color: rgba(99, 102, 241, 0.28); box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15); }
+      60%  { background-color: rgba(99, 102, 241, 0.18); box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.10); }
+      100% { background-color: transparent; box-shadow: none; }
     }
   `]
 })
@@ -436,6 +693,10 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
   messages: Array<{ messageId: number; senderUserId: string; senderName?: string; receiverUserId?: string; messageContent: string; sentTime: Date; isSeen: boolean; isDeleted: boolean }> = [];
   currentUserId: string = '';
   isConnected: boolean = false;
+  /** Live set of online userIds from the chat hub. */
+  onlineUserIds: Set<string> = new Set<string>();
+  /** Shared unread overlay (kept in sync by the chat service). */
+  private unreadOverlay: Record<string, number> = {};
   isSending: boolean = false;
   searchText: string = '';
   messagesLoading = false;
@@ -451,6 +712,14 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
   showSelectUserModal: boolean = false;
   chatUsers: ChatUserDto[] = [];
   loadingChatUsers: boolean = false;
+  chatUsersSearch: string = '';
+
+  /** Latest backend message-content search results for the conversation-list search input. */
+  messageSearchResults: DirectMessageSearchResult[] = [];
+  messageSearchLoading = false;
+  private searchText$ = new Subject<string>();
+  /** When set, after loadDirectMessages finishes the view scrolls to and briefly highlights this message. */
+  private pendingScrollToMessageId: number | null = null;
   private destroy$ = new Subject<void>();
   private shouldScroll = false;
 
@@ -473,7 +742,31 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
   createGroupSelectedUserIds: string[] = [];
   creatingGroup = false;
 
-  constructor(private chatService: ChatService, private fb: FormBuilder, private confirmationService: ConfirmationService, private _router: Router, private _userMenuService: UserMenuService) {
+  /** Per-user employee profile cache (rank, name, IDs, unit, profile image blob URL). */
+  private userProfiles: Record<string, {
+    rank: string;
+    fullName: string;
+    serviceId?: string | null;
+    rabId?: string | null;
+    rabUnit?: string | null;
+    profileImageUrl?: string | null;
+  }> = {};
+  private profileFetchInflight: Record<string, boolean> = {};
+
+  /** State for the "user info" modal triggered by the (i) icon in the chat header. */
+  showProfileInfoModal = false;
+  profileInfoUserId: string | null = null;
+
+  constructor(
+    private chatService: ChatService,
+    private fb: FormBuilder,
+    private confirmationService: ConfirmationService,
+    private _router: Router,
+    private _userMenuService: UserMenuService,
+    private mappingService: IdentityUserMappingService,
+    private servingMembersService: ServingMembersService,
+    private empService: EmpService
+  ) {
     this.messageForm = this.fb.group({
       messageContent: ['', [Validators.required, Validators.minLength(1)]]
     });
@@ -491,6 +784,191 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
     if (!userId) return '?';
     const first = userId.replace(/-/g, '').charAt(0).toUpperCase();
     return first || '?';
+  }
+
+  /** Rank + employee full name (e.g. "Major Aziz Rahman"). Falls back to chat user name / userId. */
+  getRankAndName(userId: string): string {
+    const p = this.userProfiles[userId];
+    if (p) {
+      const composed = `${p.rank ?? ''} ${p.fullName ?? ''}`.trim();
+      if (composed) return composed;
+    }
+    return this.getDisplayName(userId);
+  }
+
+  /** True when the chat hub reports this user is currently connected. */
+  isOnline(userId: string): boolean {
+    return !!userId && this.onlineUserIds.has(userId);
+  }
+
+  /** Effective unread count for a conversation: max(server-reported, locally-tracked overlay). */
+  getUnreadCount(conv: DirectConversation): number {
+    const overlay = this.unreadOverlay[conv.otherUserId] ?? 0;
+    const server = conv.unreadCount ?? 0;
+    return Math.max(overlay, server);
+  }
+
+  /** Login/chat username; used as the small secondary line under rank+name. */
+  getChatUserName(userId: string): string {
+    return this.chatUsers.find(u => u.userId === userId)?.userName
+      || this.userDisplayNames[userId]
+      || userId;
+  }
+
+  /** Lazy-fetches employeeId then profile (rank, name, IDs, unit, profile image) and caches it. */
+  ensureUserProfile(userId: string): void {
+    if (!userId) return;
+    if (this.userProfiles[userId] || this.profileFetchInflight[userId]) return;
+    this.profileFetchInflight[userId] = true;
+    this.mappingService.getEmployeeIdForUser(userId).pipe(
+      switchMap((empId) => {
+        if (!empId) return of(null);
+        return this.servingMembersService.getEmployeePersonalServiceOverview(empId).pipe(
+          catchError(() => of(null))
+        );
+      }),
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (profile) => {
+        this.profileFetchInflight[userId] = false;
+        if (!profile) return;
+        const rank = (profile.armyRank ?? '').toString().trim();
+        const fullName = (profile.nameEnglish ?? '').toString().trim();
+        this.userProfiles[userId] = {
+          rank,
+          fullName,
+          serviceId: profile.serviceId ?? null,
+          rabId: profile.rabId ?? null,
+          rabUnit: profile.rabUnit ?? null,
+          profileImageUrl: null
+        };
+        this.loadUserProfileImage(userId, profile.profileImages ?? null);
+      },
+      error: () => { this.profileFetchInflight[userId] = false; }
+    });
+  }
+
+  /** Pulls the first profile image blob referenced in profileImages JSON and caches a blob URL on the user profile. */
+  private loadUserProfileImage(userId: string, json: string | null): void {
+    if (!json) return;
+    let refs: { FileId?: number; fileId?: number }[];
+    try {
+      refs = JSON.parse(json) as { FileId?: number; fileId?: number }[];
+    } catch {
+      return;
+    }
+    const first = Array.isArray(refs) && refs.length > 0 ? refs[0] : null;
+    const fileId = first?.FileId ?? first?.fileId;
+    if (fileId == null || fileId <= 0) return;
+    this.empService.downloadFile(fileId).pipe(
+      catchError(() => of(null)),
+      takeUntil(this.destroy$)
+    ).subscribe((blob) => {
+      if (!blob || (blob as Blob).size === 0) return;
+      const profile = this.userProfiles[userId];
+      if (!profile) return;
+      if (profile.profileImageUrl) URL.revokeObjectURL(profile.profileImageUrl);
+      profile.profileImageUrl = URL.createObjectURL(blob as Blob);
+    });
+  }
+
+  /** Returns the cached profile object for the user, or null if not loaded yet. */
+  getUserProfile(userId: string | null): {
+    rank: string;
+    fullName: string;
+    serviceId?: string | null;
+    rabId?: string | null;
+    rabUnit?: string | null;
+    profileImageUrl?: string | null;
+  } | null {
+    if (!userId) return null;
+    return this.userProfiles[userId] ?? null;
+  }
+
+  openProfileInfo(userId: string | null): void {
+    if (!userId) return;
+    this.ensureUserProfile(userId);
+    this.profileInfoUserId = userId;
+    this.showProfileInfoModal = true;
+  }
+
+  closeProfileInfo(): void {
+    this.showProfileInfoModal = false;
+    this.profileInfoUserId = null;
+  }
+
+  /** Prefetch rank+name for every user in the direct conversation list. */
+  private prefetchConversationProfiles(): void {
+    for (const c of this.directConversations) this.ensureUserProfile(c.otherUserId);
+  }
+
+  /** Up to two initials from a display name (e.g. "Tanvir Ahmed" -> "TA"). */
+  getInitials(name: string): string {
+    if (!name || !name.trim()) return '?';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+  }
+
+  /** Deterministic gradient color for an avatar based on the userId/seed. */
+  getAvatarColor(seed: string): string {
+    const palette = [
+      'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)',
+      'linear-gradient(135deg, #ec4899 0%, #f472b6 100%)',
+      'linear-gradient(135deg, #14b8a6 0%, #2dd4bf 100%)',
+      'linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)',
+      'linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%)',
+      'linear-gradient(135deg, #06b6d4 0%, #22d3ee 100%)',
+      'linear-gradient(135deg, #ef4444 0%, #fb7185 100%)'
+    ];
+    const s = seed || '';
+    let hash = 0;
+    for (let i = 0; i < s.length; i++) hash = (hash * 31 + s.charCodeAt(i)) | 0;
+    return palette[Math.abs(hash) % palette.length];
+  }
+
+  /** Compact time for the conversation list (e.g. "7:28 PM" today, "Yesterday", or date). */
+  getConversationTime(dateLike: string | Date | null | undefined): string {
+    if (!dateLike) return '';
+    const d = new Date(dateLike);
+    if (isNaN(d.getTime())) return '';
+    const now = new Date();
+    const isSameDay = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+    if (isSameDay) return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    const isYesterday = d.getFullYear() === yesterday.getFullYear() && d.getMonth() === yesterday.getMonth() && d.getDate() === yesterday.getDate();
+    if (isYesterday) return 'Yesterday';
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  }
+
+  /** "Today" / "Yesterday" / dated label for in-conversation separators. */
+  getDateLabel(dateLike: string | Date | null | undefined): string {
+    if (!dateLike) return '';
+    const d = new Date(dateLike);
+    if (isNaN(d.getTime())) return '';
+    const now = new Date();
+    const isSameDay = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+    if (isSameDay) return 'Today';
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    const isYesterday = d.getFullYear() === yesterday.getFullYear() && d.getMonth() === yesterday.getMonth() && d.getDate() === yesterday.getDate();
+    if (isYesterday) return 'Yesterday';
+    return d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+  }
+
+  /** Show a date separator if this message is the first of its day in the list. */
+  shouldShowDateSeparator(list: Array<{ sentTime: Date | string }>, index: number): boolean {
+    if (index < 0 || index >= list.length) return false;
+    if (index === 0) return true;
+    const a = new Date(list[index].sentTime);
+    const b = new Date(list[index - 1].sentTime);
+    if (isNaN(a.getTime()) || isNaN(b.getTime())) return false;
+    return a.getFullYear() !== b.getFullYear() || a.getMonth() !== b.getMonth() || a.getDate() !== b.getDate();
+  }
+
+  shouldShowGroupDateSeparator(list: Array<{ sentTime: Date | string }>, index: number): boolean {
+    return this.shouldShowDateSeparator(list, index);
   }
 
   setViewMode(mode: 'direct' | 'groups'): void {
@@ -713,6 +1191,12 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
         this.isConnected = status;
       });
 
+    this.chatService.onlineUserIds$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(ids => {
+        this.onlineUserIds = ids;
+      });
+
     this.chatService.directMessageReceived$
       .pipe(takeUntil(this.destroy$))
       .subscribe((payload: any) => {
@@ -733,6 +1217,45 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
             this.chatService.markDirectMessagesAsSeen(payload.senderUserId).catch(() => {});
         }
         this.loadDirectConversations();
+      });
+
+    this.chatService.unreadOverlay$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(map => {
+        this.unreadOverlay = map;
+      });
+
+    this.searchText$
+      .pipe(
+        debounceTime(280),
+        distinctUntilChanged(),
+        switchMap((q) => {
+          const raw = (q ?? '').trim();
+          if (!raw) {
+            this.messageSearchLoading = false;
+            return of<DirectMessageSearchResult[]>([]);
+          }
+          this.messageSearchLoading = true;
+          return this.chatService.searchDirectMessages(raw, 50).pipe(
+            catchError(() => of<DirectMessageSearchResult[]>([]))
+          );
+        }),
+        takeUntil(this.destroy$)
+      )
+      .subscribe((results) => {
+        this.messageSearchResults = results ?? [];
+        this.messageSearchLoading = false;
+        for (const r of this.messageSearchResults) this.ensureUserProfile(r.otherUserId);
+      });
+
+    this.chatService.myDirectSeenForSender$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((senderUserId) => {
+        if (!senderUserId) return;
+        const conv = this.directConversations.find(c => c.otherUserId === senderUserId);
+        if (conv) conv.unreadCount = 0;
+        const fconv = this.filteredDirectConversations.find(c => c.otherUserId === senderUserId);
+        if (fconv) fconv.unreadCount = 0;
       });
 
     this.chatService.directMessagesSeen$
@@ -828,6 +1351,7 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
         next: (conversations) => {
           this.directConversations = conversations;
           this.filterDirectConversations();
+          this.prefetchConversationProfiles();
           const openUserId = this.chatService.getAndClearOpenConversationUserId();
           if (openUserId) {
             const conv = this.directConversations.find(c => c.otherUserId === openUserId);
@@ -853,6 +1377,9 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
     }
     this.selectedOtherUserId = conv.otherUserId;
     this.chatService.setSelectedConversation(conv.otherUserId);
+    this.ensureUserProfile(conv.otherUserId);
+    this.chatService.clearUnreadOverlay(conv.otherUserId);
+    conv.unreadCount = 0;
     this.messages = [];
     this.messagesPageNumber = 1;
     this.hasMoreOlder = false;
@@ -871,9 +1398,10 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
           const msgs = Array.isArray(list) ? list.map(m => this.normalizeDirectMessage(m)) : [];
           this.messages = msgs;
           this.hasMoreOlder = msgs.length >= this.PAGE_SIZE;
-          this.shouldScroll = true;
+          this.shouldScroll = this.pendingScrollToMessageId == null;
           this.messagesLoading = false;
           this.markConversationAsSeen();
+          this.resolvePendingScroll();
         },
         error: (err) => {
           console.error('Error loading messages:', err);
@@ -923,16 +1451,18 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
           this.messagesPageNumber = nextPage;
           this.hasMoreOlder = older.length >= this.PAGE_SIZE;
           this.loadingOlder = false;
-          if (container && older.length > 0) {
+          if (container && older.length > 0 && this.pendingScrollToMessageId == null) {
             setTimeout(() => {
               const newScrollHeight = container.scrollHeight;
               container.scrollTop = newScrollHeight - oldScrollHeight + oldScrollTop;
             }, 0);
           }
+          this.resolvePendingScroll();
         },
         error: (err) => {
           console.error('Error loading older messages:', err);
           this.loadingOlder = false;
+          this.pendingScrollToMessageId = null;
         }
       });
   }
@@ -979,12 +1509,14 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
     this.showSelectUserModal = true;
     this.loadingChatUsers = true;
     this.chatUsers = [];
+    this.chatUsersSearch = '';
     this.chatService.getChatUsers()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (users) => {
           this.chatUsers = users;
           this.loadingChatUsers = false;
+          for (const u of this.chatUsers) this.ensureUserProfile(u.userId);
         },
         error: (err) => {
           console.error('Error loading chat users:', err);
@@ -995,6 +1527,18 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
 
   closeSelectUserModal(): void {
     this.showSelectUserModal = false;
+    this.chatUsersSearch = '';
+  }
+
+  /** Filtered chat users for the user-picker modal (searches rank+name and userName). */
+  filteredChatUsers(): ChatUserDto[] {
+    const q = (this.chatUsersSearch || '').trim().toLowerCase();
+    if (!q) return this.chatUsers;
+    return this.chatUsers.filter((u) => {
+      const rankName = this.getRankAndName(u.userId).toLowerCase();
+      const userName = (u.userName || '').toLowerCase();
+      return rankName.includes(q) || userName.includes(q);
+    });
   }
 
   startChatWithUser(user: ChatUserDto): void {
@@ -1017,15 +1561,88 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
   }
 
   filterDirectConversations(): void {
-    if (!this.searchText.trim()) {
+    const raw = (this.searchText ?? '').trim();
+    if (!raw) {
       this.filteredDirectConversations = this.directConversations;
-    } else {
-      const search = this.searchText.toLowerCase();
-      this.filteredDirectConversations = this.directConversations.filter(c => {
-        const name = this.getDisplayName(c.otherUserId).toLowerCase();
-        return name.includes(search) || (c.lastMessage?.toLowerCase().includes(search));
-      });
+      this.messageSearchResults = [];
+      this.messageSearchLoading = false;
+      this.searchText$.next('');
+      return;
     }
+    const search = raw.toLowerCase();
+    this.filteredDirectConversations = this.directConversations.filter(c => {
+      const rankName = this.getRankAndName(c.otherUserId).toLowerCase();
+      const userName = this.getChatUserName(c.otherUserId).toLowerCase();
+      const last = (c.lastMessage ?? '').toLowerCase();
+      return rankName.includes(search) || userName.includes(search) || last.includes(search);
+    });
+    for (const u of this.searchResultUsers()) this.ensureUserProfile(u.userId);
+    this.searchText$.next(raw);
+  }
+
+  /** Jump to the conversation that contains a matched message, then scroll to and highlight it. */
+  openSearchResult(result: DirectMessageSearchResult): void {
+    if (!result?.otherUserId) return;
+    this.pendingScrollToMessageId = result.messageId;
+    const existing = this.directConversations.find(c => c.otherUserId === result.otherUserId);
+    if (existing) {
+      this.selectConversation(existing);
+    } else {
+      const newConv: DirectConversation = {
+        otherUserId: result.otherUserId,
+        lastMessage: result.messageContent,
+        lastMessageDate: new Date(result.sentTime),
+        unreadCount: 0
+      };
+      this.directConversations = [newConv, ...this.directConversations];
+      this.filterDirectConversations();
+      this.selectConversation(newConv);
+    }
+    this.searchText = '';
+    this.filterDirectConversations();
+  }
+
+  /** Scroll the messages container to the message with the given id and pulse a highlight. */
+  private scrollToMessage(messageId: number): void {
+    if (!this.messagesContainer) return;
+    const container = this.messagesContainer.nativeElement;
+    const el = container.querySelector(`[data-message-id="${messageId}"]`) as HTMLElement | null;
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.add('chat-message-highlight');
+    setTimeout(() => el.classList.remove('chat-message-highlight'), 2200);
+  }
+
+  /** Recursively page older messages until we find the target id (or run out). */
+  private resolvePendingScroll(): void {
+    const target = this.pendingScrollToMessageId;
+    if (target == null) return;
+    const found = this.messages.some(m => m.messageId === target);
+    if (found) {
+      this.pendingScrollToMessageId = null;
+      setTimeout(() => this.scrollToMessage(target), 120);
+      return;
+    }
+    if (!this.hasMoreOlder || this.loadingOlder) {
+      this.pendingScrollToMessageId = null;
+      return;
+    }
+    this.loadOlderMessages();
+  }
+
+  /** Chat users matching the search query that don't already have a conversation (for "start a new chat" suggestions). */
+  searchResultUsers(): ChatUserDto[] {
+    const raw = (this.searchText ?? '').trim();
+    if (!raw) return [];
+    const search = raw.toLowerCase();
+    const existing = new Set(this.directConversations.map(c => c.otherUserId));
+    return this.chatUsers.filter(u => {
+      if (!u.userId || u.userId === this.currentUserId) return false;
+      if (existing.has(u.userId)) return false;
+      const rankName = this.getRankAndName(u.userId).toLowerCase();
+      const userName = (u.userName ?? '').toLowerCase();
+      return rankName.includes(search) || userName.includes(search);
+    });
   }
 
   private scrollToBottom(): void {
@@ -1043,6 +1660,11 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
     if (this.selectedGroupId !== null) this.chatService.leaveGroupHub(this.selectedGroupId).catch(() => {});
     this.chatService.setSelectedGroupId(null);
     this.chatService.setSelectedConversation(null);
+    for (const userId of Object.keys(this.userProfiles)) {
+      const url = this.userProfiles[userId]?.profileImageUrl;
+      if (url) URL.revokeObjectURL(url);
+    }
+    this.userProfiles = {};
     this.destroy$.next();
     this.destroy$.complete();
   }

@@ -21,6 +21,17 @@ export interface DirectMessageDto {
   isDeleted: boolean;
 }
 
+export interface DirectMessageSearchResult {
+  messageId: number;
+  senderUserId: string;
+  receiverUserId: string;
+  /** Counterpart of the searching user — the conversation partner. */
+  otherUserId: string;
+  messageContent: string;
+  sentTime: Date | string;
+  isSeen: boolean;
+}
+
 // ----- Group chat -----
 
 export interface GroupDto {

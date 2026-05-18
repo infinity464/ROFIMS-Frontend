@@ -1,9 +1,10 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, BehaviorSubject, Subject } from 'rxjs';
+import { Observable, BehaviorSubject, Subject, of } from 'rxjs';
+import { tap } from 'rxjs/operators';
 import { environment } from '@/Core/Environments/environment';
 import { HubConnection, HubConnectionBuilder, HubConnectionState } from '@microsoft/signalr';
-import { ChatUserDto, DirectConversation, DirectMessageDto, GroupDto, GroupMemberDto, GroupMessageDto } from '@/models/chat.model';
+import { ChatUserDto, DirectConversation, DirectMessageDto, DirectMessageSearchResult, GroupDto, GroupMemberDto, GroupMessageDto } from '@/models/chat.model';
 
 @Injectable({
   providedIn: 'root'
@@ -40,6 +41,46 @@ export class ChatService {
 
   private connectionStatusSubject = new BehaviorSubject<boolean>(false);
   public connectionStatus$ = this.connectionStatusSubject.asObservable();
+
+  /** Live set of online userIds, populated from the chat hub's UserOnline/UserOffline events. */
+  private onlineUserIdsSubject = new BehaviorSubject<Set<string>>(new Set<string>());
+  public onlineUserIds$ = this.onlineUserIdsSubject.asObservable();
+
+  /** Emits the senderUserId whose messages the CURRENT user has just marked as seen. Used by the floating widget to clear bubbles. */
+  private myDirectSeenForSenderSubject = new Subject<string>();
+  public myDirectSeenForSender$ = this.myDirectSeenForSenderSubject.asObservable();
+
+  /** Per-senderUserId in-session unread count; the floating widget bumps this on incoming messages and the chat container reads it for badge/bolding. */
+  private unreadOverlaySubject = new BehaviorSubject<Record<string, number>>({});
+  public unreadOverlay$ = this.unreadOverlaySubject.asObservable();
+
+  bumpUnreadOverlay(senderUserId: string): void {
+    if (!senderUserId) return;
+    const cur = { ...this.unreadOverlaySubject.getValue() };
+    cur[senderUserId] = (cur[senderUserId] ?? 0) + 1;
+    this.unreadOverlaySubject.next(cur);
+  }
+
+  setUnreadOverlay(senderUserId: string, count: number): void {
+    if (!senderUserId) return;
+    const cur = { ...this.unreadOverlaySubject.getValue() };
+    if (count <= 0) {
+      delete cur[senderUserId];
+    } else {
+      cur[senderUserId] = count;
+    }
+    this.unreadOverlaySubject.next(cur);
+  }
+
+  clearUnreadOverlay(senderUserId: string): void {
+    if (!senderUserId) return;
+    const cur = this.unreadOverlaySubject.getValue();
+    if (senderUserId in cur) {
+      const next = { ...cur };
+      delete next[senderUserId];
+      this.unreadOverlaySubject.next(next);
+    }
+  }
 
   private errorSubject = new Subject<string>();
   public error$ = this.errorSubject.asObservable();
@@ -133,13 +174,41 @@ export class ChatService {
       this.errorSubject.next(message);
     });
 
+    this.hubConnection.on('UserOnline', (userId: string) => {
+      if (!userId) return;
+      const next = new Set(this.onlineUserIdsSubject.getValue());
+      next.add(userId);
+      this.onlineUserIdsSubject.next(next);
+    });
+    this.hubConnection.on('UserOffline', (userId: string) => {
+      if (!userId) return;
+      const next = new Set(this.onlineUserIdsSubject.getValue());
+      next.delete(userId);
+      this.onlineUserIdsSubject.next(next);
+    });
+
     this.hubConnection.onreconnecting(() => {
       this.connectionStatusSubject.next(false);
+      this.onlineUserIdsSubject.next(new Set());
     });
 
     this.hubConnection.onreconnected(() => {
       this.connectionStatusSubject.next(true);
+      this.refreshOnlineUsers();
     });
+  }
+
+  /** Fetch the current online userIds from the hub and replace the local set. */
+  private refreshOnlineUsers(): void {
+    if (!this.hubConnection || this.hubConnection.state !== HubConnectionState.Connected) return;
+    this.hubConnection.invoke<string[]>('GetOnlineUsers')
+      .then((ids) => this.onlineUserIdsSubject.next(new Set(ids ?? [])))
+      .catch(() => { /* ignore */ });
+  }
+
+  /** Synchronous helper for templates. */
+  isUserOnline(userId: string): boolean {
+    return this.onlineUserIdsSubject.getValue().has(userId);
   }
 
   connectToHub(): Promise<void> {
@@ -149,12 +218,14 @@ export class ChatService {
 
     if (this.hubConnection.state === HubConnectionState.Connected) {
       this.connectionStatusSubject.next(true);
+      this.refreshOnlineUsers();
       return Promise.resolve();
     }
 
     if (this.hubConnection.state === HubConnectionState.Disconnected) {
       return this.hubConnection.start().then(() => {
         this.connectionStatusSubject.next(true);
+        this.refreshOnlineUsers();
       }).catch(err => {
         this.errorSubject.next(`Failed to connect: ${err.message}`);
         return Promise.reject(err);
@@ -195,6 +266,15 @@ export class ChatService {
     });
   }
 
+  /** Full-text search across the current user's direct messages. Empty/blank query returns []. */
+  searchDirectMessages(query: string, limit: number = 50): Observable<DirectMessageSearchResult[]> {
+    const q = (query ?? '').trim();
+    if (!q) return of([]);
+    return this.http.get<DirectMessageSearchResult[]>(`${this.chatApi}/SearchDirectMessages`, {
+      params: { q, limit: limit.toString() }
+    });
+  }
+
   sendDirectMessage(receiverUserId: string, content: string, senderUserId?: string | null): Promise<void> {
     if (!this.hubConnection) {
       return Promise.reject('Hub not connected');
@@ -215,11 +295,24 @@ export class ChatService {
 
   markDirectMessagesAsSeen(senderUserId: string): Promise<void> {
     if (!this.hubConnection) return Promise.reject('Hub not connected');
-    return this.hubConnection.invoke('MarkDirectMessagesAsSeen', senderUserId).catch(() => {});
+    return this.hubConnection.invoke('MarkDirectMessagesAsSeen', senderUserId)
+      .then(() => {
+        if (senderUserId) {
+          this.clearUnreadOverlay(senderUserId);
+          this.myDirectSeenForSenderSubject.next(senderUserId);
+        }
+      })
+      .catch(() => {});
   }
 
   markDirectMessagesAsSeenViaApi(senderUserId: string): Observable<any> {
-    return this.http.post(`${this.chatApi}/MarkDirectMessagesAsSeen`, { senderUserId });
+    return this.http.post(`${this.chatApi}/MarkDirectMessagesAsSeen`, { senderUserId })
+      .pipe(tap(() => {
+        if (senderUserId) {
+          this.clearUnreadOverlay(senderUserId);
+          this.myDirectSeenForSenderSubject.next(senderUserId);
+        }
+      }));
   }
 
   deleteDirectMessage(messageId: number): Promise<void> {

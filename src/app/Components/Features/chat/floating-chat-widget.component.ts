@@ -3,9 +3,13 @@ import { CommonModule } from '@angular/common';
 import { Router, NavigationEnd } from '@angular/router';
 import { DialogModule } from 'primeng/dialog';
 import { ChatService } from '@/services/chat.service';
+import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
+import { ServingMembersService } from '@/services/serving-members.service';
 import { ChatContainerComponent } from '@/Components/Features/chat/chat-container.component';
-import { Subject } from 'rxjs';
-import { takeUntil, combineLatestWith, filter } from 'rxjs/operators';
+import { ChatUserDto, DirectConversation } from '@/models/chat.model';
+import { forkJoin } from 'rxjs';
+import { Subject, of } from 'rxjs';
+import { takeUntil, withLatestFrom, filter, switchMap, catchError } from 'rxjs/operators';
 
 export interface ChatBubble {
   type: 'direct';
@@ -27,7 +31,7 @@ export interface GroupChatBubble {
   standalone: true,
   imports: [CommonModule, DialogModule, ChatContainerComponent],
   template: `
-    <div class="fixed bottom-6 right-6 z-[9999] flex flex-col items-end gap-3" *ngIf="isLoggedIn && !isOnChatPage">
+    <div class="fixed bottom-6 right-6 z-[9999] flex flex-col items-end gap-3" *ngIf="isLoggedIn && !isOnChatPage && !showChatModal">
       <!-- Group message bubbles -->
       <div *ngFor="let bubble of groupBubbles; trackBy: trackByGroup"
            (click)="openGroup(bubble.groupId)"
@@ -46,13 +50,14 @@ export interface GroupChatBubble {
       <div *ngFor="let bubble of bubbles; trackBy: trackBySender"
            (click)="openChat(bubble.senderUserId)"
            class="flex items-center gap-2 cursor-pointer group">
-        <div class="flex items-center gap-2 bg-surface-0 dark:bg-surface-800 rounded-full shadow-lg border border-surface-200 dark:border-surface-600 hover:shadow-xl transition-all hover:scale-105 min-w-[200px] pr-2 py-1.5 pl-1.5">
-          <div class="w-10 h-10 rounded-full bg-indigo-600 dark:bg-indigo-500 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
-            {{ getInitial(bubble.senderName) }}
+        <div class="chat-attention-bubble flex items-center gap-2 bg-surface-0 dark:bg-surface-800 rounded-2xl shadow-lg border-2 border-red-500 hover:shadow-xl transition-all hover:scale-105 min-w-[220px] pr-3 py-2 pl-2">
+          <div class="w-10 h-10 rounded-xl bg-indigo-600 dark:bg-indigo-500 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
+            {{ getInitial(getBubbleRankAndName(bubble)) }}
           </div>
           <div class="flex-1 min-w-0 text-left">
-            <p class="text-sm font-medium text-surface-900 dark:text-surface-0 truncate">{{ bubble.senderName }}</p>
-            <p class="text-xs text-surface-600 dark:text-surface-400">{{ bubble.unreadCount }} unread {{ bubble.unreadCount === 1 ? 'message' : 'messages' }}</p>
+            <p class="text-[13px] font-semibold leading-tight text-surface-900 dark:text-surface-0 truncate">{{ getBubbleRankAndName(bubble) }}</p>
+            <p class="text-[10px] text-surface-500 dark:text-surface-400 truncate leading-tight">{{ bubble.senderName }}</p>
+            <p class="text-[11px] text-red-600 dark:text-red-400 font-medium mt-0.5">{{ bubble.unreadCount }} unread {{ bubble.unreadCount === 1 ? 'message' : 'messages' }}</p>
           </div>
         </div>
       </div>
@@ -75,15 +80,30 @@ export interface GroupChatBubble {
       [closeOnEscape]="true"
       [style]="{ width: '90vw', maxWidth: '1100px', height: '85vh' }"
       [contentStyle]="{ padding: '0', overflow: 'hidden' }"
-      header="Messages"
       styleClass="chat-modal-dialog">
+      <ng-template pTemplate="header">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
+          <span class="text-lg font-bold text-surface-900 dark:text-surface-0">Messages</span>
+        </div>
+      </ng-template>
       <app-chat-container *ngIf="showChatModal"></app-chat-container>
     </p-dialog>
   `,
   styles: [`
     :host { display: block; }
-    :host ::ng-deep .chat-modal-dialog .p-dialog-content { height: 100%; }
+    :host ::ng-deep .chat-modal-dialog .p-dialog-content { height: 100%; padding: 0; }
+    :host ::ng-deep .chat-modal-dialog .p-dialog-header { border-bottom: 1px solid var(--p-surface-200, #e5e7eb); padding: 1rem 1.25rem; }
+    :host-context(.app-dark) ::ng-deep .chat-modal-dialog .p-dialog-header { border-bottom-color: var(--p-surface-700, #334155); }
     :host ::ng-deep .chat-modal-dialog .chat-container { height: 100% !important; }
+
+    .chat-attention-bubble {
+      animation: chatAttentionPulse 1.6s ease-in-out infinite;
+    }
+    @keyframes chatAttentionPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.45), 0 10px 15px -3px rgba(0,0,0,0.1); }
+      50%      { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0),    0 10px 15px -3px rgba(0,0,0,0.1); }
+    }
   `]
 })
 export class FloatingChatWidgetComponent implements OnInit, OnDestroy {
@@ -97,10 +117,16 @@ export class FloatingChatWidgetComponent implements OnInit, OnDestroy {
   private readonly MAX_BUBBLES = 5;
   private readonly MAX_GROUP_BUBBLES = 5;
 
+  /** Cache of rank+name per senderUserId so the bubble can show "Major Aziz" instead of the userName. */
+  private userProfiles: Record<string, { rank: string; fullName: string }> = {};
+  private profileFetchInflight: Record<string, boolean> = {};
+
   constructor(
     private chatService: ChatService,
     private router: Router,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private mappingService: IdentityUserMappingService,
+    private servingMembersService: ServingMembersService
   ) {}
 
   ngOnInit(): void {
@@ -131,11 +157,13 @@ export class FloatingChatWidgetComponent implements OnInit, OnDestroy {
 
     if (!this.isLoggedIn) return;
 
-    this.chatService.connectToHub().catch(() => {});
+    this.chatService.connectToHub()
+      .then(() => this.seedBubblesFromUnreadConversations())
+      .catch(() => this.seedBubblesFromUnreadConversations());
 
     this.chatService.directMessageReceived$
       .pipe(
-        combineLatestWith(this.chatService.selectedOtherUserId$),
+        withLatestFrom(this.chatService.selectedOtherUserId$),
         takeUntil(this.destroy$)
       )
       .subscribe(([payload, selectedOtherUserId]) => {
@@ -147,6 +175,7 @@ export class FloatingChatWidgetComponent implements OnInit, OnDestroy {
           senderName: payload.senderName || payload.senderUserId || 'Someone',
           unreadCount: 1
         });
+        this.ensureUserProfile(payload.senderUserId);
         this.cdr.markForCheck();
       });
 
@@ -175,6 +204,15 @@ export class FloatingChatWidgetComponent implements OnInit, OnDestroy {
         }
         this.cdr.markForCheck();
       });
+
+    this.chatService.myDirectSeenForSender$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((senderUserId) => {
+        if (senderUserId) {
+          this.removeBubble(senderUserId);
+          this.cdr.markForCheck();
+        }
+      });
   }
 
   private addOrUpdateBubble(bubble: ChatBubble): void {
@@ -185,6 +223,7 @@ export class FloatingChatWidgetComponent implements OnInit, OnDestroy {
       updated,
       ...this.bubbles.filter((b) => b.senderUserId !== bubble.senderUserId)
     ].slice(0, this.MAX_BUBBLES);
+    this.chatService.bumpUnreadOverlay(bubble.senderUserId);
   }
 
   private addOrUpdateGroupBubble(bubble: GroupChatBubble): void {
@@ -199,6 +238,7 @@ export class FloatingChatWidgetComponent implements OnInit, OnDestroy {
 
   private removeBubble(senderUserId: string): void {
     this.bubbles = this.bubbles.filter((b) => b.senderUserId !== senderUserId);
+    this.chatService.clearUnreadOverlay(senderUserId);
   }
 
   private removeGroupBubble(groupId: number): void {
@@ -214,6 +254,76 @@ export class FloatingChatWidgetComponent implements OnInit, OnDestroy {
     return name.trim().charAt(0).toUpperCase();
   }
 
+  /** Returns "Major Aziz" if the employee profile has resolved; otherwise falls back to the SignalR senderName. */
+  getBubbleRankAndName(bubble: ChatBubble): string {
+    const p = this.userProfiles[bubble.senderUserId];
+    if (p) {
+      const composed = `${p.rank ?? ''} ${p.fullName ?? ''}`.trim();
+      if (composed) return composed;
+    }
+    return bubble.senderName || bubble.senderUserId || 'Someone';
+  }
+
+  /**
+   * Populate bubbles from the server's unread-conversation list so messages received while the user
+   * was offline (no live SignalR DirectMessageReceived) still surface as red attention bubbles.
+   */
+  private seedBubblesFromUnreadConversations(): void {
+    forkJoin({
+      conversations: this.chatService.getDirectConversations(),
+      users: this.chatService.getChatUsers()
+    }).pipe(takeUntil(this.destroy$)).subscribe({
+      next: ({ conversations, users }) => {
+        const userNameById = new Map<string, string>(
+          (users ?? []).map((u: ChatUserDto) => [u.userId, u.userName || u.email || u.userId])
+        );
+        const unread = (conversations ?? []).filter((c: DirectConversation) => c.unreadCount > 0);
+        for (const c of unread) {
+          if (this.bubbles.some((b) => b.senderUserId === c.otherUserId)) continue;
+          this.bubbles.push({
+            type: 'direct',
+            senderUserId: c.otherUserId,
+            senderName: userNameById.get(c.otherUserId) || c.otherUserId,
+            unreadCount: c.unreadCount
+          });
+          this.chatService.setUnreadOverlay(c.otherUserId, c.unreadCount);
+          this.ensureUserProfile(c.otherUserId);
+        }
+        this.bubbles = this.bubbles.slice(0, this.MAX_BUBBLES);
+        this.cdr.markForCheck();
+      },
+      error: () => { /* silent */ }
+    });
+  }
+
+  /** Lazy-fetch employeeId → profile (rank + nameEnglish) so the bubble can upgrade from userName to rank+name. */
+  private ensureUserProfile(userId: string): void {
+    if (!userId) return;
+    if (this.userProfiles[userId] || this.profileFetchInflight[userId]) return;
+    this.profileFetchInflight[userId] = true;
+    this.mappingService.getEmployeeIdForUser(userId).pipe(
+      switchMap((empId) => {
+        if (!empId) return of(null);
+        return this.servingMembersService.getEmployeePersonalServiceOverview(empId).pipe(
+          catchError(() => of(null))
+        );
+      }),
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (profile) => {
+        this.profileFetchInflight[userId] = false;
+        if (!profile) return;
+        const rank = (profile.armyRank ?? '').toString().trim();
+        const fullName = (profile.nameEnglish ?? '').toString().trim();
+        if (rank || fullName) {
+          this.userProfiles[userId] = { rank, fullName };
+          this.cdr.markForCheck();
+        }
+      },
+      error: () => { this.profileFetchInflight[userId] = false; }
+    });
+  }
+
   trackBySender(_: number, b: ChatBubble): string {
     return b.senderUserId;
   }
@@ -226,14 +336,14 @@ export class FloatingChatWidgetComponent implements OnInit, OnDestroy {
     this.removeBubble(senderUserId);
     this.cdr.markForCheck();
     this.chatService.requestOpenConversation(senderUserId);
-    this.router.navigate(['/chat']);
+    this.showChatModal = true;
   }
 
   openGroup(groupId: number): void {
     this.removeGroupBubble(groupId);
     this.cdr.markForCheck();
     this.chatService.requestOpenGroup(groupId);
-    this.router.navigate(['/chat']);
+    this.showChatModal = true;
   }
 
   goToChat(): void {
