@@ -43,6 +43,8 @@ export interface RankWiseRankRow {
     def: number;
     sur: number;
     defPct: number;
+    /** In-flight posting-out count (PermanentPostingMORecord rows whose employee still has PostingStatus != ExMember). */
+    postedOut: number;
 }
 
 export interface RankWiseOrgBlock {

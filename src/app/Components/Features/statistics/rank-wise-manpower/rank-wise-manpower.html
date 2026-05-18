@@ -31,6 +31,11 @@
                     <span>{{ lang === 'en' ? 'Show equivalent ranks' : 'সমতুল্য পদবী দেখান' }}</span>
                 </label>
 
+                <label class="equiv-toggle">
+                    <p-checkbox [(ngModel)]="showPostingOut" [binary]="true" inputId="showPostingOut"></p-checkbox>
+                    <span>{{ lang === 'en' ? 'Show Posted Out' : 'প্রেষণাদেশ বাতিল দেখান' }}</span>
+                </label>
+
                 <button type="button" class="report-lang-toggle" (click)="toggleLang()">
                     {{ lang === 'en' ? 'বাংলা' : 'English' }}
                 </button>
@@ -109,7 +114,7 @@
 
             <div class="report-table-wrap">
                 <table class="report-table">
-                    <colgroup>
+                    <colgroup *ngIf="!showPostingOut">
                         <col style="width: 6%">
                         <col style="width: 30%">
                         <col style="width: 12%">
@@ -117,6 +122,16 @@
                         <col style="width: 12%">
                         <col style="width: 12%">
                         <col style="width: 16%">
+                    </colgroup>
+                    <colgroup *ngIf="showPostingOut">
+                        <col style="width: 5%">
+                        <col style="width: 24%">
+                        <col style="width: 11%">
+                        <col style="width: 11%">
+                        <col style="width: 11%">
+                        <col style="width: 11%">
+                        <col style="width: 13%">
+                        <col style="width: 14%">
                     </colgroup>
                     <thead>
                         <tr>
@@ -132,6 +147,7 @@
                             <td class="num-cell" [class.cell-danger]="row.def > 0">{{ fmt(row.def) }}</td>
                             <td class="num-cell" [class.cell-warning]="row.sur > 0">{{ fmt(row.sur) }}</td>
                             <td class="num-cell" [class.cell-danger]="row.defPct > 0">{{ fmtPct(row.defPct) }}</td>
+                            <td class="num-cell" *ngIf="showPostingOut">{{ fmt(row.postedOut) }}</td>
                         </tr>
                     </tbody>
                     <tfoot>
@@ -143,6 +159,7 @@
                             <td class="num-cell">{{ fmt(org.subtotal.def) }}</td>
                             <td class="num-cell">{{ fmt(org.subtotal.sur) }}</td>
                             <td class="num-cell">{{ fmtPct(org.subtotal.defPct) }}</td>
+                            <td class="num-cell" *ngIf="showPostingOut">{{ fmt(org.subtotal.postedOut) }}</td>
                         </tr>
                     </tfoot>
                 </table>
@@ -153,7 +170,7 @@
         <div class="grand-total-section" *ngIf="filteredOrgs.length > 0">
             <div class="report-table-wrap">
                 <table class="report-table">
-                    <colgroup>
+                    <colgroup *ngIf="!showPostingOut">
                         <col style="width: 6%">
                         <col style="width: 30%">
                         <col style="width: 12%">
@@ -161,6 +178,16 @@
                         <col style="width: 12%">
                         <col style="width: 12%">
                         <col style="width: 16%">
+                    </colgroup>
+                    <colgroup *ngIf="showPostingOut">
+                        <col style="width: 5%">
+                        <col style="width: 24%">
+                        <col style="width: 11%">
+                        <col style="width: 11%">
+                        <col style="width: 11%">
+                        <col style="width: 11%">
+                        <col style="width: 13%">
+                        <col style="width: 14%">
                     </colgroup>
                     <tbody>
                         <tr class="grand-total-row">
@@ -171,6 +198,7 @@
                             <td class="num-cell">{{ fmt(grandTotal.def) }}</td>
                             <td class="num-cell">{{ fmt(grandTotal.sur) }}</td>
                             <td class="num-cell">{{ fmtPct(grandTotal.defPct) }}</td>
+                            <td class="num-cell" *ngIf="showPostingOut">{{ fmt(grandTotal.postedOut) }}</td>
                         </tr>
                     </tbody>
                 </table>

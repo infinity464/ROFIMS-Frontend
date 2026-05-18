@@ -54,6 +54,9 @@ export class RankWiseManpowerComponent implements OnInit {
     /** When true, the equivalent-name (basic-setup/rank-equivalent) is appended in parens after each rank name. */
     showEquivalentRanks = false;
 
+    /** When true, an extra "Posting Out" column (in-flight PermanentPostingMORecord count) is rendered. */
+    showPostingOut = false;
+
     /** rankId -> equivalent-name label(s) it maps to (EN + BN). */
     private equivalentNamesByRankId: Map<number, { en: string; bn: string }[]> = new Map();
 
@@ -171,40 +174,53 @@ export class RankWiseManpowerComponent implements OnInit {
         this.exportDropdownOpen = false;
 
         const scope = this.scopeLine;
+        const includePO = this.showPostingOut;
         const sectionedConfig = {
             title: this.titleLabel,
             lang: this.lang,
             columns: this.colHeaders,
             sections: this.filteredOrgs.map(org => ({
                 title: this.orgLabel(org),
-                rows: org.rows.map((row, i) => [
-                    this.fmt(i + 1),
-                    this.rankLabel(row),
-                    this.fmt(row.auth),
-                    this.fmt(row.held),
-                    this.fmt(row.def),
-                    this.fmt(row.sur),
-                    this.fmtPct(row.defPct)
-                ]),
-                subtotalRow: [
-                    '',
-                    this.subtotalLabel,
-                    this.fmt(org.subtotal.auth),
-                    this.fmt(org.subtotal.held),
-                    this.fmt(org.subtotal.def),
-                    this.fmt(org.subtotal.sur),
-                    this.fmtPct(org.subtotal.defPct)
-                ]
+                rows: org.rows.map((row, i) => {
+                    const cells = [
+                        this.fmt(i + 1),
+                        this.rankLabel(row),
+                        this.fmt(row.auth),
+                        this.fmt(row.held),
+                        this.fmt(row.def),
+                        this.fmt(row.sur),
+                        this.fmtPct(row.defPct)
+                    ];
+                    if (includePO) cells.push(this.fmt(row.postedOut));
+                    return cells;
+                }),
+                subtotalRow: (() => {
+                    const cells = [
+                        '',
+                        this.subtotalLabel,
+                        this.fmt(org.subtotal.auth),
+                        this.fmt(org.subtotal.held),
+                        this.fmt(org.subtotal.def),
+                        this.fmt(org.subtotal.sur),
+                        this.fmtPct(org.subtotal.defPct)
+                    ];
+                    if (includePO) cells.push(this.fmt(org.subtotal.postedOut));
+                    return cells;
+                })()
             })),
-            grandTotalRow: [
-                '',
-                this.grandTotalLabel,
-                this.fmt(this.grandTotal.auth),
-                this.fmt(this.grandTotal.held),
-                this.fmt(this.grandTotal.def),
-                this.fmt(this.grandTotal.sur),
-                this.fmtPct(this.grandTotal.defPct)
-            ],
+            grandTotalRow: (() => {
+                const cells = [
+                    '',
+                    this.grandTotalLabel,
+                    this.fmt(this.grandTotal.auth),
+                    this.fmt(this.grandTotal.held),
+                    this.fmt(this.grandTotal.def),
+                    this.fmt(this.grandTotal.sur),
+                    this.fmtPct(this.grandTotal.defPct)
+                ];
+                if (includePO) cells.push(this.fmt(this.grandTotal.postedOut));
+                return cells;
+            })(),
             showPageNumbers: true,
             filename: 'rank-wise-manpower',
             filterLines: scope ? [scope] : undefined
@@ -271,9 +287,11 @@ export class RankWiseManpowerComponent implements OnInit {
     }
 
     get colHeaders(): string[] {
-        return this.lang === 'en'
+        const base = this.lang === 'en'
             ? ['Ser', 'Rank', 'Auth', 'Held', 'Def', 'Sur', 'Def %']
             : ['ক্রমিক', 'পদবী', 'প্রাধিকার', 'বিদ্যমান', 'ঘাটতি', 'অতিরিক্ত', 'ঘাটতি %'];
+        if (!this.showPostingOut) return base;
+        return [...base, this.lang === 'en' ? 'Posted Out' : 'প্রেষণাদেশ বাতিল'];
     }
 
     get subtotalLabel(): string { return this.lang === 'en' ? 'Subtotal' : 'উপ-মোট'; }
@@ -307,18 +325,20 @@ export class RankWiseManpowerComponent implements OnInit {
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private emptyRow(): RankWiseRankRow {
-        return { rankId: 0, rankName: '', rankNameBN: '', auth: 0, held: 0, def: 0, sur: 0, defPct: 0 };
+        return { rankId: 0, rankName: '', rankNameBN: '', auth: 0, held: 0, def: 0, sur: 0, defPct: 0, postedOut: 0 };
     }
 
     private computeGrandTotal(orgs: RankWiseOrgBlock[]): RankWiseRankRow {
-        const auth = orgs.reduce((s, o) => s + o.subtotal.auth, 0);
-        const held = orgs.reduce((s, o) => s + o.subtotal.held, 0);
-        const def  = orgs.reduce((s, o) => s + o.subtotal.def,  0);
-        const sur  = orgs.reduce((s, o) => s + o.subtotal.sur,  0);
+        const auth      = orgs.reduce((s, o) => s + o.subtotal.auth, 0);
+        const held      = orgs.reduce((s, o) => s + o.subtotal.held, 0);
+        const def       = orgs.reduce((s, o) => s + o.subtotal.def,  0);
+        const sur       = orgs.reduce((s, o) => s + o.subtotal.sur,  0);
+        const postedOut = orgs.reduce((s, o) => s + (o.subtotal.postedOut ?? 0), 0);
         return {
             rankId: 0, rankName: '', rankNameBN: '',
             auth, held, def, sur,
-            defPct: auth > 0 ? Math.round(def / auth * 1000) / 10 : 0
+            defPct: auth > 0 ? Math.round(def / auth * 1000) / 10 : 0,
+            postedOut
         };
     }
 
