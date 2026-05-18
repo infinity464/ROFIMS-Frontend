@@ -275,21 +275,22 @@ export class ChatService {
     });
   }
 
-  sendDirectMessage(receiverUserId: string, content: string, senderUserId?: string | null): Promise<void> {
+  sendDirectMessage(receiverUserId: string, content: string, senderUserId?: string | null, attachments?: string | null): Promise<void> {
     if (!this.hubConnection) {
       return Promise.reject('Hub not connected');
     }
-    return this.hubConnection.invoke('SendDirectMessage', senderUserId ?? '', receiverUserId, content).catch(err => {
+    return this.hubConnection.invoke('SendDirectMessage', senderUserId ?? '', receiverUserId, content ?? '', attachments ?? null).catch(err => {
       this.errorSubject.next(`Error sending: ${err.message}`);
       return Promise.reject(err);
     });
   }
 
-  sendDirectMessageViaApi(receiverUserId: string, content: string, senderUserId?: string | null): Observable<any> {
+  sendDirectMessageViaApi(receiverUserId: string, content: string, senderUserId?: string | null, attachments?: string | null): Observable<any> {
     return this.http.post(`${this.chatApi}/SendDirectMessage`, {
       senderUserId: senderUserId ?? undefined,
       receiverUserId,
-      messageContent: content
+      messageContent: content,
+      attachments: attachments ?? null
     });
   }
 
@@ -419,19 +420,20 @@ export class ChatService {
     return this.hubConnection.invoke('LeaveGroup', groupId).catch(() => {});
   }
 
-  sendGroupMessage(groupId: number, content: string, senderUserId?: string | null): Promise<void> {
+  sendGroupMessage(groupId: number, content: string, senderUserId?: string | null, attachments?: string | null): Promise<void> {
     if (!this.hubConnection) return Promise.reject('Hub not connected');
-    return this.hubConnection.invoke('SendGroupMessage', senderUserId ?? '', groupId, content).catch(err => {
+    return this.hubConnection.invoke('SendGroupMessage', senderUserId ?? '', groupId, content ?? '', attachments ?? null).catch(err => {
       this.errorSubject.next(`Error sending: ${err?.message ?? err}`);
       return Promise.reject(err);
     });
   }
 
-  sendGroupMessageViaApi(groupId: number, content: string, senderUserId?: string | null): Observable<any> {
+  sendGroupMessageViaApi(groupId: number, content: string, senderUserId?: string | null, attachments?: string | null): Observable<any> {
     return this.http.post(`${this.chatApi}/SendGroupMessage`, {
       senderUserId: senderUserId ?? undefined,
       groupId,
-      messageContent: content
+      messageContent: content,
+      attachments: attachments ?? null
     });
   }
 

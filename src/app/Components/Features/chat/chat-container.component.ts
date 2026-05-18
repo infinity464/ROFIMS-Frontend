@@ -10,8 +10,9 @@ import { IdentityUserMappingService } from '@/services/identity-user-mapping.ser
 import { ServingMembersService } from '@/services/serving-members.service';
 import { EmpService } from '@/services/emp-service';
 import { DialogModule } from 'primeng/dialog';
-import { ChatUserDto, DirectConversation, DirectMessageDto, DirectMessageSearchResult, GroupDto, GroupMessageDto } from '@/models/chat.model';
-import { Subject, of } from 'rxjs';
+import { ChatAttachment, ChatUserDto, DirectConversation, DirectMessageDto, DirectMessageSearchResult, GroupDto, GroupMessageDto } from '@/models/chat.model';
+import { saveAs } from 'file-saver';
+import { Subject, of, forkJoin } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged, switchMap, takeUntil } from 'rxjs/operators';
 
 @Component({
@@ -332,7 +333,54 @@ import { catchError, debounceTime, distinctUntilChanged, switchMap, takeUntil } 
                     [style.background]="message.senderUserId === currentUserId ? 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)' : null"
                     class="px-4 py-2.5 rounded-2xl break-words">
                     <span *ngIf="message.senderUserId !== currentUserId && message.senderName" class="block text-xs font-semibold text-indigo-500 dark:text-indigo-300 mb-0.5">{{ message.senderName }}</span>
-                    <p class="text-[14px] leading-snug break-words max-w-full">{{ message.messageContent }}</p>
+                    <p *ngIf="message.messageContent" class="text-[14px] leading-snug break-words max-w-full">{{ message.messageContent }}</p>
+                    <!-- Attachments -->
+                    <ng-container *ngIf="parseAttachments(message.attachments) as atts">
+                      <div *ngIf="atts.length > 0" class="flex flex-col gap-2"
+                           [class.mt-2]="message.messageContent">
+                        <ng-container *ngFor="let a of atts">
+                          <div *ngIf="isImageAttachment(a); else fileCard"
+                               class="relative max-w-[260px] rounded-xl overflow-hidden ring-1 ring-black/10 group">
+                            <button type="button"
+                                    (click)="openImageLightbox(a)"
+                                    class="block w-full hover:opacity-90 transition">
+                              <img *ngIf="getAttachmentImageUrl(a) as src" [src]="src" [alt]="a.fileName"
+                                   class="block w-full h-auto max-h-[260px] object-cover" />
+                              <div *ngIf="!getAttachmentImageUrl(a)" class="w-[200px] h-[140px] flex items-center justify-center bg-surface-100 dark:bg-surface-700">
+                                <i class="pi pi-spin pi-spinner text-surface-400"></i>
+                              </div>
+                            </button>
+                            <button type="button"
+                                    (click)="downloadAttachment(a, $event)"
+                                    class="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/55 text-white hover:bg-black/75 flex items-center justify-center transition shadow-md"
+                                    title="Download image">
+                              <i class="pi pi-download text-xs"></i>
+                            </button>
+                          </div>
+                          <ng-template #fileCard>
+                            <button type="button"
+                                    (click)="downloadAttachment(a, $event)"
+                                    class="flex items-center gap-2 px-3 py-2 rounded-xl ring-1 hover:opacity-90 transition text-left max-w-[260px]"
+                                    [class.bg-white\/15]="message.senderUserId === currentUserId"
+                                    [class.ring-white\/25]="message.senderUserId === currentUserId"
+                                    [class.bg-surface-100]="message.senderUserId !== currentUserId"
+                                    [class.dark:!bg-surface-700]="message.senderUserId !== currentUserId"
+                                    [class.ring-surface-200]="message.senderUserId !== currentUserId"
+                                    [class.dark:!ring-surface-600]="message.senderUserId !== currentUserId">
+                              <i class="pi pi-file text-base shrink-0"
+                                 [class.text-white]="message.senderUserId === currentUserId"
+                                 [class.text-indigo-500]="message.senderUserId !== currentUserId"></i>
+                              <span class="flex-1 min-w-0">
+                                <span class="block text-[13px] font-medium truncate"
+                                      [class.text-white]="message.senderUserId === currentUserId">{{ a.fileName }}</span>
+                                <span class="block text-[10px] opacity-80">{{ formatFileSize(a.size) || 'Download' }}</span>
+                              </span>
+                              <i class="pi pi-download text-xs shrink-0 opacity-80"></i>
+                            </button>
+                          </ng-template>
+                        </ng-container>
+                      </div>
+                    </ng-container>
                   </div>
                   <div class="flex items-center gap-1.5 mt-1 px-1"
                        [class.flex-row-reverse]="message.senderUserId === currentUserId">
@@ -362,9 +410,31 @@ import { catchError, debounceTime, distinctUntilChanged, switchMap, takeUntil } 
           </div>
 
           <!-- Direct message input -->
-          <div *ngIf="selectedOtherUserId && !selectedGroupId" class="px-5 py-4 border-t border-surface-200 dark:border-surface-700 bg-surface-0 dark:bg-surface-900">
+          <div *ngIf="selectedOtherUserId && !selectedGroupId" class="px-5 py-3 border-t border-surface-200 dark:border-surface-700 bg-surface-0 dark:bg-surface-900">
+            <!-- Pending attachments preview -->
+            <div *ngIf="pendingAttachments.length > 0" class="flex flex-wrap gap-2 mb-2">
+              <div *ngFor="let a of pendingAttachments; let i = index"
+                   class="relative flex items-center gap-2 bg-surface-100 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-xl pr-3 py-1.5 pl-1.5 max-w-[220px]">
+                <img *ngIf="a.previewUrl" [src]="a.previewUrl" [alt]="a.file.name"
+                     class="w-10 h-10 rounded-lg object-cover shrink-0" />
+                <div *ngIf="!a.previewUrl" class="w-10 h-10 rounded-lg bg-indigo-100 dark:bg-indigo-500/20 flex items-center justify-center text-indigo-500 shrink-0">
+                  <i class="pi pi-file"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="text-[12px] font-medium text-surface-900 dark:text-surface-0 truncate">{{ a.file.name }}</div>
+                  <div class="text-[10px] text-surface-500 dark:text-surface-400">{{ formatFileSize(a.file.size) }}</div>
+                </div>
+                <button type="button" (click)="removePendingAttachment(i)"
+                        class="w-5 h-5 rounded-full bg-surface-200 dark:bg-surface-700 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-500/20 transition flex items-center justify-center"
+                        title="Remove">
+                  <i class="pi pi-times text-[10px]"></i>
+                </button>
+              </div>
+            </div>
             <form [formGroup]="messageForm" (ngSubmit)="sendMessage()" class="flex items-center gap-3">
+              <input #attachmentInput type="file" multiple class="hidden" (change)="onAttachmentsPicked($event)" />
               <button type="button"
+                      (click)="attachmentInput.click()"
                       class="w-10 h-10 rounded-full flex items-center justify-center text-surface-500 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-800 transition shrink-0"
                       title="Attach">
                 <i class="pi pi-paperclip"></i>
@@ -378,7 +448,7 @@ import { catchError, debounceTime, distinctUntilChanged, switchMap, takeUntil } 
                 class="flex-1 px-5 py-3 border border-surface-200 dark:border-surface-600 rounded-full bg-surface-50 dark:bg-surface-800 text-sm text-surface-900 dark:text-surface-0 placeholder:text-surface-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/30 focus:border-indigo-400 focus:bg-surface-0 dark:focus:bg-surface-800 disabled:opacity-60 disabled:cursor-not-allowed">
               <button
                 type="submit"
-                [disabled]="!isConnected || isSending || !messageForm.valid"
+                [disabled]="!isConnected || isSending || (!messageForm.valid && pendingAttachments.length === 0)"
                 style="background: linear-gradient(135deg, #6366f1 0%, #818cf8 100%);"
                 class="w-11 h-11 rounded-full text-white shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center shrink-0"
                 title="Send">
@@ -427,7 +497,45 @@ import { catchError, debounceTime, distinctUntilChanged, switchMap, takeUntil } 
                     [style.background]="message.senderUserId === currentUserId ? 'linear-gradient(135deg, #059669 0%, #34d399 100%)' : null"
                     class="px-4 py-2.5 rounded-2xl break-words">
                     <span *ngIf="message.senderUserId !== currentUserId && message.senderUserName" class="block text-xs font-semibold text-emerald-600 dark:text-emerald-300 mb-0.5">{{ message.senderUserName }}</span>
-                    <p class="text-[14px] leading-snug break-words max-w-full">{{ message.messageContent }}</p>
+                    <p *ngIf="message.messageContent" class="text-[14px] leading-snug break-words max-w-full">{{ message.messageContent }}</p>
+                    <ng-container *ngIf="parseAttachments(message.attachments) as atts">
+                      <div *ngIf="atts.length > 0" class="flex flex-col gap-2"
+                           [class.mt-2]="message.messageContent">
+                        <ng-container *ngFor="let a of atts">
+                          <button *ngIf="isImageAttachment(a); else groupFileCard"
+                                  type="button"
+                                  (click)="openImageLightbox(a)"
+                                  class="block max-w-[260px] rounded-xl overflow-hidden ring-1 ring-black/10 hover:opacity-90 transition">
+                            <img *ngIf="getAttachmentImageUrl(a) as src" [src]="src" [alt]="a.fileName"
+                                 class="block w-full h-auto max-h-[260px] object-cover" />
+                            <div *ngIf="!getAttachmentImageUrl(a)" class="w-[200px] h-[140px] flex items-center justify-center bg-surface-100 dark:bg-surface-700">
+                              <i class="pi pi-spin pi-spinner text-surface-400"></i>
+                            </div>
+                          </button>
+                          <ng-template #groupFileCard>
+                            <button type="button"
+                                    (click)="downloadAttachment(a, $event)"
+                                    class="flex items-center gap-2 px-3 py-2 rounded-xl ring-1 hover:opacity-90 transition text-left max-w-[260px]"
+                                    [class.bg-white\/15]="message.senderUserId === currentUserId"
+                                    [class.ring-white\/25]="message.senderUserId === currentUserId"
+                                    [class.bg-surface-100]="message.senderUserId !== currentUserId"
+                                    [class.dark:!bg-surface-700]="message.senderUserId !== currentUserId"
+                                    [class.ring-surface-200]="message.senderUserId !== currentUserId"
+                                    [class.dark:!ring-surface-600]="message.senderUserId !== currentUserId">
+                              <i class="pi pi-file text-base shrink-0"
+                                 [class.text-white]="message.senderUserId === currentUserId"
+                                 [class.text-emerald-500]="message.senderUserId !== currentUserId"></i>
+                              <span class="flex-1 min-w-0">
+                                <span class="block text-[13px] font-medium truncate"
+                                      [class.text-white]="message.senderUserId === currentUserId">{{ a.fileName }}</span>
+                                <span class="block text-[10px] opacity-80">{{ formatFileSize(a.size) || 'Download' }}</span>
+                              </span>
+                              <i class="pi pi-download text-xs shrink-0 opacity-80"></i>
+                            </button>
+                          </ng-template>
+                        </ng-container>
+                      </div>
+                    </ng-container>
                   </div>
                   <div class="flex items-center gap-1.5 mt-1 px-1"
                        [class.flex-row-reverse]="message.senderUserId === currentUserId">
@@ -456,9 +564,31 @@ import { catchError, debounceTime, distinctUntilChanged, switchMap, takeUntil } 
           </div>
 
           <!-- Group message input -->
-          <div *ngIf="selectedGroupId" class="px-5 py-4 border-t border-surface-200 dark:border-surface-700 bg-surface-0 dark:bg-surface-900">
+          <div *ngIf="selectedGroupId" class="px-5 py-3 border-t border-surface-200 dark:border-surface-700 bg-surface-0 dark:bg-surface-900">
+            <!-- Pending attachments preview -->
+            <div *ngIf="pendingAttachments.length > 0" class="flex flex-wrap gap-2 mb-2">
+              <div *ngFor="let a of pendingAttachments; let i = index"
+                   class="relative flex items-center gap-2 bg-surface-100 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-xl pr-3 py-1.5 pl-1.5 max-w-[220px]">
+                <img *ngIf="a.previewUrl" [src]="a.previewUrl" [alt]="a.file.name"
+                     class="w-10 h-10 rounded-lg object-cover shrink-0" />
+                <div *ngIf="!a.previewUrl" class="w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center text-emerald-500 shrink-0">
+                  <i class="pi pi-file"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="text-[12px] font-medium text-surface-900 dark:text-surface-0 truncate">{{ a.file.name }}</div>
+                  <div class="text-[10px] text-surface-500 dark:text-surface-400">{{ formatFileSize(a.file.size) }}</div>
+                </div>
+                <button type="button" (click)="removePendingAttachment(i)"
+                        class="w-5 h-5 rounded-full bg-surface-200 dark:bg-surface-700 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-500/20 transition flex items-center justify-center"
+                        title="Remove">
+                  <i class="pi pi-times text-[10px]"></i>
+                </button>
+              </div>
+            </div>
             <form [formGroup]="groupMessageForm" (ngSubmit)="sendGroupMessage()" class="flex items-center gap-3">
+              <input #groupAttachmentInput type="file" multiple class="hidden" (change)="onAttachmentsPicked($event)" />
               <button type="button"
+                      (click)="groupAttachmentInput.click()"
                       class="w-10 h-10 rounded-full flex items-center justify-center text-surface-500 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-800 transition shrink-0"
                       title="Attach">
                 <i class="pi pi-paperclip"></i>
@@ -472,7 +602,7 @@ import { catchError, debounceTime, distinctUntilChanged, switchMap, takeUntil } 
                 class="flex-1 px-5 py-3 border border-surface-200 dark:border-surface-600 rounded-full bg-surface-50 dark:bg-surface-800 text-sm text-surface-900 dark:text-surface-0 placeholder:text-surface-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/30 focus:border-emerald-400 focus:bg-surface-0 dark:focus:bg-surface-800 disabled:opacity-60 disabled:cursor-not-allowed">
               <button
                 type="submit"
-                [disabled]="!isConnected || isSendingGroup || !groupMessageForm.valid"
+                [disabled]="!isConnected || isSendingGroup || (!groupMessageForm.valid && pendingAttachments.length === 0)"
                 style="background: linear-gradient(135deg, #059669 0%, #34d399 100%);"
                 class="w-11 h-11 rounded-full text-white shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center shrink-0"
                 title="Send">
@@ -655,6 +785,34 @@ import { catchError, debounceTime, distinctUntilChanged, switchMap, takeUntil } 
         </ng-template>
       </p-dialog>
 
+      <!-- Image lightbox for clicked image attachments -->
+      <p-dialog
+        [(visible)]="showImageLightbox"
+        [modal]="true"
+        [draggable]="false"
+        [resizable]="false"
+        [dismissableMask]="true"
+        [closeOnEscape]="true"
+        [style]="{ width: '92vw', maxWidth: '900px', maxHeight: '92vh' }"
+        [contentStyle]="{ padding: '0', background: 'transparent', overflow: 'auto' }"
+        styleClass="chat-image-lightbox-dialog">
+        <ng-template pTemplate="header">
+          <div class="flex items-center gap-3 w-full">
+            <div class="text-sm font-semibold text-surface-900 dark:text-surface-0 truncate max-w-[55vw]">{{ lightboxImageName || 'Image' }}</div>
+            <button *ngIf="lightboxAttachment"
+                    type="button"
+                    (click)="downloadAttachment(lightboxAttachment, $event)"
+                    class="ml-auto inline-flex items-center gap-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-500/15 hover:bg-indigo-100 dark:hover:bg-indigo-500/25 px-2.5 py-1.5 rounded-full transition"
+                    title="Download image">
+              <i class="pi pi-download text-[11px]"></i>
+              <span>Download</span>
+            </button>
+          </div>
+        </ng-template>
+        <img *ngIf="lightboxImageUrl" [src]="lightboxImageUrl" [alt]="lightboxImageName || ''"
+             class="block max-w-full max-h-[80vh] mx-auto" />
+      </p-dialog>
+
       <p-confirmDialog />
     </div>
   `,
@@ -690,7 +848,7 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
   filteredDirectConversations: DirectConversation[] = [];
   selectedOtherUserId: string | null = null;
   /** Display list of messages. */
-  messages: Array<{ messageId: number; senderUserId: string; senderName?: string; receiverUserId?: string; messageContent: string; sentTime: Date; isSeen: boolean; isDeleted: boolean }> = [];
+  messages: Array<{ messageId: number; senderUserId: string; senderName?: string; receiverUserId?: string; messageContent: string; attachments?: string | null; sentTime: Date; isSeen: boolean; isDeleted: boolean }> = [];
   currentUserId: string = '';
   isConnected: boolean = false;
   /** Live set of online userIds from the chat hub. */
@@ -720,6 +878,22 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
   private searchText$ = new Subject<string>();
   /** When set, after loadDirectMessages finishes the view scrolls to and briefly highlights this message. */
   private pendingScrollToMessageId: number | null = null;
+  /** Caps how many older pages resolvePendingScroll will walk back before giving up. */
+  private pendingScrollPagesLeft = 0;
+  /** Memoised parsed attachment arrays keyed by the raw JSON string. Avoids JSON.parse on every CD cycle. */
+  private attachmentParseCache = new Map<string, ChatAttachment[]>();
+
+  /** Files queued in the input bar awaiting send. Each carries an in-memory preview URL for images. */
+  pendingAttachments: Array<{ file: File; previewUrl: string | null }> = [];
+  /** Cached blob URLs for already-sent attachment previews keyed by fileId. */
+  private attachmentBlobUrls: Record<number, string> = {};
+  /** Guards against re-firing downloadFile during pending requests (template calls getAttachmentImageUrl every CD cycle). */
+  private attachmentFetchInflight: Record<number, boolean> = {};
+  /** Lightbox state for clicked image attachments. */
+  showImageLightbox = false;
+  lightboxImageUrl: string | null = null;
+  lightboxImageName: string | null = null;
+  lightboxAttachment: ChatAttachment | null = null;
   private destroy$ = new Subject<void>();
   private shouldScroll = false;
 
@@ -728,7 +902,7 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
   loadingGroups = false;
   selectedGroupId: number | null = null;
   selectedGroup: GroupDto | null = null;
-  groupMessages: Array<{ messageId: number; groupId: number; senderUserId: string; senderUserName?: string; messageContent: string; sentTime: Date; isDeleted: boolean; isSeen?: boolean }> = [];
+  groupMessages: Array<{ messageId: number; groupId: number; senderUserId: string; senderUserName?: string; messageContent: string; attachments?: string | null; sentTime: Date; isDeleted: boolean; isSeen?: boolean }> = [];
   groupMessagesLoading = false;
   groupLoadingOlder = false;
   groupHasMoreOlder = false;
@@ -872,6 +1046,165 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
     });
   }
 
+  // ----- Attachments -----
+
+  onAttachmentsPicked(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const files = input.files;
+    if (!files || files.length === 0) return;
+    for (let i = 0; i < files.length; i++) {
+      const f = files.item(i);
+      if (!f) continue;
+      const isImage = f.type.startsWith('image/');
+      const previewUrl = isImage ? URL.createObjectURL(f) : null;
+      this.pendingAttachments.push({ file: f, previewUrl });
+    }
+    input.value = '';
+  }
+
+  removePendingAttachment(index: number): void {
+    const item = this.pendingAttachments[index];
+    if (item?.previewUrl) URL.revokeObjectURL(item.previewUrl);
+    this.pendingAttachments.splice(index, 1);
+  }
+
+  /** Parses the server's attachments JSON string into an array. Memoised per raw JSON string so CD-tick re-evaluation is cheap. */
+  parseAttachments(json: string | null | undefined): ChatAttachment[] {
+    if (!json) return [];
+    const cached = this.attachmentParseCache.get(json);
+    if (cached) return cached;
+    let result: ChatAttachment[] = [];
+    try {
+      const arr = JSON.parse(json) as Array<{ FileId?: number; fileId?: number; FileName?: string; fileName?: string; ContentType?: string; contentType?: string; Size?: number; size?: number }>;
+      if (Array.isArray(arr)) {
+        result = arr.map(a => ({
+          fileId: (a.FileId ?? a.fileId ?? 0) as number,
+          fileName: (a.FileName ?? a.fileName ?? '') as string,
+          contentType: a.ContentType ?? a.contentType,
+          size: a.Size ?? a.size
+        })).filter(a => a.fileId > 0);
+      }
+    } catch {
+      result = [];
+    }
+    this.attachmentParseCache.set(json, result);
+    return result;
+  }
+
+  isImageAttachment(a: ChatAttachment): boolean {
+    const ct = (a.contentType ?? '').toLowerCase();
+    if (ct.startsWith('image/')) return true;
+    const name = (a.fileName ?? '').toLowerCase();
+    return /\.(png|jpe?g|gif|webp|bmp|svg)$/.test(name);
+  }
+
+  formatFileSize(bytes?: number): string {
+    if (!bytes || bytes <= 0) return '';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  }
+
+  /** Lazily fetches and caches a blob URL for an attachment image, returns the URL synchronously once available. */
+  getAttachmentImageUrl(a: ChatAttachment): string | null {
+    if (!a?.fileId) return null;
+    const cached = this.attachmentBlobUrls[a.fileId];
+    if (cached) return cached;
+    if (this.attachmentFetchInflight[a.fileId]) return null;
+    this.attachmentFetchInflight[a.fileId] = true;
+    this.empService.downloadFile(a.fileId).pipe(
+      catchError(() => of(null)),
+      takeUntil(this.destroy$)
+    ).subscribe((blob) => {
+      this.attachmentFetchInflight[a.fileId] = false;
+      if (!blob || (blob as Blob).size === 0) return;
+      this.attachmentBlobUrls[a.fileId] = URL.createObjectURL(blob as Blob);
+    });
+    return null;
+  }
+
+  openImageLightbox(a: ChatAttachment): void {
+    this.lightboxAttachment = a;
+    const url = this.getAttachmentImageUrl(a);
+    if (!url) {
+      // Force a fetch then open when ready.
+      this.empService.downloadFile(a.fileId).pipe(
+        catchError(() => of(null)),
+        takeUntil(this.destroy$)
+      ).subscribe((blob) => {
+        if (!blob || (blob as Blob).size === 0) return;
+        const objectUrl = URL.createObjectURL(blob as Blob);
+        this.attachmentBlobUrls[a.fileId] = objectUrl;
+        this.lightboxImageUrl = objectUrl;
+        this.lightboxImageName = a.fileName;
+        this.showImageLightbox = true;
+      });
+      return;
+    }
+    this.lightboxImageUrl = url;
+    this.lightboxImageName = a.fileName;
+    this.showImageLightbox = true;
+  }
+
+  downloadAttachment(a: ChatAttachment, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
+    console.debug('[chat] downloadAttachment clicked for', a);
+    if (!a?.fileId) {
+      console.warn('[chat] downloadAttachment: no fileId on attachment', a);
+      return;
+    }
+    // If we already have a cached blob URL for this file, reuse it instead of re-fetching.
+    const cached = this.attachmentBlobUrls[a.fileId];
+    if (cached) {
+      console.debug('[chat] downloadAttachment: using cached blob URL', cached);
+      this.triggerDownloadFromUrl(cached, a.fileName || `attachment-${a.fileId}`);
+      return;
+    }
+    this.empService.downloadFile(a.fileId).subscribe({
+      next: (blob) => {
+        console.debug('[chat] downloadAttachment: blob received', { size: (blob as Blob)?.size, type: (blob as Blob)?.type });
+        if (!blob || (blob as Blob).size === 0) {
+          console.warn('[chat] downloadAttachment: empty blob');
+          return;
+        }
+        const url = URL.createObjectURL(blob as Blob);
+        this.attachmentBlobUrls[a.fileId] = url;
+        this.triggerDownloadFromUrl(url, a.fileName || `attachment-${a.fileId}`);
+      },
+      error: (err) => {
+        console.error('[chat] downloadAttachment: HTTP error', err);
+      }
+    });
+  }
+
+  /** Triggers a browser file download for a given blob URL. Tries file-saver first, falls back to manual anchor click. */
+  private triggerDownloadFromUrl(blobUrl: string, fileName: string): void {
+    try {
+      // file-saver works with both Blob and a fresh blob URL via fetch — easiest is fetch -> blob -> saveAs
+      // but here we already have a blob URL; manual anchor is more reliable for blob URLs.
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = fileName;
+      link.rel = 'noopener';
+      link.target = '_self';
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => {
+        if (document.body.contains(link)) document.body.removeChild(link);
+      }, 100);
+      console.debug('[chat] downloadAttachment: triggered anchor click for', fileName);
+    } catch (err) {
+      console.error('[chat] triggerDownloadFromUrl failed', err);
+      // Last-ditch: try saveAs via fetch
+      fetch(blobUrl).then(r => r.blob()).then(b => saveAs(b, fileName)).catch(e => {
+        console.error('[chat] saveAs fallback also failed', e);
+      });
+    }
+  }
+
   /** Returns the cached profile object for the user, or null if not loaded yet. */
   getUserProfile(userId: string | null): {
     rank: string;
@@ -973,7 +1306,14 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
 
   setViewMode(mode: 'direct' | 'groups'): void {
     this.viewMode = mode;
+    this.clearPendingAttachments();
     if (mode === 'groups') this.loadUserGroups();
+  }
+
+  /** Drops any staged-but-not-sent file attachments and revokes their preview URLs. */
+  private clearPendingAttachments(): void {
+    for (const p of this.pendingAttachments) if (p.previewUrl) URL.revokeObjectURL(p.previewUrl);
+    this.pendingAttachments = [];
   }
 
   loadUserGroups(): void {
@@ -1008,6 +1348,7 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
     this.groupMessages = [];
     this.groupMessagesPageNumber = 1;
     this.groupHasMoreOlder = false;
+    this.clearPendingAttachments();
     this.chatService.joinGroupHub(g.groupId).then(() => this.loadGroupMessages()).catch(() => this.loadGroupMessages());
   }
 
@@ -1038,6 +1379,7 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
       senderUserId: m.senderUserId ?? m.SenderUserId ?? '',
       senderUserName: m.senderUserName ?? m.SenderUserName,
       messageContent: m.messageContent ?? m.MessageContent ?? '',
+      attachments: m.attachments ?? m.Attachments ?? null,
       sentTime: m.sentTime ? new Date(m.sentTime) : (m.SentTime ? new Date(m.SentTime) : new Date()),
       isDeleted: m.isDeleted ?? m.IsDeleted ?? false,
       isSeen: m.isSeen ?? m.IsSeen ?? false
@@ -1077,14 +1419,45 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
   }
 
   sendGroupMessage(): void {
-    if (!this.groupMessageForm.valid || !this.selectedGroupId || this.isSendingGroup) return;
+    if (!this.selectedGroupId || this.isSendingGroup) return;
+    const content: string = (this.groupMessageForm.get('messageContent')?.value ?? '').trim();
+    const hasAttachments = this.pendingAttachments.length > 0;
+    if (!content && !hasAttachments) return;
+
     this.isSendingGroup = true;
-    const content = this.groupMessageForm.get('messageContent')?.value;
-    this.chatService.sendGroupMessage(this.selectedGroupId, content, this.currentUserId).then(() => {
-      this.groupMessageForm.reset();
-      this.isSendingGroup = false;
-      this.loadUserGroups();
-    }).catch(() => { this.isSendingGroup = false; });
+    const send = (attachmentsJson: string | null) => {
+      this.chatService.sendGroupMessage(this.selectedGroupId!, content, this.currentUserId, attachmentsJson).then(() => {
+        this.groupMessageForm.reset();
+        for (const p of this.pendingAttachments) if (p.previewUrl) URL.revokeObjectURL(p.previewUrl);
+        this.pendingAttachments = [];
+        this.isSendingGroup = false;
+        this.loadUserGroups();
+      }).catch(() => { this.isSendingGroup = false; });
+    };
+
+    if (!hasAttachments) {
+      send(null);
+      return;
+    }
+    const uploads = this.pendingAttachments.map(p =>
+      this.empService.uploadEmployeeFile(p.file, p.file.name).pipe(
+        catchError(() => of(null)),
+        takeUntil(this.destroy$)
+      )
+    );
+    forkJoin(uploads).subscribe((results) => {
+      const ok: ChatAttachment[] = [];
+      results.forEach((r, i) => {
+        if (!r || !r.fileId) return;
+        const f = this.pendingAttachments[i].file;
+        ok.push({ fileId: r.fileId, fileName: r.fileName ?? f.name, contentType: f.type || undefined, size: f.size });
+      });
+      if (ok.length === 0 && !content) {
+        this.isSendingGroup = false;
+        return;
+      }
+      send(ok.length > 0 ? JSON.stringify(ok) : null);
+    });
   }
 
   deleteGroupMessage(messageId: number): void {
@@ -1208,6 +1581,7 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
             senderUserId: payload.senderUserId,
             senderName: payload.senderName,
             messageContent: payload.messageContent,
+            attachments: payload.attachments ?? null,
             sentTime: payload.sentTime ? new Date(payload.sentTime) : new Date(),
             isSeen: payload.isSeen ?? false,
             isDeleted: false
@@ -1285,6 +1659,7 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
             senderUserId: payload.senderUserId,
             senderUserName: payload.senderName,
             messageContent: payload.messageContent,
+            attachments: payload.attachments ?? null,
             sentTime: payload.sentTime ? new Date(payload.sentTime) : new Date(),
             isDeleted: false,
             isSeen: false
@@ -1380,6 +1755,7 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
     this.ensureUserProfile(conv.otherUserId);
     this.chatService.clearUnreadOverlay(conv.otherUserId);
     conv.unreadCount = 0;
+    this.clearPendingAttachments();
     this.messages = [];
     this.messagesPageNumber = 1;
     this.hasMoreOlder = false;
@@ -1421,6 +1797,7 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
       senderUserId: m.senderUserId ?? m.SenderUserId ?? '',
       senderName: this.userDisplayNames[m.senderUserId ?? m.SenderUserId] ?? m.senderName ?? m.SenderName,
       messageContent: m.messageContent ?? m.MessageContent ?? '',
+      attachments: m.attachments ?? m.Attachments ?? null,
       sentTime: m.sentTime ? new Date(m.sentTime) : (m.SentTime ? new Date(m.SentTime) : new Date()),
       isSeen: m.isSeen ?? m.IsSeen ?? false,
       isDeleted: m.isDeleted ?? m.IsDeleted ?? false
@@ -1475,17 +1852,47 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
   }
 
   sendMessage(): void {
-    if (!this.messageForm.valid || !this.selectedOtherUserId || this.isSending) return;
+    if (!this.selectedOtherUserId || this.isSending) return;
+    const content: string = (this.messageForm.get('messageContent')?.value ?? '').trim();
+    const hasAttachments = this.pendingAttachments.length > 0;
+    if (!content && !hasAttachments) return;
 
     this.isSending = true;
-    const content = this.messageForm.get('messageContent')?.value;
+    const send = (attachmentsJson: string | null) => {
+      this.chatService.sendDirectMessage(this.selectedOtherUserId!, content, this.currentUserId, attachmentsJson).then(() => {
+        this.messageForm.reset();
+        for (const p of this.pendingAttachments) if (p.previewUrl) URL.revokeObjectURL(p.previewUrl);
+        this.pendingAttachments = [];
+        this.isSending = false;
+        this.loadDirectConversations();
+      }).catch(() => {
+        this.isSending = false;
+      });
+    };
 
-    this.chatService.sendDirectMessage(this.selectedOtherUserId, content, this.currentUserId).then(() => {
-      this.messageForm.reset();
-      this.isSending = false;
-      this.loadDirectConversations();
-    }).catch(() => {
-      this.isSending = false;
+    if (!hasAttachments) {
+      send(null);
+      return;
+    }
+    // Upload every file first, then send the message with the attachments JSON.
+    const uploads = this.pendingAttachments.map(p =>
+      this.empService.uploadEmployeeFile(p.file, p.file.name).pipe(
+        catchError(() => of(null)),
+        takeUntil(this.destroy$)
+      )
+    );
+    forkJoin(uploads).subscribe((results) => {
+      const ok: ChatAttachment[] = [];
+      results.forEach((r, i) => {
+        if (!r || !r.fileId) return;
+        const f = this.pendingAttachments[i].file;
+        ok.push({ fileId: r.fileId, fileName: r.fileName ?? f.name, contentType: f.type || undefined, size: f.size });
+      });
+      if (ok.length === 0 && !content) {
+        this.isSending = false;
+        return;
+      }
+      send(ok.length > 0 ? JSON.stringify(ok) : null);
     });
   }
 
@@ -1584,6 +1991,7 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
   openSearchResult(result: DirectMessageSearchResult): void {
     if (!result?.otherUserId) return;
     this.pendingScrollToMessageId = result.messageId;
+    this.pendingScrollPagesLeft = 20; // hard cap so an unfindable id can't cause endless paging
     const existing = this.directConversations.find(c => c.otherUserId === result.otherUserId);
     if (existing) {
       this.selectConversation(existing);
@@ -1613,20 +2021,23 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
     setTimeout(() => el.classList.remove('chat-message-highlight'), 2200);
   }
 
-  /** Recursively page older messages until we find the target id (or run out). */
+  /** Recursively page older messages until we find the target id (or run out / hit the cap). */
   private resolvePendingScroll(): void {
     const target = this.pendingScrollToMessageId;
     if (target == null) return;
     const found = this.messages.some(m => m.messageId === target);
     if (found) {
       this.pendingScrollToMessageId = null;
+      this.pendingScrollPagesLeft = 0;
       setTimeout(() => this.scrollToMessage(target), 120);
       return;
     }
-    if (!this.hasMoreOlder || this.loadingOlder) {
+    if (!this.hasMoreOlder || this.loadingOlder || this.pendingScrollPagesLeft <= 0) {
       this.pendingScrollToMessageId = null;
+      this.pendingScrollPagesLeft = 0;
       return;
     }
+    this.pendingScrollPagesLeft--;
     this.loadOlderMessages();
   }
 
@@ -1665,6 +2076,14 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
       if (url) URL.revokeObjectURL(url);
     }
     this.userProfiles = {};
+    for (const p of this.pendingAttachments) if (p.previewUrl) URL.revokeObjectURL(p.previewUrl);
+    this.pendingAttachments = [];
+    for (const id of Object.keys(this.attachmentBlobUrls)) {
+      const url = this.attachmentBlobUrls[+id];
+      if (url) URL.revokeObjectURL(url);
+    }
+    this.attachmentBlobUrls = {};
+    this.attachmentFetchInflight = {};
     this.destroy$.next();
     this.destroy$.complete();
   }

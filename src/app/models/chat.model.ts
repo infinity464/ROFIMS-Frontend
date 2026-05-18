@@ -11,11 +11,20 @@ export interface DirectConversation {
   unreadCount: number;
 }
 
+export interface ChatAttachment {
+  fileId: number;
+  fileName: string;
+  contentType?: string;
+  size?: number;
+}
+
 export interface DirectMessageDto {
   messageId: number;
   senderUserId: string;
   receiverUserId: string;
   messageContent: string;
+  /** JSON string from server; parse to ChatAttachment[]. */
+  attachments?: string | null;
   sentTime: Date;
   isSeen: boolean;
   isDeleted: boolean;
@@ -60,6 +69,8 @@ export interface GroupMessageDto {
   senderUserId: string;
   senderUserName?: string;
   messageContent: string;
+  /** JSON string from server; parse to ChatAttachment[]. */
+  attachments?: string | null;
   sentTime: Date | string;
   isDeleted: boolean;
   /** True if the message has been seen; when true, sender cannot delete. */
