@@ -203,7 +203,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
             kv(L['field.dateOfJoiningInServiceTraining'], this.formatDateDisplay(p.dateOfJoiningInServiceTraining)),
             kv(L['field.motherUnit'], this.codeValue(p.motherUnit, p.motherUnitBN)),
             kv(L['field.location'], this.codeValue(p.location, p.locationBN)),
-            kv(L['field.rabUnitLastPosting'], this.displayRabUnit),
+            kv(this.rabUnitFieldLabel, this.displayRabUnit),
             kv(L['field.joiningDate'], this.formatDateDisplay(p.joiningDate)),
             kv(L['field.maritalStatus'], this.codeValue(p.maritalStatus, p.maritalStatusBN)),
             ...this.getPostingStatusExportRows(L),
@@ -547,8 +547,25 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         return '—';
     }
 
-    /** RAB Unit for ex-member: Top 1 from previousServiceInfo ORDER BY durationFrom (serviceFrom) DESC. Uses BN when profileLang is bn. */
+    /** True for members who are still serving (profile.status === true). False/unknown for ex-members. */
+    get isPresentMember(): boolean {
+        return this.profile?.status === true;
+    }
+
+    /** Label for the RAB Unit field: drops "(Last Posting)" for present members. */
+    get rabUnitFieldLabel(): string {
+        return this.isPresentMember ? this.L['field.rabUnit'] : this.L['field.rabUnitLastPosting'];
+    }
+
+    /**
+     * RAB Unit display:
+     *  - Present members → current `profile.rabUnit` (their present working unit).
+     *  - Ex members → most recent entry from previousServiceInfo (sorted by durationFrom DESC), falling back to profile.rabUnit.
+     */
     get displayRabUnit(): string {
+        if (this.isPresentMember) {
+            return this.codeValue(this.profile?.rabUnit ?? null, this.profile?.rabUnitBN ?? null);
+        }
         if (!this.previousRabList?.length) return this.codeValue(this.profile?.rabUnit ?? null, this.profile?.rabUnitBN ?? null);
         const sorted = [...this.previousRabList].sort((a, b) => {
             const fromA = a.serviceFrom ?? '';
