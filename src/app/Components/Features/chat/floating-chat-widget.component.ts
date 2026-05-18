@@ -1,7 +1,9 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, NavigationEnd } from '@angular/router';
+import { DialogModule } from 'primeng/dialog';
 import { ChatService } from '@/services/chat.service';
+import { ChatContainerComponent } from '@/Components/Features/chat/chat-container.component';
 import { Subject } from 'rxjs';
 import { takeUntil, combineLatestWith, filter } from 'rxjs/operators';
 
@@ -23,7 +25,7 @@ export interface GroupChatBubble {
 @Component({
   selector: 'app-floating-chat-widget',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, DialogModule, ChatContainerComponent],
   template: `
     <div class="fixed bottom-6 right-6 z-[9999] flex flex-col items-end gap-3" *ngIf="isLoggedIn && !isOnChatPage">
       <!-- Group message bubbles -->
@@ -57,15 +59,31 @@ export interface GroupChatBubble {
 
       <!-- Main Chat button (like FB pencil icon) -->
       <button type="button"
-              (click)="goToChat()"
+              (click)="openChatModal()"
               class="w-14 h-14 rounded-full bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white shadow-lg hover:shadow-xl flex items-center justify-center transition-all hover:scale-105"
               title="Open Chat">
         <i class="pi pi-comments text-xl"></i>
       </button>
     </div>
+
+    <p-dialog
+      [(visible)]="showChatModal"
+      [modal]="true"
+      [draggable]="false"
+      [resizable]="false"
+      [dismissableMask]="true"
+      [closeOnEscape]="true"
+      [style]="{ width: '90vw', maxWidth: '1100px', height: '85vh' }"
+      [contentStyle]="{ padding: '0', overflow: 'hidden' }"
+      header="Messages"
+      styleClass="chat-modal-dialog">
+      <app-chat-container *ngIf="showChatModal"></app-chat-container>
+    </p-dialog>
   `,
   styles: [`
     :host { display: block; }
+    :host ::ng-deep .chat-modal-dialog .p-dialog-content { height: 100%; }
+    :host ::ng-deep .chat-modal-dialog .chat-container { height: 100% !important; }
   `]
 })
 export class FloatingChatWidgetComponent implements OnInit, OnDestroy {
@@ -73,6 +91,7 @@ export class FloatingChatWidgetComponent implements OnInit, OnDestroy {
   groupBubbles: GroupChatBubble[] = [];
   isLoggedIn = false;
   isOnChatPage = false;
+  showChatModal = false;
   private currentUserId = '';
   private destroy$ = new Subject<void>();
   private readonly MAX_BUBBLES = 5;
@@ -219,6 +238,10 @@ export class FloatingChatWidgetComponent implements OnInit, OnDestroy {
 
   goToChat(): void {
     this.router.navigate(['/chat']);
+  }
+
+  openChatModal(): void {
+    this.showChatModal = true;
   }
 
   ngOnDestroy(): void {
