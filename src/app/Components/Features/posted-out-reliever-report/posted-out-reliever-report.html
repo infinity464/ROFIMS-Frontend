@@ -1,34 +1,38 @@
 <p-toast position="top-center"></p-toast>
-<p-confirmdialog></p-confirmdialog>
 
 <div class="form-card">
     <div class="form-card-header">
         <h3 class="form-card-title">
-            <i class="pi pi-user-plus" style="font-size:1.1rem"></i>
+            <i class="pi pi-list" style="font-size:1.1rem"></i>
             {{ L[lang]['title'] }}
         </h3>
         <div class="flex gap-2 align-items-center">
             <div class="report-export-wrap" (click)="$event.stopPropagation()">
-                <button class="export-btn" [disabled]="!records.length || exporting" (click)="toggleExportDropdown($event)">
+                <button type="button" class="report-btn-export" [disabled]="!records.length || exporting" (click)="toggleExportDropdown($event)">
                     @if (exporting) {
-                        <i class="pi pi-spin pi-spinner" style="font-size:0.8rem"></i> Generating...
+                        <i class="pi pi-spin pi-spinner" style="font-size:13px"></i> Generating...
                     } @else {
-                        <i class="pi pi-download" style="font-size:0.8rem"></i> {{ L[lang]['export'] }}
+                        <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                            <path d="M6.5 1v7M3.5 5.5l3 3 3-3M1.5 10.5h10"
+                                  stroke="currentColor" stroke-width="1.5"
+                                  stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        {{ L[lang]['export'] }}
                     }
                 </button>
                 @if (exportDropdownOpen) {
-                <div class="report-export-dropdown">
+                <div class="report-export-dropdown" (click)="$event.stopPropagation()">
                     <button type="button" class="report-export-item report-export-print" (click)="exportAs('print')">
                         <i class="pi pi-print" style="font-size:0.75rem"></i> Print
                     </button>
                     <button type="button" class="report-export-item report-export-pdf" (click)="exportAs('pdf')">
-                        <i class="pi pi-file-pdf" style="font-size:0.75rem"></i> PDF
+                        <span class="report-export-icon">&#11015;</span> PDF
                     </button>
                     <button type="button" class="report-export-item report-export-word" (click)="exportAs('word')">
-                        <i class="pi pi-file-word" style="font-size:0.75rem"></i> Word
+                        <span class="report-export-icon">&#11015;</span> Word
                     </button>
                     <button type="button" class="report-export-item report-export-excel" (click)="exportAs('excel')">
-                        <i class="pi pi-file-excel" style="font-size:0.75rem"></i> Excel
+                        <span class="report-export-icon">&#11015;</span> Excel
                     </button>
                 </div>
                 }
@@ -46,7 +50,7 @@
             <div class="filter-bar">
                 <div class="filter-group">
                     <label>Status</label>
-                    <p-select [options]="joineeFilterOptions" [(ngModel)]="joineeFilter"
+                    <p-select [options]="entryStatusOptions" [(ngModel)]="entryStatusFilter"
                         optionLabel="label" optionValue="value"
                         placeholder="Filter by Entry Status"
                         styleClass="text-sm" [style]="{'min-width':'12rem'}"
@@ -54,11 +58,15 @@
                 </div>
                 <div class="filter-group">
                     <label>{{ L[lang]['fromDate'] }}</label>
-                    <p-datepicker [(ngModel)]="filterDateFrom" dateFormat="dd-mm-yy" placeholder="dd-mm-yyyy" [showIcon]="true" appendTo="body" class="w-full" [inputStyle]="{'width':'100%'}" (onSelect)="onFilterChange()" (onClear)="onFilterChange()" [showClear]="true"></p-datepicker>
+                    <p-datepicker [(ngModel)]="filterDateFrom" dateFormat="dd-mm-yy" placeholder="dd-mm-yyyy"
+                        [showIcon]="true" appendTo="body" class="w-full" [inputStyle]="{'width':'100%'}"
+                        (onSelect)="onFilterChange()" (onClear)="onFilterChange()" [showClear]="true"></p-datepicker>
                 </div>
                 <div class="filter-group">
                     <label>{{ L[lang]['toDate'] }}</label>
-                    <p-datepicker [(ngModel)]="filterDateTo" dateFormat="dd-mm-yy" placeholder="dd-mm-yyyy" [showIcon]="true" appendTo="body" class="w-full" [inputStyle]="{'width':'100%'}" (onSelect)="onFilterChange()" (onClear)="onFilterChange()" [showClear]="true"></p-datepicker>
+                    <p-datepicker [(ngModel)]="filterDateTo" dateFormat="dd-mm-yy" placeholder="dd-mm-yyyy"
+                        [showIcon]="true" appendTo="body" class="w-full" [inputStyle]="{'width':'100%'}"
+                        (onSelect)="onFilterChange()" (onClear)="onFilterChange()" [showClear]="true"></p-datepicker>
                 </div>
                 <div class="filter-btn">
                     <p-button icon="pi pi-filter-slash" label="Clear" severity="secondary" [outlined]="true" size="small" (onClick)="clearFilters()"></p-button>
@@ -75,57 +83,49 @@
         <ng-template pTemplate="header">
             <tr>
                 <th style="width:50px">{{ L[lang]['col.ser'] }}</th>
+                <th>{{ L[lang]['col.postedOutSvcId'] }}</th>
+                <th>{{ L[lang]['col.postedOutName'] }}</th>
+                <th>{{ L[lang]['col.relieverSvcId'] }}</th>
+                <th>{{ L[lang]['col.relieverName'] }}</th>
                 <th>{{ L[lang]['col.motherOrg'] }}</th>
                 <th>{{ L[lang]['col.motherOrgUnit'] }}</th>
                 <th>{{ L[lang]['col.memberType'] }}</th>
                 <th>{{ L[lang]['col.rank'] }}</th>
                 <th>{{ L[lang]['col.corps'] }}</th>
                 <th>{{ L[lang]['col.trade'] }}</th>
-                <th>{{ L[lang]['col.serviceId'] }}</th>
-                <th>{{ L[lang]['col.name'] }}</th>
-                <th>{{ L[lang]['col.joiningOrderNo'] }}</th>
-                <th>{{ L[lang]['col.joiningDate'] }}</th>
-                <th>{{ L[lang]['col.possibleJoining'] }}</th>
-                <th style="width:90px">{{ L[lang]['col.added'] }}</th>
-                <th style="width:90px">{{ L[lang]['col.actions'] }}</th>
+                <th>{{ L[lang]['col.postingOrderDate'] }}</th>
+                <th style="width:90px">{{ L[lang]['col.entryStatus'] }}</th>
             </tr>
         </ng-template>
         <ng-template pTemplate="body" let-row let-i="rowIndex">
             <tr>
                 <td>{{ first + i + 1 }}</td>
+                <td>{{ postedOutSvcId(row) }}</td>
+                <td>{{ (lang === 'bn' ? row.postedOutNameBN : row.postedOutName) ?? '-' }}</td>
+                <td>{{ relieverSvcId(row) }}</td>
+                <td>{{ row.relieverNameBangla ?? '-' }}</td>
                 <td>{{ (lang === 'bn' ? row.motherOrgNameBN : row.motherOrgName) ?? '-' }}</td>
                 <td>{{ (lang === 'bn' ? row.motherOrgUnitNameBN : row.motherOrgUnitName) ?? '-' }}</td>
                 <td>{{ (lang === 'bn' ? row.memberTypeNameBN : row.memberTypeName) ?? '-' }}</td>
                 <td>{{ (lang === 'bn' ? row.rankNameBN : row.rankName) ?? '-' }}</td>
                 <td>{{ (lang === 'bn' ? row.corpsNameBN : row.corpsName) ?? '-' }}</td>
                 <td>{{ (lang === 'bn' ? row.tradeNameBN : row.tradeName) ?? '-' }}</td>
-                <td>{{ row.prefixName && row.serviceId ? row.prefixName + '-' + row.serviceId : row.serviceId ?? '-' }}</td>
-                <td>{{ row.nameBangla ?? '-' }}</td>
-                <td>{{ row.joiningOrderNo ?? '-' }}</td>
-                <td>{{ formatDisplay(row.joiningOrderDate) }}</td>
-                <td>{{ formatDisplay(row.possibleJoiningDate) }}</td>
+                <td>{{ formatDisplay(row.postingOrderDate) }}</td>
                 <td>
-                    <span [class]="row.isAddedInNewJoineeDataEntry ? 'status-badge status-yes' : 'status-badge status-pending'">
-                        <i [class]="row.isAddedInNewJoineeDataEntry ? 'pi pi-check-circle' : 'pi pi-clock'"></i>
-                        {{ row.isAddedInNewJoineeDataEntry ? L[lang]['yes'] : L[lang]['no'] }}
+                    <span [class]="row.isAddedInNewJoineeDataEntry === true ? 'status-badge status-yes' : row.isAddedInNewJoineeDataEntry === false ? 'status-badge status-pending' : ''">
+                        @if (row.isAddedInNewJoineeDataEntry === true) {
+                            <i class="pi pi-check-circle"></i>
+                        } @else if (row.isAddedInNewJoineeDataEntry === false) {
+                            <i class="pi pi-clock"></i>
+                        }
+                        {{ entryStatusText(row) }}
                     </span>
-                </td>
-                <td>
-                    <div class="flex gap-1">
-                        <p-button icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" size="small" [text]="true"
-                            [disabled]="row.isAddedInNewJoineeDataEntry"
-                            pTooltip="Edit" tooltipPosition="top" (onClick)="onEdit(row)"></p-button>
-                        <p-button icon="pi pi-trash" [class.perm-hidden]="!canDelete" size="small" [text]="true"
-                            [disabled]="row.isAddedInNewJoineeDataEntry"
-                            severity="danger" pTooltip="Delete" tooltipPosition="top"
-                            (onClick)="onDelete(row)"></p-button>
-                    </div>
                 </td>
             </tr>
         </ng-template>
         <ng-template pTemplate="emptymessage">
             <tr>
-                <td colspan="14" class="text-center p-4 text-500">
+                <td colspan="13" class="text-center p-4 text-500">
                     <i class="pi pi-inbox text-2xl mb-2 block"></i>No records found.
                 </td>
             </tr>

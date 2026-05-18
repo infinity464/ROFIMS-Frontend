@@ -1,8 +1,8 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { TableModule } from 'primeng/table';
+import { TableModule, TableLazyLoadEvent } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
 import { Toast } from 'primeng/toast';
@@ -12,17 +12,15 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { InputTextModule } from 'primeng/inputtext';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
-import { Table } from 'primeng/table';
-import * as XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
 import { UserMenuService } from '@/services/user-menu.service';
 import { PermanentPostingMORecordService, PermanentPostingMORecordModel } from '@/services/permanent-posting-mo-record.service';
-import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
+import { ExportService, ReportConfig } from '@/services/export.service';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
     selector: 'app-posted-out-person-list',
     standalone: true,
-    imports: [CommonModule, FormsModule, TableModule, ButtonModule, TooltipModule, Toast, ConfirmDialog, DatePickerModule, InputTextModule, IconFieldModule, InputIconModule, FlexibleDateDirective],
+    imports: [CommonModule, FormsModule, TableModule, ButtonModule, TooltipModule, Toast, ConfirmDialog, DatePickerModule, InputTextModule, IconFieldModule, InputIconModule],
     providers: [MessageService, ConfirmationService],
     templateUrl: './posted-out-person-list.html',
     styleUrl: './posted-out-person-list.scss'
@@ -34,14 +32,22 @@ export class PostedOutPersonListComponent implements OnInit {
     canDelete = true;
 
     records: PermanentPostingMORecordModel[] = [];
+    totalRecords = 0;
     loading = false;
+    rows = 10;
+    first = 0;
 
     filterDateFrom: Date | null = null;
     filterDateTo: Date | null = null;
-    private _allRecords: PermanentPostingMORecordModel[] = [];
+    searchText = '';
+    private _searchTimer: any;
+
+    exportDropdownOpen = false;
+    exporting = false;
 
     constructor(
         private recordSvc: PermanentPostingMORecordService,
+        private exportService: ExportService,
         private messageService: MessageService,
         private confirmationService: ConfirmationService
     ) {}
@@ -50,38 +56,49 @@ export class PostedOutPersonListComponent implements OnInit {
         const perms = this._userMenuService.getPermissionsByRoute(this._router.url);
         this.canUpdate = perms.canUpdate;
         this.canDelete = perms.canDelete;
-        this.loadList();
     }
 
-    loadList(): void {
+    loadRecords(event?: TableLazyLoadEvent): void {
         this.loading = true;
-        this.recordSvc.getAll().subscribe({
-            next: (d) => { this._allRecords = d; this.applyDateFilter(); this.loading = false; },
-            error: () => { this.loading = false; }
+        const page = event ? Math.floor((event.first ?? 0) / (event.rows ?? this.rows)) + 1 : 1;
+        const rowPerPage = event?.rows ?? this.rows;
+        if (event) {
+            this.first = event.first ?? 0;
+            this.rows = event.rows ?? this.rows;
+        }
+
+        const dateFrom = this.filterDateFrom ? this.formatDateParam(this.filterDateFrom) : undefined;
+        const dateTo = this.filterDateTo ? this.formatDateParam(this.filterDateTo) : undefined;
+
+        this.recordSvc.getAllPaginated(page, rowPerPage, this.searchText || undefined, dateFrom, dateTo).subscribe({
+            next: (res) => {
+                this.records = res.datalist ?? [];
+                this.totalRecords = res.pages?.Rows ?? 0;
+                this.loading = false;
+            },
+            error: () => { this.records = []; this.totalRecords = 0; this.loading = false; }
         });
     }
 
+    onSearch(event: Event): void {
+        this.searchText = (event.target as HTMLInputElement).value;
+        clearTimeout(this._searchTimer);
+        this._searchTimer = setTimeout(() => {
+            this.first = 0;
+            this.loadRecords();
+        }, 400);
+    }
+
     applyDateFilter(): void {
-        let list = [...this._allRecords];
-        if (this.filterDateFrom) {
-            const from = new Date(this.filterDateFrom); from.setHours(0, 0, 0, 0);
-            list = list.filter(r => r.postingOrderDate && new Date(r.postingOrderDate) >= from);
-        }
-        if (this.filterDateTo) {
-            const to = new Date(this.filterDateTo); to.setHours(23, 59, 59, 999);
-            list = list.filter(r => r.postingOrderDate && new Date(r.postingOrderDate) <= to);
-        }
-        this.records = list;
+        this.first = 0;
+        this.loadRecords();
     }
 
     clearDateFilter(): void {
         this.filterDateFrom = null;
         this.filterDateTo = null;
-        this.records = [...this._allRecords];
-    }
-
-    onGlobalFilter(table: Table, event: Event): void {
-        table.filterGlobal((event.target as HTMLInputElement).value, 'contains');
+        this.first = 0;
+        this.loadRecords();
     }
 
     onEdit(row: PermanentPostingMORecordModel): void {
@@ -96,37 +113,90 @@ export class PostedOutPersonListComponent implements OnInit {
             acceptButtonStyleClass: 'p-button-danger',
             accept: () => {
                 this.recordSvc.delete(row.id).subscribe({
-                    next: () => { this.messageService.add({ severity: 'success', summary: 'Deleted', detail: 'Record deleted.' }); this.loadList(); },
+                    next: () => {
+                        this.messageService.add({ severity: 'success', summary: 'Deleted', detail: 'Record deleted.' });
+                        this.loadRecords();
+                    },
                     error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Delete failed.' })
                 });
             }
         });
     }
 
-    exportExcel(): void {
-        const rows = this.records.map((r, i) => ({
-            '#': i + 1,
-            'Record No': r.id,
-            'Posted Out Emp. ID': r.postedOutEmployeeId ?? '-',
-            'Posting Order No': r.postingOrderNo ?? '-',
-            'PO Date': this.formatDisplay(r.postingOrderDate),
-            'Possible Release': this.formatDisplay(r.possibleReleaseDate),
-            'Reliever': r.isReliever === true ? 'Yes' : r.isReliever === false ? 'No' : '-',
-            'Service ID': r.serviceId ?? '-',
-            'NS Clearance': r.noteSheetClearance === true ? 'Yes' : r.noteSheetClearance === false ? 'No' : '-',
-            'Clearance Given': r.clearanceGiven === true ? 'Yes' : r.clearanceGiven === false ? 'No' : '-',
-            'Status': r.status ?? '-'
-        }));
-        const ws = XLSX.utils.json_to_sheet(rows);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Data');
-        const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-        saveAs(new Blob([buf], { type: 'application/octet-stream' }), 'Posted_Out_Person_List.xlsx');
+    toggleExportDropdown(event: Event): void {
+        event.stopPropagation();
+        this.exportDropdownOpen = !this.exportDropdownOpen;
     }
 
-    formatDisplay(v: string | null | undefined): string {
-        if (!v) return '-';
-        const d = new Date(v);
-        return isNaN(d.getTime()) ? v : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    @HostListener('document:click')
+    closeExportDropdown(): void {
+        this.exportDropdownOpen = false;
+    }
+
+    private buildExportData(allRecords: PermanentPostingMORecordModel[]): { columns: string[]; rows: string[][] } {
+        const columns = [
+            '#', 'Name', 'Service ID', 'RAB ID',
+            'Posting Unit', 'Rank', 'Corps', 'Trade', 'Is Reliever Assigned?',
+        ];
+        const rows = allRecords.map((r, i) => [
+            String(i + 1),
+            r.postedOutName ?? '-',
+            this.prefixServiceId(r),
+            r.postedOutRabId ?? '-',
+            r.postingUnitName ?? '-',
+            r.postedOutRank ?? '-',
+            r.postedOutCorps ?? '-',
+            r.postedOutTrade ?? '-',
+            this.yesNo(r.isReliever),
+        ]);
+        return { columns, rows };
+    }
+
+    async exportAs(type: 'print' | 'pdf' | 'word' | 'excel'): Promise<void> {
+        this.exportDropdownOpen = false;
+        this.exporting = true;
+        try {
+            const allRecords = await firstValueFrom(this.recordSvc.getAll());
+            const { columns, rows } = this.buildExportData(allRecords);
+            const now = new Date();
+            const generated = now.toLocaleString('en-GB', {
+                day: '2-digit', month: 'short', year: 'numeric',
+                hour: '2-digit', minute: '2-digit', second: '2-digit',
+                hour12: true, timeZoneName: 'short',
+            });
+            const config: ReportConfig = {
+                title: 'Posted Out Person List',
+                lang: 'en',
+                columns,
+                rows,
+                showPageNumbers: true,
+                filename: 'Posted_Out_Person_List',
+                filterLines: [`Generated: ${generated}`],
+            };
+            if (type === 'pdf') {
+                await this.exportService.generatePDF(config);
+            } else if (type === 'print') {
+                this.exportService.exportPDF(config);
+            } else if (type === 'word') {
+                await this.exportService.exportWord(config);
+            } else {
+                this.exportService.exportExcel(config);
+            }
+        } finally { this.exporting = false; }
+    }
+
+    prefixServiceId(r: PermanentPostingMORecordModel): string {
+        return r.postedOutPrefix && r.serviceId ? `${r.postedOutPrefix}-${r.serviceId}` : r.serviceId ?? '-';
+    }
+
+    yesNo(v: boolean | null): string {
+        return v === true ? 'Yes' : v === false ? 'No' : '-';
+    }
+
+    private formatDateParam(d: Date): string {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
     }
 }

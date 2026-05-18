@@ -33,7 +33,7 @@
         <div class="col-panel">
             <div class="col-panel-header">
                 <i class="pi pi-file-edit"></i>
-                <span>Posted Out/ New Posting Person</span>
+                <span>Posted Out</span>
                 <p-button label="Clear" icon="pi pi-eraser" size="small" severity="secondary" [text]="true"
                     [style]="{'margin-left':'auto'}" (onClick)="clearPostedOutSection()"></p-button>
             </div>
@@ -190,7 +190,7 @@
         <div class="col-panel">
             <div class="col-panel-header">
                 <i class="pi pi-user-plus"></i>
-                <span>Posted Out/ New Posting Person</span>
+                <span>Posted In</span>
                 <p-button label="Clear" icon="pi pi-eraser" size="small" severity="secondary" [text]="true"
                     [style]="{'margin-left':'auto'}" (onClick)="clearJoineeSection()"></p-button>
             </div>
@@ -220,7 +220,8 @@
                     <p-select [options]="memberTypeOptions" [(ngModel)]="joineeMemberType"
                         optionLabel="label" optionValue="value"
                         placeholder="Select member type"
-                        [showClear]="true" class="w-full" appendTo="body"></p-select>
+                        [showClear]="true" class="w-full" appendTo="body"
+                        (onChange)="onMemberTypeChange($event.value)"></p-select>
                 </div>
                 <div class="form-field">
                     <label class="form-label">Rank</label>

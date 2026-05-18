@@ -139,6 +139,7 @@ export class PermanentPostingMORecordComponent implements OnInit {
     motherOrgOptions: { label: string; value: number }[] = [];
     motherOrgUnitOptions: { label: string; value: number }[] = [];
     memberTypeOptions: { label: string; value: number }[] = [];
+    private allRanksForOrg: any[] = [];
     rankOptions: { label: string; value: number }[] = [];
     corpsOptions: { label: string; value: number }[] = [];
     tradeOptions: { label: string; value: number }[] = [];
@@ -240,6 +241,7 @@ export class PermanentPostingMORecordComponent implements OnInit {
         this.joineeTrade = null;
         this.joineePrefixId = null;
         this.motherOrgUnitOptions = [];
+        this.allRanksForOrg = [];
         this.rankOptions = [];
         this.corpsOptions = [];
         this.tradeOptions = [];
@@ -257,7 +259,8 @@ export class PermanentPostingMORecordComponent implements OnInit {
         }).subscribe({
             next: ({ units, ranks, corps, prefixes }) => {
                 this.motherOrgUnitOptions = (units as any[]).map(u => ({ label: u.orgNameEN, value: u.orgId }));
-                this.rankOptions    = (ranks as any[]).map(c => ({ label: c.codeValueEN, value: c.codeId }));
+                this.allRanksForOrg = ranks as any[];
+                this.applyRankMemberTypeFilter();
                 this.corpsOptions   = (corps as any[]).map(c => ({ label: c.codeValueEN, value: c.codeId }));
                 this.prefixOptions  = (prefixes as any[]).map(c => ({ label: c.codeValueEN, value: c.codeId }));
                 if (onLoaded) onLoaded();
@@ -273,6 +276,19 @@ export class PermanentPostingMORecordComponent implements OnInit {
             next: (codes) => { this.tradeOptions = codes.map(c => ({ label: c.codeValueEN, value: c.codeId })); },
             error: (err: any) => {}
         });
+    }
+
+    onMemberTypeChange(memberTypeId: number | null): void {
+        this.joineeRank = null;
+        this.applyRankMemberTypeFilter();
+    }
+
+    private applyRankMemberTypeFilter(): void {
+        const mt = this.joineeMemberType;
+        const filtered = mt == null
+            ? this.allRanksForOrg
+            : this.allRanksForOrg.filter((r: any) => (r?.parentCodeId ?? r?.ParentCodeId ?? null) === mt);
+        this.rankOptions = filtered.map((item: any) => ({ label: item.codeValueEN ?? item.CodeValueEN, value: item.codeId ?? item.CodeId }));
     }
 
     // ── Employee search events ──────────────────────────────────────
@@ -702,7 +718,8 @@ export class PermanentPostingMORecordComponent implements OnInit {
             }).subscribe({
                 next: ({ units, ranks, corps, prefixes, searchInfo }) => {
                     this.motherOrgUnitOptions = (units as any[]).map(u => ({ label: u.orgNameEN, value: u.orgId }));
-                    this.rankOptions          = (ranks as any[]).map(c => ({ label: c.codeValueEN, value: c.codeId }));
+                    this.allRanksForOrg = ranks as any[];
+                    this.applyRankMemberTypeFilter();
                     this.corpsOptions         = (corps as any[]).map(c => ({ label: c.codeValueEN, value: c.codeId }));
                     this.prefixOptions        = (prefixes as any[]).map(c => ({ label: c.codeValueEN, value: c.codeId }));
 
@@ -738,6 +755,7 @@ export class PermanentPostingMORecordComponent implements OnInit {
         this.joineeTrade = null;
         this.joineePrefixId = null;
         this.motherOrgUnitOptions = [];
+        this.allRanksForOrg = [];
         this.rankOptions = [];
         this.corpsOptions = [];
         this.tradeOptions = [];
@@ -1121,6 +1139,6 @@ export class PermanentPostingMORecordComponent implements OnInit {
         this.joineeServiceId = ''; this.joineePreviousRabId = ''; this.joineeNameBangla = '';
         this.joineeJoiningOrderNo = ''; this.joineeJoiningOrderDate = null; this.joineePossibleJoiningDate = null;
         this.joineeFileRows = [];
-        this.motherOrgUnitOptions = []; this.rankOptions = []; this.corpsOptions = []; this.tradeOptions = []; this.prefixOptions = [];
+        this.motherOrgUnitOptions = []; this.allRanksForOrg = []; this.rankOptions = []; this.corpsOptions = []; this.tradeOptions = []; this.prefixOptions = [];
     }
 }

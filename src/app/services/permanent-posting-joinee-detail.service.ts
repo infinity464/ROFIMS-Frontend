@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '@/Core/Environments/environment';
+import { PagedResponse } from '@/Core/Models/Pagination';
 
 export interface PermanentPostingJoineeDetailModel {
     id: number;
@@ -29,6 +30,56 @@ export interface PermanentPostingJoineeDetailModel {
     lastupdate: string | null;
 }
 
+export interface PermanentPostingJoineeDetailListModel {
+    id: number;
+    permanentPostingMORecordId: number | null;
+    isAddedInNewJoineeDataEntry: boolean;
+    employeeId: number | null;
+    serviceId: string | null;
+    previousRabId: string | null;
+    nameBangla: string | null;
+    joiningOrderNo: string | null;
+    joiningOrderDate: string | null;
+    possibleJoiningDate: string | null;
+    joiningOrderFilesReferences: string | null;
+    createdBy: string;
+    createdDate: string;
+    lastUpdatedBy: string;
+    lastupdate: string | null;
+    linkStatus: string | null;
+    parentRecordNo: string | null;
+    postedOutEmployeeId: number | null;
+    postedOutServiceId: string | null;
+    postedOutNameBN: string | null;
+    postedOutNameEN: string | null;
+    motherOrgName: string | null;
+    motherOrgNameBN: string | null;
+    motherOrgUnitName: string | null;
+    motherOrgUnitNameBN: string | null;
+    memberTypeName: string | null;
+    memberTypeNameBN: string | null;
+    prefixName: string | null;
+    prefixNameBN: string | null;
+    rankName: string | null;
+    rankNameBN: string | null;
+    corpsName: string | null;
+    corpsNameBN: string | null;
+    tradeName: string | null;
+    tradeNameBN: string | null;
+}
+
+export interface PermanentPostingJoineeDetailFilterRequest {
+    searchText?: string;
+    isAddedInNewJoineeDataEntry?: boolean | null;
+    dateFrom?: string | null;
+    dateTo?: string | null;
+}
+
+export interface PermanentPostingJoineeDetailPaginatedFilterRequest {
+    pagination: { page_no: number; row_per_page: number };
+    filter: PermanentPostingJoineeDetailFilterRequest;
+}
+
 @Injectable({ providedIn: 'root' })
 export class PermanentPostingJoineeDetailService {
     private baseUrl = `${environment.apis.core}/PermanentPostingJoineeDetail`;
@@ -37,6 +88,14 @@ export class PermanentPostingJoineeDetailService {
 
     getAll(): Observable<PermanentPostingJoineeDetailModel[]> {
         return this.http.get<any>(`${this.baseUrl}/GetAll`).pipe(map((r) => (Array.isArray(r) ? r : [])));
+    }
+
+    getAllList(): Observable<PermanentPostingJoineeDetailListModel[]> {
+        return this.http.get<any>(`${this.baseUrl}/GetAllListAsyn`).pipe(map((r) => (Array.isArray(r) ? r : [])));
+    }
+
+    getPaginatedFiltered(request: PermanentPostingJoineeDetailPaginatedFilterRequest): Observable<PagedResponse<PermanentPostingJoineeDetailListModel>> {
+        return this.http.post<PagedResponse<PermanentPostingJoineeDetailListModel>>(`${this.baseUrl}/GetPaginatedFiltered`, request);
     }
 
     getByRecordId(recordId: number): Observable<PermanentPostingJoineeDetailModel | null> {
