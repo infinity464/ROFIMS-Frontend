@@ -6,7 +6,7 @@ import { ChatService } from '@/services/chat.service';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
 import { ServingMembersService } from '@/services/serving-members.service';
 import { ChatContainerComponent } from '@/Components/Features/chat/chat-container.component';
-import { ChatUserDto, DirectConversation } from '@/models/chat.model';
+import { ChatUserDto, DirectConversation, GroupDto } from '@/models/chat.model';
 import { forkJoin } from 'rxjs';
 import { Subject, of } from 'rxjs';
 import { takeUntil, withLatestFrom, filter, switchMap, catchError } from 'rxjs/operators';
@@ -42,7 +42,9 @@ export interface GroupChatBubble {
           </div>
           <div class="flex-1 min-w-0 text-left">
             <p class="text-sm font-medium text-surface-900 dark:text-surface-0 truncate">{{ bubble.groupName || 'Group' }}</p>
-            <p class="text-xs text-surface-600 dark:text-surface-400">{{ bubble.senderName }} · {{ bubble.unreadCount }} unread</p>
+            <p class="text-xs text-surface-600 dark:text-surface-400 truncate">
+              <ng-container *ngIf="bubble.senderName">{{ bubble.senderName }} · </ng-container>{{ bubble.unreadCount }} unread {{ bubble.unreadCount === 1 ? 'message' : 'messages' }}
+            </p>
           </div>
         </div>
       </div>
@@ -158,8 +160,14 @@ export class FloatingChatWidgetComponent implements OnInit, OnDestroy {
     if (!this.isLoggedIn) return;
 
     this.chatService.connectToHub()
-      .then(() => this.seedBubblesFromUnreadConversations())
-      .catch(() => this.seedBubblesFromUnreadConversations());
+      .then(() => {
+        this.seedBubblesFromUnreadConversations();
+        this.seedGroupBubblesFromUnreadGroups();
+      })
+      .catch(() => {
+        this.seedBubblesFromUnreadConversations();
+        this.seedGroupBubblesFromUnreadGroups();
+      });
 
     this.chatService.directMessageReceived$
       .pipe(
@@ -183,6 +191,7 @@ export class FloatingChatWidgetComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe((payload: any) => {
         if (!payload || payload.senderUserId === this.currentUserId) return;
+        if (payload.groupId === this.chatService.getSelectedGroupId()) return;
         this.addOrUpdateGroupBubble({
           type: 'group',
           groupId: payload.groupId,
@@ -190,6 +199,23 @@ export class FloatingChatWidgetComponent implements OnInit, OnDestroy {
           senderName: payload.senderName || 'Someone',
           unreadCount: 1
         });
+        this.cdr.markForCheck();
+      });
+
+    this.chatService.selectedGroupId$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((groupId) => {
+        if (groupId != null) {
+          this.removeGroupBubble(groupId);
+          this.cdr.markForCheck();
+        }
+      });
+
+    this.chatService.groupDeleted$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((payload: { groupId: number }) => {
+        if (!payload?.groupId) return;
+        this.removeGroupBubble(payload.groupId);
         this.cdr.markForCheck();
       });
 
@@ -294,6 +320,35 @@ export class FloatingChatWidgetComponent implements OnInit, OnDestroy {
       },
       error: () => { /* silent */ }
     });
+  }
+
+  /**
+   * Populate group bubbles from the server's groups list so unread-group bubbles survive page refreshes.
+   * Skips the currently-viewed group so the user doesn't see a bubble for what they're already looking at.
+   */
+  private seedGroupBubblesFromUnreadGroups(): void {
+    this.chatService.getUserGroups()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (groups) => {
+          const viewingGroupId = this.chatService.getSelectedGroupId();
+          const unread = (groups ?? []).filter((g: GroupDto) => (g.unreadCount ?? 0) > 0 && g.groupId !== viewingGroupId);
+          for (const g of unread) {
+            if (this.groupBubbles.some((b) => b.groupId === g.groupId)) continue;
+            this.groupBubbles.push({
+              type: 'group',
+              groupId: g.groupId,
+              groupName: g.groupName,
+              senderName: '',
+              unreadCount: g.unreadCount ?? 0
+            });
+            this.chatService.setGroupUnreadOverlay(g.groupId, g.unreadCount ?? 0);
+          }
+          this.groupBubbles = this.groupBubbles.slice(0, this.MAX_GROUP_BUBBLES);
+          this.cdr.markForCheck();
+        },
+        error: () => { /* silent */ }
+      });
   }
 
   /** Lazy-fetch employeeId → profile (rank + nameEnglish) so the bubble can upgrade from userName to rank+name. */

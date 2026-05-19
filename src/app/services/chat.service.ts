@@ -60,6 +60,35 @@ export class ChatService {
   private unreadOverlaySubject = new BehaviorSubject<Record<string, number>>({});
   public unreadOverlay$ = this.unreadOverlaySubject.asObservable();
 
+  /** Per-groupId in-session unread count, same pattern as the direct overlay above. */
+  private groupUnreadOverlaySubject = new BehaviorSubject<Record<number, number>>({});
+  public groupUnreadOverlay$ = this.groupUnreadOverlaySubject.asObservable();
+
+  bumpGroupUnreadOverlay(groupId: number): void {
+    if (!groupId) return;
+    const cur = { ...this.groupUnreadOverlaySubject.getValue() };
+    cur[groupId] = (cur[groupId] ?? 0) + 1;
+    this.groupUnreadOverlaySubject.next(cur);
+  }
+
+  setGroupUnreadOverlay(groupId: number, count: number): void {
+    if (!groupId) return;
+    const cur = { ...this.groupUnreadOverlaySubject.getValue() };
+    if (count <= 0) delete cur[groupId];
+    else cur[groupId] = count;
+    this.groupUnreadOverlaySubject.next(cur);
+  }
+
+  clearGroupUnreadOverlay(groupId: number): void {
+    if (!groupId) return;
+    const cur = this.groupUnreadOverlaySubject.getValue();
+    if (groupId in cur) {
+      const next = { ...cur };
+      delete next[groupId];
+      this.groupUnreadOverlaySubject.next(next);
+    }
+  }
+
   bumpUnreadOverlay(senderUserId: string): void {
     if (!senderUserId) return;
     const cur = { ...this.unreadOverlaySubject.getValue() };

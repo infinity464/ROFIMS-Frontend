@@ -52,6 +52,8 @@ export interface GroupDto {
   myRole: string;
   lastMessageAt?: Date | string | null;
   lastMessagePreview?: string | null;
+  /** Server-reported unread count (best-effort: messages from others still flagged !IsSeen). */
+  unreadCount?: number;
 }
 
 export interface GroupMemberDto {
