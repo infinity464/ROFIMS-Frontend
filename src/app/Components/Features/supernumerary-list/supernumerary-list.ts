@@ -360,6 +360,44 @@ export class SupernumeraryList implements OnInit {
         this.selectedIds.add(row.employeeID);
     }
 
+    /** Rows on the current page only (respects p-table pagination state). */
+    private getCurrentPageRows(): EmployeeList[] {
+        const list = this.filteredList ?? [];
+        const start = this.first ?? 0;
+        const end = start + (this.rows || list.length);
+        return list.slice(start, end);
+    }
+
+    /** Rows on the current page that the header "select all" can target (selectable + has RAB ID). */
+    private getEligibleRows(): EmployeeList[] {
+        return this.getCurrentPageRows().filter(r => this.isSelectable(r) && !!this.rabIdOf(r));
+    }
+
+    /** Header checkbox state: true when every eligible row in the visible list is selected (and there is at least one eligible row). */
+    get isAllSelectableSelected(): boolean {
+        const eligible = this.getEligibleRows();
+        if (eligible.length === 0) return false;
+        return eligible.every(r => this.selectedIds.has(r.employeeID));
+    }
+
+    /** Tri-state hint: true when some but not all eligible rows are selected (used to render an indeterminate checkbox). */
+    get isSelectableIndeterminate(): boolean {
+        const eligible = this.getEligibleRows();
+        if (eligible.length === 0) return false;
+        const picked = eligible.filter(r => this.selectedIds.has(r.employeeID)).length;
+        return picked > 0 && picked < eligible.length;
+    }
+
+    /** Toggle every eligible row in the visible list. Already-posted (disabled) rows are skipped. */
+    toggleSelectAllVisible(checked: boolean): void {
+        const eligible = this.getEligibleRows();
+        if (checked) {
+            for (const r of eligible) this.selectedIds.add(r.employeeID);
+        } else {
+            for (const r of eligible) this.selectedIds.delete(r.employeeID);
+        }
+    }
+
     get selectedCount(): number {
         return this.selectedIds.size;
     }

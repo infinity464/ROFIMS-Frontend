@@ -113,10 +113,12 @@ export class EmpBasicInfo implements OnInit {
         employeeId: this.employeeId
     };
 
-    // Spouse Permanent address config
+    // Spouse Permanent address config (with "Same as Member Permanent" option)
     spousePermanentAddressConfig: AddressFormConfig = {
         title: 'Spouse Permanent Address',
         addressType: 'spouse',
+        showSameAsPresent: true,
+        sameAsLabel: 'Same As Member Permanent Address',
         employeeId: this.employeeId
     };
 
@@ -125,7 +127,7 @@ export class EmpBasicInfo implements OnInit {
         title: 'Spouse Present Address',
         addressType: 'spousePresent',
         showSameAsPresent: true,
-        sameAsLabel: 'Same as Spouse Permanent Address',
+        sameAsLabel: 'Same as Permanent Address',
         employeeId: this.employeeId
     };
 
@@ -525,6 +527,14 @@ export class EmpBasicInfo implements OnInit {
         const spousePermanentData = this.spousePermanentAddressForm?.getFormData();
         if (spousePermanentData?.data) {
             this.spousePresentAddressForm?.populateFromSourceAddress(spousePermanentData.data);
+        }
+    }
+
+    // Copy member permanent address data to spouse permanent address form
+    copyMemberPermanentToSpousePermanent(): void {
+        const permanentData = this.permanentAddressForm?.getFormData();
+        if (permanentData?.data) {
+            this.spousePermanentAddressForm?.populateFromSourceAddress(permanentData.data);
         }
     }
 
@@ -1297,7 +1307,7 @@ export class EmpBasicInfo implements OnInit {
             lastMotherUnit: [null, Validators.required],
             memberType: [null, Validators.required],
             batch: [null],
-            appointment: [null, Validators.required],
+            appointment: [null],
             joiningDate: [null, Validators.required],
             rank: [null, Validators.required],
             branch: [null, Validators.required],

@@ -11,14 +11,34 @@ export interface DirectConversation {
   unreadCount: number;
 }
 
+export interface ChatAttachment {
+  fileId: number;
+  fileName: string;
+  contentType?: string;
+  size?: number;
+}
+
 export interface DirectMessageDto {
   messageId: number;
   senderUserId: string;
   receiverUserId: string;
   messageContent: string;
+  /** JSON string from server; parse to ChatAttachment[]. */
+  attachments?: string | null;
   sentTime: Date;
   isSeen: boolean;
   isDeleted: boolean;
+}
+
+export interface DirectMessageSearchResult {
+  messageId: number;
+  senderUserId: string;
+  receiverUserId: string;
+  /** Counterpart of the searching user — the conversation partner. */
+  otherUserId: string;
+  messageContent: string;
+  sentTime: Date | string;
+  isSeen: boolean;
 }
 
 // ----- Group chat -----
@@ -32,6 +52,10 @@ export interface GroupDto {
   myRole: string;
   lastMessageAt?: Date | string | null;
   lastMessagePreview?: string | null;
+  /** Server-reported unread count (best-effort: messages from others still flagged !IsSeen). */
+  unreadCount?: number;
+  /** Optional FileID for the group's avatar image. Resolved to a blob URL by the empService.downloadFile flow. */
+  groupImageFileId?: number | null;
 }
 
 export interface GroupMemberDto {
@@ -49,6 +73,8 @@ export interface GroupMessageDto {
   senderUserId: string;
   senderUserName?: string;
   messageContent: string;
+  /** JSON string from server; parse to ChatAttachment[]. */
+  attachments?: string | null;
   sentTime: Date | string;
   isDeleted: boolean;
   /** True if the message has been seen; when true, sender cannot delete. */

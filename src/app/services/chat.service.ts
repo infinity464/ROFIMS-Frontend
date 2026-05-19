@@ -1,9 +1,10 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, BehaviorSubject, Subject } from 'rxjs';
+import { Observable, BehaviorSubject, Subject, of } from 'rxjs';
+import { tap } from 'rxjs/operators';
 import { environment } from '@/Core/Environments/environment';
 import { HubConnection, HubConnectionBuilder, HubConnectionState } from '@microsoft/signalr';
-import { ChatUserDto, DirectConversation, DirectMessageDto, GroupDto, GroupMemberDto, GroupMessageDto } from '@/models/chat.model';
+import { ChatUserDto, DirectConversation, DirectMessageDto, DirectMessageSearchResult, GroupDto, GroupMemberDto, GroupMessageDto } from '@/models/chat.model';
 
 @Injectable({
   providedIn: 'root'
@@ -30,6 +31,15 @@ export class ChatService {
   private groupMessagesSeenSubject = new Subject<{ messageIds: number[]; groupId: number; seenByUserId: string }>();
   public groupMessagesSeen$ = this.groupMessagesSeenSubject.asObservable();
 
+  private groupRenamedSubject = new Subject<{ groupId: number; groupName: string }>();
+  public groupRenamed$ = this.groupRenamedSubject.asObservable();
+
+  private groupDeletedSubject = new Subject<{ groupId: number }>();
+  public groupDeleted$ = this.groupDeletedSubject.asObservable();
+
+  private groupImageChangedSubject = new Subject<{ groupId: number; groupImageFileId: number | null }>();
+  public groupImageChanged$ = this.groupImageChangedSubject.asObservable();
+
   /** Emitted when a leave application is submitted for approval and this user is the approver. */
   private leaveApprovalRequestedSubject = new Subject<{ leaveApplicationId: number; applicantEmployeeId: number; fromDate: string; toDate: string; leaveTypeId: number; message: string; notificationId?: number }>();
   public leaveApprovalRequested$ = this.leaveApprovalRequestedSubject.asObservable();
@@ -40,6 +50,75 @@ export class ChatService {
 
   private connectionStatusSubject = new BehaviorSubject<boolean>(false);
   public connectionStatus$ = this.connectionStatusSubject.asObservable();
+
+  /** Live set of online userIds, populated from the chat hub's UserOnline/UserOffline events. */
+  private onlineUserIdsSubject = new BehaviorSubject<Set<string>>(new Set<string>());
+  public onlineUserIds$ = this.onlineUserIdsSubject.asObservable();
+
+  /** Emits the senderUserId whose messages the CURRENT user has just marked as seen. Used by the floating widget to clear bubbles. */
+  private myDirectSeenForSenderSubject = new Subject<string>();
+  public myDirectSeenForSender$ = this.myDirectSeenForSenderSubject.asObservable();
+
+  /** Per-senderUserId in-session unread count; the floating widget bumps this on incoming messages and the chat container reads it for badge/bolding. */
+  private unreadOverlaySubject = new BehaviorSubject<Record<string, number>>({});
+  public unreadOverlay$ = this.unreadOverlaySubject.asObservable();
+
+  /** Per-groupId in-session unread count, same pattern as the direct overlay above. */
+  private groupUnreadOverlaySubject = new BehaviorSubject<Record<number, number>>({});
+  public groupUnreadOverlay$ = this.groupUnreadOverlaySubject.asObservable();
+
+  bumpGroupUnreadOverlay(groupId: number): void {
+    if (!groupId) return;
+    const cur = { ...this.groupUnreadOverlaySubject.getValue() };
+    cur[groupId] = (cur[groupId] ?? 0) + 1;
+    this.groupUnreadOverlaySubject.next(cur);
+  }
+
+  setGroupUnreadOverlay(groupId: number, count: number): void {
+    if (!groupId) return;
+    const cur = { ...this.groupUnreadOverlaySubject.getValue() };
+    if (count <= 0) delete cur[groupId];
+    else cur[groupId] = count;
+    this.groupUnreadOverlaySubject.next(cur);
+  }
+
+  clearGroupUnreadOverlay(groupId: number): void {
+    if (!groupId) return;
+    const cur = this.groupUnreadOverlaySubject.getValue();
+    if (groupId in cur) {
+      const next = { ...cur };
+      delete next[groupId];
+      this.groupUnreadOverlaySubject.next(next);
+    }
+  }
+
+  bumpUnreadOverlay(senderUserId: string): void {
+    if (!senderUserId) return;
+    const cur = { ...this.unreadOverlaySubject.getValue() };
+    cur[senderUserId] = (cur[senderUserId] ?? 0) + 1;
+    this.unreadOverlaySubject.next(cur);
+  }
+
+  setUnreadOverlay(senderUserId: string, count: number): void {
+    if (!senderUserId) return;
+    const cur = { ...this.unreadOverlaySubject.getValue() };
+    if (count <= 0) {
+      delete cur[senderUserId];
+    } else {
+      cur[senderUserId] = count;
+    }
+    this.unreadOverlaySubject.next(cur);
+  }
+
+  clearUnreadOverlay(senderUserId: string): void {
+    if (!senderUserId) return;
+    const cur = this.unreadOverlaySubject.getValue();
+    if (senderUserId in cur) {
+      const next = { ...cur };
+      delete next[senderUserId];
+      this.unreadOverlaySubject.next(next);
+    }
+  }
 
   private errorSubject = new Subject<string>();
   public error$ = this.errorSubject.asObservable();
@@ -114,6 +193,15 @@ export class ChatService {
     this.hubConnection.on('GroupMessagesSeen', (payload: { messageIds: number[]; groupId: number; seenByUserId: string }) => {
       this.groupMessagesSeenSubject.next(payload);
     });
+    this.hubConnection.on('GroupRenamed', (payload: { groupId: number; groupName: string }) => {
+      this.groupRenamedSubject.next(payload);
+    });
+    this.hubConnection.on('GroupDeleted', (payload: { groupId: number }) => {
+      this.groupDeletedSubject.next(payload);
+    });
+    this.hubConnection.on('GroupImageChanged', (payload: { groupId: number; groupImageFileId: number | null }) => {
+      this.groupImageChangedSubject.next(payload);
+    });
 
     this.hubConnection.on('LeaveApprovalRequested', (payload: any) => {
       if (typeof console !== 'undefined' && console.debug) {
@@ -133,13 +221,41 @@ export class ChatService {
       this.errorSubject.next(message);
     });
 
+    this.hubConnection.on('UserOnline', (userId: string) => {
+      if (!userId) return;
+      const next = new Set(this.onlineUserIdsSubject.getValue());
+      next.add(userId);
+      this.onlineUserIdsSubject.next(next);
+    });
+    this.hubConnection.on('UserOffline', (userId: string) => {
+      if (!userId) return;
+      const next = new Set(this.onlineUserIdsSubject.getValue());
+      next.delete(userId);
+      this.onlineUserIdsSubject.next(next);
+    });
+
     this.hubConnection.onreconnecting(() => {
       this.connectionStatusSubject.next(false);
+      this.onlineUserIdsSubject.next(new Set());
     });
 
     this.hubConnection.onreconnected(() => {
       this.connectionStatusSubject.next(true);
+      this.refreshOnlineUsers();
     });
+  }
+
+  /** Fetch the current online userIds from the hub and replace the local set. */
+  private refreshOnlineUsers(): void {
+    if (!this.hubConnection || this.hubConnection.state !== HubConnectionState.Connected) return;
+    this.hubConnection.invoke<string[]>('GetOnlineUsers')
+      .then((ids) => this.onlineUserIdsSubject.next(new Set(ids ?? [])))
+      .catch(() => { /* ignore */ });
+  }
+
+  /** Synchronous helper for templates. */
+  isUserOnline(userId: string): boolean {
+    return this.onlineUserIdsSubject.getValue().has(userId);
   }
 
   connectToHub(): Promise<void> {
@@ -149,12 +265,14 @@ export class ChatService {
 
     if (this.hubConnection.state === HubConnectionState.Connected) {
       this.connectionStatusSubject.next(true);
+      this.refreshOnlineUsers();
       return Promise.resolve();
     }
 
     if (this.hubConnection.state === HubConnectionState.Disconnected) {
       return this.hubConnection.start().then(() => {
         this.connectionStatusSubject.next(true);
+        this.refreshOnlineUsers();
       }).catch(err => {
         this.errorSubject.next(`Failed to connect: ${err.message}`);
         return Promise.reject(err);
@@ -195,31 +313,54 @@ export class ChatService {
     });
   }
 
-  sendDirectMessage(receiverUserId: string, content: string, senderUserId?: string | null): Promise<void> {
+  /** Full-text search across the current user's direct messages. Empty/blank query returns []. */
+  searchDirectMessages(query: string, limit: number = 50): Observable<DirectMessageSearchResult[]> {
+    const q = (query ?? '').trim();
+    if (!q) return of([]);
+    return this.http.get<DirectMessageSearchResult[]>(`${this.chatApi}/SearchDirectMessages`, {
+      params: { q, limit: limit.toString() }
+    });
+  }
+
+  sendDirectMessage(receiverUserId: string, content: string, senderUserId?: string | null, attachments?: string | null): Promise<void> {
     if (!this.hubConnection) {
       return Promise.reject('Hub not connected');
     }
-    return this.hubConnection.invoke('SendDirectMessage', senderUserId ?? '', receiverUserId, content).catch(err => {
+    return this.hubConnection.invoke('SendDirectMessage', senderUserId ?? '', receiverUserId, content ?? '', attachments ?? null).catch(err => {
       this.errorSubject.next(`Error sending: ${err.message}`);
       return Promise.reject(err);
     });
   }
 
-  sendDirectMessageViaApi(receiverUserId: string, content: string, senderUserId?: string | null): Observable<any> {
+  sendDirectMessageViaApi(receiverUserId: string, content: string, senderUserId?: string | null, attachments?: string | null): Observable<any> {
     return this.http.post(`${this.chatApi}/SendDirectMessage`, {
       senderUserId: senderUserId ?? undefined,
       receiverUserId,
-      messageContent: content
+      messageContent: content,
+      attachments: attachments ?? null
     });
   }
 
   markDirectMessagesAsSeen(senderUserId: string): Promise<void> {
     if (!this.hubConnection) return Promise.reject('Hub not connected');
-    return this.hubConnection.invoke('MarkDirectMessagesAsSeen', senderUserId).catch(() => {});
+    return this.hubConnection.invoke('MarkDirectMessagesAsSeen', senderUserId)
+      .then(() => {
+        if (senderUserId) {
+          this.clearUnreadOverlay(senderUserId);
+          this.myDirectSeenForSenderSubject.next(senderUserId);
+        }
+      })
+      .catch(() => {});
   }
 
   markDirectMessagesAsSeenViaApi(senderUserId: string): Observable<any> {
-    return this.http.post(`${this.chatApi}/MarkDirectMessagesAsSeen`, { senderUserId });
+    return this.http.post(`${this.chatApi}/MarkDirectMessagesAsSeen`, { senderUserId })
+      .pipe(tap(() => {
+        if (senderUserId) {
+          this.clearUnreadOverlay(senderUserId);
+          this.myDirectSeenForSenderSubject.next(senderUserId);
+        }
+      }));
   }
 
   deleteDirectMessage(messageId: number): Promise<void> {
@@ -326,19 +467,20 @@ export class ChatService {
     return this.hubConnection.invoke('LeaveGroup', groupId).catch(() => {});
   }
 
-  sendGroupMessage(groupId: number, content: string, senderUserId?: string | null): Promise<void> {
+  sendGroupMessage(groupId: number, content: string, senderUserId?: string | null, attachments?: string | null): Promise<void> {
     if (!this.hubConnection) return Promise.reject('Hub not connected');
-    return this.hubConnection.invoke('SendGroupMessage', senderUserId ?? '', groupId, content).catch(err => {
+    return this.hubConnection.invoke('SendGroupMessage', senderUserId ?? '', groupId, content ?? '', attachments ?? null).catch(err => {
       this.errorSubject.next(`Error sending: ${err?.message ?? err}`);
       return Promise.reject(err);
     });
   }
 
-  sendGroupMessageViaApi(groupId: number, content: string, senderUserId?: string | null): Observable<any> {
+  sendGroupMessageViaApi(groupId: number, content: string, senderUserId?: string | null, attachments?: string | null): Observable<any> {
     return this.http.post(`${this.chatApi}/SendGroupMessage`, {
       senderUserId: senderUserId ?? undefined,
       groupId,
-      messageContent: content
+      messageContent: content,
+      attachments: attachments ?? null
     });
   }
 
@@ -356,5 +498,21 @@ export class ChatService {
 
   leaveGroup(groupId: number): Observable<any> {
     return this.http.post(`${this.chatApi}/LeaveGroup`, { groupId });
+  }
+
+  removeGroupMember(groupId: number, userIdToRemove: string): Observable<any> {
+    return this.http.post(`${this.chatApi}/RemoveGroupMember`, { groupId, userIdToRemove });
+  }
+
+  renameGroup(groupId: number, newGroupName: string, renamerDisplayName?: string | null): Observable<any> {
+    return this.http.post(`${this.chatApi}/RenameGroup`, { groupId, newGroupName, renamerDisplayName: renamerDisplayName ?? null });
+  }
+
+  deleteGroup(groupId: number): Observable<any> {
+    return this.http.post(`${this.chatApi}/DeleteGroup`, { groupId });
+  }
+
+  setGroupImage(groupId: number, groupImageFileId: number | null): Observable<any> {
+    return this.http.post(`${this.chatApi}/SetGroupImage`, { groupId, groupImageFileId });
   }
 }

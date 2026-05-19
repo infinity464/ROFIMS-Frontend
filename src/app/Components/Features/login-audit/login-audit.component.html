@@ -63,7 +63,7 @@
 
         <ng-template pTemplate="body" let-audit let-rowIndex="rowIndex">
             <tr>
-                <td>{{ first + rowIndex + 1 }}</td>
+                <td>{{ rowIndex + 1 }}</td>
                 <td>{{ audit.attemptedEmail }}</td>
                 <td>{{ toBdDate(audit.attemptedAt) }}</td>
                 <td>{{ toBdTime(audit.attemptedAt) }}</td>

@@ -1,0 +1,25 @@
+:host {
+    display: block;
+}
+
+.ds-required {
+    color: #ef4444;
+    margin-left: 2px;
+    font-weight: 700;
+}
+
+.ds-field-hint {
+    font-size: 0.72rem;
+    color: var(--text-color-secondary, rgba(255, 255, 255, 0.55));
+    margin-top: 0.25rem;
+    line-height: 1.3;
+}
+
+/* Make p-inputNumber span the column like the other filter inputs. */
+:host ::ng-deep .long-stay-years.p-inputnumber {
+    width: 100%;
+}
+
+:host ::ng-deep .long-stay-years.p-inputnumber input.p-inputtext {
+    text-align: center;
+}

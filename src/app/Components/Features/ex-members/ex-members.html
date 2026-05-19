@@ -225,7 +225,7 @@
                 </ng-template>
                 <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                     <tr>
-                        <td><span class="report-ser-num">{{ first + rowIndex + 1 }}</span></td>
+                        <td><span class="report-ser-num">{{ rowIndex + 1 }}</span></td>
                         <td><span class="font-semibold">{{ row.serviceId || '—' }}</span></td>
                         <td>{{ row.armyRank || '—' }}</td>
                         <td>

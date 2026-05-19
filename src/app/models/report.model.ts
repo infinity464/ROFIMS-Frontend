@@ -286,3 +286,97 @@ export interface PresentStatusUnitWiseReportResponse {
   monthTotals: Record<number, number>;
   grandTotal: number;
 }
+
+// ── Unit & Specific Duration wise Nominal Roll ──────────────────────────
+
+/**
+ * Request for the Unit + Duration nominal roll. RabUnitId is required for a meaningful result.
+ * DurationFrom/DurationTo are ISO "yyyy-MM-dd"; backend treats them as an inclusive overlap window
+ * against PreviousRABServiceInfo stints. PostingStatus defaults to "Servings" server-side.
+ */
+export interface UnitDurationNominalRollReportParams {
+  rabUnitId?: number | null;
+  durationFrom?: string | null;
+  durationTo?: string | null;
+  orgId?: number | null;
+  rankId?: number | null;
+  postingStatus?: string | null;
+  pagination: ReportPagination;
+}
+
+/** One row of the Unit + Duration nominal roll (one per matching PreviousRABServiceInfo stint). */
+export interface UnitDurationNominalRollReportRow extends ReportRowBase {
+  /** Stint start date (ISO "yyyy-MM-dd") — RAB Service "From" column. */
+  rabServiceFrom?: string | null;
+  /** Stint end date (ISO "yyyy-MM-dd"). Null when still serving in that unit. */
+  rabServiceTo?: string | null;
+  rmks?: string | null;
+}
+
+// ── Nominal Roll of Stay in RAB Above N Years ───────────────────────────
+
+/**
+ * Request for the long-stay nominal roll. MinDuration + Unit ("Years" | "Months") select the
+ * threshold; both default to 2 / "Years" server-side. PostingStatus defaults to "Servings".
+ */
+export interface LongStayNominalRollReportParams {
+  minDuration?: number | null;
+  unit?: 'Years' | 'Months' | null;
+  orgId?: number | null;
+  rankId?: number | null;
+  postingStatus?: string | null;
+  pagination: ReportPagination;
+}
+
+// ── Nominal Roll of Stay in RAB after Reliever Joined ──────────────────
+
+export interface StayAfterRelieverJoinedReportParams {
+  orgId?: number | null;
+  rankId?: number | null;
+  postingStatus?: string | null;
+  pagination: ReportPagination;
+}
+
+/** One row — subset of the long-stay row, minus Mother Unit / Posting Order Date. */
+export interface StayAfterRelieverJoinedReportRow {
+  ser?: number;
+  serviceId?: string | null;
+  rank?: string | null;
+  rankBN?: string | null;
+  name?: string | null;
+  nameBN?: string | null;
+  joiningInRab?: string | null;
+  durationOfStay?: string | null;
+  presentUnit?: string | null;
+  presentUnitBN?: string | null;
+  postedOutUnit?: string | null;
+  postedOutUnitBN?: string | null;
+  relieverServiceId?: string | null;
+  relieverJoiningDate?: string | null;
+  rmks?: string | null;
+}
+
+/** One row of the long-stay nominal roll. */
+export interface LongStayNominalRollReportRow {
+  ser?: number;
+  serviceId?: string | null;
+  rank?: string | null;
+  rankBN?: string | null;
+  name?: string | null;
+  nameBN?: string | null;
+  motherUnit?: string | null;
+  motherUnitBN?: string | null;
+  /** ISO "yyyy-MM-dd" — EmployeeInfo.JoiningDate. */
+  joiningInRab?: string | null;
+  /** Server-formatted "Yy Mm" — gap from current-unit ServiceFrom to today. */
+  durationOfStay?: string | null;
+  presentUnit?: string | null;
+  presentUnitBN?: string | null;
+  postedOutUnit?: string | null;
+  postedOutUnitBN?: string | null;
+  /** ISO "yyyy-MM-dd" — latest PermanentPostingMORecord.PostingOrderDate. */
+  postingOrderDate?: string | null;
+  /** ISO "yyyy-MM-dd" — Reliever EmployeeInfo.JoiningDate (when reliever's ServiceId exists in EmployeeInfo). */
+  relieverJoiningDate?: string | null;
+  rmks?: string | null;
+}

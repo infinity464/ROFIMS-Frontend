@@ -168,11 +168,11 @@
 
                     <div class="form-field">
                         <label class="form-label">
-                            Appointment <span class="form-label-required">*</span>
+                            Appointment
                         </label>
                         <p-select [options]="appointments" optionLabel="codeValueEN" optionValue="codeId"
                             placeholder="Select Appointment" styleClass="w-full" formControlName="appointment"
-                            [filter]="true" filterPlaceholder="Search">
+                            [filter]="true" filterPlaceholder="Search" [showClear]="true">
                         </p-select>
                         @if (isFieldInvalid('appointment')) {
                         <small class="form-error">{{ getErrorMessage('appointment') }}</small>
@@ -366,7 +366,7 @@
                         </p-select>
                     </div>
                     <div class="form-field">
-                        <label class="form-label">Spouse Name</label>
+                        <label class="form-label">Spouse Name English</label>
                         <input pInputText class="w-full" placeholder="Enter spouse name"
                             formControlName="spouseName" />
                     </div>
@@ -420,7 +420,8 @@
             [isOptional]="true"
             [initialAddressData]="spousePermanentAddress"
             (onSave)="saveSpousePermanentAddress($event)"
-            (onCancel)="cancelAddress()">
+            (onCancel)="cancelAddress()"
+            (onSameAsPresentRequest)="copyMemberPermanentToSpousePermanent()">
           </app-address-form>
         </div>
 

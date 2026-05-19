@@ -159,8 +159,8 @@ export class PresentlyServingMembers implements OnInit {
         this.loadList(this.pageNumber, this.pageSize);
     }
 
-    serialNumber(rowIndexOnPage: number): number {
-        return (this.pageNumber - 1) * this.pageSize + rowIndexOnPage + 1;
+    serialNumber(rowIndex: number): number {
+        return rowIndex + 1;
     }
 
     private prefillRemarks(): void {
