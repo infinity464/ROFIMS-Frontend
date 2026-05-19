@@ -146,7 +146,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
             this.codeValue(row.presentUnit, row.presentUnitBN),
             this.codeValue(row.postedOutUnit, row.postedOutUnitBN),
             this.formatDateLabel(row.relieverJoiningDate),
-            row.rmks ?? '—',
+            row.rmks ?? '',
         ]);
         return { columns, rows };
     }

@@ -221,7 +221,7 @@ export class ReportLongStayNominalRollComponent implements OnInit {
             this.codeValue(row.postedOutUnit, row.postedOutUnitBN),
             this.formatDateLabel(row.postingOrderDate),
             this.formatDateLabel(row.relieverJoiningDate),
-            row.rmks ?? '—',
+            row.rmks ?? '',
         ]);
         return { columns, rows };
     }

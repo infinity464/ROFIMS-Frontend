@@ -193,7 +193,7 @@
                         </td>
                         <td>{{ formatDateLabel(row.postingOrderDate) }}</td>
                         <td>{{ formatDateLabel(row.relieverJoiningDate) }}</td>
-                        <td><span class="report-dash">{{ row.rmks ?? '—' }}</span></td>
+                        <td>{{ row.rmks ?? '' }}</td>
                     </tr>
                 </ng-template>
                 <ng-template pTemplate="emptymessage">

@@ -345,6 +345,7 @@ export interface StayAfterRelieverJoinedReportRow {
   presentUnitBN?: string | null;
   postedOutUnit?: string | null;
   postedOutUnitBN?: string | null;
+  relieverServiceId?: string | null;
   relieverJoiningDate?: string | null;
   rmks?: string | null;
 }

@@ -240,7 +240,7 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
             this.codeValue(row.presentUnit, row.presentUnitBN),
             this.formatDateLabel(row.rabServiceFrom),
             this.formatDateLabel(row.rabServiceTo),
-            row.rmks ?? '—',
+            row.rmks ?? '',
         ]);
         return { columns, rows };
     }
