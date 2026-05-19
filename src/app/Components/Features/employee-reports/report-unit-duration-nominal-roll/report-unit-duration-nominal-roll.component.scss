@@ -1,0 +1,15 @@
+:host {
+    display: block;
+}
+
+/* Required-field asterisk on the RAB Unit label. */
+.ds-required {
+    color: #ef4444;
+    margin-left: 2px;
+    font-weight: 700;
+}
+
+/* Group cell ("RAB Service") in the two-row header. */
+:host ::ng-deep .p-datatable .p-datatable-thead .th-group {
+    text-align: center;
+}

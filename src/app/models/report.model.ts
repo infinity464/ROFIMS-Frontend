@@ -286,3 +286,27 @@ export interface PresentStatusUnitWiseReportResponse {
   monthTotals: Record<number, number>;
   grandTotal: number;
 }
+
+// ── Unit & Specific Duration wise Nominal Roll ──────────────────────────
+
+/**
+ * Request for the Unit + Duration nominal roll. RabUnitId is required for a meaningful result.
+ * DurationFrom/DurationTo are ISO "yyyy-MM-dd"; backend treats them as an inclusive overlap window
+ * against PreviousRABServiceInfo stints. PostingStatus defaults to "Servings" server-side.
+ */
+export interface UnitDurationNominalRollReportParams {
+  rabUnitId?: number | null;
+  durationFrom?: string | null;
+  durationTo?: string | null;
+  postingStatus?: string | null;
+  pagination: ReportPagination;
+}
+
+/** One row of the Unit + Duration nominal roll (one per matching PreviousRABServiceInfo stint). */
+export interface UnitDurationNominalRollReportRow extends ReportRowBase {
+  /** Stint start date (ISO "yyyy-MM-dd") — RAB Service "From" column. */
+  rabServiceFrom?: string | null;
+  /** Stint end date (ISO "yyyy-MM-dd"). Null when still serving in that unit. */
+  rabServiceTo?: string | null;
+  rmks?: string | null;
+}
