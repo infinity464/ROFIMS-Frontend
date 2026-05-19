@@ -232,7 +232,7 @@
                         label="Add Member"
                         severity="success"
                         size="small"
-                        [disabled]="!selectedAddEmployee || addMemberSaving"
+                        [disabled]="!selectedAddEmployee || !addMemberTransferUnitId || addMemberSaving"
                         (onClick)="addMemberToList()">
                     </p-button>
                 </div>
