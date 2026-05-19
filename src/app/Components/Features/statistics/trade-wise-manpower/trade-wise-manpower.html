@@ -19,6 +19,8 @@
                     [filter]="true"
                     filterBy="orgName,orgNameBN"
                     display="chip"
+                    appendTo="body"
+                    scrollHeight=""
                     (onChange)="onOrgFilterChange()"
                     styleClass="org-filter-select"
                     [disabled]="loadingOrgs || loading">
