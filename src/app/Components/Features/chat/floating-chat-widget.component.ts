@@ -123,6 +123,12 @@ export class FloatingChatWidgetComponent implements OnInit, OnDestroy {
   private userProfiles: Record<string, { rank: string; fullName: string }> = {};
   private profileFetchInflight: Record<string, boolean> = {};
 
+  /** Lazy AudioContext for the incoming-message notification sound. Created on first play (after user has interacted via login). */
+  private audioCtx: AudioContext | null = null;
+  /** Throttle: drop sounds within this window of the previous play to avoid a burst when many messages land at once. */
+  private lastSoundAt = 0;
+  private readonly SOUND_THROTTLE_MS = 250;
+
   constructor(
     private chatService: ChatService,
     private router: Router,
@@ -176,6 +182,7 @@ export class FloatingChatWidgetComponent implements OnInit, OnDestroy {
       )
       .subscribe(([payload, selectedOtherUserId]) => {
         if (!payload || payload.receiverUserId !== this.currentUserId) return;
+        this.playMessageSound();
         if (payload.senderUserId === selectedOtherUserId) return;
         this.addOrUpdateBubble({
           type: 'direct',
@@ -191,6 +198,9 @@ export class FloatingChatWidgetComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe((payload: any) => {
         if (!payload || payload.senderUserId === this.currentUserId) return;
+        // Skip the sound for in-channel system notifications (rename, etc.) — those aren't human messages.
+        const content: string = payload.messageContent ?? '';
+        if (!content.startsWith('__SYSTEM__:')) this.playMessageSound();
         if (payload.groupId === this.chatService.getSelectedGroupId()) return;
         this.addOrUpdateGroupBubble({
           type: 'group',
@@ -278,6 +288,43 @@ export class FloatingChatWidgetComponent implements OnInit, OnDestroy {
   getInitial(name: string): string {
     if (!name || !name.trim()) return '?';
     return name.trim().charAt(0).toUpperCase();
+  }
+
+  /**
+   * Plays a short two-tone "pop" via Web Audio when a new message arrives. Synthesised so we don't ship an audio asset.
+   * Throttled so a burst of incoming messages doesn't produce overlapping beeps.
+   */
+  private playMessageSound(): void {
+    const now = Date.now();
+    if (now - this.lastSoundAt < this.SOUND_THROTTLE_MS) return;
+    this.lastSoundAt = now;
+    try {
+      if (!this.audioCtx) {
+        const Ctx: typeof AudioContext | undefined =
+          (window as unknown as { AudioContext?: typeof AudioContext }).AudioContext
+          ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        if (!Ctx) return;
+        this.audioCtx = new Ctx();
+      }
+      const ctx = this.audioCtx;
+      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+      const t0 = ctx.currentTime;
+      this.scheduleTone(ctx, 880, t0, 0.18, 0.22);          // A5
+      this.scheduleTone(ctx, 1320, t0 + 0.08, 0.18, 0.18);  // E6 — a fifth above for a "ding"
+    } catch { /* sound is non-critical — never throw */ }
+  }
+
+  private scheduleTone(ctx: AudioContext, freq: number, startAt: number, duration: number, peak: number): void {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, startAt);
+    gain.gain.exponentialRampToValueAtTime(peak, startAt + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(startAt);
+    osc.stop(startAt + duration + 0.05);
   }
 
   /** Returns "Major Aziz" if the employee profile has resolved; otherwise falls back to the SignalR senderName. */
@@ -412,5 +459,9 @@ export class FloatingChatWidgetComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+    if (this.audioCtx) {
+      this.audioCtx.close().catch(() => {});
+      this.audioCtx = null;
+    }
   }
 }
