@@ -161,7 +161,7 @@
 /* ── Themed table ── */
 :host ::ng-deep .themed-table {
     .p-datatable-thead > tr > th {
-        background: color-mix(in srgb, var(--primary-color) 12%, #fff) !important;
+        background: color-mix(in srgb, var(--primary-color) 12%, var(--surface-card)) !important;
         color: var(--text-color, #1e293b) !important;
         font-size: 0.75rem;
         font-weight: 700;
