@@ -27,6 +27,8 @@ import type {
   PresentStatusUnitWiseReportResponse,
   UnitDurationNominalRollReportParams,
   UnitDurationNominalRollReportRow,
+  LongStayNominalRollReportParams,
+  LongStayNominalRollReportRow,
 } from '@/models/report.model';
 import type { PagedResponse } from '@/Core/Models/Pagination';
 
@@ -236,6 +238,17 @@ export class ReportService {
     return this.http
       .post<ReportPagedResponse<UnitDurationNominalRollReportRow>>(
         `${this.apiUrl}/GetUnitDurationNominalRollReport`,
+        params
+      )
+      .pipe(map(normalizePages));
+  }
+
+  getLongStayNominalRollReport(
+    params: LongStayNominalRollReportParams
+  ): Observable<PagedResponse<LongStayNominalRollReportRow>> {
+    return this.http
+      .post<ReportPagedResponse<LongStayNominalRollReportRow>>(
+        `${this.apiUrl}/GetLongStayNominalRollReport`,
         params
       )
       .pipe(map(normalizePages));

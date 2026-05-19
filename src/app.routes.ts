@@ -171,6 +171,7 @@ import { ReportSupernumeraryComponent } from '@/Components/Features/employee-rep
 import { ReportPresentStatusByMotherOrgComponent } from '@/Components/Features/employee-reports/report-present-status-by-mother-org/report-present-status-by-mother-org.component';
 import { ReportPresentStatusUnitWiseComponent } from '@/Components/Features/employee-reports/report-present-status-unit-wise/report-present-status-unit-wise.component';
 import { ReportUnitDurationNominalRollComponent } from '@/Components/Features/employee-reports/report-unit-duration-nominal-roll/report-unit-duration-nominal-roll.component';
+import { ReportLongStayNominalRollComponent } from '@/Components/Features/employee-reports/report-long-stay-nominal-roll/report-long-stay-nominal-roll.component';
 import { RabUnitAor } from '@/Components/basic-setup/rab-unit-aor/rab-unit-aor';
 import { RabUnitAorMap } from '@/Components/basic-setup/rab-unit-aor-map/rab-unit-aor-map';
 import { ManpowerSummaryComponent } from '@/Components/Features/statistics/manpower-summary/manpower-summary';
@@ -395,6 +396,7 @@ export const appRoutes: Routes = [
             { path: 'report-present-status-by-mother-org', component: ReportPresentStatusByMotherOrgComponent },
             { path: 'report-present-status-unit-wise', component: ReportPresentStatusUnitWiseComponent },
             { path: 'report-unit-duration-nominal-roll', component: ReportUnitDurationNominalRollComponent },
+            { path: 'report-long-stay-nominal-roll', component: ReportLongStayNominalRollComponent },
 
             // Statistics
             { path: 'statistics/manpower-summary', component: ManpowerSummaryComponent },

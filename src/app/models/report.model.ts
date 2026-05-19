@@ -310,3 +310,41 @@ export interface UnitDurationNominalRollReportRow extends ReportRowBase {
   rabServiceTo?: string | null;
   rmks?: string | null;
 }
+
+// ── Nominal Roll of Stay in RAB Above N Years ───────────────────────────
+
+/**
+ * Request for the long-stay nominal roll. MinDuration + Unit ("Years" | "Months") select the
+ * threshold; both default to 2 / "Years" server-side. PostingStatus defaults to "Servings".
+ */
+export interface LongStayNominalRollReportParams {
+  minDuration?: number | null;
+  unit?: 'Years' | 'Months' | null;
+  postingStatus?: string | null;
+  pagination: ReportPagination;
+}
+
+/** One row of the long-stay nominal roll. */
+export interface LongStayNominalRollReportRow {
+  ser?: number;
+  serviceId?: string | null;
+  rank?: string | null;
+  rankBN?: string | null;
+  name?: string | null;
+  nameBN?: string | null;
+  motherUnit?: string | null;
+  motherUnitBN?: string | null;
+  /** ISO "yyyy-MM-dd" — EmployeeInfo.JoiningDate. */
+  joiningInRab?: string | null;
+  /** Server-formatted "Yy Mm" — gap from current-unit ServiceFrom to today. */
+  durationOfStay?: string | null;
+  presentUnit?: string | null;
+  presentUnitBN?: string | null;
+  postedOutUnit?: string | null;
+  postedOutUnitBN?: string | null;
+  /** ISO "yyyy-MM-dd" — latest PermanentPostingMORecord.PostingOrderDate. */
+  postingOrderDate?: string | null;
+  /** ISO "yyyy-MM-dd" — Reliever EmployeeInfo.JoiningDate (when reliever's ServiceId exists in EmployeeInfo). */
+  relieverJoiningDate?: string | null;
+  rmks?: string | null;
+}
