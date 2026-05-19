@@ -372,6 +372,18 @@ export class FloatingChatWidgetComponent implements OnInit, OnDestroy {
       this.groups = groups ?? [];
       for (const u of users ?? []) this.chatUserNames[u.userId] = u.userName || u.email || u.userId;
       for (const c of this.directConversations) this.ensureUserProfile(c.otherUserId);
+      // Any conversation with an expanded (non-minimized) window is being read right now —
+      // ignore any lingering server-side unread count for it to avoid the badge ticking back up.
+      for (const w of this.openWindows) {
+        if (w.minimized) continue;
+        if (w.kind === 'direct') {
+          const c = this.directConversations.find(c => c.otherUserId === w.targetId);
+          if (c) c.unreadCount = 0;
+        } else {
+          const g = this.groups.find(g => g.groupId === w.targetId);
+          if (g) g.unreadCount = 0;
+        }
+      }
       this.loadingConversations = false;
     });
   }
@@ -576,9 +588,28 @@ export class FloatingChatWidgetComponent implements OnInit, OnDestroy {
 
   totalUnread(): number {
     let total = 0;
-    for (const c of this.directConversations) total += c.unreadCount ?? 0;
-    for (const g of this.groups) total += g.unreadCount ?? 0;
-    for (const w of this.openWindows) if (w.minimized) total += w.unreadCount;
+    // For each known conversation, take max(server-reported, locally-tracked window count).
+    // The window counter bumps on live incoming messages; the server count refreshes on popup open.
+    // Summing both would double-count the same unread message.
+    for (const c of this.directConversations) {
+      const w = this.openWindows.find(ow => ow.kind === 'direct' && ow.targetId === c.otherUserId);
+      const winCount = w && w.minimized ? w.unreadCount : 0;
+      total += Math.max(winCount, c.unreadCount ?? 0);
+    }
+    for (const g of this.groups) {
+      const w = this.openWindows.find(ow => ow.kind === 'group' && ow.targetId === g.groupId);
+      const winCount = w && w.minimized ? w.unreadCount : 0;
+      total += Math.max(winCount, g.unreadCount ?? 0);
+    }
+    // Include orphan minimized windows whose conversation isn't in the loaded lists yet
+    // (e.g. a live message arrived before the first refreshConversations completed).
+    for (const w of this.openWindows) {
+      if (!w.minimized) continue;
+      const known = w.kind === 'direct'
+        ? this.directConversations.some(c => c.otherUserId === w.targetId)
+        : this.groups.some(g => g.groupId === w.targetId);
+      if (!known) total += w.unreadCount;
+    }
     return total;
   }
 

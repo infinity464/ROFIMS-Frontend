@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, Input, Output, EventEmitter, ViewChild, ElementRef, AfterViewChecked, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, OnChanges, SimpleChanges, Input, Output, EventEmitter, ViewChild, ElementRef, AfterViewChecked, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Observable, Subject, of, forkJoin } from 'rxjs';
@@ -217,7 +217,7 @@ interface UserProfileLite {
     </div>
   `
 })
-export class ChatWindowComponent implements OnInit, OnDestroy, AfterViewChecked {
+export class ChatWindowComponent implements OnInit, OnDestroy, OnChanges, AfterViewChecked {
   @Input({ required: true }) kind!: 'direct' | 'group';
   /** userId for direct, groupId for group */
   @Input({ required: true }) targetId!: string | number;
@@ -385,10 +385,30 @@ export class ChatWindowComponent implements OnInit, OnDestroy, AfterViewChecked 
     }
   }
 
+  ngOnChanges(changes: SimpleChanges): void {
+    // When the window is restored from a minimized chat head, the messages were never marked as seen
+    // (the mark in loadMessages skips minimized state). Trigger a mark-as-seen now so the unread badge clears.
+    const m = changes['minimized'];
+    if (m && m.previousValue === true && m.currentValue === false) {
+      this.markCurrentlyVisibleAsSeen();
+      this.shouldScrollBottom = true;
+    }
+  }
+
   ngAfterViewChecked(): void {
     if (this.shouldScrollBottom) {
       this.shouldScrollBottom = false;
       setTimeout(() => this.scrollToBottom(), 0);
+    }
+  }
+
+  private markCurrentlyVisibleAsSeen(): void {
+    if (this.messages.length === 0) return;
+    if (this.kind === 'direct') {
+      this.chatService.markDirectMessagesAsSeen(this.targetId as string).catch(() => {});
+    } else {
+      const ids = this.messages.map(m => m.messageId);
+      this.chatService.markGroupMessagesAsSeen(this.targetId as number, ids).catch(() => {});
     }
   }
 
