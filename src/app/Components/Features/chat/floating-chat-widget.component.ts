@@ -66,56 +66,65 @@ interface ConversationRow {
           <!-- Conversations popup -->
           <div *ngIf="showPopup"
                (click)="$event.stopPropagation()"
-               class="absolute bottom-16 right-0 w-[340px] max-h-[520px] bg-surface-0 dark:bg-surface-900 rounded-2xl shadow-2xl border border-surface-200 dark:border-surface-700 flex flex-col overflow-hidden">
+               class="absolute bottom-16 right-0 w-[340px] min-h-[420px] max-h-[520px] bg-surface-0 dark:bg-surface-900 rounded-2xl shadow-2xl border border-surface-200 dark:border-surface-700 flex flex-col overflow-hidden">
             <!-- Header -->
             <div class="px-4 pt-3 pb-2 border-b border-surface-200 dark:border-surface-700">
               <div class="flex items-center justify-between mb-2">
                 <div class="text-base font-bold text-surface-900 dark:text-surface-0">Chats</div>
                 <button type="button"
                         (click)="goToChat()"
-                        class="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
-                        title="Open full chat page">
-                  Open full
+                        class="w-7 h-7 rounded-full flex items-center justify-center text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/15 transition"
+                        title="Open Messenger">
+                  <i class="pi pi-window-maximize text-xs"></i>
                 </button>
               </div>
-              <!-- Search -->
+              <!-- Search (drives both the conversation list and the new-chat picker) -->
               <div class="relative mb-2">
                 <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-surface-400 text-xs"></i>
                 <input type="text" [(ngModel)]="searchText"
-                       placeholder="Search Messenger"
+                       [placeholder]="popupView === 'newDirect' ? 'Search by rank, name or username...' : 'Search Messenger'"
                        class="w-full pl-8 pr-3 py-1.5 border border-surface-200 dark:border-surface-600 rounded-full bg-surface-50 dark:bg-surface-800 text-xs text-surface-900 dark:text-surface-0 placeholder:text-surface-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/30 focus:border-indigo-400">
               </div>
-              <!-- Tabs -->
-              <div class="flex gap-1">
+              <!-- Tabs + New chat toggle (always visible) -->
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex gap-1">
+                  <button type="button"
+                          (click)="popupTab = 'all'; popupView = 'list'"
+                          [class.bg-indigo-50]="popupView === 'list' && popupTab === 'all'"
+                          [class.dark:!bg-indigo-500\/15]="popupView === 'list' && popupTab === 'all'"
+                          [class.text-indigo-700]="popupView === 'list' && popupTab === 'all'"
+                          [class.dark:!text-indigo-300]="popupView === 'list' && popupTab === 'all'"
+                          [class.text-surface-600]="!(popupView === 'list' && popupTab === 'all')"
+                          class="px-3 py-1 rounded-full text-xs font-semibold transition">All</button>
+                  <button type="button"
+                          (click)="popupTab = 'direct'; popupView = 'list'"
+                          [class.bg-indigo-50]="popupView === 'list' && popupTab === 'direct'"
+                          [class.dark:!bg-indigo-500\/15]="popupView === 'list' && popupTab === 'direct'"
+                          [class.text-indigo-700]="popupView === 'list' && popupTab === 'direct'"
+                          [class.dark:!text-indigo-300]="popupView === 'list' && popupTab === 'direct'"
+                          [class.text-surface-600]="!(popupView === 'list' && popupTab === 'direct')"
+                          class="px-3 py-1 rounded-full text-xs font-semibold transition">Direct</button>
+                  <button type="button"
+                          (click)="popupTab = 'groups'; popupView = 'list'"
+                          [class.bg-emerald-50]="popupView === 'list' && popupTab === 'groups'"
+                          [class.dark:!bg-emerald-500\/15]="popupView === 'list' && popupTab === 'groups'"
+                          [class.text-emerald-700]="popupView === 'list' && popupTab === 'groups'"
+                          [class.dark:!text-emerald-300]="popupView === 'list' && popupTab === 'groups'"
+                          [class.text-surface-600]="!(popupView === 'list' && popupTab === 'groups')"
+                          class="px-3 py-1 rounded-full text-xs font-semibold transition">Groups</button>
+                </div>
                 <button type="button"
-                        (click)="popupTab = 'all'"
-                        [class.bg-indigo-50]="popupTab === 'all'"
-                        [class.dark:!bg-indigo-500\/15]="popupTab === 'all'"
-                        [class.text-indigo-700]="popupTab === 'all'"
-                        [class.dark:!text-indigo-300]="popupTab === 'all'"
-                        [class.text-surface-600]="popupTab !== 'all'"
-                        class="px-3 py-1 rounded-full text-xs font-semibold transition">All</button>
-                <button type="button"
-                        (click)="popupTab = 'direct'"
-                        [class.bg-indigo-50]="popupTab === 'direct'"
-                        [class.dark:!bg-indigo-500\/15]="popupTab === 'direct'"
-                        [class.text-indigo-700]="popupTab === 'direct'"
-                        [class.dark:!text-indigo-300]="popupTab === 'direct'"
-                        [class.text-surface-600]="popupTab !== 'direct'"
-                        class="px-3 py-1 rounded-full text-xs font-semibold transition">Direct</button>
-                <button type="button"
-                        (click)="popupTab = 'groups'"
-                        [class.bg-emerald-50]="popupTab === 'groups'"
-                        [class.dark:!bg-emerald-500\/15]="popupTab === 'groups'"
-                        [class.text-emerald-700]="popupTab === 'groups'"
-                        [class.dark:!text-emerald-300]="popupTab === 'groups'"
-                        [class.text-surface-600]="popupTab !== 'groups'"
-                        class="px-3 py-1 rounded-full text-xs font-semibold transition">Groups</button>
+                        (click)="openNewDirectView($event)"
+                        class="flex items-center gap-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/15 hover:bg-indigo-100 dark:hover:bg-indigo-500/25 px-2.5 py-1 rounded-full transition shrink-0"
+                        title="Start a new chat">
+                  <i class="pi pi-plus text-[10px]"></i>
+                  <span>New chat</span>
+                </button>
               </div>
             </div>
 
             <!-- Conversation list -->
-            <div class="flex-1 overflow-y-auto py-1">
+            <div *ngIf="popupView === 'list'" class="flex-1 overflow-y-auto py-1">
               <div *ngIf="loadingConversations" class="py-4 text-center text-xs text-surface-500"><i class="pi pi-spin pi-spinner mr-1"></i>Loading...</div>
               <div *ngIf="!loadingConversations && filteredRows().length === 0" class="py-6 text-center text-xs text-surface-500">
                 {{ searchText.trim() ? 'No matches.' : 'No conversations yet.' }}
@@ -166,6 +175,39 @@ interface ConversationRow {
                 </div>
               </button>
             </div>
+
+            <!-- New direct chat: user picker -->
+            <div *ngIf="popupView === 'newDirect'" class="flex-1 overflow-y-auto py-1">
+              <div *ngIf="loadingPickerUsers" class="py-4 text-center text-xs text-surface-500">
+                <i class="pi pi-spin pi-spinner mr-1"></i>Loading users...
+              </div>
+              <div *ngIf="!loadingPickerUsers && filteredPickerUsers().length === 0" class="py-6 text-center text-xs text-surface-500">
+                {{ searchText.trim() ? 'No users match.' : 'No users found.' }}
+              </div>
+              <button *ngFor="let u of filteredPickerUsers()"
+                      type="button"
+                      (click)="startDirectWith(u)"
+                      class="w-full text-left flex items-center gap-2.5 px-3 py-2 hover:bg-surface-100 dark:hover:bg-surface-800 transition">
+                <div class="relative shrink-0">
+                  <img *ngIf="pickerUserAvatarUrl(u.userId) as imgUrl; else pickerLetter"
+                       [src]="imgUrl" alt=""
+                       class="w-9 h-9 rounded-full object-cover bg-surface-100 dark:bg-surface-700" />
+                  <ng-template #pickerLetter>
+                    <div class="w-9 h-9 rounded-full flex items-center justify-center text-white font-semibold text-xs"
+                         [style.background]="getAvatarColor(u.userId)">
+                      {{ pickerInitial(u.userId) }}
+                    </div>
+                  </ng-template>
+                  <span *ngIf="isOnline(u.userId)"
+                        class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-surface-0 dark:border-surface-900"></span>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="text-[13px] font-semibold text-surface-900 dark:text-surface-0 truncate leading-tight">{{ getRankAndName(u.userId) || u.userName || u.email || u.userId }}</div>
+                  <div class="text-[10px] text-surface-500 dark:text-surface-400 truncate leading-tight">{{ u.userName || u.email || u.userId }}</div>
+                </div>
+                <i class="pi pi-plus text-indigo-500 text-[10px]"></i>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -192,6 +234,10 @@ export class FloatingChatWidgetComponent implements OnInit, OnDestroy {
   showPopup = false;
   popupTab: 'all' | 'direct' | 'groups' = 'all';
   searchText = '';
+  /** Current popup view. 'newDirect' shows the user picker used to start a new conversation. */
+  popupView: 'list' | 'newDirect' = 'list';
+  loadingPickerUsers = false;
+  allChatUsers: ChatUserDto[] = [];
 
   loadingConversations = false;
   directConversations: DirectConversation[] = [];
@@ -345,7 +391,11 @@ export class FloatingChatWidgetComponent implements OnInit, OnDestroy {
   toggleConversationsPopup(event?: Event): void {
     if (event) event.stopPropagation();
     this.showPopup = !this.showPopup;
-    if (this.showPopup) this.refreshConversations();
+    if (this.showPopup) {
+      this.refreshConversations();
+    } else {
+      this.popupView = 'list';
+    }
   }
 
   @HostListener('document:click', ['$event'])
@@ -353,11 +403,15 @@ export class FloatingChatWidgetComponent implements OnInit, OnDestroy {
     if (!this.showPopup) return;
     const host = this.hostRef?.nativeElement;
     if (!host) return;
-    if (!host.contains(event.target as Node)) this.showPopup = false;
+    if (!host.contains(event.target as Node)) {
+      this.showPopup = false;
+      this.popupView = 'list';
+    }
   }
 
   @HostListener('document:keydown.escape')
   onEscape(): void {
+    if (this.popupView !== 'list') { this.popupView = 'list'; return; }
     if (this.showPopup) this.showPopup = false;
   }
 
@@ -750,6 +804,82 @@ export class FloatingChatWidgetComponent implements OnInit, OnDestroy {
     this.showPopup = false;
     this.router.navigate(['/chat']);
   }
+
+  // ---- "New chat" picker ----
+
+  openNewDirectView(event?: Event): void {
+    if (event) event.stopPropagation();
+    this.popupView = 'newDirect';
+    if (this.allChatUsers.length === 0 && !this.loadingPickerUsers) {
+      this.loadingPickerUsers = true;
+      this.chatService.getChatUsers()
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (users) => {
+            this.allChatUsers = users ?? [];
+            this.loadingPickerUsers = false;
+            for (const u of this.allChatUsers) this.ensureUserProfile(u.userId);
+          },
+          error: () => { this.loadingPickerUsers = false; }
+        });
+    } else {
+      for (const u of this.allChatUsers) this.ensureUserProfile(u.userId);
+    }
+  }
+
+  /**
+   * Users who can be selected for a new chat: everyone except the current user AND anyone who
+   * already has a direct conversation (those are already reachable in the main list).
+   */
+  filteredPickerUsers(): ChatUserDto[] {
+    const existing = new Set(this.directConversations.map(c => c.otherUserId));
+    const q = this.searchText.trim().toLowerCase();
+    const list = this.allChatUsers.filter(u =>
+      u.userId
+      && u.userId !== this.currentUserId
+      && !existing.has(u.userId));
+    if (!q) return list;
+    return list.filter(u => {
+      const rankName = this.getRankAndName(u.userId).toLowerCase();
+      const userName = (u.userName ?? '').toLowerCase();
+      const email = (u.email ?? '').toLowerCase();
+      return rankName.includes(q) || userName.includes(q) || email.includes(q);
+    });
+  }
+
+  pickerInitial(userId: string): string {
+    const profile = this.userProfiles[userId];
+    const fullName = (profile?.fullName ?? '').trim();
+    if (fullName) {
+      const parts = fullName.split(/\s+/);
+      return (parts[parts.length - 1] ?? '').charAt(0).toUpperCase() || '?';
+    }
+    const u = this.allChatUsers.find(u => u.userId === userId);
+    return (u?.userName ?? userId).charAt(0).toUpperCase() || '?';
+  }
+
+  pickerUserAvatarUrl(userId: string): string | null {
+    return this.userProfiles[userId]?.profileImageUrl ?? null;
+  }
+
+  startDirectWith(user: ChatUserDto): void {
+    const title = this.getRankAndName(user.userId) || user.userName || user.email || user.userId;
+    this.chatUserNames[user.userId] = user.userName || user.email || user.userId;
+    this.showPopup = false;
+    this.popupView = 'list';
+    // Reuse the same open-window path the conversation list uses.
+    this.openConversation({
+      kind: 'direct',
+      id: user.userId,
+      title,
+      subtitle: user.userName ?? '',
+      lastMessage: '',
+      lastMessageDate: null,
+      unreadCount: 0,
+      avatarUserId: user.userId
+    });
+  }
+
 
   // ---- Sound ----
 
