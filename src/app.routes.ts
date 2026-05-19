@@ -94,6 +94,7 @@ import { EmpPermPostingMotherOrg } from '@/Components/Features/Emp/emp-perm-post
 import { PermanentPostingMORecordComponent } from '@/Components/Features/permanent-posting-mo-record/permanent-posting-mo-record';
 import { PostedOutPersonListComponent } from '@/Components/Features/posted-out-person-list/posted-out-person-list';
 import { NewJoiningPersonListComponent } from '@/Components/Features/new-joining-person-list/new-joining-person-list';
+import { PostedOutRelieverReportComponent } from '@/Components/Features/posted-out-reliever-report/posted-out-reliever-report';
 import { EmpPresentStatus } from '@/Components/Features/Emp/emp-present-status/emp-present-status';
 import { EmpPersonalServiceInfoComponent } from '@/Components/Features/Emp/emp-personal-service-info/emp-personal-service-info';
 import { EmpPresentMemberCheckComponent } from '@/Components/Features/Emp/emp-present-member-check/emp-present-member-check.component';
@@ -355,6 +356,7 @@ export const appRoutes: Routes = [
             { path: 'posting/permanent-posting-mo-record', component: PermanentPostingMORecordComponent },
             { path: 'posting/posted-out-person-list', component: PostedOutPersonListComponent },
             { path: 'posting/new-joining-person-list', component: NewJoiningPersonListComponent },
+            { path: 'posting/posted-out-reliever-report', component: PostedOutRelieverReportComponent },
             { path: 'posting/add-draft-new-posting', component: AddDraftNewPostingComponent },
             { path: 'posting/notesheet-generate', component: PostingNotesheetGenerateComponent },
             { path: 'posting/add-draft-inter-posting', component: AddDraftInterPostingComponent },

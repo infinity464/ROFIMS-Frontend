@@ -8,17 +8,44 @@
             Posted Out Person List
         </h3>
         <div class="flex gap-2 align-items-center">
-            <p-button label="Export Excel" icon="pi pi-file-excel" size="small" severity="success"
-                [outlined]="true" [disabled]="!records.length"
-                (onClick)="exportExcel()"></p-button>
+            <div class="report-export-wrap" (click)="$event.stopPropagation()">
+                <button type="button" class="report-btn-export" [disabled]="!records.length || exporting" (click)="toggleExportDropdown($event)">
+                    @if (exporting) {
+                        <i class="pi pi-spin pi-spinner" style="font-size:13px"></i> Generating...
+                    } @else {
+                        <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                            <path d="M6.5 1v7M3.5 5.5l3 3 3-3M1.5 10.5h10"
+                                  stroke="currentColor" stroke-width="1.5"
+                                  stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Export
+                    }
+                </button>
+                @if (exportDropdownOpen) {
+                <div class="report-export-dropdown" (click)="$event.stopPropagation()">
+                    <button type="button" class="report-export-item report-export-print" (click)="exportAs('print')">
+                        <i class="pi pi-print" style="font-size:0.75rem"></i> Print
+                    </button>
+                    <button type="button" class="report-export-item report-export-pdf" (click)="exportAs('pdf')">
+                        <span class="report-export-icon">&#11015;</span> PDF
+                    </button>
+                    <button type="button" class="report-export-item report-export-word" (click)="exportAs('word')">
+                        <span class="report-export-icon">&#11015;</span> Word
+                    </button>
+                    <button type="button" class="report-export-item report-export-excel" (click)="exportAs('excel')">
+                        <span class="report-export-icon">&#11015;</span> Excel
+                    </button>
+                </div>
+                }
+            </div>
         </div>
     </div>
 
-    <p-table #dt [value]="records" [loading]="loading" dataKey="id"
-             styleClass="p-datatable-striped p-datatable-gridlines"
-             [tableStyle]="{'min-width':'50rem'}"
-             [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10,25,50]"
-             [globalFilterFields]="['postingOrderNo', 'serviceId', 'recordNo']">
+    <p-table [value]="records" [loading]="loading" dataKey="id"
+             styleClass="p-datatable-striped p-datatable-gridlines themed-table"
+             [lazy]="true" (onLazyLoad)="loadRecords($event)"
+             [paginator]="true" [rows]="rows" [totalRecords]="totalRecords" [first]="first"
+             [rowsPerPageOptions]="[10,25,50]">
         <ng-template pTemplate="caption">
             <div class="filter-bar">
                 <div class="filter-group">
@@ -36,52 +63,40 @@
                     <label>Search</label>
                     <p-iconfield>
                         <p-inputicon styleClass="pi pi-search"></p-inputicon>
-                        <input pInputText type="text" placeholder="Search..." (input)="onGlobalFilter(dt, $event)" />
+                        <input pInputText type="text" placeholder="Search..." (input)="onSearch($event)" />
                     </p-iconfield>
                 </div>
             </div>
         </ng-template>
         <ng-template pTemplate="header">
             <tr>
-                <th style="width:50px">#</th>
-                <th>Record No</th>
-                <th>Posted Out Emp. ID</th>
-                <th>Posting Order No</th>
-                <th>PO Date</th>
-                <th>Possible Release</th>
-                <th>Reliever</th>
+                <th style="width:3rem">#</th>
+                <th>Name</th>
                 <th>Service ID</th>
-                <th>NS Clearance</th>
-                <th>Clearance Given</th>
-                <th>Created Date</th>
-                <th style="width:90px">Actions</th>
+                <th>RAB ID</th>
+                <th>Posting Unit</th>
+                <th>Rank</th>
+                <th>Corps</th>
+                <th>Trade</th>
+                <th style="width:10rem">Is Reliever Assigned?</th>
+                <th style="width:5rem">Actions</th>
             </tr>
         </ng-template>
         <ng-template pTemplate="body" let-row let-i="rowIndex">
             <tr>
-                <td>{{ i + 1 }}</td>
-                <td>{{ row.id }}</td>
-                <td>{{ row.postedOutEmployeeId ?? '-' }}</td>
-                <td>{{ row.postingOrderNo ?? '-' }}</td>
-                <td>{{ formatDisplay(row.postingOrderDate) }}</td>
-                <td>{{ formatDisplay(row.possibleReleaseDate) }}</td>
+                <td>{{ first + i + 1 }}</td>
+                <td>{{ row.postedOutName ?? '-' }}</td>
+                <td>{{ prefixServiceId(row) }}</td>
+                <td>{{ row.postedOutRabId ?? '-' }}</td>
+                <td>{{ row.postingUnitName ?? '-' }}</td>
+                <td>{{ row.postedOutRank ?? '-' }}</td>
+                <td>{{ row.postedOutCorps ?? '-' }}</td>
+                <td>{{ row.postedOutTrade ?? '-' }}</td>
                 <td>
                     <span [class]="row.isReliever === true ? 'text-green-600 font-semibold' : row.isReliever === false ? 'text-orange-500' : 'text-500'">
-                        {{ row.isReliever === true ? 'Yes' : row.isReliever === false ? 'No' : '-' }}
+                        {{ yesNo(row.isReliever) }}
                     </span>
                 </td>
-                <td>{{ row.serviceId ?? '-' }}</td>
-                <td>
-                    <span [class]="row.noteSheetClearance === true ? 'text-green-600' : row.noteSheetClearance === false ? 'text-orange-500' : 'text-500'">
-                        {{ row.noteSheetClearance === true ? 'Yes' : row.noteSheetClearance === false ? 'No' : '-' }}
-                    </span>
-                </td>
-                <td>
-                    <span [class]="row.clearanceGiven === true ? 'text-green-600' : row.clearanceGiven === false ? 'text-orange-500' : 'text-500'">
-                        {{ row.clearanceGiven === true ? 'Yes' : row.clearanceGiven === false ? 'No' : '-' }}
-                    </span>
-                </td>
-                <td><span class="text-sm text-500">{{ formatDisplay(row.createdDate) }}</span></td>
                 <td>
                     <div class="flex gap-1">
                         <p-button icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" size="small" [text]="true"
@@ -95,7 +110,7 @@
         </ng-template>
         <ng-template pTemplate="emptymessage">
             <tr>
-                <td colspan="12" class="text-center p-4 text-500">
+                <td colspan="10" class="text-center p-4 text-500">
                     <i class="pi pi-inbox text-2xl mb-2 block"></i>No records found.
                 </td>
             </tr>

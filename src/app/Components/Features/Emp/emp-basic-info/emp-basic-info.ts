@@ -191,8 +191,8 @@ export class EmpBasicInfo implements OnInit {
                     this.loadAndPatchJoineeData(record);
                     this.messageService.add({
                         severity: 'info',
-                        summary: 'নতুন জয়নি তথ্য লোড হয়েছে',
-                        detail: 'এই সদস্য "New Joining Person" তালিকায় রয়েছে। তথ্য স্বয়ংক্রিয়ভাবে লোড করা হয়েছে।',
+                        summary: 'New Joinee Data Loaded',
+                        detail: 'This member was found in the "New Joining Person" list. Data has been loaded automatically.',
                         life: 6000
                     });
                 } else {

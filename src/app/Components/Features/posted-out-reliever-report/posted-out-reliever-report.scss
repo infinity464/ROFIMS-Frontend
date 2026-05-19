@@ -24,7 +24,7 @@
     gap: 0.5rem;
 }
 
-/* ── Export button (matches report-present-status-by-mother-org) ── */
+/* ── Export button ── */
 .report-btn-export {
     display: flex;
     align-items: center;
@@ -140,7 +140,7 @@
     padding-bottom: 1px;
 }
 
-/* ── Themed table header (light tint of theme color) ── */
+/* ── Themed table header ── */
 :host ::ng-deep .themed-table {
     .p-datatable-thead > tr > th {
         background: color-mix(in srgb, var(--primary-color) 10%, #fff) !important;
@@ -167,7 +167,24 @@
     }
 }
 
-/* ── Permission-based hiding ── */
-.perm-hidden {
-    display: none !important;
+/* ── Status badges ── */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.status-yes {
+    background: #e6f9ee;
+    color: #15803d;
+}
+
+.status-pending {
+    background: #fff7ed;
+    color: #c2410c;
 }
