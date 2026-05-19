@@ -234,9 +234,14 @@ import { catchError, debounceTime, distinctUntilChanged, switchMap, takeUntil } 
                   class="absolute left-0 top-2 bottom-2 w-[3px] rounded-full bg-emerald-500"></span>
             <span *ngIf="getGroupUnreadCount(g) > 0 && selectedGroupId !== g.groupId"
                   class="absolute left-0 top-2 bottom-2 w-[3px] rounded-full bg-emerald-400"></span>
-            <div class="w-11 h-11 rounded-xl bg-emerald-500 flex items-center justify-center text-white shrink-0">
-              <i class="pi pi-users text-base"></i>
-            </div>
+            <img *ngIf="getGroupAvatarImage(g) as gImg; else groupListIcon"
+                 [src]="gImg" alt=""
+                 class="w-11 h-11 rounded-xl object-cover shrink-0 bg-surface-100 dark:bg-surface-700" />
+            <ng-template #groupListIcon>
+              <div class="w-11 h-11 rounded-xl bg-emerald-500 flex items-center justify-center text-white shrink-0">
+                <i class="pi pi-users text-base"></i>
+              </div>
+            </ng-template>
             <div class="flex-1 min-w-0">
               <div class="flex items-baseline justify-between gap-2">
                 <div class="text-[13px] leading-tight text-surface-900 dark:text-surface-0 truncate"
@@ -319,9 +324,14 @@ import { catchError, debounceTime, distinctUntilChanged, switchMap, takeUntil } 
           <div *ngIf="selectedGroupId && selectedGroup" class="px-5 py-3.5 border-b border-surface-200 dark:border-surface-700 bg-surface-0 dark:bg-surface-900">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-3 min-w-0">
-                <div class="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center text-white shrink-0">
-                  <i class="pi pi-users"></i>
-                </div>
+                <img *ngIf="getGroupAvatarImage(selectedGroup) as gHdr; else groupHeaderIcon"
+                     [src]="gHdr" alt=""
+                     class="w-10 h-10 rounded-xl object-cover shrink-0 bg-surface-100 dark:bg-surface-700" />
+                <ng-template #groupHeaderIcon>
+                  <div class="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center text-white shrink-0">
+                    <i class="pi pi-users"></i>
+                  </div>
+                </ng-template>
                 <div class="min-w-0">
                   <div class="text-sm font-semibold leading-tight text-surface-900 dark:text-surface-0 truncate">{{ selectedGroup.groupName }}</div>
                   <p class="text-xs text-surface-500 dark:text-surface-400 mt-0.5">{{ selectedGroup.memberCount }} members · {{ selectedGroup.myRole }}</p>
@@ -844,6 +854,44 @@ import { catchError, debounceTime, distinctUntilChanged, switchMap, takeUntil } 
 
         <!-- Members tab -->
         <div *ngIf="groupInfoTab === 'members'" class="px-4 py-3">
+          <!-- Group picture (admin can change) -->
+          <div class="mb-3 px-3 py-3 rounded-xl bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 flex items-center gap-3">
+            <div class="relative shrink-0">
+              <img *ngIf="getGroupAvatarImage(selectedGroup) as gPic; else groupPicPlaceholder"
+                   [src]="gPic" alt=""
+                   class="w-16 h-16 rounded-xl object-cover bg-surface-100 dark:bg-surface-700" />
+              <ng-template #groupPicPlaceholder>
+                <div class="w-16 h-16 rounded-xl bg-emerald-500 flex items-center justify-center text-white">
+                  <i class="pi pi-users text-2xl"></i>
+                </div>
+              </ng-template>
+              <i *ngIf="uploadingGroupImage"
+                 class="pi pi-spin pi-spinner absolute inset-0 m-auto text-white text-xl"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-[10px] font-bold tracking-[0.12em] text-surface-500 dark:text-surface-400 mb-1">GROUP PICTURE</div>
+              <div *ngIf="isCurrentUserGroupAdmin(); else readOnlyPicHint" class="flex flex-wrap items-center gap-2">
+                <input #groupImageInput type="file" accept="image/*" class="hidden" (change)="onGroupImagePicked($event)" />
+                <button type="button"
+                        (click)="groupImageInput.click()"
+                        [disabled]="uploadingGroupImage"
+                        class="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/15 hover:bg-emerald-100 dark:hover:bg-emerald-500/25 disabled:opacity-50 px-2.5 py-1 rounded-full transition">
+                  <i class="pi pi-upload text-[10px] mr-1"></i>{{ selectedGroup?.groupImageFileId ? 'Change' : 'Upload' }}
+                </button>
+                <button *ngIf="selectedGroup?.groupImageFileId"
+                        type="button"
+                        (click)="clearGroupImage()"
+                        [disabled]="uploadingGroupImage"
+                        class="text-[11px] font-semibold text-red-600 dark:text-red-400 hover:underline disabled:opacity-50">
+                  Remove
+                </button>
+              </div>
+              <ng-template #readOnlyPicHint>
+                <p class="text-[11px] text-surface-500 dark:text-surface-400 leading-tight">Only group admins can change the picture.</p>
+              </ng-template>
+            </div>
+          </div>
+
           <!-- Group name (admin can rename) -->
           <div class="mb-3 px-3 py-2.5 rounded-xl bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700">
             <div class="flex items-center justify-between gap-2 mb-1">
@@ -1220,6 +1268,7 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
   renameGroupName = '';
   submittingRename = false;
   deletingGroup = false;
+  uploadingGroupImage = false;
 
   constructor(
     private chatService: ChatService,
@@ -1502,6 +1551,42 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
     }
   }
 
+  /** Lazy blob URL cache for group avatar images keyed by groupId. */
+  private groupImageBlobUrls: Record<number, string> = {};
+  /** Guards against re-firing downloadFile while a request is pending. */
+  private groupImageFetchInflight: Record<number, boolean> = {};
+  /** Tracks the fileId currently cached for each group so we can invalidate when the admin uploads a new pic. */
+  private groupImageFileIdCache: Record<number, number> = {};
+
+  /**
+   * Returns the blob URL for the group's avatar image if available; otherwise kicks off a lazy fetch and returns null.
+   * Mirrors getAttachmentImageUrl. Template callers should fall back to the colored avatar swatch on null.
+   */
+  getGroupAvatarImage(g: GroupDto | null | undefined): string | null {
+    const fid = g?.groupImageFileId;
+    if (!g || !fid || fid <= 0) return null;
+    // If the fileId changed (admin re-uploaded), drop the stale cached blob URL.
+    if (this.groupImageFileIdCache[g.groupId] !== fid) {
+      const stale = this.groupImageBlobUrls[g.groupId];
+      if (stale) URL.revokeObjectURL(stale);
+      delete this.groupImageBlobUrls[g.groupId];
+      this.groupImageFileIdCache[g.groupId] = fid;
+    }
+    const cached = this.groupImageBlobUrls[g.groupId];
+    if (cached) return cached;
+    if (this.groupImageFetchInflight[g.groupId]) return null;
+    this.groupImageFetchInflight[g.groupId] = true;
+    this.empService.downloadFile(fid).pipe(
+      catchError(() => of(null)),
+      takeUntil(this.destroy$)
+    ).subscribe((blob) => {
+      this.groupImageFetchInflight[g.groupId] = false;
+      if (!blob || (blob as Blob).size === 0) return;
+      this.groupImageBlobUrls[g.groupId] = URL.createObjectURL(blob as Blob);
+    });
+    return null;
+  }
+
   /** Returns the cached profile object for the user, or null if not loaded yet. */
   getUserProfile(userId: string | null): {
     rank: string;
@@ -1712,6 +1797,64 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
         },
         error: () => { this.deletingGroup = false; }
       });
+  }
+
+  /** Uploads the picked image via the existing FileInformation endpoint and writes the resulting fileId onto the group. Admin-only. */
+  onGroupImagePicked(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file || !this.selectedGroupId || !this.selectedGroup) return;
+    if (!file.type.startsWith('image/')) return;
+    if (this.uploadingGroupImage) return;
+
+    this.uploadingGroupImage = true;
+    const groupId = this.selectedGroupId;
+    this.empService.uploadEmployeeFile(file, file.name).pipe(
+      catchError(() => of(null)),
+      takeUntil(this.destroy$)
+    ).subscribe((upload) => {
+      const fid = upload?.fileId;
+      if (!fid) {
+        this.uploadingGroupImage = false;
+        return;
+      }
+      this.chatService.setGroupImage(groupId, fid)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            this.uploadingGroupImage = false;
+            this.applyGroupImageChange(groupId, fid);
+          },
+          error: () => { this.uploadingGroupImage = false; }
+        });
+    });
+  }
+
+  clearGroupImage(): void {
+    if (!this.selectedGroupId || !this.selectedGroup?.groupImageFileId || this.uploadingGroupImage) return;
+    const groupId = this.selectedGroupId;
+    this.uploadingGroupImage = true;
+    this.chatService.setGroupImage(groupId, null)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.uploadingGroupImage = false;
+          this.applyGroupImageChange(groupId, null);
+        },
+        error: () => { this.uploadingGroupImage = false; }
+      });
+  }
+
+  /** Locally apply a group-image change (invalidating the blob cache so subsequent renders re-fetch). */
+  private applyGroupImageChange(groupId: number, fileId: number | null): void {
+    const stale = this.groupImageBlobUrls[groupId];
+    if (stale) URL.revokeObjectURL(stale);
+    delete this.groupImageBlobUrls[groupId];
+    delete this.groupImageFileIdCache[groupId];
+    if (this.selectedGroup && this.selectedGroupId === groupId) this.selectedGroup.groupImageFileId = fileId;
+    const g = this.userGroups.find(gr => gr.groupId === groupId);
+    if (g) g.groupImageFileId = fileId;
   }
 
   /** Closes the group view, clears local state, and refreshes the group list. Used on both local-initiated delete and remote GroupDeleted events. */
@@ -2266,6 +2409,22 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
         this.handleGroupGone(payload.groupId);
       });
 
+    this.chatService.groupImageChanged$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((payload: { groupId: number; groupImageFileId: number | null }) => {
+        if (!payload?.groupId) return;
+        // Drop any cached blob URL so getGroupAvatarImage refetches with the new fileId.
+        const stale = this.groupImageBlobUrls[payload.groupId];
+        if (stale) URL.revokeObjectURL(stale);
+        delete this.groupImageBlobUrls[payload.groupId];
+        delete this.groupImageFileIdCache[payload.groupId];
+        const g = this.userGroups.find(gr => gr.groupId === payload.groupId);
+        if (g) g.groupImageFileId = payload.groupImageFileId ?? null;
+        if (this.selectedGroup && this.selectedGroupId === payload.groupId) {
+          this.selectedGroup.groupImageFileId = payload.groupImageFileId ?? null;
+        }
+      });
+
     this.chatService.error$
       .pipe(takeUntil(this.destroy$))
       .subscribe(error => {
@@ -2661,6 +2820,13 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
     }
     this.attachmentBlobUrls = {};
     this.attachmentFetchInflight = {};
+    for (const id of Object.keys(this.groupImageBlobUrls)) {
+      const url = this.groupImageBlobUrls[+id];
+      if (url) URL.revokeObjectURL(url);
+    }
+    this.groupImageBlobUrls = {};
+    this.groupImageFetchInflight = {};
+    this.groupImageFileIdCache = {};
     this.destroy$.next();
     this.destroy$.complete();
   }

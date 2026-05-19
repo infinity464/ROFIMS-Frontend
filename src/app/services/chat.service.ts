@@ -37,6 +37,9 @@ export class ChatService {
   private groupDeletedSubject = new Subject<{ groupId: number }>();
   public groupDeleted$ = this.groupDeletedSubject.asObservable();
 
+  private groupImageChangedSubject = new Subject<{ groupId: number; groupImageFileId: number | null }>();
+  public groupImageChanged$ = this.groupImageChangedSubject.asObservable();
+
   /** Emitted when a leave application is submitted for approval and this user is the approver. */
   private leaveApprovalRequestedSubject = new Subject<{ leaveApplicationId: number; applicantEmployeeId: number; fromDate: string; toDate: string; leaveTypeId: number; message: string; notificationId?: number }>();
   public leaveApprovalRequested$ = this.leaveApprovalRequestedSubject.asObservable();
@@ -195,6 +198,9 @@ export class ChatService {
     });
     this.hubConnection.on('GroupDeleted', (payload: { groupId: number }) => {
       this.groupDeletedSubject.next(payload);
+    });
+    this.hubConnection.on('GroupImageChanged', (payload: { groupId: number; groupImageFileId: number | null }) => {
+      this.groupImageChangedSubject.next(payload);
     });
 
     this.hubConnection.on('LeaveApprovalRequested', (payload: any) => {
@@ -504,5 +510,9 @@ export class ChatService {
 
   deleteGroup(groupId: number): Observable<any> {
     return this.http.post(`${this.chatApi}/DeleteGroup`, { groupId });
+  }
+
+  setGroupImage(groupId: number, groupImageFileId: number | null): Observable<any> {
+    return this.http.post(`${this.chatApi}/SetGroupImage`, { groupId, groupImageFileId });
   }
 }

@@ -54,6 +54,8 @@ export interface GroupDto {
   lastMessagePreview?: string | null;
   /** Server-reported unread count (best-effort: messages from others still flagged !IsSeen). */
   unreadCount?: number;
+  /** Optional FileID for the group's avatar image. Resolved to a blob URL by the empService.downloadFile flow. */
+  groupImageFileId?: number | null;
 }
 
 export interface GroupMemberDto {
