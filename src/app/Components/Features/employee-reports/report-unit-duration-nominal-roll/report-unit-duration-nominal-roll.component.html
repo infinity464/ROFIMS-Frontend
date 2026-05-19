@@ -44,9 +44,39 @@
                                 <p-select
                                     [options]="rabUnitOptions"
                                     [(ngModel)]="selectedRabUnitId"
-                                    optionLabel="label"
+                                    [optionLabel]="lang === 'bn' ? 'labelBn' : 'label'"
                                     optionValue="value"
                                     placeholder="Select a RAB Unit"
+                                    styleClass="w-full"
+                                    [filter]="true"
+                                    [showClear]="true"
+                                    appendTo="body">
+                                </p-select>
+                            </div>
+                            <div class="ds-field">
+                                <label class="ds-field-label">Mother Organization</label>
+                                <p-select
+                                    [options]="orgOptions"
+                                    [(ngModel)]="selectedOrgId"
+                                    (onChange)="onOrgChange()"
+                                    [optionLabel]="lang === 'bn' ? 'labelBn' : 'label'"
+                                    optionValue="value"
+                                    placeholder="All Mother Organizations"
+                                    styleClass="w-full"
+                                    [filter]="true"
+                                    [showClear]="true"
+                                    appendTo="body">
+                                </p-select>
+                            </div>
+                            <div class="ds-field">
+                                <label class="ds-field-label">Rank</label>
+                                <p-select
+                                    [options]="rankOptions"
+                                    [(ngModel)]="selectedRankId"
+                                    [optionLabel]="lang === 'bn' ? 'labelBn' : 'label'"
+                                    optionValue="value"
+                                    [placeholder]="selectedOrgId ? 'All Ranks' : 'Select a Mother Org first'"
+                                    [disabled]="selectedOrgId == null"
                                     styleClass="w-full"
                                     [filter]="true"
                                     [showClear]="true"

@@ -4,9 +4,11 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TableModule, TableLazyLoadEvent } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
+import { SelectModule } from 'primeng/select';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { ReportService } from '@/services/report.service';
+import { CommonCodeService } from '@/services/common-code-service';
 import { ExportService } from '@/services/export.service';
 import { UserMenuService } from '@/services/user-menu.service';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
@@ -14,13 +16,15 @@ import type {
     StayAfterRelieverJoinedReportParams,
     StayAfterRelieverJoinedReportRow,
 } from '@/models/report.model';
+import type { CommonCodeModel } from '@/models/common-code-model';
+import type { MotherOrganizationModel } from '@/models/mother-org-model';
 
 type Lang = 'en' | 'bn';
 
 @Component({
     selector: 'app-report-stay-after-reliever-joined',
     standalone: true,
-    imports: [CommonModule, FormsModule, TableModule, ButtonModule, Toast],
+    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, Toast],
     providers: [MessageService],
     templateUrl: './report-stay-after-reliever-joined.component.html',
     styleUrls: [
@@ -41,6 +45,14 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
     loading = false;
     searched = false;
 
+    /** Mother Org dropdown options — loaded once on init. Both languages stored so the chip / dropdown text follow the toggle. */
+    orgOptions: { label: string; labelBn: string; value: number }[] = [];
+    /** Rank dropdown options — reloaded each time Mother Org changes (rank set is per-service). */
+    rankOptions: { label: string; labelBn: string; value: number }[] = [];
+
+    selectedOrgId: number | null = null;
+    selectedRankId: number | null = null;
+
     totalRecords = 0;
     pageNo = 1;
     rows = 20;
@@ -48,11 +60,15 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
 
     exportDropdownOpen = false;
     exporting = false;
+    appliedFilterLines: string[] = [];
+
+    filterOpen = true;
 
     constructor(
         private _router: Router,
         private _userMenuService: UserMenuService,
         private reportService: ReportService,
+        private commonCodeService: CommonCodeService,
         private messageService: MessageService,
         private exportService: ExportService
     ) {}
@@ -68,8 +84,87 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
         this.canUpdate = _perms.canUpdate;
         this.canDelete = _perms.canDelete;
 
-        // No filters to gather — load immediately on first paint.
+        this.loadMotherOrgs();
+        // Auto-run with no filters so the user lands on a populated list.
+        this.search();
+    }
+
+    private loadMotherOrgs(): void {
+        this.commonCodeService.getAllActiveMotherOrgs().subscribe({
+            next: (orgs: MotherOrganizationModel[]) => {
+                this.orgOptions = (orgs || []).map((o) => ({
+                    label: o.orgNameEN || String(o.orgId),
+                    labelBn: o.orgNameBN || o.orgNameEN || String(o.orgId),
+                    value: o.orgId,
+                }));
+            },
+            error: () => (this.orgOptions = []),
+        });
+    }
+
+    /** Rank values differ per service, so the rank list is scoped to the selected Mother Org. */
+    onOrgChange(): void {
+        this.selectedRankId = null;
+        this.rankOptions = [];
+        if (this.selectedOrgId == null) return;
+        this.commonCodeService
+            .getAllActiveCommonCodesByOrgIdAndType(this.selectedOrgId, 'MotherOrgRank')
+            .subscribe({
+                next: (codes: CommonCodeModel[]) => {
+                    this.rankOptions = (codes || []).map((c) => ({
+                        label: c.codeValueEN || String(c.codeId),
+                        labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId),
+                        value: c.codeId,
+                    }));
+                },
+                error: () => (this.rankOptions = []),
+            });
+    }
+
+    toggleFilter(): void {
+        this.filterOpen = !this.filterOpen;
+    }
+
+    get activeFilterCount(): number {
+        let c = 0;
+        if (this.selectedOrgId != null) c++;
+        if (this.selectedRankId != null) c++;
+        return c;
+    }
+
+    filterSubtitle(): string {
+        if (this.activeFilterCount === 0) {
+            return this.lang === 'en' ? 'Select fields to search on' : 'খোঁজার জন্য ক্ষেত্র নির্বাচন করুন';
+        }
+        const n = this.lang === 'bn' ? BanglaNumerals.toBangla(String(this.activeFilterCount)) : String(this.activeFilterCount);
+        return this.lang === 'en' ? `${n} filters applied` : `${n} ফিল্টার প্রয়োগকৃত`;
+    }
+
+    private buildFilterLines(): string[] {
+        const lines: string[] = [];
+        if (this.selectedOrgId != null) {
+            const opt = this.orgOptions.find((o) => o.value === this.selectedOrgId);
+            const lbl = this.lang === 'en' ? 'Mother Org' : 'মাতৃ সংস্থা';
+            if (opt) lines.push(`${lbl}: ${this.lang === 'bn' ? opt.labelBn : opt.label}`);
+        }
+        if (this.selectedRankId != null) {
+            const opt = this.rankOptions.find((o) => o.value === this.selectedRankId);
+            const lbl = this.lang === 'en' ? 'Rank' : 'পদবী';
+            if (opt) lines.push(`${lbl}: ${this.lang === 'bn' ? opt.labelBn : opt.label}`);
+        }
+        return lines;
+    }
+
+    clearFilters(): void {
+        this.selectedOrgId = null;
+        this.selectedRankId = null;
+        this.rankOptions = [];
+    }
+
+    search(): void {
+        this.pageNo = 1;
         this.searched = true;
+        this.appliedFilterLines = this.buildFilterLines();
         this.loadPage();
     }
 
@@ -98,6 +193,8 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
     private loadPage(): void {
         this.loading = true;
         const params: StayAfterRelieverJoinedReportParams = {
+            orgId: this.selectedOrgId,
+            rankId: this.selectedRankId,
             postingStatus: 'Servings',
             pagination: { page_no: this.pageNo, row_per_page: this.rows },
         };
@@ -121,6 +218,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
 
     toggleLang(): void {
         this.lang = this.lang === 'en' ? 'bn' : 'en';
+        this.appliedFilterLines = this.buildFilterLines();
     }
 
     toggleExportDropdown(event: Event): void {
@@ -160,7 +258,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
             columns,
             rows,
             showPageNumbers: true,
-            filterLines: [],
+            filterLines: this.appliedFilterLines,
             landscape: true,
             filename: 'stay-after-reliever-joined',
         };

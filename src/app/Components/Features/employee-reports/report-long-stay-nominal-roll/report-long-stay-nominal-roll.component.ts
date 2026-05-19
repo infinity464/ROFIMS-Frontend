@@ -9,6 +9,7 @@ import { SelectModule } from 'primeng/select';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { ReportService } from '@/services/report.service';
+import { CommonCodeService } from '@/services/common-code-service';
 import { ExportService } from '@/services/export.service';
 import { UserMenuService } from '@/services/user-menu.service';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
@@ -16,6 +17,8 @@ import type {
     LongStayNominalRollReportParams,
     LongStayNominalRollReportRow,
 } from '@/models/report.model';
+import type { CommonCodeModel } from '@/models/common-code-model';
+import type { MotherOrganizationModel } from '@/models/mother-org-model';
 
 type Lang = 'en' | 'bn';
 
@@ -50,6 +53,11 @@ export class ReportLongStayNominalRollComponent implements OnInit {
         { label: 'Months', value: 'Months' },
     ];
 
+    orgOptions: { label: string; labelBn: string; value: number }[] = [];
+    rankOptions: { label: string; labelBn: string; value: number }[] = [];
+    selectedOrgId: number | null = null;
+    selectedRankId: number | null = null;
+
     totalRecords = 0;
     pageNo = 1;
     rows = 20;
@@ -65,6 +73,7 @@ export class ReportLongStayNominalRollComponent implements OnInit {
         private _router: Router,
         private _userMenuService: UserMenuService,
         private reportService: ReportService,
+        private commonCodeService: CommonCodeService,
         private messageService: MessageService,
         private exportService: ExportService
     ) {}
@@ -79,6 +88,40 @@ export class ReportLongStayNominalRollComponent implements OnInit {
         this.canInsert = _perms.canInsert;
         this.canUpdate = _perms.canUpdate;
         this.canDelete = _perms.canDelete;
+
+        this.loadMotherOrgs();
+    }
+
+    private loadMotherOrgs(): void {
+        this.commonCodeService.getAllActiveMotherOrgs().subscribe({
+            next: (orgs: MotherOrganizationModel[]) => {
+                this.orgOptions = (orgs || []).map((o) => ({
+                    label: o.orgNameEN || String(o.orgId),
+                    labelBn: o.orgNameBN || o.orgNameEN || String(o.orgId),
+                    value: o.orgId,
+                }));
+            },
+            error: () => (this.orgOptions = []),
+        });
+    }
+
+    /** Ranks are scoped per Mother Org (Army ranks differ from Navy ranks). */
+    onOrgChange(): void {
+        this.selectedRankId = null;
+        this.rankOptions = [];
+        if (this.selectedOrgId == null) return;
+        this.commonCodeService
+            .getAllActiveCommonCodesByOrgIdAndType(this.selectedOrgId, 'MotherOrgRank')
+            .subscribe({
+                next: (codes: CommonCodeModel[]) => {
+                    this.rankOptions = (codes || []).map((c) => ({
+                        label: c.codeValueEN || String(c.codeId),
+                        labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId),
+                        value: c.codeId,
+                    }));
+                },
+                error: () => (this.rankOptions = []),
+            });
     }
 
     get reportTitle(): string {
@@ -115,11 +158,24 @@ export class ReportLongStayNominalRollComponent implements OnInit {
             value = `${BanglaNumerals.toBangla(String(n))} ${bnNoun}`;
         }
         lines.push(`${lbl}: ${value}`);
+        if (this.selectedOrgId != null) {
+            const opt = this.orgOptions.find((o) => o.value === this.selectedOrgId);
+            const orgLbl = this.lang === 'en' ? 'Mother Org' : 'মাতৃ সংস্থা';
+            if (opt) lines.push(`${orgLbl}: ${this.lang === 'bn' ? opt.labelBn : opt.label}`);
+        }
+        if (this.selectedRankId != null) {
+            const opt = this.rankOptions.find((o) => o.value === this.selectedRankId);
+            const rkLbl = this.lang === 'en' ? 'Rank' : 'পদবী';
+            if (opt) lines.push(`${rkLbl}: ${this.lang === 'bn' ? opt.labelBn : opt.label}`);
+        }
         return lines;
     }
 
     get activeFilterCount(): number {
-        return this.minDuration && this.minDuration > 0 ? 1 : 0;
+        let c = this.minDuration && this.minDuration > 0 ? 1 : 0;
+        if (this.selectedOrgId != null) c++;
+        if (this.selectedRankId != null) c++;
+        return c;
     }
 
     toggleFilter(): void {
@@ -137,6 +193,9 @@ export class ReportLongStayNominalRollComponent implements OnInit {
     clearFilters(): void {
         this.minDuration = 2;
         this.unit = 'Years';
+        this.selectedOrgId = null;
+        this.selectedRankId = null;
+        this.rankOptions = [];
     }
 
     toggleLang(): void {
@@ -175,6 +234,8 @@ export class ReportLongStayNominalRollComponent implements OnInit {
         const params: LongStayNominalRollReportParams = {
             minDuration: this.minDuration,
             unit: this.unit,
+            orgId: this.selectedOrgId,
+            rankId: this.selectedRankId,
             postingStatus: 'Servings',
             pagination: { page_no: this.pageNo, row_per_page: this.rows },
         };

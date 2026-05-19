@@ -14,6 +14,7 @@ import { ExportService } from '@/services/export.service';
 import { UserMenuService } from '@/services/user-menu.service';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import type { CommonCodeModel } from '@/models/common-code-model';
+import type { MotherOrganizationModel } from '@/models/mother-org-model';
 import type {
     UnitDurationNominalRollReportParams,
     UnitDurationNominalRollReportRow,
@@ -45,8 +46,13 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
     loading = false;
     searched = false;
 
-    rabUnitOptions: { label: string; value: number }[] = [];
+    rabUnitOptions: { label: string; labelBn: string; value: number }[] = [];
     selectedRabUnitId: number | null = null;
+
+    orgOptions: { label: string; labelBn: string; value: number }[] = [];
+    rankOptions: { label: string; labelBn: string; value: number }[] = [];
+    selectedOrgId: number | null = null;
+    selectedRankId: number | null = null;
 
     fromDate: Date | null = null;
     toDate: Date | null = null;
@@ -87,6 +93,7 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
         this.toDate = new Date(now.getFullYear(), 11, 31);
 
         this.loadRabUnits();
+        this.loadMotherOrgs();
     }
 
     private loadRabUnits(): void {
@@ -94,11 +101,44 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
             next: (codes: CommonCodeModel[]) => {
                 this.rabUnitOptions = (codes || []).map((c) => ({
                     label: c.codeValueEN || String(c.codeId),
+                    labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId),
                     value: c.codeId,
                 }));
             },
             error: () => (this.rabUnitOptions = []),
         });
+    }
+
+    private loadMotherOrgs(): void {
+        this.commonCodeService.getAllActiveMotherOrgs().subscribe({
+            next: (orgs: MotherOrganizationModel[]) => {
+                this.orgOptions = (orgs || []).map((o) => ({
+                    label: o.orgNameEN || String(o.orgId),
+                    labelBn: o.orgNameBN || o.orgNameEN || String(o.orgId),
+                    value: o.orgId,
+                }));
+            },
+            error: () => (this.orgOptions = []),
+        });
+    }
+
+    /** Ranks are scoped per Mother Org (Army ranks differ from Navy ranks). */
+    onOrgChange(): void {
+        this.selectedRankId = null;
+        this.rankOptions = [];
+        if (this.selectedOrgId == null) return;
+        this.commonCodeService
+            .getAllActiveCommonCodesByOrgIdAndType(this.selectedOrgId, 'MotherOrgRank')
+            .subscribe({
+                next: (codes: CommonCodeModel[]) => {
+                    this.rankOptions = (codes || []).map((c) => ({
+                        label: c.codeValueEN || String(c.codeId),
+                        labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId),
+                        value: c.codeId,
+                    }));
+                },
+                error: () => (this.rankOptions = []),
+            });
     }
 
     get reportTitle(): string {
@@ -124,7 +164,17 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
         if (this.selectedRabUnitId != null) {
             const opt = this.rabUnitOptions.find((o) => o.value === this.selectedRabUnitId);
             const lbl = this.lang === 'en' ? 'RAB Unit' : 'র‍্যাব ইউনিট';
-            if (opt) lines.push(`${lbl}: ${opt.label}`);
+            if (opt) lines.push(`${lbl}: ${this.lang === 'bn' ? opt.labelBn : opt.label}`);
+        }
+        if (this.selectedOrgId != null) {
+            const opt = this.orgOptions.find((o) => o.value === this.selectedOrgId);
+            const lbl = this.lang === 'en' ? 'Mother Org' : 'মাতৃ সংস্থা';
+            if (opt) lines.push(`${lbl}: ${this.lang === 'bn' ? opt.labelBn : opt.label}`);
+        }
+        if (this.selectedRankId != null) {
+            const opt = this.rankOptions.find((o) => o.value === this.selectedRankId);
+            const lbl = this.lang === 'en' ? 'Rank' : 'পদবী';
+            if (opt) lines.push(`${lbl}: ${this.lang === 'bn' ? opt.labelBn : opt.label}`);
         }
         if (this.fromDate || this.toDate) {
             const fromLbl = this.lang === 'en' ? 'From' : 'হইতে';
@@ -139,6 +189,8 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
     get activeFilterCount(): number {
         let c = 0;
         if (this.selectedRabUnitId != null) c++;
+        if (this.selectedOrgId != null) c++;
+        if (this.selectedRankId != null) c++;
         if (this.fromDate) c++;
         if (this.toDate) c++;
         return c;
@@ -158,6 +210,9 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
 
     clearFilters(): void {
         this.selectedRabUnitId = null;
+        this.selectedOrgId = null;
+        this.selectedRankId = null;
+        this.rankOptions = [];
         this.fromDate = null;
         this.toDate = null;
     }
@@ -199,6 +254,8 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
             rabUnitId: this.selectedRabUnitId,
             durationFrom: this.fmtDate(this.fromDate),
             durationTo: this.fmtDate(this.toDate),
+            orgId: this.selectedOrgId,
+            rankId: this.selectedRankId,
             postingStatus: 'Servings',
             pagination: { page_no: this.pageNo, row_per_page: this.rows },
         };

@@ -298,6 +298,8 @@ export interface UnitDurationNominalRollReportParams {
   rabUnitId?: number | null;
   durationFrom?: string | null;
   durationTo?: string | null;
+  orgId?: number | null;
+  rankId?: number | null;
   postingStatus?: string | null;
   pagination: ReportPagination;
 }
@@ -320,6 +322,8 @@ export interface UnitDurationNominalRollReportRow extends ReportRowBase {
 export interface LongStayNominalRollReportParams {
   minDuration?: number | null;
   unit?: 'Years' | 'Months' | null;
+  orgId?: number | null;
+  rankId?: number | null;
   postingStatus?: string | null;
   pagination: ReportPagination;
 }
@@ -327,6 +331,8 @@ export interface LongStayNominalRollReportParams {
 // ── Nominal Roll of Stay in RAB after Reliever Joined ──────────────────
 
 export interface StayAfterRelieverJoinedReportParams {
+  orgId?: number | null;
+  rankId?: number | null;
   postingStatus?: string | null;
   pagination: ReportPagination;
 }
