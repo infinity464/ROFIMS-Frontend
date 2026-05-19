@@ -223,7 +223,7 @@
                     </ng-template>
                     <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                         <tr>
-                            <td><span class="report-ser-num">{{ first + rowIndex + 1 }}</span></td>
+                            <td><span class="report-ser-num">{{ rowIndex + 1 }}</span></td>
                             <td><span class="font-semibold">{{ row.serviceId || '—' }}</span></td>
                             <td>{{ row.rabid || '—' }}</td>
                             <td>{{ row.nameEnglish || '—' }}</td>
@@ -289,7 +289,7 @@
                     </ng-template>
                     <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                         <tr>
-                            <td><span class="report-ser-num">{{ first + rowIndex + 1 }}</span></td>
+                            <td><span class="report-ser-num">{{ rowIndex + 1 }}</span></td>
                             <td><span class="report-badge-corps">{{ row.recordType }}</span></td>
                             <td><span class="font-semibold">{{ row.referenceNo || '—' }}</span></td>
                             <td>{{ formatDate(row.recordDate) }}</td>
