@@ -29,6 +29,8 @@ import type {
   UnitDurationNominalRollReportRow,
   LongStayNominalRollReportParams,
   LongStayNominalRollReportRow,
+  StayAfterRelieverJoinedReportParams,
+  StayAfterRelieverJoinedReportRow,
 } from '@/models/report.model';
 import type { PagedResponse } from '@/Core/Models/Pagination';
 
@@ -249,6 +251,17 @@ export class ReportService {
     return this.http
       .post<ReportPagedResponse<LongStayNominalRollReportRow>>(
         `${this.apiUrl}/GetLongStayNominalRollReport`,
+        params
+      )
+      .pipe(map(normalizePages));
+  }
+
+  getStayAfterRelieverJoinedReport(
+    params: StayAfterRelieverJoinedReportParams
+  ): Observable<PagedResponse<StayAfterRelieverJoinedReportRow>> {
+    return this.http
+      .post<ReportPagedResponse<StayAfterRelieverJoinedReportRow>>(
+        `${this.apiUrl}/GetStayAfterRelieverJoinedReport`,
         params
       )
       .pipe(map(normalizePages));

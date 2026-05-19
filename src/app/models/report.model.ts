@@ -324,6 +324,31 @@ export interface LongStayNominalRollReportParams {
   pagination: ReportPagination;
 }
 
+// ── Nominal Roll of Stay in RAB after Reliever Joined ──────────────────
+
+export interface StayAfterRelieverJoinedReportParams {
+  postingStatus?: string | null;
+  pagination: ReportPagination;
+}
+
+/** One row — subset of the long-stay row, minus Mother Unit / Posting Order Date. */
+export interface StayAfterRelieverJoinedReportRow {
+  ser?: number;
+  serviceId?: string | null;
+  rank?: string | null;
+  rankBN?: string | null;
+  name?: string | null;
+  nameBN?: string | null;
+  joiningInRab?: string | null;
+  durationOfStay?: string | null;
+  presentUnit?: string | null;
+  presentUnitBN?: string | null;
+  postedOutUnit?: string | null;
+  postedOutUnitBN?: string | null;
+  relieverJoiningDate?: string | null;
+  rmks?: string | null;
+}
+
 /** One row of the long-stay nominal roll. */
 export interface LongStayNominalRollReportRow {
   ser?: number;
