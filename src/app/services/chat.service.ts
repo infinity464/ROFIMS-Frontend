@@ -31,6 +31,12 @@ export class ChatService {
   private groupMessagesSeenSubject = new Subject<{ messageIds: number[]; groupId: number; seenByUserId: string }>();
   public groupMessagesSeen$ = this.groupMessagesSeenSubject.asObservable();
 
+  private groupRenamedSubject = new Subject<{ groupId: number; groupName: string }>();
+  public groupRenamed$ = this.groupRenamedSubject.asObservable();
+
+  private groupDeletedSubject = new Subject<{ groupId: number }>();
+  public groupDeleted$ = this.groupDeletedSubject.asObservable();
+
   /** Emitted when a leave application is submitted for approval and this user is the approver. */
   private leaveApprovalRequestedSubject = new Subject<{ leaveApplicationId: number; applicantEmployeeId: number; fromDate: string; toDate: string; leaveTypeId: number; message: string; notificationId?: number }>();
   public leaveApprovalRequested$ = this.leaveApprovalRequestedSubject.asObservable();
@@ -154,6 +160,12 @@ export class ChatService {
     });
     this.hubConnection.on('GroupMessagesSeen', (payload: { messageIds: number[]; groupId: number; seenByUserId: string }) => {
       this.groupMessagesSeenSubject.next(payload);
+    });
+    this.hubConnection.on('GroupRenamed', (payload: { groupId: number; groupName: string }) => {
+      this.groupRenamedSubject.next(payload);
+    });
+    this.hubConnection.on('GroupDeleted', (payload: { groupId: number }) => {
+      this.groupDeletedSubject.next(payload);
     });
 
     this.hubConnection.on('LeaveApprovalRequested', (payload: any) => {
@@ -451,5 +463,17 @@ export class ChatService {
 
   leaveGroup(groupId: number): Observable<any> {
     return this.http.post(`${this.chatApi}/LeaveGroup`, { groupId });
+  }
+
+  removeGroupMember(groupId: number, userIdToRemove: string): Observable<any> {
+    return this.http.post(`${this.chatApi}/RemoveGroupMember`, { groupId, userIdToRemove });
+  }
+
+  renameGroup(groupId: number, newGroupName: string, renamerDisplayName?: string | null): Observable<any> {
+    return this.http.post(`${this.chatApi}/RenameGroup`, { groupId, newGroupName, renamerDisplayName: renamerDisplayName ?? null });
+  }
+
+  deleteGroup(groupId: number): Observable<any> {
+    return this.http.post(`${this.chatApi}/DeleteGroup`, { groupId });
   }
 }

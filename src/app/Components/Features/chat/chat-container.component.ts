@@ -10,7 +10,7 @@ import { IdentityUserMappingService } from '@/services/identity-user-mapping.ser
 import { ServingMembersService } from '@/services/serving-members.service';
 import { EmpService } from '@/services/emp-service';
 import { DialogModule } from 'primeng/dialog';
-import { ChatAttachment, ChatUserDto, DirectConversation, DirectMessageDto, DirectMessageSearchResult, GroupDto, GroupMessageDto } from '@/models/chat.model';
+import { ChatAttachment, ChatUserDto, DirectConversation, DirectMessageDto, DirectMessageSearchResult, GroupDto, GroupMemberDto, GroupMessageDto } from '@/models/chat.model';
 import { saveAs } from 'file-saver';
 import { Subject, of, forkJoin } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged, switchMap, takeUntil } from 'rxjs/operators';
@@ -224,7 +224,7 @@ import { catchError, debounceTime, distinctUntilChanged, switchMap, takeUntil } 
                 <span class="text-[11px] text-surface-500 dark:text-surface-400 shrink-0">{{ g.lastMessageAt ? getConversationTime(g.lastMessageAt) : '' }}</span>
               </div>
               <div class="flex items-center justify-between gap-2 mt-0.5">
-                <p class="text-xs text-surface-600 dark:text-surface-400 truncate">{{ g.lastMessagePreview || 'No messages yet' }}</p>
+                <p class="text-xs text-surface-600 dark:text-surface-400 truncate">{{ formatGroupPreview(g.lastMessagePreview) || 'No messages yet' }}</p>
                 <span class="text-[10px] text-surface-500 dark:text-surface-400 shrink-0">{{ g.memberCount }}</span>
               </div>
             </div>
@@ -286,7 +286,10 @@ import { catchError, debounceTime, distinctUntilChanged, switchMap, takeUntil } 
                 </div>
               </div>
               <div class="flex items-center gap-2">
-                <button type="button" class="w-9 h-9 rounded-full flex items-center justify-center text-surface-600 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-800 transition" title="Group info">
+                <button type="button"
+                        (click)="openGroupInfo()"
+                        class="w-9 h-9 rounded-full flex items-center justify-center text-surface-600 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-800 transition"
+                        title="Group info">
                   <i class="pi pi-info-circle"></i>
                 </button>
               </div>
@@ -477,7 +480,16 @@ import { catchError, debounceTime, distinctUntilChanged, switchMap, takeUntil } 
                 <div class="flex-1 h-px bg-surface-200 dark:bg-surface-700"></div>
               </div>
 
-              <div *ngIf="!message.isDeleted"
+              <!-- System message (e.g. group renamed) -->
+              <div *ngIf="!message.isDeleted && isSystemMessage(message.messageContent)"
+                   [attr.data-message-id]="message.messageId"
+                   class="flex justify-center my-2 px-3">
+                <div class="px-3 py-1 rounded-full bg-surface-100 dark:bg-surface-800 text-[11px] text-surface-600 dark:text-surface-400 italic max-w-[85%] text-center">
+                  <i class="pi pi-info-circle mr-1 text-[10px]"></i>{{ getSystemMessageText(message.messageContent) }}
+                </div>
+              </div>
+
+              <div *ngIf="!message.isDeleted && !isSystemMessage(message.messageContent)"
                    [attr.data-message-id]="message.messageId"
                    [class.justify-end]="message.senderUserId === currentUserId"
                    [class.justify-start]="message.senderUserId !== currentUserId"
@@ -723,6 +735,213 @@ import { catchError, debounceTime, distinctUntilChanged, switchMap, takeUntil } 
           </div>
         </div>
       </div>
+      <!-- Group info modal (info icon in group chat header): members list, add, remove -->
+      <p-dialog
+        [(visible)]="showGroupInfoModal"
+        [modal]="true"
+        [draggable]="false"
+        [resizable]="false"
+        [dismissableMask]="true"
+        [closeOnEscape]="true"
+        [style]="{ width: '92vw', maxWidth: '480px', maxHeight: '90vh' }"
+        [contentStyle]="{ padding: '0', maxHeight: '78vh', overflowY: 'auto' }"
+        styleClass="chat-group-info-dialog">
+        <ng-template pTemplate="header">
+          <div class="flex items-center gap-2 w-full">
+            <div class="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center text-white shrink-0">
+              <i class="pi pi-users text-sm"></i>
+            </div>
+            <div class="min-w-0">
+              <div class="text-sm font-bold text-surface-900 dark:text-surface-0 truncate">{{ selectedGroup?.groupName }}</div>
+              <div class="text-[11px] text-surface-500 dark:text-surface-400">{{ groupMembers.length }} members</div>
+            </div>
+          </div>
+        </ng-template>
+
+        <!-- Tabs: Members | Add Member -->
+        <div class="px-4 pt-3 bg-surface-0 dark:bg-surface-900 sticky top-0 z-10">
+          <div class="flex rounded-full bg-surface-100 dark:bg-surface-800 p-1">
+            <button type="button"
+                    (click)="groupInfoTab = 'members'"
+                    [class.bg-white]="groupInfoTab === 'members'"
+                    [class.dark:!bg-surface-700]="groupInfoTab === 'members'"
+                    [class.shadow-sm]="groupInfoTab === 'members'"
+                    [class.text-surface-900]="groupInfoTab === 'members'"
+                    [class.dark:!text-surface-0]="groupInfoTab === 'members'"
+                    [class.text-surface-600]="groupInfoTab !== 'members'"
+                    class="flex-1 py-1.5 rounded-full text-xs font-semibold transition">
+              Members
+            </button>
+            <button type="button"
+                    *ngIf="isCurrentUserGroupAdmin()"
+                    (click)="openAddMembers()"
+                    [class.bg-white]="groupInfoTab === 'add'"
+                    [class.dark:!bg-surface-700]="groupInfoTab === 'add'"
+                    [class.shadow-sm]="groupInfoTab === 'add'"
+                    [class.text-surface-900]="groupInfoTab === 'add'"
+                    [class.dark:!text-surface-0]="groupInfoTab === 'add'"
+                    [class.text-surface-600]="groupInfoTab !== 'add'"
+                    class="flex-1 py-1.5 rounded-full text-xs font-semibold transition">
+              Add Member
+            </button>
+          </div>
+        </div>
+
+        <!-- Members tab -->
+        <div *ngIf="groupInfoTab === 'members'" class="px-4 py-3">
+          <!-- Group name (admin can rename) -->
+          <div class="mb-3 px-3 py-2.5 rounded-xl bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700">
+            <div class="flex items-center justify-between gap-2 mb-1">
+              <div class="text-[10px] font-bold tracking-[0.12em] text-surface-500 dark:text-surface-400">GROUP NAME</div>
+              <button *ngIf="isCurrentUserGroupAdmin() && !renamingGroup"
+                      type="button"
+                      (click)="beginRenameGroup()"
+                      class="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">
+                <i class="pi pi-pencil text-[10px] mr-1"></i>Rename
+              </button>
+            </div>
+            <div *ngIf="!renamingGroup" class="text-sm font-semibold text-surface-900 dark:text-surface-0 truncate">{{ selectedGroup?.groupName }}</div>
+            <div *ngIf="renamingGroup" class="flex items-center gap-2">
+              <input type="text"
+                     [(ngModel)]="renameGroupName"
+                     (keyup.enter)="submitRenameGroup()"
+                     (keyup.escape)="cancelRenameGroup()"
+                     [disabled]="submittingRename"
+                     maxlength="200"
+                     class="flex-1 px-3 py-1.5 border border-surface-200 dark:border-surface-600 rounded-lg bg-surface-0 dark:bg-surface-900 text-sm text-surface-900 dark:text-surface-0 focus:outline-none focus:ring-2 focus:ring-emerald-400/30 focus:border-emerald-400"
+                     placeholder="New group name">
+              <button type="button"
+                      (click)="submitRenameGroup()"
+                      [disabled]="!renameGroupName?.trim() || submittingRename || renameGroupName.trim() === selectedGroup?.groupName"
+                      class="px-3 py-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 dark:hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition text-xs font-medium">
+                <i class="pi pi-spin pi-spinner mr-1" *ngIf="submittingRename"></i>
+                Save
+              </button>
+              <button type="button"
+                      (click)="cancelRenameGroup()"
+                      [disabled]="submittingRename"
+                      class="px-3 py-1.5 border border-surface-300 dark:border-surface-600 rounded-lg text-surface-700 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-700 transition text-xs disabled:opacity-50">
+                Cancel
+              </button>
+            </div>
+          </div>
+
+          <div *ngIf="loadingGroupMembers" class="py-6 text-center text-sm text-surface-500 dark:text-surface-400">
+            <i class="pi pi-spin pi-spinner mr-2"></i>Loading members...
+          </div>
+          <div *ngIf="!loadingGroupMembers && groupMembers.length === 0" class="py-6 text-center text-sm text-surface-500 dark:text-surface-400">
+            No members.
+          </div>
+          <div *ngIf="!loadingGroupMembers && groupMembers.length > 0" class="space-y-1">
+            <div *ngFor="let m of groupMembers"
+                 class="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition">
+              <div class="relative shrink-0">
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white font-semibold text-sm"
+                     [style.background]="getAvatarColor(m.userId)">
+                  {{ getInitials(getRankAndName(m.userId)) }}
+                </div>
+                <span *ngIf="isOnline(m.userId)"
+                      title="Online"
+                      class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-surface-0 dark:border-surface-900"></span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="text-[13px] font-semibold text-surface-900 dark:text-surface-0 truncate">
+                  {{ getRankAndName(m.userId) }}
+                  <span *ngIf="m.userId === currentUserId" class="text-[10px] font-medium text-surface-500 dark:text-surface-400">(You)</span>
+                </div>
+                <div class="text-[10px] text-surface-500 dark:text-surface-400 truncate">{{ m.userName || m.email || m.userId }}</div>
+              </div>
+              <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0"
+                    [class.bg-indigo-50]="m.role === 'Admin'"
+                    [class.text-indigo-700]="m.role === 'Admin'"
+                    [class.dark:!bg-indigo-500\/15]="m.role === 'Admin'"
+                    [class.dark:!text-indigo-300]="m.role === 'Admin'"
+                    [class.bg-surface-100]="m.role !== 'Admin'"
+                    [class.text-surface-600]="m.role !== 'Admin'"
+                    [class.dark:!bg-surface-700]="m.role !== 'Admin'"
+                    [class.dark:!text-surface-300]="m.role !== 'Admin'">{{ m.role }}</span>
+              <button *ngIf="isCurrentUserGroupAdmin() && m.userId !== currentUserId"
+                      type="button"
+                      (click)="confirmRemoveMember(m)"
+                      [disabled]="removingMemberId === m.userId"
+                      class="w-8 h-8 rounded-full flex items-center justify-center text-red-500 hover:bg-red-50 dark:hover:bg-red-500/15 transition shrink-0 disabled:opacity-50"
+                      title="Remove member">
+                <i class="pi pi-user-minus text-sm" *ngIf="removingMemberId !== m.userId"></i>
+                <i class="pi pi-spin pi-spinner text-sm" *ngIf="removingMemberId === m.userId"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Danger zone: delete group (creator only) -->
+          <div *ngIf="isCurrentUserGroupCreator()" class="mt-4 pt-3 border-t border-red-200 dark:border-red-500/30">
+            <div class="text-[10px] font-bold tracking-[0.12em] text-red-600 dark:text-red-400 mb-2">DANGER ZONE</div>
+            <div class="flex items-start justify-between gap-3 px-3 py-2.5 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30">
+              <div class="min-w-0">
+                <div class="text-[13px] font-semibold text-red-700 dark:text-red-300">Delete this group</div>
+                <p class="text-[11px] text-red-700/80 dark:text-red-300/80 leading-snug">Members will lose access immediately. Message history is preserved on the server.</p>
+              </div>
+              <button type="button"
+                      (click)="confirmDeleteGroup()"
+                      [disabled]="deletingGroup"
+                      class="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition text-xs font-semibold shrink-0">
+                <i class="pi pi-spin pi-spinner mr-1" *ngIf="deletingGroup"></i>
+                <i class="pi pi-trash mr-1" *ngIf="!deletingGroup"></i>
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Add Member tab -->
+        <div *ngIf="groupInfoTab === 'add'" class="px-4 py-3">
+          <p class="text-xs text-surface-500 dark:text-surface-400 mb-2">Select users to add to this group.</p>
+          <div class="relative mb-2">
+            <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-surface-400 text-xs"></i>
+            <input
+              type="text"
+              [(ngModel)]="addMembersSearch"
+              placeholder="Search by name or username..."
+              class="w-full pl-8 pr-3 py-2 border border-surface-200 dark:border-surface-600 rounded-full bg-surface-50 dark:bg-surface-800 text-xs text-surface-900 dark:text-surface-0 placeholder:text-surface-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/30 focus:border-emerald-400">
+          </div>
+          <div *ngIf="loadingChatUsers" class="py-6 text-center text-sm text-surface-500 dark:text-surface-400">
+            <i class="pi pi-spin pi-spinner mr-2"></i>Loading users...
+          </div>
+          <div *ngIf="!loadingChatUsers && addableUsers().length === 0" class="py-6 text-center text-sm text-surface-500 dark:text-surface-400">
+            {{ addMembersSearch?.trim() ? 'No matches.' : 'Everyone is already a member.' }}
+          </div>
+          <div *ngIf="!loadingChatUsers && addableUsers().length > 0" class="max-h-64 overflow-y-auto border border-surface-200 dark:border-surface-600 rounded-lg p-1 space-y-0.5">
+            <label *ngFor="let u of addableUsers()"
+                   class="flex items-center gap-2 cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-800 rounded px-2 py-1.5">
+              <input type="checkbox"
+                     [checked]="addMembersSelectedUserIds.includes(u.userId)"
+                     (change)="toggleAddMemberUser(u.userId)">
+              <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white font-semibold text-xs shrink-0"
+                   [style.background]="getAvatarColor(u.userId)">
+                {{ getInitials(getRankAndName(u.userId)) }}
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="text-[12px] font-semibold text-surface-900 dark:text-surface-0 truncate">{{ getRankAndName(u.userId) }}</div>
+                <div class="text-[10px] text-surface-500 dark:text-surface-400 truncate">{{ u.userName || u.email }}</div>
+              </div>
+            </label>
+          </div>
+          <div class="flex gap-2 mt-3">
+            <button type="button"
+                    (click)="submitAddMembers()"
+                    [disabled]="addMembersSelectedUserIds.length === 0 || addingMembers"
+                    class="flex-1 px-3 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 dark:hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition text-sm font-medium">
+              <i class="pi pi-spin pi-spinner mr-1" *ngIf="addingMembers"></i>
+              {{ addingMembers ? 'Adding...' : 'Add selected' }}
+            </button>
+            <button type="button"
+                    (click)="groupInfoTab = 'members'"
+                    class="px-3 py-2 border border-surface-300 dark:border-surface-600 rounded-lg text-surface-700 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-800 transition text-sm">
+              Cancel
+            </button>
+          </div>
+        </div>
+      </p-dialog>
+
       <!-- User profile info modal (info icon in chat header) -->
       <p-dialog
         [(visible)]="showProfileInfoModal"
@@ -930,6 +1149,20 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
   /** State for the "user info" modal triggered by the (i) icon in the chat header. */
   showProfileInfoModal = false;
   profileInfoUserId: string | null = null;
+
+  /** State for the group info modal triggered by the (i) icon in the group chat header. */
+  showGroupInfoModal = false;
+  groupInfoTab: 'members' | 'add' = 'members';
+  groupMembers: GroupMemberDto[] = [];
+  loadingGroupMembers = false;
+  removingMemberId: string | null = null;
+  addMembersSelectedUserIds: string[] = [];
+  addMembersSearch = '';
+  addingMembers = false;
+  renamingGroup = false;
+  renameGroupName = '';
+  submittingRename = false;
+  deletingGroup = false;
 
   constructor(
     private chatService: ChatService,
@@ -1228,6 +1461,217 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
   closeProfileInfo(): void {
     this.showProfileInfoModal = false;
     this.profileInfoUserId = null;
+  }
+
+  /** Opens the group info dialog and loads the members list. */
+  openGroupInfo(): void {
+    if (!this.selectedGroupId) return;
+    this.showGroupInfoModal = true;
+    this.groupInfoTab = 'members';
+    this.addMembersSelectedUserIds = [];
+    this.addMembersSearch = '';
+    this.loadGroupMembers();
+  }
+
+  private loadGroupMembers(): void {
+    if (!this.selectedGroupId) return;
+    this.loadingGroupMembers = true;
+    this.chatService.getGroupMembers(this.selectedGroupId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (list) => {
+          this.groupMembers = Array.isArray(list) ? list : [];
+          this.loadingGroupMembers = false;
+          for (const m of this.groupMembers) this.ensureUserProfile(m.userId);
+        },
+        error: () => { this.loadingGroupMembers = false; }
+      });
+  }
+
+  isCurrentUserGroupAdmin(): boolean {
+    if (!this.currentUserId || !this.groupMembers?.length) return this.selectedGroup?.myRole === 'Admin';
+    const me = this.groupMembers.find(m => m.userId === this.currentUserId);
+    return me?.role === 'Admin';
+  }
+
+  confirmRemoveMember(member: GroupMemberDto): void {
+    if (!this.selectedGroupId) return;
+    const name = this.getRankAndName(member.userId);
+    this.confirmationService.confirm({
+      message: `Remove ${name} from this group?`,
+      header: 'Remove member',
+      icon: 'pi pi-exclamation-triangle',
+      rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+      acceptButtonProps: { label: 'Remove', severity: 'danger' },
+      accept: () => this.removeMember(member)
+    });
+  }
+
+  private removeMember(member: GroupMemberDto): void {
+    if (!this.selectedGroupId) return;
+    this.removingMemberId = member.userId;
+    this.chatService.removeGroupMember(this.selectedGroupId, member.userId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.removingMemberId = null;
+          this.groupMembers = this.groupMembers.filter(m => m.userId !== member.userId);
+          if (this.selectedGroup) this.selectedGroup.memberCount = Math.max(0, (this.selectedGroup.memberCount || 0) - 1);
+          this.loadUserGroups();
+        },
+        error: () => { this.removingMemberId = null; }
+      });
+  }
+
+  openAddMembers(): void {
+    this.groupInfoTab = 'add';
+    this.addMembersSelectedUserIds = [];
+    this.addMembersSearch = '';
+    if (this.chatUsers.length === 0 && !this.loadingChatUsers) {
+      this.loadingChatUsers = true;
+      this.chatService.getChatUsers()
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (users) => { this.chatUsers = users ?? []; this.loadingChatUsers = false; },
+          error: () => { this.loadingChatUsers = false; }
+        });
+    }
+  }
+
+  /** Users not yet in the group, filtered by the add-member search input. */
+  addableUsers(): ChatUserDto[] {
+    const memberIds = new Set(this.groupMembers.map(m => m.userId));
+    const search = (this.addMembersSearch ?? '').trim().toLowerCase();
+    return this.chatUsers.filter(u => {
+      if (!u.userId || memberIds.has(u.userId)) return false;
+      if (!search) return true;
+      const rankName = this.getRankAndName(u.userId).toLowerCase();
+      const userName = (u.userName ?? '').toLowerCase();
+      const email = (u.email ?? '').toLowerCase();
+      return rankName.includes(search) || userName.includes(search) || email.includes(search);
+    });
+  }
+
+  toggleAddMemberUser(userId: string): void {
+    const i = this.addMembersSelectedUserIds.indexOf(userId);
+    if (i >= 0) this.addMembersSelectedUserIds = this.addMembersSelectedUserIds.filter(id => id !== userId);
+    else this.addMembersSelectedUserIds = [...this.addMembersSelectedUserIds, userId];
+  }
+
+  submitAddMembers(): void {
+    if (!this.selectedGroupId || this.addMembersSelectedUserIds.length === 0 || this.addingMembers) return;
+    this.addingMembers = true;
+    this.chatService.addGroupMembers(this.selectedGroupId, this.addMembersSelectedUserIds)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.addingMembers = false;
+          this.addMembersSelectedUserIds = [];
+          this.groupInfoTab = 'members';
+          this.loadGroupMembers();
+          this.loadUserGroups();
+        },
+        error: () => { this.addingMembers = false; }
+      });
+  }
+
+  /** True if the current user is the creator of the currently selected group. Creator-only actions (delete) gate on this. */
+  isCurrentUserGroupCreator(): boolean {
+    return !!this.selectedGroup && !!this.currentUserId && this.selectedGroup.createdByUserId === this.currentUserId;
+  }
+
+  beginRenameGroup(): void {
+    if (!this.selectedGroup) return;
+    this.renameGroupName = this.selectedGroup.groupName ?? '';
+    this.renamingGroup = true;
+  }
+
+  cancelRenameGroup(): void {
+    this.renamingGroup = false;
+    this.renameGroupName = '';
+  }
+
+  submitRenameGroup(): void {
+    if (!this.selectedGroupId || !this.selectedGroup) return;
+    const newName = (this.renameGroupName ?? '').trim();
+    if (!newName || this.submittingRename) return;
+    if (newName === (this.selectedGroup.groupName ?? '').trim()) {
+      this.cancelRenameGroup();
+      return;
+    }
+    this.submittingRename = true;
+    const renamerDisplayName = this.getRankAndName(this.currentUserId);
+    this.chatService.renameGroup(this.selectedGroupId, newName, renamerDisplayName)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.submittingRename = false;
+          this.renamingGroup = false;
+          this.renameGroupName = '';
+          if (this.selectedGroup) this.selectedGroup.groupName = newName;
+          this.loadUserGroups();
+        },
+        error: () => { this.submittingRename = false; }
+      });
+  }
+
+  confirmDeleteGroup(): void {
+    if (!this.selectedGroup) return;
+    const name = this.selectedGroup.groupName ?? 'this group';
+    this.confirmationService.confirm({
+      message: `Delete "${name}"? All members will lose access. Message history is preserved on the server.`,
+      header: 'Delete group',
+      icon: 'pi pi-exclamation-triangle',
+      rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+      acceptButtonProps: { label: 'Delete', severity: 'danger' },
+      accept: () => this.deleteGroup()
+    });
+  }
+
+  private deleteGroup(): void {
+    if (!this.selectedGroupId || this.deletingGroup) return;
+    const groupId = this.selectedGroupId;
+    this.deletingGroup = true;
+    this.chatService.deleteGroup(groupId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.deletingGroup = false;
+          this.showGroupInfoModal = false;
+          this.handleGroupGone(groupId);
+        },
+        error: () => { this.deletingGroup = false; }
+      });
+  }
+
+  /** Closes the group view, clears local state, and refreshes the group list. Used on both local-initiated delete and remote GroupDeleted events. */
+  private handleGroupGone(groupId: number): void {
+    if (this.selectedGroupId === groupId) {
+      this.chatService.leaveGroupHub(groupId).catch(() => {});
+      this.selectedGroupId = null;
+      this.selectedGroup = null;
+      this.groupMessages = [];
+      this.chatService.setSelectedGroupId(null);
+    }
+    this.userGroups = this.userGroups.filter(g => g.groupId !== groupId);
+    this.loadUserGroups();
+  }
+
+  /** True when the message is an in-channel system notification (rename, etc.). */
+  isSystemMessage(content: string | null | undefined): boolean {
+    return typeof content === 'string' && content.startsWith('__SYSTEM__:');
+  }
+
+  /** Strips the system-message marker prefix so the human-readable text can be rendered. */
+  getSystemMessageText(content: string | null | undefined): string {
+    if (!content) return '';
+    return content.replace(/^__SYSTEM__:/, '');
+  }
+
+  /** Strips the system-message marker from group sidebar previews so the user sees plain text (the backend truncates so the prefix may be partly present). */
+  formatGroupPreview(preview: string | null | undefined): string {
+    if (!preview) return '';
+    return preview.replace(/^__SYSTEM__:/, '');
   }
 
   /** Prefetch rank+name for every user in the direct conversation list. */
@@ -1687,6 +2131,24 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
         if (payload?.groupId !== this.selectedGroupId) return;
         const msg = this.groupMessages.find(m => m.messageId === payload?.messageId);
         if (msg) msg.isDeleted = true;
+      });
+
+    this.chatService.groupRenamed$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((payload: { groupId: number; groupName: string }) => {
+        if (!payload) return;
+        if (this.selectedGroup && this.selectedGroupId === payload.groupId) {
+          this.selectedGroup.groupName = payload.groupName;
+        }
+        const g = this.userGroups.find(gr => gr.groupId === payload.groupId);
+        if (g) g.groupName = payload.groupName;
+      });
+
+    this.chatService.groupDeleted$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((payload: { groupId: number }) => {
+        if (!payload?.groupId) return;
+        this.handleGroupGone(payload.groupId);
       });
 
     this.chatService.error$
