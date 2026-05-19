@@ -31,6 +31,15 @@ export class ChatService {
   private groupMessagesSeenSubject = new Subject<{ messageIds: number[]; groupId: number; seenByUserId: string }>();
   public groupMessagesSeen$ = this.groupMessagesSeenSubject.asObservable();
 
+  private groupRenamedSubject = new Subject<{ groupId: number; groupName: string }>();
+  public groupRenamed$ = this.groupRenamedSubject.asObservable();
+
+  private groupDeletedSubject = new Subject<{ groupId: number }>();
+  public groupDeleted$ = this.groupDeletedSubject.asObservable();
+
+  private groupImageChangedSubject = new Subject<{ groupId: number; groupImageFileId: number | null }>();
+  public groupImageChanged$ = this.groupImageChangedSubject.asObservable();
+
   /** Emitted when a leave application is submitted for approval and this user is the approver. */
   private leaveApprovalRequestedSubject = new Subject<{ leaveApplicationId: number; applicantEmployeeId: number; fromDate: string; toDate: string; leaveTypeId: number; message: string; notificationId?: number }>();
   public leaveApprovalRequested$ = this.leaveApprovalRequestedSubject.asObservable();
@@ -53,6 +62,35 @@ export class ChatService {
   /** Per-senderUserId in-session unread count; the floating widget bumps this on incoming messages and the chat container reads it for badge/bolding. */
   private unreadOverlaySubject = new BehaviorSubject<Record<string, number>>({});
   public unreadOverlay$ = this.unreadOverlaySubject.asObservable();
+
+  /** Per-groupId in-session unread count, same pattern as the direct overlay above. */
+  private groupUnreadOverlaySubject = new BehaviorSubject<Record<number, number>>({});
+  public groupUnreadOverlay$ = this.groupUnreadOverlaySubject.asObservable();
+
+  bumpGroupUnreadOverlay(groupId: number): void {
+    if (!groupId) return;
+    const cur = { ...this.groupUnreadOverlaySubject.getValue() };
+    cur[groupId] = (cur[groupId] ?? 0) + 1;
+    this.groupUnreadOverlaySubject.next(cur);
+  }
+
+  setGroupUnreadOverlay(groupId: number, count: number): void {
+    if (!groupId) return;
+    const cur = { ...this.groupUnreadOverlaySubject.getValue() };
+    if (count <= 0) delete cur[groupId];
+    else cur[groupId] = count;
+    this.groupUnreadOverlaySubject.next(cur);
+  }
+
+  clearGroupUnreadOverlay(groupId: number): void {
+    if (!groupId) return;
+    const cur = this.groupUnreadOverlaySubject.getValue();
+    if (groupId in cur) {
+      const next = { ...cur };
+      delete next[groupId];
+      this.groupUnreadOverlaySubject.next(next);
+    }
+  }
 
   bumpUnreadOverlay(senderUserId: string): void {
     if (!senderUserId) return;
@@ -154,6 +192,15 @@ export class ChatService {
     });
     this.hubConnection.on('GroupMessagesSeen', (payload: { messageIds: number[]; groupId: number; seenByUserId: string }) => {
       this.groupMessagesSeenSubject.next(payload);
+    });
+    this.hubConnection.on('GroupRenamed', (payload: { groupId: number; groupName: string }) => {
+      this.groupRenamedSubject.next(payload);
+    });
+    this.hubConnection.on('GroupDeleted', (payload: { groupId: number }) => {
+      this.groupDeletedSubject.next(payload);
+    });
+    this.hubConnection.on('GroupImageChanged', (payload: { groupId: number; groupImageFileId: number | null }) => {
+      this.groupImageChangedSubject.next(payload);
     });
 
     this.hubConnection.on('LeaveApprovalRequested', (payload: any) => {
@@ -451,5 +498,21 @@ export class ChatService {
 
   leaveGroup(groupId: number): Observable<any> {
     return this.http.post(`${this.chatApi}/LeaveGroup`, { groupId });
+  }
+
+  removeGroupMember(groupId: number, userIdToRemove: string): Observable<any> {
+    return this.http.post(`${this.chatApi}/RemoveGroupMember`, { groupId, userIdToRemove });
+  }
+
+  renameGroup(groupId: number, newGroupName: string, renamerDisplayName?: string | null): Observable<any> {
+    return this.http.post(`${this.chatApi}/RenameGroup`, { groupId, newGroupName, renamerDisplayName: renamerDisplayName ?? null });
+  }
+
+  deleteGroup(groupId: number): Observable<any> {
+    return this.http.post(`${this.chatApi}/DeleteGroup`, { groupId });
+  }
+
+  setGroupImage(groupId: number, groupImageFileId: number | null): Observable<any> {
+    return this.http.post(`${this.chatApi}/SetGroupImage`, { groupId, groupImageFileId });
   }
 }

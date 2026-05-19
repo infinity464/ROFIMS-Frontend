@@ -10,7 +10,7 @@ import { IdentityUserMappingService } from '@/services/identity-user-mapping.ser
 import { ServingMembersService } from '@/services/serving-members.service';
 import { EmpService } from '@/services/emp-service';
 import { DialogModule } from 'primeng/dialog';
-import { ChatAttachment, ChatUserDto, DirectConversation, DirectMessageDto, DirectMessageSearchResult, GroupDto, GroupMessageDto } from '@/models/chat.model';
+import { ChatAttachment, ChatUserDto, DirectConversation, DirectMessageDto, DirectMessageSearchResult, GroupDto, GroupMemberDto, GroupMessageDto } from '@/models/chat.model';
 import { saveAs } from 'file-saver';
 import { Subject, of, forkJoin } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged, switchMap, takeUntil } from 'rxjs/operators';
@@ -112,10 +112,15 @@ import { catchError, debounceTime, distinctUntilChanged, switchMap, takeUntil } 
                   class="absolute left-0 top-2 bottom-2 w-[3px] rounded-full bg-indigo-400"></span>
             <!-- Avatar -->
             <div class="relative shrink-0">
-              <div class="w-11 h-11 rounded-xl flex items-center justify-center text-white font-semibold text-sm"
-                   [style.background]="getAvatarColor(conv.otherUserId)">
-                {{ getInitials(getDisplayName(conv.otherUserId)) }}
-              </div>
+              <img *ngIf="getUserAvatarImage(conv.otherUserId) as imgUrl; else convLetter"
+                   [src]="imgUrl" alt=""
+                   class="w-11 h-11 rounded-xl object-cover bg-surface-100 dark:bg-surface-700" />
+              <ng-template #convLetter>
+                <div class="w-11 h-11 rounded-xl flex items-center justify-center text-white font-semibold text-sm"
+                     [style.background]="getAvatarColor(conv.otherUserId)">
+                  {{ getLastNameInitial(conv.otherUserId) }}
+                </div>
+              </ng-template>
               <span *ngIf="isOnline(conv.otherUserId)"
                     title="Online"
                     class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-surface-0 dark:border-surface-900"></span>
@@ -156,10 +161,15 @@ import { catchError, debounceTime, distinctUntilChanged, switchMap, takeUntil } 
                  (click)="startChatWithUser(u)"
                  class="flex items-start gap-3 px-3 py-2.5 mb-1 rounded-xl cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-800 transition">
               <div class="relative shrink-0">
-                <div class="w-11 h-11 rounded-xl flex items-center justify-center text-white font-semibold text-sm"
-                     [style.background]="getAvatarColor(u.userId)">
-                  {{ getInitials(getRankAndName(u.userId)) }}
-                </div>
+                <img *ngIf="getUserAvatarImage(u.userId) as imgUrl; else newChatLetter"
+                     [src]="imgUrl" alt=""
+                     class="w-11 h-11 rounded-xl object-cover bg-surface-100 dark:bg-surface-700" />
+                <ng-template #newChatLetter>
+                  <div class="w-11 h-11 rounded-xl flex items-center justify-center text-white font-semibold text-sm"
+                       [style.background]="getAvatarColor(u.userId)">
+                    {{ getLastNameInitial(u.userId) }}
+                  </div>
+                </ng-template>
                 <span *ngIf="isOnline(u.userId)"
                       title="Online"
                       class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-surface-0 dark:border-surface-900"></span>
@@ -183,10 +193,15 @@ import { catchError, debounceTime, distinctUntilChanged, switchMap, takeUntil } 
               <div *ngFor="let r of messageSearchResults"
                    (click)="openSearchResult(r)"
                    class="flex items-start gap-3 px-3 py-2.5 mb-1 rounded-xl cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-800 transition">
-                <div class="w-11 h-11 rounded-xl flex items-center justify-center text-white font-semibold text-sm shrink-0"
-                     [style.background]="getAvatarColor(r.otherUserId)">
-                  {{ getInitials(getRankAndName(r.otherUserId)) }}
-                </div>
+                <img *ngIf="getUserAvatarImage(r.otherUserId) as imgUrl; else searchLetter"
+                     [src]="imgUrl" alt=""
+                     class="w-11 h-11 rounded-xl object-cover shrink-0 bg-surface-100 dark:bg-surface-700" />
+                <ng-template #searchLetter>
+                  <div class="w-11 h-11 rounded-xl flex items-center justify-center text-white font-semibold text-sm shrink-0"
+                       [style.background]="getAvatarColor(r.otherUserId)">
+                    {{ getLastNameInitial(r.otherUserId) }}
+                  </div>
+                </ng-template>
                 <div class="flex-1 min-w-0">
                   <div class="flex items-baseline justify-between gap-2">
                     <div class="font-semibold text-[13px] leading-tight text-surface-900 dark:text-surface-0 truncate">{{ getRankAndName(r.otherUserId) }}</div>
@@ -212,20 +227,47 @@ import { catchError, debounceTime, distinctUntilChanged, switchMap, takeUntil } 
                [class.bg-emerald-50]="selectedGroupId === g.groupId"
                [class.dark:!bg-emerald-500/10]="selectedGroupId === g.groupId"
                [class.shadow-sm]="selectedGroupId === g.groupId"
+               [class.bg-emerald-50\/60]="getGroupUnreadCount(g) > 0 && selectedGroupId !== g.groupId"
+               [class.dark:!bg-emerald-500\/5]="getGroupUnreadCount(g) > 0 && selectedGroupId !== g.groupId"
                class="relative flex items-start gap-3 px-3 py-2.5 mb-1 rounded-xl cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-800 transition">
             <span *ngIf="selectedGroupId === g.groupId"
                   class="absolute left-0 top-2 bottom-2 w-[3px] rounded-full bg-emerald-500"></span>
-            <div class="w-11 h-11 rounded-xl bg-emerald-500 flex items-center justify-center text-white shrink-0">
-              <i class="pi pi-users text-base"></i>
-            </div>
+            <span *ngIf="getGroupUnreadCount(g) > 0 && selectedGroupId !== g.groupId"
+                  class="absolute left-0 top-2 bottom-2 w-[3px] rounded-full bg-emerald-400"></span>
+            <img *ngIf="getGroupAvatarImage(g) as gImg; else groupListIcon"
+                 [src]="gImg" alt=""
+                 class="w-11 h-11 rounded-xl object-cover shrink-0 bg-surface-100 dark:bg-surface-700" />
+            <ng-template #groupListIcon>
+              <div class="w-11 h-11 rounded-xl bg-emerald-500 flex items-center justify-center text-white shrink-0">
+                <i class="pi pi-users text-base"></i>
+              </div>
+            </ng-template>
             <div class="flex-1 min-w-0">
               <div class="flex items-baseline justify-between gap-2">
-                <div class="font-semibold text-[13px] leading-tight text-surface-900 dark:text-surface-0 truncate">{{ g.groupName }}</div>
-                <span class="text-[11px] text-surface-500 dark:text-surface-400 shrink-0">{{ g.lastMessageAt ? getConversationTime(g.lastMessageAt) : '' }}</span>
+                <div class="text-[13px] leading-tight text-surface-900 dark:text-surface-0 truncate"
+                     [class.font-bold]="getGroupUnreadCount(g) > 0"
+                     [class.font-semibold]="getGroupUnreadCount(g) === 0">{{ g.groupName }}</div>
+                <span class="text-[11px] shrink-0"
+                      [class.text-emerald-600]="getGroupUnreadCount(g) > 0"
+                      [class.dark:!text-emerald-400]="getGroupUnreadCount(g) > 0"
+                      [class.font-semibold]="getGroupUnreadCount(g) > 0"
+                      [class.text-surface-500]="getGroupUnreadCount(g) === 0"
+                      [class.dark:!text-surface-400]="getGroupUnreadCount(g) === 0">{{ g.lastMessageAt ? getConversationTime(g.lastMessageAt) : '' }}</span>
               </div>
               <div class="flex items-center justify-between gap-2 mt-0.5">
-                <p class="text-xs text-surface-600 dark:text-surface-400 truncate">{{ g.lastMessagePreview || 'No messages yet' }}</p>
-                <span class="text-[10px] text-surface-500 dark:text-surface-400 shrink-0">{{ g.memberCount }}</span>
+                <p class="text-xs truncate"
+                   [class.text-surface-900]="getGroupUnreadCount(g) > 0"
+                   [class.dark:!text-surface-0]="getGroupUnreadCount(g) > 0"
+                   [class.font-semibold]="getGroupUnreadCount(g) > 0"
+                   [class.text-surface-600]="getGroupUnreadCount(g) === 0"
+                   [class.dark:!text-surface-400]="getGroupUnreadCount(g) === 0">{{ formatGroupPreview(g.lastMessagePreview) || 'No messages yet' }}</p>
+                <div class="flex items-center gap-1.5 shrink-0">
+                  <span *ngIf="getGroupUnreadCount(g) > 0"
+                        class="bg-emerald-600 text-white text-[10px] font-bold rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center shadow-sm shadow-emerald-500/30">
+                    {{ getGroupUnreadCount(g) }}
+                  </span>
+                  <span class="text-[10px] text-surface-500 dark:text-surface-400">{{ g.memberCount }}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -247,10 +289,15 @@ import { catchError, debounceTime, distinctUntilChanged, switchMap, takeUntil } 
           <div *ngIf="selectedOtherUserId && !selectedGroupId" class="px-5 py-3.5 border-b border-surface-200 dark:border-surface-700 bg-surface-0 dark:bg-surface-900">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-3 min-w-0">
-                <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white font-semibold text-sm shrink-0"
-                     [style.background]="getAvatarColor(selectedOtherUserId!)">
-                  {{ getInitials(getRankAndName(selectedOtherUserId!)) }}
-                </div>
+                <img *ngIf="getUserAvatarImage(selectedOtherUserId!) as imgUrl; else headerLetter"
+                     [src]="imgUrl" alt=""
+                     class="w-10 h-10 rounded-xl object-cover shrink-0 bg-surface-100 dark:bg-surface-700" />
+                <ng-template #headerLetter>
+                  <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white font-semibold text-sm shrink-0"
+                       [style.background]="getAvatarColor(selectedOtherUserId!)">
+                    {{ getLastNameInitial(selectedOtherUserId!) }}
+                  </div>
+                </ng-template>
                 <div class="min-w-0">
                   <div class="text-sm font-semibold leading-tight text-surface-900 dark:text-surface-0 truncate">{{ getRankAndName(selectedOtherUserId!) }}</div>
                   <div class="flex items-center gap-2 mt-0.5">
@@ -277,16 +324,24 @@ import { catchError, debounceTime, distinctUntilChanged, switchMap, takeUntil } 
           <div *ngIf="selectedGroupId && selectedGroup" class="px-5 py-3.5 border-b border-surface-200 dark:border-surface-700 bg-surface-0 dark:bg-surface-900">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-3 min-w-0">
-                <div class="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center text-white shrink-0">
-                  <i class="pi pi-users"></i>
-                </div>
+                <img *ngIf="getGroupAvatarImage(selectedGroup) as gHdr; else groupHeaderIcon"
+                     [src]="gHdr" alt=""
+                     class="w-10 h-10 rounded-xl object-cover shrink-0 bg-surface-100 dark:bg-surface-700" />
+                <ng-template #groupHeaderIcon>
+                  <div class="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center text-white shrink-0">
+                    <i class="pi pi-users"></i>
+                  </div>
+                </ng-template>
                 <div class="min-w-0">
                   <div class="text-sm font-semibold leading-tight text-surface-900 dark:text-surface-0 truncate">{{ selectedGroup.groupName }}</div>
                   <p class="text-xs text-surface-500 dark:text-surface-400 mt-0.5">{{ selectedGroup.memberCount }} members · {{ selectedGroup.myRole }}</p>
                 </div>
               </div>
               <div class="flex items-center gap-2">
-                <button type="button" class="w-9 h-9 rounded-full flex items-center justify-center text-surface-600 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-800 transition" title="Group info">
+                <button type="button"
+                        (click)="openGroupInfo()"
+                        class="w-9 h-9 rounded-full flex items-center justify-center text-surface-600 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-800 transition"
+                        title="Group info">
                   <i class="pi pi-info-circle"></i>
                 </button>
               </div>
@@ -332,7 +387,7 @@ import { catchError, debounceTime, distinctUntilChanged, switchMap, takeUntil } 
                     [class.shadow]="message.senderUserId !== currentUserId"
                     [style.background]="message.senderUserId === currentUserId ? 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)' : null"
                     class="px-4 py-2.5 rounded-2xl break-words">
-                    <span *ngIf="message.senderUserId !== currentUserId && message.senderName" class="block text-xs font-semibold text-indigo-500 dark:text-indigo-300 mb-0.5">{{ message.senderName }}</span>
+                    <span *ngIf="message.senderUserId !== currentUserId && message.senderUserId" class="block text-xs font-semibold text-indigo-500 dark:text-indigo-300 mb-0.5">{{ getRankAndName(message.senderUserId) }}</span>
                     <p *ngIf="message.messageContent" class="text-[14px] leading-snug break-words max-w-full">{{ message.messageContent }}</p>
                     <!-- Attachments -->
                     <ng-container *ngIf="parseAttachments(message.attachments) as atts">
@@ -477,7 +532,16 @@ import { catchError, debounceTime, distinctUntilChanged, switchMap, takeUntil } 
                 <div class="flex-1 h-px bg-surface-200 dark:bg-surface-700"></div>
               </div>
 
-              <div *ngIf="!message.isDeleted"
+              <!-- System message (e.g. group renamed) -->
+              <div *ngIf="!message.isDeleted && isSystemMessage(message.messageContent)"
+                   [attr.data-message-id]="message.messageId"
+                   class="flex justify-center my-2 px-3">
+                <div class="px-3 py-1 rounded-full bg-surface-100 dark:bg-surface-800 text-[11px] text-surface-600 dark:text-surface-400 italic max-w-[85%] text-center">
+                  <i class="pi pi-info-circle mr-1 text-[10px]"></i>{{ getSystemMessageText(message.messageContent) }}
+                </div>
+              </div>
+
+              <div *ngIf="!message.isDeleted && !isSystemMessage(message.messageContent)"
                    [attr.data-message-id]="message.messageId"
                    [class.justify-end]="message.senderUserId === currentUserId"
                    [class.justify-start]="message.senderUserId !== currentUserId"
@@ -496,7 +560,7 @@ import { catchError, debounceTime, distinctUntilChanged, switchMap, takeUntil } 
                     [class.shadow]="message.senderUserId !== currentUserId"
                     [style.background]="message.senderUserId === currentUserId ? 'linear-gradient(135deg, #059669 0%, #34d399 100%)' : null"
                     class="px-4 py-2.5 rounded-2xl break-words">
-                    <span *ngIf="message.senderUserId !== currentUserId && message.senderUserName" class="block text-xs font-semibold text-emerald-600 dark:text-emerald-300 mb-0.5">{{ message.senderUserName }}</span>
+                    <span *ngIf="message.senderUserId !== currentUserId && message.senderUserId" class="block text-xs font-semibold text-emerald-600 dark:text-emerald-300 mb-0.5">{{ getRankAndName(message.senderUserId) }}</span>
                     <p *ngIf="message.messageContent" class="text-[14px] leading-snug break-words max-w-full">{{ message.messageContent }}</p>
                     <ng-container *ngIf="parseAttachments(message.attachments) as atts">
                       <div *ngIf="atts.length > 0" class="flex flex-col gap-2"
@@ -656,10 +720,15 @@ import { catchError, debounceTime, distinctUntilChanged, switchMap, takeUntil } 
               type="button"
               class="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl border border-surface-200 dark:border-surface-600 hover:bg-surface-100 dark:hover:bg-surface-800 transition">
               <div class="relative shrink-0">
-                <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white font-semibold text-sm"
-                     [style.background]="getAvatarColor(user.userId)">
-                  {{ getInitials(getRankAndName(user.userId)) }}
-                </div>
+                <img *ngIf="getUserAvatarImage(user.userId) as imgUrl; else selectUserLetter"
+                     [src]="imgUrl" alt=""
+                     class="w-10 h-10 rounded-xl object-cover bg-surface-100 dark:bg-surface-700" />
+                <ng-template #selectUserLetter>
+                  <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white font-semibold text-sm"
+                       [style.background]="getAvatarColor(user.userId)">
+                    {{ getLastNameInitial(user.userId) }}
+                  </div>
+                </ng-template>
                 <span *ngIf="isOnline(user.userId)"
                       title="Online"
                       class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-surface-0 dark:border-surface-900"></span>
@@ -685,7 +754,7 @@ import { catchError, debounceTime, distinctUntilChanged, switchMap, takeUntil } 
       <div *ngIf="showCreateGroupModalOpen" class="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50">
         <div class="bg-surface-0 dark:bg-surface-900 rounded-lg shadow-xl border border-surface-200 dark:border-surface-700 p-6 w-full max-w-md mx-4 max-h-[85vh] flex flex-col">
           <h3 class="text-lg font-bold text-surface-900 dark:text-surface-0 mb-4">Create group</h3>
-          <p class="text-sm text-surface-500 dark:text-surface-400 mb-3">Enter a name and select members (by userId).</p>
+          <p class="text-sm text-surface-500 dark:text-surface-400 mb-3">Enter a name and select members.</p>
           <div class="mb-4">
             <label class="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">Group name</label>
             <input
@@ -698,11 +767,19 @@ import { catchError, debounceTime, distinctUntilChanged, switchMap, takeUntil } 
             <label class="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">Add members</label>
             <div *ngIf="loadingChatUsers" class="text-surface-500 dark:text-surface-400 py-2">Loading users...</div>
             <div *ngIf="!loadingChatUsers && chatUsers.length === 0" class="text-surface-500 dark:text-surface-400 py-2">No other users found.</div>
-            <div *ngIf="!loadingChatUsers && chatUsers.length > 0" class="flex-1 overflow-y-auto border border-surface-200 dark:border-surface-600 rounded-lg p-2 max-h-48 space-y-1">
+            <div *ngIf="!loadingChatUsers && chatUsers.length > 0" class="flex-1 overflow-y-auto border border-surface-200 dark:border-surface-600 rounded-lg p-2 max-h-64 space-y-1">
               <label *ngFor="let user of chatUsers" class="flex items-center gap-2 cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-800 rounded px-2 py-1.5">
                 <input type="checkbox" [checked]="createGroupSelectedUserIds.includes(user.userId)" (change)="toggleCreateGroupUser(user.userId)">
-                <span class="font-medium text-surface-900 dark:text-surface-0">{{ user.userName || user.email }}</span>
-                <span class="text-xs text-surface-500 dark:text-surface-400">({{ user.userId }})</span>
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white font-semibold text-xs shrink-0"
+                     [style.background]="getAvatarColor(user.userId)">
+                  {{ getInitials(getRankAndName(user.userId)) }}
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="text-[13px] font-semibold text-surface-900 dark:text-surface-0 truncate">
+                    {{ getRankAndName(user.userId) }}
+                    <span class="text-[11px] font-normal text-surface-500 dark:text-surface-400">({{ user.userName || user.email || user.userId }})</span>
+                  </div>
+                </div>
               </label>
             </div>
           </div>
@@ -723,6 +800,251 @@ import { catchError, debounceTime, distinctUntilChanged, switchMap, takeUntil } 
           </div>
         </div>
       </div>
+      <!-- Group info modal (info icon in group chat header): members list, add, remove -->
+      <p-dialog
+        [(visible)]="showGroupInfoModal"
+        [modal]="true"
+        [draggable]="false"
+        [resizable]="false"
+        [dismissableMask]="true"
+        [closeOnEscape]="true"
+        [style]="{ width: '92vw', maxWidth: '480px', maxHeight: '90vh' }"
+        [contentStyle]="{ padding: '0', maxHeight: '78vh', overflowY: 'auto' }"
+        styleClass="chat-group-info-dialog">
+        <ng-template pTemplate="header">
+          <div class="flex items-center gap-2 w-full">
+            <div class="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center text-white shrink-0">
+              <i class="pi pi-users text-sm"></i>
+            </div>
+            <div class="min-w-0">
+              <div class="text-sm font-bold text-surface-900 dark:text-surface-0 truncate">{{ selectedGroup?.groupName }}</div>
+              <div class="text-[11px] text-surface-500 dark:text-surface-400">{{ groupMembers.length }} members</div>
+            </div>
+          </div>
+        </ng-template>
+
+        <!-- Tabs: Members | Add Member -->
+        <div class="px-4 pt-3 bg-surface-0 dark:bg-surface-900 sticky top-0 z-10">
+          <div class="flex rounded-full bg-surface-100 dark:bg-surface-800 p-1">
+            <button type="button"
+                    (click)="groupInfoTab = 'members'"
+                    [class.bg-white]="groupInfoTab === 'members'"
+                    [class.dark:!bg-surface-700]="groupInfoTab === 'members'"
+                    [class.shadow-sm]="groupInfoTab === 'members'"
+                    [class.text-surface-900]="groupInfoTab === 'members'"
+                    [class.dark:!text-surface-0]="groupInfoTab === 'members'"
+                    [class.text-surface-600]="groupInfoTab !== 'members'"
+                    class="flex-1 py-1.5 rounded-full text-xs font-semibold transition">
+              Members
+            </button>
+            <button type="button"
+                    *ngIf="isCurrentUserGroupAdmin()"
+                    (click)="openAddMembers()"
+                    [class.bg-white]="groupInfoTab === 'add'"
+                    [class.dark:!bg-surface-700]="groupInfoTab === 'add'"
+                    [class.shadow-sm]="groupInfoTab === 'add'"
+                    [class.text-surface-900]="groupInfoTab === 'add'"
+                    [class.dark:!text-surface-0]="groupInfoTab === 'add'"
+                    [class.text-surface-600]="groupInfoTab !== 'add'"
+                    class="flex-1 py-1.5 rounded-full text-xs font-semibold transition">
+              Add Member
+            </button>
+          </div>
+        </div>
+
+        <!-- Members tab -->
+        <div *ngIf="groupInfoTab === 'members'" class="px-4 py-3">
+          <!-- Group picture (admin can change) -->
+          <div class="mb-3 px-3 py-3 rounded-xl bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 flex items-center gap-3">
+            <div class="relative shrink-0">
+              <img *ngIf="getGroupAvatarImage(selectedGroup) as gPic; else groupPicPlaceholder"
+                   [src]="gPic" alt=""
+                   class="w-16 h-16 rounded-xl object-cover bg-surface-100 dark:bg-surface-700" />
+              <ng-template #groupPicPlaceholder>
+                <div class="w-16 h-16 rounded-xl bg-emerald-500 flex items-center justify-center text-white">
+                  <i class="pi pi-users text-2xl"></i>
+                </div>
+              </ng-template>
+              <i *ngIf="uploadingGroupImage"
+                 class="pi pi-spin pi-spinner absolute inset-0 m-auto text-white text-xl"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-[10px] font-bold tracking-[0.12em] text-surface-500 dark:text-surface-400 mb-1">GROUP PICTURE</div>
+              <div *ngIf="isCurrentUserGroupAdmin(); else readOnlyPicHint" class="flex flex-wrap items-center gap-2">
+                <input #groupImageInput type="file" accept="image/*" class="hidden" (change)="onGroupImagePicked($event)" />
+                <button type="button"
+                        (click)="groupImageInput.click()"
+                        [disabled]="uploadingGroupImage"
+                        class="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/15 hover:bg-emerald-100 dark:hover:bg-emerald-500/25 disabled:opacity-50 px-2.5 py-1 rounded-full transition">
+                  <i class="pi pi-upload text-[10px] mr-1"></i>{{ selectedGroup?.groupImageFileId ? 'Change' : 'Upload' }}
+                </button>
+                <button *ngIf="selectedGroup?.groupImageFileId"
+                        type="button"
+                        (click)="clearGroupImage()"
+                        [disabled]="uploadingGroupImage"
+                        class="text-[11px] font-semibold text-red-600 dark:text-red-400 hover:underline disabled:opacity-50">
+                  Remove
+                </button>
+              </div>
+              <ng-template #readOnlyPicHint>
+                <p class="text-[11px] text-surface-500 dark:text-surface-400 leading-tight">Only group admins can change the picture.</p>
+              </ng-template>
+            </div>
+          </div>
+
+          <!-- Group name (admin can rename) -->
+          <div class="mb-3 px-3 py-2.5 rounded-xl bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700">
+            <div class="flex items-center justify-between gap-2 mb-1">
+              <div class="text-[10px] font-bold tracking-[0.12em] text-surface-500 dark:text-surface-400">GROUP NAME</div>
+              <button *ngIf="isCurrentUserGroupAdmin() && !renamingGroup"
+                      type="button"
+                      (click)="beginRenameGroup()"
+                      class="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">
+                <i class="pi pi-pencil text-[10px] mr-1"></i>Rename
+              </button>
+            </div>
+            <div *ngIf="!renamingGroup" class="text-sm font-semibold text-surface-900 dark:text-surface-0 truncate">{{ selectedGroup?.groupName }}</div>
+            <div *ngIf="renamingGroup" class="flex items-center gap-2">
+              <input type="text"
+                     [(ngModel)]="renameGroupName"
+                     (keyup.enter)="submitRenameGroup()"
+                     (keyup.escape)="cancelRenameGroup()"
+                     [disabled]="submittingRename"
+                     maxlength="200"
+                     class="flex-1 px-3 py-1.5 border border-surface-200 dark:border-surface-600 rounded-lg bg-surface-0 dark:bg-surface-900 text-sm text-surface-900 dark:text-surface-0 focus:outline-none focus:ring-2 focus:ring-emerald-400/30 focus:border-emerald-400"
+                     placeholder="New group name">
+              <button type="button"
+                      (click)="submitRenameGroup()"
+                      [disabled]="!renameGroupName?.trim() || submittingRename || renameGroupName.trim() === selectedGroup?.groupName"
+                      class="px-3 py-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 dark:hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition text-xs font-medium">
+                <i class="pi pi-spin pi-spinner mr-1" *ngIf="submittingRename"></i>
+                Save
+              </button>
+              <button type="button"
+                      (click)="cancelRenameGroup()"
+                      [disabled]="submittingRename"
+                      class="px-3 py-1.5 border border-surface-300 dark:border-surface-600 rounded-lg text-surface-700 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-700 transition text-xs disabled:opacity-50">
+                Cancel
+              </button>
+            </div>
+          </div>
+
+          <div *ngIf="loadingGroupMembers" class="py-6 text-center text-sm text-surface-500 dark:text-surface-400">
+            <i class="pi pi-spin pi-spinner mr-2"></i>Loading members...
+          </div>
+          <div *ngIf="!loadingGroupMembers && groupMembers.length === 0" class="py-6 text-center text-sm text-surface-500 dark:text-surface-400">
+            No members.
+          </div>
+          <div *ngIf="!loadingGroupMembers && groupMembers.length > 0" class="space-y-1">
+            <div *ngFor="let m of groupMembers"
+                 class="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition">
+              <div class="relative shrink-0">
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white font-semibold text-sm"
+                     [style.background]="getAvatarColor(m.userId)">
+                  {{ getInitials(getRankAndName(m.userId)) }}
+                </div>
+                <span *ngIf="isOnline(m.userId)"
+                      title="Online"
+                      class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-surface-0 dark:border-surface-900"></span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="text-[13px] font-semibold text-surface-900 dark:text-surface-0 truncate">
+                  {{ getRankAndName(m.userId) }}
+                  <span *ngIf="m.userId === currentUserId" class="text-[10px] font-medium text-surface-500 dark:text-surface-400">(You)</span>
+                </div>
+                <div class="text-[10px] text-surface-500 dark:text-surface-400 truncate">{{ m.userName || m.email || m.userId }}</div>
+              </div>
+              <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0"
+                    [class.bg-indigo-50]="m.role === 'Admin'"
+                    [class.text-indigo-700]="m.role === 'Admin'"
+                    [class.dark:!bg-indigo-500\/15]="m.role === 'Admin'"
+                    [class.dark:!text-indigo-300]="m.role === 'Admin'"
+                    [class.bg-surface-100]="m.role !== 'Admin'"
+                    [class.text-surface-600]="m.role !== 'Admin'"
+                    [class.dark:!bg-surface-700]="m.role !== 'Admin'"
+                    [class.dark:!text-surface-300]="m.role !== 'Admin'">{{ m.role }}</span>
+              <button *ngIf="isCurrentUserGroupAdmin() && m.userId !== currentUserId"
+                      type="button"
+                      (click)="confirmRemoveMember(m)"
+                      [disabled]="removingMemberId === m.userId"
+                      class="w-8 h-8 rounded-full flex items-center justify-center text-red-500 hover:bg-red-50 dark:hover:bg-red-500/15 transition shrink-0 disabled:opacity-50"
+                      title="Remove member">
+                <i class="pi pi-user-minus text-sm" *ngIf="removingMemberId !== m.userId"></i>
+                <i class="pi pi-spin pi-spinner text-sm" *ngIf="removingMemberId === m.userId"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Danger zone: delete group (creator only) -->
+          <div *ngIf="isCurrentUserGroupCreator()" class="mt-4 pt-3 border-t border-red-200 dark:border-red-500/30">
+            <div class="text-[10px] font-bold tracking-[0.12em] text-red-600 dark:text-red-400 mb-2">DANGER ZONE</div>
+            <div class="flex items-start justify-between gap-3 px-3 py-2.5 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30">
+              <div class="min-w-0">
+                <div class="text-[13px] font-semibold text-red-700 dark:text-red-300">Delete this group</div>
+                <p class="text-[11px] text-red-700/80 dark:text-red-300/80 leading-snug">Members will lose access immediately. Message history is preserved on the server.</p>
+              </div>
+              <button type="button"
+                      (click)="confirmDeleteGroup()"
+                      [disabled]="deletingGroup"
+                      class="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition text-xs font-semibold shrink-0">
+                <i class="pi pi-spin pi-spinner mr-1" *ngIf="deletingGroup"></i>
+                <i class="pi pi-trash mr-1" *ngIf="!deletingGroup"></i>
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Add Member tab -->
+        <div *ngIf="groupInfoTab === 'add'" class="px-4 py-3">
+          <p class="text-xs text-surface-500 dark:text-surface-400 mb-2">Select users to add to this group.</p>
+          <div class="relative mb-2">
+            <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-surface-400 text-xs"></i>
+            <input
+              type="text"
+              [(ngModel)]="addMembersSearch"
+              placeholder="Search by name or username..."
+              class="w-full pl-8 pr-3 py-2 border border-surface-200 dark:border-surface-600 rounded-full bg-surface-50 dark:bg-surface-800 text-xs text-surface-900 dark:text-surface-0 placeholder:text-surface-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/30 focus:border-emerald-400">
+          </div>
+          <div *ngIf="loadingChatUsers" class="py-6 text-center text-sm text-surface-500 dark:text-surface-400">
+            <i class="pi pi-spin pi-spinner mr-2"></i>Loading users...
+          </div>
+          <div *ngIf="!loadingChatUsers && addableUsers().length === 0" class="py-6 text-center text-sm text-surface-500 dark:text-surface-400">
+            {{ addMembersSearch?.trim() ? 'No matches.' : 'Everyone is already a member.' }}
+          </div>
+          <div *ngIf="!loadingChatUsers && addableUsers().length > 0" class="max-h-64 overflow-y-auto border border-surface-200 dark:border-surface-600 rounded-lg p-1 space-y-0.5">
+            <label *ngFor="let u of addableUsers()"
+                   class="flex items-center gap-2 cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-800 rounded px-2 py-1.5">
+              <input type="checkbox"
+                     [checked]="addMembersSelectedUserIds.includes(u.userId)"
+                     (change)="toggleAddMemberUser(u.userId)">
+              <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white font-semibold text-xs shrink-0"
+                   [style.background]="getAvatarColor(u.userId)">
+                {{ getInitials(getRankAndName(u.userId)) }}
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="text-[12px] font-semibold text-surface-900 dark:text-surface-0 truncate">{{ getRankAndName(u.userId) }}</div>
+                <div class="text-[10px] text-surface-500 dark:text-surface-400 truncate">{{ u.userName || u.email }}</div>
+              </div>
+            </label>
+          </div>
+          <div class="flex gap-2 mt-3">
+            <button type="button"
+                    (click)="submitAddMembers()"
+                    [disabled]="addMembersSelectedUserIds.length === 0 || addingMembers"
+                    class="flex-1 px-3 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 dark:hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition text-sm font-medium">
+              <i class="pi pi-spin pi-spinner mr-1" *ngIf="addingMembers"></i>
+              {{ addingMembers ? 'Adding...' : 'Add selected' }}
+            </button>
+            <button type="button"
+                    (click)="groupInfoTab = 'members'"
+                    class="px-3 py-2 border border-surface-300 dark:border-surface-600 rounded-lg text-surface-700 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-800 transition text-sm">
+              Cancel
+            </button>
+          </div>
+        </div>
+      </p-dialog>
+
       <!-- User profile info modal (info icon in chat header) -->
       <p-dialog
         [(visible)]="showProfileInfoModal"
@@ -855,6 +1177,8 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
   onlineUserIds: Set<string> = new Set<string>();
   /** Shared unread overlay (kept in sync by the chat service). */
   private unreadOverlay: Record<string, number> = {};
+  /** Shared group unread overlay (kept in sync by the chat service). */
+  private groupUnreadOverlay: Record<number, number> = {};
   isSending: boolean = false;
   searchText: string = '';
   messagesLoading = false;
@@ -931,6 +1255,21 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
   showProfileInfoModal = false;
   profileInfoUserId: string | null = null;
 
+  /** State for the group info modal triggered by the (i) icon in the group chat header. */
+  showGroupInfoModal = false;
+  groupInfoTab: 'members' | 'add' = 'members';
+  groupMembers: GroupMemberDto[] = [];
+  loadingGroupMembers = false;
+  removingMemberId: string | null = null;
+  addMembersSelectedUserIds: string[] = [];
+  addMembersSearch = '';
+  addingMembers = false;
+  renamingGroup = false;
+  renameGroupName = '';
+  submittingRename = false;
+  deletingGroup = false;
+  uploadingGroupImage = false;
+
   constructor(
     private chatService: ChatService,
     private fb: FormBuilder,
@@ -979,6 +1318,13 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
   getUnreadCount(conv: DirectConversation): number {
     const overlay = this.unreadOverlay[conv.otherUserId] ?? 0;
     const server = conv.unreadCount ?? 0;
+    return Math.max(overlay, server);
+  }
+
+  /** Effective unread count for a group: max(server-reported, locally-tracked overlay). */
+  getGroupUnreadCount(g: GroupDto): number {
+    const overlay = this.groupUnreadOverlay[g.groupId] ?? 0;
+    const server = g.unreadCount ?? 0;
     return Math.max(overlay, server);
   }
 
@@ -1205,6 +1551,42 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
     }
   }
 
+  /** Lazy blob URL cache for group avatar images keyed by groupId. */
+  private groupImageBlobUrls: Record<number, string> = {};
+  /** Guards against re-firing downloadFile while a request is pending. */
+  private groupImageFetchInflight: Record<number, boolean> = {};
+  /** Tracks the fileId currently cached for each group so we can invalidate when the admin uploads a new pic. */
+  private groupImageFileIdCache: Record<number, number> = {};
+
+  /**
+   * Returns the blob URL for the group's avatar image if available; otherwise kicks off a lazy fetch and returns null.
+   * Mirrors getAttachmentImageUrl. Template callers should fall back to the colored avatar swatch on null.
+   */
+  getGroupAvatarImage(g: GroupDto | null | undefined): string | null {
+    const fid = g?.groupImageFileId;
+    if (!g || !fid || fid <= 0) return null;
+    // If the fileId changed (admin re-uploaded), drop the stale cached blob URL.
+    if (this.groupImageFileIdCache[g.groupId] !== fid) {
+      const stale = this.groupImageBlobUrls[g.groupId];
+      if (stale) URL.revokeObjectURL(stale);
+      delete this.groupImageBlobUrls[g.groupId];
+      this.groupImageFileIdCache[g.groupId] = fid;
+    }
+    const cached = this.groupImageBlobUrls[g.groupId];
+    if (cached) return cached;
+    if (this.groupImageFetchInflight[g.groupId]) return null;
+    this.groupImageFetchInflight[g.groupId] = true;
+    this.empService.downloadFile(fid).pipe(
+      catchError(() => of(null)),
+      takeUntil(this.destroy$)
+    ).subscribe((blob) => {
+      this.groupImageFetchInflight[g.groupId] = false;
+      if (!blob || (blob as Blob).size === 0) return;
+      this.groupImageBlobUrls[g.groupId] = URL.createObjectURL(blob as Blob);
+    });
+    return null;
+  }
+
   /** Returns the cached profile object for the user, or null if not loaded yet. */
   getUserProfile(userId: string | null): {
     rank: string;
@@ -1230,6 +1612,281 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
     this.profileInfoUserId = null;
   }
 
+  /** Opens the group info dialog and loads the members list. */
+  openGroupInfo(): void {
+    if (!this.selectedGroupId) return;
+    this.showGroupInfoModal = true;
+    this.groupInfoTab = 'members';
+    this.addMembersSelectedUserIds = [];
+    this.addMembersSearch = '';
+    this.loadGroupMembers();
+  }
+
+  private loadGroupMembers(): void {
+    if (!this.selectedGroupId) return;
+    this.loadingGroupMembers = true;
+    this.chatService.getGroupMembers(this.selectedGroupId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (list) => {
+          this.groupMembers = Array.isArray(list) ? list : [];
+          this.loadingGroupMembers = false;
+          for (const m of this.groupMembers) this.ensureUserProfile(m.userId);
+        },
+        error: () => { this.loadingGroupMembers = false; }
+      });
+  }
+
+  isCurrentUserGroupAdmin(): boolean {
+    if (!this.currentUserId || !this.groupMembers?.length) return this.selectedGroup?.myRole === 'Admin';
+    const me = this.groupMembers.find(m => m.userId === this.currentUserId);
+    return me?.role === 'Admin';
+  }
+
+  confirmRemoveMember(member: GroupMemberDto): void {
+    if (!this.selectedGroupId) return;
+    const name = this.getRankAndName(member.userId);
+    this.confirmationService.confirm({
+      message: `Remove ${name} from this group?`,
+      header: 'Remove member',
+      icon: 'pi pi-exclamation-triangle',
+      rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+      acceptButtonProps: { label: 'Remove', severity: 'danger' },
+      accept: () => this.removeMember(member)
+    });
+  }
+
+  private removeMember(member: GroupMemberDto): void {
+    if (!this.selectedGroupId) return;
+    this.removingMemberId = member.userId;
+    this.chatService.removeGroupMember(this.selectedGroupId, member.userId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.removingMemberId = null;
+          this.groupMembers = this.groupMembers.filter(m => m.userId !== member.userId);
+          if (this.selectedGroup) this.selectedGroup.memberCount = Math.max(0, (this.selectedGroup.memberCount || 0) - 1);
+          this.loadUserGroups();
+        },
+        error: () => { this.removingMemberId = null; }
+      });
+  }
+
+  openAddMembers(): void {
+    this.groupInfoTab = 'add';
+    this.addMembersSelectedUserIds = [];
+    this.addMembersSearch = '';
+    if (this.chatUsers.length === 0 && !this.loadingChatUsers) {
+      this.loadingChatUsers = true;
+      this.chatService.getChatUsers()
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (users) => {
+            this.chatUsers = users ?? [];
+            this.loadingChatUsers = false;
+            for (const u of this.chatUsers) this.ensureUserProfile(u.userId);
+          },
+          error: () => { this.loadingChatUsers = false; }
+        });
+    } else {
+      for (const u of this.chatUsers) this.ensureUserProfile(u.userId);
+    }
+  }
+
+  /** Users not yet in the group, filtered by the add-member search input. */
+  addableUsers(): ChatUserDto[] {
+    const memberIds = new Set(this.groupMembers.map(m => m.userId));
+    const search = (this.addMembersSearch ?? '').trim().toLowerCase();
+    return this.chatUsers.filter(u => {
+      if (!u.userId || memberIds.has(u.userId)) return false;
+      if (!search) return true;
+      const rankName = this.getRankAndName(u.userId).toLowerCase();
+      const userName = (u.userName ?? '').toLowerCase();
+      const email = (u.email ?? '').toLowerCase();
+      return rankName.includes(search) || userName.includes(search) || email.includes(search);
+    });
+  }
+
+  toggleAddMemberUser(userId: string): void {
+    const i = this.addMembersSelectedUserIds.indexOf(userId);
+    if (i >= 0) this.addMembersSelectedUserIds = this.addMembersSelectedUserIds.filter(id => id !== userId);
+    else this.addMembersSelectedUserIds = [...this.addMembersSelectedUserIds, userId];
+  }
+
+  submitAddMembers(): void {
+    if (!this.selectedGroupId || this.addMembersSelectedUserIds.length === 0 || this.addingMembers) return;
+    this.addingMembers = true;
+    this.chatService.addGroupMembers(this.selectedGroupId, this.addMembersSelectedUserIds)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.addingMembers = false;
+          this.addMembersSelectedUserIds = [];
+          this.groupInfoTab = 'members';
+          this.loadGroupMembers();
+          this.loadUserGroups();
+        },
+        error: () => { this.addingMembers = false; }
+      });
+  }
+
+  /** True if the current user is the creator of the currently selected group. Creator-only actions (delete) gate on this. */
+  isCurrentUserGroupCreator(): boolean {
+    return !!this.selectedGroup && !!this.currentUserId && this.selectedGroup.createdByUserId === this.currentUserId;
+  }
+
+  beginRenameGroup(): void {
+    if (!this.selectedGroup) return;
+    this.renameGroupName = this.selectedGroup.groupName ?? '';
+    this.renamingGroup = true;
+  }
+
+  cancelRenameGroup(): void {
+    this.renamingGroup = false;
+    this.renameGroupName = '';
+  }
+
+  submitRenameGroup(): void {
+    if (!this.selectedGroupId || !this.selectedGroup) return;
+    const newName = (this.renameGroupName ?? '').trim();
+    if (!newName || this.submittingRename) return;
+    if (newName === (this.selectedGroup.groupName ?? '').trim()) {
+      this.cancelRenameGroup();
+      return;
+    }
+    this.submittingRename = true;
+    const renamerDisplayName = this.getRankAndName(this.currentUserId);
+    this.chatService.renameGroup(this.selectedGroupId, newName, renamerDisplayName)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.submittingRename = false;
+          this.renamingGroup = false;
+          this.renameGroupName = '';
+          if (this.selectedGroup) this.selectedGroup.groupName = newName;
+          this.loadUserGroups();
+        },
+        error: () => { this.submittingRename = false; }
+      });
+  }
+
+  confirmDeleteGroup(): void {
+    if (!this.selectedGroup) return;
+    const name = this.selectedGroup.groupName ?? 'this group';
+    this.confirmationService.confirm({
+      message: `Delete "${name}"? All members will lose access. Message history is preserved on the server.`,
+      header: 'Delete group',
+      icon: 'pi pi-exclamation-triangle',
+      rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+      acceptButtonProps: { label: 'Delete', severity: 'danger' },
+      accept: () => this.deleteGroup()
+    });
+  }
+
+  private deleteGroup(): void {
+    if (!this.selectedGroupId || this.deletingGroup) return;
+    const groupId = this.selectedGroupId;
+    this.deletingGroup = true;
+    this.chatService.deleteGroup(groupId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.deletingGroup = false;
+          this.showGroupInfoModal = false;
+          this.handleGroupGone(groupId);
+        },
+        error: () => { this.deletingGroup = false; }
+      });
+  }
+
+  /** Uploads the picked image via the existing FileInformation endpoint and writes the resulting fileId onto the group. Admin-only. */
+  onGroupImagePicked(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file || !this.selectedGroupId || !this.selectedGroup) return;
+    if (!file.type.startsWith('image/')) return;
+    if (this.uploadingGroupImage) return;
+
+    this.uploadingGroupImage = true;
+    const groupId = this.selectedGroupId;
+    this.empService.uploadEmployeeFile(file, file.name).pipe(
+      catchError(() => of(null)),
+      takeUntil(this.destroy$)
+    ).subscribe((upload) => {
+      const fid = upload?.fileId;
+      if (!fid) {
+        this.uploadingGroupImage = false;
+        return;
+      }
+      this.chatService.setGroupImage(groupId, fid)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            this.uploadingGroupImage = false;
+            this.applyGroupImageChange(groupId, fid);
+          },
+          error: () => { this.uploadingGroupImage = false; }
+        });
+    });
+  }
+
+  clearGroupImage(): void {
+    if (!this.selectedGroupId || !this.selectedGroup?.groupImageFileId || this.uploadingGroupImage) return;
+    const groupId = this.selectedGroupId;
+    this.uploadingGroupImage = true;
+    this.chatService.setGroupImage(groupId, null)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.uploadingGroupImage = false;
+          this.applyGroupImageChange(groupId, null);
+        },
+        error: () => { this.uploadingGroupImage = false; }
+      });
+  }
+
+  /** Locally apply a group-image change (invalidating the blob cache so subsequent renders re-fetch). */
+  private applyGroupImageChange(groupId: number, fileId: number | null): void {
+    const stale = this.groupImageBlobUrls[groupId];
+    if (stale) URL.revokeObjectURL(stale);
+    delete this.groupImageBlobUrls[groupId];
+    delete this.groupImageFileIdCache[groupId];
+    if (this.selectedGroup && this.selectedGroupId === groupId) this.selectedGroup.groupImageFileId = fileId;
+    const g = this.userGroups.find(gr => gr.groupId === groupId);
+    if (g) g.groupImageFileId = fileId;
+  }
+
+  /** Closes the group view, clears local state, and refreshes the group list. Used on both local-initiated delete and remote GroupDeleted events. */
+  private handleGroupGone(groupId: number): void {
+    if (this.selectedGroupId === groupId) {
+      this.chatService.leaveGroupHub(groupId).catch(() => {});
+      this.selectedGroupId = null;
+      this.selectedGroup = null;
+      this.groupMessages = [];
+      this.chatService.setSelectedGroupId(null);
+    }
+    this.userGroups = this.userGroups.filter(g => g.groupId !== groupId);
+    this.loadUserGroups();
+  }
+
+  /** True when the message is an in-channel system notification (rename, etc.). */
+  isSystemMessage(content: string | null | undefined): boolean {
+    return typeof content === 'string' && content.startsWith('__SYSTEM__:');
+  }
+
+  /** Strips the system-message marker prefix so the human-readable text can be rendered. */
+  getSystemMessageText(content: string | null | undefined): string {
+    if (!content) return '';
+    return content.replace(/^__SYSTEM__:/, '');
+  }
+
+  /** Strips the system-message marker from group sidebar previews so the user sees plain text (the backend truncates so the prefix may be partly present). */
+  formatGroupPreview(preview: string | null | undefined): string {
+    if (!preview) return '';
+    return preview.replace(/^__SYSTEM__:/, '');
+  }
+
   /** Prefetch rank+name for every user in the direct conversation list. */
   private prefetchConversationProfiles(): void {
     for (const c of this.directConversations) this.ensureUserProfile(c.otherUserId);
@@ -1241,6 +1898,26 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
     const parts = name.trim().split(/\s+/);
     if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
     return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+  }
+
+  /** First character of the last word in the user's full name (e.g. "Md Shariar Kabir" -> "K"). Falls back to the chat username's first char while the employee profile is still loading. */
+  getLastNameInitial(userId: string): string {
+    const profile = this.userProfiles[userId];
+    const fullName = (profile?.fullName ?? '').trim();
+    if (fullName) {
+      const parts = fullName.split(/\s+/);
+      const last = parts[parts.length - 1] ?? '';
+      const ch = last.charAt(0).toUpperCase();
+      if (ch) return ch;
+    }
+    const display = this.getDisplayName(userId) ?? '';
+    return display.trim().charAt(0).toUpperCase() || '?';
+  }
+
+  /** Profile image blob URL for the user, or null if it has not loaded (caller falls back to the colored swatch). */
+  getUserAvatarImage(userId: string): string | null {
+    if (!userId) return null;
+    return this.userProfiles[userId]?.profileImageUrl ?? null;
   }
 
   /** Deterministic gradient color for an avatar based on the userId/seed. */
@@ -1323,6 +2000,10 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
       .subscribe({
         next: (list) => {
           this.userGroups = list ?? [];
+          if (this.selectedGroupId) {
+            const cur = this.userGroups.find(gr => gr.groupId === this.selectedGroupId);
+            if (cur) cur.unreadCount = 0;
+          }
           this.loadingGroups = false;
           const openGroupId = this.chatService.getAndClearOpenGroupId();
           if (openGroupId) {
@@ -1349,6 +2030,8 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
     this.groupMessagesPageNumber = 1;
     this.groupHasMoreOlder = false;
     this.clearPendingAttachments();
+    this.chatService.clearGroupUnreadOverlay(g.groupId);
+    g.unreadCount = 0;
     this.chatService.joinGroupHub(g.groupId).then(() => this.loadGroupMessages()).catch(() => this.loadGroupMessages());
   }
 
@@ -1363,6 +2046,7 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
           this.groupHasMoreOlder = this.groupMessages.length >= this.PAGE_SIZE;
           this.shouldScrollGroup = true;
           this.groupMessagesLoading = false;
+          for (const m of this.groupMessages) if (m.senderUserId) this.ensureUserProfile(m.senderUserId);
           if (this.selectedGroupId && this.groupMessages.length > 0 && this.isConnected) {
             const ids = this.groupMessages.map(m => m.messageId);
             this.chatService.markGroupMessagesAsSeen(this.selectedGroupId, ids).catch(() => {});
@@ -1402,6 +2086,7 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
           this.groupMessagesPageNumber = nextPage;
           this.groupHasMoreOlder = older.length >= this.PAGE_SIZE;
           this.groupLoadingOlder = false;
+          for (const m of older) if (m.senderUserId) this.ensureUserProfile(m.senderUserId);
           if (container && older.length > 0) {
             setTimeout(() => {
               const newScrollHeight = container.scrollHeight;
@@ -1485,7 +2170,11 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
     this.chatService.getChatUsers()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (users) => { this.chatUsers = users; this.loadingChatUsers = false; },
+        next: (users) => {
+          this.chatUsers = users ?? [];
+          this.loadingChatUsers = false;
+          for (const u of this.chatUsers) this.ensureUserProfile(u.userId);
+        },
         error: () => { this.loadingChatUsers = false; }
       });
   }
@@ -1599,6 +2288,12 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
         this.unreadOverlay = map;
       });
 
+    this.chatService.groupUnreadOverlay$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(map => {
+        this.groupUnreadOverlay = map;
+      });
+
     this.searchText$
       .pipe(
         debounceTime(280),
@@ -1651,8 +2346,11 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
     this.chatService.groupMessageReceived$
       .pipe(takeUntil(this.destroy$))
       .subscribe((payload: any) => {
-        if (!payload || payload.groupId !== this.selectedGroupId) return;
-        if (!this.groupMessages.some(m => m.messageId === payload.messageId)) {
+        if (!payload) return;
+        const isOwn = payload.senderUserId === this.currentUserId;
+        const isViewing = payload.groupId === this.selectedGroupId;
+
+        if (isViewing && !this.groupMessages.some(m => m.messageId === payload.messageId)) {
           this.groupMessages.push({
             messageId: payload.messageId,
             groupId: payload.groupId,
@@ -1664,9 +2362,13 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
             isDeleted: false,
             isSeen: false
           });
+          if (payload.senderUserId) this.ensureUserProfile(payload.senderUserId);
           this.shouldScrollGroup = true;
-          if (this.selectedGroupId && payload.senderUserId !== this.currentUserId)
+          if (this.selectedGroupId && !isOwn)
             this.chatService.markGroupMessagesAsSeen(this.selectedGroupId, [payload.messageId]).catch(() => {});
+        }
+        if (!isViewing && !isOwn && payload.groupId) {
+          this.chatService.bumpGroupUnreadOverlay(payload.groupId);
         }
         this.loadUserGroups();
       });
@@ -1687,6 +2389,40 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
         if (payload?.groupId !== this.selectedGroupId) return;
         const msg = this.groupMessages.find(m => m.messageId === payload?.messageId);
         if (msg) msg.isDeleted = true;
+      });
+
+    this.chatService.groupRenamed$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((payload: { groupId: number; groupName: string }) => {
+        if (!payload) return;
+        if (this.selectedGroup && this.selectedGroupId === payload.groupId) {
+          this.selectedGroup.groupName = payload.groupName;
+        }
+        const g = this.userGroups.find(gr => gr.groupId === payload.groupId);
+        if (g) g.groupName = payload.groupName;
+      });
+
+    this.chatService.groupDeleted$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((payload: { groupId: number }) => {
+        if (!payload?.groupId) return;
+        this.handleGroupGone(payload.groupId);
+      });
+
+    this.chatService.groupImageChanged$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((payload: { groupId: number; groupImageFileId: number | null }) => {
+        if (!payload?.groupId) return;
+        // Drop any cached blob URL so getGroupAvatarImage refetches with the new fileId.
+        const stale = this.groupImageBlobUrls[payload.groupId];
+        if (stale) URL.revokeObjectURL(stale);
+        delete this.groupImageBlobUrls[payload.groupId];
+        delete this.groupImageFileIdCache[payload.groupId];
+        const g = this.userGroups.find(gr => gr.groupId === payload.groupId);
+        if (g) g.groupImageFileId = payload.groupImageFileId ?? null;
+        if (this.selectedGroup && this.selectedGroupId === payload.groupId) {
+          this.selectedGroup.groupImageFileId = payload.groupImageFileId ?? null;
+        }
       });
 
     this.chatService.error$
@@ -2084,6 +2820,13 @@ export class ChatContainerComponent implements OnInit, OnDestroy, AfterViewCheck
     }
     this.attachmentBlobUrls = {};
     this.attachmentFetchInflight = {};
+    for (const id of Object.keys(this.groupImageBlobUrls)) {
+      const url = this.groupImageBlobUrls[+id];
+      if (url) URL.revokeObjectURL(url);
+    }
+    this.groupImageBlobUrls = {};
+    this.groupImageFetchInflight = {};
+    this.groupImageFileIdCache = {};
     this.destroy$.next();
     this.destroy$.complete();
   }
