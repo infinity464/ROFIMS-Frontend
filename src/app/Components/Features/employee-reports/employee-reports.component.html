@@ -87,6 +87,12 @@
                 @case ('rabRank') {
                     <app-report-rab-rank [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" [reportTypeLabel]="selectedReportTypeLabel" [commonCodeLabel]="selectedCommonCodeLabel" [postingStatus]="selectedPostingStatus" [statusLabel]="selectedStatusLabel" [statusLabelBn]="selectedStatusLabelBn" (langToggle)="toggleReportLang()" />
                 }
+                @case ('corps') {
+                    <app-report-corps [lang]="reportLang" [commonCodeIds]="selectedCommonCodeIds" [reportTypeLabel]="selectedReportTypeLabel" [commonCodeLabel]="selectedCommonCodeLabel" [postingStatus]="selectedPostingStatus" [statusLabel]="selectedStatusLabel" [statusLabelBn]="selectedStatusLabelBn" (langToggle)="toggleReportLang()" />
+                }
+                @case ('trade') {
+                    <app-report-trade [lang]="reportLang" [commonCodeIds]="selectedCommonCodeIds" [reportTypeLabel]="selectedReportTypeLabel" [commonCodeLabel]="selectedCommonCodeLabel" [postingStatus]="selectedPostingStatus" [statusLabel]="selectedStatusLabel" [statusLabelBn]="selectedStatusLabelBn" (langToggle)="toggleReportLang()" />
+                }
             }
         </div>
     }

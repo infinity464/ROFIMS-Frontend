@@ -85,12 +85,18 @@ export interface GenericReportRow extends ReportRowBase {
   rmks?: string | null;
 }
 
-/** Request for Mother Org / Officer Type / RAB Unit / Wings reports. motherUnitId = Mother Org Unit (child org) for Mother Org report only. */
+/** Request for Mother Org / Officer Type / RAB Unit / Wings / Corps / Trade reports. motherUnitId = Mother Org Unit (child org) for Mother Org report only. */
 export interface GenericReportParams {
   orgId?: number | null;
   rankId?: number | null;
   tradeId?: number | null;
   commonCodeId?: number | null;
+  /**
+   * Multi-value variant: when present and non-empty, backend filters on FilterCodeId IN (commonCodeIds)
+   * and ignores commonCodeId. Used by the Corps and Trade reports where multiple "N/A" CommonCode rows
+   * collapse into a single dropdown option.
+   */
+  commonCodeIds?: number[] | null;
   motherUnitId?: number | null;
   postingStatus?: string | null;
   pagination: ReportPagination;

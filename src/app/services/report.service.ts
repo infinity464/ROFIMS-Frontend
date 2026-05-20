@@ -106,6 +106,28 @@ export class ReportService {
       .pipe(map(normalizePages));
   }
 
+  getCorpsReport(
+    params: GenericReportParams
+  ): Observable<PagedResponse<GenericReportRow>> {
+    return this.http
+      .post<ReportPagedResponse<GenericReportRow>>(
+        `${this.apiUrl}/GetCorpsReport`,
+        params
+      )
+      .pipe(map(normalizePages));
+  }
+
+  getTradeReport(
+    params: GenericReportParams
+  ): Observable<PagedResponse<GenericReportRow>> {
+    return this.http
+      .post<ReportPagedResponse<GenericReportRow>>(
+        `${this.apiUrl}/GetTradeReport`,
+        params
+      )
+      .pipe(map(normalizePages));
+  }
+
   getRabUnitReport(
     params: GenericReportParams
   ): Observable<PagedResponse<GenericReportRow>> {
