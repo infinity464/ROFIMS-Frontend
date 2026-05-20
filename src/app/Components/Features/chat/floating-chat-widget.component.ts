@@ -741,12 +741,13 @@ export class FloatingChatWidgetComponent implements OnInit, OnDestroy {
     const dt = new Date(d);
     if (isNaN(dt.getTime())) return '';
     const now = new Date();
-    const same = dt.getFullYear() === now.getFullYear() && dt.getMonth() === now.getMonth() && dt.getDate() === now.getDate();
-    if (same) return dt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-    const diffMs = now.getTime() - dt.getTime();
-    const days = Math.floor(diffMs / 86400000);
-    if (days === 1) return '1d';
-    if (days < 7) return `${days}d`;
+    // Use calendar-day difference (not raw 24h chunks) so a message from yesterday at 11pm
+    // viewed at 9am today reads "1d" instead of "0d".
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const startOfThatDay = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()).getTime();
+    const dayDiff = Math.round((startOfToday - startOfThatDay) / 86400000);
+    if (dayDiff <= 0) return dt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    if (dayDiff < 7) return `${dayDiff}d`;
     return dt.toLocaleDateString([], { month: 'short', day: 'numeric' });
   }
 
