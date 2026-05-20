@@ -7,6 +7,7 @@ import { IdentityUserMappingService } from '@/services/identity-user-mapping.ser
 import { ServingMembersService } from '@/services/serving-members.service';
 import { EmpService } from '@/services/emp-service';
 import { ChatWindowComponent } from '@/Components/Features/chat/chat-window.component';
+import { ChatContainerComponent } from '@/Components/Features/chat/chat-container.component';
 import { ChatUserDto, DirectConversation, GroupDto } from '@/models/chat.model';
 import { Subject, of, forkJoin } from 'rxjs';
 import { takeUntil, filter, switchMap, catchError } from 'rxjs/operators';
@@ -45,9 +46,9 @@ interface ConversationRow {
 @Component({
   selector: 'app-floating-chat-widget',
   standalone: true,
-  imports: [CommonModule, FormsModule, ChatWindowComponent],
+  imports: [CommonModule, FormsModule, ChatWindowComponent, ChatContainerComponent],
   template: `
-    <div *ngIf="isLoggedIn && !isOnChatPage" class="fixed bottom-4 right-4 z-[9999]">
+    <div *ngIf="isLoggedIn && !isOnChatPage && !showFullModal" class="fixed bottom-4 right-4 z-[9999]">
       <!-- Bottom row: open chat windows + launcher (right-anchored, grows leftward) -->
       <div class="flex flex-row-reverse items-end gap-3">
         <!-- Launcher button + popup -->
@@ -225,13 +226,52 @@ interface ConversationRow {
         </app-chat-window>
       </div>
     </div>
-  `
+
+    <!-- Full chat overlay — occupies the same area as the /chat route's main content (right of sidebar, below topbar). -->
+    <div *ngIf="showFullModal" class="chat-route-overlay" (keydown.escape)="closeFullModal()">
+      <button type="button"
+              (click)="closeFullModal()"
+              class="absolute top-2 right-3 z-10 w-9 h-9 rounded-full flex items-center justify-center bg-surface-0 dark:bg-surface-800 text-surface-600 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-700 shadow-md border border-surface-200 dark:border-surface-700 transition"
+              title="Close (Esc)">
+        <i class="pi pi-times text-sm"></i>
+      </button>
+      <app-chat-container></app-chat-container>
+    </div>
+  `,
+  styles: [`
+    /* Mirror the geometry of .layout-main-container so the overlay looks identical to navigating to /chat. */
+    .chat-route-overlay {
+      position: fixed;
+      top: 4rem;          /* under the 4rem topbar */
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--surface-ground, #f8fafc);
+      z-index: 998;       /* topbar is 997; sit just above content but below floating dialogs (PrimeNG default is ~1100) */
+      padding: 2rem;
+      overflow: hidden;
+      border-top-left-radius: 0.75rem;
+    }
+    :host ::ng-deep .chat-route-overlay .chat-container {
+      height: 100% !important;
+      border-radius: 0.75rem;
+      overflow: hidden;
+    }
+    /* Reserve the sidebar gutter only when the static sidebar is actually visible. */
+    @media (min-width: 992px) {
+      :host-context(.layout-wrapper.layout-static:not(.layout-static-inactive)) .chat-route-overlay {
+        left: 22rem;
+      }
+    }
+  `]
 })
 export class FloatingChatWidgetComponent implements OnInit, OnDestroy {
   isLoggedIn = false;
   isOnChatPage = false;
 
   showPopup = false;
+  /** Full chat-container modal — opened by the "maximize" icon. Mirrors the /chat route experience without actually navigating. */
+  showFullModal = false;
   popupTab: 'all' | 'direct' | 'groups' = 'all';
   searchText = '';
   /** Current popup view. 'newDirect' shows the user picker used to start a new conversation. */
@@ -287,6 +327,10 @@ export class FloatingChatWidgetComponent implements OnInit, OnDestroy {
       .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd), takeUntil(this.destroy$))
       .subscribe(() => {
         this.updateIsOnChatPage();
+        // Any navigation (e.g. picking another menu item from the sidebar) should dismiss the
+        // full-chat overlay and the conversations popup so the user lands on the new page clean.
+        if (this.showFullModal) this.closeFullModal();
+        if (this.showPopup) { this.showPopup = false; this.popupView = 'list'; }
         this.cdr.markForCheck();
       });
 
@@ -411,6 +455,7 @@ export class FloatingChatWidgetComponent implements OnInit, OnDestroy {
 
   @HostListener('document:keydown.escape')
   onEscape(): void {
+    if (this.showFullModal) { this.closeFullModal(); return; }
     if (this.popupView !== 'list') { this.popupView = 'list'; return; }
     if (this.showPopup) this.showPopup = false;
   }
@@ -801,9 +846,19 @@ export class FloatingChatWidgetComponent implements OnInit, OnDestroy {
 
   // ---- Navigation ----
 
+  /**
+   * Opens the same chat experience as the /chat route, but as an in-place overlay anchored to the main content
+   * area (right of the sidebar, below the topbar). No navigation happens, so the user keeps whatever they were
+   * doing underneath when they close it.
+   */
   goToChat(): void {
     this.showPopup = false;
-    this.router.navigate(['/chat']);
+    this.popupView = 'list';
+    this.showFullModal = true;
+  }
+
+  closeFullModal(): void {
+    this.showFullModal = false;
   }
 
   // ---- "New chat" picker ----
