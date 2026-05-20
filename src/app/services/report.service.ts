@@ -31,6 +31,8 @@ import type {
   LongStayNominalRollReportRow,
   StayAfterRelieverJoinedReportParams,
   StayAfterRelieverJoinedReportRow,
+  DeceasedReportParams,
+  DeceasedReportRow,
 } from '@/models/report.model';
 import type { PagedResponse } from '@/Core/Models/Pagination';
 
@@ -284,6 +286,17 @@ export class ReportService {
     return this.http
       .post<ReportPagedResponse<StayAfterRelieverJoinedReportRow>>(
         `${this.apiUrl}/GetStayAfterRelieverJoinedReport`,
+        params
+      )
+      .pipe(map(normalizePages));
+  }
+
+  getDeceasedReport(
+    params: DeceasedReportParams
+  ): Observable<PagedResponse<DeceasedReportRow>> {
+    return this.http
+      .post<ReportPagedResponse<DeceasedReportRow>>(
+        `${this.apiUrl}/GetDeceasedReport`,
         params
       )
       .pipe(map(normalizePages));

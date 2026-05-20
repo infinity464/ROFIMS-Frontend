@@ -334,6 +334,36 @@ export interface LongStayNominalRollReportParams {
   pagination: ReportPagination;
 }
 
+// ── Nominal Roll of Deceased Members ───────────────────────────────────
+
+/** Filter on Date of Death (PresentStatusInfo.Dated); both bounds optional. Mother Org + Rank optional. */
+export interface DeceasedReportParams {
+  dateFrom?: string | null;
+  dateTo?: string | null;
+  orgId?: number | null;
+  rankId?: number | null;
+  pagination: ReportPagination;
+}
+
+export interface DeceasedReportRow {
+  ser?: number;
+  serviceId?: string | null;
+  rank?: string | null;
+  rankBN?: string | null;
+  corps?: string | null;
+  corpsBN?: string | null;
+  trade?: string | null;
+  tradeBN?: string | null;
+  name?: string | null;
+  nameBN?: string | null;
+  joiningInRab?: string | null;
+  lastUnit?: string | null;
+  lastUnitBN?: string | null;
+  dateOfDeath?: string | null;
+  deceasedReason?: string | null;
+  rmks?: string | null;
+}
+
 // ── Nominal Roll of Stay in RAB after Reliever Joined ──────────────────
 
 export interface StayAfterRelieverJoinedReportParams {
