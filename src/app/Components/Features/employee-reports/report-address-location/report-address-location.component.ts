@@ -14,7 +14,7 @@ import { ExportService } from '@/services/export.service';
 import { UserMenuService } from '@/services/user-menu.service';
 import { REPORT_LABELS, type ReportLang } from '@/Core/i18n/report-labels';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
-import type { AddressLocationReportRow } from '@/models/report.model';
+import type { AddressLocationReportRow, ReportAccessibleScope } from '@/models/report.model';
 import type { CommonCodeModel } from '@/models/common-code-model';
 
 @Component({
@@ -96,6 +96,14 @@ export class ReportAddressLocationComponent implements OnInit {
     exporting = false;
     appliedFilterLines: string[] = [];
 
+    /**
+     * Access-scope snapshot returned by the backend. Drives:
+     *  - The scope chip rendered under the title
+     *  - Locking the Member Status dropdown to "Servings" when the org scope is
+     *    restricted (other statuses have no RAB unit to scope against)
+     */
+    accessibleScope: ReportAccessibleScope | null = null;
+
     constructor(
         private _router: Router,
         private _userMenuService: UserMenuService,
@@ -124,6 +132,44 @@ export class ReportAddressLocationComponent implements OnInit {
     get statusLabelBn(): string {
         const opt = this.statusOptions.find((o) => o.value === this.selectedPostingStatus);
         return opt?.labelBn ?? '';
+    }
+
+    /**
+     * When the caller has org-tree restrictions, only currently-serving members
+     * carry a RAB unit placement we can scope against. We lock the status filter
+     * to "Servings" to make the constraint explicit instead of silently 0-ing
+     * out an Ex-Member / Supernumerary search.
+     */
+    get statusLocked(): boolean {
+        return this.accessibleScope?.orgScopeRestricted === true;
+    }
+
+    /**
+     * Unit-scope line — rendered ABOVE the date so the org context reads first.
+     * Bare comma-separated list (no "Units:" label) to match the statistics
+     * reports' design pass. Null when unrestricted on this axis.
+     */
+    get unitScopeLine(): string | null {
+        const s = this.accessibleScope;
+        if (!s) return null;
+        const bn = this.lang === 'bn';
+        const unitNames = (bn ? s.rabUnitNamesBN : s.rabUnitNames) ?? s.rabUnitNames;
+        if (!unitNames || unitNames.length === 0) return null;
+        return unitNames.join(', ');
+    }
+
+    /**
+     * Member-type scope line — rendered BELOW the date, where the original
+     * combined scope chip used to live. Null when unrestricted on this axis.
+     */
+    get memberTypeScopeLine(): string | null {
+        const s = this.accessibleScope;
+        if (!s) return null;
+        const bn = this.lang === 'bn';
+        const memberTypeNames = (bn ? s.memberTypeNamesBN : s.memberTypeNames) ?? s.memberTypeNames;
+        if (!memberTypeNames || memberTypeNames.length === 0) return null;
+        const label = bn ? 'সদস্য ধরণ' : 'Member Types';
+        return `${label}: ${memberTypeNames.join(', ')}`;
     }
 
     get dateLine(): string {
@@ -220,13 +266,23 @@ export class ReportAddressLocationComponent implements OnInit {
     async exportAs(type: 'print' | 'pdf' | 'word' | 'excel'): Promise<void> {
         this.exportDropdownOpen = false;
         const { columns, rows } = this.getExportData();
+        // Unit picks render ABOVE the date via preDateLines so the org context
+        // sits next to the title (matches the on-screen header). Member-type
+        // restrictions stay with the other applied filters under the date.
+        const preDate: string[] = [];
+        if (this.unitScopeLine) preDate.push(this.unitScopeLine);
+        const belowDate: string[] = [];
+        if (this.memberTypeScopeLine) belowDate.push(this.memberTypeScopeLine);
         const config = {
             title: this.reportTitle,
             lang: this.lang,
             columns,
             rows,
             showPageNumbers: true,
-            filterLines: this.appliedFilterLines,
+            // 15 visible columns (16 with RAB Unit on Servings) — portrait clips.
+            landscape: true,
+            preDateLines: preDate,
+            filterLines: [...belowDate, ...this.appliedFilterLines],
         };
         if (type === 'pdf') {
             this.exporting = true;
@@ -375,6 +431,8 @@ export class ReportAddressLocationComponent implements OnInit {
         this.selectedDistrictId = null;
         this.selectedUpazilaId = null;
         this.selectedPostOfficeId = null;
+        // 'Servings' is also the locked value when the user is org-scope-restricted,
+        // so this default is safe in both modes.
         this.selectedPostingStatus = 'Servings';
         this.activeOnly = true;
         this.districtOptions = [];
@@ -418,6 +476,13 @@ export class ReportAddressLocationComponent implements OnInit {
                 next: (res) => {
                     this.list = res.datalist ?? [];
                     this.totalRecords = res.pages?.rows ?? 0;
+                    this.accessibleScope = res.accessibleScope ?? null;
+                    // Mirror the backend's enforced status when the caller's org
+                    // scope is restricted — keeps the UI honest (any value other
+                    // than "Servings" would silently be overridden server-side).
+                    if (this.accessibleScope?.orgScopeRestricted && this.selectedPostingStatus !== 'Servings') {
+                        this.selectedPostingStatus = 'Servings';
+                    }
                     this.loading = false;
                 },
                 error: (err) => {

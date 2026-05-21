@@ -18,6 +18,8 @@ import type {
   FamilyOccupationReportRow,
   AddressLocationReportParams,
   AddressLocationReportRow,
+  AddressLocationReportPagedResponse,
+  ReportAccessibleScope,
   MemberTypeServingReportParams,
   MemberTypeServingReportRow,
   ReportPagedResponse,
@@ -220,13 +222,18 @@ export class ReportService {
 
   getAddressLocationReport(
     params: AddressLocationReportParams
-  ): Observable<PagedResponse<AddressLocationReportRow>> {
+  ): Observable<PagedResponse<AddressLocationReportRow> & { accessibleScope?: ReportAccessibleScope | null }> {
     return this.http
-      .post<ReportPagedResponse<AddressLocationReportRow>>(
+      .post<AddressLocationReportPagedResponse<AddressLocationReportRow>>(
         `${this.apiUrl}/GetAddressLocationReport`,
         params
       )
-      .pipe(map(normalizePages));
+      .pipe(
+        map((res) => ({
+          ...normalizePages(res),
+          accessibleScope: res.accessibleScope ?? null,
+        }))
+      );
   }
 
   getMemberTypeServingReport(

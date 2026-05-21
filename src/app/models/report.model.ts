@@ -220,6 +220,26 @@ export interface ReportPagedResponse<T> {
   pages: { rows?: number; totalPages?: number; Rows?: number; TotalPages?: number };
 }
 
+/**
+ * Snapshot of the caller's accessible scope, attached to scope-aware reports
+ * so the UI can render the chip and lock filters that don't make sense under
+ * a restricted scope (e.g. the PostingStatus filter on AddressLocation —
+ * only currently-serving members carry a RAB placement to scope against).
+ */
+export interface ReportAccessibleScope {
+  rabUnitNames?: string[] | null;
+  rabUnitNamesBN?: string[] | null;
+  memberTypeNames?: string[] | null;
+  memberTypeNamesBN?: string[] | null;
+  /** True when the caller has org-tree restrictions — FE locks status filter. */
+  orgScopeRestricted?: boolean;
+}
+
+/** AddressLocation response wraps the standard page shape with the scope snapshot. */
+export interface AddressLocationReportPagedResponse<T> extends ReportPagedResponse<T> {
+  accessibleScope?: ReportAccessibleScope | null;
+}
+
 // ── Present Status by Mother Org monthly pivot report ───────────────────
 
 /** One dynamic column (mother org) for the monthly pivot report. */

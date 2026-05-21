@@ -37,6 +37,12 @@ export interface ReportConfig {
     filename?: string;
     /** Optional applied filter lines shown below the date (e.g. "Rank: Major"). */
     filterLines?: string[];
+    /**
+     * Optional scope lines rendered ABOVE the date — used for access-scope
+     * chips (e.g. unit picks) that should sit visually closer to the title
+     * than the filter banner. Each entry becomes its own line.
+     */
+    preDateLines?: string[];
     /** Use landscape orientation (default false = portrait). */
     landscape?: boolean;
     /** Page margin in mm (default 20). */
@@ -189,6 +195,7 @@ export class ExportService {
         body { font-family: ${fontFamily}; font-size: ${sizeContentPt}; margin: 0; padding: 0; }
         h1 { font-family: ${fontFamily}; font-size: 14pt; font-weight: bold; text-align: center; margin-bottom: 8px; }
         .date { font-family: ${fontFamily}; font-size: 14pt; color: #555; text-align: center; margin-bottom: 4px; }
+        .pre-date { font-family: ${fontFamily}; font-size: 11pt; color: var(--p-primary-color, #10b981); text-align: center; margin-bottom: 4px; font-weight: 500; }
         .filters { font-family: ${fontFamily}; font-size: 10pt; color: #333; text-align: center; margin-bottom: 16px; }
         .filters span { display: inline-block; margin: 2px 6px; }
         table { width: 100%; border-collapse: collapse; table-layout: fixed; font-family: ${fontFamily}; }
@@ -199,6 +206,7 @@ export class ExportService {
 </head>
 <body>
     <h1>${escapeHtml(title)}</h1>
+    ${(config.preDateLines?.length) ? config.preDateLines.map(l => `<div class="pre-date">${escapeHtml(l)}</div>`).join('') : ''}
     <div class="date">${escapeHtml(dateText)}</div>
     ${(config.filterLines?.length) ? `<div class="filters">${config.filterLines.map(l => `<span>${escapeHtml(l)}</span>`).join(' | ')}</div>` : ''}
     <table>
@@ -352,8 +360,21 @@ export class ExportService {
                                 }),
                             ],
                             alignment: AlignmentType.CENTER,
-                            spacing: { after: 200 },
+                            spacing: { after: (config.preDateLines?.length) ? 120 : 200 },
                         }),
+                        // Scope chip(s) — rendered between title and date so
+                        // the org/scope context reads with the title.
+                        ...((config.preDateLines ?? []).map((line) => new Paragraph({
+                            children: [new TextRun({
+                                text: line,
+                                size: 22,
+                                color: '10b981',
+                                bold: true,
+                                font,
+                            })],
+                            alignment: AlignmentType.CENTER,
+                            spacing: { after: 120 },
+                        }))),
                         new Paragraph({
                             children: [
                                 new TextRun({
@@ -398,8 +419,12 @@ export class ExportService {
         });
 
         const filterLine = config.filterLines?.length ? config.filterLines.join('  |  ') : '';
+        const preDateLines = config.preDateLines ?? [];
         const data: unknown[][] = [
             [config.title],
+            // Scope chip rows between title and date so the layout mirrors the
+            // on-screen header and the Word / PDF exports.
+            ...preDateLines.map(line => [line]),
             [dateStr],
             ...(filterLine ? [[filterLine]] : []),
             [],
@@ -412,12 +437,21 @@ export class ExportService {
         ws['!cols'] = config.columns.map(() => ({ wch: 22 }));
 
         const colCount = config.columns.length;
+        // Each header row gets a horizontal merge across the column range. Title
+        // is row 0; pre-date scope lines follow; then date; then optional filter.
         const merges = [
             { s: { r: 0, c: 0 }, e: { r: 0, c: colCount - 1 } },
-            { s: { r: 1, c: 0 }, e: { r: 1, c: colCount - 1 } },
         ];
+        let nextRow = 1;
+        for (let i = 0; i < preDateLines.length; i++) {
+            merges.push({ s: { r: nextRow, c: 0 }, e: { r: nextRow, c: colCount - 1 } });
+            nextRow++;
+        }
+        // Date row
+        merges.push({ s: { r: nextRow, c: 0 }, e: { r: nextRow, c: colCount - 1 } });
+        nextRow++;
         if (filterLine) {
-            merges.push({ s: { r: 2, c: 0 }, e: { r: 2, c: colCount - 1 } });
+            merges.push({ s: { r: nextRow, c: 0 }, e: { r: nextRow, c: colCount - 1 } });
         }
         ws['!merges'] = merges;
 
@@ -1314,12 +1348,21 @@ ${sectionBlocks}
             ? `<div style="font-size:9pt;text-align:center;margin-bottom:10px;color:#333">${config.filterLines.map(l => esc(l)).join(' | ')}</div>`
             : '';
 
+        // Scope chip lines render between the title and the date so the org-
+        // context reads with the title (mirrors the on-screen header).
+        const preDateHtml = config.preDateLines?.length
+            ? config.preDateLines
+                .map(l => `<div style="font-size:10pt;font-weight:600;text-align:center;margin:0 0 2px 0;color:#0f6b4b">${esc(l)}</div>`)
+                .join('')
+            : '';
+
         const containerWidth = config.landscape ? 1050 : 760;
         const container = document.createElement('div');
         container.style.cssText = `position:absolute;left:-9999px;top:0;width:${containerWidth}px;padding:30px;background:#fff;z-index:-1;overflow:visible;box-sizing:border-box`;
         container.innerHTML = `
             <div style="font-family:${fontFamily};font-size:${sizeContentPt};color:#000;line-height:1.4;width:100%">
                 <h1 style="font-size:14pt;font-weight:700;text-align:center;margin:0 0 3px 0">${esc(config.title)}</h1>
+                ${preDateHtml}
                 <div style="font-size:9pt;text-align:center;margin-bottom:6px">${esc(dateStr)}</div>
                 ${filterHtml}
                 <table style="width:100%;border-collapse:collapse;font-family:${fontFamily}">

@@ -82,8 +82,12 @@
                                 optionValue="value"
                                 placeholder="Select Status"
                                 styleClass="w-full"
+                                [disabled]="statusLocked"
                                 appendTo="body">
                             </p-select>
+                            @if (statusLocked) {
+                                <small class="ds-field-hint">Locked to Presently Serving — your access scope is restricted.</small>
+                            }
                         </div>
                     </div>
                 </div>
@@ -242,7 +246,13 @@
 
         <div class="report-header-title-block">
             <div class="report-main-title">{{ reportTitle }}</div>
+            @if (unitScopeLine) {
+                <div class="report-scope-line">{{ unitScopeLine }}</div>
+            }
             <div class="report-date-line">{{ dateLine }}</div>
+            @if (memberTypeScopeLine) {
+                <div class="report-scope-line">{{ memberTypeScopeLine }}</div>
+            }
             @if (appliedFilterLines.length > 0) {
                 <div class="report-filter-summary">
                     @for (line of appliedFilterLines; track line) {
