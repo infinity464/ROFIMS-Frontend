@@ -15,7 +15,6 @@ import { MessageService } from 'primeng/api';
 import { AuthenticationService } from '../Service/authentication';
 import { UserMenuService } from '@/services/user-menu.service';
 import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
-import { IdentityUserRabUnitAccessService } from '@/services/identity-user-rab-unit-access.service';
 import { SessionPolicyService } from '@/shared/services/session-policy.service';
 import { AppFloatingConfigurator } from '@/layout/component/app.floatingconfigurator';
 
@@ -62,7 +61,6 @@ export class Login implements OnInit {
     private messageService: MessageService,
     private userMenuService: UserMenuService,
     private memberTypeAccess: IdentityUserMemberTypeAccessService,
-    private rabUnitAccess: IdentityUserRabUnitAccessService,
     private sessionPolicy: SessionPolicyService
   ) {}
 
@@ -96,11 +94,13 @@ export class Login implements OnInit {
           this.auth.setRememberMeEmail(null);
         }
 
-        // Cache this user's allowed member-type and RAB-unit IDs so other screens don't refetch.
-        // Fire-and-forget: errors are swallowed inside the services; navigation proceeds regardless.
+        // Cache this user's allowed member-type IDs so other screens don't refetch.
+        // (RAB-unit/org-tree access is no longer cached on the client — it's enforced
+        //  server-side from the JWT claim, and caching it caused stale-state risks
+        //  when admins updated a user's scope mid-session.)
+        // Fire-and-forget: errors are swallowed inside the service; navigation proceeds regardless.
         if (res.userId) {
           this.memberTypeAccess.cacheForUser(res.userId).subscribe();
-          this.rabUnitAccess.cacheForUser(res.userId).subscribe();
         }
 
         // Refresh session policy so the idle-timeout watcher and storage-tier choice are current.
