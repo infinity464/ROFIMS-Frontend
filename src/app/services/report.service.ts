@@ -19,6 +19,7 @@ import type {
   AddressLocationReportParams,
   AddressLocationReportRow,
   AddressLocationReportPagedResponse,
+  ScopedReportPagedResponse,
   ReportAccessibleScope,
   MemberTypeServingReportParams,
   MemberTypeServingReportRow,
@@ -49,21 +50,45 @@ function normalizePages<T>(res: ReportPagedResponse<T>): PagedResponse<T> {
   };
 }
 
+/**
+ * Same as {@link normalizePages} but preserves the accessibleScope envelope
+ * shipped by scope-aware report endpoints under employee-reports. The
+ * component reads `accessibleScope` to render the unit / member-type chip
+ * and lock the PostingStatus filter when the caller is org-restricted.
+ */
+function normalizeScopedPages<T>(
+  res: ScopedReportPagedResponse<T>
+): PagedResponse<T> & { accessibleScope: ReportAccessibleScope | null } {
+  return {
+    ...normalizePages(res),
+    accessibleScope: res.accessibleScope ?? null,
+  };
+}
+
 @Injectable({ providedIn: 'root' })
 export class ReportService {
   private readonly apiUrl = `${environment.apis.core}/EmployeeInfo`;
 
   constructor(private http: HttpClient) {}
 
+  /**
+   * Returns ONLY the caller's access-scope snapshot, no report data. Used by
+   * the /employee-reports parent so it can lock its shared PostingStatus
+   * dropdown on init (before any child report has fired).
+   */
+  getMyReportAccessScope(): Observable<ReportAccessibleScope> {
+    return this.http.get<ReportAccessibleScope>(`${this.apiUrl}/GetMyReportAccessScope`);
+  }
+
   getMemberAppointmentReport(
     params: MemberAppointmentReportParams
-  ): Observable<PagedResponse<MemberAppointmentReportRow>> {
+  ): Observable<PagedResponse<MemberAppointmentReportRow> & { accessibleScope: ReportAccessibleScope | null }> {
     return this.http
-      .post<ReportPagedResponse<MemberAppointmentReportRow>>(
+      .post<ScopedReportPagedResponse<MemberAppointmentReportRow>>(
         `${this.apiUrl}/GetMemberAppointmentReport`,
         params
       )
-      .pipe(map(normalizePages));
+      .pipe(map(normalizeScopedPages));
   }
 
   getBatchCourseReport(
@@ -222,18 +247,13 @@ export class ReportService {
 
   getAddressLocationReport(
     params: AddressLocationReportParams
-  ): Observable<PagedResponse<AddressLocationReportRow> & { accessibleScope?: ReportAccessibleScope | null }> {
+  ): Observable<PagedResponse<AddressLocationReportRow> & { accessibleScope: ReportAccessibleScope | null }> {
     return this.http
-      .post<AddressLocationReportPagedResponse<AddressLocationReportRow>>(
+      .post<ScopedReportPagedResponse<AddressLocationReportRow>>(
         `${this.apiUrl}/GetAddressLocationReport`,
         params
       )
-      .pipe(
-        map((res) => ({
-          ...normalizePages(res),
-          accessibleScope: res.accessibleScope ?? null,
-        }))
-      );
+      .pipe(map(normalizeScopedPages));
   }
 
   getMemberTypeServingReport(

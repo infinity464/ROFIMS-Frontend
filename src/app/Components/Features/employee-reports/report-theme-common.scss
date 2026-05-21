@@ -1,3 +1,23 @@
+/* Scope chip rendered under the report title for reports that apply
+   access-scope filtering. Used as `<div class="report-scope-line">…</div>`.
+   Always lives between the title and the date, OR between the date and
+   the filter-tag row — the component picks placement based on which axis. */
+.report-scope-line {
+    margin-top: 0.35rem;
+    font-size: 0.82rem;
+    color: var(--p-primary-color, var(--report-accent, #10b981));
+    font-weight: 500;
+    text-align: center;
+}
+
+/* Small hint shown under a filter that's locked because of access scope. */
+.ds-field-hint {
+    font-size: 0.72rem;
+    color: var(--text-color-secondary, rgba(255, 255, 255, 0.55));
+    margin-top: 0.25rem;
+    line-height: 1.3;
+}
+
 /**
  * Central report theme – shared by employee-reports, rab-id-allocation, supernumerary-list,
  * ex-members, presently-serving-members. Uses .app-dark for dark mode.

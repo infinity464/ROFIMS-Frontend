@@ -56,6 +56,8 @@ export interface MemberAppointmentReportParams {
   joiningDateFrom?: string | null;
   joiningDateTo?: string | null;
   postingStatus?: string | null;
+  /** AppointmentCategory CommonCode CodeId from the parent dropdown. */
+  commonCodeId?: number | null;
   pagination: ReportPagination;
 }
 
@@ -235,10 +237,17 @@ export interface ReportAccessibleScope {
   orgScopeRestricted?: boolean;
 }
 
-/** AddressLocation response wraps the standard page shape with the scope snapshot. */
-export interface AddressLocationReportPagedResponse<T> extends ReportPagedResponse<T> {
+/**
+ * Standard scope-aware report response — every employee-reports endpoint that
+ * applies org-tree + member-type scoping returns this shape. The legacy
+ * `AddressLocationReportPagedResponse` alias is kept for compatibility.
+ */
+export interface ScopedReportPagedResponse<T> extends ReportPagedResponse<T> {
   accessibleScope?: ReportAccessibleScope | null;
 }
+
+/** @deprecated Use {@link ScopedReportPagedResponse} — kept for back-compat. */
+export type AddressLocationReportPagedResponse<T> = ScopedReportPagedResponse<T>;
 
 // ── Present Status by Mother Org monthly pivot report ───────────────────
 

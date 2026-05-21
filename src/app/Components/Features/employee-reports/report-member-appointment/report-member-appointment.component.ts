@@ -14,10 +14,16 @@ import { ExportService } from '@/services/export.service';
 import { UserMenuService } from '@/services/user-menu.service';
 import { REPORT_LABELS, type ReportLang } from '@/Core/i18n/report-labels';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
-import type { MemberAppointmentReportRow } from '@/models/report.model';
+import type { MemberAppointmentReportRow, ReportAccessibleScope } from '@/models/report.model';
 import type { MotherOrganizationModel } from '@/models/mother-org-model';
 import type { CommonCodeModel } from '@/models/common-code-model';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
+import {
+    unitScopeLine,
+    memberTypeScopeLine,
+    statusLocked,
+    buildScopeExportLines,
+} from '../report-scope.helper';
 
 @Component({
     selector: 'app-report-member-appointment',
@@ -65,6 +71,18 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
     exportDropdownOpen = false;
     exporting = false;
     appliedFilterLines: string[] = [];
+
+    /** Backend's access-scope snapshot for this caller. Drives the chip + status lock. */
+    accessibleScope: ReportAccessibleScope | null = null;
+    /** Emitted to parent (employee-reports) so it can lock its shared PostingStatus dropdown. */
+    @Output() scopeChange = new EventEmitter<ReportAccessibleScope | null>();
+
+    /** Unit picks line — shown above the date. Null when unrestricted. */
+    get unitScopeLine(): string | null { return unitScopeLine(this.accessibleScope, this.lang); }
+    /** Member-type line — shown below the date. Null when unrestricted. */
+    get memberTypeScopeLine(): string | null { return memberTypeScopeLine(this.accessibleScope, this.lang); }
+    /** True when caller has org-tree restrictions — UI should pin status to Servings. */
+    get statusLocked(): boolean { return statusLocked(this.accessibleScope); }
 
     canInsert = true;
     canUpdate = true;
@@ -166,13 +184,21 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
     async exportAs(type: 'print' | 'pdf' | 'word' | 'excel'): Promise<void> {
         this.exportDropdownOpen = false;
         const { columns, rows } = this.getExportData();
+        // Scope chip lines go ABOVE the date (preDateLines), member-type chip
+        // joins the applied filters BELOW the date. Landscape because 10+
+        // columns clip in portrait.
+        const { preDateLines, filterLines } = buildScopeExportLines(
+            this.accessibleScope, this.lang, this.appliedFilterLines
+        );
         const config = {
             title: this.reportTitle,
             lang: this.lang,
             columns,
             rows,
             showPageNumbers: true,
-            filterLines: this.appliedFilterLines,
+            landscape: true,
+            preDateLines,
+            filterLines,
         };
         if (type === 'pdf') {
             this.exporting = true;
@@ -296,12 +322,15 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
                 joiningDateFrom: this.toDateStr(this.joiningDateFrom),
                 joiningDateTo: this.toDateStr(this.joiningDateTo),
                 postingStatus: this.postingStatus || undefined,
+                commonCodeId: this.commonCodeId ?? undefined,
                 pagination: { page_no, row_per_page: this.rows },
             })
             .subscribe({
                 next: (res) => {
                     this.list = res.datalist ?? [];
                     this.totalRecords = res.pages?.rows ?? 0;
+                    this.accessibleScope = res.accessibleScope ?? null;
+                    this.scopeChange.emit(this.accessibleScope);
                     this.loading = false;
                 },
                 error: (err) => {

@@ -45,7 +45,11 @@
                         [inputId]="'report-status-select'"
                         placeholder="Select Status"
                         appendTo="body"
-                        [showClear]="true" />
+                        [disabled]="statusLocked"
+                        [showClear]="!statusLocked" />
+                    @if (statusLocked) {
+                        <small class="rt-field-hint">Locked to Presently Serving — your access scope is restricted.</small>
+                    }
                 </div>
             </div>
         </div>
@@ -55,7 +59,7 @@
         <div>
             @switch (reportType) {
                 @case ('memberAppointment') {
-                    <app-report-member-appointment [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" [reportTypeLabel]="selectedReportTypeLabel" [commonCodeLabel]="selectedCommonCodeLabel" [postingStatus]="selectedPostingStatus" [statusLabel]="selectedStatusLabel" [statusLabelBn]="selectedStatusLabelBn" (langToggle)="toggleReportLang()" />
+                    <app-report-member-appointment [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" [reportTypeLabel]="selectedReportTypeLabel" [commonCodeLabel]="selectedCommonCodeLabel" [postingStatus]="selectedPostingStatus" [statusLabel]="selectedStatusLabel" [statusLabelBn]="selectedStatusLabelBn" (langToggle)="toggleReportLang()" (scopeChange)="onChildScopeChange($event)" />
                 }
                 @case ('batchCourse') {
                     <app-report-batch-course [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" [reportTypeLabel]="selectedReportTypeLabel" [commonCodeLabel]="selectedCommonCodeLabel" [postingStatus]="selectedPostingStatus" [statusLabel]="selectedStatusLabel" [statusLabelBn]="selectedStatusLabelBn" (langToggle)="toggleReportLang()" />

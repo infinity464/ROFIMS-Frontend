@@ -87,6 +87,24 @@
     max-width: none;
 }
 
+/* Absolute-positioned hint so it doesn't push the row layout (which would
+   misalign Status against the Report Type / Common Code dropdowns). Falls
+   below the dropdown like a caption; long lines wrap above its own field. */
+.rt-field-hint {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    font-size: 0.72rem;
+    color: var(--text-color-secondary, rgba(15, 31, 61, 0.55));
+    line-height: 1.3;
+    pointer-events: none;
+}
+
+:host-context(.app-dark) .rt-field-hint {
+    color: rgba(255, 255, 255, 0.55);
+}
+
 :host ::ng-deep .employee-reports-page .rt-select-wrap {
     --rt-input-h: 34px;
     --rt-input-bg: var(--surface-card, rgba(255, 255, 255, 0.03));

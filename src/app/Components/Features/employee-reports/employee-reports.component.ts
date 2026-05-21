@@ -19,9 +19,11 @@ import { ReportTradeComponent } from './report-trade/report-trade.component';
 import { SelectModule } from 'primeng/select';
 import { REPORT_LABELS, type ReportLang } from '@/Core/i18n/report-labels';
 import { CommonCodeService } from '@/services/common-code-service';
+import { ReportService } from '@/services/report.service';
 import { UserMenuService } from '@/services/user-menu.service';
 import type { CommonCodeModel } from '@/models/common-code-model';
 import type { MotherOrganizationModel } from '@/models/mother-org-model';
+import type { ReportAccessibleScope } from '@/models/report.model';
 
 export type ReportType =
     | 'memberAppointment'
@@ -162,13 +164,46 @@ export class EmployeeReportsComponent implements OnInit {
     ];
     selectedPostingStatus: string = 'Servings';
 
-    constructor(private _router: Router, private _userMenuService: UserMenuService, private commonCodeService: CommonCodeService) {}
+    /**
+     * Latest access-scope snapshot from any child report. When a child loads
+     * a scope-aware response, it emits via (scopeChange). Once we see one
+     * with orgScopeRestricted, we lock the shared PostingStatus dropdown to
+     * "Servings" — out-of-scope ex-members / supernumeraries aren't visible
+     * to org-restricted callers anyway, and the backend hard-overrides.
+     */
+    accessibleScope: ReportAccessibleScope | null = null;
+
+    get statusLocked(): boolean {
+        return this.accessibleScope?.orgScopeRestricted === true;
+    }
+
+    onChildScopeChange(scope: ReportAccessibleScope | null): void {
+        this.accessibleScope = scope;
+        if (scope?.orgScopeRestricted && this.selectedPostingStatus !== 'Servings') {
+            this.selectedPostingStatus = 'Servings';
+        }
+    }
+
+    constructor(
+        private _router: Router,
+        private _userMenuService: UserMenuService,
+        private commonCodeService: CommonCodeService,
+        private reportService: ReportService,
+    ) {}
 
     ngOnInit(): void {
         const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
         this.canInsert = _perms.canInsert;
         this.canUpdate = _perms.canUpdate;
         this.canDelete = _perms.canDelete;
+
+        // Fetch the caller's access-scope BEFORE any child report runs, so
+        // the Status dropdown locks immediately on page load instead of
+        // waiting for the first common-code pick to fire a report.
+        this.reportService.getMyReportAccessScope().subscribe({
+            next: (scope) => this.onChildScopeChange(scope ?? null),
+            error: () => { /* silent — leave dropdown editable on failure */ },
+        });
 
         this.loadCommonCodeOptions();
     }
