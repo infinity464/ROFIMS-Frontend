@@ -402,6 +402,21 @@ export class EmployeeSearchComponent implements OnChanges {
                 this.isSearching = false;
                 this.employeeFound = false;
                 this.onSearchReset.emit();
+                // 403 means the employee DOES exist but is outside the caller's
+                // org-scope (or no longer presently serving) — show a clearer
+                // message instead of the generic "Failed to search" so the user
+                // understands the difference between "no such employee" and
+                // "you don't have access to this one".
+                if (err?.status === 403) {
+                    this.messageService.add({
+                        severity: 'warn',
+                        summary: 'Permission Denied',
+                        detail: err?.error?.message
+                            || 'You do not have permission to view this employee. They are outside your accessible scope or no longer presently serving.',
+                        life: 6000
+                    });
+                    return;
+                }
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',

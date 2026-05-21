@@ -82,16 +82,25 @@
                                 [class.dist-row--section]="row.level === 4"
                                 [class.dist-row--subsection]="row.level === 5">
                                 <td class="dist-table__office">
-                                    <span [class.dist-row__indent1]="row.level === 1"
-                                          [class.dist-row__indent2]="row.level === 2"
-                                          [class.dist-row__indent3]="row.level === 3"
-                                          [class.dist-row__indent4]="row.level === 4"
-                                          [class.dist-row__indent5]="row.level === 5">
-                                        @if (row.level > 0) {
-                                            <span class="dist-row__arrow">↳</span>
+                                    <div class="tree-row" [attr.data-level]="row.level">
+                                        @for (line of row.branchLines; track $index) {
+                                            <span class="tree-pipe"
+                                                  [class.tree-pipe--blank]="!line"
+                                                  [attr.data-level]="$index"></span>
                                         }
-                                        {{ row.officeName }}
-                                    </span>
+                                        @if (row.level > 0) {
+                                            <span class="tree-connector"
+                                                  [class.tree-connector--mid]="!row.isLast"
+                                                  [attr.data-level]="row.level"></span>
+                                        }
+                                        <span class="tree-marker"
+                                              [class.tree-marker--parent]="row.hasChildren"
+                                              [class.tree-marker--leaf]="!row.hasChildren"
+                                              [attr.data-level]="row.level">
+                                            {{ row.hasChildren ? '▼' : '•' }}
+                                        </span>
+                                        <span class="tree-label">{{ row.officeName }}</span>
+                                    </div>
                                 </td>
                                 @for (col of dynamicColumns; track col.field) {
                                     <td class="dist-table__cell dist-table__cell--editable"

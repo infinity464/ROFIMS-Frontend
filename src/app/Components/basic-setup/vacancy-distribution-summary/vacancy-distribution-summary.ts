@@ -32,6 +32,12 @@ export interface DisplayRow {
     officeName: string;
     qtyByField: Record<string, number>;
     total: number;
+    /** Has at least one descendant row directly below */
+    hasChildren: boolean;
+    /** This row is the last sibling at its level (└ elbow). Otherwise ├ elbow. */
+    isLast: boolean;
+    /** For each ancestor level a (0..level-1): true = draw vertical pipe (ancestor has more siblings to come) */
+    branchLines: boolean[];
 }
 
 @Component({
@@ -616,10 +622,40 @@ export class VacancyDistributionSummaryComponent implements OnInit {
                 level,
                 officeName: this.rabNameById[codeId] ?? String(codeId),
                 qtyByField,
-                total: rowTotal
+                total: rowTotal,
+                hasChildren: false,
+                isLast: true,
+                branchLines: []
             });
         });
 
+        this.decorateTreeShape(rows);
         this.displayRows = rows;
+    }
+
+    /** Compute hasChildren / isLast / branchLines for tree connector rendering. */
+    private decorateTreeShape(rows: DisplayRow[]): void {
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
+            row.hasChildren = i + 1 < rows.length && rows[i + 1].level > row.level;
+
+            let isLast = true;
+            for (let j = i + 1; j < rows.length; j++) {
+                if (rows[j].level < row.level) break;
+                if (rows[j].level === row.level) { isLast = false; break; }
+            }
+            row.isLast = isLast;
+
+            const lines: boolean[] = [];
+            for (let a = 0; a < row.level; a++) {
+                let more = false;
+                for (let j = i + 1; j < rows.length; j++) {
+                    if (rows[j].level < a) break;
+                    if (rows[j].level === a) { more = true; break; }
+                }
+                lines.push(more);
+            }
+            row.branchLines = lines;
+        }
     }
 }
