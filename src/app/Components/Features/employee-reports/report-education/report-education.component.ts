@@ -13,9 +13,10 @@ import { ExportService } from '@/services/export.service';
 import { UserMenuService } from '@/services/user-menu.service';
 import { REPORT_LABELS, type ReportLang } from '@/Core/i18n/report-labels';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
-import type { EducationReportRow } from '@/models/report.model';
+import type { EducationReportRow, ReportAccessibleScope } from '@/models/report.model';
 import type { MotherOrganizationModel } from '@/models/mother-org-model';
 import type { CommonCodeModel } from '@/models/common-code-model';
+import { unitScopeLine, memberTypeScopeLine, statusLocked, buildScopeExportLines } from '../report-scope.helper';
 
 @Component({
     selector: 'app-report-education',
@@ -35,6 +36,12 @@ export class ReportEducationComponent implements OnInit, OnChanges {
     @Input() statusLabel = '';
     @Input() statusLabelBn = '';
     @Output() langToggle = new EventEmitter<void>();
+    @Output() scopeChange = new EventEmitter<ReportAccessibleScope | null>();
+
+    accessibleScope: ReportAccessibleScope | null = null;
+    get unitScopeLine(): string | null { return unitScopeLine(this.accessibleScope, this.lang); }
+    get memberTypeScopeLine(): string | null { return memberTypeScopeLine(this.accessibleScope, this.lang); }
+    get statusLocked(): boolean { return statusLocked(this.accessibleScope); }
 
     orgOptions: MotherOrganizationModel[] = [];
     selectedOrgId: number | null = null;
@@ -147,13 +154,16 @@ export class ReportEducationComponent implements OnInit, OnChanges {
     async exportAs(type: 'print' | 'pdf' | 'word' | 'excel'): Promise<void> {
         this.exportDropdownOpen = false;
         const { columns, rows } = this.getExportData();
+        const { preDateLines, filterLines } = buildScopeExportLines(this.accessibleScope, this.lang, this.appliedFilterLines);
         const config = {
             title: this.reportTitle,
             lang: this.lang,
             columns,
             rows,
             showPageNumbers: true,
-            filterLines: this.appliedFilterLines,
+            landscape: true,
+            preDateLines,
+            filterLines,
         };
         if (type === 'pdf') {
             this.exporting = true;
@@ -275,6 +285,8 @@ export class ReportEducationComponent implements OnInit, OnChanges {
                 next: (res) => {
                     this.list = res.datalist ?? [];
                     this.totalRecords = res.pages?.rows ?? 0;
+                    this.accessibleScope = res.accessibleScope ?? null;
+                    this.scopeChange.emit(this.accessibleScope);
                     this.loading = false;
                 },
                 error: (err) => {
