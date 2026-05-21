@@ -697,9 +697,43 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         if (this.employeeId == null) return;
         const id = this.employeeId;
         this.loading = true;
+
+        // Two-stage load: fetch the access-gated profile first. Backend returns
+        // 404 for both "not found" and "out of scope" — either way we must NOT
+        // fan out the per-employee detail calls (each was leaking data into
+        // the Network tab even when the caller lacked access).
+        this.servingMembersService.getEmployeePersonalServiceOverview(id).subscribe({
+            next: (profile) => {
+                if (!profile) {
+                    this.profile = null;
+                    this.onError('This profile is not available or you do not have access to it.');
+                    onComplete?.();
+                    return;
+                }
+                this.profile = profile;
+                this.loadProfileImage(profile);
+                this.loadRelatedProfileData(id, onComplete);
+            },
+            error: (err) => {
+                this.profile = null;
+                if (err?.status === 404 || err?.status === 403) {
+                    this.onError('This profile is not available or you do not have access to it.');
+                } else {
+                    console.error('Failed to load profile', err);
+                    this.onError(err?.error?.message || 'Failed to load profile');
+                }
+                onComplete?.();
+            }
+        });
+    }
+
+    /**
+     * Stage-2: fan-out of per-employee detail endpoints, only after the
+     * primary profile call (and its access check) succeeded.
+     */
+    private loadRelatedProfileData(id: number, onComplete?: () => void): void {
         const currentYear = this.currentYear;
         forkJoin({
-            profile: this.servingMembersService.getEmployeePersonalServiceOverview(id),
             family: this.familyInfoService.getFamilyInfoByEmployeeView(id),
             previousRab: this.previousRabService.getViewByEmployeeId(id),
             bankAcc: this.bankAccInfoService.getViewByEmployeeId(id),
@@ -720,10 +754,8 @@ export class ExMemberProfile implements OnInit, OnDestroy {
             movements: this.movementInfoService.getByEmployeeId(id).pipe(catchError(() => of([] as MovementInfoByEmployeeDto[]))),
             postingStatus: this.postingService.getEmployeePostingProcessingStatus(id).pipe(catchError(() => of(null as EmployeePostingProcessingStatusDto | null)))
         }).subscribe({
-            next: ({ profile, family, previousRab, bankAcc, education, foreignVisit, leaveCurrentYear, additionalRemarks, address, moServHistory, discipline, course, promotion, documents, rftsTraining, presentStatus, approvedNoteSheets, exBdLeaveProgress, movements, postingStatus }) => {
-                this.profile = profile;
+            next: ({ family, previousRab, bankAcc, education, foreignVisit, leaveCurrentYear, additionalRemarks, address, moServHistory, discipline, course, promotion, documents, rftsTraining, presentStatus, approvedNoteSheets, exBdLeaveProgress, movements, postingStatus }) => {
                 this.familyList = family ?? [];
-                this.loadProfileImage(profile);
                 this.previousRabList = previousRab ?? [];
                 this.bankAccList = bankAcc ?? [];
                 this.educationList = education ?? [];
@@ -754,11 +786,11 @@ export class ExMemberProfile implements OnInit, OnDestroy {
                 onComplete?.();
             },
             error: (err) => {
-                console.error('Failed to load profile', err);
+                console.error('Failed to load profile details', err);
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: err?.error?.message || 'Failed to load profile'
+                    detail: err?.error?.message || 'Failed to load profile details'
                 });
                 this.loading = false;
                 onComplete?.();

@@ -16,6 +16,7 @@ import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-me
 import { SharedService } from '@/shared/services/shared-service';
 import { MotherOrganizationModel } from '@/models/mother-org-model';
 import { PostingStatus } from '@/models/enums';
+import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 
 export interface EmployeeBasicInfo {
     employeeID: number;
@@ -47,11 +48,11 @@ export interface EmployeeBasicInfo {
             <div class="flex flex-wrap align-items-end gap-3">
                 <div style="min-width: 140px; max-width: 160px;">
                     <label class="font-semibold block mb-2 text-700">RAB ID</label>
-                    <input pInputText class="w-full" placeholder="RAB ID" [(ngModel)]="searchRabId" (ngModelChange)="onRabIdInput($event)" (keydown.enter)="$event.preventDefault(); search()" />
+                    <input pInputText class="w-full" placeholder="RAB ID" inputmode="numeric" [(ngModel)]="searchRabId" (ngModelChange)="onRabIdInput($event)" (keypress)="onNumericKeypress($event, false)" (paste)="onRabIdPaste()" (keydown.enter)="$event.preventDefault(); search()" />
                 </div>
                 <div style="min-width: 140px; max-width: 160px;">
                     <label class="font-semibold block mb-2 text-700">Service ID</label>
-                    <input pInputText class="w-full" placeholder="Service ID" [(ngModel)]="searchServiceId" (ngModelChange)="onServiceIdInput($event)" (keydown.enter)="$event.preventDefault(); search()" />
+                    <input pInputText class="w-full" placeholder="Service ID" inputmode="numeric" [(ngModel)]="searchServiceId" (ngModelChange)="onServiceIdInput($event)" (keypress)="onNumericKeypress($event, true)" (paste)="onServiceIdPaste()" (keydown.enter)="$event.preventDefault(); search()" />
                 </div>
                 <div>
                     <label class="font-semibold block mb-2 text-700">&nbsp;</label>
@@ -300,8 +301,13 @@ export class EmployeeSearchComponent implements OnChanges {
     }
 
     onRabIdInput(value: string): void {
+        // Bangla digits → Western, then strip everything except digits
+        const normalized = BanglaNumerals.toWestern(value).replace(/\D/g, '');
+        if (normalized !== value) {
+            this.searchRabId = normalized;
+        }
         // Only clear the other field if this one is cleared
-        if (!value || !value.trim()) {
+        if (!normalized) {
             this.searchServiceId = '';
             this.employeeFound = false;
             this.employeeInfo = null;
@@ -309,11 +315,39 @@ export class EmployeeSearchComponent implements OnChanges {
     }
 
     onServiceIdInput(value: string): void {
+        // Bangla digits → Western, then keep only digits and commas (commas support bulk lookup)
+        const normalized = BanglaNumerals.toWestern(value).replace(/[^\d,]/g, '');
+        if (normalized !== value) {
+            this.searchServiceId = normalized;
+        }
         // Only clear the other field if this one is cleared
-        if (!value || !value.trim()) {
+        if (!normalized) {
             this.searchRabId = '';
             this.employeeFound = false;
             this.employeeInfo = null;
+        }
+    }
+
+    onRabIdPaste(): void {
+        this.searchServiceId = '';
+        this.employeeFound = false;
+        this.employeeInfo = null;
+    }
+
+    onServiceIdPaste(): void {
+        this.searchRabId = '';
+        this.employeeFound = false;
+        this.employeeInfo = null;
+    }
+
+    /** Blocks any printable key that isn't a Western/Bangla digit (or comma, for Service ID bulk lookup). */
+    onNumericKeypress(event: KeyboardEvent, allowComma: boolean): void {
+        const ch = event.key;
+        if (!ch || ch.length !== 1) return; // let control keys through (Backspace, Tab, arrows, …)
+        const isDigit = /[\d০-৯]/.test(ch);
+        const isComma = allowComma && ch === ',';
+        if (!isDigit && !isComma) {
+            event.preventDefault();
         }
     }
 
@@ -368,6 +402,21 @@ export class EmployeeSearchComponent implements OnChanges {
                 this.isSearching = false;
                 this.employeeFound = false;
                 this.onSearchReset.emit();
+                // 403 means the employee DOES exist but is outside the caller's
+                // org-scope (or no longer presently serving) — show a clearer
+                // message instead of the generic "Failed to search" so the user
+                // understands the difference between "no such employee" and
+                // "you don't have access to this one".
+                if (err?.status === 403) {
+                    this.messageService.add({
+                        severity: 'warn',
+                        summary: 'Permission Denied',
+                        detail: err?.error?.message
+                            || 'You do not have permission to view this employee. They are outside your accessible scope or no longer presently serving.',
+                        life: 6000
+                    });
+                    return;
+                }
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',

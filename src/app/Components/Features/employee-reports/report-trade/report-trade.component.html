@@ -68,28 +68,6 @@
                         appendTo="body">
                     </p-select>
                 </div>
-                <div class="report-filter-field report-filter-field-date">
-                    <label>{{ L['en']['report.search.fromDate'] }}</label>
-                    <p-datepicker
-                        [(ngModel)]="joiningDateFrom"
-                        (ngModelChange)="onFilterChange()"
-                        dateFormat="dd-mm-yy"
-                        placeholder="mm/dd/yyyy"
-                        appendTo="body"
-                        styleClass="w-full">
-                    </p-datepicker>
-                </div>
-                <div class="report-filter-field report-filter-field-date">
-                    <label>{{ L['en']['report.search.toDate'] }}</label>
-                    <p-datepicker
-                        [(ngModel)]="joiningDateTo"
-                        (ngModelChange)="onFilterChange()"
-                        dateFormat="dd-mm-yy"
-                        placeholder="mm/dd/yyyy"
-                        appendTo="body"
-                        styleClass="w-full">
-                    </p-datepicker>
-                </div>
             </div>
 
             <div class="report-filter-actions">
@@ -156,13 +134,7 @@
         <!-- Row 2: centered two-line title -->
         <div class="report-header-title-block">
             <div class="report-main-title">{{ reportTitle }}</div>
-            @if (unitScopeLine) {
-                <div class="report-scope-line">{{ unitScopeLine }}</div>
-            }
             <div class="report-date-line">{{ dateLine }}</div>
-            @if (memberTypeScopeLine) {
-                <div class="report-scope-line">{{ memberTypeScopeLine }}</div>
-            }
             @if (appliedFilterLines.length > 0) {
                 <div class="report-filter-summary">
                     @for (line of appliedFilterLines; track line) {
@@ -198,7 +170,6 @@
                     <th>{{ L[lang]['report.table.trade'] }}</th>
                     <th>{{ L[lang]['report.table.name'] }}</th>
                     <th>{{ L[lang]['report.table.presentUnit'] }}</th>
-                    <th>{{ L[lang]['report.table.joiningDate'] }}</th>
                     <th>{{ L[lang]['report.table.rmks'] }}</th>
                 </tr>
             </ng-template>
@@ -224,13 +195,12 @@
                             <span class="report-dash">—</span>
                         }
                     </td>
-                    <td>{{ formatDate(row.joiningDate) }}</td>
                     <td><span class="report-dash">{{ row.rmks ?? '—' }}</span></td>
                 </tr>
             </ng-template>
             <ng-template pTemplate="emptymessage">
                 <tr>
-                    <td colspan="10" class="text-center p-4">{{ L['en']['report.empty'] }}</td>
+                    <td colspan="9" class="text-center p-4">{{ L['en']['report.empty'] }}</td>
                 </tr>
             </ng-template>
         </p-table>

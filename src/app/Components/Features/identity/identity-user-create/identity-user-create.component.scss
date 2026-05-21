@@ -2,6 +2,19 @@
   display: block;
 }
 
+// Coloured-per-level org-path tooltip. Hosts HTML (one <span> per level with
+// inline colour, separated by → arrows; multi-line via <div>s on "+N more").
+:host ::ng-deep .org-paths-tooltip .p-tooltip-text {
+  max-width: 460px;
+  line-height: 1.55;
+  font-size: 0.78rem;
+  // Allow the embedded spans/divs to render normally; don't collapse whitespace.
+  white-space: normal;
+  div + div {
+    margin-top: 2px;
+  }
+}
+
 :host ::ng-deep .user-list-table {
   .p-datatable-tbody > tr > td {
     padding-top: 0.65rem;

@@ -551,9 +551,49 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
         if (this.employeeId == null) return;
         const id = this.employeeId;
         this.loading = true;
+
+        // Two-stage load:
+        // 1) Fetch the access-gated profile first. The backend returns 404 both
+        //    for "doesn't exist" and "out of scope" — either way we must NOT
+        //    fan out the 14 related per-employee calls below (each was leaking
+        //    data into the Network panel even when the user lacked access).
+        // 2) Only on success do we forkJoin the rest. Adds one round-trip of
+        //    latency for legit users but eliminates the data leak for everyone
+        //    else.
+        this.servingMembersService.getEmployeePersonalServiceOverview(id).subscribe({
+            next: (profile) => {
+                if (!profile) {
+                    this.profile = null;
+                    this.onError('This profile is not available or you do not have access to it.');
+                    return;
+                }
+                this.profile = profile;
+                this.loadProfileImage(profile);
+                this.loadRelatedProfileData(id);
+            },
+            error: (err) => {
+                this.profile = null;
+                if (err?.status === 404 || err?.status === 403) {
+                    this.onError('This profile is not available or you do not have access to it.');
+                } else {
+                    console.error('Failed to load profile', err);
+                    this.onError(err?.error?.message || 'Failed to load profile');
+                }
+            }
+        });
+    }
+
+    /**
+     * Stage-2 fan-out: fires the 14 per-employee detail calls in parallel.
+     * Only invoked after the primary profile call succeeded (i.e. the caller
+     * has access). The detail calls themselves do NOT re-check access — they
+     * inherit the gate from the profile call. Backend should still enforce
+     * defense-in-depth on these endpoints, but the FE no longer leaks them
+     * when access is denied.
+     */
+    private loadRelatedProfileData(id: number): void {
         const currentYear = this.currentYear;
         forkJoin({
-            profile: this.servingMembersService.getEmployeePersonalServiceOverview(id),
             family: this.familyInfoService.getFamilyInfoByEmployeeView(id),
             previousRab: this.previousRabService.getViewByEmployeeId(id),
             bankAcc: this.bankAccInfoService.getViewByEmployeeId(id),
@@ -569,10 +609,8 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
             documents: this.empService.getEmployeeDocumentReferences(id).pipe(catchError(() => of([]))),
             exBdLeaveProgress: this.exBdLeaveService.getProgressByEmployee(id).pipe(catchError(() => of([])))
         }).subscribe({
-            next: ({ profile, family, previousRab, bankAcc, education, foreignVisit, leaveCurrentYear, additionalRemarks, address, moServHistory, discipline, course, promotion, documents, exBdLeaveProgress }) => {
-                this.profile = profile;
+            next: ({ family, previousRab, bankAcc, education, foreignVisit, leaveCurrentYear, additionalRemarks, address, moServHistory, discipline, course, promotion, documents, exBdLeaveProgress }) => {
                 this.familyList = family ?? [];
-                this.loadProfileImage(profile);
                 this.previousRabList = previousRab ?? [];
                 this.bankAccList = bankAcc ?? [];
                 this.educationList = education ?? [];
@@ -589,11 +627,11 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
                 this.loading = false;
             },
             error: (err) => {
-                console.error('Failed to load profile', err);
+                console.error('Failed to load profile details', err);
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: err?.error?.message || 'Failed to load profile'
+                    detail: err?.error?.message || 'Failed to load profile details'
                 });
                 this.loading = false;
             }

@@ -12,7 +12,6 @@ import {
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
-import { MultiSelectModule } from 'primeng/multiselect';
 import { RadioButtonModule } from 'primeng/radiobutton';
 import { PasswordModule } from 'primeng/password';
 import { IconFieldModule } from 'primeng/iconfield';
@@ -38,10 +37,13 @@ import {
 } from '@/services/identity-user-member-type-access.service';
 import {
   IdentityUserRabUnitAccessService,
-  UserRabUnitAccessDto
+  UserRabUnitAccessDto,
+  OrgPathSegment
 } from '@/services/identity-user-rab-unit-access.service';
+import { LEVEL_COLORS } from '@/Components/basic-setup/org-tree/models/org-node.model';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { SharedService } from '@/shared/services/shared-service';
+import { OrgTreeMultiSelectComponent } from '@/shared/components/org-tree-multi-select/org-tree-multi-select.component';
 import type { ApplicationRole, ApplicationUser } from '@/models/identity.model';
 
 interface UserRow extends ApplicationUser {
@@ -56,14 +58,17 @@ interface UserRow extends ApplicationUser {
   memberTypeNamesJoined?: string;
   rabUnitNames?: string[];
   rabUnitNamesJoined?: string;
+  /** Breadcrumb per node, index-aligned with rabUnitNames. */
+  rabUnitPaths?: string[];
+  /** Structured breadcrumb per node, used to render colour-per-level tooltips. */
+  rabUnitPathSegments?: OrgPathSegment[][];
+  /** Pre-rendered HTML for each chip's tooltip (single path, coloured). */
+  rabUnitPathHtml?: string[];
+  /** Pre-rendered HTML for the "+N more" tooltip (multi-line, coloured). */
+  rabUnitPathHtmlAll?: string;
 }
 
 interface MemberTypeOption {
-  label: string;
-  value: number;
-}
-
-interface RabUnitOption {
   label: string;
   value: number;
 }
@@ -80,7 +85,6 @@ const USERNAME_PATTERN = /^[A-Za-z0-9._@-]+$/;
     InputTextModule,
     ButtonModule,
     SelectModule,
-    MultiSelectModule,
     RadioButtonModule,
     PasswordModule,
     IconFieldModule,
@@ -90,7 +94,8 @@ const USERNAME_PATTERN = /^[A-Za-z0-9._@-]+$/;
     DialogModule,
     TagModule,
     Fluid,
-    Toast
+    Toast,
+    OrgTreeMultiSelectComponent
   ],
   providers: [MessageService],
   templateUrl: './identity-user-create.component.html',
@@ -119,7 +124,6 @@ export class IdentityUserCreateComponent implements OnInit {
   users: UserRow[] = [];
   employees: EmployeeDropdownDto[] = [];
   memberTypes: MemberTypeOption[] = [];
-  rabUnits: RabUnitOption[] = [];
   private mappings: IdentityUserMappingDto[] = [];
   private memberTypeAccesses: UserMemberTypeAccessDto[] = [];
   private rabUnitAccesses: UserRabUnitAccessDto[] = [];
@@ -147,22 +151,7 @@ export class IdentityUserCreateComponent implements OnInit {
     this.loadRoles();
     this.loadEmployees();
     this.loadMemberTypes();
-    this.loadRabUnits();
     this.loadUsersAndMappings();
-  }
-
-  loadRabUnits(): void {
-    this.masterBasicSetupService.getAllByType('RabUnit').subscribe({
-      next: (list) => {
-        const arr = Array.isArray(list) ? list : [];
-        this.rabUnits = arr
-          .filter((u) => u.status !== false && u.codeId > 0)
-          .map((u) => ({ label: u.codeValueEN ?? '', value: u.codeId }));
-      },
-      error: (err: any) => {
-        this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load RAB units' });
-      }
-    });
   }
 
   loadMemberTypes(): void {
@@ -240,8 +229,44 @@ export class IdentityUserCreateComponent implements OnInit {
       memberTypeNames: access?.memberTypeNames ?? [],
       memberTypeNamesJoined: (access?.memberTypeNames ?? []).join(' | '),
       rabUnitNames: rabAccess?.rabUnitNames ?? [],
-      rabUnitNamesJoined: (rabAccess?.rabUnitNames ?? []).join(' | ')
+      rabUnitNamesJoined: (rabAccess?.rabUnitNames ?? []).join(' | '),
+      rabUnitPaths: rabAccess?.rabUnitPaths ?? [],
+      rabUnitPathSegments: rabAccess?.rabUnitPathSegments ?? [],
+      // Pre-render the tooltip HTML once per row so the template just binds a string
+      // (saves rebuilding the markup on every change-detection tick).
+      // Prefer structured segments (carries codeType → accurate level colour). When the
+      // backend isn't redeployed yet and only the legacy plain string form is present,
+      // fall back to splitting "Unit / Wing / Branch" and colouring by POSITION.
+      rabUnitPathHtml: this.buildPerChipPathHtml(
+        rabAccess?.rabUnitPathSegments ?? [],
+        rabAccess?.rabUnitPaths ?? []
+      ),
+      rabUnitPathHtmlAll: (rabAccess?.rabUnitPathSegments?.length ?? 0) > 0
+        ? this.renderOrgPathsHtml(rabAccess!.rabUnitPathSegments!)
+        : this.renderOrgPathsHtmlFromStrings(rabAccess?.rabUnitPaths ?? [])
     };
+  }
+
+  /**
+   * Per-chip tooltip HTML. Walks BOTH inputs in parallel; for each index,
+   * prefers the structured segment chain (colour-by-codeType — accurate even
+   * when paths skip levels) and falls back to splitting the plain string form.
+   */
+  private buildPerChipPathHtml(
+    segmentsList: OrgPathSegment[][],
+    paths: string[]
+  ): string[] {
+    const n = Math.max(segmentsList.length, paths.length);
+    const out: string[] = [];
+    for (let i = 0; i < n; i++) {
+      const segs = segmentsList[i];
+      if (segs?.length) {
+        out.push(this.renderOrgPathHtml(segs));
+      } else {
+        out.push(this.renderOrgPathHtmlFromString(paths[i] ?? ''));
+      }
+    }
+    return out;
   }
 
   private buildEmployeeMeta(rabID: string | null, serviceId: string | null): string | null {
@@ -930,12 +955,95 @@ export class IdentityUserCreateComponent implements OnInit {
     return { text: `${sel} of ${total}`, partial: true };
   }
 
-  /** Returns label for RAB-Unit access. Empty selection = "all units" (no restriction). */
+  /**
+   * Normalise a CommonCode codeType to the short level name used by
+   * <c>LEVEL_COLORS</c>. The DB stores either form ("RabWing" or "Wing") in
+   * the wild; this strips the "Rab"/"RAB" prefix when present so the colour
+   * lookup is stable.
+   */
+  private normaliseLevel(codeType: string | null | undefined): string {
+    const t = (codeType ?? '').trim();
+    if (!t) return '';
+    if (t.toLowerCase().startsWith('rab')) return t.slice(3);
+    return t;
+  }
+
+  /** Minimal HTML-escape — guards against codeValueEN strings that contain &, <, >, ", '. */
+  private htmlEscape(s: string): string {
+    return (s ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  /**
+   * Render ONE org path (Unit → Wing → Branch …) as coloured HTML for use as a
+   * tooltip body. Each segment gets the colour from <c>LEVEL_COLORS</c> by its
+   * level; segments are joined with " → " arrows in a muted colour.
+   * Output is consumed by <c>p-tooltip</c> with <c>[escape]="false"</c>.
+   */
+  renderOrgPathHtml(segments: OrgPathSegment[] | null | undefined): string {
+    if (!segments?.length) return '';
+    const parts = segments.map(seg => {
+      const level = this.normaliseLevel(seg.codeType);
+      const color = (LEVEL_COLORS as Record<string, string>)[level] || '#34495e';
+      return `<span style="color:${color};font-weight:600">${this.htmlEscape(seg.name ?? '')}</span>`;
+    });
+    return parts.join('<span style="color:#9aa5b7;margin:0 4px"> &rarr; </span>');
+  }
+
+  /**
+   * Fallback renderer used when the backend response carries only the legacy
+   * plain-string {@link UserRabUnitAccessDto.rabUnitPaths} (e.g. before the
+   * server is redeployed with the new <c>RabUnitPathSegments</c> field). Splits
+   * the string on " / " and colours each segment by POSITION in the chain —
+   * works as long as paths come back root → leaf in the standard order
+   * (Unit → Wing → Branch → Sub-Branch → Section → Sub-Section).
+   */
+  renderOrgPathHtmlFromString(path: string | null | undefined): string {
+    const t = (path ?? '').trim();
+    if (!t) return '';
+    const parts = t.split(/\s*\/\s*/).filter(s => s);
+    if (parts.length === 0) return '';
+    const levels = ['Unit', 'Wing', 'Branch', 'Sub-Branch', 'Section', 'Sub-Section'];
+    return parts
+      .map((name, i) => {
+        const level = levels[Math.min(i, levels.length - 1)];
+        const color = (LEVEL_COLORS as Record<string, string>)[level] || '#34495e';
+        return `<span style="color:${color};font-weight:600">${this.htmlEscape(name)}</span>`;
+      })
+      .join('<span style="color:#9aa5b7;margin:0 4px"> &rarr; </span>');
+  }
+
+  /** Render the full multi-path block (one per row) for the "+N more" tooltip. */
+  renderOrgPathsHtml(segmentsList: OrgPathSegment[][] | null | undefined): string {
+    if (!segmentsList?.length) return '';
+    return segmentsList
+      .filter(s => s?.length)
+      .map(s => `<div>${this.renderOrgPathHtml(s)}</div>`)
+      .join('');
+  }
+
+  /** Same as {@link renderOrgPathsHtml} but for the legacy plain-string form. */
+  renderOrgPathsHtmlFromStrings(paths: string[] | null | undefined): string {
+    if (!paths?.length) return '';
+    return paths
+      .filter(p => p?.trim())
+      .map(p => `<div>${this.renderOrgPathHtmlFromString(p)}</div>`)
+      .join('');
+  }
+
+  /**
+   * Returns label for RAB-Unit (org-tree) access. Empty selection = "all units" (no
+   * restriction). The denominator "of N" was dropped when picker became any-depth:
+   * total possible nodes spans Unit + Wing + Branch + Sub-Branch + Section +
+   * Sub-Section, which is neither meaningful nor stable to display.
+   */
   getRabAccessSummary(user: UserRow): { text: string; partial: boolean } {
     const sel = user.rabUnitNames?.length ?? 0;
-    const total = this.rabUnits.length;
-    if (sel === 0) return { text: total > 0 ? `All · ${total}` : '—', partial: false };
-    if (total > 0 && sel === total) return { text: `All · ${total}`, partial: false };
-    return { text: `${sel} of ${total}`, partial: true };
+    if (sel === 0) return { text: 'All', partial: false };
+    return { text: `${sel} selected`, partial: true };
   }
 }

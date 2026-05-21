@@ -45,6 +45,9 @@ export class RankWiseManpowerComponent implements OnInit {
     /** Names of the RAB Units the user is restricted to. null/empty = full access. */
     accessibleRabUnitNames: string[] | null = null;
     accessibleRabUnitNamesBN: string[] | null = null;
+    /** Names of the Member Types the user is restricted to. null/empty = full access on this axis. */
+    accessibleMemberTypeNames: string[] | null = null;
+    accessibleMemberTypeNamesBN: string[] | null = null;
 
     /** Options for p-multiselect */
     orgOptions: { label: string; value: number }[] = [];
@@ -137,21 +140,39 @@ export class RankWiseManpowerComponent implements OnInit {
                     label: o.orgName,
                     value: o.orgId
                 }));
-                this.accessibleRabUnitNames   = res.accessibleRabUnitNames ?? null;
-                this.accessibleRabUnitNamesBN = res.accessibleRabUnitNamesBN ?? null;
+                this.accessibleRabUnitNames      = res.accessibleRabUnitNames ?? null;
+                this.accessibleRabUnitNamesBN    = res.accessibleRabUnitNamesBN ?? null;
+                this.accessibleMemberTypeNames   = res.accessibleMemberTypeNames ?? null;
+                this.accessibleMemberTypeNamesBN = res.accessibleMemberTypeNamesBN ?? null;
                 this.loading = false;
             },
             error: () => { this.loading = false; }
         });
     }
 
-    /** Comma-separated unit-scope line shown under the report title; null when unrestricted. */
+    /**
+     * Combined scope line shown under the report title when EITHER axis is
+     * restricted. Format:
+     *   "A, B, C  |  Member Types: Officer, OR"
+     * Either side is omitted when that axis is unrestricted.
+     * Returns null when the caller has no restrictions at all (full access).
+     */
     get scopeLine(): string | null {
-        const names = this.lang === 'bn'
-            ? (this.accessibleRabUnitNamesBN ?? this.accessibleRabUnitNames)
-            : this.accessibleRabUnitNames;
-        if (!names || names.length === 0) return null;
-        return names.join(', ');
+        const bn = this.lang === 'bn';
+        const unitNames = (bn ? this.accessibleRabUnitNamesBN : this.accessibleRabUnitNames)
+            ?? this.accessibleRabUnitNames;
+        const memberTypeNames = (bn ? this.accessibleMemberTypeNamesBN : this.accessibleMemberTypeNames)
+            ?? this.accessibleMemberTypeNames;
+
+        const parts: string[] = [];
+        if (unitNames && unitNames.length > 0) {
+            parts.push(unitNames.join(', '));
+        }
+        if (memberTypeNames && memberTypeNames.length > 0) {
+            const label = bn ? 'সদস্য ধরণ' : 'Member Types';
+            parts.push(`${label}: ${memberTypeNames.join(', ')}`);
+        }
+        return parts.length === 0 ? null : parts.join('  |  ');
     }
 
     onOrgFilterChange(): void {

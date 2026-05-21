@@ -4,7 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
-import { DatePickerModule } from 'primeng/datepicker';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { ReportService } from '@/services/report.service';
@@ -14,38 +13,23 @@ import { ExportService } from '@/services/export.service';
 import { UserMenuService } from '@/services/user-menu.service';
 import { REPORT_LABELS, type ReportLang } from '@/Core/i18n/report-labels';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
-import type { MemberAppointmentReportRow, ReportAccessibleScope } from '@/models/report.model';
+import type { GenericReportRow } from '@/models/report.model';
 import type { MotherOrganizationModel } from '@/models/mother-org-model';
 import type { CommonCodeModel } from '@/models/common-code-model';
-import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
-import {
-    unitScopeLine,
-    memberTypeScopeLine,
-    statusLocked,
-    buildScopeExportLines,
-} from '../report-scope.helper';
 
 @Component({
-    selector: 'app-report-member-appointment',
+    selector: 'app-report-trade',
     standalone: true,
-    imports: [
-        CommonModule,
-        FormsModule,
-        TableModule,
-        ButtonModule,
-        SelectModule,
-        DatePickerModule, FlexibleDateDirective,
-        Toast,
-    ],
+    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, Toast],
     providers: [MessageService],
-    templateUrl: './report-member-appointment.component.html',
-    styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-member-appointment.component.scss'],
+    templateUrl: './report-trade.component.html',
+    styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-trade.component.scss'],
 })
-export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
+export class ReportTradeComponent implements OnInit, OnChanges {
     L = REPORT_LABELS;
     @Input() lang: ReportLang = 'en';
-    /** When container common code is selected, filter runs (load). */
-    @Input() commonCodeId: number | null = null;
+    /** Either a single CommonCode ID or the N/A group's ID list (sent verbatim to the backend). */
+    @Input() commonCodeIds: number[] = [];
     @Input() reportTypeLabel = '';
     @Input() commonCodeLabel = '';
     @Input() postingStatus: string = 'Servings';
@@ -59,10 +43,8 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
     tradeOptions: { label: string; labelBn: string; value: number }[] = [];
     selectedRankId: number | null = null;
     selectedTradeId: number | null = null;
-    joiningDateFrom: Date | null = null;
-    joiningDateTo: Date | null = null;
 
-    list: MemberAppointmentReportRow[] = [];
+    list: GenericReportRow[] = [];
     loading = false;
     first = 0;
     rows = 20;
@@ -71,18 +53,6 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
     exportDropdownOpen = false;
     exporting = false;
     appliedFilterLines: string[] = [];
-
-    /** Backend's access-scope snapshot for this caller. Drives the chip + status lock. */
-    accessibleScope: ReportAccessibleScope | null = null;
-    /** Emitted to parent (employee-reports) so it can lock its shared PostingStatus dropdown. */
-    @Output() scopeChange = new EventEmitter<ReportAccessibleScope | null>();
-
-    /** Unit picks line — shown above the date. Null when unrestricted. */
-    get unitScopeLine(): string | null { return unitScopeLine(this.accessibleScope, this.lang); }
-    /** Member-type line — shown below the date. Null when unrestricted. */
-    get memberTypeScopeLine(): string | null { return memberTypeScopeLine(this.accessibleScope, this.lang); }
-    /** True when caller has org-tree restrictions — UI should pin status to Servings. */
-    get statusLocked(): boolean { return statusLocked(this.accessibleScope); }
 
     canInsert = true;
     canUpdate = true;
@@ -109,7 +79,7 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
             const suffix = this.lang === 'bn' ? 'প্রতিবেদন' : 'Report';
             return `${this.reportTypeLabel}: ${this.commonCodeLabel} ${suffix}${statusSuffix}`;
         }
-        return this.L[this.lang]['report.title.memberAppointment'] + statusSuffix;
+        return (this.lang === 'bn' ? 'ট্রেড প্রতিবেদন' : 'Trade Report') + statusSuffix;
     }
 
     get dateLine(): string {
@@ -138,12 +108,6 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
             const val = this.lang === 'bn' ? trade?.labelBn : trade?.label;
             if (val) lines.push(`${L['report.search.trade']}: ${val}`);
         }
-        if (this.joiningDateFrom != null) {
-            lines.push(`${L['report.search.fromDate']}: ${this.formatDate(this.toDateStr(this.joiningDateFrom) ?? '')}`);
-        }
-        if (this.joiningDateTo != null) {
-            lines.push(`${L['report.search.toDate']}: ${this.formatDate(this.toDateStr(this.joiningDateTo) ?? '')}`);
-        }
         return lines;
     }
 
@@ -158,7 +122,6 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
             L['report.table.trade'],
             L['report.table.name'],
             L['report.table.presentUnit'],
-            L['report.table.joiningDate'],
             L['report.table.rmks'],
         ];
         const rows = this.list.map((row) => [
@@ -170,7 +133,6 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
             this.codeValue(row.trade, row.tradeBN),
             this.codeValue(row.name, row.nameBN),
             this.codeValue(row.presentUnit, row.presentUnitBN),
-            this.formatDate(row.joiningDate),
             row.rmks ?? '—',
         ]);
         return { columns, rows };
@@ -184,21 +146,13 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
     async exportAs(type: 'print' | 'pdf' | 'word' | 'excel'): Promise<void> {
         this.exportDropdownOpen = false;
         const { columns, rows } = this.getExportData();
-        // Scope chip lines go ABOVE the date (preDateLines), member-type chip
-        // joins the applied filters BELOW the date. Landscape because 10+
-        // columns clip in portrait.
-        const { preDateLines, filterLines } = buildScopeExportLines(
-            this.accessibleScope, this.lang, this.appliedFilterLines
-        );
         const config = {
             title: this.reportTitle,
             lang: this.lang,
             columns,
             rows,
             showPageNumbers: true,
-            landscape: true,
-            preDateLines,
-            filterLines,
+            filterLines: this.appliedFilterLines,
         };
         if (type === 'pdf') {
             this.exporting = true;
@@ -223,7 +177,7 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
     }
 
     ngOnChanges(changes: SimpleChanges): void {
-        if (changes['commonCodeId'] && !changes['commonCodeId'].firstChange) {
+        if (changes['commonCodeIds'] && !changes['commonCodeIds'].firstChange) {
             this.first = 0;
             this.load();
         } else if (changes['postingStatus'] && !changes['postingStatus'].firstChange) {
@@ -233,43 +187,6 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
         if (changes['lang']) {
             this.appliedFilterLines = this.buildFilterLines();
         }
-    }
-
-    /** Filter panel collapsed state. */
-    filterOpen = true;
-
-    /** Number of filters currently applied (for badge). */
-    get activeFilterCount(): number {
-        let c = 0;
-        if (this.selectedOrgId != null) c++;
-        if (this.selectedRankId != null) c++;
-        if (this.selectedTradeId != null) c++;
-        if (this.joiningDateFrom != null) c++;
-        if (this.joiningDateTo != null) c++;
-        return c;
-    }
-
-    toggleFilter(): void {
-        this.filterOpen = !this.filterOpen;
-    }
-
-    filterSubtitle(): string {
-        const L = this.L['en'];
-        if (this.activeFilterCount === 0) return L['report.search.panelSubtitle'];
-        const n = this.lang === 'bn' ? BanglaNumerals.toBangla(String(this.activeFilterCount)) : String(this.activeFilterCount);
-        return n + ' ' + L['report.search.panelSubtitleApplied'];
-    }
-
-    clearFilters(): void {
-        this.selectedOrgId = null;
-        this.selectedRankId = null;
-        this.selectedTradeId = null;
-        this.joiningDateFrom = null;
-        this.joiningDateTo = null;
-        this.rankOptions = [];
-        this.tradeOptions = [];
-        this.first = 0;
-        // User clicks Search to apply
     }
 
     loadOrgOptions(): void {
@@ -300,8 +217,36 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
         }
     }
 
-    onFilterChange(): void {
-        // Only update options; search runs when user clicks Search
+    onFilterChange(): void {}
+
+    filterOpen = true;
+
+    get activeFilterCount(): number {
+        let c = 0;
+        if (this.selectedOrgId != null) c++;
+        if (this.selectedRankId != null) c++;
+        if (this.selectedTradeId != null) c++;
+        return c;
+    }
+
+    toggleFilter(): void {
+        this.filterOpen = !this.filterOpen;
+    }
+
+    filterSubtitle(): string {
+        const L = this.L['en'];
+        if (this.activeFilterCount === 0) return L['report.search.panelSubtitle'];
+        const n = this.lang === 'bn' ? BanglaNumerals.toBangla(String(this.activeFilterCount)) : String(this.activeFilterCount);
+        return n + ' ' + L['report.search.panelSubtitleApplied'];
+    }
+
+    clearFilters(): void {
+        this.selectedOrgId = null;
+        this.selectedRankId = null;
+        this.selectedTradeId = null;
+        this.rankOptions = [];
+        this.tradeOptions = [];
+        this.first = 0;
     }
 
     onPage(event: { first: number; rows: number }): void {
@@ -315,22 +260,18 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
         this.appliedFilterLines = this.buildFilterLines();
         const page_no = Math.floor(this.first / this.rows) + 1;
         this.reportService
-            .getMemberAppointmentReport({
+            .getTradeReport({
                 orgId: this.selectedOrgId ?? undefined,
                 rankId: this.selectedRankId ?? undefined,
                 tradeId: this.selectedTradeId ?? undefined,
-                joiningDateFrom: this.toDateStr(this.joiningDateFrom),
-                joiningDateTo: this.toDateStr(this.joiningDateTo),
+                commonCodeIds: this.commonCodeIds?.length ? this.commonCodeIds : undefined,
                 postingStatus: this.postingStatus || undefined,
-                commonCodeId: this.commonCodeId ?? undefined,
                 pagination: { page_no, row_per_page: this.rows },
             })
             .subscribe({
                 next: (res) => {
                     this.list = res.datalist ?? [];
                     this.totalRecords = res.pages?.rows ?? 0;
-                    this.accessibleScope = res.accessibleScope ?? null;
-                    this.scopeChange.emit(this.accessibleScope);
                     this.loading = false;
                 },
                 error: (err) => {
@@ -345,40 +286,14 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
             });
     }
 
-    toDateStr(d: Date | null): string | undefined {
-        if (d == null) return undefined;
-        const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${y}-${m}-${day}`;
-    }
-
-    formatDate(v: string | null | undefined): string {
-        if (v == null || v === '') return '-';
-        try {
-            const d = new Date(v);
-            if (isNaN(d.getTime())) return v;
-            const day = String(d.getDate()).padStart(2, '0');
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const year = String(d.getFullYear());
-            const s = `${day}-${month}-${year}`;
-            return this.lang === 'bn' ? BanglaNumerals.toBangla(s) : s;
-        } catch {
-            return v;
-        }
-    }
-
-    /** Serial and numeric content: Bangla numerals when lang is BN. */
     displayNum(v: number | string | null | undefined): string {
         if (v == null || v === '') return '-';
         const s = String(v);
         return this.lang === 'bn' ? BanglaNumerals.toBangla(s) : s;
     }
 
-    /** Name and common codes: use Bangla when lang is bn. */
     codeValue(enVal: string | null | undefined, bnVal: string | null | undefined): string {
         if (this.lang === 'bn' && bnVal != null && bnVal.trim() !== '') return bnVal.trim();
         return enVal ?? bnVal ?? '—';
     }
-
 }

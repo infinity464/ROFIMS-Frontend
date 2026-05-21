@@ -56,6 +56,8 @@ export interface MemberAppointmentReportParams {
   joiningDateFrom?: string | null;
   joiningDateTo?: string | null;
   postingStatus?: string | null;
+  /** AppointmentCategory CommonCode CodeId from the parent dropdown. */
+  commonCodeId?: number | null;
   pagination: ReportPagination;
 }
 
@@ -85,12 +87,18 @@ export interface GenericReportRow extends ReportRowBase {
   rmks?: string | null;
 }
 
-/** Request for Mother Org / Officer Type / RAB Unit / Wings reports. motherUnitId = Mother Org Unit (child org) for Mother Org report only. */
+/** Request for Mother Org / Officer Type / RAB Unit / Wings / Corps / Trade reports. motherUnitId = Mother Org Unit (child org) for Mother Org report only. */
 export interface GenericReportParams {
   orgId?: number | null;
   rankId?: number | null;
   tradeId?: number | null;
   commonCodeId?: number | null;
+  /**
+   * Multi-value variant: when present and non-empty, backend filters on FilterCodeId IN (commonCodeIds)
+   * and ignores commonCodeId. Used by the Corps and Trade reports where multiple "N/A" CommonCode rows
+   * collapse into a single dropdown option.
+   */
+  commonCodeIds?: number[] | null;
   motherUnitId?: number | null;
   postingStatus?: string | null;
   pagination: ReportPagination;
@@ -214,6 +222,33 @@ export interface ReportPagedResponse<T> {
   pages: { rows?: number; totalPages?: number; Rows?: number; TotalPages?: number };
 }
 
+/**
+ * Snapshot of the caller's accessible scope, attached to scope-aware reports
+ * so the UI can render the chip and lock filters that don't make sense under
+ * a restricted scope (e.g. the PostingStatus filter on AddressLocation —
+ * only currently-serving members carry a RAB placement to scope against).
+ */
+export interface ReportAccessibleScope {
+  rabUnitNames?: string[] | null;
+  rabUnitNamesBN?: string[] | null;
+  memberTypeNames?: string[] | null;
+  memberTypeNamesBN?: string[] | null;
+  /** True when the caller has org-tree restrictions — FE locks status filter. */
+  orgScopeRestricted?: boolean;
+}
+
+/**
+ * Standard scope-aware report response — every employee-reports endpoint that
+ * applies org-tree + member-type scoping returns this shape. The legacy
+ * `AddressLocationReportPagedResponse` alias is kept for compatibility.
+ */
+export interface ScopedReportPagedResponse<T> extends ReportPagedResponse<T> {
+  accessibleScope?: ReportAccessibleScope | null;
+}
+
+/** @deprecated Use {@link ScopedReportPagedResponse} — kept for back-compat. */
+export type AddressLocationReportPagedResponse<T> = ScopedReportPagedResponse<T>;
+
 // ── Present Status by Mother Org monthly pivot report ───────────────────
 
 /** One dynamic column (mother org) for the monthly pivot report. */
@@ -326,6 +361,36 @@ export interface LongStayNominalRollReportParams {
   rankId?: number | null;
   postingStatus?: string | null;
   pagination: ReportPagination;
+}
+
+// ── Nominal Roll of Deceased Members ───────────────────────────────────
+
+/** Filter on Date of Death (PresentStatusInfo.Dated); both bounds optional. Mother Org + Rank optional. */
+export interface DeceasedReportParams {
+  dateFrom?: string | null;
+  dateTo?: string | null;
+  orgId?: number | null;
+  rankId?: number | null;
+  pagination: ReportPagination;
+}
+
+export interface DeceasedReportRow {
+  ser?: number;
+  serviceId?: string | null;
+  rank?: string | null;
+  rankBN?: string | null;
+  corps?: string | null;
+  corpsBN?: string | null;
+  trade?: string | null;
+  tradeBN?: string | null;
+  name?: string | null;
+  nameBN?: string | null;
+  joiningInRab?: string | null;
+  lastUnit?: string | null;
+  lastUnitBN?: string | null;
+  dateOfDeath?: string | null;
+  deceasedReason?: string | null;
+  rmks?: string | null;
 }
 
 // ── Nominal Roll of Stay in RAB after Reliever Joined ──────────────────

@@ -132,9 +132,18 @@ export class SupernumeraryList implements OnInit {
         });
     }
 
+    /**
+     * Raw rank list for the currently-selected Mother Org (with `parentCodeId`
+     * referencing the Member Type each rank belongs to). We cache the unfiltered
+     * list so changing Member Type can re-derive the dropdown without re-hitting
+     * the server.
+     */
+    private allOrgRanks: CommonCodeModel[] = [];
+
     /** Rank and Trade depend on Mother Org: when org selected, load options for that org. */
     onOrgChange(): void {
         this.rankOptions = [];
+        this.allOrgRanks = [];
         this.selectedRankId = null;
         this.tradeOptions = [];
         this.selectedTradeId = null;
@@ -142,10 +151,13 @@ export class SupernumeraryList implements OnInit {
         if (orgId != null) {
             this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'MotherOrgRank').subscribe({
                 next: (codes: CommonCodeModel[]) => {
-                    this.rankOptions = codes.map((c) => ({
-                        label: c.codeValueEN || String(c.codeId),
-                        value: c.codeId
-                    }));
+                    // Cache the unfiltered rank list, then derive the visible
+                    // options by also filtering on the current Member Type.
+                    // MotherOrgRank rows already carry parentCodeId = MemberTypeId
+                    // (see basic-setup/mother-org-rank), so the relationship is
+                    // already present in the data — we just consume it here.
+                    this.allOrgRanks = Array.isArray(codes) ? codes : [];
+                    this.rebuildRankOptions();
                 },
                 error: (err) => {
                     console.error('Failed to load ranks', err);
@@ -177,7 +189,7 @@ export class SupernumeraryList implements OnInit {
         this.loadData();
     }
 
-    /** Member Type change: validate access, then reload list. */
+    /** Member Type change: validate access, refilter ranks, then reload list. */
     onMemberTypeChange(): void {
         const codeId = this.selectedMemberTypeId;
         if (codeId != null && this.allowedMemberTypeIds !== null && !this.allowedMemberTypeIds.includes(codeId)) {
@@ -191,8 +203,35 @@ export class SupernumeraryList implements OnInit {
             this.selectedMemberTypeId = null;
             return;
         }
+        // Re-narrow the rank dropdown by the new Member Type (uses the cached
+        // raw list from the last org load — no extra HTTP call).
+        this.rebuildRankOptions();
         this.first = 0;
         this.loadData();
+    }
+
+    /**
+     * Derive the visible rank dropdown options from {@link allOrgRanks} by
+     * filtering on the current Member Type when one is selected. Drops the
+     * currently-selected rank if it isn't in the new option set.
+     */
+    private rebuildRankOptions(): void {
+        const memberTypeId = this.selectedMemberTypeId;
+        const filtered = memberTypeId == null
+            ? this.allOrgRanks
+            : this.allOrgRanks.filter((c) => c.parentCodeId === memberTypeId);
+
+        this.rankOptions = filtered.map((c) => ({
+            label: c.codeValueEN || String(c.codeId),
+            value: c.codeId
+        }));
+
+        // If the currently-selected rank no longer appears (because the user
+        // narrowed by Member Type and the previous rank doesn't belong to it),
+        // clear it so the dropdown doesn't show a stale label.
+        if (this.selectedRankId != null && !this.rankOptions.some((o) => o.value === this.selectedRankId)) {
+            this.selectedRankId = null;
+        }
     }
 
     rankOptions: { label: string; value: number }[] = [];

@@ -111,45 +111,107 @@
         background: transparent;
     }
 
-    /* Indentation for Wing and Branch */
-    .dist-row__indent1 {
-        padding-left: 1rem;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.25rem;
+    /* Body office cell needs zero vertical padding so tree connectors span full row height */
+    tbody td.dist-table__office {
+        padding-top: 0;
+        padding-bottom: 0;
+        height: 1px; /* trick so inner flex children can stretch */
     }
 
-    .dist-row__indent2 {
-        padding-left: 2rem;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.25rem;
+    /* Tree connector row */
+    .tree-row {
+        display: flex;
+        align-items: stretch;
+        min-height: 2.25rem;
+        height: 100%;
+        font-weight: inherit;
     }
 
-    .dist-row__indent3 {
-        padding-left: 3rem;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.25rem;
+    .tree-pipe,
+    .tree-connector {
+        flex: 0 0 auto;
+        width: 22px;
+        position: relative;
+        align-self: stretch;
+        /* Default line color — overridden by per-level rules below */
+        --tree-line-color: #94a3b8;
+        --tree-line-width: 2px;
     }
 
-    .dist-row__indent4 {
-        padding-left: 4rem;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.25rem;
+    /* Per-level palette (applied to pipes, connectors and markers via data-level) */
+    [data-level='0'] { --tree-line-color: #3b82f6; } /* blue   — Unit */
+    [data-level='1'] { --tree-line-color: #10b981; } /* emerald — Wing */
+    [data-level='2'] { --tree-line-color: #f59e0b; } /* amber  — Branch */
+    [data-level='3'] { --tree-line-color: #ef4444; } /* red    — Sub-Branch */
+    [data-level='4'] { --tree-line-color: #8b5cf6; } /* violet — Section */
+    [data-level='5'] { --tree-line-color: #ec4899; } /* pink   — Sub-Section */
+
+    /* Vertical pipe through ancestor column */
+    .tree-pipe::before {
+        content: '';
+        position: absolute;
+        left: 10px;
+        top: 0;
+        bottom: 0;
+        width: var(--tree-line-width);
+        background: var(--tree-line-color);
+        border-radius: 2px;
+    }
+    .tree-pipe.tree-pipe--blank::before {
+        display: none;
     }
 
-    .dist-row__indent5 {
-        padding-left: 5rem;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.25rem;
+    /* Elbow connector at current node */
+    .tree-connector::before {
+        /* vertical segment */
+        content: '';
+        position: absolute;
+        left: 10px;
+        top: 0;
+        width: var(--tree-line-width);
+        height: 50%;
+        background: var(--tree-line-color);
+        border-radius: 2px;
+    }
+    .tree-connector.tree-connector--mid::before {
+        /* ├ — vertical runs full height */
+        height: 100%;
+    }
+    .tree-connector::after {
+        /* horizontal segment to the right */
+        content: '';
+        position: absolute;
+        left: 10px;
+        top: 50%;
+        width: 12px;
+        height: var(--tree-line-width);
+        background: var(--tree-line-color);
+        border-radius: 2px;
+        transform: translateY(-50%);
     }
 
-    .dist-row__arrow {
-        opacity: 0.5;
-        font-size: 0.8em;
+    .tree-marker {
+        flex: 0 0 auto;
+        width: 18px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 6px;
+        margin-left: 2px;
+        color: var(--tree-line-color);
+    }
+    .tree-marker--parent {
+        font-size: 0.65rem;
+    }
+    .tree-marker--leaf {
+        font-size: 1.2rem;
+        line-height: 1;
+    }
+
+    .tree-label {
+        display: inline-flex;
+        align-items: center;
+        white-space: nowrap;
     }
 
     /* Editable cell */
@@ -174,7 +236,9 @@
     border: 1.5px solid var(--primary-color, #22c55e);
     border-radius: 4px;
     outline: none;
-    background: #fff;
+    background: var(--surface-card, #fff);
+    color: var(--text-color, #111);
+    caret-color: var(--text-color, #111);
 
     &:focus {
         box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);

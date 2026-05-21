@@ -18,6 +18,9 @@ import type {
   FamilyOccupationReportRow,
   AddressLocationReportParams,
   AddressLocationReportRow,
+  AddressLocationReportPagedResponse,
+  ScopedReportPagedResponse,
+  ReportAccessibleScope,
   MemberTypeServingReportParams,
   MemberTypeServingReportRow,
   ReportPagedResponse,
@@ -31,6 +34,8 @@ import type {
   LongStayNominalRollReportRow,
   StayAfterRelieverJoinedReportParams,
   StayAfterRelieverJoinedReportRow,
+  DeceasedReportParams,
+  DeceasedReportRow,
 } from '@/models/report.model';
 import type { PagedResponse } from '@/Core/Models/Pagination';
 
@@ -45,21 +50,45 @@ function normalizePages<T>(res: ReportPagedResponse<T>): PagedResponse<T> {
   };
 }
 
+/**
+ * Same as {@link normalizePages} but preserves the accessibleScope envelope
+ * shipped by scope-aware report endpoints under employee-reports. The
+ * component reads `accessibleScope` to render the unit / member-type chip
+ * and lock the PostingStatus filter when the caller is org-restricted.
+ */
+function normalizeScopedPages<T>(
+  res: ScopedReportPagedResponse<T>
+): PagedResponse<T> & { accessibleScope: ReportAccessibleScope | null } {
+  return {
+    ...normalizePages(res),
+    accessibleScope: res.accessibleScope ?? null,
+  };
+}
+
 @Injectable({ providedIn: 'root' })
 export class ReportService {
   private readonly apiUrl = `${environment.apis.core}/EmployeeInfo`;
 
   constructor(private http: HttpClient) {}
 
+  /**
+   * Returns ONLY the caller's access-scope snapshot, no report data. Used by
+   * the /employee-reports parent so it can lock its shared PostingStatus
+   * dropdown on init (before any child report has fired).
+   */
+  getMyReportAccessScope(): Observable<ReportAccessibleScope> {
+    return this.http.get<ReportAccessibleScope>(`${this.apiUrl}/GetMyReportAccessScope`);
+  }
+
   getMemberAppointmentReport(
     params: MemberAppointmentReportParams
-  ): Observable<PagedResponse<MemberAppointmentReportRow>> {
+  ): Observable<PagedResponse<MemberAppointmentReportRow> & { accessibleScope: ReportAccessibleScope | null }> {
     return this.http
-      .post<ReportPagedResponse<MemberAppointmentReportRow>>(
+      .post<ScopedReportPagedResponse<MemberAppointmentReportRow>>(
         `${this.apiUrl}/GetMemberAppointmentReport`,
         params
       )
-      .pipe(map(normalizePages));
+      .pipe(map(normalizeScopedPages));
   }
 
   getBatchCourseReport(
@@ -101,6 +130,28 @@ export class ReportService {
     return this.http
       .post<ReportPagedResponse<GenericReportRow>>(
         `${this.apiUrl}/GetOfficerTypeReport`,
+        params
+      )
+      .pipe(map(normalizePages));
+  }
+
+  getCorpsReport(
+    params: GenericReportParams
+  ): Observable<PagedResponse<GenericReportRow>> {
+    return this.http
+      .post<ReportPagedResponse<GenericReportRow>>(
+        `${this.apiUrl}/GetCorpsReport`,
+        params
+      )
+      .pipe(map(normalizePages));
+  }
+
+  getTradeReport(
+    params: GenericReportParams
+  ): Observable<PagedResponse<GenericReportRow>> {
+    return this.http
+      .post<ReportPagedResponse<GenericReportRow>>(
+        `${this.apiUrl}/GetTradeReport`,
         params
       )
       .pipe(map(normalizePages));
@@ -196,13 +247,13 @@ export class ReportService {
 
   getAddressLocationReport(
     params: AddressLocationReportParams
-  ): Observable<PagedResponse<AddressLocationReportRow>> {
+  ): Observable<PagedResponse<AddressLocationReportRow> & { accessibleScope: ReportAccessibleScope | null }> {
     return this.http
-      .post<ReportPagedResponse<AddressLocationReportRow>>(
+      .post<ScopedReportPagedResponse<AddressLocationReportRow>>(
         `${this.apiUrl}/GetAddressLocationReport`,
         params
       )
-      .pipe(map(normalizePages));
+      .pipe(map(normalizeScopedPages));
   }
 
   getMemberTypeServingReport(
@@ -262,6 +313,17 @@ export class ReportService {
     return this.http
       .post<ReportPagedResponse<StayAfterRelieverJoinedReportRow>>(
         `${this.apiUrl}/GetStayAfterRelieverJoinedReport`,
+        params
+      )
+      .pipe(map(normalizePages));
+  }
+
+  getDeceasedReport(
+    params: DeceasedReportParams
+  ): Observable<PagedResponse<DeceasedReportRow>> {
+    return this.http
+      .post<ReportPagedResponse<DeceasedReportRow>>(
+        `${this.apiUrl}/GetDeceasedReport`,
         params
       )
       .pipe(map(normalizePages));

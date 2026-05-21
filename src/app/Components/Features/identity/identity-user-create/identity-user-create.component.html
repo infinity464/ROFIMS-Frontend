@@ -162,69 +162,57 @@
             }
           </div>
           <div class="field md:col-span-2">
-            <div class="font-medium mb-1">Accessible RAB units</div>
-            <p class="text-sm text-color-secondary mb-3">Which RAB units' data should this user see?</p>
-            @if (rabUnits.length === 0) {
-              <div class="p-3 border border-surface rounded text-sm text-color-secondary">
-                No RAB units available yet. Add them from
-                <span class="font-medium">Basic Setup &rarr; RAB Unit</span>, then come back here.
-              </div>
-            } @else {
-              <div class="flex flex-col gap-2">
-                <!-- All units -->
-                <label
-                  for="rabModeAll"
-                  class="flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors"
-                  [class.border-primary]="form.get('rabUnitMode')?.value === 'all'"
-                  [class.ring-1]="form.get('rabUnitMode')?.value === 'all'"
-                  [class.ring-primary]="form.get('rabUnitMode')?.value === 'all'"
-                  [class.border-surface]="form.get('rabUnitMode')?.value !== 'all'"
-                >
-                  <p-radioButton inputId="rabModeAll" name="rabUnitMode" value="all" formControlName="rabUnitMode" />
-                  <div class="leading-tight">
-                    <div class="font-medium">All units</div>
-                    <div class="text-sm text-color-secondary">No restriction. User sees data from every unit, including ones added later.</div>
-                  </div>
-                </label>
+            <div class="font-medium mb-1">Accessible organization scope</div>
+            <p class="text-sm text-color-secondary mb-3">
+              Which org-tree nodes' data should this user see? Pick at any level —
+              Unit, Wing, Branch, Sub-Branch, Section or Sub-Section.
+              Selecting a node grants access to it and everything beneath it.
+            </p>
+            <div class="flex flex-col gap-2">
+              <!-- All units -->
+              <label
+                for="rabModeAll"
+                class="flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors"
+                [class.border-primary]="form.get('rabUnitMode')?.value === 'all'"
+                [class.ring-1]="form.get('rabUnitMode')?.value === 'all'"
+                [class.ring-primary]="form.get('rabUnitMode')?.value === 'all'"
+                [class.border-surface]="form.get('rabUnitMode')?.value !== 'all'"
+              >
+                <p-radioButton inputId="rabModeAll" name="rabUnitMode" value="all" formControlName="rabUnitMode" />
+                <div class="leading-tight">
+                  <div class="font-medium">All units</div>
+                  <div class="text-sm text-color-secondary">No restriction. User sees data from every unit, including ones added later.</div>
+                </div>
+              </label>
 
-                <!-- Specific only -->
-                <label
-                  for="rabModeSpecific"
-                  class="flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors"
-                  [class.border-primary]="form.get('rabUnitMode')?.value === 'specific'"
-                  [class.ring-1]="form.get('rabUnitMode')?.value === 'specific'"
-                  [class.ring-primary]="form.get('rabUnitMode')?.value === 'specific'"
-                  [class.border-surface]="form.get('rabUnitMode')?.value !== 'specific'"
-                >
-                  <p-radioButton inputId="rabModeSpecific" name="rabUnitMode" value="specific" formControlName="rabUnitMode" />
-                  <div class="leading-tight">
-                    <div class="font-medium">Specific units only</div>
-                    <div class="text-sm text-color-secondary">Limit access to a hand-picked set.</div>
-                  </div>
-                </label>
+              <!-- Specific only -->
+              <label
+                for="rabModeSpecific"
+                class="flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors"
+                [class.border-primary]="form.get('rabUnitMode')?.value === 'specific'"
+                [class.ring-1]="form.get('rabUnitMode')?.value === 'specific'"
+                [class.ring-primary]="form.get('rabUnitMode')?.value === 'specific'"
+                [class.border-surface]="form.get('rabUnitMode')?.value !== 'specific'"
+              >
+                <p-radioButton inputId="rabModeSpecific" name="rabUnitMode" value="specific" formControlName="rabUnitMode" />
+                <div class="leading-tight">
+                  <div class="font-medium">Specific scope only</div>
+                  <div class="text-sm text-color-secondary">Limit access to a hand-picked set of nodes at any tree level.</div>
+                </div>
+              </label>
 
-                @if (form.get('rabUnitMode')?.value === 'specific') {
-                  <div class="mt-1 p-3 rounded-lg border border-surface bg-surface-50 dark:bg-surface-800">
-                    <div class="text-sm text-color-secondary mb-2">
-                      Allowed units · {{ (form.get('rabUnitIds')?.value?.length ?? 0) }} of {{ rabUnits.length }} selected
-                    </div>
-                    <p-multiSelect
-                      inputId="rabUnitIds"
-                      formControlName="rabUnitIds"
-                      [options]="rabUnits"
-                      optionLabel="label"
-                      optionValue="value"
-                      [filter]="true"
-                      [showToggleAll]="true"
-                      display="chip"
-                      placeholder="Add a unit…"
-                      appendTo="body"
-                      styleClass="w-full"
-                    />
+              @if (form.get('rabUnitMode')?.value === 'specific') {
+                <div class="mt-1 p-3 rounded-lg border border-surface bg-surface-50 dark:bg-surface-800">
+                  <div class="text-sm text-color-secondary mb-2">
+                    Selected: {{ (form.get('rabUnitIds')?.value?.length ?? 0) }} node(s)
                   </div>
-                }
-              </div>
-            }
+                  <app-org-tree-multi-select
+                    formControlName="rabUnitIds"
+                    placeholder="Pick units, wings, branches…">
+                  </app-org-tree-multi-select>
+                </div>
+              }
+            </div>
           </div>
 
           <div class="field md:col-span-2">
@@ -323,7 +311,7 @@
           <th class="uppercase text-xs tracking-wide" style="width: 7rem">Role</th>
           <th class="uppercase text-xs tracking-wide">Mapped Employee</th>
           <th class="uppercase text-xs tracking-wide" style="width: 8rem">Type Access</th>
-          <th class="uppercase text-xs tracking-wide" style="width: 8rem">Unit Access</th>
+          <th class="uppercase text-xs tracking-wide" style="width: 8rem">Access Label</th>
           <th class="uppercase text-xs tracking-wide" style="width: 7rem">Status</th>
           <th class="uppercase text-xs tracking-wide" style="width: 9rem">Actions</th>
         </tr>
@@ -393,25 +381,31 @@
           <!-- UNIT ACCESS -->
           <td>
             @if (!user.rabUnitNames?.length) {
-              <p-tag severity="success" value="All units" pTooltip="No restriction — full RAB Unit access" tooltipPosition="top" />
-            } @else if (rabUnits.length > 0 && user.rabUnitNames.length === rabUnits.length) {
-              <p-tag
-                severity="success"
-                [value]="'All (' + user.rabUnitNames.length + ')'"
-                [pTooltip]="user.rabUnitNames.join(', ')"
-                tooltipPosition="top"
-              />
+              <p-tag severity="success" value="All units" pTooltip="No restriction — full org-tree access" tooltipPosition="top" />
             } @else {
               <div class="flex flex-wrap items-center gap-1">
-                @for (name of user.rabUnitNames.slice(0, 3); track name) {
-                  <p-tag [value]="name" severity="info" />
+                <!-- Each chip shows the leaf name; hover renders the full
+                     breadcrumb as a coloured chain (one colour per org level,
+                     separated by → arrows) via pre-rendered HTML in
+                     rabUnitPathHtml + [escape]=false on the tooltip. -->
+                @for (name of user.rabUnitNames.slice(0, 3); track $index; let i = $index) {
+                  <p-tag
+                    [value]="name"
+                    severity="info"
+                    [pTooltip]="user.rabUnitPathHtml?.[i] || (user.rabUnitPaths?.[i] ?? name)"
+                    [escape]="false"
+                    tooltipPosition="top"
+                    tooltipStyleClass="org-paths-tooltip"
+                  />
                 }
                 @if (user.rabUnitNames.length > 3) {
                   <p-tag
                     [value]="'+' + (user.rabUnitNames.length - 3) + ' more'"
                     severity="warn"
-                    [pTooltip]="user.rabUnitNames.join(', ')"
+                    [pTooltip]="user.rabUnitPathHtmlAll || ((user.rabUnitPaths?.length ? user.rabUnitPaths : user.rabUnitNames)!.join('\n'))"
+                    [escape]="false"
                     tooltipPosition="top"
+                    tooltipStyleClass="org-paths-tooltip"
                   />
                 }
               </div>
