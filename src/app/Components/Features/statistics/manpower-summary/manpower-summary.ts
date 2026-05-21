@@ -58,6 +58,9 @@ export class ManpowerSummaryComponent implements OnInit {
     /** Names of the RAB Units the user is restricted to. null/empty = full access (no scope line shown). */
     accessibleRabUnitNames: string[] | null = null;
     accessibleRabUnitNamesBN: string[] | null = null;
+    /** Names of the Member Types the user is restricted to. null/empty = full access on this axis. */
+    accessibleMemberTypeNames: string[] | null = null;
+    accessibleMemberTypeNamesBN: string[] | null = null;
 
     readonly columns = COLUMNS;
 
@@ -90,21 +93,42 @@ export class ManpowerSummaryComponent implements OnInit {
             next: (res: ManpowerSummaryResponse) => {
                 this.rows   = res.rows ?? [];
                 this.totals = res.totals ?? { auth: 0, held: 0, def: 0, sur: 0, postingIn: 0, postingOut: 0 };
-                this.accessibleRabUnitNames   = res.accessibleRabUnitNames ?? null;
-                this.accessibleRabUnitNamesBN = res.accessibleRabUnitNamesBN ?? null;
+                this.accessibleRabUnitNames      = res.accessibleRabUnitNames ?? null;
+                this.accessibleRabUnitNamesBN    = res.accessibleRabUnitNamesBN ?? null;
+                this.accessibleMemberTypeNames   = res.accessibleMemberTypeNames ?? null;
+                this.accessibleMemberTypeNamesBN = res.accessibleMemberTypeNamesBN ?? null;
                 this.loading = false;
             },
             error: () => { this.loading = false; }
         });
     }
 
-    /** Returns the comma-separated unit-scope line shown under the report title, or null when unrestricted. */
+    /**
+     * Combined scope line shown under the report title when EITHER axis is
+     * restricted. Format:
+     *   "Units: A, B, C  |  Member Types: Officer, OR"
+     * Either side is omitted when that axis is unrestricted on the caller.
+     * Returns null when the caller has no restrictions at all (full access).
+     */
     get scopeLine(): string | null {
-        const names = this.lang === 'bn'
-            ? (this.accessibleRabUnitNamesBN ?? this.accessibleRabUnitNames)
-            : this.accessibleRabUnitNames;
-        if (!names || names.length === 0) return null;
-        return names.join(', ');
+        const bn = this.lang === 'bn';
+        const unitNames = (bn ? this.accessibleRabUnitNamesBN : this.accessibleRabUnitNames)
+            ?? this.accessibleRabUnitNames;
+        const memberTypeNames = (bn ? this.accessibleMemberTypeNamesBN : this.accessibleMemberTypeNames)
+            ?? this.accessibleMemberTypeNames;
+
+        const parts: string[] = [];
+        // Unit names go in bare — the picked node name (e.g. "General Br") is
+        // self-describing and the redundant "Units:" prefix was just visual noise
+        // per the latest design pass.
+        if (unitNames && unitNames.length > 0) {
+            parts.push(unitNames.join(', '));
+        }
+        if (memberTypeNames && memberTypeNames.length > 0) {
+            const label = bn ? 'সদস্য ধরণ' : 'Member Types';
+            parts.push(`${label}: ${memberTypeNames.join(', ')}`);
+        }
+        return parts.length === 0 ? null : parts.join('  |  ');
     }
 
     toggleLang(): void {

@@ -236,7 +236,9 @@
     border: 1.5px solid var(--primary-color, #22c55e);
     border-radius: 4px;
     outline: none;
-    background: #fff;
+    background: var(--surface-card, #fff);
+    color: var(--text-color, #111);
+    caret-color: var(--text-color, #111);
 
     &:focus {
         box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);

@@ -32,6 +32,10 @@ export interface ManpowerSummaryResponse {
     accessibleRabUnitNames?: string[] | null;
     /** Bangla names paired with accessibleRabUnitNames. */
     accessibleRabUnitNamesBN?: string[] | null;
+    /** Names (EN) of the Member Types the user is restricted to. null = unrestricted. */
+    accessibleMemberTypeNames?: string[] | null;
+    /** Bangla names paired with accessibleMemberTypeNames. */
+    accessibleMemberTypeNamesBN?: string[] | null;
 }
 
 export interface RankWiseRankRow {
@@ -62,6 +66,10 @@ export interface RankWiseManpowerResponse {
     accessibleRabUnitNames?: string[] | null;
     /** Bangla names paired with accessibleRabUnitNames. */
     accessibleRabUnitNamesBN?: string[] | null;
+    /** Names (EN) of the Member Types the user is restricted to. null = unrestricted. */
+    accessibleMemberTypeNames?: string[] | null;
+    /** Bangla names paired with accessibleMemberTypeNames. */
+    accessibleMemberTypeNamesBN?: string[] | null;
 }
 
 export interface MotherUnitOrgOption {
@@ -96,6 +104,10 @@ export interface MotherUnitWiseManpowerResponse {
     accessibleRabUnitNames?: string[] | null;
     /** Bangla names paired with accessibleRabUnitNames. */
     accessibleRabUnitNamesBN?: string[] | null;
+    /** Names (EN) of the Member Types the user is restricted to. null = unrestricted. */
+    accessibleMemberTypeNames?: string[] | null;
+    /** Bangla names paired with accessibleMemberTypeNames. */
+    accessibleMemberTypeNamesBN?: string[] | null;
 }
 
 export interface CorpsRow {
@@ -132,6 +144,10 @@ export interface TradeWiseManpowerResponse {
     accessibleRabUnitNames?: string[] | null;
     /** Bangla names paired with accessibleRabUnitNames. */
     accessibleRabUnitNamesBN?: string[] | null;
+    /** Names (EN) of the Member Types the user is restricted to. null = unrestricted. */
+    accessibleMemberTypeNames?: string[] | null;
+    /** Bangla names paired with accessibleMemberTypeNames. */
+    accessibleMemberTypeNamesBN?: string[] | null;
 }
 
 export interface MemberTypeOption {
@@ -203,6 +219,10 @@ export interface MemberTypeWiseManpowerResponse {
     accessibleRabUnitNames?: string[] | null;
     /** Bangla names paired with accessibleRabUnitNames. */
     accessibleRabUnitNamesBN?: string[] | null;
+    /** Names (EN) of the Member Types the user is restricted to. null = unrestricted. */
+    accessibleMemberTypeNames?: string[] | null;
+    /** Bangla names paired with accessibleMemberTypeNames. */
+    accessibleMemberTypeNamesBN?: string[] | null;
 }
 
 export interface UnitRankColumn {
@@ -247,6 +267,10 @@ export interface CorpsWiseManpowerResponse {
     accessibleRabUnitNames?: string[] | null;
     /** Bangla names paired with accessibleRabUnitNames. */
     accessibleRabUnitNamesBN?: string[] | null;
+    /** Names (EN) of the Member Types the user is restricted to. null = unrestricted. */
+    accessibleMemberTypeNames?: string[] | null;
+    /** Bangla names paired with accessibleMemberTypeNames. */
+    accessibleMemberTypeNamesBN?: string[] | null;
 }
 
 @Injectable({ providedIn: 'root' })

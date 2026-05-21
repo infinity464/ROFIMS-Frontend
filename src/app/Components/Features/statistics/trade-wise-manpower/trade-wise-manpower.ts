@@ -56,6 +56,9 @@ export class TradeWiseManpowerComponent implements OnInit {
     /** Names of the RAB Units the user is restricted to. null/empty = full access. */
     accessibleRabUnitNames: string[] | null = null;
     accessibleRabUnitNamesBN: string[] | null = null;
+    /** Names of the Member Types the user is restricted to. null/empty = full access on this axis. */
+    accessibleMemberTypeNames: string[] | null = null;
+    accessibleMemberTypeNamesBN: string[] | null = null;
 
     private static readonly EN_MONTHS = [
         'JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE',
@@ -110,6 +113,8 @@ export class TradeWiseManpowerComponent implements OnInit {
             this.grandTotal = 0;
             this.accessibleRabUnitNames = null;
             this.accessibleRabUnitNamesBN = null;
+            this.accessibleMemberTypeNames = null;
+            this.accessibleMemberTypeNamesBN = null;
             return;
         }
         this.loading = true;
@@ -125,8 +130,10 @@ export class TradeWiseManpowerComponent implements OnInit {
                     .filter((r): r is TradeWiseManpowerResponse => r != null);
                 // RAB-unit scope is the same across calls — take it from the first non-null response.
                 const first = this.filteredOrgs[0];
-                this.accessibleRabUnitNames   = first?.accessibleRabUnitNames   ?? null;
-                this.accessibleRabUnitNamesBN = first?.accessibleRabUnitNamesBN ?? null;
+                this.accessibleRabUnitNames      = first?.accessibleRabUnitNames      ?? null;
+                this.accessibleRabUnitNamesBN    = first?.accessibleRabUnitNamesBN    ?? null;
+                this.accessibleMemberTypeNames   = first?.accessibleMemberTypeNames   ?? null;
+                this.accessibleMemberTypeNamesBN = first?.accessibleMemberTypeNamesBN ?? null;
                 this.grandTotal = this.filteredOrgs.reduce((sum, o) => sum + (o.grandTotal ?? 0), 0);
                 this.loading = false;
             },
@@ -134,13 +141,27 @@ export class TradeWiseManpowerComponent implements OnInit {
         });
     }
 
-    /** Comma-separated unit-scope line shown under the report title; null when unrestricted. */
+    /**
+     * Combined scope line shown under the report title when EITHER axis is
+     * restricted. Either side is omitted when that axis is unrestricted.
+     * Returns null when the caller has no restrictions at all.
+     */
     get scopeLine(): string | null {
-        const names = this.lang === 'bn'
-            ? (this.accessibleRabUnitNamesBN ?? this.accessibleRabUnitNames)
-            : this.accessibleRabUnitNames;
-        if (!names || names.length === 0) return null;
-        return names.join(', ');
+        const bn = this.lang === 'bn';
+        const unitNames = (bn ? this.accessibleRabUnitNamesBN : this.accessibleRabUnitNames)
+            ?? this.accessibleRabUnitNames;
+        const memberTypeNames = (bn ? this.accessibleMemberTypeNamesBN : this.accessibleMemberTypeNames)
+            ?? this.accessibleMemberTypeNames;
+
+        const parts: string[] = [];
+        if (unitNames && unitNames.length > 0) {
+            parts.push(unitNames.join(', '));
+        }
+        if (memberTypeNames && memberTypeNames.length > 0) {
+            const label = bn ? 'সদস্য ধরণ' : 'Member Types';
+            parts.push(`${label}: ${memberTypeNames.join(', ')}`);
+        }
+        return parts.length === 0 ? null : parts.join('  |  ');
     }
 
     toggleLang(): void { this.lang = this.lang === 'en' ? 'bn' : 'en'; }
