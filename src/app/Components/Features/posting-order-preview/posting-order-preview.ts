@@ -1118,6 +1118,13 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                     next: (res) => {
                         this.removingEmployeeId = null;
                         if (res.statusCode === 200) {
+                            // If no members remain after removal, navigate back
+                            const remaining = this.editEmployees.filter(e => e.employeeId !== emp.employeeId);
+                            if (remaining.length === 0) {
+                                this.messageService.add({ severity: 'info', summary: 'Empty', detail: 'No members remaining. Returning to previous page.' });
+                                setTimeout(() => window.history.back(), 800);
+                                return;
+                            }
                             this.messageService.add({ severity: 'success', summary: 'Removed', detail: `${name} removed from posting order.` });
                             this.loadOrder(this.currentOrderId!);
                         } else {
