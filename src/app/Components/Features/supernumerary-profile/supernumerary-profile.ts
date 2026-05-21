@@ -209,18 +209,47 @@ export class SupernumeraryProfile implements OnInit, OnDestroy {
         if (this.employeeId == null) return;
         const id = this.employeeId;
         this.loading = true;
+
+        // Gate on the access-checked overview call first — backend returns 404
+        // when the caller is out of scope. We must NOT fan out the supernumerary
+        // profile / posting-status / document calls when access is denied
+        // (those endpoints don't currently re-check access and would leak data
+        // into the Network tab).
+        this.servingMembersService.getEmployeePersonalServiceOverview(id).subscribe({
+            next: (overview) => {
+                if (!overview) {
+                    this.profile = null;
+                    this.serviceOverview = null;
+                    this.onError('This profile is not available or you do not have access to it.');
+                    this.loading = false;
+                    return;
+                }
+                this.serviceOverview = overview;
+                this.loadSupernumeraryDetails(id);
+            },
+            error: (err) => {
+                this.profile = null;
+                this.serviceOverview = null;
+                if (err?.status === 404 || err?.status === 403) {
+                    this.onError('This profile is not available or you do not have access to it.');
+                } else {
+                    console.error('Failed to load profile', err);
+                    this.onError(err?.error?.message || 'Failed to load profile');
+                }
+                this.loading = false;
+            }
+        });
+    }
+
+    private loadSupernumeraryDetails(id: number): void {
         forkJoin({
             profile: this.employeeListService.getSupernumeraryEmpProfile(id),
-            overview: this.servingMembersService.getEmployeePersonalServiceOverview(id).pipe(
-                catchError(() => of(null))
-            ),
             postingStatus: this.postingService.getEmployeePostingProcessingStatus(id).pipe(
                 catchError(() => of(null as EmployeePostingProcessingStatusDto | null))
             )
         }).subscribe({
-            next: ({ profile, overview, postingStatus }) => {
+            next: ({ profile, postingStatus }) => {
                 this.profile = profile ?? null;
-                this.serviceOverview = overview ?? null;
                 this.postingProcessingStatus = postingStatus ?? null;
                 this.loadProfileImage(this.profile);
                 this.relieverTableRows = this.buildRelieverTableRows(this.profile);
@@ -228,11 +257,11 @@ export class SupernumeraryProfile implements OnInit, OnDestroy {
                 this.loading = false;
             },
             error: (err) => {
-                console.error('Failed to load profile', err);
+                console.error('Failed to load supernumerary details', err);
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: err?.error?.message || 'Failed to load profile'
+                    detail: err?.error?.message || 'Failed to load profile details'
                 });
                 this.loading = false;
             }
