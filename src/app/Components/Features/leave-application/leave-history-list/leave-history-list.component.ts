@@ -8,6 +8,7 @@ import { LeaveApplicationService, LeaveApplicationModel, LeaveApplicationFilterP
 import { UserMenuService } from '@/services/user-menu.service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { CommonCodeService } from '@/services/common-code-service';
+import { ServingMembersService } from '@/services/serving-members.service';
 import { MessageService } from 'primeng/api';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
@@ -84,6 +85,16 @@ export class LeaveHistoryListComponent implements OnInit {
     profQualNameMap: Record<number, string> = {};
     leaveTypeNameMap: Record<number, string> = {};
 
+    /**
+     * RAB Unit name per applicant — lazy-fetched from vw_EmployeePersonalServiceOverview
+     * (same source as leave-card). The legacy `motherOrganization` field on
+     * EmployeeInfo/GetAll doesn't exist (it's `OrgId` there), so the prior
+     * `employeeUnitIdMap → unitNameMap` lookup always missed and the column
+     * rendered as '-'. We now populate this map after each page load via
+     * one /GetEmployeePersonalServiceOverview/{id} call per visible applicant.
+     */
+    rabUnitNameMap: Record<number, string> = {};
+
     constructor(
         private http: HttpClient,
         private router: Router,
@@ -91,6 +102,7 @@ export class LeaveHistoryListComponent implements OnInit {
         private leaveAppService: LeaveApplicationService,
         private masterBasicSetup: MasterBasicSetupService,
         private commonCodeService: CommonCodeService,
+        private servingMembersService: ServingMembersService,
         private messageService: MessageService,
         private _userMenuService: UserMenuService
     ) {}
@@ -249,6 +261,7 @@ export class LeaveHistoryListComponent implements OnInit {
                 this.currentList = res.datalist ?? [];
                 this.totalRecords = res.pages?.rows ?? 0;
                 this.loading = false;
+                this.loadRabUnitNamesForApplicants();
             },
             error: () => {
                 this.currentList = [];
@@ -256,6 +269,31 @@ export class LeaveHistoryListComponent implements OnInit {
                 this.loading = false;
                 this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load history.' });
             }
+        });
+    }
+
+    /**
+     * Resolves the RAB Unit name for every applicant on the current page via
+     * vw_EmployeePersonalServiceOverview — same source as leave-card. Skips
+     * any applicant whose unit name is already cached so we don't re-fetch
+     * across page changes. Falls back silently on per-row error so one bad
+     * id doesn't blank the column for the whole page.
+     */
+    private loadRabUnitNamesForApplicants(): void {
+        const uniqueIds = Array.from(new Set(
+            (this.currentList ?? [])
+                .map((row) => row.applicantEmployeeId)
+                .filter((id): id is number => id != null && !(id in this.rabUnitNameMap))
+        ));
+        uniqueIds.forEach((id) => {
+            this.servingMembersService.getEmployeePersonalServiceOverview(id).subscribe({
+                next: (overview: any) => {
+                    if (!overview) return;
+                    const name = String(overview.rabUnit ?? overview.RABUnit ?? '').trim();
+                    if (name) this.rabUnitNameMap[id] = name;
+                },
+                error: () => { /* silent — column shows '-' for this row */ }
+            });
         });
     }
 
@@ -298,8 +336,10 @@ export class LeaveHistoryListComponent implements OnInit {
 
     getApplicantUnit(empId: number | null | undefined): string {
         if (empId == null) return '-';
-        const orgId = this.employeeUnitIdMap[empId];
-        return orgId == null ? '-' : (this.unitNameMap[orgId] ?? String(orgId));
+        // RAB Unit comes from vw_EmployeePersonalServiceOverview (same source
+        // leave-card uses). Falls back to '-' until the per-applicant fetch
+        // resolves; the table re-renders when the map updates.
+        return this.rabUnitNameMap[empId] || '-';
     }
 
     getApplicantAppointment(empId: number | null | undefined): string {
