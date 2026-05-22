@@ -258,13 +258,13 @@ export class ReportService {
 
   getMemberTypeServingReport(
     params: MemberTypeServingReportParams
-  ): Observable<PagedResponse<MemberTypeServingReportRow>> {
+  ): Observable<PagedResponse<MemberTypeServingReportRow> & { accessibleScope: ReportAccessibleScope | null }> {
     return this.http
-      .post<ReportPagedResponse<MemberTypeServingReportRow>>(
+      .post<ScopedReportPagedResponse<MemberTypeServingReportRow>>(
         `${this.apiUrl}/GetMemberTypeServingReport`,
         params
       )
-      .pipe(map(normalizePages));
+      .pipe(map(normalizeScopedPages));
   }
 
   getPresentStatusByMotherOrgReport(

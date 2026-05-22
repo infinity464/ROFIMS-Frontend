@@ -9,6 +9,7 @@ import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { PostingService } from '@/services/posting.service';
 import { CommonCodeService } from '@/services/common-code-service';
+import { ReportService } from '@/services/report.service';
 import { ExportService } from '@/services/export.service';
 import { UserMenuService } from '@/services/user-menu.service';
 import { REPORT_LABELS, type ReportLang } from '@/Core/i18n/report-labels';
@@ -16,6 +17,8 @@ import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import type { PendingPostingJoiningDto } from '@/models/posting.model';
 import type { CommonCodeModel } from '@/models/common-code-model';
 import type { MotherOrganizationModel } from '@/models/mother-org-model';
+import type { ReportAccessibleScope } from '@/models/report.model';
+import { unitScopeLine, memberTypeScopeLine, buildScopeExportLines } from '../report-scope.helper';
 
 @Component({
     selector: 'app-report-pending-inter-posting',
@@ -53,6 +56,13 @@ export class ReportPendingInterPostingComponent implements OnInit {
     exporting = false;
     appliedFilterLines: string[] = [];
 
+    /** Backend's access-scope snapshot. The pending-list endpoint applies the
+     *  same scope filter server-side, so this is only used for the chip UI +
+     *  preDateLines treatment on Print/PDF/Word/Excel exports. */
+    accessibleScope: ReportAccessibleScope | null = null;
+    get unitScopeLine(): string | null { return unitScopeLine(this.accessibleScope, this.lang); }
+    get memberTypeScopeLine(): string | null { return memberTypeScopeLine(this.accessibleScope, this.lang); }
+
     filterOpen = true;
 
     constructor(
@@ -60,6 +70,7 @@ export class ReportPendingInterPostingComponent implements OnInit {
         private _userMenuService: UserMenuService,
         private postingService: PostingService,
         private commonCodeService: CommonCodeService,
+        private reportService: ReportService,
         private messageService: MessageService,
         private exportService: ExportService
     ) {}
@@ -74,6 +85,13 @@ export class ReportPendingInterPostingComponent implements OnInit {
         this.canInsert = _perms.canInsert;
         this.canUpdate = _perms.canUpdate;
         this.canDelete = _perms.canDelete;
+
+        // Fetch the caller's access-scope snapshot — drives the chip + export
+        // headers. The list endpoint applies the same scope filter server-side.
+        this.reportService.getMyReportAccessScope().subscribe({
+            next: (scope) => { this.accessibleScope = scope ?? null; },
+            error: () => { /* silent — chip stays hidden on failure */ },
+        });
 
         this.loadMotherOrgs();
         this.loadRabUnits();
@@ -216,13 +234,16 @@ export class ReportPendingInterPostingComponent implements OnInit {
     async exportAs(type: 'print' | 'pdf' | 'word' | 'excel'): Promise<void> {
         this.exportDropdownOpen = false;
         const { columns, rows } = this.getExportData();
+        const { preDateLines, filterLines } = buildScopeExportLines(this.accessibleScope, this.lang, this.appliedFilterLines);
         const config = {
             title: this.reportTitle,
             lang: this.lang,
             columns,
             rows,
             showPageNumbers: true,
-            filterLines: this.appliedFilterLines,
+            landscape: true,
+            preDateLines,
+            filterLines,
         };
         if (type === 'pdf') {
             this.exporting = true;

@@ -242,7 +242,13 @@
             <!-- Row 2: centered two-line title -->
             <div class="report-header-title-block">
                 <div class="report-main-title">{{ reportTitle }}</div>
+                @if (unitScopeLine) {
+                    <div class="report-scope-line">{{ unitScopeLine }}</div>
+                }
                 <div class="report-date-line">{{ dateLine }}</div>
+                @if (memberTypeScopeLine) {
+                    <div class="report-scope-line">{{ memberTypeScopeLine }}</div>
+                }
                 @if (appliedFilterLines.length > 0) {
                     <div class="report-filter-summary">
                         @for (line of appliedFilterLines; track line) {
