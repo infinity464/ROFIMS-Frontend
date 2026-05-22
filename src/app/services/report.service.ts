@@ -287,24 +287,24 @@ export class ReportService {
 
   getUnitDurationNominalRollReport(
     params: UnitDurationNominalRollReportParams
-  ): Observable<PagedResponse<UnitDurationNominalRollReportRow>> {
+  ): Observable<PagedResponse<UnitDurationNominalRollReportRow> & { accessibleScope: ReportAccessibleScope | null }> {
     return this.http
-      .post<ReportPagedResponse<UnitDurationNominalRollReportRow>>(
+      .post<ScopedReportPagedResponse<UnitDurationNominalRollReportRow>>(
         `${this.apiUrl}/GetUnitDurationNominalRollReport`,
         params
       )
-      .pipe(map(normalizePages));
+      .pipe(map(normalizeScopedPages));
   }
 
   getLongStayNominalRollReport(
     params: LongStayNominalRollReportParams
-  ): Observable<PagedResponse<LongStayNominalRollReportRow>> {
+  ): Observable<PagedResponse<LongStayNominalRollReportRow> & { accessibleScope: ReportAccessibleScope | null }> {
     return this.http
-      .post<ReportPagedResponse<LongStayNominalRollReportRow>>(
+      .post<ScopedReportPagedResponse<LongStayNominalRollReportRow>>(
         `${this.apiUrl}/GetLongStayNominalRollReport`,
         params
       )
-      .pipe(map(normalizePages));
+      .pipe(map(normalizeScopedPages));
   }
 
   getStayAfterRelieverJoinedReport(

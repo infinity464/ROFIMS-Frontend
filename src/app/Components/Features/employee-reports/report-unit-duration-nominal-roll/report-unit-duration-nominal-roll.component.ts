@@ -18,7 +18,9 @@ import type { MotherOrganizationModel } from '@/models/mother-org-model';
 import type {
     UnitDurationNominalRollReportParams,
     UnitDurationNominalRollReportRow,
+    ReportAccessibleScope,
 } from '@/models/report.model';
+import { unitScopeLine, memberTypeScopeLine, buildScopeExportLines } from '../report-scope.helper';
 
 type Lang = 'en' | 'bn';
 
@@ -66,6 +68,16 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
     exporting = false;
     appliedFilterLines: string[] = [];
 
+    /**
+     * Backend's access-scope snapshot. Unit chip shows above the date, member-
+     * type chip below. The data query is also scoped server-side via the same
+     * org-tree closure + member-type allowlist — picking a RAB Unit outside
+     * the user's scope yields zero rows on purpose.
+     */
+    accessibleScope: ReportAccessibleScope | null = null;
+    get unitScopeLine(): string | null { return unitScopeLine(this.accessibleScope, this.lang); }
+    get memberTypeScopeLine(): string | null { return memberTypeScopeLine(this.accessibleScope, this.lang); }
+
     filterOpen = true;
 
     constructor(
@@ -91,6 +103,14 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
         const now = new Date();
         this.fromDate = new Date(now.getFullYear(), 0, 1);
         this.toDate = new Date(now.getFullYear(), 11, 31);
+
+        // Fetch scope eagerly so the chip shows under the title before any
+        // search runs (the data load also sets accessibleScope but doesn't
+        // fire on init).
+        this.reportService.getMyReportAccessScope().subscribe({
+            next: (scope) => { this.accessibleScope = scope ?? null; },
+            error: () => { /* silent — chip stays hidden on failure */ },
+        });
 
         this.loadRabUnits();
         this.loadMotherOrgs();
@@ -263,6 +283,7 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
             next: (res) => {
                 this.list = res.datalist ?? [];
                 this.totalRecords = res.pages?.rows ?? 0;
+                this.accessibleScope = res.accessibleScope ?? null;
                 this.loading = false;
             },
             error: (err) => {
@@ -305,14 +326,16 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
     async exportAs(type: 'print' | 'pdf' | 'word' | 'excel'): Promise<void> {
         this.exportDropdownOpen = false;
         const { columns, rows } = this.getExportData();
+        const { preDateLines, filterLines } = buildScopeExportLines(this.accessibleScope, this.lang, this.appliedFilterLines);
         const config = {
             title: this.reportTitle,
             lang: this.lang,
             columns,
             rows,
             showPageNumbers: true,
-            filterLines: this.appliedFilterLines,
             landscape: true,
+            preDateLines,
+            filterLines,
             filename: 'unit-duration-nominal-roll',
         };
         if (type === 'pdf') {

@@ -16,9 +16,11 @@ import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import type {
     LongStayNominalRollReportParams,
     LongStayNominalRollReportRow,
+    ReportAccessibleScope,
 } from '@/models/report.model';
 import type { CommonCodeModel } from '@/models/common-code-model';
 import type { MotherOrganizationModel } from '@/models/mother-org-model';
+import { unitScopeLine, memberTypeScopeLine, buildScopeExportLines } from '../report-scope.helper';
 
 type Lang = 'en' | 'bn';
 
@@ -67,6 +69,11 @@ export class ReportLongStayNominalRollComponent implements OnInit {
     exporting = false;
     appliedFilterLines: string[] = [];
 
+    /** Caller's access-scope snapshot. Unit chip above the date, member-type below. */
+    accessibleScope: ReportAccessibleScope | null = null;
+    get unitScopeLine(): string | null { return unitScopeLine(this.accessibleScope, this.lang); }
+    get memberTypeScopeLine(): string | null { return memberTypeScopeLine(this.accessibleScope, this.lang); }
+
     filterOpen = true;
 
     constructor(
@@ -88,6 +95,12 @@ export class ReportLongStayNominalRollComponent implements OnInit {
         this.canInsert = _perms.canInsert;
         this.canUpdate = _perms.canUpdate;
         this.canDelete = _perms.canDelete;
+
+        // Fetch scope eagerly so the chip shows under the title before any search.
+        this.reportService.getMyReportAccessScope().subscribe({
+            next: (scope) => { this.accessibleScope = scope ?? null; },
+            error: () => { /* silent — chip stays hidden on failure */ },
+        });
 
         this.loadMotherOrgs();
     }
@@ -243,6 +256,7 @@ export class ReportLongStayNominalRollComponent implements OnInit {
             next: (res) => {
                 this.list = res.datalist ?? [];
                 this.totalRecords = res.pages?.rows ?? 0;
+                this.accessibleScope = res.accessibleScope ?? null;
                 this.loading = false;
             },
             error: (err) => {
@@ -290,14 +304,16 @@ export class ReportLongStayNominalRollComponent implements OnInit {
     async exportAs(type: 'print' | 'pdf' | 'word' | 'excel'): Promise<void> {
         this.exportDropdownOpen = false;
         const { columns, rows } = this.getExportData();
+        const { preDateLines, filterLines } = buildScopeExportLines(this.accessibleScope, this.lang, this.appliedFilterLines);
         const config = {
             title: this.reportTitle,
             lang: this.lang,
             columns,
             rows,
             showPageNumbers: true,
-            filterLines: this.appliedFilterLines,
             landscape: true,
+            preDateLines,
+            filterLines,
             filename: 'long-stay-nominal-roll',
         };
         if (type === 'pdf') {
