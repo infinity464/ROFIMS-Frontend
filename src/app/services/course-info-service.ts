@@ -48,16 +48,12 @@ export interface CourseInfoModel {
     filesReferences?: string | null;
 }
 
-/** Filter params for GetEmployeesNotCompletedByCourseName (server-side). */
+/** Filter params for the Select Employee RFTS autocomplete (server-side search). */
 export interface EmployeeCourseFilterParams {
-    serviceId?: string;
-    rabId?: string;
-    motherOrganization?: string;
-    rank?: string;
-    corps?: string;
-    trade?: string;
-    joiningDateFrom?: string; // yyyy-MM-dd
-    joiningDateTo?: string;
+    /** Free-text — matched against Name / Service ID / RAB ID server-side. */
+    query?: string;
+    /** Hard cap on rows returned. Server default 50, max 200. */
+    take?: number;
 }
 
 @Injectable({
@@ -89,19 +85,20 @@ export class CourseInfoService {
         return this.http.delete(`${this.apiUrl}/DeleteAsyn/${employeeId}/${courseId}`);
     }
 
-    /** Gets employees who have NOT completed the specified course (by CourseName CommonCode id). Server-side filter optional. */
+    /**
+     * Server-side autocomplete search for employees. Backend returns up to
+     * `take` rows (default 50) whose Name / ServiceId / RAB ID contains
+     * `query`. Empty query returns an empty list — the dropdown only fires
+     * once the user types at least one character (the table has ~50k rows).
+     * Ex-members are always excluded; the caller's member-type access scope
+     * is applied server-side.
+     */
     getEmployeesNotCompletedByCourseName(courseNameId: number, filter?: EmployeeCourseFilterParams): Observable<EmployeeSearchInfoModel[]> {
         let url = `${this.apiUrl}/GetEmployeesNotCompletedByCourseName/${courseNameId}`;
         if (filter) {
             const p = new URLSearchParams();
-            if (filter.serviceId?.trim()) p.set('serviceId', filter.serviceId.trim());
-            if (filter.rabId?.trim()) p.set('rabId', filter.rabId.trim());
-            if (filter.motherOrganization?.trim()) p.set('motherOrganization', filter.motherOrganization.trim());
-            if (filter.rank?.trim()) p.set('rank', filter.rank.trim());
-            if (filter.corps?.trim()) p.set('corps', filter.corps.trim());
-            if (filter.trade?.trim()) p.set('trade', filter.trade.trim());
-            if (filter.joiningDateFrom) p.set('joiningDateFrom', filter.joiningDateFrom);
-            if (filter.joiningDateTo) p.set('joiningDateTo', filter.joiningDateTo);
+            if (filter.query?.trim()) p.set('query', filter.query.trim());
+            if (filter.take != null) p.set('take', String(filter.take));
             const qs = p.toString();
             if (qs) url += '?' + qs;
         }
