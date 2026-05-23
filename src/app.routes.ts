@@ -83,6 +83,8 @@ import { EmpRankConfirmationComponent } from '@/Components/Features/Emp/emp-rank
 import { EmpEducationInfoComponent } from '@/Components/Features/Emp/emp-education-info/emp-education-info';
 import { EmpCourseInfoComponent } from '@/Components/Features/Emp/emp-course-info/emp-course-info';
 import { EmpSendToCourseComponent } from '@/Components/Features/Emp/emp-send-to-course/emp-send-to-course';
+import { EmpDraftListComponent } from '@/Components/Features/Emp/emp-draft-list/emp-draft-list';
+import { EmpRftsCompletedComponent } from '@/Components/Features/Emp/emp-rfts-completed/emp-rfts-completed';
 import { EmpDisciplineInfoComponent } from '@/Components/Features/Emp/emp-discipline-info/emp-discipline-info';
 import { EmpBankAccount } from '@/Components/Features/Emp/emp-bank-account/emp-bank-account.component';
 import { EmpForeignVisit } from '@/Components/Features/Emp/emp-foreign-visit/emp-foreign-visit.component';
@@ -164,6 +166,7 @@ import { MyLoginAuditComponent } from '@/Components/Features/my-login-audit/my-l
 import { SessionPolicyComponent } from '@/Components/Features/settings/session-policy/session-policy.component';
 import { EmployeeReportsComponent } from '@/Components/Features/employee-reports/employee-reports.component';
 import { ReportFamilyOccupationComponent } from '@/Components/Features/employee-reports/report-family-occupation/report-family-occupation.component';
+import { ReportRftsCompletionComponent } from '@/Components/Features/employee-reports/report-rfts-completion/report-rfts-completion.component';
 import { ReportAddressLocationComponent } from '@/Components/Features/employee-reports/report-address-location/report-address-location.component';
 import { ReportMemberTypeServingComponent } from '@/Components/Features/employee-reports/report-member-type-serving/report-member-type-serving.component';
 import { ReportPendingInterPostingComponent } from '@/Components/Features/employee-reports/report-pending-inter-posting/report-pending-inter-posting.component';
@@ -343,6 +346,8 @@ export const appRoutes: Routes = [
             { path: 'emp-education-info', component: EmpEducationInfoComponent, canActivate: [MemberTypePermissionGuard] },
             { path: 'emp-course-info', component: EmpCourseInfoComponent, canActivate: [MemberTypePermissionGuard] },
             { path: 'emp-send-to-course', component: EmpSendToCourseComponent, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-draft-list', component: EmpDraftListComponent, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-rfts-completed', component: EmpRftsCompletedComponent, canActivate: [MemberTypePermissionGuard] },
             { path: 'emp-discipline-info', component: EmpDisciplineInfoComponent, canActivate: [MemberTypePermissionGuard] },
             { path: 'emp-bank-account', component: EmpBankAccount, canActivate: [MemberTypePermissionGuard] },
             { path: 'emp-foreign-visit', component: EmpForeignVisit, canActivate: [MemberTypePermissionGuard] },
@@ -391,6 +396,7 @@ export const appRoutes: Routes = [
             // Employee Reports
             { path: 'employee-reports', component: EmployeeReportsComponent },
             { path: 'report-family-occupation', component: ReportFamilyOccupationComponent },
+            { path: 'report-rfts-completion', component: ReportRftsCompletionComponent },
             { path: 'report-address-location', component: ReportAddressLocationComponent },
             { path: 'member-type-reporting', component: ReportMemberTypeServingComponent },
             { path: 'report-pending-inter-posting', component: ReportPendingInterPostingComponent },

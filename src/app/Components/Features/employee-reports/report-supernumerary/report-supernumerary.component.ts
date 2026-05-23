@@ -9,6 +9,7 @@ import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { EmployeeListService, GetSupernumeraryListRequest } from '@/services/employee-list.service';
 import { CommonCodeService } from '@/services/common-code-service';
+import { ReportService } from '@/services/report.service';
 import { ExportService } from '@/services/export.service';
 import { UserMenuService } from '@/services/user-menu.service';
 import { REPORT_LABELS, type ReportLang } from '@/Core/i18n/report-labels';
@@ -16,6 +17,7 @@ import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import type { EmployeeList } from '@/models/employee-list.model';
 import type { MotherOrganizationModel } from '@/models/mother-org-model';
 import type { CommonCodeModel } from '@/models/common-code-model';
+import type { ReportAccessibleScope } from '@/models/report.model';
 
 @Component({
     selector: 'app-report-supernumerary',
@@ -53,6 +55,24 @@ export class ReportSupernumeraryComponent implements OnInit {
     exporting = false;
     appliedFilterLines: string[] = [];
 
+    /**
+     * Member-type access-scope snapshot from /GetMyReportAccessScope. The
+     * supernumerary list backend already filters server-side; this is only
+     * used to render the chip under the title + the preDateLines treatment
+     * on exports. No unit chip is shown — supernumeraries have no RAB
+     * placement yet, so org-tree scope doesn't apply.
+     */
+    accessibleScope: ReportAccessibleScope | null = null;
+
+    get memberTypeScopeLine(): string | null {
+        const names = (this.lang === 'bn'
+            ? this.accessibleScope?.memberTypeNamesBN
+            : this.accessibleScope?.memberTypeNames) ?? this.accessibleScope?.memberTypeNames;
+        if (!names || names.length === 0) return null;
+        const label = this.lang === 'bn' ? 'সদস্য ধরণ' : 'Member Types';
+        return `${label}: ${names.join(', ')}`;
+    }
+
     filterOpen = true;
 
     constructor(
@@ -60,6 +80,7 @@ export class ReportSupernumeraryComponent implements OnInit {
         private _userMenuService: UserMenuService,
         private employeeListService: EmployeeListService,
         private commonCodeService: CommonCodeService,
+        private reportService: ReportService,
         private messageService: MessageService,
         private exportService: ExportService
     ) {}
@@ -75,6 +96,13 @@ export class ReportSupernumeraryComponent implements OnInit {
         this.canUpdate = _perms.canUpdate;
         this.canDelete = _perms.canDelete;
 
+        // Fetch the caller's access-scope snapshot for the chip + export header.
+        // Backend already filters server-side; this is purely presentational.
+        this.reportService.getMyReportAccessScope().subscribe({
+            next: (scope) => { this.accessibleScope = scope ?? null; },
+            error: () => { /* silent — chip stays hidden on failure */ },
+        });
+
         this.loadOrgs();
         this.loadMemberTypes();
     }
@@ -87,7 +115,10 @@ export class ReportSupernumeraryComponent implements OnInit {
     }
 
     loadMemberTypes(): void {
-        this.commonCodeService.getAllActiveCommonCodesType('EmployeeType').subscribe({
+        // Server-side filtered to the caller's accessible member types — mirrors
+        // the report data filter, so the dropdown can't offer a type the user
+        // wouldn't be allowed to see results for.
+        this.commonCodeService.getAccessibleMemberTypes().subscribe({
             next: (codes: CommonCodeModel[]) => {
                 this.memberTypeOptions = (codes ?? []).map((c) => ({
                     label: c.codeValueEN || String(c.codeId),
@@ -274,13 +305,18 @@ export class ReportSupernumeraryComponent implements OnInit {
     async exportAs(type: 'print' | 'pdf' | 'word' | 'excel'): Promise<void> {
         this.exportDropdownOpen = false;
         const { columns, rows } = this.getExportData();
+        // Member-type chip joins the applied filters under the date. No
+        // preDateLines / unit chip — supernumeraries aren't org-tree scoped.
+        const belowDate: string[] = [];
+        if (this.memberTypeScopeLine) belowDate.push(this.memberTypeScopeLine);
         const config = {
             title: this.reportTitle,
             lang: this.lang,
             columns,
             rows,
             showPageNumbers: true,
-            filterLines: this.appliedFilterLines,
+            landscape: true,
+            filterLines: [...belowDate, ...this.appliedFilterLines],
         };
         if (type === 'pdf') {
             this.exporting = true;

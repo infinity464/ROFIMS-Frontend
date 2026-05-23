@@ -14,9 +14,10 @@ import { ExportService } from '@/services/export.service';
 import { UserMenuService } from '@/services/user-menu.service';
 import { REPORT_LABELS, type ReportLang } from '@/Core/i18n/report-labels';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
-import type { MemberTypeServingReportRow } from '@/models/report.model';
+import type { MemberTypeServingReportRow, ReportAccessibleScope } from '@/models/report.model';
 import type { MotherOrganizationModel } from '@/models/mother-org-model';
 import type { CommonCodeModel } from '@/models/common-code-model';
+import { unitScopeLine } from '../report-scope.helper';
 
 @Component({
     selector: 'app-report-member-type-serving',
@@ -65,6 +66,18 @@ export class ReportMemberTypeServingComponent implements OnInit {
     exporting = false;
     appliedFilterLines: string[] = [];
 
+    /** Backend's access-scope snapshot. Drives the chip rendered under the title +
+     *  the preDateLines treatment on Print/PDF/Word/Excel exports. */
+    accessibleScope: ReportAccessibleScope | null = null;
+    get unitScopeLine(): string | null { return unitScopeLine(this.accessibleScope, this.lang); }
+    /**
+     * Member-type chip is hidden entirely on this report — it's redundant with
+     * the report title ("Member Type Report by RAB Unit & Wing") and the
+     * "Member Type" filter chip already shown under the search bar. Returning
+     * null suppresses both the on-screen line and the export header line.
+     */
+    get memberTypeScopeLine(): string | null { return null; }
+
     filterOpen = true;
 
     constructor(
@@ -86,6 +99,14 @@ export class ReportMemberTypeServingComponent implements OnInit {
         this.canInsert = _perms.canInsert;
         this.canUpdate = _perms.canUpdate;
         this.canDelete = _perms.canDelete;
+
+        // Fetch scope eagerly so the chip shows on page load — without this,
+        // the chip only appears after the user clicks Search (the data load
+        // path also sets accessibleScope but doesn't fire on init).
+        this.reportService.getMyReportAccessScope().subscribe({
+            next: (scope) => { this.accessibleScope = scope ?? null; },
+            error: () => { /* silent — chip stays hidden on failure */ },
+        });
 
         this.loadMemberTypes();
         this.loadRabUnits();
@@ -286,6 +307,7 @@ export class ReportMemberTypeServingComponent implements OnInit {
                 next: (res) => {
                     this.list = res.datalist ?? [];
                     this.totalRecords = res.pages?.rows ?? 0;
+                    this.accessibleScope = res.accessibleScope ?? null;
                     this.loading = false;
                 },
                 error: (err) => {
@@ -337,13 +359,23 @@ export class ReportMemberTypeServingComponent implements OnInit {
     async exportAs(type: 'print' | 'pdf' | 'word' | 'excel'): Promise<void> {
         this.exportDropdownOpen = false;
         const { columns, rows } = this.getExportData();
+        // Mirror the on-screen chip: unit names ABOVE the date, member-type names
+        // BELOW the date WITHOUT the "Member Types:" prefix (redundant on this
+        // report — title is already about member types). Custom build instead of
+        // the shared helper.
+        const preDate: string[] = [];
+        if (this.unitScopeLine) preDate.push(this.unitScopeLine);
+        const belowDate: string[] = [];
+        if (this.memberTypeScopeLine) belowDate.push(this.memberTypeScopeLine);
         const config = {
             title: this.reportTitle,
             lang: this.lang,
             columns,
             rows,
             showPageNumbers: true,
-            filterLines: this.appliedFilterLines,
+            landscape: true,
+            preDateLines: preDate,
+            filterLines: [...belowDate, ...this.appliedFilterLines],
         };
         if (type === 'pdf') {
             this.exporting = true;

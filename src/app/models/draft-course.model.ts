@@ -50,6 +50,7 @@ export interface RftsTrainingRow {
     serviceId: string | null;
     rankName: string | null;
     corpsName: string | null;
+    tradeName: string | null;
     motherUnitName: string | null;
     courseTypeName: string | null;
     courseNameDisplay: string | null;

@@ -16,6 +16,8 @@ import type {
   BloodGroupReportRow,
   FamilyOccupationReportParams,
   FamilyOccupationReportRow,
+  RftsCompletionReportParams,
+  RftsCompletionReportRow,
   AddressLocationReportParams,
   AddressLocationReportRow,
   AddressLocationReportPagedResponse,
@@ -93,145 +95,145 @@ export class ReportService {
 
   getBatchCourseReport(
     params: BatchCourseReportParams
-  ): Observable<PagedResponse<BatchCourseReportRow>> {
+  ): Observable<PagedResponse<BatchCourseReportRow> & { accessibleScope: ReportAccessibleScope | null }> {
     return this.http
-      .post<ReportPagedResponse<BatchCourseReportRow>>(
+      .post<ScopedReportPagedResponse<BatchCourseReportRow>>(
         `${this.apiUrl}/GetBatchCourseReport`,
         params
       )
-      .pipe(map(normalizePages));
+      .pipe(map(normalizeScopedPages));
   }
 
   getEducationReport(
     params: EducationReportParams
-  ): Observable<PagedResponse<EducationReportRow>> {
+  ): Observable<PagedResponse<EducationReportRow> & { accessibleScope: ReportAccessibleScope | null }> {
     return this.http
-      .post<ReportPagedResponse<EducationReportRow>>(
+      .post<ScopedReportPagedResponse<EducationReportRow>>(
         `${this.apiUrl}/GetEducationReport`,
         params
       )
-      .pipe(map(normalizePages));
+      .pipe(map(normalizeScopedPages));
   }
 
   getMotherOrgReport(
     params: GenericReportParams
-  ): Observable<PagedResponse<GenericReportRow>> {
+  ): Observable<PagedResponse<GenericReportRow> & { accessibleScope: ReportAccessibleScope | null }> {
     return this.http
-      .post<ReportPagedResponse<GenericReportRow>>(
+      .post<ScopedReportPagedResponse<GenericReportRow>>(
         `${this.apiUrl}/GetMotherOrgReport`,
         params
       )
-      .pipe(map(normalizePages));
+      .pipe(map(normalizeScopedPages));
   }
 
   getOfficerTypeReport(
     params: GenericReportParams
-  ): Observable<PagedResponse<GenericReportRow>> {
+  ): Observable<PagedResponse<GenericReportRow> & { accessibleScope: ReportAccessibleScope | null }> {
     return this.http
-      .post<ReportPagedResponse<GenericReportRow>>(
+      .post<ScopedReportPagedResponse<GenericReportRow>>(
         `${this.apiUrl}/GetOfficerTypeReport`,
         params
       )
-      .pipe(map(normalizePages));
+      .pipe(map(normalizeScopedPages));
   }
 
   getCorpsReport(
     params: GenericReportParams
-  ): Observable<PagedResponse<GenericReportRow>> {
+  ): Observable<PagedResponse<GenericReportRow> & { accessibleScope: ReportAccessibleScope | null }> {
     return this.http
-      .post<ReportPagedResponse<GenericReportRow>>(
+      .post<ScopedReportPagedResponse<GenericReportRow>>(
         `${this.apiUrl}/GetCorpsReport`,
         params
       )
-      .pipe(map(normalizePages));
+      .pipe(map(normalizeScopedPages));
   }
 
   getTradeReport(
     params: GenericReportParams
-  ): Observable<PagedResponse<GenericReportRow>> {
+  ): Observable<PagedResponse<GenericReportRow> & { accessibleScope: ReportAccessibleScope | null }> {
     return this.http
-      .post<ReportPagedResponse<GenericReportRow>>(
+      .post<ScopedReportPagedResponse<GenericReportRow>>(
         `${this.apiUrl}/GetTradeReport`,
         params
       )
-      .pipe(map(normalizePages));
+      .pipe(map(normalizeScopedPages));
   }
 
   getRabUnitReport(
     params: GenericReportParams
-  ): Observable<PagedResponse<GenericReportRow>> {
+  ): Observable<PagedResponse<GenericReportRow> & { accessibleScope: ReportAccessibleScope | null }> {
     return this.http
-      .post<ReportPagedResponse<GenericReportRow>>(
+      .post<ScopedReportPagedResponse<GenericReportRow>>(
         `${this.apiUrl}/GetRabUnitReport`,
         params
       )
-      .pipe(map(normalizePages));
+      .pipe(map(normalizeScopedPages));
   }
 
   getWingsReport(
     params: GenericReportParams
-  ): Observable<PagedResponse<GenericReportRow>> {
+  ): Observable<PagedResponse<GenericReportRow> & { accessibleScope: ReportAccessibleScope | null }> {
     return this.http
-      .post<ReportPagedResponse<GenericReportRow>>(
+      .post<ScopedReportPagedResponse<GenericReportRow>>(
         `${this.apiUrl}/GetWingsReport`,
         params
       )
-      .pipe(map(normalizePages));
+      .pipe(map(normalizeScopedPages));
   }
 
   getPersonalQualificationReport(
     params: GenericReportParams
-  ): Observable<PagedResponse<GenericReportRow>> {
+  ): Observable<PagedResponse<GenericReportRow> & { accessibleScope: ReportAccessibleScope | null }> {
     return this.http
-      .post<ReportPagedResponse<GenericReportRow>>(
+      .post<ScopedReportPagedResponse<GenericReportRow>>(
         `${this.apiUrl}/GetPersonalQualificationReport`,
         params
       )
-      .pipe(map(normalizePages));
+      .pipe(map(normalizeScopedPages));
   }
 
   getProfessionalQualificationReport(
     params: GenericReportParams
-  ): Observable<PagedResponse<GenericReportRow>> {
+  ): Observable<PagedResponse<GenericReportRow> & { accessibleScope: ReportAccessibleScope | null }> {
     return this.http
-      .post<ReportPagedResponse<GenericReportRow>>(
+      .post<ScopedReportPagedResponse<GenericReportRow>>(
         `${this.apiUrl}/GetProfessionalQualificationReport`,
         params
       )
-      .pipe(map(normalizePages));
+      .pipe(map(normalizeScopedPages));
   }
 
   getSpecialQualificationReport(
     params: GenericReportParams
-  ): Observable<PagedResponse<GenericReportRow>> {
+  ): Observable<PagedResponse<GenericReportRow> & { accessibleScope: ReportAccessibleScope | null }> {
     return this.http
-      .post<ReportPagedResponse<GenericReportRow>>(
+      .post<ScopedReportPagedResponse<GenericReportRow>>(
         `${this.apiUrl}/GetSpecialQualificationReport`,
         params
       )
-      .pipe(map(normalizePages));
+      .pipe(map(normalizeScopedPages));
   }
 
   getRabRankReport(
     params: GenericReportParams
-  ): Observable<PagedResponse<GenericReportRow>> {
+  ): Observable<PagedResponse<GenericReportRow> & { accessibleScope: ReportAccessibleScope | null }> {
     return this.http
-      .post<ReportPagedResponse<GenericReportRow>>(
+      .post<ScopedReportPagedResponse<GenericReportRow>>(
         `${this.apiUrl}/GetRabRankReport`,
         params
       )
-      .pipe(map(normalizePages));
+      .pipe(map(normalizeScopedPages));
   }
 
   getBloodGroupReport(
     params: BloodGroupReportParams
-  ): Observable<PagedResponse<BloodGroupReportRow>> {
+  ): Observable<PagedResponse<BloodGroupReportRow> & { accessibleScope: ReportAccessibleScope | null }> {
     return this.http
-      .post<ReportPagedResponse<BloodGroupReportRow>>(
+      .post<ScopedReportPagedResponse<BloodGroupReportRow>>(
         `${this.apiUrl}/GetBloodGroupReport`,
         params
       )
-      .pipe(map(normalizePages));
+      .pipe(map(normalizeScopedPages));
   }
 
   getFamilyOccupationReport(
@@ -240,6 +242,17 @@ export class ReportService {
     return this.http
       .post<ReportPagedResponse<FamilyOccupationReportRow>>(
         `${this.apiUrl}/GetFamilyOccupationReport`,
+        params
+      )
+      .pipe(map(normalizePages));
+  }
+
+  getRftsCompletionReport(
+    params: RftsCompletionReportParams
+  ): Observable<PagedResponse<RftsCompletionReportRow>> {
+    return this.http
+      .post<ReportPagedResponse<RftsCompletionReportRow>>(
+        `${this.apiUrl}/GetRftsCompletionReport`,
         params
       )
       .pipe(map(normalizePages));
@@ -258,13 +271,13 @@ export class ReportService {
 
   getMemberTypeServingReport(
     params: MemberTypeServingReportParams
-  ): Observable<PagedResponse<MemberTypeServingReportRow>> {
+  ): Observable<PagedResponse<MemberTypeServingReportRow> & { accessibleScope: ReportAccessibleScope | null }> {
     return this.http
-      .post<ReportPagedResponse<MemberTypeServingReportRow>>(
+      .post<ScopedReportPagedResponse<MemberTypeServingReportRow>>(
         `${this.apiUrl}/GetMemberTypeServingReport`,
         params
       )
-      .pipe(map(normalizePages));
+      .pipe(map(normalizeScopedPages));
   }
 
   getPresentStatusByMotherOrgReport(
@@ -287,24 +300,24 @@ export class ReportService {
 
   getUnitDurationNominalRollReport(
     params: UnitDurationNominalRollReportParams
-  ): Observable<PagedResponse<UnitDurationNominalRollReportRow>> {
+  ): Observable<PagedResponse<UnitDurationNominalRollReportRow> & { accessibleScope: ReportAccessibleScope | null }> {
     return this.http
-      .post<ReportPagedResponse<UnitDurationNominalRollReportRow>>(
+      .post<ScopedReportPagedResponse<UnitDurationNominalRollReportRow>>(
         `${this.apiUrl}/GetUnitDurationNominalRollReport`,
         params
       )
-      .pipe(map(normalizePages));
+      .pipe(map(normalizeScopedPages));
   }
 
   getLongStayNominalRollReport(
     params: LongStayNominalRollReportParams
-  ): Observable<PagedResponse<LongStayNominalRollReportRow>> {
+  ): Observable<PagedResponse<LongStayNominalRollReportRow> & { accessibleScope: ReportAccessibleScope | null }> {
     return this.http
-      .post<ReportPagedResponse<LongStayNominalRollReportRow>>(
+      .post<ScopedReportPagedResponse<LongStayNominalRollReportRow>>(
         `${this.apiUrl}/GetLongStayNominalRollReport`,
         params
       )
-      .pipe(map(normalizePages));
+      .pipe(map(normalizeScopedPages));
   }
 
   getStayAfterRelieverJoinedReport(

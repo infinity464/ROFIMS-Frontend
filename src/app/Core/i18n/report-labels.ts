@@ -116,6 +116,16 @@ export const REPORT_LABELS = {
         'report.table.postOffice': 'Post Office',
         'report.table.address': 'Address',
 
+        'report.title.rftsCompletion': 'RFTS Completion Report',
+        'report.search.completionStatus': 'Completion Status',
+        'report.status.completed': 'Completed RFTS',
+        'report.status.notCompleted': 'Not Completed RFTS',
+        'report.table.coursesCompleted': 'Courses Completed',
+        'report.table.latestCourseNo': 'Course No',
+        'report.table.latestCourseDate': 'Latest Course Date',
+        'report.table.from': 'From',
+        'report.table.to': 'To',
+
         'report.empty': 'No records found.'
     } as const,
 
@@ -229,6 +239,16 @@ export const REPORT_LABELS = {
         'report.table.upazila': 'উপজেলা',
         'report.table.postOffice': 'ডাকঘর',
         'report.table.address': 'ঠিকানা',
+
+        'report.title.rftsCompletion': 'আরএফটিএস কোর্স সম্পন্ন প্রতিবেদন',
+        'report.search.completionStatus': 'সম্পন্ন অবস্থা',
+        'report.status.completed': 'আরএফটিএস সম্পন্ন',
+        'report.status.notCompleted': 'আরএফটিএস সম্পন্ন হয়নি',
+        'report.table.coursesCompleted': 'সম্পন্ন কোর্স',
+        'report.table.latestCourseNo': 'কোর্স নম্বর',
+        'report.table.latestCourseDate': 'সর্বশেষ কোর্সের তারিখ',
+        'report.table.from': 'হতে',
+        'report.table.to': 'পর্যন্ত',
 
         'report.empty': 'কোন রেকর্ড পাওয়া যায়নি।'
     } as const

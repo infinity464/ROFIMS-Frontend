@@ -1,0 +1,286 @@
+<p-toast position="top-center"></p-toast>
+<p-confirmDialog></p-confirmDialog>
+
+<!-- Send to Course - Course Details Modal -->
+<p-dialog header="Add Course" [(visible)]="showSendCourseModal" [modal]="true" [style]="{width: '640px'}" [closable]="true">
+    <p class="text-500 mb-3">Enter course details for the selected members.</p>
+    <form [formGroup]="courseForm" class="mt-3">
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="font-semibold block mb-2 text-700">Course Type</label>
+                <p-select formControlName="courseType" [options]="courseTypeOptions" optionLabel="label" optionValue="value" placeholder="Select Course Type" styleClass="w-full"></p-select>
+            </div>
+            <div>
+                <label class="font-semibold block mb-2 text-700">Course Name</label>
+                <p-select formControlName="courseName" [options]="courseOptions" optionLabel="label" optionValue="value" placeholder="Select Course Name" styleClass="w-full" [filter]="true"></p-select>
+            </div>
+            <div>
+                <label class="font-semibold block mb-2 text-700">Training Institute Name</label>
+                <p-select formControlName="trainingInstitueName" [options]="trainingInstituteOptions" optionLabel="label" optionValue="value" placeholder="Select Institute" styleClass="w-full"></p-select>
+            </div>
+            <div>
+                <label class="font-semibold block mb-2 text-700">Country</label>
+                <input pInputText formControlName="countryDisplay" class="w-full" placeholder="From Training Institute" readonly />
+            </div>
+            <div>
+                <label class="font-semibold block mb-2 text-700">Location</label>
+                <input pInputText formControlName="locationDisplay" class="w-full" placeholder="From Training Institute" readonly />
+            </div>
+            <div class="w-full">
+                <label class="font-semibold block mb-2 text-700">From</label>
+                <p-datepicker formControlName="dateFrom" dateFormat="dd-mm-yy" [showIcon]="true" styleClass="w-full" [style]="{'width': '100%'}" placeholder="From"></p-datepicker>
+            </div>
+            <div class="w-full">
+                <label class="font-semibold block mb-2 text-700">To</label>
+                <p-datepicker formControlName="dateTo" dateFormat="dd-mm-yy" [showIcon]="true" styleClass="w-full" [style]="{'width': '100%'}" placeholder="To"></p-datepicker>
+            </div>
+            <div>
+                <label class="font-semibold block mb-2 text-700">Course Result</label>
+                <p-autocomplete formControlName="result" [suggestions]="courseResultSuggestions" optionLabel="label" optionValue="value" (completeMethod)="filterCourseResult($event)" [dropdown]="true" placeholder="Select or type result" styleClass="w-full" [inputStyle]="{'width': '100%'}"></p-autocomplete>
+            </div>
+            <div>
+                <label class="font-semibold block mb-2 text-700">Auth</label>
+                <input pInputText formControlName="auth" class="w-full" placeholder="Auth" />
+            </div>
+            <div class="col-span-full">
+                <label class="font-semibold block mb-2 text-700">Remarks</label>
+                <input pInputText formControlName="remarks" class="w-full" placeholder="Remarks" />
+            </div>
+        </div>
+    </form>
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="showSendCourseModal = false" [disabled]="isSending"></p-button>
+        <p-button label="Save" icon="pi pi-check" [loading]="isSending" [disabled]="isSending" (onClick)="sendFromDraft()"></p-button>
+    </ng-template>
+</p-dialog>
+
+<p-fluid>
+    <p-card>
+        <!-- Header: title + actions -->
+        <ng-template pTemplate="header">
+            <div class="flex items-center justify-between gap-3 p-4 flex-wrap">
+                <div>
+                    <h2 class="text-2xl font-bold m-0">RFTS course drafts</h2>
+                    <small class="text-color-secondary">Manage course drafts and member assignments</small>
+                </div>
+                <div class="flex items-center gap-2">
+                    <p-button icon="pi pi-ellipsis-h" [text]="true" [rounded]="true" severity="secondary" size="small"></p-button>
+                    <p-button label="New draft" icon="pi pi-plus" severity="secondary" [outlined]="true" [routerLink]="['/emp-send-to-course']"></p-button>
+                </div>
+            </div>
+        </ng-template>
+
+        <!-- Drafts: count + sort hint -->
+        <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+            <span class="text-color-secondary">{{ draftLists.length }} draft{{ draftLists.length === 1 ? '' : 's' }}</span>
+            <small class="text-color-secondary">Sorted by most recent</small>
+        </div>
+
+        <!-- Drafts list — card-style rows. Click anywhere on the card to
+             toggle "open" (members panel below). Per user request the
+             "Selected" pill is intentionally not rendered — the members
+             panel + a left-border accent are the only signals. -->
+        @if (isLoadingDrafts) {
+            <div class="text-center py-4 text-color-secondary"><i class="pi pi-spin pi-spinner mr-2"></i>Loading drafts…</div>
+        } @else if (draftLists.length === 0) {
+            <div class="rounded-lg border border-surface p-6 text-center text-color-secondary">
+                No drafts. Create one in the Select Member RFTS page.
+            </div>
+        } @else {
+            <div class="flex flex-col gap-2">
+                @for (row of draftLists; track row.id) {
+                    <div class="rounded-lg border border-surface hover:bg-surface-50 dark:hover:bg-surface-800 p-3 flex items-center gap-4 cursor-pointer transition-colors"
+                         [class.border-l-4]="selectedDraft?.id === row.id"
+                         [class.border-l-green-500]="selectedDraft?.id === row.id"
+                         (click)="toggleDraftMembers(row)">
+                        <!-- Course no -->
+                        <div class="flex flex-col min-w-20">
+                            <span class="text-2xl font-bold leading-tight">{{ row.listNo }}</span>
+                            <small class="text-color-secondary">Course no</small>
+                        </div>
+
+                        <!-- Date range + members meta -->
+                        <div class="flex-1 min-w-0">
+                            <div class="font-semibold">
+                                {{ row.dateFrom ? (row.dateFrom | date:'dd MMM') : '—' }}
+                                <span class="mx-1 text-color-secondary">&#8594;</span>
+                                {{ row.dateTo ? (row.dateTo | date:'dd MMM yyyy') : '—' }}
+                                @if (row.dateFrom && row.dateTo) {
+                                    <span class="text-color-secondary font-normal text-sm">· {{ daysBetween(row.dateFrom, row.dateTo) }} day{{ daysBetween(row.dateFrom, row.dateTo) === 1 ? '' : 's' }}</span>
+                                }
+                            </div>
+                            <div class="text-color-secondary text-sm flex items-center gap-1 mt-1">
+                                <i class="pi pi-users text-xs"></i>
+                                <span>{{ row.members?.length ?? 0 }} {{ (row.members?.length ?? 0) === 1 ? 'member' : 'members' }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Row actions — always visible (no "Selected" pill per user request) -->
+                        <div class="flex gap-1 shrink-0">
+                            <p-button icon="pi pi-eye" [rounded]="true" [text]="true" severity="info" size="small"
+                                pTooltip="Show Members"
+                                (onClick)="toggleDraftMembers(row); $event.stopPropagation()"></p-button>
+                            <p-button icon="pi pi-trash" [class.perm-hidden]="!canDelete" [rounded]="true" [text]="true"
+                                severity="danger" size="small" pTooltip="Delete"
+                                (onClick)="deleteDraftRow(row); $event.stopPropagation()" [disabled]="isDeletingDraft"></p-button>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+
+        <!-- ============== Members panel ============== -->
+        @if (selectedDraft) {
+            <div class="rounded-lg border border-surface bg-surface-50 dark:bg-surface-800 p-4 mt-4">
+                <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <i class="pi pi-users text-color-secondary"></i>
+                        <span class="font-semibold text-lg">Members in</span>
+                        <span class="inline-block bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-100 rounded-md px-2 py-1 font-semibold text-sm">
+                            {{ selectedDraft.listNo }}
+                        </span>
+                    </div>
+                    <p-button label="Approve draft" icon="pi pi-send" severity="success"
+                        [loading]="isSending" [disabled]="isSending" (onClick)="approveAndSave()"></p-button>
+                </div>
+
+                <!-- Member table — per-row X button replaces the
+                     bulk-select flow. Each row's red outlined X removes
+                     that single member via removeSingleMember(). -->
+                <p-table
+                    [value]="selectedDraft.members"
+                    styleClass="p-datatable-sm"
+                    dataKey="employeeId"
+                    [paginator]="(selectedDraft?.members?.length ?? 0) > 10"
+                    [rows]="10">
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th>Member</th>
+                            <th>RAB ID</th>
+                            <th>Service ID</th>
+                            <th>Rank</th>
+                            <th>Corps</th>
+                            <th>Trade</th>
+                            <th>Remarks</th>
+                            <th style="width: 60px"></th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row>
+                        <tr>
+                            <td>
+                                <div class="flex flex-col">
+                                    <span class="font-semibold">{{ row.fullNameEN || '—' }}</span>
+                                    <small class="text-color-secondary">{{ row.motherUnitName || '—' }}</small>
+                                </div>
+                            </td>
+                            <td>{{ row.rabId || 'N/A' }}</td>
+                            <td>{{ row.serviceId || '—' }}</td>
+                            <td>
+                                @if (row.rankName) {
+                                    <span class="inline-block bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-100 rounded-md px-2 py-1 text-sm">{{ row.rankName }}</span>
+                                } @else {
+                                    <span>N/A</span>
+                                }
+                            </td>
+                            <td>{{ row.corpsName || 'N/A' }}</td>
+                            <td>{{ row.tradeName || '—' }}</td>
+                            <td>
+                                <input pInputText
+                                    [value]="getMemberRemark(row.employeeId)"
+                                    (input)="setMemberRemark(row.employeeId, $any($event.target).value)"
+                                    placeholder="Add remarks…"
+                                    class="w-full" style="min-width: 140px;" />
+                            </td>
+                            <td>
+                                <p-button icon="pi pi-times" severity="danger" [outlined]="true" size="small" [class.perm-hidden]="!canDelete"
+                                    pTooltip="Remove" (onClick)="removeSingleMember(row)" [disabled]="isRemovingFromDraft"></p-button>
+                            </td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td [attr.colspan]="8" class="text-center py-4 text-color-secondary">No members in this draft.</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+
+                <div class="flex justify-end mt-3">
+                    <p-button
+                        label="Add members"
+                        icon="pi pi-user-plus"
+                        severity="secondary"
+                        [outlined]="true"
+                        (onClick)="showAddToDraftPanel = true; addToDraftSelectedRows = []; addToDraftEmployeeList = []"
+                        [disabled]="isAddingToDraft">
+                    </p-button>
+                </div>
+            </div>
+
+            <!-- ============== Add members panel ==============
+                 Only renders after clicking "Add members" — separate
+                 card with dashed border so it visually reads as a
+                 transient overlay rather than part of the page. -->
+            @if (showAddToDraftPanel) {
+                <div class="rounded-lg border border-dashed border-surface p-4 mt-3">
+                    <div class="flex items-center gap-2 mb-3">
+                        <i class="pi pi-user-plus text-color-secondary"></i>
+                        <span class="font-semibold">Add members to draft {{ selectedDraft?.listNo }}</span>
+                    </div>
+                    <p-iconfield iconPosition="left" class="w-full block mb-3">
+                        <p-inputicon styleClass="pi pi-search"></p-inputicon>
+                        <p-autoComplete
+                            [(ngModel)]="addToDraftPickerValue"
+                            [suggestions]="addToDraftEmployeeList"
+                            (completeMethod)="searchEmployeesForAddToDraft($event)"
+                            (onSelect)="onPickAddToDraftEmployee($event)"
+                            [dropdown]="false"
+                            [forceSelection]="true"
+                            dataKey="employeeID"
+                            placeholder="Search by name, Service ID, or RAB ID…"
+                            styleClass="w-full"
+                            [inputStyle]="{ width: '100%', paddingLeft: '2.5rem' }"
+                            [showEmptyMessage]="true"
+                            [delay]="250">
+                            <ng-template let-row pTemplate="item">
+                                <span class="font-medium">
+                                    {{ getVal(row, 'rank', 'Rank') }} {{ getVal(row, 'fullNameEN', 'FullNameEN') }}
+                                    | Svc : {{ getVal(row, 'serviceId', 'ServiceId') }}
+                                    @if (getVal(row, 'rabid', 'rabId', 'rabID', 'RABID')) {
+                                        | RAB ID : {{ getVal(row, 'rabid', 'rabId', 'rabID', 'RABID') }}
+                                    }
+                                </span>
+                            </ng-template>
+                        </p-autoComplete>
+                    </p-iconfield>
+                    @if (isLoadingAddToDraftEmployees) {
+                        <small class="text-color-secondary block mb-2"><i class="pi pi-spin pi-spinner mr-1" style="font-size: 0.8rem"></i> Searching…</small>
+                    }
+
+                    @if (addToDraftSelectedRows.length > 0) {
+                        <div class="flex flex-col gap-2 mb-3">
+                            @for (r of addToDraftSelectedRows; track (r.employeeID ?? r.EmployeeID)) {
+                                <div class="rounded-md border border-surface p-2 flex items-center gap-3 bg-surface-0 dark:bg-surface-900">
+                                    <div class="flex-1 min-w-0">
+                                        <div class="font-medium">{{ getVal(r, 'rank', 'Rank') }} {{ getVal(r, 'fullNameEN', 'FullNameEN') }}</div>
+                                        <div class="text-color-secondary text-sm">Svc {{ getVal(r, 'serviceId', 'ServiceId') }} · RAB {{ getVal(r, 'rabid', 'rabId', 'rabID', 'RABID') }}</div>
+                                    </div>
+                                    <p-button icon="pi pi-times" [rounded]="true" [text]="true" severity="danger" size="small"
+                                        pTooltip="Remove" (onClick)="removeAddToDraftEmployee(r)"></p-button>
+                                </div>
+                            }
+                        </div>
+                    }
+
+                    <div class="flex gap-2">
+                        <p-button label="Add selected" icon="pi pi-plus" severity="success"
+                            (onClick)="addToExistingDraft()"
+                            [loading]="isAddingToDraft"
+                            [disabled]="!addToDraftSelectedRows?.length || isAddingToDraft"></p-button>
+                        <p-button label="Cancel" severity="secondary" [outlined]="true"
+                            (onClick)="showAddToDraftPanel = false; addToDraftSelectedRows = []; addToDraftEmployeeList = []"></p-button>
+                    </div>
+                </div>
+            }
+        }
+    </p-card>
+</p-fluid>

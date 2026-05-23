@@ -155,6 +155,53 @@ export interface FamilyOccupationReportParams {
   pagination: ReportPagination;
 }
 
+/**
+ * Report: RFTS Completion. Returns either members who completed at
+ * least one RFTS course or members who completed none, filtered by the
+ * caller's member-type access scope (no org/unit scope).
+ */
+export interface RftsCompletionReportRow {
+  ser?: number;
+  employeeId?: number;
+  name?: string | null;
+  nameBN?: string | null;
+  rabid?: string | null;
+  serviceId?: string | null;
+  rank?: string | null;
+  rankBN?: string | null;
+  corps?: string | null;
+  corpsBN?: string | null;
+  trade?: string | null;
+  tradeBN?: string | null;
+  orgName?: string | null;
+  orgNameBN?: string | null;
+  /** Only populated for the "Completed" view; 0 for "NotCompleted". */
+  coursesCompleted?: number;
+  /** Only populated for the "Completed" view. */
+  latestCourseNo?: string | null;
+  /** Most recent course start date (ISO yyyy-MM-dd). */
+  latestCourseDateFrom?: string | null;
+  /** Most recent course end date (ISO yyyy-MM-dd). */
+  latestCourseDateTo?: string | null;
+}
+
+export interface RftsCompletionReportParams {
+  /** "Completed" or "NotCompleted" (defaults to "Completed" on the server). */
+  completionStatus: 'Completed' | 'NotCompleted';
+  postingStatus?: string | null;
+  rabId?: string | null;
+  serviceId?: string | null;
+  motherOrgId?: number | null;
+  memberTypeId?: number | null;
+  rankId?: number | null;
+  /** Course no — when set, the completion filter pivots on this specific RFTS course. */
+  courseNo?: string | null;
+  /** Duration filters — yyyy-MM-dd (server expects ISO date strings). */
+  dateFrom?: string | null;
+  dateTo?: string | null;
+  pagination: ReportPagination;
+}
+
 /** Report H: Address Location – Division, District, Upazila, Post Office, Address details, RAB Unit. */
 export interface AddressLocationReportRow extends ReportRowBase {
   rabid?: string | null;
