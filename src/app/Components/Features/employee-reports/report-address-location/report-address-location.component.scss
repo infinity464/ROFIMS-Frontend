@@ -517,3 +517,539 @@
     font-weight: 500;
     text-align: center;
 }
+
+/* =============================================================
+   RAB Formal Report Paper — Selection Criteria + Data Table.
+   Replaces the generic .report-results-card view with a
+   government-letterhead-style layout. Dark and light variants
+   are driven by .app-dark on the document root.
+   ============================================================= */
+
+.rab-report-document {
+    /* --- Light theme defaults --- */
+    --rab-bg: #ffffff;
+    --rab-paper-bg: #ffffff;
+    --rab-strip-bg: #f3f5fa;
+    --rab-strip-border: #d8dde6;
+    --rab-border: #d8dde6;
+    --rab-border-soft: #e6eaf1;
+    --rab-text: #1a2744;
+    --rab-text-strong: #0f1f3d;
+    --rab-muted: #8893aa;
+    --rab-muted-strong: #5a6781;
+    --rab-accent: #b78b3b;
+    --rab-accent-soft: #d9b876;
+    --rab-table-head-bg: #1a2744;
+    --rab-table-head-text: #d9c79a;
+    --rab-row-stripe: #f8f9fc;
+    --rab-row-hover: #f1ecdf;
+    --rab-red: #b03a3a;
+    --rab-red-soft: rgba(176, 58, 58, 0.18);
+    --rab-serif: 'Playfair Display', 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+    --rab-mono: 'JetBrains Mono', 'SF Mono', Consolas, 'Liberation Mono', monospace;
+
+    margin-top: 1.25rem;
+    color: var(--rab-text);
+}
+
+:host-context(.app-dark) .rab-report-document,
+.app-dark .rab-report-document {
+    --rab-bg: #0a1220;
+    --rab-paper-bg: #0e1828;
+    --rab-strip-bg: #131f33;
+    --rab-strip-border: #233149;
+    --rab-border: #243250;
+    --rab-border-soft: #1a2640;
+    --rab-text: #e8d9b0;
+    --rab-text-strong: #f0dca2;
+    --rab-muted: #8a7d5e;
+    --rab-muted-strong: #b5a275;
+    --rab-accent: #d9b876;
+    --rab-accent-soft: #b78b3b;
+    --rab-table-head-bg: #131f33;
+    --rab-table-head-text: #c4a86c;
+    --rab-row-stripe: #0c1626;
+    --rab-row-hover: #16243c;
+    --rab-red: #d04d4d;
+    --rab-red-soft: rgba(208, 77, 77, 0.22);
+}
+
+/* --- Screen-only toolbar above the paper --- */
+.rab-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+/* --- The paper itself --- */
+.rab-paper {
+    background: var(--rab-paper-bg);
+    border: 1px solid var(--rab-border);
+    border-radius: 0.5rem;
+    padding: 2.25rem 2rem 1.25rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+}
+
+:host-context(.app-dark) .rab-paper,
+.app-dark .rab-paper {
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* ----- Header (Government / RAB / sub) ----- */
+.rab-paper-head {
+    text-align: center;
+    padding-bottom: 1.25rem;
+}
+
+.rab-overline {
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.32em;
+    color: var(--rab-muted-strong);
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+}
+
+.rab-paper-title {
+    font-family: var(--rab-serif);
+    font-weight: 700;
+    font-size: 2.1rem;
+    line-height: 1.1;
+    margin: 0 0 0.4rem 0;
+    color: var(--rab-text-strong);
+    letter-spacing: 0.12em;
+}
+
+.rab-paper-sub {
+    font-family: var(--rab-serif);
+    font-size: 0.92rem;
+    color: var(--rab-muted-strong);
+    font-style: italic;
+    margin-bottom: 1rem;
+
+    em {
+        font-style: italic;
+    }
+}
+
+.rab-orn-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    margin: 0.5rem auto 1.25rem;
+    max-width: 60%;
+
+    .rab-orn-line {
+        flex: 1;
+        height: 1px;
+        background: linear-gradient(
+            to right,
+            transparent,
+            var(--rab-accent-soft) 30%,
+            var(--rab-accent-soft) 70%,
+            transparent
+        );
+    }
+
+    .rab-orn-diamond {
+        color: var(--rab-accent);
+        font-size: 0.7rem;
+        line-height: 1;
+        transform: translateY(-1px);
+    }
+}
+
+.rab-paper-section {
+    font-family: var(--rab-serif);
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    color: var(--rab-text-strong);
+    margin: 0 0 0.25rem 0;
+    text-transform: uppercase;
+}
+
+.rab-paper-section-sub {
+    font-family: var(--rab-serif);
+    font-size: 0.92rem;
+    font-style: italic;
+    color: var(--rab-muted-strong);
+
+    em {
+        font-style: italic;
+    }
+}
+
+/* ----- Selection Criteria strip ----- */
+.rab-criteria {
+    margin: 1rem 0 1.25rem;
+    border: 1px solid var(--rab-strip-border);
+    border-radius: 0.25rem;
+    overflow: hidden;
+}
+
+.rab-criteria-strip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.55rem 0.95rem;
+    background: var(--rab-strip-bg);
+    border-bottom: 1px solid var(--rab-strip-border);
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--rab-muted-strong);
+    font-weight: 600;
+}
+
+.rab-criteria-strip-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--rab-text-strong);
+}
+
+.rab-diamond-bullet {
+    color: var(--rab-accent);
+    font-size: 0.6rem;
+    line-height: 1;
+}
+
+.rab-criteria-strip-date {
+    color: var(--rab-muted-strong);
+    font-weight: 500;
+}
+
+.rab-criteria-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    background: var(--rab-paper-bg);
+}
+
+.rab-criteria-cell {
+    padding: 0.65rem 0.9rem 0.7rem;
+    border-right: 1px solid var(--rab-border-soft);
+    border-top: 1px solid var(--rab-border-soft);
+    min-width: 0;
+
+    /* Strip the trailing divider on each row's last cell. With auto-fit columns
+       this is unknowable in CSS, so the rightmost cell always renders the line —
+       it visually merges into the outer .rab-criteria border, so no glitch. */
+    &:last-child {
+        border-right: 1px solid var(--rab-border-soft);
+    }
+}
+
+.rab-criteria-cell-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--rab-muted);
+    margin-bottom: 0.3rem;
+    font-weight: 600;
+}
+
+.rab-criteria-cell-value {
+    font-family: var(--rab-serif);
+    font-size: 0.95rem;
+    color: var(--rab-text-strong);
+    font-weight: 700;
+    line-height: 1.25;
+    word-break: break-word;
+}
+
+/* When no filters were applied: keep just the title strip (no grid below). */
+.rab-criteria-stamp-only .rab-criteria-strip {
+    border-bottom: none;
+}
+
+/* Bangla doesn't tolerate letter-spacing — Playfair Display has no Bangla glyphs,
+   the browser falls back to a Bangla font, and letter-spacing then prises apart
+   conjuncts and modifier marks. Reset spacing on dynamic-text elements when
+   rendering in Bangla, and let the OS pick a Bangla-aware font instead of the
+   Latin serif. Hardcoded English (overline, paper title, footer) is unaffected. */
+.rab-paper.rab-lang-bn {
+    /* Display text — keep the formal weight but drop letter-spacing and swap
+       to a Bangla-aware family so conjuncts and modifiers render correctly. */
+    .rab-overline,
+    .rab-paper-title,
+    .rab-paper-sub,
+    .rab-paper-section,
+    .rab-paper-section-sub,
+    .rab-criteria-cell-value,
+    .rab-name,
+    .rab-rank,
+    .rab-loc-text,
+    .rab-unit-pill {
+        letter-spacing: 0;
+        font-family: 'Hind Siliguri', 'Noto Sans Bengali', 'SolaimanLipi', 'Kalpurush', sans-serif;
+    }
+
+    /* Heavily tracked uppercase strips — soften the tracking but keep a hint
+       of separation so the strip still reads as a "label row". */
+    .rab-criteria-strip,
+    .rab-criteria-cell-label,
+    .rab-foot-row {
+        letter-spacing: 0.04em;
+        font-family: 'Hind Siliguri', 'Noto Sans Bengali', 'SolaimanLipi', sans-serif;
+        text-transform: none;
+    }
+
+    .rab-paper-title {
+        /* Latin title was large + tracked; the Bangla equivalent reads heavier
+           at the same size, so trim a touch. */
+        font-size: 1.85rem;
+    }
+}
+
+/* PrimeNG-generated table cells: ::ng-deep must live at the top level. */
+:host ::ng-deep .rab-paper.rab-lang-bn .rab-data-table .p-datatable-thead > tr > th {
+    letter-spacing: 0.04em;
+    font-family: 'Hind Siliguri', 'Noto Sans Bengali', 'SolaimanLipi', sans-serif;
+}
+
+/* ----- Data table ----- */
+.rab-paper-table-wrap {
+    overflow-x: auto;
+    margin: 0 -0.25rem;
+}
+
+:host ::ng-deep .rab-data-table {
+    .p-datatable-table {
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .p-datatable-thead > tr > th {
+        background: var(--rab-table-head-bg);
+        color: var(--rab-table-head-text);
+        font-family: var(--rab-mono);
+        font-size: 0.65rem;
+        font-weight: 600;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        padding: 0.7rem 0.85rem;
+        border-bottom: 1px solid var(--rab-strip-border);
+        border-top: 1px solid var(--rab-strip-border);
+        border-right: 1px solid var(--rab-strip-border);
+        text-align: left;
+
+        &:first-child {
+            border-left: 1px solid var(--rab-strip-border);
+        }
+    }
+
+    .p-datatable-tbody > tr {
+        background: var(--rab-paper-bg);
+
+        > td {
+            padding: 0.6rem 0.85rem;
+            font-size: 0.84rem;
+            color: var(--rab-text);
+            border-bottom: 1px solid var(--rab-border-soft);
+            border-right: 1px solid var(--rab-border-soft);
+            vertical-align: middle;
+
+            &:first-child {
+                border-left: 1px solid var(--rab-border-soft);
+            }
+        }
+
+        &:nth-child(even) {
+            background: var(--rab-row-stripe);
+        }
+
+        &:hover {
+            background: var(--rab-row-hover);
+        }
+
+        &:last-child > td {
+            border-bottom: 1px solid var(--rab-strip-border);
+        }
+    }
+
+    .p-paginator {
+        background: var(--rab-paper-bg);
+        border: none;
+        padding: 0.75rem 0.25rem 0.25rem;
+        color: var(--rab-text);
+    }
+
+    .p-paginator .p-paginator-page,
+    .p-paginator .p-paginator-prev,
+    .p-paginator .p-paginator-next,
+    .p-paginator .p-paginator-first,
+    .p-paginator .p-paginator-last {
+        color: var(--rab-text);
+        background: transparent;
+        border: 1px solid transparent;
+
+        &:not(.p-disabled):hover {
+            background: var(--rab-row-hover);
+        }
+
+        &.p-paginator-page-selected,
+        &.p-highlight {
+            background: var(--rab-accent);
+            color: #fff;
+            border-color: var(--rab-accent);
+        }
+    }
+}
+
+/* Cell helpers */
+.rab-ser {
+    font-family: var(--rab-mono);
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--rab-muted-strong);
+    letter-spacing: 0.04em;
+}
+
+.rab-mono {
+    font-family: var(--rab-mono);
+    font-size: 0.83rem;
+    letter-spacing: 0.02em;
+    color: var(--rab-text);
+}
+
+.rab-rank {
+    font-weight: 700;
+    color: var(--rab-text-strong);
+    font-family: var(--rab-mono);
+    font-size: 0.85rem;
+    letter-spacing: 0.04em;
+}
+
+.rab-name {
+    font-family: var(--rab-serif);
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--rab-text-strong);
+}
+
+.rab-unit-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3px 10px;
+    border-radius: 3px;
+    border: 1px solid var(--rab-strip-border);
+    background: var(--rab-strip-bg);
+    color: var(--rab-text-strong);
+    font-family: var(--rab-mono);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.rab-loc-cell {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.rab-loc-icon {
+    display: inline-block;
+    width: 11px;
+    height: 11px;
+    border: 1.5px solid var(--rab-muted-strong);
+    border-radius: 1px;
+    background: transparent;
+    flex-shrink: 0;
+
+    &.filled {
+        background: var(--rab-text-strong);
+        border-color: var(--rab-text-strong);
+    }
+}
+
+.rab-loc-text {
+    font-family: var(--rab-mono);
+    font-size: 0.74rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    color: var(--rab-text);
+}
+
+.rab-dash {
+    color: var(--rab-muted);
+}
+
+/* ----- Confidential footer ----- */
+.rab-paper-foot {
+    margin-top: 1rem;
+    padding-top: 0.5rem;
+}
+
+.rab-foot-line {
+    height: 2px;
+    background: linear-gradient(
+        to right,
+        var(--rab-red) 0%,
+        var(--rab-red) 25%,
+        transparent 50%,
+        var(--rab-red) 75%,
+        var(--rab-red) 100%
+    );
+    border-radius: 1px;
+    margin-bottom: 0.6rem;
+    opacity: 0.85;
+}
+
+.rab-foot-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    font-family: var(--rab-mono);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+}
+
+.rab-foot-confidential {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--rab-red);
+}
+
+.rab-foot-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--rab-red);
+    display: inline-block;
+}
+
+.rab-foot-page {
+    color: var(--rab-muted-strong);
+    letter-spacing: 0.25em;
+}
+
+.rab-foot-warning {
+    color: var(--rab-red);
+}
+
+@media (max-width: 720px) {
+    .rab-paper {
+        padding: 1.5rem 1rem 1rem;
+    }
+    .rab-paper-title {
+        font-size: 1.5rem;
+        letter-spacing: 0.08em;
+    }
+    .rab-foot-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.35rem;
+    }
+}

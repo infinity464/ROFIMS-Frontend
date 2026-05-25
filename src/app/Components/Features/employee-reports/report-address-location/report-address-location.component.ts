@@ -180,6 +180,167 @@ export class ReportAddressLocationComponent implements OnInit {
         return now.toLocaleDateString('bn-BD', { day: 'numeric', month: 'long', year: 'numeric' });
     }
 
+    /**
+     * Date formatted for the formal RAB report header strip — "25 MAY, 2026".
+     * Day numeric, month uppercase abbrev-full, year numeric.
+     */
+    get rabFormattedDate(): string {
+        const now = new Date();
+        if (this.lang === 'en') {
+            const day = now.getDate();
+            const month = now.toLocaleString('en-US', { month: 'long' }).toUpperCase();
+            const year = now.getFullYear();
+            return `${day} ${month}, ${year}`;
+        }
+        const dayBn = BanglaNumerals.toBangla(now.getDate().toString());
+        const monthBn = now.toLocaleString('bn-BD', { month: 'long' });
+        const yearBn = BanglaNumerals.toBangla(now.getFullYear().toString());
+        return `${dayBn} ${monthBn}, ${yearBn}`;
+    }
+
+    /** "<status> Personnel" — section subtitle under the report title in the paper view. */
+    get rabSubtitleText(): string {
+        const label = this.lang === 'bn' ? this.statusLabelBn : this.statusLabel;
+        if (!label) return '';
+        return this.lang === 'bn' ? label : `${label} Personnel`;
+    }
+
+    /** Section title for the paper view — uppercase variant of the report title. */
+    get rabSectionTitle(): string {
+        return this.L[this.lang]['report.title.addressLocation'].toUpperCase();
+    }
+
+    /** Government-letterhead lines at the top of the paper. */
+    get rabOverlineText(): string {
+        return this.lang === 'bn'
+            ? 'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার'
+            : "GOVERNMENT OF THE PEOPLE'S REPUBLIC OF BANGLADESH";
+    }
+    get rabOrgTitle(): string {
+        return this.lang === 'bn' ? 'র‍্যাপিড অ্যাকশন ব্যাটালিয়ন' : 'RAPID ACTION BATTALION';
+    }
+    get rabOrgSubtitle(): string {
+        return this.lang === 'bn'
+            ? 'বাংলাদেশ পুলিশ · সদর দপ্তর, কুর্মিটোলা, ঢাকা'
+            : 'Bangladesh Police · Headquarters, Kurmitola, Dhaka';
+    }
+
+    /** Selection-criteria strip labels. */
+    get rabCriteriaTitle(): string {
+        return this.lang === 'bn' ? 'বাছাইয়ের শর্তাবলী' : 'SELECTION CRITERIA';
+    }
+    get rabGeneratedLabel(): string {
+        return this.lang === 'bn' ? 'প্রস্তুতকৃত' : 'GENERATED';
+    }
+
+    /** Confidential-strip labels. */
+    get rabConfidentialLabel(): string {
+        return this.lang === 'bn' ? 'গোপনীয়' : 'CONFIDENTIAL';
+    }
+    get rabPageOfLabel(): string {
+        if (this.lang === 'bn') {
+            const cur = BanglaNumerals.toBangla(this.currentPage.toString());
+            const tot = BanglaNumerals.toBangla(this.totalPages.toString());
+            return `পৃষ্ঠা ${cur} / ${tot}`;
+        }
+        return `PAGE ${this.currentPage} OF ${this.totalPages}`;
+    }
+    get rabWarningLabel(): string {
+        return this.lang === 'bn' ? 'অননুমোদিত প্রকাশ নিষিদ্ধ' : 'UNAUTHORIZED DISCLOSURE PROHIBITED';
+    }
+
+    /** Current/total pages for the in-paper footer line. */
+    get currentPage(): number {
+        return Math.floor(this.first / this.rows) + 1;
+    }
+    get totalPages(): number {
+        return Math.max(1, Math.ceil(this.totalRecords / this.rows));
+    }
+
+    /** Zero-pad serial to 2 digits and apply Bangla numerals when appropriate. */
+    paddedSer(n: number | string | null | undefined): string {
+        if (n == null || n === '') return '—';
+        const padded = String(n).padStart(2, '0');
+        return this.lang === 'bn' ? BanglaNumerals.toBangla(padded) : padded;
+    }
+
+    /** True for Permanent / SpousePermanent — drives the filled-square icon. */
+    isPermanent(loc: string | null | undefined): boolean {
+        if (!loc) return false;
+        return loc === 'Permanent' || loc === 'SpousePermanent';
+    }
+
+    displayLocationTypeUpper(val: string | null | undefined): string {
+        return this.displayLocationType(val).toUpperCase();
+    }
+
+    /**
+     * Criteria cells rendered in the SELECTION CRITERIA strip — only filters the
+     * user actually applied. Cells fall through if the value is the "All"/empty
+     * sentinel, so the formal-report top section stays free of placeholder rows.
+     */
+    get criteriaItems(): { label: string; value: string }[] {
+        const bn = this.lang === 'bn';
+        const findLabel = <T>(
+            opts: { value: T; label: string; labelBn?: string }[],
+            val: T,
+        ): string | null => {
+            const opt = opts.find((o) => o.value === val);
+            if (!opt) return null;
+            return bn ? (opt.labelBn ?? opt.label) : opt.label;
+        };
+        const lbl = (en: string, b: string) => (bn ? b : en);
+
+        const items: { label: string; value: string }[] = [];
+
+        if (this.selectedAddressOwner) {
+            const v = findLabel(this.addressOwnerOptions, this.selectedAddressOwner);
+            if (v) items.push({ label: lbl('ADDRESS OWNER', 'ঠিকানার মালিক'), value: v });
+        }
+
+        if (this.selectedDivisionId != null) {
+            const v = findLabel(this.divisionOptions, this.selectedDivisionId);
+            if (v) items.push({ label: lbl('DIVISION', 'বিভাগ'), value: v });
+        }
+
+        if (this.selectedDistrictId != null) {
+            const v = findLabel(this.districtOptions, this.selectedDistrictId);
+            if (v) items.push({ label: lbl('DISTRICT', 'জেলা'), value: v });
+        }
+
+        if (this.selectedUpazilaId != null) {
+            const v = findLabel(this.upazilaOptions, this.selectedUpazilaId);
+            if (v) items.push({ label: lbl('UPAZILA', 'উপজেলা'), value: v });
+        }
+
+        if (this.selectedPostOfficeId != null) {
+            const v = findLabel(this.postOfficeOptions, this.selectedPostOfficeId);
+            if (v) items.push({ label: lbl('UNION / POST OFFICE', 'ইউনিয়ন / ডাকঘর'), value: v });
+        }
+
+        // RAB UNIT — only shown when access-scope actually restricts to specific units.
+        if (this.unitScopeLine) {
+            items.push({ label: lbl('RAB UNIT', 'র‍্যাব ইউনিট'), value: this.unitScopeLine });
+        }
+
+        if (this.selectedLocationType) {
+            const v = findLabel(this.locationTypeOptions, this.selectedLocationType);
+            if (v) items.push({ label: lbl('LOCATION TYPE', 'অবস্থানের ধরন'), value: v });
+        }
+
+        if (this.searchRabId.trim()) {
+            items.push({ label: lbl('RAB ID', 'র‍্যাব আইডি'), value: this.searchRabId.trim() });
+        }
+        if (this.searchServiceId.trim()) {
+            items.push({ label: lbl('SERVICE ID', 'সার্ভিস আইডি'), value: this.searchServiceId.trim() });
+        }
+        if (this.searchNid.trim()) {
+            items.push({ label: lbl('NID', 'এনআইডি'), value: this.searchNid.trim() });
+        }
+
+        return items;
+    }
+
     buildFilterLines(): string[] {
         const L = this.L[this.lang];
         const lines: string[] = [];
