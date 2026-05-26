@@ -527,24 +527,36 @@
 
 .rab-report-document {
     /* --- Light theme defaults --- */
+    /* Ink palette: near-black, not navy. RAB duty document, not a SaaS report. */
     --rab-bg: #ffffff;
     --rab-paper-bg: #ffffff;
-    --rab-strip-bg: #f3f5fa;
-    --rab-strip-border: #d8dde6;
-    --rab-border: #d8dde6;
-    --rab-border-soft: #e6eaf1;
-    --rab-text: #1a2744;
-    --rab-text-strong: #0f1f3d;
-    --rab-muted: #8893aa;
-    --rab-muted-strong: #5a6781;
+    --rab-strip-bg: #f4f4f2;
+    --rab-strip-border: #d8d6d0;
+    --rab-border: #d8d6d0;
+    --rab-border-soft: #e6e4de;
+    --rab-text: #1a1a1a;
+    --rab-text-strong: #0b0b0b;
+    --rab-muted: #8a8a8a;
+    --rab-muted-strong: #4a4a4a;
     --rab-accent: #b78b3b;
     --rab-accent-soft: #d9b876;
-    --rab-table-head-bg: #1a2744;
+    --rab-table-head-bg: #0b0b0b;
     --rab-table-head-text: #d9c79a;
-    --rab-row-stripe: #f8f9fc;
+    --rab-row-stripe: #fafaf6;
     --rab-row-hover: #f1ecdf;
     --rab-red: #b03a3a;
     --rab-red-soft: rgba(176, 58, 58, 0.18);
+
+    /* Body-row palette — kept theme-agnostic so dark mode can flip rows dark
+       without leaving a "cream island" inside the charcoal frame. */
+    --rab-body-bg: #ffffff;
+    --rab-body-bg-alt: #fafaf6;
+    --rab-body-hover: #f3eedf;
+    --rab-body-ink: #0b0b0b;
+    --rab-body-ink-muted: #6b6b6b;
+    --rab-body-ink-faint: #b0b0b0;
+    --rab-body-border: #ece6d4;
+
     --rab-serif: 'Playfair Display', 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
     --rab-mono: 'JetBrains Mono', 'SF Mono', Consolas, 'Liberation Mono', monospace;
 
@@ -554,33 +566,99 @@
 
 :host-context(.app-dark) .rab-report-document,
 .app-dark .rab-report-document {
-    --rab-bg: #0a1220;
-    --rab-paper-bg: #0e1828;
-    --rab-strip-bg: #131f33;
-    --rab-strip-border: #233149;
-    --rab-border: #243250;
-    --rab-border-soft: #1a2640;
-    --rab-text: #e8d9b0;
+    /* Warm charcoal — "paper at night / archive room", not "cockpit console".
+       Hue rotated off navy toward neutral so gold accents read as ink-on-paper. */
+    --rab-bg: #0d0f13;
+    --rab-paper-bg: #171a20;
+    --rab-strip-bg: #1e2128;
+    --rab-strip-border: #2d3038;
+    --rab-border: #2d3038;
+    --rab-border-soft: #23262c;
+    --rab-text: #e6d8b0;
     --rab-text-strong: #f0dca2;
-    --rab-muted: #8a7d5e;
-    --rab-muted-strong: #b5a275;
+    --rab-muted: #847a5e;
+    --rab-muted-strong: #b1a075;
     --rab-accent: #d9b876;
     --rab-accent-soft: #b78b3b;
-    --rab-table-head-bg: #131f33;
+    --rab-table-head-bg: #1e2128;
     --rab-table-head-text: #c4a86c;
-    --rab-row-stripe: #0c1626;
-    --rab-row-hover: #16243c;
+    --rab-row-stripe: #14171c;
+    --rab-row-hover: #22262e;
     --rab-red: #d04d4d;
     --rab-red-soft: rgba(208, 77, 77, 0.22);
+
+    /* Body rows live ON the dark frame, not floating ABOVE it as a cream
+       island. Cream paper either lives everywhere or nowhere — dark mode
+       picks "nowhere", so rows inherit charcoal stock and cream/gold ink. */
+    --rab-body-bg: #171a20;
+    --rab-body-bg-alt: #1f232b;
+    --rab-body-hover: #262a33;
+    --rab-body-ink: #e6d8b0;
+    --rab-body-ink-muted: #95895f;
+    --rab-body-ink-faint: #5a5240;
+    --rab-body-border: #2d3038;
 }
 
-/* --- Screen-only toolbar above the paper --- */
+/* --- Screen-only toolbar above the paper ---
+   Restyled to speak the report's typographic vocabulary (mono, small-caps,
+   subdued borders) so the visual jump from teal-pill filter chrome to the
+   formal paper is bridged rather than abrupt. Scoped to .rab-toolbar so
+   sibling reports using the shared button classes stay untouched. */
 .rab-toolbar {
     display: flex;
     justify-content: flex-end;
     align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.75rem;
+    gap: 0.4rem;
+    margin-bottom: 0.65rem;
+
+    .report-lang-toggle,
+    .report-btn-export {
+        height: 28px;
+        padding: 0 12px;
+        border-radius: 2px;
+        border: 1px solid var(--rab-strip-border);
+        background: var(--rab-strip-bg);
+        color: var(--rab-text);
+        font-family: var(--rab-mono);
+        font-size: 0.66rem;
+        font-weight: 600;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        box-shadow: none;
+        transition: border-color 0.15s, color 0.15s, background 0.15s;
+
+        &:hover:not(:disabled) {
+            border-color: var(--rab-accent);
+            color: var(--rab-accent);
+            background: var(--rab-strip-bg);
+            transform: none;
+            box-shadow: none;
+        }
+    }
+
+    .report-lang-toggle {
+        /* Button text is the OTHER language ("বাংলা" when lang=en,
+           "English" when lang=bn) — both render fine without tracking. */
+        letter-spacing: 0.04em;
+    }
+
+    /* Dropdown items inherit document type too. */
+    .report-export-dropdown {
+        background: var(--rab-paper-bg);
+        border-color: var(--rab-strip-border);
+        border-radius: 3px;
+
+        .report-export-item {
+            color: var(--rab-text);
+            font-family: var(--rab-mono);
+            font-size: 0.74rem;
+            letter-spacing: 0.04em;
+
+            &:hover {
+                background: var(--rab-row-hover);
+            }
+        }
+    }
 }
 
 /* --- The paper itself --- */
@@ -720,7 +798,11 @@
 }
 
 .rab-criteria-strip-date {
-    color: var(--rab-muted-strong);
+    /* Metadata, but it should be readable without squinting. Lock to the
+       primary ink color at 75% opacity so the contrast stays high in both
+       themes without making the timestamp shout. */
+    color: var(--rab-text-strong);
+    opacity: 0.75;
     font-weight: 500;
 }
 
@@ -784,7 +866,13 @@
     .rab-name,
     .rab-rank,
     .rab-loc-text,
-    .rab-unit-pill {
+    .rab-unit-pill,
+    .rab-personnel-name,
+    .rab-personnel-meta,
+    .rab-addr-part,
+    .rab-addr-part-label,
+    .rab-addr-part-value,
+    .rab-addr-detail {
         letter-spacing: 0;
         font-family: 'Hind Siliguri', 'Noto Sans Bengali', 'SolaimanLipi', 'Kalpurush', sans-serif;
     }
@@ -822,8 +910,10 @@
     .p-datatable-table {
         border-collapse: separate;
         border-spacing: 0;
+        width: 100%;
     }
 
+    /* Header keeps the document's dark strip + cream/gold ink. */
     .p-datatable-thead > tr > th {
         background: var(--rab-table-head-bg);
         color: var(--rab-table-head-text);
@@ -832,64 +922,220 @@
         font-weight: 600;
         letter-spacing: 0.18em;
         text-transform: uppercase;
-        padding: 0.7rem 0.85rem;
+        padding: 0.7rem 0.95rem;
         border-bottom: 1px solid var(--rab-strip-border);
         border-top: 1px solid var(--rab-strip-border);
-        border-right: 1px solid var(--rab-strip-border);
         text-align: left;
-
-        &:first-child {
-            border-left: 1px solid var(--rab-strip-border);
-        }
+        vertical-align: middle;
+        white-space: nowrap;
     }
 
+    /* Body rows take their palette from the theme. Light = white paper with
+       ink-black text; dark = charcoal stock with cream/gold text. The whole
+       page reads as one document on one kind of stock, not a light island
+       inside a dark frame. */
     .p-datatable-tbody > tr {
-        background: var(--rab-paper-bg);
+        background: var(--rab-body-bg);
 
         > td {
-            padding: 0.6rem 0.85rem;
+            padding: 0.85rem 0.95rem;
             font-size: 0.84rem;
-            color: var(--rab-text);
-            border-bottom: 1px solid var(--rab-border-soft);
-            border-right: 1px solid var(--rab-border-soft);
+            color: var(--rab-body-ink);
+            background: var(--rab-body-bg);
+            border-bottom: 1px solid var(--rab-body-border);
             vertical-align: middle;
-
-            &:first-child {
-                border-left: 1px solid var(--rab-border-soft);
-            }
         }
 
         &:nth-child(even) {
-            background: var(--rab-row-stripe);
+            background: var(--rab-body-bg-alt);
+
+            > td {
+                background: var(--rab-body-bg-alt);
+            }
         }
 
         &:hover {
-            background: var(--rab-row-hover);
+            background: var(--rab-body-hover);
+
+            > td {
+                background: var(--rab-body-hover);
+            }
         }
 
         &:last-child > td {
             border-bottom: 1px solid var(--rab-strip-border);
         }
     }
+}
 
-    .p-paginator {
-        background: var(--rab-paper-bg);
-        border: none;
-        padding: 0.75rem 0.25rem 0.25rem;
-        color: var(--rab-text);
+/* PrimeNG v18+ paints the row background on each <td> via its theme (not on
+   <tr>) — so the var on <tr> alone gets covered. Force the td bg explicitly,
+   AND override the dark-theme variant outside ::ng-deep so the cascade is
+   unambiguous. Both selectors needed: :host-context for when the .app-dark
+   class sits on an ancestor outside this component, .app-dark for when it
+   lives on a parent of this host. */
+:host-context(.app-dark) ::ng-deep .rab-data-table .p-datatable-tbody > tr,
+:host-context(.app-dark) ::ng-deep .rab-data-table .p-datatable-tbody > tr > td,
+.app-dark :host ::ng-deep .rab-data-table .p-datatable-tbody > tr,
+.app-dark :host ::ng-deep .rab-data-table .p-datatable-tbody > tr > td {
+    background: #171a20;
+    color: #e6d8b0;
+    border-color: #2d3038;
+}
+
+:host-context(.app-dark) ::ng-deep .rab-data-table .p-datatable-tbody > tr:nth-child(even),
+:host-context(.app-dark) ::ng-deep .rab-data-table .p-datatable-tbody > tr:nth-child(even) > td,
+.app-dark :host ::ng-deep .rab-data-table .p-datatable-tbody > tr:nth-child(even),
+.app-dark :host ::ng-deep .rab-data-table .p-datatable-tbody > tr:nth-child(even) > td {
+    background: #1f232b;
+}
+
+:host-context(.app-dark) ::ng-deep .rab-data-table .p-datatable-tbody > tr:hover,
+:host-context(.app-dark) ::ng-deep .rab-data-table .p-datatable-tbody > tr:hover > td,
+.app-dark :host ::ng-deep .rab-data-table .p-datatable-tbody > tr:hover,
+.app-dark :host ::ng-deep .rab-data-table .p-datatable-tbody > tr:hover > td {
+    background: #262a33;
+}
+
+/* Column-width hints — fixed where the content is uniform, flexible for the
+   composite columns so addresses can breathe. */
+:host ::ng-deep .rab-data-table {
+    .rab-th-ser, .rab-td-ser { width: 56px; text-align: left; }
+    .rab-th-rabid, .rab-td-rabid {
+        width: 110px;
+        font-family: var(--rab-mono);
+        letter-spacing: 0.02em;
     }
+    .rab-th-loctype, .rab-td-loctype { width: 160px; }
+    .rab-th-owner, .rab-td-owner {
+        width: 140px;
+        font-family: var(--rab-serif);
+        font-weight: 600;
+        color: var(--rab-body-ink);
+    }
+    .rab-th-remarks, .rab-td-remarks { width: 90px; text-align: left; }
+    .rab-td-personnel { min-width: 220px; }
+    .rab-td-address { min-width: 280px; }
+}
 
-    .p-paginator .p-paginator-page,
-    .p-paginator .p-paginator-prev,
-    .p-paginator .p-paginator-next,
-    .p-paginator .p-paginator-first,
-    .p-paginator .p-paginator-last {
+/* Composite cell typography — keep weight where it earns it (the name, the
+   breadcrumb head), drop to muted ink for the secondary line. */
+.rab-personnel-name {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: 0.92rem;
+    color: var(--rab-body-ink);
+    line-height: 1.2;
+    letter-spacing: -0.005em;
+}
+.rab-personnel-meta {
+    margin-top: 0.18rem;
+    font-family: var(--rab-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--rab-body-ink-muted);
+}
+
+.rab-addr-crumb {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.4rem;
+    font-size: 0.85rem;
+    color: var(--rab-body-ink);
+    line-height: 1.25;
+}
+.rab-addr-part {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.3rem;
+    font-weight: 500;
+}
+.rab-addr-part-label {
+    font-family: var(--rab-mono);
+    font-size: 0.66rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--rab-body-ink-muted);
+}
+.rab-addr-part-value {
+    font-weight: 600;
+    color: var(--rab-body-ink);
+}
+.rab-addr-sep {
+    color: var(--rab-accent-soft);
+    font-weight: 700;
+    font-size: 0.95rem;
+    line-height: 1;
+}
+.rab-addr-detail {
+    margin-top: 0.22rem;
+    font-size: 0.74rem;
+    color: var(--rab-body-ink-muted);
+    font-style: italic;
+    line-height: 1.3;
+}
+
+/* Cell-level helpers — read values from the body palette so they invert
+   correctly between themes (black ink on white in light, cream on charcoal
+   in dark) without any hardcoded color. */
+:host ::ng-deep .rab-data-table .p-datatable-tbody {
+    .rab-ser {
+        color: var(--rab-body-ink-muted);
+        font-family: var(--rab-mono);
+        font-weight: 600;
+        font-size: 0.82rem;
+        letter-spacing: 0.04em;
+    }
+    .rab-dash {
+        color: var(--rab-body-ink-faint);
+    }
+    .rab-loc-text {
+        color: var(--rab-body-ink);
+        letter-spacing: 0.08em;
+    }
+    .rab-loc-icon {
+        background: var(--rab-accent-soft);
+        border-color: var(--rab-accent-soft);
+
+        &.filled {
+            background: var(--rab-body-ink);
+            border-color: var(--rab-body-ink);
+        }
+    }
+}
+
+/* Standalone paginator rendered below the confidential footer. */
+.rab-paginator-bar {
+    display: flex;
+    justify-content: center;
+    padding: 0.75rem 0 0;
+}
+
+:host ::ng-deep .rab-paginator-bar .p-paginator {
+    background: transparent;
+    border: none;
+    padding: 0;
+    color: var(--rab-text);
+    gap: 0.15rem;
+
+    .p-paginator-page,
+    .p-paginator-prev,
+    .p-paginator-next,
+    .p-paginator-first,
+    .p-paginator-last {
+        min-width: 30px;
+        height: 30px;
         color: var(--rab-text);
         background: transparent;
         border: 1px solid transparent;
+        border-radius: 2px;
 
         &:not(.p-disabled):hover {
             background: var(--rab-row-hover);
+            color: var(--rab-text-strong);
         }
 
         &.p-paginator-page-selected,
@@ -898,6 +1144,17 @@
             color: #fff;
             border-color: var(--rab-accent);
         }
+    }
+
+    .p-select,
+    .p-dropdown {
+        height: 30px;
+        border: 1px solid var(--rab-strip-border);
+        border-radius: 2px;
+        background: var(--rab-strip-bg);
+        color: var(--rab-text);
+        font-family: var(--rab-mono);
+        font-size: 0.78rem;
     }
 }
 
@@ -955,13 +1212,17 @@
     gap: 0.5rem;
 }
 
+/* Both states are filled, just in different colors — a hollow square reads
+   as an unchecked checkbox in Bangla context, especially next to বর্তমান.
+   Permanent = ink (text-strong); Present = accent (gold). Two filled pins
+   read as a legend, not a form control. */
 .rab-loc-icon {
     display: inline-block;
-    width: 11px;
-    height: 11px;
-    border: 1.5px solid var(--rab-muted-strong);
+    width: 10px;
+    height: 10px;
     border-radius: 1px;
-    background: transparent;
+    background: var(--rab-accent);
+    border: 1px solid var(--rab-accent);
     flex-shrink: 0;
 
     &.filled {

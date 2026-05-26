@@ -6,6 +6,7 @@ import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { InputTextModule } from 'primeng/inputtext';
+import { PaginatorModule } from 'primeng/paginator';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { ReportService } from '@/services/report.service';
@@ -20,7 +21,7 @@ import type { CommonCodeModel } from '@/models/common-code-model';
 @Component({
     selector: 'app-report-address-location',
     standalone: true,
-    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, InputTextModule, Toast],
+    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, InputTextModule, PaginatorModule, Toast],
     providers: [MessageService],
     templateUrl: './report-address-location.component.html',
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-address-location.component.scss'],
@@ -52,7 +53,7 @@ export class ReportAddressLocationComponent implements OnInit {
     /** Address Owner filter: "Self", relationship CodeId as string, or empty for all */
     addressOwnerOptions: { label: string; labelBn: string; value: string }[] = [
         { label: 'All', labelBn: 'সকল', value: '' },
-        { label: 'Self (Employee)', labelBn: 'নিজ (কর্মচারী)', value: 'Self' },
+        { label: 'Self (Member)', labelBn: 'নিজ (সদস্য)', value: 'Self' },
     ];
     selectedAddressOwner: string = 'Self';
 
@@ -83,6 +84,14 @@ export class ReportAddressLocationComponent implements OnInit {
     /** Show RAB Unit column only when filtering Presently Serving members */
     get showRabUnit(): boolean {
         return this.selectedPostingStatus === 'Servings';
+    }
+
+    /** Show the Address Owner column whenever the filter is something OTHER than
+        "Self" — when the user is looking at "All" or a specific relationship, the
+        owner identity is the whole point of the column. With "Self" selected,
+        every row would say the same thing, so the column is dead weight. */
+    get showAddressOwner(): boolean {
+        return this.selectedAddressOwner !== 'Self';
     }
 
     list: AddressLocationReportRow[] = [];
@@ -274,6 +283,62 @@ export class ReportAddressLocationComponent implements OnInit {
         return this.displayLocationType(val).toUpperCase();
     }
 
+    /** "CPL · ARMY · SVC 4045260" — sub-meta line under the personnel name. */
+    personnelMeta(row: AddressLocationReportRow): string {
+        const rank = this.codeValue(row.rank, row.rankBN);
+        const org = this.codeValue(row.orgName, row.orgNameBN);
+        const svcId = row.serviceId != null && row.serviceId !== '' ? this.displayNum(row.serviceId) : '';
+        const svc = svcId && svcId !== '-' ? (this.lang === 'bn' ? `সার্ভিস ${svcId}` : `SVC ${svcId}`) : '';
+        return [rank, org, svc].filter((s) => s && s !== '—' && s !== '-').join(' · ');
+    }
+
+    /** Geographic crumbs — each part labelled (Division/District/Upazila) so a
+        reader can see what the value names without inferring from position alone. */
+    addressCrumbParts(row: AddressLocationReportRow): { label: string; value: string }[] {
+        const bn = this.lang === 'bn';
+        const parts = [
+            { label: bn ? 'বিভাগ' : 'Division', value: this.codeValue(row.division, row.divisionBN) },
+            { label: bn ? 'জেলা' : 'District', value: this.codeValue(row.district, row.districtBN) },
+            { label: bn ? 'উপজেলা' : 'Upazila', value: this.codeValue(row.upazila, row.upazilaBN) },
+        ];
+        return parts.filter((p) => p.value && p.value !== '—');
+    }
+
+    /** "P.O. Bishnapur · Holding 54, Kholla, 3413" — second address line. */
+    addressDetail(row: AddressLocationReportRow): string {
+        const po = this.codeValue(row.postOffice, row.postOfficeBN);
+        const addr = this.codeValue(row.address, row.addressBN);
+        const parts: string[] = [];
+        if (po && po !== '—') {
+            parts.push(this.lang === 'bn' ? `ডাকঘর ${po}` : `P.O. ${po}`);
+        }
+        if (addr && addr !== '—') parts.push(addr);
+        return parts.join(' · ');
+    }
+
+    /** Table column headers — lang-aware. Composite columns ("Personnel", "Address")
+        replace the previous flat layout shown in the screen design. */
+    get rabHeaders(): {
+        ser: string;
+        personnel: string;
+        rabId: string;
+        locationType: string;
+        addressOwner: string;
+        address: string;
+        remarks: string;
+    } {
+        const bn = this.lang === 'bn';
+        return {
+            ser: bn ? 'ক্রঃ' : 'SER',
+            personnel: bn ? 'সদস্য' : 'PERSONNEL',
+            rabId: bn ? 'র‍্যাব আইডি' : 'RAB ID',
+            locationType: bn ? 'অবস্থানের ধরন' : 'LOCATION TYPE',
+            addressOwner: bn ? 'ঠিকানার মালিক' : 'ADDRESS OWNER',
+            address: bn ? 'ঠিকানা' : 'ADDRESS',
+            remarks: bn ? 'মন্তব্য' : 'REMARKS',
+        };
+    }
+
     /**
      * Criteria cells rendered in the SELECTION CRITERIA strip — only filters the
      * user actually applied. Cells fall through if the value is the "All"/empty
@@ -293,8 +358,14 @@ export class ReportAddressLocationComponent implements OnInit {
 
         const items: { label: string; value: string }[] = [];
 
-        if (this.selectedAddressOwner) {
-            const v = findLabel(this.addressOwnerOptions, this.selectedAddressOwner);
+        // Address Owner always renders — when "All" is picked it reads as the
+        // friendly "Member & Family" instead of the placeholder "All", so a
+        // reader can see the scope of the search at a glance.
+        {
+            const v =
+                this.selectedAddressOwner === ''
+                    ? bn ? 'সদস্য ও পরিবার' : 'Member & Family'
+                    : findLabel(this.addressOwnerOptions, this.selectedAddressOwner);
             if (v) items.push({ label: lbl('ADDRESS OWNER', 'ঠিকানার মালিক'), value: v });
         }
 
@@ -490,7 +561,7 @@ export class ReportAddressLocationComponent implements OnInit {
                 }));
                 this.addressOwnerOptions = [
                     { label: 'All', labelBn: 'সকল', value: '' },
-                    { label: 'Self (Employee)', labelBn: 'নিজ (কর্মচারী)', value: 'Self' },
+                    { label: 'Self (Member)', labelBn: 'নিজ (সদস্য)', value: 'Self' },
                     ...relOptions,
                 ];
             },
@@ -602,9 +673,9 @@ export class ReportAddressLocationComponent implements OnInit {
         this.first = 0;
     }
 
-    onPage(event: { first: number; rows: number }): void {
-        this.first = event.first;
-        this.rows = event.rows;
+    onPage(event: { first?: number; rows?: number }): void {
+        this.first = event.first ?? 0;
+        this.rows = event.rows ?? this.rows;
         this.load();
     }
 
