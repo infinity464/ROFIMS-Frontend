@@ -17,6 +17,23 @@ import { REPORT_LABELS, type ReportLang } from '@/Core/i18n/report-labels';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import type { AddressLocationReportRow, ReportAccessibleScope } from '@/models/report.model';
 import type { CommonCodeModel } from '@/models/common-code-model';
+import {
+    Document,
+    Packer,
+    Paragraph,
+    TextRun,
+    Table,
+    TableRow,
+    TableCell,
+    WidthType,
+    BorderStyle,
+    AlignmentType,
+    TableLayoutType,
+    PageOrientation,
+    Footer,
+    PageNumber,
+} from 'docx';
+import { saveAs } from 'file-saver';
 
 @Component({
     selector: 'app-report-address-location',
@@ -921,29 +938,473 @@ export class ReportAddressLocationComponent implements OnInit {
 </html>`;
     }
 
-    /** Word export — formal RAB layout. Mirrors the on-screen document structure
-        with a title block, selection-criteria table, and the composite-cell
-        data table. Falls back to the shared exportService for the docx packing. */
+    /** Word export — mirrors the formal-RAB print layout (title block, selection
+        criteria strip + grid, composite-cell data table, confidential footer).
+        Black-and-white: the print HTML's gold accents, shaded strip, and
+        filled/hollow location icon are dropped in favour of typography-only
+        differentiation so the docx reads identically on any printer. */
     private async exportRabWord(): Promise<void> {
-        const { columns, rows } = this.getExportData();
-        const preDate: string[] = [];
-        if (this.unitScopeLine) preDate.push(this.unitScopeLine);
-        const belowDate: string[] = [];
-        if (this.memberTypeScopeLine) belowDate.push(this.memberTypeScopeLine);
-        // Add the selection-criteria lines (key: value) into filterLines so the
-        // Word output carries the same scope info the print HTML shows in the
-        // criteria strip. Order: org-scope (preDate) → status → criteria.
-        const criteriaLines = this.criteriaItems.map((c) => `${c.label}: ${c.value}`);
-        await this.exportService.exportWord({
-            title: this.rabSectionTitle + (this.rabSubtitleText ? ` — ${this.rabSubtitleText}` : ''),
-            lang: this.lang,
-            columns,
-            rows,
-            showPageNumbers: true,
-            landscape: true,
-            preDateLines: preDate,
-            filterLines: [...belowDate, ...criteriaLines],
+        const isBn = this.lang === 'bn';
+        const sans = isBn ? 'Nirmala UI' : 'Calibri';
+        const serif = isBn ? 'Nirmala UI' : 'Cambria';
+        const mono = isBn ? 'Nirmala UI' : 'Consolas';
+
+        // Half-points (Word: 2 × pt).
+        const S = {
+            overline: 15, title: 44, subtitle: 20,
+            sectionTitle: 26, sectionSub: 20,
+            stripLabel: 16, stripDate: 16,
+            critLabel: 14, critValue: 20,
+            tableHeader: 14, name: 20, meta: 14, body: 16, footer: 15,
+        };
+        const C = {
+            black: '0B0B0B',
+            mutedText: '555555',
+            gray: '6B6B6B',
+            labelGray: '8A8A8A',
+            zebra: 'FAFAF6',
+            border: 'BFBFBF',
+            innerBorder: 'D9D9D9',
+        };
+
+        const cellBorder = {
+            top: { style: BorderStyle.SINGLE, size: 4, color: C.border },
+            bottom: { style: BorderStyle.SINGLE, size: 4, color: C.border },
+            left: { style: BorderStyle.SINGLE, size: 4, color: C.border },
+            right: { style: BorderStyle.SINGLE, size: 4, color: C.border },
+        };
+        const innerCellBorder = {
+            top: { style: BorderStyle.SINGLE, size: 2, color: C.innerBorder },
+            bottom: { style: BorderStyle.SINGLE, size: 2, color: C.innerBorder },
+            left: { style: BorderStyle.SINGLE, size: 2, color: C.innerBorder },
+            right: { style: BorderStyle.SINGLE, size: 2, color: C.innerBorder },
+        };
+        const headerCellBorder = {
+            top: { style: BorderStyle.SINGLE, size: 8, color: C.black },
+            bottom: { style: BorderStyle.SINGLE, size: 8, color: C.black },
+            left: { style: BorderStyle.SINGLE, size: 4, color: C.border },
+            right: { style: BorderStyle.SINGLE, size: 4, color: C.border },
+        };
+
+        // Page: A4 landscape by default. Margins kept tight so the table reads
+        // wide. Both tables below use percentage widths + AUTOFIT layout so
+        // they reflow when the user flips orientation or resizes margins in
+        // Word — fixed-DXA widths would clip content on portrait.
+        const marginTop = 680;
+        const marginBottom = 1247;
+        const marginSide = 680;
+
+        // ── Header block ──────────────────────────────────────────────────
+        const headerPars: Paragraph[] = [];
+        headerPars.push(new Paragraph({
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 80 },
+            children: [new TextRun({
+                text: this.rabOverlineText,
+                font: sans, size: S.overline, color: C.mutedText,
+                characterSpacing: 60, allCaps: !isBn,
+            })],
+        }));
+        headerPars.push(new Paragraph({
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 40 },
+            children: [new TextRun({
+                text: this.rabOrgTitle,
+                font: serif, size: S.title, bold: true, color: C.black,
+                characterSpacing: isBn ? 0 : 24,
+            })],
+        }));
+        headerPars.push(new Paragraph({
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 200 },
+            children: [new TextRun({
+                text: this.rabOrgSubtitle,
+                font: serif, size: S.subtitle, italics: true, color: C.mutedText,
+            })],
+        }));
+        headerPars.push(new Paragraph({
+            alignment: AlignmentType.CENTER,
+            spacing: { after: this.rabSubtitleText ? 40 : 200 },
+            children: [new TextRun({
+                text: this.rabSectionTitle,
+                font: serif, size: S.sectionTitle, bold: true, color: C.black,
+                characterSpacing: isBn ? 0 : 32, allCaps: !isBn,
+            })],
+        }));
+        if (this.rabSubtitleText) {
+            headerPars.push(new Paragraph({
+                alignment: AlignmentType.CENTER,
+                spacing: { after: 200 },
+                children: [new TextRun({
+                    text: this.rabSubtitleText,
+                    font: serif, size: S.sectionSub, italics: true, color: C.mutedText,
+                })],
+            }));
+        }
+
+        // ── Selection Criteria block ──────────────────────────────────────
+        // Uniform 4-col grid. Strip row uses columnSpan=2 left + columnSpan=2
+        // right so the title sits opposite the generated date on the same row.
+        // Cell widths are PERCENTAGE-based so the table reflows when the user
+        // flips orientation in Word.
+        const colsPerCritRow = 4;
+        const critCellPct = 100 / colsPerCritRow;
+
+        const stripCell = (
+            runs: TextRun[],
+            alignment: typeof AlignmentType.LEFT | typeof AlignmentType.RIGHT,
+        ) => new TableCell({
+            columnSpan: 2,
+            borders: {
+                top: { style: BorderStyle.SINGLE, size: 4, color: C.border },
+                bottom: { style: BorderStyle.SINGLE, size: 4, color: C.border },
+                left: { style: BorderStyle.SINGLE, size: 4, color: C.border },
+                right: { style: BorderStyle.SINGLE, size: 4, color: C.border },
+            },
+            margins: { top: 80, bottom: 80, left: 140, right: 140 },
+            width: { size: 50, type: WidthType.PERCENTAGE },
+            children: [new Paragraph({ alignment, children: runs })],
         });
+
+        const stripRow = new TableRow({
+            cantSplit: true,
+            children: [
+                stripCell([
+                    new TextRun({
+                        text: this.rabCriteriaTitle,
+                        font: sans, size: S.stripLabel, bold: true,
+                        color: C.black, characterSpacing: 40, allCaps: !isBn,
+                    }),
+                ], AlignmentType.LEFT),
+                stripCell([
+                    new TextRun({
+                        text: `${this.rabGeneratedLabel} · ${this.rabFormattedDate}`,
+                        font: sans, size: S.stripDate, bold: true,
+                        color: C.mutedText, characterSpacing: 30, allCaps: !isBn,
+                    }),
+                ], AlignmentType.RIGHT),
+            ],
+        });
+
+        const items = this.criteriaItems;
+        const critRows: TableRow[] = [stripRow];
+        for (let i = 0; i < items.length; i += colsPerCritRow) {
+            const cells: TableCell[] = [];
+            for (let j = 0; j < colsPerCritRow; j++) {
+                const it = items[i + j];
+                cells.push(new TableCell({
+                    borders: innerCellBorder,
+                    margins: { top: 100, bottom: 100, left: 140, right: 140 },
+                    width: { size: critCellPct, type: WidthType.PERCENTAGE },
+                    children: it ? [
+                        new Paragraph({
+                            spacing: { after: 40 },
+                            children: [new TextRun({
+                                text: it.label,
+                                font: sans, size: S.critLabel, bold: true,
+                                color: C.labelGray, characterSpacing: 32,
+                                allCaps: !isBn,
+                            })],
+                        }),
+                        new Paragraph({
+                            children: [new TextRun({
+                                text: it.value,
+                                font: serif, size: S.critValue, bold: true,
+                                color: C.black,
+                            })],
+                        }),
+                    ] : [new Paragraph({ children: [new TextRun({ text: ' ', font: sans, size: S.critValue })] })],
+                }));
+            }
+            critRows.push(new TableRow({ cantSplit: true, children: cells }));
+        }
+
+        const criteriaTable = new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            layout: TableLayoutType.AUTOFIT,
+            rows: critRows,
+        });
+
+        // ── Data table ────────────────────────────────────────────────────
+        // Column widths are PERCENTAGE-based so the table reflows on orientation
+        // changes — fixed DXA widths previously clipped the rightmost columns
+        // when the user switched to portrait in Word.
+        const showOwner = this.showAddressOwner;
+        const dataColPct = showOwner
+            ? [4.5, 21.5, 9.5, 9.5, 9.5, 35.3, 10.2]
+            : [4.5, 22.6, 11.0, 11.0, 40.7, 10.2];
+
+        const headerLabels: string[] = [
+            this.rabHeaders.ser,
+            this.rabHeaders.personnel,
+            this.rabHeaders.rabId,
+        ];
+        if (showOwner) headerLabels.push(this.rabHeaders.addressOwner);
+        headerLabels.push(
+            this.rabHeaders.locationType,
+            this.rabHeaders.address,
+            this.rabHeaders.remarks,
+        );
+
+        const headerCells: TableCell[] = headerLabels.map((label, i) => new TableCell({
+            borders: headerCellBorder,
+            margins: { top: 120, bottom: 120, left: 140, right: 140 },
+            width: { size: dataColPct[i], type: WidthType.PERCENTAGE },
+            children: [new Paragraph({
+                alignment: AlignmentType.LEFT,
+                children: [new TextRun({
+                    text: label,
+                    font: sans, size: S.tableHeader, bold: true,
+                    color: C.black, characterSpacing: 30, allCaps: !isBn,
+                })],
+            })],
+        }));
+
+        const headerRow = new TableRow({
+            tableHeader: true,
+            cantSplit: true,
+            children: headerCells,
+        });
+
+        const dataRows: TableRow[] = this.list.map((row, idx) => {
+            const isEven = idx % 2 === 1;  // zebra: rows 2, 4, 6 (1-based) get shading
+            const ser = this.paddedSer(row.ser);
+            const name = this.codeValue(row.name, row.nameBN);
+            const meta = this.personnelMeta(row);
+            const rabId = row.rabid ? this.displayNum(row.rabid) : '—';
+            const owner = this.codeValue(row.addressOwner, row.addressOwnerBN);
+            const locType = this.displayLocationTypeUpper(row.locationType);
+            const crumbs = this.addressCrumbParts(row);
+            const detail = this.addressDetail(row);
+            const remarks = row.rmks || '';
+
+            const shading = isEven
+                ? { type: 'clear' as const, fill: C.zebra, color: 'auto' }
+                : undefined;
+
+            const cellOpts = (pct: number) => ({
+                borders: innerCellBorder,
+                margins: { top: 100, bottom: 100, left: 140, right: 140 },
+                width: { size: pct, type: WidthType.PERCENTAGE },
+                shading,
+            });
+
+            // Address crumbs: "Division: Dhaka  >  District: Gazipur  >  ..."
+            // Plain " > " separator in gray — the gold chevron is dropped per
+            // the B&W brief.
+            const crumbRuns: TextRun[] = [];
+            for (let i = 0; i < crumbs.length; i++) {
+                crumbRuns.push(new TextRun({
+                    text: `${crumbs[i].label}: `,
+                    font: mono, size: S.meta, bold: true,
+                    color: C.labelGray, characterSpacing: 16, allCaps: !isBn,
+                }));
+                crumbRuns.push(new TextRun({
+                    text: crumbs[i].value,
+                    font: sans, size: S.body, bold: true, color: C.black,
+                }));
+                if (i < crumbs.length - 1) {
+                    crumbRuns.push(new TextRun({
+                        text: '   ›   ',
+                        font: sans, size: S.body, bold: true, color: C.gray,
+                    }));
+                }
+            }
+            const addrParagraphs: Paragraph[] = [
+                new Paragraph({
+                    spacing: { after: detail ? 40 : 0 },
+                    children: crumbRuns.length > 0 ? crumbRuns : [new TextRun({ text: '—', font: sans, size: S.body, color: C.gray })],
+                }),
+            ];
+            if (detail) {
+                addrParagraphs.push(new Paragraph({
+                    children: [new TextRun({
+                        text: detail,
+                        font: sans, size: S.body, italics: true, color: C.gray,
+                    })],
+                }));
+            }
+
+            const cells: TableCell[] = [];
+            // SER
+            cells.push(new TableCell({
+                ...cellOpts(dataColPct[0]),
+                children: [new Paragraph({
+                    alignment: AlignmentType.LEFT,
+                    children: [new TextRun({
+                        text: ser, font: mono, size: S.name, bold: true,
+                        color: C.gray, characterSpacing: 8,
+                    })],
+                })],
+            }));
+            // PERSONNEL — name + meta
+            cells.push(new TableCell({
+                ...cellOpts(dataColPct[1]),
+                children: [
+                    new Paragraph({
+                        spacing: { after: 40 },
+                        children: [new TextRun({
+                            text: name, font: sans, size: S.name, bold: true, color: C.black,
+                        })],
+                    }),
+                    new Paragraph({
+                        children: [new TextRun({
+                            text: meta, font: mono, size: S.meta,
+                            color: C.gray, characterSpacing: 16, allCaps: !isBn,
+                        })],
+                    }),
+                ],
+            }));
+            // RAB ID
+            cells.push(new TableCell({
+                ...cellOpts(dataColPct[2]),
+                children: [new Paragraph({
+                    children: [new TextRun({
+                        text: rabId, font: mono, size: S.body, color: C.black,
+                        characterSpacing: 4,
+                    })],
+                })],
+            }));
+            // OWNER (conditional)
+            let colIdx = 3;
+            if (showOwner) {
+                cells.push(new TableCell({
+                    ...cellOpts(dataColPct[colIdx++]),
+                    children: [new Paragraph({
+                        children: [new TextRun({
+                            text: owner, font: sans, size: S.body, bold: true, color: C.black,
+                        })],
+                    })],
+                }));
+            }
+            // LOC TYPE — bold uppercase mono, no icon glyph (B&W brief).
+            cells.push(new TableCell({
+                ...cellOpts(dataColPct[colIdx++]),
+                children: [new Paragraph({
+                    children: [new TextRun({
+                        text: locType, font: mono, size: S.meta, bold: true,
+                        color: C.black, characterSpacing: 16, allCaps: !isBn,
+                    })],
+                })],
+            }));
+            // ADDRESS — crumbs + optional detail
+            cells.push(new TableCell({
+                ...cellOpts(dataColPct[colIdx++]),
+                children: addrParagraphs,
+            }));
+            // REMARKS
+            cells.push(new TableCell({
+                ...cellOpts(dataColPct[colIdx++]),
+                children: [new Paragraph({
+                    children: [new TextRun({
+                        text: remarks, font: sans, size: S.body, color: C.black,
+                    })],
+                })],
+            }));
+
+            return new TableRow({ cantSplit: true, children: cells });
+        });
+
+        const dataTable = new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            layout: TableLayoutType.AUTOFIT,
+            rows: [headerRow, ...dataRows],
+        });
+
+        // ── Confidential footer ───────────────────────────────────────────
+        // 3-cell borderless table: CONFIDENTIAL (left) | spacer | PAGE X OF Y
+        // (right). columnWidths sum to 9000 DXA — under portrait A4's
+        // printable width with default 1" margins — so the underlying
+        // tblGrid never overflows portrait. FIXED layout with tblW=100% PCT
+        // lets Word scale the columns proportionally to the live page
+        // width: in landscape the table fills the page (each col grows in
+        // proportion), in portrait it fits exactly. The right column's
+        // right edge always lands on the page's right margin, so the
+        // right-aligned page number stays flush-right in both orientations.
+        const footerCellBorder = {
+            top: { style: BorderStyle.SINGLE, size: 6, color: C.black },
+            bottom: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+            left: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+            right: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+        };
+        const footerCellMargins = { top: 80, bottom: 0, left: 0, right: 0 };
+
+        const footer = new Footer({
+            children: [
+                new Table({
+                    width: { size: 100, type: WidthType.PERCENTAGE },
+                    layout: TableLayoutType.FIXED,
+                    columnWidths: [3000, 3000, 3000],
+                    rows: [new TableRow({
+                        cantSplit: true,
+                        children: [
+                            new TableCell({
+                                borders: footerCellBorder,
+                                margins: footerCellMargins,
+                                children: [new Paragraph({
+                                    alignment: AlignmentType.LEFT,
+                                    children: [new TextRun({
+                                        text: this.rabConfidentialLabel,
+                                        font: mono, size: S.footer, bold: true, color: C.black,
+                                        characterSpacing: 30, allCaps: !isBn,
+                                    })],
+                                })],
+                            }),
+                            new TableCell({
+                                borders: footerCellBorder,
+                                margins: footerCellMargins,
+                                children: [new Paragraph({ children: [] })],
+                            }),
+                            new TableCell({
+                                borders: footerCellBorder,
+                                margins: footerCellMargins,
+                                children: [new Paragraph({
+                                    alignment: AlignmentType.RIGHT,
+                                    children: [new TextRun({
+                                        children: [
+                                            `${isBn ? 'পৃষ্ঠা' : 'PAGE'} `,
+                                            PageNumber.CURRENT,
+                                            ` ${isBn ? '/' : 'OF'} `,
+                                            PageNumber.TOTAL_PAGES,
+                                        ],
+                                        font: mono, size: S.footer, bold: true, color: C.black,
+                                        characterSpacing: 24, allCaps: !isBn,
+                                    })],
+                                })],
+                            }),
+                        ],
+                    })],
+                }),
+            ],
+        });
+
+        const doc = new Document({
+            sections: [{
+                properties: {
+                    page: {
+                        size: { orientation: PageOrientation.LANDSCAPE },
+                        margin: {
+                            top: marginTop, bottom: marginBottom,
+                            left: marginSide, right: marginSide,
+                        },
+                    },
+                },
+                footers: { default: footer },
+                children: [
+                    ...headerPars,
+                    criteriaTable,
+                    new Paragraph({
+                        spacing: { before: 0, after: 200 },
+                        children: [new TextRun({ text: '', font: sans, size: 4 })],
+                    }),
+                    dataTable,
+                ],
+            }],
+        });
+
+        const blob = await Packer.toBlob(doc);
+        const filename = `address-location-report_${this.lang}.docx`;
+        saveAs(blob, filename);
     }
 
     ngOnInit(): void {
