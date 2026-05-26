@@ -317,7 +317,7 @@
                             <div class="rab-personnel-name">{{ codeValue(row.name, row.nameBN) }}</div>
                             <div class="rab-personnel-meta">{{ personnelMeta(row) }}</div>
                         </td>
-                        <td class="rab-td-rabid">{{ row.rabid ?? '—' }}</td>
+                        <td class="rab-td-rabid">{{ row.rabid || '—' }}</td>
                         @if (showAddressOwner) {
                             <td class="rab-td-owner">{{ codeValue(row.addressOwner, row.addressOwnerBN) }}</td>
                         }
@@ -343,7 +343,7 @@
                                 <div class="rab-addr-detail">{{ addressDetail(row) }}</div>
                             }
                         </td>
-                        <td class="rab-td-remarks"><span class="rab-dash">{{ row.rmks ?? '—' }}</span></td>
+                        <td class="rab-td-remarks">{{ row.rmks || '' }}</td>
                     </tr>
                 </ng-template>
                 <ng-template pTemplate="emptymessage">

@@ -283,12 +283,15 @@ export class ReportAddressLocationComponent implements OnInit {
         return this.displayLocationType(val).toUpperCase();
     }
 
-    /** "CPL · ARMY · SVC 4045260" — sub-meta line under the personnel name. */
+    /** "CPL · ARMY · SVC 4045260" — sub-meta line under the personnel name.
+        The space between "SVC" and the service id is a non-breaking space
+        (U+00A0) so they always render on the same line, even when the cell
+        is narrow enough to wrap the rest of the meta string. */
     personnelMeta(row: AddressLocationReportRow): string {
         const rank = this.codeValue(row.rank, row.rankBN);
         const org = this.codeValue(row.orgName, row.orgNameBN);
         const svcId = row.serviceId != null && row.serviceId !== '' ? this.displayNum(row.serviceId) : '';
-        const svc = svcId && svcId !== '-' ? (this.lang === 'bn' ? `সার্ভিস ${svcId}` : `SVC ${svcId}`) : '';
+        const svc = svcId && svcId !== '-' ? (this.lang === 'bn' ? `সার্ভিস ${svcId}` : `SVC ${svcId}`) : '';
         return [rank, org, svc].filter((s) => s && s !== '—' && s !== '-').join(' · ');
     }
 
@@ -497,35 +500,432 @@ export class ReportAddressLocationComponent implements OnInit {
 
     async exportAs(type: 'print' | 'pdf' | 'word' | 'excel'): Promise<void> {
         this.exportDropdownOpen = false;
+
+        if (type === 'print' || type === 'pdf') {
+            // Both routes use the same formal RAB HTML — the print dialog the
+            // browser opens lets the user pick "Print" or "Save as PDF" from a
+            // single rendered document, instead of us shipping two divergent
+            // layouts.
+            if (type === 'pdf') this.exporting = true;
+            try {
+                this.openRabPrintWindow();
+            } finally {
+                if (type === 'pdf') this.exporting = false;
+            }
+            return;
+        }
+
+        if (type === 'word') {
+            await this.exportRabWord();
+            return;
+        }
+
+        // Excel stays on the flat tabular export — spreadsheets are for the
+        // data shape, not the formal document presentation.
         const { columns, rows } = this.getExportData();
-        // Unit picks render ABOVE the date via preDateLines so the org context
-        // sits next to the title (matches the on-screen header). Member-type
-        // restrictions stay with the other applied filters under the date.
         const preDate: string[] = [];
         if (this.unitScopeLine) preDate.push(this.unitScopeLine);
         const belowDate: string[] = [];
         if (this.memberTypeScopeLine) belowDate.push(this.memberTypeScopeLine);
-        const config = {
+        this.exportService.exportExcel({
             title: this.reportTitle,
             lang: this.lang,
             columns,
             rows,
             showPageNumbers: true,
-            // 15 visible columns (16 with RAB Unit on Servings) — portrait clips.
             landscape: true,
             preDateLines: preDate,
             filterLines: [...belowDate, ...this.appliedFilterLines],
-        };
-        if (type === 'pdf') {
-            this.exporting = true;
-            try { await this.exportService.generatePDF(config); } finally { this.exporting = false; }
-        } else if (type === 'print') {
-            this.exportService.exportPDF(config);
-        } else if (type === 'word') {
-            await this.exportService.exportWord(config);
-        } else {
-            this.exportService.exportExcel(config);
+        });
+    }
+
+    /** Opens a new browser window with the formal RAB HTML and fires the print dialog. */
+    private openRabPrintWindow(): void {
+        const html = this.buildRabPrintHtml();
+        const win = window.open('', '_blank', 'width=1200,height=900');
+        if (!win) return;
+        win.document.open();
+        win.document.write(html);
+        win.document.close();
+        // 700ms gives the font loader and layout enough time to settle before
+        // the dialog opens; without it, headings sometimes print in fallback fonts.
+        setTimeout(() => {
+            try {
+                win.focus();
+                win.print();
+            } catch {
+                // print blocked — leave the window open, user can Ctrl+P
+            }
+        }, 700);
+    }
+
+    /** Mirrors the on-screen RAB document as printable HTML. */
+    private buildRabPrintHtml(): string {
+        const esc = (s: string) =>
+            (s ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        const isBn = this.lang === 'bn';
+        const serif = isBn
+            ? "'Nirmala UI', 'Hind Siliguri', 'SolaimanLipi', serif"
+            : "'Playfair Display', Georgia, 'Times New Roman', serif";
+        const sans = isBn
+            ? "'Nirmala UI', 'Hind Siliguri', 'SolaimanLipi', sans-serif"
+            : "'DM Sans', 'Segoe UI', Arial, sans-serif";
+        const mono = "'JetBrains Mono', 'Consolas', 'Courier New', monospace";
+
+        const h = this.rabHeaders;
+        const cols: string[] = [h.ser, h.personnel, h.rabId];
+        if (this.showAddressOwner) cols.push(h.addressOwner);
+        cols.push(h.locationType, h.address, h.remarks);
+        const tableHeaderHtml = `<tr>${cols.map((c) => `<th>${esc(c)}</th>`).join('')}</tr>`;
+
+        const tableBodyHtml = this.list
+            .map((row) => {
+                const ser = this.paddedSer(row.ser);
+                const name = this.codeValue(row.name, row.nameBN);
+                const meta = this.personnelMeta(row);
+                const rabId = row.rabid || '—';
+                const owner = this.codeValue(row.addressOwner, row.addressOwnerBN);
+                const locType = this.displayLocationTypeUpper(row.locationType);
+                const isPerm = this.isPermanent(row.locationType);
+                const crumbs = this.addressCrumbParts(row);
+                const detail = this.addressDetail(row);
+                // Remarks is intentionally blank when absent — em-dash would
+                // imply "intentionally empty" but the column is just optional.
+                const remarks = row.rmks || '';
+
+                const crumbHtml = crumbs
+                    .map(
+                        (p, i) =>
+                            `<span class="addr-part"><span class="addr-label">${esc(p.label)}:</span> <span class="addr-value">${esc(p.value)}</span></span>` +
+                            (i < crumbs.length - 1 ? '<span class="addr-sep">&rsaquo;</span>' : ''),
+                    )
+                    .join(' ');
+
+                const ownerCell = this.showAddressOwner ? `<td class="td-owner">${esc(owner)}</td>` : '';
+
+                return `<tr>
+                    <td class="td-ser"><span class="ser">${esc(ser)}</span></td>
+                    <td class="td-personnel">
+                        <div class="name">${esc(name)}</div>
+                        <div class="meta">${esc(meta)}</div>
+                    </td>
+                    <td class="td-rabid">${esc(rabId)}</td>
+                    ${ownerCell}
+                    <td class="td-loctype">
+                        <span class="loc-icon${isPerm ? ' filled' : ''}"></span>
+                        <span class="loc-text">${esc(locType)}</span>
+                    </td>
+                    <td class="td-address">
+                        <div class="addr-crumb">${crumbHtml}</div>
+                        ${detail ? `<div class="addr-detail">${esc(detail)}</div>` : ''}
+                    </td>
+                    <td class="td-remarks">${esc(remarks)}</td>
+                </tr>`;
+            })
+            .join('');
+
+        const criteriaGridHtml = this.criteriaItems.length
+            ? `<div class="criteria-grid">${this.criteriaItems
+                  .map(
+                      (item) => `
+                <div class="cell">
+                    <div class="cell-label">${esc(item.label)}</div>
+                    <div class="cell-value">${esc(item.value)}</div>
+                </div>`,
+                  )
+                  .join('')}</div>`
+            : '';
+
+        const subtitleHtml = this.rabSubtitleText
+            ? `<div class="paper-section-sub"><em>${esc(this.rabSubtitleText)}</em></div>`
+            : '';
+
+        const confidential = isBn ? 'গোপনীয়' : 'CONFIDENTIAL';
+        const warning = isBn ? 'অননুমোদিত প্রকাশ নিষিদ্ধ' : 'UNAUTHORIZED DISCLOSURE PROHIBITED';
+        const pageWord = isBn ? 'পৃষ্ঠা' : 'PAGE';
+        const ofWord = isBn ? '/' : 'OF';
+        const criteriaTitle = esc(this.rabCriteriaTitle);
+        const generatedLabel = esc(this.rabGeneratedLabel);
+        const generatedDate = esc(this.rabFormattedDate);
+        // CSS escape for use inside content: "..." — escape backslashes and quotes.
+        const cssStr = (s: string) => s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+
+        return `<!DOCTYPE html>
+<html lang="${isBn ? 'bn' : 'en'}">
+<head>
+<meta charset="UTF-8" />
+<title>${esc(this.rabSectionTitle)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+    /* Bengali numerals for counter(page) when printing in Bangla mode.
+       Browsers that ignore @counter-style will fall back to decimal — readable. */
+    @counter-style bn-digits {
+        system: numeric;
+        symbols: '\\09E6' '\\09E7' '\\09E8' '\\09E9' '\\09EA' '\\09EB' '\\09EC' '\\09ED' '\\09EE' '\\09EF';
+    }
+
+    @page {
+        size: A4 portrait;
+        /* Side margins tightened so the criteria + table read ~8% wider,
+           matching the per-page footer strip more closely. Bottom margin
+           stays generous to reserve room for the @bottom-* footer. */
+        margin: 12mm 5mm 22mm 5mm;
+
+        /* The three margin-boxes sit side-by-side along the bottom of every
+           page and share a common red top border, which paints as one
+           continuous accent line across the page. */
+        @bottom-left {
+            content: "● " "${cssStr(confidential)}";
+            font-family: ${mono};
+            font-size: 7.5pt;
+            font-weight: 600;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            color: #b03a3a;
+            padding-top: 3mm;
+            border-top: 0.7mm solid #b03a3a;
+            vertical-align: top;
+            ${isBn ? 'letter-spacing:0.05em;text-transform:none;font-family:' + sans + ';' : ''}
         }
+        @bottom-center {
+            content: "${cssStr(pageWord)} " counter(page${isBn ? ', bn-digits' : ''}) " ${cssStr(ofWord)} " counter(pages${isBn ? ', bn-digits' : ''});
+            font-family: ${mono};
+            font-size: 7.5pt;
+            font-weight: 600;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            color: #4a4a4a;
+            padding-top: 3mm;
+            border-top: 0.7mm solid #b03a3a;
+            vertical-align: top;
+            ${isBn ? 'letter-spacing:0.05em;text-transform:none;font-family:' + sans + ';' : ''}
+        }
+        @bottom-right {
+            content: "${cssStr(warning)}";
+            font-family: ${mono};
+            font-size: 7.5pt;
+            font-weight: 600;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            color: #b03a3a;
+            padding-top: 3mm;
+            border-top: 0.7mm solid #b03a3a;
+            vertical-align: top;
+            ${isBn ? 'letter-spacing:0.05em;text-transform:none;font-family:' + sans + ';' : ''}
+        }
+    }
+    * { box-sizing: border-box; }
+    html, body {
+        margin: 0; padding: 0;
+        background: #ffffff;
+        color: #0b0b0b;
+        font-family: ${sans};
+        font-size: 10pt;
+        line-height: 1.35;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    .paper { padding: 4mm 0; }
+    /* ---- Header ---- */
+    .paper-head { text-align: center; margin-bottom: 6mm; }
+    .overline {
+        font-size: 7.5pt; letter-spacing: 0.3em; color: #555;
+        text-transform: uppercase; margin-bottom: 3mm; font-weight: 500;
+    }
+    .paper-title {
+        font-family: ${serif};
+        font-weight: 700; font-size: 22pt; margin: 0 0 2mm 0;
+        letter-spacing: 0.12em; color: #0b0b0b;
+        ${isBn ? 'letter-spacing:0;' : ''}
+    }
+    .paper-sub {
+        font-family: ${serif};
+        font-style: italic; color: #555; font-size: 10pt;
+        margin-bottom: 4mm;
+    }
+    .orn-divider {
+        display: flex; justify-content: center; align-items: center;
+        gap: 6mm; margin: 4mm auto; max-width: 65%;
+    }
+    .orn-line {
+        flex: 1; height: 1px;
+        background: linear-gradient(to right, transparent, #b78b3b, transparent);
+    }
+    .orn-diamond { color: #b78b3b; font-size: 9pt; }
+    .paper-section {
+        font-family: ${serif};
+        font-size: 13pt; font-weight: 700; letter-spacing: 0.16em;
+        color: #0b0b0b; margin: 0 0 1mm 0; text-transform: uppercase;
+        ${isBn ? 'letter-spacing:0;' : ''}
+    }
+    .paper-section-sub {
+        font-family: ${serif}; font-style: italic; color: #555; font-size: 10pt;
+    }
+
+    /* ---- Selection Criteria ---- */
+    .criteria { margin: 5mm 0 6mm; border: 1px solid #d8d6d0; border-radius: 1mm; overflow: hidden; }
+    .criteria-strip {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 1.5mm 3mm; background: #f4f4f2; border-bottom: 1px solid #d8d6d0;
+        font-size: 8pt; letter-spacing: 0.2em; text-transform: uppercase;
+        color: #4a4a4a; font-weight: 600;
+        ${isBn ? 'letter-spacing:0.04em;text-transform:none;' : ''}
+    }
+    .criteria-strip-title { display: inline-flex; gap: 1.5mm; align-items: center; color: #0b0b0b; }
+    .diamond-bullet { color: #b78b3b; }
+    .criteria-strip-date { opacity: 0.75; font-weight: 500; }
+    .criteria-grid {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(38mm, 1fr));
+    }
+    .cell {
+        padding: 2mm 3mm; border-right: 1px solid #e6e4de; border-top: 1px solid #e6e4de;
+    }
+    .cell:last-child { border-right: 1px solid #e6e4de; }
+    .cell-label {
+        font-size: 7pt; letter-spacing: 0.16em; text-transform: uppercase;
+        color: #8a8a8a; margin-bottom: 1mm; font-weight: 600;
+        ${isBn ? 'letter-spacing:0.04em;text-transform:none;' : ''}
+    }
+    .cell-value {
+        font-family: ${serif};
+        font-size: 10pt; font-weight: 700; color: #0b0b0b; line-height: 1.2;
+        ${isBn ? 'font-family:' + sans + ';' : ''}
+    }
+
+    /* ---- Table ---- */
+    table {
+        width: 100%; border-collapse: collapse; table-layout: auto;
+        font-family: ${sans}; font-size: 8pt;
+    }
+    /* Repeat the table header on every printed page so each page reads as a
+       self-contained roster, not "page 2 starts with a nameless column". */
+    thead { display: table-header-group; }
+    tfoot { display: table-footer-group; }
+    thead th {
+        background: #0b0b0b; color: #d9c79a;
+        font-family: ${mono}; font-size: 6.5pt; font-weight: 600;
+        letter-spacing: 0.15em; text-transform: uppercase;
+        padding: 1.8mm 2mm; text-align: left; vertical-align: middle;
+        white-space: nowrap; border: 1px solid #0b0b0b;
+        ${isBn ? 'letter-spacing:0.04em;font-family:' + sans + ';' : ''}
+    }
+    tbody td {
+        padding: 2mm 2mm; font-size: 8pt; color: #0b0b0b;
+        border-bottom: 1px solid #ece6d4; vertical-align: top;
+        background: #ffffff;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+    }
+    tbody tr:nth-child(even) td { background: #fafaf6; }
+    tbody tr { page-break-inside: avoid; }
+
+    .ser {
+        font-family: ${mono}; font-size: 9pt; font-weight: 600;
+        color: #6b6b6b; letter-spacing: 0.04em;
+    }
+    .name {
+        font-family: ${sans}; font-weight: 600; font-size: 10pt;
+        color: #0b0b0b; line-height: 1.2;
+    }
+    .meta {
+        margin-top: 0.5mm; font-family: ${mono}; font-size: 7.5pt;
+        letter-spacing: 0.08em; text-transform: uppercase; color: #6b6b6b;
+        ${isBn ? 'letter-spacing:0;text-transform:none;font-family:' + sans + ';' : ''}
+    }
+    .td-rabid { font-family: ${mono}; letter-spacing: 0.02em; }
+    .td-owner {
+        font-family: ${sans}; font-weight: 600; font-size: 10pt;
+        color: #0b0b0b; letter-spacing: -0.005em;
+    }
+    .loc-icon {
+        display: inline-block; width: 2.5mm; height: 2.5mm;
+        border-radius: 0.3mm; vertical-align: middle; margin-right: 1.5mm;
+        background: #d9b876; border: 1px solid #d9b876;
+    }
+    .loc-icon.filled { background: #0b0b0b; border-color: #0b0b0b; }
+    .loc-text {
+        font-family: ${mono}; font-size: 7.5pt; font-weight: 600;
+        letter-spacing: 0.08em; color: #0b0b0b;
+        ${isBn ? 'letter-spacing:0;font-family:' + sans + ';' : ''}
+    }
+    .addr-crumb { display: flex; flex-wrap: wrap; align-items: baseline; gap: 1mm 1.5mm; line-height: 1.25; }
+    .addr-part { display: inline-flex; align-items: baseline; gap: 1mm; }
+    .addr-label {
+        font-family: ${mono}; font-size: 7pt; font-weight: 600;
+        letter-spacing: 0.08em; text-transform: uppercase; color: #8a8a8a;
+        ${isBn ? 'letter-spacing:0;text-transform:none;font-family:' + sans + ';' : ''}
+    }
+    .addr-value { font-weight: 600; color: #0b0b0b; }
+    .addr-sep { color: #b78b3b; font-weight: 700; font-size: 11pt; line-height: 1; }
+    .addr-detail {
+        margin-top: 0.8mm; font-size: 8pt; color: #6b6b6b;
+        font-style: italic; line-height: 1.3;
+    }
+    .dash { color: #b0b0b0; }
+</style>
+</head>
+<body>
+    <div class="paper">
+        <header class="paper-head">
+            <div class="overline">${esc(this.rabOverlineText)}</div>
+            <h1 class="paper-title">${esc(this.rabOrgTitle)}</h1>
+            <div class="paper-sub"><em>${esc(this.rabOrgSubtitle)}</em></div>
+            <div class="orn-divider">
+                <span class="orn-line"></span>
+                <span class="orn-diamond">&#9670;</span>
+                <span class="orn-line"></span>
+            </div>
+            <h2 class="paper-section">${esc(this.rabSectionTitle)}</h2>
+            ${subtitleHtml}
+        </header>
+
+        <div class="criteria">
+            <div class="criteria-strip">
+                <span class="criteria-strip-title"><span class="diamond-bullet">&#9670;</span> ${criteriaTitle}</span>
+                <span class="criteria-strip-date">${generatedLabel} &middot; ${generatedDate}</span>
+            </div>
+            ${criteriaGridHtml}
+        </div>
+
+        <table>
+            <thead>${tableHeaderHtml}</thead>
+            <tbody>${tableBodyHtml}</tbody>
+        </table>
+    </div>
+</body>
+</html>`;
+    }
+
+    /** Word export — formal RAB layout. Mirrors the on-screen document structure
+        with a title block, selection-criteria table, and the composite-cell
+        data table. Falls back to the shared exportService for the docx packing. */
+    private async exportRabWord(): Promise<void> {
+        const { columns, rows } = this.getExportData();
+        const preDate: string[] = [];
+        if (this.unitScopeLine) preDate.push(this.unitScopeLine);
+        const belowDate: string[] = [];
+        if (this.memberTypeScopeLine) belowDate.push(this.memberTypeScopeLine);
+        // Add the selection-criteria lines (key: value) into filterLines so the
+        // Word output carries the same scope info the print HTML shows in the
+        // criteria strip. Order: org-scope (preDate) → status → criteria.
+        const criteriaLines = this.criteriaItems.map((c) => `${c.label}: ${c.value}`);
+        await this.exportService.exportWord({
+            title: this.rabSectionTitle + (this.rabSubtitleText ? ` — ${this.rabSubtitleText}` : ''),
+            lang: this.lang,
+            columns,
+            rows,
+            showPageNumbers: true,
+            landscape: true,
+            preDateLines: preDate,
+            filterLines: [...belowDate, ...criteriaLines],
+        });
     }
 
     ngOnInit(): void {
