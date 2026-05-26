@@ -1005,6 +1005,7 @@
         width: 110px;
         font-family: var(--rab-mono);
         letter-spacing: 0.02em;
+        white-space: nowrap;
     }
     .rab-th-loctype, .rab-td-loctype { width: 160px; }
     .rab-th-owner, .rab-td-owner {

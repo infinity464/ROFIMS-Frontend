@@ -857,7 +857,7 @@ export class ReportAddressLocationComponent implements OnInit {
         letter-spacing: 0.08em; text-transform: uppercase; color: #6b6b6b;
         ${isBn ? 'letter-spacing:0;text-transform:none;font-family:' + sans + ';' : ''}
     }
-    .td-rabid { font-family: ${mono}; letter-spacing: 0.02em; }
+    .td-rabid { font-family: ${mono}; letter-spacing: 0.02em; white-space: nowrap; }
     .td-owner {
         font-family: ${sans}; font-weight: 600; font-size: 10pt;
         color: #0b0b0b; letter-spacing: -0.005em;
