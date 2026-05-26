@@ -673,14 +673,16 @@ export class ReportAddressLocationComponent implements OnInit {
 
     @page {
         size: A4 portrait;
-        /* Side margins tightened so the criteria + table read ~8% wider,
-           matching the per-page footer strip more closely. Bottom margin
-           stays generous to reserve room for the @bottom-* footer. */
+        /* Side margins kept narrow so the criteria + table use the full
+           printable area and the per-page @bottom-* footer text never wraps
+           onto two lines. */
         margin: 12mm 5mm 22mm 5mm;
 
         /* The three margin-boxes sit side-by-side along the bottom of every
-           page and share a common red top border, which paints as one
-           continuous accent line across the page. */
+           page. Each paints its own share of a red horizontal line using a
+           background gradient (not border-top): the outermost boxes inset the
+           line by 8mm so the overall strip reads ~8% narrower than the page
+           content while the table above stays at its full width. */
         @bottom-left {
             content: "● " "${cssStr(confidential)}";
             font-family: ${mono};
@@ -689,8 +691,11 @@ export class ReportAddressLocationComponent implements OnInit {
             letter-spacing: 0.3em;
             text-transform: uppercase;
             color: #b03a3a;
-            padding-top: 3mm;
-            border-top: 0.7mm solid #b03a3a;
+            padding: 5mm 0 0 8mm;
+            background-image: linear-gradient(rgba(176, 58, 58, 0.5), rgba(176, 58, 58, 0.5));
+            background-position: 8mm 1.5mm;
+            background-size: calc(100% - 8mm) 0.7mm;
+            background-repeat: no-repeat;
             vertical-align: top;
             ${isBn ? 'letter-spacing:0.05em;text-transform:none;font-family:' + sans + ';' : ''}
         }
@@ -702,8 +707,11 @@ export class ReportAddressLocationComponent implements OnInit {
             letter-spacing: 0.25em;
             text-transform: uppercase;
             color: #4a4a4a;
-            padding-top: 3mm;
-            border-top: 0.7mm solid #b03a3a;
+            padding-top: 5mm;
+            background-image: linear-gradient(rgba(176, 58, 58, 0.5), rgba(176, 58, 58, 0.5));
+            background-position: 0 1.5mm;
+            background-size: 100% 0.7mm;
+            background-repeat: no-repeat;
             vertical-align: top;
             ${isBn ? 'letter-spacing:0.05em;text-transform:none;font-family:' + sans + ';' : ''}
         }
@@ -715,8 +723,11 @@ export class ReportAddressLocationComponent implements OnInit {
             letter-spacing: 0.3em;
             text-transform: uppercase;
             color: #b03a3a;
-            padding-top: 3mm;
-            border-top: 0.7mm solid #b03a3a;
+            padding: 5mm 8mm 0 0;
+            background-image: linear-gradient(rgba(176, 58, 58, 0.5), rgba(176, 58, 58, 0.5));
+            background-position: 0 1.5mm;
+            background-size: calc(100% - 8mm) 0.7mm;
+            background-repeat: no-repeat;
             vertical-align: top;
             ${isBn ? 'letter-spacing:0.05em;text-transform:none;font-family:' + sans + ';' : ''}
         }
@@ -732,12 +743,17 @@ export class ReportAddressLocationComponent implements OnInit {
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
     }
-    .paper { padding: 4mm 0; }
+    /* Side padding makes the body content (criteria + table) sit 8mm in from
+       each page edge — the @bottom-* footer stays at the full printable
+       width set by @page margin, so the footer can keep its single-line text
+       layout while the table reads slightly inset. */
+    .paper { padding: 4mm 8mm; }
     /* ---- Header ---- */
     .paper-head { text-align: center; margin-bottom: 6mm; }
     .overline {
         font-size: 7.5pt; letter-spacing: 0.3em; color: #555;
         text-transform: uppercase; margin-bottom: 3mm; font-weight: 500;
+        ${isBn ? 'letter-spacing:0;text-transform:none;font-family:' + sans + ';font-size:9pt;' : ''}
     }
     .paper-title {
         font-family: ${serif};
@@ -826,9 +842,11 @@ export class ReportAddressLocationComponent implements OnInit {
     tbody tr:nth-child(even) td { background: #fafaf6; }
     tbody tr { page-break-inside: avoid; }
 
+    .td-ser { white-space: nowrap; }
     .ser {
         font-family: ${mono}; font-size: 9pt; font-weight: 600;
         color: #6b6b6b; letter-spacing: 0.04em;
+        white-space: nowrap;
     }
     .name {
         font-family: ${sans}; font-weight: 600; font-size: 10pt;

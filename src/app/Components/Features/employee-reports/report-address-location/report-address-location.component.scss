@@ -1015,9 +1015,9 @@
         letter-spacing: -0.005em;
         color: var(--rab-body-ink);
     }
-    .rab-th-remarks, .rab-td-remarks { width: 90px; text-align: left; }
+    .rab-th-remarks, .rab-td-remarks { width: 130px; text-align: left; }
     .rab-td-personnel { min-width: 220px; }
-    .rab-td-address { min-width: 280px; }
+    .rab-td-address { min-width: 240px; }
 }
 
 /* Composite cell typography — keep weight where it earns it (the name, the
@@ -1090,6 +1090,7 @@
         font-weight: 600;
         font-size: 0.82rem;
         letter-spacing: 0.04em;
+        white-space: nowrap;
     }
     .rab-dash {
         color: var(--rab-body-ink-faint);
