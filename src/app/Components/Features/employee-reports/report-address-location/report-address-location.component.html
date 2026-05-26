@@ -63,17 +63,6 @@
                             </p-select>
                         </div>
                         <div class="ds-field">
-                            <label class="ds-field-label">{{ L['en']['report.search.addressStatus'] }}</label>
-                            <p-select
-                                [options]="addressStatusOptions"
-                                [(ngModel)]="activeOnly"
-                                optionLabel="label"
-                                optionValue="value"
-                                styleClass="w-full"
-                                appendTo="body">
-                            </p-select>
-                        </div>
-                        <div class="ds-field">
                             <label class="ds-field-label">{{ L['en']['report.search.rabMemberStatus'] }}</label>
                             <p-select
                                 [options]="statusOptions"
@@ -165,27 +154,6 @@
                     </div>
                 </div>
 
-                <!-- Group 3: Identification -->
-                <div class="ds-field-group">
-                    <div class="ds-group-divider">
-                        <span class="ds-group-label">Identification</span>
-                        <span class="ds-group-line"></span>
-                    </div>
-                    <div class="ds-criteria-grid">
-                        <div class="ds-field">
-                            <label class="ds-field-label">RAB ID</label>
-                            <input pInputText type="text" [(ngModel)]="searchRabId" placeholder="Enter RAB ID" class="w-full" />
-                        </div>
-                        <div class="ds-field">
-                            <label class="ds-field-label">Service ID</label>
-                            <input pInputText type="text" [(ngModel)]="searchServiceId" placeholder="Enter Service ID" class="w-full" />
-                        </div>
-                        <div class="ds-field">
-                            <label class="ds-field-label">NID</label>
-                            <input pInputText type="text" [(ngModel)]="searchNid" placeholder="Enter NID" class="w-full" />
-                        </div>
-                    </div>
-                </div>
             </div>
 
             <div class="ds-actions">
@@ -317,7 +285,7 @@
                             <div class="rab-personnel-name">{{ codeValue(row.name, row.nameBN) }}</div>
                             <div class="rab-personnel-meta">{{ personnelMeta(row) }}</div>
                         </td>
-                        <td class="rab-td-rabid">{{ row.rabid || '—' }}</td>
+                        <td class="rab-td-rabid">{{ row.rabid ? displayNum(row.rabid) : '—' }}</td>
                         @if (showAddressOwner) {
                             <td class="rab-td-owner">{{ codeValue(row.addressOwner, row.addressOwnerBN) }}</td>
                         }

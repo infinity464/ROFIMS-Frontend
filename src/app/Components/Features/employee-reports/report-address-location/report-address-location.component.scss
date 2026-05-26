@@ -814,16 +814,11 @@
 
 .rab-criteria-cell {
     padding: 0.65rem 0.9rem 0.7rem;
-    border-right: 1px solid var(--rab-border-soft);
-    border-top: 1px solid var(--rab-border-soft);
+    /* Full border on every filter cell — each chip reads as its own boxed
+       criterion rather than sharing edges with its neighbours. Adjacent cells
+       sit edge-to-edge so the shared borders visually merge into single lines. */
+    border: 1px solid var(--rab-border-soft);
     min-width: 0;
-
-    /* Strip the trailing divider on each row's last cell. With auto-fit columns
-       this is unknowable in CSS, so the rightmost cell always renders the line —
-       it visually merges into the outer .rab-criteria border, so no glitch. */
-    &:last-child {
-        border-right: 1px solid var(--rab-border-soft);
-    }
 }
 
 .rab-criteria-cell-label {
