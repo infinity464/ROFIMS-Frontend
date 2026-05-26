@@ -34,6 +34,7 @@ import {
     PageNumber,
 } from 'docx';
 import { saveAs } from 'file-saver';
+import * as XLSX from 'xlsx';
 
 @Component({
     selector: 'app-report-address-location',
@@ -537,23 +538,10 @@ export class ReportAddressLocationComponent implements OnInit {
             return;
         }
 
-        // Excel stays on the flat tabular export — spreadsheets are for the
-        // data shape, not the formal document presentation.
-        const { columns, rows } = this.getExportData();
-        const preDate: string[] = [];
-        if (this.unitScopeLine) preDate.push(this.unitScopeLine);
-        const belowDate: string[] = [];
-        if (this.memberTypeScopeLine) belowDate.push(this.memberTypeScopeLine);
-        this.exportService.exportExcel({
-            title: this.reportTitle,
-            lang: this.lang,
-            columns,
-            rows,
-            showPageNumbers: true,
-            landscape: true,
-            preDateLines: preDate,
-            filterLines: [...belowDate, ...this.appliedFilterLines],
-        });
+        if (type === 'excel') {
+            this.exportRabExcel();
+            return;
+        }
     }
 
     /** Opens a new browser window with the formal RAB HTML and fires the print dialog. */
@@ -1405,6 +1393,122 @@ export class ReportAddressLocationComponent implements OnInit {
         const blob = await Packer.toBlob(doc);
         const filename = `address-location-report_${this.lang}.docx`;
         saveAs(blob, filename);
+    }
+
+    /** Excel export — mirrors the formal-RAB layout used by the PDF/Word
+        exports (title block → selection criteria → composite-cell data table
+        → confidential strip). Without cell-styling support in the standard
+        xlsx package, composite columns use ' · ' separators within a single
+        cell so the data still reads cleanly as one line — line breaks would
+        otherwise render as raw newline characters. */
+    private exportRabExcel(): void {
+        const isBn = this.lang === 'bn';
+        const showOwner = this.showAddressOwner;
+
+        const headers: string[] = [
+            this.rabHeaders.ser,
+            this.rabHeaders.personnel,
+            this.rabHeaders.rabId,
+        ];
+        if (showOwner) headers.push(this.rabHeaders.addressOwner);
+        headers.push(
+            this.rabHeaders.locationType,
+            this.rabHeaders.address,
+            this.rabHeaders.remarks,
+        );
+        const totalCols = headers.length;
+
+        const data: unknown[][] = [];
+        const merges: { s: { r: number; c: number }; e: { r: number; c: number } }[] = [];
+        const fullMerge = (r: number) => merges.push({ s: { r, c: 0 }, e: { r, c: totalCols - 1 } });
+
+        // ── Header block (centered, full-width rows) ──────────────────────
+        let r = 0;
+        data.push([this.rabOverlineText]); fullMerge(r++);
+        data.push([this.rabOrgTitle]); fullMerge(r++);
+        data.push([this.rabOrgSubtitle]); fullMerge(r++);
+        data.push([this.rabSectionTitle]); fullMerge(r++);
+        if (this.rabSubtitleText) { data.push([this.rabSubtitleText]); fullMerge(r++); }
+        data.push([]); r++;
+
+        // ── Selection Criteria block ──────────────────────────────────────
+        // Strip row: title left + date right merged across full width as a
+        // single concatenated string (cell-level alignment isn't reachable
+        // without cell styling, so we lean on the natural reading order).
+        const stripText = `${this.rabCriteriaTitle}     ${this.rabGeneratedLabel} · ${this.rabFormattedDate}`;
+        data.push([stripText]); fullMerge(r++);
+
+        const items = this.criteriaItems;
+        if (items.length > 0) {
+            // 2-per-row layout: each item formatted as "LABEL: VALUE" and
+            // each cell merged across half the table width so the criteria
+            // grid mirrors the PDF's 4-up layout without requiring 4 equal
+            // table columns (which would break the data-table layout below).
+            const halfPoint = Math.floor(totalCols / 2);
+            for (let i = 0; i < items.length; i += 2) {
+                const left = items[i] ? `${items[i].label}: ${items[i].value}` : '';
+                const right = items[i + 1] ? `${items[i + 1].label}: ${items[i + 1].value}` : '';
+                const row: string[] = new Array(totalCols).fill('');
+                row[0] = left;
+                row[halfPoint] = right;
+                data.push(row);
+                merges.push({ s: { r, c: 0 }, e: { r, c: halfPoint - 1 } });
+                merges.push({ s: { r, c: halfPoint }, e: { r, c: totalCols - 1 } });
+                r++;
+            }
+        }
+        data.push([]); r++;
+
+        // ── Data table ────────────────────────────────────────────────────
+        data.push(headers); r++;
+
+        for (const row of this.list) {
+            const ser = this.paddedSer(row.ser);
+            const name = this.codeValue(row.name, row.nameBN);
+            const meta = this.personnelMeta(row);
+            const rabId = row.rabid ? this.displayNum(row.rabid) : '—';
+            const owner = this.codeValue(row.addressOwner, row.addressOwnerBN);
+            const locType = this.displayLocationTypeUpper(row.locationType);
+            const crumbs = this.addressCrumbParts(row);
+            const detail = this.addressDetail(row);
+            const remarks = row.rmks || '';
+
+            // Composite cells: " · " keeps them readable on a single line so
+            // they don't depend on cell-level wrapText (unreachable without
+            // the styling-enabled xlsx fork).
+            const personnel = meta ? `${name} · ${meta}` : name;
+            const crumbText = crumbs.map((c) => `${c.label}: ${c.value}`).join(' › ');
+            const address = detail
+                ? (crumbText ? `${crumbText} · ${detail}` : detail)
+                : crumbText;
+
+            const rowData: string[] = [ser, personnel, rabId];
+            if (showOwner) rowData.push(owner);
+            rowData.push(locType, address, remarks);
+            data.push(rowData);
+            r++;
+        }
+
+        // ── Confidential footer strip ─────────────────────────────────────
+        data.push([]); r++;
+        const footerText = isBn ? 'গোপনীয়' : 'CONFIDENTIAL';
+        data.push([footerText]); fullMerge(r++);
+
+        // ── Build sheet ───────────────────────────────────────────────────
+        const ws = XLSX.utils.aoa_to_sheet(data);
+
+        // Column widths tuned to the composite cell content — Personnel and
+        // Address are the widest because they carry the merged sub-fields.
+        const cols = showOwner
+            ? [{ wch: 6 }, { wch: 32 }, { wch: 14 }, { wch: 20 }, { wch: 16 }, { wch: 55 }, { wch: 16 }]
+            : [{ wch: 6 }, { wch: 32 }, { wch: 14 }, { wch: 16 }, { wch: 60 }, { wch: 16 }];
+        ws['!cols'] = cols;
+        ws['!merges'] = merges;
+
+        const wb = XLSX.utils.book_new();
+        const sheetName = isBn ? 'প্রতিবেদন' : 'Report';
+        XLSX.utils.book_append_sheet(wb, ws, sheetName);
+        XLSX.writeFile(wb, `address-location-report_${this.lang}.xlsx`);
     }
 
     ngOnInit(): void {
