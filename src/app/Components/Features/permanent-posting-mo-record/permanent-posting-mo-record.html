@@ -120,7 +120,7 @@
 
             <div class="form-row">
                 <div class="form-field">
-                    <label class="form-label">Note-Sheet Clearance</label>
+                    <label class="form-label">Note-Sheet Clearance <span class="form-label-required">*</span></label>
                     <p-select [options]="yesNoOptions" [(ngModel)]="noteSheetClearance"
                         optionLabel="label" optionValue="value"
                         placeholder="Select" [showClear]="true" class="w-full" appendTo="body"></p-select>
@@ -134,7 +134,7 @@
 
             <div class="form-row">
                 <div class="form-field">
-                    <label class="form-label">Clearance Given</label>
+                    <label class="form-label">Clearance Given <span class="form-label-required">*</span></label>
                     <p-select [options]="yesNoOptions" [(ngModel)]="clearanceGiven"
                         optionLabel="label" optionValue="value"
                         placeholder="Select" [showClear]="true" class="w-full" appendTo="body"></p-select>
@@ -154,7 +154,8 @@
                     <p-select [options]="yesNoOptions" [(ngModel)]="isReliever"
                         optionLabel="label" optionValue="value"
                         placeholder="Select Yes / No" [showClear]="true"
-                        class="w-full" appendTo="body"></p-select>
+                        class="w-full" appendTo="body"
+                        (onChange)="isReliever === true ? joineeCollapsed = false : null"></p-select>
                 </div>
                 @if (isReliever === true) {
                     <div class="form-field">
@@ -186,18 +187,27 @@
             </app-file-references-form>
         </div>
 
-        <!-- ── RIGHT: New Posting Person ───────────────────────── -->
-        <div class="col-panel">
-            <div class="col-panel-header">
-                <i class="pi pi-user-plus"></i>
-                <span>New Posting Person</span>
-                <p-button label="Clear" icon="pi pi-eraser" size="small" severity="secondary" [text]="true"
-                    [style]="{'margin-left':'auto'}" (onClick)="clearJoineeSection()"></p-button>
-            </div>
-
+        <!-- ── RIGHT: New Posting Person (collapsible) ──────────── -->
+        <div>
+            @if (joineeCollapsed) {
+                <div class="joinee-ribbon" (click)="joineeCollapsed = false">
+                    <i class="pi pi-chevron-left" style="font-size:0.8rem;"></i>
+                    <i class="pi pi-user-plus"></i>
+                    <span>New Posting Person</span>
+                </div>
+            } @else {
+            <div class="col-panel">
+                <div class="col-panel-header">
+                    <i class="pi pi-user-plus"></i>
+                    <span>New Posting Person</span>
+                    <p-button label="Clear" icon="pi pi-eraser" size="small" severity="secondary" [text]="true"
+                        [style]="{'margin-left':'auto'}" (onClick)="clearJoineeSection()"></p-button>
+                    <p-button icon="pi pi-eye-slash" size="small" [rounded]="true"
+                        pTooltip="Hide" tooltipPosition="top" (onClick)="joineeCollapsed = true"></p-button>
+                </div>
             <div class="form-row">
                 <div class="form-field">
-                    <label class="form-label">Mother Org</label>
+                    <label class="form-label">Mother Org <span class="form-label-required">*</span></label>
                     <p-select [options]="motherOrgOptions" [(ngModel)]="joineeMotherOrgId"
                         optionLabel="label" optionValue="value"
                         placeholder="Select mother org" [filter]="true" filterBy="label"
@@ -205,7 +215,7 @@
                         (onChange)="onMotherOrgChange($event.value)"></p-select>
                 </div>
                 <div class="form-field">
-                    <label class="form-label">Mother Org Unit</label>
+                    <label class="form-label">Mother Org Unit <span class="form-label-required">*</span></label>
                     <p-select [options]="motherOrgUnitOptions" [(ngModel)]="joineeMotherOrgUnitId"
                         optionLabel="label" optionValue="value"
                         placeholder="Select unit" [filter]="true" filterBy="label"
@@ -255,7 +265,7 @@
 
             <div class="form-row">
                 <div class="form-field">
-                    <label class="form-label">Prefix</label>
+                    <label class="form-label">Prefix <span class="form-label-required">*</span></label>
                     <p-select [options]="prefixOptions" [(ngModel)]="joineePrefixId"
                         optionLabel="label" optionValue="value"
                         placeholder="Select prefix"
@@ -263,7 +273,7 @@
                         [disabled]="!prefixOptions.length"></p-select>
                 </div>
                 <div class="form-field">
-                    <label class="form-label">Service ID</label>
+                    <label class="form-label">Service ID <span class="form-label-required">*</span></label>
                     <input pInputText class="w-full" [(ngModel)]="joineeServiceId"
                         placeholder="Service ID" />
                 </div>
@@ -271,7 +281,7 @@
 
             <div class="form-row">
                 <div class="form-field">
-                    <label class="form-label">Name (Bangla)</label>
+                    <label class="form-label">Name (Bangla) <span class="form-label-required">*</span></label>
                     <input pInputText class="w-full" [(ngModel)]="joineeNameBangla"
                         placeholder="নাম বাংলায়" />
                 </div>
@@ -303,6 +313,8 @@
                 (fileRowsChange)="onJOFileRowsChange($event)"
                 (onDownloadFile)="onDownloadFile($event)">
             </app-file-references-form>
+            </div>
+            }
         </div>
 
     </div>

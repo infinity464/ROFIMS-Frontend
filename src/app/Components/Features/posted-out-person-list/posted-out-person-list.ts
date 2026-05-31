@@ -14,6 +14,7 @@ import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { UserMenuService } from '@/services/user-menu.service';
 import { PermanentPostingMORecordService, PermanentPostingMORecordModel } from '@/services/permanent-posting-mo-record.service';
+import { PermanentPostingJoineeDetailService } from '@/services/permanent-posting-joinee-detail.service';
 import { ExportService, ReportConfig } from '@/services/export.service';
 import { firstValueFrom } from 'rxjs';
 
@@ -47,6 +48,7 @@ export class PostedOutPersonListComponent implements OnInit {
 
     constructor(
         private recordSvc: PermanentPostingMORecordService,
+        private joineeDetailSvc: PermanentPostingJoineeDetailService,
         private exportService: ExportService,
         private messageService: MessageService,
         private confirmationService: ConfirmationService
@@ -106,19 +108,35 @@ export class PostedOutPersonListComponent implements OnInit {
     }
 
     onDelete(row: PermanentPostingMORecordModel): void {
-        this.confirmationService.confirm({
-            message: `Delete record #${row.id}?`,
-            header: 'Confirm Delete',
-            icon: 'pi pi-exclamation-triangle',
-            acceptButtonStyleClass: 'p-button-danger',
-            accept: () => {
-                this.recordSvc.delete(row.id).subscribe({
-                    next: () => {
-                        this.messageService.add({ severity: 'success', summary: 'Deleted', detail: 'Record deleted.' });
-                        this.loadRecords();
-                    },
-                    error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Delete failed.' })
+        // Check if a linked joinee detail record exists before allowing deletion
+        this.joineeDetailSvc.getByRecordId(row.id).subscribe({
+            next: (joinee) => {
+                if (joinee) {
+                    this.messageService.add({
+                        severity: 'warn',
+                        summary: 'Cannot Delete',
+                        detail: 'A related New Joining Person record exists. Please remove it first before deleting this Posted Out record.'
+                    });
+                    return;
+                }
+                this.confirmationService.confirm({
+                    message: `Delete record #${row.id}?`,
+                    header: 'Confirm Delete',
+                    icon: 'pi pi-exclamation-triangle',
+                    acceptButtonStyleClass: 'p-button-danger',
+                    accept: () => {
+                        this.recordSvc.delete(row.id).subscribe({
+                            next: () => {
+                                this.messageService.add({ severity: 'success', summary: 'Deleted', detail: 'Record deleted.' });
+                                this.loadRecords();
+                            },
+                            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Delete failed.' })
+                        });
+                    }
                 });
+            },
+            error: () => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to check related records.' });
             }
         });
     }

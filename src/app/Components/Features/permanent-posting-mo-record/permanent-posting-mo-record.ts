@@ -101,6 +101,7 @@ export class PermanentPostingMORecordComponent implements OnInit {
     possibleReleaseDate: Date | null = null;
     isReliever: boolean | null = null;
     relieverNotGivenReason = '';
+    joineeCollapsed = true;
 
     // Officer-only
     noteSheetClearance: boolean | null = null;
@@ -794,6 +795,75 @@ export class PermanentPostingMORecordComponent implements OnInit {
 
     // ── Save ────────────────────────────────────────────────────────
     onSave(): void {
+        // ── Validation ───────────────────────────────────────────
+        const hasPostedOut = !!(this.postedOutEmployee || this.editId);
+        const hasJoineeData = !!(this.joineeMotherOrgId || this.joineeServiceId?.trim() || this.joineeNameBangla?.trim());
+
+        // Duplicate check: prevent same employee being posted out twice
+        if (hasPostedOut && this.postedOutEmployee?.employeeID) {
+            const empId = this.postedOutEmployee.employeeID;
+            const existing = this.records.find(r => r.postedOutEmployeeId === empId && r.id !== this.editId);
+            if (existing) {
+                this.messageService.add({ severity: 'warn', summary: 'Duplicate', detail: 'This employee already has a Posted Out entry.' });
+                return;
+            }
+        }
+
+        // Posted Out validation: if posted-out employee is provided, require key fields
+        if (hasPostedOut) {
+            if (!this.postingUnitId) {
+                this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Posting Unit.' });
+                return;
+            }
+            if (this.noteSheetClearance == null) {
+                this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Note-Sheet Clearance.' });
+                return;
+            }
+            if (this.clearanceGiven == null) {
+                this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Clearance Given.' });
+                return;
+            }
+            if (this.isReliever == null) {
+                this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Is Reliever Assigned.' });
+                return;
+            }
+        }
+
+        // If isReliever = Yes, New Posting Person fields are required
+        if (hasPostedOut && this.isReliever === true) {
+            const missing: string[] = [];
+            if (!this.joineeMotherOrgId) missing.push('Mother Org');
+            if (!this.joineeMotherOrgUnitId) missing.push('Mother Org Unit');
+            if (!this.joineePrefixId) missing.push('Prefix');
+            if (!this.joineeServiceId?.trim()) missing.push('Service ID');
+            if (!this.joineeNameBangla?.trim()) missing.push('Name (Bangla)');
+            if (missing.length > 0) {
+                this.joineeCollapsed = false;
+                this.messageService.add({ severity: 'warn', summary: 'Validation', detail: `New Posting Person required: ${missing.join(', ')}.` });
+                return;
+            }
+        }
+
+        // Standalone joinee save (no posted-out): validate joinee required fields
+        if (!hasPostedOut && hasJoineeData) {
+            const missing: string[] = [];
+            if (!this.joineeMotherOrgId) missing.push('Mother Org');
+            if (!this.joineeMotherOrgUnitId) missing.push('Mother Org Unit');
+            if (!this.joineePrefixId) missing.push('Prefix');
+            if (!this.joineeServiceId?.trim()) missing.push('Service ID');
+            if (!this.joineeNameBangla?.trim()) missing.push('Name (Bangla)');
+            if (missing.length > 0) {
+                this.messageService.add({ severity: 'warn', summary: 'Validation', detail: `New Posting Person required: ${missing.join(', ')}.` });
+                return;
+            }
+        }
+
+        // Nothing to save at all
+        if (!hasPostedOut && !hasJoineeData) {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please fill Posted Out or New Posting Person data before saving.' });
+            return;
+        }
+
         this.saving = true;
 
         const poNewFiles = this.poFileForm?.getFilesToUpload() ?? [];
@@ -915,11 +985,17 @@ export class PermanentPostingMORecordComponent implements OnInit {
             lastUpdatedBy: user
         };
 
+        const hasJoineeData = !!(this.joineeMotherOrgId || this.joineeServiceId?.trim() || this.joineeNameBangla?.trim());
+
         this.recordSvc.saveUpdate(mainPayload).pipe(
             switchMap((res) => {
                 if (res?.statusCode !== 200) return of({ mainRes: res });
                 const recordId = res.data?.id ?? res.id ?? this.editId ?? null;
-                return this.detailSvc.saveUpdate(buildDetail(recordId)).pipe(switchMap(() => of({ mainRes: res })));
+                // Only save joinee detail if isReliever=Yes or there's actual joinee data
+                if (this.isReliever === true || hasJoineeData || this.editDetailId) {
+                    return this.detailSvc.saveUpdate(buildDetail(recordId)).pipe(switchMap(() => of({ mainRes: res })));
+                }
+                return of({ mainRes: res });
             })
         ).subscribe({ next: ({ mainRes }) => onResult(mainRes), error: onError });
     }
@@ -942,6 +1018,7 @@ export class PermanentPostingMORecordComponent implements OnInit {
         this.postingOrderDate = row.postingOrderDate ? new Date(row.postingOrderDate) : null;
         this.possibleReleaseDate = row.possibleReleaseDate ? new Date(row.possibleReleaseDate) : null;
         this.isReliever = row.isReliever;
+        this.joineeCollapsed = row.isReliever !== true;
         this.relieverNotGivenReason = row.relieverNotGivenReason ?? '';
         this.noteSheetClearance = row.noteSheetClearance ?? null;
         this.nsClearanceDate = row.nsClearanceDate ? new Date(row.nsClearanceDate) : null;
@@ -1026,6 +1103,7 @@ export class PermanentPostingMORecordComponent implements OnInit {
     }
 
     onEditJoinee(row: PermanentPostingJoineeDetailModel): void {
+        this.joineeCollapsed = false;
         this.editId = null;
         this.editDetailId = row.id;
         this.editPostedOutEmployeeId = null;

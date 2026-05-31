@@ -67,3 +67,22 @@
   color: var(--green-600, #16a34a);
   border-bottom-color: var(--green-600, #16a34a);
 }
+
+.joinee-ribbon {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: 1px dashed var(--primary-color);
+  border-radius: 0.5rem;
+  background: var(--surface-ground, #fafafa);
+  color: var(--primary-color);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover {
+    background: var(--primary-50, #eef2ff);
+  }
+}
