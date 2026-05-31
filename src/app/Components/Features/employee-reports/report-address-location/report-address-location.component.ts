@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
+import { MultiSelectModule } from 'primeng/multiselect';
 import { InputTextModule } from 'primeng/inputtext';
 import { PaginatorModule } from 'primeng/paginator';
 import { Toast } from 'primeng/toast';
@@ -15,7 +16,20 @@ import { ExportService } from '@/services/export.service';
 import { UserMenuService } from '@/services/user-menu.service';
 import { REPORT_LABELS, type ReportLang } from '@/Core/i18n/report-labels';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
-import type { AddressLocationReportRow, ReportAccessibleScope } from '@/models/report.model';
+import {
+    codeValue as codeValueHelper,
+    displayNum as displayNumHelper,
+    paddedSer as paddedSerHelper,
+    personnelMeta as personnelMetaHelper,
+    addressCrumbParts as addressCrumbPartsHelper,
+    addressDetail as addressDetailHelper,
+} from '../formal-rab-render.helper';
+import type {
+    AddressLocationReportRow,
+    ReportAccessibleScope,
+    DynamicReportCriterion,
+    DynamicReportRow,
+} from '@/models/report.model';
 import type { CommonCodeModel } from '@/models/common-code-model';
 import {
     Document,
@@ -39,7 +53,7 @@ import * as XLSX from 'xlsx';
 @Component({
     selector: 'app-report-address-location',
     standalone: true,
-    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, InputTextModule, PaginatorModule, Toast],
+    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, InputTextModule, PaginatorModule, Toast],
     providers: [MessageService],
     templateUrl: './report-address-location.component.html',
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-address-location.component.scss'],
@@ -104,19 +118,273 @@ export class ReportAddressLocationComponent implements OnInit {
         return this.selectedPostingStatus === 'Servings';
     }
 
+    /** ── Column picker ────────────────────────────────────────────────
+        Catalog of fields the user can toggle. Built from the existing
+        `AddressLocationReportRow` shape so this is additive and doesn't
+        require a backend change — every key here is already populated by
+        the current `getAddressLocationReport` endpoint.
+
+        `hint` drives the cell renderer in the HTML:
+          - 'Serial'             — row index + 1
+          - 'PersonnelComposite' — name + rank · org · SVC meta
+          - 'RabId'              — mono-styled cell
+          - 'LocationType'       — uppercase mono cell
+          - 'AddressComposite'   — Division › District › Upazila crumb + PO
+          - 'AddressOwner'       — `addressOwner` / `addressOwnerBN`
+          - 'Status'             — mapped via displayMemberStatus()
+          - 'Remarks'            — row.rmks
+          - 'Plain'              — generic codeValue() lookup
+
+        `lockedWhen` lets us auto-select a column based on the filter state
+        without locking the user out (e.g. Status auto-ticks when the
+        Member Status filter is set to All). */
+    columnCatalog: {
+        key: string;
+        labelEN: string;
+        labelBN: string;
+        hint: string;
+        defaultVisible: boolean;
+    }[] = [
+        { key: 'ser',          labelEN: 'Ser',           labelBN: 'ক্রঃ',           hint: 'Serial',             defaultVisible: true },
+        { key: 'personnel',    labelEN: 'Personnel',     labelBN: 'সদস্য',          hint: 'PersonnelComposite', defaultVisible: true },
+        { key: 'rabId',        labelEN: 'RAB ID',        labelBN: 'র‍্যাব আইডি',     hint: 'RabId',              defaultVisible: true },
+        { key: 'addressOwner', labelEN: 'Address Owner', labelBN: 'ঠিকানার মালিক',   hint: 'AddressOwner',       defaultVisible: false },
+        { key: 'locationType', labelEN: 'Location Type', labelBN: 'অবস্থানের ধরন',   hint: 'LocationType',       defaultVisible: true },
+        { key: 'address',      labelEN: 'Address',       labelBN: 'ঠিকানা',         hint: 'AddressComposite',   defaultVisible: true },
+        { key: 'status',       labelEN: 'Status',        labelBN: 'অবস্থা',          hint: 'Status',             defaultVisible: false },
+        { key: 'remarks',      labelEN: 'Remarks',       labelBN: 'মন্তব্য',         hint: 'Remarks',            defaultVisible: true },
+        // Extras the user can add — already in the AddressLocationReportRow
+        // shape; just not shown by default.
+        // Service-side extras (data comes from the dynamic backend via
+        // vw_DynamicReportEmployee). Keys match the backend ReportFieldRegistry
+        // so the request → response round-trip works without renames.
+        { key: 'serviceId',         labelEN: 'Service ID',       labelBN: 'সার্ভিস আইডি',       hint: 'Plain', defaultVisible: false },
+        { key: 'nameEnglish',       labelEN: 'Name (EN)',        labelBN: 'নাম (ইংরেজি)',      hint: 'Plain', defaultVisible: false },
+        { key: 'nameBangla',        labelEN: 'Name (BN)',        labelBN: 'নাম (বাংলা)',       hint: 'Plain', defaultVisible: false },
+        { key: 'nid',               labelEN: 'NID',              "labelBN": 'এনআইডি',          hint: 'Plain', defaultVisible: false },
+        { key: 'prefix',            labelEN: 'Prefix',           labelBN: 'প্রিফিক্স',          hint: 'Plain', defaultVisible: false },
+        { key: 'appointment',       labelEN: 'Appointment',      labelBN: 'নিয়োগ',            hint: 'Plain', defaultVisible: false },
+        { key: 'memberType',        labelEN: 'Member Type',      labelBN: 'সদস্য ধরন',         hint: 'Plain', defaultVisible: false },
+        { key: 'motherOrganization',labelEN: 'Mother Org',       labelBN: 'মাতৃ সংস্থা',       hint: 'Plain', defaultVisible: false },
+        { key: 'armyRank',          labelEN: 'Rank',             labelBN: 'র‍্যাঙ্ক',          hint: 'Plain', defaultVisible: false },
+        { key: 'corps',             labelEN: 'Corps',            labelBN: 'কোর',              hint: 'Plain', defaultVisible: false },
+        { key: 'trade',             labelEN: 'Trade',            labelBN: 'ট্রেড',             hint: 'Plain', defaultVisible: false },
+        { key: 'tradeRemarks',      labelEN: 'Trade Remarks',    labelBN: 'ট্রেড মন্তব্য',      hint: 'Plain', defaultVisible: false },
+        { key: 'gender',            labelEN: 'Gender',           labelBN: 'লিঙ্গ',             hint: 'Plain', defaultVisible: false },
+        { key: 'motherUnit',        labelEN: 'Last Unit',        labelBN: 'শেষ ইউনিট',         hint: 'Plain', defaultVisible: false },
+        { key: 'rabUnit',           labelEN: 'RAB Unit',         labelBN: 'র‍্যাব ইউনিট',     hint: 'Plain', defaultVisible: false },
+        { key: 'dateOfCommission',  labelEN: 'Commission Date',  labelBN: 'কমিশন তারিখ',       hint: 'Plain', defaultVisible: false },
+        { key: 'joiningDate',       labelEN: 'Joining Date',     labelBN: 'যোগদান তারিখ',      hint: 'Plain', defaultVisible: false },
+        { key: 'rabServiceFrom',    labelEN: 'RAB Joining Date', labelBN: 'র‍্যাবে যোগদান তারিখ', hint: 'Plain', defaultVisible: false },
+        { key: 'rabServiceTo',      labelEN: 'RAB End Date',     labelBN: 'র‍্যাব শেষ তারিখ',  hint: 'Plain', defaultVisible: false },
+        { key: 'division',          labelEN: 'Division',         labelBN: 'বিভাগ',             hint: 'Plain', defaultVisible: false },
+        { key: 'district',          labelEN: 'District',         labelBN: 'জেলা',              hint: 'Plain', defaultVisible: false },
+        { key: 'upazila',           labelEN: 'Upazila',          labelBN: 'উপজেলা',            hint: 'Plain', defaultVisible: false },
+        { key: 'postOffice',        labelEN: 'Post Office',      labelBN: 'ডাকঘর',             hint: 'Plain', defaultVisible: false },
+        // Personal-side fields
+        { key: 'dob',               labelEN: 'Date of Birth',    labelBN: 'জন্ম তারিখ',         hint: 'Plain', defaultVisible: false },
+        { key: 'religion',          labelEN: 'Religion',         labelBN: 'ধর্ম',              hint: 'Plain', defaultVisible: false },
+        { key: 'bloodGroup',        labelEN: 'Blood Group',      labelBN: 'রক্তের গ্রুপ',       hint: 'Plain', defaultVisible: false },
+        { key: 'maritalStatus',     labelEN: 'Marital Status',   labelBN: 'বৈবাহিক অবস্থা',     hint: 'Plain', defaultVisible: false },
+        { key: 'mobileNo',          labelEN: 'Mobile',           labelBN: 'মোবাইল',            hint: 'Plain', defaultVisible: false },
+        { key: 'email',             labelEN: 'Email',            labelBN: 'ইমেইল',             hint: 'Plain', defaultVisible: false },
+    ];
+
+    /** Field keys the user has selected to render. Defaults to the catalog's
+        `defaultVisible` set; the user can edit via the MultiSelect picker. */
+    selectedColumnKeys: string[] = this.columnCatalog
+        .filter((c) => c.defaultVisible)
+        .map((c) => c.key);
+
+    /** Picker option list — projects the catalog to PrimeNG MultiSelect shape. */
+    get columnPickerOptions(): { label: string; value: string }[] {
+        return this.columnCatalog.map((c) => ({
+            label: this.lang === 'bn' ? c.labelBN : c.labelEN,
+            value: c.key,
+        }));
+    }
+
+    /** Visible columns in user-picked order. `selectedColumnKeys` is the
+        source of truth — drag-reorder mutates it directly. New picks land at
+        the end (PrimeNG MultiSelect appends), so they appear at the right
+        of the table until the user drags them elsewhere. */
+    get visibleColumns() {
+        const map = new Map(this.columnCatalog.map((c) => [c.key, c]));
+        return this.selectedColumnKeys
+            .map((k) => map.get(k))
+            .filter((c): c is typeof this.columnCatalog[number] => c != null);
+    }
+
+    // ── Drag-reorder of the column chips ─────────────────────────────────
+    /** Field key currently being dragged. Cleared on dragend/drop. */
+    draggingColumnKey: string | null = null;
+
+    onColumnDragStart(key: string, event: DragEvent): void {
+        this.draggingColumnKey = key;
+        // dataTransfer is required for Firefox to fire dragover on the drop target.
+        event.dataTransfer?.setData('text/plain', key);
+        if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+    }
+
+    onColumnDragOver(event: DragEvent): void {
+        event.preventDefault();  // allow drop
+        if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+    }
+
+    onColumnDrop(targetKey: string, event: DragEvent): void {
+        event.preventDefault();
+        const sourceKey = this.draggingColumnKey;
+        this.draggingColumnKey = null;
+        if (!sourceKey || sourceKey === targetKey) return;
+        const arr = [...this.selectedColumnKeys];
+        const fromIdx = arr.indexOf(sourceKey);
+        const toIdx   = arr.indexOf(targetKey);
+        if (fromIdx === -1 || toIdx === -1) return;
+        const [moved] = arr.splice(fromIdx, 1);
+        arr.splice(toIdx, 0, moved);
+        this.selectedColumnKeys = arr;
+    }
+
+    onColumnDragEnd(): void {
+        this.draggingColumnKey = null;
+    }
+
+    /** "×" button on a chip — removes the column from the picker selection. */
+    removeColumn(key: string): void {
+        this.selectedColumnKeys = this.selectedColumnKeys.filter((k) => k !== key);
+    }
+
     /** Show the Address Owner column whenever the filter is something OTHER than
         "Self" — when the user is looking at "All" or a specific relationship, the
         owner identity is the whole point of the column. With "Self" selected,
-        every row would say the same thing, so the column is dead weight. */
+        every row would say the same thing, so the column is dead weight.
+
+        Still drives auto-selection: when the filter changes, the column key
+        is added to (or removed from) `selectedColumnKeys` so the picker UX
+        and the legacy auto-toggle stay in sync. Manual user picks aren't
+        overridden — the picker is the single source of truth at render time. */
     get showAddressOwner(): boolean {
-        return this.selectedAddressOwner !== 'Self';
+        return this.selectedColumnKeys.includes('addressOwner');
     }
 
-    /** Show the Status column only when the filter is "All" (empty value).
-        With a specific status picked, every row carries the same value, so
-        the column would just repeat the filter label on every line. */
+    /** Show the Status column when the user has selected it in the picker.
+        Auto-managed by `onPostingStatusChange()` so that picking "All" in
+        the filter auto-adds the column, and picking a specific status
+        auto-removes it (unless the user explicitly re-ticked it). */
     get showStatus(): boolean {
-        return !this.selectedPostingStatus;
+        return this.selectedColumnKeys.includes('status');
+    }
+
+    /** Mapping from picker key → (EN-property, BN-property) on the row.
+        Drives the @default cell renderer for "Plain" columns. Adapter
+        renames preserve the existing render code's property accesses
+        (`row.rank` / `row.rankBN` etc.) for the legacy field set; new
+        fields project under their own keys via the adapter's pass-through. */
+    private static readonly plainColumnPropertyMap: Record<string, { en: string; bn?: string }> = {
+        // Service-side — keys match the picker; values are the AddressLocation
+        // legacy property names the adapter renames the dynamic response to.
+        serviceId:           { en: 'serviceId' },
+        nameEnglish:         { en: 'name' },
+        nameBangla:          { en: 'nameBN' },
+        nid:                 { en: 'nid' },
+        prefix:              { en: 'prefix',              bn: 'prefixBN' },
+        appointment:         { en: 'appointment',         bn: 'appointmentBN' },
+        memberType:          { en: 'memberType',          bn: 'memberTypeBN' },
+        motherOrganization:  { en: 'orgName',             bn: 'orgNameBN' },
+        armyRank:            { en: 'rank',                bn: 'rankBN' },
+        corps:               { en: 'corps',               bn: 'corpsBN' },
+        trade:               { en: 'trade',               bn: 'tradeBN' },
+        tradeRemarks:        { en: 'tradeRemarks' },
+        gender:              { en: 'gender',              bn: 'genderBN' },
+        motherUnit:          { en: 'motherUnit',          bn: 'motherUnitBN' },
+        rabUnit:             { en: 'rabUnit',             bn: 'rabUnitBN' },
+        dateOfCommission:    { en: 'dateOfCommission' },
+        joiningDate:         { en: 'joiningDate' },
+        rabServiceFrom:      { en: 'rabServiceFrom' },
+        rabServiceTo:        { en: 'rabServiceTo' },
+        division:            { en: 'division',            bn: 'divisionBN' },
+        district:            { en: 'district',            bn: 'districtBN' },
+        upazila:             { en: 'upazila',             bn: 'upazilaBN' },
+        postOffice:          { en: 'postOffice',          bn: 'postOfficeBN' },
+        // Personal-side
+        dob:                 { en: 'dob' },
+        religion:            { en: 'religion' },              // view exposes EN only
+        bloodGroup:          { en: 'bloodGroup' },
+        maritalStatus:       { en: 'maritalStatus' },          // view exposes EN only
+        mobileNo:            { en: 'mobileNo' },
+        email:               { en: 'email' },
+    };
+
+    /** Flatten any column to a single text value for exports. Composite
+        cells get joined with " · " / " › " so the row stays one line — Word
+        keeps richer formatting by branching directly on hint instead. */
+    private cellExportText(row: AddressLocationReportRow, col: { key: string; hint: string }): string {
+        switch (col.hint) {
+            case 'Serial':
+                return this.paddedSer(row.ser);
+            case 'PersonnelComposite': {
+                const name = this.codeValue(row.name, row.nameBN);
+                const meta = this.personnelMeta(row);
+                return meta && meta !== '—' ? `${name} · ${meta}` : name;
+            }
+            case 'RabId':
+                return row.rabid ? this.displayNum(row.rabid) : '—';
+            case 'LocationType':
+                return this.displayLocationTypeUpper(row.locationType);
+            case 'AddressComposite': {
+                const crumbs = this.addressCrumbParts(row)
+                    .map((p) => `${p.label}: ${p.value}`)
+                    .join(' › ');
+                const detail = this.addressDetail(row);
+                if (crumbs && detail) return `${crumbs} · ${detail}`;
+                return crumbs || detail || '';
+            }
+            case 'AddressOwner':
+                return this.codeValue(row.addressOwner, row.addressOwnerBN);
+            case 'Status':
+                return this.displayMemberStatus(row);
+            case 'Remarks':
+                return row.rmks || '';
+            default:
+                return this.plainCellValue(row, col.key);
+        }
+    }
+
+    /** Header label list for exports, in visible-column order, lang-aware. */
+    private get exportHeaderLabels(): string[] {
+        return this.visibleColumns.map((c) =>
+            this.lang === 'bn' ? c.labelBN : c.labelEN,
+        );
+    }
+
+    /** Resolve a plain-hint cell's value by walking the column→property map
+        and applying the same bilingual fallback as `codeValue()`. */
+    plainCellValue(row: AddressLocationReportRow, key: string): string {
+        const map = ReportAddressLocationComponent.plainColumnPropertyMap[key];
+        if (!map) return '—';
+        const en = (row as any)[map.en] as string | null | undefined;
+        const bn = map.bn ? (row as any)[map.bn] as string | null | undefined : undefined;
+        return this.codeValue(en, bn);
+    }
+
+    /** Toggle a single column key in the picker selection. Used by the
+        auto-management of conditional columns (Address Owner, Status). */
+    private toggleColumn(key: string, visible: boolean): void {
+        const has = this.selectedColumnKeys.includes(key);
+        if (visible && !has) {
+            this.selectedColumnKeys = [...this.selectedColumnKeys, key];
+        } else if (!visible && has) {
+            this.selectedColumnKeys = this.selectedColumnKeys.filter((k) => k !== key);
+        }
+    }
+
+    /** Filter-change handlers — auto-add/remove the address-owner / status
+        columns to mirror the previous always-on conditional behaviour. */
+    onAddressOwnerFilterChange(): void {
+        this.toggleColumn('addressOwner', this.selectedAddressOwner !== 'Self');
+    }
+    onPostingStatusFilterChange(): void {
+        this.toggleColumn('status', !this.selectedPostingStatus);
     }
 
     /** Backend returns the status code; map to a localized label. Unknown
@@ -316,9 +584,7 @@ export class ReportAddressLocationComponent implements OnInit {
 
     /** Zero-pad serial to 2 digits and apply Bangla numerals when appropriate. */
     paddedSer(n: number | string | null | undefined): string {
-        if (n == null || n === '') return '—';
-        const padded = String(n).padStart(2, '0');
-        return this.lang === 'bn' ? BanglaNumerals.toBangla(padded) : padded;
+        return paddedSerHelper(n, this.lang);
     }
 
     displayLocationTypeUpper(val: string | null | undefined): string {
@@ -330,35 +596,18 @@ export class ReportAddressLocationComponent implements OnInit {
         (U+00A0) so they always render on the same line, even when the cell
         is narrow enough to wrap the rest of the meta string. */
     personnelMeta(row: AddressLocationReportRow): string {
-        const rank = this.codeValue(row.rank, row.rankBN);
-        const org = this.codeValue(row.orgName, row.orgNameBN);
-        const svcId = row.serviceId != null && row.serviceId !== '' ? this.displayNum(row.serviceId) : '';
-        const svc = svcId && svcId !== '-' ? (this.lang === 'bn' ? `সার্ভিস ${svcId}` : `SVC ${svcId}`) : '';
-        return [rank, org, svc].filter((s) => s && s !== '—' && s !== '-').join(' · ');
+        return personnelMetaHelper(row, this.lang);
     }
 
     /** Geographic crumbs — each part labelled (Division/District/Upazila) so a
         reader can see what the value names without inferring from position alone. */
     addressCrumbParts(row: AddressLocationReportRow): { label: string; value: string }[] {
-        const bn = this.lang === 'bn';
-        const parts = [
-            { label: bn ? 'বিভাগ' : 'Division', value: this.codeValue(row.division, row.divisionBN) },
-            { label: bn ? 'জেলা' : 'District', value: this.codeValue(row.district, row.districtBN) },
-            { label: bn ? 'উপজেলা' : 'Upazila', value: this.codeValue(row.upazila, row.upazilaBN) },
-        ];
-        return parts.filter((p) => p.value && p.value !== '—');
+        return addressCrumbPartsHelper(row, this.lang);
     }
 
     /** "P.O. Bishnapur · Holding 54, Kholla, 3413" — second address line. */
     addressDetail(row: AddressLocationReportRow): string {
-        const po = this.codeValue(row.postOffice, row.postOfficeBN);
-        const addr = this.codeValue(row.address, row.addressBN);
-        const parts: string[] = [];
-        if (po && po !== '—') {
-            parts.push(this.lang === 'bn' ? `ডাকঘর ${po}` : `P.O. ${po}`);
-        }
-        if (addr && addr !== '—') parts.push(addr);
-        return parts.join(' · ');
+        return addressDetailHelper(row, this.lang);
     }
 
     /** Table column headers — lang-aware. Composite columns ("Personnel", "Address")
@@ -608,58 +857,56 @@ export class ReportAddressLocationComponent implements OnInit {
             : "'DM Sans', 'Segoe UI', Arial, sans-serif";
         const mono = "'JetBrains Mono', 'Consolas', 'Courier New', monospace";
 
-        const h = this.rabHeaders;
-        const cols: string[] = [h.ser, h.personnel, h.rabId];
-        if (this.showAddressOwner) cols.push(h.addressOwner);
-        cols.push(h.locationType, h.address);
-        if (this.showStatus) cols.push(h.status);
-        cols.push(h.remarks);
-        const tableHeaderHtml = `<tr>${cols.map((c) => `<th>${esc(c)}</th>`).join('')}</tr>`;
+        const visibleCols = this.visibleColumns;
+        const tableHeaderHtml = `<tr>${visibleCols
+            .map((c) => `<th>${esc(this.lang === 'bn' ? c.labelBN : c.labelEN)}</th>`)
+            .join('')}</tr>`;
 
-        const tableBodyHtml = this.list
-            .map((row) => {
-                const ser = this.paddedSer(row.ser);
-                const name = this.codeValue(row.name, row.nameBN);
-                const meta = this.personnelMeta(row);
-                const rabId = row.rabid ? this.displayNum(row.rabid) : '—';
-                const owner = this.codeValue(row.addressOwner, row.addressOwnerBN);
-                const locType = this.displayLocationTypeUpper(row.locationType);
-                const crumbs = this.addressCrumbParts(row);
-                const detail = this.addressDetail(row);
-                // Remarks is intentionally blank when absent — em-dash would
-                // imply "intentionally empty" but the column is just optional.
-                const remarks = row.rmks || '';
-
-                const crumbHtml = crumbs
-                    .map(
-                        (p, i) =>
-                            `<span class="addr-part"><span class="addr-label">${esc(p.label)}:</span> <span class="addr-value">${esc(p.value)}</span></span>` +
-                            (i < crumbs.length - 1 ? '<span class="addr-sep">&rsaquo;</span>' : ''),
-                    )
-                    .join(' ');
-
-                const ownerCell = this.showAddressOwner ? `<td class="td-owner">${esc(owner)}</td>` : '';
-                const statusCell = this.showStatus ? `<td class="td-status">${esc(this.displayMemberStatus(row))}</td>` : '';
-
-                return `<tr>
-                    <td class="td-ser"><span class="ser">${esc(ser)}</span></td>
-                    <td class="td-personnel">
+        const renderPrintCell = (row: AddressLocationReportRow, col: { key: string; hint: string }): string => {
+            switch (col.hint) {
+                case 'Serial':
+                    return `<td class="td-ser"><span class="ser">${esc(this.paddedSer(row.ser))}</span></td>`;
+                case 'PersonnelComposite': {
+                    const name = this.codeValue(row.name, row.nameBN);
+                    const meta = this.personnelMeta(row);
+                    return `<td class="td-personnel">
                         <div class="name">${esc(name)}</div>
                         <div class="meta">${esc(meta)}</div>
-                    </td>
-                    <td class="td-rabid">${esc(rabId)}</td>
-                    ${ownerCell}
-                    <td class="td-loctype">
-                        <span class="loc-text">${esc(locType)}</span>
-                    </td>
-                    <td class="td-address">
+                    </td>`;
+                }
+                case 'RabId':
+                    return `<td class="td-rabid">${esc(row.rabid ? this.displayNum(row.rabid) : '—')}</td>`;
+                case 'AddressOwner':
+                    return `<td class="td-owner">${esc(this.codeValue(row.addressOwner, row.addressOwnerBN))}</td>`;
+                case 'LocationType':
+                    return `<td class="td-loctype"><span class="loc-text">${esc(this.displayLocationTypeUpper(row.locationType))}</span></td>`;
+                case 'AddressComposite': {
+                    const crumbs = this.addressCrumbParts(row);
+                    const detail = this.addressDetail(row);
+                    const crumbHtml = crumbs
+                        .map((p, i) =>
+                            `<span class="addr-part"><span class="addr-label">${esc(p.label)}:</span> <span class="addr-value">${esc(p.value)}</span></span>` +
+                            (i < crumbs.length - 1 ? '<span class="addr-sep">&rsaquo;</span>' : ''),
+                        )
+                        .join(' ');
+                    return `<td class="td-address">
                         <div class="addr-crumb">${crumbHtml}</div>
                         ${detail ? `<div class="addr-detail">${esc(detail)}</div>` : ''}
-                    </td>
-                    ${statusCell}
-                    <td class="td-remarks">${esc(remarks)}</td>
-                </tr>`;
-            })
+                    </td>`;
+                }
+                case 'Status':
+                    return `<td class="td-status">${esc(this.displayMemberStatus(row))}</td>`;
+                case 'Remarks':
+                    // Remarks is intentionally blank when absent — em-dash would
+                    // imply "intentionally empty" but the column is just optional.
+                    return `<td class="td-remarks">${esc(row.rmks || '')}</td>`;
+                default:
+                    return `<td>${esc(this.plainCellValue(row, col.key))}</td>`;
+            }
+        };
+
+        const tableBodyHtml = this.list
+            .map((row) => `<tr>${visibleCols.map((c) => renderPrintCell(row, c)).join('')}</tr>`)
             .join('');
 
         const criteriaGridHtml = this.criteriaItems.length
@@ -1164,35 +1411,30 @@ export class ReportAddressLocationComponent implements OnInit {
         });
 
         // ── Data table ────────────────────────────────────────────────────
-        // Column widths are PERCENTAGE-based so the table reflows on orientation
-        // changes — fixed DXA widths previously clipped the rightmost columns
-        // when the user switched to portrait in Word.
-        const showOwner = this.showAddressOwner;
-        const showStatus = this.showStatus;
-        // Column-width percentages per visible-column combination. Sum = 100%.
-        // Status (~8%) is carved out of ADDRESS so the address crumbs stay
-        // the widest column — REMARKS and the member-attribute cols keep
-        // their existing share.
-        const dataColPct: number[] = showOwner
-            ? (showStatus
-                ? [4.0, 19.0, 8.5, 8.5, 8.5, 28.0, 13.5, 10.0]
-                : [4.5, 21.5, 9.5, 9.5, 9.5, 35.3, 10.2])
-            : (showStatus
-                ? [4.0, 21.0, 10.0, 10.0, 31.5, 13.5, 10.0]
-                : [4.5, 22.6, 11.0, 11.0, 40.7, 10.2]);
+        // Column-width percentages are derived per visible column from a
+        // hint→weight table, then normalized so the row sums to 100. This
+        // means adding/removing picker columns automatically rebalances the
+        // table width without per-combination hardcoded arrays.
+        const widthWeightForHint = (hint: string): number => {
+            switch (hint) {
+                case 'Serial':              return 4;
+                case 'PersonnelComposite':  return 22;
+                case 'RabId':               return 9.5;
+                case 'AddressOwner':        return 10;
+                case 'LocationType':        return 10;
+                case 'AddressComposite':    return 32;
+                case 'Status':              return 13;
+                case 'Remarks':             return 10;
+                default:                    return 10;
+            }
+        };
+        const rawWeights = this.visibleColumns.map((c) => widthWeightForHint(c.hint));
+        const weightSum = rawWeights.reduce((a, b) => a + b, 0) || 1;
+        const dataColPct: number[] = rawWeights.map((w) => (w * 100) / weightSum);
 
-        const headerLabels: string[] = [
-            this.rabHeaders.ser,
-            this.rabHeaders.personnel,
-            this.rabHeaders.rabId,
-        ];
-        if (showOwner) headerLabels.push(this.rabHeaders.addressOwner);
-        headerLabels.push(
-            this.rabHeaders.locationType,
-            this.rabHeaders.address,
+        const headerLabels: string[] = this.visibleColumns.map((c) =>
+            this.lang === 'bn' ? c.labelBN : c.labelEN,
         );
-        if (showStatus) headerLabels.push(this.rabHeaders.status);
-        headerLabels.push(this.rabHeaders.remarks);
 
         const headerCells: TableCell[] = headerLabels.map((label, i) => new TableCell({
             borders: headerCellBorder,
@@ -1273,94 +1515,105 @@ export class ReportAddressLocationComponent implements OnInit {
                 }));
             }
 
-            const cells: TableCell[] = [];
-            // SER
-            cells.push(new TableCell({
-                ...cellOpts(dataColPct[0]),
-                children: [new Paragraph({
-                    alignment: AlignmentType.LEFT,
-                    children: [new TextRun({
-                        text: wsafe(ser), font: mono, size: S.name, ...bnRunExtras(S.name), bold: true,
-                        color: C.gray, characterSpacing: isBn ? 0 : 8,
-                    })],
-                })],
-            }));
-            // PERSONNEL — name + meta
-            cells.push(new TableCell({
-                ...cellOpts(dataColPct[1]),
-                children: [
-                    new Paragraph({
-                        spacing: { after: 40 },
-                        children: [new TextRun({
-                            text: wsafe(name), font: sans, size: S.name, ...bnRunExtras(S.name), bold: true, color: C.black,
-                        })],
-                    }),
-                    new Paragraph({
-                        children: [new TextRun({
-                            text: wsafe(meta), font: mono, size: S.meta, ...bnRunExtras(S.meta),
-                            color: C.gray, characterSpacing: isBn ? 0 : 16, allCaps: !isBn,
-                        })],
-                    }),
-                ],
-            }));
-            // RAB ID
-            cells.push(new TableCell({
-                ...cellOpts(dataColPct[2]),
-                children: [new Paragraph({
-                    children: [new TextRun({
-                        text: wsafe(rabId), font: mono, size: S.body, ...bnRunExtras(S.body), color: C.black,
-                        characterSpacing: isBn ? 0 : 4,
-                    })],
-                })],
-            }));
-            // OWNER (conditional)
-            let colIdx = 3;
-            if (showOwner) {
-                cells.push(new TableCell({
-                    ...cellOpts(dataColPct[colIdx++]),
-                    children: [new Paragraph({
-                        children: [new TextRun({
-                            text: wsafe(owner), font: sans, size: S.body, ...bnRunExtras(S.body), bold: true, color: C.black,
-                        })],
-                    })],
-                }));
-            }
-            // LOC TYPE — bold uppercase mono, no icon glyph (B&W brief).
-            cells.push(new TableCell({
-                ...cellOpts(dataColPct[colIdx++]),
-                children: [new Paragraph({
-                    children: [new TextRun({
-                        text: wsafe(locType), font: mono, size: S.meta, ...bnRunExtras(S.meta), bold: true,
-                        color: C.black, characterSpacing: isBn ? 0 : 16, allCaps: !isBn,
-                    })],
-                })],
-            }));
-            // ADDRESS — crumbs + optional detail
-            cells.push(new TableCell({
-                ...cellOpts(dataColPct[colIdx++]),
-                children: addrParagraphs,
-            }));
-            // STATUS (conditional) — only when the user picked "All".
-            if (showStatus) {
-                cells.push(new TableCell({
-                    ...cellOpts(dataColPct[colIdx++]),
-                    children: [new Paragraph({
-                        children: [new TextRun({
-                            text: wsafe(this.displayMemberStatus(row)),
-                            font: sans, size: S.body, ...bnRunExtras(S.body), bold: true, color: C.black,
-                        })],
-                    })],
-                }));
-            }
-            // REMARKS
-            cells.push(new TableCell({
-                ...cellOpts(dataColPct[colIdx++]),
-                children: [new Paragraph({
-                    children: [new TextRun({
-                        text: wsafe(remarks), font: sans, size: S.body, ...bnRunExtras(S.body), color: C.black,
-                    })],
-                })],
-            }));
+            // Per-column cell builder — switches on the registry hint so
+            // composite cells keep their rich Word formatting (name+meta,
+            // address crumb+detail) while plain cells render as a single
+            // styled paragraph. Index into dataColPct stays aligned with
+            // visibleColumns because both iterate the same list.
+            const cells: TableCell[] = this.visibleColumns.map((col, i) => {
+                const w = cellOpts(dataColPct[i]);
+                switch (col.hint) {
+                    case 'Serial':
+                        return new TableCell({
+                            ...w,
+                            children: [new Paragraph({
+                                alignment: AlignmentType.LEFT,
+                                children: [new TextRun({
+                                    text: wsafe(ser), font: mono, size: S.name, ...bnRunExtras(S.name), bold: true,
+                                    color: C.gray, characterSpacing: isBn ? 0 : 8,
+                                })],
+                            })],
+                        });
+                    case 'PersonnelComposite':
+                        return new TableCell({
+                            ...w,
+                            children: [
+                                new Paragraph({
+                                    spacing: { after: 40 },
+                                    children: [new TextRun({
+                                        text: wsafe(name), font: sans, size: S.name, ...bnRunExtras(S.name), bold: true, color: C.black,
+                                    })],
+                                }),
+                                new Paragraph({
+                                    children: [new TextRun({
+                                        text: wsafe(meta), font: mono, size: S.meta, ...bnRunExtras(S.meta),
+                                        color: C.gray, characterSpacing: isBn ? 0 : 16, allCaps: !isBn,
+                                    })],
+                                }),
+                            ],
+                        });
+                    case 'RabId':
+                        return new TableCell({
+                            ...w,
+                            children: [new Paragraph({
+                                children: [new TextRun({
+                                    text: wsafe(rabId), font: mono, size: S.body, ...bnRunExtras(S.body), color: C.black,
+                                    characterSpacing: isBn ? 0 : 4,
+                                })],
+                            })],
+                        });
+                    case 'AddressOwner':
+                        return new TableCell({
+                            ...w,
+                            children: [new Paragraph({
+                                children: [new TextRun({
+                                    text: wsafe(owner), font: sans, size: S.body, ...bnRunExtras(S.body), bold: true, color: C.black,
+                                })],
+                            })],
+                        });
+                    case 'LocationType':
+                        return new TableCell({
+                            ...w,
+                            children: [new Paragraph({
+                                children: [new TextRun({
+                                    text: wsafe(locType), font: mono, size: S.meta, ...bnRunExtras(S.meta), bold: true,
+                                    color: C.black, characterSpacing: isBn ? 0 : 16, allCaps: !isBn,
+                                })],
+                            })],
+                        });
+                    case 'AddressComposite':
+                        return new TableCell({ ...w, children: addrParagraphs });
+                    case 'Status':
+                        return new TableCell({
+                            ...w,
+                            children: [new Paragraph({
+                                children: [new TextRun({
+                                    text: wsafe(this.displayMemberStatus(row)),
+                                    font: sans, size: S.body, ...bnRunExtras(S.body), bold: true, color: C.black,
+                                })],
+                            })],
+                        });
+                    case 'Remarks':
+                        return new TableCell({
+                            ...w,
+                            children: [new Paragraph({
+                                children: [new TextRun({
+                                    text: wsafe(remarks), font: sans, size: S.body, ...bnRunExtras(S.body), color: C.black,
+                                })],
+                            })],
+                        });
+                    default:
+                        return new TableCell({
+                            ...w,
+                            children: [new Paragraph({
+                                children: [new TextRun({
+                                    text: wsafe(this.plainCellValue(row, col.key)),
+                                    font: sans, size: S.body, ...bnRunExtras(S.body), color: C.black,
+                                })],
+                            })],
+                        });
+                }
+            });
 
             return new TableRow({ cantSplit: true, children: cells });
         });
@@ -1475,26 +1728,14 @@ export class ReportAddressLocationComponent implements OnInit {
         otherwise render as raw newline characters. */
     private exportRabExcel(): void {
         const isBn = this.lang === 'bn';
-        const showOwner = this.showAddressOwner;
-        const showStatus = this.showStatus;
         // Identity helper kept as a seam for any future Bangla-specific
         // string normalization; currently a no-op so the original ZWJ form
         // ("র‍্যাপিড") reaches Excel intact.
         const wsafe = (s: string | null | undefined): string => s ?? '';
 
-        const headers: string[] = [
-            wsafe(this.rabHeaders.ser),
-            wsafe(this.rabHeaders.personnel),
-            wsafe(this.rabHeaders.rabId),
-        ];
-        if (showOwner) headers.push(wsafe(this.rabHeaders.addressOwner));
-        headers.push(
-            wsafe(this.rabHeaders.locationType),
-            wsafe(this.rabHeaders.address),
-        );
-        if (showStatus) headers.push(wsafe(this.rabHeaders.status));
-        headers.push(wsafe(this.rabHeaders.remarks));
-        const totalCols = headers.length;
+        // Visible columns from the picker drive both headers AND data rows.
+        const headers: string[] = this.exportHeaderLabels.map(wsafe);
+        const totalCols = headers.length || 1;
 
         const data: unknown[][] = [];
         const merges: { s: { r: number; c: number }; e: { r: number; c: number } }[] = [];
@@ -1540,31 +1781,11 @@ export class ReportAddressLocationComponent implements OnInit {
         // ── Data table ────────────────────────────────────────────────────
         data.push(headers); r++;
 
+        // Composite cells flatten to one line via cellExportText (` · ` / ` › ` joins)
+        // so the row stays readable without depending on per-cell wrapText (which
+        // the standard xlsx package can't write anyway).
         for (const row of this.list) {
-            const ser = wsafe(this.paddedSer(row.ser));
-            const name = wsafe(this.codeValue(row.name, row.nameBN));
-            const meta = wsafe(this.personnelMeta(row));
-            const rabId = wsafe(row.rabid ? this.displayNum(row.rabid) : '—');
-            const owner = wsafe(this.codeValue(row.addressOwner, row.addressOwnerBN));
-            const locType = wsafe(this.displayLocationTypeUpper(row.locationType));
-            const crumbs = this.addressCrumbParts(row);
-            const detail = wsafe(this.addressDetail(row));
-            const remarks = wsafe(row.rmks || '');
-
-            // Composite cells: " · " keeps them readable on a single line so
-            // they don't depend on cell-level wrapText (unreachable without
-            // the styling-enabled xlsx fork).
-            const personnel = meta ? `${name} · ${meta}` : name;
-            const crumbText = crumbs.map((c) => wsafe(`${c.label}: ${c.value}`)).join(' › ');
-            const address = detail
-                ? (crumbText ? `${crumbText} · ${detail}` : detail)
-                : crumbText;
-
-            const rowData: string[] = [ser, personnel, rabId];
-            if (showOwner) rowData.push(owner);
-            rowData.push(locType, address);
-            if (showStatus) rowData.push(wsafe(this.displayMemberStatus(row)));
-            rowData.push(remarks);
+            const rowData = this.visibleColumns.map((col) => wsafe(this.cellExportText(row, col)));
             data.push(rowData);
             r++;
         }
@@ -1577,17 +1798,22 @@ export class ReportAddressLocationComponent implements OnInit {
         // ── Build sheet ───────────────────────────────────────────────────
         const ws = XLSX.utils.aoa_to_sheet(data);
 
-        // Column widths tuned to the composite cell content — Personnel and
-        // Address are the widest because they carry the merged sub-fields.
-        // STATUS slots in just before REMARKS when shown.
-        const baseWithOwner = [{ wch: 6 }, { wch: 32 }, { wch: 14 }, { wch: 20 }, { wch: 16 }, { wch: 55 }];
-        const baseWithoutOwner = [{ wch: 6 }, { wch: 32 }, { wch: 14 }, { wch: 16 }, { wch: 60 }];
-        const statusCol = [{ wch: 18 }];
-        const remarksCol = [{ wch: 16 }];
-        const cols = showOwner
-            ? [...baseWithOwner, ...(showStatus ? statusCol : []), ...remarksCol]
-            : [...baseWithoutOwner, ...(showStatus ? statusCol : []), ...remarksCol];
-        ws['!cols'] = cols;
+        // Column widths derived from the column hint — Personnel and
+        // Address carry composite content so they get the widest share.
+        const widthForHint = (hint: string): number => {
+            switch (hint) {
+                case 'Serial':              return 6;
+                case 'PersonnelComposite':  return 36;
+                case 'RabId':               return 14;
+                case 'AddressOwner':        return 20;
+                case 'LocationType':        return 16;
+                case 'AddressComposite':    return 60;
+                case 'Status':              return 18;
+                case 'Remarks':             return 16;
+                default:                    return 18;
+            }
+        };
+        ws['!cols'] = this.visibleColumns.map((c) => ({ wch: widthForHint(c.hint) }));
         ws['!merges'] = merges;
 
         const wb = XLSX.utils.book_new();
@@ -1771,55 +1997,123 @@ export class ReportAddressLocationComponent implements OnInit {
         this.loading = true;
         this.appliedFilterLines = this.buildFilterLines();
         const page_no = Math.floor(this.first / this.rows) + 1;
-        this.reportService
-            .getAddressLocationReport({
-                divisionId: this.selectedDivisionId ?? undefined,
-                districtId: this.selectedDistrictId ?? undefined,
-                upazilaId: this.selectedUpazilaId ?? undefined,
-                postOfficeId: this.selectedPostOfficeId ?? undefined,
-                postingStatus: this.selectedPostingStatus || undefined,
-                rabId: this.searchRabId.trim() || undefined,
-                serviceId: this.searchServiceId.trim() || undefined,
-                nid: this.searchNid.trim() || undefined,
-                activeOnly: this.activeOnly,
-                locationType: this.selectedLocationType || undefined,
-                addressOwner: this.selectedAddressOwner || undefined,
-                pagination: { page_no, row_per_page: this.rows },
-            })
-            .subscribe({
-                next: (res) => {
-                    this.list = res.datalist ?? [];
-                    this.totalRecords = res.pages?.rows ?? 0;
-                    this.accessibleScope = res.accessibleScope ?? null;
-                    // Mirror the backend's enforced status when the caller's org
-                    // scope is restricted — keeps the UI honest (any value other
-                    // than "Servings" would silently be overridden server-side).
-                    if (this.accessibleScope?.orgScopeRestricted && this.selectedPostingStatus !== 'Servings') {
-                        this.selectedPostingStatus = 'Servings';
-                    }
-                    this.loading = false;
-                },
-                error: (err) => {
-                    console.error(err);
-                    this.messageService.add({
-                        severity: 'error',
-                        summary: 'Error',
-                        detail: err?.error?.message || 'Failed to load report',
-                    });
-                    this.loading = false;
-                },
-            });
+
+        // Filter clauses for the dynamic backend. The cascading geo + free-
+        // text searches go through `criteria`; AddressOwner / LocationType /
+        // PostingStatus / ActiveOnly use the special top-level slots.
+        const criteria: DynamicReportCriterion[] = [];
+        if (this.selectedDivisionId != null)    criteria.push({ fieldKey: 'division',   idValue: this.selectedDivisionId });
+        if (this.selectedDistrictId != null)    criteria.push({ fieldKey: 'district',   idValue: this.selectedDistrictId });
+        if (this.selectedUpazilaId != null)     criteria.push({ fieldKey: 'upazila',    idValue: this.selectedUpazilaId });
+        if (this.selectedPostOfficeId != null)  criteria.push({ fieldKey: 'postOffice', idValue: this.selectedPostOfficeId });
+        if (this.searchRabId.trim())            criteria.push({ fieldKey: 'rabId',      textValue: this.searchRabId.trim() });
+        if (this.searchServiceId.trim())        criteria.push({ fieldKey: 'serviceId',  textValue: this.searchServiceId.trim() });
+        if (this.searchNid.trim())              criteria.push({ fieldKey: 'nid',        textValue: this.searchNid.trim() });
+
+        this.reportService.runDynamicReport({
+            columns: this.selectedColumnKeys,
+            criteria,
+            postingStatusFilter: this.selectedPostingStatus || null,
+            locationTypeFilter:  this.selectedLocationType  || null,
+            addressOwnerFilter:  this.selectedAddressOwner  || null,
+            activeOnly: this.activeOnly,
+            pagination: { page_no, row_per_page: this.rows },
+        }).subscribe({
+            next: (res) => {
+                const startSer = (page_no - 1) * this.rows + 1;
+                this.list = (res.datalist ?? []).map((d, i) => this.adaptDynamicRow(d, startSer + i));
+                this.totalRecords = res.pages?.Rows ?? res.pages?.rows ?? 0;
+                // Dynamic-backend scope envelope returns IDs (not names). For
+                // MVP we surface only the `orgScopeRestricted` flag — names
+                // for the unit / member-type chip can be resolved client-side
+                // via CommonCodeService in a follow-up.
+                this.accessibleScope = res.accessibleScope ? {
+                    rabUnitNames: null,
+                    rabUnitNamesBN: null,
+                    memberTypeNames: null,
+                    memberTypeNamesBN: null,
+                    orgScopeRestricted: res.accessibleScope.orgScopeRestricted,
+                } as ReportAccessibleScope : null;
+                if (this.accessibleScope?.orgScopeRestricted && this.selectedPostingStatus !== 'Servings') {
+                    this.selectedPostingStatus = 'Servings';
+                }
+                this.loading = false;
+            },
+            error: (err) => {
+                console.error(err);
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: err?.error?.message || 'Failed to load report',
+                });
+                this.loading = false;
+            },
+        });
+    }
+
+    /** Translates a dynamic-backend property bag (keyed by registry field
+        keys: rabId, nameEnglish, armyRank, motherOrganization, …) into the
+        existing AddressLocationReportRow shape (rabid, name, rank, orgName,
+        …). The spread keeps the original camelCase keys on the object too so
+        the picker's "Plain" cells for new fields (religion, dob, bloodGroup,
+        …) resolve via plainColumnPropertyMap without further renames. */
+    private adaptDynamicRow(d: DynamicReportRow, ser: number): AddressLocationReportRow {
+        const houseRoad     = (d['houseRoad'] as string)     || '';
+        const addressAreaEN = (d['addressAreaEN'] as string) || '';
+        const addressAreaBN = (d['addressAreaBN'] as string) || '';
+        const postCode      = (d['postCode'] as string)      || '';
+        const join = (...parts: string[]) =>
+            parts.map((p) => (p || '').trim()).filter(Boolean).join(', ');
+        return {
+            // Pass-through: any field key not explicitly renamed below stays
+            // accessible by its original (registry) key.
+            ...d,
+            ser,
+            rabid:           d['rabId']                  as string,
+            name:            d['nameEnglish']            as string,
+            nameBN:          d['nameBangla']             as string,
+            serviceId:       d['serviceId']              as string,
+            rank:            d['armyRank']               as string,
+            rankBN:          d['armyRankBN']             as string,
+            orgName:         d['motherOrganization']     as string,
+            orgNameBN:       d['motherOrganizationBN']   as string,
+            corps:           d['corps']                  as string,
+            corpsBN:         d['corpsBN']                as string,
+            trade:           d['trade']                  as string,
+            tradeBN:         d['tradeBN']                as string,
+            rabUnit:         d['rabUnit']                as string,
+            rabUnitBN:       d['rabUnitBN']              as string,
+            locationType:    d['locationType']           as string,
+            addressOwner:    d['addressOwner']           as string,
+            addressOwnerBN:  d['addressOwnerBN']         as string,
+            division:        d['division']               as string,
+            divisionBN:      d['divisionBN']             as string,
+            district:        d['district']               as string,
+            districtBN:      d['districtBN']             as string,
+            upazila:         d['upazila']                as string,
+            upazilaBN:       d['upazilaBN']              as string,
+            postOffice:      d['postOffice']             as string,
+            postOfficeBN:    d['postOfficeBN']           as string,
+            // Address detail built from underlying view columns — the legacy
+            // backend pre-concatenated these; the dynamic backend leaves them
+            // separate so we recreate the same string here.
+            address:         join(houseRoad, addressAreaEN, postCode),
+            addressBN:       join(houseRoad, addressAreaBN, postCode),
+            // Status code passthrough — backend `status` field carries
+            // EmployeeInfo.PostingStatus.
+            status:          d['status']                 as string,
+            // Remarks column doesn't exist on the view; legacy row had `rmks`
+            // which the existing render falls back to '' for.
+            rmks:            null,
+        } as AddressLocationReportRow;
     }
 
     displayNum(v: number | string | null | undefined): string {
-        if (v == null || v === '') return '-';
-        const s = String(v);
-        return this.lang === 'bn' ? BanglaNumerals.toBangla(s) : s;
+        return displayNumHelper(v, this.lang);
     }
 
     codeValue(enVal: string | null | undefined, bnVal: string | null | undefined): string {
-        if (this.lang === 'bn' && bnVal != null && bnVal.trim() !== '') return bnVal.trim();
-        return enVal ?? bnVal ?? '—';
+        return codeValueHelper(enVal, bnVal, this.lang);
     }
 
     /** Strip "Spouse" prefix and translate LocationType for display */

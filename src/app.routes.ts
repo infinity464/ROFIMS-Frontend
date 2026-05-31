@@ -168,6 +168,7 @@ import { EmployeeReportsComponent } from '@/Components/Features/employee-reports
 import { ReportFamilyOccupationComponent } from '@/Components/Features/employee-reports/report-family-occupation/report-family-occupation.component';
 import { ReportRftsCompletionComponent } from '@/Components/Features/employee-reports/report-rfts-completion/report-rfts-completion.component';
 import { ReportAddressLocationComponent } from '@/Components/Features/employee-reports/report-address-location/report-address-location.component';
+import { ReportDynamicComponent } from '@/Components/Features/employee-reports/report-dynamic/report-dynamic.component';
 import { ReportMemberTypeServingComponent } from '@/Components/Features/employee-reports/report-member-type-serving/report-member-type-serving.component';
 import { ReportPendingInterPostingComponent } from '@/Components/Features/employee-reports/report-pending-inter-posting/report-pending-inter-posting.component';
 import { ReportSupernumeraryComponent } from '@/Components/Features/employee-reports/report-supernumerary/report-supernumerary.component';
@@ -398,6 +399,7 @@ export const appRoutes: Routes = [
             { path: 'report-family-occupation', component: ReportFamilyOccupationComponent },
             { path: 'report-rfts-completion', component: ReportRftsCompletionComponent },
             { path: 'report-address-location', component: ReportAddressLocationComponent },
+            { path: 'report-dynamic', component: ReportDynamicComponent },
             { path: 'member-type-reporting', component: ReportMemberTypeServingComponent },
             { path: 'report-pending-inter-posting', component: ReportPendingInterPostingComponent },
             { path: 'report-supernumerary', component: ReportSupernumeraryComponent },

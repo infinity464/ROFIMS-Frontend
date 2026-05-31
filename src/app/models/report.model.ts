@@ -499,3 +499,83 @@ export interface LongStayNominalRollReportRow {
   relieverJoiningDate?: string | null;
   rmks?: string | null;
 }
+
+// ── Dynamic Employee Report ───────────────────────────────────────────────
+
+/**
+ * Field metadata returned by GET /rab/api/DynamicReport/GetFields.
+ * Mirrors the backend ReportFieldDefinition shape (camelCased on the wire).
+ * Drives the column picker and per-field filter UI on the report-dynamic
+ * component.
+ */
+export interface DynamicReportFieldMeta {
+  fieldKey: string;
+  displayLabel: string;
+  displayLabelBN: string;
+  /** "Text" | "ExactId" | "DateRange" | "Boolean" | "Composite" | "Synthetic" */
+  fieldType: string;
+  /** "Composite" | "Service" | "Personal" — drives MultiSelect grouping. */
+  group: string;
+  /** "Plain" | "PersonnelComposite" | "AddressComposite" | "Serial" */
+  renderHint: string;
+  /** CommonCode CodeType for ExactId fields — frontend feeds CommonCodeService. */
+  codeType?: string | null;
+  /** For composite columns: atomic field keys the SQL projection includes. */
+  underlyingFields?: string[] | null;
+  defaultVisible: boolean;
+  sortOrder: number;
+}
+
+/** One filter clause. Matches the backend DynamicSearchCriterion envelope. */
+export interface DynamicReportCriterion {
+  fieldKey: string;
+  textValue?: string | null;
+  idValue?: number | null;
+  stringIdValue?: string | null;
+  /** ISO "yyyy-MM-dd". */
+  dateFrom?: string | null;
+  /** ISO "yyyy-MM-dd". */
+  dateTo?: string | null;
+}
+
+export interface DynamicReportSort {
+  fieldKey: string;
+  /** "asc" | "desc" */
+  direction: 'asc' | 'desc';
+}
+
+export interface DynamicReportRequest {
+  columns: string[];
+  criteria: DynamicReportCriterion[];
+  sort?: DynamicReportSort[];
+  /** "Servings" / "ExMember" / "Supernumerary" / "Pending" / "" (All). */
+  postingStatusFilter?: string | null;
+  /** "Permanent" / "Present" / "" (All). Matches base + Spouse* server-side. */
+  locationTypeFilter?: string | null;
+  /** "Self" / "<relationCodeId>" / "" (All). */
+  addressOwnerFilter?: string | null;
+  /** True = active addresses only (default UI value). */
+  activeOnly?: boolean | null;
+  pagination: ReportPagination;
+}
+
+/**
+ * Each row is a property bag keyed by ReportFieldRegistry field keys —
+ * the backend only projects the columns the caller asked for (plus the
+ * underlying atomics any selected composite needs).
+ */
+export type DynamicReportRow = Record<string, unknown>;
+
+export interface DynamicReportAccessibleScope {
+  rabUnitIds: number[];
+  memberTypeIds: number[];
+  orgScopeRestricted: boolean;
+}
+
+export interface DynamicReportResponse {
+  datalist: DynamicReportRow[];
+  /** Echo of the columns the backend projected, in caller order. */
+  columns: string[];
+  pages: { Rows?: number; TotalPages?: number; rows?: number; totalPages?: number };
+  accessibleScope: DynamicReportAccessibleScope;
+}

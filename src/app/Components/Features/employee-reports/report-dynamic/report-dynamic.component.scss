@@ -1,0 +1,65 @@
+/* Dynamic-report component — most of the look comes from the shared
+   `report-theme.scss` + `report-card-mtr.scss` files (also used by
+   report-address-location). This file only carries the deltas specific to
+   the dynamic report: the column-picker chip area + the lazy-loading table. */
+
+:host ::ng-deep .ds-criteria-section .p-multiselect {
+    /* Let the chip area grow to fit a long pick set on one row at most. */
+    min-height: 38px;
+}
+
+:host ::ng-deep .rab-data-table {
+    .rab-ser {
+        font-family: var(--rab-mono);
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: var(--rab-body-ink-faint);
+        letter-spacing: 0.04em;
+        white-space: nowrap;
+    }
+    .rab-personnel-name {
+        font-family: 'DM Sans', sans-serif;
+        font-weight: 600;
+        font-size: 0.94rem;
+        color: var(--rab-body-ink);
+    }
+    .rab-personnel-meta {
+        margin-top: 0.15rem;
+        font-family: var(--rab-mono);
+        font-size: 0.7rem;
+        color: var(--rab-body-ink-faint);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+    }
+    .rab-addr-crumb {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 0.15rem 0.4rem;
+        line-height: 1.3;
+    }
+    .rab-addr-part-label {
+        font-family: var(--rab-mono);
+        font-size: 0.66rem;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: var(--rab-body-ink-faint);
+    }
+    .rab-addr-part-value {
+        font-weight: 600;
+        color: var(--rab-body-ink);
+    }
+    .rab-addr-sep {
+        color: var(--rab-accent);
+        font-weight: 700;
+        font-size: 0.95rem;
+        line-height: 1;
+    }
+    .rab-addr-detail {
+        margin-top: 0.2rem;
+        font-size: 0.85rem;
+        color: var(--rab-body-ink-faint);
+        font-style: italic;
+    }
+}
