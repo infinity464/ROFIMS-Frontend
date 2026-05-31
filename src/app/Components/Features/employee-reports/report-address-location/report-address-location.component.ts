@@ -112,6 +112,34 @@ export class ReportAddressLocationComponent implements OnInit {
         return this.selectedAddressOwner !== 'Self';
     }
 
+    /** Show the Status column only when the filter is "All" (empty value).
+        With a specific status picked, every row carries the same value, so
+        the column would just repeat the filter label on every line. */
+    get showStatus(): boolean {
+        return !this.selectedPostingStatus;
+    }
+
+    /** Backend returns the status code; map to a localized label. Unknown
+        codes fall through as-is so we don't silently hide unexpected values.
+        "Pending" and "PendingForJoining" collapse onto one display label —
+        the backend uses both spellings interchangeably in EmployeeInfo. */
+    private static readonly memberStatusDisplayMap: Record<string, { en: string; bn: string }> = {
+        Servings: { en: 'Serving', bn: 'কর্মরত' },
+        Serving: { en: 'Serving', bn: 'কর্মরত' },
+        ExMember: { en: 'Ex-Member', bn: 'সাবেক সদস্য' },
+        Pending: { en: 'Pending for Joining', bn: 'যোগদানের অপেক্ষায়' },
+        PendingForJoining: { en: 'Pending for Joining', bn: 'যোগদানের অপেক্ষায়' },
+        Supernumerary: { en: 'Supernumerary', bn: 'সুপারনিউমারারি' },
+    };
+
+    displayMemberStatus(row: AddressLocationReportRow): string {
+        const raw = (row.status ?? '').trim();
+        if (!raw) return '—';
+        const mapped = ReportAddressLocationComponent.memberStatusDisplayMap[raw];
+        if (mapped) return this.lang === 'bn' ? mapped.bn : mapped.en;
+        return raw;
+    }
+
     list: AddressLocationReportRow[] = [];
     loading = false;
     searched = false;
@@ -346,6 +374,7 @@ export class ReportAddressLocationComponent implements OnInit {
         locationType: string;
         addressOwner: string;
         address: string;
+        status: string;
         remarks: string;
     } {
         const bn = this.lang === 'bn';
@@ -356,6 +385,7 @@ export class ReportAddressLocationComponent implements OnInit {
             locationType: bn ? 'অবস্থানের ধরন' : 'LOCATION TYPE',
             addressOwner: bn ? 'ঠিকানার মালিক' : 'ADDRESS OWNER',
             address: bn ? 'ঠিকানা' : 'ADDRESS',
+            status: bn ? 'অবস্থা' : 'STATUS',
             remarks: bn ? 'মন্তব্য' : 'REMARKS',
         };
     }
@@ -585,7 +615,9 @@ export class ReportAddressLocationComponent implements OnInit {
         const h = this.rabHeaders;
         const cols: string[] = [h.ser, h.personnel, h.rabId];
         if (this.showAddressOwner) cols.push(h.addressOwner);
-        cols.push(h.locationType, h.address, h.remarks);
+        cols.push(h.locationType, h.address);
+        if (this.showStatus) cols.push(h.status);
+        cols.push(h.remarks);
         const tableHeaderHtml = `<tr>${cols.map((c) => `<th>${esc(c)}</th>`).join('')}</tr>`;
 
         const tableBodyHtml = this.list
@@ -612,6 +644,7 @@ export class ReportAddressLocationComponent implements OnInit {
                     .join(' ');
 
                 const ownerCell = this.showAddressOwner ? `<td class="td-owner">${esc(owner)}</td>` : '';
+                const statusCell = this.showStatus ? `<td class="td-status">${esc(this.displayMemberStatus(row))}</td>` : '';
 
                 return `<tr>
                     <td class="td-ser"><span class="ser">${esc(ser)}</span></td>
@@ -629,6 +662,7 @@ export class ReportAddressLocationComponent implements OnInit {
                         <div class="addr-crumb">${crumbHtml}</div>
                         ${detail ? `<div class="addr-detail">${esc(detail)}</div>` : ''}
                     </td>
+                    ${statusCell}
                     <td class="td-remarks">${esc(remarks)}</td>
                 </tr>`;
             })
@@ -691,7 +725,7 @@ export class ReportAddressLocationComponent implements OnInit {
         @bottom-left {
             content: "● " "${cssStr(confidential)}";
             font-family: ${mono};
-            font-size: 7.5pt;
+            font-size: 6.5pt;
             font-weight: 600;
             letter-spacing: 0.3em;
             text-transform: uppercase;
@@ -707,7 +741,7 @@ export class ReportAddressLocationComponent implements OnInit {
         @bottom-center {
             content: "${cssStr(pageWord)} " counter(page${isBn ? ', bn-digits' : ''}) " ${cssStr(ofWord)} " counter(pages${isBn ? ', bn-digits' : ''});
             font-family: ${mono};
-            font-size: 7.5pt;
+            font-size: 6.5pt;
             font-weight: 600;
             letter-spacing: 0.25em;
             text-transform: uppercase;
@@ -723,7 +757,7 @@ export class ReportAddressLocationComponent implements OnInit {
         @bottom-right {
             content: "${cssStr(warning)}";
             font-family: ${mono};
-            font-size: 7.5pt;
+            font-size: 6.5pt;
             font-weight: 600;
             letter-spacing: 0.3em;
             text-transform: uppercase;
@@ -863,6 +897,9 @@ export class ReportAddressLocationComponent implements OnInit {
         ${isBn ? 'letter-spacing:0;text-transform:none;font-family:' + sans + ';' : ''}
     }
     .td-rabid { font-family: ${mono}; letter-spacing: 0.02em; white-space: nowrap; }
+    /* Status keeps the whole code on one line — words like "Supernumerary"
+       were breaking mid-token when the cell was forced narrow. */
+    .td-status { font-family: ${sans}; font-weight: 600; font-size: 9pt; white-space: nowrap; }
     .td-owner {
         font-family: ${sans}; font-weight: 600; font-size: 10pt;
         color: #0b0b0b; letter-spacing: -0.005em;
@@ -933,9 +970,34 @@ export class ReportAddressLocationComponent implements OnInit {
         differentiation so the docx reads identically on any printer. */
     private async exportRabWord(): Promise<void> {
         const isBn = this.lang === 'bn';
-        const sans = isBn ? 'Nirmala UI' : 'Calibri';
-        const serif = isBn ? 'Nirmala UI' : 'Cambria';
-        const mono = isBn ? 'Nirmala UI' : 'Consolas';
+        // Nirmala UI is the standard Bangla font on Windows 8+. The same
+        // font config we use here is what the notesheet-preview/article-47
+        // exports use to render conjuncts like "র‍্যাব" correctly — the key
+        // is that EVERY TextRun must also carry (a) language: bn-BD with
+        // bidirectional set so Word's shaping engine applies Bangla rules,
+        // and (b) sizeComplexScript matching size so the cs glyphs aren't
+        // shrunk to Word's default cs size. Without the language tag, the
+        // ZWJ (U+200D) in "র‍্যাপিড" gets dropped to a placeholder box even
+        // when cs font is set.
+        const bnFont = {
+            ascii: 'Nirmala UI',
+            hAnsi: 'Nirmala UI',
+            cs: 'Nirmala UI',
+            hint: 'cs' as const,
+        };
+        const bnLang = { value: 'bn-BD', bidirectional: 'bn-BD' } as any;
+        const sans = isBn ? bnFont : 'Calibri';
+        const serif = isBn ? bnFont : 'Cambria';
+        const mono = isBn ? bnFont : 'Consolas';
+
+        // Per-run extras for Bangla — language tag + complex-script size.
+        // Spread into each TextRun via `...bnRunExtras(size)` so the docx
+        // shaping engine sees the Bangla cues on every run.
+        const bnRunExtras = (size: number) =>
+            isBn ? { language: bnLang, sizeComplexScript: size } : {};
+
+        // Identity helper — kept as a seam for future per-string fixes.
+        const wsafe = (s: string | null | undefined): string => s ?? '';
 
         // Half-points (Word: 2 × pt).
         const S = {
@@ -943,7 +1005,7 @@ export class ReportAddressLocationComponent implements OnInit {
             sectionTitle: 26, sectionSub: 20,
             stripLabel: 16, stripDate: 16,
             critLabel: 14, critValue: 20,
-            tableHeader: 14, name: 20, meta: 14, body: 16, footer: 15,
+            tableHeader: 14, name: 20, meta: 14, body: 16, footer: 13,
         };
         const C = {
             black: '0B0B0B',
@@ -988,17 +1050,17 @@ export class ReportAddressLocationComponent implements OnInit {
             alignment: AlignmentType.CENTER,
             spacing: { after: 80 },
             children: [new TextRun({
-                text: this.rabOverlineText,
-                font: sans, size: S.overline, color: C.mutedText,
-                characterSpacing: 60, allCaps: !isBn,
+                text: wsafe(this.rabOverlineText),
+                font: sans, size: S.overline, ...bnRunExtras(S.overline), color: C.mutedText,
+                characterSpacing: isBn ? 0 : 60, allCaps: !isBn,
             })],
         }));
         headerPars.push(new Paragraph({
             alignment: AlignmentType.CENTER,
             spacing: { after: 40 },
             children: [new TextRun({
-                text: this.rabOrgTitle,
-                font: serif, size: S.title, bold: true, color: C.black,
+                text: wsafe(this.rabOrgTitle),
+                font: serif, size: S.title, ...bnRunExtras(S.title), bold: true, color: C.black,
                 characterSpacing: isBn ? 0 : 24,
             })],
         }));
@@ -1006,16 +1068,16 @@ export class ReportAddressLocationComponent implements OnInit {
             alignment: AlignmentType.CENTER,
             spacing: { after: 200 },
             children: [new TextRun({
-                text: this.rabOrgSubtitle,
-                font: serif, size: S.subtitle, italics: true, color: C.mutedText,
+                text: wsafe(this.rabOrgSubtitle),
+                font: serif, size: S.subtitle, ...bnRunExtras(S.subtitle), italics: true, color: C.mutedText,
             })],
         }));
         headerPars.push(new Paragraph({
             alignment: AlignmentType.CENTER,
             spacing: { after: this.rabSubtitleText ? 40 : 200 },
             children: [new TextRun({
-                text: this.rabSectionTitle,
-                font: serif, size: S.sectionTitle, bold: true, color: C.black,
+                text: wsafe(this.rabSectionTitle),
+                font: serif, size: S.sectionTitle, ...bnRunExtras(S.sectionTitle), bold: true, color: C.black,
                 characterSpacing: isBn ? 0 : 32, allCaps: !isBn,
             })],
         }));
@@ -1024,8 +1086,8 @@ export class ReportAddressLocationComponent implements OnInit {
                 alignment: AlignmentType.CENTER,
                 spacing: { after: 200 },
                 children: [new TextRun({
-                    text: this.rabSubtitleText,
-                    font: serif, size: S.sectionSub, italics: true, color: C.mutedText,
+                    text: wsafe(this.rabSubtitleText),
+                    font: serif, size: S.sectionSub, ...bnRunExtras(S.sectionSub), italics: true, color: C.mutedText,
                 })],
             }));
         }
@@ -1059,16 +1121,16 @@ export class ReportAddressLocationComponent implements OnInit {
             children: [
                 stripCell([
                     new TextRun({
-                        text: this.rabCriteriaTitle,
-                        font: sans, size: S.stripLabel, bold: true,
-                        color: C.black, characterSpacing: 40, allCaps: !isBn,
+                        text: wsafe(this.rabCriteriaTitle),
+                        font: sans, size: S.stripLabel, ...bnRunExtras(S.stripLabel), bold: true,
+                        color: C.black, characterSpacing: isBn ? 0 : 40, allCaps: !isBn,
                     }),
                 ], AlignmentType.LEFT),
                 stripCell([
                     new TextRun({
-                        text: `${this.rabGeneratedLabel} · ${this.rabFormattedDate}`,
-                        font: sans, size: S.stripDate, bold: true,
-                        color: C.mutedText, characterSpacing: 30, allCaps: !isBn,
+                        text: wsafe(`${this.rabGeneratedLabel} · ${this.rabFormattedDate}`),
+                        font: sans, size: S.stripDate, ...bnRunExtras(S.stripDate), bold: true,
+                        color: C.mutedText, characterSpacing: isBn ? 0 : 30, allCaps: !isBn,
                     }),
                 ], AlignmentType.RIGHT),
             ],
@@ -1088,20 +1150,20 @@ export class ReportAddressLocationComponent implements OnInit {
                         new Paragraph({
                             spacing: { after: 40 },
                             children: [new TextRun({
-                                text: it.label,
-                                font: sans, size: S.critLabel, bold: true,
-                                color: C.labelGray, characterSpacing: 32,
+                                text: wsafe(it.label),
+                                font: sans, size: S.critLabel, ...bnRunExtras(S.critLabel), bold: true,
+                                color: C.labelGray, characterSpacing: isBn ? 0 : 32,
                                 allCaps: !isBn,
                             })],
                         }),
                         new Paragraph({
                             children: [new TextRun({
-                                text: it.value,
-                                font: serif, size: S.critValue, bold: true,
+                                text: wsafe(it.value),
+                                font: serif, size: S.critValue, ...bnRunExtras(S.critValue), bold: true,
                                 color: C.black,
                             })],
                         }),
-                    ] : [new Paragraph({ children: [new TextRun({ text: ' ', font: sans, size: S.critValue })] })],
+                    ] : [new Paragraph({ children: [new TextRun({ text: ' ', font: sans, size: S.critValue, ...bnRunExtras(S.critValue) })] })],
                 }));
             }
             critRows.push(new TableRow({ cantSplit: true, children: cells }));
@@ -1118,9 +1180,18 @@ export class ReportAddressLocationComponent implements OnInit {
         // changes — fixed DXA widths previously clipped the rightmost columns
         // when the user switched to portrait in Word.
         const showOwner = this.showAddressOwner;
-        const dataColPct = showOwner
-            ? [4.5, 21.5, 9.5, 9.5, 9.5, 35.3, 10.2]
-            : [4.5, 22.6, 11.0, 11.0, 40.7, 10.2];
+        const showStatus = this.showStatus;
+        // Column-width percentages per visible-column combination. Sum = 100%.
+        // Status (~8%) is carved out of ADDRESS so the address crumbs stay
+        // the widest column — REMARKS and the member-attribute cols keep
+        // their existing share.
+        const dataColPct: number[] = showOwner
+            ? (showStatus
+                ? [4.0, 19.0, 8.5, 8.5, 8.5, 28.0, 13.5, 10.0]
+                : [4.5, 21.5, 9.5, 9.5, 9.5, 35.3, 10.2])
+            : (showStatus
+                ? [4.0, 21.0, 10.0, 10.0, 31.5, 13.5, 10.0]
+                : [4.5, 22.6, 11.0, 11.0, 40.7, 10.2]);
 
         const headerLabels: string[] = [
             this.rabHeaders.ser,
@@ -1131,8 +1202,9 @@ export class ReportAddressLocationComponent implements OnInit {
         headerLabels.push(
             this.rabHeaders.locationType,
             this.rabHeaders.address,
-            this.rabHeaders.remarks,
         );
+        if (showStatus) headerLabels.push(this.rabHeaders.status);
+        headerLabels.push(this.rabHeaders.remarks);
 
         const headerCells: TableCell[] = headerLabels.map((label, i) => new TableCell({
             borders: headerCellBorder,
@@ -1141,9 +1213,9 @@ export class ReportAddressLocationComponent implements OnInit {
             children: [new Paragraph({
                 alignment: AlignmentType.LEFT,
                 children: [new TextRun({
-                    text: label,
-                    font: sans, size: S.tableHeader, bold: true,
-                    color: C.black, characterSpacing: 30, allCaps: !isBn,
+                    text: wsafe(label),
+                    font: sans, size: S.tableHeader, ...bnRunExtras(S.tableHeader), bold: true,
+                    color: C.black, characterSpacing: isBn ? 0 : 30, allCaps: !isBn,
                 })],
             })],
         }));
@@ -1183,32 +1255,32 @@ export class ReportAddressLocationComponent implements OnInit {
             const crumbRuns: TextRun[] = [];
             for (let i = 0; i < crumbs.length; i++) {
                 crumbRuns.push(new TextRun({
-                    text: `${crumbs[i].label}: `,
-                    font: mono, size: S.meta, bold: true,
-                    color: C.labelGray, characterSpacing: 16, allCaps: !isBn,
+                    text: wsafe(`${crumbs[i].label}: `),
+                    font: mono, size: S.meta, ...bnRunExtras(S.meta), bold: true,
+                    color: C.labelGray, characterSpacing: isBn ? 0 : 16, allCaps: !isBn,
                 }));
                 crumbRuns.push(new TextRun({
-                    text: crumbs[i].value,
-                    font: sans, size: S.body, bold: true, color: C.black,
+                    text: wsafe(crumbs[i].value),
+                    font: sans, size: S.body, ...bnRunExtras(S.body), bold: true, color: C.black,
                 }));
                 if (i < crumbs.length - 1) {
                     crumbRuns.push(new TextRun({
                         text: '   ›   ',
-                        font: sans, size: S.body, bold: true, color: C.gray,
+                        font: sans, size: S.body, ...bnRunExtras(S.body), bold: true, color: C.gray,
                     }));
                 }
             }
             const addrParagraphs: Paragraph[] = [
                 new Paragraph({
                     spacing: { after: detail ? 40 : 0 },
-                    children: crumbRuns.length > 0 ? crumbRuns : [new TextRun({ text: '—', font: sans, size: S.body, color: C.gray })],
+                    children: crumbRuns.length > 0 ? crumbRuns : [new TextRun({ text: '—', font: sans, size: S.body, ...bnRunExtras(S.body), color: C.gray })],
                 }),
             ];
             if (detail) {
                 addrParagraphs.push(new Paragraph({
                     children: [new TextRun({
-                        text: detail,
-                        font: sans, size: S.body, italics: true, color: C.gray,
+                        text: wsafe(detail),
+                        font: sans, size: S.body, ...bnRunExtras(S.body), italics: true, color: C.gray,
                     })],
                 }));
             }
@@ -1220,8 +1292,8 @@ export class ReportAddressLocationComponent implements OnInit {
                 children: [new Paragraph({
                     alignment: AlignmentType.LEFT,
                     children: [new TextRun({
-                        text: ser, font: mono, size: S.name, bold: true,
-                        color: C.gray, characterSpacing: 8,
+                        text: wsafe(ser), font: mono, size: S.name, ...bnRunExtras(S.name), bold: true,
+                        color: C.gray, characterSpacing: isBn ? 0 : 8,
                     })],
                 })],
             }));
@@ -1232,13 +1304,13 @@ export class ReportAddressLocationComponent implements OnInit {
                     new Paragraph({
                         spacing: { after: 40 },
                         children: [new TextRun({
-                            text: name, font: sans, size: S.name, bold: true, color: C.black,
+                            text: wsafe(name), font: sans, size: S.name, ...bnRunExtras(S.name), bold: true, color: C.black,
                         })],
                     }),
                     new Paragraph({
                         children: [new TextRun({
-                            text: meta, font: mono, size: S.meta,
-                            color: C.gray, characterSpacing: 16, allCaps: !isBn,
+                            text: wsafe(meta), font: mono, size: S.meta, ...bnRunExtras(S.meta),
+                            color: C.gray, characterSpacing: isBn ? 0 : 16, allCaps: !isBn,
                         })],
                     }),
                 ],
@@ -1248,8 +1320,8 @@ export class ReportAddressLocationComponent implements OnInit {
                 ...cellOpts(dataColPct[2]),
                 children: [new Paragraph({
                     children: [new TextRun({
-                        text: rabId, font: mono, size: S.body, color: C.black,
-                        characterSpacing: 4,
+                        text: wsafe(rabId), font: mono, size: S.body, ...bnRunExtras(S.body), color: C.black,
+                        characterSpacing: isBn ? 0 : 4,
                     })],
                 })],
             }));
@@ -1260,7 +1332,7 @@ export class ReportAddressLocationComponent implements OnInit {
                     ...cellOpts(dataColPct[colIdx++]),
                     children: [new Paragraph({
                         children: [new TextRun({
-                            text: owner, font: sans, size: S.body, bold: true, color: C.black,
+                            text: wsafe(owner), font: sans, size: S.body, ...bnRunExtras(S.body), bold: true, color: C.black,
                         })],
                     })],
                 }));
@@ -1270,8 +1342,8 @@ export class ReportAddressLocationComponent implements OnInit {
                 ...cellOpts(dataColPct[colIdx++]),
                 children: [new Paragraph({
                     children: [new TextRun({
-                        text: locType, font: mono, size: S.meta, bold: true,
-                        color: C.black, characterSpacing: 16, allCaps: !isBn,
+                        text: wsafe(locType), font: mono, size: S.meta, ...bnRunExtras(S.meta), bold: true,
+                        color: C.black, characterSpacing: isBn ? 0 : 16, allCaps: !isBn,
                     })],
                 })],
             }));
@@ -1280,12 +1352,24 @@ export class ReportAddressLocationComponent implements OnInit {
                 ...cellOpts(dataColPct[colIdx++]),
                 children: addrParagraphs,
             }));
+            // STATUS (conditional) — only when the user picked "All".
+            if (showStatus) {
+                cells.push(new TableCell({
+                    ...cellOpts(dataColPct[colIdx++]),
+                    children: [new Paragraph({
+                        children: [new TextRun({
+                            text: wsafe(this.displayMemberStatus(row)),
+                            font: sans, size: S.body, ...bnRunExtras(S.body), bold: true, color: C.black,
+                        })],
+                    })],
+                }));
+            }
             // REMARKS
             cells.push(new TableCell({
                 ...cellOpts(dataColPct[colIdx++]),
                 children: [new Paragraph({
                     children: [new TextRun({
-                        text: remarks, font: sans, size: S.body, color: C.black,
+                        text: wsafe(remarks), font: sans, size: S.body, ...bnRunExtras(S.body), color: C.black,
                     })],
                 })],
             }));
@@ -1332,9 +1416,9 @@ export class ReportAddressLocationComponent implements OnInit {
                                 children: [new Paragraph({
                                     alignment: AlignmentType.LEFT,
                                     children: [new TextRun({
-                                        text: this.rabConfidentialLabel,
-                                        font: mono, size: S.footer, bold: true, color: C.black,
-                                        characterSpacing: 30, allCaps: !isBn,
+                                        text: wsafe(this.rabConfidentialLabel),
+                                        font: mono, size: S.footer, ...bnRunExtras(S.footer), bold: true, color: C.black,
+                                        characterSpacing: isBn ? 0 : 30, allCaps: !isBn,
                                     })],
                                 })],
                             }),
@@ -1355,8 +1439,8 @@ export class ReportAddressLocationComponent implements OnInit {
                                             ` ${isBn ? '/' : 'OF'} `,
                                             PageNumber.TOTAL_PAGES,
                                         ],
-                                        font: mono, size: S.footer, bold: true, color: C.black,
-                                        characterSpacing: 24, allCaps: !isBn,
+                                        font: mono, size: S.footer, ...bnRunExtras(S.footer), bold: true, color: C.black,
+                                        characterSpacing: isBn ? 0 : 24, allCaps: !isBn,
                                     })],
                                 })],
                             }),
@@ -1404,18 +1488,24 @@ export class ReportAddressLocationComponent implements OnInit {
     private exportRabExcel(): void {
         const isBn = this.lang === 'bn';
         const showOwner = this.showAddressOwner;
+        const showStatus = this.showStatus;
+        // Identity helper kept as a seam for any future Bangla-specific
+        // string normalization; currently a no-op so the original ZWJ form
+        // ("র‍্যাপিড") reaches Excel intact.
+        const wsafe = (s: string | null | undefined): string => s ?? '';
 
         const headers: string[] = [
-            this.rabHeaders.ser,
-            this.rabHeaders.personnel,
-            this.rabHeaders.rabId,
+            wsafe(this.rabHeaders.ser),
+            wsafe(this.rabHeaders.personnel),
+            wsafe(this.rabHeaders.rabId),
         ];
-        if (showOwner) headers.push(this.rabHeaders.addressOwner);
+        if (showOwner) headers.push(wsafe(this.rabHeaders.addressOwner));
         headers.push(
-            this.rabHeaders.locationType,
-            this.rabHeaders.address,
-            this.rabHeaders.remarks,
+            wsafe(this.rabHeaders.locationType),
+            wsafe(this.rabHeaders.address),
         );
+        if (showStatus) headers.push(wsafe(this.rabHeaders.status));
+        headers.push(wsafe(this.rabHeaders.remarks));
         const totalCols = headers.length;
 
         const data: unknown[][] = [];
@@ -1424,18 +1514,18 @@ export class ReportAddressLocationComponent implements OnInit {
 
         // ── Header block (centered, full-width rows) ──────────────────────
         let r = 0;
-        data.push([this.rabOverlineText]); fullMerge(r++);
-        data.push([this.rabOrgTitle]); fullMerge(r++);
-        data.push([this.rabOrgSubtitle]); fullMerge(r++);
-        data.push([this.rabSectionTitle]); fullMerge(r++);
-        if (this.rabSubtitleText) { data.push([this.rabSubtitleText]); fullMerge(r++); }
+        data.push([wsafe(this.rabOverlineText)]); fullMerge(r++);
+        data.push([wsafe(this.rabOrgTitle)]); fullMerge(r++);
+        data.push([wsafe(this.rabOrgSubtitle)]); fullMerge(r++);
+        data.push([wsafe(this.rabSectionTitle)]); fullMerge(r++);
+        if (this.rabSubtitleText) { data.push([wsafe(this.rabSubtitleText)]); fullMerge(r++); }
         data.push([]); r++;
 
         // ── Selection Criteria block ──────────────────────────────────────
         // Strip row: title left + date right merged across full width as a
         // single concatenated string (cell-level alignment isn't reachable
         // without cell styling, so we lean on the natural reading order).
-        const stripText = `${this.rabCriteriaTitle}     ${this.rabGeneratedLabel} · ${this.rabFormattedDate}`;
+        const stripText = wsafe(`${this.rabCriteriaTitle}     ${this.rabGeneratedLabel} · ${this.rabFormattedDate}`);
         data.push([stripText]); fullMerge(r++);
 
         const items = this.criteriaItems;
@@ -1446,8 +1536,8 @@ export class ReportAddressLocationComponent implements OnInit {
             // table columns (which would break the data-table layout below).
             const halfPoint = Math.floor(totalCols / 2);
             for (let i = 0; i < items.length; i += 2) {
-                const left = items[i] ? `${items[i].label}: ${items[i].value}` : '';
-                const right = items[i + 1] ? `${items[i + 1].label}: ${items[i + 1].value}` : '';
+                const left = items[i] ? wsafe(`${items[i].label}: ${items[i].value}`) : '';
+                const right = items[i + 1] ? wsafe(`${items[i + 1].label}: ${items[i + 1].value}`) : '';
                 const row: string[] = new Array(totalCols).fill('');
                 row[0] = left;
                 row[halfPoint] = right;
@@ -1463,35 +1553,37 @@ export class ReportAddressLocationComponent implements OnInit {
         data.push(headers); r++;
 
         for (const row of this.list) {
-            const ser = this.paddedSer(row.ser);
-            const name = this.codeValue(row.name, row.nameBN);
-            const meta = this.personnelMeta(row);
-            const rabId = row.rabid ? this.displayNum(row.rabid) : '—';
-            const owner = this.codeValue(row.addressOwner, row.addressOwnerBN);
-            const locType = this.displayLocationTypeUpper(row.locationType);
+            const ser = wsafe(this.paddedSer(row.ser));
+            const name = wsafe(this.codeValue(row.name, row.nameBN));
+            const meta = wsafe(this.personnelMeta(row));
+            const rabId = wsafe(row.rabid ? this.displayNum(row.rabid) : '—');
+            const owner = wsafe(this.codeValue(row.addressOwner, row.addressOwnerBN));
+            const locType = wsafe(this.displayLocationTypeUpper(row.locationType));
             const crumbs = this.addressCrumbParts(row);
-            const detail = this.addressDetail(row);
-            const remarks = row.rmks || '';
+            const detail = wsafe(this.addressDetail(row));
+            const remarks = wsafe(row.rmks || '');
 
             // Composite cells: " · " keeps them readable on a single line so
             // they don't depend on cell-level wrapText (unreachable without
             // the styling-enabled xlsx fork).
             const personnel = meta ? `${name} · ${meta}` : name;
-            const crumbText = crumbs.map((c) => `${c.label}: ${c.value}`).join(' › ');
+            const crumbText = crumbs.map((c) => wsafe(`${c.label}: ${c.value}`)).join(' › ');
             const address = detail
                 ? (crumbText ? `${crumbText} · ${detail}` : detail)
                 : crumbText;
 
             const rowData: string[] = [ser, personnel, rabId];
             if (showOwner) rowData.push(owner);
-            rowData.push(locType, address, remarks);
+            rowData.push(locType, address);
+            if (showStatus) rowData.push(wsafe(this.displayMemberStatus(row)));
+            rowData.push(remarks);
             data.push(rowData);
             r++;
         }
 
         // ── Confidential footer strip ─────────────────────────────────────
         data.push([]); r++;
-        const footerText = isBn ? 'গোপনীয়' : 'CONFIDENTIAL';
+        const footerText = wsafe(this.rabConfidentialLabel);
         data.push([footerText]); fullMerge(r++);
 
         // ── Build sheet ───────────────────────────────────────────────────
@@ -1499,9 +1591,14 @@ export class ReportAddressLocationComponent implements OnInit {
 
         // Column widths tuned to the composite cell content — Personnel and
         // Address are the widest because they carry the merged sub-fields.
+        // STATUS slots in just before REMARKS when shown.
+        const baseWithOwner = [{ wch: 6 }, { wch: 32 }, { wch: 14 }, { wch: 20 }, { wch: 16 }, { wch: 55 }];
+        const baseWithoutOwner = [{ wch: 6 }, { wch: 32 }, { wch: 14 }, { wch: 16 }, { wch: 60 }];
+        const statusCol = [{ wch: 18 }];
+        const remarksCol = [{ wch: 16 }];
         const cols = showOwner
-            ? [{ wch: 6 }, { wch: 32 }, { wch: 14 }, { wch: 20 }, { wch: 16 }, { wch: 55 }, { wch: 16 }]
-            : [{ wch: 6 }, { wch: 32 }, { wch: 14 }, { wch: 16 }, { wch: 60 }, { wch: 16 }];
+            ? [...baseWithOwner, ...(showStatus ? statusCol : []), ...remarksCol]
+            : [...baseWithoutOwner, ...(showStatus ? statusCol : []), ...remarksCol];
         ws['!cols'] = cols;
         ws['!merges'] = merges;
 

@@ -272,6 +272,9 @@
                         }
                         <th class="rab-th-loctype">{{ rabHeaders.locationType }}</th>
                         <th class="rab-th-address">{{ rabHeaders.address }}</th>
+                        @if (showStatus) {
+                            <th class="rab-th-status">{{ rabHeaders.status }}</th>
+                        }
                         <th class="rab-th-remarks">{{ rabHeaders.remarks }}</th>
                     </tr>
                 </ng-template>
@@ -308,12 +311,15 @@
                                 <div class="rab-addr-detail">{{ addressDetail(row) }}</div>
                             }
                         </td>
+                        @if (showStatus) {
+                            <td class="rab-td-status">{{ displayMemberStatus(row) }}</td>
+                        }
                         <td class="rab-td-remarks">{{ row.rmks || '' }}</td>
                     </tr>
                 </ng-template>
                 <ng-template pTemplate="emptymessage">
                     <tr>
-                        <td [attr.colspan]="showAddressOwner ? 7 : 6" class="text-center p-4">{{ L['en']['report.empty'] }}</td>
+                        <td [attr.colspan]="6 + (showAddressOwner ? 1 : 0) + (showStatus ? 1 : 0)" class="text-center p-4">{{ L['en']['report.empty'] }}</td>
                     </tr>
                 </ng-template>
             </p-table>

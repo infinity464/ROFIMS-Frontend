@@ -220,6 +220,13 @@ export interface AddressLocationReportRow extends ReportRowBase {
   postOfficeBN?: string | null;
   address?: string | null;
   addressBN?: string | null;
+  /**
+   * Member-status code (e.g. "Servings", "ExMember", "PendingForJoining",
+   * "Supernumerary"). Frontend maps the code to a localized label. Only
+   * meaningful when the Status filter is "All" — otherwise every row carries
+   * the same value and the column is hidden.
+   */
+  status?: string | null;
   rmks?: string | null;
 }
 

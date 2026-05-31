@@ -1011,6 +1011,16 @@
         letter-spacing: -0.005em;
         color: var(--rab-body-ink);
     }
+    /* Status keeps the whole label on one line — "Supernumerary" was
+       breaking mid-word at narrower viewports. */
+    .rab-th-status, .rab-td-status {
+        width: 150px;
+        font-family: 'DM Sans', sans-serif;
+        font-weight: 600;
+        font-size: 0.92rem;
+        white-space: nowrap;
+        color: var(--rab-body-ink);
+    }
     .rab-th-remarks, .rab-td-remarks { width: 130px; text-align: left; }
     .rab-td-personnel { min-width: 220px; }
     .rab-td-address { min-width: 240px; }
