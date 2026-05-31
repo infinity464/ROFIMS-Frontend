@@ -9,6 +9,8 @@ import { InputTextModule } from 'primeng/inputtext';
 import { DatePickerModule } from 'primeng/datepicker';
 import { SelectModule } from 'primeng/select';
 import { Toast } from 'primeng/toast';
+import { DialogModule } from 'primeng/dialog';
+import { TooltipModule } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
 import { EmployeeListService } from '@/services/employee-list.service';
 import { PostingService } from '@/services/posting.service';
@@ -29,7 +31,9 @@ import { DraftPostingStatusOptions, IsSendingNotesheetStatus } from '@/models/en
         InputTextModule,
         DatePickerModule, FlexibleDateDirective,
         SelectModule,
-        Toast
+        Toast,
+        DialogModule,
+        TooltipModule
     ],
     providers: [MessageService],
     templateUrl: './add-draft-new-posting.html',
@@ -270,5 +274,29 @@ export class AddDraftNewPostingComponent implements OnInit {
         if (value == null || value === '') return '-';
         const opt = this.draftPostingStatusOptions.find((o) => o.value === value);
         return opt?.label ?? value;
+    }
+
+    // ─── Employee Preview Modal ────────────────────────────
+    showEmployeeModal = false;
+    employeeModalTitle = '';
+    employeeModalList: DraftPostingDetailDto[] = [];
+    employeeModalLoading = false;
+
+    viewEmployees(row: DraftPostingMasterDto): void {
+        this.employeeModalTitle = `Employees — ${row.draftPostingNo}`;
+        this.employeeModalLoading = true;
+        this.showEmployeeModal = true;
+        this.employeeModalList = [];
+
+        this.postingService.getDraftNewPostingById(row.id).subscribe({
+            next: (data: DraftPostingMasterWithDetailsDto) => {
+                this.employeeModalList = data?.details ?? [];
+                this.employeeModalLoading = false;
+            },
+            error: () => {
+                this.employeeModalLoading = false;
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load employees.' });
+            }
+        });
     }
 }

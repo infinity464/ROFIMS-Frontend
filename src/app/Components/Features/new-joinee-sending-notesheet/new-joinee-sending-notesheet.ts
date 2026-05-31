@@ -132,9 +132,18 @@ export class NewJoineeSendingNotesheet implements OnInit {
         });
     }
 
+    /**
+     * Raw rank list for the currently-selected Mother Org (with `parentCodeId`
+     * referencing the Member Type each rank belongs to). We cache the unfiltered
+     * list so changing Member Type can re-derive the dropdown without re-hitting
+     * the server.
+     */
+    private allOrgRanks: CommonCodeModel[] = [];
+
     /** Rank and Trade depend on Mother Org: when org selected, load options for that org. */
     onOrgChange(): void {
         this.rankOptions = [];
+        this.allOrgRanks = [];
         this.selectedRankId = null;
         this.tradeOptions = [];
         this.selectedTradeId = null;
@@ -142,10 +151,8 @@ export class NewJoineeSendingNotesheet implements OnInit {
         if (orgId != null) {
             this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'MotherOrgRank').subscribe({
                 next: (codes: CommonCodeModel[]) => {
-                    this.rankOptions = codes.map((c) => ({
-                        label: c.codeValueEN || String(c.codeId),
-                        value: c.codeId
-                    }));
+                    this.allOrgRanks = Array.isArray(codes) ? codes : [];
+                    this.rebuildRankOptions();
                 },
                 error: (err) => {
                     console.error('Failed to load ranks', err);
@@ -177,7 +184,7 @@ export class NewJoineeSendingNotesheet implements OnInit {
         this.loadData();
     }
 
-    /** Member Type change: validate access, then reload list. */
+    /** Member Type change: validate access, refilter ranks, then reload list. */
     onMemberTypeChange(): void {
         const codeId = this.selectedMemberTypeId;
         if (codeId != null && this.allowedMemberTypeIds !== null && !this.allowedMemberTypeIds.includes(codeId)) {
@@ -191,8 +198,29 @@ export class NewJoineeSendingNotesheet implements OnInit {
             this.selectedMemberTypeId = null;
             return;
         }
+        this.rebuildRankOptions();
         this.first = 0;
         this.loadData();
+    }
+
+    /**
+     * Derive the visible rank dropdown options from allOrgRanks by
+     * filtering on the current Member Type when one is selected.
+     */
+    private rebuildRankOptions(): void {
+        const memberTypeId = this.selectedMemberTypeId;
+        const filtered = memberTypeId == null
+            ? this.allOrgRanks
+            : this.allOrgRanks.filter((c) => c.parentCodeId === memberTypeId);
+
+        this.rankOptions = filtered.map((c) => ({
+            label: c.codeValueEN || String(c.codeId),
+            value: c.codeId
+        }));
+
+        if (this.selectedRankId != null && !this.rankOptions.some((o) => o.value === this.selectedRankId)) {
+            this.selectedRankId = null;
+        }
     }
 
     rankOptions: { label: string; value: number }[] = [];
@@ -353,6 +381,44 @@ export class NewJoineeSendingNotesheet implements OnInit {
             return;
         }
         this.selectedIds.add(row.employeeID);
+    }
+
+    /** Rows on the current page only (respects p-table pagination state). */
+    private getCurrentPageRows(): EmployeeList[] {
+        const list = this.filteredList ?? [];
+        const start = this.first ?? 0;
+        const end = start + (this.rows || list.length);
+        return list.slice(start, end);
+    }
+
+    /** Rows on the current page that the header "select all" can target (selectable + has RAB ID). */
+    private getEligibleRows(): EmployeeList[] {
+        return this.getCurrentPageRows().filter(r => this.isSelectable(r) && !!this.rabIdOf(r));
+    }
+
+    /** Header checkbox state: true when every eligible row in the visible list is selected. */
+    get isAllSelectableSelected(): boolean {
+        const eligible = this.getEligibleRows();
+        if (eligible.length === 0) return false;
+        return eligible.every(r => this.selectedIds.has(r.employeeID));
+    }
+
+    /** Tri-state hint: true when some but not all eligible rows are selected. */
+    get isSelectableIndeterminate(): boolean {
+        const eligible = this.getEligibleRows();
+        if (eligible.length === 0) return false;
+        const picked = eligible.filter(r => this.selectedIds.has(r.employeeID)).length;
+        return picked > 0 && picked < eligible.length;
+    }
+
+    /** Toggle every eligible row in the visible list. Already-posted (disabled) rows are skipped. */
+    toggleSelectAllVisible(checked: boolean): void {
+        const eligible = this.getEligibleRows();
+        if (checked) {
+            for (const r of eligible) this.selectedIds.add(r.employeeID);
+        } else {
+            for (const r of eligible) this.selectedIds.delete(r.employeeID);
+        }
     }
 
     get selectedCount(): number {

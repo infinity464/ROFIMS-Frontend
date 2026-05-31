@@ -137,7 +137,11 @@
                     <td>{{ row.draftPostingNo }}</td>
                     <td>{{ row.draftPostingDate }}</td>
                     <td>{{ getDraftPostingStatusLabel(row.draftPostingStatus) }}</td>
-                    <td>{{ row.detailCount }}</td>
+                    <td>
+                        <a class="cursor-pointer text-primary font-semibold" (click)="viewEmployees(row)" pTooltip="View employees" tooltipPosition="top">
+                            {{ row.detailCount }}
+                        </a>
+                    </td>
                     <td>{{ row.createdBy || '-' }}</td>
                 </tr>
             </ng-template>
@@ -149,3 +153,50 @@
         </p-table>
     </div>
 </div>
+
+<!-- Employee Preview Modal -->
+<p-dialog [(visible)]="showEmployeeModal" [header]="employeeModalTitle" [modal]="true" [dismissableMask]="true" [style]="{ width: '70vw' }" [maximizable]="true">
+    <p-table
+        [value]="employeeModalList"
+        [loading]="employeeModalLoading"
+        dataKey="id"
+        [tableStyle]="{ 'min-width': '50rem' }"
+        styleClass="p-datatable-striped p-datatable-gridlines p-datatable-sm"
+        [paginator]="employeeModalList.length > 10"
+        [rows]="10"
+        [rowsPerPageOptions]="[10, 25, 50]">
+        <ng-template pTemplate="header">
+            <tr>
+                <th style="width: 50px">Ser</th>
+                <th>Service ID</th>
+                <th>Rank</th>
+                <th>Corps</th>
+                <th>Trade</th>
+                <th>Name</th>
+                <th>Mother Unit</th>
+                <th>Date of Join in RAB</th>
+                <th>Transfer Unit</th>
+                <th>Remarks</th>
+            </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+            <tr>
+                <td>{{ rowIndex + 1 }}</td>
+                <td class="font-semibold">{{ row.serviceId || '-' }}</td>
+                <td>{{ row.rank || '-' }}</td>
+                <td>{{ row.corps || '-' }}</td>
+                <td>{{ row.trade || '-' }}</td>
+                <td>{{ row.name || '-' }}</td>
+                <td>{{ row.motherUnit || '-' }}</td>
+                <td>{{ formatDate(row.rabJoingdate) }}</td>
+                <td>{{ row.transferRabUnitName || '-' }}</td>
+                <td>{{ row.remarks || '-' }}</td>
+            </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+            <tr>
+                <td colspan="10" class="text-center p-4 text-500">No employees found.</td>
+            </tr>
+        </ng-template>
+    </p-table>
+</p-dialog>

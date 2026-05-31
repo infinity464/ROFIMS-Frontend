@@ -229,10 +229,18 @@
                 [tableStyle]="{ 'min-width': '72rem' }"
                 styleClass="p-datatable-sm"
                 paginatorDropdownAppendTo="body"
-                [showCurrentPageReport]="false">
+                [showCurrentPageReport]="true">
                 <ng-template pTemplate="header">
                     <tr>
-                        <th style="width: 2.5rem"></th>
+                        <th style="width: 2.5rem">
+                            <input #headerCb type="checkbox"
+                                class="report-row-checkbox"
+                                [checked]="isAllSelectableSelected"
+                                [indeterminate]="isSelectableIndeterminate"
+                                (change)="toggleSelectAllVisible(headerCb.checked)"
+                                pTooltip="Select all on this page (skips already-posted rows)"
+                                tooltipPosition="top" />
+                        </th>
                         <th>Ser</th>
                         <th>Service ID</th>
                         <th>Rank</th>
