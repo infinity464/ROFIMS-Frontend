@@ -144,7 +144,9 @@ export class ReportAddressLocationComponent implements OnInit {
     loading = false;
     searched = false;
     first = 0;
-    rows = 20;
+    // Reports default to 1000 rows per page — the formal-document layout is
+    // designed to be browsed at a roster scale, not 20 rows at a time.
+    rows = 1000;
     totalRecords = 0;
 
     exportDropdownOpen = false;
@@ -1710,6 +1712,20 @@ export class ReportAddressLocationComponent implements OnInit {
 
     toggleFilter(): void {
         this.filterOpen = !this.filterOpen;
+    }
+
+    /** Paginator page-size choices. Static base ladder plus totalRecords as
+        the "All" option — appended only when it exceeds the largest base
+        rung so we don't duplicate (e.g. 500 base + 487 total would still
+        show 500 as the max). Recomputes on every change-detection pass, so
+        the "All" rung snaps to whatever the current result set contains. */
+    get rowsPerPageOptions(): number[] {
+        const base = [100, 500, 1000, 5000];
+        const t = this.totalRecords;
+        if (t > 0 && t > base[base.length - 1] && !base.includes(t)) {
+            return [...base, t];
+        }
+        return base;
     }
 
     filterSubtitle(): string {
