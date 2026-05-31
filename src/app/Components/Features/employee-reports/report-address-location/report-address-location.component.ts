@@ -319,12 +319,6 @@ export class ReportAddressLocationComponent implements OnInit {
         return this.lang === 'bn' ? BanglaNumerals.toBangla(padded) : padded;
     }
 
-    /** True for Permanent / SpousePermanent — drives the filled-square icon. */
-    isPermanent(loc: string | null | undefined): boolean {
-        if (!loc) return false;
-        return loc === 'Permanent' || loc === 'SpousePermanent';
-    }
-
     displayLocationTypeUpper(val: string | null | undefined): string {
         return this.displayLocationType(val).toUpperCase();
     }
@@ -628,7 +622,6 @@ export class ReportAddressLocationComponent implements OnInit {
                 const rabId = row.rabid ? this.displayNum(row.rabid) : '—';
                 const owner = this.codeValue(row.addressOwner, row.addressOwnerBN);
                 const locType = this.displayLocationTypeUpper(row.locationType);
-                const isPerm = this.isPermanent(row.locationType);
                 const crumbs = this.addressCrumbParts(row);
                 const detail = this.addressDetail(row);
                 // Remarks is intentionally blank when absent — em-dash would
@@ -655,7 +648,6 @@ export class ReportAddressLocationComponent implements OnInit {
                     <td class="td-rabid">${esc(rabId)}</td>
                     ${ownerCell}
                     <td class="td-loctype">
-                        <span class="loc-icon${isPerm ? ' filled' : ''}"></span>
                         <span class="loc-text">${esc(locType)}</span>
                     </td>
                     <td class="td-address">
@@ -904,12 +896,6 @@ export class ReportAddressLocationComponent implements OnInit {
         font-family: ${sans}; font-weight: 600; font-size: 10pt;
         color: #0b0b0b; letter-spacing: -0.005em;
     }
-    .loc-icon {
-        display: inline-block; width: 2.5mm; height: 2.5mm;
-        border-radius: 0.3mm; vertical-align: middle; margin-right: 1.5mm;
-        background: #d9b876; border: 1px solid #d9b876;
-    }
-    .loc-icon.filled { background: #0b0b0b; border-color: #0b0b0b; }
     .loc-text {
         font-family: ${mono}; font-size: 7.5pt; font-weight: 600;
         letter-spacing: 0.08em; color: #0b0b0b;

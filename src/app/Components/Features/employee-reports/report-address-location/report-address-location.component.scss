@@ -1105,15 +1105,6 @@
         color: var(--rab-body-ink);
         letter-spacing: 0.08em;
     }
-    .rab-loc-icon {
-        background: var(--rab-accent-soft);
-        border-color: var(--rab-accent-soft);
-
-        &.filled {
-            background: var(--rab-body-ink);
-            border-color: var(--rab-body-ink);
-        }
-    }
 }
 
 /* Standalone paginator rendered below the confidential footer. */
@@ -1213,31 +1204,6 @@
     letter-spacing: 0.1em;
     text-transform: uppercase;
     white-space: nowrap;
-}
-
-.rab-loc-cell {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-/* Both states are filled, just in different colors — a hollow square reads
-   as an unchecked checkbox in Bangla context, especially next to বর্তমান.
-   Permanent = ink (text-strong); Present = accent (gold). Two filled pins
-   read as a legend, not a form control. */
-.rab-loc-icon {
-    display: inline-block;
-    width: 10px;
-    height: 10px;
-    border-radius: 1px;
-    background: var(--rab-accent);
-    border: 1px solid var(--rab-accent);
-    flex-shrink: 0;
-
-    &.filled {
-        background: var(--rab-text-strong);
-        border-color: var(--rab-text-strong);
-    }
 }
 
 .rab-loc-text {
