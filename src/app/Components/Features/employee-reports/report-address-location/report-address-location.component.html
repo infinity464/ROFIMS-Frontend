@@ -184,7 +184,7 @@
                          order in the table + exports. The "×" removes the
                          column (same as unticking it in the MultiSelect). -->
                     <div class="ds-field">
-                        <label class="ds-field-label">Column order — drag to rearrange</label>
+                        <label class="ds-field-label column-order-label">Column order — drag to rearrange</label>
                         <div class="column-order-strip" (dragover)="onColumnDragOver($event)">
                             @for (col of visibleColumns; track col.key) {
                                 <span

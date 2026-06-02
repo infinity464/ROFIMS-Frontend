@@ -1365,6 +1365,14 @@
     padding: 0.25rem 0.4rem;
 }
 
+/* Extra breathing room above/below the "Column order — drag to rearrange"
+   label so it sits a bit apart from the Visible-columns MultiSelect above
+   and the chip strip below. */
+.column-order-label {
+    margin-top: 2pt;
+    margin-bottom: 2pt;
+}
+
 /* Dark-mode overrides — anchor surface + ink against the warm-charcoal
    filter card. Uses solid hex values rather than --surface-* tokens because
    the Aura preset (this project's PrimeNG theme) only exposes `--p-surface-*`
