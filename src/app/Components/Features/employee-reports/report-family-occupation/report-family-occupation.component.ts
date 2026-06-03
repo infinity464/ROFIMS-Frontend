@@ -16,7 +16,12 @@ import { UserMenuService } from '@/services/user-menu.service';
 import { REPORT_LABELS, type ReportLang } from '@/Core/i18n/report-labels';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import { personnelMeta as personnelMetaHelper } from '../formal-rab-render.helper';
-import type { FamilyOccupationReportRow, ReportAccessibleScope } from '@/models/report.model';
+import type {
+    FamilyOccupationReportRow,
+    ReportAccessibleScope,
+    DynamicReportCriterion,
+    DynamicReportRow,
+} from '@/models/report.model';
 import type { CommonCodeModel } from '@/models/common-code-model';
 import {
     AlignmentType,
@@ -103,19 +108,107 @@ export class ReportFamilyOccupationComponent implements OnInit {
      * MotherOrg / Plain). Status auto-toggles when the Member Status
      * filter is "All" — same pattern address-location uses.
      */
+    /**
+     * Column catalog — keys MATCH FamilyReportFieldRegistry FieldKeys so
+     * the picker selection maps 1:1 to backend projection columns. Defaults
+     * (ser, rabPersonnel, rabId, familyMemberName, relation, occupation,
+     * occupationDetails) are curated cells; everything else is Plain.
+     */
     columnCatalog: { key: string; labelEN: string; labelBN: string; hint: string; defaultVisible: boolean }[] = [
         { key: 'ser',                labelEN: 'Ser',                  labelBN: 'ক্রঃ',                hint: 'Serial',                defaultVisible: true  },
-        // RAB Personnel + RAB ID lead by default — readers anchor on WHO this
-        // record is about before scanning the family/occupation columns.
         // Composite: Name + (SVC · Rank · Mother Org) on a secondary line.
         { key: 'rabPersonnel',       labelEN: 'RAB Personnel',        labelBN: 'র‍্যাব সদস্য',        hint: 'RabPersonnelComposite', defaultVisible: true  },
-        { key: 'rabid',              labelEN: 'RAB ID',               labelBN: 'র‍্যাব আইডি',         hint: 'RabId',                 defaultVisible: true  },
+        { key: 'rabId',              labelEN: 'RAB ID',               labelBN: 'র‍্যাব আইডি',         hint: 'RabId',                 defaultVisible: true  },
         { key: 'familyMemberName',   labelEN: 'Family Member Name',   labelBN: 'পরিবারের সদস্যের নাম', hint: 'FamilyName',            defaultVisible: true  },
         { key: 'relation',           labelEN: 'Relation',             labelBN: 'সম্পর্ক',             hint: 'Relation',              defaultVisible: true  },
         { key: 'occupation',         labelEN: 'Occupation',           labelBN: 'পেশা',               hint: 'Occupation',            defaultVisible: true  },
         { key: 'occupationDetails',  labelEN: 'Occupation Details',   labelBN: 'পেশার বিবরণ',         hint: 'OccupationDetails',     defaultVisible: true  },
         { key: 'status',             labelEN: 'Status',               labelBN: 'অবস্থা',             hint: 'Status',                defaultVisible: false },
+        // ── Family-specific extras ───────────────────────────────────
+        { key: 'familyMemberNID',    labelEN: 'Family NID',           labelBN: 'পরিবার এনআইডি',      hint: 'Plain',                 defaultVisible: false },
+        { key: 'familyMemberMobile', labelEN: 'Family Mobile',        labelBN: 'পরিবার মোবাইল',      hint: 'Plain',                 defaultVisible: false },
+        { key: 'familyMemberEmail',  labelEN: 'Family Email',         labelBN: 'পরিবার ইমেইল',       hint: 'Plain',                 defaultVisible: false },
+        { key: 'familyMemberDOB',    labelEN: 'Family DOB',           labelBN: 'পরিবার জন্ম তারিখ',   hint: 'Plain',                 defaultVisible: false },
+        // ── Service / Posting extras (mirror ReportFieldRegistry) ────
+        { key: 'serviceId',          labelEN: 'Service ID',           labelBN: 'সার্ভিস আইডি',       hint: 'Plain',                 defaultVisible: false },
+        { key: 'nameEnglish',        labelEN: 'Name (EN)',            labelBN: 'নাম (ইংরেজি)',      hint: 'Plain',                 defaultVisible: false },
+        { key: 'nameBangla',         labelEN: 'Name (BN)',            labelBN: 'নাম (বাংলা)',       hint: 'Plain',                 defaultVisible: false },
+        { key: 'nid',                labelEN: 'NID',                  labelBN: 'এনআইডি',            hint: 'Plain',                 defaultVisible: false },
+        { key: 'prefix',             labelEN: 'Prefix',               labelBN: 'প্রিফিক্স',          hint: 'Plain',                 defaultVisible: false },
+        { key: 'appointment',        labelEN: 'Appointment',          labelBN: 'নিয়োগ',             hint: 'Plain',                 defaultVisible: false },
+        { key: 'memberType',         labelEN: 'Member Type',          labelBN: 'সদস্য ধরন',          hint: 'Plain',                 defaultVisible: false },
+        { key: 'motherOrganization', labelEN: 'Mother Org',           labelBN: 'মাতৃ সংস্থা',        hint: 'Plain',                 defaultVisible: false },
+        { key: 'armyRank',           labelEN: 'Rank',                 labelBN: 'র‍্যাঙ্ক',           hint: 'Plain',                 defaultVisible: false },
+        { key: 'corps',              labelEN: 'Corps',                labelBN: 'কোর',               hint: 'Plain',                 defaultVisible: false },
+        { key: 'trade',              labelEN: 'Trade',                labelBN: 'ট্রেড',             hint: 'Plain',                 defaultVisible: false },
+        { key: 'tradeRemarks',       labelEN: 'Trade Remarks',        labelBN: 'ট্রেড মন্তব্য',      hint: 'Plain',                 defaultVisible: false },
+        { key: 'gender',             labelEN: 'Gender',               labelBN: 'লিঙ্গ',             hint: 'Plain',                 defaultVisible: false },
+        { key: 'motherUnit',         labelEN: 'Last Unit',            labelBN: 'শেষ ইউনিট',         hint: 'Plain',                 defaultVisible: false },
+        { key: 'rabUnit',            labelEN: 'RAB Unit',             labelBN: 'র‍্যাব ইউনিট',      hint: 'Plain',                 defaultVisible: false },
+        { key: 'dateOfCommission',   labelEN: 'Commission Date',      labelBN: 'কমিশন তারিখ',        hint: 'Plain',                 defaultVisible: false },
+        { key: 'joiningDate',        labelEN: 'Joining Date',         labelBN: 'যোগদান তারিখ',       hint: 'Plain',                 defaultVisible: false },
+        { key: 'rabServiceFrom',     labelEN: 'RAB Joining Date',     labelBN: 'র‍্যাবে যোগদান তারিখ', hint: 'Plain',                defaultVisible: false },
+        { key: 'rabServiceTo',       labelEN: 'RAB End Date',         labelBN: 'র‍্যাব শেষ তারিখ',   hint: 'Plain',                 defaultVisible: false },
+        // ── Personal extras ──────────────────────────────────────────
+        { key: 'dob',                labelEN: 'Date of Birth',        labelBN: 'জন্ম তারিখ',         hint: 'Plain',                 defaultVisible: false },
+        { key: 'religion',           labelEN: 'Religion',             labelBN: 'ধর্ম',              hint: 'Plain',                 defaultVisible: false },
+        { key: 'bloodGroup',         labelEN: 'Blood Group',          labelBN: 'রক্তের গ্রুপ',       hint: 'Plain',                 defaultVisible: false },
+        { key: 'maritalStatus',      labelEN: 'Marital Status',       labelBN: 'বৈবাহিক অবস্থা',     hint: 'Plain',                 defaultVisible: false },
+        { key: 'mobileNo',           labelEN: 'Mobile',               labelBN: 'মোবাইল',            hint: 'Plain',                 defaultVisible: false },
+        { key: 'email',              labelEN: 'Email',                labelBN: 'ইমেইল',             hint: 'Plain',                 defaultVisible: false },
     ];
+
+    /**
+     * Plain-hint cell resolver — keys match FamilyReportFieldRegistry's
+     * FieldKeys; values name the row property they project to. The dynamic
+     * backend returns `{key: value, keyBN: bnValue}` on each row; after
+     * adaptDynamicRow() legacy renames (registry `armyRank` → row `rank`)
+     * this map points each picker key at the right row property so the
+     * codeValue(en, bn) fallback works in both languages.
+     */
+    private static readonly plainColumnPropertyMap: Record<string, { en: string; bn?: string }> = {
+        // Service-side
+        serviceId:           { en: 'serviceId' },
+        nameEnglish:         { en: 'name' },
+        nameBangla:          { en: 'nameBN' },
+        nid:                 { en: 'nid' },
+        prefix:              { en: 'prefix',              bn: 'prefixBN' },
+        appointment:         { en: 'appointment',         bn: 'appointmentBN' },
+        memberType:          { en: 'memberType',          bn: 'memberTypeBN' },
+        motherOrganization:  { en: 'orgName',             bn: 'orgNameBN' },
+        armyRank:            { en: 'rank',                bn: 'rankBN' },
+        corps:               { en: 'corps',               bn: 'corpsBN' },
+        trade:               { en: 'trade',               bn: 'tradeBN' },
+        tradeRemarks:        { en: 'tradeRemarks' },
+        gender:              { en: 'gender',              bn: 'genderBN' },
+        motherUnit:          { en: 'motherUnit',          bn: 'motherUnitBN' },
+        rabUnit:             { en: 'rabUnit',             bn: 'rabUnitBN' },
+        dateOfCommission:    { en: 'dateOfCommission' },
+        joiningDate:         { en: 'joiningDate' },
+        rabServiceFrom:      { en: 'rabServiceFrom' },
+        rabServiceTo:        { en: 'rabServiceTo' },
+        // Personal
+        dob:                 { en: 'dob' },
+        religion:            { en: 'religion' },
+        bloodGroup:          { en: 'bloodGroup' },
+        maritalStatus:       { en: 'maritalStatus' },
+        mobileNo:            { en: 'mobileNo' },
+        email:               { en: 'email' },
+        // Family-specific
+        familyMemberNID:     { en: 'familyMemberNID' },
+        familyMemberMobile:  { en: 'familyMemberMobile' },
+        familyMemberEmail:   { en: 'familyMemberEmail' },
+        familyMemberDOB:     { en: 'familyMemberDOB' },
+    };
+
+    /** Resolve a Plain-hint cell via plainColumnPropertyMap. */
+    plainCellValue(row: FamilyOccupationReportRow, key: string): string {
+        const map = ReportFamilyOccupationComponent.plainColumnPropertyMap[key];
+        if (!map) return '—';
+        const en = (row as any)[map.en] as string | null | undefined;
+        const bn = map.bn ? (row as any)[map.bn] as string | null | undefined : undefined;
+        return this.codeValue(en, bn);
+    }
 
     selectedColumnKeys: string[] = this.columnCatalog.filter(c => c.defaultVisible).map(c => c.key);
 
@@ -340,15 +433,13 @@ export class ReportFamilyOccupationComponent implements OnInit {
         this.exportDropdownOpen = !this.exportDropdownOpen;
     }
 
-    async exportAs(type: 'print' | 'pdf' | 'word' | 'excel'): Promise<void> {
+    async exportAs(type: 'print' | 'word' | 'excel'): Promise<void> {
         this.exportDropdownOpen = false;
         if (!this.list?.length) return;
-        // Print + PDF share the formal RAB layout (browser print dialog
-        // also lets the user "Save as PDF" from a single rendered document).
-        if (type === 'print' || type === 'pdf') {
-            if (type === 'pdf') this.exporting = true;
-            try { this.openRabPrintWindow(); }
-            finally { if (type === 'pdf') this.exporting = false; }
+        // Print opens the browser print dialog over the formal RAB layout;
+        // users who want a PDF can choose "Save as PDF" as the destination.
+        if (type === 'print') {
+            this.openRabPrintWindow();
             return;
         }
         if (type === 'word') {
@@ -509,10 +600,19 @@ export class ReportFamilyOccupationComponent implements OnInit {
                     }
                     case 'RabId':
                         return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(row.rabid ? this.displayNum(row.rabid) : '—', { fontKey: mono, chSp: isBn ? 0 : 4 })] })] });
+                    case 'RabMemberName':
+                        return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(codeValue(row.name, row.nameBN), { sz: S.name, bold: true })] })] });
+                    case 'ServiceId':
+                        return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(row.serviceId ? this.displayNum(row.serviceId) : '—', { fontKey: mono, chSp: isBn ? 0 : 4 })] })] });
+                    case 'Rank':
+                        return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(codeValue(row.rank, row.rankBN))] })] });
+                    case 'MotherOrg':
+                        return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(codeValue(row.orgName, row.orgNameBN), { bold: true })] })] });
                     case 'Status':
                         return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.displayMemberStatus(row), { bold: true })] })] });
+                    case 'Plain':
                     default:
-                        return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(((row as any)[col.key] ?? '—').toString())] })] });
+                        return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.plainCellValue(row, col.key))] })] });
                 }
             });
             return new TableRow({ cantSplit: true, children: cells });
@@ -607,8 +707,13 @@ export class ReportFamilyOccupationComponent implements OnInit {
                         return meta ? `${name}\n${meta}` : name;
                     }
                     case 'RabId':             return row.rabid ? this.displayNum(row.rabid) : '';
+                    case 'RabMemberName':     return codeValue(row.name, row.nameBN);
+                    case 'ServiceId':         return row.serviceId ? this.displayNum(row.serviceId) : '';
+                    case 'Rank':              return codeValue(row.rank, row.rankBN);
+                    case 'MotherOrg':         return codeValue(row.orgName, row.orgNameBN);
                     case 'Status':            return this.displayMemberStatus(row);
-                    default:                  return ((row as any)[col.key] ?? '').toString();
+                    case 'Plain':
+                    default:                  return this.plainCellValue(row, col.key);
                 }
             });
             aoa.push(cells);
@@ -689,10 +794,19 @@ export class ReportFamilyOccupationComponent implements OnInit {
                 }
                 case 'RabId':
                     return `<td class="td-rabid">${esc(row.rabid ? this.displayNum(row.rabid) : '—')}</td>`;
+                case 'RabMemberName':
+                    return `<td class="td-name"><div class="name">${esc(codeValue(row.name, row.nameBN))}</div></td>`;
+                case 'ServiceId':
+                    return `<td class="td-rabid">${esc(row.serviceId ? this.displayNum(row.serviceId) : '—')}</td>`;
+                case 'Rank':
+                    return `<td>${esc(codeValue(row.rank, row.rankBN))}</td>`;
+                case 'MotherOrg':
+                    return `<td>${esc(codeValue(row.orgName, row.orgNameBN))}</td>`;
                 case 'Status':
                     return `<td class="td-status">${esc(this.displayMemberStatus(row))}</td>`;
+                case 'Plain':
                 default:
-                    return `<td>${esc(((row as any)[col.key] ?? '—').toString())}</td>`;
+                    return `<td>${esc(this.plainCellValue(row, col.key))}</td>`;
             }
         };
 
@@ -938,37 +1052,85 @@ export class ReportFamilyOccupationComponent implements OnInit {
         this.loading = true;
         this.appliedFilterLines = this.buildFilterLines();
         const page_no = Math.floor(this.first / this.rows) + 1;
-        this.reportService
-            .getFamilyOccupationReport({
-                relationId: this.selectedRelationId && this.selectedRelationId > 0 ? this.selectedRelationId : undefined,
-                occupationId: this.selectedOccupationId ?? undefined,
-                postingStatus: this.selectedPostingStatus && this.selectedPostingStatus !== 'All' ? this.selectedPostingStatus : undefined,
-                pagination: { page_no, row_per_page: this.rows },
-            })
-            .subscribe({
-                next: (res) => {
-                    this.list = res.datalist ?? [];
-                    this.totalRecords = res.pages?.rows ?? 0;
-                    this.searched = true;
-                    // Refresh the access-scope snapshot from the response
-                    // so the lock stays correct even if the user's scope
-                    // somehow changed mid-session.
-                    this.accessibleScope = res.accessibleScope ?? this.accessibleScope;
-                    if (this.accessibleScope?.orgScopeRestricted && this.selectedPostingStatus !== 'Servings') {
-                        this.selectedPostingStatus = 'Servings';
-                    }
-                    this.loading = false;
-                },
-                error: (err) => {
-                    console.error(err);
-                    this.messageService.add({
-                        severity: 'error',
-                        summary: 'Error',
-                        detail: err?.error?.message || 'Failed to load report',
-                    });
-                    this.loading = false;
-                },
-            });
+
+        // Map UI filters → registry criteria. Keys MATCH FamilyReportFieldRegistry
+        // so the backend whitelist accepts them (unknown keys would 400).
+        const criteria: DynamicReportCriterion[] = [];
+        if (this.selectedRelationId != null && this.selectedRelationId > 0)
+            criteria.push({ fieldKey: 'relation', idValue: this.selectedRelationId });
+        if (this.selectedOccupationId != null && this.selectedOccupationId > 0)
+            criteria.push({ fieldKey: 'occupation', idValue: this.selectedOccupationId });
+
+        this.reportService.runDynamicFamilyReport({
+            columns: this.selectedColumnKeys,
+            criteria,
+            postingStatusFilter: this.selectedPostingStatus && this.selectedPostingStatus !== 'All'
+                ? this.selectedPostingStatus
+                : null,
+            pagination: { page_no, row_per_page: this.rows },
+        }).subscribe({
+            next: (res) => {
+                const startSer = (page_no - 1) * this.rows + 1;
+                this.list = (res.datalist ?? []).map((d, i) => this.adaptDynamicRow(d, startSer + i));
+                this.totalRecords = res.pages?.Rows ?? res.pages?.rows ?? 0;
+                this.searched = true;
+                // Dynamic backend returns IDs only — surface the org-restricted
+                // flag; resolved unit/member-type chip names can be added via
+                // CommonCodeService in a follow-up (same MVP as address-location).
+                this.accessibleScope = res.accessibleScope ? {
+                    rabUnitNames: null,
+                    rabUnitNamesBN: null,
+                    memberTypeNames: null,
+                    memberTypeNamesBN: null,
+                    orgScopeRestricted: res.accessibleScope.orgScopeRestricted,
+                } as ReportAccessibleScope : null;
+                if (this.accessibleScope?.orgScopeRestricted && this.selectedPostingStatus !== 'Servings') {
+                    this.selectedPostingStatus = 'Servings';
+                }
+                this.loading = false;
+            },
+            error: (err) => {
+                console.error(err);
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: err?.error?.message || 'Failed to load report',
+                });
+                this.loading = false;
+            },
+        });
+    }
+
+    /**
+     * Translate a dynamic-backend property bag (keyed by registry FieldKeys)
+     * into the FamilyOccupationReportRow shape used by the curated renderers
+     * (familyMemberName, name + meta line, relation/occupation/details).
+     * Spread keeps original keys on the object too so the Plain-hint resolver
+     * can read either `armyRank` (registry) or `rank` (legacy).
+     */
+    private adaptDynamicRow(d: DynamicReportRow, ser: number): FamilyOccupationReportRow {
+        return {
+            ...d,
+            ser,
+            // Family-specific
+            familyMemberName:    d['familyMemberName']        as string,
+            familyMemberNameBN:  d['familyMemberNameBN']      as string,
+            relation:            d['relation']                as string,
+            relationBN:          d['relationBN']              as string,
+            occupation:          d['occupation']              as string,
+            occupationBN:        d['occupationBN']            as string,
+            occupationDetails:   d['occupationDetails']       as string,
+            // Employee-level renames (mirror DynamicReportEmployee adapter)
+            name:                d['nameEnglish']             as string,
+            nameBN:              d['nameBangla']              as string,
+            serviceId:           d['serviceId']               as string,
+            rank:                d['armyRank']                as string,
+            rankBN:              d['armyRankBN']              as string,
+            orgName:             d['motherOrganization']      as string,
+            orgNameBN:           d['motherOrganizationBN']    as string,
+            // RAB ID uses the existing model field name `rabid`.
+            ...(d['rabId'] ? { rabid: d['rabId'] as string } : {}),
+        } as FamilyOccupationReportRow & { rabid?: string };
     }
 
     displayNum(v: number | string | null | undefined): string {

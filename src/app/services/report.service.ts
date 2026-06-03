@@ -195,4 +195,10 @@ export class ReportService {
     runDynamicReport(req: DynamicReportRequest): Observable<DynamicReportResponse> {
         return this.http.post<DynamicReportResponse>(`${environment.apis.core}/DynamicReport/EmployeeOverview`, req);
     }
+
+    /** Family-member-cardinality counterpart to runDynamicReport. Same wire
+      shape — backs the family-occupation report's full column picker. */
+    runDynamicFamilyReport(req: DynamicReportRequest): Observable<DynamicReportResponse> {
+        return this.http.post<DynamicReportResponse>(`${environment.apis.core}/DynamicReport/FamilyMemberOverview`, req);
+    }
 }

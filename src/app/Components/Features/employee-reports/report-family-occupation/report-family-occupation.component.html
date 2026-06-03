@@ -191,9 +191,6 @@
                     <button type="button" class="report-export-item report-export-print" (click)="exportAs('print')">
                         <i class="pi pi-print" style="font-size:0.75rem"></i> Print
                     </button>
-                    <button type="button" class="report-export-item report-export-pdf" (click)="exportAs('pdf')">
-                        <span class="report-export-icon">⬇</span> PDF
-                    </button>
                     <button type="button" class="report-export-item report-export-word" (click)="exportAs('word')">
                         <span class="report-export-icon">⬇</span> Word
                     </button>
@@ -297,11 +294,26 @@
                                     @case ('RabId') {
                                         <td class="rab-td-rabid">{{ row.rabid ? displayNum(row.rabid) : '—' }}</td>
                                     }
+                                    @case ('RabMemberName') {
+                                        <td class="rab-td-name"><div class="rab-cell-name">{{ codeValue(row.name, row.nameBN) }}</div></td>
+                                    }
+                                    @case ('ServiceId') {
+                                        <td class="rab-td-rabid">{{ row.serviceId ? displayNum(row.serviceId) : '—' }}</td>
+                                    }
+                                    @case ('Rank') {
+                                        <td>{{ codeValue(row.rank, row.rankBN) }}</td>
+                                    }
+                                    @case ('MotherOrg') {
+                                        <td>{{ codeValue(row.orgName, row.orgNameBN) }}</td>
+                                    }
                                     @case ('Status') {
                                         <td class="rab-td-status">{{ displayMemberStatus(row) }}</td>
                                     }
+                                    @case ('Plain') {
+                                        <td>{{ plainCellValue(row, col.key) }}</td>
+                                    }
                                     @default {
-                                        <td>{{ row[col.key] ?? '—' }}</td>
+                                        <td>{{ plainCellValue(row, col.key) }}</td>
                                     }
                                 }
                             }
