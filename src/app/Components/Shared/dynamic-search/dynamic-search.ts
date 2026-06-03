@@ -140,6 +140,10 @@ export class DynamicSearchComponent implements OnInit {
         { key: 'specialQualifications', labelEN: 'Special Qualifications', labelBN: 'বিশেষ যোগ্যতা', hint: 'Plain', defaultVisible: false },
         { key: 'presentStatus',   labelEN: 'Present Status', labelBN: 'বর্তমান অবস্থা', hint: 'Plain',           defaultVisible: false },
         { key: 'permanentDistrictTypeName', labelEN: 'Home District', labelBN: 'নিজ জেলা', hint: 'Plain',         defaultVisible: false },
+        // Status auto-toggles when the Member Status filter is set to "All"
+        // (see onPostingStatusFilterChange) — picked from PostingStatus and
+        // mapped through memberStatusDisplayMap for a localized label.
+        { key: 'postingStatus',   labelEN: 'Status',       labelBN: 'অবস্থা',          hint: 'Status',          defaultVisible: false },
         { key: 'action',          labelEN: 'Action',       labelBN: 'কর্ম',           hint: 'Action',          defaultVisible: true  },
     ];
 
@@ -190,6 +194,50 @@ export class DynamicSearchComponent implements OnInit {
 
     removeColumn(key: string): void {
         this.selectedColumnKeys = this.selectedColumnKeys.filter(k => k !== key);
+    }
+
+    /**
+     * Member Status dropdown changed — when the user picks "All" (empty
+     * string), the result set will mix PostingStatuses, so auto-tick the
+     * Status column. Specific picks ("Servings", "ExMember", etc.) make
+     * the column redundant, so auto-untick. Same pattern as
+     * report-address-location. Status is inserted BEFORE 'action' so the
+     * profile-link column stays the rightmost — feels more natural than
+     * Action then Status.
+     */
+    onPostingStatusFilterChange(): void {
+        const wantStatus = !this.selectedMemberStatus;
+        const has = this.selectedColumnKeys.includes('postingStatus');
+        if (wantStatus && !has) {
+            const arr = [...this.selectedColumnKeys];
+            const idx = arr.indexOf('action');
+            if (idx >= 0) arr.splice(idx, 0, 'postingStatus');
+            else arr.push('postingStatus');
+            this.selectedColumnKeys = arr;
+        } else if (!wantStatus && has) {
+            this.selectedColumnKeys = this.selectedColumnKeys.filter(k => k !== 'postingStatus');
+        }
+    }
+
+    /**
+     * Localized label for the Status cell. The view's PostingStatus column
+     * carries raw codes; we map them through this dictionary for display.
+     * "Pending" and "PendingForJoining" collapse onto one label — the FE
+     * dropdown treats them as one too.
+     */
+    private static readonly memberStatusDisplayMap: Record<string, string> = {
+        Servings: 'Serving',
+        Serving: 'Serving',
+        ExMember: 'Ex-Member',
+        Pending: 'Pending for Joining',
+        PendingForJoining: 'Pending for Joining',
+        Supernumerary: 'Supernumerary',
+    };
+
+    displayMemberStatus(row: any): string {
+        const raw = (row?.postingStatus ?? '').toString().trim();
+        if (!raw) return '—';
+        return DynamicSearchComponent.memberStatusDisplayMap[raw] ?? raw;
     }
 
     constructor(
