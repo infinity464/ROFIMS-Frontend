@@ -39,6 +39,16 @@ export interface DynamicSearchRequest {
     postingStatusFilter?: string | null;
 }
 
+/**
+ * Wraps PagedResponse with the caller's access-scope snapshot. The
+ * Employee category response includes `orgScopeRestricted = true` when
+ * the user is unit-scoped — the page uses this to lock its Member
+ * Status dropdown to "Servings". Office category never sets it.
+ */
+export interface DynamicSearchResponse<T> extends PagedResponse<T> {
+    accessibleScope?: { orgScopeRestricted: boolean } | null;
+}
+
 @Injectable({
     providedIn: 'root'
 })
@@ -52,7 +62,7 @@ export class DynamicSearchService {
         return this.http.get<SearchFieldDefinition[]>(`${this.apiUrl}/GetSearchFields`, { params });
     }
 
-    search(request: DynamicSearchRequest): Observable<PagedResponse<any>> {
-        return this.http.post<PagedResponse<any>>(`${this.apiUrl}/Search`, request);
+    search(request: DynamicSearchRequest): Observable<DynamicSearchResponse<any>> {
+        return this.http.post<DynamicSearchResponse<any>>(`${this.apiUrl}/Search`, request);
     }
 }

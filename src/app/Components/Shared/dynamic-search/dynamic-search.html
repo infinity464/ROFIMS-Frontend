@@ -75,10 +75,17 @@
 
                     @if (isEmployee) {
                         <div class="ds-member-status-field">
-                            <label class="ds-label">Member Status</label>
+                            <label class="ds-label">
+                                Member Status
+                                @if (memberStatusLocked) {
+                                    <i class="pi pi-lock ml-1" style="font-size: 0.75rem; opacity: 0.7;"
+                                       title="Locked to Servings — your access scope only covers serving members"></i>
+                                }
+                            </label>
                             <p-select
                                 [(ngModel)]="selectedMemberStatus"
                                 [options]="memberStatusOptions"
+                                [disabled]="memberStatusLocked"
                                 optionLabel="label"
                                 optionValue="value"
                                 styleClass="w-full"
@@ -130,6 +137,8 @@
                                                     } @else {
                                                         <p-select
                                                             [(ngModel)]="getCriterionValue(field.fieldKey).idValue"
+                                                            (onChange)="onCriterionIdChange(field.fieldKey)"
+                                                            (onClear)="onCriterionIdChange(field.fieldKey)"
                                                             [options]="getFieldOptions(field)"
                                                             optionLabel="label"
                                                             optionValue="value"

@@ -18,6 +18,8 @@ import {
     DynamicSearchRequest
 } from '@/services/dynamic-search.service';
 import { UserMenuService } from '@/services/user-menu.service';
+import { ReportService } from '@/services/report.service';
+import { CommonCodeService } from '@/services/common-code-service';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 
 interface CriterionValue {
@@ -50,7 +52,7 @@ export class DynamicSearchComponent implements OnInit {
     // Category
     categoryOptions = [
         { label: 'Employee', value: 'Employee' as SearchCategory },
-        { label: 'Office Management', value: 'OfficeManagement' as SearchCategory }
+        // { label: 'Office Management', value: 'OfficeManagement' as SearchCategory } // TODO: re-enable when Office Management search is ready
     ];
     selectedCategory: SearchCategory = 'Employee';
 
@@ -79,6 +81,14 @@ export class DynamicSearchComponent implements OnInit {
     // Track whether user has performed a search (prevents onLazyLoad from firing before first search)
     private hasSearched = false;
 
+    /**
+     * Set from the Search response. When the caller is org-tree
+     * restricted, the backend forces "Servings" — we lock the Member
+     * Status dropdown to match so the user sees the constraint instead
+     * of silently picking an option that gets overridden server-side.
+     */
+    memberStatusLocked = false;
+
     // Filter panel
     filterOpen = true;
 
@@ -86,8 +96,25 @@ export class DynamicSearchComponent implements OnInit {
         private searchService: DynamicSearchService,
         private messageService: MessageService,
         private _router: Router,
-        private _userMenuService: UserMenuService
+        private _userMenuService: UserMenuService,
+        private reportService: ReportService,
+        private commonCodeService: CommonCodeService
     ) {}
+
+    /** Cached accessible-member-type ids (loaded once at init). Null = not loaded yet. */
+    private accessibleMemberTypeIds: Set<number> | null = null;
+
+    /**
+     * Underlying CodeIds for the synthetic N/A option per field. When the
+     * user picks the collapsed "N/A" (value = -1), the backend pre-resolves
+     * these on its own (see DynamicSearchQuery), but we keep the map for
+     * potential FE-side filtering / display.
+     */
+    private naCodeIdsByField = new Map<string, number[]>();
+
+    /** Original (full) option lists per field — captured the first time the
+     *  field arrives from the backend, so a cascade-reset can restore them. */
+    private originalOptionsByField = new Map<string, { label: string; value: any }[]>();
 
     ngOnInit(): void {
         const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
@@ -95,7 +122,177 @@ export class DynamicSearchComponent implements OnInit {
         this.canUpdate = _perms.canUpdate;
         this.canDelete = _perms.canDelete;
 
+        // Fetch the caller's access-scope BEFORE the first search, so the
+        // Member Status dropdown locks immediately on page load — same
+        // pattern as /employee-reports. The search response also carries
+        // the flag so it stays correct across category changes; this just
+        // makes the lock visible without a search.
+        this.reportService.getMyReportAccessScope().subscribe({
+            next: (scope) => {
+                const locked = scope?.orgScopeRestricted === true;
+                this.memberStatusLocked = locked;
+                if (locked && this.selectedMemberStatus !== 'Servings') {
+                    this.selectedMemberStatus = 'Servings';
+                }
+                // Strip the RAB Unit picker for org-scoped callers — picking
+                // a unit outside their scope would silently return zero
+                // rows. Also drop it from selectedFields if it was already
+                // queued before the scope response landed.
+                if (locked) this.applyScopeFieldRestrictions();
+            },
+            error: () => { /* silent — leave dropdown editable on failure */ },
+        });
+
+        // Pre-load the caller's accessible member-type ids. GetAccessibleMemberTypes
+        // is server-side filtered: a scoped user gets only their allowed
+        // EmployeeType rows; an admin (no member-type rows) gets all. We
+        // overlay these onto the memberType field's options so the dropdown
+        // mirrors what the user can actually search.
+        this.commonCodeService.getAccessibleMemberTypes().subscribe({
+            next: (rows) => {
+                this.accessibleMemberTypeIds = new Set((rows ?? []).map((r: any) => r?.codeId ?? r?.CodeId ?? 0).filter(Boolean));
+                this.applyMemberTypeRestriction();
+            },
+            error: () => { /* silent — leave dropdown unfiltered on failure */ },
+        });
+
         this.loadFields();
+    }
+
+    /**
+     * Cascade dependency wiring — when the parent field's value changes,
+     * its dependent fields reload from a scoped endpoint. Called by the
+     * template (onChange). Triggers a fresh option-list fetch for each
+     * dependent and clears any stale picked value.
+     */
+    onCriterionIdChange(fieldKey: string): void {
+        const cv = this.criteriaValues.get(fieldKey);
+        if (fieldKey === 'motherOrg') {
+            // Mother Org → reload Corps options for the picked org
+            // and Rank options (per-org MotherOrgRank).
+            this.reloadCorpsByMotherOrg(cv?.idValue ?? null);
+            this.reloadRankByMotherOrg(cv?.idValue ?? null);
+        } else if (fieldKey === 'corps') {
+            // Corps → reload Trade options for the picked corps's children.
+            this.reloadTradeByCorps(cv?.idValue ?? null);
+        }
+    }
+
+    private reloadCorpsByMotherOrg(orgId: number | null): void {
+        const corpsField = this.availableFields.find(f => f.fieldKey === 'corps');
+        if (!corpsField) return;
+        // Restore the original full list when org is cleared.
+        if (orgId == null || orgId <= 0) {
+            const original = this.originalOptionsByField.get('corps');
+            if (original) corpsField.options = original;
+        } else {
+            this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'Corps').subscribe({
+                next: (codes: any[]) => {
+                    corpsField.options = this.collapseNa(codes, 'corps');
+                },
+                error: () => { corpsField.options = []; },
+            });
+        }
+        this.clearStaleCriterionId('corps', corpsField.options);
+        // Corps changed implicitly → cascade Trade too.
+        this.reloadTradeByCorps(this.criteriaValues.get('corps')?.idValue ?? null);
+    }
+
+    private reloadRankByMotherOrg(orgId: number | null): void {
+        const rankField = this.availableFields.find(f => f.fieldKey === 'rank');
+        if (!rankField) return;
+        if (orgId == null || orgId <= 0) {
+            const original = this.originalOptionsByField.get('rank');
+            if (original) rankField.options = original;
+        } else {
+            this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'MotherOrgRank').subscribe({
+                next: (codes: any[]) => {
+                    rankField.options = (Array.isArray(codes) ? codes : [])
+                        .map((c: any) => ({ label: c?.codeValueEN ?? String(c?.codeId ?? ''), value: c?.codeId ?? 0 }));
+                },
+                error: () => { rankField.options = []; },
+            });
+        }
+        this.clearStaleCriterionId('rank', rankField.options);
+    }
+
+    private reloadTradeByCorps(corpsId: number | null): void {
+        const tradeField = this.availableFields.find(f => f.fieldKey === 'trade');
+        if (!tradeField) return;
+        if (corpsId == null || corpsId <= 0) {
+            const original = this.originalOptionsByField.get('trade');
+            if (original) tradeField.options = original;
+        } else if (corpsId === -1) {
+            // User picked the N/A corps — Trade options would be the N/A
+            // trade rows. The simplest behaviour: keep the global Trade
+            // list so the user can narrow further (or wipe the trade pick
+            // if it's no longer meaningful). Leave options as-is.
+            const original = this.originalOptionsByField.get('trade');
+            if (original) tradeField.options = original;
+        } else {
+            this.commonCodeService.getAllActiveCommonCodesByParentId(corpsId).subscribe({
+                next: (codes: any[]) => {
+                    tradeField.options = this.collapseNa(codes, 'trade');
+                },
+                error: () => { tradeField.options = []; },
+            });
+        }
+        this.clearStaleCriterionId('trade', tradeField.options);
+    }
+
+    /** Collapse multiple "N/A" CommonCode rows into one synthetic option
+     *  (value = -1). Mirrors the backend field-definitions handler. */
+    private collapseNa(codes: any[], fieldKey: string): { label: string; value: any }[] {
+        const list = Array.isArray(codes) ? codes : [];
+        const naIds: number[] = [];
+        const nonNa: { label: string; value: any }[] = [];
+        for (const c of list) {
+            const label = c?.codeValueEN ?? c?.CodeValueEN ?? '';
+            const id = c?.codeId ?? c?.CodeId ?? 0;
+            const trimmed = String(label).trim().toUpperCase();
+            if (trimmed === 'N/A' || trimmed === 'NA') {
+                naIds.push(id);
+            } else {
+                nonNa.push({ label, value: id });
+            }
+        }
+        this.naCodeIdsByField.set(fieldKey, naIds);
+        if (naIds.length > 0) nonNa.push({ label: 'N/A', value: -1 });
+        return nonNa;
+    }
+
+    /** Drop the picked id from a dependent field when it's no longer in the new option set. */
+    private clearStaleCriterionId(fieldKey: string, options: { value: any }[] | null | undefined): void {
+        const cv = this.criteriaValues.get(fieldKey);
+        if (cv?.idValue == null) return;
+        const allowed = new Set((options ?? []).map(o => o.value));
+        if (!allowed.has(cv.idValue)) cv.idValue = null;
+    }
+
+    /**
+     * Replace the memberType field's options with only the ids the caller
+     * can access. Called from both the fields-loaded and accessible-types-loaded
+     * subscriptions so it works regardless of order. If the user already
+     * picked a now-inaccessible member-type, clear it.
+     */
+    private applyMemberTypeRestriction(): void {
+        if (this.accessibleMemberTypeIds == null) return;
+        const allowedIds = this.accessibleMemberTypeIds;
+        const memberTypeField = this.availableFields.find(f => f.fieldKey === 'memberType');
+        if (memberTypeField?.options) {
+            memberTypeField.options = memberTypeField.options.filter(o => allowedIds.has(o.value as number));
+        }
+        const cv = this.criteriaValues.get('memberType');
+        if (cv?.idValue != null && !allowedIds.has(cv.idValue)) {
+            cv.idValue = null;
+        }
+    }
+
+    /** Org-scoped users can't meaningfully pick a RAB Unit — hide the field. */
+    private applyScopeFieldRestrictions(): void {
+        this.availableFields = this.availableFields.filter(f => f.fieldKey !== 'rabUnit');
+        this.selectedFields = this.selectedFields.filter(f => f.fieldKey !== 'rabUnit');
+        this.criteriaValues.delete('rabUnit');
     }
 
     onCategoryChange(): void {
@@ -112,6 +309,20 @@ export class DynamicSearchComponent implements OnInit {
         this.searchService.getSearchFields(this.selectedCategory).subscribe({
             next: (fields) => {
                 this.availableFields = fields;
+                // Snapshot Corps / Trade / Rank originals so a cascade reset
+                // (parent cleared) can restore the full list without an
+                // extra round-trip.
+                this.originalOptionsByField.clear();
+                for (const key of ['corps', 'trade', 'rank']) {
+                    const f = fields.find(x => x.fieldKey === key);
+                    if (f?.options) this.originalOptionsByField.set(key, [...f.options]);
+                }
+                // If the scope response already landed and the user is
+                // org-scoped, re-apply the restriction to this fresh field
+                // list. (loadFields can fire AFTER the scope subscribe.)
+                if (this.memberStatusLocked) this.applyScopeFieldRestrictions();
+                // Re-apply the member-type allowlist too — same race.
+                this.applyMemberTypeRestriction();
             },
             error: (err: any) => {
                 this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load search fields.' });
@@ -151,9 +362,39 @@ export class DynamicSearchComponent implements OnInit {
     }
 
     search(): void {
+        // If the user picked search fields, they MUST fill each one.
+        // Without this check, an empty field is silently dropped from the
+        // request and the page returns an effectively unfiltered result
+        // set — surprising and (with no upper bound on the FE side)
+        // potentially huge.
+        const empty = this.selectedFields.filter((f) => !this.hasCriterionValue(f));
+        if (empty.length > 0) {
+            const names = empty.map((f) => f.displayLabel).join(', ');
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'Fill the selected fields',
+                detail: `Please enter a value for: ${names}. Otherwise remove them from the criteria.`,
+                life: 5000,
+            });
+            return;
+        }
         this.first = 0;
         this.hasSearched = true;
         this.loadResults();
+    }
+
+    /** Returns true when the user has typed/picked something into the given field's input. */
+    private hasCriterionValue(field: SearchFieldDefinition): boolean {
+        const cv = this.criteriaValues.get(field.fieldKey);
+        if (!cv) return false;
+        if (field.fieldType === 'Text') return !!cv.textValue?.trim();
+        if (field.fieldType === 'ExactId') {
+            return field.isStringId
+                ? !!cv.stringIdValue
+                : cv.idValue != null;
+        }
+        if (field.fieldType === 'DateRange') return !!cv.dateFrom || !!cv.dateTo;
+        return false;
     }
 
     clearFilter(): void {
@@ -230,6 +471,11 @@ export class DynamicSearchComponent implements OnInit {
             next: (response) => {
                 this.results = response.datalist || [];
                 this.totalRecords = response.pages?.rows || 0;
+                // Lock state is set once at ngOnInit via getMyReportAccessScope()
+                // — a user's access scope can't change mid-session, so the
+                // search response is NOT used here. (Doing so would briefly
+                // unlock the dropdown for a single render tick if the
+                // backend ever omits the flag, e.g. before an API rebuild.)
                 this.loading = false;
             },
             error: (err: any) => {
@@ -256,10 +502,18 @@ export class DynamicSearchComponent implements OnInit {
         }
     }
 
-    // Field grouping for Employee category (visual sections)
+    // Field grouping for Employee category (visual sections). Keep these
+    // Sets exhaustive — any field key not listed here lands in the
+    // "Other" catch-all so newly-registered fields render immediately
+    // without the dev forgetting to assign a group.
     private readonly identifierKeys = new Set(['rabId', 'serviceId', 'nid']);
-    private readonly personalKeys = new Set(['nameEnglish', 'nameBangla', 'mobileNo', 'email', 'dob', 'gender', 'bloodGroup', 'religion', 'maritalStatus']);
-    private readonly serviceKeys = new Set(['rank', 'corps', 'trade', 'appointment', 'memberType', 'rabUnit', 'joiningDate', 'commissionDate', 'permanentDistrict']);
+    private readonly personalKeys = new Set(['nameEnglish', 'nameBangla', 'prefix', 'mobileNo', 'email', 'dob', 'gender', 'bloodGroup', 'religion', 'maritalStatus']);
+    private readonly serviceKeys = new Set([
+        'rank', 'corps', 'trade', 'tradeRemarks', 'appointment', 'memberType',
+        'motherOrg', 'motherUnit', 'rabUnit', 'location',
+        'joiningDate', 'commissionDate', 'dateOfJoinService',
+        'rabServiceFrom', 'rabServiceTo', 'permanentDistrict'
+    ]);
 
     get groupedFields(): { label: string; fields: SearchFieldDefinition[] }[] {
         if (this.selectedCategory !== 'Employee') {
@@ -271,9 +525,14 @@ export class DynamicSearchComponent implements OnInit {
         const ids = this.selectedFields.filter(f => this.identifierKeys.has(f.fieldKey));
         const personal = this.selectedFields.filter(f => this.personalKeys.has(f.fieldKey));
         const service = this.selectedFields.filter(f => this.serviceKeys.has(f.fieldKey));
+        const other = this.selectedFields.filter(f =>
+            !this.identifierKeys.has(f.fieldKey)
+            && !this.personalKeys.has(f.fieldKey)
+            && !this.serviceKeys.has(f.fieldKey));
         if (ids.length > 0) groups.push({ label: 'Identification', fields: ids });
         if (personal.length > 0) groups.push({ label: 'Personal Information', fields: personal });
         if (service.length > 0) groups.push({ label: 'Service Information', fields: service });
+        if (other.length > 0) groups.push({ label: 'Other', fields: other });
         return groups;
     }
 
