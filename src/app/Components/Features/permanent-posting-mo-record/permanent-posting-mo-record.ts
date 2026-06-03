@@ -1073,7 +1073,7 @@ export class PermanentPostingMORecordComponent implements OnInit {
 
     onDelete(row: PermanentPostingMORecordModel): void {
         this.confirmationService.confirm({
-            message: `Are you sure you want to delete Posted Out Record #${row.id}? This action cannot be undone.`,
+            message: `Are you sure you want to delete Posted Out Record #${row.id}? If a linked New Joining Person record exists, it will also be removed. This action cannot be undone.`,
             header: 'Delete Confirmation',
             icon: 'pi pi-exclamation-triangle',
             acceptLabel: 'Yes, Delete',
@@ -1081,8 +1081,27 @@ export class PermanentPostingMORecordComponent implements OnInit {
             acceptButtonStyleClass: 'p-button-danger',
             accept: () => {
                 this.recordSvc.delete(row.id).subscribe({
-                    next: () => { this.messageService.add({ severity: 'success', summary: 'Deleted', detail: 'Record deleted.' }); this.loadList(); },
-                    error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Delete failed.' })
+                    next: (res: any) => {
+                        if (res?.statusCode === 403) {
+                            this.messageService.add({ severity: 'warn', summary: 'Cannot Delete', detail: res.description ?? 'Ex-Member records cannot be removed.' });
+                            return;
+                        }
+                        if (res?.statusCode !== 200) {
+                            this.messageService.add({ severity: 'error', summary: 'Error', detail: res?.description ?? 'Delete failed.' });
+                            return;
+                        }
+                        this.messageService.add({ severity: 'success', summary: 'Deleted', detail: res.description ?? 'Record deleted.' });
+                        this.loadList();
+                        this.loadJoineeList();
+                    },
+                    error: (err: any) => {
+                        const body = err?.error;
+                        if (body?.statusCode === 403) {
+                            this.messageService.add({ severity: 'warn', summary: 'Cannot Delete', detail: body.description ?? 'Ex-Member records cannot be removed.' });
+                        } else {
+                            this.messageService.add({ severity: 'error', summary: 'Error', detail: body?.description ?? 'Delete failed.' });
+                        }
+                    }
                 });
             }
         });
@@ -1144,8 +1163,15 @@ export class PermanentPostingMORecordComponent implements OnInit {
             acceptButtonStyleClass: 'p-button-danger',
             accept: () => {
                 this.detailSvc.delete(row.id).subscribe({
-                    next: () => { this.messageService.add({ severity: 'success', summary: 'Deleted', detail: 'Joinee record deleted.' }); this.loadJoineeList(); },
-                    error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Delete failed.' })
+                    next: (res: any) => {
+                        if (res?.statusCode !== 200) {
+                            this.messageService.add({ severity: 'error', summary: 'Error', detail: res?.description ?? 'Delete failed.' });
+                            return;
+                        }
+                        this.messageService.add({ severity: 'success', summary: 'Deleted', detail: res.description ?? 'Joinee record deleted.' });
+                        this.loadJoineeList();
+                    },
+                    error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.description ?? 'Delete failed.' })
                 });
             }
         });

@@ -86,3 +86,77 @@
     background: var(--primary-50, #eef2ff);
   }
 }
+
+// ── Inline List Sections ──────────────────────────────────────
+.list-section {
+  margin-top: 1.5rem;
+  border: 1px solid var(--surface-border, #dee2e6);
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+.list-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.25rem;
+  background: var(--surface-ground, #fafafa);
+  cursor: pointer;
+  user-select: none;
+  border-bottom: 1px solid var(--surface-border, #dee2e6);
+  transition: background 0.15s;
+
+  &:hover {
+    background: var(--surface-100, #f3f4f6);
+  }
+}
+
+.list-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text-color);
+}
+
+.list-section-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.list-badge {
+  background: var(--primary-color);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  min-width: 1.4rem;
+  text-align: center;
+}
+
+.row-active {
+  background: var(--primary-50, #eef2ff) !important;
+  outline: 2px solid var(--primary-color);
+  outline-offset: -2px;
+}
+
+.status-yes {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--green-600, #16a34a);
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.status-pending {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--orange-500, #f59e0b);
+  font-weight: 600;
+  font-size: 0.85rem;
+}
