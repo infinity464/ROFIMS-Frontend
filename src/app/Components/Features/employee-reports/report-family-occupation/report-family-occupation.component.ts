@@ -6,7 +6,6 @@ import { TableModule } from 'primeng/table';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
-import { InputTextModule } from 'primeng/inputtext';
 import { PaginatorModule } from 'primeng/paginator';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
@@ -41,7 +40,7 @@ import * as XLSX from 'xlsx';
 @Component({
     selector: 'app-report-family-occupation',
     standalone: true,
-    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, InputTextModule, Toast, MultiSelectModule, PaginatorModule],
+    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, Toast, MultiSelectModule, PaginatorModule],
     providers: [MessageService],
     templateUrl: './report-family-occupation.component.html',
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-family-occupation.component.scss'],
@@ -57,11 +56,6 @@ export class ReportFamilyOccupationComponent implements OnInit {
     /** Relation Type dropdown (value = 0 means "All") */
     relationOptions: { label: string; labelBn: string; value: number }[] = [];
     selectedRelationId: number | null = null;
-
-    /** Text search fields */
-    searchRabId: string = '';
-    searchServiceId: string = '';
-    searchNid: string = '';
 
     /** Occupation dropdown */
     occupationOptions: { label: string; labelBn: string; value: number }[] = [];
@@ -111,15 +105,15 @@ export class ReportFamilyOccupationComponent implements OnInit {
      */
     columnCatalog: { key: string; labelEN: string; labelBN: string; hint: string; defaultVisible: boolean }[] = [
         { key: 'ser',                labelEN: 'Ser',                  labelBN: 'ক্রঃ',                hint: 'Serial',                defaultVisible: true  },
+        // RAB Personnel + RAB ID lead by default — readers anchor on WHO this
+        // record is about before scanning the family/occupation columns.
+        // Composite: Name + (SVC · Rank · Mother Org) on a secondary line.
+        { key: 'rabPersonnel',       labelEN: 'RAB Personnel',        labelBN: 'র‍্যাব সদস্য',        hint: 'RabPersonnelComposite', defaultVisible: true  },
+        { key: 'rabid',              labelEN: 'RAB ID',               labelBN: 'র‍্যাব আইডি',         hint: 'RabId',                 defaultVisible: true  },
         { key: 'familyMemberName',   labelEN: 'Family Member Name',   labelBN: 'পরিবারের সদস্যের নাম', hint: 'FamilyName',            defaultVisible: true  },
         { key: 'relation',           labelEN: 'Relation',             labelBN: 'সম্পর্ক',             hint: 'Relation',              defaultVisible: true  },
         { key: 'occupation',         labelEN: 'Occupation',           labelBN: 'পেশা',               hint: 'Occupation',            defaultVisible: true  },
         { key: 'occupationDetails',  labelEN: 'Occupation Details',   labelBN: 'পেশার বিবরণ',         hint: 'OccupationDetails',     defaultVisible: true  },
-        // Composite: Name + (SVC · Rank · Mother Org) on a secondary line — bundled
-        // so the personnel block reads as one entity instead of four scattered
-        // columns. Matches address-location's "PersonnelComposite" pattern.
-        { key: 'rabPersonnel',       labelEN: 'RAB Personnel',        labelBN: 'র‍্যাব সদস্য',        hint: 'RabPersonnelComposite', defaultVisible: true  },
-        { key: 'rabid',              labelEN: 'RAB ID',               labelBN: 'র‍্যাব আইডি',         hint: 'RabId',                 defaultVisible: true  },
         { key: 'status',             labelEN: 'Status',               labelBN: 'অবস্থা',             hint: 'Status',                defaultVisible: false },
     ];
 
@@ -228,9 +222,6 @@ export class ReportFamilyOccupationComponent implements OnInit {
             const val = this.lang === 'bn' ? s?.labelBn : s?.label;
             if (val) items.push({ label: this.L[this.lang]['report.search.rabMemberStatus'], value: val });
         }
-        if (this.searchRabId.trim()) items.push({ label: 'RAB ID', value: this.searchRabId.trim() });
-        if (this.searchServiceId.trim()) items.push({ label: 'Service ID', value: this.searchServiceId.trim() });
-        if (this.searchNid.trim()) items.push({ label: 'NID', value: this.searchNid.trim() });
         return items;
     }
 
@@ -312,9 +303,6 @@ export class ReportFamilyOccupationComponent implements OnInit {
             const val = this.lang === 'bn' ? occ?.labelBn : occ?.label;
             if (val) lines.push(`${L['report.search.occupation']}: ${val}`);
         }
-        if (this.searchRabId.trim()) lines.push(`RAB ID: ${this.searchRabId.trim()}`);
-        if (this.searchServiceId.trim()) lines.push(`Service ID: ${this.searchServiceId.trim()}`);
-        if (this.searchNid.trim()) lines.push(`NID: ${this.searchNid.trim()}`);
         return lines;
     }
 
@@ -520,7 +508,7 @@ export class ReportFamilyOccupationComponent implements OnInit {
                         return new TableCell({ ...cellOpts, children });
                     }
                     case 'RabId':
-                        return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(row.rabid || '—', { fontKey: mono, chSp: isBn ? 0 : 4 })] })] });
+                        return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(row.rabid ? this.displayNum(row.rabid) : '—', { fontKey: mono, chSp: isBn ? 0 : 4 })] })] });
                     case 'Status':
                         return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.displayMemberStatus(row), { bold: true })] })] });
                     default:
@@ -618,7 +606,7 @@ export class ReportFamilyOccupationComponent implements OnInit {
                         const meta = this.personnelMeta(row);
                         return meta ? `${name}\n${meta}` : name;
                     }
-                    case 'RabId':             return row.rabid || '';
+                    case 'RabId':             return row.rabid ? this.displayNum(row.rabid) : '';
                     case 'Status':            return this.displayMemberStatus(row);
                     default:                  return ((row as any)[col.key] ?? '').toString();
                 }
@@ -700,7 +688,7 @@ export class ReportFamilyOccupationComponent implements OnInit {
                     return `<td class="td-personnel"><div class="personnel-name">${esc(codeValue(row.name, row.nameBN))}</div>${metaHtml}</td>`;
                 }
                 case 'RabId':
-                    return `<td class="td-rabid">${esc(row.rabid || '—')}</td>`;
+                    return `<td class="td-rabid">${esc(row.rabid ? this.displayNum(row.rabid) : '—')}</td>`;
                 case 'Status':
                     return `<td class="td-status">${esc(this.displayMemberStatus(row))}</td>`;
                 default:
@@ -912,9 +900,6 @@ export class ReportFamilyOccupationComponent implements OnInit {
         if (this.selectedRelationId != null) c++;
         if (this.selectedOccupationId != null) c++;
         if (this.selectedPostingStatus) c++;
-        if (this.searchRabId.trim()) c++;
-        if (this.searchServiceId.trim()) c++;
-        if (this.searchNid.trim()) c++;
         return c;
     }
 
@@ -933,9 +918,6 @@ export class ReportFamilyOccupationComponent implements OnInit {
         this.selectedRelationId = null;
         this.selectedOccupationId = null;
         this.selectedPostingStatus = 'Servings';
-        this.searchRabId = '';
-        this.searchServiceId = '';
-        this.searchNid = '';
         this.first = 0;
         this.list = [];
         this.totalRecords = 0;
@@ -961,9 +943,6 @@ export class ReportFamilyOccupationComponent implements OnInit {
                 relationId: this.selectedRelationId && this.selectedRelationId > 0 ? this.selectedRelationId : undefined,
                 occupationId: this.selectedOccupationId ?? undefined,
                 postingStatus: this.selectedPostingStatus && this.selectedPostingStatus !== 'All' ? this.selectedPostingStatus : undefined,
-                rabId: this.searchRabId.trim() || undefined,
-                serviceId: this.searchServiceId.trim() || undefined,
-                nid: this.searchNid.trim() || undefined,
                 pagination: { page_no, row_per_page: this.rows },
             })
             .subscribe({

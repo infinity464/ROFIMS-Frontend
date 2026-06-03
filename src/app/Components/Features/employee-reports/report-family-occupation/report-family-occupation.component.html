@@ -95,29 +95,7 @@
                         </div>
                     </div>
 
-                    <!-- Group 2: Identification -->
-                    <div class="ds-field-group">
-                        <div class="ds-group-divider">
-                            <span class="ds-group-label">Identification</span>
-                            <span class="ds-group-line"></span>
-                        </div>
-                        <div class="ds-criteria-grid">
-                            <div class="ds-field">
-                                <label class="ds-field-label">RAB ID</label>
-                                <input pInputText type="text" [(ngModel)]="searchRabId" placeholder="Enter RAB ID" class="w-full" />
-                            </div>
-                            <div class="ds-field">
-                                <label class="ds-field-label">Service ID</label>
-                                <input pInputText type="text" [(ngModel)]="searchServiceId" placeholder="Enter Service ID" class="w-full" />
-                            </div>
-                            <div class="ds-field">
-                                <label class="ds-field-label">NID</label>
-                                <input pInputText type="text" [(ngModel)]="searchNid" placeholder="Enter NID" class="w-full" />
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Group 3: Column picker — only after a search has populated rows. -->
+                    <!-- Group 2: Column picker — only after a search has populated rows. -->
                     @if (searched) {
                     <div class="ds-field-group">
                         <div class="ds-group-divider">
@@ -317,7 +295,7 @@
                                         </td>
                                     }
                                     @case ('RabId') {
-                                        <td class="rab-td-rabid">{{ row.rabid || '—' }}</td>
+                                        <td class="rab-td-rabid">{{ row.rabid ? displayNum(row.rabid) : '—' }}</td>
                                     }
                                     @case ('Status') {
                                         <td class="rab-td-status">{{ displayMemberStatus(row) }}</td>
