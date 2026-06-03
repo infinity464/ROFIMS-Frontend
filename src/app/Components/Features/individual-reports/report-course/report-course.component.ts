@@ -1004,9 +1004,47 @@ export class ReportCourseComponent implements OnInit, OnChanges {
     @counter-style bn-digits { system: numeric; symbols: '\\09E6' '\\09E7' '\\09E8' '\\09E9' '\\09EA' '\\09EB' '\\09EC' '\\09ED' '\\09EE' '\\09EF'; }
     @page {
         margin: 12mm 5mm 22mm 5mm;
-        @bottom-left   { content: "● " "${cssStr(confidential)}"; font-family: ${mono}; font-size: 6.5pt; font-weight: 600; letter-spacing: 0.3em; text-transform: uppercase; color: #b03a3a; padding: 5mm 0 0 8mm; ${isBn ? 'letter-spacing:0.05em;text-transform:none;font-family:' + sans + ';' : ''} }
-        @bottom-center { content: "${cssStr(pageWord)} " counter(page${isBn ? ', bn-digits' : ''}) " ${cssStr(ofWord)} " counter(pages${isBn ? ', bn-digits' : ''}); font-family: ${mono}; font-size: 6.5pt; font-weight: 600; letter-spacing: 0.25em; text-transform: uppercase; color: #4a4a4a; padding-top: 5mm; ${isBn ? 'letter-spacing:0.05em;text-transform:none;font-family:' + sans + ';' : ''} }
-        @bottom-right  { content: "${cssStr(warning)}"; font-family: ${mono}; font-size: 6.5pt; font-weight: 600; letter-spacing: 0.3em; text-transform: uppercase; color: #b03a3a; padding: 5mm 8mm 0 0; ${isBn ? 'letter-spacing:0.05em;text-transform:none;font-family:' + sans + ';' : ''} }
+        /* Three margin-boxes sit side-by-side along the bottom of every
+           page. Each paints its own share of a red horizontal line using
+           a background-image gradient (NOT border-top): the outermost
+           boxes inset the line by 8mm so the strip reads ~8% narrower
+           than the page width. Matches report-address-location exactly. */
+        @bottom-left {
+            content: "● " "${cssStr(confidential)}";
+            font-family: ${mono}; font-size: 6.5pt; font-weight: 600;
+            letter-spacing: 0.3em; text-transform: uppercase; color: #b03a3a;
+            padding: 5mm 0 0 8mm;
+            background-image: linear-gradient(rgba(176, 58, 58, 0.5), rgba(176, 58, 58, 0.5));
+            background-position: 8mm 1.5mm;
+            background-size: calc(100% - 8mm) 0.7mm;
+            background-repeat: no-repeat;
+            vertical-align: top;
+            ${isBn ? 'letter-spacing:0.05em;text-transform:none;font-family:' + sans + ';' : ''}
+        }
+        @bottom-center {
+            content: "${cssStr(pageWord)} " counter(page${isBn ? ', bn-digits' : ''}) " ${cssStr(ofWord)} " counter(pages${isBn ? ', bn-digits' : ''});
+            font-family: ${mono}; font-size: 6.5pt; font-weight: 600;
+            letter-spacing: 0.25em; text-transform: uppercase; color: #4a4a4a;
+            padding-top: 5mm;
+            background-image: linear-gradient(rgba(176, 58, 58, 0.5), rgba(176, 58, 58, 0.5));
+            background-position: 0 1.5mm;
+            background-size: 100% 0.7mm;
+            background-repeat: no-repeat;
+            vertical-align: top;
+            ${isBn ? 'letter-spacing:0.05em;text-transform:none;font-family:' + sans + ';' : ''}
+        }
+        @bottom-right {
+            content: "${cssStr(warning)}";
+            font-family: ${mono}; font-size: 6.5pt; font-weight: 600;
+            letter-spacing: 0.3em; text-transform: uppercase; color: #b03a3a;
+            padding: 5mm 8mm 0 0;
+            background-image: linear-gradient(rgba(176, 58, 58, 0.5), rgba(176, 58, 58, 0.5));
+            background-position: 0 1.5mm;
+            background-size: calc(100% - 8mm) 0.7mm;
+            background-repeat: no-repeat;
+            vertical-align: top;
+            ${isBn ? 'letter-spacing:0.05em;text-transform:none;font-family:' + sans + ';' : ''}
+        }
     }
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; background: #fff; color: #0b0b0b; font-family: ${sans}; font-size: 10pt; line-height: 1.35; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -1015,6 +1053,9 @@ export class ReportCourseComponent implements OnInit, OnChanges {
     .overline { font-size: 7.5pt; letter-spacing: 0.3em; color: #555; text-transform: uppercase; margin-bottom: 3mm; font-weight: 500; ${isBn ? 'letter-spacing:0;text-transform:none;font-family:' + sans + ';font-size:9pt;' : ''} }
     .paper-title { font-family: ${serif}; font-weight: 700; font-size: 22pt; margin: 0 0 2mm 0; letter-spacing: 0.12em; color: #0b0b0b; ${isBn ? 'letter-spacing:0;' : ''} }
     .paper-sub { font-family: ${serif}; font-style: italic; color: #555; font-size: 10pt; margin-bottom: 4mm; }
+    .orn-divider { display: flex; align-items: center; justify-content: center; gap: 4mm; margin: 3mm auto 4mm; max-width: 60%; }
+    .orn-line { flex: 1; height: 0.25mm; background: linear-gradient(to right, transparent, #b78b3b 30%, #b78b3b 70%, transparent); }
+    .orn-diamond { color: #b78b3b; font-size: 9pt; line-height: 1; }
     .paper-section { font-family: ${serif}; font-size: 13pt; font-weight: 700; letter-spacing: 0.16em; color: #0b0b0b; margin: 0 0 1mm 0; text-transform: uppercase; ${isBn ? 'letter-spacing:0;' : ''} }
     .criteria { margin: 5mm 0 6mm; border: 1px solid #d8d6d0; border-radius: 1mm; overflow: hidden; }
     .criteria-strip { display: flex; justify-content: space-between; align-items: center; padding: 1.5mm 3mm; background: #f4f4f2; border-bottom: 1px solid #d8d6d0; font-size: 8pt; letter-spacing: 0.2em; text-transform: uppercase; color: #4a4a4a; font-weight: 600; }
@@ -1041,6 +1082,11 @@ export class ReportCourseComponent implements OnInit, OnChanges {
             <div class="overline">${esc(this.rabOverlineText)}</div>
             <h1 class="paper-title">${esc(this.rabOrgTitle)}</h1>
             <div class="paper-sub"><em>${esc(this.rabOrgSubtitle)}</em></div>
+            <div class="orn-divider">
+                <span class="orn-line"></span>
+                <span class="orn-diamond">&#9670;</span>
+                <span class="orn-line"></span>
+            </div>
             <h2 class="paper-section">${esc(this.rabSectionTitle)}</h2>
         </header>
         <div class="criteria">
