@@ -79,8 +79,10 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
     orgOptions: MotherOrganizationModel[] = [];
     selectedOrgId: number | null = null;
     rankOptions: { label: string; labelBn: string; value: number }[] = [];
+    corpsOptions: { label: string; labelBn: string; value: number }[] = [];
     tradeOptions: { label: string; labelBn: string; value: number }[] = [];
     selectedRankId: number | null = null;
+    selectedCorpsId: number | null = null;
     selectedTradeId: number | null = null;
 
     list: MemberAppointmentReportRow[] = [];
@@ -135,7 +137,10 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
      */
     columnCatalog: { key: string; labelEN: string; labelBN: string; hint: string; defaultVisible: boolean }[] = [
         { key: 'ser',          labelEN: 'Ser',           labelBN: 'ক্রঃ',          hint: 'Serial',                defaultVisible: true  },
-        { key: 'rabPersonnel', labelEN: 'RAB Personnel', labelBN: 'র‍্যাব সদস্য',   hint: 'RabPersonnelComposite', defaultVisible: true  },
+        // Backend key MUST be 'personnel' — that's the FieldKey ReportFieldRegistry
+        // emits for the composite. The hint stays RabPersonnelComposite to keep
+        // the cell template independent of the registry's naming.
+        { key: 'personnel',    labelEN: 'RAB Personnel', labelBN: 'র‍্যাব সদস্য',   hint: 'RabPersonnelComposite', defaultVisible: true  },
         { key: 'rabId',        labelEN: 'RAB ID',        labelBN: 'র‍্যাব আইডি',    hint: 'RabId',                 defaultVisible: true  },
         { key: 'corps',        labelEN: 'Corps',         labelBN: 'কোর',           hint: 'Plain',                 defaultVisible: true  },
         { key: 'trade',        labelEN: 'Trade',         labelBN: 'ট্রেড',         hint: 'Plain',                 defaultVisible: true  },
@@ -268,7 +273,7 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
     // ── Display helpers ───────────────────────────────────────────────
     paddedSer(n: number | string | null | undefined): string {
         const s = n == null ? '' : String(n);
-        return this.lang === 'bn' ? BanglaNumerals.toBangla(s.padStart(3, '0')) : s.padStart(3, '0');
+        return this.lang === 'bn' ? BanglaNumerals.toBangla(s.padStart(2, '0')) : s.padStart(2, '0');
     }
 
     /** Secondary line for the composite RAB Personnel cell — "SVC 123 · Rank · Org". */
@@ -289,6 +294,11 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
             const rank = this.rankOptions.find(o => o.value === this.selectedRankId);
             const val = this.lang === 'bn' ? rank?.labelBn : rank?.label;
             if (val) items.push({ label: L['report.search.rank'], value: val });
+        }
+        if (this.selectedCorpsId != null) {
+            const corps = this.corpsOptions.find(o => o.value === this.selectedCorpsId);
+            const val = this.lang === 'bn' ? corps?.labelBn : corps?.label;
+            if (val) items.push({ label: L['report.table.corps'] ?? 'Corps', value: val });
         }
         if (this.selectedTradeId != null) {
             const trade = this.tradeOptions.find(o => o.value === this.selectedTradeId);
@@ -381,6 +391,12 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
             const rank = this.rankOptions.find((o) => o.value === this.selectedRankId);
             const val = this.lang === 'bn' ? rank?.labelBn : rank?.label;
             if (val) lines.push(`${L['report.search.rank']}: ${val}`);
+        }
+        if (this.selectedCorpsId != null) {
+            const corps = this.corpsOptions.find((o) => o.value === this.selectedCorpsId);
+            const val = this.lang === 'bn' ? corps?.labelBn : corps?.label;
+            const label = L['report.table.corps'] ?? 'Corps';
+            if (val) lines.push(`${label}: ${val}`);
         }
         if (this.selectedTradeId != null) {
             const trade = this.tradeOptions.find((o) => o.value === this.selectedTradeId);
@@ -555,7 +571,7 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
                     case 'JoiningDate':
                         return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.formatDate(row.joiningDate), { fontKey: mono, chSp: isBn ? 0 : 4 })] })] });
                     case 'Remarks':
-                        return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(row.rmks || '—', { color: C.gray })] })] });
+                        return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(row.rmks || '', { color: C.gray })] })] });
                     case 'Plain':
                     default:
                         return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.plainCellValue(row, col.key))] })] });
@@ -713,7 +729,7 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
                 case 'JoiningDate':
                     return `<td class="td-date">${esc(this.formatDate(row.joiningDate))}</td>`;
                 case 'Remarks':
-                    return `<td class="td-rmks">${esc(row.rmks || '—')}</td>`;
+                    return `<td class="td-rmks">${esc(row.rmks || '')}</td>`;
                 case 'Plain':
                 default:
                     return `<td>${esc(this.plainCellValue(row, col.key))}</td>`;
@@ -882,6 +898,7 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
         let c = 0;
         if (this.selectedOrgId != null) c++;
         if (this.selectedRankId != null) c++;
+        if (this.selectedCorpsId != null) c++;
         if (this.selectedTradeId != null) c++;
         return c;
     }
@@ -900,8 +917,10 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
     clearFilters(): void {
         this.selectedOrgId = null;
         this.selectedRankId = null;
+        this.selectedCorpsId = null;
         this.selectedTradeId = null;
         this.rankOptions = [];
+        this.corpsOptions = [];
         this.tradeOptions = [];
         this.first = 0;
         // User clicks Search to apply
@@ -918,9 +937,12 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
     }
 
     onOrgChange(): void {
+        // Cascade resets — picking a new Mother Org clears every dependent.
         this.rankOptions = [];
+        this.corpsOptions = [];
         this.tradeOptions = [];
         this.selectedRankId = null;
+        this.selectedCorpsId = null;
         this.selectedTradeId = null;
         const orgId = this.selectedOrgId;
         if (orgId != null) {
@@ -928,7 +950,24 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
                 next: (codes: CommonCodeModel[]) =>
                     (this.rankOptions = codes.map((c) => ({ label: c.codeValueEN || String(c.codeId), labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId), value: c.codeId }))),
             });
-            this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'Trade').subscribe({
+            // Corps is a peer of Rank (both org-scoped via CommonCode.OrgId).
+            // Trades only become available once a Corps is picked — they hang
+            // off Corps via CommonCode.ParentCodeId.
+            this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'Corps').subscribe({
+                next: (codes: CommonCodeModel[]) =>
+                    (this.corpsOptions = codes.map((c) => ({ label: c.codeValueEN || String(c.codeId), labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId), value: c.codeId }))),
+            });
+        }
+    }
+
+    /** Cascade: a new Corps clears the Trade selection and reloads Trade
+        options scoped to that Corps via CommonCode.ParentCodeId. */
+    onCorpsChange(): void {
+        this.tradeOptions = [];
+        this.selectedTradeId = null;
+        const corpsId = this.selectedCorpsId;
+        if (corpsId != null) {
+            this.commonCodeService.getAllActiveCommonCodesByParentId(corpsId).subscribe({
                 next: (codes: CommonCodeModel[]) =>
                     (this.tradeOptions = codes.map((c) => ({ label: c.codeValueEN || String(c.codeId), labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId), value: c.codeId }))),
             });
@@ -960,6 +999,8 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
             criteria.push({ fieldKey: 'motherOrganization', idValue: this.selectedOrgId });
         if (this.selectedRankId != null && this.selectedRankId > 0)
             criteria.push({ fieldKey: 'armyRank', idValue: this.selectedRankId });
+        if (this.selectedCorpsId != null && this.selectedCorpsId > 0)
+            criteria.push({ fieldKey: 'corps', idValue: this.selectedCorpsId });
         if (this.selectedTradeId != null && this.selectedTradeId > 0)
             criteria.push({ fieldKey: 'trade', idValue: this.selectedTradeId });
         if (this.commonCodeId != null && this.commonCodeId > 0)
@@ -969,7 +1010,7 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
         // any curated cell (Personnel composite) needs. The backend always
         // emits a composite's UnderlyingFields whether or not the caller
         // listed them, so passing just selectedColumnKeys is enough.
-        this.reportService.runDynamicReport({
+        this.reportService.runDynamicEmployeeBaseReport({
             columns: this.selectedColumnKeys,
             criteria,
             postingStatusFilter: this.postingStatus || null,

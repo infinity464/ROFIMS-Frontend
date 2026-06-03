@@ -271,7 +271,7 @@ export class ReportFamilyOccupationComponent implements OnInit {
     // ── Display helpers ───────────────────────────────────────────────
     paddedSer(n: number | string | null | undefined): string {
         const s = n == null ? '' : String(n);
-        return this.lang === 'bn' ? BanglaNumerals.toBangla(s.padStart(3, '0')) : s.padStart(3, '0');
+        return this.lang === 'bn' ? BanglaNumerals.toBangla(s.padStart(2, '0')) : s.padStart(2, '0');
     }
 
     /** Map raw PostingStatus codes to localized labels. */

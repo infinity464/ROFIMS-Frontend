@@ -201,4 +201,11 @@ export class ReportService {
     runDynamicFamilyReport(req: DynamicReportRequest): Observable<DynamicReportResponse> {
         return this.http.post<DynamicReportResponse>(`${environment.apis.core}/DynamicReport/FamilyMemberOverview`, req);
     }
+
+    /** Per-employee variant — one row per employee (no address row
+      multiplication). Use for any employee-overview report where
+      address-cardinality from runDynamicReport would produce duplicates. */
+    runDynamicEmployeeBaseReport(req: DynamicReportRequest): Observable<DynamicReportResponse> {
+        return this.http.post<DynamicReportResponse>(`${environment.apis.core}/DynamicReport/EmployeeBaseOverview`, req);
+    }
 }

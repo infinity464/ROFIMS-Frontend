@@ -55,6 +55,22 @@
                     </p-select>
                 </div>
                 <div class="report-filter-field">
+                    <label>{{ L['en']['report.table.corps'] }}</label>
+                    <p-select
+                        [options]="corpsOptions"
+                        [(ngModel)]="selectedCorpsId"
+                        (ngModelChange)="onCorpsChange()"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Select"
+                        styleClass="w-full"
+                        [disabled]="selectedOrgId == null"
+                        [filter]="true"
+                        [showClear]="true"
+                        appendTo="body">
+                    </p-select>
+                </div>
+                <div class="report-filter-field">
                     <label>{{ L['en']['report.search.trade'] }}</label>
                     <p-select
                         [options]="tradeOptions"
@@ -64,7 +80,9 @@
                         optionValue="value"
                         placeholder="Select"
                         styleClass="w-full"
-                        [disabled]="selectedOrgId == null"
+                        [disabled]="selectedCorpsId == null"
+                        [filter]="true"
+                        [showClear]="true"
                         appendTo="body">
                     </p-select>
                 </div>
@@ -268,7 +286,7 @@
                                     <td class="rab-td-date">{{ formatDate(row.joiningDate) }}</td>
                                 }
                                 @case ('Remarks') {
-                                    <td class="rab-td-rmks">{{ row.rmks || '—' }}</td>
+                                    <td class="rab-td-rmks">{{ row.rmks || '' }}</td>
                                 }
                                 @case ('Plain') {
                                     <td>{{ plainCellValue(row, col.key) }}</td>
