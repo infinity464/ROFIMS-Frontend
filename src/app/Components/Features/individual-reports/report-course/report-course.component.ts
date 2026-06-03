@@ -220,14 +220,13 @@ export class ReportCourseComponent implements OnInit, OnChanges {
         { key: 'courseDateFrom',    labelEN: 'From Date',     labelBN: 'শুরু তারিখ',     hint: 'PlainDate', defaultVisible: true  },
         { key: 'courseDateTo',      labelEN: 'To Date',       labelBN: 'শেষ তারিখ',      hint: 'PlainDate', defaultVisible: true  },
         { key: 'courseResult',      labelEN: 'Result',        labelBN: 'ফলাফল',          hint: 'Plain',     defaultVisible: true  },
+        { key: 'trainingInstitute', labelEN: 'Training Inst', labelBN: 'প্রশিক্ষণ প্রতিষ্ঠান', hint: 'Plain', defaultVisible: true  },
+        { key: 'country',           labelEN: 'Country',       labelBN: 'দেশ',           hint: 'Plain',     defaultVisible: true  },
+        { key: 'courseRemarks',     labelEN: 'Remarks',       labelBN: 'মন্তব্য',        hint: 'Plain',     defaultVisible: true  },
         // ── Course extras (opt-in) ───────────────────────────────────
         { key: 'courseType',        labelEN: 'Course Type',   labelBN: 'কোর্সের ধরন',     hint: 'Plain',     defaultVisible: false },
-        { key: 'courseNo',          labelEN: 'Course No',     labelBN: 'কোর্স নম্বর',     hint: 'Plain',     defaultVisible: false },
-        { key: 'trainingInstitute', labelEN: 'Training Inst', labelBN: 'প্রশিক্ষণ প্রতিষ্ঠান', hint: 'Plain', defaultVisible: false },
-        { key: 'country',           labelEN: 'Country',       labelBN: 'দেশ',           hint: 'Plain',     defaultVisible: false },
         { key: 'courseAddress',     labelEN: 'Address',       labelBN: 'ঠিকানা',        hint: 'Plain',     defaultVisible: false },
         { key: 'courseAuth',        labelEN: 'Auth',          labelBN: 'প্রমাণ',        hint: 'Plain',     defaultVisible: false },
-        { key: 'courseRemarks',     labelEN: 'Course Remarks',labelBN: 'কোর্স মন্তব্য',  hint: 'Plain',     defaultVisible: false },
     ];
 
     /** Plain-hint cell resolver — course keys only. */
@@ -592,12 +591,19 @@ export class ReportCourseComponent implements OnInit, OnChanges {
         this.loading = true;
         this.first = 0;
 
+        // Always project EVERY catalog field plus the Member Details
+        // card's required fields. The column picker is then a pure
+        // display toggle — checking "Training Inst" doesn't need a
+        // round-trip. The cost is small: ~12 extra columns on rows the
+        // user is already looking at, and the backend already has them
+        // joined in the view.
         const requiredForCard = [
             'rabId', 'serviceId', 'nameEnglish', 'nameBangla',
             'armyRank', 'corps', 'trade', 'motherOrganization', 'rabUnit',
             'prefix',
         ];
         const projectedColumns = Array.from(new Set([
+            ...this.columnCatalog.map(c => c.key),
             ...this.selectedColumnKeys,
             ...requiredForCard,
         ]));

@@ -124,6 +124,10 @@ export class ReportBatchCourseComponent implements OnInit, OnChanges {
         { key: 'rabId',        labelEN: 'RAB ID',        labelBN: 'র‍্যাব আইডি',    hint: 'RabId',                 defaultVisible: true  },
         { key: 'corps',        labelEN: 'Corps',         labelBN: 'কোর',           hint: 'Plain',                 defaultVisible: true  },
         { key: 'trade',        labelEN: 'Trade',         labelBN: 'ট্রেড',         hint: 'Plain',                 defaultVisible: true  },
+        // Course / Batch is the filter context (parent's commonCodeId)
+        // — the on-screen title already shows it, so showing it again
+        // per row would be noise. The filter is "any course matches X"
+        // (server-side EXISTS against CourseInfo).
         { key: 'rmks',         labelEN: 'Remarks',       labelBN: 'মন্তব্য',       hint: 'Remarks',               defaultVisible: true  },
         // ── Opt-in extras (same set as member-appointment) ───────────
         { key: 'serviceId',         labelEN: 'Service ID',       labelBN: 'সার্ভিস আইডি',       hint: 'Plain', defaultVisible: false },
@@ -937,10 +941,12 @@ export class ReportBatchCourseComponent implements OnInit, OnChanges {
             criteria.push({ fieldKey: 'corps', idValue: this.selectedCorpsId });
         if (this.selectedTradeId != null && this.selectedTradeId > 0)
             criteria.push({ fieldKey: 'trade', idValue: this.selectedTradeId });
-        // Parent's commonCodeId was a course/batch filter, now handled by
-        // the standalone Course report under individual-reports. The
-        // employee-base endpoint no longer carries course data — the
-        // commonCodeId here is ignored.
+        // Parent's commonCodeId is the picked course/batch CodeId.
+        // Filter is "employees who have completed this course at any time"
+        // (server-side EXISTS against CourseInfo via the courseAnyMatch
+        // sentinel field key — see ReportFieldRegistry).
+        if (this.commonCodeId != null && this.commonCodeId > 0)
+            criteria.push({ fieldKey: 'courseAnyMatch', idValue: this.commonCodeId });
 
         this.reportService.runDynamicEmployeeBaseReport({
             columns: this.selectedColumnKeys,
