@@ -10,6 +10,7 @@ import { MultiSelectModule } from 'primeng/multiselect';
 import { DatePickerModule } from 'primeng/datepicker';
 import { MessageService } from 'primeng/api';
 import { Toast } from 'primeng/toast';
+import { DialogModule } from 'primeng/dialog';
 import {
     DynamicSearchService,
     SearchCategory,
@@ -38,7 +39,7 @@ interface CriterionValue {
         CommonModule, FormsModule, RouterModule,
         TableModule, ButtonModule, InputTextModule,
         SelectModule, MultiSelectModule, DatePickerModule, FlexibleDateDirective,
-        Toast
+        Toast, DialogModule
     ],
     providers: [MessageService],
     templateUrl: './dynamic-search.html',
@@ -100,6 +101,15 @@ export class DynamicSearchComponent implements OnInit {
         private reportService: ReportService,
         private commonCodeService: CommonCodeService
     ) {}
+
+    /**
+     * Plain p-dialog state (matches emp-present-member-check's info-dialog
+     * pattern). Shown when an identity-style search (RAB ID / Service ID /
+     * NID) returns zero rows — the row almost certainly exists but the
+     * caller can't reach it.
+     */
+    showAccessDeniedDialog = false;
+    accessDeniedMessage = 'You do not have permission to view this employee. Either they are outside your accessible scope or no longer presently serving.';
 
     /** Cached accessible-member-type ids (loaded once at init). Null = not loaded yet. */
     private accessibleMemberTypeIds: Set<number> | null = null;
@@ -467,6 +477,18 @@ export class DynamicSearchComponent implements OnInit {
                 : null
         };
 
+        // Identity-style fields (RAB ID, Service ID, NID) are unique
+        // person identifiers — if the user searched by one of these and
+        // got zero rows, the most likely cause is that the member exists
+        // but falls outside the caller's access scope (org-tree or
+        // member-type) or is no longer serving. Show the access dialog
+        // instead of the silent empty state. Detect at request-build time
+        // so we don't lose the criteria values when the response lands.
+        const identitySearched = criteria.some(c =>
+            (c.fieldKey === 'rabId' || c.fieldKey === 'serviceId' || c.fieldKey === 'nid')
+            && !!c.textValue?.trim()
+        );
+
         this.searchService.search(request).subscribe({
             next: (response) => {
                 this.results = response.datalist || [];
@@ -477,6 +499,9 @@ export class DynamicSearchComponent implements OnInit {
                 // unlock the dropdown for a single render tick if the
                 // backend ever omits the flag, e.g. before an API rebuild.)
                 this.loading = false;
+                if (identitySearched && this.totalRecords === 0) {
+                    this.showAccessDeniedDialog = true;
+                }
             },
             error: (err: any) => {
                 this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Search failed.' });
