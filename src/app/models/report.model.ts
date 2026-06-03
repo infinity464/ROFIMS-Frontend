@@ -570,6 +570,13 @@ export interface DynamicReportAccessibleScope {
   rabUnitIds: number[];
   memberTypeIds: number[];
   orgScopeRestricted: boolean;
+  /**
+   * True when the same user-supplied criteria would match at least one
+   * row IF access filters were not applied. Lets the frontend tell
+   * "no permission" apart from "not found" on a filtered-empty result.
+   * Optional — only EmployeeBaseOverview currently emits this flag.
+   */
+  unrestrictedHasMatches?: boolean;
 }
 
 export interface DynamicReportResponse {

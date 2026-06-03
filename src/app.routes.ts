@@ -411,7 +411,7 @@ export const appRoutes: Routes = [
             { path: 'report-stay-after-reliever-joined', component: ReportStayAfterRelieverJoinedComponent },
             { path: 'report-deceased', component: ReportDeceasedComponent },
 
-            // Individual Reports (parent with dropdown — Course, then more)
+            // Individual Personnel Report (parent with dropdown — Course, then more)
             { path: 'individual-reports', component: IndividualReportsComponent },
 
             // Statistics

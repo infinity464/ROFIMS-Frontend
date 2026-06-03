@@ -162,11 +162,21 @@ export class ReportCourseComponent implements OnInit, OnChanges {
         return this.searched && !this.loading && this.list.length === 0 && this.orgScopeRestricted;
     }
 
-    get noAccessMessage(): string {
-        return this.lang === 'bn'
-            ? 'এই সদস্যের রেকর্ড দেখার অনুমতি আপনার নেই, অথবা কোনো মিল পাওয়া যায়নি।'
-            : "You do not have permission to view this employee's records, or no matching record was found.";
-    }
+    /**
+     * Access-denied dialog — only fires when backend returned matches
+     * but the client-side member-type filter zeroed them all out (we
+     * know there's a record, the caller just can't see it).
+     */
+    showAccessDeniedDialog = false;
+    accessDeniedMessage = 'You do not have permission to view this employee. Either they are outside your accessible scope or no longer presently serving.';
+
+    /**
+     * Member-not-found dialog — fires when the identity search returned
+     * zero matches. Distinct from access-denied so a typo on Service ID
+     * doesn't confusingly read as a permission issue.
+     */
+    showNotFoundDialog = false;
+    notFoundMessage = 'No member found with the given RAB ID / Service ID / NID.';
 
     get noMatchMessage(): string {
         return this.lang === 'bn'
@@ -514,19 +524,23 @@ export class ReportCourseComponent implements OnInit, OnChanges {
 
                 const employees = (lookup.datalist ?? []) as Array<DynamicReportRow>;
 
-                // No matches at all.
+                // No matches in the filtered result. The backend's
+                // `unrestrictedHasMatches` flag tells us whether the
+                // SAME criteria would have matched anything without
+                // access filters: true → access denied (we know a row
+                // exists, the caller just can't see it); false → real
+                // not-found (typo in identifier, etc.).
                 if (employees.length === 0) {
                     this.fullResult = [];
                     this.list = [];
                     this.totalRecords = 0;
                     this.loading = false;
-                    if (this.orgScopeRestricted) {
-                        this.messageService.add({
-                            severity: 'warn',
-                            summary: 'No Permission',
-                            detail: this.noAccessMessage,
-                            life: 6000,
-                        });
+                    const unrestrictedHasMatches =
+                        (lookup.accessibleScope as any)?.unrestrictedHasMatches === true;
+                    if (unrestrictedHasMatches) {
+                        this.showAccessDeniedDialog = true;
+                    } else {
+                        this.showNotFoundDialog = true;
                     }
                     return;
                 }
@@ -546,12 +560,7 @@ export class ReportCourseComponent implements OnInit, OnChanges {
                     this.list = [];
                     this.totalRecords = 0;
                     this.loading = false;
-                    this.messageService.add({
-                        severity: 'warn',
-                        summary: 'No Permission',
-                        detail: this.noAccessMessage,
-                        life: 6000,
-                    });
+                    this.showAccessDeniedDialog = true;
                     return;
                 }
 

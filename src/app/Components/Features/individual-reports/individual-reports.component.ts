@@ -6,8 +6,9 @@ import { ReportCourseComponent } from './report-course/report-course.component';
 import { REPORT_LABELS, type ReportLang } from '@/Core/i18n/report-labels';
 
 /**
- * Individual Reports — parent page that hosts standalone employee-centric
- * reports. Each child report defines its own filters (e.g. the Course
+ * Individual Personnel Report — parent page that hosts standalone
+ * employee-centric reports. Each child report defines its own filters
+ * (e.g. the Course
  * report takes RAB ID / Service ID / NID), unlike employee-reports which
  * share global Status + CommonCode picks across all of its children.
  *
@@ -27,7 +28,7 @@ export class IndividualReportsComponent implements OnInit {
 
     /** Picker options — extend as new individual reports are added. */
     reportTypes: { label: string; value: string }[] = [
-        { label: 'Course (by Employee)', value: 'course' },
+        { label: 'Course Report', value: 'course' },
     ];
 
     reportType: string = 'course';
