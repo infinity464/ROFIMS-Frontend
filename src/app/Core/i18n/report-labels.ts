@@ -98,7 +98,7 @@ export const REPORT_LABELS = {
         'report.table.dateOfJoinInPresentUnit': 'Date of Join in Present Unit',
         'report.table.joiningInRab': 'Joining in RAB',
 
-        'report.title.addressLocation': 'Employee Address Location Report',
+        'report.title.addressLocation': 'Member Address Location Report',
         'report.search.division': 'Division',
         'report.search.district': 'District',
         'report.search.upazila': 'Upazila',
@@ -222,7 +222,7 @@ export const REPORT_LABELS = {
         'report.table.dateOfJoinInPresentUnit': 'বর্তমান ইউনিটে যোগদানের তারিখ',
         'report.table.joiningInRab': 'র‍্যাবে যোগদানের তারিখ',
 
-        'report.title.addressLocation': 'কর্মচারীর ঠিকানার অবস্থান প্রতিবেদন',
+        'report.title.addressLocation': 'সদস্যের ঠিকানার অবস্থান প্রতিবেদন',
         'report.search.division': 'বিভাগ',
         'report.search.district': 'জেলা',
         'report.search.upazila': 'উপজেলা',
