@@ -159,7 +159,10 @@
                 <!-- Group 3: Column picker — toggles which columns appear in
                      the table + Word/Excel/Print exports. Pre-ticked with the
                      existing default-visible set; auto-managed for Address
-                     Owner / Status based on the filter dropdowns above. -->
+                     Owner / Status based on the filter dropdowns above.
+                     Hidden until the first search — the picker has nothing
+                     useful to do before there are any rows to render. -->
+                @if (searched) {
                 <div class="ds-field-group">
                     <div class="ds-group-divider">
                         <span class="ds-group-label">Columns</span>
@@ -212,6 +215,7 @@
                         </div>
                     </div>
                 </div>
+                }
 
             </div>
 

@@ -139,8 +139,8 @@ export class ReportService {
         return this.http.post<ScopedReportPagedResponse<BloodGroupReportRow>>(`${this.apiUrl}/GetBloodGroupReport`, params).pipe(map(normalizeScopedPages));
     }
 
-    getFamilyOccupationReport(params: FamilyOccupationReportParams): Observable<PagedResponse<FamilyOccupationReportRow>> {
-        return this.http.post<ReportPagedResponse<FamilyOccupationReportRow>>(`${this.apiUrl}/GetFamilyOccupationReport`, params).pipe(map(normalizePages));
+    getFamilyOccupationReport(params: FamilyOccupationReportParams): Observable<PagedResponse<FamilyOccupationReportRow> & { accessibleScope: ReportAccessibleScope | null }> {
+        return this.http.post<ScopedReportPagedResponse<FamilyOccupationReportRow>>(`${this.apiUrl}/GetFamilyOccupationReport`, params).pipe(map(normalizeScopedPages));
     }
 
     getRftsCompletionReport(params: RftsCompletionReportParams): Observable<PagedResponse<RftsCompletionReportRow>> {

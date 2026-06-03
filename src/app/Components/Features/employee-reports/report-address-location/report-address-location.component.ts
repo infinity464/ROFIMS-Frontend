@@ -952,7 +952,10 @@ export class ReportAddressLocationComponent implements OnInit {
     }
 
     @page {
-        size: A4 portrait;
+        /* No size rule — Chrome's print dialog hides the Layout
+           (Portrait / Landscape) selector whenever @page declares a size,
+           even without an orientation keyword. Margins only, so the user
+           picks paper size AND orientation from the dialog. */
         /* Side margins kept narrow so the criteria + table use the full
            printable area and the per-page @bottom-* footer text never wraps
            onto two lines. */
@@ -1828,6 +1831,19 @@ export class ReportAddressLocationComponent implements OnInit {
         this.canUpdate = _perms.canUpdate;
         this.canDelete = _perms.canDelete;
 
+        // Fetch the caller's access-scope BEFORE the first search so the
+        // RAB Member Status dropdown locks immediately on page load —
+        // previously it only flipped after a search response landed.
+        this.reportService.getMyReportAccessScope().subscribe({
+            next: (scope) => {
+                this.accessibleScope = scope ?? null;
+                if (scope?.orgScopeRestricted && this.selectedPostingStatus !== 'Servings') {
+                    this.selectedPostingStatus = 'Servings';
+                }
+            },
+            error: () => { /* silent — leave dropdown editable on failure */ },
+        });
+
         this.loadDivisions();
         this.loadRelationshipOptions();
     }
@@ -1979,6 +1995,9 @@ export class ReportAddressLocationComponent implements OnInit {
         this.upazilaOptions = [];
         this.postOfficeOptions = [];
         this.first = 0;
+        // Roll back to the pre-search state so the Columns picker (gated
+        // on `searched`) disappears again until the next Search click.
+        this.searched = false;
     }
 
     onPage(event: { first?: number; rows?: number }): void {
