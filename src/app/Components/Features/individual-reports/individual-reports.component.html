@@ -1,0 +1,30 @@
+<div class="employee-reports-page">
+    <div class="report-type-card">
+        <div class="report-page-header">
+            <h1 class="report-page-title">Individual Reports</h1>
+        </div>
+        <div class="report-type-row">
+            <div class="report-type-field">
+                <div class="rt-label">Report Type</div>
+                <div class="rt-select-wrap">
+                    <p-select
+                        [options]="reportTypes"
+                        [(ngModel)]="reportType"
+                        optionLabel="label"
+                        optionValue="value"
+                        [inputId]="'individual-report-select'"
+                        placeholder="Select Report"
+                        appendTo="body" />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div>
+        @switch (reportType) {
+            @case ('course') {
+                <app-report-course [lang]="reportLang" (langToggle)="toggleReportLang()" />
+            }
+        }
+    </div>
+</div>

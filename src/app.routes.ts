@@ -178,6 +178,7 @@ import { ReportUnitDurationNominalRollComponent } from '@/Components/Features/em
 import { ReportLongStayNominalRollComponent } from '@/Components/Features/employee-reports/report-long-stay-nominal-roll/report-long-stay-nominal-roll.component';
 import { ReportStayAfterRelieverJoinedComponent } from '@/Components/Features/employee-reports/report-stay-after-reliever-joined/report-stay-after-reliever-joined.component';
 import { ReportDeceasedComponent } from '@/Components/Features/employee-reports/report-deceased/report-deceased.component';
+import { IndividualReportsComponent } from '@/Components/Features/individual-reports/individual-reports.component';
 import { RabUnitAor } from '@/Components/basic-setup/rab-unit-aor/rab-unit-aor';
 import { RabUnitAorMap } from '@/Components/basic-setup/rab-unit-aor-map/rab-unit-aor-map';
 import { ManpowerSummaryComponent } from '@/Components/Features/statistics/manpower-summary/manpower-summary';
@@ -409,6 +410,9 @@ export const appRoutes: Routes = [
             { path: 'report-long-stay-nominal-roll', component: ReportLongStayNominalRollComponent },
             { path: 'report-stay-after-reliever-joined', component: ReportStayAfterRelieverJoinedComponent },
             { path: 'report-deceased', component: ReportDeceasedComponent },
+
+            // Individual Reports (parent with dropdown — Course, then more)
+            { path: 'individual-reports', component: IndividualReportsComponent },
 
             // Statistics
             { path: 'statistics/manpower-summary', component: ManpowerSummaryComponent },
