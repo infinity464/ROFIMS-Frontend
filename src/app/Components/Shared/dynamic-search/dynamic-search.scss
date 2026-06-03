@@ -215,23 +215,31 @@
 .ds-top-row {
     display: flex;
     gap: 1rem;
-    align-items: flex-end;
+    // flex-start so both columns hang from their labels at the top.
+    // The lock-state helper text under Member Status used to push its
+    // dropdown up while Search Fields stayed pinned to the row's bottom,
+    // misaligning the two inputs.
+    align-items: flex-start;
     margin-bottom: 1rem;
 }
 
 .ds-field-selector {
-    flex: 1;
+    // Search Fields no longer eats the whole row — narrowed so Member
+    // Status can claim a wider slot. Roughly 60/40 split at desktop.
+    flex: 3 1 0;
     min-width: 0;
 }
 
 .ds-member-status-field {
-    flex: 0 0 220px;
+    flex: 2 1 0;
+    min-width: 260px;
     display: flex;
     flex-direction: column;
     gap: 6px;
 
     @media (max-width: 640px) {
-        flex: 1;
+        flex: 1 1 100%;
+        min-width: 0;
     }
 }
 

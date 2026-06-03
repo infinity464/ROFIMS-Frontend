@@ -477,16 +477,17 @@ export class DynamicSearchComponent implements OnInit {
                 : null
         };
 
-        // Identity-style fields (RAB ID, Service ID, NID) are unique
-        // person identifiers — if the user searched by one of these and
-        // got zero rows, the most likely cause is that the member exists
-        // but falls outside the caller's access scope (org-tree or
-        // member-type) or is no longer serving. Show the access dialog
-        // instead of the silent empty state. Detect at request-build time
-        // so we don't lose the criteria values when the response lands.
+        // Identity-style fields (RAB ID, Service ID, NID, Mobile No,
+        // Passport No) are person-identifying — if the user searched by
+        // one of these and got zero rows, the most likely cause is that
+        // the member exists but falls outside the caller's access scope
+        // (org-tree or member-type) or is no longer serving. Show the
+        // access dialog instead of the silent empty state. Detect at
+        // request-build time so we don't lose the criteria values when
+        // the response lands.
+        const IDENTITY_KEYS = new Set(['rabId', 'serviceId', 'nid', 'mobileNo', 'passportNo', 'email']);
         const identitySearched = criteria.some(c =>
-            (c.fieldKey === 'rabId' || c.fieldKey === 'serviceId' || c.fieldKey === 'nid')
-            && !!c.textValue?.trim()
+            IDENTITY_KEYS.has(c.fieldKey) && !!c.textValue?.trim()
         );
 
         this.searchService.search(request).subscribe({

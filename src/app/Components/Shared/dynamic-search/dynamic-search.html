@@ -113,6 +113,11 @@
                                 styleClass="w-full"
                                 appendTo="body">
                             </p-select>
+                            @if (memberStatusLocked) {
+                                <small class="block mt-1" style="color: var(--text-color-secondary, rgba(255,255,255,0.6)); font-size: 0.75rem;">
+                                    Locked to Presently Serving — your access scope is restricted.
+                                </small>
+                            }
                         </div>
                     }
                 </div>
