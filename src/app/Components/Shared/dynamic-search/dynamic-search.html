@@ -204,6 +204,62 @@
                     </div>
                 }
 
+                <!-- Columns: visible-column picker + drag-reorder strip.
+                     Same pattern as report-address-location — user picks
+                     which fields appear in the results table and drags
+                     chips to change column order. Employee-only (Office
+                     results stay on the legacy hardcoded shape). -->
+                @if (isEmployee) {
+                    <div class="ds-field-group">
+                        <div class="ds-group-divider">
+                            <span class="ds-group-label">Columns</span>
+                            <span class="ds-group-line"></span>
+                        </div>
+                        <div class="ds-field">
+                            <label class="ds-field-label">Visible columns</label>
+                            <p-multiselect
+                                [options]="columnPickerOptions"
+                                [(ngModel)]="selectedColumnKeys"
+                                optionLabel="label"
+                                optionValue="value"
+                                display="chip"
+                                [filter]="true"
+                                placeholder="Pick columns…"
+                                styleClass="w-full"
+                                appendTo="body">
+                            </p-multiselect>
+                        </div>
+                        <div class="ds-field">
+                            <label class="ds-field-label column-order-label">Column order — drag to rearrange</label>
+                            <div class="column-order-strip" (dragover)="onColumnDragOver($event)">
+                                @for (col of visibleColumns; track col.key) {
+                                    <span
+                                        class="column-order-chip"
+                                        [class.dragging]="draggingColumnKey === col.key"
+                                        draggable="true"
+                                        (dragstart)="onColumnDragStart(col.key, $event)"
+                                        (dragend)="onColumnDragEnd()"
+                                        (dragover)="onColumnDragOver($event)"
+                                        (drop)="onColumnDrop(col.key, $event)">
+                                        <i class="pi pi-bars chip-handle" aria-hidden="true"></i>
+                                        <span class="chip-label">{{ col.labelEN }}</span>
+                                        <button
+                                            type="button"
+                                            class="chip-remove"
+                                            (click)="removeColumn(col.key)"
+                                            title="Remove column">
+                                            <i class="pi pi-times" aria-hidden="true"></i>
+                                        </button>
+                                    </span>
+                                }
+                                @if (visibleColumns.length === 0) {
+                                    <span class="column-order-empty">Pick columns above to populate the table.</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+
                 <!-- Action Buttons -->
                 <div class="ds-actions">
                     <button type="button" class="ds-btn-clear" (click)="clearFilter()">
@@ -229,7 +285,7 @@
         </div>
 
         <div class="report-table-wrap">
-            <!-- Employee Results -->
+            <!-- Employee Results — dynamic columns from visibleColumns. -->
             @if (isEmployee) {
                 <p-table
                     [value]="results"
@@ -246,49 +302,59 @@
                     paginatorDropdownAppendTo="body">
                     <ng-template pTemplate="header">
                         <tr>
-                            <th>Ser</th>
-                            <th>Service ID</th>
-                            <th>RAB ID</th>
-                            <th>Name</th>
-                            <th>Rank</th>
-                            <th>Corps</th>
-                            <th>Trade</th>
-                            <th>RAB Unit</th>
-                            <th>Action</th>
+                            @for (col of visibleColumns; track col.key) {
+                                <th>{{ col.labelEN }}</th>
+                            }
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                         <tr>
-                            <td><span class="report-ser-num">{{ rowIndex + 1 }}</span></td>
-                            <td><span class="font-semibold">{{ row.serviceId || '—' }}</span></td>
-                            <td>{{ row.rabid || '—' }}</td>
-                            <td>{{ row.nameEnglish || '—' }}</td>
-                            <td>{{ row.armyRank || '—' }}</td>
-                            <td>
-                                @if (row.corps) {
-                                    <span class="report-badge-corps">{{ row.corps }}</span>
-                                } @else {
-                                    <span class="report-dash">—</span>
+                            @for (col of visibleColumns; track col.key) {
+                                @switch (col.hint) {
+                                    @case ('Serial') {
+                                        <td><span class="report-ser-num">{{ rowIndex + 1 }}</span></td>
+                                    }
+                                    @case ('NameWithProfile') {
+                                        <td>{{ row[col.key] || '—' }}</td>
+                                    }
+                                    @case ('CorpsBadge') {
+                                        <td>
+                                            @if (row[col.key]) {
+                                                <span class="report-badge-corps">{{ row[col.key] }}</span>
+                                            } @else {
+                                                <span class="report-dash">—</span>
+                                            }
+                                        </td>
+                                    }
+                                    @case ('UnitBadge') {
+                                        <td>
+                                            @if (row[col.key]) {
+                                                <span class="report-badge-unit">{{ row[col.key] }}</span>
+                                            } @else {
+                                                <span class="report-dash">—</span>
+                                            }
+                                        </td>
+                                    }
+                                    @case ('Date') {
+                                        <td>{{ formatDate(row[col.key]) }}</td>
+                                    }
+                                    @case ('Action') {
+                                        <td>
+                                            <a [routerLink]="['/members/profile', row.employeeID]" class="report-link-profile">
+                                                <i class="pi pi-user"></i> Profile
+                                            </a>
+                                        </td>
+                                    }
+                                    @default {
+                                        <td>{{ row[col.key] ?? '—' }}</td>
+                                    }
                                 }
-                            </td>
-                            <td>{{ row.trade || '—' }}</td>
-                            <td>
-                                @if (row.rabUnit) {
-                                    <span class="report-badge-unit">{{ row.rabUnit }}</span>
-                                } @else {
-                                    <span class="report-dash">—</span>
-                                }
-                            </td>
-                            <td>
-                                <a [routerLink]="['/members/profile', row.employeeID]" class="report-link-profile">
-                                    <i class="pi pi-user"></i> Profile
-                                </a>
-                            </td>
+                            }
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="emptymessage">
                         <tr>
-                            <td colspan="9" class="text-center p-4">No records found. Select fields and search.</td>
+                            <td [attr.colspan]="visibleColumns.length || 1" class="text-center p-4">No records found. Select fields and search.</td>
                         </tr>
                     </ng-template>
                 </p-table>

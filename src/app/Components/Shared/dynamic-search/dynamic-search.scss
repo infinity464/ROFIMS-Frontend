@@ -703,3 +703,109 @@
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+
+/* Column picker — drag-reorder chip strip. Mirrors
+   report-address-location's column-order-strip styling so the dynamic
+   column picker on dynamic-search reads as the same component family.
+   Light theme is the default; the :host-context(.app-dark) block
+   overrides for dark mode. */
+.column-order-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    padding: 0.5rem 0.6rem;
+    border: 1px dashed #d6d6d6;
+    border-radius: 6px;
+    min-height: 44px;
+    background: #fafafa;
+}
+
+.column-order-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.55rem 0.3rem 0.45rem;
+    background: #ffffff;
+    border: 1px solid #d6d6d6;
+    border-radius: 14px;
+    font-size: 0.82rem;
+    line-height: 1.2;
+    color: #333;
+    cursor: grab;
+    user-select: none;
+    transition: box-shadow 120ms ease, transform 120ms ease, opacity 120ms ease, background 120ms ease;
+
+    &:hover {
+        background: #f0f0f0;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    }
+    &:active { cursor: grabbing; }
+    &.dragging { opacity: 0.4; transform: scale(0.97); }
+
+    .chip-handle {
+        color: #888;
+        font-size: 0.65rem;
+    }
+    .chip-label {
+        font-weight: 500;
+        color: inherit;
+    }
+    .chip-remove {
+        all: unset;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px; height: 16px;
+        margin-left: 0.15rem;
+        border-radius: 50%;
+        color: #888;
+        transition: background 120ms ease, color 120ms ease;
+
+        &:hover {
+            background: #eee;
+            color: #d32f2f;
+        }
+        i { font-size: 0.65rem; }
+    }
+}
+
+.column-order-empty {
+    font-size: 0.82rem;
+    font-style: italic;
+    color: #888;
+    padding: 0.25rem 0.4rem;
+}
+
+.column-order-label {
+    margin-top: 2pt;
+    margin-bottom: 2pt;
+}
+
+:host-context(.app-dark) {
+    .column-order-strip {
+        background: rgba(255, 255, 255, 0.04);
+        border-color: rgba(255, 255, 255, 0.18);
+    }
+    .column-order-chip {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: rgba(255, 255, 255, 0.18);
+        color: rgba(255, 255, 255, 0.92);
+
+        .chip-handle,
+        .chip-remove {
+            color: rgba(255, 255, 255, 0.55);
+        }
+        &:hover {
+            background: rgba(255, 255, 255, 0.13);
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+        }
+        .chip-remove:hover {
+            background: rgba(255, 255, 255, 0.13);
+            color: #ef4444;
+        }
+    }
+    .column-order-empty {
+        color: rgba(255, 255, 255, 0.55);
+    }
+}

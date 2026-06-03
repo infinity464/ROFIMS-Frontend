@@ -93,6 +93,105 @@ export class DynamicSearchComponent implements OnInit {
     // Filter panel
     filterOpen = true;
 
+    /**
+     * Catalog of every column the Employee results table can render.
+     * `key` doubles as the access path on the result row (camelCase
+     * matching .NET JSON serialization). `hint` selects a cell template:
+     * Serial / NameWithProfile / CorpsBadge / UnitBadge / Date / Plain.
+     * Mirrors the pattern used by report-address-location.
+     */
+    columnCatalog: { key: string; labelEN: string; labelBN: string; hint: string; defaultVisible: boolean }[] = [
+        { key: 'ser',             labelEN: 'Ser',          labelBN: 'ক্রঃ',           hint: 'Serial',          defaultVisible: true  },
+        { key: 'serviceId',       labelEN: 'Service ID',   labelBN: 'সার্ভিস আইডি',    hint: 'Plain',           defaultVisible: true  },
+        { key: 'rabid',           labelEN: 'RAB ID',       labelBN: 'র‍্যাব আইডি',     hint: 'Plain',           defaultVisible: true  },
+        { key: 'nameEnglish',     labelEN: 'Name (EN)',    labelBN: 'নাম (ইংরেজি)',    hint: 'NameWithProfile', defaultVisible: true  },
+        { key: 'nameBangla',      labelEN: 'Name (BN)',    labelBN: 'নাম (বাংলা)',     hint: 'Plain',           defaultVisible: false },
+        { key: 'armyRank',        labelEN: 'Rank',         labelBN: 'র‍্যাঙ্ক',         hint: 'Plain',           defaultVisible: true  },
+        { key: 'corps',           labelEN: 'Corps',        labelBN: 'কোর',             hint: 'CorpsBadge',      defaultVisible: true  },
+        { key: 'trade',           labelEN: 'Trade',        labelBN: 'ট্রেড',           hint: 'Plain',           defaultVisible: true  },
+        { key: 'tradeRemarks',    labelEN: 'Trade Remarks', labelBN: 'ট্রেড মন্তব্য',   hint: 'Plain',           defaultVisible: false },
+        { key: 'memberType',      labelEN: 'Member Type',  labelBN: 'সদস্য ধরন',       hint: 'Plain',           defaultVisible: false },
+        { key: 'appointment',     labelEN: 'Appointment',  labelBN: 'নিয়োগ',          hint: 'Plain',           defaultVisible: false },
+        { key: 'prefix',          labelEN: 'Prefix',       labelBN: 'প্রিফিক্স',        hint: 'Plain',           defaultVisible: false },
+        { key: 'motherOrganization', labelEN: 'Mother Org', labelBN: 'মাতৃ সংস্থা',     hint: 'Plain',           defaultVisible: false },
+        { key: 'motherUnit',      labelEN: 'Last Unit',    labelBN: 'শেষ ইউনিট',        hint: 'Plain',           defaultVisible: false },
+        { key: 'location',        labelEN: 'Location',     labelBN: 'অবস্থান',         hint: 'Plain',           defaultVisible: false },
+        { key: 'rabUnit',         labelEN: 'RAB Unit',     labelBN: 'র‍্যাব ইউনিট',     hint: 'UnitBadge',       defaultVisible: true  },
+        { key: 'gender',          labelEN: 'Gender',       labelBN: 'লিঙ্গ',           hint: 'Plain',           defaultVisible: false },
+        { key: 'dob',             labelEN: 'Date of Birth', labelBN: 'জন্ম তারিখ',      hint: 'Date',            defaultVisible: false },
+        { key: 'joiningDate',     labelEN: 'Date of Joining in RAB', labelBN: 'র‍্যাবে যোগদান', hint: 'Date',     defaultVisible: false },
+        { key: 'dateOfCommission', labelEN: 'Commission Date', labelBN: 'কমিশন তারিখ',  hint: 'Date',            defaultVisible: false },
+        { key: 'dateOfJoiningInServiceTraining', labelEN: 'Date of Joining in Service/Training', labelBN: 'সেবা/প্রশিক্ষণে যোগদান', hint: 'Date', defaultVisible: false },
+        { key: 'religionName',    labelEN: 'Religion',     labelBN: 'ধর্ম',             hint: 'Plain',           defaultVisible: false },
+        { key: 'bloodGroup',      labelEN: 'Blood Group',  labelBN: 'রক্তের গ্রুপ',     hint: 'Plain',           defaultVisible: false },
+        { key: 'maritalStatusName', labelEN: 'Marital Status', labelBN: 'বৈবাহিক অবস্থা', hint: 'Plain',          defaultVisible: false },
+        { key: 'mobileNo',        labelEN: 'Mobile No',    labelBN: 'মোবাইল',          hint: 'Plain',           defaultVisible: false },
+        { key: 'mobileNoOfficial', labelEN: 'Mobile (Official)', labelBN: 'মোবাইল (অফিসিয়াল)', hint: 'Plain',   defaultVisible: false },
+        { key: 'email',           labelEN: 'Email',        labelBN: 'ইমেইল',           hint: 'Plain',           defaultVisible: false },
+        { key: 'nid',             labelEN: 'NID',          labelBN: 'এনআইডি',          hint: 'Plain',           defaultVisible: false },
+        { key: 'nIDOld',          labelEN: 'Old NID',      labelBN: 'পুরাতন এনআইডি',   hint: 'Plain',           defaultVisible: false },
+        { key: 'passportNo',      labelEN: 'Passport No',  labelBN: 'পাসপোর্ট নং',     hint: 'Plain',           defaultVisible: false },
+        { key: 'identificationMark', labelEN: 'Identification Mark', labelBN: 'পরিচিতি চিহ্ন', hint: 'Plain',     defaultVisible: false },
+        { key: 'emergencyContact', labelEN: 'Emergency Contact', labelBN: 'জরুরি যোগাযোগ', hint: 'Plain',       defaultVisible: false },
+        { key: 'drivingLicenseNo', labelEN: 'Driving License No', labelBN: 'ড্রাইভিং লাইসেন্স', hint: 'Plain',  defaultVisible: false },
+        { key: 'serviceIdCardNo', labelEN: 'Service ID Card No', labelBN: 'সার্ভিস আইডি কার্ড', hint: 'Plain',  defaultVisible: false },
+        { key: 'personalBatch',   labelEN: 'Batch',        labelBN: 'ব্যাচ',           hint: 'Plain',           defaultVisible: false },
+        { key: 'awards',          labelEN: 'Gallantry Awards', labelBN: 'গ্যালান্ট্রি অ্যাওয়ার্ড', hint: 'Plain', defaultVisible: false },
+        { key: 'specialQualifications', labelEN: 'Special Qualifications', labelBN: 'বিশেষ যোগ্যতা', hint: 'Plain', defaultVisible: false },
+        { key: 'presentStatus',   labelEN: 'Present Status', labelBN: 'বর্তমান অবস্থা', hint: 'Plain',           defaultVisible: false },
+        { key: 'permanentDistrictTypeName', labelEN: 'Home District', labelBN: 'নিজ জেলা', hint: 'Plain',         defaultVisible: false },
+        { key: 'action',          labelEN: 'Action',       labelBN: 'কর্ম',           hint: 'Action',          defaultVisible: true  },
+    ];
+
+    selectedColumnKeys: string[] = this.columnCatalog.filter(c => c.defaultVisible).map(c => c.key);
+
+    get columnPickerOptions(): { label: string; value: string }[] {
+        return this.columnCatalog.map(c => ({ label: c.labelEN, value: c.key }));
+    }
+
+    get visibleColumns(): typeof this.columnCatalog {
+        const map = new Map(this.columnCatalog.map(c => [c.key, c]));
+        return this.selectedColumnKeys
+            .map(k => map.get(k))
+            .filter((c): c is typeof this.columnCatalog[number] => c != null);
+    }
+
+    /** Field key currently being dragged on the column-order strip. */
+    draggingColumnKey: string | null = null;
+
+    onColumnDragStart(key: string, event: DragEvent): void {
+        this.draggingColumnKey = key;
+        event.dataTransfer?.setData('text/plain', key);
+        if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+    }
+
+    onColumnDragOver(event: DragEvent): void {
+        event.preventDefault();
+        if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+    }
+
+    onColumnDrop(targetKey: string, event: DragEvent): void {
+        event.preventDefault();
+        const sourceKey = this.draggingColumnKey;
+        this.draggingColumnKey = null;
+        if (!sourceKey || sourceKey === targetKey) return;
+        const arr = [...this.selectedColumnKeys];
+        const fromIdx = arr.indexOf(sourceKey);
+        const toIdx   = arr.indexOf(targetKey);
+        if (fromIdx === -1 || toIdx === -1) return;
+        const [moved] = arr.splice(fromIdx, 1);
+        arr.splice(toIdx, 0, moved);
+        this.selectedColumnKeys = arr;
+    }
+
+    onColumnDragEnd(): void {
+        this.draggingColumnKey = null;
+    }
+
+    removeColumn(key: string): void {
+        this.selectedColumnKeys = this.selectedColumnKeys.filter(k => k !== key);
+    }
+
     constructor(
         private searchService: DynamicSearchService,
         private messageService: MessageService,
